@@ -1,0 +1,17 @@
+{
+  "name": "@warehouser/shared-types",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "lint": "echo \"no lint for shared-types\""
+  }
+}
