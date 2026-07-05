@@ -1,0 +1,27 @@
+{
+  "name": "@warehouser/utils",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "lint": "eslint src",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@warehouser/shared-types": "workspace:*"
+  },
+  "devDependencies": {
+    "@warehouser/eslint-config": "workspace:*",
+    "vitest": "^3.2.4"
+  }
+}
