@@ -172,6 +172,9 @@ importers:
       '@warehouser/eslint-config':
         specifier: workspace:*
         version: link:../eslint-config
+      eslint:
+        specifier: ^9.28.0
+        version: 9.39.4
       vitest:
         specifier: ^3.2.4
         version: 3.2.6(@types/node@26.1.0)(terser@5.48.0)
