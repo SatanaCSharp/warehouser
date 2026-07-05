@@ -1,0 +1,21 @@
+{
+  "name": "@warehouser/eslint-config",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./base": "./base.js",
+    "./react": "./react.js",
+    "./nest": "./nest.js"
+  },
+  "dependencies": {
+    "@eslint/js": "^9.28.0",
+    "eslint-config-prettier": "^10.1.5",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "typescript-eslint": "^8.34.0"
+  },
+  "peerDependencies": {
+    "eslint": "^9.0.0"
+  }
+}
