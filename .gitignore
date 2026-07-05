@@ -1,0 +1,9 @@
+.superpowers/
+.idea
+docs/superpowers
+node_modules/
+dist/
+.turbo/
+coverage/
+*.env
+.env.local
