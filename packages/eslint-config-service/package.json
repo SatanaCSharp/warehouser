@@ -1,0 +1,16 @@
+{
+  "name": "@warehouser/eslint-config-service",
+  "version": "1.0.0",
+  "description": "",
+  "license": "MIT",
+  "author": "",
+  "type": "module",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@warehouser/eslint-config-base": "workspace:*"
+  }
+}

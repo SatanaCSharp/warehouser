@@ -1,0 +1,11 @@
+{
+  "name": "@warehouser/tsconfig",
+  "version": "1.0.0",
+  "private": true,
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=24.14.0"
+  }
+}

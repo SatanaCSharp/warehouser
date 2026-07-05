@@ -1,0 +1,133 @@
+// @ts-check
+import eslint from '@eslint/js';
+import prettierConfig from 'eslint-config-prettier';
+import noRelativeImportPaths from 'eslint-plugin-no-relative-import-paths';
+import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
+import simpleImportSort from 'eslint-plugin-simple-import-sort';
+import unusedImports from 'eslint-plugin-unused-imports';
+import tseslint from 'typescript-eslint';
+
+export default [
+  {
+    ignores: [
+      'eslint.config.mjs',
+      'eslint.config.js',
+      '.eslintrc.js',
+      '.eslintrc.cjs',
+      '.prettierrc.js',
+      '.prettierrc',
+    ],
+  },
+  eslint.configs.recommended,
+  ...tseslint.configs.recommended,
+  ...tseslint.configs.recommendedTypeChecked,
+  prettierConfig,
+  eslintPluginPrettierRecommended,
+  {
+    plugins: {
+      'unused-imports': unusedImports,
+      'no-relative-import-paths': noRelativeImportPaths,
+      'simple-import-sort': simpleImportSort,
+    },
+    languageOptions: {
+      sourceType: 'module',
+      ecmaVersion: 2020,
+      parserOptions: {
+        projectService: true,
+      },
+    },
+    rules: {
+      'prettier/prettier': 'warn',
+      'max-classes-per-file': 'off',
+      '@typescript-eslint/no-use-before-define': ['error', 'nofunc'],
+      'unused-imports/no-unused-imports': 'warn',
+      'no-relative-import-paths/no-relative-import-paths': [
+        'warn',
+        { rootDir: 'src' },
+      ],
+      'simple-import-sort/imports': 'warn',
+      'simple-import-sort/exports': 'warn',
+      'no-void': ['off', { allowAsStatement: true }],
+      'no-continue': ['off'],
+      curly: ['warn', 'all'],
+      'linebreak-style': ['error', 'unix'],
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/explicit-member-accessibility': [
+        'error',
+        { accessibility: 'no-public' },
+      ],
+      '@typescript-eslint/explicit-function-return-type': [
+        'error',
+        {
+          allowExpressions: true,
+        },
+      ],
+      'class-methods-use-this': 'off',
+      'accessor-pairs': 'warn',
+      complexity: ['warn', { max: 20 }],
+      'default-case': 'warn',
+      'default-case-last': 'warn',
+      eqeqeq: ['warn', 'always', { null: 'ignore' }],
+      'grouped-accessor-pairs': 'warn',
+      'max-lines': [
+        'warn',
+        { max: 1000, skipBlankLines: true, skipComments: true },
+      ],
+      'max-lines-per-function': [
+        'warn',
+        { max: 200, skipBlankLines: true, skipComments: true },
+      ],
+      'max-nested-callbacks': ['warn', { max: 4 }],
+      'max-statements': ['warn', { max: 30 }],
+      'no-alert': 'warn',
+      'no-bitwise': 'warn',
+      'no-caller': 'error',
+      'no-case-declarations': 'warn',
+      'no-console': 'warn',
+      'no-empty': ['warn', { allowEmptyCatch: true }],
+      'no-empty-static-block': 'warn',
+      'no-eq-null': 'warn',
+      'no-eval': 'error',
+      'no-extend-native': 'warn',
+      'no-global-assign': 'error',
+      'no-lone-blocks': 'warn',
+      'no-multi-assign': 'warn',
+      'no-new-func': 'error',
+      'no-new-wrappers': 'warn',
+      'no-nonoctal-decimal-escape': 'error',
+      'no-octal': 'error',
+      'no-octal-escape': 'error',
+      'no-param-reassign': ['warn', { props: true }],
+      'no-regex-spaces': 'warn',
+      'no-restricted-exports': 'warn',
+      'no-restricted-globals': 'warn',
+      'no-restricted-properties': 'warn',
+      'no-restricted-syntax': 'warn',
+      'no-return-assign': 'warn',
+      'no-script-url': 'warn',
+      'no-sequences': 'warn',
+      'no-shadow-restricted-names': 'error',
+      'no-throw-literal': 'warn',
+      'no-unused-labels': 'warn',
+      'no-useless-call': 'warn',
+      'no-useless-catch': 'warn',
+      'no-useless-escape': 'warn',
+      'no-useless-rename': 'warn',
+      'no-useless-return': 'warn',
+      'no-with': 'error',
+      'prefer-const': 'warn',
+      'prefer-named-capture-group': 'warn',
+      'prefer-object-has-own': 'warn',
+      'prefer-regex-literals': 'warn',
+      'prefer-rest-params': 'warn',
+      'prefer-template': 'warn',
+      'preserve-caught-error': 'warn',
+      quotes: [
+        'warn',
+        'single',
+        { avoidEscape: true, allowTemplateLiterals: true },
+      ],
+      'require-unicode-regexp': 'warn',
+    },
+  },
+];

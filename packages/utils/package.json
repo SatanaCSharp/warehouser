@@ -1,28 +1,53 @@
 {
   "name": "@warehouser/utils",
-  "version": "0.0.1",
-  "private": true,
-  "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "version": "1.0.0",
+  "description": "",
+  "license": "MIT",
+  "author": "",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=24.14.0"
+  },
   "exports": {
-    ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+    "./asserts": {
+      "types": "./dist/asserts/index.d.ts",
+      "default": "./dist/asserts/index.js"
+    },
+    "./predicates": {
+      "types": "./dist/predicates/index.d.ts",
+      "default": "./dist/predicates/index.js"
+    },
+    "./type-guards": {
+      "types": "./dist/type-guards/index.d.ts",
+      "default": "./dist/type-guards/index.js"
+    },
+    "./async": {
+      "types": "./dist/async/index.d.ts",
+      "default": "./dist/async/index.js"
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "test": "vitest run",
-    "lint": "eslint src",
-    "clean": "rm -rf dist"
+    "build": "tsc && tsc-alias",
+    "start:dev": "tsc && (concurrently \"tsc -w\" \"tsc-alias -w\")",
+    "lint": "eslint 'src/**/*.ts' --max-warnings=0",
+    "lint:fix": "eslint 'src/**/*.ts' --max-warnings=0 --fix",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:cov": "jest --coverage"
   },
   "dependencies": {
     "@warehouser/shared-types": "workspace:*"
   },
   "devDependencies": {
-    "@warehouser/eslint-config": "workspace:*",
-    "eslint": "^9.28.0",
-    "vitest": "^3.2.4"
+    "@warehouser/eslint-config-base": "workspace:*",
+    "@warehouser/jest-config-preset": "workspace:*",
+    "@warehouser/tsconfig": "workspace:*",
+    "@types/jest": "catalog:",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "jest": "catalog:",
+    "ts-jest": "catalog:",
+    "tsc-alias": "catalog:",
+    "typescript": "catalog:"
   }
 }

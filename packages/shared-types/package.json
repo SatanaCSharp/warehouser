@@ -1,17 +1,38 @@
 {
   "name": "@warehouser/shared-types",
-  "version": "0.0.1",
-  "private": true,
-  "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "version": "1.0.0",
+  "description": "",
+  "license": "MIT",
+  "author": "",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=24.14.0"
+  },
   "exports": {
-    ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+    "./errors": {
+      "types": "./dist/errors/index.d.ts",
+      "default": "./dist/errors/index.js"
+    },
+    "./enums": {
+      "types": "./dist/enums/index.d.ts",
+      "default": "./dist/enums/index.js"
+    },
+    "./utils": {
+      "types": "./dist/utils/index.d.ts",
+      "default": "./dist/utils/index.js"
     }
   },
   "scripts": {
-    "lint": "echo \"no lint for shared-types\""
+    "build": "tsc && tsc-alias",
+    "start:dev": "tsc && (concurrently \"tsc -w\" \"tsc-alias -w\")",
+    "lint": "eslint 'src/**/*.ts' --max-warnings=0",
+    "lint:fix": "eslint 'src/**/*.ts' --max-warnings=0 --fix"
+  },
+  "devDependencies": {
+    "@warehouser/eslint-config-base": "workspace:*",
+    "@warehouser/tsconfig": "workspace:*",
+    "eslint": "catalog:",
+    "tsc-alias": "catalog:",
+    "typescript": "catalog:"
   }
 }

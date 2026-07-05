@@ -8,10 +8,16 @@
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "test": "turbo run test",
-    "clean": "turbo run clean"
+    "clean": "turbo run clean",
+    "prepare": "husky"
   },
   "devDependencies": {
-    "turbo": "^2.5.4",
-    "typescript": "^5.8.3"
+    "@commitlint/cli": "^21.2.0",
+    "@commitlint/config-conventional": "^21.2.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.8",
+    "prettier": "^3.5.3",
+    "turbo": "catalog:",
+    "typescript": "catalog:"
   }
 }

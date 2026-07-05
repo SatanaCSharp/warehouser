@@ -1,7 +1,8 @@
-import "reflect-metadata";
-import { NestFactory } from "@nestjs/core";
-import { ValidationPipe } from "@nestjs/common";
-import { AppModule } from "./app.module.js";
+import 'reflect-metadata';
+
+import { ValidationPipe } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from 'app.module.js';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
@@ -9,7 +10,6 @@ async function bootstrap(): Promise<void> {
   app.enableCors();
   const port = process.env.PORT ?? 3001;
   await app.listen(port);
-  console.log(`Server running on port ${port}`);
 }
 
-bootstrap();
+void bootstrap();

@@ -1,0 +1,27 @@
+{
+  "name": "@warehouser/eslint-config-base",
+  "version": "1.0.0",
+  "description": "",
+  "license": "MIT",
+  "author": "",
+  "type": "module",
+  "engines": {
+    "node": ">=24.14.0"
+  },
+  "main": "index.js",
+  "types": "index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "@typescript-eslint/eslint-plugin": "catalog:",
+    "@typescript-eslint/parser": "catalog:",
+    "eslint-config-prettier": "catalog:",
+    "eslint-plugin-no-relative-import-paths": "catalog:",
+    "eslint-plugin-prettier": "catalog:",
+    "eslint-plugin-simple-import-sort": "catalog:",
+    "eslint-plugin-unused-imports": "catalog:",
+    "typescript-eslint": "catalog:"
+  }
+}

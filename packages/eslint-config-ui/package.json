@@ -1,0 +1,25 @@
+{
+  "name": "@warehouser/eslint-config-ui",
+  "version": "1.0.0",
+  "description": "",
+  "license": "MIT",
+  "author": "",
+  "type": "module",
+  "engines": {
+    "node": ">=24.14.0"
+  },
+  "main": "index.js",
+  "types": "index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@warehouser/eslint-config-base": "workspace:*",
+    "@types/eslint-plugin-jsx-a11y": "catalog:",
+    "eslint-import-resolver-typescript": "catalog:",
+    "eslint-plugin-import": "catalog:",
+    "eslint-plugin-jsx-a11y": "catalog:",
+    "eslint-plugin-react": "catalog:",
+    "eslint-plugin-react-hooks": "catalog:"
+  }
+}

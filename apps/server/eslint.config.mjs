@@ -1,7 +1,7 @@
-import nest from "@warehouser/eslint-config/nest";
+import serviceConfig from "@warehouser/eslint-config-service";
 
 export default [
-  ...nest,
+  ...serviceConfig,
   {
     ignores: ["dist/**", "node_modules/**"]
   }

@@ -1,7 +1,7 @@
-import react from "@warehouser/eslint-config/react";
+import uiConfig from "@warehouser/eslint-config-ui";
 
 export default [
-  ...react,
+  ...uiConfig,
   {
     ignores: ["dist/**", "node_modules/**"]
   }

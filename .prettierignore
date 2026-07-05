@@ -1,0 +1,51 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.*
+
+# Build outputs
+dist
+dist-ssr
+build
+.next
+out
+.nitro
+.tanstack
+.wrangler
+.output
+.vinxi
+
+# Generated files
+*.tsbuildinfo
+next-env.d.ts
+routeTree.gen.ts
+*.gen.ts
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Lock files
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# Coverage
+coverage
+.nyc_output
+
+# Turbo
+.turbo
+
+# Public assets (usually don't need formatting)
+public
+
+# Config files that might have specific formatting
+*.min.js
+*.min.css
+.lintstagedrc.js

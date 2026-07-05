@@ -1,0 +1,11 @@
+{
+  "name": "@warehouser/jest-config-preset",
+  "version": "0.0.1",
+  "private": true,
+  "type": "commonjs",
+  "main": "jest-config-preset.cjs",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24.14.0"
+  }
+}
