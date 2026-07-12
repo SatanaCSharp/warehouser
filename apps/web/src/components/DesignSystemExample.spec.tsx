@@ -14,4 +14,11 @@ describe('DesignSystemExample', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Danger' })).toBeInTheDocument();
   });
+
+  it('renders a link to the login route', () => {
+    render(<DesignSystemExample />);
+
+    const link = screen.getByRole('link', { name: /log in/iu });
+    expect(link).toHaveAttribute('href', '/login');
+  });
 });

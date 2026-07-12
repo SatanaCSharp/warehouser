@@ -1,4 +1,4 @@
-import { Button, Card, CardBody, CardHeader } from '@heroui/react';
+import { Button, Card, CardBody, CardHeader, Link } from '@heroui/react';
 
 import type React from 'react';
 
@@ -9,7 +9,7 @@ const DesignSystemExample = (): React.ReactElement => {
         <CardHeader className="text-lg font-semibold text-foreground">
           Design System Preview
         </CardHeader>
-        <CardBody className="flex flex-row gap-3">
+        <CardBody className="flex flex-row items-center gap-3">
           <Button color="primary">Primary</Button>
           <Button color="secondary" variant="flat">
             Secondary
@@ -17,6 +17,7 @@ const DesignSystemExample = (): React.ReactElement => {
           <Button color="danger" variant="bordered">
             Danger
           </Button>
+          <Link href="/login">Log in</Link>
         </CardBody>
       </Card>
       <div className="rounded-medium bg-content2 p-4 text-sm text-foreground-500">
