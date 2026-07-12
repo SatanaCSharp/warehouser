@@ -11,11 +11,11 @@ import { store } from 'store/index';
 describe('router', () => {
   it('renders LoginForm at /login', async () => {
     render(
-      <HeroUIProvider>
-        <Provider store={store}>
+      <Provider store={store}>
+        <HeroUIProvider>
           <RouterProvider router={router} />
-        </Provider>
-      </HeroUIProvider>,
+        </HeroUIProvider>
+      </Provider>,
     );
 
     // router.navigate triggers an async route transition (and the
