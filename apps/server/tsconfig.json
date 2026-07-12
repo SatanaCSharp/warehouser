@@ -2,7 +2,8 @@
   "extends": "@warehouser/tsconfig/tsconfig.node.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "baseUrl": "./src"
+    "baseUrl": "./src",
+    "skipLibCheck": true
   },
   "include": ["src/**/*", "db/migrations/**/*"],
   "exclude": ["./dist*"]

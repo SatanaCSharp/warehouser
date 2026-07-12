@@ -15,11 +15,13 @@
   "dependencies": {
     "@reduxjs/toolkit": "catalog:",
     "@tanstack/react-router": "catalog:",
+    "@warehouser/contracts": "workspace:*",
     "@warehouser/shared-types": "workspace:*",
     "@warehouser/utils": "workspace:*",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "react-redux": "catalog:"
+    "react-redux": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@types/react": "catalog:",

@@ -1,0 +1,32 @@
+{
+  "name": "@warehouser/contracts",
+  "version": "1.0.0",
+  "description": "",
+  "license": "MIT",
+  "author": "",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=24.14.0"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc && tsc-alias",
+    "lint": "eslint 'src/**/*.ts' --max-warnings=0",
+    "lint:fix": "eslint 'src/**/*.ts' --max-warnings=0 --fix"
+  },
+  "dependencies": {
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@warehouser/eslint-config-base": "workspace:*",
+    "@warehouser/tsconfig": "workspace:*",
+    "eslint": "catalog:",
+    "tsc-alias": "catalog:",
+    "typescript": "catalog:"
+  }
+}

@@ -1,6 +1,7 @@
 {
   "extends": "@warehouser/tsconfig/tsconfig.node.json",
   "compilerOptions": {
+    "composite": true,
     "declaration": true,
     "baseUrl": "src",
     "outDir": "dist"

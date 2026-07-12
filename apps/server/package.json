@@ -22,15 +22,16 @@
     "@nestjs/mongoose": "catalog:",
     "@nestjs/passport": "catalog:",
     "@nestjs/platform-express": "catalog:",
+    "@warehouser/contracts": "workspace:*",
     "@warehouser/shared-types": "workspace:*",
-    "class-transformer": "catalog:",
-    "class-validator": "catalog:",
     "mongoose": "catalog:",
+    "nestjs-zod": "catalog:",
     "passport": "catalog:",
     "passport-jwt": "catalog:",
     "passport-local": "catalog:",
     "reflect-metadata": "catalog:",
-    "rxjs": "catalog:"
+    "rxjs": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@nestjs/cli": "catalog:",

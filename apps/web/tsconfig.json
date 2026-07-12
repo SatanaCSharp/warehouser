@@ -9,6 +9,7 @@
     "baseUrl": "./src"
   },
   "references": [
+    { "path": "../../packages/contracts" },
     { "path": "../../packages/shared-types" },
     { "path": "../../packages/utils" },
     { "path": "./tsconfig.node.json" }
