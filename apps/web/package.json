@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@heroui/react": "^2.8.10",
+    "@hookform/resolvers": "^5.4.0",
     "@reduxjs/toolkit": "catalog:",
     "@tanstack/react-router": "catalog:",
     "@warehouser/contracts": "workspace:*",
@@ -22,17 +23,22 @@
     "framer-motion": "^12.42.2",
     "react": "catalog:",
     "react-dom": "catalog:",
+    "react-hook-form": "^7.81.0",
     "react-redux": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@heroui/theme": "^2.4.26",
     "@tailwindcss/vite": "^4.3.2",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
     "@warehouser/eslint-config-ui": "workspace:*",
     "eslint": "catalog:",
+    "jsdom": "^29.1.1",
     "tailwindcss": "^4.3.2",
     "vite": "catalog:",
     "vitest": "catalog:"
