@@ -9,6 +9,7 @@ export default defineConfig({
     alias: {
       src: path.resolve(__dirname, './src'),
       App: path.resolve(__dirname, './src/App.tsx'),
+      components: path.resolve(__dirname, './src/components'),
       router: path.resolve(__dirname, './src/router.ts'),
       routes: path.resolve(__dirname, './src/routes'),
       store: path.resolve(__dirname, './src/store'),
