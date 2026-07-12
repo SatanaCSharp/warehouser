@@ -13,7 +13,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@heroui/react": "^3.2.2",
+    "@heroui/react": "^2.8.10",
     "@reduxjs/toolkit": "catalog:",
     "@tanstack/react-router": "catalog:",
     "@warehouser/contracts": "workspace:*",
@@ -26,6 +26,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@heroui/theme": "^2.4.26",
     "@tailwindcss/vite": "^4.3.2",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
