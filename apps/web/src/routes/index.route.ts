@@ -1,5 +1,7 @@
 import { createRoute, rootRouteWithContext } from '@tanstack/react-router';
 
+import DesignSystemExample from 'components/DesignSystemExample';
+
 import type { RootState } from 'store/index';
 
 export interface RouterContext {
@@ -11,5 +13,5 @@ export const rootRoute = rootRouteWithContext<RouterContext>()({});
 export const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
-  component: () => null,
+  component: DesignSystemExample,
 });

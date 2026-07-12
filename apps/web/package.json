@@ -13,22 +13,27 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@heroui/react": "^2.8.10",
     "@reduxjs/toolkit": "catalog:",
     "@tanstack/react-router": "catalog:",
     "@warehouser/contracts": "workspace:*",
     "@warehouser/shared-types": "workspace:*",
     "@warehouser/utils": "workspace:*",
+    "framer-motion": "^12.42.2",
     "react": "catalog:",
     "react-dom": "catalog:",
     "react-redux": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@heroui/theme": "^2.4.26",
+    "@tailwindcss/vite": "^4.3.2",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
     "@warehouser/eslint-config-ui": "workspace:*",
     "eslint": "catalog:",
+    "tailwindcss": "^4.3.2",
     "vite": "catalog:",
     "vitest": "catalog:"
   }
