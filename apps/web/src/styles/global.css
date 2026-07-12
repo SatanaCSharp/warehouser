@@ -1,0 +1,12 @@
+/* apps/web/src/styles/global.css */
+@import 'tailwindcss';
+@plugin './hero.ts';
+@source '../../node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}';
+
+html {
+  color-scheme: light dark;
+}
+
+body {
+  @apply bg-background text-foreground antialiased;
+}
