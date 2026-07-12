@@ -13,6 +13,7 @@ export default defineConfig({
       router: path.resolve(__dirname, './src/router.ts'),
       routes: path.resolve(__dirname, './src/routes'),
       store: path.resolve(__dirname, './src/store'),
+      test: path.resolve(__dirname, './src/test'),
     },
   },
   server: {

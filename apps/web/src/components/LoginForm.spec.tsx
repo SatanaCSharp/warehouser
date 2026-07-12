@@ -1,19 +1,15 @@
 import { configureStore, type EnhancedStore } from '@reduxjs/toolkit';
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Provider } from 'react-redux';
 import { describe, expect, it } from 'vitest';
 
 import LoginForm from 'components/LoginForm';
 import authReducer, { type AuthState } from 'store/slices/authSlice';
+import { renderWithProviders } from 'test/render';
 
 const renderLoginForm = (): EnhancedStore<{ auth: AuthState }> => {
   const store = configureStore({ reducer: { auth: authReducer } });
-  render(
-    <Provider store={store}>
-      <LoginForm />
-    </Provider>,
-  );
+  renderWithProviders(<LoginForm />, store);
   return store;
 };
 
