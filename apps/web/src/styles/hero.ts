@@ -1,6 +1,15 @@
 import { heroui } from '@heroui/react';
 
-export default heroui({
+/**
+ * TS2742 workaround: heroui()'s inferred return type references
+ * tailwindcss/plugin's non-exported PluginWithConfig type via a pnpm
+ * store path, which tsc can't emit a portable declaration for under
+ * `composite: true`. Naming it via ReturnType<typeof heroui> gives tsc
+ * a portable reference (the `@heroui/react` import) instead.
+ */
+type HeroUITheme = ReturnType<typeof heroui>;
+
+const theme: HeroUITheme = heroui({
   defaultTheme: 'light',
   layout: {
     radius: {
@@ -165,3 +174,5 @@ export default heroui({
     },
   },
 });
+
+export default theme;
