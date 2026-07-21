@@ -5,6 +5,6 @@
     "baseUrl": "./src",
     "skipLibCheck": true
   },
-  "include": ["src/**/*", "db/migrations/**/*"],
+  "include": ["src/**/*", "migrations/**/*"],
   "exclude": ["./dist*"]
 }

@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom/vitest';
 
 import { cleanup } from '@testing-library/react';
-import { afterEach } from 'vitest';
+import { afterEach, vi } from 'vitest';
 
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean | undefined;
@@ -15,6 +15,7 @@ declare global {
 // Setting this once, globally, is the standard fix recommended by React's
 // and RTL's own testing docs.
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+window.scrollTo = vi.fn();
 
 // @testing-library/react only auto-registers its afterEach(cleanup) hook when
 // it detects a global `afterEach` at import time. This project doesn't set

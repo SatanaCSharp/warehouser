@@ -1,1 +1,1 @@
-See @README for project overview and @package.json for available pnpm commands for this project.
+Before implementing changes in `apps/web`, read the relevant UI-related documentation under `docs/system/`, including the frontend architecture documentation.

@@ -1,0 +1,109 @@
+---
+description: Synchronize an existing coding-agent installation with the canonical AI instructions at the workspace root and in every app.
+argument-hint: [target-agent]
+---
+
+# Update an AI agent
+
+Actualize an existing project-local coding-agent installation from the repository-owned `ai/`
+directories. The command is agent agnostic: resolve the target agent's supported project-local
+surfaces and use capability names rather than assuming a vendor-specific layout. Canonical `ai/`
+files are the source of truth; agent-specific files are adapters.
+
+## Inputs and preconditions
+
+- Run from the repository root.
+- The optional first argument identifies the target agent (for example `claude`, `codex`,
+  `cursor`, or `gemini`).
+- When the target is omitted, infer it only from the current agent identity or an unambiguous
+  existing project-local installation. If multiple installed agents are possible, ask which one to
+  update and stop.
+- Treat each immediate `apps/*/` directory as an app, including apps without a local `ai/`
+  directory.
+- This command updates an installation previously created or managed from the canonical `ai/`
+  trees. If the target has no existing project-local instruction entry point or generated adapter,
+  report that it is not initialized and direct the user to `ai/commands/init-agent.md`. Do not turn
+  an update into a new installation silently.
+
+## Canonical scopes
+
+Compare all canonical AI content in both scopes:
+
+1. **Workspace scope** — root `ai/agents`, `ai/commands`, and `ai/skills`, plus every existing
+   `apps/*/ai/skills`. App-specific skills at this scope use the same `<app>-<skill>` collision
+   namespace established by `init-agent`.
+2. **App scope** — for each `apps/<app>/`, root `ai/agents`, `ai/commands`, and `ai/skills`, plus
+   that app's `apps/<app>/ai/skills` when present. The app-specific skill wins over a root skill
+   with the same name.
+
+Include every file needed by an instruction surface, not only Markdown: references, templates,
+scripts, assets, and metadata must remain reachable with their relative paths intact. Ignore
+dependencies, caches, build output, and agent-generated directories when discovering canonical
+sources.
+
+## Procedure
+
+1. Read `AGENTS.md`, the root project overview when present, `package.json`, all app-local
+   instruction files, and `ai/commands/init-agent.md`.
+2. Identify the target and its existing project-local instruction, command/prompt, skill,
+   specialized-worker, and MCP locations. Derive unfamiliar layouts from installed configuration
+   or official documentation; do not guess or substitute another agent's conventions.
+3. Inventory every canonical file below the root `ai/` directory and every immediate
+   `apps/*/ai/` directory. Inventory the target's existing workspace and app adapters separately.
+4. Determine ownership before changing a destination. An entry is managed only when it is:
+   - a symbolic link to a canonical source;
+   - a generated copy carrying the canonical source path and the standard do-not-edit marker from
+     `init-agent`; or
+   - content inside an `<!-- init-agent:start -->` / `<!-- init-agent:end -->` managed block.
+     Never classify a file as managed merely because its name matches a canonical file.
+5. Build and print a comparison table before writing. For each canonical or managed destination,
+   show its scope, source, destination, ownership, and action: `unchanged`, `add`, `update`,
+   `relink`, `remove stale`, `collision`, or `unsupported`.
+6. Synchronize the existing installation:
+   - preserve valid relative symbolic links;
+   - relink broken or incorrectly targeted managed links to the current canonical source;
+   - refresh managed copies whose bytes differ from their source while retaining the generated
+     header required by `init-agent`;
+   - add newly introduced canonical entries to already initialized supported surfaces;
+   - update the managed instruction block at the workspace root and in every app so it points to
+     the applicable canonical instructions and continues to state that `ai/` is the source of
+     truth;
+   - remove destinations whose canonical sources no longer exist only when ownership is proven
+     and only inside the target's generated directories or managed blocks;
+   - leave unmanaged files and content outside managed blocks byte-for-byte unchanged.
+7. Preserve the existing project-local MCP adapter. Compare its `pencil` entry with `.mcp.json`
+   and `init-agent` requirements, and update only the managed `pencil` fields when they are stale.
+   Preserve unrelated servers and settings. Do not require Pencil desktop to be running.
+8. If a newly canonical surface is unsupported by the target, keep it reachable through the
+   target's managed main instruction block and report the fallback. If a destination is occupied
+   by an unmanaged file or link, report the collision and continue with unaffected entries.
+9. Run the comparison again after writing and verify:
+   - every managed link resolves within the repository;
+   - every managed copy matches its canonical source apart from its generated header;
+   - every app has its existing instruction entry point with a valid managed block;
+   - no destination escapes the repository;
+   - no canonical `ai/` source was modified by synchronization;
+   - a second synchronization with unchanged inputs would produce no diff.
+10. Show `git status --short` and summarize added, updated, relinked, removed, unchanged,
+    unsupported, and collided entries by workspace and app scope.
+
+## Safety and maintenance rules
+
+- Do not modify canonical files under root or app `ai/` directories during synchronization.
+- Do not install globally, fetch packages, or use network access unless explicitly requested.
+- Do not overwrite or delete hand-written agent configuration, unmanaged links, or content outside
+  a managed block.
+- Do not copy credentials, authentication data, session tokens, user-global configuration, or
+  machine-specific absolute paths into the repository.
+- Do not update every detected agent when no target was supplied. One invocation updates one
+  explicitly identified or unambiguously inferred agent.
+- Be idempotent: unchanged canonical sources and configuration produce no filesystem changes.
+- A collision, unresolved mapping, invalid adapter, missing app instruction entry point, or failed
+  verification makes the update partial rather than successful.
+
+## Completion report
+
+Return the target and resolved layout, the canonical directories compared, workspace and app
+changes grouped by action, MCP status, collisions and unsupported-surface fallbacks, verification
+results, and files changed. Label a partial update clearly and list the exact unresolved paths and
+the next action needed for each one.

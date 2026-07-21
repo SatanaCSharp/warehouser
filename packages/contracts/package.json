@@ -8,12 +8,7 @@
   "engines": {
     "node": ">=24.14.0"
   },
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
-    }
-  },
+  "exports": {},
   "scripts": {
     "build": "tsc && tsc-alias",
     "lint": "eslint 'src/**/*.ts' --max-warnings=0",
