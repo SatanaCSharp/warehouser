@@ -1,5 +1,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
+import type { RootState } from 'store/index';
+
 type IUser = Record<string, unknown>;
 
 export interface AuthState {
@@ -28,4 +30,12 @@ export const authSlice = createSlice({
 });
 
 export const { setCredentials, clearCredentials } = authSlice.actions;
+
+export const selectCurrentUser = (state: RootState): IUser | null =>
+  state.auth.user;
+export const selectAuthToken = (state: RootState): string | null =>
+  state.auth.token;
+export const selectIsAuthenticated = (state: RootState): boolean =>
+  selectAuthToken(state) !== null;
+
 export default authSlice.reducer;

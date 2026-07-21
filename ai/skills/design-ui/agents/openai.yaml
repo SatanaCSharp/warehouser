@@ -1,0 +1,4 @@
+interface:
+  display_name: "Design UI with pen.dev"
+  short_description: "Create, approve, and hand off UI designs through pen.dev"
+  default_prompt: "Create or refine a UI design in pen.dev, pause for approval, and produce an implementation handoff."

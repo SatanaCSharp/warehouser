@@ -12,6 +12,9 @@
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
     "test": "jest --passWithNoTests",
+    "migration:generate": "typeorm-ts-node-commonjs migration:generate -d src/shared/database/data-source.ts",
+    "migration:run": "typeorm-ts-node-commonjs migration:run -d src/shared/database/data-source.ts",
+    "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/shared/database/data-source.ts",
     "clean": "rm -rf dist"
   },
   "dependencies": {
@@ -19,18 +22,19 @@
     "@nestjs/config": "catalog:",
     "@nestjs/core": "catalog:",
     "@nestjs/jwt": "catalog:",
-    "@nestjs/mongoose": "catalog:",
+    "@nestjs/typeorm": "catalog:",
     "@nestjs/passport": "catalog:",
     "@nestjs/platform-express": "catalog:",
     "@warehouser/contracts": "workspace:*",
     "@warehouser/shared-types": "workspace:*",
-    "mongoose": "catalog:",
+    "pg": "catalog:",
     "nestjs-zod": "catalog:",
     "passport": "catalog:",
     "passport-jwt": "catalog:",
     "passport-local": "catalog:",
     "reflect-metadata": "catalog:",
     "rxjs": "catalog:",
+    "typeorm": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
@@ -40,8 +44,10 @@
     "@types/passport-jwt": "catalog:",
     "@types/passport-local": "catalog:",
     "@warehouser/eslint-config-service": "workspace:*",
+    "@warehouser/tsconfig": "workspace:*",
     "eslint": "catalog:",
     "jest": "catalog:",
+    "ts-node": "catalog:",
     "ts-jest": "catalog:"
   }
 }

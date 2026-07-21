@@ -1,15 +1,38 @@
-import { createRouter } from '@tanstack/react-router';
+import {
+  createMemoryHistory,
+  createRouter,
+  Router,
+} from '@tanstack/react-router';
 
-import { rootRoute, indexRoute } from 'routes/index.route';
-import { loginRoute } from 'routes/login.route';
-import { store } from 'store/index';
+import { loginRoute } from 'modules/auth/login/route';
+import { homeRoute } from 'modules/home/route';
+import { rootRoute } from 'routes/__root.route';
+import { store } from 'store';
 
-const routeTree = rootRoute.addChildren([indexRoute, loginRoute]);
+import type { AppStore } from 'store';
 
-export const router = createRouter({
-  routeTree,
-  context: { getState: () => store.getState() },
-});
+const routeTree = rootRoute.addChildren([homeRoute, loginRoute]);
+
+type CreateAppRouterOptions = {
+  appStore?: AppStore;
+  initialEntries?: string[];
+};
+
+export type AppRouter = Router<typeof routeTree>;
+
+export const createAppRouter = ({
+  appStore = store,
+  initialEntries,
+}: CreateAppRouterOptions = {}): AppRouter =>
+  createRouter({
+    routeTree,
+    context: { store: appStore },
+    ...(initialEntries
+      ? { history: createMemoryHistory({ initialEntries }) }
+      : {}),
+  });
+
+export const router = createAppRouter();
 
 declare module '@tanstack/react-router' {
   interface Register {
