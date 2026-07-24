@@ -27,6 +27,7 @@ catalog:
   # NestJS
   "@nestjs/cli": ^11.0.24
   "@nestjs/common": ^11.1.28
+  "@nestjs/bullmq": ^11.0.4
   "@nestjs/config": ^4.0.4
   "@nestjs/core": ^11.1.28
   "@nestjs/jwt": ^11.0.2
@@ -36,6 +37,7 @@ catalog:
   "@nestjs/testing": ^11.1.28
 
   # Server runtime
+  bullmq: ^5.81.1
   pg: ^8.16.3
   passport: ^0.7.0
   passport-jwt: ^4.0.1

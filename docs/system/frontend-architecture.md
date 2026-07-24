@@ -140,6 +140,10 @@ Use Zod and the accepted repository ownership rule:
 
 See [Adding and using contracts](guides/adding-and-using-contracts.md).
 
+For API error normalization, HeroUI form errors, React-Toastify notifications, successful-action
+feedback, and i18next ownership, follow
+[Web error handling and action feedback](guides/web-error-handling.md).
+
 ## Testing
 
 Colocate component, page, hook, schema, and slice tests with their owner. Keep cross-cutting test

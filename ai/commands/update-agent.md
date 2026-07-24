@@ -68,12 +68,23 @@ sources.
    - update the managed instruction block at the workspace root and in every app so it points to
      the applicable canonical instructions and continues to state that `ai/` is the source of
      truth;
+   - ensure every managed instruction block contains the local-credentials policy established by
+     `init-agent`: coding agents may read `.env.example` files only; they must not read, print,
+     search, summarize, diff, or otherwise inspect `.env`, `.env.*` (except `.env.example`), or
+     any other file known or suspected to contain credentials, tokens, keys, passwords, or
+     secrets; when a required ignored local environment file is missing, they may copy the
+     applicable `.env.example` to it without displaying either file, but must never overwrite an
+     existing local environment file; setup commands and generated guidance must use only the
+     placeholder/development values documented in `.env.example`;
    - remove destinations whose canonical sources no longer exist only when ownership is proven
      and only inside the target's generated directories or managed blocks;
    - leave unmanaged files and content outside managed blocks byte-for-byte unchanged.
-7. Preserve the existing project-local MCP adapter. Compare its `pencil` entry with `.mcp.json`
-   and `init-agent` requirements, and update only the managed `pencil` fields when they are stale.
-   Preserve unrelated servers and settings. Do not require Pencil desktop to be running.
+7. Preserve the existing project-local MCP adapter. Compare its `pencil` and `notebooklm` entries
+   with `.mcp.json` and `init-agent` requirements, and update only those managed server fields when
+   they are stale. Add either canonical entry when it is missing, translating it to the target's
+   project-local format as needed. Preserve unrelated servers and settings. Verify Node.js 18 or
+   newer and `npx` are available for NotebookLM, but do not fetch/start the package or perform
+   browser authentication. Do not require Pencil desktop to be running.
 8. If a newly canonical surface is unsupported by the target, keep it reachable through the
    target's managed main instruction block and report the fallback. If a destination is occupied
    by an unmanaged file or link, report the collision and continue with unaffected entries.
@@ -90,11 +101,14 @@ sources.
 ## Safety and maintenance rules
 
 - Do not modify canonical files under root or app `ai/` directories during synchronization.
-- Do not install globally, fetch packages, or use network access unless explicitly requested.
+- Do not install globally. Do not eagerly fetch or start the canonical NotebookLM package during
+  synchronization; its `npx` invocation may fetch it on first use.
 - Do not overwrite or delete hand-written agent configuration, unmanaged links, or content outside
   a managed block.
 - Do not copy credentials, authentication data, session tokens, user-global configuration, or
   machine-specific absolute paths into the repository.
+- Do not inspect existing local environment files during synchronization. File-existence checks
+  are allowed, but credential values must come only from the applicable `.env.example`.
 - Do not update every detected agent when no target was supplied. One invocation updates one
   explicitly identified or unambiguously inferred agent.
 - Be idempotent: unchanged canonical sources and configuration produce no filesystem changes.

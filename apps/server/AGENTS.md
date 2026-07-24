@@ -7,6 +7,7 @@ Before modifying `apps/server`, read:
 - `../../docs/system/server-architecture.md`
 - `../../docs/system/guides/adding-a-server-module.md`
 - `../../docs/system/guides/adding-and-using-contracts.md`
+- `../../docs/system/guides/server-error-handling.md`
 
 Follow the modular-monolith boundaries in those documents.
 
@@ -26,3 +27,6 @@ Follow the modular-monolith boundaries in those documents.
 - Define server-internal event payloads as Zod schemas under
   `src/shared/events/<event-name>/` and infer their TypeScript types from those schemas.
 - Keep reusable test support under `src/test/`.
+- Follow `server-error-handling.md` for predicate placement, named error factories, typed errors,
+  propagation, NestJS exception filtering, logging, and safe REST error responses. Do not add
+  routine `try/catch` blocks to controllers or endpoint handlers.
