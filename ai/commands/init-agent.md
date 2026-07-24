@@ -30,11 +30,11 @@ Build two scopes:
    `ai/skills`, plus that app's `apps/<app>/ai/skills` when present. This keeps an agent started in
    an app independently useful without leaking another app's specialized skills into it.
 
-Also configure a project-local MCP server named `pencil` for the target agent. Treat `.mcp.json`
-as the repository's common Pencil definition when the target supports that format; otherwise
-translate the same server definition into the target's supported project-local configuration.
-Agent-specific configuration is an adapter and must not become a new source of workflow
-instructions.
+Also configure the project-local MCP servers declared in `.mcp.json` for the target agent.
+Currently these are `pencil` and `notebooklm`. Treat `.mcp.json` as the repository's common,
+agent-neutral MCP definition when the target supports that format; otherwise translate both
+server definitions into the target's supported project-local configuration. Agent-specific
+configuration is an adapter and must not become a new source of workflow instructions.
 
 Use the target agent's project-local locations, not user-global configuration. Prefer relative
 symbolic links back to the canonical files when the target supports links. Otherwise generate
@@ -53,12 +53,19 @@ with init-agent`. Preserve directory structure so references and bundled assets 
    - invokable commands or prompts;
    - specialized workers/subagents, if supported.
    - MCP server configuration, including the target-specific Pencil agent identifier when Pencil
-     requires one.
+     requires one and an `npx`-based stdio server definition for NotebookLM.
 4. Print the resolved source-to-destination mapping before writing. If a surface is unsupported,
    keep its instructions reachable through the target's main project instruction file and report
    the fallback.
-5. Initialize Pencil for the target:
+5. Initialize the canonical MCP servers for the target:
    - inspect `.mcp.json` and any existing target-local MCP configuration before changing either;
+   - merge or update both `mcpServers.pencil` and `mcpServers.notebooklm` (or their target-native
+     equivalents), preserving unrelated MCP servers and hand-written settings;
+   - configure `notebooklm` as the cross-platform stdio command from `.mcp.json`; verify Node.js
+     18 or newer and `npx` are available, but do not run browser authentication during
+     initialization;
+   - keep NotebookLM authentication, browser profiles, cookies, and other session data in the
+     package's user-local storage. Never copy or commit them to the repository;
    - resolve the installed Pencil desktop MCP executable for the current operating system and
      architecture instead of assuming the macOS ARM path is valid;
    - preserve the server name `pencil`, the desktop mode, and Pencil's target-agent identifier,
@@ -66,11 +73,10 @@ with init-agent`. Preserve directory structure so references and bundled assets 
      it is not already known for the target;
    - treat `.mcp.json` as a checked-in bootstrap, not a portable executable path: resolve its
      command for the local OS/architecture and add the target-agent identifier only when required;
-   - if the target reads `.mcp.json`, merge or update only `mcpServers.pencil`; otherwise merge the
-     equivalent entry into the target's project-local MCP configuration;
-   - preserve unrelated MCP servers and hand-written settings. If the target has no project-local
-     MCP support, report the exact user-local configuration needed but do not install it without
-     explicit permission.
+   - if the target reads `.mcp.json`, preserve both canonical entries there; otherwise merge their
+     equivalents into the target's project-local MCP configuration;
+   - if the target has no project-local MCP support, report the exact user-local configuration
+     needed for both servers but do not install it without explicit permission.
 6. Install workspace and app scopes. Namespace app-specific skill collisions as `<app>-<skill>` at
    workspace scope. At app scope, the app-specific skill wins over a root skill with the same name.
    Never overwrite two different sources at one destination.
@@ -101,17 +107,19 @@ with init-agent`. Preserve directory structure so references and bundled assets 
    command for the same target. Do not delete hand-written target configuration.
 9. Verify every installed link resolves (or every generated copy matches its source), every app has
    an instruction entry point, no destination escapes the repository, and the target can discover
-   a project-local MCP server named `pencil`. Do not require Pencil desktop to be running during
-   initialization; when it is running, use the target's MCP inspection command to verify the server
-   starts successfully. Show `git status --short` and summarize installed, skipped, namespaced, and
+   project-local MCP servers named `pencil` and `notebooklm`. Do not require Pencil desktop or a
+   NotebookLM login during initialization. When Pencil is running, use the target's MCP inspection
+   command to verify that server starts successfully. Do not start `notebooklm` merely to verify
+   configuration because `npx` may fetch the package; report whether its runtime prerequisites are
+   present instead. Show `git status --short` and summarize installed, skipped, namespaced, and
    stale entries.
 
 ## Safety and portability rules
 
 - Be idempotent: running the command twice with unchanged inputs produces no diff.
 - Do not modify anything under a canonical `ai/` directory during installation.
-- Do not install globally, fetch packages, or require network access unless the user explicitly
-  asks for it.
+- Do not install globally. Configuring the canonical `notebooklm` MCP invocation is required, but
+  do not eagerly fetch or start its package during initialization; `npx` may fetch it on first use.
 - Do not commit Pencil authentication data, API keys, session tokens, absolute paths copied from a
   different machine, or user-global MCP configuration.
 - Do not inspect existing local environment files while installing an agent. File-existence checks
@@ -125,7 +133,7 @@ with init-agent`. Preserve directory structure so references and bundled assets 
 
 ## Completion report
 
-Return the target and resolved layout, Pencil executable and project-local MCP adapter, workspace/
-app scopes installed, collision or unsupported-surface fallbacks, verification results, and the
-files changed. A partial install is not success; label it clearly and give the exact unresolved
-paths or configuration.
+Return the target and resolved layout, Pencil executable, NotebookLM runtime prerequisites,
+project-local MCP adapter, workspace/app scopes installed, collision or unsupported-surface
+fallbacks, verification results, and the files changed. A partial install is not success; label it
+clearly and give the exact unresolved paths or configuration.

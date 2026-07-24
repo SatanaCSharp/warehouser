@@ -63,6 +63,20 @@ or repaired. Do not modify the canonical files under ai/.
 
 Restart the coding agent if it reports that configuration or MCP changes require it.
 
+### NotebookLM MCP
+
+The repository exposes a project-local `notebooklm` MCP server to every MCP-capable coding agent.
+`.mcp.json` is the agent-neutral definition, and `ai/commands/init-agent.md` translates it into
+the target agent's project-local format alongside Pencil. The server runs with Node.js 18 or newer
+through `npx -y notebooklm-mcp@latest`; `npx` downloads or refreshes the package on first use.
+
+NotebookLM authentication is a one-time interactive browser flow. After initializing the coding
+agent, ask it to use the `notebooklm` server's authentication setup tool, sign in in the browser
+window, and then restart the agent if requested. Authentication profiles, cookies, and session
+data are user-local and must never be copied into or committed to this repository. This integration
+is an unofficial community bridge that automates NotebookLM rather than a Google-supported API, so
+do not use it with sensitive notebooks without reviewing that tradeoff.
+
 ## Conditional UI design with Pencil
 
 The repository uses [Pencil](https://pencil.dev/) for editable UI designs and live design review, but only when a feature changes a user-facing web, mobile, or desktop interface. Coding agents interact with the running Pencil desktop application through its local MCP server.

@@ -2,13 +2,12 @@
 name: clarify
 model-tier: reasoning
 reasoning-effort: high
-workers: [devils-advocate]
+workers: [domain-expert, devils-advocate]
 description: >
   Use to run an ambiguity sweep over a written spec.md and close every under-specified
   point before planning or design proceeds — so two engineers can't reasonably build
   different things from the same spec. Triggers on "clarify {slug}", "find ambiguities in
   {slug}", "is the spec ready", "sharpen the spec", "/sdd:clarify {slug}",
-  "прояснити специфікацію", "знайди неоднозначності {slug}", "чи готова специфікація".
   Re-reads the spec, dispatches a clean-context devil's-advocate subagent to list where the
   spec forks, then for each ambiguity uses the available user-input mechanism to RESOLVE it (tighten §1/§5/§6
   in place) or DEFER it (→ §8 Open questions with owner+due). Output: an updated
@@ -40,6 +39,9 @@ PM + Tech Lead (the spec's co-authors resolve their own ambiguities). PM owns va
 
 ## Protocol
 
+0. Run [`../_shared/domain-expert-first.md`](../_shared/domain-expert-first.md) for every ambiguity
+   about domain meaning or behavior. Ask the KB-backed expert before asking the human; if the KB
+   cannot answer, present its escalation block rather than proposing a resolution as fact.
 1. **Gate + set interview depth.** `test -f docs/features/<slug>/spec.md` → missing = refuse with the pointer above. Read the spec (and `## Glossary` from both root `CONTEXT.md` and `docs/features/<slug>/CONTEXT.md` if present — per-feature wins — to suppress false "undefined-term" hits). **Then set the interview depth (the opening question):** read `interview_depth` from `.ai/sdd.local.md` if present (else default medium), and — unless a `--depth=easy|medium|hard` arg was passed — ask ONE depth-selection question through the available user-input mechanism phrased per [`../_shared/ask-style.md`](../_shared/ask-style.md), with the saved/medium value as the «(Recommended)» first option. The level tunes how adversarially the sweep + subagent hunt (easy: only build-divergence that changes behavior, with assumptions stated; medium: balanced; hard: adversarial, every fork surfaced) and the per-finding question volume → [`../_shared/interview-depth.md`](../_shared/interview-depth.md).
 2. **First-pass self-sweep.** Walk the spec against the eight ambiguity classes in [`./references/ambiguity-checks.md`](./references/ambiguity-checks.md) (vague-term / unmeasured-NFR / under-specified-AC / unstated-assumption / conflicting-requirement / undefined-term / missing-actor / scope-creep). Note candidate findings with a `§ref` each — do not edit yet.
 3. **Devil's-advocate subagent (the core mechanic).** Dispatch the [`devils-advocate`](../../agents/devils-advocate.md) agent — the named `devils-advocate` worker role (uses the reasoning tier + high effort; clean context — it never saw this conversation). Pass only the slug + the spec path; it Reads `spec.md` (and `CONTEXT.md`) itself — inline nothing — and returns "two engineers would diverge here" findings. The dispatch follows the contract in [`../_shared/agent-roster.md`](../_shared/agent-roster.md) (clean-isolated context, cited findings, `NO_AMBIGUITIES` if none). If `devils-advocate` is unavailable at runtime, fall back to a `general-purpose` Agent with the prompt body in [`./references/ambiguity-checks.md`](./references/ambiguity-checks.md).

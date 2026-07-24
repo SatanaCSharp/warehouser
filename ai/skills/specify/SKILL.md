@@ -2,13 +2,14 @@
 name: specify
 model-tier: reasoning
 reasoning-effort: high
-workers: [critic, researcher, strategist, analyst, devils-advocate]
+workers:
+  [domain-expert, critic, researcher, strategist, analyst, devils-advocate]
 description: >
   Use to turn a raw feature idea into a reviewed spec.md — a lightweight Socratic interview
   front (capture the idea, deep-dive the problem) merged with a full product spec (context,
   goals, user stories, acceptance criteria, NFRs, KPIs). Triggers on "specify {slug}",
   "spec for {slug}", "write the spec", "capture this idea", "draft requirements for {slug}",
-  "/sdd:specify {slug}", "напиши специфікацію {slug}", "опиши вимоги", "зафіксуй ідею".
+  "/sdd:specify {slug}".
   Opens by setting the interview-depth dial (easy/medium/hard), drafts from templates/spec.md,
   validates each acceptance criterion Socratically, runs a clean-context critic, then writes
   docs/features/{slug}/spec.md. The ideation analyses (competitive research, strategic approaches,
@@ -28,6 +29,10 @@ Turns a one-line idea into a reviewed `spec.md`: a lightweight interview capture
 The Socratic machine, the critic, and the size matrix are **shared** — this skill keeps only its deltas:
 → [`../_shared/socratic-loop.md`](../_shared/socratic-loop.md) · [`../_shared/critic.md`](../_shared/critic.md) · [`../_shared/size-matrix.md`](../_shared/size-matrix.md) · [`../_shared/ask-style.md`](../_shared/ask-style.md)
 
+Before the interview or draft introduces a domain rule, run the mandatory
+[`domain-expert-first`](../_shared/domain-expert-first.md) protocol. Ask domain questions first;
+unanswered or conflicting rules are escalated and never entered in the assumptions ledger.
+
 Depth governs question volume + autonomy (and which ideation analyses run) → [`../_shared/interview-depth.md`](../_shared/interview-depth.md).
 
 Document prose follows the project's `artifact_language` setting — section headings, frontmatter and machine tokens stay English → [`../_shared/artifact-language.md`](../_shared/artifact-language.md).
@@ -45,6 +50,9 @@ PM + Tech Lead (co-authors). PM drives goals / non-goals / KPIs; Tech Lead drive
 
 ## Protocol
 
+0. **Domain gate.** Identify the domain concepts in the request and existing artifacts, turn every
+   unstated rule into a question, and dispatch `domain-expert`. Proceed only with sourced answers
+   and preserve their citations in the spec. Re-run the gate for new questions from the interview.
 1. **Read context + set interview depth.** If a `CONTEXT.md` exists (read **both** repo-root and `docs/features/<slug>/` — per-feature wins on conflict), load its `## Glossary` as session state (canonical roles + terms). If `.size` exists, read it to size the spec's depth; **if it's absent, establish it now** — run the **`classify-size` protocol inline** (the canon: [`../classify-size/SKILL.md`](../classify-size/SKILL.md) + the mapping in [`../_shared/size-matrix.md`](../_shared/size-matrix.md)); the four signals fold into one bundled request through the available user-input mechanism here (at `easy` depth, take the matrix default and record it in the assumptions ledger), and write `docs/features/<slug>/.size` **+ `.route`** (the route defaults from the size — XS/S→`quick`, M→`standard`, L/XL→`full` — and is confirmed in the **same** bundled question, per the Routes table in [`../_shared/size-matrix.md`](../_shared/size-matrix.md)) — so every later stage reads a real size instead of silently defaulting to M (the gap that otherwise surfaces only at `plan-tests`). `classify-size` stays the utility to re-classify when scope changes. If `docs/architecture-map.md` exists (from `survey`), read it so the spec is **architecture-aware** — it informs §1 Context, §2 Constraints, and §3 Non-goals (what the existing system already does / can't do). Absent → suggest running `survey` first, but proceed (the spec is product-level and can be captured without it). **Do not leak the map's tech into §5 AC** — AC stay business-observable; the map shapes constraints, not acceptance criteria. **Then set the interview depth (the opening question):** **if `.ai/sdd.local.md` is absent, auto-create it** with the documented default frontmatter (every key + its allowed values explained inline) and patch `.gitignore` → [`../implement/references/settings.md`](../implement/references/settings.md); then read `interview_depth` from it (else default medium), and — unless a `--depth=easy|medium|hard` arg was passed (which skips the question) — ask ONE depth-selection question through the available user-input mechanism phrased per [`../_shared/ask-style.md`](../_shared/ask-style.md), with the saved/medium value as the «(Recommended)» first option, overridable per run. The chosen level governs the step-2 deep-dive volume, the step-3 ideation suite, and the step-7 Socratic volume → [`../_shared/interview-depth.md`](../_shared/interview-depth.md). (Completeness — §5's 5-type AC floor — is unaffected by depth.)
 2. **Capture the idea (interview front).** One request through the available user-input mechanism for the raw idea in 1–3 sentences (persist verbatim as the baseline). Then a Socratic deep-dive across problem clarity / success criteria / constraints / strategic fit, delivered in batches of 2–3 — its volume scales with the depth dial (easy: only the few un-inferable ones, then a stated-assumptions ledger; medium: 3–5; hard: walk every angle, foreground each trade-off). Phrase every question per [`../_shared/ask-style.md`](../_shared/ask-style.md).
 3. **Ideation suite (depth-gated, named subagents).** Run the ideation analyses as named-subagent dispatches gated by the **interview-depth dial** (size as a secondary trimmer) → [`./references/ideation.md`](./references/ideation.md): **easy** → skip the suite (deep-dive only; the chosen approach is recorded as a ledger assumption); **medium** → `researcher` (`sdd:researcher`, competitive/web) + `devils-advocate` (`sdd:devils-advocate`, failure-mode mode); **hard** → full suite `researcher` + `strategist` (`sdd:strategist`, 3 approaches) + `analyst` (`sdd:analyst`, multi-perspective) + `devils-advocate`, then the agent-proposed RICE/feasibility confirm. Analyses stay **product-level** (no tech names — that's `design`); the confirmed recommendation becomes §1 ¶3. Dispatch with the matching named worker role per [`../_shared/agent-roster.md`](../_shared/agent-roster.md) (`general-purpose` fallback); `researcher` needs web — accept its `RESEARCH_LIMITED` output as a noted gap if web is unavailable.
