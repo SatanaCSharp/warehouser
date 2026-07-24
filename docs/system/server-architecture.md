@@ -116,6 +116,9 @@ imported through a package subpath. Files in `rest/dtos/` are thin NestJS adapte
 `createZodDto`; they must not redefine the network shape. Follow
 [Adding and using contracts](guides/adding-and-using-contracts.md).
 
+Server predicates, typed errors, assertion factories, propagation, and global NestJS exception
+mapping follow [Server error handling](guides/server-error-handling.md).
+
 ### BullMQ handlers
 
 `handlers/jobs.controller.ts` consumes BullMQ jobs and invokes commands. A job payload describes a

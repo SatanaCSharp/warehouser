@@ -18,6 +18,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@nestjs/bullmq": "catalog:",
     "@nestjs/common": "catalog:",
     "@nestjs/config": "catalog:",
     "@nestjs/core": "catalog:",
@@ -27,6 +28,7 @@
     "@nestjs/platform-express": "catalog:",
     "@warehouser/contracts": "workspace:*",
     "@warehouser/shared-types": "workspace:*",
+    "bullmq": "catalog:",
     "pg": "catalog:",
     "nestjs-zod": "catalog:",
     "passport": "catalog:",

@@ -10,6 +10,15 @@ Install dependencies:
 pnpm install
 ```
 
+Start PostgreSQL and Redis:
+
+```sh
+docker compose up -d
+```
+
+Copy `apps/server/.env.example` to `apps/server/.env` when setting up the server for the first time.
+The example values connect to the local Compose services.
+
 Common commands:
 
 ```sh
