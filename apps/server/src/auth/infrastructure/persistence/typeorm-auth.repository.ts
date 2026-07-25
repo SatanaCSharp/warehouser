@@ -10,6 +10,7 @@ import {
   SessionId,
   SessionRepository,
 } from 'auth/domain';
+import { AuthEmailAlreadyRegisteredError } from 'auth/errors';
 import { DataSource } from 'typeorm';
 
 interface AccountRow {
@@ -35,29 +36,43 @@ export class TypeOrmAuthRepository
   constructor(private readonly dataSource: DataSource) {}
 
   async registerIdentity(identity: RegisteredIdentity): Promise<void> {
-    await this.dataSource.transaction(async (manager) => {
-      const now = new Date();
-      await manager.query(
-        `INSERT INTO accounts
+    try {
+      await this.dataSource.transaction(async (manager) => {
+        const now = new Date();
+        await manager.query(
+          `INSERT INTO accounts
           (id, user_id, normalized_email, password_hash,
            password_hash_algorithm, password_hash_parameters, created_at, updated_at)
          VALUES ($1, $1, $2, $3, $4, $5, $6, $6)`,
-        [
-          identity.account.id.value,
-          identity.account.email.value,
-          identity.account.credential.hash,
-          identity.account.credential.algorithm,
-          JSON.stringify(identity.account.credential.parameters),
-          now,
-        ],
-      );
-      await manager.query(
-        `INSERT INTO users (id, account_id, created_at, updated_at)
+          [
+            identity.account.id.value,
+            identity.account.email.value,
+            identity.account.credential.hash,
+            identity.account.credential.algorithm,
+            JSON.stringify(identity.account.credential.parameters),
+            now,
+          ],
+        );
+        await manager.query(
+          `INSERT INTO users (id, account_id, created_at, updated_at)
          VALUES ($1, $1, $2, $2)`,
-        [identity.user.id.value, now],
-      );
-      await this.insertSession(manager, identity.session);
-    });
+          [identity.user.id.value, now],
+        );
+        await this.insertSession(manager, identity.session);
+      });
+    } catch (error) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        error.code === '23505' &&
+        'constraint' in error &&
+        error.constraint === 'uq_accounts_normalized_email'
+      ) {
+        throw new AuthEmailAlreadyRegisteredError();
+      }
+      throw error;
+    }
   }
 
   async findByNormalizedEmail(email: EmailAddress): Promise<Account | null> {
