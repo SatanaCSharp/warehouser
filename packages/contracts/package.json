@@ -8,19 +8,30 @@
   "engines": {
     "node": ">=24.14.0"
   },
-  "exports": {},
+  "exports": {
+    "./auth": {
+      "types": "./dist/auth/index.d.ts",
+      "default": "./dist/auth/index.js"
+    }
+  },
   "scripts": {
     "build": "tsc && tsc-alias",
     "lint": "eslint 'src/**/*.ts' --max-warnings=0",
-    "lint:fix": "eslint 'src/**/*.ts' --max-warnings=0 --fix"
+    "lint:fix": "eslint 'src/**/*.ts' --max-warnings=0 --fix",
+    "test": "jest"
   },
   "dependencies": {
     "zod": "catalog:"
   },
   "devDependencies": {
     "@warehouser/eslint-config-base": "workspace:*",
+    "@warehouser/jest-config-preset": "workspace:*",
     "@warehouser/tsconfig": "workspace:*",
+    "@types/jest": "catalog:",
+    "@types/node": "catalog:",
     "eslint": "catalog:",
+    "jest": "catalog:",
+    "ts-jest": "catalog:",
     "tsc-alias": "catalog:",
     "typescript": "catalog:"
   }
