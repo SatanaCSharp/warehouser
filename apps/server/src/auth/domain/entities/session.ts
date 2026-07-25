@@ -10,6 +10,11 @@ export interface EstablishSession {
   readonly establishedAt: Date;
 }
 
+export interface RestoreSession extends EstablishSession {
+  readonly expiresAt: Date;
+  readonly revokedAt: Date | null;
+}
+
 export class Session {
   private constructor(
     readonly id: SessionId,
@@ -28,6 +33,17 @@ export class Session {
       new Date(input.establishedAt),
       new Date(input.establishedAt.getTime() + SESSION_LIFETIME_MS),
       null,
+    );
+  }
+
+  static restore(input: RestoreSession): Session {
+    return new Session(
+      input.id,
+      input.accountId,
+      input.digest,
+      new Date(input.establishedAt),
+      new Date(input.expiresAt),
+      input.revokedAt === null ? null : new Date(input.revokedAt),
     );
   }
 
