@@ -236,6 +236,9 @@ importers:
       '@warehouser/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types
+      '@warehouser/utils':
+        specifier: workspace:*
+        version: link:../../packages/utils
       bullmq:
         specifier: 'catalog:'
         version: 5.81.1

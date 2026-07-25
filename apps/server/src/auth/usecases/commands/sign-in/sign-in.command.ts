@@ -1,3 +1,4 @@
+import { assert } from '@warehouser/utils/asserts';
 import {
   AccountRepository,
   EmailAddress,
@@ -7,10 +8,11 @@ import {
   SessionId,
   SessionRepository,
 } from 'auth/domain';
+import { isSupportedEmail } from 'auth/domain/predicates/is-supported-email';
+import { isSupportedPassword } from 'auth/domain/predicates/is-supported-password';
 import {
   AuthInvalidCredentialsError,
   AuthInvalidInputError,
-  AuthSessionUnavailableError,
 } from 'auth/errors';
 import { PasswordHasher } from 'auth/services/password-hasher';
 import { AuthIdGenerator, Clock } from 'auth/services/runtime';
@@ -31,26 +33,23 @@ export class SignInCommand {
     email: string;
     password: string;
   }): Promise<RegisteredSession> {
-    let email: EmailAddress;
-    let password: Password;
-    try {
-      email = EmailAddress.create(input.email);
-      password = Password.create(input.password);
-    } catch {
-      throw new AuthInvalidInputError();
-    }
+    assert(
+      isSupportedEmail(input.email) && isSupportedPassword(input.password),
+      AuthInvalidInputError(),
+    );
+    const email = EmailAddress.create(input.email);
+    const password = Password.create(input.password);
 
     const account = await this.accounts.findByNormalizedEmail(email);
     if (!account) {
       await this.passwordHasher.dummyVerify(password.value);
-      throw new AuthInvalidCredentialsError();
     }
+    assert(account !== null, AuthInvalidCredentialsError());
 
-    if (
-      !(await this.passwordHasher.verify(password.value, account.credential))
-    ) {
-      throw new AuthInvalidCredentialsError();
-    }
+    assert(
+      await this.passwordHasher.verify(password.value, account.credential),
+      AuthInvalidCredentialsError(),
+    );
 
     const generated = this.sessionSecrets.generate();
     const session = Session.establish({
@@ -59,11 +58,7 @@ export class SignInCommand {
       digest: SessionDigest.create(generated.digest),
       establishedAt: this.clock.now(),
     });
-    try {
-      await this.sessions.create(session);
-    } catch {
-      throw new AuthSessionUnavailableError();
-    }
+    await this.sessions.create(session);
 
     return {
       userId: account.userId.value,

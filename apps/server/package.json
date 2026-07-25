@@ -28,6 +28,7 @@
     "@nestjs/platform-express": "catalog:",
     "@warehouser/contracts": "workspace:*",
     "@warehouser/shared-types": "workspace:*",
+    "@warehouser/utils": "workspace:*",
     "bullmq": "catalog:",
     "pg": "catalog:",
     "nestjs-zod": "catalog:",

@@ -1,12 +1,9 @@
+import { ErrorCode } from '@warehouser/shared-types/enums';
 import {
   AccountRepository,
   AuthRegistrationRepository,
   RegisteredIdentity,
 } from 'auth/domain';
-import {
-  AuthEmailAlreadyRegisteredError,
-  AuthInvalidInputError,
-} from 'auth/errors';
 import { PasswordHasher } from 'auth/services/password-hasher';
 import {
   GeneratedSessionSecret,
@@ -103,7 +100,7 @@ describe('RegisterCommand', () => {
 
     await expect(
       command.execute({ email: 'invalid', password: 'short' }),
-    ).rejects.toBeInstanceOf(AuthInvalidInputError);
+    ).rejects.toMatchObject({ code: ErrorCode.AUTH_INVALID_INPUT });
     expect(registrations.registered).toBeUndefined();
   });
 
@@ -116,7 +113,9 @@ describe('RegisterCommand', () => {
         email: 'person@example.test',
         password: 'password',
       }),
-    ).rejects.toBeInstanceOf(AuthEmailAlreadyRegisteredError);
+    ).rejects.toMatchObject({
+      code: ErrorCode.AUTH_EMAIL_ALREADY_REGISTERED,
+    });
   });
 
   it('propagates registration failure without reporting authenticated access', async () => {

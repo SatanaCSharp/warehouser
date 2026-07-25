@@ -1,6 +1,6 @@
+import { ErrorCode } from '@warehouser/shared-types/enums';
 import { Account, SessionRepository } from 'auth/domain';
 import {
-  AuthInvalidCredentialsError,
   AuthSessionUnavailableError,
   AuthSignOutUnavailableError,
 } from 'auth/errors';
@@ -47,7 +47,7 @@ describe('auth session use cases', () => {
 
     await expect(
       command.execute({ email: 'missing@example.test', password: 'password' }),
-    ).rejects.toBeInstanceOf(AuthInvalidCredentialsError);
+    ).rejects.toMatchObject({ code: ErrorCode.AUTH_INVALID_CREDENTIALS });
     expect(dummyVerified).toBe(true);
   });
 
@@ -80,7 +80,10 @@ describe('auth session use cases', () => {
     const command = new SignInCommand(
       { findByNormalizedEmail: () => Promise.resolve(account) },
       { verify: () => Promise.resolve(true) } as PasswordHasher,
-      { create: () => Promise.reject(new Error('db')) } as SessionRepository,
+      {
+        create: () =>
+          Promise.reject(AuthSessionUnavailableError(new Error('db'))),
+      } as SessionRepository,
       {
         generate: () => ({ secret: 'secret', digest: Buffer.alloc(32, 1) }),
       } as SessionSecrets,
@@ -93,7 +96,7 @@ describe('auth session use cases', () => {
 
     await expect(
       command.execute({ email: 'person@example.test', password: 'password' }),
-    ).rejects.toBeInstanceOf(AuthSessionUnavailableError);
+    ).rejects.toMatchObject({ code: ErrorCode.AUTH_SESSION_UNAVAILABLE });
   });
 
   it('restores identity only and signs out idempotently', async () => {
@@ -118,11 +121,13 @@ describe('auth session use cases', () => {
       }).execute('secret'),
     ).resolves.toBeUndefined();
 
-    repository.revokeByDigest = jest.fn().mockRejectedValue(new Error('db'));
+    repository.revokeByDigest = jest
+      .fn()
+      .mockRejectedValue(AuthSignOutUnavailableError(new Error('db')));
     await expect(
       new SignOutCommand(repository, secrets, {
         now: () => new Date('2026-07-25T10:00:00.000Z'),
       }).execute('secret'),
-    ).rejects.toBeInstanceOf(AuthSignOutUnavailableError);
+    ).rejects.toMatchObject({ code: ErrorCode.AUTH_SIGN_OUT_UNAVAILABLE });
   });
 });

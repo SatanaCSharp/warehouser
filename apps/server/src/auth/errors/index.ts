@@ -1,23 +1,25 @@
-export class AuthInvalidInputError extends Error {
-  readonly code = 'auth.invalid_input';
-}
+import { ErrorCode } from '@warehouser/shared-types/enums';
+import { ApplicationError, SystemError } from '@warehouser/shared-types/errors';
 
-export class AuthEmailAlreadyRegisteredError extends Error {
-  readonly code = 'auth.email_already_registered';
-}
+export const AuthInvalidInputError = (
+  fields?: Readonly<Record<string, string>>,
+): ApplicationError =>
+  new ApplicationError(
+    ErrorCode.AUTH_INVALID_INPUT,
+    fields ? { fields } : undefined,
+  );
 
-export class AuthInvalidCredentialsError extends Error {
-  readonly code = 'auth.invalid_credentials';
-}
+export const AuthEmailAlreadyRegisteredError = (): ApplicationError =>
+  new ApplicationError(ErrorCode.AUTH_EMAIL_ALREADY_REGISTERED);
 
-export class AuthRegistrationUnavailableError extends Error {
-  readonly code = 'auth.registration_unavailable';
-}
+export const AuthInvalidCredentialsError = (): ApplicationError =>
+  new ApplicationError(ErrorCode.AUTH_INVALID_CREDENTIALS);
 
-export class AuthSessionUnavailableError extends Error {
-  readonly code = 'auth.session_unavailable';
-}
+export const AuthRegistrationUnavailableError = (cause: unknown): SystemError =>
+  new SystemError(ErrorCode.AUTH_REGISTRATION_UNAVAILABLE, cause);
 
-export class AuthSignOutUnavailableError extends Error {
-  readonly code = 'auth.sign_out_unavailable';
-}
+export const AuthSessionUnavailableError = (cause: unknown): SystemError =>
+  new SystemError(ErrorCode.AUTH_SESSION_UNAVAILABLE, cause);
+
+export const AuthSignOutUnavailableError = (cause: unknown): SystemError =>
+  new SystemError(ErrorCode.AUTH_SIGN_OUT_UNAVAILABLE, cause);

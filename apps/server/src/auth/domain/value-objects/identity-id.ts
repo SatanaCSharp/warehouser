@@ -1,11 +1,11 @@
+import { assert } from '@warehouser/utils/asserts';
+
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
 abstract class IdentityId {
   protected constructor(readonly value: string) {
-    if (!UUID_PATTERN.test(value)) {
-      throw new Error('Identity ID must be a UUID');
-    }
+    assert(UUID_PATTERN.test(value), 'Identity ID must be a UUID');
   }
 }
 

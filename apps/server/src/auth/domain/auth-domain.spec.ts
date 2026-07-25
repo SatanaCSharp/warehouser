@@ -1,3 +1,4 @@
+import { AssertionError } from '@warehouser/shared-types/errors';
 import {
   Account,
   AccountId,
@@ -17,7 +18,7 @@ describe('auth domain', () => {
       'test.user@example.test',
     );
     expect(() => EmailAddress.create('invalid@example')).toThrow(
-      'Unsupported email address',
+      AssertionError,
     );
   });
 
@@ -25,12 +26,8 @@ describe('auth domain', () => {
     const password = '  🔐pass  ';
 
     expect(Password.create(password).value).toBe(password);
-    expect(() => Password.create('🔐'.repeat(7))).toThrow(
-      'Password must contain 8 to 128 Unicode code points',
-    );
-    expect(() => Password.create('🔐'.repeat(129))).toThrow(
-      'Password must contain 8 to 128 Unicode code points',
-    );
+    expect(() => Password.create('🔐'.repeat(7))).toThrow(AssertionError);
+    expect(() => Password.create('🔐'.repeat(129))).toThrow(AssertionError);
   });
 
   it('requires Account and User to share one identity', () => {

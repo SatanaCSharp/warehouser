@@ -1,10 +1,12 @@
 import { AssertionError } from '@warehouser/shared-types/errors';
 
-/** Checking invariants, condition has to be always TRUE otherwise it throws an error  */
-export const assert = <TError extends Error>(
+type Assert = <TError extends Error>(
   condition: boolean,
   message: string | TError | (() => TError),
-): void => {
+) => asserts condition;
+
+/** Checking invariants, condition has to be always TRUE otherwise it throws an error  */
+export const assert: Assert = (condition, message) => {
   if (condition) {
     return;
   }

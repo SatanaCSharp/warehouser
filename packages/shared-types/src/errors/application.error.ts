@@ -1,5 +1,8 @@
 export class ApplicationError extends Error {
-  constructor(message: string) {
-    super(message);
+  constructor(
+    readonly code: string,
+    readonly details?: Readonly<Record<string, unknown>>,
+  ) {
+    super(code);
   }
 }

@@ -1,3 +1,4 @@
+import { assert } from '@warehouser/utils/asserts';
 import {
   Account,
   AccountRepository,
@@ -9,6 +10,8 @@ import {
   SessionId,
   User,
 } from 'auth/domain';
+import { isSupportedEmail } from 'auth/domain/predicates/is-supported-email';
+import { isSupportedPassword } from 'auth/domain/predicates/is-supported-password';
 import {
   AuthEmailAlreadyRegisteredError,
   AuthInvalidInputError,
@@ -39,18 +42,22 @@ export class RegisterCommand {
   ) {}
 
   async execute(input: RegisterInput): Promise<RegisteredSession> {
-    let email: EmailAddress;
-    let password: Password;
-    try {
-      email = EmailAddress.create(input.email);
-      password = Password.create(input.password);
-    } catch {
-      throw new AuthInvalidInputError();
-    }
+    const emailSupported = isSupportedEmail(input.email);
+    const passwordSupported = isSupportedPassword(input.password);
+    assert(
+      emailSupported && passwordSupported,
+      AuthInvalidInputError({
+        ...(!emailSupported && { email: 'unsupported' }),
+        ...(!passwordSupported && { password: 'unsupported' }),
+      }),
+    );
+    const email = EmailAddress.create(input.email);
+    const password = Password.create(input.password);
 
-    if (await this.accounts.findByNormalizedEmail(email)) {
-      throw new AuthEmailAlreadyRegisteredError();
-    }
+    assert(
+      !(await this.accounts.findByNormalizedEmail(email)),
+      AuthEmailAlreadyRegisteredError(),
+    );
 
     const credential = await this.passwordHasher.hash(password.value);
     const account = Account.create({

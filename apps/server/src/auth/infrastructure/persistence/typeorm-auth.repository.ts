@@ -10,7 +10,12 @@ import {
   SessionId,
   SessionRepository,
 } from 'auth/domain';
-import { AuthEmailAlreadyRegisteredError } from 'auth/errors';
+import {
+  AuthEmailAlreadyRegisteredError,
+  AuthRegistrationUnavailableError,
+  AuthSessionUnavailableError,
+  AuthSignOutUnavailableError,
+} from 'auth/errors';
 import { DataSource } from 'typeorm';
 
 interface AccountRow {
@@ -69,9 +74,9 @@ export class TypeOrmAuthRepository
         'constraint' in error &&
         error.constraint === 'uq_accounts_normalized_email'
       ) {
-        throw new AuthEmailAlreadyRegisteredError();
+        throw AuthEmailAlreadyRegisteredError();
       }
-      throw error;
+      throw AuthRegistrationUnavailableError(error);
     }
   }
 
@@ -99,19 +104,28 @@ export class TypeOrmAuthRepository
   }
 
   async create(session: Session): Promise<void> {
-    await this.insertSession(this.dataSource.manager, session);
+    try {
+      await this.insertSession(this.dataSource.manager, session);
+    } catch (error) {
+      throw AuthSessionUnavailableError(error);
+    }
   }
 
   async findValidByDigest(
     digest: SessionDigest,
     at: Date,
   ): Promise<Session | null> {
-    const rows: SessionRow[] = await this.dataSource.query(
-      `SELECT id, account_id, secret_digest, established_at, expires_at, revoked_at
-         FROM sessions
-        WHERE secret_digest = $1 AND revoked_at IS NULL AND expires_at > $2`,
-      [Buffer.from(digest.value), at],
-    );
+    let rows: SessionRow[];
+    try {
+      rows = await this.dataSource.query(
+        `SELECT id, account_id, secret_digest, established_at, expires_at, revoked_at
+           FROM sessions
+          WHERE secret_digest = $1 AND revoked_at IS NULL AND expires_at > $2`,
+        [Buffer.from(digest.value), at],
+      );
+    } catch (error) {
+      throw AuthSessionUnavailableError(error);
+    }
     const row = rows[0];
     if (!row) {
       return null;
@@ -128,11 +142,16 @@ export class TypeOrmAuthRepository
   }
 
   async revokeByDigest(digest: SessionDigest, at: Date): Promise<boolean> {
-    const result: [unknown[], number] = await this.dataSource.query(
-      `UPDATE sessions SET revoked_at = $2
-        WHERE secret_digest = $1 AND revoked_at IS NULL AND expires_at > $2`,
-      [Buffer.from(digest.value), at],
-    );
+    let result: [unknown[], number];
+    try {
+      result = await this.dataSource.query(
+        `UPDATE sessions SET revoked_at = $2
+          WHERE secret_digest = $1 AND revoked_at IS NULL AND expires_at > $2`,
+        [Buffer.from(digest.value), at],
+      );
+    } catch (error) {
+      throw AuthSignOutUnavailableError(error);
+    }
     return result[1] === 1;
   }
 

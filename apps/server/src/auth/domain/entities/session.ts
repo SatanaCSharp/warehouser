@@ -1,3 +1,4 @@
+import { assert } from '@warehouser/utils/asserts';
 import { AccountId, SessionId } from 'auth/domain/value-objects/identity-id';
 import { SessionDigest } from 'auth/domain/value-objects/session-digest';
 
@@ -55,9 +56,10 @@ export class Session {
     if (this.revokedAt !== null) {
       return this;
     }
-    if (at < this.establishedAt) {
-      throw new Error('Session cannot be revoked before establishment');
-    }
+    assert(
+      at >= this.establishedAt,
+      'Session cannot be revoked before establishment',
+    );
 
     return new Session(
       this.id,

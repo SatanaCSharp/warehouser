@@ -1,5 +1,4 @@
 import { SessionDigest, SessionRepository } from 'auth/domain';
-import { AuthSignOutUnavailableError } from 'auth/errors';
 import { Clock } from 'auth/services/runtime';
 import { SessionSecrets } from 'auth/services/session-secrets';
 
@@ -15,13 +14,9 @@ export class SignOutCommand {
       return;
     }
 
-    try {
-      await this.sessions.revokeByDigest(
-        SessionDigest.create(this.sessionSecrets.digest(secret)),
-        this.clock.now(),
-      );
-    } catch {
-      throw new AuthSignOutUnavailableError();
-    }
+    await this.sessions.revokeByDigest(
+      SessionDigest.create(this.sessionSecrets.digest(secret)),
+      this.clock.now(),
+    );
   }
 }
