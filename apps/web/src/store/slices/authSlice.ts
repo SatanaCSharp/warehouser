@@ -2,40 +2,39 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import type { RootState } from 'store/index';
 
-type IUser = Record<string, unknown>;
+export type AuthStatus = 'anonymous' | 'authenticated' | 'unknown';
+export type AuthUser = { id: string };
 
 export interface AuthState {
-  user: Record<string, unknown> | null;
-  token: string | null;
+  status: AuthStatus;
+  user: AuthUser | null;
 }
 
-const initialState: AuthState = { user: null, token: null };
+const initialState: AuthState = { status: 'unknown', user: null };
 
 export const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
-    setCredentials(
-      state,
-      action: PayloadAction<{ user: IUser; token: string }>,
-    ) {
-      state.user = action.payload.user;
-      state.token = action.payload.token;
-    },
-    clearCredentials(state) {
+    authBecameAnonymous(state) {
+      state.status = 'anonymous';
       state.user = null;
-      state.token = null;
+    },
+    authBecameAuthenticated(state, action: PayloadAction<AuthUser>) {
+      state.status = 'authenticated';
+      state.user = action.payload;
     },
   },
 });
 
-export const { setCredentials, clearCredentials } = authSlice.actions;
+export const { authBecameAnonymous, authBecameAuthenticated } =
+  authSlice.actions;
 
-export const selectCurrentUser = (state: RootState): IUser | null =>
+export const selectAuthStatus = (state: RootState): AuthStatus =>
+  state.auth.status;
+export const selectCurrentUser = (state: RootState): AuthUser | null =>
   state.auth.user;
-export const selectAuthToken = (state: RootState): string | null =>
-  state.auth.token;
 export const selectIsAuthenticated = (state: RootState): boolean =>
-  selectAuthToken(state) !== null;
+  selectAuthStatus(state) === 'authenticated';
 
 export default authSlice.reducer;

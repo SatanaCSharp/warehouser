@@ -3,7 +3,7 @@ import { RouterProvider } from '@tanstack/react-router';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createAppRouter } from 'router';
 import { makeStore } from 'store';
@@ -32,13 +32,25 @@ const renderRoute = (initialEntry: string): RenderedRoute => {
 };
 
 describe('router', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it('renders LoginForm at /login', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(new Response(null, { status: 204 })),
+    );
     renderRoute('/login');
 
     expect(await screen.findByLabelText('Email')).toBeInTheDocument();
   });
 
   it('redirects anonymous users from the protected home route', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(new Response(null, { status: 204 })),
+    );
     const { router } = renderRoute('/');
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/login'));
@@ -46,6 +58,17 @@ describe('router', () => {
   });
 
   it('updates RTK auth state and enters the protected route after login', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce(new Response(null, { status: 204 }))
+        .mockResolvedValueOnce(
+          Response.json({
+            user: { id: '00000000-0000-4000-8000-000000000001' },
+          }),
+        ),
+    );
     const user = userEvent.setup();
     const { router, store } = renderRoute('/login');
 
@@ -55,11 +78,39 @@ describe('router', () => {
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/'));
     expect(store.getState().auth).toEqual({
-      user: { email: 'jane@example.com' },
-      token: 'mock-token',
+      status: 'authenticated',
+      user: { id: '00000000-0000-4000-8000-000000000001' },
     });
     expect(
       await screen.findByText('Design System Preview'),
     ).toBeInTheDocument();
+  });
+
+  it('waits for restoration and admits a valid session to the protected route', async () => {
+    let resolveSession: ((response: Response) => void) | undefined;
+    const fetchMock = vi.fn(
+      () =>
+        new Promise<Response>((resolve) => {
+          resolveSession = resolve;
+        }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    const { router, store } = renderRoute('/');
+
+    expect(store.getState().auth.status).toBe('unknown');
+    expect(screen.queryByText('Design System Preview')).not.toBeInTheDocument();
+
+    resolveSession?.(
+      Response.json({
+        user: { id: '00000000-0000-4000-8000-000000000001' },
+      }),
+    );
+
+    expect(
+      await screen.findByText('Design System Preview'),
+    ).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/');
+    expect(store.getState().auth.status).toBe('authenticated');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

@@ -7,6 +7,10 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
+      '@warehouser/contracts/auth': path.resolve(
+        __dirname,
+        '../../packages/contracts/src/auth/index.ts',
+      ),
       src: path.resolve(__dirname, './src'),
       App: path.resolve(__dirname, './src/App.tsx'),
       guards: path.resolve(__dirname, './src/guards'),
