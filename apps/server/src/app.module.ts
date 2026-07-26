@@ -2,6 +2,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuthModule } from 'auth/auth.module';
 import { createTypeOrmOptions } from 'shared/database/typeorm.options.js';
 import { createBullMqOptions } from 'shared/queue/bullmq.options.js';
 
@@ -12,6 +13,7 @@ import { createBullMqOptions } from 'shared/queue/bullmq.options.js';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => createTypeOrmOptions(config),
     }),
+    AuthModule,
     BullModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => createBullMqOptions(config),
