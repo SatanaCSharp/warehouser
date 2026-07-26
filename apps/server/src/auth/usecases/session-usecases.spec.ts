@@ -1,14 +1,22 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
-import { Account, SessionRepository } from 'auth/domain';
+import { Account } from 'auth/domain/entities/account';
+import { Session } from 'auth/domain/entities/session';
+import { SessionId } from 'auth/domain/value-objects/identity-id';
+import { SessionDigest } from 'auth/domain/value-objects/session-digest';
 import {
   AuthSessionUnavailableError,
   AuthSignOutUnavailableError,
-} from 'auth/errors';
-import { PasswordHasher } from 'auth/services/password-hasher';
-import { SessionSecrets } from 'auth/services/session-secrets';
-import { SignInCommand } from 'auth/usecases/commands/sign-in';
-import { SignOutCommand } from 'auth/usecases/commands/sign-out';
-import { CurrentSessionQuery } from 'auth/usecases/queries/current-session';
+} from 'auth/errors/auth.errors';
+import { toAccountEntity } from 'auth/mappers/account.mapper';
+import { toSessionEntity } from 'auth/mappers/session.mapper';
+import { SignInCommand } from 'auth/usecases/commands/sign-in.command';
+import { SignOutCommand } from 'auth/usecases/commands/sign-out.command';
+import { CurrentSessionQuery } from 'auth/usecases/queries/current-session.query';
+import { AuthRuntime } from 'auth/utils/auth-runtime';
+import { PasswordHasher } from 'auth/utils/node-scrypt-password-hasher';
+import { GeneratedSessionSecret } from 'auth/utils/opaque-session-secrets';
+import { AccountRepository } from 'shared/domain/repositories/account.repository';
+import { SessionRepository } from 'shared/domain/repositories/session.repository';
 
 const account = Account.create({
   id: '00000000-0000-4000-8000-000000000001',
@@ -20,11 +28,32 @@ const account = Account.create({
   },
 });
 
+const runtime = {
+  now: () => new Date('2026-07-25T10:00:00.000Z'),
+  identityId: jest.fn(),
+  sessionId: () => '00000000-0000-4000-8000-000000000002',
+} as AuthRuntime;
+
+const generateSecret = (): GeneratedSessionSecret => ({
+  secret: 'secret',
+  digest: Buffer.alloc(32, 1),
+});
+const digestSecret = (): Buffer => Buffer.alloc(32, 1);
+const accountEntity = toAccountEntity(
+  account,
+  new Date('2026-07-25T10:00:00.000Z'),
+);
+
 describe('auth session use cases', () => {
   it('uses one generic failure and dummy verification for unknown accounts', async () => {
     let dummyVerified = false;
     const command = new SignInCommand(
-      { findByNormalizedEmail: () => Promise.resolve(null) },
+      {
+        findByNormalizedEmail: () => Promise.resolve(null),
+      } as unknown as AccountRepository,
+      {
+        createSession: jest.fn(),
+      } as unknown as SessionRepository,
       {
         hash: jest.fn(),
         verify: jest.fn(),
@@ -34,15 +63,8 @@ describe('auth session use cases', () => {
         },
         needsUpgrade: jest.fn(),
       },
-      { create: jest.fn() } as unknown as SessionRepository,
-      {
-        generate: () => ({ secret: 'secret', digest: Buffer.alloc(32, 1) }),
-      } as SessionSecrets,
-      { now: () => new Date('2026-07-25T10:00:00.000Z') },
-      {
-        identityId: jest.fn(),
-        sessionId: () => '00000000-0000-4000-8000-000000000002',
-      },
+      generateSecret,
+      runtime,
     );
 
     await expect(
@@ -52,19 +74,18 @@ describe('auth session use cases', () => {
   });
 
   it('establishes a durable session only after valid credentials', async () => {
-    const sessions = { create: jest.fn().mockResolvedValue(undefined) };
+    const repository = {
+      findByNormalizedEmail: () => Promise.resolve(accountEntity),
+      createSession: jest.fn().mockResolvedValue(undefined),
+    };
     const command = new SignInCommand(
-      { findByNormalizedEmail: () => Promise.resolve(account) },
-      { verify: () => Promise.resolve(true) } as PasswordHasher,
-      sessions as unknown as SessionRepository,
+      repository as unknown as AccountRepository,
+      repository as unknown as SessionRepository,
       {
-        generate: () => ({ secret: 'secret', digest: Buffer.alloc(32, 1) }),
-      } as SessionSecrets,
-      { now: () => new Date('2026-07-25T10:00:00.000Z') },
-      {
-        identityId: jest.fn(),
-        sessionId: () => '00000000-0000-4000-8000-000000000002',
-      },
+        verify: () => Promise.resolve(true),
+      } as PasswordHasher,
+      generateSecret,
+      runtime,
     );
 
     await expect(
@@ -73,25 +94,23 @@ describe('auth session use cases', () => {
       userId: account.id.value,
       sessionSecret: 'secret',
     });
-    expect(sessions.create).toHaveBeenCalledTimes(1);
+    expect(repository.createSession).toHaveBeenCalledTimes(1);
   });
 
   it('withholds access when session persistence fails', async () => {
     const command = new SignInCommand(
-      { findByNormalizedEmail: () => Promise.resolve(account) },
-      { verify: () => Promise.resolve(true) } as PasswordHasher,
       {
-        create: () =>
+        findByNormalizedEmail: () => Promise.resolve(accountEntity),
+      } as unknown as AccountRepository,
+      {
+        createSession: () =>
           Promise.reject(AuthSessionUnavailableError(new Error('db'))),
-      } as SessionRepository,
+      } as unknown as SessionRepository,
       {
-        generate: () => ({ secret: 'secret', digest: Buffer.alloc(32, 1) }),
-      } as SessionSecrets,
-      { now: () => new Date('2026-07-25T10:00:00.000Z') },
-      {
-        identityId: jest.fn(),
-        sessionId: () => '00000000-0000-4000-8000-000000000002',
-      },
+        verify: () => Promise.resolve(true),
+      } as PasswordHasher,
+      generateSecret,
+      runtime,
     );
 
     await expect(
@@ -102,32 +121,32 @@ describe('auth session use cases', () => {
   it('restores identity only and signs out idempotently', async () => {
     const repository = {
       findValidByDigest: jest.fn().mockResolvedValue({
-        accountId: account.id,
+        ...toSessionEntity(
+          Session.establish({
+            id: SessionId.create('00000000-0000-4000-8000-000000000002'),
+            accountId: account.id,
+            digest: SessionDigest.create(Buffer.alloc(32, 1)),
+            establishedAt: new Date('2026-07-25T10:00:00.000Z'),
+          }),
+        ),
       }),
       revokeByDigest: jest.fn().mockResolvedValue(false),
     } as unknown as SessionRepository;
-    const secrets = {
-      digest: () => Buffer.alloc(32, 1),
-    } as SessionSecrets;
 
     await expect(
-      new CurrentSessionQuery(repository, secrets, {
-        now: () => new Date('2026-07-25T10:00:00.000Z'),
-      }).execute('secret'),
+      new CurrentSessionQuery(repository, digestSecret, runtime).execute(
+        'secret',
+      ),
     ).resolves.toEqual({ userId: account.id.value });
     await expect(
-      new SignOutCommand(repository, secrets, {
-        now: () => new Date('2026-07-25T10:00:00.000Z'),
-      }).execute('secret'),
+      new SignOutCommand(repository, digestSecret, runtime).execute('secret'),
     ).resolves.toBeUndefined();
 
     repository.revokeByDigest = jest
       .fn()
       .mockRejectedValue(AuthSignOutUnavailableError(new Error('db')));
     await expect(
-      new SignOutCommand(repository, secrets, {
-        now: () => new Date('2026-07-25T10:00:00.000Z'),
-      }).execute('secret'),
+      new SignOutCommand(repository, digestSecret, runtime).execute('secret'),
     ).rejects.toMatchObject({ code: ErrorCode.AUTH_SIGN_OUT_UNAVAILABLE });
   });
 });

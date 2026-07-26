@@ -1,16 +1,16 @@
 import { AssertionError } from '@warehouser/shared-types/errors';
+import { toAuthenticatedPrincipal } from 'auth/domain/authenticated-principal';
+import { Account } from 'auth/domain/entities/account';
+import { Session } from 'auth/domain/entities/session';
+import { User } from 'auth/domain/entities/user';
+import { EmailAddress } from 'auth/domain/value-objects/email-address';
 import {
-  Account,
   AccountId,
-  EmailAddress,
-  Password,
-  Session,
-  SessionDigest,
   SessionId,
-  toAuthenticatedPrincipal,
-  User,
   UserId,
-} from 'auth/domain';
+} from 'auth/domain/value-objects/identity-id';
+import { Password } from 'auth/domain/value-objects/password';
+import { SessionDigest } from 'auth/domain/value-objects/session-digest';
 
 describe('auth domain', () => {
   it('normalizes a supported email while preserving its validated shape', () => {
