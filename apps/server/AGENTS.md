@@ -6,6 +6,7 @@ Before modifying `apps/server`, read:
 - `package.json`
 - `../../docs/system/server-architecture.md`
 - `../../docs/system/guides/adding-a-server-module.md`
+- `../../docs/system/guides/creating-a-server-repository.md`
 - `../../docs/system/guides/adding-and-using-contracts.md`
 - `../../docs/system/guides/server-error-handling.md`
 
@@ -19,8 +20,9 @@ Follow the modular-monolith boundaries in those documents.
 - Put reusable server-local pure fabrications under `src/shared/`.
 - Use `@warehouser/contracts` for every REST request and response schema.
 - Reuse `@warehouser/utils`; move a generally reusable utility there instead of duplicating it.
-- Use PostgreSQL through TypeORM and keep it behind repository interfaces so persistence details do
-  not affect domain, use-case, REST, or job-handler code.
+- Use PostgreSQL through TypeORM. Put concrete repositories in
+  `src/shared/domain/repositories/`; every new repository must extend `BaseRepository<TEntity>` as
+  described in `creating-a-server-repository.md`.
 - Use reviewed TypeORM migrations for schema changes; never enable runtime synchronization.
 - Use BullMQ for asynchronous operations and scheduled jobs when its infrastructure is introduced.
   Do not add a second job or cron mechanism.
@@ -30,3 +32,30 @@ Follow the modular-monolith boundaries in those documents.
 - Follow `server-error-handling.md` for predicate placement, named error factories, typed errors,
   propagation, NestJS exception filtering, logging, and safe REST error responses. Do not add
   routine `try/catch` blocks to controllers or endpoint handlers.
+
+<!-- init-agent:start -->
+
+## Repository AI adapter (managed)
+
+The canonical AI instructions under `../../ai/` and `ai/` are the source of truth. Load relevant
+skills from `.agents/skills/` on demand. Root reusable commands and specialized worker roles remain
+available through `../../ai/commands/` and `../../ai/agents/`; read them directly when applicable
+because Codex has no separate project-local command or worker adapter here.
+
+Pencil is required only for user-facing UI work described in `../../README.md` and
+`../../ai/skills/design-ui/`; it is not required for backend-only server work.
+
+Credential policy:
+
+- `.env.example` files are the only credential or environment-value files coding agents may read.
+- Do not read, print, search, summarize, diff, or otherwise inspect `.env`, `.env.*` (except
+  `.env.example`), or any file known or suspected to contain credentials, tokens, keys, passwords,
+  or secrets.
+- If a required ignored local environment file is missing, you may copy the applicable
+  `.env.example` to the expected path without displaying either file. Never overwrite an existing
+  local environment file.
+- Use only placeholder or development credentials documented in `.env.example` in setup commands
+  or generated guidance. Never copy sensitive local values into instructions, prompts, logs,
+  reports, or tracked files.
+
+<!-- init-agent:end -->

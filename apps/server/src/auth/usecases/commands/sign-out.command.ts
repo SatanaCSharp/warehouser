@@ -1,10 +1,10 @@
-import { type AuthRuntime, authRuntime } from 'auth/utils/auth-runtime';
-import { digestSessionSecret } from 'auth/utils/opaque-session-secrets';
-import { SessionRepository } from 'shared/domain/repositories/session.repository';
+import { type AuthRuntime, authRuntime } from 'auth/domain/auth-runtime';
+import { digestSessionSecret } from 'auth/domain/security/session-secret';
+import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
 
 export class SignOutCommand {
   constructor(
-    private readonly sessions: SessionRepository,
+    private readonly authentication: AuthenticationRepository,
     private readonly digestSecret: (
       secret: string,
     ) => Buffer = digestSessionSecret,
@@ -16,7 +16,7 @@ export class SignOutCommand {
       return;
     }
 
-    await this.sessions.revokeByDigest(
+    await this.authentication.revokeSessionByDigest(
       this.digestSecret(secret),
       this.runtime.now(),
     );

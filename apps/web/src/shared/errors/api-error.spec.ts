@@ -11,7 +11,7 @@ describe('API error presentation', () => {
     });
 
     expect(getTranslatedApiError(error, translate)).toBe(
-      'translated:errors.auth.invalidCredentials',
+      'translated:auth.invalidCredentials',
     );
   });
 

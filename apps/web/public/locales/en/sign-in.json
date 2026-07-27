@@ -1,0 +1,11 @@
+{
+  "form": {
+    "email": {
+      "label": "Email"
+    },
+    "password": {
+      "label": "Password"
+    },
+    "submit": "Log in"
+  }
+}

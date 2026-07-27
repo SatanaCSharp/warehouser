@@ -1,13 +1,13 @@
+import { type AuthRuntime, authRuntime } from 'auth/domain/auth-runtime';
 import { toAuthenticatedPrincipal } from 'auth/domain/authenticated-principal';
+import { toSession } from 'auth/domain/mappers/session.mapper';
+import { digestSessionSecret } from 'auth/domain/security/session-secret';
 import { UserId } from 'auth/domain/value-objects/identity-id';
-import { toSession } from 'auth/mappers/session.mapper';
-import { type AuthRuntime, authRuntime } from 'auth/utils/auth-runtime';
-import { digestSessionSecret } from 'auth/utils/opaque-session-secrets';
-import { SessionRepository } from 'shared/domain/repositories/session.repository';
+import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
 
 export class CurrentSessionQuery {
   constructor(
-    private readonly sessions: SessionRepository,
+    private readonly authentication: AuthenticationRepository,
     private readonly digestSecret: (
       secret: string,
     ) => Buffer = digestSessionSecret,
@@ -19,7 +19,7 @@ export class CurrentSessionQuery {
       return null;
     }
 
-    const sessionEntity = await this.sessions.findValidByDigest(
+    const sessionEntity = await this.authentication.findValidSessionByDigest(
       this.digestSecret(secret),
       this.runtime.now(),
     );

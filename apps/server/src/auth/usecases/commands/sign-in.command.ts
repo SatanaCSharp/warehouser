@@ -1,28 +1,27 @@
 import { assert } from '@warehouser/utils/asserts';
+import { type AuthRuntime, authRuntime } from 'auth/domain/auth-runtime';
 import { Session } from 'auth/domain/entities/session';
+import {
+  AuthInvalidCredentialsError,
+  AuthInvalidInputError,
+} from 'auth/domain/errors/auth.errors';
+import { toAccount } from 'auth/domain/mappers/account.mapper';
+import { toSessionEntity } from 'auth/domain/mappers/session.mapper';
 import { isSupportedEmail } from 'auth/domain/predicates/is-supported-email';
 import { isSupportedPassword } from 'auth/domain/predicates/is-supported-password';
+import {
+  dummyVerifyPassword,
+  verifyPassword,
+} from 'auth/domain/security/password';
+import {
+  type GeneratedSessionSecret,
+  generateSessionSecret,
+} from 'auth/domain/security/session-secret';
 import { EmailAddress } from 'auth/domain/value-objects/email-address';
 import { SessionId } from 'auth/domain/value-objects/identity-id';
 import { Password } from 'auth/domain/value-objects/password';
 import { SessionDigest } from 'auth/domain/value-objects/session-digest';
-import {
-  AuthInvalidCredentialsError,
-  AuthInvalidInputError,
-} from 'auth/errors/auth.errors';
-import { toAccount } from 'auth/mappers/account.mapper';
-import { toSessionEntity } from 'auth/mappers/session.mapper';
-import { type AuthRuntime, authRuntime } from 'auth/utils/auth-runtime';
-import {
-  createNodeScryptPasswordHasher,
-  type PasswordHasher,
-} from 'auth/utils/node-scrypt-password-hasher';
-import {
-  type GeneratedSessionSecret,
-  generateSessionSecret,
-} from 'auth/utils/opaque-session-secrets';
-import { AccountRepository } from 'shared/domain/repositories/account.repository';
-import { SessionRepository } from 'shared/domain/repositories/session.repository';
+import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
 
 export interface SignedInSession {
   readonly userId: string;
@@ -32,9 +31,9 @@ export interface SignedInSession {
 
 export class SignInCommand {
   constructor(
-    private readonly accounts: AccountRepository,
-    private readonly sessions: SessionRepository,
-    private readonly passwordHasher: PasswordHasher = createNodeScryptPasswordHasher(),
+    private readonly authentication: AuthenticationRepository,
+    private readonly verify: typeof verifyPassword = verifyPassword,
+    private readonly dummyVerify: typeof dummyVerifyPassword = dummyVerifyPassword,
     private readonly generateSecret: () => GeneratedSessionSecret = generateSessionSecret,
     private readonly runtime: AuthRuntime = authRuntime,
   ) {}
@@ -50,17 +49,16 @@ export class SignInCommand {
     const email = EmailAddress.create(input.email);
     const password = Password.create(input.password);
 
-    const accountEntity = await this.accounts.findByNormalizedEmail(
-      email.value,
-    );
+    const accountEntity =
+      await this.authentication.findAccountByNormalizedEmail(email.value);
     if (!accountEntity) {
-      await this.passwordHasher.dummyVerify(password.value);
+      await this.dummyVerify(password.value);
     }
     assert(accountEntity !== null, AuthInvalidCredentialsError());
     const account = toAccount(accountEntity);
 
     assert(
-      await this.passwordHasher.verify(password.value, account.credential),
+      await this.verify(password.value, account.credential),
       AuthInvalidCredentialsError(),
     );
 
@@ -71,7 +69,7 @@ export class SignInCommand {
       digest: SessionDigest.create(generated.digest),
       establishedAt: this.runtime.now(),
     });
-    await this.sessions.createSession(toSessionEntity(session));
+    await this.authentication.createSession(toSessionEntity(session));
 
     return {
       userId: account.userId.value,

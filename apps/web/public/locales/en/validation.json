@@ -1,0 +1,10 @@
+{
+  "email": {
+    "invalid": "Enter a valid email address",
+    "required": "Enter your email address."
+  },
+  "password": {
+    "length": "Password must be at least 8 characters",
+    "required": "Enter your password."
+  }
+}

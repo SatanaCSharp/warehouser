@@ -28,7 +28,7 @@ Classify server failures as:
 
 Represent conditions as pure predicate functions and enforce them with `assert` from
 `@warehouser/utils/asserts`. Application and system errors are created by named error factory
-functions placed close to their server usage under `src/<module-name>/errors/`. Stable,
+functions placed close to their server usage under `src/<module-name>/domain/errors/`. Stable,
 machine-readable error codes live in `packages/shared-types/src` when they are part of a shared
 boundary. REST error envelopes are schemas in `@warehouser/contracts`.
 
@@ -38,8 +38,10 @@ HTTP statuses and the shared response contract, records the complete internal fa
 prevents sensitive implementation details from reaching the response.
 
 Transport validation remains the responsibility of the global Zod pipe. Authentication and
-transport-level authorization remain guard responsibilities. Domain and application code do not
-depend on NestJS HTTP exception classes.
+transport-level authorization remain guard responsibilities. All server guards are shared
+transport infrastructure and must be placed in `apps/server/src/shared/guards/`; do not place
+guards inside feature modules. Domain and application code do not depend on NestJS HTTP exception
+classes.
 
 ## Alternatives
 
@@ -61,6 +63,8 @@ depend on NestJS HTTP exception classes.
   diagnostics in server logs.
 - Predicate and named error-factory placement makes business conditions and failure construction
   discoverable by module.
+- Central guard placement prevents feature modules from defining competing transport authorization
+  boundaries.
 - Shared codes and REST contracts create a stable boundary without prescribing how any client
   application presents or stores errors.
 - The global exception filter becomes critical infrastructure and requires focused tests for every

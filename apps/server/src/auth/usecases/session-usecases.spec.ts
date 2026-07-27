@@ -1,22 +1,20 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
+import { AuthRuntime } from 'auth/domain/auth-runtime';
 import { Account } from 'auth/domain/entities/account';
 import { Session } from 'auth/domain/entities/session';
-import { SessionId } from 'auth/domain/value-objects/identity-id';
-import { SessionDigest } from 'auth/domain/value-objects/session-digest';
 import {
   AuthSessionUnavailableError,
   AuthSignOutUnavailableError,
-} from 'auth/errors/auth.errors';
-import { toAccountEntity } from 'auth/mappers/account.mapper';
-import { toSessionEntity } from 'auth/mappers/session.mapper';
+} from 'auth/domain/errors/auth.errors';
+import { toAccountEntity } from 'auth/domain/mappers/account.mapper';
+import { toSessionEntity } from 'auth/domain/mappers/session.mapper';
+import { GeneratedSessionSecret } from 'auth/domain/security/session-secret';
+import { SessionId } from 'auth/domain/value-objects/identity-id';
+import { SessionDigest } from 'auth/domain/value-objects/session-digest';
 import { SignInCommand } from 'auth/usecases/commands/sign-in.command';
 import { SignOutCommand } from 'auth/usecases/commands/sign-out.command';
 import { CurrentSessionQuery } from 'auth/usecases/queries/current-session.query';
-import { AuthRuntime } from 'auth/utils/auth-runtime';
-import { PasswordHasher } from 'auth/utils/node-scrypt-password-hasher';
-import { GeneratedSessionSecret } from 'auth/utils/opaque-session-secrets';
-import { AccountRepository } from 'shared/domain/repositories/account.repository';
-import { SessionRepository } from 'shared/domain/repositories/session.repository';
+import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
 
 const account = Account.create({
   id: '00000000-0000-4000-8000-000000000001',
@@ -49,19 +47,13 @@ describe('auth session use cases', () => {
     let dummyVerified = false;
     const command = new SignInCommand(
       {
-        findByNormalizedEmail: () => Promise.resolve(null),
-      } as unknown as AccountRepository,
-      {
+        findAccountByNormalizedEmail: () => Promise.resolve(null),
         createSession: jest.fn(),
-      } as unknown as SessionRepository,
-      {
-        hash: jest.fn(),
-        verify: jest.fn(),
-        dummyVerify: () => {
-          dummyVerified = true;
-          return Promise.resolve();
-        },
-        needsUpgrade: jest.fn(),
+      } as unknown as AuthenticationRepository,
+      jest.fn(),
+      () => {
+        dummyVerified = true;
+        return Promise.resolve();
       },
       generateSecret,
       runtime,
@@ -75,15 +67,13 @@ describe('auth session use cases', () => {
 
   it('establishes a durable session only after valid credentials', async () => {
     const repository = {
-      findByNormalizedEmail: () => Promise.resolve(accountEntity),
+      findAccountByNormalizedEmail: () => Promise.resolve(accountEntity),
       createSession: jest.fn().mockResolvedValue(undefined),
     };
     const command = new SignInCommand(
-      repository as unknown as AccountRepository,
-      repository as unknown as SessionRepository,
-      {
-        verify: () => Promise.resolve(true),
-      } as PasswordHasher,
+      repository as unknown as AuthenticationRepository,
+      () => Promise.resolve(true),
+      jest.fn(),
       generateSecret,
       runtime,
     );
@@ -100,15 +90,12 @@ describe('auth session use cases', () => {
   it('withholds access when session persistence fails', async () => {
     const command = new SignInCommand(
       {
-        findByNormalizedEmail: () => Promise.resolve(accountEntity),
-      } as unknown as AccountRepository,
-      {
+        findAccountByNormalizedEmail: () => Promise.resolve(accountEntity),
         createSession: () =>
           Promise.reject(AuthSessionUnavailableError(new Error('db'))),
-      } as unknown as SessionRepository,
-      {
-        verify: () => Promise.resolve(true),
-      } as PasswordHasher,
+      } as unknown as AuthenticationRepository,
+      () => Promise.resolve(true),
+      jest.fn(),
       generateSecret,
       runtime,
     );
@@ -120,7 +107,7 @@ describe('auth session use cases', () => {
 
   it('restores identity only and signs out idempotently', async () => {
     const repository = {
-      findValidByDigest: jest.fn().mockResolvedValue({
+      findValidSessionByDigest: jest.fn().mockResolvedValue({
         ...toSessionEntity(
           Session.establish({
             id: SessionId.create('00000000-0000-4000-8000-000000000002'),
@@ -130,8 +117,8 @@ describe('auth session use cases', () => {
           }),
         ),
       }),
-      revokeByDigest: jest.fn().mockResolvedValue(false),
-    } as unknown as SessionRepository;
+      revokeSessionByDigest: jest.fn().mockResolvedValue(false),
+    } as unknown as AuthenticationRepository;
 
     await expect(
       new CurrentSessionQuery(repository, digestSecret, runtime).execute(
@@ -142,7 +129,7 @@ describe('auth session use cases', () => {
       new SignOutCommand(repository, digestSecret, runtime).execute('secret'),
     ).resolves.toBeUndefined();
 
-    repository.revokeByDigest = jest
+    repository.revokeSessionByDigest = jest
       .fn()
       .mockRejectedValue(AuthSignOutUnavailableError(new Error('db')));
     await expect(

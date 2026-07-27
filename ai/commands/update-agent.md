@@ -82,9 +82,9 @@ sources.
 7. Preserve the existing project-local MCP adapter. Compare its `pencil` and `notebooklm` entries
    with `.mcp.json` and `init-agent` requirements, and update only those managed server fields when
    they are stale. Add either canonical entry when it is missing, translating it to the target's
-   project-local format as needed. Preserve unrelated servers and settings. Verify Node.js 18 or
-   newer and `npx` are available for NotebookLM, but do not fetch/start the package or perform
-   browser authentication. Do not require Pencil desktop to be running.
+   project-local format as needed. Preserve unrelated servers and settings. Verify
+   `notebooklm-mcp` and its companion `nlm` CLI are available, but do not start the server or
+   perform browser authentication. Do not require Pencil desktop to be running.
 8. If a newly canonical surface is unsupported by the target, keep it reachable through the
    target's managed main instruction block and report the fallback. If a destination is occupied
    by an unmanaged file or link, report the collision and continue with unaffected entries.
@@ -101,8 +101,8 @@ sources.
 ## Safety and maintenance rules
 
 - Do not modify canonical files under root or app `ai/` directories during synchronization.
-- Do not install globally. Do not eagerly fetch or start the canonical NotebookLM package during
-  synchronization; its `npx` invocation may fetch it on first use.
+- Do not install packages. Do not start the canonical NotebookLM server or perform browser
+  authentication during synchronization.
 - Do not overwrite or delete hand-written agent configuration, unmanaged links, or content outside
   a managed block.
 - Do not copy credentials, authentication data, session tokens, user-global configuration, or

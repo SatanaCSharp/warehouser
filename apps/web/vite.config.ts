@@ -13,6 +13,7 @@ export default defineConfig({
       ),
       src: path.resolve(__dirname, './src'),
       App: path.resolve(__dirname, './src/App.tsx'),
+      i18n: path.resolve(__dirname, './src/i18n.ts'),
       guards: path.resolve(__dirname, './src/guards'),
       modules: path.resolve(__dirname, './src/modules'),
       router: path.resolve(__dirname, './src/router.ts'),

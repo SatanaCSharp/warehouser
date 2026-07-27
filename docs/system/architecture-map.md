@@ -19,16 +19,21 @@ owning application.
 `apps/web/src/main.tsx` mounts the provider chain. `router.ts` assembles manually declared routes
 from route-owned modules. Redux Toolkit is the cross-module client-state owner and the RTK store is
 passed into TanStack Router context so route guards can read current state through selectors.
+i18next is initialized in `apps/web/src/i18n.ts` before React renders. The HTTP backend loads
+mirrored locale/namespace files from `apps/web/public/locales/<language>/<namespace>.json`.
 
 See [Frontend architecture](frontend-architecture.md) for boundaries and
-[Adding a web module](guides/adding-a-web-module.md) for the extension procedure.
+[Adding a web module](guides/adding-a-web-module.md) and
+[Adding and maintaining web localization](guides/adding-and-maintaining-web-localization.md) for
+extension procedures.
 
 ## Server application
 
 `apps/server` is evolving into a NestJS modular monolith organized by entity-related feature
 modules. REST and BullMQ worker processes share application and domain code while keeping their
-transport adapters separate. PostgreSQL is connected through TypeORM, with persistence hidden
-behind repository interfaces and runtime schema synchronization disabled.
+transport adapters separate. PostgreSQL is connected through TypeORM; specialized concrete
+repositories encapsulate cohesive, potentially multi-entity operations, and runtime schema
+synchronization is disabled.
 
 See [Server architecture](server-architecture.md) for target boundaries and
 [Adding a server module](guides/adding-a-server-module.md) for the extension procedure.
@@ -37,3 +42,5 @@ See [Server architecture](server-architecture.md) for target boundaries and
 
 - [Schema validation with Zod](adr/12-07-2026-schema-validation-with-zod.md)
 - [PostgreSQL persistence with TypeORM](adr/21-07-2026-postgresql-with-typeorm.md)
+- [Structured server logging with Pino](adr/27-07-2026-structured-logging-with-pino.md)
+- [Public centralized web translations](adr/27-07-2026-bundled-centralized-web-translations.md)

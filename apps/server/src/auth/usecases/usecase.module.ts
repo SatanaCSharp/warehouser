@@ -1,12 +1,11 @@
 import { Module } from '@nestjs/common';
-import { AuthRegistrationService } from 'auth/services/auth-registration.service';
+import { AuthRegistrationService } from 'auth/domain/services/auth-registration.service';
 import { RegisterCommand } from 'auth/usecases/commands/register.command';
 import { SignInCommand } from 'auth/usecases/commands/sign-in.command';
 import { SignOutCommand } from 'auth/usecases/commands/sign-out.command';
 import { CurrentSessionQuery } from 'auth/usecases/queries/current-session.query';
 import { TransactionModule } from 'shared/database/transaction.module';
-import { AccountRepository } from 'shared/domain/repositories/account.repository';
-import { SessionRepository } from 'shared/domain/repositories/session.repository';
+import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
 
 @Module({
   imports: [TransactionModule],
@@ -14,28 +13,29 @@ import { SessionRepository } from 'shared/domain/repositories/session.repository
     AuthRegistrationService,
     {
       provide: RegisterCommand,
-      inject: [AccountRepository, AuthRegistrationService],
+      inject: [AuthenticationRepository, AuthRegistrationService],
       useFactory: (
-        accounts: AccountRepository,
+        authentication: AuthenticationRepository,
         registrations: AuthRegistrationService,
-      ) => new RegisterCommand(accounts, registrations),
+      ) => new RegisterCommand(authentication, registrations),
     },
     {
       provide: SignInCommand,
-      inject: [AccountRepository, SessionRepository],
-      useFactory: (accounts: AccountRepository, sessions: SessionRepository) =>
-        new SignInCommand(accounts, sessions),
+      inject: [AuthenticationRepository],
+      useFactory: (authentication: AuthenticationRepository) =>
+        new SignInCommand(authentication),
     },
     {
       provide: SignOutCommand,
-      inject: [SessionRepository],
-      useFactory: (sessions: SessionRepository) => new SignOutCommand(sessions),
+      inject: [AuthenticationRepository],
+      useFactory: (authentication: AuthenticationRepository) =>
+        new SignOutCommand(authentication),
     },
     {
       provide: CurrentSessionQuery,
-      inject: [SessionRepository],
-      useFactory: (sessions: SessionRepository) =>
-        new CurrentSessionQuery(sessions),
+      inject: [AuthenticationRepository],
+      useFactory: (authentication: AuthenticationRepository) =>
+        new CurrentSessionQuery(authentication),
     },
   ],
   exports: [

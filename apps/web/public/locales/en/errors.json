@@ -1,0 +1,14 @@
+{
+  "api": {
+    "network": "Check your connection and try again.",
+    "unexpected": "Something went wrong. Try again."
+  },
+  "auth": {
+    "emailAlreadyRegistered": "This email is already registered.",
+    "invalidCredentials": "The email or password is incorrect.",
+    "invalidInput": "Correct the highlighted authentication fields.",
+    "registrationUnavailable": "Sign-up did not complete. Try again.",
+    "sessionUnavailable": "Sign-in could not establish a session. Try again.",
+    "signOutUnavailable": "Sign-out did not complete. Try again."
+  }
+}

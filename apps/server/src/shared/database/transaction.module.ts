@@ -7,9 +7,7 @@ import { TransactionExecutor } from 'shared/database/transaction-executor.servic
 import { AccountEntity } from 'shared/domain/entities/account.entity';
 import { SessionEntity } from 'shared/domain/entities/session.entity';
 import { UserEntity } from 'shared/domain/entities/user.entity';
-import { AccountRepository } from 'shared/domain/repositories/account.repository';
-import { SessionRepository } from 'shared/domain/repositories/session.repository';
-import { UserRepository } from 'shared/domain/repositories/user.repository';
+import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
 
 @Global()
 @Module({
@@ -21,16 +19,12 @@ import { UserRepository } from 'shared/domain/repositories/user.repository';
     DbTransactionContext,
     DbTransactionService,
     TransactionExecutor,
-    AccountRepository,
-    UserRepository,
-    SessionRepository,
+    AuthenticationRepository,
   ],
   exports: [
     DbTransactionContext,
     DbTransactionService,
-    AccountRepository,
-    SessionRepository,
-    UserRepository,
+    AuthenticationRepository,
   ],
 })
 export class TransactionModule {}

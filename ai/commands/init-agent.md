@@ -53,7 +53,7 @@ with init-agent`. Preserve directory structure so references and bundled assets 
    - invokable commands or prompts;
    - specialized workers/subagents, if supported.
    - MCP server configuration, including the target-specific Pencil agent identifier when Pencil
-     requires one and an `npx`-based stdio server definition for NotebookLM.
+     requires one and a `notebooklm-mcp` stdio server definition for NotebookLM.
 4. Print the resolved source-to-destination mapping before writing. If a surface is unsupported,
    keep its instructions reachable through the target's main project instruction file and report
    the fallback.
@@ -61,9 +61,9 @@ with init-agent`. Preserve directory structure so references and bundled assets 
    - inspect `.mcp.json` and any existing target-local MCP configuration before changing either;
    - merge or update both `mcpServers.pencil` and `mcpServers.notebooklm` (or their target-native
      equivalents), preserving unrelated MCP servers and hand-written settings;
-   - configure `notebooklm` as the cross-platform stdio command from `.mcp.json`; verify Node.js
-     18 or newer and `npx` are available, but do not run browser authentication during
-     initialization;
+   - configure `notebooklm` as the cross-platform stdio command from `.mcp.json`; verify
+     `notebooklm-mcp` and its companion `nlm` CLI are available, but do not run browser
+     authentication during initialization;
    - keep NotebookLM authentication, browser profiles, cookies, and other session data in the
      package's user-local storage. Never copy or commit them to the repository;
    - resolve the installed Pencil desktop MCP executable for the current operating system and
@@ -110,16 +110,15 @@ with init-agent`. Preserve directory structure so references and bundled assets 
    project-local MCP servers named `pencil` and `notebooklm`. Do not require Pencil desktop or a
    NotebookLM login during initialization. When Pencil is running, use the target's MCP inspection
    command to verify that server starts successfully. Do not start `notebooklm` merely to verify
-   configuration because `npx` may fetch the package; report whether its runtime prerequisites are
-   present instead. Show `git status --short` and summarize installed, skipped, namespaced, and
-   stale entries.
+   configuration; report whether `notebooklm-mcp` and `nlm` are present instead. Show
+   `git status --short` and summarize installed, skipped, namespaced, and stale entries.
 
 ## Safety and portability rules
 
 - Be idempotent: running the command twice with unchanged inputs produces no diff.
 - Do not modify anything under a canonical `ai/` directory during installation.
-- Do not install globally. Configuring the canonical `notebooklm` MCP invocation is required, but
-  do not eagerly fetch or start its package during initialization; `npx` may fetch it on first use.
+- Do not install packages. Configuring the canonical `notebooklm` MCP invocation is required, but
+  do not start it or initiate browser authentication during initialization.
 - Do not commit Pencil authentication data, API keys, session tokens, absolute paths copied from a
   different machine, or user-global MCP configuration.
 - Do not inspect existing local environment files while installing an agent. File-existence checks

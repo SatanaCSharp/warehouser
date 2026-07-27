@@ -3,6 +3,7 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from 'app.module.js';
+import { PinoLogger } from 'nestjs-pino';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { configureHttpPlatform } from 'shared/config/http-platform.bootstrap.js';
 import { readHttpPlatformConfig } from 'shared/config/http-platform.config.js';
@@ -20,8 +21,9 @@ async function bootstrap(): Promise<void> {
   );
   const port = process.env.PORT ?? 3001;
   await app.listen(port);
-  // eslint-disable-next-line no-console
-  console.log(`Server running on port: ${port}`);
+  const logger = app.get(PinoLogger);
+  logger.setContext('Bootstrap');
+  logger.info({ port }, 'Server running');
 }
 
 void bootstrap();

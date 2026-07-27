@@ -67,8 +67,9 @@ Restart the coding agent if it reports that configuration or MCP changes require
 
 The repository exposes a project-local `notebooklm` MCP server to every MCP-capable coding agent.
 `.mcp.json` is the agent-neutral definition, and `ai/commands/init-agent.md` translates it into
-the target agent's project-local format alongside Pencil. The server runs with Node.js 18 or newer
-through `npx -y notebooklm-mcp@latest`; `npx` downloads or refreshes the package on first use.
+the target agent's project-local format alongside Pencil. The server is provided by
+[`notebooklm-mcp-cli`](https://github.com/jacob-bd/gemini-notebook-mcp-cli) and runs through the
+installed `notebooklm-mcp` executable.
 
 NotebookLM authentication is a one-time interactive browser flow. After initializing the coding
 agent, ask it to use the `notebooklm` server's authentication setup tool, sign in in the browser

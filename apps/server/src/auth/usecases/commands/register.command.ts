@@ -1,28 +1,25 @@
 import { assert } from '@warehouser/utils/asserts';
+import { type AuthRuntime, authRuntime } from 'auth/domain/auth-runtime';
 import { Account } from 'auth/domain/entities/account';
 import { Session } from 'auth/domain/entities/session';
 import { User } from 'auth/domain/entities/user';
+import {
+  AuthEmailAlreadyRegisteredError,
+  AuthInvalidInputError,
+} from 'auth/domain/errors/auth.errors';
 import { isSupportedEmail } from 'auth/domain/predicates/is-supported-email';
 import { isSupportedPassword } from 'auth/domain/predicates/is-supported-password';
+import { hashPassword } from 'auth/domain/security/password';
+import {
+  type GeneratedSessionSecret,
+  generateSessionSecret,
+} from 'auth/domain/security/session-secret';
+import { AuthRegistrationService } from 'auth/domain/services/auth-registration.service';
 import { EmailAddress } from 'auth/domain/value-objects/email-address';
 import { SessionId } from 'auth/domain/value-objects/identity-id';
 import { Password } from 'auth/domain/value-objects/password';
 import { SessionDigest } from 'auth/domain/value-objects/session-digest';
-import {
-  AuthEmailAlreadyRegisteredError,
-  AuthInvalidInputError,
-} from 'auth/errors/auth.errors';
-import { AuthRegistrationService } from 'auth/services/auth-registration.service';
-import { type AuthRuntime, authRuntime } from 'auth/utils/auth-runtime';
-import {
-  createNodeScryptPasswordHasher,
-  type PasswordHasher,
-} from 'auth/utils/node-scrypt-password-hasher';
-import {
-  type GeneratedSessionSecret,
-  generateSessionSecret,
-} from 'auth/utils/opaque-session-secrets';
-import { AccountRepository } from 'shared/domain/repositories/account.repository';
+import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
 
 export interface RegisterInput {
   readonly email: string;
@@ -37,9 +34,9 @@ export interface RegisteredSession {
 
 export class RegisterCommand {
   constructor(
-    private readonly accounts: AccountRepository,
+    private readonly authentication: AuthenticationRepository,
     private readonly registrations: AuthRegistrationService,
-    private readonly passwordHasher: PasswordHasher = createNodeScryptPasswordHasher(),
+    private readonly hash: typeof hashPassword = hashPassword,
     private readonly generateSecret: () => GeneratedSessionSecret = generateSessionSecret,
     private readonly runtime: AuthRuntime = authRuntime,
   ) {}
@@ -58,11 +55,11 @@ export class RegisterCommand {
     const password = Password.create(input.password);
 
     assert(
-      !(await this.accounts.findByNormalizedEmail(email.value)),
+      !(await this.authentication.findAccountByNormalizedEmail(email.value)),
       AuthEmailAlreadyRegisteredError(),
     );
 
-    const credential = await this.passwordHasher.hash(password.value);
+    const credential = await this.hash(password.value);
     const account = Account.create({
       id: this.runtime.identityId(),
       email: email.value,

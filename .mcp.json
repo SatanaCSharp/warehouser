@@ -5,8 +5,8 @@
       "args": ["--app", "desktop"]
     },
     "notebooklm": {
-      "command": "npx",
-      "args": ["-y", "notebooklm-mcp@latest"]
+      "command": "notebooklm-mcp",
+      "args": []
     }
   }
 }

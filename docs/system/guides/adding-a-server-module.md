@@ -2,7 +2,8 @@
 
 Use this guide when adding an entity-related feature to `apps/server`. Read
 [Server architecture](../server-architecture.md) and
-[Adding and using contracts](adding-and-using-contracts.md) first.
+[Adding and using contracts](adding-and-using-contracts.md) first. When the module needs
+persistence, also follow [Creating a server repository](creating-a-server-repository.md).
 
 ## 1. Choose the owner
 
@@ -18,8 +19,9 @@ src/inventory/
 ├── domain/
 │   ├── entities/
 │   ├── value-objects/
-│   └── repositories/
-├── services/
+│   ├── errors/
+│   ├── mappers/
+│   └── services/
 ├── usecases/
 │   ├── commands/
 │   ├── queries/
@@ -40,26 +42,36 @@ Omit empty directories, controllers, and NestJS modules.
 
 ## 3. Define domain and persistence boundaries
 
-Add entities and value objects without NestJS or persistence decorators. Define repository ports
-in `domain/repositories/` and inject those ports into services or use cases. Keep the TypeORM
-implementation behind the port so persistence details do not leak into callers.
+Add domain entities and value objects without NestJS or persistence decorators. Put TypeORM
+entities under `apps/server/src/shared/domain/entities/`. Create concrete repositories under
+`apps/server/src/shared/domain/repositories/` and specialize each repository around a cohesive
+persistence operation as described in
+[Creating a server repository](creating-a-server-repository.md). A repository may operate on
+several entities when one query, database operation, or method is more efficient. Inject concrete
+repositories into services or use cases; do not add repository ports, a `BaseRepository`, or
+feature-owned persistence adapters.
 
-Place TypeORM persistence entities and repository adapters in a feature-owned infrastructure
-directory. Add schema changes as timestamped migration classes under
-`apps/server/migrations/`; generate, review, apply, and revert them with the server's
-`migration:*` scripts. Runtime synchronization must remain disabled.
+Repositories in `shared/domain/repositories/` must not import from or otherwise know about a
+dedicated feature module. They accept and return shared persistence entities and
+persistence-oriented values only. Put mappings between shared TypeORM entities and feature domain
+objects in `apps/server/src/<feature-name>/domain/mappers/`. Call mappers such as `toSession` and
+`toSessionEntity` from a use case or feature domain service above the repository, never from the
+repository itself.
 
-Do not return persistence documents from a repository. Map them to domain entities or explicit
-application result types inside the persistence adapter.
+Add schema changes as timestamped migration classes under `apps/server/migrations/`; generate,
+review, apply, revert, and apply them again with the server's `migration:*` scripts. Runtime
+synchronization must remain disabled. Do not write tests for migrations.
 
 ## 4. Implement the application use cases
 
 Put writes in `usecases/commands/` and reads in `usecases/queries/`. Put behavior triggered by
 consumed events in `usecases/events/`.
 
-A use case may coordinate domain services and repository ports. Reuse a service when it owns a
-business rule; do not repeat that rule in a controller, handler, or use case. A service must not
-call a command, query, or event use case.
+A use case may coordinate domain services and concrete repositories. Put services in
+`<feature-name>/domain/services/`. Use a service when an operation requires several calls to one
+repository, calls to multiple repositories, or business logic that depends on multiple
+repositories. Reuse a service when it owns a business rule; do not repeat that rule in a controller,
+handler, or use case. A service must not call a command, query, or event use case.
 
 Register the use cases and their dependencies in `usecases/usecase.module.ts`. Export only the
 providers that a transport adapter or another deliberately coupled module needs.
@@ -122,6 +134,10 @@ there and expose it through an existing or new package subpath. Keep server-only
 in `src/shared/types/`; use `packages/shared-types` when another application or package owns a real
 consumer.
 
+Use Lodash for collection, object, and other data-structure operations when it provides the
+operation. Import the needed Lodash function directly and prefer it to a hand-written imperative
+loop or a new custom helper.
+
 Use `src/shared/domain/` only for genuine cross-module pure fabrications. Do not place feature-owned
 entities or repositories there pre-emptively.
 
@@ -136,7 +152,7 @@ src/test/expects/
 src/test/mocks/
 ```
 
-Cover domain invariants, command/query behavior, repository-port interactions, boundary validation,
+Cover domain invariants, command/query behavior, repository interactions, boundary validation,
 and transport delegation. For asynchronous consumers, also cover invalid payloads, duplicate
 delivery/idempotency, retryable failures, and permanent failures.
 
@@ -162,4 +178,9 @@ When contracts or shared utilities change, build and test their packages as well
 - Creating empty handler or REST modules for symmetry.
 - Registering both an in-process cron and a BullMQ schedule.
 - Moving feature-owned code to `shared/` before another module needs it.
+- Importing a feature module or feature-owned domain type from a shared repository.
+- Mapping between persistence and feature domain objects inside a repository.
+- Placing a feature domain service outside `<feature-name>/domain/services/`.
 - Duplicating a utility that already exists in `@warehouser/utils`.
+- Extending `BaseRepository` or splitting a cohesive multi-entity persistence operation into
+  table-shaped repositories.

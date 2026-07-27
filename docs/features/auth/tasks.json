@@ -1,0 +1,248 @@
+{
+  "slug": "auth",
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "Promote and verify the auth schema migration",
+      "layer": "migration",
+      "deps": [],
+      "acs": ["AC-01", "AC-01b", "AC-03", "AC-07", "AC-08", "AC-09"],
+      "dod": "The staged auth migration applies and reverts against PostgreSQL, and integration assertions prove the Account/User bijection, normalized-email uniqueness, and Session constraints.",
+      "files_hint": ["docs/features/auth/migrations/01-create-auth-schema.ts"]
+    },
+    {
+      "id": "T2",
+      "title": "Publish shared auth boundary schemas",
+      "layer": "ports",
+      "deps": [],
+      "acs": [
+        "AC-01",
+        "AC-02",
+        "AC-03",
+        "AC-04",
+        "AC-05",
+        "AC-07",
+        "AC-08",
+        "AC-09"
+      ],
+      "dod": "Contract tests prove every OpenAPI auth request, response, and safe error shape, including Unicode code-point password length and password preservation.",
+      "files_hint": [
+        "packages/contracts/src/auth",
+        "packages/contracts/src/index.ts",
+        "packages/contracts/package.json"
+      ]
+    },
+    {
+      "id": "T3",
+      "title": "Model auth domain invariants and repository ports",
+      "layer": "domain",
+      "deps": [],
+      "acs": [
+        "AC-01",
+        "AC-01b",
+        "AC-02",
+        "AC-03",
+        "AC-04",
+        "AC-05",
+        "AC-07",
+        "AC-08",
+        "AC-09",
+        "AC-10",
+        "AC-11"
+      ],
+      "dod": "Domain unit tests prove email normalization, exact password handling, Account/User pairing, fixed Session expiry and revocation, and that the authenticated principal contains no authorization grants or secrets.",
+      "files_hint": ["apps/server/src/auth/domain"]
+    },
+    {
+      "id": "T4",
+      "title": "Implement credential and opaque-session security adapters",
+      "layer": "infra",
+      "deps": ["T3"],
+      "acs": ["AC-01", "AC-04", "AC-05", "AC-07", "AC-08", "AC-09"],
+      "dod": "Security adapter tests prove reviewed memory-hard hashing and upgrade detection, bounded dummy verification, cryptographically random secrets, digest-only persistence values, and fixed expiry calculation.",
+      "files_hint": [
+        "apps/server/src/auth/services",
+        "apps/server/src/auth/infrastructure/security",
+        "apps/server/package.json",
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "id": "T5",
+      "title": "Implement TypeORM auth persistence adapters",
+      "layer": "infra",
+      "deps": ["T1", "T3"],
+      "acs": ["AC-01", "AC-01b", "AC-03", "AC-04", "AC-07", "AC-08", "AC-09"],
+      "dod": "PostgreSQL integration tests prove atomic registration commit and rollback, concurrent normalized-email uniqueness, valid-session lookup, and idempotent revocation without leaking TypeORM types.",
+      "files_hint": [
+        "apps/server/src/auth/infrastructure/persistence",
+        "apps/server/src/test/factories"
+      ]
+    },
+    {
+      "id": "T6",
+      "title": "Implement atomic registration use case",
+      "layer": "app",
+      "deps": ["T3", "T4", "T5"],
+      "acs": ["AC-01", "AC-01b", "AC-02", "AC-03"],
+      "dod": "Registration use-case tests prove successful linked identity creation, invalid-input rejection, duplicate-email mapping including the concurrency loser, and complete rollback when initial Session persistence fails.",
+      "files_hint": ["apps/server/src/auth/usecases/commands/register"]
+    },
+    {
+      "id": "T7",
+      "title": "Implement sign-in, restoration, and sign-out use cases",
+      "layer": "app",
+      "deps": ["T3", "T4", "T5"],
+      "acs": ["AC-04", "AC-05", "AC-07", "AC-08", "AC-09", "AC-10", "AC-11"],
+      "dod": "Application tests prove generic credential failure, durable Session establishment, valid restoration, anonymous expired/revoked outcomes, current-session-only revocation, and identity-only principals.",
+      "files_hint": [
+        "apps/server/src/auth/usecases/commands/sign-in",
+        "apps/server/src/auth/usecases/commands/sign-out",
+        "apps/server/src/auth/usecases/queries/current-session"
+      ]
+    },
+    {
+      "id": "T8",
+      "title": "Harden credentialed HTTP platform boundaries",
+      "layer": "wiring",
+      "deps": ["T2"],
+      "acs": ["AC-01b", "AC-02", "AC-05", "AC-08", "AC-10", "AC-11"],
+      "dod": "Server bootstrap integration tests prove explicit credentialed-origin handling, safe global error envelopes, credential redaction, and privacy-safe auth outcome telemetry using documented configuration placeholders.",
+      "files_hint": [
+        "apps/server/src/main.ts",
+        "apps/server/src/shared/config",
+        "apps/server/src/shared/errors",
+        "apps/server/src/shared/observability",
+        "apps/server/.env.example"
+      ]
+    },
+    {
+      "id": "T9",
+      "title": "Expose and wire the auth REST boundary",
+      "layer": "ports",
+      "deps": ["T2", "T6", "T7", "T8"],
+      "acs": [
+        "AC-01",
+        "AC-01b",
+        "AC-02",
+        "AC-03",
+        "AC-04",
+        "AC-05",
+        "AC-07",
+        "AC-08",
+        "AC-09",
+        "AC-10",
+        "AC-11"
+      ],
+      "dod": "REST integration tests prove all four OpenAPI operations, cookie issue/expiry attributes, origin enforcement, generic sign-in failure, safe projections, AuthModule composition, and an authentication guard that attaches only userId.",
+      "files_hint": [
+        "apps/server/src/auth/rest",
+        "apps/server/src/auth/auth.module.ts",
+        "apps/server/src/auth/authentication",
+        "apps/server/src/app.module.ts"
+      ]
+    },
+    {
+      "id": "T10",
+      "title": "Build the credentialed web API and feedback boundary",
+      "layer": "infra",
+      "deps": ["T2"],
+      "acs": [
+        "AC-01",
+        "AC-01b",
+        "AC-02",
+        "AC-03",
+        "AC-04",
+        "AC-05",
+        "AC-07",
+        "AC-08",
+        "AC-09"
+      ],
+      "dod": "Web adapter tests prove credentialed auth calls, contract parsing, normalized and deduplicated translated failures, field-error mapping, and the approved action-specific notification exceptions.",
+      "files_hint": [
+        "apps/web/src/modules/auth/api",
+        "apps/web/src/shared/api",
+        "apps/web/src/shared/errors",
+        "apps/web/src/shared/i18n",
+        "apps/web/src/shared/notifications",
+        "apps/web/src/main.tsx",
+        "apps/web/package.json",
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "id": "T11",
+      "title": "Replace mock auth state with session bootstrap and guards",
+      "layer": "wiring",
+      "deps": ["T9", "T10"],
+      "acs": ["AC-07", "AC-08", "AC-09", "AC-10", "AC-11"],
+      "dod": "Redux, bootstrap, and router tests prove unknown/anonymous/authenticated states, one coalesced restoration request, guard decisions only after initialization, sign-out state clearing, and separation from capability authorization.",
+      "files_hint": [
+        "apps/web/src/store/slices/authSlice.ts",
+        "apps/web/src/store/index.ts",
+        "apps/web/src/guards",
+        "apps/web/src/router.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/modules/auth/session"
+      ]
+    },
+    {
+      "id": "T12",
+      "title": "Implement the approved create-account experience",
+      "layer": "ui",
+      "deps": ["T10", "T11"],
+      "acs": ["AC-01", "AC-01b", "AC-02", "AC-03"],
+      "dod": "Accessible component and route tests prove the approved desktop/mobile sign-up flow, exact validation behavior, duplicate and unavailable outcomes, loading/focus behavior, authenticated navigation, and sign-up success feedback.",
+      "files_hint": [
+        "apps/web/src/modules/auth/sign-up",
+        "apps/web/src/modules/auth/components",
+        "apps/web/src/shared/layouts/RootLayout.tsx",
+        "apps/web/src/shared/constants/routes.ts",
+        "apps/web/src/router.ts"
+      ]
+    },
+    {
+      "id": "T13",
+      "title": "Implement the approved sign-in and sign-out experience",
+      "layer": "ui",
+      "deps": ["T10", "T11"],
+      "acs": ["AC-04", "AC-05", "AC-07", "AC-08", "AC-09"],
+      "dod": "Accessible component and route tests prove the approved desktop/mobile sign-in states, indistinguishable credential failures, expired-session focus, no sign-in success toast, and sign-out revocation before feedback and navigation.",
+      "files_hint": [
+        "apps/web/src/modules/auth/sign-in",
+        "apps/web/src/modules/auth/sign-out",
+        "apps/web/src/modules/auth/components",
+        "apps/web/src/shared/layouts/RootLayout.tsx",
+        "apps/web/src/shared/constants/routes.ts",
+        "apps/web/src/router.ts"
+      ]
+    },
+    {
+      "id": "T14",
+      "title": "Verify auth journeys and release quality gates",
+      "layer": "tests",
+      "deps": ["T9", "T11", "T12", "T13"],
+      "acs": [
+        "AC-01",
+        "AC-01b",
+        "AC-02",
+        "AC-03",
+        "AC-04",
+        "AC-05",
+        "AC-07",
+        "AC-08",
+        "AC-09",
+        "AC-10",
+        "AC-11"
+      ],
+      "dod": "Automated end-to-end, load-smoke, reconciliation, secret-leak, dependency, accessibility, keyboard, and approved-frame visual checks pass, with Product and Security approval recorded before implementation is declared shippable.",
+      "files_hint": [
+        "apps/server/test/auth",
+        "apps/web/src/modules/auth/auth.e2e.spec.tsx",
+        "tests/auth",
+        "docs/features/auth/previews",
+        "docs/features/auth/tasks/tracker.md"
+      ]
+    }
+  ]
+}

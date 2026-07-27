@@ -1,10 +1,16 @@
 import { z } from 'zod';
 
+export const loginValidationKeys = {
+  emailInvalid: 'email.invalid',
+  passwordLength: 'password.length',
+} as const;
+
+export type LoginValidationKey =
+  (typeof loginValidationKeys)[keyof typeof loginValidationKeys];
+
 export const loginFormSchema = z.object({
-  email: z.string().email({ message: 'Enter a valid email address' }),
-  password: z
-    .string()
-    .min(8, { message: 'Password must be at least 8 characters' }),
+  email: z.string().email({ message: loginValidationKeys.emailInvalid }),
+  password: z.string().min(8, { message: loginValidationKeys.passwordLength }),
 });
 
 export type LoginFormValues = z.infer<typeof loginFormSchema>;
