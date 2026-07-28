@@ -10,8 +10,8 @@ real development database.
 The canonical, agent-neutral AI instructions under `ai/` are the source of truth. Do not edit
 canonical files to suit Codex. Load relevant skills from `.agents/skills/` on demand; those entries
 link back to root and app-local canonical skills. Reusable commands live in `ai/commands/`, and
-specialized worker roles live in `ai/agents/`; read the applicable canonical file directly when a
-workflow calls for one because Codex has no separate project-local command or worker adapter here.
+specialized worker roles live in `ai/agents/`; project-scoped Codex adapters under
+`.codex/agents/` direct each subagent back to its applicable canonical role.
 
 Pencil is required only for work that changes a user-facing web, mobile, or desktop interface, as
 described in `README.md` and `ai/skills/design-ui/`. Do not invoke it for backend-only work.

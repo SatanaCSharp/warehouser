@@ -1,6 +1,6 @@
 ---
 name: design-ui
-description: Create or refine one cohesive feature UI design with the local pen.dev/Pencil MCP server, review it live in the desktop canvas, record explicit human approval, and hand the approved design to implementation. Use for "design UI", "mock up this feature", "preview this module", "design a feature", "/sdd:design-ui", or when planning a feature whose target surfaces include web, mobile, or desktop UI. Writes .pen sources, preview images, and design-handoff.md; never writes production UI code before approval.
+description: Create or refine one cohesive feature UI design with the local pen.dev/Pencil MCP server, review it live in the desktop canvas, record explicit human approval, and hand the approved design to implementation. Use for "design UI", "mock up this feature", "preview this module", "design a feature", "/design-ui", or when planning a feature whose target surfaces include web, mobile, or desktop UI. Writes .pen sources, preview images, and design-handoff.md; never writes production UI code before approval.
 ---
 
 # Design UI
@@ -33,7 +33,7 @@ Turn an approved feature specification into an editable pen.dev design and a pre
 6. **Verify the system and the flow.** Inspect layout structure, overlaps, clipping, hierarchy, variables, component reuse, HeroUI fidelity, cross-screen consistency, and responsive continuity. Compare related screens side by side so changes in task do not accidentally change the visual system. Capture screenshots into `docs/features/<slug>/previews/`. Follow [`references/design-review-checklist.md`](references/design-review-checklist.md).
 7. **Approval gate.** Present the single design flow, explain its key decisions and trade-offs, then stop. Do not write application code and do not mark a design approved without explicit user approval naming the reviewed frame/version.
 8. **Freeze the decision.** After approval, preserve the approved frame and create `docs/features/<slug>/design-handoff.md` from [`templates/design-handoff.md`](templates/design-handoff.md). Record the `.pen` path, exact frame name and node ID, viewports, states, component mapping, tokens, accessibility behavior, and unresolved questions.
-9. **Hand off.** Recommend `/sdd:tasks <slug>` when architecture artifacts already exist; otherwise recommend the repository's architecture-design stage first. Implementation must read the approved handoff and report any visible deviation.
+9. **Hand off.** Recommend `/tasks <slug>` when architecture artifacts already exist; otherwise recommend the repository's architecture-design stage first. Implementation must read the approved handoff and report any visible deviation.
 
 ## Hard rules
 

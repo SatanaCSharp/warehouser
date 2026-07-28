@@ -9,7 +9,7 @@ description: >
   levels (unit / integration / e2e / contract / load) without binding to a language or
   framework, and fixes the integration and data strategy. Triggers on "plan tests for {slug}",
   "test plan for {slug}", "how do we test {slug}", "test strategy for {slug}",
-  "/sdd:plan-tests {slug}", "план тестів для {slug}", "як тестувати {slug}", "тест-план".
+  "/plan-tests {slug}".
   Output: docs/features/{slug}/test-plan.md (separate file for M+), or inline in spec.md for
   XS/S per the size matrix. Hard-refuse if spec.md is missing → run `specify {slug}` first.
 ---
@@ -32,7 +32,7 @@ QA + the engineer who will implement the feature (co-authors). QA drives the lev
 - **Gate (hard-refuse if missing):** `docs/features/<slug>/spec.md`. Its §5 acceptance criteria are the entire reason this plan exists — each one must map to a test. If `spec.md` is absent → STOP and point: «run `specify <slug>` first — the test plan maps its §5 acceptance criteria to tests».
 - (Optional) `docs/features/<slug>/data-model.md` — the entity shapes tell you what test data to build and what to seed/clean per suite. Read it if present.
 - (Optional) `docs/features/<slug>/sad.md` §6 sequence diagrams — each drawn flow is an e2e candidate; each cross-participant boundary is a contract-test candidate.
-- (Optional) `docs/features/<slug>/.size` — depth hint. Absent → default to M (separate `test-plan.md` file) **and say so loudly in the handoff** — «size M (default — no `.size`; run `/sdd:classify-size <slug>`)».
+- (Optional) `docs/features/<slug>/.size` — depth hint. Absent → default to M (separate `test-plan.md` file) **and say so loudly in the handoff** — «size M (default — no `.size`; run `/classify-size <slug>`)».
 
 ## Protocol
 
@@ -46,7 +46,7 @@ QA + the engineer who will implement the feature (co-authors). QA drives the lev
 8. **CI placement.** Note which suites run where: fast suites (unit, contract) on every PR; the heavier ones (e2e, load) on a schedule or pre-release. The split is advice, not a pipeline config — `implement` and the repo's CI own the actual wiring.
 9. **Socratic walk + write.** Walk the coverage table and the strategy choices with the 4-state actions from [`../_shared/ask-style.md`](../_shared/ask-style.md) (Accept / Fix / Save-as-OQ / Drop); on Fix, regenerate that one row (one round, second answer final). Maintain the edits-log per [`../_shared/socratic-loop.md`](../_shared/socratic-loop.md). On pass, write the plan to its target (separate file for M+, inline `## Test plan` for XS/S).
 10. **Structural self-check** — per [`../_shared/self-check.md`](../_shared/self-check.md): re-read the written plan from disk and verify **6 items**: (1) every `spec.md` §5 AC id appears in the coverage table; (2) every error/authorization AC has its **own dedicated row** (not folded into a happy path); (3) every Level value ∈ the fixed vocabulary {unit, integration, e2e, contract, load, component, visual-regression, e2e-through-UI}; (4) **zero tool names** in the plan (no runner / broker / visual-diff / load-tool name outside the single "e.g. k6 / Locust" allowance); (5) the load section carries numbers (rate + duration + metric + threshold) or the literal `<!-- N/A: no numeric NFR -->`; (6) the plan sits at its size-correct target (inline `## Test plan` for XS/S or route `quick`, separate `test-plan.md` for M+). Fix + re-check ≤2 cycles; surface anything unresolved.
-11. **Propose commit + handoff.** `test-plan: <slug>`. Then **emit the stage-handoff block** per [`../_shared/handoff.md`](../_shared/handoff.md) — _What I did_ (incl. «self-check: 6/6 pass») + _Review_ (`test-plan.md`, or `spec.md` `## Test plan` for XS/S) + _Run next_ (`/clear`, then `/sdd:implement <slug>`, which consumes this map to write the red tests).
+11. **Propose commit + handoff.** `test-plan: <slug>`. Then **emit the stage-handoff block** per [`../_shared/handoff.md`](../_shared/handoff.md) — _What I did_ (incl. «self-check: 6/6 pass») + _Review_ (`test-plan.md`, or `spec.md` `## Test plan` for XS/S) + _Run next_ (`/clear`, then `/implement <slug>`, which consumes this map to write the red tests).
 
 ## Definition of Done
 

@@ -49,7 +49,7 @@ Priority for the step-4 merge (highest-impact first): **conflicting-requirement 
 ## A finding is closed two ways (mirror of the shared 4-state machine)
 
 - **Resolve now** → the spec is edited in its native section; record `before→after` in the edits-log.
-- **Defer to §8** → a checkbox row `- [ ] <question>? Default now: <X>. — owner: <name/role>, due: <date or stage trigger like "before sdd:design">`. Owner + due are mandatory (same rule as `specify`'s §8); missing either → re-ask once, else the finding stays unresolved (never silently dropped).
+- **Defer to §8** → a checkbox row `- [ ] <question>? Default now: <X>. — owner: <name/role>, due: <date or stage trigger like "before design">`. Owner + due are mandatory (same rule as `specify`'s §8); missing either → re-ask once, else the finding stays unresolved (never silently dropped).
 - **Not an ambiguity** (false positive, e.g. a term already in CONTEXT, or a number already present that the sweep misread) → drop it, no edit.
 
 ---

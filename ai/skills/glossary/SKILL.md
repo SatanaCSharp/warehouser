@@ -8,8 +8,8 @@ description: >
   whenever a fuzzy word shows up in an interview, spec, or review and you want one
   canonical definition plus a NOT-reference so a homonym can't bite you in six months.
   Triggers on "add term {X}", "what is {X} in our domain", "add to CONTEXT", "fix the
-  glossary", "define {X}", "/sdd:glossary {term}", "додай термін", "онови глосарій",
-  "що означає {X}". Two-level contract: repo-root CONTEXT.md holds project-wide terms,
+  glossary", "define {X}", "/glossary {term}".
+  Two-level contract: repo-root CONTEXT.md holds project-wide terms,
   docs/features/{slug}/CONTEXT.md holds feature-scoped ones; readers read both and the
   per-feature entry wins. Lazy-bootstraps the target from a template, checks BOTH levels
   for a conflicting existing entry, asks for a one-sentence definition + the concept it's
@@ -55,7 +55,7 @@ Whoever drives the conversation — anyone who spots ambiguity. Tech Lead approv
 8. **Append under `## Glossary`.** Read the file, insert the line in `## Glossary` (alphabetical if the section is already sorted, else at the end). Never rewrite existing entries.
 9. **Prune empty H2s.** On a fresh bootstrap, delete `## Invariants` / `## Out of scope` if they hold no real content — only `## Glossary` is mandatory. (A genuine invariant or out-of-scope note goes in its section, never as implementation detail.)
 10. **Structural self-check** — per [`../_shared/self-check.md`](../_shared/self-check.md): re-read the target file(s) from disk and verify **3 items**: (1) the term appears **exactly once across both levels combined** (grep root `CONTEXT.md` + `docs/features/<slug>/CONTEXT.md` — no duplicate, no split); (2) the entry matches the format `- <term> — <definition>.` (with the optional `NOT …` tail); (3) no empty H2 sections remain. Fix + re-check ≤2 cycles; surface anything unresolved.
-11. **Stamp + commit + handoff.** Set `updated_at: <today>` in the frontmatter. Propose `context: + <term>` (or `context: + <term>, <term2>` for a batch). May fold into the caller's intake/spec commit. Then **emit the stage-handoff block** per [`../_shared/handoff.md`](../_shared/handoff.md) (utility variant) — _What I did_ (incl. «self-check: 3/3 pass») + _Review_ (`CONTEXT.md`) + _Run next_: resume your backbone stage (e.g. `/sdd:design <slug>`); `/clear` optional.
+11. **Stamp + commit + handoff.** Set `updated_at: <today>` in the frontmatter. Propose `context: + <term>` (or `context: + <term>, <term2>` for a batch). May fold into the caller's intake/spec commit. Then **emit the stage-handoff block** per [`../_shared/handoff.md`](../_shared/handoff.md) (utility variant) — _What I did_ (incl. «self-check: 3/3 pass») + _Review_ (`CONTEXT.md`) + _Run next_: resume your backbone stage (e.g. `/design <slug>`); `/clear` optional.
 
 ## Definition of Done
 

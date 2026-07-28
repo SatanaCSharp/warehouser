@@ -48,6 +48,11 @@ sources.
 2. Identify the target and its existing project-local instruction, command/prompt, skill,
    specialized-worker, and MCP locations. Derive unfamiliar layouts from installed configuration
    or official documentation; do not guess or substitute another agent's conventions.
+   For Codex, specialized-worker adapters are standalone `.codex/agents/*.toml` files at workspace
+   scope and `apps/<app>/.codex/agents/*.toml` at app scope. Each managed adapter must contain the
+   required `name`, `description`, and `developer_instructions` fields and retain the generated
+   source marker defined by `init-agent`. Its instructions must locate and load the corresponding
+   canonical `ai/agents/<role>.md`; the adapter must not duplicate the canonical role body.
 3. Inventory every canonical file below the root `ai/` directory and every immediate
    `apps/*/ai/` directory. Inventory the target's existing workspace and app adapters separately.
 4. Determine ownership before changing a destination. An entry is managed only when it is:
@@ -65,6 +70,11 @@ sources.
    - refresh managed copies whose bytes differ from their source while retaining the generated
      header required by `init-agent`;
    - add newly introduced canonical entries to already initialized supported surfaces;
+   - for Codex, add or refresh one managed custom-agent TOML adapter per canonical
+     `ai/agents/*.md` role in both workspace and app scopes, using the exact schema and translation
+     rules in `init-agent`; update adapter metadata when canonical frontmatter changes, preserve
+     unrelated hand-written `.codex/config.toml` settings, and never replace an unmanaged custom
+     agent merely because its filename or `name` matches;
    - update the managed instruction block at the workspace root and in every app so it points to
      the applicable canonical instructions and continues to state that `ai/` is the source of
      truth;
@@ -94,6 +104,9 @@ sources.
    - every app has its existing instruction entry point with a valid managed block;
    - no destination escapes the repository;
    - no canonical `ai/` source was modified by synchronization;
+   - for Codex, every managed custom-agent file parses as TOML, contains all required fields,
+     points to an existing canonical role, and has a unique `name` within its workspace or app
+     scope;
    - a second synchronization with unchanged inputs would produce no diff.
 10. Show `git status --short` and summarize added, updated, relinked, removed, unchanged,
     unsupported, and collided entries by workspace and app scope.

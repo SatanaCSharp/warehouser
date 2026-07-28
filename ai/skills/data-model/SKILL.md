@@ -3,7 +3,7 @@ name: data-model
 model-tier: inherit
 reasoning-effort: medium
 workers: [explorer]
-description: Design a feature's PostgreSQL data model and stage reversible TypeORM migrations using the persistence architecture in docs/system. Use for schemas, entities, indexes, constraints, migration design, drift checks, and /sdd:data-model. Writes docs/features/{slug}/data-model.md and staged TypeScript migrations without changing the live schema.
+description: Design a feature's PostgreSQL data model and stage reversible TypeORM migrations using the persistence architecture in docs/system. Use for schemas, entities, indexes, constraints, migration design, drift checks, and /data-model. Writes docs/features/{slug}/data-model.md and staged TypeScript migrations without changing the live schema.
 ---
 
 # Data model

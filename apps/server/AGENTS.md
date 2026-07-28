@@ -38,9 +38,9 @@ Follow the modular-monolith boundaries in those documents.
 ## Repository AI adapter (managed)
 
 The canonical AI instructions under `../../ai/` and `ai/` are the source of truth. Load relevant
-skills from `.agents/skills/` on demand. Root reusable commands and specialized worker roles remain
-available through `../../ai/commands/` and `../../ai/agents/`; read them directly when applicable
-because Codex has no separate project-local command or worker adapter here.
+skills from `.agents/skills/` on demand. Root reusable commands remain available through
+`../../ai/commands/`; project-scoped Codex adapters under `.codex/agents/` direct each subagent
+back to its canonical role under `../../ai/agents/`.
 
 Pencil is required only for user-facing UI work described in `../../README.md` and
 `../../ai/skills/design-ui/`; it is not required for backend-only server work.
