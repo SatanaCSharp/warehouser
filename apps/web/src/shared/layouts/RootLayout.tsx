@@ -5,11 +5,15 @@ import {
   useRouterState,
 } from '@tanstack/react-router';
 
+import { SignOutButton } from 'modules/auth/sign-out/components/SignOutButton';
 import { ROUTES } from 'shared/constants/routes';
+import { useAppSelector } from 'store/hooks';
+import { selectIsAuthenticated } from 'store/slices/authSlice';
 
 import type { ReactElement } from 'react';
 
 export const RootLayout = (): ReactElement => {
+  const isAuthenticated = useAppSelector(selectIsAuthenticated);
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
@@ -44,6 +48,18 @@ export const RootLayout = (): ReactElement => {
               {pathname === ROUTES.SIGN_UP ? 'Sign in' : 'Create account'}
             </Link>
           </div>
+        </header>
+      ) : isAuthenticated ? (
+        <header className="flex h-[68px] items-center justify-between border-b border-divider bg-content1 px-6 sm:h-20 sm:px-12">
+          <Link
+            as={RouterLink}
+            to={ROUTES.HOME}
+            color="foreground"
+            className="text-xl font-bold"
+          >
+            Warehouser
+          </Link>
+          <SignOutButton />
         </header>
       ) : null}
       <Outlet />

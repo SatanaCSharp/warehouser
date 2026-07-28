@@ -12,6 +12,9 @@ export const requireAuth = async ({ store }: RouterContext): Promise<void> => {
   if (!selectIsAuthenticated(store.getState())) {
     // TanStack Router handles its redirect descriptor as a thrown control signal.
     // eslint-disable-next-line @typescript-eslint/only-throw-error
-    throw redirect({ to: ROUTES.LOGIN });
+    throw redirect({
+      to: ROUTES.LOGIN,
+      search: { reason: 'session-ended' },
+    });
   }
 };

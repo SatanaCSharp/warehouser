@@ -71,7 +71,7 @@ describe('localization resources', () => {
       resources,
     });
 
-    expect(instance.t('form.submit', { ns: 'sign-in' })).toBe('Log in');
+    expect(instance.t('form.submit', { ns: 'sign-in' })).toBe('Sign in');
     expect(instance.t('api.network', { ns: 'errors' })).toBe(
       'Check your connection and try again.',
     );

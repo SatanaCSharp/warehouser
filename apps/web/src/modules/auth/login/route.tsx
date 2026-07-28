@@ -1,4 +1,5 @@
 import { createRoute, lazyRouteComponent } from '@tanstack/react-router';
+import { z } from 'zod';
 
 import { requireAnonymous } from 'guards/anonymous-user.guard';
 import { rootRoute } from 'routes/__root.route';
@@ -9,4 +10,7 @@ export const loginRoute = createRoute({
   path: ROUTES.LOGIN,
   component: lazyRouteComponent(() => import('./page'), 'LoginPage'),
   beforeLoad: ({ context }) => requireAnonymous(context),
+  validateSearch: z.object({
+    reason: z.literal('session-ended').optional(),
+  }),
 });

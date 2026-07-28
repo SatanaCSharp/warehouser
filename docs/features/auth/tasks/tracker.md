@@ -17,7 +17,7 @@
 | T10 | [Build the credentialed web API and feedback boundary](./build-web-auth-boundary.md)          | infra     | Frontend Lead                 | M        | T2                | done   |
 | T11 | [Replace mock auth state with session bootstrap and guards](./replace-auth-state.md)          | wiring    | Frontend Lead                 | M        | T9, T10           | done   |
 | T12 | [Implement the approved create-account experience](./implement-sign-up-ui.md)                 | ui        | Frontend Lead                 | M        | T10, T11          | done   |
-| T13 | [Implement the approved sign-in and sign-out experience](./implement-sign-in-out-ui.md)       | ui        | Frontend Lead                 | M        | T10, T11          | todo   |
+| T13 | [Implement the approved sign-in and sign-out experience](./implement-sign-in-out-ui.md)       | ui        | Frontend Lead                 | M        | T10, T11          | done   |
 | T14 | [Verify auth journeys and release quality gates](./verify-auth-release.md)                    | tests     | Tech Lead + Security Lead     | 1d       | T9, T11, T12, T13 | todo   |
 
 **Total:** 14 tasks, approximately 9 person-days.
