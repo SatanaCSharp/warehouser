@@ -3,9 +3,9 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from 'auth/auth.module';
-import { createTypeOrmOptions } from 'shared/database/typeorm.options.js';
-import { AppLoggerModule } from 'shared/logger/app-logger.module.js';
-import { createBullMqOptions } from 'shared/queue/bullmq.options.js';
+import { createTypeOrmOptions } from 'shared/database/typeorm.options';
+import { AppLoggerModule } from 'shared/logger/app-logger.module';
+import { createBullMqOptions } from 'shared/queue/bullmq.options';
 
 @Module({
   imports: [

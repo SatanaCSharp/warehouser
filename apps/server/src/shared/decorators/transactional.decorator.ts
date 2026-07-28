@@ -1,5 +1,5 @@
 import { SetMetadata } from '@nestjs/common';
-import type { IsolationLevel } from 'typeorm/driver/types/IsolationLevel.js';
+import type { IsolationLevel } from 'typeorm/driver/types/IsolationLevel';
 
 export const TRANSACTIONAL_KEY = Symbol('TRANSACTIONAL_METHOD');
 
