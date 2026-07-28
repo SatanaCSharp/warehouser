@@ -46,6 +46,87 @@ describe('router', () => {
     expect(await screen.findByLabelText('Email')).toBeInTheDocument();
   });
 
+  it('renders the approved create-account flow at /sign-up', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(new Response(null, { status: 204 })),
+    );
+    renderRoute('/sign-up');
+
+    expect(
+      await screen.findByRole('heading', { name: 'Create your account' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Create account' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute(
+      'href',
+      '/login',
+    );
+  });
+
+  it('creates an account, authenticates the linked user, and enters home', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce(new Response(null, { status: 204 }))
+        .mockResolvedValueOnce(
+          Response.json({
+            user: { id: '00000000-0000-4000-8000-000000000012' },
+          }),
+        ),
+    );
+    const user = userEvent.setup();
+    const { router, store } = renderRoute('/sign-up');
+
+    await user.type(await screen.findByLabelText('Email'), 'new@example.test');
+    await user.type(screen.getByLabelText('Password'), 'long enough');
+    await user.click(screen.getByRole('button', { name: 'Create account' }));
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/'));
+    expect(store.getState().auth).toEqual({
+      status: 'authenticated',
+      user: { id: '00000000-0000-4000-8000-000000000012' },
+    });
+  });
+
+  it('keeps duplicate sign-up anonymous and offers sign-in', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce(new Response(null, { status: 204 }))
+        .mockResolvedValueOnce(
+          Response.json(
+            {
+              code: 'auth.email_already_registered',
+              message: 'This email is already registered.',
+            },
+            { status: 409 },
+          ),
+        ),
+    );
+    const user = userEvent.setup();
+    const { router, store } = renderRoute('/sign-up');
+
+    await user.type(
+      await screen.findByLabelText('Email'),
+      'existing@example.test',
+    );
+    await user.type(screen.getByLabelText('Password'), 'long enough');
+    await user.click(screen.getByRole('button', { name: 'Create account' }));
+
+    expect(
+      await screen.findByText('This email is already registered.'),
+    ).toBeVisible();
+    expect(
+      screen.getByRole('link', { name: 'Sign in instead' }),
+    ).toHaveAttribute('href', '/login');
+    expect(router.state.location.pathname).toBe('/sign-up');
+    expect(store.getState().auth.status).toBe('anonymous');
+  });
+
   it('redirects anonymous users from the protected home route', async () => {
     vi.stubGlobal(
       'fetch',

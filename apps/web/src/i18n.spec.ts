@@ -7,12 +7,14 @@ import enCommon from '../public/locales/en/common.json';
 import enErrors from '../public/locales/en/errors.json';
 import enHome from '../public/locales/en/home.json';
 import enSignIn from '../public/locales/en/sign-in.json';
+import enSignUp from '../public/locales/en/sign-up.json';
 import enSuccess from '../public/locales/en/success.json';
 import enValidation from '../public/locales/en/validation.json';
 import ukCommon from '../public/locales/uk/common.json';
 import ukErrors from '../public/locales/uk/errors.json';
 import ukHome from '../public/locales/uk/home.json';
 import ukSignIn from '../public/locales/uk/sign-in.json';
+import ukSignUp from '../public/locales/uk/sign-up.json';
 import ukSuccess from '../public/locales/uk/success.json';
 import ukValidation from '../public/locales/uk/validation.json';
 
@@ -22,6 +24,7 @@ const resources = {
     errors: enErrors,
     home: enHome,
     'sign-in': enSignIn,
+    'sign-up': enSignUp,
     success: enSuccess,
     validation: enValidation,
   },
@@ -30,6 +33,7 @@ const resources = {
     errors: ukErrors,
     home: ukHome,
     'sign-in': ukSignIn,
+    'sign-up': ukSignUp,
     success: ukSuccess,
     validation: ukValidation,
   },

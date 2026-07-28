@@ -1,0 +1,33 @@
+{
+  "title": "Create your account",
+  "description": "Use a work email you can access consistently.",
+  "form": {
+    "email": {
+      "label": "Email",
+      "placeholder": "name@company.com",
+      "help": "ASCII email, up to 254 characters"
+    },
+    "password": {
+      "label": "Password",
+      "placeholder": "Create a password",
+      "help": "8–128 characters; spaces are significant",
+      "show": "Show password",
+      "hide": "Hide password"
+    },
+    "submit": "Create account",
+    "submitting": "Creating account…"
+  },
+  "duplicate": {
+    "signIn": "Sign in instead"
+  },
+  "intro": {
+    "eyebrow": "New to Warehouser",
+    "title": "Create the identity behind your warehouse work.",
+    "description": "One account creates one linked warehouse user. You’ll be signed in immediately when setup completes.",
+    "account": "Account and user created together",
+    "password": "Password preserved exactly as entered",
+    "session": "Persistent session for 30 days"
+  },
+  "confidentiality": "Credentials are confidential and never displayed back to you.",
+  "accessibility": "Labels stay visible · field errors are associated and announced · reduced motion uses no animated transitions"
+}

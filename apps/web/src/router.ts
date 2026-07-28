@@ -5,13 +5,14 @@ import {
 } from '@tanstack/react-router';
 
 import { loginRoute } from 'modules/auth/login/route';
+import { signUpRoute } from 'modules/auth/sign-up/route';
 import { homeRoute } from 'modules/home/route';
 import { rootRoute } from 'routes/__root.route';
 import { store } from 'store';
 
 import type { AppStore } from 'store';
 
-const routeTree = rootRoute.addChildren([homeRoute, loginRoute]);
+const routeTree = rootRoute.addChildren([homeRoute, loginRoute, signUpRoute]);
 
 type CreateAppRouterOptions = {
   appStore?: AppStore;
