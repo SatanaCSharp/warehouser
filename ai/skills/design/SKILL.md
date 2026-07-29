@@ -3,7 +3,7 @@ name: design
 model-tier: reasoning
 reasoning-effort: high
 workers: [explorer, critic]
-description: Create or update a feature architecture from an approved specification while applying the durable architecture in docs/system. Use for architecture design, feature SADs, system placement, module boundaries, runtime design, target surfaces, and /sdd:design. Writes docs/features/{slug}/sad.md and only creates feature ADRs for consequential feature-specific decisions.
+description: Create or update a feature architecture from an approved specification while applying the durable architecture in docs/system. Use for architecture design, feature SADs, system placement, module boundaries, runtime design, target surfaces, and /design. Writes docs/features/{slug}/sad.md and only creates feature ADRs for consequential feature-specific decisions.
 ---
 
 # Feature architecture design

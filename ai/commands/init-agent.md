@@ -53,7 +53,46 @@ with init-agent`. Preserve directory structure so references and bundled assets 
    - invokable commands or prompts;
    - specialized workers/subagents, if supported.
    - MCP server configuration, including the target-specific Pencil agent identifier when Pencil
-     requires one and an `npx`-based stdio server definition for NotebookLM.
+     requires one and a `notebooklm-mcp` stdio server definition for NotebookLM.
+     When the target is Codex, install specialized workers as project-scoped custom-agent adapters:
+   - create one standalone TOML file under `.codex/agents/` for every `ai/agents/*.md` role;
+   - create the same adapters under `apps/<app>/.codex/agents/` so Codex started from an app can
+     discover the repository roles;
+   - use the canonical role's frontmatter `name` as the TOML `name`, and normalize its
+     `description` to a valid TOML string;
+   - include the required `name`, `description`, and `developer_instructions` fields;
+   - translate `reasoning-effort` to `model_reasoning_effort` when Codex supports the declared
+     value, but do not guess or hard-code a model from the agent-neutral `model-tier`;
+   - use `sandbox_mode = "read-only"` when the canonical capabilities contain no write/edit
+     capability. Otherwise inherit the parent sandbox unless the canonical role requires a
+     stricter supported mode;
+   - keep the adapter thin: `developer_instructions` must direct the subagent to locate the
+     repository root, read the applicable canonical `ai/agents/<role>.md` completely before doing
+     work, treat it as the role's source of truth, and follow every applicable `AGENTS.md`;
+   - do not copy the canonical role body into TOML or create a competing role definition.
+
+   Use this Codex adapter shape, with TOML escaping applied to substituted values:
+
+   ```toml
+   # Generated from ai/agents/<role>.md. DO NOT EDIT: regenerate with init-agent.
+   name = "<canonical-name>"
+   description = "<canonical-description>"
+   model_reasoning_effort = "<canonical-supported-reasoning-effort>"
+   sandbox_mode = "read-only" # omit when the role needs writes
+
+   developer_instructions = """
+   Locate the repository root, then read ai/agents/<role>.md completely before starting.
+   That file is the canonical role definition and source of truth; follow it without duplicating
+   or replacing it here. Also follow every applicable AGENTS.md and relevant skill instruction.
+   Work only on the bounded task delegated by the parent agent and return a concise result to it.
+   """
+   ```
+
+   In Codex project configuration, preserve unrelated settings and ensure multi-agent support is
+   not disabled. Add `[agents]` only when needed; if a managed concurrency setting is required,
+   use `max_concurrent_threads_per_session`. Do not overwrite a user-selected default subagent
+   model, reasoning effort, or concurrency limit.
+
 4. Print the resolved source-to-destination mapping before writing. If a surface is unsupported,
    keep its instructions reachable through the target's main project instruction file and report
    the fallback.
@@ -61,9 +100,9 @@ with init-agent`. Preserve directory structure so references and bundled assets 
    - inspect `.mcp.json` and any existing target-local MCP configuration before changing either;
    - merge or update both `mcpServers.pencil` and `mcpServers.notebooklm` (or their target-native
      equivalents), preserving unrelated MCP servers and hand-written settings;
-   - configure `notebooklm` as the cross-platform stdio command from `.mcp.json`; verify Node.js
-     18 or newer and `npx` are available, but do not run browser authentication during
-     initialization;
+   - configure `notebooklm` as the cross-platform stdio command from `.mcp.json`; verify
+     `notebooklm-mcp` and its companion `nlm` CLI are available, but do not run browser
+     authentication during initialization;
    - keep NotebookLM authentication, browser profiles, cookies, and other session data in the
      package's user-local storage. Never copy or commit them to the repository;
    - resolve the installed Pencil desktop MCP executable for the current operating system and
@@ -110,16 +149,17 @@ with init-agent`. Preserve directory structure so references and bundled assets 
    project-local MCP servers named `pencil` and `notebooklm`. Do not require Pencil desktop or a
    NotebookLM login during initialization. When Pencil is running, use the target's MCP inspection
    command to verify that server starts successfully. Do not start `notebooklm` merely to verify
-   configuration because `npx` may fetch the package; report whether its runtime prerequisites are
-   present instead. Show `git status --short` and summarize installed, skipped, namespaced, and
-   stale entries.
+   configuration; report whether `notebooklm-mcp` and `nlm` are present instead. For Codex, parse
+   every generated `.codex/agents/*.toml`, verify that its required fields are present, its
+   canonical role path exists, and its name is unique within that scope. Show `git status --short`
+   and summarize installed, skipped, namespaced, and stale entries.
 
 ## Safety and portability rules
 
 - Be idempotent: running the command twice with unchanged inputs produces no diff.
 - Do not modify anything under a canonical `ai/` directory during installation.
-- Do not install globally. Configuring the canonical `notebooklm` MCP invocation is required, but
-  do not eagerly fetch or start its package during initialization; `npx` may fetch it on first use.
+- Do not install packages. Configuring the canonical `notebooklm` MCP invocation is required, but
+  do not start it or initiate browser authentication during initialization.
 - Do not commit Pencil authentication data, API keys, session tokens, absolute paths copied from a
   different machine, or user-global MCP configuration.
 - Do not inspect existing local environment files while installing an agent. File-existence checks

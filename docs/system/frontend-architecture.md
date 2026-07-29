@@ -61,6 +61,10 @@ Keep logic inside one module until another module genuinely needs it. Promote it
 root `hooks/` only when reuse exists. Stable platform boundaries—root layout, route constants,
 store creation, and an eventual shared API client—may start outside a feature.
 
+Use Lodash for collection, object, and other data-structure operations when it provides the
+operation. Import the needed function directly so the web bundle includes only what it uses, and
+prefer it to a hand-written imperative loop or custom equivalent.
+
 ## Layer responsibilities
 
 ### Route
@@ -143,6 +147,11 @@ See [Adding and using contracts](guides/adding-and-using-contracts.md).
 For API error normalization, HeroUI form errors, React-Toastify notifications, successful-action
 feedback, and i18next ownership, follow
 [Web error handling and action feedback](guides/web-error-handling.md).
+
+All user-visible copy is configured by the centralized boundary at `src/i18n.ts`. Translation
+resources are served from `public/locales/<language>/<namespace>.json`; module copy remains in a
+module-named namespace rather than being moved into the module source tree. Follow
+[Adding and maintaining web localization](guides/adding-and-maintaining-web-localization.md).
 
 ## Testing
 

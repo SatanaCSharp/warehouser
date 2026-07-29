@@ -66,7 +66,7 @@ symptom (the bug lives in pre-SDD code). Either way:
 
 - run intake → RED → GREEN → gate → record as usual;
 - the record's triage field is `no-spec`, and its «Spec patch» section states why;
-- the handoff recommends `/sdd:survey` (map the codebase so future fixes have something to trace
+- the handoff recommends `/survey` (map the codebase so future fixes have something to trace
   to) — a recommendation, never a blocker.
 
 Hard-refusing here would lock out exactly the user this skill serves first: someone with a bug

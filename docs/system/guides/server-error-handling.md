@@ -59,11 +59,12 @@ Do not pass an anonymous factory such as
 `() => new ApplicationError(ErrorCode.INSUFFICIENT_STOCK)` to `assert`.
 
 Define a named error factory close to the assertion under
-`apps/server/src/<module-name>/errors/`. Its name describes the failure, uses the `Error` suffix,
-accepts every value required to construct the error, and returns the configured error instance:
+`apps/server/src/<module-name>/domain/errors/`. Its name describes the failure, uses the `Error`
+suffix, accepts every value required to construct the error, and returns the configured error
+instance:
 
 ```ts
-// apps/server/src/inventory/errors/insufficient-stock.error.ts
+// apps/server/src/inventory/domain/errors/insufficient-stock.error.ts
 export const InsufficientStockError = (
   stock: Stock,
   requested: number,

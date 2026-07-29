@@ -13,7 +13,7 @@ durable system structure and contributor procedures live in `docs/system`.
 - Keep application implementation details inside their owning app rather than moving them into a
   package pre-emptively.
 - Organize the server as a modular monolith with entity-related feature modules, inward-pointing
-  dependencies, and repository interfaces isolating persistence technology.
+  dependencies, and specialized repositories shaped around cohesive persistence operations.
 - Use PostgreSQL through TypeORM as the server persistence baseline. Manage schema changes with
   reviewed TypeORM migrations; runtime schema synchronization remains disabled.
   See the accepted [PostgreSQL/TypeORM ADR](adr/21-07-2026-postgresql-with-typeorm.md).
@@ -41,12 +41,27 @@ router redirects; a parallel React auth context is not used.
 
 Detailed frontend boundaries are defined in [Frontend architecture](frontend-architecture.md).
 
+### Web localization
+
+i18next is the web application's localization runtime. Translation resources are served centrally
+from `apps/web/public/locales/<language>/<namespace>.json` through the HTTP backend. Module-specific
+copy uses a module-named namespace; reusable feedback uses shared namespaces. See the accepted
+[web translation ADR](adr/27-07-2026-bundled-centralized-web-translations.md) and the
+[localization guide](guides/adding-and-maintaining-web-localization.md).
+
 ### Server modules and asynchronous work
 
 Server features are owned by entity-related modules. REST controllers and BullMQ handlers are thin
 transport adapters over commands, queries, and event use cases. BullMQ is the target mechanism for
 asynchronous operations and scheduled jobs once Redis-backed queue infrastructure is introduced.
 Detailed boundaries are defined in [Server architecture](server-architecture.md).
+
+### Server logging
+
+The server uses centrally configured structured Pino logging through `nestjs-pino`. Providers
+inject `PinoLogger` and set their class context; uncaught errors are logged once at the global
+exception boundary. See the accepted
+[Pino logging ADR](adr/27-07-2026-structured-logging-with-pino.md).
 
 ### UI delivery
 
@@ -58,7 +73,8 @@ implementation → visual review workflow in the root README. Backend-only work 
 
 - Authentication is currently a mock in-memory flow. Token transport, refresh, expiry, and session
   restoration require an explicit security design before production use.
-- Localization is not currently installed; new code must not assume an i18n runtime exists.
+- Every language/namespace pair configured in `apps/web/src/i18n.ts` requires a matching JSON file
+  under `apps/web/public/locales`; missing files fail as runtime HTTP loads.
 - The web application has no domain API client yet; choose its error and request policy when the
   first real server-integrated feature is designed.
 - BullMQ and Redis are target technologies and are not installed yet; their introduction requires

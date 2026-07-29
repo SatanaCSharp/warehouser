@@ -1,0 +1,6 @@
+{
+  "auth": {
+    "signOut": "Sign out",
+    "signingOut": "Signing out…"
+  }
+}

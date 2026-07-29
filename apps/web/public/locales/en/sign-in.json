@@ -1,0 +1,36 @@
+{
+  "title": "Sign in to your account",
+  "description": "Use the email and password registered to your account.",
+  "sessionEnded": "Your session ended. Sign in again to continue.",
+  "accessibility": "Labels stay visible · field errors are associated and announced · reduced motion uses no animated transitions",
+  "intro": {
+    "eyebrow": "Welcome back",
+    "title": "Continue as the same warehouse user.",
+    "description": "Sign in with your existing credentials to restore access for your linked warehouse identity.",
+    "user": "Return to the same linked user",
+    "session": "Session remains active for 30 days",
+    "authorization": "Warehouse permissions stay separate"
+  },
+  "mobile": {
+    "sameUser": "Same account, same linked user",
+    "session": "Session remains active for 30 days"
+  },
+  "form": {
+    "email": {
+      "label": "Email",
+      "placeholder": "name@company.com",
+      "help": "Email matching is case-insensitive"
+    },
+    "password": {
+      "label": "Password",
+      "placeholder": "Enter your password",
+      "help": "Password is preserved exactly as entered",
+      "show": "Show password",
+      "hide": "Hide password",
+      "showShort": "Show",
+      "hideShort": "Hide"
+    },
+    "submit": "Sign in",
+    "submitting": "Signing in…"
+  }
+}

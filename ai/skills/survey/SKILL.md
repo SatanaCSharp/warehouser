@@ -3,7 +3,7 @@ name: survey
 model-tier: reasoning
 reasoning-effort: high
 workers: [explorer]
-description: Survey a repository and create or refresh the evidence-backed system architecture map under docs/system. Use for codebase surveys, architecture inventories, stale architecture documentation, greenfield foundations, and /sdd:survey. Records current implementation separately from accepted target architecture.
+description: Survey a repository and create or refresh the evidence-backed system architecture map under docs/system. Use for codebase surveys, architecture inventories, stale architecture documentation, greenfield foundations, and /survey. Records current implementation separately from accepted target architecture.
 ---
 
 # System architecture survey

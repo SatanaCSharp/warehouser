@@ -13,7 +13,7 @@ viewports: []
 
 ## Decision
 
-- Selected alternative: <name>
+- Selected design direction: <name>
 - Approval evidence: <conversation/reference>
 - Preview files: <paths>
 

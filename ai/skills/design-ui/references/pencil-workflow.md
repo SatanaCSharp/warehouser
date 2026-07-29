@@ -27,12 +27,12 @@ If the desktop bridge remains unavailable, report the blocker. The optional `@pe
 
 ## Design operations
 
-Start with editor state and variables. Read the closest relevant components before writing. Prefer batched changes, then inspect the resulting structure and computed bounds. Capture a screenshot after every meaningful alternative or revision.
+Start with editor state and variables. Read the closest relevant components before writing. Prefer batched changes, then inspect the resulting structure and computed bounds. Capture a screenshot after every meaningful screen or revision.
 
 Name frames so approval is unambiguous:
 
 ```text
-<Feature> / <Alternative> / <Viewport> / v<N>
+<Feature> / <Flow or Screen> / <Viewport> / v<N>
 ```
 
 Use shared roots/components rather than detached lookalikes. Preserve approved versions.

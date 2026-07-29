@@ -1,0 +1,256 @@
+openapi: 3.1.0
+
+info:
+  title: Auth API
+  version: 0.1.0
+  description: |
+    Replaces Warehouser's mock browser identity with durable email/password
+    authentication linked one-to-one to a warehouse User. The API creates and
+    restores server-managed persistent sessions while keeping authentication
+    separate from warehouse authorization.
+
+servers:
+  - url: https://api.example.com
+    description: Production
+  - url: http://localhost
+    description: Local
+
+security:
+  - SessionCookie: []
+
+paths:
+  /api/v1/auth/sign-up:
+    post:
+      summary: Create an Account, linked User, and initial session
+      operationId: signUp
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthCredentials"
+            example:
+              email: "test.user@example.test"
+              password: "Test password 123"
+      responses:
+        "201":
+          description: The identity and initial session were created atomically.
+          headers:
+            Set-Cookie:
+              description: Host-only HttpOnly session cookie; SameSite=Lax, Path=/, fixed 30-day expiry, and Secure in production.
+              schema:
+                type: string
+              example: "warehouser_session=<opaque-session-secret>; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=2592000"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthenticatedUser"
+              example:
+                user:
+                  id: "00000000-0000-4000-8000-000000000001"
+        "400":
+          description: The email or password does not satisfy the authentication input rules.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "auth.invalid_input"
+                message: "Correct the highlighted authentication fields."
+                details:
+                  fields:
+                    email: "Enter a supported email address."
+        "409":
+          description: The normalized email is already registered.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "auth.email_already_registered"
+                message: "This email is already registered."
+        "503":
+          description: The Account, User, and initial Session could not be committed atomically.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "auth.registration_unavailable"
+                message: "Sign-up did not complete. Try again."
+
+  /api/v1/auth/sign-in:
+    post:
+      summary: Verify credentials and establish a new persistent session
+      operationId: signIn
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthCredentials"
+            example:
+              email: "test.user@example.test"
+              password: "Test password 123"
+      responses:
+        "200":
+          description: Credentials were verified and a new fixed-expiry session was established.
+          headers:
+            Set-Cookie:
+              description: Host-only HttpOnly session cookie; SameSite=Lax, Path=/, fixed 30-day expiry, and Secure in production.
+              schema:
+                type: string
+              example: "warehouser_session=<opaque-session-secret>; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=2592000"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthenticatedUser"
+              example:
+                user:
+                  id: "00000000-0000-4000-8000-000000000001"
+        "400":
+          description: The email or password does not satisfy the authentication input rules.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "auth.invalid_input"
+                message: "Correct the highlighted authentication fields."
+                details:
+                  fields:
+                    email: "Enter a supported email address."
+        "401":
+          description: The email is unknown or the password is incorrect; both cases use this response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "auth.invalid_credentials"
+                message: "The email or password is incorrect."
+        "503":
+          description: Credential verification succeeded but the Session could not be persisted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "auth.session_unavailable"
+                message: "Sign-in could not establish a session. Try again."
+
+  /api/v1/auth/session:
+    get:
+      summary: Resolve the current browser session
+      description: Returns the linked User for a valid session, or an anonymous no-content outcome for an absent, expired, or revoked session.
+      operationId: getCurrentSession
+      responses:
+        "200":
+          description: The cookie identifies a valid, unrevoked, unexpired Session.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthenticatedUser"
+              example:
+                user:
+                  id: "00000000-0000-4000-8000-000000000001"
+        "204":
+          description: No valid Session exists. The server expires the cookie where applicable.
+          headers:
+            Set-Cookie:
+              description: Present when an invalid or expired session cookie must be removed.
+              schema:
+                type: string
+              example: "warehouser_session=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0"
+    delete:
+      summary: Revoke the current browser session
+      operationId: signOut
+      responses:
+        "204":
+          description: Sign-out completed idempotently; any matching Session is revoked and the cookie is expired.
+          headers:
+            Set-Cookie:
+              description: Expires the current browser's session cookie.
+              required: true
+              schema:
+                type: string
+              example: "warehouser_session=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0"
+        "503":
+          description: A matching valid Session existed but revocation could not be persisted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "auth.sign_out_unavailable"
+                message: "Sign-out did not complete. Try again."
+
+components:
+  securitySchemes:
+    SessionCookie:
+      type: apiKey
+      in: cookie
+      name: warehouser_session
+      description: Server-issued opaque session secret. The cookie is host-only, HttpOnly, SameSite=Lax, Path=/, and Secure in production.
+
+  schemas:
+    AuthCredentials:
+      type: object
+      required:
+        - email
+        - password
+      additionalProperties: false
+      properties:
+        email:
+          type: string
+          minLength: 3
+          maxLength: 254
+          pattern: "^(?=[^@]{1,64}@)[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+)*@[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?:\\.[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)+$"
+          description: ASCII email trimmed before validation and normalized to lower case for lookup. The local part is limited to 64 characters.
+          example: "test.user@example.test"
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+          description: Preserved exactly as entered; whitespace is significant and length is measured in Unicode code points.
+          example: "Test password 123"
+
+    AuthenticatedUser:
+      type: object
+      required:
+        - user
+      additionalProperties: false
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+
+    User:
+      type: object
+      required:
+        - id
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Stable warehouse-domain User identifier shared with the linked Account.
+          example: "00000000-0000-4000-8000-000000000001"
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          pattern: "^[a-z_]+\\.[a-z_]+$"
+          example: "auth.invalid_credentials"
+        message:
+          type: string
+        details:
+          type: object
+          description: Optional safe structured context, such as field-level validation failures.

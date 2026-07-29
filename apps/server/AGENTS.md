@@ -6,6 +6,7 @@ Before modifying `apps/server`, read:
 - `package.json`
 - `../../docs/system/server-architecture.md`
 - `../../docs/system/guides/adding-a-server-module.md`
+- `../../docs/system/guides/creating-a-server-repository.md`
 - `../../docs/system/guides/adding-and-using-contracts.md`
 - `../../docs/system/guides/server-error-handling.md`
 
@@ -19,8 +20,9 @@ Follow the modular-monolith boundaries in those documents.
 - Put reusable server-local pure fabrications under `src/shared/`.
 - Use `@warehouser/contracts` for every REST request and response schema.
 - Reuse `@warehouser/utils`; move a generally reusable utility there instead of duplicating it.
-- Use PostgreSQL through TypeORM and keep it behind repository interfaces so persistence details do
-  not affect domain, use-case, REST, or job-handler code.
+- Use PostgreSQL through TypeORM. Put concrete repositories in
+  `src/shared/domain/repositories/`; every new repository must extend `BaseRepository<TEntity>` as
+  described in `creating-a-server-repository.md`.
 - Use reviewed TypeORM migrations for schema changes; never enable runtime synchronization.
 - Use BullMQ for asynchronous operations and scheduled jobs when its infrastructure is introduced.
   Do not add a second job or cron mechanism.
@@ -30,3 +32,6 @@ Follow the modular-monolith boundaries in those documents.
 - Follow `server-error-handling.md` for predicate placement, named error factories, typed errors,
   propagation, NestJS exception filtering, logging, and safe REST error responses. Do not add
   routine `try/catch` blocks to controllers or endpoint handlers.
+
+Do not write tests for migrations. Verify migrations by applying and reverting them against the
+real development database.

@@ -113,6 +113,12 @@ The production router and test routers are created from the same route tree. Rou
 
 ## 8. Add tests
 
+Before adding visible copy, create or extend the module-named translation namespace under
+`apps/web/public/locales/<language>/` for every supported language. Keep stable keys in
+logic and translate them at the presentation boundary. Follow
+[Adding and maintaining web localization](adding-and-maintaining-web-localization.md); do not
+hardcode user-visible strings or move module-specific copy into `common`.
+
 Colocate tests with the code they cover. At minimum, cover:
 
 - client validation and valid form output;
@@ -147,3 +153,4 @@ change, also complete the viewport/state comparison required by the approved des
 - Moving single-feature code to `shared/` before it has another consumer.
 - Importing UI libraries other than the established HeroUI foundation without an architectural
   decision.
+- Adding visible copy to only one locale or hardcoding it in a page, component, schema, or toast.

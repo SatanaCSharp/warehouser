@@ -36,8 +36,10 @@ apps/server/src/
 ├── shared/
 │   ├── shared.module.ts             # global infrastructure providers only
 │   ├── domain/
-│   │   ├── entities/                # genuinely cross-module domain abstractions
-│   │   └── repositories/            # genuinely cross-module repository ports
+│   │   ├── entities/                # shared TypeORM persistence entities
+│   │   └── repositories/            # specialized concrete repositories
+│   ├── guards/                       # all NestJS authentication/authorization guards
+│   ├── logger/                       # shared structured logging module
 │   ├── events/
 │   │   └── <event-name>/
 │   │       ├── <event-name>.schema.ts
@@ -52,8 +54,9 @@ apps/server/src/
     ├── domain/
     │   ├── entities/
     │   ├── value-objects/
-    │   └── repositories/             # ports, not database implementations
-    ├── services/
+    │   ├── errors/
+    │   ├── mappers/
+    │   └── services/
     ├── usecases/
     │   ├── commands/
     │   ├── queries/
@@ -78,20 +81,36 @@ cross-module abstractions, not miscellaneous code or business behavior with an u
 
 ### Domain
 
-Domain entities and value objects contain framework-independent rules and invariants. Domain code
-must not import NestJS, HTTP adapters, BullMQ, TypeORM, or concrete persistence models.
+Domain entities and value objects contain framework-independent rules and invariants. Domain
+entities and value objects must not import NestJS, HTTP adapters, BullMQ, TypeORM, or concrete
+persistence models.
 
-Repository interfaces are domain/application ports. Put a port in a feature's
-`domain/repositories/` when that feature owns it. Promote it to `shared/domain/repositories/` only
-when its abstraction is intentionally shared by multiple modules. Concrete TypeORM adapters belong
-in an infrastructure implementation, never beside the port.
+TypeORM persistence entities and concrete repositories are shared persistence infrastructure.
+Place entities in `shared/domain/entities/` and repositories in `shared/domain/repositories/`.
+Every repository is specialized around a cohesive persistence operation and follows
+[Creating a server repository](guides/creating-a-server-repository.md). It may operate on several
+entities when one query, database operation, or public method is more efficient. Do not use
+`BaseRepository`, generic CRUD bases, repository ports, or feature-owned persistence adapters.
+Repository classes do not contain private methods. Shared repositories must not import from or
+otherwise know about dedicated feature modules. They accept and return shared persistence entities
+and persistence-oriented values only.
+
+Mappings between shared persistence entities and feature-owned domain objects belong in
+`<feature-name>/domain/mappers/`. A feature use case or domain service invokes mappings such as
+`toSession` and `toSessionEntity` above the repository boundary; repositories never perform
+feature/domain mapping.
 
 ### Services
 
-Services contain reusable business operations and may use domain objects and repository
-interfaces. Services must not invoke commands, queries, event use cases, controllers, or handlers.
-A use case may access a repository directly for simple coordination, especially a query, but it
-must use an existing service when that service owns the relevant business rule.
+Services live under the owning feature's `<feature-name>/domain/services/`. They contain reusable
+business operations and may use domain objects, feature mappers, and concrete repositories.
+Services must not invoke commands, queries, event use cases, controllers, or handlers. A use case
+may access a repository directly for a simple operation, especially a query, but it must use an
+existing service when that service owns the relevant business rule. Use an injectable feature
+domain service for business rules or orchestration across independent persistence operations. A
+service may delegate an optimized multi-entity read or write to one specialized repository method
+instead of coordinating table-shaped repositories. The complete operation owns one transaction
+boundary.
 
 ### Use cases
 
@@ -101,9 +120,9 @@ Use cases are the application boundary and have three categories:
 - `queries/` return data without changing business state;
 - `events/` coordinate application behavior caused by a consumed event.
 
-Use cases may coordinate services, domain objects, repository interfaces, shared abstractions, and
+Use cases may coordinate services, domain objects, concrete repositories, shared abstractions, and
 other infrastructure ports. They must not depend on REST DTO classes, controllers, BullMQ handler
-classes, TypeORM entities, or TypeORM repositories.
+classes, TypeORM entities, QueryBuilder, or other TypeORM APIs.
 
 ### REST
 
@@ -118,6 +137,9 @@ imported through a package subpath. Files in `rest/dtos/` are thin NestJS adapte
 
 Server predicates, typed errors, assertion factories, propagation, and global NestJS exception
 mapping follow [Server error handling](guides/server-error-handling.md).
+
+Authentication and transport-level authorization use NestJS guards from `shared/guards/`. Guards
+must not be placed inside feature modules.
 
 ### BullMQ handlers
 
@@ -135,10 +157,10 @@ REST controllers ----\
                       +--> commands / queries / event use cases
 BullMQ handlers ------/                 |
                                         +--> domain services
-                                        +--> repository interfaces
+                                        +--> concrete repositories
                                         +--> shared abstractions
 
-persistence adapters ----------------------> repository interfaces
+concrete repositories ---------------------> TypeORM / PostgreSQL
 ```
 
 Dependencies point inward. In particular:
@@ -146,7 +168,9 @@ Dependencies point inward. In particular:
 - controllers and handlers call use cases, not repositories or business services;
 - services never call use cases;
 - domain code never depends on application, transport, queue, or persistence code;
-- persistence implementations depend on repository interfaces, never the reverse;
+- persistence access stays inside specialized concrete repositories;
+- shared repositories never depend on dedicated feature modules;
+- feature mappers translate between domain and persistence models above the repository boundary;
 - modules communicate through exported use-case modules, explicit services, or events, not through
   another module's controller or persistence implementation.
 
@@ -168,9 +192,14 @@ If the feature has no BullMQ consumers, do not create or export a handler module
 rule to REST functionality.
 
 `SharedModule` may use NestJS `@Global()` for shared infrastructure providers such as configuration,
-logging, database connections, or queue connections. Plain entities, repository interfaces,
-schemas, and TypeScript types are shared through imports and do not need Nest registration. Global
+logging, database connections, or queue connections. Plain entities, repositories, schemas, and
+TypeScript types are shared through imports and do not need Nest registration. Global
 providers must not become a service locator or a way to hide feature dependencies.
+
+Structured application logging follows the accepted
+[Pino logging ADR](adr/27-07-2026-structured-logging-with-pino.md). Configure it in
+`shared/logger/app-logger.module.ts`; application providers inject `PinoLogger` and set their class
+name as context.
 
 ## Events
 
@@ -197,15 +226,21 @@ promote its schema to `packages/contracts` rather than keeping it server-local.
 PostgreSQL and TypeORM are current infrastructure. `AppModule` configures the connection from
 `DATABASE_HOST`, `DATABASE_PORT`, `DATABASE_USER`, `DATABASE_PASSWORD`, and `DATABASE_NAME`.
 Runtime synchronization is disabled: all schema changes use reviewed TypeORM migrations. New
-domain, service, and use-case code must depend on repository interfaces and must not expose TypeORM
-entities, query builders, or database transactions across the persistence boundary.
-
-Keep mapping between persistence records and domain entities inside persistence adapters. Any
-feature that depends on database-specific behavior must document that dependency so it can be
-revisited during migration.
+repositories must follow
+[Creating a server repository](guides/creating-a-server-repository.md): place the concrete class in
+`shared/domain/repositories/` and shape it around a cohesive persistence operation rather than a
+single entity. Prefer one optimized query, database operation, or public method when the operation
+spans several entities. Do not extend `BaseRepository`. Callers inject the concrete repository.
+The repository operates only on shared persistence types and remains independent of feature
+modules. Put domain/persistence conversion in the owning feature's `domain/mappers/` directory and
+invoke it from a use case or feature domain service. Query builders must not leak beyond
+repositories.
 
 ## Shared utilities and types
 
+- Use Lodash in both server and web application code for collection, object, and other
+  data-structure transformations when it supplies the operation. Prefer a directly imported
+  Lodash function over a hand-written imperative loop or custom data-structure helper.
 - Reuse `@warehouser/utils` before adding a utility to the server.
 - Move a framework-neutral utility to `packages/utils/src` when it is or should be useful outside
   the server; expose it through that package's established subpath pattern.
@@ -223,8 +258,8 @@ for reusable test support:
 - `expects/` contains custom Jest matchers and assertion helpers;
 - `mocks/` contains HTTP request and infrastructure test doubles.
 
-Test domain rules without NestJS. Test use cases against repository interfaces using controlled
-fakes. Test REST validation and mapping at the controller/application boundary. Test BullMQ
+Test domain rules without NestJS. Test use cases with controlled repository doubles. Test REST
+validation and mapping at the controller/application boundary. Test BullMQ
 handlers for payload validation, delegation, idempotency behavior, retry classification, and
 failure behavior once BullMQ is installed.
 

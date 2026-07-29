@@ -1,5 +1,8 @@
 export class SystemError extends Error {
-  constructor(message: string) {
-    super(message);
+  constructor(
+    readonly code: string,
+    readonly cause?: unknown,
+  ) {
+    super(code);
   }
 }

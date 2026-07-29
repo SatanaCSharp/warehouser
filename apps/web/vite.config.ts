@@ -7,8 +7,13 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
+      '@warehouser/contracts/auth': path.resolve(
+        __dirname,
+        '../../packages/contracts/src/auth/index.ts',
+      ),
       src: path.resolve(__dirname, './src'),
       App: path.resolve(__dirname, './src/App.tsx'),
+      i18n: path.resolve(__dirname, './src/i18n.ts'),
       guards: path.resolve(__dirname, './src/guards'),
       modules: path.resolve(__dirname, './src/modules'),
       router: path.resolve(__dirname, './src/router.ts'),
@@ -19,9 +24,9 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3000,
+    port: 3200,
     proxy: {
-      '/api': 'http://localhost:3001',
+      '/api': 'http://localhost:3100',
     },
   },
   test: {

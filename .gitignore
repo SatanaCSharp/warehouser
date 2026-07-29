@@ -12,3 +12,4 @@ coverage/
 .codex
 .ai/*.local.md
 .worktrees/
+.agents

@@ -1,0 +1,12 @@
+{
+  "preview": {
+    "title": "Design System Preview",
+    "actions": {
+      "primary": "Primary",
+      "secondary": "Secondary",
+      "danger": "Danger",
+      "signIn": "Log in"
+    },
+    "description": "Plain elements use the same semantic classes (bg-content2, text-foreground-500, rounded-medium) so they stay correct across theme toggles without any custom CSS."
+  }
+}

@@ -7,7 +7,8 @@
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
-    "test": "turbo run test",
+    "test": "node --test tests/**/*.spec.mjs && turbo run test",
+    "test:auth-release": "node --test tests/auth/release-gates.spec.mjs",
     "clean": "turbo run clean",
     "prepare": "husky"
   },

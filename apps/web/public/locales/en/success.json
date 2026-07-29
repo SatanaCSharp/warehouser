@@ -1,0 +1,6 @@
+{
+  "auth": {
+    "signOut": "You have signed out.",
+    "signUp": "Your account was created."
+  }
+}

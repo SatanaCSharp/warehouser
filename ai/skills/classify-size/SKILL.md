@@ -7,8 +7,8 @@ description: >
   Use to classify a feature into XS/S/M/L/XL and write docs/features/{slug}/.size plus the
   pipeline route docs/features/{slug}/.route (quick|standard|full) so later skills know how
   much of each artifact to produce and how handoffs resolve skips. Triggers on "classify size",
-  "feature size", "is this XS or M for {slug}", "size {slug}", "change route", "/sdd:classify-size {slug}",
-  "класифікуй розмір {slug}", "який розмір фічі", "XS чи M". Asks four questions through the available user-input mechanism
+  "feature size", "is this XS or M for {slug}", "size {slug}", "change route", "/classify-size {slug}".
+  Asks four questions through the available user-input mechanism
   (PR count / time / new module-API-migration / breaking changes), maps to a size class via
   the shared size matrix, derives the default route (XS/S→quick, M→standard, L/XL→full),
   confirms size + route in ONE question, and writes the one-line .size and .route files — the
@@ -51,7 +51,7 @@ PM or Tech Lead (driver of the intake phase). An architect may escalate S → M 
 5. **Write `.size` + `.route`.** Each one line, plain text — `.size` only `XS`/`S`/`M`/`L`/`XL`; `.route` only `quick`/`standard`/`full` — no comments, no frontmatter. `docs/features/<slug>/.size`, `docs/features/<slug>/.route`.
 6. **Re-sync the frontmatter mirrors (`.size` is the source of truth).** `feature_size:` lives in up to three places: the `.size` file (canonical) plus the `spec.md` and `sad.md` frontmatter (human-readable mirrors). For each of the two files that exists: same value → OK; different (a reclassification, or a hand-edited mirror) → **update the frontmatter to the new `.size` value** and say so — never leave a mirror stale; missing field → suggest adding `feature_size: <size>`. If the user insists a mirror is the right value, that's a reclassification — loop back to step 4 and re-confirm, then re-sync.
 7. **Structural self-check** — per [`../_shared/self-check.md`](../_shared/self-check.md): re-read the written files from disk and verify **3 items**: (1) `.size` holds exactly one of {XS, S, M, L, XL} (one bare word, no trailing content); (2) `.route` holds exactly one of {quick, standard, full}; (3) both frontmatter mirrors (`feature_size:` in `spec.md` and `sad.md`, for whichever exists) match `.size`. Fix + re-check ≤2 cycles; surface anything unresolved.
-8. **Propose commit + handoff.** `size: <slug> classified as <size> (route <route>)` (or fold into the intake commit if a wrapper called this). Then **emit the stage-handoff block** per [`../_shared/handoff.md`](../_shared/handoff.md) (utility variant) — _What I did_ (incl. «self-check: 3/3 pass») + _Review_ (`.size`, `.route`) + _Run next_: resume your backbone stage (e.g. `/sdd:specify <slug>`); `/clear` optional.
+8. **Propose commit + handoff.** `size: <slug> classified as <size> (route <route>)` (or fold into the intake commit if a wrapper called this). Then **emit the stage-handoff block** per [`../_shared/handoff.md`](../_shared/handoff.md) (utility variant) — _What I did_ (incl. «self-check: 3/3 pass») + _Review_ (`.size`, `.route`) + _Run next_: resume your backbone stage (e.g. `/specify <slug>`); `/clear` optional.
 
 ## Definition of Done
 

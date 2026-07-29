@@ -130,7 +130,7 @@ Tag each AC with its US-NN. Concurrent edge → add as AC-NNb, still in business
 
 ## 8. Open questions
 
-<!-- instruction: 2–4 open questions. Format: `- [ ] <question>? Default now: <X>. — owner: <name/role>, due: <date or stage trigger like "before sdd:tasks">`. Every question has an owner + due — a lone «TBD» is an anti-pattern. -->
+<!-- instruction: 2–4 open questions. Format: `- [ ] <question>? Default now: <X>. — owner: <name/role>, due: <date or stage trigger like "before tasks">`. Every question has an owner + due — a lone «TBD» is an anti-pattern. -->
 
 - [ ] <question>? Default now: <...>. — owner: <name/role>, due: <date or stage>
 - [ ] <question>? — owner: <name/role>, due: <date or stage>
