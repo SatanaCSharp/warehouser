@@ -33,29 +33,5 @@ Follow the modular-monolith boundaries in those documents.
   propagation, NestJS exception filtering, logging, and safe REST error responses. Do not add
   routine `try/catch` blocks to controllers or endpoint handlers.
 
-<!-- init-agent:start -->
-
-## Repository AI adapter (managed)
-
-The canonical AI instructions under `../../ai/` and `ai/` are the source of truth. Load relevant
-skills from `.agents/skills/` on demand. Root reusable commands remain available through
-`../../ai/commands/`; project-scoped Codex adapters under `.codex/agents/` direct each subagent
-back to its canonical role under `../../ai/agents/`.
-
-Pencil is required only for user-facing UI work described in `../../README.md` and
-`../../ai/skills/design-ui/`; it is not required for backend-only server work.
-
-Credential policy:
-
-- `.env.example` files are the only credential or environment-value files coding agents may read.
-- Do not read, print, search, summarize, diff, or otherwise inspect `.env`, `.env.*` (except
-  `.env.example`), or any file known or suspected to contain credentials, tokens, keys, passwords,
-  or secrets.
-- If a required ignored local environment file is missing, you may copy the applicable
-  `.env.example` to the expected path without displaying either file. Never overwrite an existing
-  local environment file.
-- Use only placeholder or development credentials documented in `.env.example` in setup commands
-  or generated guidance. Never copy sensitive local values into instructions, prompts, logs,
-  reports, or tracked files.
-
-<!-- init-agent:end -->
+Do not write tests for migrations. Verify migrations by applying and reverting them against the
+real development database.
