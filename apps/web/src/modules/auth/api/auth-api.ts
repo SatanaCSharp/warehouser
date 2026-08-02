@@ -1,6 +1,6 @@
 import { authenticatedUserSchema } from '@warehouser/contracts/auth';
 
-import { ApiFailure, request } from 'shared/api/api-client';
+import { api } from 'shared/api/api-client';
 
 import type {
   AuthCredentials,
@@ -9,38 +9,34 @@ import type {
 
 const AUTH_PATH = '/api/v1/auth';
 
-const requestAuthenticatedUser = async (
-  path: string,
-  credentials: AuthCredentials,
-): Promise<AuthenticatedUser> => {
-  const result = await request(`${AUTH_PATH}/${path}`, {
-    method: 'POST',
-    body: credentials,
-    schema: authenticatedUserSchema,
-  });
+export const authApi = api.injectEndpoints({
+  endpoints: (build) => ({
+    signUp: build.mutation<AuthenticatedUser, AuthCredentials>({
+      query: (body) => ({ url: `${AUTH_PATH}/sign-up`, method: 'POST', body }),
+      extraOptions: { schema: authenticatedUserSchema },
+      invalidatesTags: ['CurrentSession'],
+    }),
+    signIn: build.mutation<AuthenticatedUser, AuthCredentials>({
+      query: (body) => ({ url: `${AUTH_PATH}/sign-in`, method: 'POST', body }),
+      extraOptions: { schema: authenticatedUserSchema },
+      invalidatesTags: ['CurrentSession'],
+    }),
+    getCurrentSession: build.query<AuthenticatedUser | null, void>({
+      query: () => `${AUTH_PATH}/session`,
+      extraOptions: { schema: authenticatedUserSchema, emptyResponse: null },
+      providesTags: ['CurrentSession'],
+    }),
+    signOut: build.mutation<void, void>({
+      query: () => ({ url: `${AUTH_PATH}/session`, method: 'DELETE' }),
+      invalidatesTags: ['CurrentSession'],
+    }),
+  }),
+  overrideExisting: false,
+});
 
-  if (!result) {
-    throw new ApiFailure('api.unexpected');
-  }
-
-  return result;
-};
-
-export const signUp = (
-  credentials: AuthCredentials,
-): Promise<AuthenticatedUser> =>
-  requestAuthenticatedUser('sign-up', credentials);
-
-export const signIn = (
-  credentials: AuthCredentials,
-): Promise<AuthenticatedUser> =>
-  requestAuthenticatedUser('sign-in', credentials);
-
-export const getCurrentSession = async (): Promise<AuthenticatedUser | null> =>
-  (await request(`${AUTH_PATH}/session`, {
-    schema: authenticatedUserSchema,
-  })) ?? null;
-
-export const signOut = async (): Promise<void> => {
-  await request(`${AUTH_PATH}/session`, { method: 'DELETE' });
-};
+export const {
+  useGetCurrentSessionQuery,
+  useSignInMutation,
+  useSignOutMutation,
+  useSignUpMutation,
+} = authApi;

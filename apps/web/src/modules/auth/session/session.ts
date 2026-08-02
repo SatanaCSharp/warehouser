@@ -1,18 +1,15 @@
-import {
-  getCurrentSession,
-  signOut as revokeCurrentSession,
-} from 'modules/auth/api/auth-api';
+import { authApi } from 'modules/auth/api/auth-api';
+import { selectAuthStatus } from 'modules/auth/store/auth.selectors';
 import {
   authBecameAnonymous,
   authBecameAuthenticated,
-  selectAuthStatus,
-} from 'store/slices/authSlice';
+} from 'modules/auth/store/auth.slice';
 
 import type { AuthenticatedUser } from '@warehouser/contracts/auth';
+import type { AuthStatus } from 'modules/auth/store/auth.slice';
 import type { AppStore } from 'store';
-import type { AuthStatus } from 'store/slices/authSlice';
 
-type RestoreSession = () => Promise<AuthenticatedUser | null>;
+type RestoreSession = (store: AppStore) => Promise<AuthenticatedUser | null>;
 type ResolvedAuthStatus = Exclude<AuthStatus, 'unknown'>;
 
 export const createSessionBootstrap = (restore: RestoreSession) => {
@@ -29,7 +26,7 @@ export const createSessionBootstrap = (restore: RestoreSession) => {
       return currentRequest;
     }
 
-    const request = restore()
+    const request = restore(store)
       .then((session) => {
         if (session) {
           store.dispatch(authBecameAuthenticated(session.user));
@@ -48,12 +45,13 @@ export const createSessionBootstrap = (restore: RestoreSession) => {
   };
 };
 
-export const initializeSession = createSessionBootstrap(getCurrentSession);
-
-export const completeSignOut = async (
-  store: AppStore,
-  revoke: () => Promise<void> = revokeCurrentSession,
-): Promise<void> => {
-  await revoke();
-  store.dispatch(authBecameAnonymous());
-};
+export const initializeSession = createSessionBootstrap((store) =>
+  store
+    .dispatch(
+      authApi.endpoints.getCurrentSession.initiate(undefined, {
+        forceRefetch: true,
+        subscribe: false,
+      }),
+    )
+    .unwrap(),
+);

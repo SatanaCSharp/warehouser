@@ -3,16 +3,13 @@ import { useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { signUp } from 'modules/auth/api/auth-api';
+import { alertSignUpSuccess } from 'modules/auth/alerts/auth-feedback';
+import { useSignUpMutation } from 'modules/auth/api/auth-api';
 import { SignUpForm } from 'modules/auth/sign-up/components/SignUpForm';
-import { ApiFailure } from 'shared/api/api-client';
+import { authBecameAuthenticated } from 'modules/auth/store/auth.slice';
+import { isApiFailure } from 'shared/api/api-client';
 import { ROUTES } from 'shared/constants/routes';
-import {
-  notifyApiFailure,
-  notifySignUpSuccess,
-} from 'shared/notifications/auth-feedback';
 import { useAppDispatch } from 'store/hooks';
-import { authBecameAuthenticated } from 'store/slices/authSlice';
 
 import type { SignUpFormValues } from 'modules/auth/sign-up/schemas/sign-up-form.schema';
 import type { ReactElement } from 'react';
@@ -23,23 +20,25 @@ export const SignUpPage = (): ReactElement => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const [emailError, setEmailError] = useState<string>();
+  const [signUp] = useSignUpMutation();
 
   const handleSubmit = async (values: SignUpFormValues): Promise<void> => {
     setEmailError(undefined);
-    try {
-      const result = await signUp(values);
-      dispatch(authBecameAuthenticated(result.user));
-      notifySignUpSuccess();
-      await navigate({ to: ROUTES.HOME });
-    } catch (error) {
-      if (!(error instanceof ApiFailure)) {
-        throw error;
-      }
-      notifyApiFailure(error);
-      if (error.code === 'auth.email_already_registered') {
+
+    const result = await signUp(values);
+    if ('error' in result) {
+      if (
+        isApiFailure(result.error) &&
+        result.error.code === 'auth.email_already_registered'
+      ) {
         setEmailError(translateErrors('auth.emailAlreadyRegistered'));
       }
+      return;
     }
+
+    dispatch(authBecameAuthenticated(result.data.user));
+    alertSignUpSuccess();
+    await navigate({ to: ROUTES.HOME });
   };
 
   return (

@@ -1,39 +1,30 @@
 import { Button } from '@heroui/react';
 import { useNavigate } from '@tanstack/react-router';
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { completeSignOut } from 'modules/auth/session/session';
-import { ApiFailure } from 'shared/api/api-client';
+import { alertSignOutSuccess } from 'modules/auth/alerts/auth-feedback';
+import { useSignOutMutation } from 'modules/auth/api/auth-api';
+import { authBecameAnonymous } from 'modules/auth/store/auth.slice';
 import { ROUTES } from 'shared/constants/routes';
-import {
-  notifyApiFailure,
-  notifySignOutSuccess,
-} from 'shared/notifications/auth-feedback';
-import { useAppStore } from 'store/hooks';
+import { useAppDispatch } from 'store/hooks';
 
 import type { ReactElement } from 'react';
 
 export const SignOutButton = (): ReactElement => {
   const { t } = useTranslation('common');
   const navigate = useNavigate();
-  const store = useAppStore();
-  const [isSigningOut, setIsSigningOut] = useState(false);
+  const dispatch = useAppDispatch();
+  const [signOut, { isLoading: isSigningOut }] = useSignOutMutation();
 
   const handleSignOut = async (): Promise<void> => {
-    setIsSigningOut(true);
-    try {
-      await completeSignOut(store);
-      notifySignOutSuccess();
-      await navigate({ to: ROUTES.LOGIN, search: {} });
-    } catch (error) {
-      if (!(error instanceof ApiFailure)) {
-        throw error;
-      }
-      notifyApiFailure(error);
-    } finally {
-      setIsSigningOut(false);
+    const result = await signOut();
+    if ('error' in result) {
+      return;
     }
+
+    dispatch(authBecameAnonymous());
+    alertSignOutSuccess();
+    await navigate({ to: ROUTES.LOGIN, search: {} });
   };
 
   return (

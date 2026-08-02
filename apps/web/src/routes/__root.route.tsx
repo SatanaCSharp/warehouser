@@ -2,7 +2,7 @@ import { createRootRouteWithContext } from '@tanstack/react-router';
 
 import { RootLayout } from 'shared/layouts/RootLayout';
 
-import type { AppStore } from 'store/index';
+import type { AppStore } from 'store';
 
 export interface RouterContext {
   store: AppStore;

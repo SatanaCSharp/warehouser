@@ -62,7 +62,8 @@ flat JSON key `"head.title"`.
 2. Add the same nested key to that namespace file in every supported language.
 3. Keep interpolation variable names identical across locales.
 4. Use the namespace-aware translator in a React presentation component.
-5. Outside React, carry a stable key or code until a shared presentation adapter translates it.
+5. Outside React, carry a stable key or code until its owning alert or presentation adapter
+   translates it.
 6. Add or update a focused test that resolves the real key in every supported language.
 
 Never hardcode user-visible copy in pages, components, Zod schemas, API adapters, or toast calls.
@@ -116,8 +117,10 @@ Non-React schemas and domain/API modules must not call hooks. They emit a stable
 const requiredEmailKey = 'validation:email.required';
 ```
 
-The form or shared notification adapter resolves that value at presentation time. Direct
-`i18next.t(...)` calls belong only in shared presentation adapters where a hook cannot be used.
+The form or owning alert adapter resolves that value at presentation time. Direct `i18next.t(...)`
+calls belong only in presentation adapters where a hook cannot be used; feature-specific alert
+adapters stay under `modules/<module>/alerts/`, while cross-feature adapters belong under
+`shared/alerts/`.
 
 `apps/web/src/i18n.ts` registers `initReactI18next`, and `main.tsx` imports that bootstrap before
 rendering the application.

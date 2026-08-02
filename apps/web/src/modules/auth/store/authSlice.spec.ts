@@ -1,13 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
-import { makeStore } from 'store';
 import {
-  authBecameAnonymous,
-  authBecameAuthenticated,
   selectAuthStatus,
   selectCurrentUser,
   selectIsAuthenticated,
-} from 'store/slices/authSlice';
+} from 'modules/auth/store/auth.selectors';
+import {
+  authBecameAnonymous,
+  authBecameAuthenticated,
+} from 'modules/auth/store/auth.slice';
+import { makeStore } from 'store';
 
 const user = { id: '00000000-0000-4000-8000-000000000001' };
 

@@ -13,3 +13,4 @@ coverage/
 .ai/*.local.md
 .worktrees/
 .agents
+docs/local

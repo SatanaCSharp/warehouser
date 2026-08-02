@@ -39,6 +39,11 @@ Redux Toolkit is the single owner of cross-module browser state. TanStack Router
 RTK store through router context. Plain guard functions use selectors against that store and throw
 router redirects; a parallel React auth context is not used.
 
+RTK Query owns web API request lifecycle and cached server state. React workflows use generated
+hooks, while route guards and other non-React workflows dispatch the same endpoints. A shared base
+query preserves cookie credentials, contract validation, and normalized errors. See the accepted
+[RTK Query ADR](adr/02-08-2026-rtk-query-for-web-api-calls.md).
+
 Detailed frontend boundaries are defined in [Frontend architecture](frontend-architecture.md).
 
 ### Web localization
@@ -75,8 +80,6 @@ implementation → visual review workflow in the root README. Backend-only work 
   restoration require an explicit security design before production use.
 - Every language/namespace pair configured in `apps/web/src/i18n.ts` requires a matching JSON file
   under `apps/web/public/locales`; missing files fail as runtime HTTP loads.
-- The web application has no domain API client yet; choose its error and request policy when the
-  first real server-integrated feature is designed.
 - BullMQ and Redis are target technologies and are not installed yet; their introduction requires
   explicit infrastructure work.
 - PostgreSQL availability, credentials, backups, and production migration execution require

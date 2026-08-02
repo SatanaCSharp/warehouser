@@ -1,7 +1,7 @@
 # Web Error Handling and Action Feedback
 
 This guide applies to `apps/web`. It defines how the web application normalizes API failures,
-presents form errors, displays error and success notifications, and translates all user-visible
+presents form errors, displays error and success alerts, and translates all user-visible
 descriptions.
 
 The server remains responsible for classifying failures and returning the safe REST error envelope
@@ -16,8 +16,8 @@ Normalize API failures at one shared API boundary:
 - Preserve its stable error code and safe interpolation parameters.
 - Produce a generic normalized error for network failures, malformed responses, and unknown
   failures.
-- Rethrow the normalized error so feature workflows and forms can react to it; do not swallow
-  failures.
+- Return the normalized error through RTK Query's error result so feature workflows and forms can
+  react to it without exception-based control flow.
 
 Treat server error codes as identifiers, not display text. Never display raw exception messages,
 stack traces, database or vendor details, or other unrestricted server response content.
@@ -31,6 +31,30 @@ containers. Prevent duplicate toasts when one failure is observed by more than o
 concurrent requests report the same session-expiry failure.
 
 An intentionally aborted request is not an API failure and must not produce a toast.
+
+Handle normalized API failures centrally with Redux middleware using RTK Query's rejected-action
+matcher. The middleware owns the generic error toast, so pages and components must not repeat
+`try`/`catch` blocks solely to call the toast notifier.
+
+Keep this cross-feature adapter in `apps/web/src/shared/alerts/`. By contrast, an alert describing
+a feature-owned action belongs in `apps/web/src/modules/<module>/alerts/`. Ownership follows the
+action, not the toast library: authentication success alerts, for example, belong to the auth
+module rather than `shared/alerts/`.
+
+For mutations, await the trigger without calling `.unwrap()` and branch on the result:
+
+```ts
+const result = await updateResource(input);
+if ('error' in result) {
+  return;
+}
+
+completeWorkflow(result.data);
+```
+
+The global middleware handles the toast. Feature code handles only feature-specific consequences,
+such as mapping a known API failure to a form field. Success-only state changes, alerts, and
+navigation must occur only after confirming the result contains `data`.
 
 ## 3. Present form errors through HeroUI
 

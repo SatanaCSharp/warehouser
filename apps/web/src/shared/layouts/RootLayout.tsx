@@ -6,9 +6,9 @@ import {
 } from '@tanstack/react-router';
 
 import { SignOutButton } from 'modules/auth/sign-out/components/SignOutButton';
+import { selectIsAuthenticated } from 'modules/auth/store/auth.selectors';
 import { ROUTES } from 'shared/constants/routes';
 import { useAppSelector } from 'store/hooks';
-import { selectIsAuthenticated } from 'store/slices/authSlice';
 
 import type { ReactElement } from 'react';
 

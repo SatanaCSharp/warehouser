@@ -3,13 +3,11 @@ import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { signIn } from 'modules/auth/api/auth-api';
+import { useSignInMutation } from 'modules/auth/api/auth-api';
 import { LoginForm } from 'modules/auth/login/components/LoginForm';
-import { ApiFailure } from 'shared/api/api-client';
+import { authBecameAuthenticated } from 'modules/auth/store/auth.slice';
 import { ROUTES } from 'shared/constants/routes';
-import { notifyApiFailure } from 'shared/notifications/auth-feedback';
 import { useAppDispatch } from 'store/hooks';
-import { authBecameAuthenticated } from 'store/slices/authSlice';
 
 import type { LoginFormValues } from 'modules/auth/login/schemas/login-form.schema';
 import type { ReactElement } from 'react';
@@ -20,6 +18,7 @@ export const LoginPage = (): ReactElement => {
   const navigate = useNavigate();
   const { reason } = useSearch({ from: ROUTES.LOGIN });
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const [signIn] = useSignInMutation();
 
   useEffect(() => {
     if (reason === 'session-ended') {
@@ -28,16 +27,13 @@ export const LoginPage = (): ReactElement => {
   }, [reason]);
 
   const handleSubmit = async (values: LoginFormValues): Promise<void> => {
-    try {
-      const result = await signIn(values);
-      dispatch(authBecameAuthenticated(result.user));
-      await navigate({ to: ROUTES.HOME });
-    } catch (error) {
-      if (!(error instanceof ApiFailure)) {
-        throw error;
-      }
-      notifyApiFailure(error);
+    const result = await signIn(values);
+    if ('error' in result) {
+      return;
     }
+
+    dispatch(authBecameAuthenticated(result.data.user));
+    await navigate({ to: ROUTES.HOME });
   };
 
   return (
