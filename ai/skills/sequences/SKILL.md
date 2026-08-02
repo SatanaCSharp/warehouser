@@ -15,6 +15,11 @@ description: >
 
 # Skill: sequences
 
+Resolve the input per [`../_shared/work-item.md`](../_shared/work-item.md). A bare slug keeps the
+feature flow; `change-request:<slug>` uses the change-request root. For a change request, sequence
+the changed runtime paths and affected error branches, while recording important unchanged paths
+as regression boundaries. All feature-root paths below mean the resolved `work_item_root`.
+
 Draws the **runtime view** of an already-designed feature: for each critical flow it produces a Mermaid `sequenceDiagram` block — generic participants, happy path plus the error branches the spec demands — and writes them into `docs/features/<slug>/sad.md §6`. One flow at a time, user confirms each. The diagrams are the bridge between the static design (§5 building blocks) and the data layer: every persist/read step you draw becomes a hint for the indexes `data-model` will need.
 
 Diagram labels + §6 prose follow `artifact_language` — but the **existing `sad.md`'s language wins** over the setting; Mermaid keywords (`sequenceDiagram`, `participant`, `alt/else/end`) and participant names that name real modules stay English → [`../_shared/artifact-language.md`](../_shared/artifact-language.md).
@@ -27,7 +32,7 @@ Tech Lead (drives the runtime decomposition). The PM confirms that each drawn fl
 
 ## Inputs
 
-- `<slug>` — same feature slug used by every earlier stage.
+- `<slug>` — feature slug, or the explicit `change-request:<slug>` identifier.
 - **Gate (hard-refuse if missing):** `docs/features/<slug>/sad.md`. The §5 building-block view names the participants; §6 is where flows are written. If `sad.md` is absent → STOP and point: «run `design <slug>` first — sequences are written into its §6».
 - (Expected) `sad.md` frontmatter `target_surfaces` — picks the participant vocabulary (UI-driven flows for a UI surface). **Absent or empty → warn** («surfaces undeclared — re-run `design`, or proceeding as `backend-service`») **and treat as `[backend-service]`** (→ [`../_shared/surfaces.md`](../_shared/surfaces.md)); never silently guess a UI surface.
 - **Strongly expected:** `docs/features/<slug>/spec.md` — §4 user stories tell you _which_ flows exist; §5 acceptance criteria are the **coverage floor** — every AC must be shown by a flow, a branch, or an explicit non-runtime N/A (the step-7 coverage check). Present by this stage in the normal pipeline; if genuinely absent, fall back to §6/§5 of `sad.md` for the flow list and note that AC-coverage can't be verified.

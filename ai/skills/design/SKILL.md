@@ -8,6 +8,12 @@ description: Create or update a feature architecture from an approved specificat
 
 # Feature architecture design
 
+Resolve the input per [`../_shared/work-item.md`](../_shared/work-item.md). A bare slug preserves
+the existing feature flow. For `change-request:<slug>`, use `docs/change-requests/<slug>` as the
+artifact root, read `change.md` with `spec.md`, and describe current versus target behavior plus
+retained/modified/removed building blocks. Never create a feature directory for the request. All
+feature-root paths below mean the resolved `work_item_root`.
+
 Apply the system architecture to one feature. `docs/system` owns durable repository rules; the
 feature SAD records how the feature fits those rules, not a competing architecture.
 

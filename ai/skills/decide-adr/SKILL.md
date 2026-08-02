@@ -18,6 +18,11 @@ description: >
 
 # Skill: decide-adr
 
+Resolve the input per [`../_shared/work-item.md`](../_shared/work-item.md). A bare slug preserves
+the feature ADR location; `change-request:<slug>` places request-specific ADRs under the
+change-request root and links `change.md` plus `spec.md`. All feature-root paths below mean the
+resolved `work_item_root`.
+
 The **post-hoc / asynchronous ADR path** (pipeline stage 8a). `design` spawns ADRs synchronously and `Accepted` while you walk it Socratically; `decide-adr` records a decision that _missed_ that pass — already in code, agreed in a chat, sketched on a whiteboard, or flagged by a `tasks`/review gate as a contract with no ADR behind it. It can also run a `Proposed → Accepted` review flow when the decision still needs a reviewer's sign-off. One file = one decision; it reuses design's MADR template, so there is **no second ADR format here**.
 
 It is a recording utility, not a Socratic design stage — it does **not** run the shared Socratic loop or critic. The two shared dependencies are question phrasing and the worthiness gate:
@@ -31,7 +36,7 @@ Decision author (usually the Architect or Tech Lead). A reviewer (Tech Lead, plu
 
 ## Inputs
 
-- `<slug>` — the feature slug, same as every earlier stage.
+- `<slug>` — feature slug, or the explicit `change-request:<slug>` work-item identifier.
 - `<title>` — kebab-case, describes the **decision**, not the problem (`time-sortable-ids`, not `id-strategy`).
 - The decision itself + its alternatives — pulled from `sad.md` §4 Solution strategy / §9 ADR index / §11 Risks, or supplied by the user.
 - **Input gate (soft).** Expects `docs/features/<slug>/` to exist, ideally with `sad.md` (decide-adr reads its §4/§9/§11 for context and drivers). If the decision is genuinely standalone — no feature folder yet — allow it, but **note the missing design context** in the ADR's Context section and warn the user, rather than refusing.

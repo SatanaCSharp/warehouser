@@ -1,5 +1,10 @@
 # Inputs + preconditions (step 1)
 
+Resolve the invocation using [`../../_shared/work-item.md`](../../_shared/work-item.md) before this
+gate. A bare slug uses `docs/features/<slug>`; `change-request:<slug>` uses
+`docs/change-requests/<slug>`. Every literal feature path below means that resolved root. Validate
+top-level `kind` when present; it must match the resolved kind.
+
 ## Hard gate
 
 `docs/features/<slug>/tasks.json` must exist and parse as JSON. Missing or malformed → refuse: «run `tasks <slug>` first (it emits tasks.json)». Do not try to reconstruct tasks from the markdown — `tasks.json` is the contract.
@@ -8,7 +13,8 @@
 
 The loaded `tasks.json` must satisfy the shape from the `tasks` skill:
 
-- top-level `{ slug, tasks: [...] }`.
+- top-level `{ slug, tasks: [...] }` for features (unchanged), or
+  `{ slug, kind: "change-request", tasks: [...] }` for change requests.
 - each task: `id` (unique), `title`, `layer`, `deps` (array of existing ids), `acs` (array), `dod` (string), `files_hint` (array).
 - `deps` forms a DAG (no cycles) — verified in step 4. A cycle is a hard error: report the cycle and stop (it is a `tasks` bug, not an `implement` one).
 

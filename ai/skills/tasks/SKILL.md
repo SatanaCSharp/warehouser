@@ -16,6 +16,12 @@ description: >
 
 # Skill: tasks
 
+Resolve the input per [`../_shared/work-item.md`](../_shared/work-item.md). A bare slug retains the
+feature flow; `change-request:<slug>` reads and writes beneath its change-request root. Change
+request tasks use `CR-AC-*`, include `kind: "change-request"` at the top of `tasks.json`, and add
+`source_refs` for tasks that amend, replace, or remove previously documented behavior. All
+feature-root paths below mean the resolved `work_item_root`.
+
 Task-breakdown generator: atomic tasks ≤1 day, each a separately reviewable change (≤~500 LOC preferred), with a visible dependency graph and a Definition of Done per task. One task = one focused session = one PR. "Build the feature" is not a task — break it down.
 
 Task files **link** to upstream artifacts (`spec.md §AC-N`, `sad.md §6`, `data-model.md`, `contracts/openapi.yaml`, `adr/NNNN-*.md`) — they do not duplicate them. Alongside the human-facing markdown, this skill emits **`tasks.json`**, the contract the `implement` engine reads to build its dependency DAG.
@@ -28,7 +34,7 @@ Tech Lead.
 
 ## Inputs
 
-- `<slug>` — feature slug.
+- `<slug>` — feature slug, or the explicit `change-request:<slug>` work-item identifier.
 - **Gate (hard refuse):** `docs/features/<slug>/spec.md` + `docs/features/<slug>/sad.md`. Missing → STOP and point at the producing skill (`specify` / `design`). Read every Accepted ADR when present; zero ADRs is valid when `sad.md §9` records that no feature decision passed the ADR gate.
 - Read directly (not via an index): spec §5 AC + §6 NFR, sad §5 module boundaries + §6 runtime + §9 ADR index, each Accepted ADR, and — if present — `data-model.md` and `contracts/openapi.yaml`.
 - (Expected) `sad.md` frontmatter `target_surfaces` — gates which layers appear (step 4). **Absent or empty → warn** («surfaces undeclared — re-run `design`, or proceeding as `backend-service`») **and treat as `[backend-service]`** (→ [`../_shared/surfaces.md`](../_shared/surfaces.md)); never silently emit `ui` tasks for an undeclared surface.
@@ -47,7 +53,7 @@ Tech Lead.
 9. **Estimate + owner.** S/M/L or hours; a named owner (or `<TBD lead>`). Adapt to the team's sizing if any.
 10. **Emit `tasks.json`** (step contract below) — the same model the markdown reflects, in machine form, at `docs/features/<slug>/tasks.json`.
 11. **Optional tracker export.** If an issue-tracker MCP is connected (Jira / Linear / GitHub Issues / Redmine — whichever the repo uses), offer to create tickets from `_epic.md` + the task files. Otherwise provide copy-paste-ready bodies. Never hard-bind to one tracker.
-12. **Self-check.** Every task ≤1 day; DAG acyclic with ≥1 parallel branch where the work allows; DoD per task; `acs` cover every spec §5 AC; `tasks.json` validates against the contract.
+12. **Self-check.** Every task ≤1 day; DAG acyclic with ≥1 parallel branch where the work allows; DoD per task; `acs` cover every spec §5 AC; `tasks.json` validates against the contract. For a change request, also verify `kind: change-request`, every `CR-AC-*` and `CR-RG-*` is covered, and every AMEND/REPLACE/REMOVE task carries a non-empty `source_refs`.
 13. **Propose commit + handoff.** `tasks: <slug> (breakdown + tasks.json)`. Then **emit the stage-handoff block** per [`../_shared/handoff.md`](../_shared/handoff.md) — _What I did_ + _Review_ (`tasks/`, `tasks.json`) + _Run next_ — **resolve the next stage per `.route`** (the Routes table in [`../_shared/size-matrix.md`](../_shared/size-matrix.md)): forward `/plan-tests <slug>` (on `quick` it always collapses to the inline `## Test plan` in `spec.md`), then `/implement <slug>`; `plan-tests`' N/A condition = **every task's DoD already names its test** — only then skip target `/implement <slug>` directly (auto-skip on `quick`, offered `↳ or` on `standard`, never on `full`).
 
 ## `tasks.json` contract (read by `implement`)
@@ -70,6 +76,10 @@ Tech Lead.
 ```
 
 - The markdown task files and `tasks.json` use the **same field names** (`deps`, `acs`) — this skill emits both from one model, so there's no translation layer to drift.
+- Feature task sets retain this existing shape unchanged. A change request extends only its own
+  task set with top-level `"kind": "change-request"` and per-task `"source_refs": [...]`.
+  `source_refs` may be empty for ADD-only tasks; it is required when a task AMENDs, REPLACEs, or
+  REMOVEs existing behavior.
 - `deps` must form a **DAG** (no cycles) and reference only ids present in the file.
 - `layer: migration` tasks are serialized by `implement` (ordered migration sequence); `layer: ui` is **not** auto-serialized (UI tasks parallelize); tasks with overlapping `files_hint` are serialized into the same lane regardless of layer — a **compile-coupled pair** (step 5) rides this same mechanism via the shared contract file, and `implement` may commit the pair together (one gate, both `SDD-Task` trailers).
 - Which layers are present is gated by `sad.md` frontmatter `target_surfaces` (a UI surface adds `ui`; a backend-only feature has none) → [`../_shared/surfaces.md`](../_shared/surfaces.md).
@@ -79,7 +89,8 @@ Tech Lead.
 - `tasks/_epic.md` + `tasks/tracker.md` + one `tasks/<task>.md` per task exist, linking (not duplicating) upstream.
 - `tasks.json` exists and validates: acyclic `deps`, every `acs` entry is a real spec §5 AC, every task has a `dod` and a `files_hint`.
 - Every task ≤1 day with an owner; the DAG shows ≥1 parallel branch where the work allows.
-- Every spec §5 AC is covered by ≥1 task's `acs`.
+- Every spec §5 AC is covered by ≥1 task's `acs`; for change requests, every regression boundary
+  is covered too and source-changing tasks retain their `source_refs`.
 - The step-12 check (atomicity, acyclic DAG, per-task DoD, AC coverage, `tasks.json` contract) is this skill's **structural self-check** ([`../_shared/self-check.md`](../_shared/self-check.md)); its result is reported in the handoff.
 
 ## Anti-patterns

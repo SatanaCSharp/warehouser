@@ -18,6 +18,11 @@ description: >
 
 # Skill: classify-size
 
+Resolve the input per [`../_shared/work-item.md`](../_shared/work-item.md) before reading or writing.
+A bare slug retains the existing feature behavior. `change-request:<slug>` uses
+`docs/change-requests/<slug>` and the change-request escalation signals in the shared size matrix.
+All `docs/features/<slug>` paths below mean the resolved `work_item_root` for that invocation.
+
 Atomic skill — classifies a feature into XS/S/M/L/XL and fixes the result in
 `docs/features/<slug>/.size`, plus the pipeline **route** (`quick` / `standard` / `full`) in
 `docs/features/<slug>/.route`. This is the single source of size- and route-aware behaviour for
@@ -35,7 +40,7 @@ PM or Tech Lead (driver of the intake phase). An architect may escalate S → M 
 
 ## Inputs
 
-- `<slug>` — feature slug.
+- `<slug>` — feature slug, or the explicit `change-request:<slug>` work-item identifier.
 - (Optional) the idea / intake note — for a rough starting hint. The skill works without it.
 
 ## Protocol
@@ -46,6 +51,9 @@ PM or Tech Lead (driver of the intake phase). An architect may escalate S → M 
    - **Time to merge the main part** — `≤1 day` / `~1 week` / `1–2 sprints` / `>1 month`.
    - **New module / new API / DB migration** — `none` / `one of three` / `two of three` / `all three`.
    - **Breaking changes for consumers** — `no` / `internal only` / `public clients`.
+     For `change-request:<slug>`, include three change-specific signals in the same intake: affected
+     domains/features, existing-data reinterpretation or migration, and rollout/rollback difficulty.
+     These signals may escalate the result; they never reduce the four-signal feature classification.
 3. **Map to a class** using the table in [`../_shared/size-matrix.md`](../_shared/size-matrix.md). On an edge case, name the dominant signal aloud («M because it adds a new API + 1–2 sprints, even though PR count is on the S/M border»). For an all-maximums answer, ask explicitly «needs a separate roadmap?» → yes = XL.
 4. **Confirm size + route — ONE question.** Derive the default route from the size (**XS/S → `quick`, M → `standard`, L/XL → `full`** — the Routes table in [`../_shared/size-matrix.md`](../_shared/size-matrix.md)). Then one request through the available user-input mechanism: «Classifying as `<size>` (<one-line rationale>) → route `<route>` (<one-line what the route does>). Lock both in?» — options: `Yes` / `Yes, but route <other>` / `No, I want size <X>` / `Reclassify`. Never a second question just for the route.
 5. **Write `.size` + `.route`.** Each one line, plain text — `.size` only `XS`/`S`/`M`/`L`/`XL`; `.route` only `quick`/`standard`/`full` — no comments, no frontmatter. `docs/features/<slug>/.size`, `docs/features/<slug>/.route`.

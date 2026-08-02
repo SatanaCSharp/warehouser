@@ -15,6 +15,12 @@ description: >
 
 # Skill: implement
 
+Resolve the input per [`../_shared/work-item.md`](../_shared/work-item.md) before the hard gate. A
+bare slug keeps the feature flow; `change-request:<slug>` loads `tasks.json` and every upstream
+artifact beneath `docs/change-requests/<slug>`. Change-request commits add
+`SDD-Change: <slug>` alongside their `SDD-Task` and `SDD-AC: CR-AC-NN` trailers. All feature-root
+paths below mean the resolved `work_item_root`.
+
 The implementation engine. It turns `tasks.json` into committed, tested code through a strict TDD cycle per task — `SELECT → RED → GREEN → REFACTOR → GATE → COMMIT` — and orchestrates that cycle in one of three modes (sequential / agent-team / dynamic-workflow) picked by an unambiguous decision tree. Everything is stack-agnostic: the test, lint, and vet commands are **detected**, never hard-coded.
 
 This file is the spine. Each step delegates to a file in `references/`.
@@ -25,7 +31,7 @@ Tech Lead drives; the engine runs the cycle. The three subagents ship with the p
 
 ## Inputs
 
-- `<slug>` — feature slug.
+- `<slug>` — feature slug, or the explicit `change-request:<slug>` work-item identifier.
 - **Gate (hard refuse):** `docs/features/<slug>/tasks.json`. Missing → «run `tasks <slug>` first».
 - Read for context (the agents read these directly, not via paraphrase): `docs/system` architecture, `spec.md` (AC), `data-model.md` + the **staged** TypeORM migrations under `docs/features/<slug>/migrations/` (a `layer: migration` task promotes these into the live server migration tree — see [`./references/inputs.md`](./references/inputs.md)), `contracts/openapi.yaml`, `test-plan.md`, `sad.md`, Accepted `adr/`, and the approved `design-handoff.md` for UI tasks.
 - Settings: `.ai/sdd.local.md` (auto-created with documented defaults if absent — normally by `specify` at the backbone start; `implement` creates it too if you jump straight here) → [`./references/settings.md`](./references/settings.md).
