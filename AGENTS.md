@@ -16,4 +16,6 @@ or secrets. If a required ignored local environment file is missing, it may be c
 applicable `.env.example` without displaying either file; never overwrite an existing local
 environment file. Setup commands and generated guidance must use only the placeholder/development
 values documented in `.env.example`, never values from sensitive local files.
+
+Coding agents must not add telemetry.
 <!-- init-agent:end -->
