@@ -1,0 +1,545 @@
+openapi: 3.1.0
+
+info:
+  title: Access API
+  version: 0.1.0
+  description: |
+    Establishes Warehouse-scoped authorization independently from authentication. Registration
+    creates an immediately manageable Warehouse, while authenticated members can inspect their
+    effective capabilities and administer custom Roles without crossing Warehouse boundaries or
+    weakening the single protected Warehouse Manager invariant.
+
+servers:
+  - url: https://api.example.com
+    description: Production
+  - url: http://localhost
+    description: Local
+
+security:
+  - SessionCookie: []
+
+paths:
+  /api/v1/auth/sign-up:
+    post:
+      summary: Register an identity and provision initial Warehouse access
+      operationId: signUpWithWarehouse
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RegistrationInput" }
+            example:
+              email: "test.user@example.test"
+              password: "Test password 123"
+              warehouseName: "Test Warehouse"
+      responses:
+        "201":
+          description: Identity, Warehouse, protected manager Role, membership, and Session were created atomically.
+          headers:
+            Set-Cookie:
+              description: Host-only HttpOnly session cookie; SameSite=Lax, Path=/, and Secure in production.
+              schema: { type: string }
+              example: "warehouser_session=<opaque-session-secret>; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=2592000"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RegistrationResult" }
+              example:
+                user: { id: "00000000-0000-4000-8000-000000000001" }
+                access:
+                  warehouseId: "00000000-0000-4000-8000-000000000002"
+                  roleId: "00000000-0000-4000-8000-000000000003"
+                  roleKind: warehouse_manager
+                  permissionIds: ["ROLES:CREATE", "ROLES:WATCH"]
+        "400": { $ref: "#/components/responses/InvalidInput" }
+        "409": { $ref: "#/components/responses/EmailAlreadyRegistered" }
+        "503": { $ref: "#/components/responses/RegistrationUnavailable" }
+
+  /api/v1/access/current:
+    get:
+      summary: Get the current member's effective access projection
+      operationId: getCurrentAccess
+      responses:
+        "200":
+          description: Fresh effective access for the authenticated member.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AccessProjection" }
+              example:
+                warehouseId: "00000000-0000-4000-8000-000000000002"
+                roleId: "00000000-0000-4000-8000-000000000003"
+                roleKind: custom
+                permissionIds: ["ROLES:WATCH", "USERS:WATCH"]
+        "401": { $ref: "#/components/responses/SessionRequired" }
+        "403": { $ref: "#/components/responses/MembershipRequired" }
+
+  /api/v1/access/roles:
+    get:
+      summary: List current-Warehouse Roles
+      operationId: listRoles
+      parameters:
+        - { $ref: "#/components/parameters/After" }
+        - { $ref: "#/components/parameters/Before" }
+        - { $ref: "#/components/parameters/Limit" }
+      responses:
+        "200":
+          description: Roles ordered deterministically by name and ID.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RolePage" }
+              example:
+                items:
+                  - id: "00000000-0000-4000-8000-000000000003"
+                    name: "Test Operator"
+                    kind: custom
+                    permissionIds: ["USERS:WATCH"]
+                hasNext: false
+                hasPrev: false
+                nextCursor: null
+        "401": { $ref: "#/components/responses/SessionRequired" }
+        "403": { $ref: "#/components/responses/AccessDenied" }
+    post:
+      summary: Create a custom Role
+      operationId: createRole
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RoleWrite" }
+            example:
+              name: "Test Operator"
+              permissionIds: ["USERS:WATCH"]
+      responses:
+        "201":
+          description: Custom Role created in the current Warehouse.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Role" }
+              example:
+                id: "00000000-0000-4000-8000-000000000003"
+                name: "Test Operator"
+                kind: custom
+                permissionIds: ["USERS:WATCH"]
+        "400": { $ref: "#/components/responses/InvalidRoleInput" }
+        "401": { $ref: "#/components/responses/SessionRequired" }
+        "403": { $ref: "#/components/responses/AccessDenied" }
+        "409": { $ref: "#/components/responses/RoleNameConflict" }
+
+  /api/v1/access/roles/{roleId}:
+    parameters:
+      - { $ref: "#/components/parameters/RoleId" }
+    patch:
+      summary: Rename a custom Role or replace its Permission membership
+      operationId: updateRole
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RoleWrite" }
+            example:
+              name: "Test Supervisor"
+              permissionIds: ["USERS:WATCH", "USERS:UPDATE"]
+      responses:
+        "200":
+          description: Custom Role updated; subsequent authorization uses the new membership.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Role" }
+              example:
+                id: "00000000-0000-4000-8000-000000000003"
+                name: "Test Supervisor"
+                kind: custom
+                permissionIds: ["USERS:WATCH", "USERS:UPDATE"]
+        "400": { $ref: "#/components/responses/InvalidRoleInput" }
+        "401": { $ref: "#/components/responses/SessionRequired" }
+        "403": { $ref: "#/components/responses/AccessDenied" }
+        "404": { $ref: "#/components/responses/RoleUnavailable" }
+        "409": { $ref: "#/components/responses/ProtectedRole" }
+    delete:
+      summary: Delete a custom Role and atomically replace its assignments when needed
+      operationId: deleteRole
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RoleDeletion" }
+            example:
+              replacementRoleId: "00000000-0000-4000-8000-000000000004"
+      responses:
+        "204":
+          description: Role deleted and all affected memberships moved atomically, if any.
+        "400": { $ref: "#/components/responses/ReplacementRequired" }
+        "401": { $ref: "#/components/responses/SessionRequired" }
+        "403": { $ref: "#/components/responses/AccessDenied" }
+        "404": { $ref: "#/components/responses/RoleUnavailable" }
+        "409": { $ref: "#/components/responses/ProtectedRole" }
+        "503": { $ref: "#/components/responses/RoleDeletionUnavailable" }
+
+  /api/v1/access/permissions:
+    get:
+      summary: List the system Permission catalogue
+      operationId: listPermissions
+      parameters:
+        - { $ref: "#/components/parameters/AfterPermission" }
+        - { $ref: "#/components/parameters/BeforePermission" }
+        - { $ref: "#/components/parameters/Limit" }
+      responses:
+        "200":
+          description: Permission catalogue ordered by kind and stable identifier.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PermissionPage" }
+              example:
+                items:
+                  - id: "USERS:WATCH"
+                    label: "View warehouse members"
+                    kind: assignable
+                hasNext: false
+                hasPrev: false
+                nextCursor: null
+        "401": { $ref: "#/components/responses/SessionRequired" }
+        "403": { $ref: "#/components/responses/AccessDenied" }
+
+  /api/v1/access/members:
+    get:
+      summary: List current-Warehouse members and Role assignments
+      operationId: listMembers
+      parameters:
+        - { $ref: "#/components/parameters/After" }
+        - { $ref: "#/components/parameters/Before" }
+        - { $ref: "#/components/parameters/Limit" }
+      responses:
+        "200":
+          description: Memberships ordered deterministically by User ID.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MemberPage" }
+              example:
+                items:
+                  - userId: "00000000-0000-4000-8000-000000000001"
+                    roleId: "00000000-0000-4000-8000-000000000003"
+                    roleKind: custom
+                hasNext: false
+                hasPrev: false
+                nextCursor: null
+        "401": { $ref: "#/components/responses/SessionRequired" }
+        "403": { $ref: "#/components/responses/AccessDenied" }
+
+  /api/v1/access/members/{userId}/role:
+    parameters:
+      - { $ref: "#/components/parameters/UserId" }
+    put:
+      summary: Assign a custom Role to a current-Warehouse member
+      operationId: assignMemberRole
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RoleAssignment" }
+            example:
+              roleId: "00000000-0000-4000-8000-000000000003"
+      responses:
+        "200":
+          description: The member now holds exactly the selected custom Role.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Member" }
+              example:
+                userId: "00000000-0000-4000-8000-000000000001"
+                roleId: "00000000-0000-4000-8000-000000000003"
+                roleKind: custom
+        "400": { $ref: "#/components/responses/InvalidInput" }
+        "401": { $ref: "#/components/responses/SessionRequired" }
+        "403": { $ref: "#/components/responses/AccessDenied" }
+        "404": { $ref: "#/components/responses/MemberOrRoleUnavailable" }
+        "409": { $ref: "#/components/responses/ManagerTransferRequired" }
+
+  /api/v1/access/manager-transfer:
+    post:
+      summary: Atomically transfer Warehouse Manager to another member
+      operationId: transferWarehouseManager
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ManagerTransfer" }
+            example:
+              recipientUserId: "00000000-0000-4000-8000-000000000005"
+              formerManagerRoleId: "00000000-0000-4000-8000-000000000004"
+      responses:
+        "200":
+          description: The recipient is the sole manager and the former manager holds the selected custom Role.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ManagerTransferResult" }
+              example:
+                managerUserId: "00000000-0000-4000-8000-000000000005"
+                formerManagerUserId: "00000000-0000-4000-8000-000000000001"
+                formerManagerRoleId: "00000000-0000-4000-8000-000000000004"
+        "400": { $ref: "#/components/responses/InvalidTransfer" }
+        "401": { $ref: "#/components/responses/SessionRequired" }
+        "403": { $ref: "#/components/responses/AccessDenied" }
+        "404": { $ref: "#/components/responses/MemberOrRoleUnavailable" }
+        "409": { $ref: "#/components/responses/ConcurrentAccessChange" }
+        "503": { $ref: "#/components/responses/ManagerTransferUnavailable" }
+
+components:
+  securitySchemes:
+    SessionCookie:
+      type: apiKey
+      in: cookie
+      name: warehouser_session
+      description: Server-issued opaque session secret; host-only, HttpOnly, SameSite=Lax, Path=/, and Secure in production.
+
+  parameters:
+    RoleId:
+      in: path
+      name: roleId
+      required: true
+      schema: { type: string, format: uuid }
+    UserId:
+      in: path
+      name: userId
+      required: true
+      schema: { type: string, format: uuid }
+    After:
+      in: query
+      name: after
+      description: UUID cursor of the last item seen; mutually exclusive with before.
+      schema: { type: string, format: uuid }
+    Before:
+      in: query
+      name: before
+      description: UUID cursor of the first item seen; mutually exclusive with after.
+      schema: { type: string, format: uuid }
+    AfterPermission:
+      in: query
+      name: after
+      description: Permission identifier cursor; mutually exclusive with before.
+      schema: { $ref: "#/components/schemas/PermissionId" }
+    BeforePermission:
+      in: query
+      name: before
+      description: Permission identifier cursor; mutually exclusive with after.
+      schema: { $ref: "#/components/schemas/PermissionId" }
+    Limit:
+      in: query
+      name: limit
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+
+  schemas:
+    RegistrationInput:
+      type: object
+      additionalProperties: false
+      required: [email, password, warehouseName]
+      properties:
+        email:
+          type: string
+          minLength: 3
+          maxLength: 254
+          format: email
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+          description: Length is measured in Unicode code points and whitespace is significant.
+        warehouseName: { $ref: "#/components/schemas/DomainName" }
+    RegistrationResult:
+      type: object
+      additionalProperties: false
+      required: [user, access]
+      properties:
+        user:
+          type: object
+          additionalProperties: false
+          required: [id]
+          properties:
+            id: { type: string, format: uuid }
+        access: { $ref: "#/components/schemas/AccessProjection" }
+    AccessProjection:
+      type: object
+      additionalProperties: false
+      required: [warehouseId, roleId, roleKind, permissionIds]
+      properties:
+        warehouseId: { type: string, format: uuid }
+        roleId: { type: string, format: uuid }
+        roleKind: { $ref: "#/components/schemas/RoleKind" }
+        permissionIds:
+          type: array
+          uniqueItems: true
+          items: { $ref: "#/components/schemas/PermissionId" }
+    DomainName:
+      type: string
+      minLength: 1
+      maxLength: 100
+      description: Trimmed, 1–100 grapheme clusters, no Unicode control/format characters; stored without normalization.
+    PermissionId:
+      type: string
+      maxLength: 64
+      pattern: "^[A-Z][A-Z0-9_]*:[A-Z][A-Z0-9_]*$"
+    RoleKind:
+      type: string
+      enum: [custom, warehouse_manager]
+    PermissionKind:
+      type: string
+      enum: [assignable, reserved]
+    RoleWrite:
+      type: object
+      additionalProperties: false
+      required: [name, permissionIds]
+      properties:
+        name: { $ref: "#/components/schemas/DomainName" }
+        permissionIds:
+          type: array
+          uniqueItems: true
+          items: { $ref: "#/components/schemas/PermissionId" }
+    Role:
+      type: object
+      additionalProperties: false
+      required: [id, name, kind, permissionIds]
+      properties:
+        id: { type: string, format: uuid }
+        name: { $ref: "#/components/schemas/DomainName" }
+        kind: { $ref: "#/components/schemas/RoleKind" }
+        permissionIds:
+          type: array
+          uniqueItems: true
+          items: { $ref: "#/components/schemas/PermissionId" }
+    Permission:
+      type: object
+      additionalProperties: false
+      required: [id, label, kind]
+      properties:
+        id: { $ref: "#/components/schemas/PermissionId" }
+        label: { type: string, minLength: 1, maxLength: 100 }
+        kind: { $ref: "#/components/schemas/PermissionKind" }
+    Member:
+      type: object
+      additionalProperties: false
+      required: [userId, roleId, roleKind]
+      properties:
+        userId: { type: string, format: uuid }
+        roleId: { type: string, format: uuid }
+        roleKind: { $ref: "#/components/schemas/RoleKind" }
+    RoleDeletion:
+      type: object
+      additionalProperties: false
+      required: [replacementRoleId]
+      properties:
+        replacementRoleId:
+          type: [string, "null"]
+          format: uuid
+          description: Required when the source Role has assignments; null or omitted body is valid only when unassigned.
+    RoleAssignment:
+      type: object
+      additionalProperties: false
+      required: [roleId]
+      properties:
+        roleId: { type: string, format: uuid }
+    ManagerTransfer:
+      type: object
+      additionalProperties: false
+      required: [recipientUserId, formerManagerRoleId]
+      properties:
+        recipientUserId: { type: string, format: uuid }
+        formerManagerRoleId: { type: string, format: uuid }
+    ManagerTransferResult:
+      type: object
+      additionalProperties: false
+      required: [managerUserId, formerManagerUserId, formerManagerRoleId]
+      properties:
+        managerUserId: { type: string, format: uuid }
+        formerManagerUserId: { type: string, format: uuid }
+        formerManagerRoleId: { type: string, format: uuid }
+    RolePage:
+      allOf:
+        - { $ref: "#/components/schemas/Page" }
+        - type: object
+          required: [items]
+          properties:
+            items: { type: array, items: { $ref: "#/components/schemas/Role" } }
+    PermissionPage:
+      allOf:
+        - { $ref: "#/components/schemas/Page" }
+        - type: object
+          required: [items]
+          properties:
+            items: { type: array, items: { $ref: "#/components/schemas/Permission" } }
+    MemberPage:
+      allOf:
+        - { $ref: "#/components/schemas/Page" }
+        - type: object
+          required: [items]
+          properties:
+            items: { type: array, items: { $ref: "#/components/schemas/Member" } }
+    Page:
+      type: object
+      additionalProperties: false
+      required: [hasNext, hasPrev, nextCursor]
+      properties:
+        hasNext: { type: boolean }
+        hasPrev: { type: boolean }
+        nextCursor: { type: [string, "null"] }
+    Error:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code: { type: string, pattern: "^[a-z_]+\\.[a-z_]+$" }
+        message: { type: string }
+        details:
+          type: object
+          additionalProperties: true
+
+  responses:
+    InvalidInput:
+      description: Request validation failed.
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" }, example: { code: "request.invalid", message: "The request is invalid." } } }
+    InvalidRoleInput:
+      description: Role name or Permission selection is invalid.
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" }, example: { code: "access.invalid_role", message: "Correct the highlighted Role fields." } } }
+    EmailAlreadyRegistered:
+      description: The normalized email is already registered.
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" }, example: { code: "auth.email_already_registered", message: "This email is already registered." } } }
+    RegistrationUnavailable:
+      description: Registration and access provisioning could not be committed atomically.
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" }, example: { code: "auth.registration_unavailable", message: "Sign-up did not complete. Try again." } } }
+    SessionRequired:
+      description: A valid current Session is required.
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" }, example: { code: "auth.invalid_credentials", message: "Authentication is required." } } }
+    MembershipRequired:
+      description: The authenticated User has no valid Warehouse membership.
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" }, example: { code: "access.membership_required", message: "Warehouse access is unavailable." } } }
+    AccessDenied:
+      description: Required Permission is absent.
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" }, example: { code: "access.denied", message: "Access is not permitted." } } }
+    RoleNameConflict:
+      description: The exact Role name already exists in the current Warehouse.
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" }, example: { code: "access.role_name_conflict", message: "Role names must be unique within the Warehouse." } } }
+    RoleUnavailable:
+      description: The Role is absent or outside the current Warehouse.
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" }, example: { code: "access.role_unavailable", message: "The Role is unavailable." } } }
+    MemberOrRoleUnavailable:
+      description: A target member or Role is absent or outside the current Warehouse.
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" }, example: { code: "access.target_unavailable", message: "The selected member or Role is unavailable." } } }
+    ProtectedRole:
+      description: The protected Warehouse Manager Role cannot be changed through custom-Role operations.
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" }, example: { code: "access.protected_role", message: "The Warehouse Manager Role is system-managed." } } }
+    ManagerTransferRequired:
+      description: Ordinary assignment cannot change either side of the current manager assignment.
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" }, example: { code: "access.manager_transfer_required", message: "Use the protected manager-transfer action." } } }
+    ReplacementRequired:
+      description: The assigned source Role needs a different valid custom replacement Role.
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" }, example: { code: "access.replacement_required", message: "Select a different custom replacement Role." } } }
+    InvalidTransfer:
+      description: The recipient is the current manager or the replacement Role is invalid.
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" }, example: { code: "access.invalid_manager_transfer", message: "Select another member and a valid custom Role." } } }
+    ConcurrentAccessChange:
+      description: Concurrent access state prevented the invariant-preserving transfer.
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" }, example: { code: "access.concurrent_change", message: "Access changed concurrently. Refresh and try again." } } }
+    RoleDeletionUnavailable:
+      description: Role assignments and deletion could not be committed atomically.
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" }, example: { code: "access.role_deletion_unavailable", message: "Role deletion did not complete." } } }
+    ManagerTransferUnavailable:
+      description: Manager transfer could not be committed atomically.
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" }, example: { code: "access.manager_transfer_unavailable", message: "Manager transfer did not complete." } } }

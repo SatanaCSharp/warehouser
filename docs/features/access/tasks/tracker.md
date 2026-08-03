@@ -1,0 +1,23 @@
+# Tracker — access
+
+> Status of every task in the epic. `implement` updates `done` as it commits each task.
+> States: `todo` · `in_progress` · `blocked` · `review` · `done`.
+
+| #   | Task                                                         | Layer     | Owner         | Estimate | Blocked by                | Status |
+| --- | ------------------------------------------------------------ | --------- | ------------- | -------- | ------------------------- | ------ |
+| T1  | Promote the access schema and Permission catalogue migration | migration | Backend Lead  | M        | —                         | todo   |
+| T2  | Implement access domain invariants and Unicode names         | domain    | Backend Lead  | M        | —                         | todo   |
+| T3  | Implement access persistence entities and repositories       | infra     | Backend Lead  | L        | T1, T2                    | todo   |
+| T4  | Extend registration with atomic Warehouse provisioning       | app       | Backend Lead  | M        | T3                        | todo   |
+| T5  | Enforce fresh Warehouse-scoped authorization                 | wiring    | Security Lead | L        | T3                        | todo   |
+| T6  | Implement custom Role lifecycle commands                     | app       | Backend Lead  | M        | T3, T5                    | todo   |
+| T7  | Implement member assignment and atomic Role deletion         | app       | Backend Lead  | L        | T3, T5                    | todo   |
+| T8  | Implement atomic Warehouse Manager transfer                  | app       | Backend Lead  | M        | T3, T5                    | todo   |
+| T9  | Expose scoped access read endpoints                          | ports     | Backend Lead  | M        | T3, T5                    | todo   |
+| T10 | Expose access mutation endpoints and normalized failures     | ports     | Backend Lead  | L        | T6, T7, T8, T9            | todo   |
+| T11 | Add Warehouse registration to the approved sign-up UI        | ui        | Frontend Lead | M        | T4                        | todo   |
+| T12 | Build the approved access review workspace                   | ui        | Frontend Lead | L        | T9                        | todo   |
+| T13 | Build approved access administration workflows               | ui        | Frontend Lead | L        | T10, T12                  | todo   |
+| T14 | Gate access security, atomicity, and performance             | tests     | Security Lead | L        | T4, T5, T9, T10, T11, T13 | todo   |
+
+**Total:** 14 tasks, approximately 10 person-days.
