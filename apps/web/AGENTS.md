@@ -14,7 +14,7 @@ For API errors, form errors, notifications, success feedback, and their translat
 <!-- init-agent:start -->
 
 The repository-owned `../../ai/` directory is the source of truth for coding-agent workflows. Load
-the relevant installed skills from `.agents/skills/` on demand. Canonical commands remain
+the relevant installed skills from `.codex/skills/` on demand. Canonical commands remain
 available under `../../ai/commands/`, and specialized roles are adapted from `../../ai/agents/`.
 
 Use Pencil only for user-facing UI work, as described in `../../README.md` and

@@ -32,9 +32,8 @@ Compare all canonical AI content in both scopes:
 1. **Workspace scope** — root `ai/agents`, `ai/commands`, and `ai/skills`, plus every existing
    `apps/*/ai/skills`. App-specific skills at this scope use the same `<app>-<skill>` collision
    namespace established by `init-agent`.
-2. **App scope** — for each `apps/<app>/`, root `ai/agents`, `ai/commands`, and `ai/skills`, plus
-   that app's `apps/<app>/ai/skills` when present. The app-specific skill wins over a root skill
-   with the same name.
+2. **App scope** — for each `apps/<app>/`, only that app's `apps/<app>/ai/skills` when present.
+   Do not install root `ai/skills` or another app's skills into an app-local skills directory.
 
 Include every file needed by an instruction surface, not only Markdown: references, templates,
 scripts, assets, and metadata must remain reachable with their relative paths intact. Ignore
@@ -42,6 +41,12 @@ dependencies, caches, build output, and agent-generated directories when discove
 sources. Installed skills must be complete materialized copies in the target's appropriate
 project-local skills directory; never use symbolic links for a skill directory or anything inside
 one.
+
+For Codex, the workspace skills directory is `.codex/skills/` and each app-local skills directory
+is `apps/<app>/.codex/skills/`; `.agents/skills/` is a legacy destination and must not receive
+Codex skills. For Claude, use `.claude/skills/` and `apps/<app>/.claude/skills/`. Derive the
+project-local location for other targets from their installed configuration or official
+documentation.
 
 ## Procedure
 
@@ -71,6 +76,11 @@ one.
      copy, including `SKILL.md`, references, templates, scripts, assets, and metadata; replace
      legacy managed skill links with materialized copies and do not create links anywhere in an
      installed skill tree;
+   - migrate managed Codex skills from legacy `.agents/skills/` destinations to `.codex/skills/`,
+     and remove the legacy managed copies after the new copies verify successfully;
+   - at app scope, synchronize only skills sourced from that app's own
+     `apps/<app>/ai/skills`; remove managed root and sibling-app skills previously copied into the
+     app-local skills directory, while leaving unmanaged entries untouched;
    - preserve valid relative symbolic links for non-skill surfaces;
    - relink broken or incorrectly targeted managed non-skill links to the current canonical source;
    - refresh managed non-skill copies whose bytes differ from their source while retaining the
