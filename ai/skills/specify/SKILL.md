@@ -43,7 +43,8 @@ PM + Tech Lead (co-authors). PM drives goals / non-goals / KPIs; Tech Lead drive
 
 ## Inputs
 
-- `<slug>` — kebab-case feature slug.
+- `<slug>` — one lowercase word (`access`) or multiple lowercase words in kebab-case
+  (`stock-access`).
 - (Optional) `CONTEXT.md` — the two-level glossary: read **both** repo-root (project-wide) and `docs/features/<slug>/CONTEXT.md` (feature-scoped); per-feature wins on conflict → [`../glossary/SKILL.md`](../glossary/SKILL.md). If present, its roles/terms are canonical and override anything that contradicts them.
 - `docs/features/<slug>/.size` — depth hint (MVP vs Full per the size matrix). **Read if present; established here if absent** (step 1 classifies + writes it), so downstream stages never silently default to M. `classify-size` re-classifies when scope changes.
 - (Optional) prior notes / a reference module / a ticket the user already has.

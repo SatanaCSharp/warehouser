@@ -26,6 +26,22 @@ A `tasks.json` with `slug: "_scaffold"` and `layer: scaffold` tasks comes from `
 - Read `docs/system/architecture-map.md` and `docs/system/sad.md` for the exact stack and conventions to scaffold.
 - After the scaffold is green the repo is real, and the normal per-feature flow (`specify → … → implement`) builds into it with real feature TDD.
 
+## System-document manifest (hard gate)
+
+Before dispatch, resolve a manifest per task from `files_hint` and place the exact paths in the task
+brief. Start with `docs/system/architecture-map.md`, then add only the governing documents:
+
+- `apps/server/**` → `docs/system/server-architecture.md`, every guide relevant to the changed
+  layer (repository, module, contracts, errors), and applicable Accepted system ADRs.
+- `apps/web/**` → `docs/system/frontend-architecture.md`, relevant web/UI/localization/error
+  guides, applicable Accepted system ADRs, and the approved feature design handoff for UI work.
+- packages/cross-application paths → the architecture documents, guides, and Accepted system ADRs
+  governing each affected boundary.
+
+The lead reads the manifest before dispatch. Every test-author, implementer, and reviewer then opens
+the same files directly and reports them in its handover. An empty manifest, missing read evidence,
+or an architecture violation blocks the task regardless of test results.
+
 ## Context the agents read directly
 
 The engine does **not** paste these into prompts — each agent (or the sequential runner) reads them itself, so there's no paraphrase drift:
@@ -35,7 +51,8 @@ The engine does **not** paste these into prompts — each agent (or the sequenti
 - `docs/features/<slug>/data-model.md` + the **staged** migration files under `docs/features/<slug>/migrations/` — the schema the code targets (a `layer: migration` task promotes them into the live `migrations/` tree; see «Staged migrations → promote» below).
 - `docs/features/<slug>/contracts/openapi.yaml` — the API contract handlers must match.
 - `docs/features/<slug>/sad.md` + Accepted `adr/` — the architecture and the locked decisions.
-- `docs/system/architecture-map.md`, relevant focused architecture documents, and Accepted system ADRs—the conventions new code must match, plus the closest precedent to reuse.
+- The task's system-document manifest—the durable conventions new code must match. A sibling
+  precedent is subordinate when it conflicts with these documents.
 - `docs/features/<slug>/design-handoff.md` for every `ui` task — it must be `status: approved` and identify the exact Pencil frame and node ID. Missing or unapproved is a hard stop for UI implementation. Treat the handoff as visual/behavioral intent and the existing codebase as the architecture source; report visible deviations instead of silently redesigning.
 
 ## Staged migrations → promote before running

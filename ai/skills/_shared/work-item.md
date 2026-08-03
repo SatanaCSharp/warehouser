@@ -8,8 +8,10 @@ The delivery pipeline supports two work-item kinds without changing the existing
 | `change-request:<slug>` | `change-request` | `docs/change-requests/<slug>` |
 
 Resolve this once, before any input gate or write. A bare slug always means a feature; never infer
-the kind by searching directories because the same slug may legally exist under both roots. Reject
-unknown prefixes and a change-request slug containing `/`, `..`, or characters outside kebab-case.
+the kind by searching directories because the same slug may legally exist under both roots. A slug
+may be one lowercase word (`access`) or multiple lowercase words separated by hyphens
+(`stock-access`). Reject unknown prefixes and any slug containing `/`, `..`, or characters outside
+that format.
 
 After resolution, every stage reads and writes relative to `work_item_root`: `spec.md`, `sad.md`,
 `.size`, `.route`, `design-handoff.md`, `data-model.md`, `migrations/`, `contracts/`, `test-plan.md`,

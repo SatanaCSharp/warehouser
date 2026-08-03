@@ -40,7 +40,8 @@ in this request. Do not hide feature creation inside a change request.
 
 ## Inputs
 
-- `<slug>` — kebab-case change-request slug; invocation is `/change-request <slug>`.
+- `<slug>` — one lowercase word (`access`) or multiple lowercase words in kebab-case
+  (`stock-access`); invocation is `/change-request <slug>`.
 - The current behavior and desired behavior, supplied by the user or located in canonical artifacts
   and code.
 - `docs/system/`, `docs/features/*/spec.md`, contracts, ADRs, and code paths that plausibly own the

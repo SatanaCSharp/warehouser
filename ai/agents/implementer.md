@@ -41,6 +41,8 @@ When a feature artifact, sibling convention, or `files_hint` conflicts with `doc
 server policy below, do not copy the conflict. Follow the durable guidance when the correction stays
 inside the task; otherwise escalate with the exact conflicting paths.
 
+Before editing, list the supplied system-document manifest and open every file in it. Extract the rules that constrain the task's changed files and keep that checklist through GREEN and REFACTOR. Do not generate production code until this read is complete. If the orchestrator omitted the manifest, derive it from `files_hint` and report the omission; do not treat absence as permission to skip `docs/system`.
+
 ## Server implementation policy
 
 Apply these rules only to work under `apps/server/**`:
@@ -106,6 +108,8 @@ Apply these rules only to work under `apps/server/**`:
 - Use the shared `AppLoggerModule` and inject `PinoLogger` for server application logs. Set the
   provider class name as logger context in its constructor. Do not instantiate Pino directly or use
   `console.*`; do not catch, log, and rethrow failures that the global exception filter records.
+  Do not add telemetry SDKs, tracing, metrics exporters, collectors, or feature-specific telemetry
+  abstractions; use ordinary structured log events with useful context instead.
 - Do not create repository interfaces, abstract or generic repository base classes, adapter
   layers, or pass-through wrappers. Do not extend or introduce `BaseRepository`.
 - Combine functional and object-oriented TypeScript deliberately to minimize cognitive load. Use a
@@ -164,6 +168,7 @@ operation; directly import the needed function instead of writing an imperative 
 1. **GREEN** — write the **least** production code that turns the quoted failing assertion green. No speculative generality, no unrelated edits, nothing outside `files_hint`. Re-run the unit command; confirm the quoted failure is now green and nothing else broke.
 2. **REFACTOR** — tidy names, extract helpers, remove duplication, re-running tests after each change. If a refactor goes red and isn't trivially fixable, **revert it** — the GREEN is the goal, not the polish.
 3. **GATE** — run, per the commands you were given / detect: **unit** (must be green), **integration** (green if available; NON-red if Docker is absent under the auto policy), **lint** (if configured), **vet/typecheck** (if configured). Report each result.
+4. **ARCHITECTURE CONFORMANCE** — inspect the final diff against every rule extracted from the system-document manifest. Fix violations inside scope. Otherwise escalate with the document path + section and changed file:line. Passing tests do not waive this gate.
 
 ## Rules
 
@@ -171,4 +176,4 @@ operation; directly import the needed function instead of writing an imperative 
 - **Minimal first.** Make it pass, then refactor — don't gold-plate in the GREEN step.
 - **Stay in your lane.** Only the files this task's `files_hint` names. Migrations are an ordered sequence — don't reorder or renumber.
 - **Never leave the tree broken.** If you can't reach GREEN, revert to the last green state and report.
-- Your final message IS the handover: what you changed (files), the gate results (unit/integration/lint/vet), and — as the final line — `Status: GREEN-and-gated` or `Status: ESCALATED — <reason>` (exactly these strings — the orchestrator parses this line).
+- Your final message IS the handover: `System documents read:` with every manifest path, what you changed (files), the gate results (unit/integration/lint/vet), and `Architecture conformance: CONFORMANT` or a cited violation. Only then, as the final line, write `Status: GREEN-and-gated` or `Status: ESCALATED — <reason>` (exactly these strings — the orchestrator parses this line). Missing document evidence forbids `GREEN-and-gated`.

@@ -65,8 +65,10 @@ Detailed boundaries are defined in [Server architecture](server-architecture.md)
 
 The server uses centrally configured structured Pino logging through `nestjs-pino`. Providers
 inject `PinoLogger` and set their class context; uncaught errors are logged once at the global
-exception boundary. See the accepted
-[Pino logging ADR](adr/27-07-2026-structured-logging-with-pino.md).
+exception boundary. Structured logs are the server diagnostic mechanism; telemetry SDKs, tracing,
+metrics exporters, collectors, and feature-specific telemetry abstractions are not used. See the
+accepted [Pino logging ADR](adr/27-07-2026-structured-logging-with-pino.md) and
+[logging instead of telemetry ADR](adr/03-08-2026-structured-logging-instead-of-telemetry.md).
 
 ### UI delivery
 

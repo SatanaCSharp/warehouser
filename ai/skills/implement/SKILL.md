@@ -38,15 +38,15 @@ Tech Lead drives; the engine runs the cycle. The three subagents ship with the p
 
 ## Protocol
 
-1. **Preconditions.** Verify `tasks.json` exists and parses; load the upstream artifacts list. Detail → [`./references/inputs.md`](./references/inputs.md).
+1. **Preconditions.** Verify `tasks.json` exists and parses; load the upstream artifacts list. For every task, resolve a **system-document manifest** from its `files_hint`: the applicable `docs/system/*-architecture.md`, guides, and Accepted system ADRs. Read those documents before dispatch and include their exact paths plus task-relevant rules in every subagent brief. A task with no manifest must not start. Detail → [`./references/inputs.md`](./references/inputs.md).
 2. **Settings.** Read `.ai/sdd.local.md`; if absent, auto-create it with the documented defaults (frontmatter + the «What each key does» body, self-documenting) and patch `.gitignore` (`.ai/*.local.md`, `.worktrees/`) — the same template `specify` writes. → [`./references/settings.md`](./references/settings.md).
 3. **Detect commands.** Run the stack-agnostic cascade (settings override → Makefile → package scripts → language manifests → Docker probe for the integration tier) to resolve unit / integration / lint / vet commands. Print what was detected. → [`./references/command-detection.md`](./references/command-detection.md).
 4. **Build the DAG.** Parse `tasks.json`, validate `deps` is acyclic, topologically sort into phases (Kahn). Compute `task_count`, `longest_chain`, `parallel_width`. Mark serialization lanes (`layer: migration`; tasks with overlapping `files_hint`).
 5. **Pick the mode.** Run the decision tree (below; full form → [`./references/decision-tree.md`](./references/decision-tree.md)). Apply the guards.
 6. **Generate the run-plan.** Sequential → an ordered task list. Team → a shared TaskList with the full task text in each body. Workflow → a generated `Workflow` script (DAG → Kahn phases → fan-out pipeline). → [`./references/team-exec.md`](./references/team-exec.md) / [`./references/workflow-exec.md`](./references/workflow-exec.md).
 7. **Banner.** Print the active mode and the settings that drove it: `mode=<…> tdd=<…> isolation=<…> parallel=<n> integration=<…>`. The user sees exactly how the engine will behave before it acts.
-8. **Execute** in the chosen mode. Every task runs the TDD cycle → [`./references/tdd-loop.md`](./references/tdd-loop.md). A `layer: migration` task first promotes its staged TypeORM migration classes into the live server migration tree, renames them to the repository timestamp convention, then runs the configured TypeORM migration up/revert checks; detail → [`./references/inputs.md`](./references/inputs.md).
-9. **Per-task gate + commit.** After GREEN+REFACTOR: unit + (integration if available) + lint + vet must be clean, then commit task-scoped with trailers `SDD-Task: <id>` and `SDD-AC: <id>` (one per satisfied AC). Tasks in one **compile-coupled lane** (shared contract file in `files_hint`) pass one shared gate and one commit carrying every task's trailers — the sanctioned exception in [`./references/tdd-loop.md`](./references/tdd-loop.md) §COMMIT. Update `tracker.md` → `done`.
+8. **Execute** in the chosen mode. Every task runs the TDD cycle → [`./references/tdd-loop.md`](./references/tdd-loop.md). Every test-author, implementer, and reviewer must read the manifest documents directly (never rely only on the lead's summary), report the paths read, and apply their rules. A `layer: migration` task first promotes its staged TypeORM migration classes into the live server migration tree, renames them to the repository timestamp convention, then runs the configured TypeORM migration up/revert checks; detail → [`./references/inputs.md`](./references/inputs.md).
+9. **Per-task gate + commit.** After GREEN+REFACTOR: unit + (integration if available) + lint + vet **and architecture conformance** must be clean. The reviewer compares the diff against every manifest rule and cites document path + section for each violation. The lead rejects a handover that omits the manifest, paths read, or conformance result. Only then commit task-scoped with trailers `SDD-Task: <id>` and `SDD-AC: <id>` (one per satisfied AC). Tasks in one **compile-coupled lane** (shared contract file in `files_hint`) pass one shared gate and one commit carrying every task's trailers — the sanctioned exception in [`./references/tdd-loop.md`](./references/tdd-loop.md) §COMMIT. Update `tracker.md` → `done`.
 10. **Summary + hand off.** Report covered AC, commits made (with `SDD-Task` trailers), any task dropped/blocked, and the per-task gate results. Then **emit the stage-handoff block** per [`../_shared/handoff.md`](../_shared/handoff.md) — _What I did_ (covered AC, commits with `SDD-Task` trailers, gate results) + _Review_ (the committed diff + `tasks/tracker.md`) + _Run next_ (`/clear`, then `/review <slug>` — a clean-context pass over the whole diff), then `/ship <slug>`. In team mode the [`reviewer`](../../agents/reviewer.md) may also run per-task, but the authoritative independent review of the whole change lives in the `review` skill — `implement` does not self-certify.
 
 ## Decision tree (compact)
@@ -73,6 +73,7 @@ else:                                                        → SEQUENTIAL sing
 - The active mode + settings were printed in the banner before execution.
 - `tracker.md` reflects final status; the summary reports the gate results and hands off to `review` (the independent review gate) — `implement` does not self-certify the whole change.
 - The per-task GATE (unit + integration + lint + vet) is this skill's **structural self-check** ([`../_shared/self-check.md`](../_shared/self-check.md)); its results are reported in the handoff.
+- Every task handover lists the system-document manifest, confirms each document was read directly, and reports the architecture-conformance result. Missing evidence blocks `done` and commit.
 
 ## Anti-patterns
 
@@ -83,6 +84,7 @@ else:                                                        → SEQUENTIAL sing
 - **Committing with a red or skipped gate** and calling it done. A NON-red integration tier must be labelled, not hidden.
 - **Spawning a team for <4 tasks** — coordination overhead exceeds the gain; the eligibility check forbids it.
 - **Claiming integration passed when Docker was absent.** Report NON-red honestly.
+- **Treating `docs/system` as optional context.** It is the durable implementation contract. Never dispatch from a paraphrase alone, copy a conflicting sibling pattern, or commit a task whose diff has not been checked against its manifest.
 
 ## References & template
 

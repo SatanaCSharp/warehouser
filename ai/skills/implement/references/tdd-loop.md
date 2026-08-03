@@ -6,6 +6,8 @@ Every task runs `SELECT → RED → GREEN → REFACTOR → GATE → COMMIT`. Thi
 
 Pick the next task whose `deps` are all `done`. In sequential mode that's the topo order; in parallel modes the orchestrator hands it out. Read the task body + its `acs` from `spec.md §5` + the relevant `test-plan.md` rows. Know, before writing anything, what observable outcome the test will assert.
 
+Before RED, build the task's **system-document manifest** from `files_hint`. Include the applicable architecture document, guides, and Accepted system ADRs under `docs/system/`. Every role reads the listed files directly and reports their paths; a lead summary is orientation, not a substitute. If an applicable rule conflicts with a feature artifact or sibling implementation, stop and cite both sources unless the task can be corrected within its declared scope.
+
 ## RED — write the failing test first
 
 1. Write the test(s) for this task's `acs` **before any production code**. Put them where the repo keeps tests for that layer (detected, not assumed).
@@ -39,8 +41,10 @@ Run, per the detected commands + settings:
 - **integration** — green if available; NON-red recorded if Docker is absent under `require_integration: auto`; BLOCK was already enforced for `always`.
 - **lint** (if `gate_lint` and a linter resolved) — clean.
 - **vet/typecheck** (if `gate_vet` and a command resolved) — clean.
+- **architecture conformance** — compare every changed file with every applicable manifest rule. Report `CONFORMANT` with the document paths checked, or block with cited document section and changed `file:line`. Tests passing cannot override a system architecture violation.
 
 Any hard-gate failure (unit red, or integration red when it ran, or lint/vet errors) → the task is not done. Fix, or escalate (see [`escalation.md`](./escalation.md)).
+Missing manifest/read evidence or a non-conformant architecture result is also a hard-gate failure.
 
 ## COMMIT — task-scoped, traceable
 

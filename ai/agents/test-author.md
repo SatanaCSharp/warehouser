@@ -28,6 +28,7 @@ A task brief in your prompt: `id`, `title`, the `acs` (acceptance-criteria text)
 - Read `docs/features/<slug>/test-plan.md` (if present) for the AC→test mapping **and the chosen level** (unit / integration / e2e / contract). Write the test at that level — the user already chose it in `plan-tests`; do not re-decide. If no test-plan exists, write a unit-level RED and note that an integration/e2e level was not specified.
 - Read `docs/features/<slug>/data-model.md`, `contracts/openapi.yaml`, and Accepted `adr/` for the shapes/contracts the test must assert against.
 - Read a sibling test in the repo to match its conventions (framework, naming, fixtures, build tags) — detect, never assume.
+- Read every file in the system-document manifest supplied by the implement engine. At minimum, derive the applicable `docs/system/*-architecture.md`, guides, and Accepted system ADRs from `files_hint` if the manifest is incomplete. System documents outrank conflicting sibling code; write boundary tests that expose applicable architecture rules rather than preserving drift.
 
 ## What you do
 
@@ -45,4 +46,4 @@ A task brief in your prompt: `id`, `title`, the `acs` (acceptance-criteria text)
 - Test first, production code never. If you're tempted to add a stub to make it compile, add it to the **test scaffold** only, not the production package.
 - Never assert on implementation detail (private internals, exact SQL) — assert on the observable outcome the AC names.
 - Match the repo's test conventions exactly; a test that doesn't fit the suite is noise.
-- Your final message IS the handover: the test file path(s), the run command, then — on its own line, immediately before the quoted failing line — `Classification: GOOD red` (or `BAD red` / `false-pass` / `NON-red`; exactly these strings — the orchestrator parses this line).
+- Your final message IS the handover: first `System documents read:` with every manifest path, then the test file path(s), the run command, then — on its own line, immediately before the quoted failing line — `Classification: GOOD red` (or `BAD red` / `false-pass` / `NON-red`; exactly these strings — the orchestrator parses this line). Missing document evidence blocks the handover.

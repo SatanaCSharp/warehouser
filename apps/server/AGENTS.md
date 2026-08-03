@@ -1,8 +1,7 @@
 # Server development instructions
 
-Before modifying `apps/server`, read:
+Before modifying `apps/server`, read and follow:
 
-- `../../README.md`
 - `package.json`
 - `../../docs/system/server-architecture.md`
 - `../../docs/system/guides/adding-a-server-module.md`
@@ -32,6 +31,9 @@ Follow the modular-monolith boundaries in those documents.
 - Follow `server-error-handling.md` for predicate placement, named error factories, typed errors,
   propagation, NestJS exception filtering, logging, and safe REST error responses. Do not add
   routine `try/catch` blocks to controllers or endpoint handlers.
+- Use the shared `AppLoggerModule` and `PinoLogger` for operational diagnostics. Do not add
+  telemetry SDKs, tracing, metrics exporters, collectors, or feature-specific telemetry
+  abstractions; use ordinary structured log events with useful context instead.
 
 Do not write tests for migrations. Verify migrations by applying and reverting them against the
 real development database.
