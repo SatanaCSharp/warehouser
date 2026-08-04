@@ -220,6 +220,56 @@ describeIntegration('access persistence', () => {
     ).resolves.toEqual([]);
   });
 
+  it('rolls assigned-Role deletion back when the final delete fails', async () => {
+    const graph = await persistWarehouseAccessGraph(dataSource, {
+      customRoles: [
+        buildRole({ name: 'Delete source' }),
+        buildRole({ name: 'Delete replacement' }),
+      ],
+    });
+    const [source, replacement] = graph.customRoles;
+    const member = graph.members[0];
+
+    await dataSource.query(`
+      CREATE OR REPLACE FUNCTION fail_role_deletion()
+      RETURNS trigger AS $$
+      BEGIN
+        RAISE EXCEPTION 'injected role deletion failure';
+      END;
+      $$ LANGUAGE plpgsql;
+      CREATE TRIGGER fail_role_deletion
+      BEFORE DELETE ON roles
+      FOR EACH ROW WHEN (OLD.id = '${source.id}'::uuid)
+      EXECUTE FUNCTION fail_role_deletion();
+    `);
+    try {
+      await expect(
+        transactions.executeInTransaction({}, () =>
+          lifecycle.deleteCustomRole(
+            graph.warehouse.id,
+            source.id,
+            replacement.id,
+          ),
+        ),
+      ).rejects.toThrow('injected role deletion failure');
+    } finally {
+      await dataSource.query(
+        'DROP TRIGGER IF EXISTS fail_role_deletion ON roles',
+      );
+      await dataSource.query('DROP FUNCTION IF EXISTS fail_role_deletion');
+    }
+
+    await expect(
+      dataSource.query('SELECT id FROM roles WHERE id = $1', [source.id]),
+    ).resolves.toEqual([{ id: source.id }]);
+    await expect(
+      dataSource.query(
+        'SELECT role_id FROM warehouse_memberships WHERE user_id = $1',
+        [member.userId],
+      ),
+    ).resolves.toEqual([{ role_id: source.id }]);
+  });
+
   it(
     'creates and updates custom Roles with exact names and assignable catalogue membership',
     verifyCustomRolePersistence,
@@ -278,6 +328,57 @@ describeIntegration('access persistence', () => {
         [graph.warehouse.id],
       ),
     ).resolves.toEqual([{ user_id: recipient.userId }]);
+  });
+
+  it('rolls manager transfer back when promotion fails after demotion', async () => {
+    const graph = await persistWarehouseAccessGraph(dataSource, {
+      customRoles: [buildRole({ name: 'Former manager' })],
+    });
+    const recipient = graph.members[0];
+
+    await dataSource.query(`
+      CREATE OR REPLACE FUNCTION fail_manager_promotion()
+      RETURNS trigger AS $$
+      BEGIN
+        RAISE EXCEPTION 'injected manager promotion failure';
+      END;
+      $$ LANGUAGE plpgsql;
+      CREATE TRIGGER fail_manager_promotion
+      BEFORE UPDATE ON warehouse_memberships
+      FOR EACH ROW WHEN (NEW.role_kind = 'warehouse_manager' AND OLD.role_kind <> 'warehouse_manager')
+      EXECUTE FUNCTION fail_manager_promotion();
+    `);
+    try {
+      await expect(
+        transactions.executeInTransaction({}, () =>
+          transfers.transfer({
+            warehouseId: graph.warehouse.id,
+            currentManagerUserId: graph.manager.userId,
+            recipientUserId: recipient.userId,
+            formerManagerRoleId: graph.customRoles[0].id,
+          }),
+        ),
+      ).rejects.toThrow('injected manager promotion failure');
+    } finally {
+      await dataSource.query(
+        'DROP TRIGGER IF EXISTS fail_manager_promotion ON warehouse_memberships',
+      );
+      await dataSource.query('DROP FUNCTION IF EXISTS fail_manager_promotion');
+    }
+
+    await expect(
+      dataSource.query(
+        `SELECT user_id, role_kind FROM warehouse_memberships
+          WHERE warehouse_id = $1 AND user_id = ANY($2::uuid[])
+          ORDER BY user_id`,
+        [graph.warehouse.id, [graph.manager.userId, recipient.userId]],
+      ),
+    ).resolves.toEqual(
+      [
+        { user_id: graph.manager.userId, role_kind: 'warehouse_manager' },
+        { user_id: recipient.userId, role_kind: 'custom' },
+      ].sort((left, right) => left.user_id.localeCompare(right.user_id)),
+    );
   });
 
   it('serializes concurrent manager transfers by locking the Warehouse first', async () => {

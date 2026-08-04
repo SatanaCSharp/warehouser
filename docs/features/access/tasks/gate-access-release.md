@@ -23,7 +23,7 @@ files_hint:
   ['tests/access', 'apps/server/src/access/reconciliation', 'package.json']
 owner: 'Security Lead'
 estimate: 'L'
-status: 'todo'
+status: 'done'
 ---
 
 # T14 — Gate access security, atomicity, and performance
@@ -38,12 +38,12 @@ Add release tests and reconciliation checks for authorization coverage, catalogu
 
 ## Definition of Done
 
-- [ ] Integration gates prove 100% atomic outcomes for registration, assigned-Role deletion, and manager transfer under injected failures.
-- [ ] Security gates prove next-decision revocation, non-enumerating cross-Warehouse denial, and explicit Permission/ownership coverage for every authenticated business capability.
-- [ ] Catalogue reconciliation proves assignable/reserved classification, every manager Role receives the release-defined set, and custom Roles remain unchanged unless explicit.
-- [ ] Automated smoke test sustains at least 50 protected operations/second per service instance for 10 minutes.
-- [ ] Measured p95 added authorization is at most 50 ms, Role reads at most 250 ms, and Role mutations at most 500 ms, excluding client network time.
-- [ ] Repository tests, build, lint, and static checks pass without adding telemetry.
+- [x] Integration gates prove 100% atomic outcomes for registration, assigned-Role deletion, and manager transfer under injected failures.
+- [x] Security gates prove next-decision revocation, non-enumerating cross-Warehouse denial, and explicit Permission/ownership coverage for every authenticated business capability.
+- [x] Catalogue reconciliation proves assignable/reserved classification, every manager Role receives the release-defined set, and custom Roles remain unchanged unless explicit.
+- [x] Automated smoke test sustains at least 50 protected operations/second per service instance for 10 minutes.
+- [x] Measured p95 added authorization is at most 50 ms, Role reads at most 250 ms, and Role mutations at most 500 ms, excluding client network time.
+- [x] Repository tests, build, lint, and static checks pass without adding telemetry.
 
 ## Notes
 

@@ -1,3 +1,4 @@
+import { Test } from '@nestjs/testing';
 import { ProvisionInitialAccessCommand } from 'access/usecases/commands/provision-initial-access.command';
 import { AccessProvisioningRepository } from 'shared/domain/repositories/access/access-provisioning.repository';
 
@@ -6,6 +7,22 @@ const warehouseId = '00000000-0000-4000-8000-000000000002';
 const roleId = '00000000-0000-4000-8000-000000000003';
 
 describe('ProvisionInitialAccessCommand', () => {
+  it('can be constructed by Nest without a test-only runtime provider', async () => {
+    const module = await Test.createTestingModule({
+      providers: [
+        ProvisionInitialAccessCommand,
+        {
+          provide: AccessProvisioningRepository,
+          useValue: { provisionInitialAccess: jest.fn() },
+        },
+      ],
+    }).compile();
+
+    expect(module.get(ProvisionInitialAccessCommand)).toBeInstanceOf(
+      ProvisionInitialAccessCommand,
+    );
+  });
+
   it('constructs the protected manager access graph with the complete catalogue', async () => {
     const repository = {
       provisionInitialAccess: jest.fn().mockResolvedValue(undefined),

@@ -1,3 +1,4 @@
+import { Test } from '@nestjs/testing';
 import { ErrorCode, PermissionId } from '@warehouser/shared-types/enums';
 import { CreateRoleCommand } from 'access/usecases/commands/create-role.command';
 import { UpdateRoleCommand } from 'access/usecases/commands/update-role.command';
@@ -24,6 +25,17 @@ const repositoryDouble = () => ({
 });
 
 describe('custom Role lifecycle commands', () => {
+  it('constructs role creation through Nest without a test-only runtime provider', async () => {
+    const module = await Test.createTestingModule({
+      providers: [
+        CreateRoleCommand,
+        { provide: RoleLifecycleRepository, useValue: repositoryDouble() },
+      ],
+    }).compile();
+
+    expect(module.get(CreateRoleCommand)).toBeInstanceOf(CreateRoleCommand);
+  });
+
   it('creates a Warehouse-scoped Role with trimmed Unicode and assignable Permissions', async () => {
     const repository = repositoryDouble();
     const command = new CreateRoleCommand(

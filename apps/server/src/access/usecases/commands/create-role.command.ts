@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { PermissionId } from '@warehouser/shared-types/enums';
 import {
   accessDeniedError,
@@ -57,6 +57,7 @@ export const assertSaved = (result: RoleWriteResult): void => {
 export class CreateRoleCommand {
   constructor(
     private readonly roles: RoleLifecycleRepository,
+    @Optional()
     private readonly runtime: CreateRoleRuntime = createRoleRuntime,
   ) {}
 

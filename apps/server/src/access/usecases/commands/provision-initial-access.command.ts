@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { AccessName } from 'access/domain/value-objects/access-name';
 import { AccessProvisioningRepository } from 'shared/domain/repositories/access/access-provisioning.repository';
 
@@ -42,6 +42,7 @@ export interface InitialAccessProjection {
 export class ProvisionInitialAccessCommand {
   constructor(
     private readonly provisioning: AccessProvisioningRepository,
+    @Optional()
     private readonly runtime: AccessProvisioningRuntime = accessProvisioningRuntime,
   ) {}
 

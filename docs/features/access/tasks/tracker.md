@@ -18,6 +18,6 @@
 | T11 | Add Warehouse registration to the approved sign-up UI        | ui        | Frontend Lead | M        | T4                        | done   |
 | T12 | Build the approved access review workspace                   | ui        | Frontend Lead | L        | T9                        | done   |
 | T13 | Build approved access administration workflows               | ui        | Frontend Lead | L        | T10, T12                  | done   |
-| T14 | Gate access security, atomicity, and performance             | tests     | Security Lead | L        | T4, T5, T9, T10, T11, T13 | todo   |
+| T14 | Gate access security, atomicity, and performance             | tests     | Security Lead | L        | T4, T5, T9, T10, T11, T13 | done   |
 
 **Total:** 14 tasks, approximately 10 person-days.
