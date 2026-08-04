@@ -10,38 +10,69 @@ describe('authApi', () => {
     vi.unstubAllGlobals();
   });
 
-  it.each([
-    ['signUp', authApi.endpoints.signUp],
-    ['signIn', authApi.endpoints.signIn],
-  ] as const)(
-    'parses the %s response and sends cookies through RTK Query',
-    async (_name, endpoint) => {
-      const fetchMock = vi.fn().mockResolvedValue(Response.json(user));
-      vi.stubGlobal('fetch', fetchMock);
-      const store = makeStore();
+  it('parses sign-in and sends cookies through RTK Query', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(Response.json(user));
+    vi.stubGlobal('fetch', fetchMock);
+    const store = makeStore();
 
-      await expect(
-        store
-          .dispatch(
-            endpoint.initiate({
-              email: 'person@example.test',
-              password: 'password',
-            }),
-          )
-          .unwrap(),
-      ).resolves.toEqual(user);
-      expect(fetchMock).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({
-          body: JSON.stringify({
+    await expect(
+      store
+        .dispatch(
+          authApi.endpoints.signIn.initiate({
             email: 'person@example.test',
             password: 'password',
           }),
-          credentials: 'include',
+        )
+        .unwrap(),
+    ).resolves.toEqual(user);
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        body: JSON.stringify({
+          email: 'person@example.test',
+          password: 'password',
         }),
-      );
-    },
-  );
+        credentials: 'include',
+      }),
+    );
+  });
+
+  it('submits Warehouse registration and validates immediate access', async () => {
+    const registration = {
+      ...user,
+      access: {
+        warehouseId: '00000000-0000-4000-8000-000000000002',
+        roleId: '00000000-0000-4000-8000-000000000003',
+        roleKind: 'warehouse_manager',
+        permissionIds: ['ROLES:WATCH'],
+      },
+    };
+    const fetchMock = vi.fn().mockResolvedValue(Response.json(registration));
+    vi.stubGlobal('fetch', fetchMock);
+    const store = makeStore();
+
+    await expect(
+      store
+        .dispatch(
+          authApi.endpoints.signUp.initiate({
+            email: 'person@example.test',
+            password: 'password',
+            warehouseName: 'Main Warehouse',
+          }),
+        )
+        .unwrap(),
+    ).resolves.toEqual(registration);
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        body: JSON.stringify({
+          email: 'person@example.test',
+          password: 'password',
+          warehouseName: 'Main Warehouse',
+        }),
+      }),
+    );
+  });
 
   it('maps a no-content session response to anonymous', async () => {
     vi.stubGlobal(
@@ -77,6 +108,7 @@ describe('authApi', () => {
           authApi.endpoints.signUp.initiate({
             email: 'person@example.test',
             password: 'password',
+            warehouseName: 'Main Warehouse',
           }),
         )
         .unwrap(),

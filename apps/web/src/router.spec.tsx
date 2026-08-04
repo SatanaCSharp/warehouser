@@ -86,6 +86,12 @@ describe('router', () => {
         .mockResolvedValueOnce(
           Response.json({
             user: { id: '00000000-0000-4000-8000-000000000012' },
+            access: {
+              warehouseId: '00000000-0000-4000-8000-000000000013',
+              roleId: '00000000-0000-4000-8000-000000000014',
+              roleKind: 'warehouse_manager',
+              permissionIds: ['ROLES:WATCH'],
+            },
           }),
         ),
     );
@@ -94,6 +100,7 @@ describe('router', () => {
 
     await user.type(await screen.findByLabelText('Email'), 'new@example.test');
     await user.type(screen.getByLabelText('Password'), 'long enough');
+    await user.type(screen.getByLabelText('Warehouse name'), 'Main Warehouse');
     await user.click(screen.getByRole('button', { name: 'Create account' }));
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/'));
@@ -127,6 +134,7 @@ describe('router', () => {
       'existing@example.test',
     );
     await user.type(screen.getByLabelText('Password'), 'long enough');
+    await user.type(screen.getByLabelText('Warehouse name'), 'Main Warehouse');
     await user.click(screen.getByRole('button', { name: 'Create account' }));
 
     expect(

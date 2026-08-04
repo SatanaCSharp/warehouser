@@ -14,6 +14,11 @@
       "show": "Show password",
       "hide": "Hide password"
     },
+    "warehouseName": {
+      "label": "Warehouse name",
+      "placeholder": "Main Warehouse",
+      "help": "1–100 characters; Unicode names are supported"
+    },
     "submit": "Create account",
     "submitting": "Creating account…"
   },

@@ -21,6 +21,7 @@ describe('SignUpForm', () => {
     expect(
       screen.getByText('Password must contain 8 to 128 characters'),
     ).toBeVisible();
+    expect(screen.getByText('Enter a Warehouse name.')).toBeVisible();
     expect(screen.getByLabelText('Email')).toHaveFocus();
     expect(onSubmit).not.toHaveBeenCalled();
   });
@@ -35,6 +36,7 @@ describe('SignUpForm', () => {
       '  Jane.Doe@Example.Test  ',
     );
     await user.type(screen.getByLabelText('Password'), '  exact pass  ');
+    await user.type(screen.getByLabelText('Warehouse name'), '  Склад é  ');
     await user.click(screen.getByRole('button', { name: 'Create account' }));
 
     await waitFor(() =>
@@ -42,6 +44,7 @@ describe('SignUpForm', () => {
         {
           email: 'jane.doe@example.test',
           password: '  exact pass  ',
+          warehouseName: 'Склад é',
         },
         expect.anything(),
       ),
@@ -69,14 +72,37 @@ describe('SignUpForm', () => {
 
     await user.type(screen.getByLabelText('Email'), 'jane@example.test');
     await user.type(password, 'long enough');
+    await user.type(screen.getByLabelText('Warehouse name'), 'Main Warehouse');
     await user.click(screen.getByRole('button', { name: 'Create account' }));
 
     expect(
       await screen.findByRole('button', { name: 'Creating account…' }),
     ).toBeDisabled();
     expect(screen.getByLabelText('Email')).toBeDisabled();
+    expect(screen.getByLabelText('Warehouse name')).toBeDisabled();
     act(() => {
       resolveSubmit?.();
     });
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: 'Create account' }),
+      ).toBeEnabled(),
+    );
+  });
+
+  it.each([
+    ['x'.repeat(101), 'Warehouse name must contain 1 to 100 characters.'],
+    ['Ware\u200Bhouse', 'Warehouse name contains an unsupported character.'],
+  ])('announces invalid Warehouse name %p', async (warehouseName, message) => {
+    const user = userEvent.setup();
+    renderWithProviders(<SignUpForm onSubmit={vi.fn()} />);
+
+    await user.type(screen.getByLabelText('Email'), 'jane@example.test');
+    await user.type(screen.getByLabelText('Password'), 'long enough');
+    await user.type(screen.getByLabelText('Warehouse name'), warehouseName);
+    await user.click(screen.getByRole('button', { name: 'Create account' }));
+
+    expect(await screen.findByText(message)).toBeVisible();
+    expect(screen.getByLabelText('Warehouse name')).toHaveFocus();
   });
 });
