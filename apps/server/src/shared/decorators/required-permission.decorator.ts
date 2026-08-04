@@ -3,5 +3,5 @@ import type { PermissionId } from '@warehouser/shared-types/enums';
 
 export const REQUIRED_PERMISSION_KEY = 'access.required-permission';
 
-export const RequiredPermission = (permissionId: PermissionId) =>
-  SetMetadata(REQUIRED_PERMISSION_KEY, permissionId);
+export const RequiredPermission = (...permissionIds: PermissionId[]) =>
+  SetMetadata(REQUIRED_PERMISSION_KEY, permissionIds);

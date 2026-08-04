@@ -5,6 +5,19 @@ import {
 } from 'access/access-projections';
 import { z } from 'zod';
 
+type SegmenterConstructor = new (
+  locales?: string | string[],
+  options?: { granularity: 'grapheme' },
+) => { segment: (value: string) => Iterable<unknown> };
+
+const graphemeCount = (value: string): number => {
+  const Segmenter = (Intl as unknown as { Segmenter: SegmenterConstructor })
+    .Segmenter;
+  return [
+    ...new Segmenter(undefined, { granularity: 'grapheme' }).segment(value),
+  ].length;
+};
+
 const domainNameSchema = z
   .string()
   .transform((name) => name.trim())
@@ -12,7 +25,9 @@ const domainNameSchema = z
     z
       .string()
       .min(1)
-      .max(100)
+      .refine((name) => graphemeCount(name) <= 100, {
+        message: 'Role names must contain at most 100 perceived characters',
+      })
       .regex(/^[^\p{Cc}\p{Cf}]+$/u),
   );
 const uniquePermissionIdsSchema = z

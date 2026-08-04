@@ -8,6 +8,7 @@ export interface AccessRoleRead {
   readonly name: string;
   readonly kind: 'custom' | 'warehouse_manager';
   readonly permissionIds: readonly string[];
+  readonly assignedMemberCount: number;
 }
 
 export interface AccessMemberRead {
@@ -39,10 +40,12 @@ export class AccessReadRepository {
               role.warehouse_id AS "warehouseId",
               role.name,
               role.kind,
+              COUNT(DISTINCT membership.user_id)::int AS "assignedMemberCount",
               COALESCE(array_agg(grant_row.permission_id ORDER BY grant_row.permission_id)
                 FILTER (WHERE grant_row.permission_id IS NOT NULL), '{}') AS "permissionIds"
          FROM roles role
          LEFT JOIN role_permissions grant_row ON grant_row.role_id = role.id
+         LEFT JOIN warehouse_memberships membership ON membership.role_id = role.id
         WHERE role.warehouse_id = $1
           AND ($3::uuid IS NULL OR role.id > $3)
           AND ($4::uuid IS NULL OR role.id < $4)

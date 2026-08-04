@@ -2,7 +2,7 @@ import 'reflect-metadata';
 
 import { GUARDS_METADATA, HTTP_CODE_METADATA } from '@nestjs/common/constants';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { AccessMutationController } from 'access/rest/access-mutation.controller';
+import { AccessMutationController } from 'access/rest/controllers/access-mutation.controller';
 import type { AssignMemberRoleCommand } from 'access/usecases/commands/assign-member-role.command';
 import type { CreateRoleCommand } from 'access/usecases/commands/create-role.command';
 import type { DeleteRoleCommand } from 'access/usecases/commands/delete-role.command';
@@ -64,6 +64,7 @@ describe('AccessMutationController', () => {
       name: 'Picker',
       kind: 'custom',
       permissionIds: [PermissionId.USERS_WATCH],
+      assignedMemberCount: 0,
     });
     await expect(
       controller.updateRole(id(4), request(PermissionId.ROLES_UPDATE), {
@@ -115,9 +116,9 @@ describe('AccessMutationController', () => {
   ] as const)(
     '%s declares both guards and its exact Permission',
     (name, permission) => {
-      expect(Reflect.getMetadata(REQUIRED_PERMISSION_KEY, method(name))).toBe(
-        permission,
-      );
+      expect(
+        Reflect.getMetadata(REQUIRED_PERMISSION_KEY, method(name)),
+      ).toEqual([permission]);
       expect(Reflect.getMetadata(GUARDS_METADATA, method(name))).toEqual([
         SessionAuthGuard,
         WarehouseAccessGuard,

@@ -17,6 +17,7 @@ export const roleSchema = z.strictObject({
   name: z.string().min(1).max(100),
   kind: roleKindSchema,
   permissionIds: z.array(permissionIdSchema),
+  assignedMemberCount: z.number().int().nonnegative(),
 });
 export const permissionSchema = z.strictObject({
   id: permissionIdSchema,

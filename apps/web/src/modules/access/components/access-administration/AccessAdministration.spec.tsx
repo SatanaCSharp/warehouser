@@ -31,13 +31,21 @@ const roles: RolePage['items'] = [
     kind: 'warehouse_manager',
     name: 'Warehouse Manager',
     permissionIds: Object.values(PermissionId),
+    assignedMemberCount: 1,
   },
-  { id: pickerRoleId, kind: 'custom', name: 'Picker', permissionIds: [] },
+  {
+    id: pickerRoleId,
+    kind: 'custom',
+    name: 'Picker',
+    permissionIds: [],
+    assignedMemberCount: 1,
+  },
   {
     id: auditorRoleId,
     kind: 'custom',
     name: 'Auditor',
     permissionIds: [PermissionId.ROLES_WATCH],
+    assignedMemberCount: 0,
   },
 ];
 const permissions: PermissionPage['items'] = [
@@ -61,10 +69,10 @@ const renderAdministration = (
     members,
     permissions,
     roles,
-    onAssignRole: vi.fn().mockResolvedValue(undefined),
-    onDeleteRole: vi.fn().mockResolvedValue(undefined),
-    onSaveRole: vi.fn().mockResolvedValue(undefined),
-    onTransferManager: vi.fn().mockResolvedValue(undefined),
+    onAssignRole: vi.fn().mockResolvedValue({ success: true }),
+    onDeleteRole: vi.fn().mockResolvedValue({ success: true }),
+    onSaveRole: vi.fn().mockResolvedValue({ success: true }),
+    onTransferManager: vi.fn().mockResolvedValue({ success: true }),
     ...overrides,
   };
   renderWithProviders(<AccessAdministration {...props} />);
@@ -136,6 +144,57 @@ describe('AccessAdministration', () => {
     expect(await screen.findByRole('status')).toHaveTextContent(
       'Picker was deleted and assigned members were moved to Auditor.',
     );
+  });
+
+  it('uses deletion-safe role metadata without member-read data', async () => {
+    const user = userEvent.setup();
+    renderAdministration({ members: [] });
+
+    await user.click(screen.getByRole('button', { name: 'Delete Picker' }));
+
+    expect(
+      within(screen.getByRole('dialog')).getByLabelText('Replacement role'),
+    ).toBeRequired();
+  });
+
+  it('keeps a failed workflow open and does not announce success', async () => {
+    const user = userEvent.setup();
+    renderAdministration({
+      onSaveRole: vi.fn().mockResolvedValue({ success: false }),
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Create role' }));
+    const dialog = screen.getByRole('dialog', { name: 'Create role' });
+    await user.type(within(dialog).getByLabelText('Role name'), 'Operators');
+    await user.click(within(dialog).getByRole('button', { name: 'Save role' }));
+
+    expect(screen.getByRole('dialog', { name: 'Create role' })).toBeVisible();
+    expect(screen.getByRole('status', { hidden: true })).toBeEmptyDOMElement();
+  });
+
+  it.each([
+    ['', 'Enter a role name.'],
+    ['A'.repeat(101), 'Use 100 characters or fewer.'],
+    ['Stock\u200BPicker', 'Remove control or formatting characters.'],
+  ])('explains invalid role name %j inline', async (name, message) => {
+    const user = userEvent.setup();
+    const props = renderAdministration();
+
+    await user.click(screen.getByRole('button', { name: 'Create role' }));
+    const input = within(screen.getByRole('dialog')).getByLabelText(
+      'Role name',
+    );
+    if (name) {
+      await user.type(input, name);
+    }
+    await user.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: 'Save role',
+      }),
+    );
+
+    expect(await screen.findByText(message)).toBeVisible();
+    expect(props.onSaveRole).not.toHaveBeenCalled();
   });
 
   it('transfers management only to another member and names both affected members', async () => {

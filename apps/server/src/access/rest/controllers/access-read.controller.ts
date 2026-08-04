@@ -37,7 +37,14 @@ export class AccessReadController {
   }
 
   @Get('roles')
-  @RequiredPermission(PermissionId.ROLES_WATCH)
+  @RequiredPermission(
+    PermissionId.ROLES_WATCH,
+    PermissionId.ROLES_CREATE,
+    PermissionId.ROLES_UPDATE,
+    PermissionId.ROLES_DELETE,
+    PermissionId.ROLES_ASSIGN,
+    PermissionId.WAREHOUSE_MANAGER_ROLE_REASSIGN,
+  )
   @UseGuards(SessionAuthGuard, WarehouseAccessGuard)
   listRoles(
     @Req() request: WarehouseAccessRequest,
@@ -47,7 +54,11 @@ export class AccessReadController {
   }
 
   @Get('permissions')
-  @RequiredPermission(PermissionId.ROLES_WATCH)
+  @RequiredPermission(
+    PermissionId.ROLES_WATCH,
+    PermissionId.ROLES_CREATE,
+    PermissionId.ROLES_UPDATE,
+  )
   @UseGuards(SessionAuthGuard, WarehouseAccessGuard)
   listPermissions(
     @Req() request: WarehouseAccessRequest,
@@ -57,7 +68,11 @@ export class AccessReadController {
   }
 
   @Get('members')
-  @RequiredPermission(PermissionId.USERS_WATCH)
+  @RequiredPermission(
+    PermissionId.USERS_WATCH,
+    PermissionId.ROLES_ASSIGN,
+    PermissionId.WAREHOUSE_MANAGER_ROLE_REASSIGN,
+  )
   @UseGuards(SessionAuthGuard, WarehouseAccessGuard)
   listMembers(
     @Req() request: WarehouseAccessRequest,

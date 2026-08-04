@@ -11,15 +11,21 @@
   "roles": {
     "heading": "Roles",
     "listLabel": "Warehouse roles",
+    "empty": "No roles are available.",
+    "error": "Roles could not be loaded safely. Try again.",
     "protected": "Protected"
   },
   "members": {
     "heading": "Members",
     "listLabel": "Warehouse members"
+    ,"empty": "No members are available.",
+    "error": "Members could not be loaded safely. Try again."
   },
   "permissions": {
     "heading": "Permissions",
     "listLabel": "Permission catalogue"
+    ,"empty": "No permissions are available.",
+    "error": "Permissions could not be loaded safely. Try again."
   },
   "administration": {
     "heading": "Administration",
@@ -35,6 +41,12 @@
       "name": "Role name",
       "permissions": "Permissions",
       "reserved": "Reserved for the protected Warehouse Manager role.",
+      "validation": {
+        "required": "Enter a role name.",
+        "length": "Use 100 characters or fewer.",
+        "characters": "Remove control or formatting characters.",
+        "server": "Check the role name and try again."
+      },
       "save": "Save role"
     },
     "assignment": {

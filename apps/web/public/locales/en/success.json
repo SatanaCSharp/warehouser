@@ -2,5 +2,12 @@
   "auth": {
     "signOut": "You have signed out.",
     "signUp": "Your account was created."
+  },
+  "access": {
+    "assignRole": "Member role updated.",
+    "createRole": "Role created.",
+    "deleteRole": "Role deleted.",
+    "transferManager": "Warehouse management transferred.",
+    "updateRole": "Role updated."
   }
 }

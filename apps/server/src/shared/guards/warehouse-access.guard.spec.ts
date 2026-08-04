@@ -18,11 +18,11 @@ const contextFor = (request: Record<string, unknown>): ExecutionContext =>
 
 describe('WarehouseAccessGuard', () => {
   const reflector = {
-    getAllAndOverride: jest.fn().mockReturnValue(PermissionId.ROLES_WATCH),
+    getAllAndOverride: jest.fn().mockReturnValue([PermissionId.ROLES_WATCH]),
   } as unknown as Reflector;
 
   it('resolves current authority on every decision and attaches an immutable principal', async () => {
-    const resolveRequiredPermission = jest
+    const resolveAnyRequiredPermission = jest
       .fn()
       .mockResolvedValueOnce({
         userId,
@@ -30,6 +30,7 @@ describe('WarehouseAccessGuard', () => {
         roleId,
         roleKind: 'custom',
         granted: true,
+        permissionId: PermissionId.ROLES_WATCH,
       })
       .mockResolvedValueOnce({
         userId,
@@ -37,9 +38,10 @@ describe('WarehouseAccessGuard', () => {
         roleId,
         roleKind: 'custom',
         granted: false,
+        permissionId: PermissionId.ROLES_WATCH,
       });
     const guard = new WarehouseAccessGuard(reflector, {
-      resolveRequiredPermission,
+      resolveAnyRequiredPermission,
     } as unknown as AccessPrincipalRepository);
     const firstRequest = { user: { userId } };
 
@@ -58,7 +60,7 @@ describe('WarehouseAccessGuard', () => {
     await expect(
       guard.canActivate(contextFor({ user: { userId } })),
     ).rejects.toMatchObject({ code: ErrorCode.ACCESS_DENIED });
-    expect(resolveRequiredPermission).toHaveBeenCalledTimes(2);
+    expect(resolveAnyRequiredPermission).toHaveBeenCalledTimes(2);
   });
 
   it.each([
@@ -73,7 +75,7 @@ describe('WarehouseAccessGuard', () => {
     'denies %s without attaching access data',
     async (_name, request, result) => {
       const guard = new WarehouseAccessGuard(reflector, {
-        resolveRequiredPermission: jest.fn().mockResolvedValue(result),
+        resolveAnyRequiredPermission: jest.fn().mockResolvedValue(result),
       } as unknown as AccessPrincipalRepository);
 
       await expect(guard.canActivate(contextFor(request))).rejects.toEqual(

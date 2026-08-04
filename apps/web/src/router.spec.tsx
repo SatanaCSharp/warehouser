@@ -1,6 +1,6 @@
 import { HeroUIProvider } from '@heroui/react';
 import { RouterProvider } from '@tanstack/react-router';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -106,6 +106,7 @@ describe('router', () => {
             {
               id: '00000000-0000-4000-8000-000000000003',
               name: 'Operators',
+              assignedMemberCount: 0,
               kind: 'custom',
               permissionIds: ['ROLES:WATCH'],
             },
@@ -144,6 +145,89 @@ describe('router', () => {
       expect.stringContaining('/members'),
       expect.anything(),
     );
+  });
+
+  it('refetches current access and removes stale controls after a mutation denial', async () => {
+    const user = userEvent.setup();
+    let currentReads = 0;
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url =
+        input instanceof Request
+          ? input.url
+          : input instanceof URL
+            ? input.href
+            : input;
+      if (url.endsWith('/api/v1/auth/session')) {
+        return Promise.resolve(
+          Response.json({
+            user: { id: '00000000-0000-4000-8000-000000000001' },
+          }),
+        );
+      }
+      if (url.endsWith('/api/v1/access/current')) {
+        currentReads += 1;
+        return Promise.resolve(
+          Response.json({
+            ...readableAccess,
+            permissionIds: currentReads === 1 ? ['ROLES:CREATE'] : [],
+          }),
+        );
+      }
+      if (url.endsWith('/api/v1/access/roles') && init?.method === 'POST') {
+        return Promise.resolve(
+          Response.json(
+            { code: 'access.denied', message: 'Access denied' },
+            { status: 403 },
+          ),
+        );
+      }
+      if (url.endsWith('/api/v1/access/roles')) {
+        return Promise.resolve(
+          Response.json({
+            items: [
+              {
+                id: readableAccess.roleId,
+                name: 'Operators',
+                assignedMemberCount: 0,
+                kind: 'custom',
+                permissionIds: [],
+              },
+            ],
+            hasNext: false,
+            hasPrev: false,
+            nextCursor: null,
+          }),
+        );
+      }
+      if (url.endsWith('/api/v1/access/permissions')) {
+        return Promise.resolve(
+          Response.json({
+            items: [],
+            hasNext: false,
+            hasPrev: false,
+            nextCursor: null,
+          }),
+        );
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderRoute('/access');
+    await user.click(
+      await screen.findByRole('button', { name: 'Create role' }),
+    );
+    const dialog = screen.getByRole('dialog', { name: 'Create role' });
+    await user.type(screen.getByLabelText('Role name'), 'Auditor');
+    await user.click(within(dialog).getByRole('button', { name: 'Save role' }));
+
+    expect(await screen.findByText('Access unavailable')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Create role' }),
+    ).not.toBeInTheDocument();
+    expect(toast.error).toHaveBeenCalled();
+    expect(toast.success).not.toHaveBeenCalled();
+    expect(currentReads).toBeGreaterThan(1);
   });
 
   it('does not request or render protected access datasets without read permission', async () => {

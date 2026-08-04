@@ -1,7 +1,9 @@
+/* eslint-disable complexity, max-lines-per-function -- Dataset authority and states stay coordinated at this route-level owner. */
 import { Card, CardBody, CardHeader, Skeleton, Tab, Tabs } from '@heroui/react';
 import { PermissionId } from '@warehouser/shared-types/enums';
 import { useTranslation } from 'react-i18next';
 
+import { alertAccessSuccess } from 'modules/access/alerts/access-feedback';
 import {
   useListAccessMembersQuery,
   useListAccessPermissionsQuery,
@@ -13,11 +15,20 @@ import {
   useUpdateAccessRoleMutation,
 } from 'modules/access/api/access-api';
 import { AccessAdministration } from 'modules/access/components/access-administration/AccessAdministration';
+import { isApiFailure } from 'shared/api/api-client';
 
 import type { AccessProjection } from '@warehouser/contracts/access';
 import type { ReactElement } from 'react';
 
 type AccessWorkspaceProps = { access: AccessProjection };
+
+const administrationPermissions: readonly string[] = [
+  PermissionId.ROLES_ASSIGN,
+  PermissionId.ROLES_CREATE,
+  PermissionId.ROLES_DELETE,
+  PermissionId.ROLES_UPDATE,
+  PermissionId.WAREHOUSE_MANAGER_ROLE_REASSIGN,
+];
 
 const LoadingList = (): ReactElement => (
   <div aria-label="Loading access data" className="space-y-3">
@@ -26,20 +37,50 @@ const LoadingList = (): ReactElement => (
   </div>
 );
 
+const DatasetState = ({
+  kind,
+  label,
+}: {
+  kind: 'empty' | 'error';
+  label: string;
+}): ReactElement => (
+  <p
+    role={kind === 'error' ? 'alert' : 'status'}
+    className="py-6 text-foreground-500"
+  >
+    {label}
+  </p>
+);
+
 export const AccessWorkspace = ({
   access,
 }: AccessWorkspaceProps): ReactElement => {
   const { t } = useTranslation('access');
   const canReadRoles = access.permissionIds.includes(PermissionId.ROLES_WATCH);
+  const canManageRoles = access.permissionIds.some((permission) =>
+    administrationPermissions.includes(permission),
+  );
+  const canLoadRoles = canReadRoles || canManageRoles;
   const canReadMembers = access.permissionIds.includes(
     PermissionId.USERS_WATCH,
   );
-  const roles = useListAccessRolesQuery(undefined, { skip: !canReadRoles });
+  const canManageMembers = access.permissionIds.some(
+    (permission) =>
+      permission === PermissionId.ROLES_ASSIGN ||
+      permission === PermissionId.WAREHOUSE_MANAGER_ROLE_REASSIGN,
+  );
+  const canLoadPermissions = access.permissionIds.some(
+    (permission) =>
+      permission === PermissionId.ROLES_WATCH ||
+      permission === PermissionId.ROLES_CREATE ||
+      permission === PermissionId.ROLES_UPDATE,
+  );
+  const roles = useListAccessRolesQuery(undefined, { skip: !canLoadRoles });
   const permissions = useListAccessPermissionsQuery(undefined, {
-    skip: !canReadRoles,
+    skip: !canLoadPermissions,
   });
   const members = useListAccessMembersQuery(undefined, {
-    skip: !canReadMembers,
+    skip: !(canReadMembers || canManageMembers),
   });
   const [createRole] = useCreateAccessRoleMutation();
   const [updateRole] = useUpdateAccessRoleMutation();
@@ -67,6 +108,10 @@ export const AccessWorkspace = ({
               <CardBody>
                 {roles.isLoading ? (
                   <LoadingList />
+                ) : roles.isError ? (
+                  <DatasetState kind="error" label={t('roles.error')} />
+                ) : roles.data?.items.length === 0 ? (
+                  <DatasetState kind="empty" label={t('roles.empty')} />
                 ) : (
                   <ul
                     className="divide-y divide-divider"
@@ -97,6 +142,10 @@ export const AccessWorkspace = ({
               <CardBody>
                 {members.isLoading ? (
                   <LoadingList />
+                ) : members.isError ? (
+                  <DatasetState kind="error" label={t('members.error')} />
+                ) : members.data?.items.length === 0 ? (
+                  <DatasetState kind="empty" label={t('members.empty')} />
                 ) : (
                   <ul
                     className="divide-y divide-divider"
@@ -125,6 +174,10 @@ export const AccessWorkspace = ({
               <CardBody>
                 {permissions.isLoading ? (
                   <LoadingList />
+                ) : permissions.isError ? (
+                  <DatasetState kind="error" label={t('permissions.error')} />
+                ) : permissions.data?.items.length === 0 ? (
+                  <DatasetState kind="empty" label={t('permissions.empty')} />
                 ) : (
                   <ul
                     className="divide-y divide-divider"
@@ -148,13 +201,7 @@ export const AccessWorkspace = ({
       {roles.data &&
       permissions.data &&
       access.permissionIds.some((permission) =>
-        [
-          PermissionId.ROLES_ASSIGN,
-          PermissionId.ROLES_CREATE,
-          PermissionId.ROLES_DELETE,
-          PermissionId.ROLES_UPDATE,
-          PermissionId.WAREHOUSE_MANAGER_ROLE_REASSIGN,
-        ].includes(permission),
+        administrationPermissions.includes(permission),
       ) ? (
         <AccessAdministration
           access={access}
@@ -162,23 +209,60 @@ export const AccessWorkspace = ({
           permissions={permissions.data.items}
           roles={roles.data.items}
           onAssignRole={async (userId, roleId) => {
-            await assignRole({ userId, input: { roleId } }).unwrap();
+            const result = await assignRole({ userId, input: { roleId } });
+            if ('error' in result) {
+              return { success: false };
+            }
+            alertAccessSuccess('assignRole');
+            return { success: true };
           }}
           onDeleteRole={async (roleId, replacementRoleId) => {
-            await deleteRole({ roleId, input: { replacementRoleId } }).unwrap();
+            const result = await deleteRole({
+              roleId,
+              input: { replacementRoleId },
+            });
+            if ('error' in result) {
+              return { success: false };
+            }
+            alertAccessSuccess('deleteRole');
+            return { success: true };
           }}
           onSaveRole={async (input, roleId) => {
             if (roleId) {
-              await updateRole({ roleId, input }).unwrap();
-              return;
+              const result = await updateRole({ roleId, input });
+              if ('error' in result) {
+                return {
+                  success: false,
+                  fieldErrors: isApiFailure(result.error)
+                    ? result.error.fieldErrors
+                    : undefined,
+                };
+              }
+              alertAccessSuccess('updateRole');
+              return { success: true };
             }
-            await createRole(input).unwrap();
+            const result = await createRole(input);
+            if ('error' in result) {
+              return {
+                success: false,
+                fieldErrors: isApiFailure(result.error)
+                  ? result.error.fieldErrors
+                  : undefined,
+              };
+            }
+            alertAccessSuccess('createRole');
+            return { success: true };
           }}
           onTransferManager={async (recipientUserId, formerManagerRoleId) => {
-            await transferManager({
+            const result = await transferManager({
               recipientUserId,
               formerManagerRoleId,
-            }).unwrap();
+            });
+            if ('error' in result) {
+              return { success: false };
+            }
+            alertAccessSuccess('transferManager');
+            return { success: true };
           }}
         />
       ) : null}

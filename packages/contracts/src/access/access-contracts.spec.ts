@@ -78,10 +78,24 @@ describe('access contracts', () => {
             name: 'Operators',
             kind: 'custom',
             permissionIds: ['USERS:WATCH'],
+            assignedMemberCount: 2,
           },
         ],
       }).success,
     ).toBe(true);
+    expect(
+      rolePageSchema.safeParse({
+        ...page,
+        items: [
+          {
+            id: id(1),
+            name: 'Operators',
+            kind: 'custom',
+            permissionIds: [],
+          },
+        ],
+      }).success,
+    ).toBe(false);
     expect(
       permissionPageSchema.safeParse({
         ...page,
@@ -107,6 +121,21 @@ describe('access contracts', () => {
             warehouseId: id(3),
           },
         ],
+      }).success,
+    ).toBe(false);
+  });
+
+  it('counts role names by user-perceived characters', () => {
+    const composedName = `${'é'.repeat(100)}`;
+
+    expect(
+      roleWriteSchema.safeParse({ name: composedName, permissionIds: [] })
+        .success,
+    ).toBe(true);
+    expect(
+      roleWriteSchema.safeParse({
+        name: `${composedName}A`,
+        permissionIds: [],
       }).success,
     ).toBe(false);
   });

@@ -2,7 +2,7 @@ import 'reflect-metadata';
 
 import { GUARDS_METADATA } from '@nestjs/common/constants';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { AccessReadController } from 'access/rest/access-read.controller';
+import { AccessReadController } from 'access/rest/controllers/access-read.controller';
 import type { ListAccessMembersQuery } from 'access/usecases/queries/list-access-members.query';
 import type { ListAccessPermissionsQuery } from 'access/usecases/queries/list-access-permissions.query';
 import type { ListAccessRolesQuery } from 'access/usecases/queries/list-access-roles.query';
@@ -64,12 +64,39 @@ describe('AccessReadController', () => {
   });
 
   it.each([
-    ['listRoles', roles, PermissionId.ROLES_WATCH],
-    ['listPermissions', permissions, PermissionId.ROLES_WATCH],
-    ['listMembers', members, PermissionId.USERS_WATCH],
+    [
+      'listRoles',
+      roles,
+      [
+        PermissionId.ROLES_WATCH,
+        PermissionId.ROLES_CREATE,
+        PermissionId.ROLES_UPDATE,
+        PermissionId.ROLES_DELETE,
+        PermissionId.ROLES_ASSIGN,
+        PermissionId.WAREHOUSE_MANAGER_ROLE_REASSIGN,
+      ],
+    ],
+    [
+      'listPermissions',
+      permissions,
+      [
+        PermissionId.ROLES_WATCH,
+        PermissionId.ROLES_CREATE,
+        PermissionId.ROLES_UPDATE,
+      ],
+    ],
+    [
+      'listMembers',
+      members,
+      [
+        PermissionId.USERS_WATCH,
+        PermissionId.ROLES_ASSIGN,
+        PermissionId.WAREHOUSE_MANAGER_ROLE_REASSIGN,
+      ],
+    ],
   ] as const)(
-    'scopes %s to the guard-derived Warehouse and declares its Permission',
-    async (handlerName, query, requiredPermission) => {
+    'scopes %s to the guard-derived Warehouse and declares its supported Permissions',
+    async (handlerName, query, requiredPermissions) => {
       jest.mocked(query.execute).mockResolvedValue({
         items: [],
         hasNext: false,
@@ -82,7 +109,7 @@ describe('AccessReadController', () => {
       expect(query.execute).toHaveBeenCalledWith(request.access, { limit: 20 });
       expect(
         Reflect.getMetadata(REQUIRED_PERMISSION_KEY, method(handlerName)),
-      ).toBe(requiredPermission);
+      ).toEqual(requiredPermissions);
       expect(Reflect.getMetadata(GUARDS_METADATA, method(handlerName))).toEqual(
         [SessionAuthGuard, WarehouseAccessGuard],
       );

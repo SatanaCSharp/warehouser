@@ -9,6 +9,7 @@ import {
   ModalFooter,
   ModalHeader,
 } from '@heroui/react';
+import { roleWriteSchema } from '@warehouser/contracts/access';
 import { PermissionId } from '@warehouser/shared-types/enums';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -23,21 +24,25 @@ import type {
 import type { FormEvent, ReactElement } from 'react';
 
 type Role = RolePage['items'][number];
+export type MutationOutcome = {
+  success: boolean;
+  fieldErrors?: Record<string, string>;
+};
 type AccessAdministrationProps = {
   access: AccessProjection;
   members: MemberPage['items'];
   permissions: PermissionPage['items'];
   roles: RolePage['items'];
-  onAssignRole: (userId: string, roleId: string) => Promise<void>;
+  onAssignRole: (userId: string, roleId: string) => Promise<MutationOutcome>;
   onDeleteRole: (
     roleId: string,
     replacementRoleId: string | null,
-  ) => Promise<void>;
-  onSaveRole: (input: RoleWrite, roleId?: string) => Promise<void>;
+  ) => Promise<MutationOutcome>;
+  onSaveRole: (input: RoleWrite, roleId?: string) => Promise<MutationOutcome>;
   onTransferManager: (
     recipientUserId: string,
     formerManagerRoleId: string,
-  ) => Promise<void>;
+  ) => Promise<MutationOutcome>;
 };
 
 type Workflow =
@@ -47,6 +52,7 @@ type Workflow =
   | { kind: 'transfer' }
   | null;
 
+// eslint-disable-next-line max-lines-per-function -- This orchestrator owns the four coupled access dialogs.
 export const AccessAdministration = ({
   access,
   members,
@@ -176,11 +182,15 @@ export const AccessAdministration = ({
           role={workflow.role}
           onClose={close}
           onSave={async (input) => {
-            await onSaveRole(input, workflow.role?.id);
+            const result = await onSaveRole(input, workflow.role?.id);
+            if (!result.success) {
+              return result;
+            }
             setAnnouncement(
               t('administration.roleSaved', { name: input.name }),
             );
             close();
+            return result;
           }}
         />
       ) : null}
@@ -190,7 +200,10 @@ export const AccessAdministration = ({
           roles={customRoles}
           onClose={close}
           onSave={async (roleId) => {
-            await onAssignRole(workflow.memberId, roleId);
+            const result = await onAssignRole(workflow.memberId, roleId);
+            if (!result.success) {
+              return;
+            }
             setAnnouncement(t('administration.assignment.saved'));
             close();
           }}
@@ -198,12 +211,17 @@ export const AccessAdministration = ({
       ) : null}
       {workflow?.kind === 'delete' ? (
         <DeletionDialog
-          members={members}
           role={workflow.role}
           roles={customRoles}
           onClose={close}
           onDelete={async (replacementRoleId) => {
-            await onDeleteRole(workflow.role.id, replacementRoleId);
+            const result = await onDeleteRole(
+              workflow.role.id,
+              replacementRoleId,
+            );
+            if (!result.success) {
+              return;
+            }
             const replacement = customRoles.find(
               (role) => role.id === replacementRoleId,
             );
@@ -228,7 +246,13 @@ export const AccessAdministration = ({
           roles={customRoles}
           onClose={close}
           onTransfer={async (recipientId, replacementRoleId) => {
-            await onTransferManager(recipientId, replacementRoleId);
+            const result = await onTransferManager(
+              recipientId,
+              replacementRoleId,
+            );
+            if (!result.success) {
+              return;
+            }
             setAnnouncement(t('administration.transfer.saved'));
             close();
           }}
@@ -247,14 +271,31 @@ const RoleDialog = ({
   permissions: PermissionPage['items'];
   role?: Role;
   onClose: () => void;
-  onSave: (input: RoleWrite) => Promise<void>;
+  onSave: (input: RoleWrite) => Promise<MutationOutcome>;
 }): ReactElement => {
   const { t } = useTranslation('access');
   const [name, setName] = useState(role?.name ?? '');
   const [selected, setSelected] = useState<string[]>(role?.permissionIds ?? []);
+  const [nameError, setNameError] = useState('');
   const submit = async (event: FormEvent): Promise<void> => {
     event.preventDefault();
-    await onSave({ name: name.trim(), permissionIds: selected });
+    const parsed = roleWriteSchema.safeParse({ name, permissionIds: selected });
+    if (!parsed.success) {
+      const trimmed = name.trim();
+      setNameError(
+        trimmed.length === 0
+          ? t('administration.roleEditor.validation.required')
+          : /[\p{Cc}\p{Cf}]/u.test(trimmed)
+            ? t('administration.roleEditor.validation.characters')
+            : t('administration.roleEditor.validation.length'),
+      );
+      return;
+    }
+    setNameError('');
+    const result = await onSave(parsed.data);
+    if (!result.success && result.fieldErrors?.name) {
+      setNameError(t('administration.roleEditor.validation.server'));
+    }
   };
   const title = role
     ? t('administration.roleEditor.editTitle')
@@ -277,6 +318,9 @@ const RoleDialog = ({
             <Input
               autoFocus
               isRequired
+              validationBehavior="aria"
+              isInvalid={Boolean(nameError)}
+              errorMessage={nameError}
               label={t('administration.roleEditor.name')}
               value={name}
               onValueChange={setName}
@@ -390,20 +434,18 @@ const AssignmentDialog = ({
 };
 
 const DeletionDialog = ({
-  members,
   role,
   roles,
   onClose,
   onDelete,
 }: {
-  members: MemberPage['items'];
   role: Role;
   roles: Role[];
   onClose: () => void;
   onDelete: (replacementRoleId: string | null) => Promise<void>;
 }): ReactElement => {
   const { t } = useTranslation('access');
-  const assigned = members.some((member) => member.roleId === role.id);
+  const assigned = role.assignedMemberCount > 0;
   const [replacement, setReplacement] = useState('');
   return (
     <Modal

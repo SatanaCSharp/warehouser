@@ -8,6 +8,7 @@ export interface AccessPrincipalPersistenceResult {
   readonly roleId: string;
   readonly roleKind: 'custom' | 'warehouse_manager';
   readonly granted: boolean;
+  readonly permissionId: string;
 }
 
 export interface CurrentAccessPersistenceResult {
@@ -32,6 +33,7 @@ export class AccessPrincipalRepository {
               membership.warehouse_id AS "warehouseId",
               membership.role_id AS "roleId",
               membership.role_kind AS "roleKind",
+              $2::varchar AS "permissionId",
               (grant_row.permission_id IS NOT NULL) AS granted
          FROM warehouse_memberships membership
          LEFT JOIN role_permissions grant_row
@@ -39,6 +41,34 @@ export class AccessPrincipalRepository {
           AND grant_row.permission_id = $2
         WHERE membership.user_id = $1`,
       [userId, permissionId],
+    );
+
+    return rows[0] ?? null;
+  }
+
+  async resolveAnyRequiredPermission(
+    userId: string,
+    permissionIds: readonly string[],
+  ): Promise<AccessPrincipalPersistenceResult | null> {
+    const rows = await getEntityManager(this.dataSource).query<
+      AccessPrincipalPersistenceResult[]
+    >(
+      `SELECT membership.user_id AS "userId",
+              membership.warehouse_id AS "warehouseId",
+              membership.role_id AS "roleId",
+              membership.role_kind AS "roleKind",
+              requested.permission_id AS "permissionId",
+              (grant_row.permission_id IS NOT NULL) AS granted
+         FROM warehouse_memberships membership
+         CROSS JOIN unnest($2::varchar[]) WITH ORDINALITY requested(permission_id, position)
+         LEFT JOIN role_permissions grant_row
+           ON grant_row.role_id = membership.role_id
+          AND grant_row.permission_id = requested.permission_id
+        WHERE membership.user_id = $1
+          AND grant_row.permission_id IS NOT NULL
+        ORDER BY requested.position
+        LIMIT 1`,
+      [userId, permissionIds],
     );
 
     return rows[0] ?? null;

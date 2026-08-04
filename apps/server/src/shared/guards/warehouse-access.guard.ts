@@ -20,17 +20,17 @@ export class WarehouseAccessGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<WarehouseAccessRequest>();
-    const permissionId = this.reflector.getAllAndOverride<PermissionId>(
+    const permissionIds = this.reflector.getAllAndOverride<PermissionId[]>(
       REQUIRED_PERMISSION_KEY,
       [context.getHandler(), context.getClass()],
     );
-    if (!request.user || !permissionId) {
+    if (!request.user || !permissionIds?.length) {
       throw new ApplicationError(ErrorCode.ACCESS_DENIED);
     }
 
-    const current = await this.principals.resolveRequiredPermission(
+    const current = await this.principals.resolveAnyRequiredPermission(
       request.user.userId,
-      permissionId,
+      permissionIds,
     );
     if (!current?.granted) {
       throw new ApplicationError(ErrorCode.ACCESS_DENIED);
@@ -41,7 +41,7 @@ export class WarehouseAccessGuard implements CanActivate {
       warehouseId: current.warehouseId,
       roleId: current.roleId,
       roleKind: current.roleKind,
-      permissionId,
+      permissionId: current.permissionId as PermissionId,
     });
     return true;
   }

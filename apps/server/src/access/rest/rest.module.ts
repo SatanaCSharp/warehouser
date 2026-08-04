@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { AccessMutationController } from 'access/rest/access-mutation.controller';
-import { AccessReadController } from 'access/rest/access-read.controller';
+import { AccessMutationController } from 'access/rest/controllers/access-mutation.controller';
+import { AccessReadController } from 'access/rest/controllers/access-read.controller';
 import { AccessUsecaseModule } from 'access/usecases/usecase.module';
 import { AuthModule } from 'auth/auth.module';
 import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
@@ -10,4 +10,4 @@ import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
   controllers: [AccessReadController, AccessMutationController],
   providers: [WarehouseAccessGuard],
 })
-export class AccessModule {}
+export class AccessRestModule {}

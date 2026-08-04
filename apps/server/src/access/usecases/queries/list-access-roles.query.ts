@@ -31,6 +31,7 @@ export class ListAccessRolesQuery {
         name: role.name,
         kind: role.kind,
         permissionIds: [...role.permissionIds],
+        assignedMemberCount: role.assignedMemberCount,
       })),
     };
   }

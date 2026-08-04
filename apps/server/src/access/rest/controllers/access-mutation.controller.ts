@@ -56,7 +56,12 @@ export class AccessMutationController {
     @Body() input: RoleWriteDto,
   ): Promise<RoleResult> {
     const role = await this.create.execute(request.access!, input);
-    return { ...role, kind: 'custom', permissionIds: [...input.permissionIds] };
+    return {
+      ...role,
+      kind: 'custom',
+      permissionIds: [...input.permissionIds],
+      assignedMemberCount: 0,
+    };
   }
 
   @Patch('roles/:roleId')
@@ -71,7 +76,12 @@ export class AccessMutationController {
       roleId,
       ...input,
     });
-    return { ...role, kind: 'custom', permissionIds: [...input.permissionIds] };
+    return {
+      ...role,
+      kind: 'custom',
+      permissionIds: [...input.permissionIds],
+      assignedMemberCount: 0,
+    };
   }
 
   @Delete('roles/:roleId')

@@ -16,10 +16,8 @@ export const AccessPage = (): ReactElement => {
   }
 
   const access = currentAccess.data;
-  const canReviewAccess = access?.permissionIds.some(
-    (permission) =>
-      permission === PermissionId.ROLES_WATCH ||
-      permission === PermissionId.USERS_WATCH,
+  const canReviewAccess = access?.permissionIds.some((permission) =>
+    Object.values(PermissionId).includes(permission as PermissionId),
   );
   if (!access || !canReviewAccess) {
     return (
