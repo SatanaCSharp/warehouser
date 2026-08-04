@@ -1,4 +1,4 @@
-import { PermissionId } from '@warehouser/shared-types/enums';
+import { ErrorCode, PermissionId } from '@warehouser/shared-types/enums';
 import { CreateRoleCommand } from 'access/usecases/commands/create-role.command';
 import { UpdateRoleCommand } from 'access/usecases/commands/update-role.command';
 import type { AccessPrincipal } from 'shared/access/access-principal';
@@ -84,7 +84,12 @@ describe('custom Role lifecycle commands', () => {
           name: 'Picker',
           permissionIds: [PermissionId.ROLES_WATCH],
         }),
-      ).rejects.toThrow();
+      ).rejects.toMatchObject({
+        code:
+          result === 'name-conflict'
+            ? ErrorCode.ACCESS_ROLE_NAME_CONFLICT
+            : ErrorCode.ACCESS_INVALID_ROLE,
+      });
       expect(repository.updateCustomRole).not.toHaveBeenCalled();
     },
   );
@@ -108,7 +113,14 @@ describe('custom Role lifecycle commands', () => {
           name: 'Picker',
           permissionIds: [PermissionId.ROLES_WATCH],
         }),
-      ).rejects.toThrow();
+      ).rejects.toMatchObject({
+        code:
+          result === 'name-conflict'
+            ? ErrorCode.ACCESS_ROLE_NAME_CONFLICT
+            : result === 'invalid-permission'
+              ? ErrorCode.ACCESS_INVALID_ROLE
+              : ErrorCode.ACCESS_ROLE_UNAVAILABLE,
+      });
       expect(repository.createCustomRole).not.toHaveBeenCalled();
     },
   );

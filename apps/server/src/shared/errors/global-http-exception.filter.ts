@@ -37,6 +37,76 @@ const applicationErrors: Readonly<
       message: 'Access is not permitted.',
     },
   },
+  [ErrorCode.ACCESS_MEMBERSHIP_REQUIRED]: {
+    status: 403,
+    envelope: {
+      code: ErrorCode.ACCESS_MEMBERSHIP_REQUIRED,
+      message: 'Warehouse access is unavailable.',
+    },
+  },
+  [ErrorCode.ACCESS_INVALID_ROLE]: {
+    status: 400,
+    envelope: {
+      code: ErrorCode.ACCESS_INVALID_ROLE,
+      message: 'Correct the highlighted Role fields.',
+    },
+  },
+  [ErrorCode.ACCESS_ROLE_NAME_CONFLICT]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.ACCESS_ROLE_NAME_CONFLICT,
+      message: 'Role names must be unique within the Warehouse.',
+    },
+  },
+  [ErrorCode.ACCESS_ROLE_UNAVAILABLE]: {
+    status: 404,
+    envelope: {
+      code: ErrorCode.ACCESS_ROLE_UNAVAILABLE,
+      message: 'The Role is unavailable.',
+    },
+  },
+  [ErrorCode.ACCESS_TARGET_UNAVAILABLE]: {
+    status: 404,
+    envelope: {
+      code: ErrorCode.ACCESS_TARGET_UNAVAILABLE,
+      message: 'The selected member or Role is unavailable.',
+    },
+  },
+  [ErrorCode.ACCESS_PROTECTED_ROLE]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.ACCESS_PROTECTED_ROLE,
+      message: 'The Warehouse Manager Role is system-managed.',
+    },
+  },
+  [ErrorCode.ACCESS_MANAGER_TRANSFER_REQUIRED]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.ACCESS_MANAGER_TRANSFER_REQUIRED,
+      message: 'Use the protected manager-transfer action.',
+    },
+  },
+  [ErrorCode.ACCESS_REPLACEMENT_REQUIRED]: {
+    status: 400,
+    envelope: {
+      code: ErrorCode.ACCESS_REPLACEMENT_REQUIRED,
+      message: 'Select a different custom replacement Role.',
+    },
+  },
+  [ErrorCode.ACCESS_INVALID_MANAGER_TRANSFER]: {
+    status: 400,
+    envelope: {
+      code: ErrorCode.ACCESS_INVALID_MANAGER_TRANSFER,
+      message: 'Select another member and a valid custom Role.',
+    },
+  },
+  [ErrorCode.ACCESS_CONCURRENT_CHANGE]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.ACCESS_CONCURRENT_CHANGE,
+      message: 'Access changed concurrently. Refresh and try again.',
+    },
+  },
   [ErrorCode.AUTH_INVALID_INPUT]: {
     status: 400,
     envelope: {
@@ -61,6 +131,20 @@ const applicationErrors: Readonly<
 };
 
 const systemErrors: Readonly<Record<string, Omit<ErrorMapping, 'severity'>>> = {
+  [ErrorCode.ACCESS_ROLE_DELETION_UNAVAILABLE]: {
+    status: 503,
+    envelope: {
+      code: ErrorCode.ACCESS_ROLE_DELETION_UNAVAILABLE,
+      message: 'Role deletion did not complete.',
+    },
+  },
+  [ErrorCode.ACCESS_MANAGER_TRANSFER_UNAVAILABLE]: {
+    status: 503,
+    envelope: {
+      code: ErrorCode.ACCESS_MANAGER_TRANSFER_UNAVAILABLE,
+      message: 'Manager transfer did not complete.',
+    },
+  },
   [ErrorCode.AUTH_REGISTRATION_UNAVAILABLE]: {
     status: 503,
     envelope: {

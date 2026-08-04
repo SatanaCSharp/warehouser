@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { ErrorCode, PermissionId } from '@warehouser/shared-types/enums';
-import { ApplicationError } from '@warehouser/shared-types/errors';
+import { PermissionId } from '@warehouser/shared-types/enums';
+import {
+  accessDeniedError,
+  replacementRequiredError,
+  roleDeletionUnavailableError,
+  roleUnavailableError,
+} from 'access/domain/errors/access.errors';
 import type { AccessPrincipal } from 'shared/access/access-principal';
 import { DbTransactionService } from 'shared/database/db-transaction.service';
 import {
@@ -25,22 +30,31 @@ export class DeleteRoleCommand {
     input: DeleteRoleInput,
   ): Promise<{ readonly id: string }> {
     if (principal.permissionId !== PermissionId.ROLES_DELETE) {
-      throw new ApplicationError(ErrorCode.ACCESS_DENIED);
+      throw accessDeniedError();
     }
-    const result = await this.transactions.executeInTransaction({}, () =>
-      this.roles.deleteCustomRole(
-        principal.warehouseId,
-        input.roleId,
-        input.replacementRoleId,
-      ),
-    );
+    let result: RoleDeletionResult;
+    try {
+      result = await this.transactions.executeInTransaction({}, () =>
+        this.roles.deleteCustomRole(
+          principal.warehouseId,
+          input.roleId,
+          input.replacementRoleId,
+        ),
+      );
+    } catch (error) {
+      throw roleDeletionUnavailableError(error);
+    }
     this.assertDeleted(result);
     return { id: input.roleId };
   }
 
   private assertDeleted(result: RoleDeletionResult): void {
-    if (result !== 'deleted') {
-      throw new ApplicationError(ErrorCode.ACCESS_DENIED, { reason: result });
+    if (result === 'deleted') {
+      return;
     }
+    if (result === 'replacement-required' || result === 'invalid-replacement') {
+      throw replacementRequiredError();
+    }
+    throw roleUnavailableError();
   }
 }

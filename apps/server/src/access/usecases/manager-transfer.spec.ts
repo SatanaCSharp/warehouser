@@ -1,4 +1,4 @@
-import { PermissionId } from '@warehouser/shared-types/enums';
+import { ErrorCode, PermissionId } from '@warehouser/shared-types/enums';
 import { TransferWarehouseManagerCommand } from 'access/usecases/commands/transfer-warehouse-manager.command';
 import type { AccessPrincipal } from 'shared/access/access-principal';
 import { DbTransactionService } from 'shared/database/db-transaction.service';
@@ -21,7 +21,7 @@ const principal = (
 });
 
 const repositoryDouble = () => ({
-  transfer: jest.fn().mockResolvedValue(true),
+  transfer: jest.fn().mockResolvedValue('transferred'),
 });
 const transactionsDouble = () => ({
   executeInTransaction: jest.fn(
@@ -83,19 +83,21 @@ describe('TransferWarehouseManagerCommand', () => {
         recipientId: managerId,
         replacementRoleId,
       }),
-    ).rejects.toThrow();
+    ).rejects.toMatchObject({
+      code: ErrorCode.ACCESS_INVALID_MANAGER_TRANSFER,
+    });
     expect(repository.transfer).not.toHaveBeenCalled();
   });
 
   it('rejects scoped recipient or replacement misses atomically', async () => {
     const repository = repositoryDouble();
-    repository.transfer.mockResolvedValue(false);
+    repository.transfer.mockResolvedValue('target-unavailable');
     const command = new TransferWarehouseManagerCommand(
       repository as unknown as ManagerTransferRepository,
       transactionsDouble() as unknown as DbTransactionService,
     );
     await expect(
       command.execute(principal(), { recipientId, replacementRoleId }),
-    ).rejects.toThrow();
+    ).rejects.toMatchObject({ code: ErrorCode.ACCESS_TARGET_UNAVAILABLE });
   });
 });

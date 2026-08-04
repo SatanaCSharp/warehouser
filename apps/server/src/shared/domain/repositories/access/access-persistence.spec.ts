@@ -74,7 +74,7 @@ const verifyCustomRolePersistence = async (): Promise<void> => {
       name: 'Not manager',
       permissionIds: [],
     }),
-  ).resolves.toBe('role-unavailable');
+  ).resolves.toBe('protected-role');
 };
 
 // The integration lifecycle intentionally shares one database fixture and cleanup boundary.
@@ -175,7 +175,7 @@ describeIntegration('access persistence', () => {
 
     await expect(
       lifecycle.assignMemberRole(graph.warehouse.id, member.userId, target.id),
-    ).resolves.toBe(true);
+    ).resolves.toBe('assigned');
     await expect(
       lifecycle.replaceAssignedRole(graph.warehouse.id, target.id, source.id),
     ).resolves.toBe(2);
@@ -188,7 +188,7 @@ describeIntegration('access persistence', () => {
     ).resolves.toEqual([{ role_id: source.id }]);
     await expect(
       lifecycle.assignMemberRole(randomUUID(), member.userId, source.id),
-    ).resolves.toBe(false);
+    ).resolves.toBe('target-unavailable');
   });
 
   it('atomically replaces assignments while deleting a custom Role', async () => {
@@ -270,7 +270,7 @@ describeIntegration('access persistence', () => {
           formerManagerRoleId: graph.customRoles[0].id,
         }),
       ),
-    ).resolves.toBe(true);
+    ).resolves.toBe('transferred');
 
     await expect(
       dataSource.query(
@@ -302,7 +302,9 @@ describeIntegration('access persistence', () => {
       ),
     );
 
-    expect(results.filter(Boolean)).toHaveLength(1);
+    expect(results.filter((result) => result === 'transferred')).toHaveLength(
+      1,
+    );
     await expect(
       dataSource.query(
         "SELECT count(*) FROM warehouse_memberships WHERE warehouse_id = $1 AND role_kind = 'warehouse_manager'",

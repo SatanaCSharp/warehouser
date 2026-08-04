@@ -3,7 +3,14 @@ import { getEntityManager } from 'shared/database/db-transaction-context.service
 import { DataSource } from 'typeorm';
 
 export type RoleWriteResult =
-  'saved' | 'name-conflict' | 'invalid-permission' | 'role-unavailable';
+  | 'saved'
+  | 'name-conflict'
+  | 'invalid-permission'
+  | 'protected-role'
+  | 'role-unavailable';
+
+export type RoleAssignmentResult =
+  'assigned' | 'target-unavailable' | 'manager-transfer-required';
 
 export interface CustomRoleWrite {
   readonly id: string;
@@ -88,7 +95,13 @@ export class RoleLifecycleRepository {
           [input.id, input.warehouseId, input.name],
         );
         if (affected !== 1) {
-          return 'role-unavailable';
+          const roles = await transaction.query<{ readonly kind: string }[]>(
+            'SELECT kind FROM roles WHERE id = $1 AND warehouse_id = $2',
+            [input.id, input.warehouseId],
+          );
+          return roles[0]?.kind === 'warehouse_manager'
+            ? 'protected-role'
+            : 'role-unavailable';
         }
 
         await transaction.query(
@@ -118,7 +131,26 @@ export class RoleLifecycleRepository {
     warehouseId: string,
     userId: string,
     roleId: string,
-  ): Promise<boolean> {
+  ): Promise<RoleAssignmentResult> {
+    const manager = getEntityManager(this.dataSource);
+    const [membership] = await manager.query<{ readonly roleKind: string }[]>(
+      `SELECT role_kind AS "roleKind"
+         FROM warehouse_memberships
+        WHERE warehouse_id = $1 AND user_id = $2`,
+      [warehouseId, userId],
+    );
+    if (membership?.roleKind === 'warehouse_manager') {
+      return 'manager-transfer-required';
+    }
+
+    const [role] = await manager.query<{ readonly kind: string }[]>(
+      'SELECT kind FROM roles WHERE warehouse_id = $1 AND id = $2',
+      [warehouseId, roleId],
+    );
+    if (!membership || role?.kind !== 'custom') {
+      return 'target-unavailable';
+    }
+
     const [, affected] = await getEntityManager(this.dataSource).query<
       [unknown[], number]
     >(
@@ -136,7 +168,7 @@ export class RoleLifecycleRepository {
       [warehouseId, userId, roleId],
     );
 
-    return affected === 1;
+    return affected === 1 ? 'assigned' : 'target-unavailable';
   }
 
   async deleteCustomRole(

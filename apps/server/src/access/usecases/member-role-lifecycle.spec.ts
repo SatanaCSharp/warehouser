@@ -1,4 +1,4 @@
-import { PermissionId } from '@warehouser/shared-types/enums';
+import { ErrorCode, PermissionId } from '@warehouser/shared-types/enums';
 import { AssignMemberRoleCommand } from 'access/usecases/commands/assign-member-role.command';
 import { DeleteRoleCommand } from 'access/usecases/commands/delete-role.command';
 import type { AccessPrincipal } from 'shared/access/access-principal';
@@ -21,7 +21,7 @@ const principal = (
 });
 
 const repositoryDouble = () => ({
-  assignMemberRole: jest.fn().mockResolvedValue(true),
+  assignMemberRole: jest.fn().mockResolvedValue('assigned'),
   deleteCustomRole: jest.fn().mockResolvedValue('deleted'),
 });
 
@@ -53,7 +53,7 @@ describe('member Role lifecycle commands', () => {
 
   it('denies protected, current-manager, and cross-Warehouse assignment misses', async () => {
     const repository = repositoryDouble();
-    repository.assignMemberRole.mockResolvedValue(false);
+    repository.assignMemberRole.mockResolvedValue('target-unavailable');
     const command = new AssignMemberRoleCommand(
       repository as unknown as RoleLifecycleRepository,
     );
@@ -63,7 +63,7 @@ describe('member Role lifecycle commands', () => {
         memberId,
         roleId: replacementRoleId,
       }),
-    ).rejects.toThrow();
+    ).rejects.toMatchObject({ code: ErrorCode.ACCESS_TARGET_UNAVAILABLE });
   });
 
   it('atomically replaces assigned members and deletes the source Role', async () => {
@@ -150,6 +150,11 @@ describe('member Role lifecycle commands', () => {
         roleId: sourceRoleId,
         replacementRoleId,
       }),
-    ).rejects.toThrow();
+    ).rejects.toMatchObject({
+      code:
+        result === 'replacement-required' || result === 'invalid-replacement'
+          ? ErrorCode.ACCESS_REPLACEMENT_REQUIRED
+          : ErrorCode.ACCESS_ROLE_UNAVAILABLE,
+    });
   });
 });

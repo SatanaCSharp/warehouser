@@ -9,6 +9,12 @@ export interface ManagerTransferPersistenceInput {
   readonly formerManagerRoleId: string;
 }
 
+export type ManagerTransferResult =
+  | 'transferred'
+  | 'target-unavailable'
+  | 'invalid-transfer'
+  | 'concurrent-change';
+
 interface TransferMembershipRow {
   readonly userId: string;
   readonly roleId: string;
@@ -19,14 +25,16 @@ interface TransferMembershipRow {
 export class ManagerTransferRepository {
   constructor(private readonly dataSource: DataSource) {}
 
-  async transfer(input: ManagerTransferPersistenceInput): Promise<boolean> {
+  async transfer(
+    input: ManagerTransferPersistenceInput,
+  ): Promise<ManagerTransferResult> {
     const manager = getEntityManager(this.dataSource);
     const warehouses = await manager.query<{ readonly id: string }[]>(
       'SELECT id FROM warehouses WHERE id = $1 FOR UPDATE',
       [input.warehouseId],
     );
     if (warehouses.length !== 1) {
-      return false;
+      return 'target-unavailable';
     }
 
     const replacementRoles = await manager.query<{ readonly id: string }[]>(
@@ -48,12 +56,17 @@ export class ManagerTransferRepository {
     const recipient = memberships.find(
       (membership) => membership.userId === input.recipientUserId,
     );
+    if (replacementRoles.length !== 1) {
+      return 'invalid-transfer';
+    }
+    if (!recipient) {
+      return 'target-unavailable';
+    }
     if (
-      replacementRoles.length !== 1 ||
       current?.roleKind !== 'warehouse_manager' ||
-      recipient?.roleKind !== 'custom'
+      recipient.roleKind !== 'custom'
     ) {
-      return false;
+      return 'concurrent-change';
     }
 
     const [, demoted] = await manager.query<[unknown[], number]>(
@@ -76,6 +89,8 @@ export class ManagerTransferRepository {
         WHERE warehouse_id = $1 AND user_id = $2`,
       [input.warehouseId, input.recipientUserId, current.roleId],
     );
-    return demoted === 1 && promoted === 1;
+    return demoted === 1 && promoted === 1
+      ? 'transferred'
+      : 'concurrent-change';
   }
 }

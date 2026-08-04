@@ -1,6 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { ErrorCode, PermissionId } from '@warehouser/shared-types/enums';
-import { ApplicationError } from '@warehouser/shared-types/errors';
+import { PermissionId } from '@warehouser/shared-types/enums';
+import {
+  accessDeniedError,
+  invalidRoleError,
+  protectedRoleError,
+  roleNameConflictError,
+  roleUnavailableError,
+} from 'access/domain/errors/access.errors';
 import { AccessName } from 'access/domain/value-objects/access-name';
 import type { AccessPrincipal } from 'shared/access/access-principal';
 import {
@@ -21,14 +27,24 @@ export interface UpdatedRoleProjection {
 
 const assertUpdateAuthority = (principal: AccessPrincipal): void => {
   if (principal.permissionId !== PermissionId.ROLES_UPDATE) {
-    throw new ApplicationError(ErrorCode.ACCESS_DENIED);
+    throw accessDeniedError();
   }
 };
 
 const assertRoleUpdated = (result: RoleWriteResult): void => {
-  if (result !== 'saved') {
-    throw new ApplicationError(ErrorCode.ACCESS_DENIED, { reason: result });
+  if (result === 'saved') {
+    return;
   }
+  if (result === 'name-conflict') {
+    throw roleNameConflictError();
+  }
+  if (result === 'invalid-permission') {
+    throw invalidRoleError();
+  }
+  if (result === 'protected-role') {
+    throw protectedRoleError();
+  }
+  throw roleUnavailableError();
 };
 
 @Injectable()

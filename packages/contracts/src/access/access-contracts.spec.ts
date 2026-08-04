@@ -1,9 +1,14 @@
 import {
   accessProjectionSchema,
+  managerTransferResultSchema,
+  managerTransferSchema,
   memberPageSchema,
   permissionPageSchema,
   permissionPaginationSchema,
+  roleAssignmentSchema,
+  roleDeletionSchema,
   rolePageSchema,
+  roleWriteSchema,
   uuidPaginationSchema,
 } from 'access';
 
@@ -102,6 +107,52 @@ describe('access contracts', () => {
             warehouseId: id(3),
           },
         ],
+      }).success,
+    ).toBe(false);
+  });
+
+  it('validates every strict access mutation request', () => {
+    expect(
+      roleWriteSchema.parse({
+        name: '  Оператори  ',
+        permissionIds: ['USERS:WATCH'],
+      }),
+    ).toEqual({ name: 'Оператори', permissionIds: ['USERS:WATCH'] });
+    expect(
+      roleWriteSchema.safeParse({
+        name: 'Operators',
+        permissionIds: ['USERS:WATCH'],
+        warehouseId: id(1),
+      }).success,
+    ).toBe(false);
+    expect(roleAssignmentSchema.parse({ roleId: id(1) })).toEqual({
+      roleId: id(1),
+    });
+    expect(roleDeletionSchema.parse({ replacementRoleId: null })).toEqual({
+      replacementRoleId: null,
+    });
+    expect(
+      managerTransferSchema.parse({
+        recipientUserId: id(1),
+        formerManagerRoleId: id(2),
+      }),
+    ).toEqual({ recipientUserId: id(1), formerManagerRoleId: id(2) });
+  });
+
+  it('validates only the safe manager-transfer response', () => {
+    expect(
+      managerTransferResultSchema.safeParse({
+        managerUserId: id(1),
+        formerManagerUserId: id(2),
+        formerManagerRoleId: id(3),
+      }).success,
+    ).toBe(true);
+    expect(
+      managerTransferResultSchema.safeParse({
+        managerUserId: id(1),
+        formerManagerUserId: id(2),
+        formerManagerRoleId: id(3),
+        warehouseId: id(4),
       }).success,
     ).toBe(false);
   });

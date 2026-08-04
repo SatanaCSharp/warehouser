@@ -1,9 +1,20 @@
 import { Injectable } from '@nestjs/common';
-import { ErrorCode, PermissionId } from '@warehouser/shared-types/enums';
-import { ApplicationError } from '@warehouser/shared-types/errors';
+import { PermissionId } from '@warehouser/shared-types/enums';
+import {
+  accessDeniedError,
+  concurrentAccessChangeError,
+  invalidManagerTransferError,
+  managerTransferUnavailableError,
+  targetUnavailableError,
+} from 'access/domain/errors/access.errors';
 import type { AccessPrincipal } from 'shared/access/access-principal';
 import { DbTransactionService } from 'shared/database/db-transaction.service';
 import { ManagerTransferRepository } from 'shared/domain/repositories/access/manager-transfer.repository';
+
+const isUniqueViolation = (error: unknown): boolean =>
+  typeof error === 'object' &&
+  error !== null &&
+  Object.getOwnPropertyDescriptor(error, 'code')?.value === '23505';
 
 export interface TransferWarehouseManagerInput {
   readonly recipientId: string;
@@ -23,22 +34,38 @@ export class TransferWarehouseManagerCommand {
   ): Promise<{ readonly managerId: string }> {
     const authorized =
       principal.roleKind === 'warehouse_manager' &&
-      principal.permissionId === PermissionId.WAREHOUSE_MANAGER_ROLE_REASSIGN &&
-      principal.userId !== input.recipientId;
+      principal.permissionId === PermissionId.WAREHOUSE_MANAGER_ROLE_REASSIGN;
     if (!authorized) {
-      throw new ApplicationError(ErrorCode.ACCESS_DENIED);
+      throw accessDeniedError();
+    }
+    if (principal.userId === input.recipientId) {
+      throw invalidManagerTransferError();
     }
 
-    const transferred = await this.transactions.executeInTransaction({}, () =>
-      this.transfers.transfer({
-        warehouseId: principal.warehouseId,
-        currentManagerUserId: principal.userId,
-        recipientUserId: input.recipientId,
-        formerManagerRoleId: input.replacementRoleId,
-      }),
-    );
-    if (!transferred) {
-      throw new ApplicationError(ErrorCode.ACCESS_DENIED);
+    let result;
+    try {
+      result = await this.transactions.executeInTransaction({}, () =>
+        this.transfers.transfer({
+          warehouseId: principal.warehouseId,
+          currentManagerUserId: principal.userId,
+          recipientUserId: input.recipientId,
+          formerManagerRoleId: input.replacementRoleId,
+        }),
+      );
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        throw concurrentAccessChangeError();
+      }
+      throw managerTransferUnavailableError(error);
+    }
+    if (result === 'target-unavailable') {
+      throw targetUnavailableError();
+    }
+    if (result === 'invalid-transfer') {
+      throw invalidManagerTransferError();
+    }
+    if (result !== 'transferred') {
+      throw concurrentAccessChangeError();
     }
     return { managerId: input.recipientId };
   }

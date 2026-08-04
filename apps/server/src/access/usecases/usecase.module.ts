@@ -49,6 +49,7 @@ import { RoleLifecycleRepository } from 'shared/domain/repositories/access/role-
     ListAccessMembersQuery,
   ],
   exports: [
+    AccessPrincipalRepository,
     ProvisionInitialAccessCommand,
     CreateRoleCommand,
     UpdateRoleCommand,
