@@ -18,6 +18,12 @@ export interface AccessMemberRead {
   readonly roleKind: 'custom' | 'warehouse_manager';
 }
 
+export interface AccessPermissionRead {
+  readonly id: string;
+  readonly label: string;
+  readonly kind: 'assignable' | 'reserved';
+}
+
 @Injectable()
 export class AccessReadRepository {
   constructor(private readonly dataSource: DataSource) {}
@@ -25,6 +31,8 @@ export class AccessReadRepository {
   listRolesAndPermissions(
     warehouseId: string,
     limit: number,
+    after?: string,
+    before?: string,
   ): Promise<AccessRoleRead[]> {
     return getEntityManager(this.dataSource).query(
       `SELECT role.id,
@@ -36,16 +44,36 @@ export class AccessReadRepository {
          FROM roles role
          LEFT JOIN role_permissions grant_row ON grant_row.role_id = role.id
         WHERE role.warehouse_id = $1
+          AND ($3::uuid IS NULL OR role.id > $3)
+          AND ($4::uuid IS NULL OR role.id < $4)
         GROUP BY role.id
         ORDER BY role.name COLLATE "C", role.id
         LIMIT $2`,
-      [warehouseId, limit],
+      [warehouseId, limit, after ?? null, before ?? null],
+    );
+  }
+
+  listPermissions(
+    limit: number,
+    after?: string,
+    before?: string,
+  ): Promise<AccessPermissionRead[]> {
+    return getEntityManager(this.dataSource).query(
+      `SELECT id, label, kind
+         FROM permissions
+        WHERE ($2::varchar IS NULL OR id > $2)
+          AND ($3::varchar IS NULL OR id < $3)
+        ORDER BY kind, id
+        LIMIT $1`,
+      [limit, after ?? null, before ?? null],
     );
   }
 
   listMembersAndAssignments(
     warehouseId: string,
     limit: number,
+    after?: string,
+    before?: string,
   ): Promise<AccessMemberRead[]> {
     return getEntityManager(this.dataSource).query(
       `SELECT membership.user_id AS "userId",
@@ -58,9 +86,11 @@ export class AccessReadRepository {
            ON role.id = membership.role_id
           AND role.warehouse_id = membership.warehouse_id
         WHERE membership.warehouse_id = $1
+          AND ($3::uuid IS NULL OR membership.user_id > $3)
+          AND ($4::uuid IS NULL OR membership.user_id < $4)
         ORDER BY membership.user_id
         LIMIT $2`,
-      [warehouseId, limit],
+      [warehouseId, limit, after ?? null, before ?? null],
     );
   }
 }

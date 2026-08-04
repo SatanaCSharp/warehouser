@@ -77,6 +77,8 @@ const verifyCustomRolePersistence = async (): Promise<void> => {
   ).resolves.toBe('role-unavailable');
 };
 
+// The integration lifecycle intentionally shares one database fixture and cleanup boundary.
+// eslint-disable-next-line max-lines-per-function
 describeIntegration('access persistence', () => {
   const principals = new AccessPrincipalRepository(dataSource);
   const reads = new AccessReadRepository(dataSource);
@@ -136,6 +138,8 @@ describeIntegration('access persistence', () => {
       local.warehouse.id,
       10,
     );
+    const permissions = await reads.listPermissions(100);
+    const current = await principals.resolveCurrentAccess(local.manager.userId);
 
     expect(roles).toHaveLength(2);
     expect(roles.map((role) => role.name)).toEqual([
@@ -148,6 +152,15 @@ describeIntegration('access persistence', () => {
     expect(
       members.every((member) => member.warehouseId === local.warehouse.id),
     ).toBe(true);
+    expect(permissions.map((permission) => permission.id)).toEqual(
+      [...permissions.map((permission) => permission.id)].sort(),
+    );
+    expect(current).toMatchObject({
+      warehouseId: local.warehouse.id,
+      roleId: local.managerRole.id,
+      roleKind: 'warehouse_manager',
+    });
+    expect(current?.permissionIds).toContain('ROLES:WATCH');
   });
 
   it('scopes ordinary assignment and atomically replaces an assigned custom Role', async () => {
