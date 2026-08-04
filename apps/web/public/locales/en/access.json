@@ -21,6 +21,49 @@
     "heading": "Permissions",
     "listLabel": "Permission catalogue"
   },
+  "administration": {
+    "heading": "Administration",
+    "createRole": "Create role",
+    "editRole": "Edit {{name}}",
+    "deleteRole": "Delete {{name}}",
+    "cancel": "Cancel",
+    "select": "Select an option",
+    "roleSaved": "{{name}} was saved.",
+    "roleEditor": {
+      "createTitle": "Create role",
+      "editTitle": "Edit role",
+      "name": "Role name",
+      "permissions": "Permissions",
+      "reserved": "Reserved for the protected Warehouse Manager role.",
+      "save": "Save role"
+    },
+    "assignment": {
+      "open": "Change role for {{userId}}",
+      "title": "Assign member role",
+      "role": "Role",
+      "save": "Assign role",
+      "saved": "The member role was updated."
+    },
+    "deletion": {
+      "title": "Delete {{role}}",
+      "replacement": "Replacement role",
+      "unassigned": "This role has no assigned members.",
+      "replaceAndDelete": "Replace and delete",
+      "confirm": "Delete role",
+      "replaced": "{{role}} was deleted and assigned members were moved to {{replacement}}.",
+      "deleted": "{{role}} was deleted."
+    },
+    "transfer": {
+      "open": "Transfer manager",
+      "title": "Transfer Warehouse Manager",
+      "recipient": "New manager",
+      "replacement": "Your replacement role",
+      "recipientSummary": "{{userId}} will become Warehouse Manager.",
+      "managerSummary": "{{userId}} will become {{role}}.",
+      "save": "Transfer management",
+      "saved": "Warehouse management was transferred."
+    }
+  },
   "denied": {
     "heading": "Access unavailable",
     "description": "You do not have permission to review access configuration."

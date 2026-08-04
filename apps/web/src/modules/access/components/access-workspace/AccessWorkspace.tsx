@@ -6,7 +6,13 @@ import {
   useListAccessMembersQuery,
   useListAccessPermissionsQuery,
   useListAccessRolesQuery,
+  useAssignAccessMemberRoleMutation,
+  useCreateAccessRoleMutation,
+  useDeleteAccessRoleMutation,
+  useTransferWarehouseManagerMutation,
+  useUpdateAccessRoleMutation,
 } from 'modules/access/api/access-api';
+import { AccessAdministration } from 'modules/access/components/access-administration/AccessAdministration';
 
 import type { AccessProjection } from '@warehouser/contracts/access';
 import type { ReactElement } from 'react';
@@ -35,6 +41,11 @@ export const AccessWorkspace = ({
   const members = useListAccessMembersQuery(undefined, {
     skip: !canReadMembers,
   });
+  const [createRole] = useCreateAccessRoleMutation();
+  const [updateRole] = useUpdateAccessRoleMutation();
+  const [assignRole] = useAssignAccessMemberRoleMutation();
+  const [deleteRole] = useDeleteAccessRoleMutation();
+  const [transferManager] = useTransferWarehouseManagerMutation();
 
   return (
     <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-8 lg:px-12">
@@ -134,6 +145,43 @@ export const AccessWorkspace = ({
           </Tab>
         ) : null}
       </Tabs>
+      {roles.data &&
+      permissions.data &&
+      access.permissionIds.some((permission) =>
+        [
+          PermissionId.ROLES_ASSIGN,
+          PermissionId.ROLES_CREATE,
+          PermissionId.ROLES_DELETE,
+          PermissionId.ROLES_UPDATE,
+          PermissionId.WAREHOUSE_MANAGER_ROLE_REASSIGN,
+        ].includes(permission),
+      ) ? (
+        <AccessAdministration
+          access={access}
+          members={members.data?.items ?? []}
+          permissions={permissions.data.items}
+          roles={roles.data.items}
+          onAssignRole={async (userId, roleId) => {
+            await assignRole({ userId, input: { roleId } }).unwrap();
+          }}
+          onDeleteRole={async (roleId, replacementRoleId) => {
+            await deleteRole({ roleId, input: { replacementRoleId } }).unwrap();
+          }}
+          onSaveRole={async (input, roleId) => {
+            if (roleId) {
+              await updateRole({ roleId, input }).unwrap();
+              return;
+            }
+            await createRole(input).unwrap();
+          }}
+          onTransferManager={async (recipientUserId, formerManagerRoleId) => {
+            await transferManager({
+              recipientUserId,
+              formerManagerRoleId,
+            }).unwrap();
+          }}
+        />
+      ) : null}
     </main>
   );
 };
