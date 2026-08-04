@@ -12,7 +12,7 @@
 | T5  | Enforce fresh Warehouse-scoped authorization                 | wiring    | Security Lead | L        | T3                        | done   |
 | T6  | Implement custom Role lifecycle commands                     | app       | Backend Lead  | M        | T3, T5                    | done   |
 | T7  | Implement member assignment and atomic Role deletion         | app       | Backend Lead  | L        | T3, T5                    | done   |
-| T8  | Implement atomic Warehouse Manager transfer                  | app       | Backend Lead  | M        | T3, T5                    | todo   |
+| T8  | Implement atomic Warehouse Manager transfer                  | app       | Backend Lead  | M        | T3, T5                    | done   |
 | T9  | Expose scoped access read endpoints                          | ports     | Backend Lead  | M        | T3, T5                    | todo   |
 | T10 | Expose access mutation endpoints and normalized failures     | ports     | Backend Lead  | L        | T6, T7, T8, T9            | todo   |
 | T11 | Add Warehouse registration to the approved sign-up UI        | ui        | Frontend Lead | M        | T4                        | todo   |
