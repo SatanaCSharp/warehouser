@@ -20,7 +20,7 @@ export class Role {
     warehouseId: string,
     name: string,
     permissions: readonly Permission[],
-    id = randomUUID(),
+    id: string = randomUUID(),
   ): Role {
     assert(
       permissions.every((permission) => permission.isAssignable),
@@ -38,7 +38,7 @@ export class Role {
   static warehouseManager(
     warehouseId: string,
     permissions: readonly Permission[],
-    id = randomUUID(),
+    id: string = randomUUID(),
   ): Role {
     return new Role(
       RoleId.create(id),
