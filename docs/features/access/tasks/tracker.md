@@ -8,7 +8,7 @@
 | T1  | Promote the access schema and Permission catalogue migration | migration | Backend Lead  | M        | —                         | done   |
 | T2  | Implement access domain invariants and Unicode names         | domain    | Backend Lead  | M        | —                         | done   |
 | T3  | Implement access persistence entities and repositories       | infra     | Backend Lead  | L        | T1, T2                    | done   |
-| T4  | Extend registration with atomic Warehouse provisioning       | app       | Backend Lead  | M        | T3                        | todo   |
+| T4  | Extend registration with atomic Warehouse provisioning       | app       | Backend Lead  | M        | T3                        | done   |
 | T5  | Enforce fresh Warehouse-scoped authorization                 | wiring    | Security Lead | L        | T3                        | todo   |
 | T6  | Implement custom Role lifecycle commands                     | app       | Backend Lead  | M        | T3, T5                    | todo   |
 | T7  | Implement member assignment and atomic Role deletion         | app       | Backend Lead  | L        | T3, T5                    | todo   |
