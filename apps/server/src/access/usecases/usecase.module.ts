@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AssignMemberRoleCommand } from 'access/usecases/commands/assign-member-role.command';
 import { CreateRoleCommand } from 'access/usecases/commands/create-role.command';
+import { DeleteRoleCommand } from 'access/usecases/commands/delete-role.command';
 import { ProvisionInitialAccessCommand } from 'access/usecases/commands/provision-initial-access.command';
 import { UpdateRoleCommand } from 'access/usecases/commands/update-role.command';
 import { PermissionEntity } from 'shared/domain/entities/permission.entity';
@@ -33,11 +35,15 @@ import { RoleLifecycleRepository } from 'shared/domain/repositories/access/role-
     ProvisionInitialAccessCommand,
     CreateRoleCommand,
     UpdateRoleCommand,
+    AssignMemberRoleCommand,
+    DeleteRoleCommand,
   ],
   exports: [
     ProvisionInitialAccessCommand,
     CreateRoleCommand,
     UpdateRoleCommand,
+    AssignMemberRoleCommand,
+    DeleteRoleCommand,
   ],
 })
 export class AccessUsecaseModule {}

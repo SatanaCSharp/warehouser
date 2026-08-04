@@ -178,6 +178,35 @@ describeIntegration('access persistence', () => {
     ).resolves.toBe(false);
   });
 
+  it('atomically replaces assignments while deleting a custom Role', async () => {
+    const graph = await persistWarehouseAccessGraph(dataSource, {
+      customRoles: [
+        buildRole({ name: 'Delete source' }),
+        buildRole({ name: 'Delete replacement' }),
+      ],
+    });
+    const [source, replacement] = graph.customRoles;
+
+    await expect(
+      transactions.executeInTransaction({}, () =>
+        lifecycle.deleteCustomRole(
+          graph.warehouse.id,
+          source.id,
+          replacement.id,
+        ),
+      ),
+    ).resolves.toBe('deleted');
+    await expect(
+      dataSource.query(
+        'SELECT role_id FROM warehouse_memberships WHERE warehouse_id = $1 ORDER BY user_id',
+        [graph.warehouse.id],
+      ),
+    ).resolves.not.toContainEqual({ role_id: source.id });
+    await expect(
+      dataSource.query('SELECT id FROM roles WHERE id = $1', [source.id]),
+    ).resolves.toEqual([]);
+  });
+
   it(
     'creates and updates custom Roles with exact names and assignable catalogue membership',
     verifyCustomRolePersistence,

@@ -12,6 +12,12 @@ export interface CustomRoleWrite {
   readonly permissionIds: readonly string[];
 }
 
+export type RoleDeletionResult =
+  | 'deleted'
+  | 'role-unavailable'
+  | 'replacement-required'
+  | 'invalid-replacement';
+
 const isUniqueViolation = (error: unknown): boolean => {
   if (typeof error !== 'object' || error === null) {
     return false;
@@ -131,6 +137,60 @@ export class RoleLifecycleRepository {
     );
 
     return affected === 1;
+  }
+
+  async deleteCustomRole(
+    warehouseId: string,
+    sourceRoleId: string,
+    replacementRoleId?: string,
+  ): Promise<RoleDeletionResult> {
+    const manager = getEntityManager(this.dataSource);
+    await manager.query('SELECT id FROM warehouses WHERE id = $1 FOR UPDATE', [
+      warehouseId,
+    ]);
+    const sources = await manager.query<{ readonly id: string }[]>(
+      `SELECT id FROM roles
+        WHERE warehouse_id = $1 AND id = $2 AND kind = 'custom'
+        FOR UPDATE`,
+      [warehouseId, sourceRoleId],
+    );
+    if (sources.length !== 1) {
+      return 'role-unavailable';
+    }
+
+    const [{ count }] = await manager.query<{ readonly count: string }[]>(
+      `SELECT count(*) FROM warehouse_memberships
+        WHERE warehouse_id = $1 AND role_id = $2`,
+      [warehouseId, sourceRoleId],
+    );
+    if (count !== '0' && replacementRoleId === undefined) {
+      return 'replacement-required';
+    }
+
+    if (replacementRoleId !== undefined) {
+      const replacements = await manager.query<{ readonly id: string }[]>(
+        `SELECT id FROM roles
+          WHERE warehouse_id = $1 AND id = $2 AND id <> $3 AND kind = 'custom'
+          FOR UPDATE`,
+        [warehouseId, replacementRoleId, sourceRoleId],
+      );
+      if (replacements.length !== 1) {
+        return 'invalid-replacement';
+      }
+      await manager.query(
+        `UPDATE warehouse_memberships
+            SET role_id = $3, role_kind = 'custom', updated_at = CURRENT_TIMESTAMP
+          WHERE warehouse_id = $1 AND role_id = $2`,
+        [warehouseId, sourceRoleId, replacementRoleId],
+      );
+    }
+
+    await manager.query(
+      `DELETE FROM roles
+        WHERE warehouse_id = $1 AND id = $2 AND kind = 'custom'`,
+      [warehouseId, sourceRoleId],
+    );
+    return 'deleted';
   }
 
   async replaceAssignedRole(
