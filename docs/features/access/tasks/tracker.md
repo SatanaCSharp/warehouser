@@ -10,7 +10,7 @@
 | T3  | Implement access persistence entities and repositories       | infra     | Backend Lead  | L        | T1, T2                    | done   |
 | T4  | Extend registration with atomic Warehouse provisioning       | app       | Backend Lead  | M        | T3                        | done   |
 | T5  | Enforce fresh Warehouse-scoped authorization                 | wiring    | Security Lead | L        | T3                        | done   |
-| T6  | Implement custom Role lifecycle commands                     | app       | Backend Lead  | M        | T3, T5                    | todo   |
+| T6  | Implement custom Role lifecycle commands                     | app       | Backend Lead  | M        | T3, T5                    | done   |
 | T7  | Implement member assignment and atomic Role deletion         | app       | Backend Lead  | L        | T3, T5                    | todo   |
 | T8  | Implement atomic Warehouse Manager transfer                  | app       | Backend Lead  | M        | T3, T5                    | todo   |
 | T9  | Expose scoped access read endpoints                          | ports     | Backend Lead  | M        | T3, T5                    | todo   |

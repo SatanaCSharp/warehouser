@@ -18,11 +18,68 @@ import {
 
 const describeIntegration =
   process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
+const lifecycle = new RoleLifecycleRepository(dataSource);
+
+const verifyCustomRolePersistence = async (): Promise<void> => {
+  const graph = await persistWarehouseAccessGraph(dataSource);
+  const createdRoleId = randomUUID();
+
+  await expect(
+    lifecycle.createCustomRole({
+      id: createdRoleId,
+      warehouseId: graph.warehouse.id,
+      name: 'Picker',
+      permissionIds: ['ROLES:WATCH'],
+    }),
+  ).resolves.toBe('saved');
+  await expect(
+    lifecycle.createCustomRole({
+      id: randomUUID(),
+      warehouseId: graph.warehouse.id,
+      name: 'Picker',
+      permissionIds: [],
+    }),
+  ).resolves.toBe('name-conflict');
+  await expect(
+    lifecycle.createCustomRole({
+      id: randomUUID(),
+      warehouseId: graph.warehouse.id,
+      name: 'Reserved',
+      permissionIds: ['WAREHOUSE_MANAGER_ROLE:REASSIGN'],
+    }),
+  ).resolves.toBe('invalid-permission');
+
+  await expect(
+    lifecycle.updateCustomRole({
+      id: createdRoleId,
+      warehouseId: graph.warehouse.id,
+      name: 'picker',
+      permissionIds: [],
+    }),
+  ).resolves.toBe('saved');
+  await expect(
+    dataSource.query(
+      `SELECT role.name, count(grant_row.permission_id)::int AS grants
+         FROM roles role
+         LEFT JOIN role_permissions grant_row ON grant_row.role_id = role.id
+        WHERE role.id = $1
+        GROUP BY role.id`,
+      [createdRoleId],
+    ),
+  ).resolves.toEqual([{ name: 'picker', grants: 0 }]);
+  await expect(
+    lifecycle.updateCustomRole({
+      id: graph.managerRole.id,
+      warehouseId: graph.warehouse.id,
+      name: 'Not manager',
+      permissionIds: [],
+    }),
+  ).resolves.toBe('role-unavailable');
+};
 
 describeIntegration('access persistence', () => {
   const principals = new AccessPrincipalRepository(dataSource);
   const reads = new AccessReadRepository(dataSource);
-  const lifecycle = new RoleLifecycleRepository(dataSource);
   const transfers = new ManagerTransferRepository(dataSource);
   const provisioning = new AccessProvisioningRepository(dataSource);
   const transactionContext = new DbTransactionContext(dataSource);
@@ -120,6 +177,11 @@ describeIntegration('access persistence', () => {
       lifecycle.assignMemberRole(randomUUID(), member.userId, source.id),
     ).resolves.toBe(false);
   });
+
+  it(
+    'creates and updates custom Roles with exact names and assignable catalogue membership',
+    verifyCustomRolePersistence,
+  );
 
   it('joins the caller transaction and rolls provisioning back on failure', async () => {
     const warehouse = buildWarehouse();
