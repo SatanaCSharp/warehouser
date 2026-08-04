@@ -5,6 +5,7 @@ export const ErrorCode = {
   AUTH_REGISTRATION_UNAVAILABLE: 'auth.registration_unavailable',
   AUTH_SESSION_UNAVAILABLE: 'auth.session_unavailable',
   AUTH_SIGN_OUT_UNAVAILABLE: 'auth.sign_out_unavailable',
+  ACCESS_DENIED: 'access.denied',
   INTERNAL_ERROR: 'system.internal_error',
 } as const;
 

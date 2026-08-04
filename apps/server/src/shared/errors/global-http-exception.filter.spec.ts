@@ -40,6 +40,14 @@ describe('GlobalHttpExceptionFilter', () => {
 
   it.each([
     [
+      new ApplicationError(ErrorCode.ACCESS_DENIED),
+      403,
+      {
+        code: 'access.denied',
+        message: 'Access is not permitted.',
+      },
+    ],
+    [
       new ApplicationError(ErrorCode.AUTH_INVALID_CREDENTIALS),
       401,
       {

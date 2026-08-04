@@ -30,6 +30,13 @@ type ExceptionLogger = Pick<Logger, 'error' | 'warn'>;
 const applicationErrors: Readonly<
   Record<string, Omit<ErrorMapping, 'severity'>>
 > = {
+  [ErrorCode.ACCESS_DENIED]: {
+    status: 403,
+    envelope: {
+      code: ErrorCode.ACCESS_DENIED,
+      message: 'Access is not permitted.',
+    },
+  },
   [ErrorCode.AUTH_INVALID_INPUT]: {
     status: 400,
     envelope: {
