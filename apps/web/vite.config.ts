@@ -7,10 +7,19 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
+      '@warehouser/contracts/access': path.resolve(
+        __dirname,
+        '../../packages/contracts/src/access/index.ts',
+      ),
       '@warehouser/contracts/auth': path.resolve(
         __dirname,
         '../../packages/contracts/src/auth/index.ts',
       ),
+      '@warehouser/shared-types/enums': path.resolve(
+        __dirname,
+        '../../packages/shared-types/src/enums/index.ts',
+      ),
+      access: path.resolve(__dirname, '../../packages/contracts/src/access'),
       src: path.resolve(__dirname, './src'),
       App: path.resolve(__dirname, './src/App.tsx'),
       i18n: path.resolve(__dirname, './src/i18n.ts'),

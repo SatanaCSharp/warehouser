@@ -114,6 +114,12 @@ export const apiBaseQuery: BaseQueryFn<
 export const api = createApi({
   reducerPath: 'api',
   baseQuery: apiBaseQuery,
-  tagTypes: ['CurrentSession'],
+  tagTypes: [
+    'CurrentAccess',
+    'CurrentSession',
+    'AccessMembers',
+    'Permissions',
+    'Roles',
+  ],
   endpoints: () => ({}),
 });

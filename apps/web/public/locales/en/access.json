@@ -1,0 +1,28 @@
+{
+  "heading": "Access",
+  "description": "Review roles, members, and permissions for your current Warehouse.",
+  "loading": "Loading access",
+  "navigation": {
+    "label": "Access sections",
+    "roles": "Roles",
+    "members": "Members",
+    "permissions": "Permissions"
+  },
+  "roles": {
+    "heading": "Roles",
+    "listLabel": "Warehouse roles",
+    "protected": "Protected"
+  },
+  "members": {
+    "heading": "Members",
+    "listLabel": "Warehouse members"
+  },
+  "permissions": {
+    "heading": "Permissions",
+    "listLabel": "Permission catalogue"
+  },
+  "denied": {
+    "heading": "Access unavailable",
+    "description": "You do not have permission to review access configuration."
+  }
+}

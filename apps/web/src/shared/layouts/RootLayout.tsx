@@ -4,7 +4,9 @@ import {
   Outlet,
   useRouterState,
 } from '@tanstack/react-router';
+import { PermissionId } from '@warehouser/shared-types/enums';
 
+import { useGetCurrentAccessQuery } from 'modules/access/api/access-api';
 import { SignOutButton } from 'modules/auth/sign-out/components/SignOutButton';
 import { selectIsAuthenticated } from 'modules/auth/store/auth.selectors';
 import { ROUTES } from 'shared/constants/routes';
@@ -14,12 +16,20 @@ import type { ReactElement } from 'react';
 
 export const RootLayout = (): ReactElement => {
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
+  const currentAccess = useGetCurrentAccessQuery(undefined, {
+    skip: !isAuthenticated,
+  });
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
   const isAuthRoute = pathname === ROUTES.LOGIN || pathname === ROUTES.SIGN_UP;
   const oppositeRoute =
     pathname === ROUTES.SIGN_UP ? ROUTES.LOGIN : ROUTES.SIGN_UP;
+  const canReviewAccess = currentAccess.data?.permissionIds.some(
+    (permission) =>
+      permission === PermissionId.ROLES_WATCH ||
+      permission === PermissionId.USERS_WATCH,
+  );
 
   return (
     <div className="min-h-dvh bg-background text-foreground">
@@ -51,14 +61,21 @@ export const RootLayout = (): ReactElement => {
         </header>
       ) : isAuthenticated ? (
         <header className="flex h-[68px] items-center justify-between border-b border-divider bg-content1 px-6 sm:h-20 sm:px-12">
-          <Link
-            as={RouterLink}
-            to={ROUTES.HOME}
-            color="foreground"
-            className="text-xl font-bold"
-          >
-            Warehouser
-          </Link>
+          <div className="flex items-center gap-6">
+            <Link
+              as={RouterLink}
+              to={ROUTES.HOME}
+              color="foreground"
+              className="text-xl font-bold"
+            >
+              Warehouser
+            </Link>
+            {canReviewAccess ? (
+              <Link as={RouterLink} to={ROUTES.ACCESS} color="foreground">
+                Access
+              </Link>
+            ) : null}
+          </div>
           <SignOutButton />
         </header>
       ) : null}

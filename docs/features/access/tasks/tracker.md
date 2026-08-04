@@ -16,7 +16,7 @@
 | T9  | Expose scoped access read endpoints                          | ports     | Backend Lead  | M        | T3, T5                    | done   |
 | T10 | Expose access mutation endpoints and normalized failures     | ports     | Backend Lead  | L        | T6, T7, T8, T9            | done   |
 | T11 | Add Warehouse registration to the approved sign-up UI        | ui        | Frontend Lead | M        | T4                        | done   |
-| T12 | Build the approved access review workspace                   | ui        | Frontend Lead | L        | T9                        | todo   |
+| T12 | Build the approved access review workspace                   | ui        | Frontend Lead | L        | T9                        | done   |
 | T13 | Build approved access administration workflows               | ui        | Frontend Lead | L        | T10, T12                  | todo   |
 | T14 | Gate access security, atomicity, and performance             | tests     | Security Lead | L        | T4, T5, T9, T10, T11, T13 | todo   |
 

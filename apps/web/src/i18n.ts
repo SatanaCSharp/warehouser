@@ -5,6 +5,7 @@ import { initReactI18next } from 'react-i18next';
 
 export const supportedLanguages = ['en', 'uk'] as const;
 export const namespaces = [
+  'access',
   'common',
   'errors',
   'home',

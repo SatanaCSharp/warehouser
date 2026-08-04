@@ -3,6 +3,7 @@ import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
 import { afterEach, vi } from 'vitest';
 
+import enAccess from '../../public/locales/en/access.json';
 import enCommon from '../../public/locales/en/common.json';
 import enErrors from '../../public/locales/en/errors.json';
 import enHome from '../../public/locales/en/home.json';
@@ -10,6 +11,7 @@ import enSignIn from '../../public/locales/en/sign-in.json';
 import enSignUp from '../../public/locales/en/sign-up.json';
 import enSuccess from '../../public/locales/en/success.json';
 import enValidation from '../../public/locales/en/validation.json';
+import ukAccess from '../../public/locales/uk/access.json';
 import ukCommon from '../../public/locales/uk/common.json';
 import ukErrors from '../../public/locales/uk/errors.json';
 import ukHome from '../../public/locales/uk/home.json';
@@ -19,6 +21,7 @@ import ukSuccess from '../../public/locales/uk/success.json';
 import ukValidation from '../../public/locales/uk/validation.json';
 
 const localeResponses: Record<string, object> = {
+  '/locales/en/access.json': enAccess,
   '/locales/en/common.json': enCommon,
   '/locales/en/errors.json': enErrors,
   '/locales/en/home.json': enHome,
@@ -26,6 +29,7 @@ const localeResponses: Record<string, object> = {
   '/locales/en/sign-up.json': enSignUp,
   '/locales/en/success.json': enSuccess,
   '/locales/en/validation.json': enValidation,
+  '/locales/uk/access.json': ukAccess,
   '/locales/uk/common.json': ukCommon,
   '/locales/uk/errors.json': ukErrors,
   '/locales/uk/home.json': ukHome,
@@ -69,6 +73,11 @@ declare global {
 // and RTL's own testing docs.
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 window.scrollTo = vi.fn();
+globalThis.ResizeObserver = class ResizeObserver {
+  observe(): void {}
+  unobserve(): void {}
+  disconnect(): void {}
+};
 
 // @testing-library/react only auto-registers its afterEach(cleanup) hook when
 // it detects a global `afterEach` at import time. This project doesn't set
