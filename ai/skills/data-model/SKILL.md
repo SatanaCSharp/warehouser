@@ -8,6 +8,12 @@ description: Design a feature's PostgreSQL data model and stage reversible TypeO
 
 # Data model
 
+Resolve the input per [`../_shared/work-item.md`](../_shared/work-item.md). A bare slug preserves
+the feature flow; `change-request:<slug>` reads and stages everything beneath
+`docs/change-requests/<slug>`. For a change request, distinguish new schema from reinterpretation,
+backfill, or removal of existing data and make rollback limitations explicit. All feature-root
+paths below mean the resolved `work_item_root`.
+
 Project a designed feature onto the repository's PostgreSQL/TypeORM persistence baseline. The
 durable rules in `docs/system/server-architecture.md` and `docs/system/sad.md` are authoritative;
 feature artifacts may specialize them but may not reintroduce MongoDB/Mongoose or runtime schema

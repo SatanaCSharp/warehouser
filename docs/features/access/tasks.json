@@ -1,0 +1,316 @@
+{
+  "slug": "access",
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "Promote the access schema and Permission catalogue migration",
+      "layer": "migration",
+      "deps": [],
+      "acs": [
+        "AC-01",
+        "AC-02",
+        "AC-03",
+        "AC-04",
+        "AC-05",
+        "AC-07",
+        "AC-08",
+        "AC-10",
+        "AC-13",
+        "AC-18",
+        "AC-20",
+        "AC-21"
+      ],
+      "dod": "The staged migration is promoted, applies and reverts cleanly, and its database constraints and catalogue seed pass integration checks.",
+      "files_hint": [
+        "docs/features/access/migrations/01-create-access-schema.ts"
+      ]
+    },
+    {
+      "id": "T2",
+      "title": "Implement access domain invariants and Unicode names",
+      "layer": "domain",
+      "deps": [],
+      "acs": [
+        "AC-02a",
+        "AC-03",
+        "AC-04",
+        "AC-05",
+        "AC-06",
+        "AC-06a",
+        "AC-06b",
+        "AC-07",
+        "AC-09",
+        "AC-09a",
+        "AC-10",
+        "AC-11",
+        "AC-12a",
+        "AC-13",
+        "AC-14",
+        "AC-14a"
+      ],
+      "dod": "Domain tests prove Unicode name rules, custom/protected Role rules, reserved Permission rules, assignment replacement, and manager-transfer invariants.",
+      "files_hint": ["apps/server/src/access/domain"]
+    },
+    {
+      "id": "T3",
+      "title": "Implement access persistence entities and repositories",
+      "layer": "infra",
+      "deps": ["T1", "T2"],
+      "acs": [
+        "AC-01",
+        "AC-02",
+        "AC-06",
+        "AC-08",
+        "AC-10",
+        "AC-11",
+        "AC-12",
+        "AC-12a",
+        "AC-13",
+        "AC-16",
+        "AC-20",
+        "AC-21"
+      ],
+      "dod": "Repository integration tests prove Warehouse-scoped reads, fresh principal resolution, atomic Role replacement, provisioning rollback, and concurrency-safe manager transfer.",
+      "files_hint": [
+        "apps/server/src/shared/domain/entities",
+        "apps/server/src/shared/domain/repositories/access",
+        "apps/server/src/access/domain/mappers",
+        "apps/server/src/test/factories/access.ts"
+      ]
+    },
+    {
+      "id": "T4",
+      "title": "Extend registration with atomic Warehouse provisioning",
+      "layer": "app",
+      "deps": ["T3"],
+      "acs": ["AC-01", "AC-02", "AC-02a"],
+      "dod": "Registration contract, command, controller, and integration tests prove complete creation or complete rollback and return immediate access only after commit.",
+      "files_hint": [
+        "packages/contracts/src/auth",
+        "apps/server/src/auth/usecases/commands/register.command.ts",
+        "apps/server/src/auth/rest",
+        "apps/server/src/access/usecases/commands/provision-initial-access.command.ts"
+      ]
+    },
+    {
+      "id": "T5",
+      "title": "Enforce fresh Warehouse-scoped authorization",
+      "layer": "wiring",
+      "deps": ["T3"],
+      "acs": ["AC-15", "AC-16", "AC-17", "AC-19", "AC-22"],
+      "dod": "Guard and architecture tests deny stale, missing, or cross-Warehouse authority and fail when an authenticated business handler lacks explicit Permission metadata and scoping classification.",
+      "files_hint": [
+        "apps/server/src/shared/guards/warehouse-access.guard.ts",
+        "apps/server/src/shared/decorators/required-permission.decorator.ts",
+        "apps/server/src/shared/access",
+        "packages/shared-types/src/enums",
+        "apps/server/src/shared/errors/global-http-exception.filter.ts",
+        "tests/access/authorization-coverage.spec.mjs"
+      ]
+    },
+    {
+      "id": "T6",
+      "title": "Implement custom Role lifecycle commands",
+      "layer": "app",
+      "deps": ["T3", "T5"],
+      "acs": [
+        "AC-03",
+        "AC-04",
+        "AC-05",
+        "AC-06",
+        "AC-06a",
+        "AC-06b",
+        "AC-07",
+        "AC-19"
+      ],
+      "dod": "Command tests prove authorized create/update/rename behavior, exact-name uniqueness, empty Permission sets, protected Role rejection, and no changes after denial.",
+      "files_hint": [
+        "apps/server/src/access/usecases/commands/create-role.command.ts",
+        "apps/server/src/access/usecases/commands/update-role.command.ts",
+        "apps/server/src/access/usecases/role-lifecycle.spec.ts"
+      ]
+    },
+    {
+      "id": "T7",
+      "title": "Implement member assignment and atomic Role deletion",
+      "layer": "app",
+      "deps": ["T3", "T5"],
+      "acs": [
+        "AC-08",
+        "AC-09",
+        "AC-09a",
+        "AC-10",
+        "AC-11",
+        "AC-12",
+        "AC-12a",
+        "AC-19"
+      ],
+      "dod": "Command and transaction tests prove safe ordinary assignment, protected-manager rejection, same-Warehouse enforcement, replacement deletion, unassigned deletion, and full rollback on failure.",
+      "files_hint": [
+        "apps/server/src/access/usecases/commands/assign-member-role.command.ts",
+        "apps/server/src/access/usecases/commands/delete-role.command.ts",
+        "apps/server/src/access/usecases/member-role-lifecycle.spec.ts"
+      ]
+    },
+    {
+      "id": "T8",
+      "title": "Implement atomic Warehouse Manager transfer",
+      "layer": "app",
+      "deps": ["T3", "T5"],
+      "acs": ["AC-13", "AC-14", "AC-14a"],
+      "dod": "Command and concurrency tests prove only the current authorized manager can atomically transfer to a different same-Warehouse member while exactly one manager remains.",
+      "files_hint": [
+        "apps/server/src/access/usecases/commands/transfer-warehouse-manager.command.ts",
+        "apps/server/src/access/usecases/manager-transfer.spec.ts"
+      ]
+    },
+    {
+      "id": "T9",
+      "title": "Expose scoped access read endpoints",
+      "layer": "ports",
+      "deps": ["T3", "T5"],
+      "acs": ["AC-15", "AC-16", "AC-20", "AC-21", "AC-22"],
+      "dod": "Shared-contract and REST tests prove current capability, Role, Permission, and member pages are bounded, permission-gated, current-Warehouse scoped, and non-disclosing on denial.",
+      "files_hint": [
+        "packages/contracts/src/access",
+        "packages/contracts/package.json",
+        "apps/server/src/access/usecases/queries",
+        "apps/server/src/access/rest/access-read.controller.ts",
+        "apps/server/src/access/rest/access-read.spec.ts"
+      ]
+    },
+    {
+      "id": "T10",
+      "title": "Expose access mutation endpoints and normalized failures",
+      "layer": "ports",
+      "deps": ["T6", "T7", "T8", "T9"],
+      "acs": [
+        "AC-03",
+        "AC-04",
+        "AC-05",
+        "AC-06",
+        "AC-06a",
+        "AC-06b",
+        "AC-07",
+        "AC-08",
+        "AC-09",
+        "AC-09a",
+        "AC-10",
+        "AC-11",
+        "AC-12",
+        "AC-12a",
+        "AC-13",
+        "AC-14",
+        "AC-14a",
+        "AC-19"
+      ],
+      "dod": "Contract and REST tests cover every Role, assignment, deletion, and manager-transfer operation with the specified status, safe error code, authorization metadata, and current-Warehouse routing.",
+      "files_hint": [
+        "packages/contracts/src/access",
+        "packages/contracts/package.json",
+        "packages/shared-types/src/enums/error-code.ts",
+        "apps/server/src/access/rest/access-mutation.controller.ts",
+        "apps/server/src/access/rest/access-mutation.spec.ts",
+        "apps/server/src/access/access.module.ts",
+        "apps/server/src/app.module.ts"
+      ]
+    },
+    {
+      "id": "T11",
+      "title": "Add Warehouse registration to the approved sign-up UI",
+      "layer": "ui",
+      "deps": ["T4"],
+      "acs": ["AC-01", "AC-02", "AC-02a"],
+      "dod": "Desktop and mobile component tests prove the approved Warehouse-name field, accessible localized validation, loading, atomic success, and atomic failure states against the shared contract.",
+      "files_hint": [
+        "apps/web/src/modules/auth/sign-up",
+        "apps/web/src/modules/auth/api/auth-api.ts",
+        "apps/web/public/locales/en/sign-up.json",
+        "apps/web/public/locales/uk/sign-up.json"
+      ]
+    },
+    {
+      "id": "T12",
+      "title": "Build the approved access review workspace",
+      "layer": "ui",
+      "deps": ["T9"],
+      "acs": ["AC-15", "AC-20", "AC-21", "AC-22"],
+      "dod": "Responsive route tests prove the approved Roles/Members/Permissions workspace fetches and retains only authorized datasets, hides unavailable navigation, and meets keyboard and screen-reader requirements.",
+      "files_hint": [
+        "apps/web/src/modules/access/api",
+        "apps/web/src/modules/access/route.tsx",
+        "apps/web/src/modules/access/page.tsx",
+        "apps/web/src/modules/access/components/access-workspace",
+        "apps/web/src/guards/access.guard.ts",
+        "apps/web/src/router.ts",
+        "apps/web/src/shared/constants/routes.ts",
+        "apps/web/src/shared/layouts/RootLayout.tsx",
+        "apps/web/public/locales/en/access.json",
+        "apps/web/public/locales/uk/access.json"
+      ]
+    },
+    {
+      "id": "T13",
+      "title": "Build approved access administration workflows",
+      "layer": "ui",
+      "deps": ["T10", "T12"],
+      "acs": [
+        "AC-03",
+        "AC-04",
+        "AC-05",
+        "AC-06",
+        "AC-06a",
+        "AC-06b",
+        "AC-07",
+        "AC-08",
+        "AC-09",
+        "AC-09a",
+        "AC-11",
+        "AC-12",
+        "AC-12a",
+        "AC-13",
+        "AC-14",
+        "AC-14a",
+        "AC-15",
+        "AC-19"
+      ],
+      "dod": "Responsive interaction tests prove accessible Role editing, member assignment, assigned-Role replacement, manager transfer, capability refresh, and normalized race-denial feedback using the approved design system.",
+      "files_hint": [
+        "apps/web/src/modules/access/api",
+        "apps/web/src/modules/access/components/role-editor",
+        "apps/web/src/modules/access/components/member-assignment",
+        "apps/web/src/modules/access/components/role-deletion",
+        "apps/web/src/modules/access/components/manager-transfer",
+        "apps/web/public/locales/en/access.json",
+        "apps/web/public/locales/uk/access.json"
+      ]
+    },
+    {
+      "id": "T14",
+      "title": "Gate access security, atomicity, and performance",
+      "layer": "tests",
+      "deps": ["T4", "T5", "T9", "T10", "T11", "T13"],
+      "acs": [
+        "AC-01",
+        "AC-02",
+        "AC-11",
+        "AC-12",
+        "AC-13",
+        "AC-15",
+        "AC-16",
+        "AC-17",
+        "AC-18",
+        "AC-19",
+        "AC-20",
+        "AC-21",
+        "AC-22"
+      ],
+      "dod": "Release gates pass for lifecycle atomicity, next-decision revocation, catalogue reconciliation, authorization coverage, p95 latency targets, and 50 protected operations per second for 10 minutes.",
+      "files_hint": [
+        "tests/access",
+        "apps/server/src/access/reconciliation",
+        "package.json"
+      ]
+    }
+  ]
+}

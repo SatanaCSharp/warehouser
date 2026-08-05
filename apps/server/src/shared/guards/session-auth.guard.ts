@@ -23,14 +23,14 @@ export class SessionAuthGuard implements CanActivate {
       'switchToHttp' in context
         ? context.switchToHttp().getRequest<AuthenticatedRequest>()
         : context;
-    const principal = await this.currentSession.execute(
+    const currentUser = await this.currentSession.execute(
       readSessionCookie(request.headers.cookie),
     );
-    if (!principal) {
+    if (!currentUser) {
       throw new UnauthorizedException();
     }
 
-    request.user = { userId: principal.userId };
+    request.user = { userId: currentUser.userId };
     return true;
   }
 }

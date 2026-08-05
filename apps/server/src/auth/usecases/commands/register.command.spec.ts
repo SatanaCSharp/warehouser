@@ -1,4 +1,5 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
+import { ProvisionInitialAccessCommand } from 'access/usecases/commands/provision-initial-access.command';
 import { GeneratedSessionSecret } from 'auth/domain/security/session-secret';
 import {
   AuthRegistrationService,
@@ -52,9 +53,18 @@ const generateSecret = (): GeneratedSessionSecret => ({
 const setup = () => {
   const repository = createRepositoryFake();
   const hash = createHashFake();
+  const provision = {
+    execute: jest.fn().mockResolvedValue({
+      warehouseId: '00000000-0000-4000-8000-000000000003',
+      roleId: '00000000-0000-4000-8000-000000000004',
+      roleKind: 'warehouse_manager' as const,
+      permissionIds: ['ROLES:WATCH'],
+    }),
+  };
   const command = new RegisterCommand(
     repository as unknown as AuthenticationRepository,
     repository as unknown as AuthRegistrationService,
+    provision as unknown as ProvisionInitialAccessCommand,
     hash,
     generateSecret,
     {
@@ -63,31 +73,49 @@ const setup = () => {
       sessionId: () => sessionId,
     },
   );
-  return { repository, hash, command };
+  return { repository, hash, provision, command };
 };
 
 describe('RegisterCommand', () => {
   it('creates one linked identity and initial persistent session', async () => {
-    const { command, repository, hash } = setup();
+    const { command, repository, hash, provision } = setup();
     const password = '  exact password  ';
 
     await expect(
-      command.execute({ email: ' Person@Example.TEST ', password }),
+      command.execute({
+        email: ' Person@Example.TEST ',
+        password,
+        warehouseName: 'Склад',
+      }),
     ).resolves.toEqual({
       userId: identityId,
       sessionSecret: 'opaque-secret',
       expiresAt: new Date('2026-08-24T10:00:00.000Z'),
+      access: {
+        warehouseId: '00000000-0000-4000-8000-000000000003',
+        roleId: '00000000-0000-4000-8000-000000000004',
+        roleKind: 'warehouse_manager',
+        permissionIds: ['ROLES:WATCH'],
+      },
     });
     expect(hash).toHaveBeenCalledWith(password);
     expect(repository.registered?.account.id.value).toBe(identityId);
     expect(repository.registered?.user.id.value).toBe(identityId);
+    expect(provision.execute).toHaveBeenCalledWith({
+      userId: identityId,
+      warehouseName: 'Склад',
+    });
   });
 
   it('rejects invalid credentials before persistence', async () => {
     const { command, repository } = setup();
 
     await expect(
-      command.execute({ email: 'invalid', password: 'short' }),
+      command.execute({
+        email: 'invalid',
+        password: 'short',
+        warehouseName: 'Склад',
+      }),
     ).rejects.toMatchObject({ code: ErrorCode.AUTH_INVALID_INPUT });
     expect(repository.registered).toBeUndefined();
   });
@@ -100,6 +128,7 @@ describe('RegisterCommand', () => {
       command.execute({
         email: 'person@example.test',
         password: 'password',
+        warehouseName: 'Склад',
       }),
     ).rejects.toMatchObject({
       code: ErrorCode.AUTH_EMAIL_ALREADY_REGISTERED,
@@ -114,7 +143,11 @@ describe('RegisterCommand', () => {
       command.execute({
         email: 'person@example.test',
         password: 'password',
+        warehouseName: 'Склад',
       }),
-    ).rejects.toThrow('transaction rolled back');
+    ).rejects.toMatchObject({
+      code: ErrorCode.AUTH_REGISTRATION_UNAVAILABLE,
+      cause: repository.failure,
+    });
   });
 });

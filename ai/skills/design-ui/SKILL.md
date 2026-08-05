@@ -5,6 +5,11 @@ description: Create or refine one cohesive feature UI design with the local pen.
 
 # Design UI
 
+Resolve the input per [`../_shared/work-item.md`](../_shared/work-item.md). A bare slug retains the
+feature paths below; `change-request:<slug>` stores its design, previews, and handoff beneath
+`docs/change-requests/<slug>`. Preserve the previously approved UI as the baseline and create a new
+named frame for changed behavior; never overwrite the feature's approved frame.
+
 Turn an approved feature specification into an editable pen.dev design and a precise implementation handoff. Keep the `.pen` file as the visual source of truth; do not use generated HTML as an intermediate source of truth.
 
 ## Inputs

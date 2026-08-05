@@ -1,25 +1,24 @@
+import { createApi } from '@reduxjs/toolkit/query/react';
 import { errorResponseSchema } from '@warehouser/contracts/auth';
 
+import type { BaseQueryFn, FetchArgs } from '@reduxjs/toolkit/query';
 import type { ZodType } from 'zod';
 
-export class ApiFailure extends Error {
-  readonly code: string;
-  readonly fieldErrors?: Record<string, string>;
+export type ApiFailure = {
+  code: string;
+  fieldErrors?: Record<string, string>;
+};
 
-  constructor(
-    code: string,
-    options: {
-      cause?: unknown;
-      fieldErrors?: Record<string, string>;
-      serverMessage?: string;
-    } = {},
-  ) {
-    super(options.serverMessage ?? code, { cause: options.cause });
-    this.name = 'ApiFailure';
-    this.code = code;
-    this.fieldErrors = options.fieldErrors;
-  }
-}
+export const isApiFailure = (error: unknown): error is ApiFailure =>
+  typeof error === 'object' &&
+  error !== null &&
+  Object.hasOwn(error, 'code') &&
+  typeof (error as { code?: unknown }).code === 'string';
+
+type ApiExtraOptions = {
+  emptyResponse?: null;
+  schema?: ZodType;
+};
 
 const extractFieldErrors = (
   details: Record<string, unknown> | undefined,
@@ -36,66 +35,91 @@ const extractFieldErrors = (
   return entries.length > 0 ? Object.fromEntries(entries) : undefined;
 };
 
-export const request = async <Output>(
-  path: string,
-  options: {
-    body?: unknown;
-    method?: 'DELETE' | 'GET' | 'POST';
-    schema?: ZodType<Output>;
-  },
-): Promise<Output | undefined> => {
+const normalizeError = (payload: unknown): ApiFailure => {
+  const parsedError = errorResponseSchema.safeParse(payload);
+  if (!parsedError.success) {
+    return { code: 'api.unexpected' };
+  }
+
+  const fieldErrors = extractFieldErrors(parsedError.data.details);
+  return {
+    code: parsedError.data.code,
+    ...(fieldErrors ? { fieldErrors } : {}),
+  };
+};
+
+export const apiBaseQuery: BaseQueryFn<
+  string | FetchArgs,
+  unknown,
+  ApiFailure,
+  ApiExtraOptions
+> = async (args, api, extraOptions) => {
+  const endpointOptions = extraOptions ?? {};
+  const request = typeof args === 'string' ? { url: args } : args;
+  const headers = new Headers(request.headers as HeadersInit | undefined);
+  if (request.body !== undefined) {
+    headers.set('Content-Type', 'application/json');
+  }
   let response: Response;
   try {
-    response = await fetch(path, {
+    response = await fetch(request.url, {
       body:
-        options.body === undefined ? undefined : JSON.stringify(options.body),
+        request.body === undefined ? undefined : JSON.stringify(request.body),
       credentials: 'include',
-      headers:
-        options.body === undefined
-          ? undefined
-          : {
-              'Content-Type': 'application/json',
-            },
-      method: options.method ?? 'GET',
+      headers,
+      method: request.method ?? 'GET',
+      signal: api.signal,
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {
       throw error;
     }
-    throw new ApiFailure('api.network', { cause: error });
+    return { error: { code: 'api.network' } };
+  }
+
+  if (
+    response.status === 204 &&
+    Object.hasOwn(endpointOptions, 'emptyResponse')
+  ) {
+    return { data: endpointOptions.emptyResponse };
   }
 
   if (response.status === 204) {
-    return undefined;
+    return { data: undefined };
   }
 
-  let payload: unknown;
+  let data: unknown;
   try {
-    payload = await response.json();
-  } catch (error) {
-    throw new ApiFailure('api.unexpected', { cause: error });
+    data = await response.json();
+  } catch {
+    return { error: { code: 'api.unexpected' } };
   }
 
   if (!response.ok) {
-    const parsedError = errorResponseSchema.safeParse(payload);
-    if (!parsedError.success) {
-      throw new ApiFailure('api.unexpected');
-    }
-
-    throw new ApiFailure(parsedError.data.code, {
-      fieldErrors: extractFieldErrors(parsedError.data.details),
-      serverMessage: parsedError.data.message,
-    });
+    return { error: normalizeError(data) };
   }
 
-  if (!options.schema) {
-    throw new ApiFailure('api.unexpected');
+  if (!endpointOptions.schema) {
+    return { data };
   }
 
-  const parsedOutput = options.schema.safeParse(payload);
-  if (!parsedOutput.success) {
-    throw new ApiFailure('api.unexpected', { cause: parsedOutput.error });
+  const parsedData = endpointOptions.schema.safeParse(data);
+  if (!parsedData.success) {
+    return { error: { code: 'api.unexpected' } };
   }
 
-  return parsedOutput.data;
+  return { data: parsedData.data };
 };
+
+export const api = createApi({
+  reducerPath: 'api',
+  baseQuery: apiBaseQuery,
+  tagTypes: [
+    'CurrentAccess',
+    'CurrentSession',
+    'AccessMembers',
+    'Permissions',
+    'Roles',
+  ],
+  endpoints: () => ({}),
+});

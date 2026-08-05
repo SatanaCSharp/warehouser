@@ -93,17 +93,3 @@ export const dummyVerifyPassword = async (
 ): Promise<void> => {
   await derive(password, Buffer.alloc(16), parameters);
 };
-
-export const passwordCredentialNeedsUpgrade = (
-  credential: PasswordCredential,
-  parameters: ScryptParameters = productionScryptParameters,
-): boolean => {
-  if (credential.algorithm !== 'scrypt') {
-    return true;
-  }
-
-  const stored = readParameters(credential);
-  return Object.entries(parameters).some(
-    ([key, value]) => stored[key as keyof ScryptParameters] !== value,
-  );
-};

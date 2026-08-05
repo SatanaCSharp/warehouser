@@ -14,6 +14,12 @@ description: >
 
 # Skill: review
 
+Resolve the input per [`../_shared/work-item.md`](../_shared/work-item.md). A bare slug preserves
+the existing feature review. For `change-request:<slug>`, read `change.md`, compare affected source
+behavior at `baseline_revision` with target `spec.md`, and verify changed behavior, removed
+behavior, and every `CR-RG-*` unchanged regression boundary. Write the review beneath the resolved
+root and never create a feature directory. All feature-root paths below mean `work_item_root`.
+
 The independent review gate. After `implement` has written + tested + committed the code, `review` looks at the **whole change at once, with fresh eyes** — does it actually satisfy every acceptance criterion, and is it good code? This is distinct from the per-task gate inside `implement` (which proves each task green): `review` is the cross-cutting, clean-context pass a human reviewer would do on the PR.
 
 It reuses the shared clean-context discipline ([`../_shared/critic.md`](../_shared/critic.md)) and the [`reviewer`](../../agents/reviewer.md) subagent (read-only). Question phrasing per [`../_shared/ask-style.md`](../_shared/ask-style.md).
@@ -26,7 +32,7 @@ Tech Lead / a reviewer who did **not** write the code (independence is the point
 
 ## Inputs
 
-- `<slug>` — feature slug.
+- `<slug>` — feature slug, or the explicit `change-request:<slug>` work-item identifier.
 - **Gate (hard refuse):** an implemented change must exist (commits on the feature branch, or a non-empty working diff). Nothing to review → «run `implement <slug>` first».
 - Read for the review baseline — the **whole AC chain**, so the trace can be checked end-to-end: `docs/features/<slug>/spec.md` §5 (the full AC set — the source of truth, not the diff's trailers), `sad.md` §6 (the sequence flows/branches each AC should appear in), `data-model.md` / `contracts/openapi.yaml` / Accepted `adr/` (the contracts the code must honour), `test-plan.md` (the AC→test map, if a separate file), and `tasks.json` (which AC each task claimed).
 

@@ -1,0 +1,67 @@
+import {
+  memberSchema,
+  permissionIdSchema,
+  roleSchema,
+} from 'access/access-projections';
+import { z } from 'zod';
+
+type SegmenterConstructor = new (
+  locales?: string | string[],
+  options?: { granularity: 'grapheme' },
+) => { segment: (value: string) => Iterable<unknown> };
+
+const graphemeCount = (value: string): number => {
+  const Segmenter = (Intl as unknown as { Segmenter: SegmenterConstructor })
+    .Segmenter;
+  return [
+    ...new Segmenter(undefined, { granularity: 'grapheme' }).segment(value),
+  ].length;
+};
+
+const domainNameSchema = z
+  .string()
+  .transform((name) => name.trim())
+  .pipe(
+    z
+      .string()
+      .min(1)
+      .refine((name) => graphemeCount(name) <= 100, {
+        message: 'Role names must contain at most 100 perceived characters',
+      })
+      .regex(/^[^\p{Cc}\p{Cf}]+$/u),
+  );
+const uniquePermissionIdsSchema = z
+  .array(permissionIdSchema)
+  .refine((ids) => new Set(ids).size === ids.length, {
+    message: 'Permission identifiers must be unique',
+  });
+
+export const roleWriteSchema = z.strictObject({
+  name: domainNameSchema,
+  permissionIds: uniquePermissionIdsSchema,
+});
+export const roleDeletionSchema = z.strictObject({
+  replacementRoleId: z.string().uuid().nullable(),
+});
+export const roleAssignmentSchema = z.strictObject({
+  roleId: z.string().uuid(),
+});
+export const managerTransferSchema = z.strictObject({
+  recipientUserId: z.string().uuid(),
+  formerManagerRoleId: z.string().uuid(),
+});
+export const managerTransferResultSchema = z.strictObject({
+  managerUserId: z.string().uuid(),
+  formerManagerUserId: z.string().uuid(),
+  formerManagerRoleId: z.string().uuid(),
+});
+
+export {
+  memberSchema as memberMutationResultSchema,
+  roleSchema as roleMutationResultSchema,
+};
+export type RoleWrite = z.infer<typeof roleWriteSchema>;
+export type RoleDeletion = z.infer<typeof roleDeletionSchema>;
+export type RoleAssignment = z.infer<typeof roleAssignmentSchema>;
+export type ManagerTransfer = z.infer<typeof managerTransferSchema>;
+export type ManagerTransferResult = z.infer<typeof managerTransferResultSchema>;

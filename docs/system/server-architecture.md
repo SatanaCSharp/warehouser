@@ -199,7 +199,9 @@ providers must not become a service locator or a way to hide feature dependencie
 Structured application logging follows the accepted
 [Pino logging ADR](adr/27-07-2026-structured-logging-with-pino.md). Configure it in
 `shared/logger/app-logger.module.ts`; application providers inject `PinoLogger` and set their class
-name as context.
+name as context. The server uses these structured logs instead of telemetry; do not add telemetry
+SDKs, tracing, metrics exporters, collectors, or feature-specific telemetry abstractions. See the
+accepted [logging instead of telemetry ADR](adr/03-08-2026-structured-logging-instead-of-telemetry.md).
 
 ## Events
 

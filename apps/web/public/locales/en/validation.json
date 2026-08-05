@@ -7,5 +7,10 @@
     "length": "Password must be at least 8 characters",
     "lengthRange": "Password must contain 8 to 128 characters",
     "required": "Enter your password."
+  },
+  "warehouseName": {
+    "lengthRange": "Warehouse name must contain 1 to 100 characters.",
+    "required": "Enter a Warehouse name.",
+    "unsupportedCharacter": "Warehouse name contains an unsupported character."
   }
 }

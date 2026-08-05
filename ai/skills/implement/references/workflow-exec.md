@@ -16,7 +16,7 @@ export const meta = {
 }
 
 // tasks + deps are inlined from tasks.json by the engine
-const TASKS = /* [{id, title, acs, dod, files_hint, deps, layer}, ...] */;
+const TASKS = /* [{id, title, acs, dod, files_hint, system_docs, deps, layer}, ...] */;
 
 // Kahn layers → phases; within a layer, fan out up to the parallel cap.
 // Each task is one independent pipeline: write-test → implement → verify → [review] → commit.
@@ -33,7 +33,13 @@ for (const layer of kahnLayers(TASKS)) {              // computed from deps
 }
 ```
 
-- **Schema-validated verdicts.** Each stage returns a structured verdict (`RED_VERDICT { class: GOOD|BAD|false_pass|NON, failing_line }`, `GATE_VERDICT { unit, integration, lint, vet, gate_green }`, `REVIEW_VERDICT { ac_satisfied, issues[] }`) so the orchestrator branches on data, not prose.
+- **Schema-validated verdicts.** Every prompt requires the stage agent to open every `system_docs`
+  path directly. Each stage returns a structured verdict (`RED_VERDICT { class:
+GOOD|BAD|false_pass|NON, failing_line, system_docs_read[] }`, `GATE_VERDICT { unit, integration,
+lint, vet, architecture_conformant, system_docs_read[], gate_green }`, `REVIEW_VERDICT {
+ac_satisfied, architecture_conformant, system_docs_read[], issues[] }`) so the orchestrator
+  branches on data, not prose. Empty or incomplete `system_docs_read`, or
+  `architecture_conformant: false`, forces `gate_green: false`.
 - **Fail drops the subtree.** A stage that throws (or returns `gate_green: false` past retries) drops that task to `null`; the engine removes it from `done`, so every transitively-dependent task is skipped (its deps never complete). Independent branches finish unaffected — this is the workflow's advantage over a team halt.
 - **Parallel cap.** `parallel(...)` respects `max_parallel_agents` (the workflow runtime also caps concurrency); a wide layer queues the overflow.
 

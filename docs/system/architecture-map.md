@@ -19,6 +19,10 @@ owning application.
 `apps/web/src/main.tsx` mounts the provider chain. `router.ts` assembles manually declared routes
 from route-owned modules. Redux Toolkit is the cross-module client-state owner and the RTK store is
 passed into TanStack Router context so route guards can read current state through selectors.
+RTK Query owns API request lifecycle and server-response caching. Feature modules inject endpoints
+into one shared API slice, whose base query applies credentials, contract validation, and normalized
+failures. React components use generated hooks and route guards dispatch the same endpoints through
+the store.
 i18next is initialized in `apps/web/src/i18n.ts` before React renders. The HTTP backend loads
 mirrored locale/namespace files from `apps/web/public/locales/<language>/<namespace>.json`.
 
@@ -44,3 +48,4 @@ See [Server architecture](server-architecture.md) for target boundaries and
 - [PostgreSQL persistence with TypeORM](adr/21-07-2026-postgresql-with-typeorm.md)
 - [Structured server logging with Pino](adr/27-07-2026-structured-logging-with-pino.md)
 - [Public centralized web translations](adr/27-07-2026-bundled-centralized-web-translations.md)
+- [RTK Query for web API calls](adr/02-08-2026-rtk-query-for-web-api-calls.md)

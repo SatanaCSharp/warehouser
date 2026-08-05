@@ -9,6 +9,10 @@
     "node": ">=24.14.0"
   },
   "exports": {
+    "./access": {
+      "types": "./dist/access/index.d.ts",
+      "default": "./dist/access/index.js"
+    },
     "./auth": {
       "types": "./dist/auth/index.d.ts",
       "default": "./dist/auth/index.js"

@@ -17,6 +17,12 @@ description: >
 
 # Skill: clarify
 
+Resolve the input per [`../_shared/work-item.md`](../_shared/work-item.md) before the gate. A bare
+slug keeps the existing feature flow; `change-request:<slug>` reads and writes beneath
+`docs/change-requests/<slug>`. For a change request, read `change.md` beside `spec.md` and treat
+ambiguous source, precedence, compatibility, and unchanged boundaries as first-class findings.
+All feature-root paths below mean the resolved `work_item_root`.
+
 Ambiguity sweep over a written `spec.md`. It hunts the spec for under-specified points — vague terms, unmeasured NFRs, AC missing error/authz/edge behavior, unstated assumptions, conflicting requirements, undefined domain terms, missing actors, scope creep — then dispatches a **clean-context devil's-advocate subagent** that re-reads the spec fresh and answers one question: _where would two engineers reasonably build different things from this?_ Each ambiguity it surfaces is closed with the user: either **resolved** (the spec is tightened in place) or **deferred** (a §8 Open-Questions row with owner + due). It exists so `glossary` / `design` never proceed on an ambiguous spec.
 
 This is a sweep, not a full authoring stage — it does **not** run the shared Socratic loop or the coherence critic. Its shared dependencies:
@@ -32,7 +38,7 @@ PM + Tech Lead (the spec's co-authors resolve their own ambiguities). PM owns va
 
 ## Inputs
 
-- `<slug>` — same feature slug used by `specify`.
+- `<slug>` — the feature slug used by `specify`, or `change-request:<slug>` from change-request.
 - **Gate (hard-refuse if missing):** `docs/features/<slug>/spec.md`. Absent → STOP and point: «run `specify <slug>` first — clarify sharpens an existing spec, it does not write one».
 - (Optional) `CONTEXT.md` — two-level: read **both** repo-root (project-wide) and `docs/features/<slug>/CONTEXT.md` (feature-scoped; wins on conflict) → [`../glossary/SKILL.md`](../glossary/SKILL.md); if present, `## Glossary` is canonical; an "undefined-term" finding for a word already glossed at either level is a false positive (drop it).
 - **Fast lane (XS/S):** when `specify` produced zero §8 open questions and flagged no ambiguous AC, the skip of this stage is offered by **`specify`'s handoff** (→ the fast lane in [`../_shared/size-matrix.md`](../_shared/size-matrix.md)) — the user takes it there; clarify itself never auto-skips.

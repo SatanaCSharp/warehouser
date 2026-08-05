@@ -21,6 +21,11 @@ description: >
 
 # Skill: glossary
 
+Resolve an explicit `change-request:<slug>` per
+[`../_shared/work-item.md`](../_shared/work-item.md). Its scoped glossary lives at
+`docs/change-requests/<slug>/CONTEXT.md`; a bare slug retains the existing feature-scoped behavior.
+Readers combine root context with the resolved work-item context, and the scoped definition wins.
+
 Lazy utility that fixes the meaning of a domain term in `CONTEXT.md` the moment it first surfaces, so its sense doesn't drift across the pipeline. For each term it captures a one-sentence canonical definition and — when the word is ambiguous — a **NOT-reference** naming the concept it's confused with. Runs anytime, with no upstream gate: a single term mid-interview, an `undefined-term` finding `clarify` resolves mid-sweep, or a batch handed over by `specify`. The output feeds `specify` (role + domain-term names) and `design` (invariants), which treat `## Glossary` as canonical and override anything that contradicts it.
 
 This is a capture utility, not a Socratic stage — it does **not** run the shared Socratic loop or critic. The one shared dependency is question phrasing:

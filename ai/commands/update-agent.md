@@ -32,14 +32,21 @@ Compare all canonical AI content in both scopes:
 1. **Workspace scope** — root `ai/agents`, `ai/commands`, and `ai/skills`, plus every existing
    `apps/*/ai/skills`. App-specific skills at this scope use the same `<app>-<skill>` collision
    namespace established by `init-agent`.
-2. **App scope** — for each `apps/<app>/`, root `ai/agents`, `ai/commands`, and `ai/skills`, plus
-   that app's `apps/<app>/ai/skills` when present. The app-specific skill wins over a root skill
-   with the same name.
+2. **App scope** — for each `apps/<app>/`, only that app's `apps/<app>/ai/skills` when present.
+   Do not install root `ai/skills` or another app's skills into an app-local skills directory.
 
 Include every file needed by an instruction surface, not only Markdown: references, templates,
 scripts, assets, and metadata must remain reachable with their relative paths intact. Ignore
 dependencies, caches, build output, and agent-generated directories when discovering canonical
-sources.
+sources. Installed skills must be complete materialized copies in the target's appropriate
+project-local skills directory; never use symbolic links for a skill directory or anything inside
+one.
+
+For Codex, the workspace skills directory is `.codex/skills/` and each app-local skills directory
+is `apps/<app>/.codex/skills/`; `.agents/skills/` is a legacy destination and must not receive
+Codex skills. For Claude, use `.claude/skills/` and `apps/<app>/.claude/skills/`. Derive the
+project-local location for other targets from their installed configuration or official
+documentation.
 
 ## Procedure
 
@@ -65,10 +72,19 @@ sources.
    show its scope, source, destination, ownership, and action: `unchanged`, `add`, `update`,
    `relink`, `remove stale`, `collision`, or `unsupported`.
 6. Synchronize the existing installation:
-   - preserve valid relative symbolic links;
-   - relink broken or incorrectly targeted managed links to the current canonical source;
-   - refresh managed copies whose bytes differ from their source while retaining the generated
-     header required by `init-agent`;
+   - recursively refresh every managed skill from its canonical `ai/skills` directory as a full
+     copy, including `SKILL.md`, references, templates, scripts, assets, and metadata; replace
+     legacy managed skill links with materialized copies and do not create links anywhere in an
+     installed skill tree;
+   - migrate managed Codex skills from legacy `.agents/skills/` destinations to `.codex/skills/`,
+     and remove the legacy managed copies after the new copies verify successfully;
+   - at app scope, synchronize only skills sourced from that app's own
+     `apps/<app>/ai/skills`; remove managed root and sibling-app skills previously copied into the
+     app-local skills directory, while leaving unmanaged entries untouched;
+   - preserve valid relative symbolic links for non-skill surfaces;
+   - relink broken or incorrectly targeted managed non-skill links to the current canonical source;
+   - refresh managed non-skill copies whose bytes differ from their source while retaining the
+     generated header required by `init-agent`;
    - add newly introduced canonical entries to already initialized supported surfaces;
    - for Codex, add or refresh one managed custom-agent TOML adapter per canonical
      `ai/agents/*.md` role in both workspace and app scopes, using the exact schema and translation
@@ -86,6 +102,7 @@ sources.
      applicable `.env.example` to it without displaying either file, but must never overwrite an
      existing local environment file; setup commands and generated guidance must use only the
      placeholder/development values documented in `.env.example`;
+   - ensure every managed instruction block states that coding agents must not add telemetry;
    - remove destinations whose canonical sources no longer exist only when ownership is proven
      and only inside the target's generated directories or managed blocks;
    - leave unmanaged files and content outside managed blocks byte-for-byte unchanged.
@@ -99,8 +116,10 @@ sources.
    target's managed main instruction block and report the fallback. If a destination is occupied
    by an unmanaged file or link, report the collision and continue with unaffected entries.
 9. Run the comparison again after writing and verify:
-   - every managed link resolves within the repository;
-   - every managed copy matches its canonical source apart from its generated header;
+   - every managed non-skill link resolves within the repository;
+   - every managed non-skill copy matches its canonical source apart from its generated header;
+   - every installed skill is a complete materialized copy of its canonical skill and contains no
+     symbolic links;
    - every app has its existing instruction entry point with a valid managed block;
    - no destination escapes the repository;
    - no canonical `ai/` source was modified by synchronization;

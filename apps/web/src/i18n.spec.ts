@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { namespaces, supportedLanguages } from 'i18n';
 
+import enAccess from '../public/locales/en/access.json';
 import enCommon from '../public/locales/en/common.json';
 import enErrors from '../public/locales/en/errors.json';
 import enHome from '../public/locales/en/home.json';
@@ -10,6 +11,7 @@ import enSignIn from '../public/locales/en/sign-in.json';
 import enSignUp from '../public/locales/en/sign-up.json';
 import enSuccess from '../public/locales/en/success.json';
 import enValidation from '../public/locales/en/validation.json';
+import ukAccess from '../public/locales/uk/access.json';
 import ukCommon from '../public/locales/uk/common.json';
 import ukErrors from '../public/locales/uk/errors.json';
 import ukHome from '../public/locales/uk/home.json';
@@ -20,6 +22,7 @@ import ukValidation from '../public/locales/uk/validation.json';
 
 const resources = {
   en: {
+    access: enAccess,
     common: enCommon,
     errors: enErrors,
     home: enHome,
@@ -29,6 +32,7 @@ const resources = {
     validation: enValidation,
   },
   uk: {
+    access: ukAccess,
     common: ukCommon,
     errors: ukErrors,
     home: ukHome,
@@ -47,6 +51,12 @@ const leafKeys = (value: object, prefix = ''): string[] =>
       : [path];
   });
 
+const pluralSuffix = /_(?:zero|one|two|few|many|other)$/u;
+
+const translationKeys = (value: object): string[] => [
+  ...new Set(leafKeys(value).map((key) => key.replace(pluralSuffix, ''))),
+];
+
 describe('localization resources', () => {
   it('keeps registered namespaces and keys complete in every locale', () => {
     expect(Object.keys(resources.en).sort()).toEqual([...namespaces].sort());
@@ -56,8 +66,8 @@ describe('localization resources', () => {
     );
 
     for (const namespace of namespaces) {
-      expect(leafKeys(resources.uk[namespace]).sort()).toEqual(
-        leafKeys(resources.en[namespace]).sort(),
+      expect(translationKeys(resources.uk[namespace]).sort()).toEqual(
+        translationKeys(resources.en[namespace]).sort(),
       );
     }
   });

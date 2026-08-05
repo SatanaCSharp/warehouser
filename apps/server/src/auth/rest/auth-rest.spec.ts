@@ -8,6 +8,12 @@ import { CurrentSessionQuery } from 'auth/usecases/queries/current-session.query
 
 const userId = '00000000-0000-4000-8000-000000000001';
 const expiresAt = new Date('2026-08-24T10:00:00.000Z');
+const access = {
+  warehouseId: '00000000-0000-4000-8000-000000000002',
+  roleId: '00000000-0000-4000-8000-000000000003',
+  roleKind: 'warehouse_manager' as const,
+  permissionIds: ['ROLES:WATCH'],
+};
 
 const response = () => ({
   cookie: jest.fn(),
@@ -20,6 +26,7 @@ const setup = () => {
       userId,
       sessionSecret: 'registration-secret',
       expiresAt,
+      access,
     }),
   };
   const signIn = {
@@ -52,10 +59,14 @@ describe('AuthController', () => {
 
     await expect(
       controller.signUp(
-        { email: 'person@example.test', password: 'password' },
+        {
+          email: 'person@example.test',
+          password: 'password',
+          warehouseName: 'Склад',
+        },
         http,
       ),
-    ).resolves.toEqual({ user: { id: userId } });
+    ).resolves.toEqual({ user: { id: userId }, access });
     expect(http.cookie).toHaveBeenCalledWith(
       AUTH_SESSION_COOKIE,
       'registration-secret',
@@ -67,6 +78,37 @@ describe('AuthController', () => {
         secure: true,
       },
     );
+  });
+
+  it('does not issue the session cookie before registration commits', async () => {
+    const { controller, register } = setup();
+    const http = response();
+    let finishRegistration: ((value: unknown) => void) | undefined;
+    register.execute.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finishRegistration = resolve;
+        }),
+    );
+
+    const request = controller.signUp(
+      {
+        email: 'person@example.test',
+        password: 'password',
+        warehouseName: 'Склад',
+      },
+      http,
+    );
+    expect(http.cookie).not.toHaveBeenCalled();
+
+    finishRegistration?.({
+      userId,
+      sessionSecret: 'registration-secret',
+      expiresAt,
+      access,
+    });
+    await request;
+    expect(http.cookie).toHaveBeenCalledTimes(1);
   });
 
   it('restores a valid session and expires an invalid cookie', async () => {

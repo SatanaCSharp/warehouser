@@ -1,6 +1,6 @@
 import { HeroUIProvider } from '@heroui/react';
 import { RouterProvider } from '@tanstack/react-router';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -20,6 +20,13 @@ const toast = vi.hoisted(() => ({
 vi.mock('react-toastify', () => ({ toast }));
 
 type RenderedRoute = { router: AppRouter; store: AppStore };
+
+const readableAccess = {
+  warehouseId: '00000000-0000-4000-8000-000000000002',
+  roleId: '00000000-0000-4000-8000-000000000003',
+  roleKind: 'custom',
+  permissionIds: ['ROLES:WATCH'],
+} as const;
 
 const renderRoute = (initialEntry: string): RenderedRoute => {
   const store = makeStore();
@@ -77,6 +84,226 @@ describe('router', () => {
     );
   });
 
+  it('loads only role-authorized access datasets at /access', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        Response.json({
+          user: { id: '00000000-0000-4000-8000-000000000001' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({
+          warehouseId: '00000000-0000-4000-8000-000000000002',
+          roleId: '00000000-0000-4000-8000-000000000003',
+          roleKind: 'custom',
+          permissionIds: ['ROLES:WATCH'],
+        }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({
+          items: [
+            {
+              id: '00000000-0000-4000-8000-000000000003',
+              name: 'Operators',
+              assignedMemberCount: 0,
+              kind: 'custom',
+              permissionIds: ['ROLES:WATCH'],
+            },
+          ],
+          hasNext: false,
+          hasPrev: false,
+          nextCursor: null,
+        }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({
+          items: [
+            { id: 'ROLES:WATCH', label: 'View roles', kind: 'assignable' },
+          ],
+          hasNext: false,
+          hasPrev: false,
+          nextCursor: null,
+        }),
+      );
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderRoute('/access');
+
+    expect(
+      await screen.findByRole('heading', { name: 'Access' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Roles' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('tab', { name: 'Permissions' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('tab', { name: 'Members' }),
+    ).not.toBeInTheDocument();
+    expect(await screen.findByText('Operators')).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      expect.stringContaining('/members'),
+      expect.anything(),
+    );
+  });
+
+  it('refetches current access and removes stale controls after a mutation denial', async () => {
+    const user = userEvent.setup();
+    let currentReads = 0;
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url =
+        input instanceof Request
+          ? input.url
+          : input instanceof URL
+            ? input.href
+            : input;
+      if (url.endsWith('/api/v1/auth/session')) {
+        return Promise.resolve(
+          Response.json({
+            user: { id: '00000000-0000-4000-8000-000000000001' },
+          }),
+        );
+      }
+      if (url.endsWith('/api/v1/access/current')) {
+        currentReads += 1;
+        return Promise.resolve(
+          Response.json({
+            ...readableAccess,
+            permissionIds: currentReads === 1 ? ['ROLES:CREATE'] : [],
+          }),
+        );
+      }
+      if (url.endsWith('/api/v1/access/roles') && init?.method === 'POST') {
+        return Promise.resolve(
+          Response.json(
+            { code: 'access.denied', message: 'Access denied' },
+            { status: 403 },
+          ),
+        );
+      }
+      if (url.endsWith('/api/v1/access/roles')) {
+        return Promise.resolve(
+          Response.json({
+            items: [
+              {
+                id: readableAccess.roleId,
+                name: 'Operators',
+                assignedMemberCount: 0,
+                kind: 'custom',
+                permissionIds: [],
+              },
+            ],
+            hasNext: false,
+            hasPrev: false,
+            nextCursor: null,
+          }),
+        );
+      }
+      if (url.endsWith('/api/v1/access/permissions')) {
+        return Promise.resolve(
+          Response.json({
+            items: [],
+            hasNext: false,
+            hasPrev: false,
+            nextCursor: null,
+          }),
+        );
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderRoute('/access');
+    await user.click(
+      await screen.findByRole('button', { name: 'Create role' }),
+    );
+    const dialog = screen.getByRole('dialog', { name: 'Create role' });
+    await user.type(within(dialog).getByLabelText('Role name'), 'Auditor');
+    await user.click(within(dialog).getByRole('button', { name: 'Save role' }));
+
+    expect(await screen.findByText('Access unavailable')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Create role' }),
+    ).not.toBeInTheDocument();
+    expect(toast.error).toHaveBeenCalled();
+    expect(toast.success).not.toHaveBeenCalled();
+    expect(currentReads).toBeGreaterThan(1);
+  });
+
+  it('does not request or render protected access datasets without read permission', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        Response.json({
+          user: { id: '00000000-0000-4000-8000-000000000001' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({
+          warehouseId: '00000000-0000-4000-8000-000000000002',
+          roleId: '00000000-0000-4000-8000-000000000003',
+          roleKind: 'custom',
+          permissionIds: [],
+        }),
+      );
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderRoute('/access');
+
+    expect(
+      await screen.findByRole('heading', { name: 'Access unavailable' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('tab')).not.toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(
+      screen.queryByRole('link', { name: 'Access' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('loads only member-authorized data when the user has USERS:WATCH', async () => {
+    const memberId = '00000000-0000-4000-8000-000000000004';
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        Response.json({
+          user: { id: '00000000-0000-4000-8000-000000000001' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({ ...readableAccess, permissionIds: ['USERS:WATCH'] }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({
+          items: [
+            {
+              userId: memberId,
+              roleId: '00000000-0000-4000-8000-000000000003',
+              roleKind: 'custom',
+            },
+          ],
+          hasNext: false,
+          hasPrev: false,
+          nextCursor: null,
+        }),
+      );
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderRoute('/access');
+
+    expect(
+      await screen.findByRole('heading', { name: 'Access' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Members' })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('tab', { name: 'Roles' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('tab', { name: 'Permissions' }),
+    ).not.toBeInTheDocument();
+    expect(await screen.findByText(memberId)).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
   it('creates an account, authenticates the linked user, and enters home', async () => {
     vi.stubGlobal(
       'fetch',
@@ -86,14 +313,22 @@ describe('router', () => {
         .mockResolvedValueOnce(
           Response.json({
             user: { id: '00000000-0000-4000-8000-000000000012' },
+            access: {
+              warehouseId: '00000000-0000-4000-8000-000000000013',
+              roleId: '00000000-0000-4000-8000-000000000014',
+              roleKind: 'warehouse_manager',
+              permissionIds: ['ROLES:WATCH'],
+            },
           }),
-        ),
+        )
+        .mockResolvedValueOnce(Response.json(readableAccess)),
     );
     const user = userEvent.setup();
     const { router, store } = renderRoute('/sign-up');
 
     await user.type(await screen.findByLabelText('Email'), 'new@example.test');
     await user.type(screen.getByLabelText('Password'), 'long enough');
+    await user.type(screen.getByLabelText('Warehouse name'), 'Main Warehouse');
     await user.click(screen.getByRole('button', { name: 'Create account' }));
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/'));
@@ -127,6 +362,7 @@ describe('router', () => {
       'existing@example.test',
     );
     await user.type(screen.getByLabelText('Password'), 'long enough');
+    await user.type(screen.getByLabelText('Warehouse name'), 'Main Warehouse');
     await user.click(screen.getByRole('button', { name: 'Create account' }));
 
     expect(
@@ -165,7 +401,8 @@ describe('router', () => {
           Response.json({
             user: { id: '00000000-0000-4000-8000-000000000001' },
           }),
-        ),
+        )
+        .mockResolvedValueOnce(Response.json(readableAccess)),
     );
     const user = userEvent.setup();
     const { router, store } = renderRoute('/login');
@@ -231,6 +468,7 @@ describe('router', () => {
           user: { id: '00000000-0000-4000-8000-000000000001' },
         }),
       )
+      .mockResolvedValueOnce(Response.json(readableAccess))
       .mockImplementationOnce(
         () =>
           new Promise<Response>((resolve) => {
@@ -262,12 +500,15 @@ describe('router', () => {
 
   it('waits for restoration and admits a valid session to the protected route', async () => {
     let resolveSession: ((response: Response) => void) | undefined;
-    const fetchMock = vi.fn(
-      () =>
-        new Promise<Response>((resolve) => {
-          resolveSession = resolve;
-        }),
-    );
+    const fetchMock = vi
+      .fn()
+      .mockImplementationOnce(
+        () =>
+          new Promise<Response>((resolve) => {
+            resolveSession = resolve;
+          }),
+      )
+      .mockResolvedValueOnce(Response.json(readableAccess));
     vi.stubGlobal('fetch', fetchMock);
     const { router, store } = renderRoute('/');
 
@@ -285,6 +526,6 @@ describe('router', () => {
     ).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/');
     expect(store.getState().auth.status).toBe('authenticated');
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
   });
 });

@@ -1,8 +1,6 @@
 # Schema Validation with Zod
 
-## Status
-
-Accepted
+Status: Accepted
 
 ## Context
 

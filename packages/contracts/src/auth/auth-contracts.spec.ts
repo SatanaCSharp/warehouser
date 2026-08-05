@@ -2,6 +2,8 @@ import {
   authCredentialsSchema,
   authenticatedUserSchema,
   errorResponseSchema,
+  registrationInputSchema,
+  registrationResultSchema,
 } from 'auth';
 
 describe('auth contracts', () => {
@@ -72,5 +74,48 @@ describe('auth contracts', () => {
         stack: 'secret',
       }).success,
     ).toBe(false);
+  });
+
+  it('accepts a trimmed Unicode Warehouse name without normalizing it', () => {
+    expect(
+      registrationInputSchema.parse({
+        email: 'person@example.test',
+        password: 'password',
+        warehouseName: '  Склад e\u0301  ',
+      }),
+    ).toEqual({
+      email: 'person@example.test',
+      password: 'password',
+      warehouseName: 'Склад e\u0301',
+    });
+  });
+
+  it.each([
+    ['', 'empty'],
+    ['a'.repeat(101), 'overlong'],
+    ['Warehouse\u200B', 'format character'],
+    ['Ware\nhouse', 'control character'],
+  ])('rejects an %s Warehouse name (%s)', (warehouseName) => {
+    expect(
+      registrationInputSchema.safeParse({
+        email: 'person@example.test',
+        password: 'password',
+        warehouseName,
+      }).success,
+    ).toBe(false);
+  });
+
+  it('validates the immediate access projection returned by registration', () => {
+    expect(
+      registrationResultSchema.parse({
+        user: { id: '00000000-0000-4000-8000-000000000001' },
+        access: {
+          warehouseId: '00000000-0000-4000-8000-000000000002',
+          roleId: '00000000-0000-4000-8000-000000000003',
+          roleKind: 'warehouse_manager',
+          permissionIds: ['ROLES:WATCH'],
+        },
+      }),
+    ).toMatchObject({ access: { roleKind: 'warehouse_manager' } });
   });
 });

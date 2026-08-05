@@ -1,9 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import {
-  createSessionBootstrap,
-  completeSignOut,
-} from 'modules/auth/session/session';
+import { createSessionBootstrap } from 'modules/auth/session/session';
 import { makeStore } from 'store';
 
 const authenticated = {
@@ -43,45 +40,5 @@ describe('session bootstrap', () => {
 
     await expect(initialize(store)).resolves.toBe('anonymous');
     expect(store.getState().auth).toEqual({ status: 'anonymous', user: null });
-  });
-});
-
-describe('sign-out state', () => {
-  it('clears browser auth only after server revocation completes', async () => {
-    let finishRevocation: (() => void) | undefined;
-    const revoke = vi.fn(
-      () =>
-        new Promise<void>((resolve) => {
-          finishRevocation = resolve;
-        }),
-    );
-    const store = makeStore();
-    store.dispatch({
-      type: 'auth/authBecameAuthenticated',
-      payload: authenticated.user,
-    });
-
-    const completion = completeSignOut(store, revoke);
-    expect(store.getState().auth.status).toBe('authenticated');
-
-    finishRevocation?.();
-    await completion;
-    expect(store.getState().auth).toEqual({ status: 'anonymous', user: null });
-  });
-
-  it('retains authenticated state when revocation fails', async () => {
-    const store = makeStore();
-    store.dispatch({
-      type: 'auth/authBecameAuthenticated',
-      payload: authenticated.user,
-    });
-
-    await expect(
-      completeSignOut(
-        store,
-        vi.fn().mockRejectedValue(new Error('unavailable')),
-      ),
-    ).rejects.toThrow('unavailable');
-    expect(store.getState().auth.status).toBe('authenticated');
   });
 });

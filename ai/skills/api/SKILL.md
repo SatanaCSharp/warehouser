@@ -19,6 +19,12 @@ description: >
 
 # Skill: api
 
+Resolve the input per [`../_shared/work-item.md`](../_shared/work-item.md). A bare slug keeps the
+existing feature behavior; `change-request:<slug>` uses its change-request root. For a change
+request, compare the baseline contract named in `change.md` with the target contract and classify
+every operation as compatible, transitional, or breaking. All feature-root paths below mean the
+resolved `work_item_root`.
+
 Projects the upstream artifacts into one **interface contract**. By default that's an HTTP/OpenAPI contract; this skill is **interface-kind aware** — and the kind comes from the surface(s) `design` declared in `sad.md` frontmatter `target_surfaces`, **read here, not re-derived** (→ [`../_shared/surfaces.md`](../_shared/surfaces.md)). For a non-HTTP project it produces the matching contract form (or steps aside):
 
 - **HTTP / REST** (default) → `contracts/openapi.yaml` (OpenAPI 3.1) + `api-sync-report.md`.
@@ -40,7 +46,7 @@ Backend Lead (drives the interface). The PM confirms each endpoint maps to a rea
 
 ## Inputs
 
-- `<slug>` — same feature slug used by every earlier stage.
+- `<slug>` — feature slug, or the explicit `change-request:<slug>` work-item identifier.
 - **Gate (conditional — hard-refuse only when a schema change exists):** `docs/features/<slug>/data-model.md`. When present, it is the source of typed fields and constraints. When absent, evaluate `data-model`'s N/A condition (no schema change — [size-matrix fast lane](../_shared/size-matrix.md)) yourself: sad.md §5 declares no new building blocks/entities, no staged `docs/features/<slug>/migrations/`, and the spec introduces no new entity → **proceed**, deriving types/constraints from existing TypeORM entities and migrations plus the persistence rules in `docs/system` and saying so loudly in the handoff. Absent **and** a schema change exists → STOP and point: «run `data-model <slug>` first — the contract is derived from its entities».
 - (Expected) `sad.md` frontmatter `target_surfaces` — picks the contract form (step 1). **Absent or empty → warn** («surfaces undeclared — re-run `design`, or proceeding as `backend-service`») **and treat as `[backend-service]`**, falling back to the architecture-map derivation (→ [`../_shared/surfaces.md`](../_shared/surfaces.md)).
 - (Expected) `docs/features/<slug>/sad.md` §6 — the Mermaid `sequenceDiagram` blocks. Their `alt`/`else` branches become the error `responses`; an async participant (`<message-bus>` / `<external-system>`) on a mutating flow marks its endpoint `Idempotency-Key`-required and seeds `events.md`. Absent → note the gap (error branches derived from `spec.md` §5 only — likely misses authorization branches) and still generate.

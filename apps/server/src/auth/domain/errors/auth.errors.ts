@@ -17,9 +17,3 @@ export const AuthInvalidCredentialsError = (): ApplicationError =>
 
 export const AuthRegistrationUnavailableError = (cause: unknown): SystemError =>
   new SystemError(ErrorCode.AUTH_REGISTRATION_UNAVAILABLE, cause);
-
-export const AuthSessionUnavailableError = (cause: unknown): SystemError =>
-  new SystemError(ErrorCode.AUTH_SESSION_UNAVAILABLE, cause);
-
-export const AuthSignOutUnavailableError = (cause: unknown): SystemError =>
-  new SystemError(ErrorCode.AUTH_SIGN_OUT_UNAVAILABLE, cause);

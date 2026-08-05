@@ -25,7 +25,7 @@ describe('SessionAuthGuard', () => {
     });
   });
 
-  it('rejects absent or invalid sessions without attaching a principal', async () => {
+  it('rejects absent or invalid sessions without attaching a current user', async () => {
     const guard = new SessionAuthGuard({
       execute: jest.fn().mockResolvedValue(null),
     } as unknown as CurrentSessionQuery);

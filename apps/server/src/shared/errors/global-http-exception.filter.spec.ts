@@ -40,6 +40,46 @@ describe('GlobalHttpExceptionFilter', () => {
 
   it.each([
     [
+      new ApplicationError(ErrorCode.ACCESS_DENIED),
+      403,
+      {
+        code: 'access.denied',
+        message: 'Access is not permitted.',
+      },
+    ],
+    [
+      new ApplicationError(ErrorCode.ACCESS_ROLE_NAME_CONFLICT),
+      409,
+      {
+        code: 'access.role_name_conflict',
+        message: 'Role names must be unique within the Warehouse.',
+      },
+    ],
+    [
+      new ApplicationError(ErrorCode.ACCESS_ROLE_UNAVAILABLE),
+      404,
+      {
+        code: 'access.role_unavailable',
+        message: 'The Role is unavailable.',
+      },
+    ],
+    [
+      new ApplicationError(ErrorCode.ACCESS_REPLACEMENT_REQUIRED),
+      400,
+      {
+        code: 'access.replacement_required',
+        message: 'Select a different custom replacement Role.',
+      },
+    ],
+    [
+      new ApplicationError(ErrorCode.ACCESS_CONCURRENT_CHANGE),
+      409,
+      {
+        code: 'access.concurrent_change',
+        message: 'Access changed concurrently. Refresh and try again.',
+      },
+    ],
+    [
       new ApplicationError(ErrorCode.AUTH_INVALID_CREDENTIALS),
       401,
       {
@@ -56,6 +96,17 @@ describe('GlobalHttpExceptionFilter', () => {
       {
         code: 'auth.session_unavailable',
         message: 'Sign-in could not establish a session. Try again.',
+      },
+    ],
+    [
+      new SystemError(
+        ErrorCode.ACCESS_MANAGER_TRANSFER_UNAVAILABLE,
+        new Error('database unavailable'),
+      ),
+      503,
+      {
+        code: 'access.manager_transfer_unavailable',
+        message: 'Manager transfer did not complete.',
       },
     ],
     [

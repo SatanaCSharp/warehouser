@@ -38,10 +38,99 @@ The canonical, coding-agent-neutral instructions live in:
 ai/
 ├── agents/       # specialized worker roles
 ├── commands/     # reusable repository commands
-└── skills/       # feature-development workflows
+└── skills/       # feature and change-request delivery workflows
 ```
 
 Use `ai/commands/init-agent.md` to install adapters for a particular coding agent. The files under `ai/` remain the source of truth; generated agent-specific adapters should not be edited directly.
+
+Choose the entry flow from the intent of the work:
+
+| Intent                                                    | Entry point                  | Artifact root                  |
+| --------------------------------------------------------- | ---------------------------- | ------------------------------ |
+| Introduce a new capability or product outcome             | `/specify <slug>`            | `docs/features/<slug>/`        |
+| Intentionally change existing behavior or business logic  | `/change-request <slug>`     | `docs/change-requests/<slug>/` |
+| Correct code that violates already-intended behavior      | `/fix [feature-slug]`        | Owning feature's `_fixes/`     |
+| Record an architecture decision without a behavior change | `/decide-adr <slug> <title>` | Resolved work item's `adr/`    |
+
+### Feature workflow
+
+The feature workflow defines and delivers a new capability. It starts with a bare kebab-case slug,
+and that same bare slug is passed to every later command. Its canonical requirements, architecture,
+contracts, plans, delivery records, and changelog live together under `docs/features/<slug>/`.
+
+```text
+/specify <slug>
+  → /clarify <slug>                         when ambiguity remains
+  → /design <slug>
+  → /design-ui <slug>                       for a declared UI surface
+  → /sequences <slug>
+  → /data-model <slug>                      when the schema changes
+  → /api <slug>                             when an interface contract applies
+  → /tasks <slug>
+  → /plan-tests <slug>
+  → /implement <slug>
+  → /review <slug>
+  → /ship <slug>
+```
+
+`specify` creates `spec.md`, `.size`, and `.route`. The size selects a `quick`, `standard`, or
+`full` route; optional stages may be skipped only when their owning skill proves its N/A condition.
+Every route still runs architecture design before task planning. UI work additionally requires a
+Pencil design and explicit human approval before UI implementation.
+
+The downstream artifacts trace the feature's acceptance criteria through `sad.md`, runtime
+sequences, data and interface contracts, `tasks.json`, test planning, test-first implementation,
+independent review, and final real-world verification. `ship` writes the changelog/PR material and,
+when a roadmap exists, moves the feature from Now to Shipped. The canonical protocol remains in
+[`ai/skills/specify/SKILL.md`](ai/skills/specify/SKILL.md).
+
+### Change-request workflow
+
+The change-request workflow is for deliberately changing intended behavior: amending a business
+rule, replacing a workflow, removing supported behavior, changing permissions, or altering how
+existing data or contracts are interpreted. It is universal—it may affect no documented feature,
+one feature, several features, or a system-level rule—and it never creates an additional feature
+directory.
+
+Start the request with a bare slug:
+
+```text
+/change-request <slug>
+```
+
+The entry stage creates only `docs/change-requests/<slug>/`. Every downstream stage receives the
+explicit identifier `change-request:<slug>` so it resolves the change-request root without
+affecting the existing bare-slug feature behavior:
+
+```text
+/change-request <slug>
+  → /clarify change-request:<slug>          when ambiguity remains
+  → /design change-request:<slug>
+  → /design-ui change-request:<slug>        for a declared UI surface
+  → /sequences change-request:<slug>
+  → /data-model change-request:<slug>       when existing or new data changes
+  → /api change-request:<slug>              when a contract changes
+  → /tasks change-request:<slug>
+  → /plan-tests change-request:<slug>
+  → /implement change-request:<slug>
+  → /review change-request:<slug>
+  → /ship change-request:<slug>
+```
+
+`change.md` is the permanent old-to-new record. It classifies each delta as `ADD`, `AMEND`,
+`REPLACE`, or `REMOVE` and records the affected source, compatibility impact, consumers, migration,
+rollout, and rollback. `spec.md` is the acceptance contract for the changed behavior; it uses
+`CR-AC-*` identifiers and includes regression boundaries for important behavior that must remain
+unchanged. The remaining applicable artifacts use the same names and quality gates as the feature
+pipeline, but stay under the change-request root.
+
+Affected feature and system documents remain unchanged while the request is being specified,
+designed, implemented, and reviewed. After review passes, `ship` applies the reviewed reconciliation
+table to the canonical owners and adds backlinks to the shipped change request. A change request
+does not create or move a roadmap feature unless the user explicitly treats it as a distinct
+portfolio outcome. The canonical protocol is in
+[`ai/skills/change-request/SKILL.md`](ai/skills/change-request/SKILL.md), with work-item resolution
+defined by [`ai/skills/_shared/work-item.md`](ai/skills/_shared/work-item.md).
 
 ### Configure your coding agent
 
@@ -84,7 +173,7 @@ The repository uses [Pencil](https://pencil.dev/) for editable UI designs and li
 
 Do not invoke Pencil, start its MCP server, or require a design handoff for backend-only work such as server logic, APIs, workers, data-model changes, infrastructure, or CLI features. For a mixed feature, use Pencil only for the UI portion; server tasks continue through the normal workflow.
 
-Use `target_surfaces` in `docs/features/<feature-slug>/sad.md` as the routing decision once it exists:
+Use `target_surfaces` in the resolved work item's `sad.md` as the routing decision once it exists:
 
 - `web-frontend`, `mobile-app`, or `desktop-app` present → run `ai/skills/design-ui/SKILL.md` and require explicit design approval before planning or implementing UI tasks;
 - no UI surface present → skip `design-ui` and continue directly with the applicable architecture, contract, data-model, task-planning, and implementation stages;

@@ -85,6 +85,20 @@ export const SignUpForm = ({ emailError, onSubmit }: Props): ReactElement => {
         }
         {...register('password')}
       />
+      <Input
+        label={t('form.warehouseName.label')}
+        placeholder={t('form.warehouseName.placeholder')}
+        description={t('form.warehouseName.help')}
+        autoComplete="organization"
+        isDisabled={isSubmitting}
+        isInvalid={Boolean(errors.warehouseName)}
+        errorMessage={
+          errors.warehouseName?.message
+            ? translateValidation(errors.warehouseName.message)
+            : undefined
+        }
+        {...register('warehouseName')}
+      />
       <Button
         type="submit"
         aria-label={isSubmitting ? t('form.submitting') : t('form.submit')}
