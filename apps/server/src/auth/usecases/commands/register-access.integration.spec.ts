@@ -4,7 +4,7 @@ import { RegisterCommand } from 'auth/usecases/commands/register.command';
 import dataSource from 'shared/database/data-source';
 import { DbTransactionService } from 'shared/database/db-transaction.service';
 import { DbTransactionContext } from 'shared/database/db-transaction-context.service';
-import { AccessProvisioningRepository } from 'shared/domain/repositories/access/access-provisioning.repository';
+import { AccessProvisioningRepository } from 'shared/domain/repositories/access-provisioning.repository';
 import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
 
 const describeIntegration =

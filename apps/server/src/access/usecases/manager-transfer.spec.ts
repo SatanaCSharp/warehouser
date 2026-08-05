@@ -1,103 +1,119 @@
 import { ErrorCode, PermissionId } from '@warehouser/shared-types/enums';
 import { TransferWarehouseManagerCommand } from 'access/usecases/commands/transfer-warehouse-manager.command';
-import type { AccessPrincipal } from 'shared/access/access-principal';
-import { DbTransactionService } from 'shared/database/db-transaction.service';
-import { ManagerTransferRepository } from 'shared/domain/repositories/access/manager-transfer.repository';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { ManagerTransferRepository } from 'shared/domain/repositories/manager-transfer.repository';
 
 const warehouseId = '00000000-0000-4000-8000-000000000001';
 const managerId = '00000000-0000-4000-8000-000000000002';
 const recipientId = '00000000-0000-4000-8000-000000000003';
 const replacementRoleId = '00000000-0000-4000-8000-000000000004';
+const managerRoleId = '00000000-0000-4000-8000-000000000005';
 
-const principal = (
-  overrides: Partial<AccessPrincipal> = {},
-): AccessPrincipal => ({
+const currentUser = (
+  overrides: Partial<AccessCurrentUser> = {},
+): AccessCurrentUser => ({
   userId: managerId,
   warehouseId,
-  roleId: '00000000-0000-4000-8000-000000000005',
+  roleId: managerRoleId,
   roleKind: 'warehouse_manager',
   permissionId: PermissionId.WAREHOUSE_MANAGER_ROLE_REASSIGN,
   ...overrides,
 });
 
 const repositoryDouble = () => ({
-  transfer: jest.fn().mockResolvedValue('transferred'),
+  lockWarehouse: jest.fn().mockResolvedValue({ id: warehouseId }),
+  lockReplacementRole: jest.fn().mockResolvedValue({
+    id: replacementRoleId,
+  }),
+  lockMembers: jest.fn().mockResolvedValue([
+    { userId: managerId, roleId: managerRoleId, roleKind: 'warehouse_manager' },
+    { userId: recipientId, roleId: replacementRoleId, roleKind: 'custom' },
+  ]),
+  assignRole: jest.fn().mockResolvedValue(true),
 });
-const transactionsDouble = () => ({
-  executeInTransaction: jest.fn(
-    async (_options: unknown, callback: () => Promise<unknown>) => callback(),
-  ),
-});
-
 describe('TransferWarehouseManagerCommand', () => {
   it('commits recipient promotion and former-manager reassignment together', async () => {
     const repository = repositoryDouble();
-    const transactions = transactionsDouble();
     const command = new TransferWarehouseManagerCommand(
       repository as unknown as ManagerTransferRepository,
-      transactions as unknown as DbTransactionService,
     );
 
     await expect(
-      command.execute(principal(), { recipientId, replacementRoleId }),
+      command.execute(currentUser(), { recipientId, replacementRoleId }),
     ).resolves.toEqual({ managerId: recipientId });
-    expect(repository.transfer).toHaveBeenCalledWith({
+    expect(repository.assignRole).toHaveBeenNthCalledWith(
+      1,
       warehouseId,
-      currentManagerUserId: managerId,
-      recipientUserId: recipientId,
-      formerManagerRoleId: replacementRoleId,
-    });
-    expect(transactions.executeInTransaction).toHaveBeenCalledTimes(1);
+      managerId,
+      replacementRoleId,
+      'custom',
+    );
+    expect(repository.assignRole).toHaveBeenNthCalledWith(
+      2,
+      warehouseId,
+      recipientId,
+      managerRoleId,
+      'warehouse_manager',
+    );
   });
 
-  it.each([
-    { roleKind: 'custom' as const },
-    { permissionId: PermissionId.ROLES_ASSIGN },
-  ])(
-    'rejects a non-manager or missing reserved Permission',
-    async (overrides) => {
-      const repository = repositoryDouble();
-      const command = new TransferWarehouseManagerCommand(
-        repository as unknown as ManagerTransferRepository,
-        transactionsDouble() as unknown as DbTransactionService,
-      );
+  it('rejects a non-manager as a business invariant', async () => {
+    const repository = repositoryDouble();
+    const command = new TransferWarehouseManagerCommand(
+      repository as unknown as ManagerTransferRepository,
+    );
 
-      await expect(
-        command.execute(principal(overrides), {
+    await expect(
+      command.execute(currentUser({ roleKind: 'custom' }), {
+        recipientId,
+        replacementRoleId,
+      }),
+    ).rejects.toThrow();
+    expect(repository.lockWarehouse).not.toHaveBeenCalled();
+  });
+
+  it('relies on the transport guard for manager-transfer authorization', async () => {
+    const repository = repositoryDouble();
+    const command = new TransferWarehouseManagerCommand(
+      repository as unknown as ManagerTransferRepository,
+    );
+
+    await expect(
+      command.execute(
+        currentUser({ permissionId: PermissionId.ROLES_ASSIGN }),
+        {
           recipientId,
           replacementRoleId,
-        }),
-      ).rejects.toThrow();
-      expect(repository.transfer).not.toHaveBeenCalled();
-    },
-  );
+        },
+      ),
+    ).resolves.toEqual({ managerId: recipientId });
+    expect(repository.lockWarehouse).toHaveBeenCalled();
+  });
 
   it('rejects self transfer before persistence', async () => {
     const repository = repositoryDouble();
     const command = new TransferWarehouseManagerCommand(
       repository as unknown as ManagerTransferRepository,
-      transactionsDouble() as unknown as DbTransactionService,
     );
     await expect(
-      command.execute(principal(), {
+      command.execute(currentUser(), {
         recipientId: managerId,
         replacementRoleId,
       }),
     ).rejects.toMatchObject({
       code: ErrorCode.ACCESS_INVALID_MANAGER_TRANSFER,
     });
-    expect(repository.transfer).not.toHaveBeenCalled();
+    expect(repository.lockWarehouse).not.toHaveBeenCalled();
   });
 
   it('rejects scoped recipient or replacement misses atomically', async () => {
     const repository = repositoryDouble();
-    repository.transfer.mockResolvedValue('target-unavailable');
+    repository.lockWarehouse.mockResolvedValue(null);
     const command = new TransferWarehouseManagerCommand(
       repository as unknown as ManagerTransferRepository,
-      transactionsDouble() as unknown as DbTransactionService,
     );
     await expect(
-      command.execute(principal(), { recipientId, replacementRoleId }),
+      command.execute(currentUser(), { recipientId, replacementRoleId }),
     ).rejects.toMatchObject({ code: ErrorCode.ACCESS_TARGET_UNAVAILABLE });
   });
 });

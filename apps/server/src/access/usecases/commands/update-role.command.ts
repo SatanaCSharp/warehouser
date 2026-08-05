@@ -1,18 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { PermissionId } from '@warehouser/shared-types/enums';
+import { assert, assertDefined } from '@warehouser/utils/asserts';
 import {
-  accessDeniedError,
   invalidRoleError,
-  protectedRoleError,
   roleNameConflictError,
   roleUnavailableError,
 } from 'access/domain/errors/access.errors';
 import { AccessName } from 'access/domain/value-objects/access-name';
-import type { AccessPrincipal } from 'shared/access/access-principal';
-import {
-  RoleLifecycleRepository,
-  type RoleWriteResult,
-} from 'shared/domain/repositories/access/role-lifecycle.repository';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { Transactional } from 'shared/decorators/transactional.decorator';
+import { RoleLifecycleRepository } from 'shared/domain/repositories/role-lifecycle.repository';
 
 export interface UpdateRoleInput {
   readonly roleId: string;
@@ -25,45 +21,55 @@ export interface UpdatedRoleProjection {
   readonly name: string;
 }
 
-const assertUpdateAuthority = (principal: AccessPrincipal): void => {
-  if (principal.permissionId !== PermissionId.ROLES_UPDATE) {
-    throw accessDeniedError();
-  }
-};
-
-const assertRoleUpdated = (result: RoleWriteResult): void => {
-  if (result === 'saved') {
-    return;
-  }
-  if (result === 'name-conflict') {
-    throw roleNameConflictError();
-  }
-  if (result === 'invalid-permission') {
-    throw invalidRoleError();
-  }
-  if (result === 'protected-role') {
-    throw protectedRoleError();
-  }
-  throw roleUnavailableError();
-};
-
 @Injectable()
 export class UpdateRoleCommand {
-  constructor(private readonly roles: RoleLifecycleRepository) {}
+  constructor(
+    private readonly roleLifecycleRepository: RoleLifecycleRepository,
+  ) {}
 
+  @Transactional()
   async execute(
-    principal: AccessPrincipal,
+    currentUser: AccessCurrentUser,
     input: UpdateRoleInput,
   ): Promise<UpdatedRoleProjection> {
-    assertUpdateAuthority(principal);
     const name = AccessName.create(input.name).value;
-    const result = await this.roles.updateCustomRole({
-      id: input.roleId,
-      warehouseId: principal.warehouseId,
+
+    const warehouse = await this.roleLifecycleRepository.lockWarehouse(
+      currentUser.warehouseId,
+    );
+    assertDefined(warehouse, roleUnavailableError());
+
+    const role = await this.roleLifecycleRepository.lockCustomRole(
+      currentUser.warehouseId,
+      input.roleId,
+    );
+    assertDefined(role, roleUnavailableError());
+
+    const permissions =
+      await this.roleLifecycleRepository.findAssignablePermissions(
+        input.permissionIds,
+      );
+    assert(
+      permissions.length === new Set(input.permissionIds).size,
+      invalidRoleError(),
+    );
+
+    const matchingRole = await this.roleLifecycleRepository.findRoleByName(
+      currentUser.warehouseId,
       name,
-      permissionIds: input.permissionIds,
-    });
-    assertRoleUpdated(result);
+    );
+    assert(
+      matchingRole === null || matchingRole.id === role.id,
+      roleNameConflictError(),
+    );
+
+    await this.roleLifecycleRepository.updateCustomRole(role.id, name);
+
+    await this.roleLifecycleRepository.replaceCustomRolePermissions(
+      role.id,
+      permissions,
+    );
+
     return { id: input.roleId, name };
   }
 }

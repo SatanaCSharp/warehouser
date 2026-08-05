@@ -1,17 +1,19 @@
 import { Injectable } from '@nestjs/common';
 import type { AccessProjection } from '@warehouser/contracts/access';
+import { assertDefined } from '@warehouser/utils/asserts';
 import { membershipRequiredError } from 'access/domain/errors/access.errors';
-import { AccessPrincipalRepository } from 'shared/domain/repositories/access/access-principal.repository';
+import { AccessCurrentUserRepository } from 'shared/domain/repositories/access-current-user.repository';
 
 @Injectable()
 export class ReadCurrentAccessQuery {
-  constructor(private readonly principals: AccessPrincipalRepository) {}
+  constructor(
+    private readonly accessCurrentUserRepository: AccessCurrentUserRepository,
+  ) {}
 
   async execute(userId: string): Promise<AccessProjection> {
-    const projection = await this.principals.resolveCurrentAccess(userId);
-    if (!projection) {
-      throw membershipRequiredError();
-    }
+    const projection =
+      await this.accessCurrentUserRepository.resolveCurrentAccess(userId);
+    assertDefined(projection, membershipRequiredError());
 
     return {
       warehouseId: projection.warehouseId,

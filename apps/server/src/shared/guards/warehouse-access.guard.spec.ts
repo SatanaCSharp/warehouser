@@ -2,7 +2,7 @@ import { ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ErrorCode, PermissionId } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
-import { AccessPrincipalRepository } from 'shared/domain/repositories/access/access-principal.repository';
+import { AccessCurrentUserRepository } from 'shared/domain/repositories/access-current-user.repository';
 import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
 
 const userId = '00000000-0000-4000-8000-000000000001';
@@ -21,7 +21,7 @@ describe('WarehouseAccessGuard', () => {
     getAllAndOverride: jest.fn().mockReturnValue([PermissionId.ROLES_WATCH]),
   } as unknown as Reflector;
 
-  it('resolves current authority on every decision and attaches an immutable principal', async () => {
+  it('resolves current authority on every decision and attaches an immutable current user', async () => {
     const resolveAnyRequiredPermission = jest
       .fn()
       .mockResolvedValueOnce({
@@ -42,7 +42,7 @@ describe('WarehouseAccessGuard', () => {
       });
     const guard = new WarehouseAccessGuard(reflector, {
       resolveAnyRequiredPermission,
-    } as unknown as AccessPrincipalRepository);
+    } as unknown as AccessCurrentUserRepository);
     const firstRequest = { user: { userId } };
 
     await expect(guard.canActivate(contextFor(firstRequest))).resolves.toBe(
@@ -76,7 +76,7 @@ describe('WarehouseAccessGuard', () => {
     async (_name, request, result) => {
       const guard = new WarehouseAccessGuard(reflector, {
         resolveAnyRequiredPermission: jest.fn().mockResolvedValue(result),
-      } as unknown as AccessPrincipalRepository);
+      } as unknown as AccessCurrentUserRepository);
 
       await expect(guard.canActivate(contextFor(request))).rejects.toEqual(
         expect.objectContaining<ApplicationError>({

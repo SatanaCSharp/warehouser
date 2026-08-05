@@ -1,20 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { PermissionId } from '@warehouser/shared-types/enums';
+import { assert, assertDefined } from '@warehouser/utils/asserts';
 import {
   accessDeniedError,
   concurrentAccessChangeError,
   invalidManagerTransferError,
-  managerTransferUnavailableError,
   targetUnavailableError,
 } from 'access/domain/errors/access.errors';
-import type { AccessPrincipal } from 'shared/access/access-principal';
-import { DbTransactionService } from 'shared/database/db-transaction.service';
-import { ManagerTransferRepository } from 'shared/domain/repositories/access/manager-transfer.repository';
-
-const isUniqueViolation = (error: unknown): boolean =>
-  typeof error === 'object' &&
-  error !== null &&
-  Object.getOwnPropertyDescriptor(error, 'code')?.value === '23505';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { Transactional } from 'shared/decorators/transactional.decorator';
+import { ManagerTransferRepository } from 'shared/domain/repositories/manager-transfer.repository';
 
 export interface TransferWarehouseManagerInput {
   readonly recipientId: string;
@@ -24,49 +18,73 @@ export interface TransferWarehouseManagerInput {
 @Injectable()
 export class TransferWarehouseManagerCommand {
   constructor(
-    private readonly transfers: ManagerTransferRepository,
-    private readonly transactions: DbTransactionService,
+    private readonly managerTransferRepository: ManagerTransferRepository,
   ) {}
 
+  @Transactional()
   async execute(
-    principal: AccessPrincipal,
+    currentUser: AccessCurrentUser,
     input: TransferWarehouseManagerInput,
   ): Promise<{ readonly managerId: string }> {
-    const authorized =
-      principal.roleKind === 'warehouse_manager' &&
-      principal.permissionId === PermissionId.WAREHOUSE_MANAGER_ROLE_REASSIGN;
-    if (!authorized) {
-      throw accessDeniedError();
-    }
-    if (principal.userId === input.recipientId) {
-      throw invalidManagerTransferError();
-    }
+    assert(currentUser.roleKind === 'warehouse_manager', accessDeniedError());
+    assert(
+      currentUser.userId !== input.recipientId,
+      invalidManagerTransferError(),
+    );
 
-    let result;
-    try {
-      result = await this.transactions.executeInTransaction({}, () =>
-        this.transfers.transfer({
-          warehouseId: principal.warehouseId,
-          currentManagerUserId: principal.userId,
-          recipientUserId: input.recipientId,
-          formerManagerRoleId: input.replacementRoleId,
-        }),
+    const warehouse = await this.managerTransferRepository.lockWarehouse(
+      currentUser.warehouseId,
+    );
+
+    assertDefined(warehouse, targetUnavailableError());
+
+    const replacement =
+      await this.managerTransferRepository.lockReplacementRole(
+        currentUser.warehouseId,
+        input.replacementRoleId,
       );
-    } catch (error) {
-      if (isUniqueViolation(error)) {
-        throw concurrentAccessChangeError();
-      }
-      throw managerTransferUnavailableError(error);
-    }
-    if (result === 'target-unavailable') {
-      throw targetUnavailableError();
-    }
-    if (result === 'invalid-transfer') {
-      throw invalidManagerTransferError();
-    }
-    if (result !== 'transferred') {
-      throw concurrentAccessChangeError();
-    }
+
+    assertDefined(replacement, invalidManagerTransferError());
+
+    const members = await this.managerTransferRepository.lockMembers(
+      currentUser.warehouseId,
+      [currentUser.userId, input.recipientId],
+    );
+
+    const current = members.find(
+      (member) => member.userId === currentUser.userId,
+    );
+
+    const recipient = members.find(
+      (member) => member.userId === input.recipientId,
+    );
+
+    assertDefined(recipient, targetUnavailableError());
+
+    assert(
+      current?.roleKind === 'warehouse_manager' &&
+        recipient.roleKind === 'custom',
+      concurrentAccessChangeError(),
+    );
+
+    const demoted = await this.managerTransferRepository.assignRole(
+      currentUser.warehouseId,
+      currentUser.userId,
+      replacement.id,
+      'custom',
+    );
+
+    assert(demoted, concurrentAccessChangeError());
+
+    const promoted = await this.managerTransferRepository.assignRole(
+      currentUser.warehouseId,
+      recipient.userId,
+      current.roleId,
+      'warehouse_manager',
+    );
+
+    assert(promoted, concurrentAccessChangeError());
+
     return { managerId: input.recipientId };
   }
 }

@@ -1,5 +1,5 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
-import { ApplicationError, SystemError } from '@warehouser/shared-types/errors';
+import { ApplicationError } from '@warehouser/shared-types/errors';
 
 export const accessDeniedError = (): ApplicationError =>
   new ApplicationError(ErrorCode.ACCESS_DENIED);
@@ -23,7 +23,3 @@ export const invalidManagerTransferError = (): ApplicationError =>
   new ApplicationError(ErrorCode.ACCESS_INVALID_MANAGER_TRANSFER);
 export const concurrentAccessChangeError = (): ApplicationError =>
   new ApplicationError(ErrorCode.ACCESS_CONCURRENT_CHANGE);
-export const roleDeletionUnavailableError = (cause: unknown): SystemError =>
-  new SystemError(ErrorCode.ACCESS_ROLE_DELETION_UNAVAILABLE, cause);
-export const managerTransferUnavailableError = (cause: unknown): SystemError =>
-  new SystemError(ErrorCode.ACCESS_MANAGER_TRANSFER_UNAVAILABLE, cause);

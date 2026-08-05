@@ -1,6 +1,6 @@
 {
   "heading": "Access",
-  "description": "Review roles, members, and permissions for your current Warehouse.",
+  "description": "Manage roles, permissions, and member assignments for your current Warehouse.",
   "loading": "Loading access",
   "navigation": {
     "label": "Access sections",
@@ -13,7 +13,12 @@
     "listLabel": "Warehouse roles",
     "empty": "No roles are available.",
     "error": "Roles could not be loaded safely. Try again.",
-    "protected": "Protected"
+    "protected": "Protected",
+    "search": "Search roles",
+    "memberCount": "{{count}} member",
+    "memberCount_other": "{{count}} members",
+    "permissionCount": "{{count}} permission",
+    "permissionCount_other": "{{count}} permissions"
   },
   "members": {
     "heading": "Members",
@@ -39,7 +44,10 @@
       "createTitle": "Create role",
       "editTitle": "Edit role",
       "name": "Role name",
+      "selectedName": "Selected role name",
       "permissions": "Permissions",
+      "subtitle": "Custom role · {{count}} assigned members",
+      "hint": "Changes apply to the next authorization decision. Manager-only permissions stay unavailable.",
       "reserved": "Reserved for the protected Warehouse Manager role.",
       "validation": {
         "required": "Enter a role name.",
@@ -47,7 +55,8 @@
         "characters": "Remove control or formatting characters.",
         "server": "Check the role name and try again."
       },
-      "save": "Save role"
+      "save": "Save role",
+      "saveChanges": "Save changes"
     },
     "assignment": {
       "open": "Change role for {{userId}}",

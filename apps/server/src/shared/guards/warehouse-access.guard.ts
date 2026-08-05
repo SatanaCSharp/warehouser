@@ -6,16 +6,16 @@ import {
 import { Reflector } from '@nestjs/core';
 import { ErrorCode, type PermissionId } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
-import { accessPrincipal } from 'shared/access/access-principal';
+import { accessCurrentUser } from 'shared/access/access-current-user';
 import type { WarehouseAccessRequest } from 'shared/access/access-request';
 import { REQUIRED_PERMISSION_KEY } from 'shared/decorators/required-permission.decorator';
-import { AccessPrincipalRepository } from 'shared/domain/repositories/access/access-principal.repository';
+import { AccessCurrentUserRepository } from 'shared/domain/repositories/access-current-user.repository';
 
 @Injectable()
 export class WarehouseAccessGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
-    private readonly principals: AccessPrincipalRepository,
+    private readonly currentUsers: AccessCurrentUserRepository,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -28,7 +28,7 @@ export class WarehouseAccessGuard implements CanActivate {
       throw new ApplicationError(ErrorCode.ACCESS_DENIED);
     }
 
-    const current = await this.principals.resolveAnyRequiredPermission(
+    const current = await this.currentUsers.resolveAnyRequiredPermission(
       request.user.userId,
       permissionIds,
     );
@@ -36,7 +36,7 @@ export class WarehouseAccessGuard implements CanActivate {
       throw new ApplicationError(ErrorCode.ACCESS_DENIED);
     }
 
-    request.access = accessPrincipal({
+    request.access = accessCurrentUser({
       userId: current.userId,
       warehouseId: current.warehouseId,
       roleId: current.roleId,

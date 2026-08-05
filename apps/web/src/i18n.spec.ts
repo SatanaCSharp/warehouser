@@ -51,6 +51,12 @@ const leafKeys = (value: object, prefix = ''): string[] =>
       : [path];
   });
 
+const pluralSuffix = /_(?:zero|one|two|few|many|other)$/u;
+
+const translationKeys = (value: object): string[] => [
+  ...new Set(leafKeys(value).map((key) => key.replace(pluralSuffix, ''))),
+];
+
 describe('localization resources', () => {
   it('keeps registered namespaces and keys complete in every locale', () => {
     expect(Object.keys(resources.en).sort()).toEqual([...namespaces].sort());
@@ -60,8 +66,8 @@ describe('localization resources', () => {
     );
 
     for (const namespace of namespaces) {
-      expect(leafKeys(resources.uk[namespace]).sort()).toEqual(
-        leafKeys(resources.en[namespace]).sort(),
+      expect(translationKeys(resources.uk[namespace]).sort()).toEqual(
+        translationKeys(resources.en[namespace]).sort(),
       );
     }
   });

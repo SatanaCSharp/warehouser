@@ -1,18 +1,22 @@
 import { ErrorCode, PermissionId } from '@warehouser/shared-types/enums';
+import { RoleDeletionService } from 'access/domain/services/role-deletion.service';
 import { AssignMemberRoleCommand } from 'access/usecases/commands/assign-member-role.command';
 import { DeleteRoleCommand } from 'access/usecases/commands/delete-role.command';
-import type { AccessPrincipal } from 'shared/access/access-principal';
-import { DbTransactionService } from 'shared/database/db-transaction.service';
-import { RoleLifecycleRepository } from 'shared/domain/repositories/access/role-lifecycle.repository';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import {
+  TRANSACTIONAL_KEY,
+  type TransactionalMetadata,
+} from 'shared/decorators/transactional.decorator';
+import { RoleLifecycleRepository } from 'shared/domain/repositories/role-lifecycle.repository';
 
 const warehouseId = '00000000-0000-4000-8000-000000000001';
 const sourceRoleId = '00000000-0000-4000-8000-000000000002';
 const replacementRoleId = '00000000-0000-4000-8000-000000000003';
 const memberId = '00000000-0000-4000-8000-000000000004';
 
-const principal = (
-  permissionId: AccessPrincipal['permissionId'],
-): AccessPrincipal => ({
+const currentUser = (
+  permissionId: AccessCurrentUser['permissionId'],
+): AccessCurrentUser => ({
   userId: '00000000-0000-4000-8000-000000000005',
   warehouseId,
   roleId: '00000000-0000-4000-8000-000000000006',
@@ -21,15 +25,27 @@ const principal = (
 });
 
 const repositoryDouble = () => ({
-  assignMemberRole: jest.fn().mockResolvedValue('assigned'),
-  deleteCustomRole: jest.fn().mockResolvedValue('deleted'),
+  findMemberRole: jest.fn().mockResolvedValue({ roleKind: 'custom' }),
+  findCustomRole: jest.fn().mockResolvedValue({
+    id: replacementRoleId,
+    kind: 'custom',
+  }),
+  updateMemberRole: jest.fn().mockResolvedValue(true),
+  lockWarehouse: jest.fn().mockResolvedValue({ id: warehouseId }),
+  lockCustomRole: jest
+    .fn()
+    .mockImplementation((_warehouseId: string, id: string) =>
+      Promise.resolve({ id }),
+    ),
+  countRoleMembers: jest.fn().mockResolvedValue(0),
+  replaceRoleAssignments: jest.fn().mockResolvedValue(undefined),
+  removeCustomRole: jest.fn().mockResolvedValue(undefined),
 });
 
-const transactionsDouble = () => ({
-  executeInTransaction: jest.fn(
-    async (_options: unknown, callback: () => Promise<unknown>) => callback(),
-  ),
-});
+const deleteRoleCommand = (repository: ReturnType<typeof repositoryDouble>) => {
+  const roles = repository as unknown as RoleLifecycleRepository;
+  return new DeleteRoleCommand(roles, new RoleDeletionService(roles));
+};
 
 describe('member Role lifecycle commands', () => {
   it('assigns exactly one same-Warehouse custom Role', async () => {
@@ -39,27 +55,86 @@ describe('member Role lifecycle commands', () => {
     );
 
     await expect(
-      command.execute(principal(PermissionId.ROLES_ASSIGN), {
+      command.execute(currentUser(PermissionId.ROLES_ASSIGN), {
         memberId,
         roleId: replacementRoleId,
       }),
     ).resolves.toEqual({ memberId, roleId: replacementRoleId });
-    expect(repository.assignMemberRole).toHaveBeenCalledWith(
+    expect(repository.findMemberRole).toHaveBeenCalledWith(
+      warehouseId,
+      memberId,
+    );
+    expect(repository.findCustomRole).toHaveBeenCalledWith(
+      warehouseId,
+      replacementRoleId,
+    );
+    expect(repository.updateMemberRole).toHaveBeenCalledWith(
       warehouseId,
       memberId,
       replacementRoleId,
     );
   });
 
-  it('denies protected, current-manager, and cross-Warehouse assignment misses', async () => {
+  it('denies an unavailable member', async () => {
     const repository = repositoryDouble();
-    repository.assignMemberRole.mockResolvedValue('target-unavailable');
+    repository.findMemberRole.mockResolvedValue(null);
     const command = new AssignMemberRoleCommand(
       repository as unknown as RoleLifecycleRepository,
     );
 
     await expect(
-      command.execute(principal(PermissionId.ROLES_ASSIGN), {
+      command.execute(currentUser(PermissionId.ROLES_ASSIGN), {
+        memberId,
+        roleId: replacementRoleId,
+      }),
+    ).rejects.toMatchObject({ code: ErrorCode.ACCESS_TARGET_UNAVAILABLE });
+  });
+
+  it('requires a transfer when assigning a Role to the Warehouse manager', async () => {
+    const repository = repositoryDouble();
+    repository.findMemberRole.mockResolvedValue({
+      roleKind: 'warehouse_manager',
+    });
+    const command = new AssignMemberRoleCommand(
+      repository as unknown as RoleLifecycleRepository,
+    );
+
+    await expect(
+      command.execute(currentUser(PermissionId.ROLES_ASSIGN), {
+        memberId,
+        roleId: replacementRoleId,
+      }),
+    ).rejects.toMatchObject({
+      code: ErrorCode.ACCESS_MANAGER_TRANSFER_REQUIRED,
+    });
+    expect(repository.findCustomRole).not.toHaveBeenCalled();
+  });
+
+  it('denies an unavailable custom Role', async () => {
+    const repository = repositoryDouble();
+    repository.findCustomRole.mockResolvedValue(null);
+    const command = new AssignMemberRoleCommand(
+      repository as unknown as RoleLifecycleRepository,
+    );
+
+    await expect(
+      command.execute(currentUser(PermissionId.ROLES_ASSIGN), {
+        memberId,
+        roleId: replacementRoleId,
+      }),
+    ).rejects.toMatchObject({ code: ErrorCode.ACCESS_TARGET_UNAVAILABLE });
+    expect(repository.updateMemberRole).not.toHaveBeenCalled();
+  });
+
+  it('denies an assignment when the member update misses', async () => {
+    const repository = repositoryDouble();
+    repository.updateMemberRole.mockResolvedValue(false);
+    const command = new AssignMemberRoleCommand(
+      repository as unknown as RoleLifecycleRepository,
+    );
+
+    await expect(
+      command.execute(currentUser(PermissionId.ROLES_ASSIGN), {
         memberId,
         roleId: replacementRoleId,
       }),
@@ -68,93 +143,93 @@ describe('member Role lifecycle commands', () => {
 
   it('atomically replaces assigned members and deletes the source Role', async () => {
     const repository = repositoryDouble();
-    const transactions = transactionsDouble();
-    const command = new DeleteRoleCommand(
-      repository as unknown as RoleLifecycleRepository,
-      transactions as unknown as DbTransactionService,
-    );
+    const command = deleteRoleCommand(repository);
 
     await expect(
-      command.execute(principal(PermissionId.ROLES_DELETE), {
+      command.execute(currentUser(PermissionId.ROLES_DELETE), {
         roleId: sourceRoleId,
         replacementRoleId,
       }),
     ).resolves.toEqual({ id: sourceRoleId });
-    expect(repository.deleteCustomRole).toHaveBeenCalledWith(
+    expect(repository.replaceRoleAssignments).toHaveBeenCalledWith(
       warehouseId,
       sourceRoleId,
       replacementRoleId,
     );
-    expect(transactions.executeInTransaction).toHaveBeenCalledTimes(1);
+    expect(repository.removeCustomRole).toHaveBeenCalledWith(
+      warehouseId,
+      sourceRoleId,
+    );
+    expect(
+      Reflect.getMetadata(
+        TRANSACTIONAL_KEY,
+        DeleteRoleCommand.prototype.execute,
+      ) as TransactionalMetadata | undefined,
+    ).toEqual({ propagation: undefined, isolationLevel: undefined });
   });
 
   it('deletes an unassigned custom Role without a replacement', async () => {
     const repository = repositoryDouble();
-    const command = new DeleteRoleCommand(
-      repository as unknown as RoleLifecycleRepository,
-      transactionsDouble() as unknown as DbTransactionService,
-    );
+    const command = deleteRoleCommand(repository);
 
     await expect(
-      command.execute(principal(PermissionId.ROLES_DELETE), {
+      command.execute(currentUser(PermissionId.ROLES_DELETE), {
         roleId: sourceRoleId,
       }),
     ).resolves.toEqual({ id: sourceRoleId });
-    expect(repository.deleteCustomRole).toHaveBeenCalledWith(
+    expect(repository.removeCustomRole).toHaveBeenCalledWith(
       warehouseId,
       sourceRoleId,
-      undefined,
     );
   });
 
-  it('denies missing authority before assignment or deletion writes', async () => {
+  it('relies on the transport guard for assignment and deletion authorization', async () => {
     const repository = repositoryDouble();
-    const transactions = transactionsDouble();
     const assign = new AssignMemberRoleCommand(
       repository as unknown as RoleLifecycleRepository,
     );
-    const remove = new DeleteRoleCommand(
-      repository as unknown as RoleLifecycleRepository,
-      transactions as unknown as DbTransactionService,
-    );
+    const remove = deleteRoleCommand(repository);
 
     await expect(
-      assign.execute(principal(PermissionId.ROLES_WATCH), {
+      assign.execute(currentUser(PermissionId.ROLES_WATCH), {
         memberId,
         roleId: replacementRoleId,
       }),
-    ).rejects.toThrow();
+    ).resolves.toEqual({ memberId, roleId: replacementRoleId });
     await expect(
-      remove.execute(principal(PermissionId.ROLES_WATCH), {
+      remove.execute(currentUser(PermissionId.ROLES_WATCH), {
         roleId: sourceRoleId,
       }),
-    ).rejects.toThrow();
-    expect(repository.assignMemberRole).not.toHaveBeenCalled();
-    expect(transactions.executeInTransaction).not.toHaveBeenCalled();
+    ).resolves.toEqual({ id: sourceRoleId });
+    expect(repository.findMemberRole).toHaveBeenCalled();
+    expect(repository.lockWarehouse).toHaveBeenCalled();
   });
 
-  it.each([
-    'role-unavailable',
-    'replacement-required',
-    'invalid-replacement',
-  ] as const)('rolls back and rejects deletion result %s', async (result) => {
+  it('rolls back when the source Role is unavailable', async () => {
     const repository = repositoryDouble();
-    repository.deleteCustomRole.mockResolvedValue(result);
-    const command = new DeleteRoleCommand(
-      repository as unknown as RoleLifecycleRepository,
-      transactionsDouble() as unknown as DbTransactionService,
-    );
+    repository.lockCustomRole.mockResolvedValue(null);
+    const command = deleteRoleCommand(repository);
 
     await expect(
-      command.execute(principal(PermissionId.ROLES_DELETE), {
+      command.execute(currentUser(PermissionId.ROLES_DELETE), {
         roleId: sourceRoleId,
         replacementRoleId,
       }),
-    ).rejects.toMatchObject({
-      code:
-        result === 'replacement-required' || result === 'invalid-replacement'
-          ? ErrorCode.ACCESS_REPLACEMENT_REQUIRED
-          : ErrorCode.ACCESS_ROLE_UNAVAILABLE,
-    });
+    ).rejects.toMatchObject({ code: ErrorCode.ACCESS_ROLE_UNAVAILABLE });
+  });
+
+  it('rolls back when the replacement Role is unavailable', async () => {
+    const repository = repositoryDouble();
+    repository.lockCustomRole
+      .mockResolvedValueOnce({ id: sourceRoleId })
+      .mockResolvedValueOnce(null);
+    const command = deleteRoleCommand(repository);
+
+    await expect(
+      command.execute(currentUser(PermissionId.ROLES_DELETE), {
+        roleId: sourceRoleId,
+        replacementRoleId,
+      }),
+    ).rejects.toMatchObject({ code: ErrorCode.ACCESS_REPLACEMENT_REQUIRED });
   });
 });

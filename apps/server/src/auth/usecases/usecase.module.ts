@@ -6,11 +6,10 @@ import { RegisterCommand } from 'auth/usecases/commands/register.command';
 import { SignInCommand } from 'auth/usecases/commands/sign-in.command';
 import { SignOutCommand } from 'auth/usecases/commands/sign-out.command';
 import { CurrentSessionQuery } from 'auth/usecases/queries/current-session.query';
-import { TransactionModule } from 'shared/database/transaction.module';
 import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
 
 @Module({
-  imports: [TransactionModule, AccessUsecaseModule],
+  imports: [AccessUsecaseModule],
   providers: [
     AuthRegistrationService,
     {

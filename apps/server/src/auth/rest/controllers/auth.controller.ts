@@ -75,8 +75,8 @@ export class AuthController {
     @Res({ passthrough: true }) response: AuthResponse,
   ): Promise<AuthenticatedUser | undefined> {
     const secret = readSessionCookie(cookieHeader);
-    const principal = await this.currentSession.execute(secret);
-    if (!principal) {
+    const currentUser = await this.currentSession.execute(secret);
+    if (!currentUser) {
       if (secret) {
         this.cookie.expire(response);
       }
@@ -84,7 +84,7 @@ export class AuthController {
       return undefined;
     }
 
-    return { user: { id: principal.userId } };
+    return { user: { id: currentUser.userId } };
   }
 
   @Delete('session')

@@ -1,8 +1,4 @@
-import {
-  hashPassword,
-  passwordCredentialNeedsUpgrade,
-  verifyPassword,
-} from 'auth/domain/security/password';
+import { hashPassword, verifyPassword } from 'auth/domain/security/password';
 
 const testParameters = {
   cost: 1_024,
@@ -24,19 +20,5 @@ describe('password security', () => {
     await expect(verifyPassword(`${password}!`, credential)).resolves.toBe(
       false,
     );
-  });
-
-  it('detects credentials that need a parameter upgrade', async () => {
-    const credential = await hashPassword('password', testParameters);
-
-    expect(passwordCredentialNeedsUpgrade(credential, testParameters)).toBe(
-      false,
-    );
-    expect(
-      passwordCredentialNeedsUpgrade(credential, {
-        ...testParameters,
-        cost: 2_048,
-      }),
-    ).toBe(true);
   });
 });

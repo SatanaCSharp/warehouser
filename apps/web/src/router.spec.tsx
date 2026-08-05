@@ -218,7 +218,7 @@ describe('router', () => {
       await screen.findByRole('button', { name: 'Create role' }),
     );
     const dialog = screen.getByRole('dialog', { name: 'Create role' });
-    await user.type(screen.getByLabelText('Role name'), 'Auditor');
+    await user.type(within(dialog).getByLabelText('Role name'), 'Auditor');
     await user.click(within(dialog).getByRole('button', { name: 'Save role' }));
 
     expect(await screen.findByText('Access unavailable')).toBeInTheDocument();

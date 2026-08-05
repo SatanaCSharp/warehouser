@@ -1,12 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { PermissionId } from '@warehouser/shared-types/enums';
+import { assert, assertDefined } from '@warehouser/utils/asserts';
 import {
-  accessDeniedError,
   managerTransferRequiredError,
   targetUnavailableError,
 } from 'access/domain/errors/access.errors';
-import type { AccessPrincipal } from 'shared/access/access-principal';
-import { RoleLifecycleRepository } from 'shared/domain/repositories/access/role-lifecycle.repository';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { RoleLifecycleRepository } from 'shared/domain/repositories/role-lifecycle.repository';
 
 export interface AssignMemberRoleInput {
   readonly memberId: string;
@@ -15,26 +14,41 @@ export interface AssignMemberRoleInput {
 
 @Injectable()
 export class AssignMemberRoleCommand {
-  constructor(private readonly roles: RoleLifecycleRepository) {}
+  constructor(
+    private readonly roleLifecycleRepository: RoleLifecycleRepository,
+  ) {}
 
   async execute(
-    principal: AccessPrincipal,
+    currentUser: AccessCurrentUser,
     input: AssignMemberRoleInput,
   ): Promise<AssignMemberRoleInput> {
-    if (principal.permissionId !== PermissionId.ROLES_ASSIGN) {
-      throw accessDeniedError();
-    }
-    const result = await this.roles.assignMemberRole(
-      principal.warehouseId,
+    const membership = await this.roleLifecycleRepository.findMemberRole(
+      currentUser.warehouseId,
       input.memberId,
+    );
+
+    assertDefined(membership, targetUnavailableError());
+
+    assert(
+      membership.roleKind !== 'warehouse_manager',
+      managerTransferRequiredError(),
+    );
+
+    const role = await this.roleLifecycleRepository.findCustomRole(
+      currentUser.warehouseId,
       input.roleId,
     );
-    if (result === 'manager-transfer-required') {
-      throw managerTransferRequiredError();
-    }
-    if (result !== 'assigned') {
-      throw targetUnavailableError();
-    }
+
+    assertDefined(role, targetUnavailableError());
+
+    const assigned = await this.roleLifecycleRepository.updateMemberRole(
+      currentUser.warehouseId,
+      input.memberId,
+      role.id,
+    );
+
+    assert(assigned, targetUnavailableError());
+
     return input;
   }
 }

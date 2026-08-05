@@ -1,5 +1,5 @@
 import { AssertionError } from '@warehouser/shared-types/errors';
-import { toAuthenticatedPrincipal } from 'auth/domain/authenticated-principal';
+import { toAuthenticatedCurrentUser } from 'auth/domain/authenticated-current-user';
 import { Account } from 'auth/domain/entities/account';
 import { Session } from 'auth/domain/entities/session';
 import { User } from 'auth/domain/entities/user';
@@ -67,7 +67,7 @@ describe('auth domain', () => {
 
   it('projects identity without credentials, sessions, or grants', () => {
     expect(
-      toAuthenticatedPrincipal(
+      toAuthenticatedCurrentUser(
         UserId.create('00000000-0000-4000-8000-000000000001'),
       ),
     ).toEqual({ userId: '00000000-0000-4000-8000-000000000001' });

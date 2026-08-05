@@ -1,5 +1,5 @@
 import { type AuthRuntime, authRuntime } from 'auth/domain/auth-runtime';
-import { toAuthenticatedPrincipal } from 'auth/domain/authenticated-principal';
+import { toAuthenticatedCurrentUser } from 'auth/domain/authenticated-current-user';
 import { toSession } from 'auth/domain/mappers/session.mapper';
 import { digestSessionSecret } from 'auth/domain/security/session-secret';
 import { UserId } from 'auth/domain/value-objects/identity-id';
@@ -28,6 +28,6 @@ export class CurrentSessionQuery {
     }
     const session = toSession(sessionEntity);
 
-    return toAuthenticatedPrincipal(UserId.create(session.accountId.value));
+    return toAuthenticatedCurrentUser(UserId.create(session.accountId.value));
   }
 }

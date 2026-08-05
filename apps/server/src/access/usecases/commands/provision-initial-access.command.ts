@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 
-import { Injectable, Optional } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { AccessName } from 'access/domain/value-objects/access-name';
-import { AccessProvisioningRepository } from 'shared/domain/repositories/access/access-provisioning.repository';
+import { AccessProvisioningRepository } from 'shared/domain/repositories/access-provisioning.repository';
 
 const MANAGER_PERMISSION_IDS = [
   'ROLES:ASSIGN',
@@ -15,16 +15,6 @@ const MANAGER_PERMISSION_IDS = [
   'USERS:WATCH',
   'WAREHOUSE_MANAGER_ROLE:REASSIGN',
 ] as const;
-
-export interface AccessProvisioningRuntime {
-  readonly warehouseId: () => string;
-  readonly roleId: () => string;
-}
-
-const accessProvisioningRuntime: AccessProvisioningRuntime = {
-  warehouseId: randomUUID,
-  roleId: randomUUID,
-};
 
 export interface ProvisionInitialAccessInput {
   readonly userId: string;
@@ -41,17 +31,16 @@ export interface InitialAccessProjection {
 @Injectable()
 export class ProvisionInitialAccessCommand {
   constructor(
-    private readonly provisioning: AccessProvisioningRepository,
-    @Optional()
-    private readonly runtime: AccessProvisioningRuntime = accessProvisioningRuntime,
+    private readonly accessProvisioningRepository: AccessProvisioningRepository,
   ) {}
 
   async execute(
     input: ProvisionInitialAccessInput,
   ): Promise<InitialAccessProjection> {
-    const warehouseId = this.runtime.warehouseId();
-    const roleId = this.runtime.roleId();
-    await this.provisioning.provisionInitialAccess({
+    const warehouseId = randomUUID();
+    const roleId = randomUUID();
+
+    await this.accessProvisioningRepository.provisionInitialAccess({
       warehouse: {
         id: warehouseId,
         name: AccessName.create(input.warehouseName).value,

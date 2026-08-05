@@ -1,25 +1,22 @@
 import { randomUUID } from 'node:crypto';
 
 import { Injectable, Optional } from '@nestjs/common';
-import { PermissionId } from '@warehouser/shared-types/enums';
+import { assert, assertDefined } from '@warehouser/utils/asserts';
 import {
-  accessDeniedError,
   invalidRoleError,
   roleNameConflictError,
   roleUnavailableError,
 } from 'access/domain/errors/access.errors';
 import { AccessName } from 'access/domain/value-objects/access-name';
-import type { AccessPrincipal } from 'shared/access/access-principal';
-import {
-  RoleLifecycleRepository,
-  type RoleWriteResult,
-} from 'shared/domain/repositories/access/role-lifecycle.repository';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { Transactional } from 'shared/decorators/transactional.decorator';
+import { RoleLifecycleRepository } from 'shared/domain/repositories/role-lifecycle.repository';
 
 export interface CreateRoleRuntime {
   readonly roleId: () => string;
 }
 
-const createRoleRuntime: CreateRoleRuntime = { roleId: randomUUID };
+const defaultCreateRoleRuntime: CreateRoleRuntime = { roleId: randomUUID };
 
 export interface CreateRoleInput {
   readonly name: string;
@@ -31,50 +28,53 @@ export interface RoleWriteProjection {
   readonly name: string;
 }
 
-export const assertAuthority = (
-  principal: AccessPrincipal,
-  required: AccessPrincipal['permissionId'],
-): void => {
-  if (principal.permissionId !== required) {
-    throw accessDeniedError();
-  }
-};
-
-export const assertSaved = (result: RoleWriteResult): void => {
-  if (result === 'saved') {
-    return;
-  }
-  if (result === 'name-conflict') {
-    throw roleNameConflictError();
-  }
-  if (result === 'invalid-permission') {
-    throw invalidRoleError();
-  }
-  throw roleUnavailableError();
-};
-
 @Injectable()
 export class CreateRoleCommand {
   constructor(
-    private readonly roles: RoleLifecycleRepository,
+    private readonly roleLifecycleRepository: RoleLifecycleRepository,
     @Optional()
-    private readonly runtime: CreateRoleRuntime = createRoleRuntime,
+    private readonly createRoleRuntime: CreateRoleRuntime = defaultCreateRoleRuntime,
   ) {}
 
+  @Transactional()
   async execute(
-    principal: AccessPrincipal,
+    currentUser: AccessCurrentUser,
     input: CreateRoleInput,
   ): Promise<RoleWriteProjection> {
-    assertAuthority(principal, PermissionId.ROLES_CREATE);
-    const id = this.runtime.roleId();
+    const id = this.createRoleRuntime.roleId();
     const name = AccessName.create(input.name).value;
-    const result = await this.roles.createCustomRole({
-      id,
-      warehouseId: principal.warehouseId,
+
+    const warehouse = await this.roleLifecycleRepository.lockWarehouse(
+      currentUser.warehouseId,
+    );
+    assertDefined(warehouse, roleUnavailableError());
+
+    const permissions =
+      await this.roleLifecycleRepository.findAssignablePermissions(
+        input.permissionIds,
+      );
+
+    assert(
+      permissions.length === new Set(input.permissionIds).size,
+      invalidRoleError(),
+    );
+
+    const matchingRole = await this.roleLifecycleRepository.findRoleByName(
+      currentUser.warehouseId,
       name,
-      permissionIds: input.permissionIds,
-    });
-    assertSaved(result);
+    );
+
+    assert(matchingRole === null, roleNameConflictError());
+
+    await this.roleLifecycleRepository.createCustomRole(
+      {
+        id,
+        warehouseId: currentUser.warehouseId,
+        name,
+      },
+      permissions,
+    );
+
     return { id, name };
   }
 }

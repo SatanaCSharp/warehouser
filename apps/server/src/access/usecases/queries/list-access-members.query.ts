@@ -1,24 +1,24 @@
 import { Injectable } from '@nestjs/common';
 import type { MemberPage, UuidPagination } from '@warehouser/contracts/access';
-import { accessPage } from 'access/usecases/queries/access-page';
-import type { AccessPrincipal } from 'shared/access/access-principal';
-import { AccessReadRepository } from 'shared/domain/repositories/access/access-read.repository';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { AccessReadRepository } from 'shared/domain/repositories/access-read.repository';
+import { paginatablePage } from 'shared/pagination/paginatable-page';
 
 @Injectable()
 export class ListAccessMembersQuery {
-  constructor(private readonly reads: AccessReadRepository) {}
+  constructor(private readonly accessReadRepository: AccessReadRepository) {}
 
   async execute(
-    principal: AccessPrincipal,
+    currentUser: AccessCurrentUser,
     pagination: UuidPagination,
   ): Promise<MemberPage> {
-    const rows = await this.reads.listMembersAndAssignments(
-      principal.warehouseId,
+    const rows = await this.accessReadRepository.listMembersAndAssignments(
+      currentUser.warehouseId,
       pagination.limit + 1,
       pagination.after,
       pagination.before,
     );
-    const page = accessPage(
+    const page = paginatablePage(
       rows.map((member) => ({
         id: member.userId,
         userId: member.userId,

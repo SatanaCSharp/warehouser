@@ -1,11 +1,8 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
+import { SystemError } from '@warehouser/shared-types/errors';
 import { AuthRuntime } from 'auth/domain/auth-runtime';
 import { Account } from 'auth/domain/entities/account';
 import { Session } from 'auth/domain/entities/session';
-import {
-  AuthSessionUnavailableError,
-  AuthSignOutUnavailableError,
-} from 'auth/domain/errors/auth.errors';
 import { toAccountEntity } from 'auth/domain/mappers/account.mapper';
 import { toSessionEntity } from 'auth/domain/mappers/session.mapper';
 import { GeneratedSessionSecret } from 'auth/domain/security/session-secret';
@@ -92,7 +89,12 @@ describe('auth session use cases', () => {
       {
         findAccountByNormalizedEmail: () => Promise.resolve(accountEntity),
         createSession: () =>
-          Promise.reject(AuthSessionUnavailableError(new Error('db'))),
+          Promise.reject(
+            new SystemError(
+              ErrorCode.AUTH_SESSION_UNAVAILABLE,
+              new Error('db'),
+            ),
+          ),
       } as unknown as AuthenticationRepository,
       () => Promise.resolve(true),
       jest.fn(),
@@ -131,7 +133,9 @@ describe('auth session use cases', () => {
 
     repository.revokeSessionByDigest = jest
       .fn()
-      .mockRejectedValue(AuthSignOutUnavailableError(new Error('db')));
+      .mockRejectedValue(
+        new SystemError(ErrorCode.AUTH_SIGN_OUT_UNAVAILABLE, new Error('db')),
+      );
     await expect(
       new SignOutCommand(repository, digestSecret, runtime).execute('secret'),
     ).rejects.toMatchObject({ code: ErrorCode.AUTH_SIGN_OUT_UNAVAILABLE });

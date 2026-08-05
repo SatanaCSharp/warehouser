@@ -1,60 +1,62 @@
 import { Injectable } from '@nestjs/common';
-import { PermissionId } from '@warehouser/shared-types/enums';
+import { Maybe } from '@warehouser/shared-types/utils';
+import { assert, assertDefined } from '@warehouser/utils/asserts';
 import {
-  accessDeniedError,
   replacementRequiredError,
-  roleDeletionUnavailableError,
   roleUnavailableError,
 } from 'access/domain/errors/access.errors';
-import type { AccessPrincipal } from 'shared/access/access-principal';
-import { DbTransactionService } from 'shared/database/db-transaction.service';
-import {
-  type RoleDeletionResult,
-  RoleLifecycleRepository,
-} from 'shared/domain/repositories/access/role-lifecycle.repository';
+import { RoleDeletionService } from 'access/domain/services/role-deletion.service';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { Transactional } from 'shared/decorators/transactional.decorator';
+import { RoleLifecycleRepository } from 'shared/domain/repositories/role-lifecycle.repository';
 
 export interface DeleteRoleInput {
   readonly roleId: string;
-  readonly replacementRoleId?: string;
+  readonly replacementRoleId?: Maybe<string>;
 }
 
 @Injectable()
 export class DeleteRoleCommand {
   constructor(
-    private readonly roles: RoleLifecycleRepository,
-    private readonly transactions: DbTransactionService,
+    private readonly roleLifecycleRepository: RoleLifecycleRepository,
+    private readonly roleDeletionService: RoleDeletionService,
   ) {}
 
+  @Transactional()
   async execute(
-    principal: AccessPrincipal,
+    currentUser: AccessCurrentUser,
     input: DeleteRoleInput,
   ): Promise<{ readonly id: string }> {
-    if (principal.permissionId !== PermissionId.ROLES_DELETE) {
-      throw accessDeniedError();
-    }
-    let result: RoleDeletionResult;
-    try {
-      result = await this.transactions.executeInTransaction({}, () =>
-        this.roles.deleteCustomRole(
-          principal.warehouseId,
-          input.roleId,
-          input.replacementRoleId,
-        ),
-      );
-    } catch (error) {
-      throw roleDeletionUnavailableError(error);
-    }
-    this.assertDeleted(result);
-    return { id: input.roleId };
-  }
+    const warehouse = await this.roleLifecycleRepository.lockWarehouse(
+      currentUser.warehouseId,
+    );
+    assertDefined(warehouse, roleUnavailableError());
 
-  private assertDeleted(result: RoleDeletionResult): void {
-    if (result === 'deleted') {
-      return;
-    }
-    if (result === 'replacement-required' || result === 'invalid-replacement') {
-      throw replacementRequiredError();
-    }
-    throw roleUnavailableError();
+    const source = await this.roleLifecycleRepository.lockCustomRole(
+      currentUser.warehouseId,
+      input.roleId,
+    );
+    assertDefined(source, roleUnavailableError());
+
+    const assigned = await this.roleLifecycleRepository.countRoleMembers(
+      currentUser.warehouseId,
+      input.roleId,
+    );
+    assert(
+      assigned === 0 || Boolean(input.replacementRoleId),
+      replacementRequiredError(),
+    );
+
+    await this.roleDeletionService.replaceAssignments(
+      currentUser.warehouseId,
+      input.roleId,
+      input.replacementRoleId,
+    );
+
+    await this.roleLifecycleRepository.removeCustomRole(
+      currentUser.warehouseId,
+      input.roleId,
+    );
+    return { id: input.roleId };
   }
 }
