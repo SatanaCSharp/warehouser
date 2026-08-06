@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
 import { assert, assertDefined } from '@warehouser/utils/asserts';
+import { PinoLogger } from 'nestjs-pino';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { AccessCurrentUserRepository } from 'shared/domain/repositories/access-current-user.repository';
@@ -9,6 +10,7 @@ import { AuthenticationRepository } from 'shared/domain/repositories/authenticat
 import { MemberLifecycleRepository } from 'shared/domain/repositories/member-lifecycle.repository';
 import { isSupportedPassword } from 'shared/domain/security/is-supported-password';
 import { hashPassword } from 'shared/domain/security/password-hashing';
+import { withOperationTiming } from 'shared/logger/with-operation-timing';
 import {
   managerRoleProtectedError,
   permissionExceededError,
@@ -51,10 +53,23 @@ export class ChangeMemberPasswordCommand {
     private readonly authenticationRepository: AuthenticationRepository,
     private readonly hash: typeof hashPassword = hashPassword,
     private readonly now: () => Date = () => new Date(),
+    private readonly logger: PinoLogger = new PinoLogger({}),
   ) {}
 
   @Transactional()
-  async execute(
+  execute(
+    currentUser: AccessCurrentUser,
+    input: ChangeMemberPasswordInput,
+  ): Promise<void> {
+    return withOperationTiming(
+      this.logger,
+      'users.change_member_password',
+      currentUser,
+      () => this.changeMemberPassword(currentUser, input),
+    );
+  }
+
+  private async changeMemberPassword(
     currentUser: AccessCurrentUser,
     input: ChangeMemberPasswordInput,
   ): Promise<void> {

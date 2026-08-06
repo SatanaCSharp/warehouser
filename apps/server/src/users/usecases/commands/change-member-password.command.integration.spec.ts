@@ -1,4 +1,5 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
+import type { PinoLogger } from 'nestjs-pino';
 import dataSource from 'shared/database/data-source';
 import { DbTransactionService } from 'shared/database/db-transaction.service';
 import { DbTransactionContext } from 'shared/database/db-transaction-context.service';
@@ -62,6 +63,8 @@ describeIntegration('ChangeMemberPasswordCommand', () => {
   const context = new DbTransactionContext(dataSource);
   const transactions = new DbTransactionService(dataSource, context);
 
+  const logInfo = jest.fn();
+
   const createCommand = (): ChangeMemberPasswordCommand =>
     new ChangeMemberPasswordCommand(
       memberLifecycleRepository,
@@ -69,10 +72,15 @@ describeIntegration('ChangeMemberPasswordCommand', () => {
       authenticationRepository,
       fakeHash,
       () => now,
+      { info: logInfo } as unknown as PinoLogger,
     );
 
   beforeAll(async () => {
     await dataSource.initialize();
+  });
+
+  beforeEach(() => {
+    logInfo.mockClear();
   });
 
   afterEach(async () => {
@@ -271,6 +279,18 @@ describeIntegration('ChangeMemberPasswordCommand', () => {
 
     expect(await countActiveSessions(targetUserId)).toBe(0);
     expect(await countActiveSessions(otherAccountUserId)).toBe(1);
+
+    // sad.md §8: a structured, per-action Pino timing log — no credential
+    // fields.
+    expect(logInfo).toHaveBeenCalledWith(
+      expect.objectContaining({
+        operation: 'users.change_member_password',
+        outcomeCode: 'success',
+        durationMs: expect.any(Number),
+        userId: actorUserId,
+        warehouseId: warehouseAId,
+      }),
+    );
   });
 
   it('rejects a password outside the accepted length and makes no change', async () => {

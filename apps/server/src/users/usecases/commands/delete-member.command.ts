@@ -2,10 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
 import { assert, assertDefined } from '@warehouser/utils/asserts';
+import { PinoLogger } from 'nestjs-pino';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
 import { MemberLifecycleRepository } from 'shared/domain/repositories/member-lifecycle.repository';
+import { withOperationTiming } from 'shared/logger/with-operation-timing';
 import {
   managerRoleProtectedError,
   selfActionDeniedError,
@@ -36,10 +38,23 @@ export class DeleteMemberCommand {
   constructor(
     private readonly memberLifecycleRepository: MemberLifecycleRepository,
     private readonly authenticationRepository: AuthenticationRepository,
+    private readonly logger: PinoLogger = new PinoLogger({}),
   ) {}
 
   @Transactional()
-  async execute(
+  execute(
+    currentUser: AccessCurrentUser,
+    input: DeleteMemberInput,
+  ): Promise<DeletedMember> {
+    return withOperationTiming(
+      this.logger,
+      'users.delete_member',
+      currentUser,
+      () => this.deleteMember(currentUser, input),
+    );
+  }
+
+  private async deleteMember(
     currentUser: AccessCurrentUser,
     input: DeleteMemberInput,
   ): Promise<DeletedMember> {

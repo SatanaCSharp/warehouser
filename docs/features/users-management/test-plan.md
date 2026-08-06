@@ -90,6 +90,13 @@ exactly-one-Role / never-more-power-than-the-creator invariants throughout.
   assert no error-rate regression and the operation continues to meet its own latency target under
   load.
 
+**Current state:** `tests/users/release-gates.mjs`/`.spec.mjs` implement and unit-test the
+threshold-evaluation logic above (percentile math, the throughput formula, the terminal-outcome
+check) against hand-supplied sample data — this is manual-input evidence that the _math_ is
+correct, not an automated load driver exercising a running service instance. None of the four
+scenarios above are wired to a real load tool yet (spec.md §6, footnote 1). Treat this as an open
+follow-up, not a met NFR.
+
 <!-- "Lifecycle atomicity" and "Authorization coverage" (spec.md §6) carry a 100% target but are not
 load scenarios — they are covered by the integration/architecture rows above (rollback-on-failure,
 AC-11/13/14/15/16/18/19/20 command enforcement, and the Authorization-coverage architecture test in

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
 import { assert, assertDefined } from '@warehouser/utils/asserts';
+import { PinoLogger } from 'nestjs-pino';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { AccessCurrentUserRepository } from 'shared/domain/repositories/access-current-user.repository';
@@ -9,6 +10,7 @@ import { AuthenticationRepository } from 'shared/domain/repositories/authenticat
 import { MemberLifecycleRepository } from 'shared/domain/repositories/member-lifecycle.repository';
 import { EmailAddress } from 'shared/domain/security/email-address';
 import { isSupportedEmail } from 'shared/domain/security/is-supported-email';
+import { withOperationTiming } from 'shared/logger/with-operation-timing';
 import {
   managerRoleProtectedError,
   permissionExceededError,
@@ -67,10 +69,23 @@ export class ChangeMemberEmailCommand {
     private readonly accessCurrentUserRepository: AccessCurrentUserRepository,
     private readonly authenticationRepository: AuthenticationRepository,
     private readonly runtime: ChangeMemberEmailRuntime = defaultRuntime,
+    private readonly logger: PinoLogger = new PinoLogger({}),
   ) {}
 
   @Transactional()
-  async execute(
+  execute(
+    currentUser: AccessCurrentUser,
+    input: ChangeMemberEmailInput,
+  ): Promise<ChangedMemberEmail> {
+    return withOperationTiming(
+      this.logger,
+      'users.change_member_email',
+      currentUser,
+      () => this.changeMemberEmail(currentUser, input),
+    );
+  }
+
+  private async changeMemberEmail(
     currentUser: AccessCurrentUser,
     input: ChangeMemberEmailInput,
   ): Promise<ChangedMemberEmail> {

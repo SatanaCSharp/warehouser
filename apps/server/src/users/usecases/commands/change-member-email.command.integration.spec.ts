@@ -1,4 +1,5 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
+import type { PinoLogger } from 'nestjs-pino';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import dataSource from 'shared/database/data-source';
 import { DbTransactionService } from 'shared/database/db-transaction.service';
@@ -50,15 +51,23 @@ describeIntegration('ChangeMemberEmailCommand', () => {
   );
   const authenticationRepository = new AuthenticationRepository(dataSource);
 
+  const logInfo = jest.fn();
+
   const createCommand = (): ChangeMemberEmailCommand =>
     new ChangeMemberEmailCommand(
       memberLifecycleRepository,
       accessCurrentUserRepository,
       authenticationRepository,
+      undefined,
+      { info: logInfo } as unknown as PinoLogger,
     );
 
   beforeAll(async () => {
     await dataSource.initialize();
+  });
+
+  beforeEach(() => {
+    logInfo.mockClear();
   });
 
   afterEach(async () => {
@@ -253,6 +262,18 @@ describeIntegration('ChangeMemberEmailCommand', () => {
       .getRepository(SessionEntity)
       .findOneByOrFail({ id: '00000000-0000-4000-8000-000000000401' });
     expect(session.revokedAt).toBeNull();
+
+    // sad.md §8: a structured, per-action Pino timing log — no credential
+    // fields.
+    expect(logInfo).toHaveBeenCalledWith(
+      expect.objectContaining({
+        operation: 'users.change_member_email',
+        outcomeCode: 'success',
+        durationMs: expect.any(Number),
+        userId: actorUserId,
+        warehouseId: warehouseAId,
+      }),
+    );
   });
 
   it('rejects an invalid new email format and leaves the target unchanged', async () => {
