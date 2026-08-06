@@ -5,7 +5,11 @@ import {
   AssertionError,
   SystemError,
 } from '@warehouser/shared-types/errors';
-import { GlobalHttpExceptionFilter } from 'shared/errors/global-http-exception.filter';
+import {
+  applicationErrors,
+  GlobalHttpExceptionFilter,
+  systemErrors,
+} from 'shared/errors/global-http-exception.filter';
 
 const createHost = () => {
   const status = jest.fn().mockReturnThis();
@@ -88,6 +92,40 @@ describe('GlobalHttpExceptionFilter', () => {
       },
     ],
     [
+      new ApplicationError(ErrorCode.USERS_SELF_ACTION_DENIED),
+      409,
+      {
+        code: 'users.self_action_denied',
+        message: 'You cannot perform this action on your own account.',
+      },
+    ],
+    [
+      new ApplicationError(ErrorCode.USERS_MANAGER_ROLE_PROTECTED),
+      409,
+      {
+        code: 'users.manager_role_protected',
+        message:
+          'Transfer the Warehouse Manager Role before changing this member.',
+      },
+    ],
+    [
+      new ApplicationError(ErrorCode.USERS_PERMISSION_EXCEEDED),
+      409,
+      {
+        code: 'users.permission_exceeded',
+        message: "A member's Role can never exceed your own Permissions.",
+      },
+    ],
+    [
+      new ApplicationError(ErrorCode.USERS_RESERVED_ROLE_SELECTION),
+      409,
+      {
+        code: 'users.reserved_role_selection',
+        message:
+          'The Warehouse Manager Role can only be obtained through manager transfer.',
+      },
+    ],
+    [
       new SystemError(
         ErrorCode.AUTH_SESSION_UNAVAILABLE,
         new Error('database rejected person@example.test passwordHash abc'),
@@ -147,5 +185,16 @@ describe('GlobalHttpExceptionFilter', () => {
     expect(logged).not.toMatch(
       /secret-password|opaque-secret|person@example\.test|passwordHash abc/u,
     );
+  });
+
+  it('maps every declared ErrorCode to an HTTP status, except the internal fallback', () => {
+    const unmapped = Object.values(ErrorCode).filter(
+      (code) =>
+        code !== ErrorCode.INTERNAL_ERROR &&
+        !(code in applicationErrors) &&
+        !(code in systemErrors),
+    );
+
+    expect(unmapped).toEqual([]);
   });
 });

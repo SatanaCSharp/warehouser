@@ -27,7 +27,7 @@ interface ErrorMapping {
 
 type ExceptionLogger = Pick<Logger, 'error' | 'warn'>;
 
-const applicationErrors: Readonly<
+export const applicationErrors: Readonly<
   Record<string, Omit<ErrorMapping, 'severity'>>
 > = {
   [ErrorCode.ACCESS_DENIED]: {
@@ -128,9 +128,41 @@ const applicationErrors: Readonly<
       message: 'The email or password is incorrect.',
     },
   },
+  [ErrorCode.USERS_SELF_ACTION_DENIED]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.USERS_SELF_ACTION_DENIED,
+      message: 'You cannot perform this action on your own account.',
+    },
+  },
+  [ErrorCode.USERS_MANAGER_ROLE_PROTECTED]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.USERS_MANAGER_ROLE_PROTECTED,
+      message:
+        'Transfer the Warehouse Manager Role before changing this member.',
+    },
+  },
+  [ErrorCode.USERS_PERMISSION_EXCEEDED]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.USERS_PERMISSION_EXCEEDED,
+      message: "A member's Role can never exceed your own Permissions.",
+    },
+  },
+  [ErrorCode.USERS_RESERVED_ROLE_SELECTION]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.USERS_RESERVED_ROLE_SELECTION,
+      message:
+        'The Warehouse Manager Role can only be obtained through manager transfer.',
+    },
+  },
 };
 
-const systemErrors: Readonly<Record<string, Omit<ErrorMapping, 'severity'>>> = {
+export const systemErrors: Readonly<
+  Record<string, Omit<ErrorMapping, 'severity'>>
+> = {
   [ErrorCode.ACCESS_ROLE_DELETION_UNAVAILABLE]: {
     status: 503,
     envelope: {
@@ -164,6 +196,27 @@ const systemErrors: Readonly<Record<string, Omit<ErrorMapping, 'severity'>>> = {
     envelope: {
       code: ErrorCode.AUTH_SIGN_OUT_UNAVAILABLE,
       message: 'Sign-out did not complete. Try again.',
+    },
+  },
+  [ErrorCode.USERS_CREATION_UNAVAILABLE]: {
+    status: 503,
+    envelope: {
+      code: ErrorCode.USERS_CREATION_UNAVAILABLE,
+      message: 'Member creation did not complete. Try again.',
+    },
+  },
+  [ErrorCode.USERS_PASSWORD_CHANGE_UNAVAILABLE]: {
+    status: 503,
+    envelope: {
+      code: ErrorCode.USERS_PASSWORD_CHANGE_UNAVAILABLE,
+      message: 'Password change did not complete. Try again.',
+    },
+  },
+  [ErrorCode.USERS_DELETION_UNAVAILABLE]: {
+    status: 503,
+    envelope: {
+      code: ErrorCode.USERS_DELETION_UNAVAILABLE,
+      message: 'Member deletion did not complete. Try again.',
     },
   },
 };
