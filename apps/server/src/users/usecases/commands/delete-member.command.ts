@@ -1,0 +1,85 @@
+import { Injectable } from '@nestjs/common';
+import { ErrorCode } from '@warehouser/shared-types/enums';
+import { ApplicationError } from '@warehouser/shared-types/errors';
+import { assert, assertDefined } from '@warehouser/utils/asserts';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { Transactional } from 'shared/decorators/transactional.decorator';
+import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
+import { MemberLifecycleRepository } from 'shared/domain/repositories/member-lifecycle.repository';
+import {
+  managerRoleProtectedError,
+  selfActionDeniedError,
+} from 'users/domain/errors/users.errors';
+import {
+  isProtectedManagerTarget,
+  isSelfAction,
+} from 'users/domain/predicates/member-lifecycle.predicates';
+
+export interface DeleteMemberInput {
+  readonly targetUserId: string;
+}
+
+export interface DeletedMember {
+  readonly id: string;
+}
+
+// AC-09's cross-Warehouse-hiding denial is the identical authorization-
+// boundary condition `access` already produces for its own administration
+// actions (sad.md §4) — this feature reuses the same stable ErrorCode rather
+// than redefining it, without importing `access`'s feature-owned error
+// factories (`users` never imports `access/*`/`auth/*`).
+const targetUnavailableError = (): ApplicationError =>
+  new ApplicationError(ErrorCode.ACCESS_TARGET_UNAVAILABLE);
+
+@Injectable()
+export class DeleteMemberCommand {
+  constructor(
+    private readonly memberLifecycleRepository: MemberLifecycleRepository,
+    private readonly authenticationRepository: AuthenticationRepository,
+  ) {}
+
+  @Transactional()
+  async execute(
+    currentUser: AccessCurrentUser,
+    input: DeleteMemberInput,
+  ): Promise<DeletedMember> {
+    // Lock the target's Warehouse Membership row (sad.md §6.4 step 2), scoped
+    // to the actor's own Warehouse — a missing row is indistinguishable from
+    // a cross-Warehouse target (AC-09). Locking here, before the self and
+    // protected-Manager re-checks, is what serializes this command against a
+    // concurrent `TransferWarehouseManagerCommand` targeting the same
+    // recipient row, guaranteeing the Warehouse never ends up with zero or
+    // two Managers (AC-15).
+    const membership = await this.memberLifecycleRepository.lockMembership(
+      currentUser.warehouseId,
+      input.targetUserId,
+    );
+    assertDefined(membership, targetUnavailableError());
+
+    assert(
+      !isSelfAction(currentUser.userId, input.targetUserId),
+      selfActionDeniedError(),
+    );
+
+    assert(
+      !isProtectedManagerTarget(membership.roleKind),
+      managerRoleProtectedError(),
+    );
+
+    // Deletion sequencing (data-model.md "Deletion sequencing"): the
+    // Warehouse Membership row must be deleted before the target's Sessions,
+    // which must be hard-deleted (not merely revoked) before the target's
+    // Account+User pair, to satisfy the immediate (non-deferrable) RESTRICT
+    // foreign keys in that exact order.
+    await this.memberLifecycleRepository.deleteMembership(
+      currentUser.warehouseId,
+      membership.userId,
+    );
+    await this.authenticationRepository.deleteSessionsByAccountId(
+      membership.userId,
+    );
+    await this.authenticationRepository.deleteIdentity(membership.userId);
+
+    return { id: membership.userId };
+  }
+}
