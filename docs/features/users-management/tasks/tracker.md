@@ -6,10 +6,10 @@
 | #   | Task                                                      | Layer     | Owner         | Estimate | Blocked by            | Status |
 | --- | --------------------------------------------------------- | --------- | ------------- | -------- | --------------------- | ------ |
 | T1  | Grant USERS:\* to existing Warehouse Managers (migration) | migration | Backend Lead  | S        | —                     | done   |
-| T2  | Promote shared credential security (ADR-0001)             | domain    | Backend Lead  | M        | —                     | todo   |
-| T3  | Users domain errors and invariant predicates              | domain    | Backend Lead  | M        | —                     | todo   |
-| T4  | MemberLifecycleRepository                                 | infra     | Backend Lead  | M        | —                     | todo   |
-| T5  | Extend AuthenticationRepository                           | infra     | Backend Lead  | M        | —                     | todo   |
+| T2  | Promote shared credential security (ADR-0001)             | domain    | Backend Lead  | M        | —                     | done   |
+| T3  | Users domain errors and invariant predicates              | domain    | Backend Lead  | M        | —                     | done   |
+| T4  | MemberLifecycleRepository                                 | infra     | Backend Lead  | M        | —                     | done   |
+| T5  | Extend AuthenticationRepository                           | infra     | Backend Lead  | M        | —                     | done   |
 | T6  | Persistence-entity test factories                         | infra     | Backend Lead  | S        | —                     | todo   |
 | T7  | users contracts + shared-types                            | ports     | Backend Lead  | S        | —                     | todo   |
 | T8  | Grant USERS:\* to future Warehouse Managers               | app       | Backend Lead  | S        | T7                    | todo   |
