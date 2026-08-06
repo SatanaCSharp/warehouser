@@ -17,12 +17,12 @@
 | T10 | ChangeMemberEmailCommand                                  | app       | Backend Lead  | M        | T2, T3, T4, T5, T7    | done   |
 | T11 | ChangeMemberPasswordCommand                               | app       | Backend Lead  | M        | T2, T3, T4, T5, T7    | done   |
 | T12 | DeleteMemberCommand                                       | app       | Backend Lead  | L        | T3, T4, T5, T7        | done   |
-| T13 | UsersController + module wiring                           | ports     | Backend Lead  | M        | T7, T9, T10, T11, T12 | todo   |
+| T13 | UsersController + module wiring                           | ports     | Backend Lead  | M        | T7, T9, T10, T11, T12 | done   |
 | T14 | Access member-list email join                             | infra     | Backend Lead  | S        | —                     | done   |
-| T15 | Load smoke test                                           | tests     | Backend Lead  | S        | T13                   | todo   |
+| T15 | Load smoke test                                           | tests     | Backend Lead  | S        | T13                   | done   |
 | T16 | RTK Query slice + mutation hooks                          | ui        | Frontend Lead | M        | T7                    | done   |
 | T17 | Members list + tab wiring, incl. delete                   | ui        | Frontend Lead | L        | T16, T14              | todo   |
-| T18 | Create Member dialog                                      | ui        | Frontend Lead | M        | T16                   | todo   |
+| T18 | Create Member dialog                                      | ui        | Frontend Lead | M        | T16                   | done   |
 | T19 | Edit-email / reset-password dialogs                       | ui        | Frontend Lead | M        | T16                   | todo   |
 
 **Total:** 19 tasks, ~13 person-days (S≈0.3d, M≈0.6d, L≈1d).
