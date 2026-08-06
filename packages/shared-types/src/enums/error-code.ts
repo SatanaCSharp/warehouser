@@ -18,6 +18,10 @@ export const ErrorCode = {
   ACCESS_CONCURRENT_CHANGE: 'access.concurrent_change',
   ACCESS_ROLE_DELETION_UNAVAILABLE: 'access.role_deletion_unavailable',
   ACCESS_MANAGER_TRANSFER_UNAVAILABLE: 'access.manager_transfer_unavailable',
+  USERS_SELF_ACTION_FORBIDDEN: 'users.self_action_forbidden',
+  USERS_PROTECTED_MANAGER_TARGET: 'users.protected_manager_target',
+  USERS_PERMISSION_EXCEEDED_TARGET: 'users.permission_exceeded_target',
+  USERS_RESERVED_ROLE_SELECTION: 'users.reserved_role_selection',
   INTERNAL_ERROR: 'system.internal_error',
 } as const;
 
