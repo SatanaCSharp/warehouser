@@ -53,6 +53,33 @@ const createMemberFieldErrors = (
   return undefined;
 };
 
+const changeMemberEmailFieldErrors = (
+  code: string,
+): Record<string, string> | undefined => {
+  if (code === ErrorCode.USERS_MANAGER_ROLE_PROTECTED) {
+    return { email: 'protected' };
+  }
+  if (code === ErrorCode.USERS_PERMISSION_EXCEEDED) {
+    return { email: 'exceeded' };
+  }
+  if (code === ErrorCode.AUTH_EMAIL_ALREADY_REGISTERED) {
+    return { email: 'duplicate' };
+  }
+  return undefined;
+};
+
+const changeMemberPasswordFieldErrors = (
+  code: string,
+): Record<string, string> | undefined => {
+  if (code === ErrorCode.USERS_MANAGER_ROLE_PROTECTED) {
+    return { password: 'protected' };
+  }
+  if (code === ErrorCode.USERS_PERMISSION_EXCEEDED) {
+    return { password: 'exceeded' };
+  }
+  return undefined;
+};
+
 export const useAccessAdministrationActions = (): AdministrationActions => {
   const [createRole] = useCreateAccessRoleMutation();
   const [updateRole] = useUpdateAccessRoleMutation();
@@ -129,11 +156,14 @@ export const useAccessAdministrationActions = (): AdministrationActions => {
     onChangeMemberEmail: async (userId, input) => {
       const result = await changeMemberEmail({ userId, input });
       if ('error' in result) {
+        if (!isApiFailure(result.error)) {
+          return { success: false };
+        }
         return {
           success: false,
-          fieldErrors: isApiFailure(result.error)
-            ? result.error.fieldErrors
-            : undefined,
+          fieldErrors:
+            result.error.fieldErrors ??
+            changeMemberEmailFieldErrors(result.error.code),
         };
       }
       alertAccessSuccess('changeMemberEmail');
@@ -142,11 +172,14 @@ export const useAccessAdministrationActions = (): AdministrationActions => {
     onChangeMemberPassword: async (userId, input) => {
       const result = await changeMemberPassword({ userId, input });
       if ('error' in result) {
+        if (!isApiFailure(result.error)) {
+          return { success: false };
+        }
         return {
           success: false,
-          fieldErrors: isApiFailure(result.error)
-            ? result.error.fieldErrors
-            : undefined,
+          fieldErrors:
+            result.error.fieldErrors ??
+            changeMemberPasswordFieldErrors(result.error.code),
         };
       }
       alertAccessSuccess('changeMemberPassword');
