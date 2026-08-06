@@ -5,7 +5,11 @@
   },
   "access": {
     "assignRole": "Роль учасника оновлено.",
+    "changeMemberEmail": "Електронну пошту учасника оновлено.",
+    "changeMemberPassword": "Пароль учасника оновлено.",
+    "createMember": "Учасника створено.",
     "createRole": "Роль створено.",
+    "deleteMember": "Учасника видалено.",
     "deleteRole": "Роль видалено.",
     "transferManager": "Керування складом передано.",
     "updateRole": "Роль оновлено."
