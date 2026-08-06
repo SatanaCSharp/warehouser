@@ -83,6 +83,28 @@
       "managerSummary": "{{userId}} will become {{role}}.",
       "save": "Transfer management",
       "saved": "Warehouse management was transferred."
+    },
+    "createMember": {
+      "open": "Create member",
+      "title": "Create member",
+      "email": "Email",
+      "password": "Initial password",
+      "role": "Role",
+      "save": "Create member",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password",
+      "validation": {
+        "email": {
+          "invalid": "Enter a valid email address.",
+          "duplicate": "This email is already registered."
+        },
+        "password": {
+          "invalid": "Use 8 to 128 characters."
+        },
+        "role": {
+          "exceeded": "A new member's role can never exceed your own permissions."
+        }
+      }
     }
   },
   "denied": {

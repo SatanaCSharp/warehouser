@@ -1,3 +1,5 @@
+import { ErrorCode } from '@warehouser/shared-types/enums';
+
 import { alertAccessSuccess } from 'modules/access/alerts/access-feedback';
 import {
   useAssignAccessMemberRoleMutation,
@@ -34,6 +36,21 @@ type AdministrationActions = Pick<
     input: PasswordChangeInput,
   ) => Promise<MutationOutcome>;
   onDeleteMember: (userId: string) => Promise<MutationOutcome>;
+};
+
+const createMemberFieldErrors = (
+  code: string,
+): Record<string, string> | undefined => {
+  if (code === ErrorCode.AUTH_EMAIL_ALREADY_REGISTERED) {
+    return { email: 'duplicate' };
+  }
+  if (
+    code === ErrorCode.USERS_PERMISSION_EXCEEDED ||
+    code === ErrorCode.USERS_RESERVED_ROLE_SELECTION
+  ) {
+    return { roleId: 'exceeded' };
+  }
+  return undefined;
 };
 
 export const useAccessAdministrationActions = (): AdministrationActions => {
@@ -96,11 +113,14 @@ export const useAccessAdministrationActions = (): AdministrationActions => {
     onCreateMember: async (input) => {
       const result = await createMember(input);
       if ('error' in result) {
+        if (!isApiFailure(result.error)) {
+          return { success: false };
+        }
         return {
           success: false,
-          fieldErrors: isApiFailure(result.error)
-            ? result.error.fieldErrors
-            : undefined,
+          fieldErrors:
+            result.error.fieldErrors ??
+            createMemberFieldErrors(result.error.code),
         };
       }
       alertAccessSuccess('createMember');

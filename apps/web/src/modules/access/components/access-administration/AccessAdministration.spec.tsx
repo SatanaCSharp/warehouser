@@ -70,6 +70,7 @@ const renderAdministration = (
     permissions,
     roles,
     onAssignRole: vi.fn().mockResolvedValue({ success: true }),
+    onCreateMember: vi.fn().mockResolvedValue({ success: true }),
     onDeleteRole: vi.fn().mockResolvedValue({ success: true }),
     onSaveRole: vi.fn().mockResolvedValue({ success: true }),
     onTransferManager: vi.fn().mockResolvedValue({ success: true }),
@@ -248,6 +249,53 @@ describe('AccessAdministration', () => {
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: /Change role for/u }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Create member' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('creates a member through the Create Member dialog when authorized (AC-01, AC-03)', async () => {
+    const user = userEvent.setup();
+    const props = renderAdministration({
+      access: {
+        ...access,
+        permissionIds: [PermissionId.USERS_CREATE],
+      },
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Create member' }));
+    const dialog = screen.getByRole('dialog', { name: 'Create member' });
+    await user.type(
+      within(dialog).getByLabelText('Email'),
+      'new.member@example.test',
+    );
+    await user.type(
+      within(dialog).getByLabelText('Initial password'),
+      'a-strong-password',
+    );
+    await user.selectOptions(
+      within(dialog).getByLabelText('Role'),
+      pickerRoleId,
+    );
+    await user.click(
+      within(dialog).getByRole('button', { name: 'Create member' }),
+    );
+
+    expect(props.onCreateMember).toHaveBeenCalledWith({
+      email: 'new.member@example.test',
+      password: 'a-strong-password',
+      roleId: pickerRoleId,
+    });
+  });
+
+  it('hides the Create Member trigger without the USERS:CREATE permission (AC-03)', () => {
+    renderAdministration({
+      access: { ...access, permissionIds: [PermissionId.ROLES_WATCH] },
+    });
+
+    expect(
+      screen.queryByRole('button', { name: 'Create member' }),
     ).not.toBeInTheDocument();
   });
 });
