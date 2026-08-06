@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { AssignmentDialog } from 'modules/access/components/access-administration/AssignmentDialog';
+import { CreateMemberDialog } from 'modules/access/components/access-administration/CreateMemberDialog';
 import { DeletionDialog } from 'modules/access/components/access-administration/DeletionDialog';
 import { MemberRoleActions } from 'modules/access/components/access-administration/MemberRoleActions';
 import { RoleDialog } from 'modules/access/components/access-administration/RoleDialog';
@@ -17,6 +18,7 @@ import type {
   PermissionPage,
   RolePage,
 } from '@warehouser/contracts/access';
+import type { CreateMemberInput } from '@warehouser/contracts/users';
 import type {
   AccessRole,
   MutationOutcome,
@@ -32,6 +34,7 @@ export type AccessAdministrationProps = {
   permissions: PermissionPage['items'];
   roles: RolePage['items'];
   onAssignRole: (userId: string, roleId: string) => Promise<MutationOutcome>;
+  onCreateMember: (input: CreateMemberInput) => Promise<MutationOutcome>;
   onDeleteRole: (
     roleId: string,
     replacementRoleId: string | null,
@@ -45,6 +48,7 @@ export type AccessAdministrationProps = {
 
 type Workflow =
   | { kind: 'assign'; memberId: string }
+  | { kind: 'create' }
   | { kind: 'delete'; role: AccessRole }
   | { kind: 'role'; role?: AccessRole }
   | { kind: 'transfer' }
@@ -56,6 +60,7 @@ export const AccessAdministration = ({
   permissions,
   roles,
   onAssignRole,
+  onCreateMember,
   onDeleteRole,
   onSaveRole,
   onTransferManager,
@@ -103,6 +108,16 @@ export const AccessAdministration = ({
               onPress={() => setWorkflow({ kind: 'transfer' })}
             >
               {t('administration.transfer.open')}
+            </Button>
+          ) : null}
+          {can(PermissionId.USERS_CREATE) ? (
+            <Button
+              color="primary"
+              className="min-w-40 font-semibold"
+              size="lg"
+              onPress={() => setWorkflow({ kind: 'create' })}
+            >
+              {t('administration.createMember.open')}
             </Button>
           ) : null}
         </div>
@@ -207,6 +222,13 @@ export const AccessAdministration = ({
             );
             closeWorkflow();
           }}
+        />
+      ) : null}
+      {workflow?.kind === 'create' ? (
+        <CreateMemberDialog
+          roles={customRoles}
+          onClose={closeWorkflow}
+          onSave={onCreateMember}
         />
       ) : null}
       {workflow?.kind === 'transfer' ? (
