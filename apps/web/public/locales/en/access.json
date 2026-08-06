@@ -105,6 +105,27 @@
           "exceeded": "A new member's role can never exceed your own permissions."
         }
       }
+    },
+    "editEmail": {
+      "title": "Edit email for {{email}}",
+      "email": "New email",
+      "save": "Save email",
+      "validation": {
+        "invalid": "Enter a valid email address.",
+        "duplicate": "This email is already registered.",
+        "protected": "The Warehouse Manager role must be transferred to someone else first.",
+        "exceeded": "You can't change credentials for a member with more permissions than you."
+      }
+    },
+    "resetPassword": {
+      "title": "Reset password for {{email}}",
+      "password": "New password",
+      "save": "Reset password",
+      "validation": {
+        "invalid": "Use 8 to 128 characters.",
+        "protected": "The Warehouse Manager role must be transferred to someone else first.",
+        "exceeded": "You can't change credentials for a member with more permissions than you."
+      }
     }
   },
   "denied": {
