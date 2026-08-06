@@ -24,6 +24,79 @@ const newMemberUserId = '00000000-0000-4000-8000-000000000302';
 const permissionOneId = 'USERS:EMAIL_UPDATE';
 const permissionTwoId = 'USERS:PASSWORD_CHANGE';
 
+const seedWarehouses = async (): Promise<void> => {
+  const manager = dataSource.manager;
+  await manager.getRepository(WarehouseEntity).insert([
+    { id: warehouseAId, name: 'Warehouse A', createdAt: now, updatedAt: now },
+    { id: warehouseBId, name: 'Warehouse B', createdAt: now, updatedAt: now },
+  ]);
+  await manager.getRepository(RoleEntity).insert([
+    {
+      id: roleAId,
+      warehouseId: warehouseAId,
+      name: 'Custom Role A',
+      kind: 'custom',
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: roleBId,
+      warehouseId: warehouseBId,
+      name: 'Custom Role B',
+      kind: 'custom',
+      createdAt: now,
+      updatedAt: now,
+    },
+  ]);
+};
+
+// `accounts.user_id` / `users.account_id` form a deferred circular FK pair
+// (`fk_accounts_user_id` / `fk_users_account_id`, both `INITIALLY DEFERRED`):
+// the check only fires at COMMIT, so both inserts must run inside one
+// transaction rather than as separate implicit-transaction `.insert()`
+// calls, or the deferred check fires before the paired row exists.
+const seedIdentity = async (
+  userId: string,
+  normalizedEmail: string,
+): Promise<void> => {
+  await dataSource.transaction(async (manager) => {
+    await manager.getRepository(AccountEntity).insert({
+      id: userId,
+      userId,
+      normalizedEmail,
+      passwordHash: 'synthetic-hash',
+      passwordHashAlgorithm: 'scrypt',
+      passwordHashParameters: { cost: 1_024 },
+      createdAt: now,
+      updatedAt: now,
+    });
+    await manager.getRepository(UserEntity).insert({
+      id: userId,
+      accountId: userId,
+      createdAt: now,
+      updatedAt: now,
+    });
+  });
+};
+
+const seedMembership = async (
+  warehouseId: string,
+  roleId: string,
+): Promise<void> => {
+  // `warehouse_memberships.user_id` has a non-deferrable FK to `users(id)`
+  // (`fk_warehouse_memberships_user_id`), so the member's identity must
+  // already exist before the membership row is inserted.
+  await seedIdentity(memberUserId, 'member@example.test');
+  await dataSource.manager.getRepository(WarehouseMembershipEntity).insert({
+    userId: memberUserId,
+    warehouseId,
+    roleId,
+    roleKind: 'custom',
+    createdAt: now,
+    updatedAt: now,
+  });
+};
+
 describeIntegration('MemberLifecycleRepository', () => {
   const repository = new MemberLifecycleRepository(dataSource);
   const context = new DbTransactionContext(dataSource);
@@ -43,79 +116,27 @@ describeIntegration('MemberLifecycleRepository', () => {
     await dataSource.destroy();
   });
 
-  const seedWarehouses = async (): Promise<void> => {
-    const manager = dataSource.manager;
-    await manager.getRepository(WarehouseEntity).insert([
-      { id: warehouseAId, name: 'Warehouse A', createdAt: now, updatedAt: now },
-      { id: warehouseBId, name: 'Warehouse B', createdAt: now, updatedAt: now },
-    ]);
-    await manager.getRepository(RoleEntity).insert([
-      {
-        id: roleAId,
-        warehouseId: warehouseAId,
-        name: 'Custom Role A',
-        kind: 'custom',
-        createdAt: now,
-        updatedAt: now,
-      },
-      {
-        id: roleBId,
-        warehouseId: warehouseBId,
-        name: 'Custom Role B',
-        kind: 'custom',
-        createdAt: now,
-        updatedAt: now,
-      },
-    ]);
-  };
+  describe('lockWarehouse', () => {
+    it('locks and returns the Warehouse row for the given id', async () => {
+      await seedWarehouses();
 
-  // `accounts.user_id` / `users.account_id` form a deferred circular FK pair
-  // (`fk_accounts_user_id` / `fk_users_account_id`, both `INITIALLY
-  // DEFERRED`): the check only fires at COMMIT, so both inserts must run
-  // inside one transaction rather than as separate implicit-transaction
-  // `.insert()` calls, or the deferred check fires before the paired row
-  // exists.
-  const seedIdentity = async (
-    userId: string,
-    normalizedEmail: string,
-  ): Promise<void> => {
-    await dataSource.transaction(async (manager) => {
-      await manager.getRepository(AccountEntity).insert({
-        id: userId,
-        userId,
-        normalizedEmail,
-        passwordHash: 'synthetic-hash',
-        passwordHashAlgorithm: 'scrypt',
-        passwordHashParameters: { cost: 1_024 },
-        createdAt: now,
-        updatedAt: now,
-      });
-      await manager.getRepository(UserEntity).insert({
-        id: userId,
-        accountId: userId,
-        createdAt: now,
-        updatedAt: now,
-      });
-    });
-  };
+      const locked = await transactions.executeInTransaction({}, () =>
+        repository.lockWarehouse(warehouseAId),
+      );
 
-  const seedMembership = async (
-    warehouseId: string,
-    roleId: string,
-  ): Promise<void> => {
-    // `warehouse_memberships.user_id` has a non-deferrable FK to `users(id)`
-    // (`fk_warehouse_memberships_user_id`), so the member's identity must
-    // already exist before the membership row is inserted.
-    await seedIdentity(memberUserId, 'member@example.test');
-    await dataSource.manager.getRepository(WarehouseMembershipEntity).insert({
-      userId: memberUserId,
-      warehouseId,
-      roleId,
-      roleKind: 'custom',
-      createdAt: now,
-      updatedAt: now,
+      expect(locked).toMatchObject({ id: warehouseAId });
     });
-  };
+
+    it('returns null for an unknown Warehouse id', async () => {
+      await seedWarehouses();
+
+      const locked = await transactions.executeInTransaction({}, () =>
+        repository.lockWarehouse('00000000-0000-4000-8000-000000000999'),
+      );
+
+      expect(locked).toBeNull();
+    });
+  });
 
   describe('lockMembership', () => {
     it('locks a membership scoped to the given Warehouse', async () => {

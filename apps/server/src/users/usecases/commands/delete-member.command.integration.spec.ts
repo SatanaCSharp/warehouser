@@ -452,41 +452,26 @@ describeIntegration('DeleteMemberCommand', () => {
     await expect(persistedCounts()).resolves.toEqual(before);
   });
 
-  // AC-15: a concurrent Warehouse-Manager transfer and a deletion attempt
-  // against either the outgoing (current manager) or incoming (recipient)
-  // holder must never leave the Warehouse with zero or two Managers.
+  // AC-15 (spec.md): "the transfer is allowed to complete and any deletion
+  // targeting either the outgoing or the incoming holder during that window
+  // is refused" — the transfer always wins a race against a deletion of
+  // either Manager-transfer party, never merely "exactly one Manager
+  // survives, whichever side happened to win the lock".
   //
   // `TransferWarehouseManagerCommand.execute` pessimistic-write-locks the
-  // Warehouse row, the replacement custom Role row, and then *both*
+  // Warehouse row first, then the replacement custom Role row, then *both*
   // membership rows (current manager + recipient) via
-  // `ManagerTransferRepository.lockMembers` (ordered by userId to avoid
-  // deadlock). `DeleteMemberCommand` is expected (sad.md §6.4/§4,
-  // data-model.md `lockMembership`) to pessimistic-write-lock the single
-  // target's membership row before re-checking the self/protected-Manager
-  // preconditions. Because both commands lock through the *same*
-  // `warehouse_memberships` row for the recipient, real concurrent
-  // transactions serialize on that row rather than racing freely:
-  //
-  //   - if the delete's lock is granted first, it observes the recipient's
-  //     pre-transfer `custom` roleKind, is not blocked by AC-13, and may
-  //     delete the recipient outright — the transfer then fails to find that
-  //     membership row when it acquires its own lock afterward
-  //     (`ACCESS_TARGET_UNAVAILABLE`), leaving the *outgoing* holder as the
-  //     sole Manager;
-  //   - if the transfer's lock is granted first, it completes (promoting the
-  //     recipient, demoting the current manager), and the delete — resuming
-  //     after that commit — re-checks fresh state, finds the recipient now
-  //     `warehouse_manager`-kind, and is refused
-  //     (`USERS_MANAGER_ROLE_PROTECTED`).
-  //
-  // Either interleaving is an acceptable, correct outcome: what must always
-  // hold, regardless of which side wins the race, is that the Warehouse ends
-  // up with **exactly one** Warehouse Manager — never zero, never two. That
-  // invariant, not "the transfer always wins", is what this test asserts —
-  // it is what a straightforward pessimistic-lock implementation (matching
-  // `TransferWarehouseManagerCommand`'s own established locking discipline)
-  // naturally guarantees, and what this task's DoD asks for.
-  it('AC-15: a concurrent manager-transfer vs. delete-the-recipient race leaves the Warehouse with exactly one Manager', async () => {
+  // `ManagerTransferRepository.lockMembers`. `DeleteMemberCommand` now locks
+  // the same Warehouse row first too (`MemberLifecycleRepository
+  // .lockWarehouse`), before its target's membership row — so the two
+  // commands always serialize at the Warehouse row, the earliest lock either
+  // one takes, rather than only where their locked rows happen to overlap.
+  // The transfer is dispatched first in the `Promise.allSettled` below, so
+  // its lock request reaches Postgres first and it always wins the Warehouse
+  // row; the racing delete then resumes only after the transfer has fully
+  // committed, re-reads the now-promoted recipient, and is refused via
+  // `USERS_MANAGER_ROLE_PROTECTED`.
+  it('AC-15: a concurrent manager-transfer vs. delete-the-recipient race always lets the transfer complete and refuses the racing delete', async () => {
     await seedPermissions();
     await seedWarehouses();
     await seedRoles();
@@ -536,12 +521,11 @@ describeIntegration('DeleteMemberCommand', () => {
       ),
     ]);
 
-    // Whichever side lost the race must have failed cleanly — not silently
-    // succeeded against stale state.
+    expect(transferOutcome.status).toBe('fulfilled');
+    expect(deleteOutcome.status).toBe('rejected');
     expect(
-      transferOutcome.status === 'rejected' ||
-        deleteOutcome.status === 'rejected',
-    ).toBe(true);
+      deleteOutcome.status === 'rejected' && deleteOutcome.reason,
+    ).toMatchObject({ code: ErrorCode.USERS_MANAGER_ROLE_PROTECTED });
 
     const managerRows = await dataSource.manager
       .getRepository(WarehouseMembershipEntity)
@@ -550,7 +534,9 @@ describeIntegration('DeleteMemberCommand', () => {
       });
 
     // The invariant this task must never violate: exactly one Warehouse
-    // Manager, regardless of which side of the race won.
+    // Manager — and it must be the incoming recipient the transfer promoted,
+    // not the outgoing holder left behind by a delete that won a stale race.
     expect(managerRows).toHaveLength(1);
+    expect(managerRows[0]).toMatchObject({ userId: incomingRecipientUserId });
   });
 });

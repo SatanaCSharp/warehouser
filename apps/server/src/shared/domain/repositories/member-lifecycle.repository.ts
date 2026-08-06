@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { getEntityManager } from 'shared/database/db-transaction-context.service';
 import { RolePermissionEntity } from 'shared/domain/entities/role-permission.entity';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
 import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
 import { DataSource } from 'typeorm';
 
@@ -14,6 +15,22 @@ export interface MembershipWrite {
 @Injectable()
 export class MemberLifecycleRepository {
   constructor(private readonly dataSource: DataSource) {}
+
+  // Same Warehouse-level lock `ManagerTransferRepository.lockWarehouse` takes
+  // first (AC-15): `DeleteMemberCommand` acquires it before the target's
+  // membership row, so a racing deletion always serializes against a
+  // concurrent manager transfer at the Warehouse level rather than only at
+  // the final membership row, matching the spec's "transfer completes, the
+  // racing deletion is refused" outcome.
+  lockWarehouse(warehouseId: string): Promise<WarehouseEntity | null> {
+    const manager = getEntityManager(this.dataSource);
+    return manager
+      .getRepository(WarehouseEntity)
+      .createQueryBuilder('warehouse')
+      .where('warehouse.id = :warehouseId', { warehouseId })
+      .setLock('pessimistic_write')
+      .getOne();
+  }
 
   lockMembership(
     warehouseId: string,

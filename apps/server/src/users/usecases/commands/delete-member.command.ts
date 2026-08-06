@@ -43,13 +43,21 @@ export class DeleteMemberCommand {
     currentUser: AccessCurrentUser,
     input: DeleteMemberInput,
   ): Promise<DeletedMember> {
+    // Lock the Warehouse row first, matching
+    // `TransferWarehouseManagerCommand`'s own lock ordering (AC-15): a
+    // concurrent manager transfer locks the Warehouse row before its
+    // replacement Role and membership rows, so acquiring it here too
+    // serializes this command against a racing transfer at the earliest
+    // possible point, rather than only at the target's membership row —
+    // whichever side is still blocked here re-reads fully committed
+    // post-transfer state once it proceeds, guaranteeing the transfer always
+    // completes and a racing deletion of the outgoing or incoming holder is
+    // always refused.
+    await this.memberLifecycleRepository.lockWarehouse(currentUser.warehouseId);
+
     // Lock the target's Warehouse Membership row (sad.md §6.4 step 2), scoped
     // to the actor's own Warehouse — a missing row is indistinguishable from
-    // a cross-Warehouse target (AC-09). Locking here, before the self and
-    // protected-Manager re-checks, is what serializes this command against a
-    // concurrent `TransferWarehouseManagerCommand` targeting the same
-    // recipient row, guaranteeing the Warehouse never ends up with zero or
-    // two Managers (AC-15).
+    // a cross-Warehouse target (AC-09).
     const membership = await this.memberLifecycleRepository.lockMembership(
       currentUser.warehouseId,
       input.targetUserId,
