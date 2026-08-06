@@ -170,4 +170,18 @@ export class RoleLifecycleRepository {
       .setLock('pessimistic_write')
       .getOne();
   }
+
+  // Kind-agnostic lock: unlike `lockCustomRole`, this matches a Role of any
+  // `kind` (including the reserved `warehouse_manager` kind) scoped to the
+  // Warehouse, so a caller can distinguish "missing/cross-Warehouse Role"
+  // from "Role exists but is reserved" instead of both collapsing to null.
+  lockRoleById(warehouseId: string, id: string): Promise<RoleEntity | null> {
+    const manager = getEntityManager(this.dataSource);
+    return manager
+      .getRepository(RoleEntity)
+      .createQueryBuilder('role')
+      .where({ id, warehouseId })
+      .setLock('pessimistic_write')
+      .getOne();
+  }
 }
