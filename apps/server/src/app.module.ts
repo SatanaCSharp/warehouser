@@ -8,9 +8,11 @@ import { createTypeOrmOptions } from 'shared/database/typeorm.options';
 import { DomainModule } from 'shared/domain/domain.module';
 import { AppLoggerModule } from 'shared/logger/app-logger.module';
 import { createBullMqOptions } from 'shared/queue/bullmq.options';
+import { UsersModule } from 'users/users.module';
 
 @Module({
   imports: [
+    UsersModule,
     ConfigModule.forRoot({ isGlobal: true }),
     AppLoggerModule.forRoot(),
     TypeOrmModule.forRootAsync({
