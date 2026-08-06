@@ -74,6 +74,66 @@ describe('useAccessAdministrationActions members', () => {
     expect(alertAccessSuccess).not.toHaveBeenCalled();
   });
 
+  // Real `users.*` denial responses (once mapped through the global HTTP
+  // exception filter, review finding #1) carry a bare `code` with no server
+  // `fieldErrors` — the local mapping helpers are the only thing that turns
+  // that raw code into a field-level message.
+  it.each([
+    ['users.permission_exceeded', { roleId: 'exceeded' }],
+    ['users.reserved_role_selection', { roleId: 'exceeded' }],
+  ])(
+    'maps the raw code %s to a field error when the server sends no fieldErrors (create member)',
+    async (code, fieldErrors) => {
+      createMember.mockResolvedValue({ error: { code } });
+      const { result } = renderHook(() => useAccessAdministrationActions());
+
+      const outcome = await result.current.onCreateMember({
+        email: 'member@example.test',
+        password: 'password123',
+        roleId,
+      });
+
+      expect(outcome).toEqual({ success: false, fieldErrors });
+      expect(alertAccessSuccess).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    ['users.manager_role_protected', { email: 'protected' }],
+    ['users.permission_exceeded', { email: 'exceeded' }],
+  ])(
+    'maps the raw code %s to a field error when the server sends no fieldErrors (change email)',
+    async (code, fieldErrors) => {
+      changeMemberEmail.mockResolvedValue({ error: { code } });
+      const { result } = renderHook(() => useAccessAdministrationActions());
+
+      const outcome = await result.current.onChangeMemberEmail(userId, {
+        email: 'new@example.test',
+      });
+
+      expect(outcome).toEqual({ success: false, fieldErrors });
+      expect(alertAccessSuccess).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    ['users.manager_role_protected', { password: 'protected' }],
+    ['users.permission_exceeded', { password: 'exceeded' }],
+  ])(
+    'maps the raw code %s to a field error when the server sends no fieldErrors (change password)',
+    async (code, fieldErrors) => {
+      changeMemberPassword.mockResolvedValue({ error: { code } });
+      const { result } = renderHook(() => useAccessAdministrationActions());
+
+      const outcome = await result.current.onChangeMemberPassword(userId, {
+        password: 'newpassword123',
+      });
+
+      expect(outcome).toEqual({ success: false, fieldErrors });
+      expect(alertAccessSuccess).not.toHaveBeenCalled();
+    },
+  );
+
   it('changes a member email and reports success', async () => {
     changeMemberEmail.mockResolvedValue({
       data: { userId, email: 'new@example.test' },
