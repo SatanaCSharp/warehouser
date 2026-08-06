@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { getEntityManager } from 'shared/database/db-transaction-context.service';
+import { AccountEntity } from 'shared/domain/entities/account.entity';
 import { PermissionEntity } from 'shared/domain/entities/permission.entity';
 import { RoleEntity } from 'shared/domain/entities/role.entity';
 import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
@@ -20,6 +21,7 @@ export interface AccessMemberRead {
   readonly roleId: string;
   readonly roleName: string;
   readonly roleKind: 'custom' | 'warehouse_manager';
+  readonly email: string;
 }
 export interface AccessPermissionRead {
   readonly id: string;
@@ -100,11 +102,13 @@ export class AccessReadRepository {
         'role',
         'role.id = membership.roleId AND role.warehouseId = membership.warehouseId',
       )
+      .innerJoin(AccountEntity, 'account', 'account.userId = membership.userId')
       .select('membership.userId', 'userId')
       .addSelect('membership.warehouseId', 'warehouseId')
       .addSelect('membership.roleId', 'roleId')
       .addSelect('role.name', 'roleName')
       .addSelect('membership.roleKind', 'roleKind')
+      .addSelect('account.normalizedEmail', 'email')
       .where('membership.warehouseId = :warehouseId', { warehouseId })
       .orderBy('membership.userId', 'ASC')
       .take(limit);

@@ -28,6 +28,7 @@ export const memberSchema = z.strictObject({
   userId: z.string().uuid(),
   roleId: z.string().uuid(),
   roleKind: roleKindSchema,
+  email: z.string().email().max(254).optional(),
 });
 
 const pageShape = {
