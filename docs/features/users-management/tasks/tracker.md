@@ -16,7 +16,7 @@
 | T9  | CreateMemberCommand                                       | app       | Backend Lead  | L        | T2, T3, T4, T5, T7    | done   |
 | T10 | ChangeMemberEmailCommand                                  | app       | Backend Lead  | M        | T2, T3, T4, T5, T7    | done   |
 | T11 | ChangeMemberPasswordCommand                               | app       | Backend Lead  | M        | T2, T3, T4, T5, T7    | done   |
-| T12 | DeleteMemberCommand                                       | app       | Backend Lead  | L        | T3, T4, T5, T7        | todo   |
+| T12 | DeleteMemberCommand                                       | app       | Backend Lead  | L        | T3, T4, T5, T7        | done   |
 | T13 | UsersController + module wiring                           | ports     | Backend Lead  | M        | T7, T9, T10, T11, T12 | todo   |
 | T14 | Access member-list email join                             | infra     | Backend Lead  | S        | —                     | done   |
 | T15 | Load smoke test                                           | tests     | Backend Lead  | S        | T13                   | todo   |
