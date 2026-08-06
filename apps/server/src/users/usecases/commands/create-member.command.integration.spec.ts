@@ -395,7 +395,7 @@ describeIntegration('CreateMemberCommand', () => {
           roleId: uuid('900000000001'),
         }),
       ),
-    ).rejects.toMatchObject({ code: ErrorCode.ACCESS_TARGET_UNAVAILABLE });
+    ).rejects.toMatchObject({ code: ErrorCode.ACCESS_ROLE_UNAVAILABLE });
 
     await expect(persistedCounts()).resolves.toEqual(before);
   });
@@ -412,7 +412,7 @@ describeIntegration('CreateMemberCommand', () => {
           roleId: crossWarehouseRoleId,
         }),
       ),
-    ).rejects.toMatchObject({ code: ErrorCode.ACCESS_TARGET_UNAVAILABLE });
+    ).rejects.toMatchObject({ code: ErrorCode.ACCESS_ROLE_UNAVAILABLE });
 
     await expect(persistedCounts()).resolves.toEqual(before);
   });

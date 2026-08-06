@@ -49,6 +49,13 @@ export interface CreateMemberRuntime {
 const targetUnavailableError = (): ApplicationError =>
   new ApplicationError(ErrorCode.ACCESS_TARGET_UNAVAILABLE);
 
+// A missing/cross-Warehouse Role is the Role-not-found case specifically —
+// distinct from the actor's own membership resolution above — and reuses
+// `access`'s stable `ACCESS_ROLE_UNAVAILABLE` code for the same reason
+// `targetUnavailableError` reuses `ACCESS_TARGET_UNAVAILABLE`.
+const roleUnavailableError = (): ApplicationError =>
+  new ApplicationError(ErrorCode.ACCESS_ROLE_UNAVAILABLE);
+
 // AC-02/AC-05 reuse `auth`'s registration-time credential rules and stable
 // error codes verbatim (spec.md §5 note; ADR-0001) — constructed directly
 // here rather than importing `auth/domain/errors/*`, which is `auth`-owned.
@@ -100,7 +107,7 @@ export class CreateMemberCommand {
       currentUser.warehouseId,
       input.roleId,
     );
-    assertDefined(role, targetUnavailableError());
+    assertDefined(role, roleUnavailableError());
 
     assert(
       !isReservedManagerRoleSelection(role.kind),
