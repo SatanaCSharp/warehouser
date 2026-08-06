@@ -22,6 +22,9 @@ export const ErrorCode = {
   USERS_MANAGER_ROLE_PROTECTED: 'users.manager_role_protected',
   USERS_PERMISSION_EXCEEDED: 'users.permission_exceeded',
   USERS_RESERVED_ROLE_SELECTION: 'users.reserved_role_selection',
+  USERS_CREATION_UNAVAILABLE: 'users.creation_unavailable',
+  USERS_PASSWORD_CHANGE_UNAVAILABLE: 'users.password_change_unavailable',
+  USERS_DELETION_UNAVAILABLE: 'users.deletion_unavailable',
   INTERNAL_ERROR: 'system.internal_error',
 } as const;
 
