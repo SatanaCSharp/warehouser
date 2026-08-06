@@ -21,7 +21,7 @@
 | T14 | Access member-list email join                             | infra     | Backend Lead  | S        | —                     | done   |
 | T15 | Load smoke test                                           | tests     | Backend Lead  | S        | T13                   | done   |
 | T16 | RTK Query slice + mutation hooks                          | ui        | Frontend Lead | M        | T7                    | done   |
-| T17 | Members list + tab wiring, incl. delete                   | ui        | Frontend Lead | L        | T16, T14              | todo   |
+| T17 | Members list + tab wiring, incl. delete                   | ui        | Frontend Lead | L        | T16, T14              | done   |
 | T18 | Create Member dialog                                      | ui        | Frontend Lead | M        | T16                   | done   |
 | T19 | Edit-email / reset-password dialogs                       | ui        | Frontend Lead | M        | T16                   | done   |
 
