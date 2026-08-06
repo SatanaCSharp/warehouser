@@ -23,6 +23,6 @@
 | T16 | RTK Query slice + mutation hooks                          | ui        | Frontend Lead | M        | T7                    | done   |
 | T17 | Members list + tab wiring, incl. delete                   | ui        | Frontend Lead | L        | T16, T14              | todo   |
 | T18 | Create Member dialog                                      | ui        | Frontend Lead | M        | T16                   | done   |
-| T19 | Edit-email / reset-password dialogs                       | ui        | Frontend Lead | M        | T16                   | todo   |
+| T19 | Edit-email / reset-password dialogs                       | ui        | Frontend Lead | M        | T16                   | done   |
 
 **Total:** 19 tasks, ~13 person-days (S≈0.3d, M≈0.6d, L≈1d).
