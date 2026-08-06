@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 
 import type { AccountEntity } from 'shared/domain/entities/account.entity';
 import type { SessionEntity } from 'shared/domain/entities/session.entity';
@@ -15,7 +15,7 @@ import type { DeepPartial } from 'typeorm';
 export const accountEntityFactory = (
   overrides: DeepPartial<AccountEntity> = {},
 ): DeepPartial<AccountEntity> => {
-  const id = randomUUID();
+  const id = overrides.id ?? randomUUID();
   const now = new Date();
 
   return {
@@ -33,8 +33,9 @@ export const accountEntityFactory = (
     createdAt: now,
     updatedAt: now,
     ...overrides,
-    // Identity-pairing invariant (`chk_accounts_user_identity_pair`) is not
-    // overridable: id === userId always.
+    // Identity-pairing invariant (`chk_accounts_user_identity_pair`) always
+    // holds — a caller may pin a specific identity via `overrides.id`, but
+    // `userId` follows `id` and is never independently overridable.
     id,
     userId: id,
   };
@@ -95,7 +96,9 @@ export const sessionEntityFactory = (
 
   return {
     id: randomUUID(),
-    secretDigest: Buffer.from(randomUUID().replace(/-/gu, ''), 'hex'),
+    // `chk_sessions_secret_digest_length` requires exactly 32 bytes
+    // (`octet_length(secret_digest) = 32`), matching a real digest's size.
+    secretDigest: randomBytes(32),
     establishedAt,
     expiresAt,
     revokedAt: null,
