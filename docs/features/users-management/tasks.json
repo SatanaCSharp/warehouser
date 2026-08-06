@@ -1,0 +1,235 @@
+{
+  "slug": "users-management",
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "Promote and apply the Permission-catalogue migration granting USERS:* to existing Warehouse Managers",
+      "layer": "migration",
+      "deps": [],
+      "acs": ["AC-17"],
+      "dod": "The staged migration is promoted to live apps/server/migrations/, applies and reverts cleanly, and an integration check confirms every existing warehouse_manager Role holds all four USERS:* permissions after up and none of the three new ones after down.",
+      "files_hint": [
+        "docs/features/users-management/migrations/01-grant-users-management-permissions.ts"
+      ]
+    },
+    {
+      "id": "T2",
+      "title": "Promote shared email/password validation and hashing to shared/domain/security",
+      "layer": "domain",
+      "deps": [],
+      "acs": [],
+      "dod": "Email/password value objects, predicates, and scrypt hashing move to shared/domain/security with zero behavior change; auth's existing test suite (moved alongside) stays green; auth imports from the new shared location.",
+      "files_hint": [
+        "apps/server/src/shared/domain/security/",
+        "apps/server/src/auth/domain/"
+      ]
+    },
+    {
+      "id": "T3",
+      "title": "Add users domain errors and invariant predicates",
+      "layer": "domain",
+      "deps": [],
+      "acs": ["AC-11", "AC-13", "AC-14", "AC-16", "AC-18", "AC-19", "AC-20"],
+      "dod": "Unit tests cover self-action, protected-Manager-target, Permission-exceeded-target (creation and credential-change directions), and reserved-Role-selection predicates in isolation; users/domain has no NestJS, HTTP, or TypeORM imports.",
+      "files_hint": ["apps/server/src/users/domain/"]
+    },
+    {
+      "id": "T4",
+      "title": "Add MemberLifecycleRepository",
+      "layer": "infra",
+      "deps": [],
+      "acs": [],
+      "dod": "Repository integration tests against PostgreSQL cover lockMembership (including cross-Warehouse scoping), findRoleGrantedPermissionIds, insertMembership, and deleteMembership.",
+      "files_hint": [
+        "apps/server/src/shared/domain/repositories/member-lifecycle.repository.ts"
+      ]
+    },
+    {
+      "id": "T5",
+      "title": "Extend AuthenticationRepository with identity-lifecycle and bulk session operations",
+      "layer": "infra",
+      "deps": [],
+      "acs": [],
+      "dod": "Repository integration tests cover createIdentity (no Session row), updateEmail, updateCredential, revokeSessionsByAccountId (asserting only the target account's Sessions move), deleteSessionsByAccountId, and deleteIdentity, in the deletion-sequencing order data-model.md specifies.",
+      "files_hint": [
+        "apps/server/src/shared/domain/repositories/authentication.repository.ts"
+      ]
+    },
+    {
+      "id": "T6",
+      "title": "Add persistence-entity test factories",
+      "layer": "infra",
+      "deps": [],
+      "acs": [],
+      "dod": "accountEntityFactory, userEntityFactory, warehouseMembershipEntityFactory, and sessionEntityFactory each build a valid DeepPartial entity respecting existing invariants, using only synthetic example.test data.",
+      "files_hint": ["apps/server/src/test/factories/"]
+    },
+    {
+      "id": "T7",
+      "title": "Add users contracts and extend shared-types PermissionId/ErrorCode",
+      "layer": "ports",
+      "deps": [],
+      "acs": [],
+      "dod": "packages/contracts/users exports strict Zod request/response schemas for create/email-change/password-change/delete matching contracts/openapi.yaml; packages/shared-types PermissionId gains USERS_EMAIL_UPDATE, USERS_PASSWORD_CHANGE, USERS_DELETE matching the migration's catalogue IDs byte-for-byte, and ErrorCode gains this feature's new stable error codes.",
+      "files_hint": [
+        "packages/contracts/src/users/",
+        "packages/shared-types/src/enums/permission-id.ts",
+        "packages/shared-types/src/enums/error-code.ts"
+      ]
+    },
+    {
+      "id": "T8",
+      "title": "Grant the new Permissions to future Warehouse Managers via provision-initial-access",
+      "layer": "app",
+      "deps": ["T7"],
+      "acs": ["AC-17"],
+      "dod": "An integration test registering a new Warehouse after this change confirms its Warehouse Manager Role holds all four USERS:* Permissions immediately, with no reliance on the T1 migration.",
+      "files_hint": [
+        "apps/server/src/access/usecases/commands/provision-initial-access.command.ts"
+      ]
+    },
+    {
+      "id": "T9",
+      "title": "Implement CreateMemberCommand",
+      "layer": "app",
+      "deps": ["T2", "T3", "T4", "T5", "T7"],
+      "acs": ["AC-01", "AC-02", "AC-05", "AC-09", "AC-12", "AC-16", "AC-20"],
+      "dod": "Command integration tests cover the happy path, invalid email/password, duplicate email, missing/cross-Warehouse Role, reserved-Role selection, Role exceeding the actor's Permissions, atomic rollback on injected failure, and that a created member can sign in with the initial credentials via the existing unchanged sign-in command.",
+      "files_hint": [
+        "apps/server/src/users/usecases/commands/create-member.command.ts"
+      ]
+    },
+    {
+      "id": "T10",
+      "title": "Implement ChangeMemberEmailCommand",
+      "layer": "app",
+      "deps": ["T2", "T3", "T4", "T5", "T7"],
+      "acs": ["AC-04", "AC-05", "AC-09", "AC-14", "AC-18", "AC-19"],
+      "dod": "Command integration tests cover the happy path (target Sessions left active), invalid/duplicate email, cross-Warehouse/missing target, self-targeting, protected-Manager target, and target-exceeds-actor's-Permissions denials, plus atomic rollback on injected failure. The missing-Permission denial (AC-10) is guard-level and is not this task's concern.",
+      "files_hint": [
+        "apps/server/src/users/usecases/commands/change-member-email.command.ts"
+      ]
+    },
+    {
+      "id": "T11",
+      "title": "Implement ChangeMemberPasswordCommand",
+      "layer": "app",
+      "deps": ["T2", "T3", "T4", "T5", "T7"],
+      "acs": ["AC-06", "AC-07", "AC-09", "AC-14", "AC-18", "AC-19"],
+      "dod": "Command integration tests cover the happy path (every prior target Session revoked, verified via revokeSessionsByAccountId's returned count), invalid password length, cross-Warehouse/missing target, self-targeting, protected-Manager target, and target-exceeds-actor's-Permissions denials, plus atomic rollback on injected failure. The missing-Permission denial (AC-10) is guard-level and is not this task's concern.",
+      "files_hint": [
+        "apps/server/src/users/usecases/commands/change-member-password.command.ts"
+      ]
+    },
+    {
+      "id": "T12",
+      "title": "Implement DeleteMemberCommand",
+      "layer": "app",
+      "deps": ["T3", "T4", "T5", "T7"],
+      "acs": ["AC-08", "AC-09", "AC-11", "AC-13", "AC-15"],
+      "dod": "Command integration tests cover the happy path (target's Sessions, Membership, Account, and User all gone, email free for reuse, in the data-model deletion-sequencing order), cross-Warehouse/missing target, self-deletion, protected-Manager target, and a concurrent TransferWarehouseManagerCommand-vs-delete race that leaves the Warehouse with exactly one Manager, plus atomic rollback on injected failure. The missing-Permission denial (AC-10) is guard-level and is not this task's concern.",
+      "files_hint": [
+        "apps/server/src/users/usecases/commands/delete-member.command.ts"
+      ]
+    },
+    {
+      "id": "T13",
+      "title": "Add UsersController REST endpoints and wire the users module",
+      "layer": "ports",
+      "deps": ["T7", "T9", "T10", "T11", "T12"],
+      "acs": ["AC-03", "AC-09", "AC-10"],
+      "dod": "REST contract tests confirm every endpoint validates the shared Zod schemas, maps each command's denials to stable error codes, and denies a missing Permission and a cross-Warehouse target without disclosing existence; the existing authorization-coverage architecture scan is extended to UsersController and confirms every handler is Permission-gated and Warehouse-scoped; UsersModule is registered in AppModule and users imports no access/* or auth/* feature-owned file.",
+      "files_hint": [
+        "apps/server/src/users/rest/",
+        "apps/server/src/users/users.module.ts",
+        "apps/server/src/app.module.ts"
+      ]
+    },
+    {
+      "id": "T14",
+      "title": "Extend the access member-list read path with email",
+      "layer": "infra",
+      "deps": [],
+      "acs": [],
+      "dod": "list-access-members.query.ts / AccessReadRepository.listMembersAndAssignments returns each member's normalized email via the existing accounts.user_id join, and packages/contracts/access's AccessMemberRead schema gains the email field, with an integration test asserting the new field on an existing fixture.",
+      "files_hint": [
+        "apps/server/src/access/usecases/queries/list-access-members.query.ts",
+        "apps/server/src/shared/domain/repositories/access-read.repository.ts",
+        "packages/contracts/src/access/"
+      ]
+    },
+    {
+      "id": "T15",
+      "title": "Add a load smoke test for the four lifecycle endpoints",
+      "layer": "tests",
+      "deps": ["T13"],
+      "acs": [],
+      "dod": "An automated load smoke test sustains ≥30 operations/second per instance for 10 minutes across create/email-change/password-change/delete and reports p95 latency against spec.md §6's 400ms/300ms/300ms/500ms targets.",
+      "files_hint": ["apps/server/src/users/"]
+    },
+    {
+      "id": "T16",
+      "title": "Add users endpoints to the RTK Query API slice and mutation hook handlers",
+      "layer": "ui",
+      "deps": ["T7"],
+      "acs": [],
+      "dod": "access-api.ts exposes createMember/changeMemberEmail/changeMemberPassword/deleteMember mutations with invalidation tags covering the member list and current-access projection; useAccessAdministrationActions.ts gains matching handlers following the existing success/field-error mapping pattern, covered by unit tests.",
+      "files_hint": [
+        "apps/web/src/modules/access/api/access-api.ts",
+        "apps/web/src/modules/access/hooks/useAccessAdministrationActions.ts"
+      ]
+    },
+    {
+      "id": "T17",
+      "title": "Build the Members list and wire the Members tab, including delete",
+      "layer": "ui",
+      "deps": ["T16", "T14"],
+      "acs": ["AC-08", "AC-09", "AC-10", "AC-11", "AC-13", "AC-14", "AC-18"],
+      "dod": "MemberList/MemberRow render per the approved design handoff (node e4e0H), replacing MemberRoleActions/MembersDatasetCard in the Members tab; the protected Warehouse Manager row and the actor's own row render a status chip instead of action controls; per-row and \"Create member\" actions are enabled only for Permissions the actor holds; delete asks for confirmation via the existing DeletionDialog shell and the list refetches after every mutation; component tests cover loading/empty/protected-row/self-row/denied states.",
+      "files_hint": [
+        "apps/web/src/modules/access/components/access-administration/MemberList.tsx",
+        "apps/web/src/modules/access/components/access-administration/MemberRow.tsx",
+        "apps/web/src/modules/access/components/access-administration/AccessAdministration.tsx",
+        "apps/web/src/modules/access/components/access-workspace/AccessWorkspace.tsx",
+        "public/locales"
+      ]
+    },
+    {
+      "id": "T18",
+      "title": "Build the Create Member dialog",
+      "layer": "ui",
+      "deps": ["T16"],
+      "acs": ["AC-01", "AC-02", "AC-03", "AC-05", "AC-16", "AC-20"],
+      "dod": "A Create Member modal/sheet collects email, initial password, and an existing Role, submits via the new mutation, and surfaces field-level validation, duplicate-email, Permission-exceeded, and reserved-Role-selection errors per the approved design handoff; component tests cover success and each error state.",
+      "files_hint": [
+        "apps/web/src/modules/access/components/access-administration/CreateMemberDialog.tsx",
+        "apps/web/src/modules/access/components/access-administration/AccessAdministration.tsx",
+        "public/locales"
+      ]
+    },
+    {
+      "id": "T19",
+      "title": "Build the Edit-email and Reset-password dialogs",
+      "layer": "ui",
+      "deps": ["T16"],
+      "acs": [
+        "AC-04",
+        "AC-05",
+        "AC-06",
+        "AC-07",
+        "AC-09",
+        "AC-10",
+        "AC-14",
+        "AC-18",
+        "AC-19"
+      ],
+      "dod": "Edit-email and reset-password dialogs reuse the existing RoleDialog shell, submit via their respective mutations, and surface validation, duplicate-email (email only), protected-Manager, and Permission-exceeded-target errors per the approved design handoff; component tests cover success and each error state.",
+      "files_hint": [
+        "apps/web/src/modules/access/components/access-administration/EditEmailDialog.tsx",
+        "apps/web/src/modules/access/components/access-administration/ResetPasswordDialog.tsx",
+        "apps/web/src/modules/access/components/access-administration/AccessAdministration.tsx",
+        "public/locales"
+      ]
+    }
+  ]
+}
