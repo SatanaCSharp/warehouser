@@ -1,6 +1,10 @@
 import { randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
 
-import { PasswordCredential } from 'auth/domain/entities/account';
+export interface PasswordCredential {
+  readonly algorithm: string;
+  readonly hash: string;
+  readonly parameters: Readonly<Record<string, number | string>>;
+}
 
 export interface ScryptParameters {
   readonly cost: number;

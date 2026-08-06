@@ -1,11 +1,6 @@
-import { EmailAddress } from 'auth/domain/value-objects/email-address';
 import { AccountId, UserId } from 'auth/domain/value-objects/identity-id';
-
-export interface PasswordCredential {
-  readonly algorithm: string;
-  readonly hash: string;
-  readonly parameters: Readonly<Record<string, number | string>>;
-}
+import { EmailAddress } from 'shared/domain/security/email-address';
+import { PasswordCredential } from 'shared/domain/security/password-hashing';
 
 export interface CreateAccount {
   readonly id: string;
