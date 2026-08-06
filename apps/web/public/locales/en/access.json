@@ -24,7 +24,14 @@
     "heading": "Members",
     "listLabel": "Warehouse members"
     ,"empty": "No members are available.",
-    "error": "Members could not be loaded safely. Try again."
+    "error": "Members could not be loaded safely. Try again.",
+    "you": "You",
+    "search": "Search members",
+    "searchEmpty": "No members match your search.",
+    "loading": "Loading members",
+    "editEmail": "Edit email for {{email}}",
+    "resetPassword": "Reset password for {{email}}",
+    "deleteMember": "Delete {{email}}"
   },
   "permissions": {
     "heading": "Permissions",
@@ -126,6 +133,11 @@
         "protected": "The Warehouse Manager role must be transferred to someone else first.",
         "exceeded": "You can't change credentials for a member with more permissions than you."
       }
+    },
+    "deleteMember": {
+      "title": "Delete {{email}}",
+      "body": "This permanently removes {{email}} from the Warehouse. This action cannot be undone.",
+      "confirm": "Delete member"
     }
   },
   "denied": {

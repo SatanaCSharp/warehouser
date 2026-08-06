@@ -57,8 +57,18 @@ const permissions: PermissionPage['items'] = [
   },
 ];
 const members: MemberPage['items'] = [
-  { userId: managerId, roleId: managerRoleId, roleKind: 'warehouse_manager' },
-  { userId: memberId, roleId: pickerRoleId, roleKind: 'custom' },
+  {
+    userId: managerId,
+    roleId: managerRoleId,
+    roleKind: 'warehouse_manager',
+    email: 'manager@example.test',
+  },
+  {
+    userId: memberId,
+    roleId: pickerRoleId,
+    roleKind: 'custom',
+    email: 'member@example.test',
+  },
 ];
 
 const renderAdministration = (
@@ -70,7 +80,10 @@ const renderAdministration = (
     permissions,
     roles,
     onAssignRole: vi.fn().mockResolvedValue({ success: true }),
+    onChangeMemberEmail: vi.fn().mockResolvedValue({ success: true }),
+    onChangeMemberPassword: vi.fn().mockResolvedValue({ success: true }),
     onCreateMember: vi.fn().mockResolvedValue({ success: true }),
+    onDeleteMember: vi.fn().mockResolvedValue({ success: true }),
     onDeleteRole: vi.fn().mockResolvedValue({ success: true }),
     onSaveRole: vi.fn().mockResolvedValue({ success: true }),
     onTransferManager: vi.fn().mockResolvedValue({ success: true }),
@@ -80,6 +93,9 @@ const renderAdministration = (
   return props;
 };
 
+// This suite deliberately keeps every Roles and Members workflow scenario
+// together so each assertion exercises the same rendered administration tree.
+// eslint-disable-next-line max-lines-per-function
 describe('AccessAdministration', () => {
   it('creates an empty-grant role and explains why reserved permissions are disabled', async () => {
     const user = userEvent.setup();
@@ -296,6 +312,109 @@ describe('AccessAdministration', () => {
 
     expect(
       screen.queryByRole('button', { name: 'Create member' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('changes a member email through the Edit Email dialog when authorized (AC-04)', async () => {
+    const user = userEvent.setup();
+    const props = renderAdministration();
+
+    const row = screen.getByRole('listitem', { name: /member@example\.test/u });
+    await user.click(
+      within(row).getByRole('button', {
+        name: 'Edit email for member@example.test',
+      }),
+    );
+    const dialog = screen.getByRole('dialog', {
+      name: 'Edit email for member@example.test',
+    });
+    await user.type(
+      within(dialog).getByLabelText('New email'),
+      'member.new@example.test',
+    );
+    await user.click(
+      within(dialog).getByRole('button', { name: 'Save email' }),
+    );
+
+    expect(props.onChangeMemberEmail).toHaveBeenCalledWith(memberId, {
+      email: 'member.new@example.test',
+    });
+  });
+
+  it('resets a member password through the Reset Password dialog when authorized (AC-06)', async () => {
+    const user = userEvent.setup();
+    const props = renderAdministration();
+
+    const row = screen.getByRole('listitem', { name: /member@example\.test/u });
+    await user.click(
+      within(row).getByRole('button', {
+        name: 'Reset password for member@example.test',
+      }),
+    );
+    const dialog = screen.getByRole('dialog', {
+      name: 'Reset password for member@example.test',
+    });
+    await user.type(
+      within(dialog).getByLabelText('New password'),
+      'a-new-strong-password',
+    );
+    await user.click(
+      within(dialog).getByRole('button', { name: 'Reset password' }),
+    );
+
+    expect(props.onChangeMemberPassword).toHaveBeenCalledWith(memberId, {
+      password: 'a-new-strong-password',
+    });
+  });
+
+  it('deletes a member after confirmation through the delete dialog when authorized (AC-08)', async () => {
+    const user = userEvent.setup();
+    const props = renderAdministration();
+
+    const row = screen.getByRole('listitem', { name: /member@example\.test/u });
+    await user.click(
+      within(row).getByRole('button', { name: 'Delete member@example.test' }),
+    );
+    const dialog = screen.getByRole('dialog', {
+      name: 'Delete member@example.test',
+    });
+    await user.click(
+      within(dialog).getByRole('button', { name: 'Delete member' }),
+    );
+
+    expect(props.onDeleteMember).toHaveBeenCalledWith(memberId);
+  });
+
+  it('shows a Protected chip with no action controls for the Warehouse Manager row (AC-13/14)', () => {
+    renderAdministration();
+
+    const row = screen.getByRole('listitem', {
+      name: /manager@example\.test/u,
+    });
+    expect(within(row).getByText('Protected')).toBeInTheDocument();
+    expect(within(row).queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('hides per-row member actions without the matching Permissions', () => {
+    renderAdministration({
+      access: { ...access, permissionIds: [PermissionId.USERS_WATCH] },
+    });
+
+    const row = screen.getByRole('listitem', { name: /member@example\.test/u });
+    expect(
+      within(row).queryByRole('button', {
+        name: 'Edit email for member@example.test',
+      }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(row).queryByRole('button', {
+        name: 'Reset password for member@example.test',
+      }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(row).queryByRole('button', {
+        name: 'Delete member@example.test',
+      }),
     ).not.toBeInTheDocument();
   });
 });

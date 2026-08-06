@@ -20,12 +20,19 @@ import type { ReactElement } from 'react';
 
 type AccessWorkspaceProps = { access: AccessProjection };
 
-const administrationPermissions: readonly string[] = [
+const roleAdministrationPermissions: readonly string[] = [
   PermissionId.ROLES_ASSIGN,
   PermissionId.ROLES_CREATE,
   PermissionId.ROLES_DELETE,
   PermissionId.ROLES_UPDATE,
   PermissionId.WAREHOUSE_MANAGER_ROLE_REASSIGN,
+];
+
+const memberAdministrationPermissions: readonly string[] = [
+  PermissionId.USERS_CREATE,
+  PermissionId.USERS_EMAIL_UPDATE,
+  PermissionId.USERS_PASSWORD_CHANGE,
+  PermissionId.USERS_DELETE,
 ];
 
 export const AccessWorkspace = ({
@@ -34,16 +41,19 @@ export const AccessWorkspace = ({
   const { t } = useTranslation('access');
   const canReadRoles = access.permissionIds.includes(PermissionId.ROLES_WATCH);
   const canManageRoles = access.permissionIds.some((permission) =>
-    administrationPermissions.includes(permission),
+    roleAdministrationPermissions.includes(permission),
   );
   const canLoadRoles = canReadRoles || canManageRoles;
   const canReadMembers = access.permissionIds.includes(
     PermissionId.USERS_WATCH,
   );
-  const canManageMembers = access.permissionIds.some(
+  const canAssignRoles = access.permissionIds.some(
     (permission) =>
       permission === PermissionId.ROLES_ASSIGN ||
       permission === PermissionId.WAREHOUSE_MANAGER_ROLE_REASSIGN,
+  );
+  const canManageMemberLifecycle = access.permissionIds.some((permission) =>
+    memberAdministrationPermissions.includes(permission),
   );
   const canLoadPermissions = access.permissionIds.some(
     (permission) =>
@@ -56,21 +66,30 @@ export const AccessWorkspace = ({
     skip: !canLoadPermissions,
   });
   const members = useListAccessMembersQuery(undefined, {
-    skip: !(canReadMembers || canManageMembers),
+    skip: !(canReadMembers || canAssignRoles || canManageMemberLifecycle),
   });
   const administrationActions = useAccessAdministrationActions();
 
-  const administration =
-    roles.data &&
-    permissions.data &&
-    access.permissionIds.some((permission) =>
-      administrationPermissions.includes(permission),
-    ) ? (
+  const rolesAdministration =
+    canManageRoles && roles.data && permissions.data ? (
       <AccessAdministration
         access={access}
         members={members.data?.items ?? []}
         permissions={permissions.data.items}
         roles={roles.data.items}
+        view="roles"
+        {...administrationActions}
+      />
+    ) : null;
+
+  const membersAdministration =
+    canManageMemberLifecycle && members.data ? (
+      <AccessAdministration
+        access={access}
+        members={members.data.items}
+        permissions={permissions.data?.items ?? []}
+        roles={roles.data?.items ?? []}
+        view="members"
         {...administrationActions}
       />
     ) : null;
@@ -97,12 +116,12 @@ export const AccessWorkspace = ({
         >
           {canLoadRoles ? (
             <Tab key="roles" title={t('navigation.roles')}>
-              {administration ?? <RolesDatasetCard query={roles} />}
+              {rolesAdministration ?? <RolesDatasetCard query={roles} />}
             </Tab>
           ) : null}
           {canReadMembers ? (
             <Tab key="members" title={t('navigation.members')}>
-              <MembersDatasetCard query={members} />
+              {membersAdministration ?? <MembersDatasetCard query={members} />}
             </Tab>
           ) : null}
           {canReadRoles ? (
