@@ -15,6 +15,10 @@ export default defineConfig({
         __dirname,
         '../../packages/contracts/src/auth/index.ts',
       ),
+      '@warehouser/contracts/users': path.resolve(
+        __dirname,
+        '../../packages/contracts/src/users/index.ts',
+      ),
       '@warehouser/shared-types/enums': path.resolve(
         __dirname,
         '../../packages/shared-types/src/enums/index.ts',

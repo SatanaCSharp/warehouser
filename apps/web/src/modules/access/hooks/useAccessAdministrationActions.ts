@@ -1,19 +1,40 @@
 import { alertAccessSuccess } from 'modules/access/alerts/access-feedback';
 import {
   useAssignAccessMemberRoleMutation,
+  useChangeMemberEmailMutation,
+  useChangeMemberPasswordMutation,
   useCreateAccessRoleMutation,
+  useCreateMemberMutation,
   useDeleteAccessRoleMutation,
+  useDeleteMemberMutation,
   useTransferWarehouseManagerMutation,
   useUpdateAccessRoleMutation,
 } from 'modules/access/api/access-api';
 import { isApiFailure } from 'shared/api/api-client';
 
+import type {
+  CreateMemberInput,
+  EmailChangeInput,
+  PasswordChangeInput,
+} from '@warehouser/contracts/users';
 import type { AccessAdministrationProps } from 'modules/access/components/access-administration/AccessAdministration';
+import type { MutationOutcome } from 'modules/access/types/access-administration.types';
 
 type AdministrationActions = Pick<
   AccessAdministrationProps,
   'onAssignRole' | 'onDeleteRole' | 'onSaveRole' | 'onTransferManager'
->;
+> & {
+  onCreateMember: (input: CreateMemberInput) => Promise<MutationOutcome>;
+  onChangeMemberEmail: (
+    userId: string,
+    input: EmailChangeInput,
+  ) => Promise<MutationOutcome>;
+  onChangeMemberPassword: (
+    userId: string,
+    input: PasswordChangeInput,
+  ) => Promise<MutationOutcome>;
+  onDeleteMember: (userId: string) => Promise<MutationOutcome>;
+};
 
 export const useAccessAdministrationActions = (): AdministrationActions => {
   const [createRole] = useCreateAccessRoleMutation();
@@ -21,6 +42,10 @@ export const useAccessAdministrationActions = (): AdministrationActions => {
   const [assignRole] = useAssignAccessMemberRoleMutation();
   const [deleteRole] = useDeleteAccessRoleMutation();
   const [transferManager] = useTransferWarehouseManagerMutation();
+  const [createMember] = useCreateMemberMutation();
+  const [changeMemberEmail] = useChangeMemberEmailMutation();
+  const [changeMemberPassword] = useChangeMemberPasswordMutation();
+  const [deleteMember] = useDeleteMemberMutation();
 
   return {
     onAssignRole: async (userId, roleId) => {
@@ -66,6 +91,58 @@ export const useAccessAdministrationActions = (): AdministrationActions => {
         return { success: false };
       }
       alertAccessSuccess('transferManager');
+      return { success: true };
+    },
+    onCreateMember: async (input) => {
+      const result = await createMember(input);
+      if ('error' in result) {
+        return {
+          success: false,
+          fieldErrors: isApiFailure(result.error)
+            ? result.error.fieldErrors
+            : undefined,
+        };
+      }
+      alertAccessSuccess('createMember');
+      return { success: true };
+    },
+    onChangeMemberEmail: async (userId, input) => {
+      const result = await changeMemberEmail({ userId, input });
+      if ('error' in result) {
+        return {
+          success: false,
+          fieldErrors: isApiFailure(result.error)
+            ? result.error.fieldErrors
+            : undefined,
+        };
+      }
+      alertAccessSuccess('changeMemberEmail');
+      return { success: true };
+    },
+    onChangeMemberPassword: async (userId, input) => {
+      const result = await changeMemberPassword({ userId, input });
+      if ('error' in result) {
+        return {
+          success: false,
+          fieldErrors: isApiFailure(result.error)
+            ? result.error.fieldErrors
+            : undefined,
+        };
+      }
+      alertAccessSuccess('changeMemberPassword');
+      return { success: true };
+    },
+    onDeleteMember: async (userId) => {
+      const result = await deleteMember(userId);
+      if ('error' in result) {
+        return {
+          success: false,
+          fieldErrors: isApiFailure(result.error)
+            ? result.error.fieldErrors
+            : undefined,
+        };
+      }
+      alertAccessSuccess('deleteMember');
       return { success: true };
     },
   };
