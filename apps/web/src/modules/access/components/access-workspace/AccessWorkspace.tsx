@@ -35,32 +35,69 @@ const memberAdministrationPermissions: readonly string[] = [
   PermissionId.USERS_DELETE,
 ];
 
+type WorkspacePermissions = {
+  canAssignRoles: boolean;
+  canLoadPermissions: boolean;
+  canLoadRoles: boolean;
+  canManageMemberLifecycle: boolean;
+  canManageRoles: boolean;
+  canReadMembers: boolean;
+  canReadRoles: boolean;
+  canViewRolesTab: boolean;
+};
+
+const deriveWorkspacePermissions = (
+  permissionIds: readonly string[],
+): WorkspacePermissions => {
+  const canReadRoles = permissionIds.includes(PermissionId.ROLES_WATCH);
+  const canManageRoles = permissionIds.some((permission) =>
+    roleAdministrationPermissions.includes(permission),
+  );
+  const canReadMembers = permissionIds.includes(PermissionId.USERS_WATCH);
+  const canCreateMembers = permissionIds.includes(PermissionId.USERS_CREATE);
+  const canViewRolesTab = canReadRoles || canManageRoles;
+
+  return {
+    canReadRoles,
+    canManageRoles,
+    canReadMembers,
+    canViewRolesTab,
+    // Members (read-only Role-name lookup) and Create Member (Role
+    // selection) both need Roles loaded even for an actor who holds no
+    // role-admin Permission at all (US-07's exact persona) — this only
+    // widens when the Roles *query* fires, not the Roles tab's visibility.
+    canLoadRoles: canViewRolesTab || canReadMembers || canCreateMembers,
+    canAssignRoles: permissionIds.some(
+      (permission) =>
+        permission === PermissionId.ROLES_ASSIGN ||
+        permission === PermissionId.WAREHOUSE_MANAGER_ROLE_REASSIGN,
+    ),
+    canManageMemberLifecycle: permissionIds.some((permission) =>
+      memberAdministrationPermissions.includes(permission),
+    ),
+    canLoadPermissions: permissionIds.some(
+      (permission) =>
+        permission === PermissionId.ROLES_WATCH ||
+        permission === PermissionId.ROLES_CREATE ||
+        permission === PermissionId.ROLES_UPDATE,
+    ),
+  };
+};
+
 export const AccessWorkspace = ({
   access,
 }: AccessWorkspaceProps): ReactElement => {
   const { t } = useTranslation('access');
-  const canReadRoles = access.permissionIds.includes(PermissionId.ROLES_WATCH);
-  const canManageRoles = access.permissionIds.some((permission) =>
-    roleAdministrationPermissions.includes(permission),
-  );
-  const canLoadRoles = canReadRoles || canManageRoles;
-  const canReadMembers = access.permissionIds.includes(
-    PermissionId.USERS_WATCH,
-  );
-  const canAssignRoles = access.permissionIds.some(
-    (permission) =>
-      permission === PermissionId.ROLES_ASSIGN ||
-      permission === PermissionId.WAREHOUSE_MANAGER_ROLE_REASSIGN,
-  );
-  const canManageMemberLifecycle = access.permissionIds.some((permission) =>
-    memberAdministrationPermissions.includes(permission),
-  );
-  const canLoadPermissions = access.permissionIds.some(
-    (permission) =>
-      permission === PermissionId.ROLES_WATCH ||
-      permission === PermissionId.ROLES_CREATE ||
-      permission === PermissionId.ROLES_UPDATE,
-  );
+  const {
+    canAssignRoles,
+    canLoadPermissions,
+    canLoadRoles,
+    canManageMemberLifecycle,
+    canManageRoles,
+    canReadMembers,
+    canReadRoles,
+    canViewRolesTab,
+  } = deriveWorkspacePermissions(access.permissionIds);
   const roles = useListAccessRolesQuery(undefined, { skip: !canLoadRoles });
   const permissions = useListAccessPermissionsQuery(undefined, {
     skip: !canLoadPermissions,
@@ -83,9 +120,10 @@ export const AccessWorkspace = ({
     ) : null;
 
   const membersAdministration =
-    canManageMemberLifecycle && members.data ? (
+    canReadMembers && members.data ? (
       <AccessAdministration
         access={access}
+        isLoading={members.isFetching}
         members={members.data.items}
         permissions={permissions.data?.items ?? []}
         roles={roles.data?.items ?? []}
@@ -114,7 +152,7 @@ export const AccessWorkspace = ({
             panel: 'px-0 pt-5',
           }}
         >
-          {canLoadRoles ? (
+          {canViewRolesTab ? (
             <Tab key="roles" title={t('navigation.roles')}>
               {rolesAdministration ?? <RolesDatasetCard query={roles} />}
             </Tab>

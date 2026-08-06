@@ -4,6 +4,8 @@ import { PermissionId } from '@warehouser/shared-types/enums';
 import { describe, expect, it, vi } from 'vitest';
 
 import { AccessAdministration } from 'modules/access/components/access-administration/AccessAdministration';
+import { authBecameAuthenticated } from 'modules/auth/store/auth.slice';
+import { makeStore } from 'store';
 import { renderWithProviders } from 'test/render';
 
 import type {
@@ -12,9 +14,11 @@ import type {
   PermissionPage,
   RolePage,
 } from '@warehouser/contracts/access';
+import type { AppStore } from 'store';
 
 const managerId = '00000000-0000-4000-8000-000000000001';
 const memberId = '00000000-0000-4000-8000-000000000002';
+const actingUserId = '00000000-0000-4000-8000-000000000003';
 const managerRoleId = '00000000-0000-4000-8000-000000000011';
 const pickerRoleId = '00000000-0000-4000-8000-000000000012';
 const auditorRoleId = '00000000-0000-4000-8000-000000000013';
@@ -71,8 +75,15 @@ const members: MemberPage['items'] = [
   },
 ];
 
+const authenticatedStore = (userId: string): AppStore => {
+  const store = makeStore();
+  store.dispatch(authBecameAuthenticated({ id: userId }));
+  return store;
+};
+
 const renderAdministration = (
   overrides: Partial<Parameters<typeof AccessAdministration>[0]> = {},
+  store: AppStore = authenticatedStore(actingUserId),
 ): Parameters<typeof AccessAdministration>[0] => {
   const props: Parameters<typeof AccessAdministration>[0] = {
     access,
@@ -89,7 +100,7 @@ const renderAdministration = (
     onTransferManager: vi.fn().mockResolvedValue({ success: true }),
     ...overrides,
   };
-  renderWithProviders(<AccessAdministration {...props} />);
+  renderWithProviders(<AccessAdministration {...props} />, store);
   return props;
 };
 
@@ -416,5 +427,26 @@ describe('AccessAdministration', () => {
         name: 'Delete member@example.test',
       }),
     ).not.toBeInTheDocument();
+  });
+
+  it('defers the member list to a loading skeleton until the actor id is known (AC-11/18)', () => {
+    // An unauthenticated-looking store (no authBecameAuthenticated dispatch)
+    // reproduces the auth store not having hydrated yet — self-row gating
+    // must never fall back to treating every row as not-self while the
+    // actor id is unresolved.
+    renderAdministration({}, makeStore());
+
+    expect(screen.getByLabelText('Loading members')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('listitem', { name: /member@example\.test/u }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('hides destructive controls and shows a You chip on the actor’s own row (AC-11/18)', () => {
+    renderAdministration({}, authenticatedStore(memberId));
+
+    const row = screen.getByRole('listitem', { name: /member@example\.test/u });
+    expect(within(row).getByText('You')).toBeInTheDocument();
+    expect(within(row).queryByRole('button')).not.toBeInTheDocument();
   });
 });

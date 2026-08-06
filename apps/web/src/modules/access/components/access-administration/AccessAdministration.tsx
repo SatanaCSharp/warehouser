@@ -41,6 +41,7 @@ export type { MutationOutcome } from 'modules/access/types/access-administration
 
 export type AccessAdministrationProps = {
   access: AccessProjection;
+  isLoading?: boolean;
   members: MemberPage['items'];
   permissions: PermissionPage['items'];
   roles: RolePage['items'];
@@ -244,6 +245,7 @@ const WorkflowDialogs = ({
 
 export const AccessAdministration = ({
   access,
+  isLoading = false,
   members,
   permissions,
   roles,
@@ -258,7 +260,13 @@ export const AccessAdministration = ({
   onTransferManager,
 }: AccessAdministrationProps): ReactElement => {
   const { t } = useTranslation('access');
-  const actorUserId = useAppSelector(selectCurrentUser)?.id ?? '';
+  const currentUser = useAppSelector(selectCurrentUser);
+  // Self-row gating (AC-11/AC-18) must never fall back to treating every row
+  // as not-self while the auth store hasn't hydrated yet — defer the member
+  // list to a loading skeleton instead of rendering live destructive
+  // controls against an unresolved actor id.
+  const actorUserId = currentUser?.id ?? '';
+  const membersLoading = isLoading || currentUser === null;
   const [workflow, setWorkflow] = useState<Workflow>(null);
   const [announcement, setAnnouncement] = useState('');
   const [query, setQuery] = useState('');
@@ -364,7 +372,7 @@ export const AccessAdministration = ({
           canDeleteMember={can(PermissionId.USERS_DELETE)}
           canEditEmail={can(PermissionId.USERS_EMAIL_UPDATE)}
           canResetPassword={can(PermissionId.USERS_PASSWORD_CHANGE)}
-          isLoading={false}
+          isLoading={membersLoading}
           members={members}
           query={memberQuery}
           roles={roles}

@@ -262,30 +262,56 @@ describe('router', () => {
 
   it('loads only member-authorized data when the user has USERS:WATCH', async () => {
     const memberId = '00000000-0000-4000-8000-000000000004';
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(
-        Response.json({
-          user: { id: '00000000-0000-4000-8000-000000000001' },
-        }),
-      )
-      .mockResolvedValueOnce(
-        Response.json({ ...readableAccess, permissionIds: ['USERS:WATCH'] }),
-      )
-      .mockResolvedValueOnce(
-        Response.json({
-          items: [
-            {
-              userId: memberId,
-              roleId: '00000000-0000-4000-8000-000000000003',
-              roleKind: 'custom',
-            },
-          ],
-          hasNext: false,
-          hasPrev: false,
-          nextCursor: null,
-        }),
-      );
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url =
+        input instanceof Request
+          ? input.url
+          : input instanceof URL
+            ? input.href
+            : input;
+      if (url.endsWith('/api/v1/auth/session')) {
+        return Promise.resolve(
+          Response.json({
+            user: { id: '00000000-0000-4000-8000-000000000001' },
+          }),
+        );
+      }
+      if (url.endsWith('/api/v1/access/current')) {
+        return Promise.resolve(
+          Response.json({ ...readableAccess, permissionIds: ['USERS:WATCH'] }),
+        );
+      }
+      // Members' Role-name lookup loads Roles even without a role-admin
+      // Permission (US-07) — the Members tab is not gated on that request.
+      if (url.endsWith('/api/v1/access/roles')) {
+        return Promise.resolve(
+          Response.json({
+            items: [],
+            hasNext: false,
+            hasPrev: false,
+            nextCursor: null,
+          }),
+        );
+      }
+      if (url.endsWith('/api/v1/access/members')) {
+        return Promise.resolve(
+          Response.json({
+            items: [
+              {
+                userId: memberId,
+                roleId: '00000000-0000-4000-8000-000000000003',
+                roleKind: 'custom',
+                email: 'member@example.test',
+              },
+            ],
+            hasNext: false,
+            hasPrev: false,
+            nextCursor: null,
+          }),
+        );
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
     vi.stubGlobal('fetch', fetchMock);
 
     renderRoute('/access');
@@ -300,8 +326,11 @@ describe('router', () => {
     expect(
       screen.queryByRole('tab', { name: 'Permissions' }),
     ).not.toBeInTheDocument();
-    expect(await screen.findByText(memberId)).toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    // The approved Members list (email + search), not the raw-UUID dataset
+    // card (AC-09/10 adjacent — sad.md §6.5).
+    expect(await screen.findByLabelText('Search members')).toBeInTheDocument();
+    expect(screen.getByText('member@example.test')).toBeInTheDocument();
+    expect(screen.queryByText(memberId)).not.toBeInTheDocument();
   });
 
   it('creates an account, authenticates the linked user, and enters home', async () => {
