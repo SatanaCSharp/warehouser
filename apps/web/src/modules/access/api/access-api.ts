@@ -7,6 +7,11 @@ import {
   roleMutationResultSchema,
   rolePageSchema,
 } from '@warehouser/contracts/access';
+import {
+  memberConfirmationSchema,
+  memberEmailSchema,
+  memberSchema,
+} from '@warehouser/contracts/users';
 
 import { api } from 'shared/api/api-client';
 
@@ -21,14 +26,25 @@ import type {
   RolePage,
   RoleWrite,
 } from '@warehouser/contracts/access';
+import type {
+  CreateMemberInput,
+  EmailChangeInput,
+  Member as UserMember,
+  MemberConfirmation,
+  MemberEmail,
+  PasswordChangeInput,
+} from '@warehouser/contracts/users';
 
 type Role = RolePage['items'][number];
 type Member = MemberPage['items'][number];
 type RoleMutation = { roleId: string; input: RoleWrite };
 type RoleDeletionMutation = { roleId: string; input: RoleDeletion };
 type RoleAssignmentMutation = { userId: string; input: RoleAssignment };
+type EmailChangeMutation = { userId: string; input: EmailChangeInput };
+type PasswordChangeMutation = { userId: string; input: PasswordChangeInput };
 
 const ACCESS_PATH = '/api/v1/access';
+const USERS_PATH = '/api/v1/users';
 
 export const accessApi = api.injectEndpoints({
   endpoints: (build) => ({
@@ -96,14 +112,52 @@ export const accessApi = api.injectEndpoints({
       extraOptions: { schema: managerTransferResultSchema },
       invalidatesTags: ['Roles', 'AccessMembers', 'CurrentAccess'],
     }),
+    createMember: build.mutation<UserMember, CreateMemberInput>({
+      query: (body) => ({ url: USERS_PATH, method: 'POST', body }),
+      extraOptions: { schema: memberSchema },
+      invalidatesTags: ['AccessMembers', 'CurrentAccess'],
+    }),
+    changeMemberEmail: build.mutation<MemberEmail, EmailChangeMutation>({
+      query: ({ userId, input }) => ({
+        url: `${USERS_PATH}/${userId}/email`,
+        method: 'PATCH',
+        body: input,
+      }),
+      extraOptions: { schema: memberEmailSchema },
+      invalidatesTags: ['AccessMembers', 'CurrentAccess'],
+    }),
+    changeMemberPassword: build.mutation<
+      MemberConfirmation,
+      PasswordChangeMutation
+    >({
+      query: ({ userId, input }) => ({
+        url: `${USERS_PATH}/${userId}/password`,
+        method: 'PATCH',
+        body: input,
+      }),
+      extraOptions: { schema: memberConfirmationSchema },
+      invalidatesTags: ['AccessMembers', 'CurrentAccess'],
+    }),
+    deleteMember: build.mutation<null, string>({
+      query: (userId) => ({
+        url: `${USERS_PATH}/${userId}`,
+        method: 'DELETE',
+      }),
+      extraOptions: { emptyResponse: null },
+      invalidatesTags: ['AccessMembers', 'CurrentAccess'],
+    }),
   }),
   overrideExisting: false,
 });
 
 export const {
   useAssignAccessMemberRoleMutation,
+  useChangeMemberEmailMutation,
+  useChangeMemberPasswordMutation,
   useCreateAccessRoleMutation,
+  useCreateMemberMutation,
   useDeleteAccessRoleMutation,
+  useDeleteMemberMutation,
   useGetCurrentAccessQuery,
   useListAccessMembersQuery,
   useListAccessPermissionsQuery,

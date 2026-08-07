@@ -7,21 +7,21 @@ import {
 } from 'auth/domain/errors/auth.errors';
 import { toAccount } from 'auth/domain/mappers/account.mapper';
 import { toSessionEntity } from 'auth/domain/mappers/session.mapper';
-import { isSupportedEmail } from 'auth/domain/predicates/is-supported-email';
-import { isSupportedPassword } from 'auth/domain/predicates/is-supported-password';
-import {
-  dummyVerifyPassword,
-  verifyPassword,
-} from 'auth/domain/security/password';
 import {
   type GeneratedSessionSecret,
   generateSessionSecret,
 } from 'auth/domain/security/session-secret';
-import { EmailAddress } from 'auth/domain/value-objects/email-address';
 import { SessionId } from 'auth/domain/value-objects/identity-id';
-import { Password } from 'auth/domain/value-objects/password';
 import { SessionDigest } from 'auth/domain/value-objects/session-digest';
 import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
+import { EmailAddress } from 'shared/domain/security/email-address';
+import { isSupportedEmail } from 'shared/domain/security/is-supported-email';
+import { isSupportedPassword } from 'shared/domain/security/is-supported-password';
+import { Password } from 'shared/domain/security/password';
+import {
+  dummyVerifyPassword,
+  verifyPassword,
+} from 'shared/domain/security/password-hashing';
 
 export interface SignedInSession {
   readonly userId: string;

@@ -94,6 +94,36 @@ describeIntegration('RegisterCommand access transaction', () => {
     ]);
   });
 
+  it('grants the newly registered Warehouse Manager Role all four USERS:* Permissions immediately, without relying on the T1 migration', async () => {
+    const result = await transactions.executeInTransaction({}, () =>
+      createCommand().execute({
+        email: 'person@example.test',
+        password: 'password',
+        warehouseName: 'Склад',
+      }),
+    );
+
+    const grantedUsersPermissions = await dataSource.query(
+      `SELECT permission_id FROM role_permissions
+       WHERE role_id = $1 AND permission_id LIKE 'USERS:%'
+       ORDER BY permission_id`,
+      [result.access.roleId],
+    );
+
+    expect(
+      grantedUsersPermissions.map(
+        (row: { permission_id: string }) => row.permission_id,
+      ),
+    ).toEqual([
+      'USERS:CREATE',
+      'USERS:DELETE',
+      'USERS:EMAIL_UPDATE',
+      'USERS:PASSWORD_CHANGE',
+      'USERS:UPDATE',
+      'USERS:WATCH',
+    ]);
+  });
+
   it('rolls identity and session back when access provisioning fails', async () => {
     const unavailableAccess = {
       execute: jest.fn().mockRejectedValue(new Error('access unavailable')),

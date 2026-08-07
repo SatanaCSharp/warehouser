@@ -24,6 +24,7 @@ export class ListAccessMembersQuery {
         userId: member.userId,
         roleId: member.roleId,
         roleKind: member.roleKind,
+        email: member.email,
       })),
       pagination.limit,
       pagination.before !== undefined,
@@ -35,6 +36,7 @@ export class ListAccessMembersQuery {
         userId: member.userId,
         roleId: member.roleId,
         roleKind: member.roleKind,
+        email: member.email,
       })),
     };
   }

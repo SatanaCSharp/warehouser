@@ -18,6 +18,13 @@ export const ErrorCode = {
   ACCESS_CONCURRENT_CHANGE: 'access.concurrent_change',
   ACCESS_ROLE_DELETION_UNAVAILABLE: 'access.role_deletion_unavailable',
   ACCESS_MANAGER_TRANSFER_UNAVAILABLE: 'access.manager_transfer_unavailable',
+  USERS_SELF_ACTION_DENIED: 'users.self_action_denied',
+  USERS_MANAGER_ROLE_PROTECTED: 'users.manager_role_protected',
+  USERS_PERMISSION_EXCEEDED: 'users.permission_exceeded',
+  USERS_RESERVED_ROLE_SELECTION: 'users.reserved_role_selection',
+  USERS_CREATION_UNAVAILABLE: 'users.creation_unavailable',
+  USERS_PASSWORD_CHANGE_UNAVAILABLE: 'users.password_change_unavailable',
+  USERS_DELETION_UNAVAILABLE: 'users.deletion_unavailable',
   INTERNAL_ERROR: 'system.internal_error',
 } as const;
 

@@ -1,0 +1,361 @@
+openapi: 3.1.0
+
+info:
+  title: Users Management API
+  version: 0.1.0
+  description: |
+    Lets a permissioned Warehouse Member grow their Warehouse's team beyond the single
+    self-registered Warehouse Manager: create a new Warehouse Member with an initial credential
+    and Role, correct a member's email, reset a member's password, and permanently remove a
+    member — each individually permissioned, Warehouse-scoped, and constrained so no member ever
+    gains more power than its creator or can touch the protected Warehouse Manager or their own
+    record through these actions.
+
+servers:
+  - url: https://api.example.com
+    description: Production
+  - url: http://localhost
+    description: Local
+
+security:
+  - SessionCookie: []
+
+paths:
+  /api/v1/users:
+    post:
+      summary: Create a new Warehouse Member with an initial email, password, and Role
+      operationId: createMember
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateMemberInput" }
+            example:
+              email: "test.member@example.test"
+              password: "Test password 123"
+              roleId: "00000000-0000-4000-8000-000000000003"
+      responses:
+        "201":
+          description: The new Warehouse Member was created with the selected Role and no active Session (AC-01).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Member" }
+              example:
+                userId: "00000000-0000-4000-8000-000000000010"
+                email: "test.member@example.test"
+                roleId: "00000000-0000-4000-8000-000000000003"
+        "400": { $ref: "#/components/responses/InvalidInput" }
+        "401": { $ref: "#/components/responses/SessionRequired" }
+        "403": { $ref: "#/components/responses/AccessDenied" }
+        "404": { $ref: "#/components/responses/RoleUnavailable" }
+        "409": { $ref: "#/components/responses/CreateConflict" }
+        "503": { $ref: "#/components/responses/CreationUnavailable" }
+
+  /api/v1/users/{userId}/email:
+    parameters:
+      - { $ref: "#/components/parameters/UserId" }
+    patch:
+      summary: Change another Warehouse Member's email address
+      operationId: changeMemberEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EmailChangeInput" }
+            example:
+              email: "corrected.member@example.test"
+      responses:
+        "200":
+          description: The target's email was recorded and its existing Sessions were left active (AC-04).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MemberEmail" }
+              example:
+                userId: "00000000-0000-4000-8000-000000000010"
+                email: "corrected.member@example.test"
+        "400": { $ref: "#/components/responses/InvalidInput" }
+        "401": { $ref: "#/components/responses/SessionRequired" }
+        "403": { $ref: "#/components/responses/AccessDenied" }
+        "404": { $ref: "#/components/responses/TargetUnavailable" }
+        "409": { $ref: "#/components/responses/EmailChangeConflict" }
+
+  /api/v1/users/{userId}/password:
+    parameters:
+      - { $ref: "#/components/parameters/UserId" }
+    patch:
+      summary: Set a new password for another Warehouse Member
+      operationId: changeMemberPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PasswordChangeInput" }
+            example:
+              password: "Another test password 456"
+      responses:
+        "200":
+          description: The target's credential was recorded and every existing Session for it was ended (AC-06).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MemberConfirmation" }
+              example:
+                userId: "00000000-0000-4000-8000-000000000010"
+        "400": { $ref: "#/components/responses/InvalidInput" }
+        "401": { $ref: "#/components/responses/SessionRequired" }
+        "403": { $ref: "#/components/responses/AccessDenied" }
+        "404": { $ref: "#/components/responses/TargetUnavailable" }
+        "409": { $ref: "#/components/responses/PasswordChangeConflict" }
+        "503": { $ref: "#/components/responses/PasswordChangeUnavailable" }
+
+  /api/v1/users/{userId}:
+    parameters:
+      - { $ref: "#/components/parameters/UserId" }
+    delete:
+      summary: Permanently remove a Warehouse Member
+      operationId: deleteMember
+      responses:
+        "204":
+          description: The target's Session, Warehouse Membership, and identity were removed and its email freed for reuse (AC-08).
+        "401": { $ref: "#/components/responses/SessionRequired" }
+        "403": { $ref: "#/components/responses/AccessDenied" }
+        "404": { $ref: "#/components/responses/TargetUnavailable" }
+        "409": { $ref: "#/components/responses/DeleteConflict" }
+        "503": { $ref: "#/components/responses/DeletionUnavailable" }
+
+components:
+  securitySchemes:
+    SessionCookie:
+      type: apiKey
+      in: cookie
+      name: warehouser_session
+      description: Server-issued opaque session secret; host-only, HttpOnly, SameSite=Lax, Path=/, and Secure in production.
+
+  parameters:
+    UserId:
+      in: path
+      name: userId
+      required: true
+      schema: { type: string, format: uuid }
+
+  schemas:
+    CreateMemberInput:
+      type: object
+      additionalProperties: false
+      required: [email, password, roleId]
+      properties:
+        email:
+          type: string
+          minLength: 3
+          maxLength: 254
+          format: email
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+          description: Length is measured in Unicode code points and whitespace is significant.
+        roleId:
+          type: string
+          format: uuid
+          description: Must be an existing custom Role in the actor's own Warehouse; the reserved Warehouse Manager Role can never be selected here (AC-20).
+    Member:
+      type: object
+      additionalProperties: false
+      required: [userId, email, roleId]
+      properties:
+        userId: { type: string, format: uuid }
+        email: { type: string, format: email }
+        roleId: { type: string, format: uuid }
+    EmailChangeInput:
+      type: object
+      additionalProperties: false
+      required: [email]
+      properties:
+        email:
+          type: string
+          minLength: 3
+          maxLength: 254
+          format: email
+    MemberEmail:
+      type: object
+      additionalProperties: false
+      required: [userId, email]
+      properties:
+        userId: { type: string, format: uuid }
+        email: { type: string, format: email }
+    PasswordChangeInput:
+      type: object
+      additionalProperties: false
+      required: [password]
+      properties:
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+          description: Length is measured in Unicode code points and whitespace is significant.
+    MemberConfirmation:
+      type: object
+      additionalProperties: false
+      required: [userId]
+      properties:
+        userId: { type: string, format: uuid }
+    Error:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code: { type: string, pattern: "^[a-z_]+\\.[a-z_]+$" }
+        message: { type: string }
+        details:
+          type: object
+          additionalProperties: true
+
+  responses:
+    InvalidInput:
+      description: Submitted email or password fails the shared format/length rules reused from registration (AC-02, AC-07).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            code: "auth.invalid_input"
+            message: "Correct the highlighted field."
+            details: { field: "password" }
+    SessionRequired:
+      description: A valid current Session is required.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            code: "auth.invalid_credentials"
+            message: "Authentication is required."
+    AccessDenied:
+      description: The actor lacks the Permission this action requires (AC-03, AC-10).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            code: "access.denied"
+            message: "Access is not permitted."
+    RoleUnavailable:
+      description: The selected Role is absent or outside the actor's Warehouse; existence is not disclosed (AC-09).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            code: "access.role_unavailable"
+            message: "The Role is unavailable."
+    TargetUnavailable:
+      description: The target Warehouse Member is absent or outside the actor's Warehouse; existence is not disclosed (AC-09).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            code: "access.target_unavailable"
+            message: "The selected member is unavailable."
+    CreateConflict:
+      description: The creation was blocked by a domain invariant or the email is already registered.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          examples:
+            reservedRoleSelection:
+              summary: Selected the reserved Warehouse Manager Role (AC-20)
+              value:
+                code: "users.reserved_role_selection"
+                message: "The Warehouse Manager Role can only be obtained through manager transfer."
+            permissionExceeded:
+              summary: Selected Role's Permissions exceed the actor's own (AC-16)
+              value:
+                code: "users.permission_exceeded"
+                message: "A new member's Role can never exceed your own Permissions."
+            emailAlreadyRegistered:
+              summary: The submitted email already belongs to another identity (AC-05)
+              value:
+                code: "auth.email_already_registered"
+                message: "This email is already registered."
+    EmailChangeConflict:
+      description: The email change was blocked by a domain invariant or the new email is already registered.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          examples:
+            selfActionDenied:
+              summary: Actor targeted their own record (AC-18)
+              value:
+                code: "users.self_action_denied"
+                message: "You cannot change your own email through this action."
+            managerRoleProtected:
+              summary: Target currently holds the Warehouse Manager Role (AC-14)
+              value:
+                code: "users.manager_role_protected"
+                message: "Transfer the Warehouse Manager Role before changing this member's credentials."
+            permissionExceeded:
+              summary: Target's Role holds a Permission the actor lacks (AC-19)
+              value:
+                code: "users.permission_exceeded"
+                message: "You cannot change the credentials of a member with more Permissions than you."
+            emailAlreadyRegistered:
+              summary: The new email already belongs to another identity (AC-05)
+              value:
+                code: "auth.email_already_registered"
+                message: "This email is already registered."
+    PasswordChangeConflict:
+      description: The password change was blocked by a domain invariant.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          examples:
+            selfActionDenied:
+              summary: Actor targeted their own record (AC-18)
+              value:
+                code: "users.self_action_denied"
+                message: "You cannot change your own password through this action."
+            managerRoleProtected:
+              summary: Target currently holds the Warehouse Manager Role (AC-14)
+              value:
+                code: "users.manager_role_protected"
+                message: "Transfer the Warehouse Manager Role before changing this member's credentials."
+            permissionExceeded:
+              summary: Target's Role holds a Permission the actor lacks (AC-19)
+              value:
+                code: "users.permission_exceeded"
+                message: "You cannot change the credentials of a member with more Permissions than you."
+    DeleteConflict:
+      description: The deletion was blocked by a domain invariant.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          examples:
+            selfActionDenied:
+              summary: Actor targeted their own record (AC-11)
+              value:
+                code: "users.self_action_denied"
+                message: "You cannot delete your own record."
+            managerRoleProtected:
+              summary: Target currently holds the Warehouse Manager Role, including a race against a concurrent transfer (AC-13, AC-15)
+              value:
+                code: "users.manager_role_protected"
+                message: "Transfer the Warehouse Manager Role before removing this member."
+    CreationUnavailable:
+      description: Creating the identity and Warehouse Membership could not be committed atomically.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            code: "users.creation_unavailable"
+            message: "Member creation did not complete. Try again."
+    PasswordChangeUnavailable:
+      description: Updating the credential and revoking existing Sessions could not be committed atomically.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            code: "users.password_change_unavailable"
+            message: "Password change did not complete. Try again."
+    DeletionUnavailable:
+      description: Removing the Session, Membership, and identity rows could not be committed atomically.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            code: "users.deletion_unavailable"
+            message: "Member deletion did not complete. Try again."

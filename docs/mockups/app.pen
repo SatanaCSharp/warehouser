@@ -17806,6 +17806,2613 @@
           ]
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "e4e0H",
+      "x": -1558,
+      "y": 6454,
+      "name": "Users / Administration / Desktop / v1",
+      "clip": true,
+      "width": 1440,
+      "height": 900,
+      "fill": "$bg",
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "p7C5q6",
+          "name": "Minimal Header",
+          "width": "fill_container",
+          "height": 80,
+          "fill": "$surface",
+          "stroke": "$border",
+          "strokeWidth": {
+            "bottom": 1
+          },
+          "strokeLinejoin": "round",
+          "padding": [
+            0,
+            48
+          ],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "cokku",
+              "name": "Brand",
+              "gap": 10,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "yktge",
+                  "name": "Brand Mark",
+                  "width": 34,
+                  "height": 34,
+                  "fill": "$primary",
+                  "cornerRadius": "$radius-md",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "wGBU6",
+                      "name": "Warehouse Icon",
+                      "width": 19,
+                      "height": 19,
+                      "icon": "warehouse",
+                      "library": "lucide",
+                      "fill": "$primary-foreground"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "trEXP",
+                  "name": "Brand Name",
+                  "fill": "$text",
+                  "content": "Warehouser",
+                  "fontFamily": "$font",
+                  "fontSize": 19,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "j7mx0",
+              "name": "Returning User Switch",
+              "gap": 10,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "yIyng",
+                  "name": "Question",
+                  "fill": "$muted",
+                  "content": "Already have an account?",
+                  "fontFamily": "$font",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "ijqN2",
+                  "name": "Sign In Secondary Action",
+                  "height": 36,
+                  "fill": "$surface",
+                  "cornerRadius": "$radius-lg",
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "padding": [
+                    8,
+                    16
+                  ],
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "cI6Z2",
+                      "name": "Sign In Label",
+                      "fill": "$primary",
+                      "content": "Sign in",
+                      "fontFamily": "$font",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "y4q7xC",
+          "name": "Access Administration",
+          "width": "fill_container",
+          "height": "fill_container",
+          "fill": "$bg",
+          "layout": "vertical",
+          "gap": 18,
+          "padding": 32,
+          "children": [
+            {
+              "type": "frame",
+              "id": "VOABX",
+              "name": "Page Heading",
+              "width": "fill_container",
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "S4UFtt",
+                  "name": "Heading Copy",
+                  "width": 700,
+                  "layout": "vertical",
+                  "gap": 6,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "CaAz3",
+                      "name": "Title",
+                      "fill": "$text",
+                      "content": "Access",
+                      "fontFamily": "$font",
+                      "fontSize": 32,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "CxKF2",
+                      "name": "Subtitle",
+                      "fill": "$muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Manage roles, permissions, and member assignments for Центральний склад.",
+                      "fontFamily": "$font",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "id": "Elv3u",
+                  "type": "ref",
+                  "ref": "L80Scv",
+                  "name": "Create Member",
+                  "width": 144,
+                  "descendants": {
+                    "WUgrQ": {
+                      "enabled": false
+                    },
+                    "k2f1mD": {
+                      "content": "Create member"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "j6EfD",
+              "name": "HeroUI Tabs",
+              "width": "fill_container",
+              "stroke": "$border",
+              "strokeWidth": {
+                "bottom": 1
+              },
+              "gap": 28,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "sX3ry",
+                  "name": "Tab / Roles",
+                  "stroke": "$primary",
+                  "padding": [
+                    10,
+                    2,
+                    12,
+                    2
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "D9ucr",
+                      "name": "Label",
+                      "fill": "$muted",
+                      "content": "Roles",
+                      "fontFamily": "$font",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "F3Moy3",
+                  "name": "Tab / Members",
+                  "stroke": "$primary",
+                  "strokeWidth": {
+                    "bottom": 2
+                  },
+                  "padding": [
+                    10,
+                    2,
+                    12,
+                    2
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "e8G8eG",
+                      "name": "Label",
+                      "fill": "$primary",
+                      "content": "Members",
+                      "fontFamily": "$font",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "oUr8s",
+                  "name": "Tab / Permissions",
+                  "padding": [
+                    10,
+                    2,
+                    12,
+                    2
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Xe3zQ",
+                      "name": "Label",
+                      "fill": "$muted",
+                      "content": "Permissions",
+                      "fontFamily": "$font",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "H1tfIG",
+              "name": "Members Workspace",
+              "width": "fill_container",
+              "height": 620,
+              "layout": "vertical",
+              "gap": 16,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "G5vHl",
+                  "name": "HeroUI Search",
+                  "width": "fill_container",
+                  "height": 44,
+                  "fill": "$surface",
+                  "cornerRadius": "$radius-md",
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "gap": 10,
+                  "padding": [
+                    0,
+                    14
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "rxWF2",
+                      "name": "Search Icon",
+                      "width": 17,
+                      "height": 17,
+                      "icon": "search",
+                      "library": "lucide",
+                      "fill": "$muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "uU8E2",
+                      "name": "Placeholder",
+                      "fill": "$muted",
+                      "content": "Search members",
+                      "fontFamily": "$font",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "DmOkt",
+                  "name": "Member List",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "layout": "vertical",
+                  "gap": 10,
+                  "children": [
+                    {
+                      "id": "zKQHa",
+                      "type": "ref",
+                      "ref": "uVPoe",
+                      "name": "Member Row - iryna.koval@warehouser.io",
+                      "width": "fill_container",
+                      "descendants": {
+                        "D8hsty": {
+                          "content": "IK"
+                        },
+                        "qyfMw": {
+                          "content": "iryna.koval@warehouser.io"
+                        },
+                        "xIZ12": {
+                          "content": "Warehouse Manager"
+                        },
+                        "ljcn0": {
+                          "type": "frame",
+                          "id": "R9FSY2",
+                          "name": "Protected Chip",
+                          "fill": "#E6E5FB",
+                          "cornerRadius": 20,
+                          "padding": [
+                            5,
+                            9
+                          ],
+                          "justifyContent": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "GxwWq",
+                              "fill": "$primary",
+                              "content": "Protected",
+                              "fontFamily": "$font",
+                              "fontSize": 10,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "Sg9N6",
+                      "type": "ref",
+                      "ref": "uVPoe",
+                      "name": "Member Row - oleh.taran@warehouser.io",
+                      "width": "fill_container",
+                      "descendants": {
+                        "D8hsty": {
+                          "content": "OT"
+                        },
+                        "qyfMw": {
+                          "content": "oleh.taran@warehouser.io"
+                        },
+                        "xIZ12": {
+                          "content": "Operator"
+                        },
+                        "ljcn0": {
+                          "type": "frame",
+                          "id": "gP2NW",
+                          "name": "You Chip",
+                          "fill": "$surface-soft",
+                          "cornerRadius": 20,
+                          "padding": [
+                            5,
+                            9
+                          ],
+                          "justifyContent": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "LGpqZ",
+                              "fill": "$muted",
+                              "content": "You",
+                              "fontFamily": "$font",
+                              "fontSize": 10,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "hpJpI",
+                      "type": "ref",
+                      "ref": "uVPoe",
+                      "name": "Member Row - mariia.blyzniuk@warehouser.io",
+                      "width": "fill_container",
+                      "descendants": {
+                        "D8hsty": {
+                          "content": "MB"
+                        },
+                        "qyfMw": {
+                          "content": "mariia.blyzniuk@warehouser.io"
+                        },
+                        "xIZ12": {
+                          "content": "Operator"
+                        }
+                      }
+                    },
+                    {
+                      "id": "tK310",
+                      "type": "ref",
+                      "ref": "uVPoe",
+                      "name": "Member Row - danylo.rud@warehouser.io",
+                      "width": "fill_container",
+                      "descendants": {
+                        "D8hsty": {
+                          "content": "DR"
+                        },
+                        "qyfMw": {
+                          "content": "danylo.rud@warehouser.io"
+                        },
+                        "xIZ12": {
+                          "content": "Operator"
+                        }
+                      }
+                    },
+                    {
+                      "id": "llj9U",
+                      "type": "ref",
+                      "ref": "uVPoe",
+                      "name": "Member Row - yevheniya.tkach@warehouser.io",
+                      "width": "fill_container",
+                      "descendants": {
+                        "D8hsty": {
+                          "content": "YT"
+                        },
+                        "qyfMw": {
+                          "content": "yevheniya.tkach@warehouser.io"
+                        },
+                        "xIZ12": {
+                          "content": "Auditor"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "heckb",
+      "x": -1558,
+      "y": 7434,
+      "name": "HeroUI Icon Action Button",
+      "reusable": true,
+      "width": 32,
+      "height": 32,
+      "fill": "$surface-soft",
+      "cornerRadius": "$radius-md",
+      "justifyContent": "center",
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "icon",
+          "id": "s7pZs",
+          "name": "Icon",
+          "width": 16,
+          "height": 16,
+          "icon": "mail",
+          "library": "lucide",
+          "fill": "$muted"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "uVPoe",
+      "x": -1558,
+      "y": 7484,
+      "name": "HeroUI Card / Member Row",
+      "reusable": true,
+      "width": "fill_container(1376)",
+      "fill": "$surface",
+      "cornerRadius": "$radius-lg",
+      "stroke": "$border",
+      "strokeWidth": 1,
+      "gap": 12,
+      "padding": 16,
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "frame",
+          "id": "BD7xW",
+          "name": "Avatar",
+          "width": 40,
+          "height": 40,
+          "fill": "$surface-soft",
+          "cornerRadius": 9999,
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "D8hsty",
+              "name": "Initials",
+              "fill": "$text",
+              "content": "AS",
+              "fontFamily": "$font",
+              "fontSize": 14,
+              "fontWeight": "600"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "TX8dl",
+          "name": "Identity",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 2,
+          "children": [
+            {
+              "type": "text",
+              "id": "qyfMw",
+              "name": "Email",
+              "fill": "$text",
+              "content": "member@warehouser.io",
+              "fontFamily": "$font",
+              "fontSize": 14,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "xIZ12",
+              "name": "Role",
+              "fill": "$muted",
+              "content": "Operator",
+              "fontFamily": "$font",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "ljcn0",
+          "name": "Actions",
+          "gap": 8,
+          "alignItems": "center",
+          "children": [
+            {
+              "id": "GehS2",
+              "type": "ref",
+              "ref": "heckb",
+              "name": "Edit Email Action"
+            },
+            {
+              "id": "d9RGCm",
+              "type": "ref",
+              "ref": "heckb",
+              "name": "Reset Password Action",
+              "descendants": {
+                "s7pZs": {
+                  "icon": "key"
+                }
+              }
+            },
+            {
+              "id": "XByIK",
+              "type": "ref",
+              "ref": "heckb",
+              "name": "Delete Action",
+              "descendants": {
+                "s7pZs": {
+                  "icon": "trash-2",
+                  "fill": "$danger"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "hIpfH",
+      "x": -1558,
+      "y": 7676,
+      "name": "Users / Create Member / Desktop / v1",
+      "clip": true,
+      "width": 1440,
+      "height": 900,
+      "fill": "$bg",
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "LQeES",
+          "name": "Minimal Header",
+          "width": "fill_container",
+          "height": 80,
+          "fill": "$surface",
+          "stroke": "$border",
+          "strokeWidth": {
+            "bottom": 1
+          },
+          "strokeLinejoin": "round",
+          "padding": [
+            0,
+            48
+          ],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "h75er",
+              "name": "Brand",
+              "gap": 10,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "eUoVB",
+                  "name": "Brand Mark",
+                  "width": 34,
+                  "height": 34,
+                  "fill": "$primary",
+                  "cornerRadius": "$radius-md",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "ksSHV",
+                      "name": "Warehouse Icon",
+                      "width": 19,
+                      "height": 19,
+                      "icon": "warehouse",
+                      "library": "lucide",
+                      "fill": "$primary-foreground"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "uGDgr",
+                  "name": "Brand Name",
+                  "fill": "$text",
+                  "content": "Warehouser",
+                  "fontFamily": "$font",
+                  "fontSize": 19,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "qYqi9",
+              "name": "Returning User Switch",
+              "gap": 10,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "MoHG0",
+                  "name": "Question",
+                  "fill": "$muted",
+                  "content": "Already have an account?",
+                  "fontFamily": "$font",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "M1FcZ",
+                  "name": "Sign In Secondary Action",
+                  "height": 36,
+                  "fill": "$surface",
+                  "cornerRadius": "$radius-lg",
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "padding": [
+                    8,
+                    16
+                  ],
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "vrVXS",
+                      "name": "Sign In Label",
+                      "fill": "$primary",
+                      "content": "Sign in",
+                      "fontFamily": "$font",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "clzaU",
+          "name": "Access Administration",
+          "width": "fill_container",
+          "height": "fill_container",
+          "fill": "$bg",
+          "layout": "vertical",
+          "gap": 18,
+          "padding": 32,
+          "children": [
+            {
+              "type": "frame",
+              "id": "eYG9b",
+              "name": "Page Heading",
+              "width": "fill_container",
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "fJSP6",
+                  "name": "Heading Copy",
+                  "width": 700,
+                  "layout": "vertical",
+                  "gap": 6,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "L6oIz",
+                      "name": "Title",
+                      "fill": "$text",
+                      "content": "Access",
+                      "fontFamily": "$font",
+                      "fontSize": 32,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "DUDGE",
+                      "name": "Subtitle",
+                      "fill": "$muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Manage roles, permissions, and member assignments for Центральний склад.",
+                      "fontFamily": "$font",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "id": "P6Hnz",
+                  "type": "ref",
+                  "ref": "L80Scv",
+                  "name": "Create Member",
+                  "width": 144,
+                  "descendants": {
+                    "WUgrQ": {
+                      "enabled": false
+                    },
+                    "k2f1mD": {
+                      "content": "Create member"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "mQMpv",
+              "name": "HeroUI Tabs",
+              "width": "fill_container",
+              "stroke": "$border",
+              "strokeWidth": {
+                "bottom": 1
+              },
+              "gap": 28,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "P6bQRZ",
+                  "name": "Tab / Roles",
+                  "stroke": "$primary",
+                  "padding": [
+                    10,
+                    2,
+                    12,
+                    2
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "sx7iP",
+                      "name": "Label",
+                      "fill": "$muted",
+                      "content": "Roles",
+                      "fontFamily": "$font",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "QfGQd",
+                  "name": "Tab / Members",
+                  "stroke": "$primary",
+                  "strokeWidth": {
+                    "bottom": 2
+                  },
+                  "padding": [
+                    10,
+                    2,
+                    12,
+                    2
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "XwuIV",
+                      "name": "Label",
+                      "fill": "$primary",
+                      "content": "Members",
+                      "fontFamily": "$font",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "YIj0n",
+                  "name": "Tab / Permissions",
+                  "padding": [
+                    10,
+                    2,
+                    12,
+                    2
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "q18bWR",
+                      "name": "Label",
+                      "fill": "$muted",
+                      "content": "Permissions",
+                      "fontFamily": "$font",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "r2ZbKV",
+              "name": "Members Workspace",
+              "width": "fill_container",
+              "height": 620,
+              "layout": "vertical",
+              "gap": 16,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "EzMZ7",
+                  "name": "HeroUI Search",
+                  "width": "fill_container",
+                  "height": 44,
+                  "fill": "$surface",
+                  "cornerRadius": "$radius-md",
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "gap": 10,
+                  "padding": [
+                    0,
+                    14
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "N9guIy",
+                      "name": "Search Icon",
+                      "width": 17,
+                      "height": 17,
+                      "icon": "search",
+                      "library": "lucide",
+                      "fill": "$muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "TZk20",
+                      "name": "Placeholder",
+                      "fill": "$muted",
+                      "content": "Search members",
+                      "fontFamily": "$font",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "sNR6s",
+                  "name": "Member List",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "layout": "vertical",
+                  "gap": 10,
+                  "children": [
+                    {
+                      "id": "zVyCL",
+                      "type": "ref",
+                      "ref": "uVPoe",
+                      "name": "Member Row - iryna.koval@warehouser.io",
+                      "width": "fill_container",
+                      "descendants": {
+                        "D8hsty": {
+                          "content": "IK"
+                        },
+                        "qyfMw": {
+                          "content": "iryna.koval@warehouser.io"
+                        },
+                        "xIZ12": {
+                          "content": "Warehouse Manager"
+                        },
+                        "ljcn0": {
+                          "type": "frame",
+                          "id": "PidFv",
+                          "name": "Protected Chip",
+                          "fill": "#E6E5FB",
+                          "cornerRadius": 20,
+                          "padding": [
+                            5,
+                            9
+                          ],
+                          "justifyContent": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "n7OVt",
+                              "fill": "$primary",
+                              "content": "Protected",
+                              "fontFamily": "$font",
+                              "fontSize": 10,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "Y9rXJ",
+                      "type": "ref",
+                      "ref": "uVPoe",
+                      "name": "Member Row - oleh.taran@warehouser.io",
+                      "width": "fill_container",
+                      "descendants": {
+                        "D8hsty": {
+                          "content": "OT"
+                        },
+                        "qyfMw": {
+                          "content": "oleh.taran@warehouser.io"
+                        },
+                        "xIZ12": {
+                          "content": "Operator"
+                        },
+                        "ljcn0": {
+                          "type": "frame",
+                          "id": "ceJlI",
+                          "name": "You Chip",
+                          "fill": "$surface-soft",
+                          "cornerRadius": 20,
+                          "padding": [
+                            5,
+                            9
+                          ],
+                          "justifyContent": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "PWOKT",
+                              "fill": "$muted",
+                              "content": "You",
+                              "fontFamily": "$font",
+                              "fontSize": 10,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "O0jwO",
+                      "type": "ref",
+                      "ref": "uVPoe",
+                      "name": "Member Row - mariia.blyzniuk@warehouser.io",
+                      "width": "fill_container",
+                      "descendants": {
+                        "D8hsty": {
+                          "content": "MB"
+                        },
+                        "qyfMw": {
+                          "content": "mariia.blyzniuk@warehouser.io"
+                        },
+                        "xIZ12": {
+                          "content": "Operator"
+                        }
+                      }
+                    },
+                    {
+                      "id": "TFmfc",
+                      "type": "ref",
+                      "ref": "uVPoe",
+                      "name": "Member Row - danylo.rud@warehouser.io",
+                      "width": "fill_container",
+                      "descendants": {
+                        "D8hsty": {
+                          "content": "DR"
+                        },
+                        "qyfMw": {
+                          "content": "danylo.rud@warehouser.io"
+                        },
+                        "xIZ12": {
+                          "content": "Operator"
+                        }
+                      }
+                    },
+                    {
+                      "id": "kHxhH",
+                      "type": "ref",
+                      "ref": "uVPoe",
+                      "name": "Member Row - yevheniya.tkach@warehouser.io",
+                      "width": "fill_container",
+                      "descendants": {
+                        "D8hsty": {
+                          "content": "YT"
+                        },
+                        "qyfMw": {
+                          "content": "yevheniya.tkach@warehouser.io"
+                        },
+                        "xIZ12": {
+                          "content": "Auditor"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "rectangle",
+          "id": "ze09c",
+          "layoutPosition": "absolute",
+          "x": 0,
+          "y": 0,
+          "name": "Scrim",
+          "fill": "#18181B66",
+          "width": 1440,
+          "height": 900
+        },
+        {
+          "type": "frame",
+          "id": "XXONa",
+          "layoutPosition": "absolute",
+          "x": 480,
+          "y": 90,
+          "name": "Create Member Modal",
+          "width": 480,
+          "fill": "$surface",
+          "cornerRadius": "$radius-lg",
+          "stroke": "$border",
+          "strokeWidth": 1,
+          "effect": {
+            "type": "shadow",
+            "shadowType": "outer",
+            "color": "#00000026",
+            "offset": {
+              "x": 0,
+              "y": 12
+            },
+            "blur": 32
+          },
+          "layout": "vertical",
+          "gap": 20,
+          "padding": 24,
+          "children": [
+            {
+              "type": "frame",
+              "id": "FGogg",
+              "name": "Header",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "ixzia",
+                  "name": "Heading",
+                  "fill": "$text",
+                  "content": "Create member",
+                  "fontFamily": "$font",
+                  "fontSize": 18,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "O49tD",
+                  "name": "Subheading",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "They can sign in immediately with the email and password you set below.",
+                  "fontFamily": "$font",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "id": "S8OX7m",
+              "type": "ref",
+              "ref": "IplNB",
+              "name": "Email Field",
+              "width": "fill_container",
+              "descendants": {
+                "QwP78": {
+                  "content": "Email"
+                },
+                "wyTo2": {
+                  "content": "",
+                  "fill": "$text"
+                },
+                "uhuGX": {
+                  "content": "Must be a new address, not already in use anywhere in Warehouser."
+                }
+              }
+            },
+            {
+              "id": "Q9Tvt",
+              "type": "ref",
+              "ref": "IplNB",
+              "name": "Initial Password Field",
+              "width": "fill_container",
+              "descendants": {
+                "QwP78": {
+                  "content": "Initial password"
+                },
+                "lMr5j": {
+                  "icon": "lock"
+                },
+                "wyTo2": {
+                  "content": "",
+                  "fill": "$text"
+                },
+                "F9z622": {
+                  "enabled": true
+                },
+                "uhuGX": {
+                  "content": "Share this password with them directly — no invite email is sent."
+                }
+              }
+            },
+            {
+              "type": "frame",
+              "id": "Ey9H7",
+              "name": "Role Field",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 6,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "E58a6",
+                  "name": "Label",
+                  "fill": "$text",
+                  "content": "Role",
+                  "fontFamily": "$font",
+                  "fontSize": 14,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "rXam0",
+                  "name": "Control",
+                  "width": "fill_container",
+                  "height": 44,
+                  "fill": "$field",
+                  "cornerRadius": "$radius-lg",
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "gap": 8,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "xFQ75",
+                      "name": "Value",
+                      "fill": "$text",
+                      "content": "Operator",
+                      "fontFamily": "$font",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "icon",
+                      "id": "N3pUhZ",
+                      "name": "Chevron",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "chevron-down",
+                      "library": "lucide",
+                      "fill": "$muted"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "i91ui",
+                  "name": "Helper",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Only roles whose permissions do not exceed your own are shown.",
+                  "fontFamily": "$font",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "m7RhV",
+              "name": "Footer",
+              "width": "fill_container",
+              "gap": 10,
+              "justifyContent": "end",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "kI6Rl",
+                  "name": "Cancel Button",
+                  "height": 44,
+                  "fill": "$surface",
+                  "cornerRadius": "$radius-lg",
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "padding": [
+                    10,
+                    18
+                  ],
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "MbDG0",
+                      "fill": "$text",
+                      "content": "Cancel",
+                      "fontFamily": "$font",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "id": "XpsUU",
+                  "type": "ref",
+                  "ref": "L80Scv",
+                  "name": "Create Member Submit",
+                  "width": 160,
+                  "descendants": {
+                    "WUgrQ": {
+                      "enabled": false
+                    },
+                    "k2f1mD": {
+                      "content": "Create member"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "AVgEo",
+      "x": -1558,
+      "y": 8616,
+      "name": "HeroUI Card / Member Row Mobile",
+      "reusable": true,
+      "width": "fill_container(350)",
+      "fill": "$surface",
+      "cornerRadius": "$radius-lg",
+      "stroke": "$border",
+      "strokeWidth": 1,
+      "gap": 12,
+      "padding": 15,
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "frame",
+          "id": "PHpnA",
+          "name": "Avatar",
+          "width": 38,
+          "height": 38,
+          "fill": "$surface-soft",
+          "cornerRadius": 19,
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "VyPIn",
+              "name": "Initials",
+              "fill": "$text",
+              "content": "AS",
+              "fontFamily": "$font",
+              "fontSize": 12,
+              "fontWeight": "600"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "USs6S",
+          "name": "Identity",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 3,
+          "children": [
+            {
+              "type": "text",
+              "id": "pfqTy",
+              "name": "Email",
+              "fill": "$text",
+              "content": "member@warehouser.io",
+              "fontFamily": "$font",
+              "fontSize": 13,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "FLoD0",
+              "name": "Role",
+              "fill": "$muted",
+              "content": "Operator",
+              "fontFamily": "$font",
+              "fontSize": 11,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "icon",
+          "id": "f4kOXh",
+          "name": "More Icon",
+          "width": 17,
+          "height": 17,
+          "icon": "ellipsis-vertical",
+          "library": "lucide",
+          "fill": "$muted"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "GjSFa",
+      "x": -1558,
+      "y": 8764,
+      "name": "Users / Administration / Mobile / v1",
+      "clip": true,
+      "width": 390,
+      "height": 844,
+      "fill": "$bg",
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "gHRbW",
+          "name": "Mobile Header",
+          "width": "fill_container",
+          "height": 68,
+          "fill": "$surface",
+          "stroke": "$border",
+          "strokeWidth": {
+            "bottom": 1
+          },
+          "strokeLinejoin": "round",
+          "padding": [
+            0,
+            20
+          ],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "u9OIHN",
+              "name": "Brand",
+              "gap": 8,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "t413ik",
+                  "name": "Brand Mark",
+                  "width": 30,
+                  "height": 30,
+                  "fill": "$primary",
+                  "cornerRadius": "$radius-md",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "qGTTK",
+                      "name": "Warehouse Icon",
+                      "width": 17,
+                      "height": 17,
+                      "icon": "warehouse",
+                      "library": "lucide",
+                      "fill": "$primary-foreground"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "t4XNNT",
+                  "name": "Brand Name",
+                  "fill": "$text",
+                  "content": "Warehouser",
+                  "fontFamily": "$font",
+                  "fontSize": 17,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "yn4r4",
+              "name": "Sign In Link",
+              "fill": "$primary",
+              "content": "Sign in",
+              "fontFamily": "$font",
+              "fontSize": 14,
+              "fontWeight": "600"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "tEEwS",
+          "name": "Access Mobile",
+          "width": "fill_container",
+          "height": "fill_container",
+          "fill": "$bg",
+          "layout": "vertical",
+          "gap": 18,
+          "padding": [
+            22,
+            20,
+            24,
+            20
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "hNUUU",
+              "width": "fill_container",
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "UGDQ4",
+                  "width": 230,
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Z5zIs",
+                      "fill": "$text",
+                      "content": "Access",
+                      "fontFamily": "$font",
+                      "fontSize": 28,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "WGWW2",
+                      "fill": "$muted",
+                      "content": "Центральний склад",
+                      "fontFamily": "$font",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Nv1e1",
+                  "name": "HeroUI Icon Button / Add Role",
+                  "width": 42,
+                  "height": 42,
+                  "fill": "$primary",
+                  "cornerRadius": "$radius-md",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "cVKvY",
+                      "width": 19,
+                      "height": 19,
+                      "icon": "plus",
+                      "library": "lucide",
+                      "fill": "$primary-foreground"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "heZsM",
+              "name": "HeroUI Tabs",
+              "width": "fill_container",
+              "fill": "$surface-soft",
+              "cornerRadius": "$radius-md",
+              "gap": 4,
+              "padding": 4,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "REj4P",
+                  "name": "Tab / Roles",
+                  "width": "fill_container",
+                  "height": 36,
+                  "fill": "$surface-soft",
+                  "cornerRadius": "$radius-sm",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "JYIg0",
+                      "fill": "$muted",
+                      "content": "Roles",
+                      "fontFamily": "$font",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "aE3c7",
+                  "name": "Tab / Members",
+                  "width": "fill_container",
+                  "height": 36,
+                  "fill": "$surface",
+                  "cornerRadius": "$radius-sm",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "A6tSVh",
+                      "fill": "$text",
+                      "content": "Members",
+                      "fontFamily": "$font",
+                      "fontSize": 11,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "dvnQb",
+                  "name": "Tab / Permissions",
+                  "width": "fill_container",
+                  "height": 36,
+                  "cornerRadius": "$radius-sm",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "m7lS3",
+                      "fill": "$muted",
+                      "content": "Permissions",
+                      "fontFamily": "$font",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "gle7O",
+              "name": "HeroUI Search",
+              "width": "fill_container",
+              "height": 42,
+              "fill": "$surface",
+              "cornerRadius": "$radius-md",
+              "stroke": "$border",
+              "strokeWidth": 1,
+              "gap": 9,
+              "padding": [
+                0,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "k0i62H",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "search",
+                  "library": "lucide",
+                  "fill": "$muted"
+                },
+                {
+                  "type": "text",
+                  "id": "ckHt7",
+                  "fill": "$muted",
+                  "content": "Search members",
+                  "fontFamily": "$font",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "ifQIx",
+              "name": "Member List Mobile",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 10,
+              "children": [
+                {
+                  "id": "VbQAb",
+                  "type": "ref",
+                  "ref": "AVgEo",
+                  "name": "Member Row - iryna.koval@warehouser.io",
+                  "width": "fill_container",
+                  "descendants": {
+                    "VyPIn": {
+                      "content": "IK"
+                    },
+                    "pfqTy": {
+                      "content": "iryna.koval@warehouser.io"
+                    },
+                    "FLoD0": {
+                      "content": "Warehouse Manager"
+                    },
+                    "f4kOXh": {
+                      "type": "frame",
+                      "id": "i4QsR0",
+                      "name": "Protected Chip",
+                      "fill": "#E6E5FB",
+                      "cornerRadius": 20,
+                      "padding": [
+                        4,
+                        8
+                      ],
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "IuOnm",
+                          "fill": "$primary",
+                          "content": "Protected",
+                          "fontFamily": "$font",
+                          "fontSize": 9,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "DCI6t",
+                  "type": "ref",
+                  "ref": "AVgEo",
+                  "name": "Member Row - oleh.taran@warehouser.io",
+                  "width": "fill_container",
+                  "descendants": {
+                    "VyPIn": {
+                      "content": "OT"
+                    },
+                    "pfqTy": {
+                      "content": "oleh.taran@warehouser.io"
+                    },
+                    "FLoD0": {
+                      "content": "Operator"
+                    },
+                    "f4kOXh": {
+                      "type": "frame",
+                      "id": "URNSP",
+                      "name": "You Chip",
+                      "fill": "$surface-soft",
+                      "cornerRadius": 20,
+                      "padding": [
+                        4,
+                        8
+                      ],
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "jML3U",
+                          "fill": "$muted",
+                          "content": "You",
+                          "fontFamily": "$font",
+                          "fontSize": 9,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "N5MJM",
+                  "type": "ref",
+                  "ref": "AVgEo",
+                  "name": "Member Row - mariia.blyzniuk@warehouser.io",
+                  "width": "fill_container",
+                  "descendants": {
+                    "VyPIn": {
+                      "content": "MB"
+                    },
+                    "pfqTy": {
+                      "content": "mariia.blyzniuk@warehouser.io"
+                    },
+                    "FLoD0": {
+                      "content": "Operator"
+                    }
+                  }
+                },
+                {
+                  "id": "dKZqf",
+                  "type": "ref",
+                  "ref": "AVgEo",
+                  "name": "Member Row - danylo.rud@warehouser.io",
+                  "width": "fill_container",
+                  "descendants": {
+                    "VyPIn": {
+                      "content": "DR"
+                    },
+                    "pfqTy": {
+                      "content": "danylo.rud@warehouser.io"
+                    },
+                    "FLoD0": {
+                      "content": "Operator"
+                    }
+                  }
+                },
+                {
+                  "id": "XgPoh",
+                  "type": "ref",
+                  "ref": "AVgEo",
+                  "name": "Member Row - yevheniya.tkach@warehouser.io",
+                  "width": "fill_container",
+                  "descendants": {
+                    "VyPIn": {
+                      "content": "YT"
+                    },
+                    "pfqTy": {
+                      "content": "yevheniya.tkach@warehouser.io"
+                    },
+                    "FLoD0": {
+                      "content": "Auditor"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "qtPnQ",
+              "name": "Authorization State",
+              "width": "fill_container",
+              "fill": "#F4F4FD",
+              "cornerRadius": "$radius-md",
+              "gap": 9,
+              "padding": 12,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "m4XSl",
+                  "width": 17,
+                  "height": 17,
+                  "icon": "shield-check",
+                  "library": "lucide",
+                  "fill": "$primary"
+                },
+                {
+                  "type": "frame",
+                  "id": "fsVsv",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "NYgck",
+                      "fill": "$text",
+                      "content": "Manager access active",
+                      "fontFamily": "$font",
+                      "fontSize": 12,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "TI6GR",
+                      "fill": "$muted",
+                      "content": "Unavailable actions are hidden.",
+                      "fontFamily": "$font",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "bzV6e",
+      "x": -1558,
+      "y": 9688,
+      "name": "Users / Create Member / Mobile / v1",
+      "clip": true,
+      "width": 390,
+      "height": 844,
+      "fill": "$bg",
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "kPzdm",
+          "name": "Mobile Header",
+          "width": "fill_container",
+          "height": 68,
+          "fill": "$surface",
+          "stroke": "$border",
+          "strokeWidth": {
+            "bottom": 1
+          },
+          "strokeLinejoin": "round",
+          "padding": [
+            0,
+            20
+          ],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "f0uFnc",
+              "name": "Brand",
+              "gap": 8,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "E9RpPr",
+                  "name": "Brand Mark",
+                  "width": 30,
+                  "height": 30,
+                  "fill": "$primary",
+                  "cornerRadius": "$radius-md",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "b0TWrN",
+                      "name": "Warehouse Icon",
+                      "width": 17,
+                      "height": 17,
+                      "icon": "warehouse",
+                      "library": "lucide",
+                      "fill": "$primary-foreground"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "m5yUN",
+                  "name": "Brand Name",
+                  "fill": "$text",
+                  "content": "Warehouser",
+                  "fontFamily": "$font",
+                  "fontSize": 17,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "K43l7b",
+              "name": "Sign In Link",
+              "fill": "$primary",
+              "content": "Sign in",
+              "fontFamily": "$font",
+              "fontSize": 14,
+              "fontWeight": "600"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "AgvTW",
+          "name": "Access Mobile",
+          "width": "fill_container",
+          "height": "fill_container",
+          "fill": "$bg",
+          "layout": "vertical",
+          "gap": 18,
+          "padding": [
+            22,
+            20,
+            24,
+            20
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "O8Oykz",
+              "width": "fill_container",
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "A3ECPk",
+                  "width": 230,
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "g3bQwC",
+                      "fill": "$text",
+                      "content": "Access",
+                      "fontFamily": "$font",
+                      "fontSize": 28,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "utoLo",
+                      "fill": "$muted",
+                      "content": "Центральний склад",
+                      "fontFamily": "$font",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "hNvEQ",
+                  "name": "HeroUI Icon Button / Add Role",
+                  "width": 42,
+                  "height": 42,
+                  "fill": "$primary",
+                  "cornerRadius": "$radius-md",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "MYLqo",
+                      "width": 19,
+                      "height": 19,
+                      "icon": "plus",
+                      "library": "lucide",
+                      "fill": "$primary-foreground"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "t0NVq",
+              "name": "HeroUI Tabs",
+              "width": "fill_container",
+              "fill": "$surface-soft",
+              "cornerRadius": "$radius-md",
+              "gap": 4,
+              "padding": 4,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Rn0nR",
+                  "name": "Tab / Roles",
+                  "width": "fill_container",
+                  "height": 36,
+                  "fill": "$surface-soft",
+                  "cornerRadius": "$radius-sm",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "s3ij4",
+                      "fill": "$muted",
+                      "content": "Roles",
+                      "fontFamily": "$font",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "htfoK",
+                  "name": "Tab / Members",
+                  "width": "fill_container",
+                  "height": 36,
+                  "fill": "$surface",
+                  "cornerRadius": "$radius-sm",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "wvVN1",
+                      "fill": "$text",
+                      "content": "Members",
+                      "fontFamily": "$font",
+                      "fontSize": 11,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "T79gaf",
+                  "name": "Tab / Permissions",
+                  "width": "fill_container",
+                  "height": 36,
+                  "cornerRadius": "$radius-sm",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "tFTkY",
+                      "fill": "$muted",
+                      "content": "Permissions",
+                      "fontFamily": "$font",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Z8G2k",
+              "name": "HeroUI Search",
+              "width": "fill_container",
+              "height": 42,
+              "fill": "$surface",
+              "cornerRadius": "$radius-md",
+              "stroke": "$border",
+              "strokeWidth": 1,
+              "gap": 9,
+              "padding": [
+                0,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "b0TGm",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "search",
+                  "library": "lucide",
+                  "fill": "$muted"
+                },
+                {
+                  "type": "text",
+                  "id": "piELX",
+                  "fill": "$muted",
+                  "content": "Search members",
+                  "fontFamily": "$font",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "lACrf",
+              "name": "Member List Mobile",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 10,
+              "children": [
+                {
+                  "id": "x6v3GO",
+                  "type": "ref",
+                  "ref": "AVgEo",
+                  "name": "Member Row - iryna.koval@warehouser.io",
+                  "width": "fill_container",
+                  "descendants": {
+                    "VyPIn": {
+                      "content": "IK"
+                    },
+                    "pfqTy": {
+                      "content": "iryna.koval@warehouser.io"
+                    },
+                    "FLoD0": {
+                      "content": "Warehouse Manager"
+                    },
+                    "f4kOXh": {
+                      "type": "frame",
+                      "id": "IDFTZ",
+                      "name": "Protected Chip",
+                      "fill": "#E6E5FB",
+                      "cornerRadius": 20,
+                      "padding": [
+                        4,
+                        8
+                      ],
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "b36D5E",
+                          "fill": "$primary",
+                          "content": "Protected",
+                          "fontFamily": "$font",
+                          "fontSize": 9,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "DuVCK",
+                  "type": "ref",
+                  "ref": "AVgEo",
+                  "name": "Member Row - oleh.taran@warehouser.io",
+                  "width": "fill_container",
+                  "descendants": {
+                    "VyPIn": {
+                      "content": "OT"
+                    },
+                    "pfqTy": {
+                      "content": "oleh.taran@warehouser.io"
+                    },
+                    "FLoD0": {
+                      "content": "Operator"
+                    },
+                    "f4kOXh": {
+                      "type": "frame",
+                      "id": "kn3Iu",
+                      "name": "You Chip",
+                      "fill": "$surface-soft",
+                      "cornerRadius": 20,
+                      "padding": [
+                        4,
+                        8
+                      ],
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "uxiAQ",
+                          "fill": "$muted",
+                          "content": "You",
+                          "fontFamily": "$font",
+                          "fontSize": 9,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "HEr9M",
+                  "type": "ref",
+                  "ref": "AVgEo",
+                  "name": "Member Row - mariia.blyzniuk@warehouser.io",
+                  "width": "fill_container",
+                  "descendants": {
+                    "VyPIn": {
+                      "content": "MB"
+                    },
+                    "pfqTy": {
+                      "content": "mariia.blyzniuk@warehouser.io"
+                    },
+                    "FLoD0": {
+                      "content": "Operator"
+                    }
+                  }
+                },
+                {
+                  "id": "dx581",
+                  "type": "ref",
+                  "ref": "AVgEo",
+                  "name": "Member Row - danylo.rud@warehouser.io",
+                  "width": "fill_container",
+                  "descendants": {
+                    "VyPIn": {
+                      "content": "DR"
+                    },
+                    "pfqTy": {
+                      "content": "danylo.rud@warehouser.io"
+                    },
+                    "FLoD0": {
+                      "content": "Operator"
+                    }
+                  }
+                },
+                {
+                  "id": "s6MQc",
+                  "type": "ref",
+                  "ref": "AVgEo",
+                  "name": "Member Row - yevheniya.tkach@warehouser.io",
+                  "width": "fill_container",
+                  "descendants": {
+                    "VyPIn": {
+                      "content": "YT"
+                    },
+                    "pfqTy": {
+                      "content": "yevheniya.tkach@warehouser.io"
+                    },
+                    "FLoD0": {
+                      "content": "Auditor"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "i5U0V",
+              "name": "Authorization State",
+              "width": "fill_container",
+              "fill": "#F4F4FD",
+              "cornerRadius": "$radius-md",
+              "gap": 9,
+              "padding": 12,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "iKRWV",
+                  "width": 17,
+                  "height": 17,
+                  "icon": "shield-check",
+                  "library": "lucide",
+                  "fill": "$primary"
+                },
+                {
+                  "type": "frame",
+                  "id": "i8d3id",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "oswdH",
+                      "fill": "$text",
+                      "content": "Manager access active",
+                      "fontFamily": "$font",
+                      "fontSize": 12,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "IgAyL",
+                      "fill": "$muted",
+                      "content": "Unavailable actions are hidden.",
+                      "fontFamily": "$font",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "rectangle",
+          "id": "E7dlK",
+          "layoutPosition": "absolute",
+          "x": 0,
+          "y": 0,
+          "name": "Scrim",
+          "fill": "#18181B66",
+          "width": 390,
+          "height": 844
+        },
+        {
+          "type": "frame",
+          "id": "L3ht2",
+          "layoutPosition": "absolute",
+          "x": 0,
+          "y": 278,
+          "name": "Create Member Sheet",
+          "width": 390,
+          "fill": "$surface",
+          "cornerRadius": [
+            20,
+            20,
+            0,
+            0
+          ],
+          "effect": {
+            "type": "shadow",
+            "shadowType": "outer",
+            "color": "#00000026",
+            "offset": {
+              "x": 0,
+              "y": -8
+            },
+            "blur": 24
+          },
+          "layout": "vertical",
+          "gap": 16,
+          "padding": [
+            10,
+            20,
+            28,
+            20
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "YDYmC",
+              "name": "Grabber Wrap",
+              "width": "fill_container",
+              "justifyContent": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "JBIMg",
+                  "name": "Grabber",
+                  "width": 36,
+                  "height": 4,
+                  "fill": "$border",
+                  "cornerRadius": 2
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "CM7fO",
+              "name": "Heading",
+              "fill": "$text",
+              "content": "Create member",
+              "fontFamily": "$font",
+              "fontSize": 17,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "ead9g",
+              "name": "Subheading",
+              "fill": "$muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "They can sign in immediately with the email and password you set below.",
+              "fontFamily": "$font",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "id": "C1XPr8",
+              "type": "ref",
+              "ref": "IplNB",
+              "name": "Email Field",
+              "width": "fill_container",
+              "descendants": {
+                "QwP78": {
+                  "content": "Email"
+                },
+                "wyTo2": {
+                  "content": "",
+                  "fill": "$text"
+                },
+                "uhuGX": {
+                  "content": "Must be a new address, not already in use anywhere in Warehouser."
+                }
+              }
+            },
+            {
+              "id": "C4aZHX",
+              "type": "ref",
+              "ref": "IplNB",
+              "name": "Initial Password Field",
+              "width": "fill_container",
+              "descendants": {
+                "QwP78": {
+                  "content": "Initial password"
+                },
+                "lMr5j": {
+                  "icon": "lock"
+                },
+                "wyTo2": {
+                  "content": "",
+                  "fill": "$text"
+                },
+                "F9z622": {
+                  "enabled": true
+                },
+                "uhuGX": {
+                  "content": "Share this password with them directly — no invite email is sent."
+                }
+              }
+            },
+            {
+              "type": "frame",
+              "id": "a5eQOt",
+              "name": "Role Field",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 6,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "kdHm8",
+                  "name": "Label",
+                  "fill": "$text",
+                  "content": "Role",
+                  "fontFamily": "$font",
+                  "fontSize": 14,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "N7oSn0",
+                  "name": "Control",
+                  "width": "fill_container",
+                  "height": 44,
+                  "fill": "$field",
+                  "cornerRadius": "$radius-lg",
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "gap": 8,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "mqPRp",
+                      "name": "Value",
+                      "fill": "$text",
+                      "content": "Operator",
+                      "fontFamily": "$font",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "icon",
+                      "id": "oLD0r",
+                      "name": "Chevron",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "chevron-down",
+                      "library": "lucide",
+                      "fill": "$muted"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "ICng1",
+                  "name": "Helper",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Only roles whose permissions do not exceed your own are shown.",
+                  "fontFamily": "$font",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "dtK5H",
+              "name": "Footer",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 10,
+              "children": [
+                {
+                  "id": "OJGCf",
+                  "type": "ref",
+                  "ref": "L80Scv",
+                  "name": "Create Member Submit",
+                  "width": "fill_container",
+                  "descendants": {
+                    "WUgrQ": {
+                      "enabled": false
+                    },
+                    "k2f1mD": {
+                      "content": "Create member"
+                    }
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "g9555Y",
+                  "name": "Cancel Button",
+                  "width": "fill_container",
+                  "height": 44,
+                  "fill": "$surface",
+                  "cornerRadius": "$radius-lg",
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "n9EiCU",
+                      "fill": "$text",
+                      "content": "Cancel",
+                      "fontFamily": "$font",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "themes": {

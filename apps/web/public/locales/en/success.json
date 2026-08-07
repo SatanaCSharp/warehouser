@@ -5,7 +5,11 @@
   },
   "access": {
     "assignRole": "Member role updated.",
+    "changeMemberEmail": "Member email updated.",
+    "changeMemberPassword": "Member password updated.",
+    "createMember": "Member created.",
     "createRole": "Role created.",
+    "deleteMember": "Member removed.",
     "deleteRole": "Role deleted.",
     "transferManager": "Warehouse management transferred.",
     "updateRole": "Role updated."

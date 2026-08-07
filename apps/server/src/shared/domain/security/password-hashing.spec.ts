@@ -1,4 +1,7 @@
-import { hashPassword, verifyPassword } from 'auth/domain/security/password';
+import {
+  hashPassword,
+  verifyPassword,
+} from 'shared/domain/security/password-hashing';
 
 const testParameters = {
   cost: 1_024,

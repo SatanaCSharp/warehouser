@@ -24,7 +24,14 @@
     "heading": "Members",
     "listLabel": "Warehouse members"
     ,"empty": "No members are available.",
-    "error": "Members could not be loaded safely. Try again."
+    "error": "Members could not be loaded safely. Try again.",
+    "you": "You",
+    "search": "Search members",
+    "searchEmpty": "No members match your search.",
+    "loading": "Loading members",
+    "editEmail": "Edit email for {{email}}",
+    "resetPassword": "Reset password for {{email}}",
+    "deleteMember": "Delete {{email}}"
   },
   "permissions": {
     "heading": "Permissions",
@@ -83,6 +90,54 @@
       "managerSummary": "{{userId}} will become {{role}}.",
       "save": "Transfer management",
       "saved": "Warehouse management was transferred."
+    },
+    "createMember": {
+      "open": "Create member",
+      "title": "Create member",
+      "email": "Email",
+      "password": "Initial password",
+      "role": "Role",
+      "save": "Create member",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password",
+      "validation": {
+        "email": {
+          "invalid": "Enter a valid email address.",
+          "duplicate": "This email is already registered."
+        },
+        "password": {
+          "invalid": "Use 8 to 128 characters."
+        },
+        "role": {
+          "exceeded": "A new member's role can never exceed your own permissions."
+        }
+      }
+    },
+    "editEmail": {
+      "title": "Edit email for {{email}}",
+      "email": "New email",
+      "save": "Save email",
+      "validation": {
+        "invalid": "Enter a valid email address.",
+        "duplicate": "This email is already registered.",
+        "protected": "The Warehouse Manager role must be transferred to someone else first.",
+        "exceeded": "You can't change credentials for a member with more permissions than you."
+      }
+    },
+    "resetPassword": {
+      "title": "Reset password for {{email}}",
+      "password": "New password",
+      "save": "Reset password",
+      "validation": {
+        "invalid": "Use 8 to 128 characters.",
+        "protected": "The Warehouse Manager role must be transferred to someone else first.",
+        "exceeded": "You can't change credentials for a member with more permissions than you."
+      }
+    },
+    "deleteMember": {
+      "title": "Delete {{email}}",
+      "body": "This permanently removes {{email}} from the Warehouse. This action cannot be undone.",
+      "confirm": "Delete member"
     }
   },
   "denied": {

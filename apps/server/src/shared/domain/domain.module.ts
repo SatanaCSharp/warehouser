@@ -14,6 +14,7 @@ import { AccessProvisioningRepository } from 'shared/domain/repositories/access-
 import { AccessReadRepository } from 'shared/domain/repositories/access-read.repository';
 import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
 import { ManagerTransferRepository } from 'shared/domain/repositories/manager-transfer.repository';
+import { MemberLifecycleRepository } from 'shared/domain/repositories/member-lifecycle.repository';
 import { RoleLifecycleRepository } from 'shared/domain/repositories/role-lifecycle.repository';
 
 const domainEntities = [
@@ -33,6 +34,7 @@ const domainRepositories = [
   AccessReadRepository,
   AuthenticationRepository,
   ManagerTransferRepository,
+  MemberLifecycleRepository,
   RoleLifecycleRepository,
 ];
 
