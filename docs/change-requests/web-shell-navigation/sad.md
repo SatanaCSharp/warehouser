@@ -105,6 +105,8 @@ In scope:
 - `apps/web/src/shared/layouts/LanguageSelector.tsx` — new.
 - `apps/web/src/modules/access/components/access-administration/MemberList.tsx` — amend row
   actions only; identity stack, spacing, and row height are unchanged (CH-03).
+- `apps/web/src/modules/auth/sign-out/components/SignOutButton.tsx` — amend for icon-only collapse
+  below `sm` only; required by spec.md §6's NFR row, which `RootLayout.tsx` alone cannot satisfy.
 - `apps/web/public/locales/{en,uk}/{common,access}.json` — add/rename keys; no new namespace
   (CR-AC-11).
 - `docs/mockups/app.pen`, this work item's `design-handoff.md` — already updated (design-ui ran

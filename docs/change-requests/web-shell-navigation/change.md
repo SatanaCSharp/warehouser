@@ -10,6 +10,8 @@ compatibility: 'backward-compatible'
 affected_sources:
   - apps/web/src/shared/layouts/RootLayout.tsx
   - apps/web/src/modules/access/components/access-administration/MemberList.tsx
+  - apps/web/src/modules/auth/sign-out/components/SignOutButton.tsx (icon-only collapse below sm,
+    required by spec.md §6's NFR row; RootLayout.tsx alone cannot satisfy it)
   - apps/web/src/shared/constants/routes.ts (read-only; consumed via ROUTES.HOME/ROUTES.ACCESS, no new routes added)
   - apps/web/public/locales/en/common.json
   - apps/web/public/locales/en/access.json

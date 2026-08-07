@@ -19,7 +19,7 @@
 | T12 | SignOutButton icon-only collapse          | ui    | Frontend Lead | XS       | —              | done   |
 | T13 | RootLayout landmark + scope fixes         | ui    | Frontend Lead | S        | —              | done   |
 | T14 | Sidebar landmark + design fidelity        | ui    | Frontend Lead | S        | —              | done   |
-| T15 | SignOutButton.tsx traceability            | docs  | Frontend Lead | XS       | —              | todo   |
+| T15 | SignOutButton.tsx traceability            | docs  | Frontend Lead | XS       | —              | done   |
 
 **Total:** 15 tasks (9 original + 6 review-fix follow-ups from
 [`_review/review-2026-08-07.md`](../_review/review-2026-08-07.md)), ~7.5 person-days.
