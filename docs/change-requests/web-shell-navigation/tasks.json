@@ -1,0 +1,115 @@
+{
+  "slug": "web-shell-navigation",
+  "kind": "change-request",
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "Add shell/menu/selector locale keys and remove obsolete per-action keys",
+      "layer": "ui",
+      "deps": [],
+      "acs": ["CR-AC-11"],
+      "source_refs": ["change.md#CH-05"],
+      "dod": "en/access.json and en/common.json plus their uk/ counterparts gain matching keys for the sidebar nav labels, the kebab trigger's accessible-name template, the kebab menu's three plain-label items, the language selector's own accessible label, and the drawer-toggle/sign-out icon-only accessible labels, with full en/uk key-set parity; the three obsolete interpolated keys (members.editEmail, members.resetPassword, members.deleteMember) are removed from all four files; a localization parity test asserts no orphaned or missing key across all 8 namespaces.",
+      "files_hint": [
+        "apps/web/public/locales/en/common.json",
+        "apps/web/public/locales/en/access.json",
+        "apps/web/public/locales/uk/common.json",
+        "apps/web/public/locales/uk/access.json"
+      ]
+    },
+    {
+      "id": "T2",
+      "title": "Build Sidebar persistent nav list with Dashboard/Access gating",
+      "layer": "ui",
+      "deps": ["T1"],
+      "acs": ["CR-AC-02"],
+      "source_refs": ["change.md#CH-02"],
+      "dod": "A new Sidebar component renders \"Dashboard\" (-> ROUTES.HOME) always and \"Access\" (-> ROUTES.ACCESS) only when currentAccess.data?.permissionIds.some(...) matches ROLES_WATCH or USERS_WATCH, reproducing today's RootLayout predicate and its falsy/loading-window behavior verbatim (no skeleton added); component unit tests cover the true/false/loading-window cases; the component renders persistently when the viewport is at or above sm.",
+      "files_hint": ["apps/web/src/shared/layouts/Sidebar.tsx"]
+    },
+    {
+      "id": "T3",
+      "title": "Add Sidebar off-canvas drawer variant with focus trap and header toggle",
+      "layer": "ui",
+      "deps": ["T2"],
+      "acs": ["CR-AC-09"],
+      "source_refs": ["change.md#CH-02"],
+      "dod": "Below the sm breakpoint, Sidebar collapses to an off-canvas drawer (dimmed scrim + panel) opened by a toggle control; the drawer traps focus while open, closes via scrim tap/Escape/selecting a nav item, and returns focus to the toggle control on close, matching the app's existing dialog-focus-return convention; component unit tests cover open/close via each dismissal path and the focus-return assertion.",
+      "files_hint": ["apps/web/src/shared/layouts/Sidebar.tsx"]
+    },
+    {
+      "id": "T4",
+      "title": "Build Footer landmark component",
+      "layer": "ui",
+      "deps": [],
+      "acs": ["CR-AC-01"],
+      "source_refs": ["change.md#CH-01"],
+      "dod": "A new Footer component renders a non-interactive <footer> landmark as a full-width bar, conforming as an empty landmark per spec.md §8's open default; a component unit test asserts the landmark role and that it contains no focusable control.",
+      "files_hint": ["apps/web/src/shared/layouts/Footer.tsx"]
+    },
+    {
+      "id": "T5",
+      "title": "Build LanguageSelector component",
+      "layer": "ui",
+      "deps": ["T1"],
+      "acs": ["CR-AC-06", "CR-AC-07"],
+      "source_refs": [],
+      "dod": "A new LanguageSelector component displays i18n.resolvedLanguage (resolving a region variant to its base language), lists fixed native-name labels \"English\"/\"Українська\" (not translation keys) on open, calls i18n.changeLanguage() on selection with no independent local language state, and shows globe icon + label + chevron at or above sm, collapsing to an icon-only trigger with the value conveyed only via accessible name below sm; component unit tests cover displayed-value-from-i18next, region-variant resolution, changeLanguage invocation, and the responsive collapse.",
+      "files_hint": ["apps/web/src/shared/layouts/LanguageSelector.tsx"]
+    },
+    {
+      "id": "T6",
+      "title": "Wire RootLayout's authenticated branch to the new shell",
+      "layer": "ui",
+      "deps": ["T3", "T4", "T5"],
+      "acs": ["CR-AC-01", "CR-RG-03", "CR-RG-04"],
+      "source_refs": ["change.md#CH-01"],
+      "dod": "In the isAuthRoute === false && isAuthenticated === true branch only, RootLayout composes header (brand, LanguageSelector, sign-out, and a drawer-toggle button below sm) + Sidebar + Footer + Outlet, and no longer renders the inline \"Access\" link; the auth-route and chrome-less branches are untouched; shell integration tests assert all three branches render their correct chrome and nothing else at both <sm and >=sm viewport widths.",
+      "files_hint": ["apps/web/src/shared/layouts/RootLayout.tsx"]
+    },
+    {
+      "id": "T7",
+      "title": "Replace MemberList row action buttons with a kebab trigger and menu",
+      "layer": "ui",
+      "deps": ["T1"],
+      "acs": [
+        "CR-AC-03",
+        "CR-AC-04",
+        "CR-AC-05",
+        "CR-AC-10",
+        "CR-RG-01",
+        "CR-RG-02"
+      ],
+      "source_refs": ["change.md#CH-03", "change.md#CH-04"],
+      "dod": "Each eligible member row renders one trailing kebab trigger (HeroUI Dropdown/Menu) only when at least one of canEditEmail/canResetPassword/canDeleteMember is true, with an accessible name identifying the member (e.g. \"Actions for {email}\"); the opened menu lists only true-capability items as plain labels (Delete member keeps its danger treatment); Escape or an outside click/tap closes the menu and returns focus to the trigger; Arrow Up/Down move focus among items; selecting an item closes the menu and invokes the same onEditEmail/onResetPassword/onDeleteMember callback MemberList already receives, unchanged; protected and self rows continue to render only their Chip with no trigger; component unit tests cover trigger presence/absence, menu contents per capability combination, keyboard/outside-dismiss behavior, and that the existing callbacks still fire unchanged.",
+      "files_hint": [
+        "apps/web/src/modules/access/components/access-administration/MemberList.tsx"
+      ]
+    },
+    {
+      "id": "T8",
+      "title": "Update AccessAdministration test selectors for the kebab menu",
+      "layer": "tests",
+      "deps": ["T7"],
+      "acs": ["CR-RG-01", "CR-RG-02"],
+      "source_refs": ["change.md#CH-03"],
+      "dod": "AccessAdministration.spec.tsx's assertions that queried the three separate per-action icon buttons are updated to open the kebab menu and select the corresponding item instead; the suite passes and still confirms each action's dialog/handler/request fires exactly as before.",
+      "files_hint": [
+        "apps/web/src/modules/access/components/access-administration/AccessAdministration.spec.tsx"
+      ]
+    },
+    {
+      "id": "T9",
+      "title": "Verify responsive fit and hit targets at 390px/640px/1440px",
+      "layer": "tests",
+      "deps": ["T3", "T5", "T6", "T7"],
+      "acs": [],
+      "source_refs": [],
+      "dod": "Manual verification at 390px confirms the header's full control set (drawer toggle, brand, language selector, sign-out) fits without overflow/clipping, the kebab trigger's hit target is >=32x32px, the opened member-actions menu does not overflow the viewport, and row height respects the unchanged min-h-[72px] floor; verification at 640px and 1440px confirms the sidebar renders persistently at a fixed 240px width with the content column unconstrained and non-wrapping; results are recorded against spec.md §6's NFR table.",
+      "files_hint": [
+        "apps/web/src/shared/layouts/",
+        "apps/web/src/modules/access/components/access-administration/"
+      ]
+    }
+  ]
+}
