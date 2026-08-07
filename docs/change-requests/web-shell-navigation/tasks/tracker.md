@@ -14,8 +14,15 @@
 | T7  | MemberList kebab trigger and menu         | ui    | Frontend Lead | M        | T1             | done   |
 | T8  | AccessAdministration test selector update | tests | Frontend Lead | S        | T7             | done   |
 | T9  | Responsive/hit-target verification        | tests | Frontend Lead | S        | T3, T5, T6, T7 | done   |
+| T10 | Kebab focus-return + dismissal coverage   | ui    | Frontend Lead | S        | —              | todo   |
+| T11 | LanguageSelector fidelity fixes           | ui    | Frontend Lead | S        | —              | todo   |
+| T12 | SignOutButton icon-only collapse          | ui    | Frontend Lead | XS       | —              | todo   |
+| T13 | RootLayout landmark + scope fixes         | ui    | Frontend Lead | S        | —              | todo   |
+| T14 | Sidebar landmark + design fidelity        | ui    | Frontend Lead | S        | —              | todo   |
+| T15 | SignOutButton.tsx traceability            | docs  | Frontend Lead | XS       | —              | todo   |
 
-**Total:** 9 tasks, ~7 person-days.
+**Total:** 15 tasks (9 original + 6 review-fix follow-ups from
+[`_review/review-2026-08-07.md`](../_review/review-2026-08-07.md)), ~7.5 person-days.
 
 ## Notes
 

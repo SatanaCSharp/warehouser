@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PermissionId } from '@warehouser/shared-types/enums';
 import { describe, expect, it, vi } from 'vitest';
@@ -353,6 +353,40 @@ describe('AccessAdministration', () => {
     });
   });
 
+  it('returns focus to the kebab trigger once the Edit Email dialog is dismissed', async () => {
+    const user = userEvent.setup();
+    renderAdministration();
+
+    const row = screen.getByRole('listitem', { name: /member@example\.test/u });
+    const trigger = within(row).getByRole('button', {
+      name: 'Actions for member@example.test',
+    });
+    await user.click(trigger);
+    await user.click(screen.getByRole('menuitem', { name: 'Edit email' }));
+    const dialog = screen.getByRole('dialog', {
+      name: 'Edit email for member@example.test',
+    });
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+    );
+    await waitFor(() => expect(trigger).toHaveFocus());
+  });
+
+  it('hides the kebab trigger entirely when the actor holds no per-row action permission', () => {
+    renderAdministration({
+      access: { ...access, permissionIds: [PermissionId.USERS_WATCH] },
+    });
+
+    const row = screen.getByRole('listitem', { name: /member@example\.test/u });
+    expect(
+      within(row).queryByRole('button', {
+        name: 'Actions for member@example.test',
+      }),
+    ).not.toBeInTheDocument();
+  });
+
   it('resets a member password through the Reset Password dialog when authorized (AC-06)', async () => {
     const user = userEvent.setup();
     const props = renderAdministration();
@@ -409,29 +443,6 @@ describe('AccessAdministration', () => {
     });
     expect(within(row).getByText('Protected')).toBeInTheDocument();
     expect(within(row).queryByRole('button')).not.toBeInTheDocument();
-  });
-
-  it('hides per-row member actions without the matching Permissions', () => {
-    renderAdministration({
-      access: { ...access, permissionIds: [PermissionId.USERS_WATCH] },
-    });
-
-    const row = screen.getByRole('listitem', { name: /member@example\.test/u });
-    expect(
-      within(row).queryByRole('button', {
-        name: 'Edit email for member@example.test',
-      }),
-    ).not.toBeInTheDocument();
-    expect(
-      within(row).queryByRole('button', {
-        name: 'Reset password for member@example.test',
-      }),
-    ).not.toBeInTheDocument();
-    expect(
-      within(row).queryByRole('button', {
-        name: 'Delete member@example.test',
-      }),
-    ).not.toBeInTheDocument();
   });
 
   it('defers the member list to a loading skeleton until the actor id is known (AC-11/18)', () => {

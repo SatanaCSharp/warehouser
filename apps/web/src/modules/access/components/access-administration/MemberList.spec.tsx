@@ -77,6 +77,7 @@ const renderMemberList = (
   return props;
 };
 
+// eslint-disable-next-line max-lines-per-function
 describe('MemberList', () => {
   it('shows a loading skeleton and no member rows while loading', () => {
     renderMemberList({ isLoading: true });
@@ -199,6 +200,30 @@ describe('MemberList', () => {
       expect(screen.queryByRole('menu')).not.toBeInTheDocument(),
     );
     await waitFor(() => expect(trigger).toHaveFocus());
+  });
+
+  it('opens the menu when the focused trigger receives Enter or Space', async () => {
+    const user = userEvent.setup();
+    renderMemberList();
+
+    const row = screen.getByRole('listitem', {
+      name: /picker@example\.test/u,
+    });
+    const trigger = within(row).getByRole('button', {
+      name: 'Actions for picker@example.test',
+    });
+    trigger.focus();
+    await user.keyboard('{Enter}');
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+
+    await user.keyboard('{Escape}');
+    await waitFor(() =>
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument(),
+    );
+    await waitFor(() => expect(trigger).toHaveFocus());
+
+    await user.keyboard(' ');
+    expect(screen.getByRole('menu')).toBeInTheDocument();
   });
 
   it('closes the menu on an outside click', async () => {

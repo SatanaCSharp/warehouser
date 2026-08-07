@@ -110,6 +110,85 @@
         "apps/web/src/shared/layouts/",
         "apps/web/src/modules/access/components/access-administration/"
       ]
+    },
+    {
+      "id": "T10",
+      "title": "Fix kebab-trigger focus return and dismissal coverage (review findings #1, #2, #5)",
+      "layer": "ui",
+      "deps": [],
+      "acs": ["CR-AC-03", "CR-AC-04", "CR-RG-02"],
+      "source_refs": ["_review/review-2026-08-07.md#Stage-1"],
+      "dod": "AccessAdministration.spec.tsx's permission-gating assertion opens (or confirms absence of) the kebab trigger itself instead of asserting the absence of the three retired per-action button names; a test confirms focus returns to the originating kebab trigger once a dialog opened from the menu (edit email / reset password / delete member) is dismissed; a test confirms Enter and Space on a focused kebab trigger open the menu, matching the existing Escape/outside-click/Arrow-key coverage.",
+      "files_hint": [
+        "apps/web/src/modules/access/components/access-administration/MemberList.tsx",
+        "apps/web/src/modules/access/components/access-administration/MemberList.spec.tsx",
+        "apps/web/src/modules/access/components/access-administration/AccessAdministration.spec.tsx"
+      ]
+    },
+    {
+      "id": "T11",
+      "title": "Fix LanguageSelector label fidelity, checkmark, and icon-only collapse (review findings #3, #10, #11, #12)",
+      "layer": "ui",
+      "deps": [],
+      "acs": ["CR-AC-06"],
+      "source_refs": ["_review/review-2026-08-07.md#Stage-2"],
+      "dod": "Language option labels render as literal native-name strings (\"English\"/\"Українська\"), not translation-key lookups; the open menu marks the active option with a checkmark per frame ZQ4vO; the trigger actually collapses to an icon-only control below sm (not just a hidden text label) matching the approved mobile frame; a test asserts the responsive class contract driving that collapse.",
+      "files_hint": [
+        "apps/web/src/shared/layouts/LanguageSelector.tsx",
+        "apps/web/src/shared/layouts/LanguageSelector.spec.tsx"
+      ]
+    },
+    {
+      "id": "T12",
+      "title": "Fix SignOutButton icon-only collapse below sm (review finding #11, #12)",
+      "layer": "ui",
+      "deps": [],
+      "acs": [],
+      "source_refs": ["_review/review-2026-08-07.md#Stage-2", "spec.md#6"],
+      "dod": "SignOutButton actually collapses to an icon-only control below sm (not just a hidden text label), matching the approved mobile frame and spec.md §6's NFR row; a test asserts the responsive class contract driving that collapse.",
+      "files_hint": [
+        "apps/web/src/modules/auth/sign-out/components/SignOutButton.tsx",
+        "apps/web/src/modules/auth/sign-out/components/SignOutButton.spec.tsx"
+      ]
+    },
+    {
+      "id": "T13",
+      "title": "Fix RootLayout nested landmark and flex-col scope (review findings #6, #7, #12)",
+      "layer": "ui",
+      "deps": [],
+      "acs": ["CR-RG-03", "CR-RG-04"],
+      "source_refs": ["_review/review-2026-08-07.md#Stage-2"],
+      "dod": "The authenticated branch no longer nests a <main> landmark inside another page-level <main>; the outer wrapper's flex flex-col treatment applies only to the authenticated branch, not the auth-route or chrome-less branches (CR-RG-03/CR-RG-04 stay byte-for-byte); a test asserts the <sm/>=sm responsive class contract for the branch's chrome.",
+      "files_hint": [
+        "apps/web/src/shared/layouts/RootLayout.tsx",
+        "apps/web/src/shared/layouts/RootLayout.spec.tsx"
+      ]
+    },
+    {
+      "id": "T14",
+      "title": "Fix Sidebar drawer landmark and restore design-approved icons/active tint (review findings #8, #9, #12)",
+      "layer": "ui",
+      "deps": [],
+      "acs": ["CR-AC-09"],
+      "source_refs": ["_review/review-2026-08-07.md#Stage-2"],
+      "dod": "The off-canvas drawer variant renders its nav list inside a <nav> landmark, same as the persistent variant; nav items regain the icons and active-item #E6E5FB tint approved in design-handoff.md frames tCIFz/jUVaK; a test asserts the persistent/drawer sm responsive class contract.",
+      "files_hint": [
+        "apps/web/src/shared/layouts/Sidebar.tsx",
+        "apps/web/src/shared/layouts/Sidebar.spec.tsx"
+      ]
+    },
+    {
+      "id": "T15",
+      "title": "Record SignOutButton.tsx traceability (review finding #4)",
+      "layer": "docs",
+      "deps": [],
+      "acs": [],
+      "source_refs": ["_review/review-2026-08-07.md#Stage-1"],
+      "dod": "change.md's affected_sources and sad.md §3's in-scope list both list apps/web/src/modules/auth/sign-out/components/SignOutButton.tsx, matching the amendment already made in T6's commit.",
+      "files_hint": [
+        "docs/change-requests/web-shell-navigation/change.md",
+        "docs/change-requests/web-shell-navigation/sad.md"
+      ]
     }
   ]
 }
