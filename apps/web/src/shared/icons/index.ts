@@ -7,6 +7,7 @@ export { KeyIcon } from 'shared/icons/KeyIcon';
 export { LogOutIcon } from 'shared/icons/LogOutIcon';
 export { MailIcon } from 'shared/icons/MailIcon';
 export { MenuIcon } from 'shared/icons/MenuIcon';
+export { PlusIcon } from 'shared/icons/PlusIcon';
 export { SearchIcon } from 'shared/icons/SearchIcon';
 export { ShieldCheckIcon } from 'shared/icons/ShieldCheckIcon';
 export { TrashIcon } from 'shared/icons/TrashIcon';

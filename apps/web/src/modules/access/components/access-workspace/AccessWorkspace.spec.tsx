@@ -164,7 +164,7 @@ describe('AccessWorkspace', () => {
     const dialog = screen.getByRole('dialog', { name: 'Create member' });
 
     expect(
-      within(dialog).getByRole('option', { name: 'Picker' }),
+      within(dialog).getByRole('option', { name: 'Picker', hidden: true }),
     ).toBeInTheDocument();
   });
 });

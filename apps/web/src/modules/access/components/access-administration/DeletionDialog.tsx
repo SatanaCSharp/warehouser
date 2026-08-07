@@ -1,7 +1,8 @@
-import { useForm } from 'react-hook-form';
+import { Select, SelectItem } from '@heroui/react';
+import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import { FormModalDialog } from 'modules/access/components/access-administration/FormModalDialog';
+import { FormModalDialog } from 'shared/components/FormModalDialog';
 
 import type { AccessRole } from 'modules/access/types/access-administration.types';
 import type { ReactElement } from 'react';
@@ -23,7 +24,7 @@ export const DeletionDialog = ({
 }: DeletionDialogProps): ReactElement => {
   const { t } = useTranslation('access');
   const assigned = role.assignedMemberCount > 0;
-  const { handleSubmit, register } = useForm<DeletionForm>({
+  const { control, handleSubmit } = useForm<DeletionForm>({
     defaultValues: { replacement: '' },
   });
 
@@ -43,23 +44,31 @@ export const DeletionDialog = ({
       )}
     >
       {assigned ? (
-        <label>
-          {t('administration.deletion.replacement')}
-          <select
-            required
-            {...register('replacement', { required: assigned })}
-            className="mt-2 w-full rounded-medium border border-divider p-3"
-          >
-            <option value="">{t('administration.select')}</option>
-            {roles
-              .filter((candidate) => candidate.id !== role.id)
-              .map((candidate) => (
-                <option key={candidate.id} value={candidate.id}>
-                  {candidate.name}
-                </option>
-              ))}
-          </select>
-        </label>
+        <Controller
+          control={control}
+          name="replacement"
+          rules={{ required: assigned }}
+          render={({ field }) => (
+            <Select
+              isRequired
+              validationBehavior="aria"
+              label={t('administration.deletion.replacement')}
+              placeholder={t('administration.select')}
+              name={field.name}
+              selectedKeys={field.value ? [field.value] : []}
+              onSelectionChange={(keys) =>
+                field.onChange(Array.from(keys)[0] ?? '')
+              }
+              onBlur={field.onBlur}
+            >
+              {roles
+                .filter((candidate) => candidate.id !== role.id)
+                .map((candidate) => (
+                  <SelectItem key={candidate.id}>{candidate.name}</SelectItem>
+                ))}
+            </Select>
+          )}
+        />
       ) : (
         <p>{t('administration.deletion.unassigned')}</p>
       )}

@@ -1,7 +1,8 @@
-import { useForm, useWatch } from 'react-hook-form';
+import { Select, SelectItem } from '@heroui/react';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import { FormModalDialog } from 'modules/access/components/access-administration/FormModalDialog';
+import { FormModalDialog } from 'shared/components/FormModalDialog';
 
 import type { AccessProjection } from '@warehouser/contracts/access';
 import type {
@@ -31,7 +32,7 @@ export const TransferDialog = ({
   const currentManager = members.find(
     (member) => member.roleId === access.roleId,
   );
-  const { control, handleSubmit, register } = useForm<TransferForm>({
+  const { control, handleSubmit } = useForm<TransferForm>({
     defaultValues: { recipient: '', replacement: '' },
   });
   const recipient = useWatch({ control, name: 'recipient' });
@@ -49,38 +50,54 @@ export const TransferDialog = ({
         onTransfer(recipient, replacement),
       )}
     >
-      <label>
-        {t('administration.transfer.recipient')}
-        <select
-          required
-          {...register('recipient', { required: true })}
-          className="mt-2 w-full rounded-medium border border-divider p-3"
-        >
-          <option value="">{t('administration.select')}</option>
-          {members
-            .filter((member) => member.roleKind !== 'warehouse_manager')
-            .map((member) => (
-              <option key={member.userId} value={member.userId}>
-                {member.userId}
-              </option>
+      <Controller
+        control={control}
+        name="recipient"
+        rules={{ required: true }}
+        render={({ field }) => (
+          <Select
+            isRequired
+            validationBehavior="aria"
+            label={t('administration.transfer.recipient')}
+            placeholder={t('administration.select')}
+            name={field.name}
+            selectedKeys={field.value ? [field.value] : []}
+            onSelectionChange={(keys) =>
+              field.onChange(Array.from(keys)[0] ?? '')
+            }
+            onBlur={field.onBlur}
+          >
+            {members
+              .filter((member) => member.roleKind !== 'warehouse_manager')
+              .map((member) => (
+                <SelectItem key={member.userId}>{member.userId}</SelectItem>
+              ))}
+          </Select>
+        )}
+      />
+      <Controller
+        control={control}
+        name="replacement"
+        rules={{ required: true }}
+        render={({ field }) => (
+          <Select
+            isRequired
+            validationBehavior="aria"
+            label={t('administration.transfer.replacement')}
+            placeholder={t('administration.select')}
+            name={field.name}
+            selectedKeys={field.value ? [field.value] : []}
+            onSelectionChange={(keys) =>
+              field.onChange(Array.from(keys)[0] ?? '')
+            }
+            onBlur={field.onBlur}
+          >
+            {roles.map((role) => (
+              <SelectItem key={role.id}>{role.name}</SelectItem>
             ))}
-        </select>
-      </label>
-      <label>
-        {t('administration.transfer.replacement')}
-        <select
-          required
-          {...register('replacement', { required: true })}
-          className="mt-2 w-full rounded-medium border border-divider p-3"
-        >
-          <option value="">{t('administration.select')}</option>
-          {roles.map((role) => (
-            <option key={role.id} value={role.id}>
-              {role.name}
-            </option>
-          ))}
-        </select>
-      </label>
+          </Select>
+        )}
+      />
       {recipient ? (
         <p>
           {t('administration.transfer.recipientSummary', {

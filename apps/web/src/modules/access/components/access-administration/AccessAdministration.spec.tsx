@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { AccessAdministration } from 'modules/access/components/access-administration/AccessAdministration';
 import { authBecameAuthenticated } from 'modules/auth/store/auth.slice';
 import { makeStore } from 'store';
+import { selectHeroOption } from 'test/hero-select';
 import { renderWithProviders } from 'test/render';
 
 import type {
@@ -115,7 +116,7 @@ describe('AccessAdministration', () => {
     await user.click(screen.getByRole('button', { name: 'Create role' }));
     const dialog = screen.getByRole('dialog', { name: 'Create role' });
     expect(
-      within(dialog).getByLabelText('Transfer Warehouse Manager'),
+      within(dialog).getByLabelText('Transfer warehouse management'),
     ).toBeDisabled();
     expect(
       within(dialog).getByText(
@@ -143,10 +144,13 @@ describe('AccessAdministration', () => {
     );
     const dialog = screen.getByRole('dialog', { name: 'Assign member role' });
     expect(
-      within(dialog).queryByRole('option', { name: 'Warehouse Manager' }),
+      within(dialog).queryByRole('option', {
+        name: 'Warehouse Manager',
+        hidden: true,
+      }),
     ).not.toBeInTheDocument();
     expect(
-      within(dialog).getByRole('option', { name: 'Auditor' }),
+      within(dialog).getByRole('option', { name: 'Auditor', hidden: true }),
     ).toBeInTheDocument();
   });
 
@@ -154,12 +158,15 @@ describe('AccessAdministration', () => {
     const user = userEvent.setup();
     const props = renderAdministration();
 
-    await user.click(screen.getByRole('button', { name: 'Delete Picker' }));
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
     const dialog = screen.getByRole('dialog', { name: 'Delete Picker' });
-    expect(within(dialog).getByLabelText('Replacement role')).toBeRequired();
-    await user.selectOptions(
-      within(dialog).getByLabelText('Replacement role'),
-      auditorRoleId,
+    expect(
+      within(dialog).getByLabelText('Replacement role', { selector: 'select' }),
+    ).toBeRequired();
+    await selectHeroOption(
+      user,
+      within(dialog).getByRole('button', { name: /Replacement role/u }),
+      'Auditor',
     );
     await user.click(
       within(dialog).getByRole('button', { name: 'Replace and delete' }),
@@ -178,10 +185,12 @@ describe('AccessAdministration', () => {
     const user = userEvent.setup();
     renderAdministration({ members: [] });
 
-    await user.click(screen.getByRole('button', { name: 'Delete Picker' }));
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
 
     expect(
-      within(screen.getByRole('dialog')).getByLabelText('Replacement role'),
+      within(screen.getByRole('dialog')).getByLabelText('Replacement role', {
+        selector: 'select',
+      }),
     ).toBeRequired();
   });
 
@@ -234,18 +243,20 @@ describe('AccessAdministration', () => {
       name: 'Transfer Warehouse Manager',
     });
     expect(
-      within(dialog).queryByRole('option', { name: managerId }),
+      within(dialog).queryByRole('option', { name: managerId, hidden: true }),
     ).not.toBeInTheDocument();
     expect(
-      within(dialog).getByRole('option', { name: memberId }),
+      within(dialog).getByRole('option', { name: memberId, hidden: true }),
     ).toBeInTheDocument();
-    await user.selectOptions(
-      within(dialog).getByLabelText('New manager'),
+    await selectHeroOption(
+      user,
+      within(dialog).getByRole('button', { name: /New manager/u }),
       memberId,
     );
-    await user.selectOptions(
-      within(dialog).getByLabelText('Your replacement role'),
-      auditorRoleId,
+    await selectHeroOption(
+      user,
+      within(dialog).getByRole('button', { name: /Your replacement role/u }),
+      'Auditor',
     );
     expect(
       within(dialog).getByText(`${managerId} will become Auditor.`),
@@ -301,9 +312,10 @@ describe('AccessAdministration', () => {
       within(dialog).getByLabelText('Initial password'),
       'a-strong-password',
     );
-    await user.selectOptions(
-      within(dialog).getByLabelText('Role'),
-      pickerRoleId,
+    await selectHeroOption(
+      user,
+      within(dialog).getByRole('button', { name: /Role/u }),
+      'Picker',
     );
     await user.click(
       within(dialog).getByRole('button', { name: 'Create member' }),

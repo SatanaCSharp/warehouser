@@ -2,8 +2,8 @@ import { Checkbox, Input } from '@heroui/react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import { FormModalDialog } from 'modules/access/components/access-administration/FormModalDialog';
 import { parseRoleForm } from 'modules/access/schemas/role-form';
+import { FormModalDialog } from 'shared/components/FormModalDialog';
 
 import type { RoleWrite } from '@warehouser/contracts/access';
 import type {
@@ -112,7 +112,10 @@ export const RoleDialog = ({
                       )
                     }
                   >
-                    {permission.label}
+                    {t(
+                      `permissions.items.${permission.id.replace(':', '_')}`,
+                      permission.label,
+                    )}
                   </Checkbox>
                 )}
               />

@@ -1,8 +1,8 @@
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import { FormModalDialog } from 'modules/access/components/access-administration/FormModalDialog';
 import { parsePasswordChangeForm } from 'modules/access/schemas/password-change-form';
+import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { PasswordInput } from 'shared/components/PasswordInput';
 
 import type { PasswordChangeInput } from '@warehouser/contracts/users';

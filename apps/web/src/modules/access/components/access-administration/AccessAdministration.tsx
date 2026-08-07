@@ -16,6 +16,7 @@ import { RoleEditor } from 'modules/access/components/access-administration/Role
 import { RoleList } from 'modules/access/components/access-administration/RoleList';
 import { TransferDialog } from 'modules/access/components/access-administration/TransferDialog';
 import { selectCurrentUser } from 'modules/auth/store/auth.selectors';
+import { PlusIcon } from 'shared/icons';
 import { useAppSelector } from 'store/hooks';
 
 import type {
@@ -299,11 +300,14 @@ export const AccessAdministration = ({
           {showRoles && can(PermissionId.ROLES_CREATE) ? (
             <Button
               color="primary"
-              className="min-w-40 font-semibold"
-              size="lg"
+              aria-label={t('administration.createRole')}
+              startContent={<PlusIcon />}
+              className="w-10 min-w-10 gap-0 px-0 font-semibold sm:w-auto sm:min-w-40 sm:gap-2 sm:px-4"
               onPress={() => setWorkflow({ kind: 'role' })}
             >
-              {t('administration.createRole')}
+              <span className="hidden sm:inline">
+                {t('administration.createRole')}
+              </span>
             </Button>
           ) : null}
           {showRoles && can(PermissionId.WAREHOUSE_MANAGER_ROLE_REASSIGN) ? (
@@ -317,11 +321,14 @@ export const AccessAdministration = ({
           {showMembers && can(PermissionId.USERS_CREATE) ? (
             <Button
               color="primary"
-              className="min-w-40 font-semibold"
-              size="lg"
+              aria-label={t('administration.createMember.open')}
+              startContent={<PlusIcon />}
+              className="w-10 min-w-10 gap-0 px-0 font-semibold sm:w-auto sm:min-w-40 sm:gap-2 sm:px-4"
               onPress={() => setWorkflow({ kind: 'create' })}
             >
-              {t('administration.createMember.open')}
+              <span className="hidden sm:inline">
+                {t('administration.createMember.open')}
+              </span>
             </Button>
           ) : null}
         </div>

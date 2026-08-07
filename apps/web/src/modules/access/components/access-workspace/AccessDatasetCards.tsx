@@ -99,7 +99,12 @@ export const PermissionsDatasetCard = ({
       >
         {query.data?.items.map((permission) => (
           <li className="py-4" key={permission.id}>
-            <span className="font-medium">{permission.label}</span>
+            <span className="font-medium">
+              {t(
+                `permissions.items.${permission.id.replace(':', '_')}`,
+                permission.label,
+              )}
+            </span>
             <span className="ml-2 text-sm text-foreground-500">
               {permission.id}
             </span>

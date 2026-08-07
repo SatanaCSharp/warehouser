@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { FormModalDialog } from 'modules/access/components/access-administration/FormModalDialog';
+import { FormModalDialog } from 'shared/components/FormModalDialog';
 
 import type {
   AccessMember,

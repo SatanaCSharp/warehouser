@@ -93,6 +93,31 @@ describe('localization resources', () => {
     );
   });
 
+  it('translates permission ids and falls back to the server label when a key is missing', async () => {
+    const instance = createInstance();
+    await instance.init({
+      fallbackLng: 'en',
+      lng: 'en',
+      ns: namespaces,
+      resources,
+    });
+
+    expect(instance.t('permissions.items.USERS_CREATE', { ns: 'access' })).toBe(
+      'Create users',
+    );
+    expect(
+      instance.t('permissions.items.UNKNOWN:PERMISSION'.replace(':', '_'), {
+        ns: 'access',
+        defaultValue: 'Server-provided label',
+      }),
+    ).toBe('Server-provided label');
+
+    await instance.changeLanguage('uk');
+    expect(instance.t('permissions.items.USERS_CREATE', { ns: 'access' })).toBe(
+      'Створити користувачів',
+    );
+  });
+
   it('adds shell/menu/selector keys and drops obsolete per-action keys (CR-AC-11)', async () => {
     const instance = createInstance();
     await instance.init({

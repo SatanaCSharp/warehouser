@@ -1,9 +1,9 @@
-import { Input } from '@heroui/react';
-import { useForm } from 'react-hook-form';
+import { Input, Select, SelectItem } from '@heroui/react';
+import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import { FormModalDialog } from 'modules/access/components/access-administration/FormModalDialog';
 import { parseCreateMemberForm } from 'modules/access/schemas/create-member-form';
+import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { PasswordInput } from 'shared/components/PasswordInput';
 
 import type { CreateMemberInput } from '@warehouser/contracts/users';
@@ -28,6 +28,7 @@ export const CreateMemberDialog = ({
 }: CreateMemberDialogProps): ReactElement => {
   const { t } = useTranslation('access');
   const {
+    control,
     formState: { errors, isSubmitting },
     handleSubmit,
     register,
@@ -121,24 +122,32 @@ export const CreateMemberDialog = ({
         showLabel={t('administration.createMember.showPassword')}
         {...register('password')}
       />
-      <label>
-        {t('administration.createMember.role')}
-        <select
-          required
-          {...register('roleId', { required: true })}
-          className="mt-2 w-full rounded-medium border border-divider p-3"
-        >
-          <option value="">{t('administration.select')}</option>
-          {selectableRoles.map((role) => (
-            <option key={role.id} value={role.id}>
-              {role.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      {errors.roleId?.message ? (
-        <p className="text-sm text-danger">{errors.roleId.message}</p>
-      ) : null}
+      <Controller
+        control={control}
+        name="roleId"
+        rules={{ required: true }}
+        render={({ field }) => (
+          <Select
+            isRequired
+            validationBehavior="aria"
+            isInvalid={Boolean(errors.roleId)}
+            errorMessage={errors.roleId?.message}
+            isDisabled={isSubmitting}
+            label={t('administration.createMember.role')}
+            placeholder={t('administration.select')}
+            name={field.name}
+            selectedKeys={field.value ? [field.value] : []}
+            onSelectionChange={(keys) =>
+              field.onChange(Array.from(keys)[0] ?? '')
+            }
+            onBlur={field.onBlur}
+          >
+            {selectableRoles.map((role) => (
+              <SelectItem key={role.id}>{role.name}</SelectItem>
+            ))}
+          </Select>
+        )}
+      />
     </FormModalDialog>
   );
 };

@@ -2,8 +2,8 @@ import { Input } from '@heroui/react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import { FormModalDialog } from 'modules/access/components/access-administration/FormModalDialog';
 import { parseEmailChangeForm } from 'modules/access/schemas/email-change-form';
+import { FormModalDialog } from 'shared/components/FormModalDialog';
 
 import type { EmailChangeInput } from '@warehouser/contracts/users';
 import type {

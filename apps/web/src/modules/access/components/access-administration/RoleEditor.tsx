@@ -83,17 +83,17 @@ export const RoleEditor = ({
         </div>
         <div className="flex gap-2">
           {canDelete && !protectedRole ? (
-            <Button color="danger" variant="light" onPress={onDelete}>
-              {t('administration.deleteRole', { name: role.name })}
+            <Button color="danger" variant="light" size="sm" onPress={onDelete}>
+              {t('administration.deleteRole')}
             </Button>
           ) : null}
           {canUpdate && !protectedRole ? (
             <Button
               color="primary"
-              size="lg"
               type="submit"
+              size="sm"
               isLoading={isSubmitting}
-              className="min-w-40 font-semibold"
+              className="font-semibold"
             >
               {t('administration.roleEditor.saveChanges')}
             </Button>
@@ -156,7 +156,12 @@ export const RoleEditor = ({
                         )
                       }
                     >
-                      <span className="font-medium">{permission.label}</span>
+                      <span className="font-medium">
+                        {t(
+                          `permissions.items.${permission.id.replace(':', '_')}`,
+                          permission.label,
+                        )}
+                      </span>
                     </Checkbox>
                     {permission.kind === 'reserved' ? (
                       <p className="ml-7 text-sm text-foreground-400">

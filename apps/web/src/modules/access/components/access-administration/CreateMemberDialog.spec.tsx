@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { CreateMemberDialog } from 'modules/access/components/access-administration/CreateMemberDialog';
+import { selectHeroOption } from 'test/hero-select';
 import { renderWithProviders } from 'test/render';
 
 import type { RolePage } from '@warehouser/contracts/access';
@@ -81,7 +82,12 @@ const fillAndSubmit = async (
     );
   }
   if (roleId) {
-    await user.selectOptions(within(dialog).getByLabelText('Role'), roleId);
+    const roleName = roles.find((role) => role.id === roleId)?.name ?? '';
+    await selectHeroOption(
+      user,
+      within(dialog).getByRole('button', { name: /Role/u }),
+      roleName,
+    );
   }
   await user.click(
     within(dialog).getByRole('button', { name: 'Create member' }),
@@ -181,10 +187,13 @@ describe('CreateMemberDialog', () => {
 
     const dialog = screen.getByRole('dialog', { name: 'Create member' });
     expect(
-      within(dialog).queryByRole('option', { name: 'Warehouse Manager' }),
+      within(dialog).queryByRole('option', {
+        name: 'Warehouse Manager',
+        hidden: true,
+      }),
     ).not.toBeInTheDocument();
     expect(
-      within(dialog).getByRole('option', { name: 'Picker' }),
+      within(dialog).getByRole('option', { name: 'Picker', hidden: true }),
     ).toBeInTheDocument();
   });
 });

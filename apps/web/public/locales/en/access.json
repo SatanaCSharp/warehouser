@@ -40,13 +40,27 @@
     "heading": "Permissions",
     "listLabel": "Permission catalogue"
     ,"empty": "No permissions are available.",
-    "error": "Permissions could not be loaded safely. Try again."
+    "error": "Permissions could not be loaded safely. Try again.",
+    "items": {
+      "USERS_CREATE": "Create users",
+      "USERS_UPDATE": "Update users",
+      "USERS_WATCH": "View users",
+      "ROLES_ASSIGN": "Assign roles",
+      "ROLES_CREATE": "Create roles",
+      "ROLES_UPDATE": "Update roles",
+      "ROLES_DELETE": "Delete roles",
+      "ROLES_WATCH": "View roles",
+      "WAREHOUSE_MANAGER_ROLE_REASSIGN": "Transfer warehouse management",
+      "USERS_EMAIL_UPDATE": "Update user email",
+      "USERS_PASSWORD_CHANGE": "Change user password",
+      "USERS_DELETE": "Delete users"
+    }
   },
   "administration": {
     "heading": "Administration",
     "createRole": "Create role",
     "editRole": "Edit {{name}}",
-    "deleteRole": "Delete {{name}}",
+    "deleteRole": "Delete",
     "cancel": "Cancel",
     "select": "Select an option",
     "roleSaved": "{{name}} was saved.",

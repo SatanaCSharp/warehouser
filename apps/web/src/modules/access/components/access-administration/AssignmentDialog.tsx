@@ -1,7 +1,8 @@
-import { useForm } from 'react-hook-form';
+import { Select, SelectItem } from '@heroui/react';
+import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import { FormModalDialog } from 'modules/access/components/access-administration/FormModalDialog';
+import { FormModalDialog } from 'shared/components/FormModalDialog';
 
 import type { AccessRole } from 'modules/access/types/access-administration.types';
 import type { ReactElement } from 'react';
@@ -22,7 +23,7 @@ export const AssignmentDialog = ({
   onSave,
 }: AssignmentDialogProps): ReactElement => {
   const { t } = useTranslation('access');
-  const { handleSubmit, register } = useForm<AssignmentForm>({
+  const { control, handleSubmit } = useForm<AssignmentForm>({
     defaultValues: { roleId: '' },
   });
 
@@ -34,21 +35,29 @@ export const AssignmentDialog = ({
       onClose={onClose}
       onSubmit={handleSubmit(({ roleId }) => onSave(roleId))}
     >
-      <label>
-        {t('administration.assignment.role')}
-        <select
-          required
-          {...register('roleId', { required: true })}
-          className="mt-2 w-full rounded-medium border border-divider p-3"
-        >
-          <option value="">{t('administration.select')}</option>
-          {roles.map((role) => (
-            <option key={role.id} value={role.id}>
-              {role.name}
-            </option>
-          ))}
-        </select>
-      </label>
+      <Controller
+        control={control}
+        name="roleId"
+        rules={{ required: true }}
+        render={({ field }) => (
+          <Select
+            isRequired
+            validationBehavior="aria"
+            label={t('administration.assignment.role')}
+            placeholder={t('administration.select')}
+            name={field.name}
+            selectedKeys={field.value ? [field.value] : []}
+            onSelectionChange={(keys) =>
+              field.onChange(Array.from(keys)[0] ?? '')
+            }
+            onBlur={field.onBlur}
+          >
+            {roles.map((role) => (
+              <SelectItem key={role.id}>{role.name}</SelectItem>
+            ))}
+          </Select>
+        )}
+      />
       <p className="font-mono text-sm">{memberId}</p>
     </FormModalDialog>
   );

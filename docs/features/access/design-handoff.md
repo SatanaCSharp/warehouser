@@ -12,6 +12,8 @@ approved_frames:
     node_id: 'W48Rk'
   - name: 'Access / Administration / Mobile / v1'
     node_id: 'G0Yvp'
+  - name: 'Access / Administration / Desktop / v2'
+    node_id: 'zQ4S5'
 approved_at: '2026-08-03'
 approved_by: 'User'
 target_surfaces: ['web-frontend']
@@ -101,7 +103,15 @@ viewports: ['desktop 1440x900', 'mobile 390x844']
 
 ## Approved deviations
 
-N/A. Implementation must report any visible deviation for approval.
+- `Access / Administration / Desktop / v2` (node `zQ4S5`, Role Editor card node `fMJla`), approved
+  2026-08-07: the Role editor's Save/Delete actions are now compact HeroUI `sm`-sized buttons
+  (32px height, `[8,14]` padding, 13px label) instead of the v1 fixed-width 44px Save button.
+  Delete role uses a soft/light danger treatment (`$danger-soft` background, `$danger` text,
+  no fixed width) and sits left of Save inside a new "Role Editor Actions" row (8px gap),
+  matching the button order already used in code. Registration frames and the Administration
+  Mobile frame (`G0Yvp`) are unaffected — mobile never had a distinct Role editor screen mocked
+  (it opens as a separate page/sheet per the Responsive behavior section above), so this
+  deviation is desktop-only.
 
 ## Open questions
 
