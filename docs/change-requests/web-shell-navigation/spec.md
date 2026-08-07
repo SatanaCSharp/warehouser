@@ -46,13 +46,17 @@ for English/Ukrainian. See `change.md` §3 for the full old-to-new override map 
 - No language selector on the auth-route shell (login/sign-up) or on the not-authenticated /
   non-auth-route branch; this change applies to the authenticated shell only (CR-RG-03, CR-RG-04).
 - No new persisted language preference (e.g., account-level locale field); language selection
-  continues to rely on `i18next-browser-languagedetector`'s existing client-side detection/caching
-  (CH-05), which this change relies on for persistence but does not reconfigure.
+  continues to rely on `i18next-browser-languagedetector`'s implicit default caching behavior
+  (CH-05) — `apps/web/src/i18n.ts` configures no explicit `detection` block — which this change
+  relies on for persistence but does not reconfigure.
 - No new languages beyond English and Ukrainian; both are already fully supported by the existing
   i18next configuration, and no new i18next namespace is introduced — new strings join the existing
   `common`/`access` namespaces.
-- No edits to `apps/web/src/i18n.ts` — its namespaces, `supportedLngs`, fallback, and detection
-  config are consumed as-is, not modified.
+- No edits to `apps/web/src/i18n.ts` — its namespaces, `supportedLngs`, and fallback stay as
+  configured; `i18next-browser-languagedetector` is used with no explicit `detection` block (its
+  implicit defaults, including `localStorage` caching, apply). This change relies on those
+  defaults for CR-AC-07's reload-persistence and does not add a `detection` block, even as a
+  fallback if the defaults prove insufficient — that would be a follow-up change, not this one.
 - No telemetry is added for navigation, menu, or language-selector usage.
 - Component/file structure (e.g. whether the sidebar, footer, and selector become separate
   components) is an implementation decision left to `design`/`tasks`, not pinned by this spec.
@@ -91,9 +95,12 @@ screen width
 (`isAuthRoute === false && isAuthenticated === true`, matching today's `RootLayout.tsx` branch
 order — the auth-route branch takes precedence regardless of authentication state, see CR-RG-03)
 **When** the page renders
-**Then** the layout shows a header, a sidebar, and a footer, with the sidebar's drawer-toggle
-control present in the header on narrow viewports (CR-AC-09); the login/sign-up route keeps the
-existing header-only shell unchanged (CR-RG-03) regardless of authentication state
+**Then** the layout shows a header, a sidebar, and a footer, arranged with the sidebar to the left
+of the main content column at or above `sm` and the footer as a full-width bar at the bottom of the
+viewport at every breakpoint; the header retains its existing brand link and sign-out control and
+adds the language selector, with the sidebar's drawer-toggle control present in the header on
+narrow viewports (CR-AC-09); the login/sign-up route keeps the existing header-only shell unchanged
+(CR-RG-03) regardless of authentication state
 
 ### CR-AC-02 (CR-US-01, CH-02) — sidebar navigation, gating, and responsive behavior
 
@@ -110,7 +117,10 @@ header no longer renders a separate inline "Access" link
 **Given** an authenticated user
 **When** the viewport is narrower than the app's existing `sm` (640px) breakpoint
 **Then** the sidebar is not persistently visible; it collapses to an off-canvas drawer opened by a
-header-hosted toggle control, and at or above `sm` it renders persistently
+header-hosted toggle control, and at or above `sm` it renders persistently. The drawer opens over a
+dimmed scrim, traps focus while open, closes via scrim tap, Escape, or selecting a nav item, and
+returns focus to the toggle control on close, matching this app's existing dialog-focus-return
+convention
 
 ### CR-AC-03 (CR-US-02, CH-03) — kebab trigger and menu contents
 
@@ -119,8 +129,11 @@ header-hosted toggle control, and at or above `sm` it renders persistently
 focused)
 **Then** a menu opens, in the same dropdown presentation at every viewport width, listing only the
 actions the user's capabilities allow as plain labels (Edit email / Reset password / Delete
-member); Escape closes the menu and returns focus to the trigger; Arrow Up/Down move focus among
-menu items
+member; Delete member retains its existing danger color/treatment, the other two items carry no
+color distinction); Escape or a click/tap outside the menu closes it and returns focus to the
+trigger; Arrow Up/Down move focus among menu items; selecting an item closes the menu immediately
+and opens the corresponding dialog, and once that dialog is dismissed, focus returns to the row's
+kebab trigger
 
 ### CR-AC-04 (CR-US-02, CH-03) — capability-driven item and trigger visibility
 
@@ -160,16 +173,20 @@ on the auth-route (login/sign-up) shell or the not-authenticated/non-auth-route 
 **Given** the app's current resolved i18next language (`i18n.resolvedLanguage`) is L
 **When** the page renders
 **Then** the selector's displayed value is L (never a value independent of i18next state, and a
-region-variant detected language resolves to its base language for display); and **when** the user
-picks a different language
+region-variant detected language resolves to its base language for display), shown as the
+native-name label from CR-AC-06 alongside a globe icon at or above the `sm` breakpoint, collapsing
+to an icon-only trigger below `sm` with the value conveyed only through the accessible name; and
+**when** the user picks a different language
 **then** `i18n.changeLanguage()` is called, the whole UI re-renders in the chosen language (a brief
 fallback/loading flash while a newly-needed namespace loads is acceptable; no full page reload is
 required), and the choice persists across a subsequent reload via the detector's existing caching
 
 ### CR-AC-08 (CH-06) — design artifacts reconciled
 
-**Given** this change request reaches PASS
-**When** canonical reconciliation runs
+**Given** this change request has passed code review (PASS)
+**When** the engineer running `ship` performs the ship-time canonical reconciliation step
+(`change.md` §6 step 6, §8) — a post-PASS action, not a blocking condition of the review PASS
+itself
 **Then** `docs/features/users-management/design-handoff.md` and
 `docs/features/access/design-handoff.md` are both updated to describe the new shell, navigation,
 kebab menu, and language selector; both update their `approved_frame`/`approved_node_id` reference
@@ -185,7 +202,10 @@ names, selector's own accessible label, and any footer copy if content is added 
 question)
 **When** they are added to the locale resources
 **Then** they join the existing `common`/`access` namespaces in both `en` and `uk` with full key
-parity; no new namespace is added to `apps/web/src/i18n.ts`
+parity; no new namespace is added to `apps/web/src/i18n.ts`; the three now-obsolete per-action
+interpolated keys (`members.editEmail`, `members.resetPassword`, `members.deleteMember`) are
+removed from all four locale files (`en`/`uk` × `common`/`access`) once the new plain-label and
+trigger-accessible-name keys replace them
 
 ## 5.1 Regression boundaries
 
@@ -219,11 +239,13 @@ before, with no sidebar, footer, or language selector added
 
 ## 6. Non-functional requirements
 
-| Aspect                      | Previous target                             | New target                                                                                                                                                                       | Measurement                                     |
-| --------------------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| Row action affordance width | N/A (desktop-only icons, per design intent) | At 390px viewport width: the kebab trigger's hit target is legibly tappable, the opened menu does not overflow the viewport, and row height does not exceed today's 72px minimum | Manual verification at 390px viewport           |
-| Sidebar affordance width    | N/A (no sidebar today)                      | Below the `sm` (640px) breakpoint the sidebar is drawer-collapsed (CR-AC-09) so it does not reduce content width at 390px                                                        | Manual verification at 390px viewport           |
-| Locale completeness         | `en`/`uk` parity across 8 namespaces        | Parity maintained across the same 8 namespaces (no new namespace added, CR-AC-11); new keys present in both `en` and `uk`                                                        | Both locale directories hold identical key sets |
+| Aspect                      | Previous target                                | New target                                                                                                                                                                                                                                                                                   | Measurement                                             |
+| --------------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| Row action affordance width | N/A (desktop-only icons, per design intent)    | At 390px viewport width: the kebab trigger's hit target is ≥32×32px (matching the existing per-action icon buttons' sizing), the opened menu does not overflow the viewport, and row height matches today's unchanged `min-h-[72px]` floor (may grow to fit content, never shrinks below it) | Manual verification at 390px viewport                   |
+| Sidebar affordance width    | N/A (no sidebar today)                         | Below the `sm` (640px) breakpoint the sidebar is drawer-collapsed (CR-AC-09) so it does not reduce content width at 390px                                                                                                                                                                    | Manual verification at 390px viewport                   |
+| Sidebar persistent width    | N/A (no sidebar today)                         | At or above the `sm` breakpoint the sidebar renders at a fixed 240px width, leaving the members-list content column unconstrained and non-wrapping                                                                                                                                           | Manual verification at 640px and 1440px viewport widths |
+| Header control fit at 390px | N/A (header holds only brand + sign-out today) | At 390px viewport width the header's full control set (drawer toggle, brand, language selector, sign-out) fits without horizontal overflow or clipping, by collapsing the language selector and sign-out control to icon-only presentation below `sm`                                        | Manual verification at 390px viewport                   |
+| Locale completeness         | `en`/`uk` parity across 8 namespaces           | Parity maintained across the same 8 namespaces (no new namespace added, CR-AC-11); new keys present in both `en` and `uk`                                                                                                                                                                    | Both locale directories hold identical key sets         |
 
 ## 6.1 Security / privacy
 
@@ -243,4 +265,6 @@ before, with no sidebar, footer, or language selector added
 ## 8. Open questions
 
 - [ ] Exact footer content beyond an empty, non-interactive landmark? Default now: an empty
-      `<footer>` landmark is a conforming minimum. — owner: Product Owner, due: design-ui stage
+      `<footer>` landmark is a conforming minimum. — owner: Product Owner, due: implementation
+      stage (updated from "design-ui stage," which has already completed per the approved
+      `design-handoff.md`, without resolving this question)
