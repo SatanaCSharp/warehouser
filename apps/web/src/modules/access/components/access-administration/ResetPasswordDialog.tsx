@@ -1,17 +1,9 @@
-import {
-  Button,
-  Input,
-  Modal,
-  ModalBody,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-} from '@heroui/react';
-import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
+import { FormModalDialog } from 'modules/access/components/access-administration/FormModalDialog';
 import { parsePasswordChangeForm } from 'modules/access/schemas/password-change-form';
+import { PasswordInput } from 'shared/components/PasswordInput';
 
 import type { PasswordChangeInput } from '@warehouser/contracts/users';
 import type {
@@ -34,7 +26,6 @@ export const ResetPasswordDialog = ({
   onSave,
 }: ResetPasswordDialogProps): ReactElement => {
   const { t } = useTranslation('access');
-  const [passwordVisible, setPasswordVisible] = useState(false);
   const {
     formState: { errors, isSubmitting },
     handleSubmit,
@@ -70,61 +61,30 @@ export const ResetPasswordDialog = ({
   };
 
   return (
-    <Modal
-      isOpen
-      onOpenChange={(open) => {
-        if (!open) {
-          onClose();
-        }
-      }}
+    <FormModalDialog
+      title={t('administration.resetPassword.title', { email: member.email })}
+      cancelLabel={t('administration.cancel')}
+      submitLabel={t('administration.resetPassword.save')}
       size="lg"
       scrollBehavior="inside"
+      noValidate
+      isSubmitting={isSubmitting}
+      onClose={onClose}
+      onSubmit={handleSubmit(submit)}
     >
-      <ModalContent>
-        <form onSubmit={handleSubmit(submit)} noValidate>
-          <ModalHeader>
-            {t('administration.resetPassword.title', { email: member.email })}
-          </ModalHeader>
-          <ModalBody>
-            <Input
-              autoFocus
-              isRequired
-              validationBehavior="aria"
-              isInvalid={Boolean(errors.password)}
-              errorMessage={errors.password?.message}
-              label={t('administration.resetPassword.password')}
-              type={passwordVisible ? 'text' : 'password'}
-              autoComplete="new-password"
-              isDisabled={isSubmitting}
-              endContent={
-                <button
-                  type="button"
-                  className="min-h-11 min-w-11 text-sm text-foreground-500"
-                  aria-label={
-                    passwordVisible
-                      ? t('administration.createMember.hidePassword')
-                      : t('administration.createMember.showPassword')
-                  }
-                  onClick={() => setPasswordVisible((visible) => !visible)}
-                >
-                  {passwordVisible
-                    ? t('administration.createMember.hidePassword')
-                    : t('administration.createMember.showPassword')}
-                </button>
-              }
-              {...register('password')}
-            />
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="light" isDisabled={isSubmitting} onPress={onClose}>
-              {t('administration.cancel')}
-            </Button>
-            <Button color="primary" type="submit" isLoading={isSubmitting}>
-              {t('administration.resetPassword.save')}
-            </Button>
-          </ModalFooter>
-        </form>
-      </ModalContent>
-    </Modal>
+      <PasswordInput
+        autoFocus
+        isRequired
+        validationBehavior="aria"
+        isInvalid={Boolean(errors.password)}
+        errorMessage={errors.password?.message}
+        label={t('administration.resetPassword.password')}
+        autoComplete="new-password"
+        isDisabled={isSubmitting}
+        hideLabel={t('administration.resetPassword.hidePassword')}
+        showLabel={t('administration.resetPassword.showPassword')}
+        {...register('password')}
+      />
+    </FormModalDialog>
   );
 };

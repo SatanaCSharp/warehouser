@@ -1,17 +1,10 @@
-import {
-  Button,
-  Input,
-  Modal,
-  ModalBody,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-} from '@heroui/react';
-import { useState } from 'react';
+import { Input } from '@heroui/react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
+import { FormModalDialog } from 'modules/access/components/access-administration/FormModalDialog';
 import { parseCreateMemberForm } from 'modules/access/schemas/create-member-form';
+import { PasswordInput } from 'shared/components/PasswordInput';
 
 import type { CreateMemberInput } from '@warehouser/contracts/users';
 import type {
@@ -34,7 +27,6 @@ export const CreateMemberDialog = ({
   onSave,
 }: CreateMemberDialogProps): ReactElement => {
   const { t } = useTranslation('access');
-  const [passwordVisible, setPasswordVisible] = useState(false);
   const {
     formState: { errors, isSubmitting },
     handleSubmit,
@@ -94,88 +86,59 @@ export const CreateMemberDialog = ({
   };
 
   return (
-    <Modal
-      isOpen
-      onOpenChange={(open) => {
-        if (!open) {
-          onClose();
-        }
-      }}
+    <FormModalDialog
+      title={t('administration.createMember.title')}
+      cancelLabel={t('administration.cancel')}
+      submitLabel={t('administration.createMember.save')}
       size="lg"
       scrollBehavior="inside"
+      noValidate
+      isSubmitting={isSubmitting}
+      onClose={onClose}
+      onSubmit={handleSubmit(submit)}
     >
-      <ModalContent>
-        <form onSubmit={handleSubmit(submit)} noValidate>
-          <ModalHeader>{t('administration.createMember.title')}</ModalHeader>
-          <ModalBody>
-            <Input
-              autoFocus
-              isRequired
-              validationBehavior="aria"
-              isInvalid={Boolean(errors.email)}
-              errorMessage={errors.email?.message}
-              label={t('administration.createMember.email')}
-              type="email"
-              autoComplete="email"
-              isDisabled={isSubmitting}
-              {...register('email')}
-            />
-            <Input
-              isRequired
-              validationBehavior="aria"
-              isInvalid={Boolean(errors.password)}
-              errorMessage={errors.password?.message}
-              label={t('administration.createMember.password')}
-              type={passwordVisible ? 'text' : 'password'}
-              autoComplete="new-password"
-              isDisabled={isSubmitting}
-              endContent={
-                <button
-                  type="button"
-                  className="min-h-11 min-w-11 text-sm text-foreground-500"
-                  aria-label={
-                    passwordVisible
-                      ? t('administration.createMember.hidePassword')
-                      : t('administration.createMember.showPassword')
-                  }
-                  onClick={() => setPasswordVisible((visible) => !visible)}
-                >
-                  {passwordVisible
-                    ? t('administration.createMember.hidePassword')
-                    : t('administration.createMember.showPassword')}
-                </button>
-              }
-              {...register('password')}
-            />
-            <label>
-              {t('administration.createMember.role')}
-              <select
-                required
-                {...register('roleId', { required: true })}
-                className="mt-2 w-full rounded-medium border border-divider p-3"
-              >
-                <option value="">{t('administration.select')}</option>
-                {selectableRoles.map((role) => (
-                  <option key={role.id} value={role.id}>
-                    {role.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {errors.roleId?.message ? (
-              <p className="text-sm text-danger">{errors.roleId.message}</p>
-            ) : null}
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="light" isDisabled={isSubmitting} onPress={onClose}>
-              {t('administration.cancel')}
-            </Button>
-            <Button color="primary" type="submit" isLoading={isSubmitting}>
-              {t('administration.createMember.save')}
-            </Button>
-          </ModalFooter>
-        </form>
-      </ModalContent>
-    </Modal>
+      <Input
+        autoFocus
+        isRequired
+        validationBehavior="aria"
+        isInvalid={Boolean(errors.email)}
+        errorMessage={errors.email?.message}
+        label={t('administration.createMember.email')}
+        type="email"
+        autoComplete="email"
+        isDisabled={isSubmitting}
+        {...register('email')}
+      />
+      <PasswordInput
+        isRequired
+        validationBehavior="aria"
+        isInvalid={Boolean(errors.password)}
+        errorMessage={errors.password?.message}
+        label={t('administration.createMember.password')}
+        autoComplete="new-password"
+        isDisabled={isSubmitting}
+        hideLabel={t('administration.createMember.hidePassword')}
+        showLabel={t('administration.createMember.showPassword')}
+        {...register('password')}
+      />
+      <label>
+        {t('administration.createMember.role')}
+        <select
+          required
+          {...register('roleId', { required: true })}
+          className="mt-2 w-full rounded-medium border border-divider p-3"
+        >
+          <option value="">{t('administration.select')}</option>
+          {selectableRoles.map((role) => (
+            <option key={role.id} value={role.id}>
+              {role.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      {errors.roleId?.message ? (
+        <p className="text-sm text-danger">{errors.roleId.message}</p>
+      ) : null}
+    </FormModalDialog>
   );
 };

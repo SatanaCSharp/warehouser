@@ -1,15 +1,8 @@
-import {
-  Button,
-  Input,
-  Modal,
-  ModalBody,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-} from '@heroui/react';
+import { Input } from '@heroui/react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
+import { FormModalDialog } from 'modules/access/components/access-administration/FormModalDialog';
 import { parseEmailChangeForm } from 'modules/access/schemas/email-change-form';
 
 import type { EmailChangeInput } from '@warehouser/contracts/users';
@@ -66,45 +59,29 @@ export const EditEmailDialog = ({
   };
 
   return (
-    <Modal
-      isOpen
-      onOpenChange={(open) => {
-        if (!open) {
-          onClose();
-        }
-      }}
+    <FormModalDialog
+      title={t('administration.editEmail.title', { email: member.email })}
+      cancelLabel={t('administration.cancel')}
+      submitLabel={t('administration.editEmail.save')}
       size="lg"
       scrollBehavior="inside"
+      noValidate
+      isSubmitting={isSubmitting}
+      onClose={onClose}
+      onSubmit={handleSubmit(submit)}
     >
-      <ModalContent>
-        <form onSubmit={handleSubmit(submit)} noValidate>
-          <ModalHeader>
-            {t('administration.editEmail.title', { email: member.email })}
-          </ModalHeader>
-          <ModalBody>
-            <Input
-              autoFocus
-              isRequired
-              validationBehavior="aria"
-              isInvalid={Boolean(errors.email)}
-              errorMessage={errors.email?.message}
-              label={t('administration.editEmail.email')}
-              type="email"
-              autoComplete="email"
-              isDisabled={isSubmitting}
-              {...register('email')}
-            />
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="light" isDisabled={isSubmitting} onPress={onClose}>
-              {t('administration.cancel')}
-            </Button>
-            <Button color="primary" type="submit" isLoading={isSubmitting}>
-              {t('administration.editEmail.save')}
-            </Button>
-          </ModalFooter>
-        </form>
-      </ModalContent>
-    </Modal>
+      <Input
+        autoFocus
+        isRequired
+        validationBehavior="aria"
+        isInvalid={Boolean(errors.email)}
+        errorMessage={errors.email?.message}
+        label={t('administration.editEmail.email')}
+        type="email"
+        autoComplete="email"
+        isDisabled={isSubmitting}
+        {...register('email')}
+      />
+    </FormModalDialog>
   );
 };

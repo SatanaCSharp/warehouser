@@ -1,7 +1,6 @@
 import { Button, Input, Link } from '@heroui/react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link as RouterLink } from '@tanstack/react-router';
-import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
@@ -9,6 +8,7 @@ import {
   signUpFormSchema,
   type SignUpFormValues,
 } from 'modules/auth/sign-up/schemas/sign-up-form.schema';
+import { PasswordInput } from 'shared/components/PasswordInput';
 import { ROUTES } from 'shared/constants/routes';
 
 import type { ReactElement } from 'react';
@@ -21,7 +21,6 @@ type Props = {
 export const SignUpForm = ({ emailError, onSubmit }: Props): ReactElement => {
   const { t } = useTranslation('sign-up');
   const { t: translateValidation } = useTranslation('validation');
-  const [passwordVisible, setPasswordVisible] = useState(false);
   const {
     register,
     handleSubmit,
@@ -56,11 +55,10 @@ export const SignUpForm = ({ emailError, onSubmit }: Props): ReactElement => {
           {t('duplicate.signIn')}
         </Link>
       ) : null}
-      <Input
+      <PasswordInput
         label={t('form.password.label')}
         placeholder={t('form.password.placeholder')}
         description={t('form.password.help')}
-        type={passwordVisible ? 'text' : 'password'}
         autoComplete="new-password"
         isDisabled={isSubmitting}
         isInvalid={Boolean(errors.password)}
@@ -69,20 +67,10 @@ export const SignUpForm = ({ emailError, onSubmit }: Props): ReactElement => {
             ? translateValidation(errors.password.message)
             : undefined
         }
-        endContent={
-          <button
-            type="button"
-            className="min-h-11 min-w-11 text-sm text-foreground-500"
-            aria-label={
-              passwordVisible
-                ? t('form.password.hide')
-                : t('form.password.show')
-            }
-            onClick={() => setPasswordVisible((visible) => !visible)}
-          >
-            {passwordVisible ? 'Hide' : 'Show'}
-          </button>
-        }
+        hideLabel={t('form.password.hide')}
+        showLabel={t('form.password.show')}
+        hideText={t('form.password.hideShort')}
+        showText={t('form.password.showShort')}
         {...register('password')}
       />
       <Input

@@ -131,6 +131,8 @@
       "title": "Reset password for {{email}}",
       "password": "New password",
       "save": "Reset password",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password",
       "validation": {
         "invalid": "Use 8 to 128 characters.",
         "protected": "The Warehouse Manager role must be transferred to someone else first.",
