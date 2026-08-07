@@ -20413,6 +20413,731 @@
           ]
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "tCIFz",
+      "x": -1558,
+      "y": 10652,
+      "name": "Shell / Access Administration / Desktop / v1",
+      "clip": true,
+      "width": 1440,
+      "height": 900,
+      "fill": "$bg",
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "upi97",
+          "name": "Authenticated Header",
+          "width": "fill_container",
+          "height": 72,
+          "fill": "$surface",
+          "stroke": "$border",
+          "strokeWidth": {
+            "bottom": 1
+          },
+          "padding": [
+            0,
+            32
+          ],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "OJpVB",
+              "name": "Brand",
+              "gap": 10,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Q8tE23",
+                  "name": "Brand Mark",
+                  "width": 34,
+                  "height": 34,
+                  "fill": "$primary",
+                  "cornerRadius": "$radius-md",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "i2eC7J",
+                      "name": "Warehouse Icon",
+                      "width": 19,
+                      "height": 19,
+                      "icon": "warehouse",
+                      "library": "lucide",
+                      "fill": "$primary-foreground"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "hmEBa",
+                  "name": "Brand Name",
+                  "fill": "$text",
+                  "content": "Warehouser",
+                  "fontFamily": "$font",
+                  "fontSize": 19,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "dOmll",
+              "name": "Header Right",
+              "gap": 12,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Y8IM1h",
+                  "name": "Language Selector Trigger",
+                  "height": 36,
+                  "fill": "$surface",
+                  "cornerRadius": "$radius-lg",
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "gap": 6,
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "b4iSN",
+                      "name": "Globe Icon",
+                      "width": 15,
+                      "height": 15,
+                      "icon": "globe",
+                      "library": "lucide",
+                      "fill": "$muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "fHriJ",
+                      "name": "Language Value",
+                      "fill": "$text",
+                      "content": "English",
+                      "fontFamily": "$font",
+                      "fontSize": 13,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "icon",
+                      "id": "q7wDp",
+                      "name": "Chevron Down",
+                      "width": 13,
+                      "height": 13,
+                      "icon": "chevron-down",
+                      "library": "lucide",
+                      "fill": "$muted"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "p10lX",
+                  "name": "Sign Out Button",
+                  "height": 36,
+                  "fill": "$surface",
+                  "cornerRadius": "$radius-lg",
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "gap": 6,
+                  "padding": [
+                    8,
+                    14
+                  ],
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "brS26",
+                      "name": "Log Out Icon",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "log-out",
+                      "library": "lucide",
+                      "fill": "$muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "Z8nfb",
+                      "name": "Sign Out Label",
+                      "fill": "$text",
+                      "content": "Sign out",
+                      "fontFamily": "$font",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "HbrOR",
+          "name": "Body",
+          "width": "fill_container",
+          "height": "fill_container",
+          "children": [
+            {
+              "type": "frame",
+              "id": "EIxLw",
+              "name": "Sidebar",
+              "width": 240,
+              "height": "fill_container",
+              "fill": "$surface",
+              "stroke": "$border",
+              "strokeWidth": {
+                "right": 1
+              },
+              "layout": "vertical",
+              "gap": 2,
+              "padding": [
+                20,
+                12
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "VgFhF",
+                  "name": "Nav Item / Dashboard",
+                  "width": "fill_container",
+                  "height": 40,
+                  "fill": "$bg",
+                  "cornerRadius": "$radius-md",
+                  "gap": 10,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "R86hY",
+                      "name": "Nav Icon",
+                      "width": 16,
+                      "height": 16,
+                      "icon": "layout-dashboard",
+                      "library": "lucide",
+                      "fill": "$muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "mzo5o",
+                      "name": "Nav Label",
+                      "fill": "$text",
+                      "content": "Dashboard",
+                      "fontFamily": "$font",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "YBle2",
+                  "name": "Nav Item / Access",
+                  "width": "fill_container",
+                  "height": 40,
+                  "fill": "#E6E5FB",
+                  "cornerRadius": "$radius-md",
+                  "gap": 10,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "RDE8u",
+                      "name": "Nav Icon",
+                      "width": 16,
+                      "height": 16,
+                      "icon": "shield-check",
+                      "library": "lucide",
+                      "fill": "$primary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "rBzDy",
+                      "name": "Nav Label",
+                      "fill": "$primary",
+                      "content": "Access",
+                      "fontFamily": "$font",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "IB1yE",
+              "name": "Main Content",
+              "width": "fill_container",
+              "height": "fill_container",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "y4SK5",
+                  "name": "Access Administration Content",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "fill": "$bg",
+                  "layout": "vertical",
+                  "gap": 18,
+                  "padding": 32,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "w0zcz",
+                      "name": "Page Heading",
+                      "width": "fill_container",
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "al9dh",
+                          "name": "Heading Copy",
+                          "width": 700,
+                          "layout": "vertical",
+                          "gap": 6,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "lYTLp",
+                              "name": "Title",
+                              "fill": "$text",
+                              "content": "Access",
+                              "fontFamily": "$font",
+                              "fontSize": 32,
+                              "fontWeight": "700"
+                            },
+                            {
+                              "type": "text",
+                              "id": "r5u7gM",
+                              "name": "Subtitle",
+                              "fill": "$muted",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Manage roles, permissions, and member assignments for Центральний склад.",
+                              "fontFamily": "$font",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "id": "rdpo5",
+                          "type": "ref",
+                          "ref": "L80Scv",
+                          "name": "Create Member",
+                          "width": 144,
+                          "descendants": {
+                            "WUgrQ": {
+                              "enabled": false
+                            },
+                            "k2f1mD": {
+                              "content": "Create member"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "vaY3A",
+                      "name": "HeroUI Tabs",
+                      "width": "fill_container",
+                      "stroke": "$border",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "gap": 28,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "zNlBY",
+                          "name": "Tab / Roles",
+                          "stroke": "$primary",
+                          "padding": [
+                            10,
+                            2,
+                            12,
+                            2
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "uXTeK",
+                              "name": "Label",
+                              "fill": "$muted",
+                              "content": "Roles",
+                              "fontFamily": "$font",
+                              "fontSize": 13,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "bkOMv",
+                          "name": "Tab / Members",
+                          "stroke": "$primary",
+                          "strokeWidth": {
+                            "bottom": 2
+                          },
+                          "padding": [
+                            10,
+                            2,
+                            12,
+                            2
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "ODJBG",
+                              "name": "Label",
+                              "fill": "$primary",
+                              "content": "Members",
+                              "fontFamily": "$font",
+                              "fontSize": 13,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Td7CQ",
+                          "name": "Tab / Permissions",
+                          "padding": [
+                            10,
+                            2,
+                            12,
+                            2
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "Zn0Ww",
+                              "name": "Label",
+                              "fill": "$muted",
+                              "content": "Permissions",
+                              "fontFamily": "$font",
+                              "fontSize": 13,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "NIyJK",
+                      "name": "Members Workspace",
+                      "width": "fill_container",
+                      "height": 620,
+                      "layout": "vertical",
+                      "gap": 16,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "m3Lh3",
+                          "name": "HeroUI Search",
+                          "width": "fill_container",
+                          "height": 44,
+                          "fill": "$surface",
+                          "cornerRadius": "$radius-md",
+                          "stroke": "$border",
+                          "strokeWidth": 1,
+                          "gap": 10,
+                          "padding": [
+                            0,
+                            14
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "bg9ZP",
+                              "name": "Search Icon",
+                              "width": 17,
+                              "height": 17,
+                              "icon": "search",
+                              "library": "lucide",
+                              "fill": "$muted"
+                            },
+                            {
+                              "type": "text",
+                              "id": "gypgz",
+                              "name": "Placeholder",
+                              "fill": "$muted",
+                              "content": "Search members",
+                              "fontFamily": "$font",
+                              "fontSize": 13,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "tOxd7",
+                          "name": "Member List",
+                          "width": "fill_container",
+                          "height": "fill_container",
+                          "layout": "vertical",
+                          "gap": 10,
+                          "children": [
+                            {
+                              "id": "ma5C2",
+                              "type": "ref",
+                              "ref": "uVPoe",
+                              "name": "Member Row - iryna.koval@warehouser.io",
+                              "width": "fill_container",
+                              "descendants": {
+                                "D8hsty": {
+                                  "content": "IK"
+                                },
+                                "qyfMw": {
+                                  "content": "iryna.koval@warehouser.io"
+                                },
+                                "xIZ12": {
+                                  "content": "Warehouse Manager"
+                                },
+                                "ljcn0": {
+                                  "type": "frame",
+                                  "id": "vE17A",
+                                  "name": "Protected Chip",
+                                  "fill": "#E6E5FB",
+                                  "cornerRadius": 20,
+                                  "padding": [
+                                    5,
+                                    9
+                                  ],
+                                  "justifyContent": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "q9MD0U",
+                                      "fill": "$primary",
+                                      "content": "Protected",
+                                      "fontFamily": "$font",
+                                      "fontSize": 10,
+                                      "fontWeight": "700"
+                                    }
+                                  ]
+                                }
+                              }
+                            },
+                            {
+                              "id": "Rab6K",
+                              "type": "ref",
+                              "ref": "uVPoe",
+                              "name": "Member Row - oleh.taran@warehouser.io",
+                              "width": "fill_container",
+                              "descendants": {
+                                "D8hsty": {
+                                  "content": "OT"
+                                },
+                                "qyfMw": {
+                                  "content": "oleh.taran@warehouser.io"
+                                },
+                                "xIZ12": {
+                                  "content": "Operator"
+                                },
+                                "ljcn0": {
+                                  "type": "frame",
+                                  "id": "FvGIl",
+                                  "name": "You Chip",
+                                  "fill": "$surface-soft",
+                                  "cornerRadius": 20,
+                                  "padding": [
+                                    5,
+                                    9
+                                  ],
+                                  "justifyContent": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "MmiGw",
+                                      "fill": "$muted",
+                                      "content": "You",
+                                      "fontFamily": "$font",
+                                      "fontSize": 10,
+                                      "fontWeight": "700"
+                                    }
+                                  ]
+                                }
+                              }
+                            },
+                            {
+                              "id": "oaw0N",
+                              "type": "ref",
+                              "ref": "uVPoe",
+                              "name": "Member Row - mariia.blyzniuk@warehouser.io",
+                              "width": "fill_container",
+                              "descendants": {
+                                "D8hsty": {
+                                  "content": "MB"
+                                },
+                                "qyfMw": {
+                                  "content": "mariia.blyzniuk@warehouser.io"
+                                },
+                                "xIZ12": {
+                                  "content": "Operator"
+                                },
+                                "ljcn0": {
+                                  "type": "frame",
+                                  "id": "t4PnN2",
+                                  "name": "Actions",
+                                  "gap": 8,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "id": "mLlnY",
+                                      "type": "ref",
+                                      "ref": "heckb",
+                                      "name": "Member Actions Trigger",
+                                      "descendants": {
+                                        "s7pZs": {
+                                          "icon": "ellipsis-vertical"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            },
+                            {
+                              "id": "FenDh",
+                              "type": "ref",
+                              "ref": "uVPoe",
+                              "name": "Member Row - danylo.rud@warehouser.io",
+                              "width": "fill_container",
+                              "descendants": {
+                                "D8hsty": {
+                                  "content": "DR"
+                                },
+                                "qyfMw": {
+                                  "content": "danylo.rud@warehouser.io"
+                                },
+                                "xIZ12": {
+                                  "content": "Operator"
+                                },
+                                "ljcn0": {
+                                  "type": "frame",
+                                  "id": "LiZRY",
+                                  "name": "Actions",
+                                  "gap": 8,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "id": "krpDs",
+                                      "type": "ref",
+                                      "ref": "heckb",
+                                      "name": "Member Actions Trigger",
+                                      "descendants": {
+                                        "s7pZs": {
+                                          "icon": "ellipsis-vertical"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            },
+                            {
+                              "id": "rHZk8",
+                              "type": "ref",
+                              "ref": "uVPoe",
+                              "name": "Member Row - yevheniya.tkach@warehouser.io",
+                              "width": "fill_container",
+                              "descendants": {
+                                "D8hsty": {
+                                  "content": "YT"
+                                },
+                                "qyfMw": {
+                                  "content": "yevheniya.tkach@warehouser.io"
+                                },
+                                "xIZ12": {
+                                  "content": "Auditor"
+                                },
+                                "ljcn0": {
+                                  "type": "frame",
+                                  "id": "vC1hm",
+                                  "name": "Actions",
+                                  "gap": 8,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "id": "Cagpy",
+                                      "type": "ref",
+                                      "ref": "heckb",
+                                      "name": "Member Actions Trigger",
+                                      "descendants": {
+                                        "s7pZs": {
+                                          "icon": "ellipsis-vertical"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "UWNZJ",
+          "name": "Footer",
+          "width": "fill_container",
+          "height": 40,
+          "fill": "$surface",
+          "stroke": "$border",
+          "strokeWidth": {
+            "top": 1
+          },
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "fRTZw",
+              "name": "Footer Copy",
+              "fill": "$muted",
+              "content": "© Warehouser",
+              "fontFamily": "$font",
+              "fontSize": 11,
+              "fontWeight": "normal"
+            }
+          ]
+        }
+      ]
     }
   ],
   "themes": {
