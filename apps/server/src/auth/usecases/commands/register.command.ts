@@ -10,7 +10,6 @@ import { User } from 'auth/domain/entities/user';
 import {
   AuthEmailAlreadyRegisteredError,
   AuthInvalidInputError,
-  AuthRegistrationUnavailableError,
 } from 'auth/domain/errors/auth.errors';
 import {
   type GeneratedSessionSecret,
@@ -84,16 +83,11 @@ export class RegisterCommand {
       establishedAt: this.runtime.now(),
     });
 
-    let access: InitialAccessProjection;
-    try {
-      await this.registrations.registerIdentity({ account, user, session });
-      access = await this.provisionInitialAccess.execute({
-        userId: user.id.value,
-        warehouseName: input.warehouseName,
-      });
-    } catch (cause) {
-      throw AuthRegistrationUnavailableError(cause);
-    }
+    await this.registrations.registerIdentity({ account, user, session });
+    const access = await this.provisionInitialAccess.execute({
+      userId: user.id.value,
+      warehouseName: input.warehouseName,
+    });
 
     return {
       userId: user.id.value,
