@@ -16,7 +16,7 @@
 | T9  | Responsive/hit-target verification        | tests | Frontend Lead | S        | T3, T5, T6, T7 | done   |
 | T10 | Kebab focus-return + dismissal coverage   | ui    | Frontend Lead | S        | —              | done   |
 | T11 | LanguageSelector fidelity fixes           | ui    | Frontend Lead | S        | —              | done   |
-| T12 | SignOutButton icon-only collapse          | ui    | Frontend Lead | XS       | —              | todo   |
+| T12 | SignOutButton icon-only collapse          | ui    | Frontend Lead | XS       | —              | done   |
 | T13 | RootLayout landmark + scope fixes         | ui    | Frontend Lead | S        | —              | todo   |
 | T14 | Sidebar landmark + design fidelity        | ui    | Frontend Lead | S        | —              | todo   |
 | T15 | SignOutButton.tsx traceability            | docs  | Frontend Lead | XS       | —              | todo   |

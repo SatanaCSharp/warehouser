@@ -50,7 +50,7 @@ export const SignOutButton = (): ReactElement => {
     <Button
       color="primary"
       variant="bordered"
-      className="min-h-11"
+      className="min-h-11 w-10 min-w-10 gap-0 px-0 sm:w-auto sm:min-w-20 sm:gap-2 sm:px-4"
       aria-label={label}
       startContent={isSigningOut ? null : <LogOutIcon />}
       isDisabled={isSigningOut}

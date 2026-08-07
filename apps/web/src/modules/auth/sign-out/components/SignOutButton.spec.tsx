@@ -14,4 +14,14 @@ describe('SignOutButton', () => {
     expect(label.className).toContain('hidden');
     expect(label.className).toContain('sm:inline');
   });
+
+  it('collapses to icon-only sizing below sm, matching HeroUI icon-only sizing at sm and above', () => {
+    renderWithProviders(<SignOutButton />);
+
+    const button = screen.getByRole('button', { name: 'Sign out' });
+    expect(button.className).toContain('w-10');
+    expect(button.className).toContain('px-0');
+    expect(button.className).toContain('sm:w-auto');
+    expect(button.className).toContain('sm:px-4');
+  });
 });
