@@ -2,5 +2,16 @@
   "auth": {
     "signOut": "Sign out",
     "signingOut": "Signing out…"
+  },
+  "nav": {
+    "label": "Primary navigation",
+    "dashboard": "Dashboard",
+    "access": "Access",
+    "toggle": "Open navigation"
+  },
+  "language": {
+    "label": "Change language",
+    "english": "English",
+    "ukrainian": "Українська"
   }
 }

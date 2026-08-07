@@ -1,4 +1,13 @@
-import { Button, Chip, Input, Skeleton } from '@heroui/react';
+import {
+  Button,
+  Chip,
+  Dropdown,
+  DropdownItem,
+  DropdownMenu,
+  DropdownTrigger,
+  Input,
+  Skeleton,
+} from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 
 import type {
@@ -90,6 +99,19 @@ const TrashIcon = (): ReactElement => (
   </svg>
 );
 
+const KebabIcon = (): ReactElement => (
+  <svg
+    aria-hidden="true"
+    className="size-5"
+    fill="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <circle cx="12" cy="5" r="1.75" />
+    <circle cx="12" cy="12" r="1.75" />
+    <circle cx="12" cy="19" r="1.75" />
+  </svg>
+);
+
 export const MemberList = ({
   actorUserId,
   canDeleteMember,
@@ -138,6 +160,11 @@ export const MemberList = ({
           {filteredMembers.map((member) => {
             const isProtected = member.roleKind === 'warehouse_manager';
             const isSelf = member.userId === actorUserId;
+            const hasAnyAction =
+              canEditEmail || canResetPassword || canDeleteMember;
+            const actionsLabel = t('members.actions', {
+              email: member.email,
+            });
             return (
               <li
                 key={member.userId}
@@ -158,50 +185,58 @@ export const MemberList = ({
                   <Chip size="sm" variant="flat">
                     {t('members.you')}
                   </Chip>
-                ) : (
-                  <div className="flex items-center gap-1">
-                    {canEditEmail ? (
+                ) : hasAnyAction ? (
+                  <Dropdown>
+                    <DropdownTrigger>
                       <Button
                         isIconOnly
                         size="sm"
                         variant="light"
-                        aria-label={t('members.editEmail', {
-                          email: member.email,
-                        })}
-                        onPress={() => onEditEmail(member)}
+                        aria-label={actionsLabel}
                       >
-                        <MailIcon />
+                        <KebabIcon />
                       </Button>
-                    ) : null}
-                    {canResetPassword ? (
-                      <Button
-                        isIconOnly
-                        size="sm"
-                        variant="light"
-                        aria-label={t('members.resetPassword', {
-                          email: member.email,
-                        })}
-                        onPress={() => onResetPassword(member)}
-                      >
-                        <KeyIcon />
-                      </Button>
-                    ) : null}
-                    {canDeleteMember ? (
-                      <Button
-                        isIconOnly
-                        size="sm"
-                        variant="light"
-                        color="danger"
-                        aria-label={t('members.deleteMember', {
-                          email: member.email,
-                        })}
-                        onPress={() => onDeleteMember(member)}
-                      >
-                        <TrashIcon />
-                      </Button>
-                    ) : null}
-                  </div>
-                )}
+                    </DropdownTrigger>
+                    <DropdownMenu
+                      aria-label={actionsLabel}
+                      onAction={(key) => {
+                        if (key === 'editEmail') {
+                          onEditEmail(member);
+                        } else if (key === 'resetPassword') {
+                          onResetPassword(member);
+                        } else if (key === 'deleteMember') {
+                          onDeleteMember(member);
+                        }
+                      }}
+                    >
+                      {canEditEmail ? (
+                        <DropdownItem
+                          key="editEmail"
+                          startContent={<MailIcon />}
+                        >
+                          {t('members.menu.editEmail')}
+                        </DropdownItem>
+                      ) : null}
+                      {canResetPassword ? (
+                        <DropdownItem
+                          key="resetPassword"
+                          startContent={<KeyIcon />}
+                        >
+                          {t('members.menu.resetPassword')}
+                        </DropdownItem>
+                      ) : null}
+                      {canDeleteMember ? (
+                        <DropdownItem
+                          key="deleteMember"
+                          color="danger"
+                          startContent={<TrashIcon />}
+                        >
+                          {t('members.menu.deleteMember')}
+                        </DropdownItem>
+                      ) : null}
+                    </DropdownMenu>
+                  </Dropdown>
+                ) : null}
               </li>
             );
           })}

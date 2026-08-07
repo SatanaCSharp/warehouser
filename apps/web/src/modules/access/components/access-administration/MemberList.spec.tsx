@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -99,42 +99,152 @@ describe('MemberList', () => {
     ).toBeInTheDocument();
   });
 
-  it('renders a member row with email, role, and three accessible icon actions', async () => {
-    const user = userEvent.setup();
-    const props = renderMemberList();
+  it('renders a member row with email, role, and one kebab trigger identifying the member', () => {
+    renderMemberList();
 
     const row = screen.getByRole('listitem', {
       name: /picker@example\.test/u,
     });
     expect(within(row).getByText('picker@example.test')).toBeInTheDocument();
     expect(within(row).getByText('Picker')).toBeInTheDocument();
+    expect(
+      within(row).getByRole('button', {
+        name: 'Actions for picker@example.test',
+      }),
+    ).toBeInTheDocument();
+  });
 
+  it('opens the menu with only the true-capability actions and invokes the matching callback on selection', async () => {
+    const user = userEvent.setup();
+    const props = renderMemberList();
+
+    const row = screen.getByRole('listitem', {
+      name: /picker@example\.test/u,
+    });
     await user.click(
       within(row).getByRole('button', {
-        name: 'Edit email for picker@example.test',
+        name: 'Actions for picker@example.test',
       }),
     );
+    const menu = screen.getByRole('menu', {
+      name: 'Actions for picker@example.test',
+    });
+    expect(
+      within(menu).getByRole('menuitem', { name: 'Edit email' }),
+    ).toBeInTheDocument();
+    expect(
+      within(menu).getByRole('menuitem', { name: 'Reset password' }),
+    ).toBeInTheDocument();
+    expect(
+      within(menu).getByRole('menuitem', { name: 'Delete member' }),
+    ).toBeInTheDocument();
+
+    await user.click(
+      within(menu).getByRole('menuitem', { name: 'Edit email' }),
+    );
+
     expect(props.onEditEmail).toHaveBeenCalledWith(
       expect.objectContaining({ userId: pickerId }),
     );
+    await waitFor(() =>
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument(),
+    );
+  });
+
+  it('invokes onResetPassword and onDeleteMember for their respective menu items', async () => {
+    const user = userEvent.setup();
+    const props = renderMemberList();
+
+    const row = screen.getByRole('listitem', {
+      name: /picker@example\.test/u,
+    });
 
     await user.click(
       within(row).getByRole('button', {
-        name: 'Reset password for picker@example.test',
+        name: 'Actions for picker@example.test',
       }),
     );
+    await user.click(screen.getByRole('menuitem', { name: 'Reset password' }));
     expect(props.onResetPassword).toHaveBeenCalledWith(
       expect.objectContaining({ userId: pickerId }),
     );
 
     await user.click(
       within(row).getByRole('button', {
-        name: 'Delete picker@example.test',
+        name: 'Actions for picker@example.test',
       }),
     );
+    await user.click(screen.getByRole('menuitem', { name: 'Delete member' }));
     expect(props.onDeleteMember).toHaveBeenCalledWith(
       expect.objectContaining({ userId: pickerId }),
     );
+  });
+
+  it('closes the menu on Escape and returns focus to the trigger', async () => {
+    const user = userEvent.setup();
+    renderMemberList();
+
+    const row = screen.getByRole('listitem', {
+      name: /picker@example\.test/u,
+    });
+    const trigger = within(row).getByRole('button', {
+      name: 'Actions for picker@example.test',
+    });
+    await user.click(trigger);
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+
+    await user.keyboard('{Escape}');
+
+    await waitFor(() =>
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument(),
+    );
+    await waitFor(() => expect(trigger).toHaveFocus());
+  });
+
+  it('closes the menu on an outside click', async () => {
+    const user = userEvent.setup();
+    renderMemberList();
+
+    const row = screen.getByRole('listitem', {
+      name: /picker@example\.test/u,
+    });
+    await user.click(
+      within(row).getByRole('button', {
+        name: 'Actions for picker@example.test',
+      }),
+    );
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+
+    await user.click(document.body);
+
+    await waitFor(() =>
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument(),
+    );
+  });
+
+  it('moves focus among menu items with Arrow Up/Down', async () => {
+    const user = userEvent.setup();
+    renderMemberList();
+
+    const row = screen.getByRole('listitem', {
+      name: /picker@example\.test/u,
+    });
+    await user.click(
+      within(row).getByRole('button', {
+        name: 'Actions for picker@example.test',
+      }),
+    );
+    const menu = screen.getByRole('menu');
+    const items = within(menu).getAllByRole('menuitem');
+
+    await user.keyboard('{ArrowDown}');
+    expect(items[0]).toHaveFocus();
+
+    await user.keyboard('{ArrowDown}');
+    expect(items[1]).toHaveFocus();
+
+    await user.keyboard('{ArrowUp}');
+    expect(items[0]).toHaveFocus();
   });
 
   it('shows a Protected chip and no action controls for the Warehouse Manager row', () => {
@@ -155,7 +265,8 @@ describe('MemberList', () => {
     expect(within(row).queryByRole('button')).not.toBeInTheDocument();
   });
 
-  it('hides only the actions the actor is not permissioned for', () => {
+  it('hides only the actions the actor is not permissioned for', async () => {
+    const user = userEvent.setup();
     renderMemberList({
       canDeleteMember: false,
       canEditEmail: true,
@@ -165,24 +276,24 @@ describe('MemberList', () => {
     const row = screen.getByRole('listitem', {
       name: /picker@example\.test/u,
     });
-    expect(
+    await user.click(
       within(row).getByRole('button', {
-        name: 'Edit email for picker@example.test',
+        name: 'Actions for picker@example.test',
       }),
+    );
+    const menu = screen.getByRole('menu');
+    expect(
+      within(menu).getByRole('menuitem', { name: 'Edit email' }),
     ).toBeInTheDocument();
     expect(
-      within(row).queryByRole('button', {
-        name: 'Reset password for picker@example.test',
-      }),
+      within(menu).queryByRole('menuitem', { name: 'Reset password' }),
     ).not.toBeInTheDocument();
     expect(
-      within(row).queryByRole('button', {
-        name: 'Delete picker@example.test',
-      }),
+      within(menu).queryByRole('menuitem', { name: 'Delete member' }),
     ).not.toBeInTheDocument();
   });
 
-  it('renders no per-row action controls when the actor holds none of the lifecycle permissions', () => {
+  it('renders no kebab trigger when the actor holds none of the lifecycle permissions', () => {
     renderMemberList({
       canDeleteMember: false,
       canEditEmail: false,

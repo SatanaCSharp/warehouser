@@ -333,9 +333,10 @@ describe('AccessAdministration', () => {
     const row = screen.getByRole('listitem', { name: /member@example\.test/u });
     await user.click(
       within(row).getByRole('button', {
-        name: 'Edit email for member@example.test',
+        name: 'Actions for member@example.test',
       }),
     );
+    await user.click(screen.getByRole('menuitem', { name: 'Edit email' }));
     const dialog = screen.getByRole('dialog', {
       name: 'Edit email for member@example.test',
     });
@@ -359,9 +360,10 @@ describe('AccessAdministration', () => {
     const row = screen.getByRole('listitem', { name: /member@example\.test/u });
     await user.click(
       within(row).getByRole('button', {
-        name: 'Reset password for member@example.test',
+        name: 'Actions for member@example.test',
       }),
     );
+    await user.click(screen.getByRole('menuitem', { name: 'Reset password' }));
     const dialog = screen.getByRole('dialog', {
       name: 'Reset password for member@example.test',
     });
@@ -384,8 +386,11 @@ describe('AccessAdministration', () => {
 
     const row = screen.getByRole('listitem', { name: /member@example\.test/u });
     await user.click(
-      within(row).getByRole('button', { name: 'Delete member@example.test' }),
+      within(row).getByRole('button', {
+        name: 'Actions for member@example.test',
+      }),
     );
+    await user.click(screen.getByRole('menuitem', { name: 'Delete member' }));
     const dialog = screen.getByRole('dialog', {
       name: 'Delete member@example.test',
     });

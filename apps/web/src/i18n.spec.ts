@@ -92,4 +92,60 @@ describe('localization resources', () => {
       'Ваш обліковий запис створено.',
     );
   });
+
+  it('adds shell/menu/selector keys and drops obsolete per-action keys (CR-AC-11)', async () => {
+    const instance = createInstance();
+    await instance.init({
+      fallbackLng: 'en',
+      lng: 'en',
+      ns: namespaces,
+      resources,
+    });
+
+    expect(
+      instance.t('members.actions', { ns: 'access', email: 'a@b.test' }),
+    ).toBe('Actions for a@b.test');
+    expect(instance.t('members.menu.editEmail', { ns: 'access' })).toBe(
+      'Edit email',
+    );
+    expect(instance.t('members.menu.resetPassword', { ns: 'access' })).toBe(
+      'Reset password',
+    );
+    expect(instance.t('members.menu.deleteMember', { ns: 'access' })).toBe(
+      'Delete member',
+    );
+    expect(instance.exists('members.editEmail', { ns: 'access' })).toBe(false);
+    expect(instance.exists('members.resetPassword', { ns: 'access' })).toBe(
+      false,
+    );
+    expect(instance.exists('members.deleteMember', { ns: 'access' })).toBe(
+      false,
+    );
+
+    expect(instance.t('nav.dashboard', { ns: 'common' })).toBe('Dashboard');
+    expect(instance.t('nav.access', { ns: 'common' })).toBe('Access');
+    expect(instance.t('nav.label', { ns: 'common' })).toBe(
+      'Primary navigation',
+    );
+    expect(instance.t('nav.toggle', { ns: 'common' })).toBe('Open navigation');
+    expect(instance.t('language.label', { ns: 'common' })).toBe(
+      'Change language',
+    );
+    expect(instance.t('language.english', { ns: 'common' })).toBe('English');
+    expect(instance.t('language.ukrainian', { ns: 'common' })).toBe(
+      'Українська',
+    );
+
+    await instance.changeLanguage('uk');
+    expect(instance.t('members.menu.editEmail', { ns: 'access' })).toBe(
+      'Змінити електронну адресу',
+    );
+    expect(instance.t('nav.dashboard', { ns: 'common' })).toBe('Дашборд');
+    expect(instance.t('nav.access', { ns: 'common' })).toBe('Доступ');
+    // Fixed native-name labels never change with the active locale (CR-AC-06).
+    expect(instance.t('language.english', { ns: 'common' })).toBe('English');
+    expect(instance.t('language.ukrainian', { ns: 'common' })).toBe(
+      'Українська',
+    );
+  });
 });

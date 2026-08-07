@@ -96,7 +96,7 @@ describe('AccessWorkspace', () => {
     ).toBeInTheDocument();
     expect(
       await screen.findByRole('button', {
-        name: 'Edit email for member@example.test',
+        name: 'Actions for member@example.test',
       }),
     ).toBeInTheDocument();
   });

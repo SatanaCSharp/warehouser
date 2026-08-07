@@ -31,9 +31,12 @@
     "search": "Пошук учасників",
     "searchEmpty": "Немає учасників, що відповідають пошуку.",
     "loading": "Завантаження учасників",
-    "editEmail": "Змінити електронну адресу для {{email}}",
-    "resetPassword": "Скинути пароль для {{email}}",
-    "deleteMember": "Видалити {{email}}"
+    "actions": "Дії для {{email}}",
+    "menu": {
+      "editEmail": "Змінити електронну адресу",
+      "resetPassword": "Скинути пароль",
+      "deleteMember": "Видалити учасника"
+    }
   },
   "permissions": {
     "heading": "Дозволи",
