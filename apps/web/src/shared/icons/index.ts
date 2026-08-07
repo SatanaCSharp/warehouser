@@ -1,0 +1,12 @@
+export { CheckIcon } from 'shared/icons/CheckIcon';
+export { ChevronDownIcon } from 'shared/icons/ChevronDownIcon';
+export { DashboardIcon } from 'shared/icons/DashboardIcon';
+export { GlobeIcon } from 'shared/icons/GlobeIcon';
+export { KebabIcon } from 'shared/icons/KebabIcon';
+export { KeyIcon } from 'shared/icons/KeyIcon';
+export { LogOutIcon } from 'shared/icons/LogOutIcon';
+export { MailIcon } from 'shared/icons/MailIcon';
+export { MenuIcon } from 'shared/icons/MenuIcon';
+export { SearchIcon } from 'shared/icons/SearchIcon';
+export { ShieldCheckIcon } from 'shared/icons/ShieldCheckIcon';
+export { TrashIcon } from 'shared/icons/TrashIcon';

@@ -1,6 +1,8 @@
 import { Chip, Input } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 
+import { SearchIcon } from 'shared/icons';
+
 import type { AccessRole } from 'modules/access/types/access-administration.types';
 import type { ReactElement } from 'react';
 
@@ -11,23 +13,6 @@ type RoleListProps = {
   onQueryChange: (query: string) => void;
   onSelect: (roleId: string) => void;
 };
-
-const SearchIcon = (): ReactElement => (
-  <svg
-    aria-hidden="true"
-    className="size-5 text-foreground-400"
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke="currentColor"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2"
-      d="m21 21-4.35-4.35m2.1-5.4a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z"
-    />
-  </svg>
-);
 
 export const RoleList = ({
   query,

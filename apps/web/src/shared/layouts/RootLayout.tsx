@@ -10,29 +10,13 @@ import { useTranslation } from 'react-i18next';
 import { SignOutButton } from 'modules/auth/sign-out/components/SignOutButton';
 import { selectIsAuthenticated } from 'modules/auth/store/auth.selectors';
 import { ROUTES } from 'shared/constants/routes';
+import { MenuIcon } from 'shared/icons';
 import { Footer } from 'shared/layouts/Footer';
 import { LanguageSelector } from 'shared/layouts/LanguageSelector';
 import { Sidebar } from 'shared/layouts/Sidebar';
 import { useAppSelector } from 'store/hooks';
 
 import type { ReactElement } from 'react';
-
-const MenuIcon = (): ReactElement => (
-  <svg
-    aria-hidden="true"
-    className="size-5"
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke="currentColor"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2"
-      d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5"
-    />
-  </svg>
-);
 
 export const RootLayout = (): ReactElement => {
   const { t } = useTranslation('common');
