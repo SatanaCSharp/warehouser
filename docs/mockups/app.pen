@@ -21138,6 +21138,860 @@
           ]
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "YozAg",
+      "x": -38,
+      "y": 10652,
+      "name": "State / Member Actions Menu / Open",
+      "width": 280,
+      "height": 260,
+      "fill": "$bg",
+      "layout": "vertical",
+      "gap": 12,
+      "padding": 20,
+      "children": [
+        {
+          "type": "text",
+          "id": "Av16O",
+          "name": "State Label",
+          "fill": "$muted",
+          "content": "Kebab menu — open state",
+          "fontFamily": "$font",
+          "fontSize": 12,
+          "fontWeight": "600"
+        },
+        {
+          "id": "e57Dr",
+          "type": "ref",
+          "ref": "EG4Dv",
+          "name": "Member Actions Menu",
+          "children": [
+            {
+              "id": "clf7c",
+              "type": "ref",
+              "ref": "S5HVBW",
+              "name": "Edit Email Item",
+              "descendants": {
+                "j1PFr1": {
+                  "icon": "mail"
+                },
+                "E4K8f": {
+                  "content": "Edit email"
+                }
+              }
+            },
+            {
+              "id": "I7S3Mt",
+              "type": "ref",
+              "ref": "S5HVBW",
+              "name": "Reset Password Item",
+              "descendants": {
+                "j1PFr1": {
+                  "icon": "key"
+                },
+                "E4K8f": {
+                  "content": "Reset password"
+                }
+              }
+            },
+            {
+              "id": "dq15G",
+              "type": "ref",
+              "ref": "Z1eas",
+              "name": "Divider"
+            },
+            {
+              "id": "dqKQh",
+              "type": "ref",
+              "ref": "bS3rj",
+              "name": "Delete Member Item",
+              "descendants": {
+                "VIac8": {
+                  "content": "Delete member"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "b2FYL",
+      "x": -38,
+      "y": 11012,
+      "name": "Shell / Access Administration / Mobile / v1",
+      "width": 390,
+      "height": 844,
+      "fill": "$bg",
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "WJAGM",
+          "name": "Authenticated Header Mobile",
+          "width": "fill_container",
+          "height": 60,
+          "fill": "$surface",
+          "stroke": "$border",
+          "strokeWidth": {
+            "bottom": 1
+          },
+          "padding": [
+            0,
+            16
+          ],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "rbwLa",
+              "name": "Brand",
+              "gap": 8,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "G8yc8o",
+                  "name": "Brand Mark",
+                  "width": 30,
+                  "height": 30,
+                  "fill": "$primary",
+                  "cornerRadius": "$radius-md",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "D9d35O",
+                      "name": "Warehouse Icon",
+                      "width": 17,
+                      "height": 17,
+                      "icon": "warehouse",
+                      "library": "lucide",
+                      "fill": "$primary-foreground"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "Q3WpO",
+                  "name": "Brand Name",
+                  "fill": "$text",
+                  "content": "Warehouser",
+                  "fontFamily": "$font",
+                  "fontSize": 17,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "l98dQ4",
+              "name": "Header Right Mobile",
+              "gap": 8,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Weasn",
+                  "name": "Language Icon Button",
+                  "width": 36,
+                  "height": 36,
+                  "cornerRadius": "$radius-lg",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "xynPc",
+                      "name": "Globe Icon",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "globe",
+                      "library": "lucide",
+                      "fill": "$muted"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "wcVX0",
+                  "name": "Sign Out Icon Button",
+                  "width": 36,
+                  "height": 36,
+                  "cornerRadius": "$radius-lg",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "G6Zen",
+                      "name": "Log Out Icon",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "log-out",
+                      "library": "lucide",
+                      "fill": "$muted"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Juomu",
+                  "name": "Drawer Toggle Button",
+                  "width": 36,
+                  "height": 36,
+                  "cornerRadius": "$radius-lg",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "HsiGe",
+                      "name": "Menu Icon",
+                      "width": 20,
+                      "height": 20,
+                      "icon": "menu",
+                      "library": "lucide",
+                      "fill": "$text"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "zRMsc",
+          "name": "Access Administration Content Mobile",
+          "width": "fill_container",
+          "height": "fill_container",
+          "fill": "$bg",
+          "layout": "vertical",
+          "gap": 18,
+          "padding": [
+            22,
+            20,
+            24,
+            20
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "rycvH",
+              "width": "fill_container",
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "W6RlQ",
+                  "width": 230,
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "dTq9g",
+                      "fill": "$text",
+                      "content": "Access",
+                      "fontFamily": "$font",
+                      "fontSize": 28,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "tkMqg",
+                      "fill": "$muted",
+                      "content": "Центральний склад",
+                      "fontFamily": "$font",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "rnGo9",
+                  "name": "HeroUI Icon Button / Add Role",
+                  "width": 42,
+                  "height": 42,
+                  "fill": "$primary",
+                  "cornerRadius": "$radius-md",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "SCwD9",
+                      "width": 19,
+                      "height": 19,
+                      "icon": "plus",
+                      "library": "lucide",
+                      "fill": "$primary-foreground"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "yTWwY",
+              "name": "HeroUI Tabs",
+              "width": "fill_container",
+              "fill": "$surface-soft",
+              "cornerRadius": "$radius-md",
+              "gap": 4,
+              "padding": 4,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "PiPmS",
+                  "name": "Tab / Roles",
+                  "width": "fill_container",
+                  "height": 36,
+                  "fill": "$surface-soft",
+                  "cornerRadius": "$radius-sm",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "D3O4Z",
+                      "fill": "$muted",
+                      "content": "Roles",
+                      "fontFamily": "$font",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "rQka1",
+                  "name": "Tab / Members",
+                  "width": "fill_container",
+                  "height": 36,
+                  "fill": "$surface",
+                  "cornerRadius": "$radius-sm",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "NYSTX",
+                      "fill": "$text",
+                      "content": "Members",
+                      "fontFamily": "$font",
+                      "fontSize": 11,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "kFfQf",
+                  "name": "Tab / Permissions",
+                  "width": "fill_container",
+                  "height": 36,
+                  "cornerRadius": "$radius-sm",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "M09b15",
+                      "fill": "$muted",
+                      "content": "Permissions",
+                      "fontFamily": "$font",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "UiBN3",
+              "name": "HeroUI Search",
+              "width": "fill_container",
+              "height": 42,
+              "fill": "$surface",
+              "cornerRadius": "$radius-md",
+              "stroke": "$border",
+              "strokeWidth": 1,
+              "gap": 9,
+              "padding": [
+                0,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "UO98d",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "search",
+                  "library": "lucide",
+                  "fill": "$muted"
+                },
+                {
+                  "type": "text",
+                  "id": "rnT6s",
+                  "fill": "$muted",
+                  "content": "Search members",
+                  "fontFamily": "$font",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "YWyrV",
+              "name": "Member List Mobile",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 10,
+              "children": [
+                {
+                  "id": "rKXI0",
+                  "type": "ref",
+                  "ref": "AVgEo",
+                  "name": "Member Row - iryna.koval@warehouser.io",
+                  "width": "fill_container",
+                  "descendants": {
+                    "VyPIn": {
+                      "content": "IK"
+                    },
+                    "pfqTy": {
+                      "content": "iryna.koval@warehouser.io"
+                    },
+                    "FLoD0": {
+                      "content": "Warehouse Manager"
+                    },
+                    "f4kOXh": {
+                      "type": "frame",
+                      "id": "Q4WtZk",
+                      "name": "Protected Chip",
+                      "fill": "#E6E5FB",
+                      "cornerRadius": 20,
+                      "padding": [
+                        4,
+                        8
+                      ],
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "VaNdB",
+                          "fill": "$primary",
+                          "content": "Protected",
+                          "fontFamily": "$font",
+                          "fontSize": 9,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "JDx6O",
+                  "type": "ref",
+                  "ref": "AVgEo",
+                  "name": "Member Row - oleh.taran@warehouser.io",
+                  "width": "fill_container",
+                  "descendants": {
+                    "VyPIn": {
+                      "content": "OT"
+                    },
+                    "pfqTy": {
+                      "content": "oleh.taran@warehouser.io"
+                    },
+                    "FLoD0": {
+                      "content": "Operator"
+                    },
+                    "f4kOXh": {
+                      "type": "frame",
+                      "id": "QH71Q",
+                      "name": "You Chip",
+                      "fill": "$surface-soft",
+                      "cornerRadius": 20,
+                      "padding": [
+                        4,
+                        8
+                      ],
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "BXcnJ",
+                          "fill": "$muted",
+                          "content": "You",
+                          "fontFamily": "$font",
+                          "fontSize": 9,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "EB0n5",
+                  "type": "ref",
+                  "ref": "AVgEo",
+                  "name": "Member Row - mariia.blyzniuk@warehouser.io",
+                  "width": "fill_container",
+                  "descendants": {
+                    "VyPIn": {
+                      "content": "MB"
+                    },
+                    "pfqTy": {
+                      "content": "mariia.blyzniuk@warehouser.io"
+                    },
+                    "FLoD0": {
+                      "content": "Operator"
+                    },
+                    "f4kOXh": {
+                      "id": "z81HW3",
+                      "type": "ref",
+                      "ref": "heckb",
+                      "name": "Member Actions Trigger",
+                      "descendants": {
+                        "s7pZs": {
+                          "icon": "ellipsis-vertical"
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "DCKnR",
+                  "type": "ref",
+                  "ref": "AVgEo",
+                  "name": "Member Row - danylo.rud@warehouser.io",
+                  "width": "fill_container",
+                  "descendants": {
+                    "VyPIn": {
+                      "content": "DR"
+                    },
+                    "pfqTy": {
+                      "content": "danylo.rud@warehouser.io"
+                    },
+                    "FLoD0": {
+                      "content": "Operator"
+                    },
+                    "f4kOXh": {
+                      "id": "b5fNR",
+                      "type": "ref",
+                      "ref": "heckb",
+                      "name": "Member Actions Trigger",
+                      "descendants": {
+                        "s7pZs": {
+                          "icon": "ellipsis-vertical"
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "r6Ay9",
+                  "type": "ref",
+                  "ref": "AVgEo",
+                  "name": "Member Row - yevheniya.tkach@warehouser.io",
+                  "width": "fill_container",
+                  "descendants": {
+                    "VyPIn": {
+                      "content": "YT"
+                    },
+                    "pfqTy": {
+                      "content": "yevheniya.tkach@warehouser.io"
+                    },
+                    "FLoD0": {
+                      "content": "Auditor"
+                    },
+                    "f4kOXh": {
+                      "id": "rl3QU",
+                      "type": "ref",
+                      "ref": "heckb",
+                      "name": "Member Actions Trigger",
+                      "descendants": {
+                        "s7pZs": {
+                          "icon": "ellipsis-vertical"
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Bsa8r",
+              "name": "Authorization State",
+              "width": "fill_container",
+              "fill": "#F4F4FD",
+              "cornerRadius": "$radius-md",
+              "gap": 9,
+              "padding": 12,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "SKDaJ",
+                  "width": 17,
+                  "height": 17,
+                  "icon": "shield-check",
+                  "library": "lucide",
+                  "fill": "$primary"
+                },
+                {
+                  "type": "frame",
+                  "id": "K7DFPe",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "jEvHM",
+                      "fill": "$text",
+                      "content": "Manager access active",
+                      "fontFamily": "$font",
+                      "fontSize": 12,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "h0U3LT",
+                      "fill": "$muted",
+                      "content": "Unavailable actions are hidden.",
+                      "fontFamily": "$font",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "VZfK2",
+          "name": "Footer",
+          "width": "fill_container",
+          "height": 36,
+          "fill": "$surface",
+          "stroke": "$border",
+          "strokeWidth": {
+            "top": 1
+          },
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "w0lVD",
+              "name": "Footer Copy",
+              "fill": "$muted",
+              "content": "© Warehouser",
+              "fontFamily": "$font",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "ZQ4vO",
+      "x": 322,
+      "y": 10652,
+      "name": "State / Language Selector / Open",
+      "width": 200,
+      "height": 180,
+      "fill": "$bg",
+      "layout": "vertical",
+      "gap": 12,
+      "padding": 20,
+      "children": [
+        {
+          "type": "text",
+          "id": "p5EPe",
+          "name": "State Label",
+          "fill": "$muted",
+          "content": "Language selector — open",
+          "fontFamily": "$font",
+          "fontSize": 12,
+          "fontWeight": "600"
+        },
+        {
+          "id": "slOHI",
+          "type": "ref",
+          "ref": "EG4Dv",
+          "name": "Language Menu",
+          "width": 160,
+          "children": [
+            {
+              "id": "wxwMq",
+              "type": "ref",
+              "ref": "S5HVBW",
+              "name": "English Item",
+              "width": 150,
+              "descendants": {
+                "j1PFr1": {
+                  "icon": "check"
+                },
+                "E4K8f": {
+                  "content": "English"
+                }
+              }
+            },
+            {
+              "id": "t5DTGo",
+              "type": "ref",
+              "ref": "S5HVBW",
+              "name": "Ukrainian Item",
+              "width": 150,
+              "descendants": {
+                "j1PFr1": {
+                  "enabled": false
+                },
+                "E4K8f": {
+                  "content": "Українська"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "jUVaK",
+      "x": 602,
+      "y": 10652,
+      "name": "State / Mobile Navigation Drawer / Open",
+      "width": 340,
+      "height": 260,
+      "fill": "$bg",
+      "layout": "vertical",
+      "gap": 12,
+      "padding": 20,
+      "children": [
+        {
+          "type": "text",
+          "id": "Tnvip",
+          "name": "State Label",
+          "fill": "$muted",
+          "content": "Drawer toggle — open state (< 640px)",
+          "fontFamily": "$font",
+          "fontSize": 12,
+          "fontWeight": "600"
+        },
+        {
+          "type": "frame",
+          "id": "W7jGpU",
+          "name": "Drawer Panel",
+          "width": 280,
+          "height": 200,
+          "fill": "$surface",
+          "cornerRadius": "$radius-lg",
+          "stroke": "$border",
+          "strokeWidth": 1,
+          "layout": "vertical",
+          "gap": 2,
+          "padding": [
+            16,
+            10
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "rZ5Hc",
+              "name": "Nav Item / Dashboard",
+              "width": "fill_container",
+              "height": 44,
+              "fill": "$bg",
+              "cornerRadius": "$radius-md",
+              "gap": 10,
+              "padding": [
+                0,
+                14
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "AXjrB",
+                  "name": "Nav Icon",
+                  "width": 17,
+                  "height": 17,
+                  "icon": "layout-dashboard",
+                  "library": "lucide",
+                  "fill": "$muted"
+                },
+                {
+                  "type": "text",
+                  "id": "kSiTc",
+                  "name": "Nav Label",
+                  "fill": "$text",
+                  "content": "Dashboard",
+                  "fontFamily": "$font",
+                  "fontSize": 15,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "BKmnq",
+              "name": "Nav Item / Access",
+              "width": "fill_container",
+              "height": 44,
+              "fill": "#E6E5FB",
+              "cornerRadius": "$radius-md",
+              "gap": 10,
+              "padding": [
+                0,
+                14
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "zmqQB",
+                  "name": "Nav Icon",
+                  "width": 17,
+                  "height": 17,
+                  "icon": "shield-check",
+                  "library": "lucide",
+                  "fill": "$primary"
+                },
+                {
+                  "type": "text",
+                  "id": "F62vw",
+                  "name": "Nav Label",
+                  "fill": "$primary",
+                  "content": "Access",
+                  "fontFamily": "$font",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "themes": {
