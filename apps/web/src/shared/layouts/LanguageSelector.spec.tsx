@@ -67,11 +67,56 @@ describe('LanguageSelector', () => {
     expect(changeLanguageSpy).toHaveBeenCalledWith('uk');
   });
 
+  it('renders the option labels as fixed literal strings, not translation-key lookups', () => {
+    const tSpy = vi.spyOn(i18n, 't');
+    renderWithProviders(<LanguageSelector />);
+
+    expect(tSpy).not.toHaveBeenCalledWith(
+      'language.english',
+      expect.anything(),
+    );
+    expect(tSpy).not.toHaveBeenCalledWith(
+      'language.ukrainian',
+      expect.anything(),
+    );
+  });
+
+  it('marks the active language option with a checkmark', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<LanguageSelector />);
+
+    await user.click(
+      screen.getByRole('button', { name: 'Change language: English' }),
+    );
+    const menu = screen.getByRole('menu');
+    const activeItem = within(menu).getByRole('menuitem', {
+      name: 'English',
+    });
+    const inactiveItem = within(menu).getByRole('menuitem', {
+      name: 'Українська',
+    });
+
+    expect(activeItem.querySelector('svg')).toBeInTheDocument();
+    expect(inactiveItem.querySelector('svg')).not.toBeInTheDocument();
+  });
+
   it('collapses the visible label below the sm breakpoint, keeping the value in the accessible name', () => {
     renderWithProviders(<LanguageSelector />);
 
     const label = screen.getByText('English');
     expect(label.className).toContain('hidden');
     expect(label.className).toContain('sm:inline');
+  });
+
+  it('collapses the trigger to icon-only sizing below sm, matching HeroUI icon-only sizing at sm and above', () => {
+    renderWithProviders(<LanguageSelector />);
+
+    const trigger = screen.getByRole('button', {
+      name: 'Change language: English',
+    });
+    expect(trigger.className).toContain('w-10');
+    expect(trigger.className).toContain('px-0');
+    expect(trigger.className).toContain('sm:w-auto');
+    expect(trigger.className).toContain('sm:px-4');
   });
 });

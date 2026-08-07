@@ -14,8 +14,8 @@
 | T7  | MemberList kebab trigger and menu         | ui    | Frontend Lead | M        | T1             | done   |
 | T8  | AccessAdministration test selector update | tests | Frontend Lead | S        | T7             | done   |
 | T9  | Responsive/hit-target verification        | tests | Frontend Lead | S        | T3, T5, T6, T7 | done   |
-| T10 | Kebab focus-return + dismissal coverage   | ui    | Frontend Lead | S        | —              | todo   |
-| T11 | LanguageSelector fidelity fixes           | ui    | Frontend Lead | S        | —              | todo   |
+| T10 | Kebab focus-return + dismissal coverage   | ui    | Frontend Lead | S        | —              | done   |
+| T11 | LanguageSelector fidelity fixes           | ui    | Frontend Lead | S        | —              | done   |
 | T12 | SignOutButton icon-only collapse          | ui    | Frontend Lead | XS       | —              | todo   |
 | T13 | RootLayout landmark + scope fixes         | ui    | Frontend Lead | S        | —              | todo   |
 | T14 | Sidebar landmark + design fidelity        | ui    | Frontend Lead | S        | —              | todo   |
