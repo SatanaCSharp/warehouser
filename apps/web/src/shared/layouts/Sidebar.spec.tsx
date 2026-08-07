@@ -6,8 +6,10 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { PermissionId } from '@warehouser/shared-types/enums';
+import { useState } from 'react';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -16,6 +18,7 @@ import { Sidebar } from 'shared/layouts/Sidebar';
 import { makeStore } from 'store';
 
 import type { AccessProjection } from '@warehouser/contracts/access';
+import type { ReactElement } from 'react';
 import type { AppStore } from 'store';
 
 const baseAccess: AccessProjection = {
@@ -38,9 +41,22 @@ const stubAccess = (access: AccessProjection | null): void => {
 
 type TestContext = { store: AppStore };
 
-const renderSidebar = (store: AppStore = makeStore()): void => {
+const SidebarWithToggle = (): ReactElement => {
+  const [isOpen, setIsOpen] = useState(false);
+  return (
+    <>
+      <button onClick={() => setIsOpen(true)}>Open navigation</button>
+      <Sidebar isOpen={isOpen} onOpenChange={setIsOpen} />
+    </>
+  );
+};
+
+const renderSidebar = (
+  store: AppStore = makeStore(),
+  component: () => ReactElement = Sidebar,
+): void => {
   const rootRoute = createRootRouteWithContext<TestContext>()({
-    component: Sidebar,
+    component,
   });
   const homeRoute = createRoute({
     getParentRoute: () => rootRoute,
@@ -122,5 +138,74 @@ describe('Sidebar', () => {
       screen.queryByRole('link', { name: 'Access' }),
     ).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/loading/iu)).not.toBeInTheDocument();
+  });
+
+  it('opens the off-canvas drawer via an external toggle control', async () => {
+    stubAccess({ ...baseAccess, permissionIds: [] });
+    const user = userEvent.setup();
+    renderSidebar(makeStore(), SidebarWithToggle);
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Open navigation' }),
+    );
+
+    const dialog = await screen.findByRole('dialog');
+    expect(
+      await screen.findByRole('link', { name: 'Dashboard' }),
+    ).toBeInTheDocument();
+    expect(dialog).toBeInTheDocument();
+  });
+
+  it('closes the drawer on Escape and returns focus to the toggle', async () => {
+    stubAccess({ ...baseAccess, permissionIds: [] });
+    const user = userEvent.setup();
+    renderSidebar(makeStore(), SidebarWithToggle);
+
+    const toggle = await screen.findByRole('button', {
+      name: 'Open navigation',
+    });
+    await user.click(toggle);
+    await screen.findByRole('dialog');
+
+    await user.keyboard('{Escape}');
+
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+    );
+    await waitFor(() => expect(toggle).toHaveFocus());
+  });
+
+  it('closes the drawer on an outside click', async () => {
+    stubAccess({ ...baseAccess, permissionIds: [] });
+    const user = userEvent.setup();
+    renderSidebar(makeStore(), SidebarWithToggle);
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Open navigation' }),
+    );
+    await screen.findByRole('dialog');
+
+    await user.click(document.body);
+
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+    );
+  });
+
+  it('closes the drawer when a nav item is selected', async () => {
+    stubAccess({ ...baseAccess, permissionIds: [] });
+    const user = userEvent.setup();
+    renderSidebar(makeStore(), SidebarWithToggle);
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Open navigation' }),
+    );
+    const dialog = await screen.findByRole('dialog');
+
+    await user.click(within(dialog).getByRole('link', { name: 'Dashboard' }));
+
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+    );
   });
 });
