@@ -17,6 +17,7 @@ import { RootLayout } from 'shared/layouts/RootLayout';
 import { makeStore } from 'store';
 
 import type { AccessProjection } from '@warehouser/contracts/access';
+import type { ReactElement } from 'react';
 import type { AppStore } from 'store';
 
 type TestContext = { store: AppStore };
@@ -40,14 +41,18 @@ const stubAccess = (permissionIds: AccessProjection['permissionIds']): void => {
   );
 };
 
-const renderAt = (initialEntry: string, store: AppStore): void => {
+const renderAt = (
+  initialEntry: string,
+  store: AppStore,
+  homeContent: ReactElement = <p>Home content</p>,
+): ReturnType<typeof render> => {
   const rootRoute = createRootRouteWithContext<TestContext>()({
     component: RootLayout,
   });
   const homeRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: ROUTES.HOME,
-    component: () => <p>Home content</p>,
+    component: () => homeContent,
   });
   const loginRoute = createRoute({
     getParentRoute: () => rootRoute,
@@ -65,7 +70,7 @@ const renderAt = (initialEntry: string, store: AppStore): void => {
     history: createMemoryHistory({ initialEntries: [initialEntry] }),
   });
 
-  render(
+  return render(
     <Provider store={store}>
       <HeroUIProvider>
         <RouterProvider router={router} />
@@ -137,5 +142,39 @@ describe('RootLayout', () => {
 
     const dialog = await screen.findByRole('dialog');
     expect(dialog).toBeInTheDocument();
+  });
+
+  it('does not nest a main landmark when the routed page renders its own', async () => {
+    stubAccess([]);
+    renderAt(ROUTES.HOME, authenticatedStore(), <main>Page content</main>);
+
+    expect(await screen.findByText('Page content')).toBeInTheDocument();
+    expect(screen.getAllByRole('main')).toHaveLength(1);
+  });
+
+  it('applies flex-col layout only within the authenticated branch', async () => {
+    stubAccess([]);
+    const authResult = renderAt(ROUTES.HOME, authenticatedStore());
+    await screen.findByText('Home content');
+    expect(
+      authResult.container.querySelector('.flex.flex-col'),
+    ).toBeInTheDocument();
+    authResult.unmount();
+
+    const loginResult = renderAt(ROUTES.LOGIN, makeStore());
+    await screen.findByRole('link', { name: 'Warehouser' });
+    expect(
+      loginResult.container.querySelector('.flex.flex-col'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('hides the drawer toggle at and above sm', async () => {
+    stubAccess([]);
+    renderAt(ROUTES.HOME, authenticatedStore());
+
+    const toggle = await screen.findByRole('button', {
+      name: 'Open navigation',
+    });
+    expect(toggle.className).toContain('sm:hidden');
   });
 });

@@ -46,7 +46,7 @@ export const RootLayout = (): ReactElement => {
     pathname === ROUTES.SIGN_UP ? ROUTES.LOGIN : ROUTES.SIGN_UP;
 
   return (
-    <div className="flex min-h-dvh flex-col bg-background text-foreground">
+    <div className="min-h-dvh bg-background text-foreground">
       {isAuthRoute ? (
         <>
           <header className="flex h-[68px] items-center justify-between border-b border-divider bg-content1 px-6 sm:h-20 sm:px-12">
@@ -77,7 +77,7 @@ export const RootLayout = (): ReactElement => {
           <Outlet />
         </>
       ) : isAuthenticated ? (
-        <>
+        <div className="flex min-h-dvh flex-col">
           <header className="flex h-[68px] items-center justify-between border-b border-divider bg-content1 px-6 sm:h-20 sm:px-12">
             <Link
               as={RouterLink}
@@ -103,12 +103,12 @@ export const RootLayout = (): ReactElement => {
           </header>
           <div className="flex flex-1">
             <Sidebar isOpen={isDrawerOpen} onOpenChange={setIsDrawerOpen} />
-            <main className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1">
               <Outlet />
-            </main>
+            </div>
           </div>
           <Footer />
-        </>
+        </div>
       ) : (
         <Outlet />
       )}
