@@ -18,7 +18,7 @@
 | T11 | LanguageSelector fidelity fixes           | ui    | Frontend Lead | S        | —              | done   |
 | T12 | SignOutButton icon-only collapse          | ui    | Frontend Lead | XS       | —              | done   |
 | T13 | RootLayout landmark + scope fixes         | ui    | Frontend Lead | S        | —              | done   |
-| T14 | Sidebar landmark + design fidelity        | ui    | Frontend Lead | S        | —              | todo   |
+| T14 | Sidebar landmark + design fidelity        | ui    | Frontend Lead | S        | —              | done   |
 | T15 | SignOutButton.tsx traceability            | docs  | Frontend Lead | XS       | —              | todo   |
 
 **Total:** 15 tasks (9 original + 6 review-fix follow-ups from

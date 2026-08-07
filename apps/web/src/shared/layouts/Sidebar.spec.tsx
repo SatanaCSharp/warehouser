@@ -54,6 +54,7 @@ const SidebarWithToggle = (): ReactElement => {
 const renderSidebar = (
   store: AppStore = makeStore(),
   component: () => ReactElement = Sidebar,
+  initialEntry: string = '/',
 ): void => {
   const rootRoute = createRootRouteWithContext<TestContext>()({
     component,
@@ -71,7 +72,7 @@ const renderSidebar = (
   const router = createRouter({
     routeTree: rootRoute.addChildren([homeRoute, accessRoute]),
     context: { store },
-    history: createMemoryHistory({ initialEntries: ['/'] }),
+    history: createMemoryHistory({ initialEntries: [initialEntry] }),
   });
 
   render(
@@ -190,6 +191,43 @@ describe('Sidebar', () => {
     await waitFor(() =>
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
     );
+  });
+
+  it('wraps the drawer nav list in a navigation landmark', async () => {
+    stubAccess({ ...baseAccess, permissionIds: [] });
+    const user = userEvent.setup();
+    renderSidebar(makeStore(), SidebarWithToggle);
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Open navigation' }),
+    );
+    const dialog = await screen.findByRole('dialog');
+
+    expect(within(dialog).getByRole('navigation')).toBeInTheDocument();
+  });
+
+  it('renders an icon for each nav item', async () => {
+    stubAccess({ ...baseAccess, permissionIds: [PermissionId.ROLES_WATCH] });
+    renderSidebar();
+
+    const dashboardLink = await screen.findByRole('link', {
+      name: 'Dashboard',
+    });
+    const accessLink = await screen.findByRole('link', { name: 'Access' });
+    expect(dashboardLink.querySelector('svg')).toBeInTheDocument();
+    expect(accessLink.querySelector('svg')).toBeInTheDocument();
+  });
+
+  it('tints the nav item matching the current route as active', async () => {
+    stubAccess({ ...baseAccess, permissionIds: [PermissionId.ROLES_WATCH] });
+    renderSidebar(makeStore(), Sidebar, ROUTES.ACCESS);
+
+    const dashboardLink = await screen.findByRole('link', {
+      name: 'Dashboard',
+    });
+    const accessLink = await screen.findByRole('link', { name: 'Access' });
+    expect(accessLink.className).toContain('bg-primary-100');
+    expect(dashboardLink.className).not.toContain('bg-primary-100');
   });
 
   it('closes the drawer when a nav item is selected', async () => {
