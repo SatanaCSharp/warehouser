@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { EditEmailDialog } from 'modules/access/components/access-administration/EditEmailDialog';
+import { EditEmailDialog } from 'modules/access/components/access-administration/components/members/EditEmailDialog';
 import { renderWithProviders } from 'test/render';
 
 import type { EmailChangeInput } from '@warehouser/contracts/users';

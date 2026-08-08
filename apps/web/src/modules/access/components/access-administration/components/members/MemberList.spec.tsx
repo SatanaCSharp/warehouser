@@ -2,10 +2,10 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { MemberList } from 'modules/access/components/access-administration/MemberList';
+import { MemberList } from 'modules/access/components/access-administration/components/members/MemberList';
 import { renderWithProviders } from 'test/render';
 
-import type { MemberListProps } from 'modules/access/components/access-administration/MemberList';
+import type { MemberListProps } from 'modules/access/components/access-administration/components/members/MemberList';
 import type {
   AccessMember,
   AccessRole,

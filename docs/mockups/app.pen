@@ -21992,6 +21992,1037 @@
           ]
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "zQ4S5",
+      "x": -1558,
+      "y": 11672,
+      "name": "Access / Administration / Desktop / v2",
+      "clip": true,
+      "width": 1440,
+      "height": 900,
+      "fill": "$bg",
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "dMOSS",
+          "name": "Minimal Header",
+          "width": "fill_container",
+          "height": 80,
+          "fill": "$surface",
+          "stroke": "$border",
+          "strokeWidth": {
+            "bottom": 1
+          },
+          "strokeLinejoin": "round",
+          "padding": [
+            0,
+            48
+          ],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "cBNwD",
+              "name": "Brand",
+              "gap": 10,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "DPNjt",
+                  "name": "Brand Mark",
+                  "width": 34,
+                  "height": 34,
+                  "fill": "$primary",
+                  "cornerRadius": "$radius-md",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "D3Uye",
+                      "name": "Warehouse Icon",
+                      "width": 19,
+                      "height": 19,
+                      "icon": "warehouse",
+                      "library": "lucide",
+                      "fill": "$primary-foreground"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "OIGvO",
+                  "name": "Brand Name",
+                  "fill": "$text",
+                  "content": "Warehouser",
+                  "fontFamily": "$font",
+                  "fontSize": 19,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "ciLLl",
+              "name": "Returning User Switch",
+              "gap": 10,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "JFfWE",
+                  "name": "Question",
+                  "fill": "$muted",
+                  "content": "Already have an account?",
+                  "fontFamily": "$font",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "G3Bww",
+                  "name": "Sign In Secondary Action",
+                  "height": 36,
+                  "fill": "$surface",
+                  "cornerRadius": "$radius-lg",
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "padding": [
+                    8,
+                    16
+                  ],
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "TF6J2",
+                      "name": "Sign In Label",
+                      "fill": "$primary",
+                      "content": "Sign in",
+                      "fontFamily": "$font",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "BwDE8",
+          "name": "Access Administration",
+          "width": "fill_container",
+          "height": "fill_container",
+          "fill": "$bg",
+          "layout": "vertical",
+          "gap": 18,
+          "padding": 32,
+          "children": [
+            {
+              "type": "frame",
+              "id": "Wcm4i",
+              "name": "Page Heading",
+              "width": "fill_container",
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "PsUbh",
+                  "name": "Heading Copy",
+                  "width": 700,
+                  "layout": "vertical",
+                  "gap": 6,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "c3LRg",
+                      "name": "Title",
+                      "fill": "$text",
+                      "content": "Access",
+                      "fontFamily": "$font",
+                      "fontSize": 32,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "cRYj2",
+                      "name": "Subtitle",
+                      "fill": "$muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Manage roles, permissions, and member assignments for Центральний склад.",
+                      "fontFamily": "$font",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "id": "vBOLu",
+                  "type": "ref",
+                  "ref": "L80Scv",
+                  "name": "Create Role",
+                  "width": 144,
+                  "descendants": {
+                    "WUgrQ": {
+                      "enabled": false
+                    },
+                    "k2f1mD": {
+                      "content": "Create role"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "NMr7j",
+              "name": "HeroUI Tabs",
+              "width": "fill_container",
+              "stroke": "$border",
+              "strokeWidth": {
+                "bottom": 1
+              },
+              "gap": 28,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "fdTnp",
+                  "name": "Tab / Roles",
+                  "stroke": "$primary",
+                  "strokeWidth": {
+                    "bottom": 2
+                  },
+                  "padding": [
+                    10,
+                    2,
+                    12,
+                    2
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "sSIOD",
+                      "name": "Label",
+                      "fill": "$primary",
+                      "content": "Roles",
+                      "fontFamily": "$font",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "R3jgR",
+                  "name": "Tab / Members",
+                  "padding": [
+                    10,
+                    2,
+                    12,
+                    2
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "hScPc",
+                      "name": "Label",
+                      "fill": "$muted",
+                      "content": "Members",
+                      "fontFamily": "$font",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "YoovW",
+                  "name": "Tab / Permissions",
+                  "padding": [
+                    10,
+                    2,
+                    12,
+                    2
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "t9N2eJ",
+                      "name": "Label",
+                      "fill": "$muted",
+                      "content": "Permissions",
+                      "fontFamily": "$font",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "IwdBn",
+              "name": "Role Workspace",
+              "width": "fill_container",
+              "height": 620,
+              "gap": 20,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "JxM67",
+                  "name": "Roles",
+                  "width": 370,
+                  "height": "fill_container",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "EWctR",
+                      "name": "HeroUI Search",
+                      "width": "fill_container",
+                      "height": 44,
+                      "fill": "$surface",
+                      "cornerRadius": "$radius-md",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "gap": 10,
+                      "padding": [
+                        0,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "xoufW",
+                          "width": 17,
+                          "height": 17,
+                          "icon": "search",
+                          "library": "lucide",
+                          "fill": "$muted"
+                        },
+                        {
+                          "type": "text",
+                          "id": "CLFKH",
+                          "name": "Placeholder",
+                          "fill": "$muted",
+                          "content": "Search roles",
+                          "fontFamily": "$font",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "bNQP8",
+                      "name": "HeroUI Card / Warehouse Manager",
+                      "width": "fill_container",
+                      "fill": "$surface",
+                      "cornerRadius": "$radius-lg",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 16,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "jTGzV",
+                          "width": "fill_container",
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "Yh0k2",
+                              "name": "Role Name",
+                              "fill": "$text",
+                              "content": "Warehouse Manager",
+                              "fontFamily": "$font",
+                              "fontSize": 14,
+                              "fontWeight": "700"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "d8u49k",
+                              "name": "HeroUI Chip / Protected",
+                              "fill": "#E6E5FB",
+                              "cornerRadius": 20,
+                              "padding": [
+                                5,
+                                9
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "HBIdH",
+                                  "fill": "$primary",
+                                  "content": "Protected",
+                                  "fontFamily": "$font",
+                                  "fontSize": 10,
+                                  "fontWeight": "700"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "JuCAe",
+                          "name": "Meta",
+                          "fill": "$muted",
+                          "content": "1 member · 9 permissions",
+                          "fontFamily": "$font",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "nsbpa",
+                      "name": "HeroUI Card / Operator",
+                      "width": "fill_container",
+                      "fill": "$surface",
+                      "cornerRadius": "$radius-lg",
+                      "stroke": "$primary",
+                      "strokeWidth": 2,
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 16,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "L95x3p",
+                          "width": "fill_container",
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "PZ2v7",
+                              "name": "Role Name",
+                              "fill": "$text",
+                              "content": "Operator",
+                              "fontFamily": "$font",
+                              "fontSize": 14,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "deO4B",
+                          "name": "Meta",
+                          "fill": "$muted",
+                          "content": "8 members · 4 permissions",
+                          "fontFamily": "$font",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "S5IFR",
+                      "name": "HeroUI Card / Auditor",
+                      "width": "fill_container",
+                      "fill": "$surface",
+                      "cornerRadius": "$radius-lg",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 16,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "lFHOQ",
+                          "width": "fill_container",
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "gqKuU",
+                              "name": "Role Name",
+                              "fill": "$text",
+                              "content": "Auditor",
+                              "fontFamily": "$font",
+                              "fontSize": 14,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "O8FUC",
+                          "name": "Meta",
+                          "fill": "$muted",
+                          "content": "2 members · 2 permissions",
+                          "fontFamily": "$font",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "fMJla",
+                  "name": "HeroUI Card / Role Editor",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "fill": "$surface",
+                  "cornerRadius": "$radius-lg",
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "layout": "vertical",
+                  "gap": 18,
+                  "padding": 24,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "SAc9C",
+                      "width": "fill_container",
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "R52k7",
+                          "width": 360,
+                          "layout": "vertical",
+                          "gap": 4,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "fbaJh",
+                              "fill": "$text",
+                              "content": "Operator",
+                              "fontFamily": "$font",
+                              "fontSize": 22,
+                              "fontWeight": "700"
+                            },
+                            {
+                              "type": "text",
+                              "id": "tILVS",
+                              "fill": "$muted",
+                              "content": "Custom role · 8 assigned members",
+                              "fontFamily": "$font",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "xulMO",
+                          "name": "Role Editor Actions",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "rIGWe",
+                              "type": "ref",
+                              "ref": "L80Scv",
+                              "name": "Delete Role",
+                              "height": 32,
+                              "width": "fit_content",
+                              "padding": [
+                                8,
+                                14
+                              ],
+                              "fill": "$danger-soft",
+                              "descendants": {
+                                "WUgrQ": {
+                                  "enabled": false
+                                },
+                                "k2f1mD": {
+                                  "content": "Delete role",
+                                  "fill": "$danger",
+                                  "fontSize": 13,
+                                  "fontWeight": "500"
+                                }
+                              }
+                            },
+                            {
+                              "id": "HZ6Bd",
+                              "type": "ref",
+                              "ref": "L80Scv",
+                              "height": 32,
+                              "width": "fit_content",
+                              "padding": [
+                                8,
+                                14
+                              ],
+                              "name": "Save Changes",
+                              "descendants": {
+                                "WUgrQ": {
+                                  "enabled": false
+                                },
+                                "k2f1mD": {
+                                  "fontSize": 13,
+                                  "content": "Save changes"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "jgDtr",
+                      "name": "Role Name Field",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 7,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "a8LH98",
+                          "fill": "$text",
+                          "content": "Role name",
+                          "fontFamily": "$font",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "m0Q4X",
+                          "width": "fill_container",
+                          "height": 44,
+                          "fill": "$field",
+                          "cornerRadius": "$radius-md",
+                          "stroke": "$border",
+                          "strokeWidth": 1,
+                          "padding": [
+                            0,
+                            12
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "kophv",
+                              "fill": "$text",
+                              "content": "Operator",
+                              "fontFamily": "$font",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "F1DDd",
+                      "fill": "$text",
+                      "content": "Permissions",
+                      "fontFamily": "$font",
+                      "fontSize": 14,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "s2wKc",
+                      "fill": "$muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Changes apply to the next authorization decision. Manager-only permissions stay unavailable.",
+                      "fontFamily": "$font",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "V2Ijx7",
+                      "name": "Permission List",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 9,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "BNauk",
+                          "name": "Permission / Create users",
+                          "width": "fill_container",
+                          "fill": "#F4F4FD",
+                          "cornerRadius": "$radius-md",
+                          "gap": 12,
+                          "padding": 11,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "Q7J25",
+                              "width": 20,
+                              "height": 20,
+                              "fill": "$primary",
+                              "cornerRadius": 5,
+                              "stroke": "$primary",
+                              "strokeWidth": 1,
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "de6fa",
+                                  "width": 14,
+                                  "height": 14,
+                                  "icon": "check",
+                                  "library": "lucide",
+                                  "fill": "$primary-foreground"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "ucR8Y",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 2,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "mMisl",
+                                  "fill": "$text",
+                                  "content": "Create users",
+                                  "fontFamily": "$font",
+                                  "fontSize": 13,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "Iebjf",
+                                  "fill": "$muted",
+                                  "content": "Add members to this warehouse",
+                                  "fontFamily": "$font",
+                                  "fontSize": 11,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "m2HMu",
+                          "name": "Permission / Assign roles",
+                          "width": "fill_container",
+                          "fill": "#F4F4FD",
+                          "cornerRadius": "$radius-md",
+                          "gap": 12,
+                          "padding": 11,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "Utgf0",
+                              "width": 20,
+                              "height": 20,
+                              "fill": "$primary",
+                              "cornerRadius": 5,
+                              "stroke": "$primary",
+                              "strokeWidth": 1,
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "F3FCJS",
+                                  "width": 14,
+                                  "height": 14,
+                                  "icon": "check",
+                                  "library": "lucide",
+                                  "fill": "$primary-foreground"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "nNxnT",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 2,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "j4fkuL",
+                                  "fill": "$text",
+                                  "content": "Assign roles",
+                                  "fontFamily": "$font",
+                                  "fontSize": 13,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "iCuJN",
+                                  "fill": "$muted",
+                                  "content": "Change a member’s custom role",
+                                  "fontFamily": "$font",
+                                  "fontSize": 11,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "d1RVy7",
+                          "name": "Permission / View users",
+                          "width": "fill_container",
+                          "fill": "#F4F4FD",
+                          "cornerRadius": "$radius-md",
+                          "gap": 12,
+                          "padding": 11,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "G0ODJd",
+                              "width": 20,
+                              "height": 20,
+                              "fill": "$primary",
+                              "cornerRadius": 5,
+                              "stroke": "$primary",
+                              "strokeWidth": 1,
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "T4o0G2",
+                                  "width": 14,
+                                  "height": 14,
+                                  "icon": "check",
+                                  "library": "lucide",
+                                  "fill": "$primary-foreground"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "fu0oV",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 2,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "q9iuFD",
+                                  "fill": "$text",
+                                  "content": "View users",
+                                  "fontFamily": "$font",
+                                  "fontSize": 13,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "Rn2Ov",
+                                  "fill": "$muted",
+                                  "content": "See members and assignments",
+                                  "fontFamily": "$font",
+                                  "fontSize": 11,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "JKbyG",
+                          "name": "Permission / View roles",
+                          "width": "fill_container",
+                          "fill": "#F4F4FD",
+                          "cornerRadius": "$radius-md",
+                          "gap": 12,
+                          "padding": 11,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "A1zxue",
+                              "width": 20,
+                              "height": 20,
+                              "fill": "$primary",
+                              "cornerRadius": 5,
+                              "stroke": "$primary",
+                              "strokeWidth": 1,
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "ffl0b",
+                                  "width": 14,
+                                  "height": 14,
+                                  "icon": "check",
+                                  "library": "lucide",
+                                  "fill": "$primary-foreground"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "ZbaVM",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 2,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "ROndw",
+                                  "fill": "$text",
+                                  "content": "View roles",
+                                  "fontFamily": "$font",
+                                  "fontSize": 13,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "Nh5tG",
+                                  "fill": "$muted",
+                                  "content": "See roles and permission catalogue",
+                                  "fontFamily": "$font",
+                                  "fontSize": 11,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "OYm0c",
+                          "name": "Permission / Create roles",
+                          "width": "fill_container",
+                          "fill": "$surface-soft",
+                          "cornerRadius": "$radius-md",
+                          "gap": 12,
+                          "padding": 11,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "qMYFV",
+                              "width": 20,
+                              "height": 20,
+                              "fill": "$surface",
+                              "cornerRadius": 5,
+                              "stroke": "$border",
+                              "strokeWidth": 1,
+                              "justifyContent": "center",
+                              "alignItems": "center"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "LoiPx",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 2,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "PUZ8j",
+                                  "fill": "$text",
+                                  "content": "Create roles",
+                                  "fontFamily": "$font",
+                                  "fontSize": 13,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "qo8ys",
+                                  "fill": "$muted",
+                                  "content": "Define new custom roles",
+                                  "fontFamily": "$font",
+                                  "fontSize": 11,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "qmavb",
+                          "name": "Permission / Transfer Warehouse Manager",
+                          "opacity": 0.55,
+                          "width": "fill_container",
+                          "fill": "$surface-soft",
+                          "cornerRadius": "$radius-md",
+                          "gap": 12,
+                          "padding": 11,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "yUkaw",
+                              "width": 20,
+                              "height": 20,
+                              "fill": "$surface",
+                              "cornerRadius": 5,
+                              "stroke": "$border",
+                              "strokeWidth": 1,
+                              "justifyContent": "center",
+                              "alignItems": "center"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "qH3gR",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 2,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "MIXzb",
+                                  "fill": "$text",
+                                  "content": "Transfer Warehouse Manager",
+                                  "fontFamily": "$font",
+                                  "fontSize": 13,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "F1Y54b",
+                                  "fill": "$muted",
+                                  "content": "Reserved for the protected role",
+                                  "fontFamily": "$font",
+                                  "fontSize": 11,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "themes": {

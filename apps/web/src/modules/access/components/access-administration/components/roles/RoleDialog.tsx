@@ -2,6 +2,7 @@ import { Checkbox, Input } from '@heroui/react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
+import { useFormFieldErrors } from 'modules/access/hooks/useFormFieldErrors';
 import { parseRoleForm } from 'modules/access/schemas/role-form';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 
@@ -40,21 +41,20 @@ export const RoleDialog = ({
       permissionIds: role?.permissionIds ?? [],
     },
   });
+  const { setFieldError } = useFormFieldErrors<RoleForm>(setError);
+  const translateValidation = (code: string): string =>
+    t(`administration.roleEditor.validation.${code}`);
 
   const submit = async ({ name, permissionIds }: RoleForm): Promise<void> => {
     const parsed = parseRoleForm(name, permissionIds);
     if (!parsed.success) {
-      setError('name', {
-        message: t(`administration.roleEditor.validation.${parsed.error}`),
-      });
+      setFieldError('name', parsed.error, translateValidation);
       return;
     }
 
     const result = await onSave(parsed.data);
     if (!result.success && result.fieldErrors?.name) {
-      setError('name', {
-        message: t('administration.roleEditor.validation.server'),
-      });
+      setFieldError('name', 'server', translateValidation);
     }
   };
   const title = role

@@ -12,15 +12,16 @@ import {
   MembersDatasetCard,
   PermissionsDatasetCard,
   RolesDatasetCard,
-} from 'modules/access/components/access-workspace/AccessDatasetCards';
+} from 'modules/access/components/access-workspace/components/AccessDatasetCards';
 import { useAccessAdministrationActions } from 'modules/access/hooks/useAccessAdministrationActions';
+import { hasPermission } from 'shared/hooks/usePermissions';
 
 import type { AccessProjection } from '@warehouser/contracts/access';
 import type { ReactElement } from 'react';
 
 type AccessWorkspaceProps = { access: AccessProjection };
 
-const roleAdministrationPermissions: readonly string[] = [
+const roleAdministrationPermissions: readonly PermissionId[] = [
   PermissionId.ROLES_ASSIGN,
   PermissionId.ROLES_CREATE,
   PermissionId.ROLES_DELETE,
@@ -28,7 +29,7 @@ const roleAdministrationPermissions: readonly string[] = [
   PermissionId.WAREHOUSE_MANAGER_ROLE_REASSIGN,
 ];
 
-const memberAdministrationPermissions: readonly string[] = [
+const memberAdministrationPermissions: readonly PermissionId[] = [
   PermissionId.USERS_CREATE,
   PermissionId.USERS_EMAIL_UPDATE,
   PermissionId.USERS_PASSWORD_CHANGE,
@@ -49,12 +50,16 @@ type WorkspacePermissions = {
 const deriveWorkspacePermissions = (
   permissionIds: readonly string[],
 ): WorkspacePermissions => {
-  const canReadRoles = permissionIds.includes(PermissionId.ROLES_WATCH);
-  const canManageRoles = permissionIds.some((permission) =>
-    roleAdministrationPermissions.includes(permission),
+  const canReadRoles = hasPermission(permissionIds, PermissionId.ROLES_WATCH);
+  const canManageRoles = hasPermission(
+    permissionIds,
+    roleAdministrationPermissions,
   );
-  const canReadMembers = permissionIds.includes(PermissionId.USERS_WATCH);
-  const canCreateMembers = permissionIds.includes(PermissionId.USERS_CREATE);
+  const canReadMembers = hasPermission(permissionIds, PermissionId.USERS_WATCH);
+  const canCreateMembers = hasPermission(
+    permissionIds,
+    PermissionId.USERS_CREATE,
+  );
   const canViewRolesTab = canReadRoles || canManageRoles;
 
   return {
@@ -67,20 +72,19 @@ const deriveWorkspacePermissions = (
     // role-admin Permission at all (US-07's exact persona) — this only
     // widens when the Roles *query* fires, not the Roles tab's visibility.
     canLoadRoles: canViewRolesTab || canReadMembers || canCreateMembers,
-    canAssignRoles: permissionIds.some(
-      (permission) =>
-        permission === PermissionId.ROLES_ASSIGN ||
-        permission === PermissionId.WAREHOUSE_MANAGER_ROLE_REASSIGN,
+    canAssignRoles: hasPermission(permissionIds, [
+      PermissionId.ROLES_ASSIGN,
+      PermissionId.WAREHOUSE_MANAGER_ROLE_REASSIGN,
+    ]),
+    canManageMemberLifecycle: hasPermission(
+      permissionIds,
+      memberAdministrationPermissions,
     ),
-    canManageMemberLifecycle: permissionIds.some((permission) =>
-      memberAdministrationPermissions.includes(permission),
-    ),
-    canLoadPermissions: permissionIds.some(
-      (permission) =>
-        permission === PermissionId.ROLES_WATCH ||
-        permission === PermissionId.ROLES_CREATE ||
-        permission === PermissionId.ROLES_UPDATE,
-    ),
+    canLoadPermissions: hasPermission(permissionIds, [
+      PermissionId.ROLES_WATCH,
+      PermissionId.ROLES_CREATE,
+      PermissionId.ROLES_UPDATE,
+    ]),
   };
 };
 

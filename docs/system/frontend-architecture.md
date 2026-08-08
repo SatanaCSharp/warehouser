@@ -111,6 +111,13 @@ Use HeroUI from `@heroui/react` and semantic tokens from `styles/hero.ts`. There
 wrapper package today, so do not invent imports from one. Promote a wrapper to `shared/components`
 only when it standardizes behavior used by multiple modules.
 
+When a component in `components/` is the exclusive owner of other components — rendered only by it,
+by no sibling and no other module — nest the owned components one level down in a `components/`
+directory named after the owner, recursively. Follow
+[Placing web components](guides/placing-web-components.md) for the full rule, when to group owned
+components by domain instead of leaving them flat, and when a component must stay unnested because
+it has more than one consumer.
+
 ## Redux Toolkit infrastructure
 
 Redux Toolkit is the single source of truth for cross-module browser state. Do not add a parallel

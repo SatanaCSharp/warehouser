@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
+import { useFormFieldErrors } from 'modules/access/hooks/useFormFieldErrors';
 import { parseRoleForm } from 'modules/access/schemas/role-form';
 
 import type { RoleWrite } from '@warehouser/contracts/access';
@@ -42,6 +43,9 @@ export const RoleEditor = ({
   } = useForm<RoleForm>({
     defaultValues: { name: role.name, permissionIds: role.permissionIds },
   });
+  const { setFieldError } = useFormFieldErrors<RoleForm>(setError);
+  const translateValidation = (code: string): string =>
+    t(`administration.roleEditor.validation.${code}`);
   const protectedRole = role.kind === 'warehouse_manager';
 
   useEffect(() => {
@@ -51,17 +55,13 @@ export const RoleEditor = ({
   const submit = async ({ name, permissionIds }: RoleForm): Promise<void> => {
     const parsed = parseRoleForm(name, permissionIds);
     if (!parsed.success) {
-      setError('name', {
-        message: t(`administration.roleEditor.validation.${parsed.error}`),
-      });
+      setFieldError('name', parsed.error, translateValidation);
       return;
     }
 
     const result = await onSave(parsed.data);
     if (!result.success && result.fieldErrors?.name) {
-      setError('name', {
-        message: t('administration.roleEditor.validation.server'),
-      });
+      setFieldError('name', 'server', translateValidation);
     }
   };
 

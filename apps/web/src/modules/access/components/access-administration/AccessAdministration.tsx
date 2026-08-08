@@ -3,19 +3,21 @@ import { PermissionId } from '@warehouser/shared-types/enums';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { AssignmentDialog } from 'modules/access/components/access-administration/AssignmentDialog';
-import { CreateMemberDialog } from 'modules/access/components/access-administration/CreateMemberDialog';
-import { DeleteMemberDialog } from 'modules/access/components/access-administration/DeleteMemberDialog';
-import { DeletionDialog } from 'modules/access/components/access-administration/DeletionDialog';
-import { EditEmailDialog } from 'modules/access/components/access-administration/EditEmailDialog';
-import { MemberList } from 'modules/access/components/access-administration/MemberList';
-import { MemberRoleActions } from 'modules/access/components/access-administration/MemberRoleActions';
-import { ResetPasswordDialog } from 'modules/access/components/access-administration/ResetPasswordDialog';
-import { RoleDialog } from 'modules/access/components/access-administration/RoleDialog';
-import { RoleEditor } from 'modules/access/components/access-administration/RoleEditor';
-import { RoleList } from 'modules/access/components/access-administration/RoleList';
-import { TransferDialog } from 'modules/access/components/access-administration/TransferDialog';
+import { CreateMemberDialog } from 'modules/access/components/access-administration/components/members/CreateMemberDialog';
+import { DeleteMemberDialog } from 'modules/access/components/access-administration/components/members/DeleteMemberDialog';
+import { EditEmailDialog } from 'modules/access/components/access-administration/components/members/EditEmailDialog';
+import { MemberList } from 'modules/access/components/access-administration/components/members/MemberList';
+import { MemberRoleActions } from 'modules/access/components/access-administration/components/members/MemberRoleActions';
+import { ResetPasswordDialog } from 'modules/access/components/access-administration/components/members/ResetPasswordDialog';
+import { AssignmentDialog } from 'modules/access/components/access-administration/components/roles/AssignmentDialog';
+import { DeletionDialog } from 'modules/access/components/access-administration/components/roles/DeletionDialog';
+import { RoleDialog } from 'modules/access/components/access-administration/components/roles/RoleDialog';
+import { RoleEditor } from 'modules/access/components/access-administration/components/roles/RoleEditor';
+import { RoleList } from 'modules/access/components/access-administration/components/roles/RoleList';
+import { TransferDialog } from 'modules/access/components/access-administration/components/roles/TransferDialog';
 import { selectCurrentUser } from 'modules/auth/store/auth.selectors';
+import { PermissionGate } from 'shared/components/PermissionGate';
+import { hasPermission } from 'shared/hooks/usePermissions';
 import { PlusIcon } from 'shared/icons';
 import { useAppSelector } from 'store/hooks';
 
@@ -281,8 +283,6 @@ export const AccessAdministration = ({
   );
   const selectedRole =
     roles.find((role) => role.id === selectedRoleId) ?? roles[0];
-  const can = (permission: string): boolean =>
-    access.permissionIds.includes(permission);
   const closeWorkflow = (): void => setWorkflow(null);
   const showRoles = view !== 'members';
   const showMembers = view !== 'roles';
@@ -297,39 +297,47 @@ export const AccessAdministration = ({
     <section aria-label={t('roles.heading')}>
       <div className="mb-5 flex flex-wrap items-center justify-end gap-3">
         <div className="flex flex-wrap gap-2">
-          {showRoles && can(PermissionId.ROLES_CREATE) ? (
-            <Button
-              color="primary"
-              aria-label={t('administration.createRole')}
-              startContent={<PlusIcon />}
-              className="w-10 min-w-10 gap-0 px-0 font-semibold sm:w-auto sm:min-w-40 sm:gap-2 sm:px-4"
-              onPress={() => setWorkflow({ kind: 'role' })}
-            >
-              <span className="hidden sm:inline">
-                {t('administration.createRole')}
-              </span>
-            </Button>
+          {showRoles ? (
+            <PermissionGate permission={PermissionId.ROLES_CREATE}>
+              <Button
+                color="primary"
+                aria-label={t('administration.createRole')}
+                startContent={<PlusIcon />}
+                className="w-10 min-w-10 gap-0 px-0 font-semibold sm:w-auto sm:min-w-40 sm:gap-2 sm:px-4"
+                onPress={() => setWorkflow({ kind: 'role' })}
+              >
+                <span className="hidden sm:inline">
+                  {t('administration.createRole')}
+                </span>
+              </Button>
+            </PermissionGate>
           ) : null}
-          {showRoles && can(PermissionId.WAREHOUSE_MANAGER_ROLE_REASSIGN) ? (
-            <Button
-              variant="bordered"
-              onPress={() => setWorkflow({ kind: 'transfer' })}
+          {showRoles ? (
+            <PermissionGate
+              permission={PermissionId.WAREHOUSE_MANAGER_ROLE_REASSIGN}
             >
-              {t('administration.transfer.open')}
-            </Button>
+              <Button
+                variant="bordered"
+                onPress={() => setWorkflow({ kind: 'transfer' })}
+              >
+                {t('administration.transfer.open')}
+              </Button>
+            </PermissionGate>
           ) : null}
-          {showMembers && can(PermissionId.USERS_CREATE) ? (
-            <Button
-              color="primary"
-              aria-label={t('administration.createMember.open')}
-              startContent={<PlusIcon />}
-              className="w-10 min-w-10 gap-0 px-0 font-semibold sm:w-auto sm:min-w-40 sm:gap-2 sm:px-4"
-              onPress={() => setWorkflow({ kind: 'create' })}
-            >
-              <span className="hidden sm:inline">
-                {t('administration.createMember.open')}
-              </span>
-            </Button>
+          {showMembers ? (
+            <PermissionGate permission={PermissionId.USERS_CREATE}>
+              <Button
+                color="primary"
+                aria-label={t('administration.createMember.open')}
+                startContent={<PlusIcon />}
+                className="w-10 min-w-10 gap-0 px-0 font-semibold sm:w-auto sm:min-w-40 sm:gap-2 sm:px-4"
+                onPress={() => setWorkflow({ kind: 'create' })}
+              >
+                <span className="hidden sm:inline">
+                  {t('administration.createMember.open')}
+                </span>
+              </Button>
+            </PermissionGate>
           ) : null}
         </div>
       </div>
@@ -345,8 +353,14 @@ export const AccessAdministration = ({
           />
           {selectedRole ? (
             <RoleEditor
-              canDelete={can(PermissionId.ROLES_DELETE)}
-              canUpdate={can(PermissionId.ROLES_UPDATE)}
+              canDelete={hasPermission(
+                access.permissionIds,
+                PermissionId.ROLES_DELETE,
+              )}
+              canUpdate={hasPermission(
+                access.permissionIds,
+                PermissionId.ROLES_UPDATE,
+              )}
               permissions={permissions}
               role={selectedRole}
               onDelete={() =>
@@ -366,19 +380,30 @@ export const AccessAdministration = ({
         </div>
       ) : null}
 
-      {showRoles && can(PermissionId.ROLES_ASSIGN) ? (
-        <MemberRoleActions
-          members={members}
-          onAssign={(memberId) => setWorkflow({ kind: 'assign', memberId })}
-        />
+      {showRoles ? (
+        <PermissionGate permission={PermissionId.ROLES_ASSIGN}>
+          <MemberRoleActions
+            members={members}
+            onAssign={(memberId) => setWorkflow({ kind: 'assign', memberId })}
+          />
+        </PermissionGate>
       ) : null}
 
       {showMembers ? (
         <MemberList
           actorUserId={actorUserId}
-          canDeleteMember={can(PermissionId.USERS_DELETE)}
-          canEditEmail={can(PermissionId.USERS_EMAIL_UPDATE)}
-          canResetPassword={can(PermissionId.USERS_PASSWORD_CHANGE)}
+          canDeleteMember={hasPermission(
+            access.permissionIds,
+            PermissionId.USERS_DELETE,
+          )}
+          canEditEmail={hasPermission(
+            access.permissionIds,
+            PermissionId.USERS_EMAIL_UPDATE,
+          )}
+          canResetPassword={hasPermission(
+            access.permissionIds,
+            PermissionId.USERS_PASSWORD_CHANGE,
+          )}
           isLoading={membersLoading}
           members={members}
           query={memberQuery}

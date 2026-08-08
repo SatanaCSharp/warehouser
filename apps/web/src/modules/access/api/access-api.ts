@@ -1,5 +1,4 @@
 import {
-  accessProjectionSchema,
   managerTransferResultSchema,
   memberMutationResultSchema,
   memberPageSchema,
@@ -16,7 +15,6 @@ import {
 import { api } from 'shared/api/api-client';
 
 import type {
-  AccessProjection,
   ManagerTransfer,
   ManagerTransferResult,
   MemberPage,
@@ -48,11 +46,6 @@ const USERS_PATH = '/api/v1/users';
 
 export const accessApi = api.injectEndpoints({
   endpoints: (build) => ({
-    getCurrentAccess: build.query<AccessProjection, void>({
-      query: () => `${ACCESS_PATH}/current`,
-      extraOptions: { schema: accessProjectionSchema },
-      providesTags: ['CurrentAccess'],
-    }),
     listAccessRoles: build.query<RolePage, void>({
       query: () => `${ACCESS_PATH}/roles`,
       extraOptions: { schema: rolePageSchema },
@@ -158,7 +151,6 @@ export const {
   useCreateMemberMutation,
   useDeleteAccessRoleMutation,
   useDeleteMemberMutation,
-  useGetCurrentAccessQuery,
   useListAccessMembersQuery,
   useListAccessPermissionsQuery,
   useListAccessRolesQuery,

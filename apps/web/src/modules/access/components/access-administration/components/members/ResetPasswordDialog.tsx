@@ -1,6 +1,7 @@
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
+import { useFormFieldErrors } from 'modules/access/hooks/useFormFieldErrors';
 import { parsePasswordChangeForm } from 'modules/access/schemas/password-change-form';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { PasswordInput } from 'shared/components/PasswordInput';
@@ -32,29 +33,33 @@ export const ResetPasswordDialog = ({
     register,
     setError,
   } = useForm<ResetPasswordForm>({ defaultValues: { password: '' } });
+  const { setFieldError } = useFormFieldErrors<ResetPasswordForm>(setError);
+
+  const translateValidation = (code: string): string =>
+    t(`administration.resetPassword.validation.${code}`);
 
   const submit = async ({ password }: ResetPasswordForm): Promise<void> => {
     const parsed = parsePasswordChangeForm(password);
+
     if (!parsed.success) {
-      setError('password', {
-        message: t(
-          `administration.resetPassword.validation.${parsed.error.password}`,
-        ),
-      });
+      setFieldError('password', parsed.error.password, translateValidation);
       return;
     }
 
     const result = await onSave(parsed.data);
+
     if (result.success) {
       onClose();
       return;
     }
-    if (result.fieldErrors?.password) {
-      setError('password', {
-        message: t(
-          `administration.resetPassword.validation.${result.fieldErrors.password}`,
-        ),
-      });
+
+    if (
+      setFieldError(
+        'password',
+        result.fieldErrors?.password,
+        translateValidation,
+      )
+    ) {
       return;
     }
     onClose();

@@ -2,6 +2,7 @@ import { Input, Select, SelectItem } from '@heroui/react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
+import { useFormFieldErrors } from 'modules/access/hooks/useFormFieldErrors';
 import { parseCreateMemberForm } from 'modules/access/schemas/create-member-form';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { PasswordInput } from 'shared/components/PasswordInput';
@@ -36,6 +37,21 @@ export const CreateMemberDialog = ({
   } = useForm<CreateMemberForm>({
     defaultValues: { email: '', password: '', roleId: '' },
   });
+  const { setFieldErrors } = useFormFieldErrors<CreateMemberForm>(setError);
+
+  const validationNamespace: Record<keyof CreateMemberForm, string> = {
+    email: 'email',
+    password: 'password',
+    roleId: 'role',
+  };
+
+  const translateValidation = (
+    field: keyof CreateMemberForm,
+    code: string,
+  ): string =>
+    t(
+      `administration.createMember.validation.${validationNamespace[field]}.${code}`,
+    );
 
   const selectableRoles = roles.filter(
     (role) => role.kind !== 'warehouse_manager',
@@ -48,20 +64,10 @@ export const CreateMemberDialog = ({
   }: CreateMemberForm): Promise<void> => {
     const parsed = parseCreateMemberForm(email, password, roleId);
     if (!parsed.success) {
-      if (parsed.error.email) {
-        setError('email', {
-          message: t(
-            `administration.createMember.validation.email.${parsed.error.email}`,
-          ),
-        });
-      }
-      if (parsed.error.password) {
-        setError('password', {
-          message: t(
-            `administration.createMember.validation.password.${parsed.error.password}`,
-          ),
-        });
-      }
+      setFieldErrors(
+        { email: parsed.error.email, password: parsed.error.password },
+        translateValidation,
+      );
       return;
     }
 
@@ -70,20 +76,10 @@ export const CreateMemberDialog = ({
       onClose();
       return;
     }
-    if (result.fieldErrors?.email) {
-      setError('email', {
-        message: t(
-          `administration.createMember.validation.email.${result.fieldErrors.email}`,
-        ),
-      });
-    }
-    if (result.fieldErrors?.roleId) {
-      setError('roleId', {
-        message: t(
-          `administration.createMember.validation.role.${result.fieldErrors.roleId}`,
-        ),
-      });
-    }
+    setFieldErrors(
+      { email: result.fieldErrors?.email, roleId: result.fieldErrors?.roleId },
+      translateValidation,
+    );
   };
 
   return (

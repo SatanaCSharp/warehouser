@@ -3,7 +3,7 @@ import { Link as RouterLink, useRouterState } from '@tanstack/react-router';
 import { PermissionId } from '@warehouser/shared-types/enums';
 import { useTranslation } from 'react-i18next';
 
-import { useGetCurrentAccessQuery } from 'modules/access/api/access-api';
+import { PermissionGate } from 'shared/components/PermissionGate';
 import { ROUTES } from 'shared/constants/routes';
 import { DashboardIcon, ShieldCheckIcon } from 'shared/icons';
 
@@ -19,15 +19,9 @@ export const Sidebar = ({
   onOpenChange,
 }: SidebarProps = {}): ReactElement => {
   const { t } = useTranslation('common');
-  const currentAccess = useGetCurrentAccessQuery();
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
-  const canReviewAccess = currentAccess.data?.permissionIds.some(
-    (permission) =>
-      permission === PermissionId.ROLES_WATCH ||
-      permission === PermissionId.USERS_WATCH,
-  );
 
   const itemClassName = (isActive: boolean): string =>
     isActive
@@ -48,7 +42,9 @@ export const Sidebar = ({
           {t('nav.dashboard')}
         </Link>
       </li>
-      {canReviewAccess ? (
+      <PermissionGate
+        permission={[PermissionId.ROLES_WATCH, PermissionId.USERS_WATCH]}
+      >
         <li>
           <Link
             as={RouterLink}
@@ -61,7 +57,7 @@ export const Sidebar = ({
             {t('nav.access')}
           </Link>
         </li>
-      ) : null}
+      </PermissionGate>
     </ul>
   );
 

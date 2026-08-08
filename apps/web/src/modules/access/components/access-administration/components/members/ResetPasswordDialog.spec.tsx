@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { ResetPasswordDialog } from 'modules/access/components/access-administration/ResetPasswordDialog';
+import { ResetPasswordDialog } from 'modules/access/components/access-administration/components/members/ResetPasswordDialog';
 import { renderWithProviders } from 'test/render';
 
 import type { PasswordChangeInput } from '@warehouser/contracts/users';

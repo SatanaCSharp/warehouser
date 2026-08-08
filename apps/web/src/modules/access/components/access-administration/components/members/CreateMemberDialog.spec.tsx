@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { CreateMemberDialog } from 'modules/access/components/access-administration/CreateMemberDialog';
+import { CreateMemberDialog } from 'modules/access/components/access-administration/components/members/CreateMemberDialog';
 import { selectHeroOption } from 'test/hero-select';
 import { renderWithProviders } from 'test/render';
 

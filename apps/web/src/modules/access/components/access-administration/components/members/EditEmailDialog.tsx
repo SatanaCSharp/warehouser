@@ -2,6 +2,7 @@ import { Input } from '@heroui/react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
+import { useFormFieldErrors } from 'modules/access/hooks/useFormFieldErrors';
 import { parseEmailChangeForm } from 'modules/access/schemas/email-change-form';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 
@@ -32,13 +33,14 @@ export const EditEmailDialog = ({
     register,
     setError,
   } = useForm<EditEmailForm>({ defaultValues: { email: '' } });
+  const { setFieldError } = useFormFieldErrors<EditEmailForm>(setError);
+  const translateValidation = (code: string): string =>
+    t(`administration.editEmail.validation.${code}`);
 
   const submit = async ({ email }: EditEmailForm): Promise<void> => {
     const parsed = parseEmailChangeForm(email);
     if (!parsed.success) {
-      setError('email', {
-        message: t(`administration.editEmail.validation.${parsed.error.email}`),
-      });
+      setFieldError('email', parsed.error.email, translateValidation);
       return;
     }
 
@@ -47,12 +49,9 @@ export const EditEmailDialog = ({
       onClose();
       return;
     }
-    if (result.fieldErrors?.email) {
-      setError('email', {
-        message: t(
-          `administration.editEmail.validation.${result.fieldErrors.email}`,
-        ),
-      });
+    if (
+      setFieldError('email', result.fieldErrors?.email, translateValidation)
+    ) {
       return;
     }
     onClose();
