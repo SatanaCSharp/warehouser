@@ -7,6 +7,6 @@
       "danger": "Danger",
       "signIn": "Log in"
     },
-    "description": "Plain elements use the same semantic classes (bg-content2, text-foreground-500, rounded-medium) so they stay correct across theme toggles without any custom CSS."
+    "description": "Plain elements use the same semantic classes (bg-surface-secondary, text-muted, rounded-lg) so they stay correct across theme toggles without any custom CSS."
   }
 }
