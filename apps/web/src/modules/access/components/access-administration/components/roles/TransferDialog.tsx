@@ -1,8 +1,8 @@
-import { Select, SelectItem } from '@heroui/react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import { FormModalDialog } from 'shared/components/FormModalDialog';
+import { FormSelectField } from 'shared/components/FormSelectField';
 
 import type { AccessProjection } from '@warehouser/contracts/access';
 import type {
@@ -55,24 +55,22 @@ export const TransferDialog = ({
         name="recipient"
         rules={{ required: true }}
         render={({ field }) => (
-          <Select
+          <FormSelectField
             isRequired
             validationBehavior="aria"
             label={t('administration.transfer.recipient')}
             placeholder={t('administration.select')}
             name={field.name}
-            selectedKeys={field.value ? [field.value] : []}
-            onSelectionChange={(keys) =>
-              field.onChange(Array.from(keys)[0] ?? '')
-            }
-            onBlur={field.onBlur}
-          >
-            {members
+            options={members
               .filter((member) => member.roleKind !== 'warehouse_manager')
-              .map((member) => (
-                <SelectItem key={member.userId}>{member.userId}</SelectItem>
-              ))}
-          </Select>
+              .map((member) => ({
+                id: member.userId,
+                label: member.userId,
+              }))}
+            value={field.value}
+            onBlur={field.onBlur}
+            onChange={field.onChange}
+          />
         )}
       />
       <Controller
@@ -80,22 +78,17 @@ export const TransferDialog = ({
         name="replacement"
         rules={{ required: true }}
         render={({ field }) => (
-          <Select
+          <FormSelectField
             isRequired
             validationBehavior="aria"
             label={t('administration.transfer.replacement')}
             placeholder={t('administration.select')}
             name={field.name}
-            selectedKeys={field.value ? [field.value] : []}
-            onSelectionChange={(keys) =>
-              field.onChange(Array.from(keys)[0] ?? '')
-            }
+            options={roles.map((role) => ({ id: role.id, label: role.name }))}
+            value={field.value}
             onBlur={field.onBlur}
-          >
-            {roles.map((role) => (
-              <SelectItem key={role.id}>{role.name}</SelectItem>
-            ))}
-          </Select>
+            onChange={field.onChange}
+          />
         )}
       />
       {recipient ? (

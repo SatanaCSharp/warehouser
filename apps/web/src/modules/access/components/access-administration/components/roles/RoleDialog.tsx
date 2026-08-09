@@ -1,10 +1,11 @@
-import { Checkbox, Input } from '@heroui/react';
+import { Checkbox } from '@heroui/react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import { useFormFieldErrors } from 'modules/access/hooks/useFormFieldErrors';
 import { parseRoleForm } from 'modules/access/schemas/role-form';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
+import { FormTextField } from 'shared/components/FormTextField';
 
 import type { RoleWrite } from '@warehouser/contracts/access';
 import type {
@@ -34,6 +35,7 @@ export const RoleDialog = ({
     control,
     formState: { errors },
     handleSubmit,
+    register,
     setError,
   } = useForm<RoleForm>({
     defaultValues: {
@@ -67,27 +69,18 @@ export const RoleDialog = ({
       cancelLabel={t('administration.cancel')}
       submitLabel={t('administration.roleEditor.save')}
       size="lg"
-      scrollBehavior="inside"
+      scroll="inside"
       onClose={onClose}
       onSubmit={handleSubmit(submit)}
     >
-      <Controller
-        control={control}
-        name="name"
-        render={({ field }) => (
-          <Input
-            autoFocus
-            isRequired
-            validationBehavior="aria"
-            isInvalid={Boolean(errors.name)}
-            errorMessage={errors.name?.message}
-            label={t('administration.roleEditor.name')}
-            name={field.name}
-            value={field.value}
-            onBlur={field.onBlur}
-            onValueChange={field.onChange}
-          />
-        )}
+      <FormTextField
+        autoFocus
+        isRequired
+        validationBehavior="aria"
+        isInvalid={Boolean(errors.name)}
+        errorMessage={errors.name?.message}
+        label={t('administration.roleEditor.name')}
+        {...register('name')}
       />
       <fieldset className="space-y-3">
         <legend className="font-medium">
@@ -104,7 +97,7 @@ export const RoleDialog = ({
                   <Checkbox
                     isDisabled={reserved}
                     isSelected={field.value.includes(permission.id)}
-                    onValueChange={(checked) =>
+                    onChange={(checked) =>
                       field.onChange(
                         checked
                           ? [...field.value, permission.id]
@@ -112,15 +105,20 @@ export const RoleDialog = ({
                       )
                     }
                   >
-                    {t(
-                      `permissions.items.${permission.id.replace(':', '_')}`,
-                      permission.label,
-                    )}
+                    <Checkbox.Content>
+                      <Checkbox.Control>
+                        <Checkbox.Indicator />
+                      </Checkbox.Control>
+                      {t(
+                        `permissions.items.${permission.id.replace(':', '_')}`,
+                        permission.label,
+                      )}
+                    </Checkbox.Content>
                   </Checkbox>
                 )}
               />
               {reserved ? (
-                <p className="ml-6 text-sm text-foreground-500">
+                <p className="ml-6 text-sm text-muted">
                   {t('administration.roleEditor.reserved')}
                 </p>
               ) : null}

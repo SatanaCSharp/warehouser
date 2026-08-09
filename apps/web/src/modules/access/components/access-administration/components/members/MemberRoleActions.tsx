@@ -22,13 +22,13 @@ export const MemberRoleActions = ({
     <div className="sr-only mt-6 space-y-2 focus-within:not-sr-only">
       {assignableMembers.map((member) => (
         <div
-          className="flex items-center justify-between gap-3 rounded-medium border border-divider p-3"
+          className="flex items-center justify-between gap-3 rounded-lg border border-border p-3"
           key={member.userId}
         >
           <span className="font-mono text-sm">{member.userId}</span>
           <Button
             size="sm"
-            variant="bordered"
+            variant="outline"
             onPress={() => onAssign(member.userId)}
           >
             {t('administration.assignment.open', {

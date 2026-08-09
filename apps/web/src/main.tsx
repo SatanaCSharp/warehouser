@@ -1,4 +1,3 @@
-import { HeroUIProvider } from '@heroui/react';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Provider } from 'react-redux';
@@ -22,10 +21,8 @@ async function bootstrap(): Promise<void> {
   createRoot(root).render(
     <StrictMode>
       <Provider store={store}>
-        <HeroUIProvider>
-          <App />
-          <ToastContainer position="top-right" />
-        </HeroUIProvider>
+        <App />
+        <ToastContainer position="top-right" />
       </Provider>
     </StrictMode>,
   );

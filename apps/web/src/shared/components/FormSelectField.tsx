@@ -1,0 +1,78 @@
+import { Description, FieldError, Label, ListBox, Select } from '@heroui/react';
+
+import type { ComponentProps, ReactElement, ReactNode } from 'react';
+
+export type SelectOption = { id: string; label: string };
+
+/**
+ * HeroUI v3 replaces v2's `selectedKeys`/`onSelectionChange` `Select` with a
+ * `value`/`onChange` compound built from `Select.Trigger` + `ListBox`. This
+ * exposes the single-select case as the flat, string-valued field that React
+ * Hook Form's `Controller` already hands us.
+ */
+type FormSelectFieldProps = Pick<
+  ComponentProps<typeof Select>,
+  | 'className'
+  | 'isDisabled'
+  | 'isInvalid'
+  | 'isRequired'
+  | 'name'
+  | 'placeholder'
+  | 'validationBehavior'
+> & {
+  description?: ReactNode;
+  errorMessage?: ReactNode;
+  label: ReactNode;
+  onBlur?: () => void;
+  onChange: (value: string) => void;
+  options: SelectOption[];
+  value: string;
+};
+
+export const FormSelectField = ({
+  className,
+  description,
+  errorMessage,
+  isDisabled,
+  isInvalid,
+  isRequired,
+  label,
+  name,
+  onBlur,
+  onChange,
+  options,
+  placeholder,
+  validationBehavior,
+  value,
+}: FormSelectFieldProps): ReactElement => (
+  <Select
+    className={className}
+    isDisabled={isDisabled}
+    isInvalid={isInvalid}
+    isRequired={isRequired}
+    name={name}
+    placeholder={placeholder}
+    validationBehavior={validationBehavior}
+    value={value === '' ? null : value}
+    onBlur={onBlur}
+    onChange={(next) => onChange(typeof next === 'string' ? next : '')}
+  >
+    <Label>{label}</Label>
+    <Select.Trigger>
+      <Select.Value />
+      <Select.Indicator />
+    </Select.Trigger>
+    <Select.Popover>
+      <ListBox>
+        {options.map((option) => (
+          <ListBox.Item key={option.id} id={option.id} textValue={option.label}>
+            {option.label}
+            <ListBox.ItemIndicator />
+          </ListBox.Item>
+        ))}
+      </ListBox>
+    </Select.Popover>
+    {description ? <Description>{description}</Description> : null}
+    <FieldError>{errorMessage}</FieldError>
+  </Select>
+);

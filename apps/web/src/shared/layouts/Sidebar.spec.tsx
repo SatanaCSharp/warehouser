@@ -1,4 +1,3 @@
-import { HeroUIProvider } from '@heroui/react';
 import {
   createMemoryHistory,
   createRootRouteWithContext,
@@ -77,9 +76,7 @@ const renderSidebar = (
 
   render(
     <Provider store={store}>
-      <HeroUIProvider>
-        <RouterProvider router={router} />
-      </HeroUIProvider>
+      <RouterProvider router={router} />
     </Provider>,
   );
 };
@@ -226,8 +223,8 @@ describe('Sidebar', () => {
       name: 'Dashboard',
     });
     const accessLink = await screen.findByRole('link', { name: 'Access' });
-    expect(accessLink.className).toContain('bg-primary-100');
-    expect(dashboardLink.className).not.toContain('bg-primary-100');
+    expect(accessLink.className).toContain('bg-accent-soft');
+    expect(dashboardLink.className).not.toContain('bg-accent-soft');
   });
 
   it('closes the drawer when a nav item is selected', async () => {

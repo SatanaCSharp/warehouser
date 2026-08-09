@@ -1,11 +1,4 @@
-import {
-  Button,
-  Modal,
-  ModalBody,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-} from '@heroui/react';
+import { Button, Modal } from '@heroui/react';
 
 import type {
   ComponentProps,
@@ -15,8 +8,8 @@ import type {
 } from 'react';
 
 type FormModalDialogProps = Pick<
-  ComponentProps<typeof Modal>,
-  'scrollBehavior' | 'size'
+  ComponentProps<typeof Modal.Container>,
+  'scroll' | 'size'
 > & {
   cancelLabel: string;
   children: ReactNode;
@@ -24,8 +17,8 @@ type FormModalDialogProps = Pick<
   noValidate?: boolean;
   onClose: () => void;
   onSubmit: FormEventHandler<HTMLFormElement>;
-  submitColor?: 'danger' | 'primary';
   submitLabel: string;
+  submitVariant?: 'danger' | 'primary';
   title: ReactNode;
 };
 
@@ -36,35 +29,42 @@ export const FormModalDialog = ({
   noValidate,
   onClose,
   onSubmit,
-  scrollBehavior,
+  scroll,
   size,
-  submitColor = 'primary',
   submitLabel,
+  submitVariant = 'primary',
   title,
 }: FormModalDialogProps): ReactElement => (
-  <Modal
+  <Modal.Backdrop
     isOpen
     onOpenChange={(open) => {
       if (!open) {
         onClose();
       }
     }}
-    size={size}
-    scrollBehavior={scrollBehavior}
   >
-    <ModalContent>
-      <form onSubmit={onSubmit} noValidate={noValidate}>
-        <ModalHeader>{title}</ModalHeader>
-        <ModalBody>{children}</ModalBody>
-        <ModalFooter>
-          <Button variant="light" isDisabled={isSubmitting} onPress={onClose}>
-            {cancelLabel}
-          </Button>
-          <Button color={submitColor} type="submit" isLoading={isSubmitting}>
-            {submitLabel}
-          </Button>
-        </ModalFooter>
-      </form>
-    </ModalContent>
-  </Modal>
+    <Modal.Container scroll={scroll} size={size}>
+      <Modal.Dialog>
+        <form noValidate={noValidate} onSubmit={onSubmit}>
+          <Modal.Header>
+            <Modal.Heading>{title}</Modal.Heading>
+          </Modal.Header>
+          <Modal.Body className="flex flex-col gap-4">{children}</Modal.Body>
+          <Modal.Footer>
+            <Button variant="ghost" isDisabled={isSubmitting} onPress={onClose}>
+              {cancelLabel}
+            </Button>
+            <Button
+              type="submit"
+              variant={submitVariant}
+              isDisabled={isSubmitting}
+              isPending={isSubmitting}
+            >
+              {submitLabel}
+            </Button>
+          </Modal.Footer>
+        </form>
+      </Modal.Dialog>
+    </Modal.Container>
+  </Modal.Backdrop>
 );

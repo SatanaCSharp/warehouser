@@ -1,4 +1,3 @@
-import { HeroUIProvider } from '@heroui/react';
 import {
   createMemoryHistory,
   createRootRouteWithContext,
@@ -72,9 +71,7 @@ const renderAt = (
 
   return render(
     <Provider store={store}>
-      <HeroUIProvider>
-        <RouterProvider router={router} />
-      </HeroUIProvider>
+      <RouterProvider router={router} />
     </Provider>,
   );
 };

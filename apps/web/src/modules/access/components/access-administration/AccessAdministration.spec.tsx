@@ -76,6 +76,20 @@ const members: MemberPage['items'] = [
   },
 ];
 
+/**
+ * HeroUI v3 renders a Select's required state on the field root
+ * (`data-required`), not on the trigger button and not on the hidden native
+ * `<select>` it keeps inside an `aria-hidden` container — so the requirement
+ * is asserted from the trigger's owning field.
+ */
+const requiredSelectFieldFor = (
+  scope: HTMLElement,
+  label: RegExp,
+): Element | null =>
+  within(scope)
+    .getByRole('button', { name: label })
+    .closest('[data-slot="select"]');
+
 const authenticatedStore = (userId: string): AppStore => {
   const store = makeStore();
   store.dispatch(authBecameAuthenticated({ id: userId }));
@@ -160,9 +174,10 @@ describe('AccessAdministration', () => {
 
     await user.click(screen.getByRole('button', { name: 'Delete' }));
     const dialog = screen.getByRole('dialog', { name: 'Delete Picker' });
-    expect(
-      within(dialog).getByLabelText('Replacement role', { selector: 'select' }),
-    ).toBeRequired();
+    expect(requiredSelectFieldFor(dialog, /Replacement role/u)).toHaveAttribute(
+      'data-required',
+      'true',
+    );
     await selectHeroOption(
       user,
       within(dialog).getByRole('button', { name: /Replacement role/u }),
@@ -188,10 +203,8 @@ describe('AccessAdministration', () => {
     await user.click(screen.getByRole('button', { name: 'Delete' }));
 
     expect(
-      within(screen.getByRole('dialog')).getByLabelText('Replacement role', {
-        selector: 'select',
-      }),
-    ).toBeRequired();
+      requiredSelectFieldFor(screen.getByRole('dialog'), /Replacement role/u),
+    ).toHaveAttribute('data-required', 'true');
   });
 
   it('keeps a failed workflow open and does not announce success', async () => {

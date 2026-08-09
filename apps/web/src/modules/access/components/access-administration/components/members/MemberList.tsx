@@ -2,10 +2,8 @@ import {
   Button,
   Chip,
   Dropdown,
-  DropdownItem,
-  DropdownMenu,
-  DropdownTrigger,
-  Input,
+  InputGroup,
+  Label,
   Skeleton,
 } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
@@ -62,26 +60,27 @@ export const MemberList = ({
 
   return (
     <div>
-      <Input
-        aria-label={t('members.search')}
-        placeholder={t('members.search')}
-        value={query}
-        onValueChange={onQueryChange}
-        classNames={{
-          inputWrapper: 'h-12 border border-divider bg-content1 shadow-none',
-        }}
-        startContent={<SearchIcon />}
-      />
+      <InputGroup className="h-12 border border-border bg-surface shadow-none">
+        <InputGroup.Prefix>
+          <SearchIcon />
+        </InputGroup.Prefix>
+        <InputGroup.Input
+          aria-label={t('members.search')}
+          placeholder={t('members.search')}
+          value={query}
+          onChange={(event) => onQueryChange(event.target.value)}
+        />
+      </InputGroup>
       {isLoading ? (
         <div aria-label={t('members.loading')} className="mt-3 space-y-3">
           {[0, 1, 2].map((skeletonId) => (
-            <Skeleton key={skeletonId} className="h-[72px] rounded-large" />
+            <Skeleton key={skeletonId} className="h-[72px] rounded-xl" />
           ))}
         </div>
       ) : members.length === 0 ? (
-        <p className="mt-3 text-foreground-500">{t('members.empty')}</p>
+        <p className="mt-3 text-muted">{t('members.empty')}</p>
       ) : filteredMembers.length === 0 ? (
-        <p className="mt-3 text-foreground-500">{t('members.searchEmpty')}</p>
+        <p className="mt-3 text-muted">{t('members.searchEmpty')}</p>
       ) : (
         <ul aria-label={t('members.listLabel')} className="mt-3 space-y-3">
           {filteredMembers.map((member) => {
@@ -96,72 +95,75 @@ export const MemberList = ({
               <li
                 key={member.userId}
                 aria-label={member.email}
-                className="flex min-h-[72px] items-center justify-between gap-3 rounded-large border border-divider bg-content1 p-4"
+                className="flex min-h-[72px] items-center justify-between gap-3 rounded-xl border border-border bg-surface p-4"
               >
                 <div>
                   <p className="font-semibold">{member.email}</p>
-                  <p className="mt-1 text-sm text-foreground-500">
+                  <p className="mt-1 text-sm text-muted">
                     {roleNameById.get(member.roleId) ?? ''}
                   </p>
                 </div>
                 {isProtected ? (
-                  <Chip color="primary" size="sm" variant="flat">
+                  <Chip color="accent" size="sm" variant="soft">
                     {t('roles.protected')}
                   </Chip>
                 ) : isSelf ? (
-                  <Chip size="sm" variant="flat">
+                  <Chip size="sm" variant="soft">
                     {t('members.you')}
                   </Chip>
                 ) : hasAnyAction ? (
                   <Dropdown>
-                    <DropdownTrigger>
-                      <Button
-                        isIconOnly
-                        size="sm"
-                        variant="light"
-                        aria-label={actionsLabel}
-                      >
-                        <KebabIcon />
-                      </Button>
-                    </DropdownTrigger>
-                    <DropdownMenu
+                    <Button
+                      isIconOnly
+                      size="sm"
+                      variant="ghost"
                       aria-label={actionsLabel}
-                      onAction={(key) => {
-                        if (key === 'editEmail') {
-                          onEditEmail(member);
-                        } else if (key === 'resetPassword') {
-                          onResetPassword(member);
-                        } else if (key === 'deleteMember') {
-                          onDeleteMember(member);
-                        }
-                      }}
                     >
-                      {canEditEmail ? (
-                        <DropdownItem
-                          key="editEmail"
-                          startContent={<MailIcon />}
-                        >
-                          {t('members.menu.editEmail')}
-                        </DropdownItem>
-                      ) : null}
-                      {canResetPassword ? (
-                        <DropdownItem
-                          key="resetPassword"
-                          startContent={<KeyIcon />}
-                        >
-                          {t('members.menu.resetPassword')}
-                        </DropdownItem>
-                      ) : null}
-                      {canDeleteMember ? (
-                        <DropdownItem
-                          key="deleteMember"
-                          color="danger"
-                          startContent={<TrashIcon />}
-                        >
-                          {t('members.menu.deleteMember')}
-                        </DropdownItem>
-                      ) : null}
-                    </DropdownMenu>
+                      <KebabIcon />
+                    </Button>
+                    <Dropdown.Popover>
+                      <Dropdown.Menu
+                        aria-label={actionsLabel}
+                        onAction={(key) => {
+                          if (key === 'editEmail') {
+                            onEditEmail(member);
+                          } else if (key === 'resetPassword') {
+                            onResetPassword(member);
+                          } else if (key === 'deleteMember') {
+                            onDeleteMember(member);
+                          }
+                        }}
+                      >
+                        {canEditEmail ? (
+                          <Dropdown.Item
+                            id="editEmail"
+                            textValue={t('members.menu.editEmail')}
+                          >
+                            <MailIcon />
+                            <Label>{t('members.menu.editEmail')}</Label>
+                          </Dropdown.Item>
+                        ) : null}
+                        {canResetPassword ? (
+                          <Dropdown.Item
+                            id="resetPassword"
+                            textValue={t('members.menu.resetPassword')}
+                          >
+                            <KeyIcon />
+                            <Label>{t('members.menu.resetPassword')}</Label>
+                          </Dropdown.Item>
+                        ) : null}
+                        {canDeleteMember ? (
+                          <Dropdown.Item
+                            id="deleteMember"
+                            variant="danger"
+                            textValue={t('members.menu.deleteMember')}
+                          >
+                            <TrashIcon />
+                            <Label>{t('members.menu.deleteMember')}</Label>
+                          </Dropdown.Item>
+                        ) : null}
+                      </Dropdown.Menu>
+                    </Dropdown.Popover>
                   </Dropdown>
                 ) : null}
               </li>

@@ -1,4 +1,4 @@
-import { Tab, Tabs } from '@heroui/react';
+import { Tabs } from '@heroui/react';
 import { PermissionId } from '@warehouser/shared-types/enums';
 import { useTranslation } from 'react-i18next';
 
@@ -16,7 +16,13 @@ import {
 import { useAccessAdministrationActions } from 'modules/access/hooks/useAccessAdministrationActions';
 import { hasPermission } from 'shared/hooks/usePermissions';
 
-import type { AccessProjection } from '@warehouser/contracts/access';
+import type {
+  AccessProjection,
+  MemberPage,
+  PermissionPage,
+  RolePage,
+} from '@warehouser/contracts/access';
+import type { TFunction } from 'i18next';
 import type { ReactElement } from 'react';
 
 type AccessWorkspaceProps = { access: AccessProjection };
@@ -88,6 +94,145 @@ const deriveWorkspacePermissions = (
   };
 };
 
+type RolesQuery = {
+  data?: RolePage;
+  isError: boolean;
+  isLoading: boolean;
+};
+
+type PermissionsQuery = {
+  data?: PermissionPage;
+  isError: boolean;
+  isLoading: boolean;
+};
+
+type MembersQuery = {
+  data?: MemberPage;
+  isError: boolean;
+  isFetching: boolean;
+  isLoading: boolean;
+};
+
+type AdministrationActions = ReturnType<typeof useAccessAdministrationActions>;
+
+const resolveRolesAdministration = ({
+  access,
+  administrationActions,
+  canManageRoles,
+  members,
+  permissions,
+  roles,
+}: {
+  access: AccessProjection;
+  administrationActions: AdministrationActions;
+  canManageRoles: boolean;
+  members: MembersQuery;
+  permissions: PermissionsQuery;
+  roles: RolesQuery;
+}): ReactElement | null =>
+  canManageRoles && roles.data && permissions.data ? (
+    <AccessAdministration
+      access={access}
+      members={members.data?.items ?? []}
+      permissions={permissions.data.items}
+      roles={roles.data.items}
+      view="roles"
+      {...administrationActions}
+    />
+  ) : null;
+
+const resolveMembersAdministration = ({
+  access,
+  administrationActions,
+  canReadMembers,
+  members,
+  permissions,
+  roles,
+}: {
+  access: AccessProjection;
+  administrationActions: AdministrationActions;
+  canReadMembers: boolean;
+  members: MembersQuery;
+  permissions: PermissionsQuery;
+  roles: RolesQuery;
+}): ReactElement | null =>
+  canReadMembers && members.data ? (
+    <AccessAdministration
+      access={access}
+      isLoading={members.isFetching}
+      members={members.data.items}
+      permissions={permissions.data?.items ?? []}
+      roles={roles.data?.items ?? []}
+      view="members"
+      {...administrationActions}
+    />
+  ) : null;
+
+const AccessWorkspaceTabs = ({
+  t,
+  canReadMembers,
+  canReadRoles,
+  canViewRolesTab,
+  members,
+  membersAdministration,
+  permissions,
+  roles,
+  rolesAdministration,
+}: {
+  t: TFunction<'access'>;
+  canReadMembers: boolean;
+  canReadRoles: boolean;
+  canViewRolesTab: boolean;
+  members: MembersQuery;
+  membersAdministration: ReactElement | null;
+  permissions: PermissionsQuery;
+  roles: RolesQuery;
+  rolesAdministration: ReactElement | null;
+}): ReactElement => (
+  <Tabs className="w-full">
+    <Tabs.ListContainer>
+      <Tabs.List
+        aria-label={t('navigation.label')}
+        className="gap-8 border-b border-border px-0"
+      >
+        {canViewRolesTab ? (
+          <Tabs.Tab id="roles">
+            {t('navigation.roles')}
+            <Tabs.Indicator />
+          </Tabs.Tab>
+        ) : null}
+        {canReadMembers ? (
+          <Tabs.Tab id="members">
+            {t('navigation.members')}
+            <Tabs.Indicator />
+          </Tabs.Tab>
+        ) : null}
+        {canReadRoles ? (
+          <Tabs.Tab id="permissions">
+            {t('navigation.permissions')}
+            <Tabs.Indicator />
+          </Tabs.Tab>
+        ) : null}
+      </Tabs.List>
+    </Tabs.ListContainer>
+    {canViewRolesTab ? (
+      <Tabs.Panel id="roles" className="px-0 pt-5">
+        {rolesAdministration ?? <RolesDatasetCard query={roles} />}
+      </Tabs.Panel>
+    ) : null}
+    {canReadMembers ? (
+      <Tabs.Panel id="members" className="px-0 pt-5">
+        {membersAdministration ?? <MembersDatasetCard query={members} />}
+      </Tabs.Panel>
+    ) : null}
+    {canReadRoles ? (
+      <Tabs.Panel id="permissions" className="px-0 pt-5">
+        <PermissionsDatasetCard query={permissions} />
+      </Tabs.Panel>
+    ) : null}
+  </Tabs>
+);
+
 export const AccessWorkspace = ({
   access,
 }: AccessWorkspaceProps): ReactElement => {
@@ -111,67 +256,43 @@ export const AccessWorkspace = ({
   });
   const administrationActions = useAccessAdministrationActions();
 
-  const rolesAdministration =
-    canManageRoles && roles.data && permissions.data ? (
-      <AccessAdministration
-        access={access}
-        members={members.data?.items ?? []}
-        permissions={permissions.data.items}
-        roles={roles.data.items}
-        view="roles"
-        {...administrationActions}
-      />
-    ) : null;
-
-  const membersAdministration =
-    canReadMembers && members.data ? (
-      <AccessAdministration
-        access={access}
-        isLoading={members.isFetching}
-        members={members.data.items}
-        permissions={permissions.data?.items ?? []}
-        roles={roles.data?.items ?? []}
-        view="members"
-        {...administrationActions}
-      />
-    ) : null;
+  const rolesAdministration = resolveRolesAdministration({
+    access,
+    administrationActions,
+    canManageRoles,
+    members,
+    permissions,
+    roles,
+  });
+  const membersAdministration = resolveMembersAdministration({
+    access,
+    administrationActions,
+    canReadMembers,
+    members,
+    permissions,
+    roles,
+  });
 
   return (
-    <main className="w-full bg-content2/50 px-4 py-7 sm:px-8 lg:px-12 lg:py-9">
+    <main className="w-full bg-surface-secondary/50 px-4 py-7 sm:px-8 lg:px-12 lg:py-9">
       <header className="mx-auto mb-5 max-w-[1440px]">
         <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
           {t('heading')}
         </h1>
-        <p className="mt-2 text-foreground-500">{t('description')}</p>
+        <p className="mt-2 text-muted">{t('description')}</p>
       </header>
       <div className="mx-auto max-w-[1440px]">
-        <Tabs
-          aria-label={t('navigation.label')}
-          color="primary"
-          variant="underlined"
-          classNames={{
-            base: 'w-full',
-            tabList: 'gap-8 border-b border-divider px-0',
-            cursor: 'w-full',
-            panel: 'px-0 pt-5',
-          }}
-        >
-          {canViewRolesTab ? (
-            <Tab key="roles" title={t('navigation.roles')}>
-              {rolesAdministration ?? <RolesDatasetCard query={roles} />}
-            </Tab>
-          ) : null}
-          {canReadMembers ? (
-            <Tab key="members" title={t('navigation.members')}>
-              {membersAdministration ?? <MembersDatasetCard query={members} />}
-            </Tab>
-          ) : null}
-          {canReadRoles ? (
-            <Tab key="permissions" title={t('navigation.permissions')}>
-              <PermissionsDatasetCard query={permissions} />
-            </Tab>
-          ) : null}
-        </Tabs>
+        <AccessWorkspaceTabs
+          t={t}
+          canReadMembers={canReadMembers}
+          canReadRoles={canReadRoles}
+          canViewRolesTab={canViewRolesTab}
+          members={members}
+          membersAdministration={membersAdministration}
+          permissions={permissions}
+          roles={roles}
+          rolesAdministration={rolesAdministration}
+        />
       </div>
     </main>
   );

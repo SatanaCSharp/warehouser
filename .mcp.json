@@ -7,6 +7,10 @@
     "notebooklm": {
       "command": "notebooklm-mcp",
       "args": []
+    },
+    "heroui-react": {
+      "command": "npx",
+      "args": ["-y", "@heroui/react-mcp@latest"]
     }
   }
 }

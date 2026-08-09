@@ -38,7 +38,7 @@ export const DeleteMemberDialog = ({
       title={t('administration.deleteMember.title', { email: member.email })}
       cancelLabel={t('administration.cancel')}
       submitLabel={t('administration.deleteMember.confirm')}
-      submitColor="danger"
+      submitVariant="danger"
       isSubmitting={isSubmitting}
       onClose={onClose}
       onSubmit={(event) => void confirm(event)}

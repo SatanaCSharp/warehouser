@@ -1,4 +1,4 @@
-import { Button, Input, Link } from '@heroui/react';
+import { Button } from '@heroui/react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link as RouterLink } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
@@ -8,6 +8,7 @@ import {
   signUpFormSchema,
   type SignUpFormValues,
 } from 'modules/auth/sign-up/schemas/sign-up-form.schema';
+import { FormTextField } from 'shared/components/FormTextField';
 import { PasswordInput } from 'shared/components/PasswordInput';
 import { ROUTES } from 'shared/constants/routes';
 
@@ -39,7 +40,7 @@ export const SignUpForm = ({ emailError, onSubmit }: Props): ReactElement => {
       className="flex flex-col gap-4"
       noValidate
     >
-      <Input
+      <FormTextField
         label={t('form.email.label')}
         placeholder={t('form.email.placeholder')}
         description={t('form.email.help')}
@@ -51,9 +52,9 @@ export const SignUpForm = ({ emailError, onSubmit }: Props): ReactElement => {
         {...register('email')}
       />
       {emailError ? (
-        <Link as={RouterLink} to={ROUTES.LOGIN} color="primary">
+        <RouterLink to={ROUTES.LOGIN} className="link text-accent">
           {t('duplicate.signIn')}
-        </Link>
+        </RouterLink>
       ) : null}
       <PasswordInput
         label={t('form.password.label')}
@@ -73,7 +74,7 @@ export const SignUpForm = ({ emailError, onSubmit }: Props): ReactElement => {
         showText={t('form.password.showShort')}
         {...register('password')}
       />
-      <Input
+      <FormTextField
         label={t('form.warehouseName.label')}
         placeholder={t('form.warehouseName.placeholder')}
         description={t('form.warehouseName.help')}
@@ -90,9 +91,9 @@ export const SignUpForm = ({ emailError, onSubmit }: Props): ReactElement => {
       <Button
         type="submit"
         aria-label={isSubmitting ? t('form.submitting') : t('form.submit')}
-        color="primary"
+        variant="primary"
         className="min-h-11 w-full font-semibold"
-        isLoading={isSubmitting}
+        isPending={isSubmitting}
         isDisabled={isSubmitting}
       >
         {isSubmitting ? t('form.submitting') : t('form.submit')}

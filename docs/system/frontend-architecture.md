@@ -11,17 +11,17 @@ The bootstrap chain is:
 main.tsx
   StrictMode
     Redux Provider
-      HeroUIProvider
-        App
-          TanStack RouterProvider
-            root route
-              RootLayout
-                matched module page
+      App
+        TanStack RouterProvider
+          root route
+            RootLayout
+              matched module page
 ```
 
-Provider order is intentional. Components rendered by the router must have access to Redux and
-HeroUI. Router guards do not use React hooks; the router receives the same RTK store in its context
-and reads it through selectors.
+Provider order is intentional. Components rendered by the router must have access to Redux. HeroUI
+v3 needs no provider — its components read theme state from CSS variables (`styles/global.css`)
+rather than React context. Router guards do not use React hooks; the router receives the same RTK
+store in its context and reads it through selectors.
 
 Routes are registered manually in `src/router.ts`. Do not introduce file-route generation without
 an accepted system decision and migration plan.
@@ -59,7 +59,7 @@ apps/web/src/
 │   ├── hooks.ts             # typed dispatch and selector hooks
 │   └── middleware/          # generic application-wide Redux middleware
 ├── hooks/                   # reusable app-level non-data hooks
-├── styles/                  # global styles and HeroUI tokens
+├── styles/                  # global.css: HeroUI import + CSS-variable theme overrides
 └── test/                    # provider renderer and global test setup
 ```
 
@@ -107,9 +107,17 @@ component owns React Hook Form field registration, client validation, and submis
 passes validated values to its page through `onSubmit`. The page owns server side effects, RTK
 updates, navigation, and server-error mapping.
 
-Use HeroUI from `@heroui/react` and semantic tokens from `styles/hero.ts`. There is no Warehouser UI
-wrapper package today, so do not invent imports from one. Promote a wrapper to `shared/components`
-only when it standardizes behavior used by multiple modules.
+Use HeroUI from `@heroui/react` (v3: compound components, e.g. `Card.Header`, `TextField` +
+`Label`/`FieldError`) and the semantic CSS-variable tokens applied by `styles/global.css`
+(`--accent`, `--surface`, `--muted`, `--success`, `--warning`, `--danger`, `--radius`, etc.). Those
+variables come from `@heroui/styles` via the `@heroui/react/styles` import and match the
+`HeroUI v3 · Design System` board in `docs/mockups/app.pen`; `global.css` deliberately does not
+redeclare them. To style a framework-native element such as a TanStack router `<Link>` with HeroUI's
+look, use `buttonVariants`/`linkVariants` from `@heroui/styles` rather than hand-written classes.
+There is no Warehouser UI wrapper package today, so do not invent imports from one. Promote a wrapper to `shared/components` only when it
+standardizes behavior used by multiple modules. See
+[HeroUI design principles](guides/heroui-design-principles.md) for how HeroUI's own conventions
+apply here.
 
 When a component in `components/` is the exclusive owner of other components — rendered only by it,
 by no sibling and no other module — nest the owned components one level down in a `components/`
@@ -215,3 +223,9 @@ Any feature changing a user-visible web interface must follow the Pencil workflo
 README and `ai/skills/design-ui/`. The approved design controls visual and behavioral intent; this
 document controls production code ownership and architecture. A design handoff does not authorize
 bypassing modules, HeroUI tokens, RTK boundaries, contracts, tests, or accessibility conventions.
+
+Designs are composed from the `HeroUI/*` components on the `HeroUI v3 · Design System` board
+(`CdGdS`) in `docs/mockups/app.pen`, not drawn as new frames, and they bind only that board's themed
+`semantic: light | dark` variables. In code those variables are the HeroUI v3 CSS variables shipped
+by `@heroui/styles` and applied through `apps/web/src/styles/global.css`. There is no
+`apps/web/src/styles/hero.ts`.

@@ -1,4 +1,4 @@
-import { Button, Input } from '@heroui/react';
+import { Button } from '@heroui/react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -7,6 +7,7 @@ import {
   loginFormSchema,
   type LoginFormValues,
 } from 'modules/auth/login/schemas/login-form.schema';
+import { FormTextField } from 'shared/components/FormTextField';
 import { PasswordInput } from 'shared/components/PasswordInput';
 
 import type { ReactElement } from 'react';
@@ -33,7 +34,7 @@ export const LoginForm = ({ onSubmit }: Props): ReactElement => {
       className="flex flex-col gap-4"
       noValidate
     >
-      <Input
+      <FormTextField
         label={t('form.email.label')}
         placeholder={t('form.email.placeholder')}
         description={t('form.email.help')}
@@ -69,9 +70,9 @@ export const LoginForm = ({ onSubmit }: Props): ReactElement => {
       <Button
         type="submit"
         aria-label={isSubmitting ? t('form.submitting') : t('form.submit')}
-        color="primary"
+        variant="primary"
         className="min-h-11 w-full font-semibold"
-        isLoading={isSubmitting}
+        isPending={isSubmitting}
         isDisabled={isSubmitting}
       >
         {isSubmitting ? t('form.submitting') : t('form.submit')}

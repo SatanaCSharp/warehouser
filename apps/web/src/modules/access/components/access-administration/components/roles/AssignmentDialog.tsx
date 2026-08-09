@@ -1,8 +1,8 @@
-import { Select, SelectItem } from '@heroui/react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import { FormModalDialog } from 'shared/components/FormModalDialog';
+import { FormSelectField } from 'shared/components/FormSelectField';
 
 import type { AccessRole } from 'modules/access/types/access-administration.types';
 import type { ReactElement } from 'react';
@@ -40,22 +40,17 @@ export const AssignmentDialog = ({
         name="roleId"
         rules={{ required: true }}
         render={({ field }) => (
-          <Select
+          <FormSelectField
             isRequired
             validationBehavior="aria"
             label={t('administration.assignment.role')}
             placeholder={t('administration.select')}
             name={field.name}
-            selectedKeys={field.value ? [field.value] : []}
-            onSelectionChange={(keys) =>
-              field.onChange(Array.from(keys)[0] ?? '')
-            }
+            options={roles.map((role) => ({ id: role.id, label: role.name }))}
+            value={field.value}
             onBlur={field.onBlur}
-          >
-            {roles.map((role) => (
-              <SelectItem key={role.id}>{role.name}</SelectItem>
-            ))}
-          </Select>
+            onChange={field.onChange}
+          />
         )}
       />
       <p className="font-mono text-sm">{memberId}</p>

@@ -1,4 +1,4 @@
-import { Card, CardBody, CardHeader, Skeleton } from '@heroui/react';
+import { Card, Skeleton } from '@heroui/react';
 
 import type { ReactElement, ReactNode } from 'react';
 
@@ -20,15 +20,15 @@ const DatasetMessage = ({
   error: boolean;
   label: string;
 }): ReactElement => (
-  <p role={error ? 'alert' : 'status'} className="py-6 text-foreground-500">
+  <p role={error ? 'alert' : 'status'} className="py-6 text-muted">
     {label}
   </p>
 );
 
 const DatasetSkeleton = ({ label }: { label: string }): ReactElement => (
   <div aria-label={label} className="space-y-3">
-    <Skeleton className="h-16 rounded-medium" />
-    <Skeleton className="h-16 rounded-medium" />
+    <Skeleton className="h-16 rounded-lg" />
+    <Skeleton className="h-16 rounded-lg" />
   </div>
 );
 
@@ -52,9 +52,11 @@ export const DatasetCard = ({
   }
 
   return (
-    <Card className="border border-divider shadow-none">
-      <CardHeader className="text-lg font-semibold">{title}</CardHeader>
-      <CardBody>{content}</CardBody>
+    <Card className="border border-border shadow-none">
+      <Card.Header>
+        <Card.Title className="text-lg font-semibold">{title}</Card.Title>
+      </Card.Header>
+      <Card.Content>{content}</Card.Content>
     </Card>
   );
 };

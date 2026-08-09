@@ -1,10 +1,10 @@
-import { Input } from '@heroui/react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import { useFormFieldErrors } from 'modules/access/hooks/useFormFieldErrors';
 import { parseEmailChangeForm } from 'modules/access/schemas/email-change-form';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
+import { FormTextField } from 'shared/components/FormTextField';
 
 import type { EmailChangeInput } from '@warehouser/contracts/users';
 import type {
@@ -63,13 +63,13 @@ export const EditEmailDialog = ({
       cancelLabel={t('administration.cancel')}
       submitLabel={t('administration.editEmail.save')}
       size="lg"
-      scrollBehavior="inside"
+      scroll="inside"
       noValidate
       isSubmitting={isSubmitting}
       onClose={onClose}
       onSubmit={handleSubmit(submit)}
     >
-      <Input
+      <FormTextField
         autoFocus
         isRequired
         validationBehavior="aria"

@@ -1,4 +1,3 @@
-import { HeroUIProvider } from '@heroui/react';
 import { RouterProvider } from '@tanstack/react-router';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -37,9 +36,7 @@ const renderRoute = (initialEntry: string): RenderedRoute => {
 
   render(
     <Provider store={store}>
-      <HeroUIProvider>
-        <RouterProvider router={router} />
-      </HeroUIProvider>
+      <RouterProvider router={router} />
     </Provider>,
   );
 

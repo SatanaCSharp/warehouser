@@ -1,8 +1,8 @@
-import { Select, SelectItem } from '@heroui/react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import { FormModalDialog } from 'shared/components/FormModalDialog';
+import { FormSelectField } from 'shared/components/FormSelectField';
 
 import type { AccessRole } from 'modules/access/types/access-administration.types';
 import type { ReactElement } from 'react';
@@ -37,7 +37,7 @@ export const DeletionDialog = ({
           ? t('administration.deletion.replaceAndDelete')
           : t('administration.deletion.confirm')
       }
-      submitColor="danger"
+      submitVariant="danger"
       onClose={onClose}
       onSubmit={handleSubmit(({ replacement }) =>
         onDelete(assigned ? replacement : null),
@@ -49,24 +49,22 @@ export const DeletionDialog = ({
           name="replacement"
           rules={{ required: assigned }}
           render={({ field }) => (
-            <Select
+            <FormSelectField
               isRequired
               validationBehavior="aria"
               label={t('administration.deletion.replacement')}
               placeholder={t('administration.select')}
               name={field.name}
-              selectedKeys={field.value ? [field.value] : []}
-              onSelectionChange={(keys) =>
-                field.onChange(Array.from(keys)[0] ?? '')
-              }
-              onBlur={field.onBlur}
-            >
-              {roles
+              options={roles
                 .filter((candidate) => candidate.id !== role.id)
-                .map((candidate) => (
-                  <SelectItem key={candidate.id}>{candidate.name}</SelectItem>
-                ))}
-            </Select>
+                .map((candidate) => ({
+                  id: candidate.id,
+                  label: candidate.name,
+                }))}
+              value={field.value}
+              onBlur={field.onBlur}
+              onChange={field.onChange}
+            />
           )}
         />
       ) : (

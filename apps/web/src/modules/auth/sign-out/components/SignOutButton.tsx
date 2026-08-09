@@ -32,15 +32,14 @@ export const SignOutButton = (): ReactElement => {
 
   return (
     <Button
-      color="primary"
-      variant="bordered"
-      className="w-10 min-w-10 gap-0 px-0 sm:w-auto sm:min-w-20 sm:gap-2 sm:px-4"
+      variant="outline"
+      className="min-h-11 w-10 min-w-10 gap-0 px-0 sm:w-auto sm:min-w-20 sm:gap-2 sm:px-4"
       aria-label={label}
-      startContent={isSigningOut ? null : <LogOutIcon />}
       isDisabled={isSigningOut}
-      isLoading={isSigningOut}
+      isPending={isSigningOut}
       onPress={() => void handleSignOut()}
     >
+      {isSigningOut ? null : <LogOutIcon />}
       <span className="hidden sm:inline">{label}</span>
     </Button>
   );

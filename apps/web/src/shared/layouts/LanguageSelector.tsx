@@ -1,10 +1,4 @@
-import {
-  Button,
-  Dropdown,
-  DropdownItem,
-  DropdownMenu,
-  DropdownTrigger,
-} from '@heroui/react';
+import { Button, Dropdown, Label } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 
 import { CheckIcon, ChevronDownIcon, GlobeIcon } from 'shared/icons';
@@ -30,36 +24,32 @@ export const LanguageSelector = (): ReactElement => {
 
   return (
     <Dropdown>
-      <DropdownTrigger>
-        <Button
-          variant="light"
-          aria-label={accessibleLabel}
-          startContent={<GlobeIcon />}
-          endContent={<ChevronDownIcon />}
-          className="w-10 min-w-10 gap-0 px-0 sm:w-auto sm:min-w-20 sm:gap-2 sm:px-4"
-        >
-          <span className="hidden sm:inline">{currentLabel}</span>
-        </Button>
-      </DropdownTrigger>
-      <DropdownMenu
-        aria-label={t('language.label')}
-        onAction={(key) => {
-          void i18n.changeLanguage(String(key));
-        }}
+      <Button
+        variant="ghost"
+        aria-label={accessibleLabel}
+        className="w-10 min-w-10 gap-0 px-0 sm:w-auto sm:min-w-20 sm:gap-2 sm:px-4"
       >
-        <DropdownItem
-          key="en"
-          endContent={baseLanguage === 'en' ? <CheckIcon /> : null}
+        <GlobeIcon />
+        <span className="hidden sm:inline">{currentLabel}</span>
+        <ChevronDownIcon />
+      </Button>
+      <Dropdown.Popover>
+        <Dropdown.Menu
+          aria-label={t('language.label')}
+          onAction={(key) => {
+            void i18n.changeLanguage(String(key));
+          }}
         >
-          {LANGUAGE_LABELS.en}
-        </DropdownItem>
-        <DropdownItem
-          key="uk"
-          endContent={baseLanguage === 'uk' ? <CheckIcon /> : null}
-        >
-          {LANGUAGE_LABELS.uk}
-        </DropdownItem>
-      </DropdownMenu>
+          <Dropdown.Item id="en" textValue={LANGUAGE_LABELS.en}>
+            <Label>{LANGUAGE_LABELS.en}</Label>
+            {baseLanguage === 'en' ? <CheckIcon /> : null}
+          </Dropdown.Item>
+          <Dropdown.Item id="uk" textValue={LANGUAGE_LABELS.uk}>
+            <Label>{LANGUAGE_LABELS.uk}</Label>
+            {baseLanguage === 'uk' ? <CheckIcon /> : null}
+          </Dropdown.Item>
+        </Dropdown.Menu>
+      </Dropdown.Popover>
     </Dropdown>
   );
 };

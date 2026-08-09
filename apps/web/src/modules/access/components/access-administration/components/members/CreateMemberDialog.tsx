@@ -1,10 +1,11 @@
-import { Input, Select, SelectItem } from '@heroui/react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import { useFormFieldErrors } from 'modules/access/hooks/useFormFieldErrors';
 import { parseCreateMemberForm } from 'modules/access/schemas/create-member-form';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
+import { FormSelectField } from 'shared/components/FormSelectField';
+import { FormTextField } from 'shared/components/FormTextField';
 import { PasswordInput } from 'shared/components/PasswordInput';
 
 import type { CreateMemberInput } from '@warehouser/contracts/users';
@@ -88,13 +89,13 @@ export const CreateMemberDialog = ({
       cancelLabel={t('administration.cancel')}
       submitLabel={t('administration.createMember.save')}
       size="lg"
-      scrollBehavior="inside"
+      scroll="inside"
       noValidate
       isSubmitting={isSubmitting}
       onClose={onClose}
       onSubmit={handleSubmit(submit)}
     >
-      <Input
+      <FormTextField
         autoFocus
         isRequired
         validationBehavior="aria"
@@ -123,7 +124,7 @@ export const CreateMemberDialog = ({
         name="roleId"
         rules={{ required: true }}
         render={({ field }) => (
-          <Select
+          <FormSelectField
             isRequired
             validationBehavior="aria"
             isInvalid={Boolean(errors.roleId)}
@@ -132,16 +133,14 @@ export const CreateMemberDialog = ({
             label={t('administration.createMember.role')}
             placeholder={t('administration.select')}
             name={field.name}
-            selectedKeys={field.value ? [field.value] : []}
-            onSelectionChange={(keys) =>
-              field.onChange(Array.from(keys)[0] ?? '')
-            }
+            options={selectableRoles.map((role) => ({
+              id: role.id,
+              label: role.name,
+            }))}
+            value={field.value}
             onBlur={field.onBlur}
-          >
-            {selectableRoles.map((role) => (
-              <SelectItem key={role.id}>{role.name}</SelectItem>
-            ))}
-          </Select>
+            onChange={field.onChange}
+          />
         )}
       />
     </FormModalDialog>

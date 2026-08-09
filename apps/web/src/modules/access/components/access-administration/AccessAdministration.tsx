@@ -298,14 +298,17 @@ export const AccessAdministration = ({
       <div className="mb-5 flex flex-wrap items-center justify-end gap-3">
         <div className="flex flex-wrap gap-2">
           {showRoles ? (
-            <PermissionGate permission={PermissionId.ROLES_CREATE}>
+            <PermissionGate
+              permission={PermissionId.ROLES_CREATE}
+              permissionIds={access.permissionIds}
+            >
               <Button
-                color="primary"
+                variant="primary"
                 aria-label={t('administration.createRole')}
-                startContent={<PlusIcon />}
                 className="w-10 min-w-10 gap-0 px-0 font-semibold sm:w-auto sm:min-w-40 sm:gap-2 sm:px-4"
                 onPress={() => setWorkflow({ kind: 'role' })}
               >
+                <PlusIcon />
                 <span className="hidden sm:inline">
                   {t('administration.createRole')}
                 </span>
@@ -315,9 +318,10 @@ export const AccessAdministration = ({
           {showRoles ? (
             <PermissionGate
               permission={PermissionId.WAREHOUSE_MANAGER_ROLE_REASSIGN}
+              permissionIds={access.permissionIds}
             >
               <Button
-                variant="bordered"
+                variant="outline"
                 onPress={() => setWorkflow({ kind: 'transfer' })}
               >
                 {t('administration.transfer.open')}
@@ -325,14 +329,17 @@ export const AccessAdministration = ({
             </PermissionGate>
           ) : null}
           {showMembers ? (
-            <PermissionGate permission={PermissionId.USERS_CREATE}>
+            <PermissionGate
+              permission={PermissionId.USERS_CREATE}
+              permissionIds={access.permissionIds}
+            >
               <Button
-                color="primary"
+                variant="primary"
                 aria-label={t('administration.createMember.open')}
-                startContent={<PlusIcon />}
                 className="w-10 min-w-10 gap-0 px-0 font-semibold sm:w-auto sm:min-w-40 sm:gap-2 sm:px-4"
                 onPress={() => setWorkflow({ kind: 'create' })}
               >
+                <PlusIcon />
                 <span className="hidden sm:inline">
                   {t('administration.createMember.open')}
                 </span>
@@ -381,7 +388,10 @@ export const AccessAdministration = ({
       ) : null}
 
       {showRoles ? (
-        <PermissionGate permission={PermissionId.ROLES_ASSIGN}>
+        <PermissionGate
+          permission={PermissionId.ROLES_ASSIGN}
+          permissionIds={access.permissionIds}
+        >
           <MemberRoleActions
             members={members}
             onAssign={(memberId) => setWorkflow({ kind: 'assign', memberId })}

@@ -1,4 +1,5 @@
-import { Button, Link } from '@heroui/react';
+import { Button } from '@heroui/react';
+import { buttonVariants } from '@heroui/styles';
 import {
   Link as RouterLink,
   Outlet,
@@ -33,50 +34,44 @@ export const RootLayout = (): ReactElement => {
     <div className="min-h-dvh bg-background text-foreground">
       {isAuthRoute ? (
         <>
-          <header className="flex h-[68px] items-center justify-between border-b border-divider bg-content1 px-6 sm:h-20 sm:px-12">
-            <Link
-              as={RouterLink}
+          <header className="flex h-[68px] items-center justify-between border-b border-border bg-surface px-6 sm:h-20 sm:px-12">
+            <RouterLink
               to={ROUTES.HOME}
-              color="foreground"
-              className="text-xl font-bold"
+              className="text-xl font-bold text-foreground"
             >
               Warehouser
-            </Link>
-            <div className="flex items-center gap-3 text-sm text-foreground-500">
+            </RouterLink>
+            <div className="flex items-center gap-3 text-sm text-muted">
               <span className="hidden sm:inline">
                 {pathname === ROUTES.SIGN_UP
                   ? 'Already have an account?'
                   : 'New to Warehouser?'}
               </span>
-              <Link
-                as={RouterLink}
+              <RouterLink
                 to={oppositeRoute}
-                color="primary"
-                className="min-h-11 rounded-small border-2 border-primary px-4 font-medium"
+                className={buttonVariants({ variant: 'outline' })}
               >
                 {pathname === ROUTES.SIGN_UP ? 'Sign in' : 'Create account'}
-              </Link>
+              </RouterLink>
             </div>
           </header>
           <Outlet />
         </>
       ) : isAuthenticated ? (
         <div className="flex min-h-dvh flex-col">
-          <header className="flex h-[68px] items-center justify-between border-b border-divider bg-content1 px-6 sm:h-20 sm:px-12">
-            <Link
-              as={RouterLink}
+          <header className="flex h-[68px] items-center justify-between border-b border-border bg-surface px-6 sm:h-20 sm:px-12">
+            <RouterLink
               to={ROUTES.HOME}
-              color="foreground"
-              className="text-xl font-bold"
+              className="text-xl font-bold text-foreground"
             >
               Warehouser
-            </Link>
+            </RouterLink>
             <div className="flex items-center gap-2 sm:gap-4">
               <LanguageSelector />
               <SignOutButton />
               <Button
                 isIconOnly
-                variant="light"
+                variant="ghost"
                 aria-label={t('nav.toggle')}
                 className="sm:hidden"
                 onPress={() => setIsDrawerOpen(true)}

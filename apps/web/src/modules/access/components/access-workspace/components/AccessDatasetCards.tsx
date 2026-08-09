@@ -31,12 +31,12 @@ export const RolesDatasetCard = ({
       loadingLabel={`${t('roles.heading')}…`}
       title={t('roles.heading')}
     >
-      <ul className="divide-y divide-divider" aria-label={t('roles.listLabel')}>
+      <ul className="divide-y divide-border" aria-label={t('roles.listLabel')}>
         {query.data?.items.map((role) => (
           <li className="py-4" key={role.id}>
             <span className="font-medium">{role.name}</span>
             {role.kind === 'warehouse_manager' ? (
-              <span className="ml-2 text-sm text-foreground-500">
+              <span className="ml-2 text-sm text-muted">
                 {t('roles.protected')}
               </span>
             ) : null}
@@ -64,7 +64,7 @@ export const MembersDatasetCard = ({
       title={t('members.heading')}
     >
       <ul
-        className="divide-y divide-divider"
+        className="divide-y divide-border"
         aria-label={t('members.listLabel')}
       >
         {query.data?.items.map((member) => (
@@ -94,7 +94,7 @@ export const PermissionsDatasetCard = ({
       title={t('permissions.heading')}
     >
       <ul
-        className="divide-y divide-divider"
+        className="divide-y divide-border"
         aria-label={t('permissions.listLabel')}
       >
         {query.data?.items.map((permission) => (
@@ -105,9 +105,7 @@ export const PermissionsDatasetCard = ({
                 permission.label,
               )}
             </span>
-            <span className="ml-2 text-sm text-foreground-500">
-              {permission.id}
-            </span>
+            <span className="ml-2 text-sm text-muted">{permission.id}</span>
           </li>
         ))}
       </ul>

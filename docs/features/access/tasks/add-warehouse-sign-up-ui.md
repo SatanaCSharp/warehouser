@@ -24,7 +24,7 @@ The approved registration frames `f4Icg` and `jtBOB` in [design-handoff.md](../d
 
 ## What
 
-Extend the existing sign-up form and API with the shared `warehouseName` contract. Reuse `RootLayout`, HeroUI `Input`/`Button`, `src/styles/hero.ts` tokens, existing feedback adapters, and mirrored English/Ukrainian sign-up resources.
+Extend the existing sign-up form and API with the shared `warehouseName` contract. Reuse `RootLayout`, HeroUI `Input`/`Button`, the semantic tokens in `apps/web/src/styles/global.css`, existing feedback adapters, and mirrored English/Ukrainian sign-up resources.
 
 ## Definition of Done
 

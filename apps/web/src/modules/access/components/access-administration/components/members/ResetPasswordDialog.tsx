@@ -71,7 +71,7 @@ export const ResetPasswordDialog = ({
       cancelLabel={t('administration.cancel')}
       submitLabel={t('administration.resetPassword.save')}
       size="lg"
-      scrollBehavior="inside"
+      scroll="inside"
       noValidate
       isSubmitting={isSubmitting}
       onClose={onClose}

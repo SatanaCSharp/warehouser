@@ -16,6 +16,8 @@ approved_frames:
     node_id: 'ZQ4vO'
 approved_at: '2026-08-07'
 approved_by: 'User'
+frames_pending_rebuild_on: 'HeroUI v3 · Design System (CdGdS)'
+frames_pending_rebuild_since: '2026-08-09'
 target_surfaces: ['web-frontend']
 viewports: ['desktop 1440x900', 'mobile 390x844']
 ---
@@ -35,6 +37,18 @@ viewports: ['desktop 1440x900', 'mobile 390x844']
   Any visible revision requires a new named frame/version.
 - Preview files: `previews/tCIFz.png`, `previews/b2FYL.png`, `previews/YozAg.png`,
   `previews/jUVaK.png`, `previews/ZQ4vO.png`.
+
+- **The five frames above are not currently in `docs/mockups/app.pen` — 2026-08-09.** Merging
+  `heroui-v3-upgrade` into this branch rebuilt the mockup file around the
+  `HeroUI v3 · Design System` board (`CdGdS`), which `apps/web/src/styles/global.css` and
+  `docs/system/sad.md` now name as the token source of truth. That rebuild predates these frames and
+  does not contain them, and the two `.pen` revisions cannot be merged textually. The owner chose to
+  take the v3 revision and re-create these frames from the `HeroUI/*` components on `CdGdS` in a
+  later Pencil pass. **The design decision itself is unchanged and still approved** — the record of
+  what was approved, and when, lives in the five `previews/*.png` files above plus this document's
+  § Component mapping and § Responsive behavior, and the shipped implementation matches it. Re-create
+  the frames under the same names and, where Pencil allows, the same node IDs, so the pins above keep
+  resolving; until then, treat the previews as the visual record.
 - This handoff supersedes, for the authenticated shell and members-list row actions only, the
   guidance in `docs/features/users-management/design-handoff.md` and
   `docs/features/access/design-handoff.md`. Those documents are reconciled to match only after this
