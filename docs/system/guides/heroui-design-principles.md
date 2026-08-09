@@ -91,10 +91,17 @@ element (e.g. a router `<Link>`) with HeroUI's look, use `buttonVariants`/`linkV
 
 Theme-wide changes belong in CSS variables, not per-component overrides scattered across the
 codebase. This repository's token surface lives in `apps/web/src/styles/global.css`, which imports
-HeroUI and overrides the semantic variables (`--accent`, `--success`, `--warning`, `--danger`, etc.)
-referenced in [Frontend architecture](../frontend-architecture.md#components). Add or adjust a design
-token there; do not fight a component's default styling with one-off `className` overrides for a
-change that is really a token change.
+`@heroui/react/styles` and thereby adopts the HeroUI v3 semantic variables (`--accent`, `--surface`,
+`--muted`, `--success`, `--warning`, `--danger`, `--radius`, etc.) referenced in
+[Frontend architecture](../frontend-architecture.md#components).
+
+Those defaults are the same values the `HeroUI v3 · Design System` board in `docs/mockups/app.pen`
+is built on, so `global.css` intentionally redeclares **none** of them. A previous hand-picked
+`--accent` override drifted the running app away from every approved mockup — see
+[`change-request:design-migration`](../../change-requests/design-migration/change.md). If the product
+must diverge from a HeroUI default, change it on the board first, then mirror it in `global.css` for
+both the light and dark selector groups. Do not fight a component's default styling with one-off
+`className` overrides for a change that is really a token change.
 
 ## 9. Open and extensible, used deliberately
 

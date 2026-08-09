@@ -1,3 +1,4 @@
+import { buttonVariants, linkVariants } from '@heroui/styles';
 import {
   Link as RouterLink,
   Outlet,
@@ -48,7 +49,7 @@ export const RootLayout = (): ReactElement => {
             </span>
             <RouterLink
               to={oppositeRoute}
-              className="min-h-11 rounded-md border-2 border-accent px-4 font-medium text-accent"
+              className={buttonVariants({ variant: 'outline' })}
             >
               {pathname === ROUTES.SIGN_UP ? 'Sign in' : 'Create account'}
             </RouterLink>
@@ -64,7 +65,7 @@ export const RootLayout = (): ReactElement => {
               Warehouser
             </RouterLink>
             {canReviewAccess ? (
-              <RouterLink to={ROUTES.ACCESS} className="text-foreground">
+              <RouterLink to={ROUTES.ACCESS} className={linkVariants().base()}>
                 Access
               </RouterLink>
             ) : null}

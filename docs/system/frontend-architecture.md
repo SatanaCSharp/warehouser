@@ -108,9 +108,13 @@ passes validated values to its page through `onSubmit`. The page owns server sid
 updates, navigation, and server-error mapping.
 
 Use HeroUI from `@heroui/react` (v3: compound components, e.g. `Card.Header`, `TextField` +
-`Label`/`FieldError`) and the semantic CSS-variable tokens overridden in `styles/global.css`
-(`--accent`, `--success`, `--warning`, `--danger`, etc.). There is no Warehouser UI wrapper package
-today, so do not invent imports from one. Promote a wrapper to `shared/components` only when it
+`Label`/`FieldError`) and the semantic CSS-variable tokens applied by `styles/global.css`
+(`--accent`, `--surface`, `--muted`, `--success`, `--warning`, `--danger`, `--radius`, etc.). Those
+variables come from `@heroui/styles` via the `@heroui/react/styles` import and match the
+`HeroUI v3 · Design System` board in `docs/mockups/app.pen`; `global.css` deliberately does not
+redeclare them. To style a framework-native element such as a TanStack router `<Link>` with HeroUI's
+look, use `buttonVariants`/`linkVariants` from `@heroui/styles` rather than hand-written classes.
+There is no Warehouser UI wrapper package today, so do not invent imports from one. Promote a wrapper to `shared/components` only when it
 standardizes behavior used by multiple modules. See
 [HeroUI design principles](guides/heroui-design-principles.md) for how HeroUI's own conventions
 apply here.
@@ -212,3 +216,9 @@ Any feature changing a user-visible web interface must follow the Pencil workflo
 README and `ai/skills/design-ui/`. The approved design controls visual and behavioral intent; this
 document controls production code ownership and architecture. A design handoff does not authorize
 bypassing modules, HeroUI tokens, RTK boundaries, contracts, tests, or accessibility conventions.
+
+Designs are composed from the `HeroUI/*` components on the `HeroUI v3 · Design System` board
+(`CdGdS`) in `docs/mockups/app.pen`, not drawn as new frames, and they bind only that board's themed
+`semantic: light | dark` variables. In code those variables are the HeroUI v3 CSS variables shipped
+by `@heroui/styles` and applied through `apps/web/src/styles/global.css`. There is no
+`apps/web/src/styles/hero.ts`.

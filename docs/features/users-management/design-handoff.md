@@ -1,19 +1,31 @@
 ---
-status: approved
+status: pending-approval
 design_file: ../../mockups/app.pen
-approved_frame: 'Users / Administration / Desktop / v1'
-approved_node_id: 'e4e0H'
+approved_frame: 'Users / Administration / Desktop / v3'
+approved_node_id: 'HqrqD'
 approved_frames:
-  - name: 'Users / Administration / Desktop / v1'
+  - name: 'Users / Administration / Desktop / v3'
+    node_id: 'HqrqD'
+  - name: 'Users / Create Member / Desktop / v2'
+    node_id: 'NTEEV'
+  - name: 'Users / Administration / Mobile / v3'
+    node_id: 'B3trg0'
+  - name: 'Users / Create Member / Mobile / v2'
+    node_id: 'UEkHH'
+superseded_at: '2026-08-09'
+superseded_by: 'change-request:design-migration'
+baseline_revision: 'a7b0c9b5edb27b90b9fc348e9a0547bba18cdede'
+migrated_from:
+  - name: 'Archive / Users / Administration / Desktop / v1'
     node_id: 'e4e0H'
-  - name: 'Users / Create Member / Desktop / v1'
+  - name: 'Archive / Users / Create Member / Desktop / v1'
     node_id: 'hIpfH'
-  - name: 'Users / Administration / Mobile / v1'
+  - name: 'Archive / Users / Administration / Mobile / v1'
     node_id: 'GjSFa'
-  - name: 'Users / Create Member / Mobile / v1'
+  - name: 'Archive / Users / Create Member / Mobile / v1'
     node_id: 'bzV6e'
-approved_at: '2026-08-06'
-approved_by: 'User'
+previously_approved_at: '2026-08-06'
+previously_approved_by: 'User'
 target_surfaces: ['web-frontend']
 viewports: ['desktop 1440x900', 'mobile 390x844']
 ---
@@ -21,6 +33,16 @@ viewports: ['desktop 1440x900', 'mobile 390x844']
 # UI design handoff: users-management
 
 ## Decision
+
+- **Migrated by [`change-request:design-migration`](../../change-requests/design-migration/change.md) on 2026-08-09.**
+  The frames listed in `approved_frames` are rebuilt from the `HeroUI/*` components on the
+  `HeroUI v3 · Design System` board (`CdGdS`) and bind only the themed `semantic: light | dark`
+  tokens. Information hierarchy, control order, states, and visible copy are carried over unchanged
+  from the frames in `migrated_from`; the primitives rendering them changed. `status` is
+  `pending-approval` until the user re-approves these frames. The pre-migration frames listed in
+  `migrated_from` are **retained permanently** in `docs/mockups/app.pen` under their `Archive / `
+  names and original node IDs — they are the record of what was approved and when, and must not be
+  deleted. The top-level `Version history` frame indexes every current ↔ superseded pair.
 
 - Selected design direction: the Members tab of the existing Access Administration page — reserved
   as a tab by the Access feature but never built out — populated with a full member lifecycle
@@ -30,8 +52,25 @@ viewports: ['desktop 1440x900', 'mobile 390x844']
   conversation on 2026-08-06.
 - Canonical source: `docs/mockups/app.pen`; preserve the approved frame names and node IDs above.
   Any visible revision requires a new named frame/version.
-- Preview files: `previews/e4e0H.png`, `previews/hIpfH.png`, `previews/GjSFa.png`, and
-  `previews/bzV6e.png`.
+- Versioning: an approved frame is immutable. A revision creates a **new** versioned frame; the
+  superseded one is renamed with an `Archive / ` prefix and kept forever, keeping its node ID so
+  `migrated_from` pins keep resolving. Never delete an archived frame, and never delete a token it
+  still binds. The top-level `Version history` frame in `docs/mockups/app.pen` is the index.
+- Preview files: `previews/HqrqD.png`, `previews/NTEEV.png`, `previews/B3trg0.png`, and
+  `previews/UEkHH.png`.
+
+### As-implemented pass (2026-08-09)
+
+A second pass under `change-request:design-migration` rebuilt the frames that `apps/web` actually
+ships, so this handoff records shipped UI rather than intent that drifted. The pass-1 frames are
+archived, not deleted. What changed to match the code: segmented tabs at both viewports, plain
+(icon-less) outcome lists, a `Show` text affordance instead of an eye icon on password reveal, and a
+bordered trust box instead of a soft-surface alert.
+
+**Not re-versioned.** `Users / Create Member / Desktop|Mobile / v2` (`NTEEV`, `UEkHH`) stay at their
+pass-1 version: the create-member modal was not captured in the as-implemented pass, so its frames
+still show intent rather than verified shipped markup. Treat them as unverified until someone dumps
+the open modal and rebuilds them.
 
 ## Component mapping
 
@@ -50,20 +89,37 @@ viewports: ['desktop 1440x900', 'mobile 390x844']
 
 ## Tokens
 
-| Purpose                    | Pencil variable                          | Code token                                              |
-| -------------------------- | ---------------------------------------- | ------------------------------------------------------- |
-| Page background            | `$bg`                                    | HeroUI `bg-background`                                  |
-| Surface/card               | `$surface`                               | HeroUI `bg-content1`                                    |
-| Soft surface (avatar bg)   | `$surface-soft`                          | HeroUI `bg-content2`                                    |
-| Primary action/focus       | `$primary`                               | HeroUI `primary` configured in `src/styles/hero.ts`     |
-| Primary foreground         | `$primary-foreground`                    | HeroUI primary foreground                               |
-| Body text                  | `$text`                                  | HeroUI `text-foreground`                                |
-| Muted text                 | `$muted`                                 | HeroUI `text-foreground-500`                            |
-| Field background           | `$field`                                 | HeroUI input background                                 |
-| Borders                    | `$border`                                | HeroUI `border-divider`                                 |
-| Destructive state (delete) | `$danger`                                | HeroUI `danger`                                         |
-| Radii                      | `$radius-sm`, `$radius-md`, `$radius-lg` | HeroUI small/medium/large radii in `src/styles/hero.ts` |
-| Typography                 | `$font`                                  | Existing Inter/sans application stack                   |
+Every migrated frame binds only the themed `semantic: light | dark` variables on the
+`HeroUI v3 · Design System` board (`CdGdS`). Those variables are the HeroUI v3 default theme, so each
+one maps to a CSS variable that `@heroui/styles` already ships — the application implements them in
+`apps/web/src/styles/global.css` rather than redefining them.
+
+| Purpose                 | Pencil variable (board `CdGdS`)               | HeroUI v3 CSS variable / utility             |
+| ----------------------- | --------------------------------------------- | -------------------------------------------- |
+| Page background         | `$background/background`                      | `--background` / `bg-background`             |
+| Card and header surface | `$surface/surface`                            | `--surface` / `bg-surface`                   |
+| Subtle surface          | `$surface/secondary`                          | `--surface-secondary`                        |
+| Primary text            | `$foreground/foreground`                      | `--foreground` / `text-foreground`           |
+| Secondary text          | `$foreground/muted`                           | `--muted`                                    |
+| Field background        | `$field/background`                           | `--field-background`                         |
+| Field placeholder       | `$field/placeholder`                          | `--field-placeholder`                        |
+| Primary action, focus   | `$accent/accent`, `$accent/foreground`        | `--accent`, `--accent-foreground`, `--focus` |
+| Soft accent             | `$accent/soft`                                | `--accent-soft`                              |
+| Neutral control         | `$default/default`, `$default/foreground`     | `--default`, `--default-foreground`          |
+| Segmented control       | `$segment`, `$foreground/segment`             | `--segment`, `--segment-foreground`          |
+| Error                   | `$danger/danger`, `$danger/soft`              | `--danger`, `--danger-soft`                  |
+| Success                 | `$success/success`                            | `--success`                                  |
+| Warning                 | `$warning/warning`                            | `--warning`                                  |
+| Borders                 | `$border/border`                              | `--border`                                   |
+| Separators              | `$separator/separator`                        | `--separator`                                |
+| Overlay / backdrop      | `$overlay`, `$backdrop`                       | `--overlay`, `--backdrop`                    |
+| Radii                   | `$radius/sm` … `$radius/3xl`, `$radius/field` | `--radius` scale, `--field-radius`           |
+| Spacing                 | `$spacing/1` … `$spacing/16`                  | `--spacing` scale                            |
+| Typography              | `$typography/font-sans`, `$font-size/*`       | Application sans stack (Inter intent)        |
+
+The retired flat variables (`$bg`, `$surface`, `$text`, `$muted`, `$primary`, `$radius-lg`,
+`$space-4`, …) are no longer referenced by any migrated frame. No token maps to
+`apps/web/src/styles/hero.ts`; that file does not exist and never did.
 
 ## Responsive behavior
 
@@ -149,7 +205,7 @@ viewports: ['desktop 1440x900', 'mobile 390x844']
   denial for every action, exactly as Access already does for Roles.
 - Add endpoints through the shared RTK Query API slice described by the SAD; do not fetch or retain
   unauthorized datasets.
-- Use HeroUI directly, semantic tokens from `src/styles/hero.ts`, Lucide icons (`mail`, `key`,
+- Use HeroUI directly, the semantic tokens implemented in `apps/web/src/styles/global.css`, Lucide icons (`mail`, `key`,
   `trash-2`, `ellipsis-vertical`, `lock`, `eye`, `chevron-down` as shown in the approved frames),
   centralized i18n resources under an `access` (or feature-appropriate) namespace, and the existing
   normalized feedback adapters. Do not introduce a parallel component or styling system.
