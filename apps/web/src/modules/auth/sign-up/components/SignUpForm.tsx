@@ -1,4 +1,12 @@
-import { Button, Input, Link } from '@heroui/react';
+import {
+  Button,
+  Description,
+  FieldError,
+  Input,
+  InputGroup,
+  Label,
+  TextField,
+} from '@heroui/react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link as RouterLink } from '@tanstack/react-router';
 import { useState } from 'react';
@@ -40,71 +48,77 @@ export const SignUpForm = ({ emailError, onSubmit }: Props): ReactElement => {
       className="flex flex-col gap-4"
       noValidate
     >
-      <Input
-        label={t('form.email.label')}
-        placeholder={t('form.email.placeholder')}
-        description={t('form.email.help')}
-        type="email"
-        autoComplete="email"
-        isDisabled={isSubmitting}
-        isInvalid={Boolean(emailMessage)}
-        errorMessage={emailMessage}
-        {...register('email')}
-      />
+      <TextField isDisabled={isSubmitting} isInvalid={Boolean(emailMessage)}>
+        <Label>{t('form.email.label')}</Label>
+        <Input
+          placeholder={t('form.email.placeholder')}
+          type="email"
+          autoComplete="email"
+          {...register('email')}
+        />
+        <Description>{t('form.email.help')}</Description>
+        <FieldError>{emailMessage}</FieldError>
+      </TextField>
       {emailError ? (
-        <Link as={RouterLink} to={ROUTES.LOGIN} color="primary">
+        <RouterLink to={ROUTES.LOGIN} className="link text-accent">
           {t('duplicate.signIn')}
-        </Link>
+        </RouterLink>
       ) : null}
-      <Input
-        label={t('form.password.label')}
-        placeholder={t('form.password.placeholder')}
-        description={t('form.password.help')}
-        type={passwordVisible ? 'text' : 'password'}
-        autoComplete="new-password"
-        isDisabled={isSubmitting}
-        isInvalid={Boolean(errors.password)}
-        errorMessage={
-          errors.password?.message
+      <TextField isDisabled={isSubmitting} isInvalid={Boolean(errors.password)}>
+        <Label>{t('form.password.label')}</Label>
+        <InputGroup>
+          <InputGroup.Input
+            placeholder={t('form.password.placeholder')}
+            type={passwordVisible ? 'text' : 'password'}
+            autoComplete="new-password"
+            {...register('password')}
+          />
+          <InputGroup.Suffix>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="min-h-11 min-w-11 text-sm"
+              aria-label={
+                passwordVisible
+                  ? t('form.password.hide')
+                  : t('form.password.show')
+              }
+              onPress={() => setPasswordVisible((visible) => !visible)}
+            >
+              {passwordVisible ? 'Hide' : 'Show'}
+            </Button>
+          </InputGroup.Suffix>
+        </InputGroup>
+        <Description>{t('form.password.help')}</Description>
+        <FieldError>
+          {errors.password?.message
             ? translateValidation(errors.password.message)
-            : undefined
-        }
-        endContent={
-          <button
-            type="button"
-            className="min-h-11 min-w-11 text-sm text-foreground-500"
-            aria-label={
-              passwordVisible
-                ? t('form.password.hide')
-                : t('form.password.show')
-            }
-            onClick={() => setPasswordVisible((visible) => !visible)}
-          >
-            {passwordVisible ? 'Hide' : 'Show'}
-          </button>
-        }
-        {...register('password')}
-      />
-      <Input
-        label={t('form.warehouseName.label')}
-        placeholder={t('form.warehouseName.placeholder')}
-        description={t('form.warehouseName.help')}
-        autoComplete="organization"
+            : undefined}
+        </FieldError>
+      </TextField>
+      <TextField
         isDisabled={isSubmitting}
         isInvalid={Boolean(errors.warehouseName)}
-        errorMessage={
-          errors.warehouseName?.message
+      >
+        <Label>{t('form.warehouseName.label')}</Label>
+        <Input
+          placeholder={t('form.warehouseName.placeholder')}
+          autoComplete="organization"
+          {...register('warehouseName')}
+        />
+        <Description>{t('form.warehouseName.help')}</Description>
+        <FieldError>
+          {errors.warehouseName?.message
             ? translateValidation(errors.warehouseName.message)
-            : undefined
-        }
-        {...register('warehouseName')}
-      />
+            : undefined}
+        </FieldError>
+      </TextField>
       <Button
         type="submit"
         aria-label={isSubmitting ? t('form.submitting') : t('form.submit')}
-        color="primary"
+        variant="primary"
         className="min-h-11 w-full font-semibold"
-        isLoading={isSubmitting}
+        isPending={isSubmitting}
         isDisabled={isSubmitting}
       >
         {isSubmitting ? t('form.submitting') : t('form.submit')}

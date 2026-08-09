@@ -1,4 +1,12 @@
-import { Button, Input } from '@heroui/react';
+import {
+  Button,
+  Description,
+  FieldError,
+  Input,
+  InputGroup,
+  Label,
+  TextField,
+} from '@heroui/react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -34,58 +42,61 @@ export const LoginForm = ({ onSubmit }: Props): ReactElement => {
       className="flex flex-col gap-4"
       noValidate
     >
-      <Input
-        label={t('form.email.label')}
-        placeholder={t('form.email.placeholder')}
-        description={t('form.email.help')}
-        type="email"
-        autoComplete="email"
-        isDisabled={isSubmitting}
-        isInvalid={Boolean(errors.email)}
-        errorMessage={
-          errors.email?.message
+      <TextField isDisabled={isSubmitting} isInvalid={Boolean(errors.email)}>
+        <Label>{t('form.email.label')}</Label>
+        <Input
+          placeholder={t('form.email.placeholder')}
+          type="email"
+          autoComplete="email"
+          {...register('email')}
+        />
+        <Description>{t('form.email.help')}</Description>
+        <FieldError>
+          {errors.email?.message
             ? translateValidation(errors.email.message)
-            : undefined
-        }
-        {...register('email')}
-      />
-      <Input
-        label={t('form.password.label')}
-        placeholder={t('form.password.placeholder')}
-        description={t('form.password.help')}
-        type={passwordVisible ? 'text' : 'password'}
-        autoComplete="current-password"
-        isDisabled={isSubmitting}
-        isInvalid={Boolean(errors.password)}
-        errorMessage={
-          errors.password?.message
+            : undefined}
+        </FieldError>
+      </TextField>
+      <TextField isDisabled={isSubmitting} isInvalid={Boolean(errors.password)}>
+        <Label>{t('form.password.label')}</Label>
+        <InputGroup>
+          <InputGroup.Input
+            placeholder={t('form.password.placeholder')}
+            type={passwordVisible ? 'text' : 'password'}
+            autoComplete="current-password"
+            {...register('password')}
+          />
+          <InputGroup.Suffix>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="min-h-11 min-w-11 text-sm"
+              aria-label={
+                passwordVisible
+                  ? t('form.password.hide')
+                  : t('form.password.show')
+              }
+              onPress={() => setPasswordVisible((visible) => !visible)}
+            >
+              {passwordVisible
+                ? t('form.password.hideShort')
+                : t('form.password.showShort')}
+            </Button>
+          </InputGroup.Suffix>
+        </InputGroup>
+        <Description>{t('form.password.help')}</Description>
+        <FieldError>
+          {errors.password?.message
             ? translateValidation(errors.password.message)
-            : undefined
-        }
-        endContent={
-          <button
-            type="button"
-            className="min-h-11 min-w-11 text-sm text-foreground-500"
-            aria-label={
-              passwordVisible
-                ? t('form.password.hide')
-                : t('form.password.show')
-            }
-            onClick={() => setPasswordVisible((visible) => !visible)}
-          >
-            {passwordVisible
-              ? t('form.password.hideShort')
-              : t('form.password.showShort')}
-          </button>
-        }
-        {...register('password')}
-      />
+            : undefined}
+        </FieldError>
+      </TextField>
       <Button
         type="submit"
         aria-label={isSubmitting ? t('form.submitting') : t('form.submit')}
-        color="primary"
+        variant="primary"
         className="min-h-11 w-full font-semibold"
-        isLoading={isSubmitting}
+        isPending={isSubmitting}
         isDisabled={isSubmitting}
       >
         {isSubmitting ? t('form.submitting') : t('form.submit')}

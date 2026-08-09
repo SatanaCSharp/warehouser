@@ -1,12 +1,11 @@
 import {
   Button,
   Checkbox,
+  FieldError,
   Input,
+  Label,
   Modal,
-  ModalBody,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
+  TextField,
 } from '@heroui/react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -70,87 +69,97 @@ export const RoleDialog = ({
     : t('administration.roleEditor.createTitle');
 
   return (
-    <Modal
+    <Modal.Backdrop
       isOpen
       onOpenChange={(open) => {
         if (!open) {
           onClose();
         }
       }}
-      size="lg"
-      scrollBehavior="inside"
     >
-      <ModalContent>
-        <form onSubmit={handleSubmit(submit)}>
-          <ModalHeader>{title}</ModalHeader>
-          <ModalBody>
-            <Controller
-              control={control}
-              name="name"
-              render={({ field }) => (
-                <Input
-                  autoFocus
-                  isRequired
-                  validationBehavior="aria"
-                  isInvalid={Boolean(errors.name)}
-                  errorMessage={errors.name?.message}
-                  label={t('administration.roleEditor.name')}
-                  name={field.name}
-                  value={field.value}
-                  onBlur={field.onBlur}
-                  onValueChange={field.onChange}
-                />
-              )}
-            />
-            <fieldset className="space-y-3">
-              <legend className="font-medium">
-                {t('administration.roleEditor.permissions')}
-              </legend>
-              {permissions.map((permission) => {
-                const reserved = permission.kind === 'reserved';
-                return (
-                  <div key={permission.id}>
-                    <Controller
-                      control={control}
-                      name="permissionIds"
-                      render={({ field }) => (
-                        <Checkbox
-                          isDisabled={reserved}
-                          isSelected={field.value.includes(permission.id)}
-                          onValueChange={(checked) =>
-                            field.onChange(
-                              checked
-                                ? [...field.value, permission.id]
-                                : field.value.filter(
-                                    (id) => id !== permission.id,
-                                  ),
-                            )
-                          }
-                        >
-                          {permission.label}
-                        </Checkbox>
-                      )}
+      <Modal.Container size="lg" scroll="inside">
+        <Modal.Dialog>
+          <form onSubmit={handleSubmit(submit)}>
+            <Modal.Header>
+              <Modal.Heading>{title}</Modal.Heading>
+            </Modal.Header>
+            <Modal.Body>
+              <TextField
+                isRequired
+                validationBehavior="aria"
+                isInvalid={Boolean(errors.name)}
+              >
+                <Label>{t('administration.roleEditor.name')}</Label>
+                <Controller
+                  control={control}
+                  name="name"
+                  render={({ field }) => (
+                    <Input
+                      autoFocus
+                      name={field.name}
+                      value={field.value}
+                      onBlur={field.onBlur}
+                      onChange={field.onChange}
                     />
-                    {reserved ? (
-                      <p className="ml-6 text-sm text-foreground-500">
-                        {t('administration.roleEditor.reserved')}
-                      </p>
-                    ) : null}
-                  </div>
-                );
-              })}
-            </fieldset>
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="light" onPress={onClose}>
-              {t('administration.cancel')}
-            </Button>
-            <Button color="primary" type="submit">
-              {t('administration.roleEditor.save')}
-            </Button>
-          </ModalFooter>
-        </form>
-      </ModalContent>
-    </Modal>
+                  )}
+                />
+                <FieldError>{errors.name?.message}</FieldError>
+              </TextField>
+              <fieldset className="space-y-3">
+                <legend className="font-medium">
+                  {t('administration.roleEditor.permissions')}
+                </legend>
+                {permissions.map((permission) => {
+                  const reserved = permission.kind === 'reserved';
+                  return (
+                    <div key={permission.id}>
+                      <Controller
+                        control={control}
+                        name="permissionIds"
+                        render={({ field }) => (
+                          <Checkbox
+                            isDisabled={reserved}
+                            isSelected={field.value.includes(permission.id)}
+                            onChange={(checked) =>
+                              field.onChange(
+                                checked
+                                  ? [...field.value, permission.id]
+                                  : field.value.filter(
+                                      (id) => id !== permission.id,
+                                    ),
+                              )
+                            }
+                          >
+                            <Checkbox.Content>
+                              <Checkbox.Control>
+                                <Checkbox.Indicator />
+                              </Checkbox.Control>
+                              {permission.label}
+                            </Checkbox.Content>
+                          </Checkbox>
+                        )}
+                      />
+                      {reserved ? (
+                        <p className="ml-6 text-sm text-muted">
+                          {t('administration.roleEditor.reserved')}
+                        </p>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </fieldset>
+            </Modal.Body>
+            <Modal.Footer>
+              <Button variant="ghost" onPress={onClose}>
+                {t('administration.cancel')}
+              </Button>
+              <Button variant="primary" type="submit">
+                {t('administration.roleEditor.save')}
+              </Button>
+            </Modal.Footer>
+          </form>
+        </Modal.Dialog>
+      </Modal.Container>
+    </Modal.Backdrop>
   );
 };

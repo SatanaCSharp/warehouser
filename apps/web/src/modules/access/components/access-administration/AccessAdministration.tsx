@@ -298,7 +298,7 @@ export const AccessAdministration = ({
         <div className="flex flex-wrap gap-2">
           {showRoles && can(PermissionId.ROLES_CREATE) ? (
             <Button
-              color="primary"
+              variant="primary"
               className="min-w-40 font-semibold"
               size="lg"
               onPress={() => setWorkflow({ kind: 'role' })}
@@ -308,7 +308,7 @@ export const AccessAdministration = ({
           ) : null}
           {showRoles && can(PermissionId.WAREHOUSE_MANAGER_ROLE_REASSIGN) ? (
             <Button
-              variant="bordered"
+              variant="outline"
               onPress={() => setWorkflow({ kind: 'transfer' })}
             >
               {t('administration.transfer.open')}
@@ -316,7 +316,7 @@ export const AccessAdministration = ({
           ) : null}
           {showMembers && can(PermissionId.USERS_CREATE) ? (
             <Button
-              color="primary"
+              variant="primary"
               className="min-w-40 font-semibold"
               size="lg"
               onPress={() => setWorkflow({ kind: 'create' })}

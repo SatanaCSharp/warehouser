@@ -1,11 +1,4 @@
-import {
-  Button,
-  Modal,
-  ModalBody,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-} from '@heroui/react';
+import { Button, Modal } from '@heroui/react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -39,25 +32,36 @@ export const DeleteMemberDialog = ({
   };
 
   return (
-    <Modal isOpen onOpenChange={(open) => (open ? undefined : onClose())}>
-      <ModalContent>
-        <ModalHeader>
-          {t('administration.deleteMember.title', { email: member.email })}
-        </ModalHeader>
-        <ModalBody>
-          <p>
-            {t('administration.deleteMember.body', { email: member.email })}
-          </p>
-        </ModalBody>
-        <ModalFooter>
-          <Button variant="light" isDisabled={isSubmitting} onPress={onClose}>
-            {t('administration.cancel')}
-          </Button>
-          <Button color="danger" isLoading={isSubmitting} onPress={confirm}>
-            {t('administration.deleteMember.confirm')}
-          </Button>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+    <Modal.Backdrop
+      isOpen
+      onOpenChange={(open) => (open ? undefined : onClose())}
+    >
+      <Modal.Container>
+        <Modal.Dialog>
+          <Modal.Header>
+            <Modal.Heading>
+              {t('administration.deleteMember.title', {
+                email: member.email,
+              })}
+            </Modal.Heading>
+          </Modal.Header>
+          <Modal.Body>
+            <p>
+              {t('administration.deleteMember.body', {
+                email: member.email,
+              })}
+            </p>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="ghost" isDisabled={isSubmitting} onPress={onClose}>
+              {t('administration.cancel')}
+            </Button>
+            <Button variant="danger" isPending={isSubmitting} onPress={confirm}>
+              {t('administration.deleteMember.confirm')}
+            </Button>
+          </Modal.Footer>
+        </Modal.Dialog>
+      </Modal.Container>
+    </Modal.Backdrop>
   );
 };

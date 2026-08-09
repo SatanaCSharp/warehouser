@@ -1,4 +1,4 @@
-import { Button, Chip, Input, Skeleton } from '@heroui/react';
+import { Button, Chip, InputGroup, Skeleton } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 
 import type {
@@ -25,7 +25,7 @@ export type MemberListProps = {
 const SearchIcon = (): ReactElement => (
   <svg
     aria-hidden="true"
-    className="size-5 text-foreground-400"
+    className="size-5 text-muted"
     fill="none"
     viewBox="0 0 24 24"
     stroke="currentColor"
@@ -113,26 +113,27 @@ export const MemberList = ({
 
   return (
     <div>
-      <Input
-        aria-label={t('members.search')}
-        placeholder={t('members.search')}
-        value={query}
-        onValueChange={onQueryChange}
-        classNames={{
-          inputWrapper: 'h-12 border border-divider bg-content1 shadow-none',
-        }}
-        startContent={<SearchIcon />}
-      />
+      <InputGroup className="h-12 border border-border bg-surface shadow-none">
+        <InputGroup.Prefix>
+          <SearchIcon />
+        </InputGroup.Prefix>
+        <InputGroup.Input
+          aria-label={t('members.search')}
+          placeholder={t('members.search')}
+          value={query}
+          onChange={(event) => onQueryChange(event.target.value)}
+        />
+      </InputGroup>
       {isLoading ? (
         <div aria-label={t('members.loading')} className="mt-3 space-y-3">
           {[0, 1, 2].map((skeletonId) => (
-            <Skeleton key={skeletonId} className="h-[72px] rounded-large" />
+            <Skeleton key={skeletonId} className="h-[72px] rounded-xl" />
           ))}
         </div>
       ) : members.length === 0 ? (
-        <p className="mt-3 text-foreground-500">{t('members.empty')}</p>
+        <p className="mt-3 text-muted">{t('members.empty')}</p>
       ) : filteredMembers.length === 0 ? (
-        <p className="mt-3 text-foreground-500">{t('members.searchEmpty')}</p>
+        <p className="mt-3 text-muted">{t('members.searchEmpty')}</p>
       ) : (
         <ul aria-label={t('members.listLabel')} className="mt-3 space-y-3">
           {filteredMembers.map((member) => {
@@ -142,20 +143,20 @@ export const MemberList = ({
               <li
                 key={member.userId}
                 aria-label={member.email}
-                className="flex min-h-[72px] items-center justify-between gap-3 rounded-large border border-divider bg-content1 p-4"
+                className="flex min-h-[72px] items-center justify-between gap-3 rounded-xl border border-border bg-surface p-4"
               >
                 <div>
                   <p className="font-semibold">{member.email}</p>
-                  <p className="mt-1 text-sm text-foreground-500">
+                  <p className="mt-1 text-sm text-muted">
                     {roleNameById.get(member.roleId) ?? ''}
                   </p>
                 </div>
                 {isProtected ? (
-                  <Chip color="primary" size="sm" variant="flat">
+                  <Chip color="accent" size="sm" variant="soft">
                     {t('roles.protected')}
                   </Chip>
                 ) : isSelf ? (
-                  <Chip size="sm" variant="flat">
+                  <Chip size="sm" variant="soft">
                     {t('members.you')}
                   </Chip>
                 ) : (
@@ -164,7 +165,7 @@ export const MemberList = ({
                       <Button
                         isIconOnly
                         size="sm"
-                        variant="light"
+                        variant="ghost"
                         aria-label={t('members.editEmail', {
                           email: member.email,
                         })}
@@ -177,7 +178,7 @@ export const MemberList = ({
                       <Button
                         isIconOnly
                         size="sm"
-                        variant="light"
+                        variant="ghost"
                         aria-label={t('members.resetPassword', {
                           email: member.email,
                         })}
@@ -190,8 +191,7 @@ export const MemberList = ({
                       <Button
                         isIconOnly
                         size="sm"
-                        variant="light"
-                        color="danger"
+                        variant="danger"
                         aria-label={t('members.deleteMember', {
                           email: member.email,
                         })}

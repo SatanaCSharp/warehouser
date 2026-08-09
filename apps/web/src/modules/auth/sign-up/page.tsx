@@ -1,4 +1,4 @@
-import { Card, CardBody, CardHeader } from '@heroui/react';
+import { Card } from '@heroui/react';
 import { useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -44,13 +44,13 @@ export const SignUpPage = (): ReactElement => {
   return (
     <main className="mx-auto grid min-h-[calc(100dvh-68px)] max-w-5xl items-center gap-12 px-6 py-10 sm:min-h-[calc(100dvh-80px)] lg:grid-cols-[1fr_460px] lg:px-8">
       <section className="hidden lg:block">
-        <p className="mb-6 inline-flex rounded-full bg-primary-50 px-3 py-2 text-sm font-semibold text-primary">
+        <p className="mb-6 inline-flex rounded-full bg-accent-soft px-3 py-2 text-sm font-semibold text-accent-soft-foreground">
           {t('intro.eyebrow')}
         </p>
         <h1 className="max-w-md text-5xl font-bold leading-tight">
           {t('intro.title')}
         </h1>
-        <p className="mt-6 max-w-md text-lg text-foreground-500">
+        <p className="mt-6 max-w-md text-lg text-muted">
           {t('intro.description')}
         </p>
         <ul className="mt-8 space-y-4 text-sm">
@@ -59,20 +59,18 @@ export const SignUpPage = (): ReactElement => {
           <li>{t('intro.session')}</li>
         </ul>
       </section>
-      <Card className="w-full max-w-[460px] justify-self-center border border-divider shadow-medium max-sm:bg-transparent max-sm:shadow-none">
-        <CardHeader className="flex-col items-start gap-1 px-6 pt-8 sm:px-8">
+      <Card className="w-full max-w-[460px] justify-self-center border border-border shadow-md max-sm:bg-transparent max-sm:shadow-none">
+        <Card.Header className="flex-col items-start gap-1 px-6 pt-8 sm:px-8">
           <h2 className="text-3xl font-bold">{t('title')}</h2>
-          <p className="text-foreground-500">{t('description')}</p>
-        </CardHeader>
-        <CardBody className="gap-5 px-6 pb-8 sm:px-8">
+          <p className="text-muted">{t('description')}</p>
+        </Card.Header>
+        <Card.Content className="gap-5 px-6 pb-8 sm:px-8">
           <SignUpForm emailError={emailError} onSubmit={handleSubmit} />
-          <p className="rounded-medium bg-content2 p-3 text-sm text-foreground-500">
+          <p className="rounded-lg bg-surface-secondary p-3 text-sm text-muted">
             {t('confidentiality')}
           </p>
-          <p className="text-center text-xs text-foreground-500">
-            {t('accessibility')}
-          </p>
-        </CardBody>
+          <p className="text-center text-xs text-muted">{t('accessibility')}</p>
+        </Card.Content>
       </Card>
     </main>
   );

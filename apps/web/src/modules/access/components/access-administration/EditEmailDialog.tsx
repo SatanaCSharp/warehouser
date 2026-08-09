@@ -1,11 +1,10 @@
 import {
   Button,
+  FieldError,
   Input,
+  Label,
   Modal,
-  ModalBody,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
+  TextField,
 } from '@heroui/react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -66,45 +65,56 @@ export const EditEmailDialog = ({
   };
 
   return (
-    <Modal
+    <Modal.Backdrop
       isOpen
       onOpenChange={(open) => {
         if (!open) {
           onClose();
         }
       }}
-      size="lg"
-      scrollBehavior="inside"
     >
-      <ModalContent>
-        <form onSubmit={handleSubmit(submit)} noValidate>
-          <ModalHeader>
-            {t('administration.editEmail.title', { email: member.email })}
-          </ModalHeader>
-          <ModalBody>
-            <Input
-              autoFocus
-              isRequired
-              validationBehavior="aria"
-              isInvalid={Boolean(errors.email)}
-              errorMessage={errors.email?.message}
-              label={t('administration.editEmail.email')}
-              type="email"
-              autoComplete="email"
-              isDisabled={isSubmitting}
-              {...register('email')}
-            />
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="light" isDisabled={isSubmitting} onPress={onClose}>
-              {t('administration.cancel')}
-            </Button>
-            <Button color="primary" type="submit" isLoading={isSubmitting}>
-              {t('administration.editEmail.save')}
-            </Button>
-          </ModalFooter>
-        </form>
-      </ModalContent>
-    </Modal>
+      <Modal.Container size="lg" scroll="inside">
+        <Modal.Dialog>
+          <form onSubmit={handleSubmit(submit)} noValidate>
+            <Modal.Header>
+              <Modal.Heading>
+                {t('administration.editEmail.title', {
+                  email: member.email,
+                })}
+              </Modal.Heading>
+            </Modal.Header>
+            <Modal.Body>
+              <TextField
+                isRequired
+                validationBehavior="aria"
+                isDisabled={isSubmitting}
+                isInvalid={Boolean(errors.email)}
+              >
+                <Label>{t('administration.editEmail.email')}</Label>
+                <Input
+                  autoFocus
+                  type="email"
+                  autoComplete="email"
+                  {...register('email')}
+                />
+                <FieldError>{errors.email?.message}</FieldError>
+              </TextField>
+            </Modal.Body>
+            <Modal.Footer>
+              <Button
+                variant="ghost"
+                isDisabled={isSubmitting}
+                onPress={onClose}
+              >
+                {t('administration.cancel')}
+              </Button>
+              <Button variant="primary" type="submit" isPending={isSubmitting}>
+                {t('administration.editEmail.save')}
+              </Button>
+            </Modal.Footer>
+          </form>
+        </Modal.Dialog>
+      </Modal.Container>
+    </Modal.Backdrop>
   );
 };

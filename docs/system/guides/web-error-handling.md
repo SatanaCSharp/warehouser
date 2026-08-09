@@ -58,8 +58,9 @@ navigation must occur only after confirming the result contains `data`.
 
 ## 3. Present form errors through HeroUI
 
-Keep form validation errors inline using HeroUI's native validation presentation, such as
-`Form.validationErrors` or field `isInvalid` and `errorMessage`.
+Keep form validation errors inline using HeroUI v3's native validation presentation: wrap each
+field in `TextField` with `isInvalid`, and render the message through the field's `<FieldError>`
+child (not a v2-style `errorMessage` prop).
 
 Map server field errors to their corresponding controls through HeroUI and the form library. An API
 field-validation failure still receives the required error toast, but do not render an additional

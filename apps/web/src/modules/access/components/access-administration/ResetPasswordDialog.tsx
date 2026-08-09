@@ -1,11 +1,10 @@
 import {
   Button,
-  Input,
+  FieldError,
+  InputGroup,
+  Label,
   Modal,
-  ModalBody,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
+  TextField,
 } from '@heroui/react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -70,61 +69,75 @@ export const ResetPasswordDialog = ({
   };
 
   return (
-    <Modal
+    <Modal.Backdrop
       isOpen
       onOpenChange={(open) => {
         if (!open) {
           onClose();
         }
       }}
-      size="lg"
-      scrollBehavior="inside"
     >
-      <ModalContent>
-        <form onSubmit={handleSubmit(submit)} noValidate>
-          <ModalHeader>
-            {t('administration.resetPassword.title', { email: member.email })}
-          </ModalHeader>
-          <ModalBody>
-            <Input
-              autoFocus
-              isRequired
-              validationBehavior="aria"
-              isInvalid={Boolean(errors.password)}
-              errorMessage={errors.password?.message}
-              label={t('administration.resetPassword.password')}
-              type={passwordVisible ? 'text' : 'password'}
-              autoComplete="new-password"
-              isDisabled={isSubmitting}
-              endContent={
-                <button
-                  type="button"
-                  className="min-h-11 min-w-11 text-sm text-foreground-500"
-                  aria-label={
-                    passwordVisible
-                      ? t('administration.createMember.hidePassword')
-                      : t('administration.createMember.showPassword')
-                  }
-                  onClick={() => setPasswordVisible((visible) => !visible)}
-                >
-                  {passwordVisible
-                    ? t('administration.createMember.hidePassword')
-                    : t('administration.createMember.showPassword')}
-                </button>
-              }
-              {...register('password')}
-            />
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="light" isDisabled={isSubmitting} onPress={onClose}>
-              {t('administration.cancel')}
-            </Button>
-            <Button color="primary" type="submit" isLoading={isSubmitting}>
-              {t('administration.resetPassword.save')}
-            </Button>
-          </ModalFooter>
-        </form>
-      </ModalContent>
-    </Modal>
+      <Modal.Container size="lg" scroll="inside">
+        <Modal.Dialog>
+          <form onSubmit={handleSubmit(submit)} noValidate>
+            <Modal.Header>
+              <Modal.Heading>
+                {t('administration.resetPassword.title', {
+                  email: member.email,
+                })}
+              </Modal.Heading>
+            </Modal.Header>
+            <Modal.Body>
+              <TextField
+                isRequired
+                validationBehavior="aria"
+                isDisabled={isSubmitting}
+                isInvalid={Boolean(errors.password)}
+              >
+                <Label>{t('administration.resetPassword.password')}</Label>
+                <InputGroup>
+                  <InputGroup.Input
+                    autoFocus
+                    type={passwordVisible ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    {...register('password')}
+                  />
+                  <InputGroup.Suffix>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="min-h-11 min-w-11 text-sm"
+                      aria-label={
+                        passwordVisible
+                          ? t('administration.createMember.hidePassword')
+                          : t('administration.createMember.showPassword')
+                      }
+                      onPress={() => setPasswordVisible((visible) => !visible)}
+                    >
+                      {passwordVisible
+                        ? t('administration.createMember.hidePassword')
+                        : t('administration.createMember.showPassword')}
+                    </Button>
+                  </InputGroup.Suffix>
+                </InputGroup>
+                <FieldError>{errors.password?.message}</FieldError>
+              </TextField>
+            </Modal.Body>
+            <Modal.Footer>
+              <Button
+                variant="ghost"
+                isDisabled={isSubmitting}
+                onPress={onClose}
+              >
+                {t('administration.cancel')}
+              </Button>
+              <Button variant="primary" type="submit" isPending={isSubmitting}>
+                {t('administration.resetPassword.save')}
+              </Button>
+            </Modal.Footer>
+          </form>
+        </Modal.Dialog>
+      </Modal.Container>
+    </Modal.Backdrop>
   );
 };

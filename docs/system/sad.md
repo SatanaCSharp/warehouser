@@ -72,7 +72,8 @@ accepted [Pino logging ADR](adr/27-07-2026-structured-logging-with-pino.md) and
 
 ### UI delivery
 
-HeroUI and the tokens configured by `apps/web/src/styles/hero.ts` provide the current UI foundation.
+HeroUI (v3) and the CSS-variable tokens configured in `apps/web/src/styles/global.css` provide the
+current UI foundation.
 UI-changing features follow the specification → Pencil design → explicit approval → tasks →
 implementation → visual review workflow in the root README. Backend-only work skips UI design.
 

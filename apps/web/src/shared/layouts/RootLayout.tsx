@@ -1,4 +1,3 @@
-import { Link } from '@heroui/react';
 import {
   Link as RouterLink,
   Outlet,
@@ -34,46 +33,40 @@ export const RootLayout = (): ReactElement => {
   return (
     <div className="min-h-dvh bg-background text-foreground">
       {isAuthRoute ? (
-        <header className="flex h-[68px] items-center justify-between border-b border-divider bg-content1 px-6 sm:h-20 sm:px-12">
-          <Link
-            as={RouterLink}
+        <header className="flex h-[68px] items-center justify-between border-b border-border bg-surface px-6 sm:h-20 sm:px-12">
+          <RouterLink
             to={ROUTES.HOME}
-            color="foreground"
-            className="text-xl font-bold"
+            className="text-xl font-bold text-foreground"
           >
             Warehouser
-          </Link>
-          <div className="flex items-center gap-3 text-sm text-foreground-500">
+          </RouterLink>
+          <div className="flex items-center gap-3 text-sm text-muted">
             <span className="hidden sm:inline">
               {pathname === ROUTES.SIGN_UP
                 ? 'Already have an account?'
                 : 'New to Warehouser?'}
             </span>
-            <Link
-              as={RouterLink}
+            <RouterLink
               to={oppositeRoute}
-              color="primary"
-              className="min-h-11 rounded-small border-2 border-primary px-4 font-medium"
+              className="min-h-11 rounded-md border-2 border-accent px-4 font-medium text-accent"
             >
               {pathname === ROUTES.SIGN_UP ? 'Sign in' : 'Create account'}
-            </Link>
+            </RouterLink>
           </div>
         </header>
       ) : isAuthenticated ? (
-        <header className="flex h-[68px] items-center justify-between border-b border-divider bg-content1 px-6 sm:h-20 sm:px-12">
+        <header className="flex h-[68px] items-center justify-between border-b border-border bg-surface px-6 sm:h-20 sm:px-12">
           <div className="flex items-center gap-6">
-            <Link
-              as={RouterLink}
+            <RouterLink
               to={ROUTES.HOME}
-              color="foreground"
-              className="text-xl font-bold"
+              className="text-xl font-bold text-foreground"
             >
               Warehouser
-            </Link>
+            </RouterLink>
             {canReviewAccess ? (
-              <Link as={RouterLink} to={ROUTES.ACCESS} color="foreground">
+              <RouterLink to={ROUTES.ACCESS} className="text-foreground">
                 Access
-              </Link>
+              </RouterLink>
             ) : null}
           </div>
           <SignOutButton />

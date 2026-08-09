@@ -1,7 +1,38 @@
 /* apps/web/src/styles/global.css */
-@import 'tailwindcss';
-@plugin './hero.ts';
-@source '../../node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}';
+@import '@heroui/react/styles';
+
+:root,
+.light,
+.default,
+[data-theme='light'],
+[data-theme='default'] {
+  --accent: #4f46e5;
+  --accent-foreground: #ffffff;
+
+  --success: #17c964;
+  --success-foreground: #000000;
+
+  --warning: #f5a524;
+  --warning-foreground: #000000;
+
+  --danger: #e11d48;
+  --danger-foreground: #ffffff;
+}
+
+.dark,
+[data-theme='dark'] {
+  --accent: #807aec;
+  --accent-foreground: #000000;
+
+  --success: #58d88f;
+  --success-foreground: #000000;
+
+  --warning: #f8be61;
+  --warning-foreground: #000000;
+
+  --danger: #e95c7b;
+  --danger-foreground: #000000;
+}
 
 html {
   color-scheme: light dark;

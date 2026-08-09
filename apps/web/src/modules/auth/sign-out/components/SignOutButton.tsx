@@ -29,11 +29,10 @@ export const SignOutButton = (): ReactElement => {
 
   return (
     <Button
-      color="primary"
-      variant="bordered"
+      variant="outline"
       className="min-h-11"
       isDisabled={isSigningOut}
-      isLoading={isSigningOut}
+      isPending={isSigningOut}
       onPress={() => void handleSignOut()}
     >
       {isSigningOut ? t('auth.signingOut') : t('auth.signOut')}

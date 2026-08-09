@@ -1,4 +1,11 @@
-import { Button, Checkbox, Input } from '@heroui/react';
+import {
+  Button,
+  Checkbox,
+  FieldError,
+  Input,
+  Label,
+  TextField,
+} from '@heroui/react';
 import { useEffect } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -67,13 +74,13 @@ export const RoleEditor = ({
 
   return (
     <form
-      className="rounded-large border border-divider bg-content1 p-5 shadow-none sm:p-6"
+      className="rounded-xl border border-border bg-surface p-5 shadow-none sm:p-6"
       onSubmit={handleSubmit(submit)}
     >
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">{role.name}</h2>
-          <p className="mt-1 text-sm text-foreground-500">
+          <p className="mt-1 text-sm text-muted">
             {protectedRole
               ? t('roles.protected')
               : t('administration.roleEditor.subtitle', {
@@ -83,16 +90,16 @@ export const RoleEditor = ({
         </div>
         <div className="flex gap-2">
           {canDelete && !protectedRole ? (
-            <Button color="danger" variant="light" onPress={onDelete}>
+            <Button variant="danger" onPress={onDelete}>
               {t('administration.deleteRole', { name: role.name })}
             </Button>
           ) : null}
           {canUpdate && !protectedRole ? (
             <Button
-              color="primary"
+              variant="primary"
               size="lg"
               type="submit"
-              isLoading={isSubmitting}
+              isPending={isSubmitting}
               className="min-w-40 font-semibold"
             >
               {t('administration.roleEditor.saveChanges')}
@@ -100,34 +107,33 @@ export const RoleEditor = ({
           ) : null}
         </div>
       </div>
-      <Controller
-        control={control}
-        name="name"
-        render={({ field }) => (
-          <Input
-            className="mt-5"
-            aria-label={t('administration.roleEditor.selectedName')}
-            isDisabled={protectedRole || !canUpdate}
-            isInvalid={Boolean(errors.name)}
-            errorMessage={errors.name?.message}
-            label={t('administration.roleEditor.name')}
-            labelPlacement="outside"
-            name={field.name}
-            value={field.value}
-            onBlur={field.onBlur}
-            onValueChange={field.onChange}
-            classNames={{
-              inputWrapper:
-                'h-12 border border-divider bg-content1 shadow-none',
-            }}
-          />
-        )}
-      />
+      <TextField
+        className="mt-5"
+        isDisabled={protectedRole || !canUpdate}
+        isInvalid={Boolean(errors.name)}
+      >
+        <Label>{t('administration.roleEditor.name')}</Label>
+        <Controller
+          control={control}
+          name="name"
+          render={({ field }) => (
+            <Input
+              aria-label={t('administration.roleEditor.selectedName')}
+              className="h-12 border border-border bg-surface shadow-none"
+              name={field.name}
+              value={field.value}
+              onBlur={field.onBlur}
+              onChange={field.onChange}
+            />
+          )}
+        />
+        <FieldError>{errors.name?.message}</FieldError>
+      </TextField>
       <fieldset className="mt-6 space-y-3">
         <legend className="font-semibold">
           {t('administration.roleEditor.permissions')}
         </legend>
-        <p className="pb-2 text-sm text-foreground-500">
+        <p className="pb-2 text-sm text-muted">
           {t('administration.roleEditor.hint')}
         </p>
         <Controller
@@ -142,13 +148,13 @@ export const RoleEditor = ({
                   protectedRole || field.value.includes(permission.id);
                 return (
                   <div
-                    className={`rounded-medium px-3 py-3 ${checked ? 'bg-primary-50' : disabled ? 'bg-content2/70' : 'bg-content2'}`}
+                    className={`rounded-lg px-3 py-3 ${checked ? 'bg-accent-soft' : disabled ? 'bg-surface-secondary/70' : 'bg-surface-secondary'}`}
                     key={permission.id}
                   >
                     <Checkbox
                       isDisabled={disabled}
                       isSelected={checked}
-                      onValueChange={(value) =>
+                      onChange={(value) =>
                         field.onChange(
                           value
                             ? [...field.value, permission.id]
@@ -156,10 +162,15 @@ export const RoleEditor = ({
                         )
                       }
                     >
-                      <span className="font-medium">{permission.label}</span>
+                      <Checkbox.Content>
+                        <Checkbox.Control>
+                          <Checkbox.Indicator />
+                        </Checkbox.Control>
+                        <span className="font-medium">{permission.label}</span>
+                      </Checkbox.Content>
                     </Checkbox>
                     {permission.kind === 'reserved' ? (
-                      <p className="ml-7 text-sm text-foreground-400">
+                      <p className="ml-7 text-sm text-muted">
                         {t('administration.roleEditor.reserved')}
                       </p>
                     ) : null}
