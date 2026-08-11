@@ -72,7 +72,25 @@ accepted [Pino logging ADR](adr/27-07-2026-structured-logging-with-pino.md) and
 
 ### UI delivery
 
-HeroUI and the tokens configured by `apps/web/src/styles/hero.ts` provide the current UI foundation.
+HeroUI (v3) and the CSS-variable tokens configured in `apps/web/src/styles/global.css` provide the
+current UI foundation.
+
+The canonical source for that foundation is the `HeroUI v3 · Design System` board (`CdGdS`) in
+`docs/mockups/app.pen`: its token foundations, its `HeroUI/*` components, and its implementation
+index mapping each layer name to an `@heroui/react` import. The board is the HeroUI v3 default
+theme, so `apps/web/src/styles/global.css` implements it by importing `@heroui/react/styles` and
+overriding only what the product deliberately diverges on — it does not define a parallel palette.
+New screens are composed from `HeroUI/*` component instances rather than drawn as new frames.
+
+Design history is versioned inside the `.pen` file, not only in Git. An approved frame is immutable:
+a revision creates a new versioned frame, and the superseded frame is renamed with an `Archive / `
+prefix and retained permanently under its original node ID. Archived frames are approved-design
+knowledge — never delete one, and never delete a token an archived frame still binds, even after
+current frames stop using it. The top-level `Version history` frame indexes every current ↔
+superseded pair with node IDs and dates. As a result `docs/mockups/app.pen` legitimately holds two
+token vocabularies: the themed `semantic` set behind current frames, and the pre-v3 flat set behind
+the archive.
+
 UI-changing features follow the specification → Pencil design → explicit approval → tasks →
 implementation → visual review workflow in the root README. Backend-only work skips UI design.
 

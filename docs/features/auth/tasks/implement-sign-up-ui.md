@@ -26,7 +26,7 @@ The UI must implement approved frame `E9i5Ma` and its mobile/state companions fr
 
 ## What
 
-Build the separate sign-up route, page, React Hook Form, and genuinely shared auth shell/field presentation. Reuse HeroUI `Input`, `Button`, `Card`, `CardHeader`, `CardBody`, `Link`, semantic tokens from `styles/hero.ts`, Lucide conventions, `ROUTES`, and the RootLayout extension.
+Build the separate sign-up route, page, React Hook Form, and genuinely shared auth shell/field presentation. Reuse HeroUI `Input`, `Button`, `Card`, `CardHeader`, `CardBody`, `Link`, the semantic tokens in `apps/web/src/styles/global.css`, Lucide conventions, `ROUTES`, and the RootLayout extension.
 
 ## Definition of Done
 

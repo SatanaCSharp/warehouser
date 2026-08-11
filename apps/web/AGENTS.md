@@ -1,5 +1,16 @@
-Before implementing changes in `apps/web`, read the relevant UI-related documentation under
-`docs/system/`, including the frontend architecture documentation.
+# Web development instructions
+
+Before implementing changes in `apps/web`, read
+[`docs/system/web-index.md`](../../docs/system/web-index.md). It is the table of contents of every
+system document that governs `apps/web`, with a short description of each document and when it
+applies. Use those descriptions to select the entries that cover the change you are making, then
+read the selected documents in full before writing code. Consult the index again whenever the work
+grows into another area — state, routing, components, errors, localization, contracts, or UI — and
+read the newly relevant entries at that point. Do not rely on remembered conventions when the index
+lists a document that covers the change.
+
+`../../docs/system/frontend-architecture.md` is the baseline every other web document assumes; read
+it for any non-trivial change.
 
 Keep feature-owned Redux state with its feature under `src/modules/<module>/store/`. The root
 `src/store/` directory is only for application-wide store composition, typed hooks, and generic
@@ -10,6 +21,17 @@ and export its generated actions and reducer from `<module>.slice.ts`, and keep 
 
 For API errors, form errors, notifications, success feedback, and their translations, follow
 `../../docs/system/guides/web-error-handling.md`.
+
+When writing or refactoring a React component, follow
+`../../docs/system/guides/writing-web-components.md`: one exported component per file, small
+components with a single reason to change, no value drilled more than two hops (read data and
+capabilities through hooks at the component that uses them), flat branching instead of `if` chains
+and nested ternaries, and transient UI state owned by the control that triggers it. Use
+`../../docs/system/guides/placing-web-components.md` to decide where the resulting file goes.
+
+Before writing `@heroui/react` code, look the component up in
+`../../docs/system/guides/heroui-react-v3-docs-index.md` and read the matching file under
+`.heroui-docs/react`. What you remember about HeroUI v3 is not reliable.
 
 <!-- init-agent:start -->
 

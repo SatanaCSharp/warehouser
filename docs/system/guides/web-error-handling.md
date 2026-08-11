@@ -24,11 +24,13 @@ stack traces, database or vendor details, or other unrestricted server response 
 
 ## 2. Show API failures in error toasts
 
-Show every API failure in an error toast using `react-toastify`.
+Show every API failure in an error toast using the HeroUI v3 toast queue (`toast.danger`).
 
-Mount one `ToastContainer` in the application root. Do not add feature-local or multiple
-containers. Prevent duplicate toasts when one failure is observed by more than one layer or when
-concurrent requests report the same session-expiry failure.
+Mount one `Toast.Provider` in the application root. Do not add feature-local or multiple providers.
+Prevent duplicate toasts when one failure is observed by more than one layer or when concurrent
+requests report the same session-expiry failure. The HeroUI queue has no `toastId` equivalent, so
+the shared adapter tracks the failure codes currently on screen and clears each one from its
+`onClose` callback.
 
 An intentionally aborted request is not an API failure and must not produce a toast.
 
@@ -40,6 +42,9 @@ Keep this cross-feature adapter in `apps/web/src/shared/alerts/`. By contrast, a
 a feature-owned action belongs in `apps/web/src/modules/<module>/alerts/`. Ownership follows the
 action, not the toast library: authentication success alerts, for example, belong to the auth
 module rather than `shared/alerts/`.
+
+Import the toast queue through `shared/alerts/toast` rather than the `@heroui/react` barrel. That
+single seam is what lets a spec observe toasts without stubbing every HeroUI component it renders.
 
 For mutations, await the trigger without calling `.unwrap()` and branch on the result:
 
@@ -58,8 +63,9 @@ navigation must occur only after confirming the result contains `data`.
 
 ## 3. Present form errors through HeroUI
 
-Keep form validation errors inline using HeroUI's native validation presentation, such as
-`Form.validationErrors` or field `isInvalid` and `errorMessage`.
+Keep form validation errors inline using HeroUI v3's native validation presentation: wrap each
+field in `TextField` with `isInvalid`, and render the message through the field's `<FieldError>`
+child (not a v2-style `errorMessage` prop).
 
 Map server field errors to their corresponding controls through HeroUI and the form library. An API
 field-validation failure still receives the required error toast, but do not render an additional
@@ -69,6 +75,13 @@ custom error banner that duplicates HeroUI's field feedback.
 
 Show a success toast after every user-triggered action that completes successfully. Emit it only
 after the complete workflow succeeds, not merely after an intermediate request.
+
+Report an asynchronous action through a promise toast: a loading toast (`isLoading: true`,
+`timeout: 0`) stays on screen for as long as the request is in flight and is replaced by the
+success description once the result carries `data`. Use `alertActionPromise` in
+`shared/alerts/action-feedback.ts` rather than HeroUI's `toast.promise` — RTK Query resolves a
+failed mutation instead of rejecting it, and `toast.promise` would read that as success. A failed
+result only closes the loading toast, because §2's middleware already owns the error toast.
 
 Do not show success toasts for:
 

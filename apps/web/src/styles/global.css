@@ -1,7 +1,22 @@
 /* apps/web/src/styles/global.css */
-@import 'tailwindcss';
-@plugin './hero.ts';
-@source '../../node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}';
+
+/*
+ * Token policy — see docs/system/sad.md "UI delivery".
+ *
+ * The canonical design source is the "HeroUI v3 · Design System" board (CdGdS) in
+ * docs/mockups/app.pen. That board is the HeroUI v3 default theme, so importing
+ * '@heroui/react/styles' below IS the token layer: --background, --surface, --foreground,
+ * --muted, --accent, --default, --segment, --danger, --success, --warning, --border,
+ * --separator, --overlay, --backdrop, --radius and the spacing scale all arrive from
+ * @heroui/styles in both light and dark, expressed in oklch.
+ *
+ * Do not redeclare those variables with hand-picked values. Doing so is what previously
+ * drifted the application accent (indigo #4f46e5) away from the design system's accent, so
+ * every approved mockup and the running app disagreed. If the product genuinely needs to
+ * diverge from a HeroUI default, change it on the board first, then mirror it here for both
+ * the light and the dark selector groups.
+ */
+@import '@heroui/react/styles';
 
 html {
   color-scheme: light dark;

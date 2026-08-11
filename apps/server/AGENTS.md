@@ -1,15 +1,16 @@
 # Server development instructions
 
-Before modifying `apps/server`, read and follow:
+Before modifying `apps/server`, read `package.json` and
+[`docs/system/server-index.md`](../../docs/system/server-index.md). The index is the table of
+contents of every system document that governs `apps/server`, with a short description of each
+document and when it applies. Use those descriptions to select the entries that cover the change you
+are making, then read the selected documents in full before writing code. Consult the index again
+whenever the work grows into another area — modules, persistence, errors, contracts, logging, or
+events — and read the newly relevant entries at that point. Do not rely on remembered conventions
+when the index lists a document that covers the change.
 
-- `package.json`
-- `../../docs/system/server-architecture.md`
-- `../../docs/system/guides/adding-a-server-module.md`
-- `../../docs/system/guides/creating-a-server-repository.md`
-- `../../docs/system/guides/adding-and-using-contracts.md`
-- `../../docs/system/guides/server-error-handling.md`
-
-Follow the modular-monolith boundaries in those documents.
+`../../docs/system/server-architecture.md` is the baseline every other server document assumes; read
+it for any non-trivial change and follow the modular-monolith boundaries it defines.
 
 - Organize entity-related features under `src/<module-name>/`.
 - REST controllers and BullMQ handlers invoke use cases. They must not contain business logic or

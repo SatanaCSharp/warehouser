@@ -12,7 +12,9 @@
       "placeholder": "Create a password",
       "help": "8–128 characters; spaces are significant",
       "show": "Show password",
-      "hide": "Hide password"
+      "hide": "Hide password",
+      "showShort": "Show",
+      "hideShort": "Hide"
     },
     "warehouseName": {
       "label": "Warehouse name",

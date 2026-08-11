@@ -1,5 +1,25 @@
 DO NOT use superpowers plugin.
 
+## System documentation indexes
+
+`docs/system` holds the durable, feature-agnostic instructions for this repository. Two indexes are
+the entry points into it:
+
+- [`docs/system/web-index.md`](docs/system/web-index.md) — every system document governing
+  `apps/web`.
+- [`docs/system/server-index.md`](docs/system/server-index.md) — every system document governing
+  `apps/server`.
+
+Before implementing anything, open the index for the application you are changing (both, when the
+change spans the web/server boundary or `packages/contracts`). Each entry names a document, gives a
+short description, and states when it applies. Use those descriptions to extract the instructions
+relevant to the current task, read the selected documents in full, and follow them while
+implementing. Re-check the index whenever the work expands into an area you have not read for yet.
+Do not rely on remembered conventions when the index lists a document that covers the change.
+
+Keep both indexes current: adding, renaming, moving, or removing a document under `docs/system`
+requires updating the corresponding index entry in the same change.
+
 <!-- init-agent:start -->
 
 The repository-owned `ai/` directory is the source of truth for coding-agent workflows. Load the

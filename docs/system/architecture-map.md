@@ -1,5 +1,8 @@
 # Architecture Map
 
+Per-application entry points into this documentation set: [Web documentation index](web-index.md)
+and [Server documentation index](server-index.md).
+
 ## Repository containers
 
 | Container               | Responsibility                                            | Primary dependencies                          |

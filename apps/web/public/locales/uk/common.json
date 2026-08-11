@@ -2,5 +2,16 @@
   "auth": {
     "signOut": "Вийти",
     "signingOut": "Виходимо…"
+  },
+  "nav": {
+    "label": "Основна навігація",
+    "dashboard": "Дашборд",
+    "access": "Доступ",
+    "toggle": "Відкрити навігацію"
+  },
+  "language": {
+    "label": "Змінити мову",
+    "english": "English",
+    "ukrainian": "Українська"
   }
 }

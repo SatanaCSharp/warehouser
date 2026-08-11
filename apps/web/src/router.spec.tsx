@@ -1,4 +1,3 @@
-import { HeroUIProvider } from '@heroui/react';
 import { RouterProvider } from '@tanstack/react-router';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -11,13 +10,22 @@ import { makeStore } from 'store';
 import type { AppRouter } from 'router';
 import type { AppStore } from 'store';
 
-const toast = vi.hoisted(() => ({
-  error: vi.fn(),
-  success: vi.fn(),
-  isActive: vi.fn(() => false),
-}));
+const toast = vi.hoisted(() => {
+  const fn = vi.fn(() => 'pending-key');
+  return Object.assign(fn, {
+    // `alertApiFailure` keeps a failure code in its dedupe registry until the
+    // queue reports that toast closed. Nothing renders a toast here, so close
+    // each one on the spot and let every scenario observe its own failure.
+    danger: vi.fn((_message: unknown, options?: { onClose?: () => void }) => {
+      options?.onClose?.();
+      return 'toast-key';
+    }),
+    success: vi.fn(() => 'toast-key'),
+    close: vi.fn(),
+  });
+});
 
-vi.mock('react-toastify', () => ({ toast }));
+vi.mock('shared/alerts/toast', () => ({ toast }));
 
 type RenderedRoute = { router: AppRouter; store: AppStore };
 
@@ -37,9 +45,7 @@ const renderRoute = (initialEntry: string): RenderedRoute => {
 
   render(
     <Provider store={store}>
-      <HeroUIProvider>
-        <RouterProvider router={router} />
-      </HeroUIProvider>
+      <RouterProvider router={router} />
     </Provider>,
   );
 
@@ -85,23 +91,26 @@ describe('router', () => {
   });
 
   it('loads only role-authorized access datasets at /access', async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(
-        Response.json({
-          user: { id: '00000000-0000-4000-8000-000000000001' },
-        }),
-      )
-      .mockResolvedValueOnce(
-        Response.json({
+    // Routed by path rather than by call order: which datasets are requested is
+    // the contract here, not the order the workspace's tabs happen to ask for
+    // them in.
+    const responsesByPath: [string, unknown][] = [
+      [
+        '/auth/session',
+        { user: { id: '00000000-0000-4000-8000-000000000001' } },
+      ],
+      [
+        '/access/current',
+        {
           warehouseId: '00000000-0000-4000-8000-000000000002',
           roleId: '00000000-0000-4000-8000-000000000003',
           roleKind: 'custom',
           permissionIds: ['ROLES:WATCH'],
-        }),
-      )
-      .mockResolvedValueOnce(
-        Response.json({
+        },
+      ],
+      [
+        '/access/roles',
+        {
           items: [
             {
               id: '00000000-0000-4000-8000-000000000003',
@@ -114,18 +123,27 @@ describe('router', () => {
           hasNext: false,
           hasPrev: false,
           nextCursor: null,
-        }),
-      )
-      .mockResolvedValueOnce(
-        Response.json({
+        },
+      ],
+      [
+        '/access/permissions',
+        {
           items: [
             { id: 'ROLES:WATCH', label: 'View roles', kind: 'assignable' },
           ],
           hasNext: false,
           hasPrev: false,
           nextCursor: null,
-        }),
+        },
+      ],
+    ];
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input instanceof Request ? input.url : input);
+      const route = responsesByPath.find(([path]) => url.includes(path));
+      return Promise.resolve(
+        route ? Response.json(route[1]) : Response.json({}, { status: 404 }),
       );
+    });
     vi.stubGlobal('fetch', fetchMock);
 
     renderRoute('/access');
@@ -225,7 +243,7 @@ describe('router', () => {
     expect(
       screen.queryByRole('button', { name: 'Create role' }),
     ).not.toBeInTheDocument();
-    expect(toast.error).toHaveBeenCalled();
+    expect(toast.danger).toHaveBeenCalled();
     expect(toast.success).not.toHaveBeenCalled();
     expect(currentReads).toBeGreaterThan(1);
   });
@@ -478,7 +496,7 @@ describe('router', () => {
     await user.click(screen.getByRole('button', { name: /sign in/iu }));
 
     await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith(
+      expect(toast.danger).toHaveBeenCalledWith(
         'The email or password is incorrect.',
         expect.any(Object),
       ),
@@ -521,10 +539,7 @@ describe('router', () => {
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/login'));
     expect(store.getState().auth.status).toBe('anonymous');
-    expect(toast.success).toHaveBeenCalledWith(
-      'You have signed out.',
-      expect.any(Object),
-    );
+    expect(toast.success).toHaveBeenCalledWith('You have signed out.');
   });
 
   it('waits for restoration and admits a valid session to the protected route', async () => {

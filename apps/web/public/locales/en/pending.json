@@ -1,0 +1,17 @@
+{
+  "auth": {
+    "signOut": "Signing you out…",
+    "signUp": "Creating your account…"
+  },
+  "access": {
+    "assignRole": "Updating the member role…",
+    "changeMemberEmail": "Updating the member email…",
+    "changeMemberPassword": "Updating the member password…",
+    "createMember": "Creating the member…",
+    "createRole": "Creating the role…",
+    "deleteMember": "Removing the member…",
+    "deleteRole": "Deleting the role…",
+    "transferManager": "Transferring warehouse management…",
+    "updateRole": "Updating the role…"
+  }
+}
