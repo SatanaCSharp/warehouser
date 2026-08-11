@@ -91,23 +91,26 @@ describe('router', () => {
   });
 
   it('loads only role-authorized access datasets at /access', async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(
-        Response.json({
-          user: { id: '00000000-0000-4000-8000-000000000001' },
-        }),
-      )
-      .mockResolvedValueOnce(
-        Response.json({
+    // Routed by path rather than by call order: which datasets are requested is
+    // the contract here, not the order the workspace's tabs happen to ask for
+    // them in.
+    const responsesByPath: [string, unknown][] = [
+      [
+        '/auth/session',
+        { user: { id: '00000000-0000-4000-8000-000000000001' } },
+      ],
+      [
+        '/access/current',
+        {
           warehouseId: '00000000-0000-4000-8000-000000000002',
           roleId: '00000000-0000-4000-8000-000000000003',
           roleKind: 'custom',
           permissionIds: ['ROLES:WATCH'],
-        }),
-      )
-      .mockResolvedValueOnce(
-        Response.json({
+        },
+      ],
+      [
+        '/access/roles',
+        {
           items: [
             {
               id: '00000000-0000-4000-8000-000000000003',
@@ -120,18 +123,27 @@ describe('router', () => {
           hasNext: false,
           hasPrev: false,
           nextCursor: null,
-        }),
-      )
-      .mockResolvedValueOnce(
-        Response.json({
+        },
+      ],
+      [
+        '/access/permissions',
+        {
           items: [
             { id: 'ROLES:WATCH', label: 'View roles', kind: 'assignable' },
           ],
           hasNext: false,
           hasPrev: false,
           nextCursor: null,
-        }),
+        },
+      ],
+    ];
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input instanceof Request ? input.url : input);
+      const route = responsesByPath.find(([path]) => url.includes(path));
+      return Promise.resolve(
+        route ? Response.json(route[1]) : Response.json({}, { status: 404 }),
       );
+    });
     vi.stubGlobal('fetch', fetchMock);
 
     renderRoute('/access');

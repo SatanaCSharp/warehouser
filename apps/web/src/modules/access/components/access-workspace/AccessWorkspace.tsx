@@ -1,28 +1,43 @@
+import { Tabs } from '@heroui/react';
+import compact from 'lodash/compact';
 import { useTranslation } from 'react-i18next';
 
-import { accessWorkspaceTabs } from 'modules/access/components/access-workspace/access-tabs';
-import { AccessWorkspaceTabs } from 'modules/access/components/access-workspace/components/AccessWorkspaceTabs';
-import { useAccessWorkspace } from 'modules/access/hooks/useAccessWorkspace';
+import { MembersTab } from 'modules/access/components/access-workspace/components/members/MembersTab';
+import { PermissionsTab } from 'modules/access/components/access-workspace/components/permissions/PermissionsTab';
+import { RolesTab } from 'modules/access/components/access-workspace/components/roles/RolesTab';
+import { useAccessCapabilities } from 'modules/access/hooks/useAccessCapabilities';
 
-import type { AccessProjection } from '@warehouser/contracts/access';
-import type { ReactElement } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 
-type AccessWorkspaceProps = { access: AccessProjection };
+type WorkspaceTab = { id: string; label: string; panel: ReactNode };
 
 /**
- * Composition root of the access workspace: it loads the context its tabs read
- * from and renders the tabs the acting user may see. Which tabs exist lives in
- * `access-tabs`, what a tab shows lives in that tab's own panel, and who may do
- * what lives in `access-capabilities` — none of it is decided here.
+ * Composition root of the access workspace: it renders the tabs the acting user
+ * may see. What a tab shows lives in that tab's own component, and each tab
+ * loads the data and mutations it needs itself — none of it is decided here.
  */
-export const AccessWorkspace = ({
-  access,
-}: AccessWorkspaceProps): ReactElement => {
+export const AccessWorkspace = (): ReactElement => {
   const { t } = useTranslation('access');
-  const context = useAccessWorkspace(access);
-  const tabs = accessWorkspaceTabs.filter((tab) =>
-    tab.isVisible(context.capabilities),
-  );
+  const { canManageRoles, canReadMembers, canReadRoles } =
+    useAccessCapabilities();
+
+  const tabs = compact<WorkspaceTab>([
+    (canReadRoles || canManageRoles) && {
+      id: 'roles',
+      label: t('navigation.roles'),
+      panel: <RolesTab />,
+    },
+    canReadMembers && {
+      id: 'members',
+      label: t('navigation.members'),
+      panel: <MembersTab />,
+    },
+    canReadRoles && {
+      id: 'permissions',
+      label: t('navigation.permissions'),
+      panel: <PermissionsTab />,
+    },
+  ]);
 
   return (
     <main className="w-full bg-surface-secondary/50 px-4 py-7 sm:px-8 lg:px-12 lg:py-9">
@@ -32,8 +47,29 @@ export const AccessWorkspace = ({
         </h1>
         <p className="mt-2 text-muted">{t('description')}</p>
       </header>
+
       <div className="mx-auto max-w-[1440px]">
-        <AccessWorkspaceTabs context={context} tabs={tabs} />
+        <Tabs className="w-full">
+          <Tabs.ListContainer>
+            <Tabs.List
+              aria-label={t('navigation.label')}
+              className="gap-8 border-b border-border px-0"
+            >
+              {tabs.map(({ id, label }) => (
+                <Tabs.Tab id={id} key={id}>
+                  {label}
+                  <Tabs.Indicator />
+                </Tabs.Tab>
+              ))}
+            </Tabs.List>
+          </Tabs.ListContainer>
+
+          {tabs.map(({ id, panel }) => (
+            <Tabs.Panel className="px-0 pt-5" id={id} key={id}>
+              {panel}
+            </Tabs.Panel>
+          ))}
+        </Tabs>
       </div>
     </main>
   );

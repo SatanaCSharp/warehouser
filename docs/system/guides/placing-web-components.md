@@ -3,6 +3,9 @@
 Use this guide whenever a `modules/<module>/components/` directory (or any directory nested inside
 one) grows a second component. Read [Frontend architecture](../frontend-architecture.md) first.
 
+This guide decides where a component's file goes.
+[Writing web components](writing-web-components.md) decides what goes inside it.
+
 ## The nesting rule
 
 A component owns another component when the other component is rendered only by it — no sibling,
@@ -11,15 +14,15 @@ level down, inside a `components/` directory named after the owner:
 
 ```text
 modules/<module>/components/
-└── <Owner>.tsx              # e.g. AccessAdministration.tsx
+└── <Owner>.tsx              # e.g. AccessWorkspace.tsx
     components/
     └── <Owned>.tsx           # rendered only by <Owner>.tsx
 ```
 
-In file terms, `modules/access/components/access-administration/AccessAdministration.tsx` owns
+In file terms, `modules/access/components/access-workspace/AccessWorkspace.tsx` owns
 `MemberList.tsx`, so `MemberList.tsx` lives at
-`modules/access/components/access-administration/components/members/MemberList.tsx`, not as a
-sibling of `AccessAdministration.tsx`.
+`modules/access/components/access-workspace/components/members/MemberList.tsx`, not as a
+sibling of `AccessWorkspace.tsx`.
 
 Apply the rule recursively. If a nested component itself becomes the exclusive owner of further
 child components, repeat the same pattern one level deeper: a `components/` directory named after
@@ -45,33 +48,46 @@ components into subdirectories named for the domain/entity they act on, not for 
 not create `dialogs/`, `lists/`, `forms/` buckets — those group by what a component looks like, not
 by what a contributor is trying to change).
 
-Worked example — `AccessAdministration.tsx` coordinates two distinct actions, member administration
-and role administration, so its owned components split into `members/` and `roles/`:
+Worked example — `AccessWorkspace.tsx` coordinates three distinct domains, so its owned components
+split into `members/`, `roles/`, and `permissions/`. `CreateActionButton.tsx` serves two of them, so
+it stays at the shared `components/` root rather than inside either domain:
 
 ```text
-modules/access/components/access-administration/
-├── AccessAdministration.tsx
-├── AccessAdministration.spec.tsx
+modules/access/components/access-workspace/
+├── AccessWorkspace.tsx
+├── AccessWorkspace.spec.tsx
 └── components/
+    ├── CreateActionButton.tsx
     ├── members/
+    │   ├── CreateMemberAction.tsx
     │   ├── CreateMemberDialog.tsx
-    │   ├── CreateMemberDialog.spec.tsx
     │   ├── DeleteMemberDialog.tsx
     │   ├── EditEmailDialog.tsx
-    │   ├── EditEmailDialog.spec.tsx
+    │   ├── MemberDirectory.tsx
     │   ├── MemberList.tsx
-    │   ├── MemberList.spec.tsx
-    │   ├── MemberRoleActions.tsx
-    │   ├── ResetPasswordDialog.tsx
-    │   └── ResetPasswordDialog.spec.tsx
+    │   ├── MemberRow.tsx
+    │   ├── MembersDatasetCard.tsx
+    │   ├── MembersTab.tsx
+    │   └── ResetPasswordDialog.tsx
+    ├── permissions/
+    │   └── PermissionsTab.tsx
     └── roles/
-        ├── AssignmentDialog.tsx
-        ├── DeletionDialog.tsx
-        ├── RoleDialog.tsx
+        ├── AssignRoleDialog.tsx
+        ├── CreateRoleAction.tsx
+        ├── CreateRoleDialog.tsx
+        ├── DeleteRoleDialog.tsx
+        ├── MemberAssignmentList.tsx
+        ├── PermissionCheckbox.tsx
+        ├── RoleDirectory.tsx
         ├── RoleEditor.tsx
         ├── RoleList.tsx
-        └── TransferDialog.tsx
+        ├── RolesDatasetCard.tsx
+        ├── RolesTab.tsx
+        ├── TransferManagerAction.tsx
+        └── TransferManagerDialog.tsx
 ```
+
+(Each component's colocated `.spec.tsx` is omitted above for brevity; it sits beside its owner.)
 
 Skip the subgrouping when the owner's components all serve one domain, or when there are few enough
 to read at a glance (roughly under half a dozen) — an extra directory level for two or three files

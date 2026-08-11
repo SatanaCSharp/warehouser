@@ -33,7 +33,7 @@ export const AccessPage = (): ReactElement => {
 
   return (
     <PermissionGate fallback={denied}>
-      <AccessWorkspace access={access} />
+      <AccessWorkspace />
     </PermissionGate>
   );
 };
