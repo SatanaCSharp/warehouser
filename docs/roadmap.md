@@ -1,0 +1,40 @@
+---
+status: Living
+updated_at: '2026-08-11'
+---
+
+# Roadmap
+
+Outcomes, not a feature list and not a dated plan. Each item states the outcome we are buying and
+links to the feature folder where the solution is specified. Horizons are **Now** (in delivery),
+**Next** (committed, not started), **Later** (candidate), and **Shipped**.
+
+## Now
+
+- **An organization can operate several warehouses under one identity.** Today a user belongs to
+  exactly one warehouse and registration is the only way a warehouse can exist, so a second site
+  means a second, disconnected account. Introduces the Workspace as the boundary above the
+  Warehouse, owning the warehouse lifecycle and its own roles, permissions, and membership.
+  → [`docs/features/workspaces`](features/workspaces/spec.md) · size L · route full · status: spec drafted
+
+## Next
+
+_Nothing committed yet._
+
+## Later
+
+Candidate outcomes are captured in `docs/local/warehouse-feature-candidates.md` and
+`docs/local/warehouse-mvp-features.md`. They are feature-altitude notes rather than outcomes, and
+are promoted here as they are reframed:
+
+- Items and Locations give a warehouse something to hold.
+- Stock balances and stock movements make the warehouse's contents answerable.
+- Auditing access-management changes makes authority changes reviewable after the fact.
+
+## Shipped
+
+- **A person can prove who they are and stay signed in.** → [`docs/features/auth`](features/auth/spec.md)
+- **Every business capability is governed by one authorization boundary.** →
+  [`docs/features/access`](features/access/spec.md)
+- **A warehouse manager can staff their warehouse.** →
+  [`docs/features/users-management`](features/users-management/spec.md)
