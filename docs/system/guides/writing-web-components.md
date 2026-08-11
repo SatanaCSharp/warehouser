@@ -112,7 +112,10 @@ Read server data and derived authorization through hooks, at the component that 
 
 Do not introduce a React context to escape prop drilling for state that already lives in Redux or
 RTK Query — [Frontend architecture](../frontend-architecture.md) forbids the parallel source of
-truth, and a query hook already gives you the shared read.
+truth, and a query hook already gives you the shared read. When the value is local UI state with no
+other owner and the third hop is genuinely unavoidable, follow
+[Sharing web state with context](sharing-web-state-with-context.md): a state provider and a dispatch
+provider, consumed through named hooks at the components that use them.
 
 Props are still the right tool for:
 

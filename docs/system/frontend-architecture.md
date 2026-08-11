@@ -41,6 +41,7 @@ apps/web/src/
 │       ├── page.tsx
 │       ├── components/
 │       ├── alerts/          # module-specific user feedback adapters
+│       ├── context/         # state + handlers provider pairs; create only when drilling fails
 │       ├── hooks/           # create only when the module needs them
 │       ├── schemas/         # browser-only validation
 │       ├── api/             # module-owned server calls/query adapters
@@ -129,7 +130,11 @@ it has more than one consumer.
 ## Redux Toolkit infrastructure
 
 Redux Toolkit is the single source of truth for cross-module browser state. Do not add a parallel
-React context for state already in RTK.
+React context for state already in RTK. React context is reserved for local UI state that a subtree
+shares and that has no other owner; when that case arises, follow
+[Sharing web state with context](guides/sharing-web-state-with-context.md), which splits every
+context into a state provider and a dispatch provider and places it in `modules/<module>/context/`.
+No module defines a context today.
 
 - `store/index.ts` owns the root reducer, `makeStore()`, the production `store`, and the
   `RootState`, `AppStore`, and `AppDispatch` types.
