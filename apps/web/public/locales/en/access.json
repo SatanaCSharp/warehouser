@@ -22,8 +22,8 @@
   },
   "members": {
     "heading": "Members",
-    "listLabel": "Warehouse members"
-    ,"empty": "No members are available.",
+    "listLabel": "Warehouse members",
+    "empty": "No members are available.",
     "error": "Members could not be loaded safely. Try again.",
     "you": "You",
     "search": "Search members",
@@ -38,8 +38,8 @@
   },
   "permissions": {
     "heading": "Permissions",
-    "listLabel": "Permission catalogue"
-    ,"empty": "No permissions are available.",
+    "listLabel": "Permission catalogue",
+    "empty": "No permissions are available.",
     "error": "Permissions could not be loaded safely. Try again.",
     "items": {
       "USERS_CREATE": "Create users",
@@ -63,7 +63,6 @@
     "deleteRole": "Delete",
     "cancel": "Cancel",
     "select": "Select an option",
-    "roleSaved": "{{name}} was saved.",
     "roleEditor": {
       "createTitle": "Create role",
       "editTitle": "Edit role",
@@ -86,17 +85,14 @@
       "open": "Change role for {{userId}}",
       "title": "Assign member role",
       "role": "Role",
-      "save": "Assign role",
-      "saved": "The member role was updated."
+      "save": "Assign role"
     },
     "deletion": {
       "title": "Delete {{role}}",
       "replacement": "Replacement role",
       "unassigned": "This role has no assigned members.",
       "replaceAndDelete": "Replace and delete",
-      "confirm": "Delete role",
-      "replaced": "{{role}} was deleted and assigned members were moved to {{replacement}}.",
-      "deleted": "{{role}} was deleted."
+      "confirm": "Delete role"
     },
     "transfer": {
       "open": "Transfer manager",
@@ -105,8 +101,7 @@
       "replacement": "Your replacement role",
       "recipientSummary": "{{userId}} will become Warehouse Manager.",
       "managerSummary": "{{userId}} will become {{role}}.",
-      "save": "Transfer management",
-      "saved": "Warehouse management was transferred."
+      "save": "Transfer management"
     },
     "createMember": {
       "open": "Create member",

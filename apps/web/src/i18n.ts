@@ -9,6 +9,7 @@ export const namespaces = [
   'common',
   'errors',
   'home',
+  'pending',
   'sign-in',
   'sign-up',
   'success',

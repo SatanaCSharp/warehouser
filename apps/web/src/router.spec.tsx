@@ -10,13 +10,22 @@ import { makeStore } from 'store';
 import type { AppRouter } from 'router';
 import type { AppStore } from 'store';
 
-const toast = vi.hoisted(() => ({
-  error: vi.fn(),
-  success: vi.fn(),
-  isActive: vi.fn(() => false),
-}));
+const toast = vi.hoisted(() => {
+  const fn = vi.fn(() => 'pending-key');
+  return Object.assign(fn, {
+    // `alertApiFailure` keeps a failure code in its dedupe registry until the
+    // queue reports that toast closed. Nothing renders a toast here, so close
+    // each one on the spot and let every scenario observe its own failure.
+    danger: vi.fn((_message: unknown, options?: { onClose?: () => void }) => {
+      options?.onClose?.();
+      return 'toast-key';
+    }),
+    success: vi.fn(() => 'toast-key'),
+    close: vi.fn(),
+  });
+});
 
-vi.mock('react-toastify', () => ({ toast }));
+vi.mock('shared/alerts/toast', () => ({ toast }));
 
 type RenderedRoute = { router: AppRouter; store: AppStore };
 
@@ -222,7 +231,7 @@ describe('router', () => {
     expect(
       screen.queryByRole('button', { name: 'Create role' }),
     ).not.toBeInTheDocument();
-    expect(toast.error).toHaveBeenCalled();
+    expect(toast.danger).toHaveBeenCalled();
     expect(toast.success).not.toHaveBeenCalled();
     expect(currentReads).toBeGreaterThan(1);
   });
@@ -475,7 +484,7 @@ describe('router', () => {
     await user.click(screen.getByRole('button', { name: /sign in/iu }));
 
     await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith(
+      expect(toast.danger).toHaveBeenCalledWith(
         'The email or password is incorrect.',
         expect.any(Object),
       ),
@@ -518,10 +527,7 @@ describe('router', () => {
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/login'));
     expect(store.getState().auth.status).toBe('anonymous');
-    expect(toast.success).toHaveBeenCalledWith(
-      'You have signed out.',
-      expect.any(Object),
-    );
+    expect(toast.success).toHaveBeenCalledWith('You have signed out.');
   });
 
   it('waits for restoration and admits a valid session to the protected route', async () => {

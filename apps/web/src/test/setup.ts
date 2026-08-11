@@ -7,6 +7,7 @@ import enAccess from '../../public/locales/en/access.json';
 import enCommon from '../../public/locales/en/common.json';
 import enErrors from '../../public/locales/en/errors.json';
 import enHome from '../../public/locales/en/home.json';
+import enPending from '../../public/locales/en/pending.json';
 import enSignIn from '../../public/locales/en/sign-in.json';
 import enSignUp from '../../public/locales/en/sign-up.json';
 import enSuccess from '../../public/locales/en/success.json';
@@ -15,6 +16,7 @@ import ukAccess from '../../public/locales/uk/access.json';
 import ukCommon from '../../public/locales/uk/common.json';
 import ukErrors from '../../public/locales/uk/errors.json';
 import ukHome from '../../public/locales/uk/home.json';
+import ukPending from '../../public/locales/uk/pending.json';
 import ukSignIn from '../../public/locales/uk/sign-in.json';
 import ukSignUp from '../../public/locales/uk/sign-up.json';
 import ukSuccess from '../../public/locales/uk/success.json';
@@ -25,6 +27,7 @@ const localeResponses: Record<string, object> = {
   '/locales/en/common.json': enCommon,
   '/locales/en/errors.json': enErrors,
   '/locales/en/home.json': enHome,
+  '/locales/en/pending.json': enPending,
   '/locales/en/sign-in.json': enSignIn,
   '/locales/en/sign-up.json': enSignUp,
   '/locales/en/success.json': enSuccess,
@@ -33,6 +36,7 @@ const localeResponses: Record<string, object> = {
   '/locales/uk/common.json': ukCommon,
   '/locales/uk/errors.json': ukErrors,
   '/locales/uk/home.json': ukHome,
+  '/locales/uk/pending.json': ukPending,
   '/locales/uk/sign-in.json': ukSignIn,
   '/locales/uk/sign-up.json': ukSignUp,
   '/locales/uk/success.json': ukSuccess,

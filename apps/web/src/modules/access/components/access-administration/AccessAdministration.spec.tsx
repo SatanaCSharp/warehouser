@@ -168,7 +168,7 @@ describe('AccessAdministration', () => {
     ).toBeInTheDocument();
   });
 
-  it('requires a replacement when deleting an assigned role and announces success', async () => {
+  it('requires a replacement when deleting an assigned role and closes on success', async () => {
     const user = userEvent.setup();
     const props = renderAdministration();
 
@@ -191,8 +191,10 @@ describe('AccessAdministration', () => {
       pickerRoleId,
       auditorRoleId,
     );
-    expect(await screen.findByRole('status')).toHaveTextContent(
-      'Picker was deleted and assigned members were moved to Auditor.',
+    // Success is reported by the mutation's toast, so all the surface owes the
+    // actor here is a dismissed dialog.
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
     );
   });
 
@@ -207,7 +209,7 @@ describe('AccessAdministration', () => {
     ).toHaveAttribute('data-required', 'true');
   });
 
-  it('keeps a failed workflow open and does not announce success', async () => {
+  it('keeps a failed workflow open instead of reporting success', async () => {
     const user = userEvent.setup();
     renderAdministration({
       onSaveRole: vi.fn().mockResolvedValue({ success: false }),
@@ -219,7 +221,6 @@ describe('AccessAdministration', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Save role' }));
 
     expect(screen.getByRole('dialog', { name: 'Create role' })).toBeVisible();
-    expect(screen.getByRole('status', { hidden: true })).toBeEmptyDOMElement();
   });
 
   it.each([

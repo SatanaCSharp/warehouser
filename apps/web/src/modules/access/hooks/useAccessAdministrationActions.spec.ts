@@ -3,14 +3,16 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { useAccessAdministrationActions } from 'modules/access/hooks/useAccessAdministrationActions';
 
-const alertAccessSuccess = vi.hoisted(() => vi.fn());
+const alertAccessAction = vi.hoisted(() =>
+  vi.fn(async (_action: string, request: Promise<unknown>) => request),
+);
 const createMember = vi.hoisted(() => vi.fn());
 const changeMemberEmail = vi.hoisted(() => vi.fn());
 const changeMemberPassword = vi.hoisted(() => vi.fn());
 const deleteMember = vi.hoisted(() => vi.fn());
 
 vi.mock('modules/access/alerts/access-feedback', () => ({
-  alertAccessSuccess,
+  alertAccessAction,
 }));
 
 vi.mock('modules/access/api/access-api', () => ({
@@ -49,7 +51,10 @@ describe('useAccessAdministrationActions members', () => {
       roleId,
     });
     expect(outcome).toEqual({ success: true });
-    expect(alertAccessSuccess).toHaveBeenCalledWith('createMember');
+    expect(alertAccessAction).toHaveBeenCalledWith(
+      'createMember',
+      expect.anything(),
+    );
   });
 
   it('maps field errors when member creation fails', async () => {
@@ -71,7 +76,6 @@ describe('useAccessAdministrationActions members', () => {
       success: false,
       fieldErrors: { email: 'validation.email.taken' },
     });
-    expect(alertAccessSuccess).not.toHaveBeenCalled();
   });
 
   // Real `users.*` denial responses (once mapped through the global HTTP
@@ -94,7 +98,6 @@ describe('useAccessAdministrationActions members', () => {
       });
 
       expect(outcome).toEqual({ success: false, fieldErrors });
-      expect(alertAccessSuccess).not.toHaveBeenCalled();
     },
   );
 
@@ -112,7 +115,6 @@ describe('useAccessAdministrationActions members', () => {
       });
 
       expect(outcome).toEqual({ success: false, fieldErrors });
-      expect(alertAccessSuccess).not.toHaveBeenCalled();
     },
   );
 
@@ -130,7 +132,6 @@ describe('useAccessAdministrationActions members', () => {
       });
 
       expect(outcome).toEqual({ success: false, fieldErrors });
-      expect(alertAccessSuccess).not.toHaveBeenCalled();
     },
   );
 
@@ -149,7 +150,10 @@ describe('useAccessAdministrationActions members', () => {
       input: { email: 'new@example.test' },
     });
     expect(outcome).toEqual({ success: true });
-    expect(alertAccessSuccess).toHaveBeenCalledWith('changeMemberEmail');
+    expect(alertAccessAction).toHaveBeenCalledWith(
+      'changeMemberEmail',
+      expect.anything(),
+    );
   });
 
   it('changes a member password and reports success', async () => {
@@ -165,7 +169,10 @@ describe('useAccessAdministrationActions members', () => {
       input: { password: 'newpassword123' },
     });
     expect(outcome).toEqual({ success: true });
-    expect(alertAccessSuccess).toHaveBeenCalledWith('changeMemberPassword');
+    expect(alertAccessAction).toHaveBeenCalledWith(
+      'changeMemberPassword',
+      expect.anything(),
+    );
   });
 
   it('deletes a member and reports success', async () => {
@@ -176,7 +183,10 @@ describe('useAccessAdministrationActions members', () => {
 
     expect(deleteMember).toHaveBeenCalledWith(userId);
     expect(outcome).toEqual({ success: true });
-    expect(alertAccessSuccess).toHaveBeenCalledWith('deleteMember');
+    expect(alertAccessAction).toHaveBeenCalledWith(
+      'deleteMember',
+      expect.anything(),
+    );
   });
 
   it('reports failure without a success toast when member deletion fails', async () => {
@@ -188,6 +198,5 @@ describe('useAccessAdministrationActions members', () => {
     const outcome = await result.current.onDeleteMember(userId);
 
     expect(outcome).toEqual({ success: false, fieldErrors: undefined });
-    expect(alertAccessSuccess).not.toHaveBeenCalled();
   });
 });

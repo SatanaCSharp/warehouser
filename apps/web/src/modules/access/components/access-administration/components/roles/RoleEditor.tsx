@@ -6,7 +6,6 @@ import {
   Label,
   TextField,
 } from '@heroui/react';
-import { useEffect } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
@@ -32,6 +31,11 @@ type RoleEditorProps = {
 
 type RoleForm = { name: string; permissionIds: string[] };
 
+/**
+ * Editor for one selected role. It seeds itself from `role` once: the caller
+ * keys it by role id, so selecting another role mounts a fresh editor instead
+ * of resetting this one.
+ */
 export const RoleEditor = ({
   canDelete,
   canUpdate,
@@ -45,7 +49,6 @@ export const RoleEditor = ({
     control,
     formState: { errors, isSubmitting },
     handleSubmit,
-    reset,
     setError,
   } = useForm<RoleForm>({
     defaultValues: { name: role.name, permissionIds: role.permissionIds },
@@ -54,10 +57,6 @@ export const RoleEditor = ({
   const translateValidation = (code: string): string =>
     t(`administration.roleEditor.validation.${code}`);
   const protectedRole = role.kind === 'warehouse_manager';
-
-  useEffect(() => {
-    reset({ name: role.name, permissionIds: role.permissionIds });
-  }, [reset, role]);
 
   const submit = async ({ name, permissionIds }: RoleForm): Promise<void> => {
     const parsed = parseRoleForm(name, permissionIds);

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import { FormModalDialog } from 'shared/components/FormModalDialog';
@@ -7,7 +7,7 @@ import type {
   AccessMember,
   MutationOutcome,
 } from 'modules/access/types/access-administration.types';
-import type { FormEvent, ReactElement } from 'react';
+import type { ReactElement } from 'react';
 
 type DeleteMemberDialogProps = {
   member: Pick<AccessMember, 'email' | 'userId'>;
@@ -21,13 +21,16 @@ export const DeleteMemberDialog = ({
   onDelete,
 }: DeleteMemberDialogProps): ReactElement => {
   const { t } = useTranslation('access');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // The confirmation carries no fields, but it submits like every sibling
+  // dialog — so the pending state comes from the form, not from a flag this
+  // component would have to keep in sync with the mutation itself.
+  const {
+    formState: { isSubmitting },
+    handleSubmit,
+  } = useForm();
 
-  const confirm = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
-    event.preventDefault();
-    setIsSubmitting(true);
+  const confirm = async (): Promise<void> => {
     const result = await onDelete();
-    setIsSubmitting(false);
     if (result.success) {
       onClose();
     }
@@ -41,7 +44,7 @@ export const DeleteMemberDialog = ({
       submitVariant="danger"
       isSubmitting={isSubmitting}
       onClose={onClose}
-      onSubmit={(event) => void confirm(event)}
+      onSubmit={handleSubmit(confirm)}
     >
       <p>{t('administration.deleteMember.body', { email: member.email })}</p>
     </FormModalDialog>
