@@ -4,6 +4,7 @@ import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user'
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
 import {
+  workspaceArchivalUnavailableError,
   workspaceLastUnarchivedWarehouseError,
   workspaceTargetUnavailableError,
 } from 'workspaces/domain/errors/workspace.errors';
@@ -52,10 +53,18 @@ export class ArchiveWarehouseCommand {
       workspaceLastUnarchivedWarehouseError(),
     );
 
-    await this.warehouseLifecycleRepository.setArchivedAt(
-      input.warehouseId,
-      new Date(),
-    );
+    // AC-13 — a failure writing the archived state is a known
+    // infrastructure/technical condition (server-error-handling.md §2), not
+    // a business rejection, so it translates into the documented 503,
+    // preserving the originating failure as `cause`.
+    try {
+      await this.warehouseLifecycleRepository.setArchivedAt(
+        input.warehouseId,
+        new Date(),
+      );
+    } catch (cause) {
+      throw workspaceArchivalUnavailableError(cause);
+    }
 
     return { warehouseId: input.warehouseId };
   }

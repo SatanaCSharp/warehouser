@@ -1,5 +1,6 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
+import { SystemError } from '@warehouser/shared-types/errors';
 import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
 import {
   TRANSACTIONAL_KEY,
@@ -117,5 +118,62 @@ describe('CreateWarehouseCommand', () => {
         CreateWarehouseCommand.prototype.execute,
       ) as TransactionalMetadata | undefined,
     ).toBeDefined();
+  });
+
+  // T43/AC-07 — the Warehouse row write itself fails (an infrastructure
+  // failure, not a business rejection per server-error-handling.md §2), so
+  // the whole outcome rolls back (openapi.yaml's documented 503
+  // `workspace.warehouse_creation_unavailable`). Neither `workspace.errors.ts`
+  // nor the command currently translates this: today the raw repository
+  // failure propagates untouched, which the global filter falls back to a
+  // generic 500 for, not the documented 503 + stable code.
+  it('AC-07: translates a Warehouse-row write failure into the documented 503 SystemError, preserving the cause', async () => {
+    const warehouseLifecycleRepository = warehouseLifecycleRepositoryDouble();
+    const writeFailure = new Error('connection terminated');
+    warehouseLifecycleRepository.createWarehouse.mockRejectedValueOnce(
+      writeFailure,
+    );
+    const provisionInitialAccess = provisionInitialAccessDouble();
+    const command = new CreateWarehouseCommand(
+      warehouseLifecycleRepository,
+      provisionInitialAccess,
+      { warehouseId: () => warehouseId },
+    );
+
+    const rejection = command.execute(currentUser(), {
+      name: 'Test Warehouse North',
+    });
+
+    await expect(rejection).rejects.toBeInstanceOf(SystemError);
+    await expect(rejection).rejects.toMatchObject({
+      code: ErrorCode.WORKSPACE_WAREHOUSE_CREATION_UNAVAILABLE,
+      cause: writeFailure,
+    });
+    expect(provisionInitialAccess.execute).not.toHaveBeenCalled();
+  });
+
+  // T43/AC-07 — the same translation applies when the Manager Role or its
+  // assignment (the provisioning delegate) is what fails to establish, since
+  // AC-07 requires that no Warehouse is left behind either way.
+  it('AC-07: translates a failure establishing the Manager Role/assignment into the documented 503 SystemError', async () => {
+    const warehouseLifecycleRepository = warehouseLifecycleRepositoryDouble();
+    const provisionInitialAccess = provisionInitialAccessDouble();
+    const provisioningFailure = new Error('manager role assignment failed');
+    provisionInitialAccess.execute.mockRejectedValueOnce(provisioningFailure);
+    const command = new CreateWarehouseCommand(
+      warehouseLifecycleRepository,
+      provisionInitialAccess,
+      { warehouseId: () => warehouseId },
+    );
+
+    const rejection = command.execute(currentUser(), {
+      name: 'Test Warehouse North',
+    });
+
+    await expect(rejection).rejects.toBeInstanceOf(SystemError);
+    await expect(rejection).rejects.toMatchObject({
+      code: ErrorCode.WORKSPACE_WAREHOUSE_CREATION_UNAVAILABLE,
+      cause: provisioningFailure,
+    });
   });
 });
