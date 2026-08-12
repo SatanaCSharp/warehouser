@@ -16,9 +16,9 @@ import type { ReactElement } from 'react';
  */
 export const CreateMemberAction = (): ReactElement | null => {
   const { t } = useTranslation('access');
-  const { canCreateMembers } = useAccessCapabilities();
+  const { canCreateMembers, isArchived, warehouseId } = useAccessCapabilities();
   const roles = useAccessRoles();
-  const createMember = useCreateMember();
+  const createMember = useCreateMember(warehouseId ?? '');
   const [isOpen, setIsOpen] = useState(false);
 
   if (!canCreateMembers) {
@@ -28,10 +28,12 @@ export const CreateMemberAction = (): ReactElement | null => {
   return (
     <>
       <CreateActionButton
+        isDisabled={isArchived}
         label={t('administration.createMember.open')}
+        reason={t('archived.reason')}
         onPress={() => setIsOpen(true)}
       />
-      {isOpen ? (
+      {isOpen && !isArchived ? (
         <CreateMemberDialog
           roles={roles.items}
           onClose={() => setIsOpen(false)}

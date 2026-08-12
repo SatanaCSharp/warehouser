@@ -46,6 +46,7 @@ const readableAccess = {
 const withWorkspaceContext = (
   requestScript: ReturnType<typeof vi.fn>,
   workspacePermissionIds: readonly WorkspacePermissionId[] = [],
+  effectiveWarehouseId: string | null = null,
 ): ReturnType<typeof vi.fn> =>
   vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input instanceof Request ? input.url : input);
@@ -58,7 +59,7 @@ const withWorkspaceContext = (
           },
           workspacePermissionIds,
           warehouses: [],
-          effectiveWarehouseId: null,
+          effectiveWarehouseId,
         }),
       );
     }
@@ -127,6 +128,18 @@ describe('router', () => {
       [
         '/auth/session',
         { user: { id: '00000000-0000-4000-8000-000000000001' } },
+      ],
+      [
+        '/workspace/context',
+        {
+          workspace: {
+            id: '00000000-0000-4000-8000-000000000020',
+            name: 'Acme Logistics',
+          },
+          workspacePermissionIds: [],
+          warehouses: [],
+          effectiveWarehouseId: '00000000-0000-4000-8000-000000000002',
+        },
       ],
       [
         '/access/current',
@@ -212,7 +225,20 @@ describe('router', () => {
           }),
         );
       }
-      if (url.endsWith('/api/v1/access/current')) {
+      if (url.includes('/api/v1/workspace/context')) {
+        return Promise.resolve(
+          Response.json({
+            workspace: {
+              id: '00000000-0000-4000-8000-000000000020',
+              name: 'Acme Logistics',
+            },
+            workspacePermissionIds: [],
+            warehouses: [],
+            effectiveWarehouseId: readableAccess.warehouseId,
+          }),
+        );
+      }
+      if (url.endsWith('/access/current')) {
         currentReads += 1;
         return Promise.resolve(
           Response.json({
@@ -221,7 +247,7 @@ describe('router', () => {
           }),
         );
       }
-      if (url.endsWith('/api/v1/access/roles') && init?.method === 'POST') {
+      if (url.endsWith('/access/roles') && init?.method === 'POST') {
         return Promise.resolve(
           Response.json(
             { code: 'access.denied', message: 'Access denied' },
@@ -229,7 +255,7 @@ describe('router', () => {
           ),
         );
       }
-      if (url.endsWith('/api/v1/access/roles')) {
+      if (url.endsWith('/access/roles')) {
         return Promise.resolve(
           Response.json({
             items: [
@@ -247,7 +273,7 @@ describe('router', () => {
           }),
         );
       }
-      if (url.endsWith('/api/v1/access/permissions')) {
+      if (url.endsWith('/access/permissions')) {
         return Promise.resolve(
           Response.json({
             items: [],
@@ -295,7 +321,14 @@ describe('router', () => {
           archivedAt: null,
         }),
       );
-    vi.stubGlobal('fetch', withWorkspaceContext(fetchMock));
+    vi.stubGlobal(
+      'fetch',
+      withWorkspaceContext(
+        fetchMock,
+        [],
+        '00000000-0000-4000-8000-000000000002',
+      ),
+    );
 
     renderRoute('/access');
 
@@ -325,14 +358,27 @@ describe('router', () => {
           }),
         );
       }
-      if (url.endsWith('/api/v1/access/current')) {
+      if (url.includes('/api/v1/workspace/context')) {
+        return Promise.resolve(
+          Response.json({
+            workspace: {
+              id: '00000000-0000-4000-8000-000000000020',
+              name: 'Acme Logistics',
+            },
+            workspacePermissionIds: [],
+            warehouses: [],
+            effectiveWarehouseId: readableAccess.warehouseId,
+          }),
+        );
+      }
+      if (url.endsWith('/access/current')) {
         return Promise.resolve(
           Response.json({ ...readableAccess, permissionIds: ['USERS:WATCH'] }),
         );
       }
       // Members' Role-name lookup loads Roles even without a role-admin
       // Permission (US-07) — the Members tab is not gated on that request.
-      if (url.endsWith('/api/v1/access/roles')) {
+      if (url.endsWith('/access/roles')) {
         return Promise.resolve(
           Response.json({
             items: [],
@@ -342,7 +388,7 @@ describe('router', () => {
           }),
         );
       }
-      if (url.endsWith('/api/v1/access/members')) {
+      if (url.endsWith('/access/members')) {
         return Promise.resolve(
           Response.json({
             items: [
@@ -553,7 +599,10 @@ describe('router', () => {
             resolveSignOut = resolve;
           }),
       );
-    vi.stubGlobal('fetch', withWorkspaceContext(fetchMock));
+    vi.stubGlobal(
+      'fetch',
+      withWorkspaceContext(fetchMock, [], readableAccess.warehouseId),
+    );
     const user = userEvent.setup();
     const { router, store } = renderRoute('/login');
 
@@ -584,7 +633,10 @@ describe('router', () => {
           }),
       )
       .mockResolvedValueOnce(Response.json(readableAccess));
-    vi.stubGlobal('fetch', withWorkspaceContext(fetchMock));
+    vi.stubGlobal(
+      'fetch',
+      withWorkspaceContext(fetchMock, [], readableAccess.warehouseId),
+    );
     const { router, store } = renderRoute('/');
 
     expect(store.getState().auth.status).toBe('unknown');

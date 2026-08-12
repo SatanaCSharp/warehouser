@@ -16,16 +16,19 @@ export const useAccessMembers = (): AccessDataset<AccessMember> => {
     canManageMemberLifecycle,
     canReadMembers,
     canTransferManager,
+    warehouseId,
   } = useAccessCapabilities();
 
   return toAccessDataset(
-    useListAccessMembersQuery(undefined, {
-      skip: !(
-        canReadMembers ||
-        canAssignRoles ||
-        canTransferManager ||
-        canManageMemberLifecycle
-      ),
+    useListAccessMembersQuery(warehouseId ?? '', {
+      skip:
+        warehouseId === undefined ||
+        !(
+          canReadMembers ||
+          canAssignRoles ||
+          canTransferManager ||
+          canManageMemberLifecycle
+        ),
     }),
   );
 };

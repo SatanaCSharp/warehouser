@@ -21,13 +21,17 @@ const fieldErrorsByCode: Record<string, Record<string, string>> = {
 
 const fieldErrorsFor: FieldErrorMap = (code) => fieldErrorsByCode[code];
 
-/** Adds a member to the Warehouse with an initial password and Role. */
-export const useCreateMember = (): CreateMember => {
+/** Adds a member to the named Warehouse with an initial password and Role. */
+export const useCreateMember = (warehouseId: string): CreateMember => {
   const [createMember] = useCreateMemberMutation();
 
   return useCallback(
     (input) =>
-      runAccessMutation('createMember', createMember(input), fieldErrorsFor),
-    [createMember],
+      runAccessMutation(
+        'createMember',
+        createMember({ warehouseId, input }),
+        fieldErrorsFor,
+      ),
+    [createMember, warehouseId],
   );
 };

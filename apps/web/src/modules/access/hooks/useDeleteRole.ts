@@ -10,16 +10,19 @@ export type DeleteRole = (
   replacementRoleId: string | null,
 ) => Promise<MutationOutcome>;
 
-/** Deletes a Role, moving its members to `replacementRoleId` when it has any. */
-export const useDeleteRole = (): DeleteRole => {
+/**
+ * Deletes a Role in the named Warehouse, moving its members to
+ * `replacementRoleId` when it has any.
+ */
+export const useDeleteRole = (warehouseId: string): DeleteRole => {
   const [deleteRole] = useDeleteAccessRoleMutation();
 
   return useCallback(
     (roleId, replacementRoleId) =>
       runAccessMutation(
         'deleteRole',
-        deleteRole({ roleId, input: { replacementRoleId } }),
+        deleteRole({ warehouseId, roleId, input: { replacementRoleId } }),
       ),
-    [deleteRole],
+    [deleteRole, warehouseId],
   );
 };

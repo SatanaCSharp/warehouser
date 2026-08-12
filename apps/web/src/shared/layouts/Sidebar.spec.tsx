@@ -36,11 +36,25 @@ const baseAccess: AccessProjection = {
 const stubAccess = (access: AccessProjection | null): void => {
   vi.stubGlobal(
     'fetch',
-    vi.fn(() =>
-      access
+    vi.fn((input: RequestInfo | URL) => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (url.includes('/api/v1/workspace/context')) {
+        return Promise.resolve(
+          Response.json({
+            workspace: {
+              id: '00000000-0000-4000-8000-000000000020',
+              name: 'Acme Logistics',
+            },
+            workspacePermissionIds: [],
+            warehouses: [],
+            effectiveWarehouseId: baseAccess.warehouseId,
+          }),
+        );
+      }
+      return access
         ? Promise.resolve(Response.json(access))
-        : new Promise<Response>(() => {}),
-    ),
+        : new Promise<Response>(() => {});
+    }),
   );
 };
 
@@ -56,7 +70,7 @@ const stubAccessAndWorkspace = (
     'fetch',
     vi.fn((input: RequestInfo | URL) => {
       const url = String(input instanceof Request ? input.url : input);
-      if (url.includes('/api/v1/access/current')) {
+      if (url.includes('/access/current')) {
         return Promise.resolve(
           Response.json({ ...baseAccess, permissionIds: [] }),
         );

@@ -21,7 +21,23 @@ const access: AccessProjection = {
 const stubAccess = (data: AccessProjection): void => {
   vi.stubGlobal(
     'fetch',
-    vi.fn(() => Promise.resolve(Response.json(data))),
+    vi.fn((input: RequestInfo | URL) => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (url.includes('/api/v1/workspace/context')) {
+        return Promise.resolve(
+          Response.json({
+            workspace: {
+              id: '00000000-0000-4000-8000-000000000020',
+              name: 'Acme Logistics',
+            },
+            workspacePermissionIds: [],
+            warehouses: [],
+            effectiveWarehouseId: data.warehouseId,
+          }),
+        );
+      }
+      return Promise.resolve(Response.json(data));
+    }),
   );
 };
 

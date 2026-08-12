@@ -22,17 +22,19 @@ const fieldErrorsByCode: Record<string, Record<string, string>> = {
 
 const fieldErrorsFor: FieldErrorMap = (code) => fieldErrorsByCode[code];
 
-/** Replaces one member's sign-in email. */
-export const useChangeMemberEmail = (): ChangeMemberEmail => {
+/** Replaces one member's sign-in email, within the named Warehouse (AC-05). */
+export const useChangeMemberEmail = (
+  warehouseId: string,
+): ChangeMemberEmail => {
   const [changeMemberEmail] = useChangeMemberEmailMutation();
 
   return useCallback(
     (userId, input) =>
       runAccessMutation(
         'changeMemberEmail',
-        changeMemberEmail({ userId, input }),
+        changeMemberEmail({ warehouseId, userId, input }),
         fieldErrorsFor,
       ),
-    [changeMemberEmail],
+    [changeMemberEmail, warehouseId],
   );
 };

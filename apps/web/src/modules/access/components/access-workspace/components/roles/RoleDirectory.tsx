@@ -30,11 +30,15 @@ export const RoleDirectory = ({
   permissions,
   roles,
 }: RoleDirectoryProps): ReactElement => {
-  const { canDeleteRoles, canUpdateRoles } = useAccessCapabilities();
-  const saveRole = useSaveRole();
-  const deleteRole = useDeleteRole();
+  const { canDeleteRoles, canUpdateRoles, isArchived, warehouseId } =
+    useAccessCapabilities();
+  const saveRole = useSaveRole(warehouseId ?? '');
+  const deleteRole = useDeleteRole(warehouseId ?? '');
+  // An archived Warehouse's Roles start unselected: nothing here is editable,
+  // so nothing opens the editor pane by default (AC-12a) — the actor still
+  // reads a Role's grants by selecting it from the list.
   const [selectedRoleId, setSelectedRoleId] = useState(() =>
-    defaultRoleId(roles),
+    isArchived ? undefined : defaultRoleId(roles),
   );
   const [rolePendingDeletion, setRolePendingDeletion] =
     useState<AccessRole | null>(null);
@@ -56,8 +60,8 @@ export const RoleDirectory = ({
         // progress on the Role that is still selected.
         <RoleEditor
           key={selectedRole.id}
-          canDelete={canDeleteRoles}
-          canUpdate={canUpdateRoles}
+          canDelete={canDeleteRoles && !isArchived}
+          canUpdate={canUpdateRoles && !isArchived}
           permissions={permissions}
           role={selectedRole}
           onDelete={() => setRolePendingDeletion(selectedRole)}

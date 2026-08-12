@@ -13,6 +13,7 @@ vi.mock('modules/access/api/access-api', () => ({
   useChangeMemberPasswordMutation: () => [changeMemberPassword, {}],
 }));
 
+const warehouseId = '00000000-0000-4000-8000-000000000010';
 const userId = '00000000-0000-4000-8000-000000000001';
 const input = { password: 'newpassword123' };
 
@@ -23,11 +24,15 @@ describe('useChangeMemberPassword', () => {
 
   it('changes a member password and reports success', async () => {
     changeMemberPassword.mockResolvedValue({ data: { userId } });
-    const { result } = renderHook(() => useChangeMemberPassword());
+    const { result } = renderHook(() => useChangeMemberPassword(warehouseId));
 
     const outcome = await result.current(userId, input);
 
-    expect(changeMemberPassword).toHaveBeenCalledWith({ userId, input });
+    expect(changeMemberPassword).toHaveBeenCalledWith({
+      warehouseId,
+      userId,
+      input,
+    });
     expect(outcome).toEqual({ success: true });
     expect(alertAccessAction).toHaveBeenCalledWith(
       'changeMemberPassword',
@@ -40,7 +45,7 @@ describe('useChangeMemberPassword', () => {
     ['users.permission_exceeded', { password: 'exceeded' }],
   ])('maps the raw code %s to a field error', async (code, fieldErrors) => {
     changeMemberPassword.mockResolvedValue({ error: { code } });
-    const { result } = renderHook(() => useChangeMemberPassword());
+    const { result } = renderHook(() => useChangeMemberPassword(warehouseId));
 
     expect(await result.current(userId, input)).toEqual({
       success: false,

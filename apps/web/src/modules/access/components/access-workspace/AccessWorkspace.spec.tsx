@@ -94,3 +94,56 @@ describe('AccessWorkspace', () => {
     ).toBeInTheDocument();
   });
 });
+
+describe('AccessWorkspace archived Warehouse (AC-12, AC-12a, AC-36)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const archivedAt = '2026-08-01T00:00:00.000Z';
+
+  it('marks the page archived and keeps its retained Roles readable, without a Restore control (AC-12a)', async () => {
+    stubAccessServer({ archivedAt });
+
+    renderWithProviders(<AccessWorkspace />, authenticatedStore());
+
+    expect(await screen.findByText('Archived')).toBeInTheDocument();
+    // Reads still work: the Warehouse's retained Roles remain visible.
+    expect(await screen.findByText('Picker')).toBeInTheDocument();
+    // Restoring is the Warehouse record's own operation and lives on the
+    // Workspace surface, not here.
+    expect(
+      screen.queryByRole('button', { name: /restore/iu }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('disables mutating controls that change what the archived Warehouse owns and exposes why (AC-12)', async () => {
+    stubAccessServer({ archivedAt });
+
+    renderWithProviders(<AccessWorkspace />, authenticatedStore());
+
+    const createRole = await screen.findByRole('button', {
+      name: 'Create role',
+    });
+    expect(createRole).toBeDisabled();
+    expect(screen.getByText(/archived/iu)).toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('tab', { name: 'Members' }));
+    const createMember = await screen.findByRole('button', {
+      name: 'Create member',
+    });
+    expect(createMember).toBeDisabled();
+  });
+
+  it('keeps the Warehouse Manager transfer available and enabled on an archived Warehouse (AC-36)', async () => {
+    stubAccessServer({ archivedAt });
+
+    renderWithProviders(<AccessWorkspace />, authenticatedStore());
+
+    const transfer = await screen.findByRole('button', {
+      name: 'Transfer manager',
+    });
+    expect(transfer).toBeEnabled();
+  });
+});

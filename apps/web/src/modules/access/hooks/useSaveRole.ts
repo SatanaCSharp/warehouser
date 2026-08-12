@@ -14,8 +14,8 @@ export type SaveRole = (
   roleId?: string,
 ) => Promise<MutationOutcome>;
 
-/** Creates a Role, or updates the one named by `roleId`. */
-export const useSaveRole = (): SaveRole => {
+/** Creates a Role, or updates the one named by `roleId`, in the named Warehouse. */
+export const useSaveRole = (warehouseId: string): SaveRole => {
   const [createRole] = useCreateAccessRoleMutation();
   const [updateRole] = useUpdateAccessRoleMutation();
 
@@ -23,8 +23,10 @@ export const useSaveRole = (): SaveRole => {
     (input, roleId) =>
       runAccessMutation(
         roleId ? 'updateRole' : 'createRole',
-        roleId ? updateRole({ roleId, input }) : createRole(input),
+        roleId
+          ? updateRole({ warehouseId, roleId, input })
+          : createRole({ warehouseId, input }),
       ),
-    [createRole, updateRole],
+    [createRole, updateRole, warehouseId],
   );
 };

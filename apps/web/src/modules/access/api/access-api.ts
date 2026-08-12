@@ -13,7 +13,9 @@ import {
 } from '@warehouser/contracts/users';
 
 import { api } from 'shared/api/api-client';
+import { warehousePath } from 'shared/api/warehouse-path';
 
+import type { TagDescription } from '@reduxjs/toolkit/query';
 import type {
   ManagerTransfer,
   ManagerTransferResult,
@@ -35,109 +37,164 @@ import type {
 
 type Role = RolePage['items'][number];
 type Member = MemberPage['items'][number];
-type RoleMutation = { roleId: string; input: RoleWrite };
-type RoleDeletionMutation = { roleId: string; input: RoleDeletion };
-type RoleAssignmentMutation = { userId: string; input: RoleAssignment };
-type EmailChangeMutation = { userId: string; input: EmailChangeInput };
-type PasswordChangeMutation = { userId: string; input: PasswordChangeInput };
 
-const ACCESS_PATH = '/api/v1/access';
-const USERS_PATH = '/api/v1/users';
+/** Every Warehouse-scoped request names the Warehouse it acts in (AC-05). */
+type InWarehouse<TRest = unknown> = { warehouseId: string } & TRest;
+type RoleMutation = InWarehouse<{ roleId: string; input: RoleWrite }>;
+type RoleDeletionMutation = InWarehouse<{
+  roleId: string;
+  input: RoleDeletion;
+}>;
+type RoleAssignmentMutation = InWarehouse<{
+  userId: string;
+  input: RoleAssignment;
+}>;
+type EmailChangeMutation = InWarehouse<{
+  userId: string;
+  input: EmailChangeInput;
+}>;
+type PasswordChangeMutation = InWarehouse<{
+  userId: string;
+  input: PasswordChangeInput;
+}>;
+
+const accessPath = (warehouseId: string, resource: string): string =>
+  warehousePath(warehouseId, `access/${resource}`);
+
+const usersPath = (warehouseId: string, resource = ''): string =>
+  warehousePath(warehouseId, `users${resource ? `/${resource}` : ''}`);
+
+/**
+ * The cached views one Warehouse mutation can invalidate, each scoped to that
+ * Warehouse so a change here never discards another Warehouse's data.
+ *
+ * The tags are returned whether the mutation committed or was refused, which is
+ * what refreshes the actor's capability projection after a denial: authority
+ * lost mid-session (`design-handoff.md` `OD62T`) must stop being offered, and
+ * the denial itself is the only signal the web gets that it changed.
+ */
+const warehouseTags =
+  (...types: ('AccessMembers' | 'CurrentAccess' | 'Roles')[]) =>
+  (
+    _result: unknown,
+    _error: unknown,
+    { warehouseId }: InWarehouse,
+  ): TagDescription<'AccessMembers' | 'CurrentAccess' | 'Roles'>[] =>
+    types.map((type) => ({ type, id: warehouseId }));
 
 export const accessApi = api.injectEndpoints({
   endpoints: (build) => ({
-    listAccessRoles: build.query<RolePage, void>({
-      query: () => `${ACCESS_PATH}/roles`,
+    listAccessRoles: build.query<RolePage, string>({
+      query: (warehouseId) => accessPath(warehouseId, 'roles'),
       extraOptions: { schema: rolePageSchema },
-      providesTags: ['Roles'],
+      providesTags: (_result, _error, warehouseId) => [
+        { type: 'Roles', id: warehouseId },
+      ],
     }),
-    listAccessPermissions: build.query<PermissionPage, void>({
-      query: () => `${ACCESS_PATH}/permissions`,
+    listAccessPermissions: build.query<PermissionPage, string>({
+      query: (warehouseId) => accessPath(warehouseId, 'permissions'),
       extraOptions: { schema: permissionPageSchema },
-      providesTags: ['Permissions'],
+      providesTags: (_result, _error, warehouseId) => [
+        { type: 'Permissions', id: warehouseId },
+      ],
     }),
-    listAccessMembers: build.query<MemberPage, void>({
-      query: () => `${ACCESS_PATH}/members`,
+    listAccessMembers: build.query<MemberPage, string>({
+      query: (warehouseId) => accessPath(warehouseId, 'members'),
       extraOptions: { schema: memberPageSchema },
-      providesTags: ['AccessMembers'],
+      providesTags: (_result, _error, warehouseId) => [
+        { type: 'AccessMembers', id: warehouseId },
+      ],
     }),
-    createAccessRole: build.mutation<Role, RoleWrite>({
-      query: (body) => ({ url: `${ACCESS_PATH}/roles`, method: 'POST', body }),
+    createAccessRole: build.mutation<Role, InWarehouse<{ input: RoleWrite }>>({
+      query: ({ warehouseId, input }) => ({
+        url: accessPath(warehouseId, 'roles'),
+        method: 'POST',
+        body: input,
+      }),
       extraOptions: { schema: roleMutationResultSchema },
-      invalidatesTags: ['Roles', 'CurrentAccess'],
+      invalidatesTags: warehouseTags('Roles', 'CurrentAccess'),
     }),
     updateAccessRole: build.mutation<Role, RoleMutation>({
-      query: ({ roleId, input }) => ({
-        url: `${ACCESS_PATH}/roles/${roleId}`,
+      query: ({ warehouseId, roleId, input }) => ({
+        url: accessPath(warehouseId, `roles/${roleId}`),
         method: 'PATCH',
         body: input,
       }),
       extraOptions: { schema: roleMutationResultSchema },
-      invalidatesTags: ['Roles', 'AccessMembers', 'CurrentAccess'],
+      invalidatesTags: warehouseTags('Roles', 'AccessMembers', 'CurrentAccess'),
     }),
     deleteAccessRole: build.mutation<null, RoleDeletionMutation>({
-      query: ({ roleId, input }) => ({
-        url: `${ACCESS_PATH}/roles/${roleId}`,
+      query: ({ warehouseId, roleId, input }) => ({
+        url: accessPath(warehouseId, `roles/${roleId}`),
         method: 'DELETE',
         body: input,
       }),
       extraOptions: { emptyResponse: null },
-      invalidatesTags: ['Roles', 'AccessMembers', 'CurrentAccess'],
+      invalidatesTags: warehouseTags('Roles', 'AccessMembers', 'CurrentAccess'),
     }),
     assignAccessMemberRole: build.mutation<Member, RoleAssignmentMutation>({
-      query: ({ userId, input }) => ({
-        url: `${ACCESS_PATH}/members/${userId}/role`,
+      query: ({ warehouseId, userId, input }) => ({
+        url: accessPath(warehouseId, `members/${userId}/role`),
         method: 'PUT',
         body: input,
       }),
       extraOptions: { schema: memberMutationResultSchema },
-      invalidatesTags: ['AccessMembers', 'CurrentAccess'],
+      invalidatesTags: warehouseTags('AccessMembers', 'CurrentAccess'),
     }),
+    // Archived-tolerant by ADR 0003: the Manager transfer's subject is a
+    // membership edge, so it stays available on an archived Warehouse (AC-36).
     transferWarehouseManager: build.mutation<
       ManagerTransferResult,
-      ManagerTransfer
+      InWarehouse<{ input: ManagerTransfer }>
     >({
-      query: (body) => ({
-        url: `${ACCESS_PATH}/manager-transfer`,
+      query: ({ warehouseId, input }) => ({
+        url: accessPath(warehouseId, 'manager-transfer'),
         method: 'POST',
-        body,
+        body: input,
       }),
       extraOptions: { schema: managerTransferResultSchema },
-      invalidatesTags: ['Roles', 'AccessMembers', 'CurrentAccess'],
+      invalidatesTags: warehouseTags('Roles', 'AccessMembers', 'CurrentAccess'),
     }),
-    createMember: build.mutation<UserMember, CreateMemberInput>({
-      query: (body) => ({ url: USERS_PATH, method: 'POST', body }),
+    createMember: build.mutation<
+      UserMember,
+      InWarehouse<{ input: CreateMemberInput }>
+    >({
+      query: ({ warehouseId, input }) => ({
+        url: usersPath(warehouseId),
+        method: 'POST',
+        body: input,
+      }),
       extraOptions: { schema: memberSchema },
-      invalidatesTags: ['AccessMembers', 'CurrentAccess'],
+      invalidatesTags: warehouseTags('AccessMembers', 'CurrentAccess'),
     }),
     changeMemberEmail: build.mutation<MemberEmail, EmailChangeMutation>({
-      query: ({ userId, input }) => ({
-        url: `${USERS_PATH}/${userId}/email`,
+      query: ({ warehouseId, userId, input }) => ({
+        url: usersPath(warehouseId, `${userId}/email`),
         method: 'PATCH',
         body: input,
       }),
       extraOptions: { schema: memberEmailSchema },
-      invalidatesTags: ['AccessMembers', 'CurrentAccess'],
+      invalidatesTags: warehouseTags('AccessMembers', 'CurrentAccess'),
     }),
     changeMemberPassword: build.mutation<
       MemberConfirmation,
       PasswordChangeMutation
     >({
-      query: ({ userId, input }) => ({
-        url: `${USERS_PATH}/${userId}/password`,
+      query: ({ warehouseId, userId, input }) => ({
+        url: usersPath(warehouseId, `${userId}/password`),
         method: 'PATCH',
         body: input,
       }),
       extraOptions: { schema: memberConfirmationSchema },
-      invalidatesTags: ['AccessMembers', 'CurrentAccess'],
+      invalidatesTags: warehouseTags('AccessMembers', 'CurrentAccess'),
     }),
-    deleteMember: build.mutation<null, string>({
-      query: (userId) => ({
-        url: `${USERS_PATH}/${userId}`,
+    deleteMember: build.mutation<null, InWarehouse<{ userId: string }>>({
+      query: ({ warehouseId, userId }) => ({
+        url: usersPath(warehouseId, userId),
         method: 'DELETE',
       }),
       extraOptions: { emptyResponse: null },
-      invalidatesTags: ['AccessMembers', 'CurrentAccess'],
+      invalidatesTags: warehouseTags('AccessMembers', 'CurrentAccess'),
     }),
   }),
   overrideExisting: false,
