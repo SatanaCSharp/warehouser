@@ -20,6 +20,7 @@ export interface WorkspaceRoleWithPermissionsRead {
   readonly name: string;
   readonly kind: 'custom' | 'workspace_owner';
   readonly permissionIds: readonly string[];
+  readonly assignedMemberCount: number;
 }
 export interface WorkspacePermissionCatalogueRead {
   readonly id: string;
@@ -35,6 +36,7 @@ export interface WorkspaceMemberRead {
 export interface WorkspaceUserWithWarehousesRead {
   readonly userId: string;
   readonly warehouseIds: readonly string[];
+  readonly isWorkspaceMember: boolean;
 }
 export interface WorkspaceWarehouseRead {
   readonly id: string;
@@ -78,12 +80,21 @@ export class WorkspaceReadRepository {
         'rolePermission',
         'rolePermission.workspaceRoleId = role.id',
       )
+      .leftJoin(
+        WorkspaceMembershipEntity,
+        'membership',
+        'membership.workspaceRoleId = role.id',
+      )
       .select('role.id', 'id')
       .addSelect('role.workspaceId', 'workspaceId')
       .addSelect('role.name', 'name')
       .addSelect('role.kind', 'kind')
       .addSelect(
-        "COALESCE(array_agg(rolePermission.workspace_permission_id ORDER BY rolePermission.workspace_permission_id) FILTER (WHERE rolePermission.workspace_permission_id IS NOT NULL), '{}')",
+        'COUNT(DISTINCT membership.user_id)::int',
+        'assignedMemberCount',
+      )
+      .addSelect(
+        "COALESCE(array_agg(DISTINCT rolePermission.workspace_permission_id) FILTER (WHERE rolePermission.workspace_permission_id IS NOT NULL), '{}')",
         'permissionIds',
       )
       .where('role.workspaceId = :workspaceId', { workspaceId })
@@ -126,24 +137,40 @@ export class WorkspaceReadRepository {
   listWorkspaceUsersWithWarehouses(
     workspaceId: string,
   ): Promise<WorkspaceUserWithWarehousesRead[]> {
-    return getEntityManager(this.dataSource)
-      .getRepository(UserEntity)
-      .createQueryBuilder('user')
-      .leftJoin(
-        WarehouseMembershipEntity,
-        'membership',
-        'membership.userId = user.id AND membership.workspaceId = :workspaceId',
-        { workspaceId },
-      )
-      .select('user.id', 'userId')
-      .addSelect(
-        "COALESCE(array_agg(membership.warehouse_id ORDER BY membership.warehouse_id) FILTER (WHERE membership.warehouse_id IS NOT NULL), '{}')",
-        'warehouseIds',
-      )
-      .where('user.workspaceId = :workspaceId', { workspaceId })
-      .groupBy('user.id')
-      .orderBy('user.id', 'ASC')
-      .getRawMany<WorkspaceUserWithWarehousesRead>();
+    return (
+      getEntityManager(this.dataSource)
+        .getRepository(UserEntity)
+        .createQueryBuilder('user')
+        .leftJoin(
+          WarehouseMembershipEntity,
+          'membership',
+          'membership.userId = user.id AND membership.workspaceId = :workspaceId',
+          { workspaceId },
+        )
+        // `isWorkspaceMember` is derived from `workspace_memberships` alone
+        // (AC-21) — a separate join from the Warehouse-membership join above,
+        // never re-derived from a Warehouse-level fact, so it survives the
+        // loss of every Warehouse membership.
+        .leftJoin(
+          WorkspaceMembershipEntity,
+          'workspaceMembership',
+          'workspaceMembership.userId = user.id AND workspaceMembership.workspaceId = :workspaceId',
+          { workspaceId },
+        )
+        .select('user.id', 'userId')
+        .addSelect(
+          "COALESCE(array_agg(DISTINCT membership.warehouse_id) FILTER (WHERE membership.warehouse_id IS NOT NULL), '{}')",
+          'warehouseIds',
+        )
+        .addSelect(
+          'BOOL_OR(workspaceMembership.user_id IS NOT NULL)',
+          'isWorkspaceMember',
+        )
+        .where('user.workspaceId = :workspaceId', { workspaceId })
+        .groupBy('user.id')
+        .orderBy('user.id', 'ASC')
+        .getRawMany<WorkspaceUserWithWarehousesRead>()
+    );
   }
 
   listWorkspaceWarehouses(

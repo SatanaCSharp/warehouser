@@ -118,6 +118,7 @@ export interface WorkspaceRoleWriteProjection {
   readonly id: string;
   readonly name: string;
   readonly permissionIds: readonly string[];
+  readonly assignedMemberCount: number;
 }
 
 export interface CreateWorkspaceRoleRuntime {
@@ -168,10 +169,14 @@ export class CreateWorkspaceRoleCommand {
       permissions,
     );
 
+    // A Role that has just been created is custom by construction and no
+    // Workspace Member is assigned to it yet, so `0` is a fact rather than a
+    // default.
     return {
       id,
       name,
       permissionIds: permissions.map((permission) => permission.id),
+      assignedMemberCount: 0,
     };
   }
 }

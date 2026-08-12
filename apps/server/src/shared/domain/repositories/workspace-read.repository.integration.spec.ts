@@ -51,6 +51,11 @@ interface WorkspaceRoleWithPermissionsRead {
   readonly name: string;
   readonly kind: 'custom' | 'workspace_owner';
   readonly permissionIds: readonly string[];
+  // T41/AC-14 — the Role's assigned-Member count, aggregated the same way
+  // `AccessReadRepository.listRolesAndPermissions` aggregates it one level
+  // down (access-read.repository.ts): `0` for an unassigned Role, never
+  // counted across Workspaces.
+  readonly assignedMemberCount: number;
 }
 interface WorkspacePermissionCatalogueRead {
   readonly id: string;
@@ -66,6 +71,10 @@ interface WorkspaceMemberRead {
 interface WorkspaceUserWithWarehousesRead {
   readonly userId: string;
   readonly warehouseIds: readonly string[];
+  // T41/AC-33/AC-21 — derived from the existence of a `workspace_memberships`
+  // row for the User alone, never from a Warehouse join, so it survives the
+  // loss of every Warehouse membership (AC-21).
+  readonly isWorkspaceMember: boolean;
 }
 interface WorkspaceWarehouseRead {
   readonly id: string;
@@ -326,7 +335,14 @@ function registerRolesAndCatalogueTests(): void {
 
     expect(rows).toHaveLength(2);
     expect(rows[0] && Object.keys(rows[0]).sort()).toEqual(
-      ['id', 'kind', 'name', 'permissionIds', 'workspaceId'].sort(),
+      [
+        'assignedMemberCount',
+        'id',
+        'kind',
+        'name',
+        'permissionIds',
+        'workspaceId',
+      ].sort(),
     );
     expect(rows.map((row) => row.name)).toEqual(['Alpha Role', 'Beta Role']);
     expect(rows[0]).toMatchObject({
@@ -336,6 +352,43 @@ function registerRolesAndCatalogueTests(): void {
       permissionIds: [grantedPermissionId],
     });
     expect(rows[1]).toMatchObject({ id: betaRoleId, permissionIds: [] });
+  });
+
+  // T41/AC-14 — `assignedMemberCount` counts exactly the memberships
+  // carrying each Workspace Role, is `0` for an unassigned Role (present in
+  // the result, not absent), and never counts a membership of another
+  // Workspace even when that other Workspace happens to use a Role with the
+  // same id-adjacent shape.
+  it('aggregates assignedMemberCount per Workspace Role, 0 for an unassigned Role, never across Workspaces (T41)', async () => {
+    const workspaceId = await persistWorkspace();
+    const assignedRoleId = await insertWorkspaceRole(workspaceId, {
+      name: 'Assigned Role',
+    });
+    const unassignedRoleId = await insertWorkspaceRole(workspaceId, {
+      name: 'Unassigned Role',
+    });
+    const memberA = await persistUser(workspaceId);
+    const memberB = await persistUser(workspaceId);
+    await insertWorkspaceMembership(memberA, workspaceId, assignedRoleId);
+    await insertWorkspaceMembership(memberB, workspaceId, assignedRoleId);
+
+    // A second Workspace whose own Role must never contribute to the first
+    // Workspace's counts.
+    const otherWorkspaceId = await persistWorkspace();
+    const otherRoleId = await insertWorkspaceRole(otherWorkspaceId, {
+      name: 'Assigned Role',
+    });
+    const otherMember = await persistUser(otherWorkspaceId);
+    await insertWorkspaceMembership(otherMember, otherWorkspaceId, otherRoleId);
+
+    const rows =
+      await repository.listWorkspaceRolesWithPermissions(workspaceId);
+
+    const byId = Object.fromEntries(
+      rows.map((row) => [row.id, row.assignedMemberCount]),
+    );
+    expect(byId[assignedRoleId]).toBe(2);
+    expect(byId[unassignedRoleId]).toBe(0);
   });
 
   it('lists the Workspace Permission catalogue with its assignable/reserved classification, ordered by kind then id', async () => {
@@ -418,7 +471,7 @@ function registerUsersWithWarehousesTests(): void {
 
     expect(rows).toHaveLength(3);
     expect(rows[0] && Object.keys(rows[0]).sort()).toEqual(
-      ['userId', 'warehouseIds'].sort(),
+      ['isWorkspaceMember', 'userId', 'warehouseIds'].sort(),
     );
     for (const row of rows) {
       expect(row).not.toHaveProperty('roleId');
@@ -432,6 +485,36 @@ function registerUsersWithWarehousesTests(): void {
     );
     expect(byUserId[memberUserId]).toEqual([warehouseA]);
     expect(byUserId[userWithNoWarehouse]).toEqual([]);
+  });
+
+  // T41/AC-33/AC-21 — isWorkspaceMember is true for a User holding a
+  // Workspace membership, false for a User of the Workspace who holds none,
+  // and — the AC-21 domain invariant — stays true for a Workspace Member who
+  // has since lost every Warehouse membership, because the flag is derived
+  // from Workspace membership alone and never from a Warehouse join.
+  it('derives isWorkspaceMember from Workspace membership alone, surviving the loss of every Warehouse membership (AC-21)', async () => {
+    const workspaceId = await persistWorkspace();
+    const workspaceRoleId = await insertWorkspaceRole(workspaceId);
+
+    const memberWithoutWarehouse = await persistUser(workspaceId);
+    await insertWorkspaceMembership(
+      memberWithoutWarehouse,
+      workspaceId,
+      workspaceRoleId,
+    );
+    // AC-21: this Workspace Member holds no Warehouse membership at all.
+
+    const nonMemberUserId = await persistUser(workspaceId);
+    const warehouseId = await insertWarehouse(workspaceId);
+    await insertWarehouseMembership(nonMemberUserId, warehouseId, workspaceId);
+
+    const rows = await repository.listWorkspaceUsersWithWarehouses(workspaceId);
+
+    const byUserId = Object.fromEntries(
+      rows.map((row) => [row.userId, row.isWorkspaceMember]),
+    );
+    expect(byUserId[memberWithoutWarehouse]).toBe(true);
+    expect(byUserId[nonMemberUserId]).toBe(false);
   });
 }
 
