@@ -6,6 +6,7 @@ export interface AccessCurrentUser {
   readonly roleId: string;
   readonly roleKind: 'custom' | 'warehouse_manager';
   readonly permissionId: PermissionId;
+  readonly archived: boolean;
 }
 
 export const accessCurrentUser = (

@@ -4,12 +4,31 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { ErrorCode, type PermissionId } from '@warehouser/shared-types/enums';
-import { ApplicationError } from '@warehouser/shared-types/errors';
+import type { PermissionId } from '@warehouser/shared-types/enums';
 import { accessCurrentUser } from 'shared/access/access-current-user';
+import {
+  accessDeniedError,
+  warehouseArchivedError,
+} from 'shared/access/access-denial.errors';
 import type { WarehouseAccessRequest } from 'shared/access/access-request';
+import { READ_TOLERANT_KEY } from 'shared/access/archived-tolerant-read.decorator';
 import { REQUIRED_PERMISSION_KEY } from 'shared/decorators/required-permission.decorator';
 import { AccessCurrentUserRepository } from 'shared/domain/repositories/access-current-user.repository';
+
+/** Reads the single Warehouse identifier the request unambiguously names. The route's
+ * `warehouseId` param is authoritative; a body-supplied `warehouseId` that disagrees with it makes
+ * the request as ambiguous as naming no Warehouse at all, and both are refused before anything is
+ * resolved from the store (AC-03a). */
+const resolveNamedWarehouseId = (
+  request: WarehouseAccessRequest,
+): string | undefined => {
+  const paramsWarehouseId = request.params?.warehouseId as string | undefined;
+  const bodyWarehouseId = request.body?.warehouseId as string | undefined;
+  if (bodyWarehouseId !== undefined && bodyWarehouseId !== paramsWarehouseId) {
+    return undefined;
+  }
+  return paramsWarehouseId;
+};
 
 @Injectable()
 export class WarehouseAccessGuard implements CanActivate {
@@ -24,24 +43,36 @@ export class WarehouseAccessGuard implements CanActivate {
       REQUIRED_PERMISSION_KEY,
       [context.getHandler(), context.getClass()],
     );
-    if (!request.user || !permissionIds?.length) {
-      throw new ApplicationError(ErrorCode.ACCESS_DENIED);
+    const warehouseId = resolveNamedWarehouseId(request);
+    if (!request.user || !permissionIds?.length || !warehouseId) {
+      throw accessDeniedError();
     }
 
-    const current = await this.currentUsers.resolveAnyRequiredPermission(
+    const current = await this.currentUsers.resolveRequiredPermission(
       request.user.userId,
-      permissionIds,
+      warehouseId,
+      permissionIds[0],
     );
     if (!current?.granted) {
-      throw new ApplicationError(ErrorCode.ACCESS_DENIED);
+      throw accessDeniedError();
+    }
+
+    const archived = current.archivedAt !== null;
+    const readTolerant = this.reflector.getAllAndOverride<boolean>(
+      READ_TOLERANT_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+    if (archived && !readTolerant) {
+      throw warehouseArchivedError();
     }
 
     request.access = accessCurrentUser({
       userId: current.userId,
-      warehouseId: current.warehouseId,
+      warehouseId,
       roleId: current.roleId,
       roleKind: current.roleKind,
       permissionId: current.permissionId as PermissionId,
+      archived,
     });
     return true;
   }
