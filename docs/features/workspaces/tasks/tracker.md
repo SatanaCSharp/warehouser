@@ -14,8 +14,8 @@
 | T7  | Workspace entities, changed entities, test factories     | infra     | Backend Lead                 | L        | T2                                    | done   |
 | T8  | Guard-read repositories (both levels)                    | infra     | Backend Lead                 | M        | T7                                    | done   |
 | T9  | `WorkspaceReadRepository`                                | infra     | Backend Lead                 | L        | T7                                    | done   |
-| T10 | Workspace Role / membership / Owner-transfer repos       | infra     | Backend Lead                 | L        | T7                                    | todo   |
-| T11 | Warehouse lifecycle + membership repos                   | infra     | Backend Lead                 | L        | T7                                    | todo   |
+| T10 | Workspace Role / membership / Owner-transfer repos       | infra     | Backend Lead                 | L        | T7                                    | done   |
+| T11 | Warehouse lifecycle + membership repos                   | infra     | Backend Lead                 | L        | T7                                    | done   |
 | T12 | Split provisioning; re-key existing Warehouse writes     | infra     | Backend Lead                 | M        | T7                                    | done   |
 | T13 | `WorkspaceAccessGuard` + reworked `WarehouseAccessGuard` | ports     | Backend Lead + Security Lead | L        | T5, T8                                | done   |
 | T14 | Registration bootstrap in `workspaces` provisioning      | app       | Backend Lead                 | M        | T4, T6, T12                           | done   |
