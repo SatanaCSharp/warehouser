@@ -74,3 +74,10 @@ export const workspaceWarehouseMembershipRequiredError = (): ApplicationError =>
 // membership at all" case.
 export const workspaceWarehouseArchivedError = (): ApplicationError =>
   new ApplicationError(ErrorCode.WORKSPACE_WAREHOUSE_ARCHIVED);
+
+// AC-26 — the database's `uq_workspace_memberships_one_owner` constraint and
+// `WorkspaceOwnerTransferRepository.transfer`'s own precondition recheck are
+// the final arbiters when two Owner transfers race; the loser is mapped to
+// this stable, retriable code rather than an opaque persistence failure.
+export const workspaceConcurrentChangeError = (): ApplicationError =>
+  new ApplicationError(ErrorCode.WORKSPACE_CONCURRENT_CHANGE);
