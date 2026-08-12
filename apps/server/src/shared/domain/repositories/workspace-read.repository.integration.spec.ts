@@ -67,6 +67,11 @@ interface WorkspaceMemberRead {
   readonly workspaceRoleId: string;
   readonly workspaceRoleName: string;
   readonly workspaceRoleKind: 'custom' | 'workspace_owner';
+  // T46 — the identifying email of `WorkspaceMember` in
+  // contracts/openapi.yaml, read from `accounts.normalized_email` on the same
+  // terms as the approved Warehouse member projection
+  // (`AccessReadRepository.listMembersAndAssignments`).
+  readonly email: string;
 }
 interface WorkspaceUserWithWarehousesRead {
   readonly userId: string;
@@ -75,6 +80,8 @@ interface WorkspaceUserWithWarehousesRead {
   // row for the User alone, never from a Warehouse join, so it survives the
   // loss of every Warehouse membership (AC-21).
   readonly isWorkspaceMember: boolean;
+  // T46 — the identifying email of `WorkspaceUser` in contracts/openapi.yaml.
+  readonly email: string;
 }
 interface WorkspaceWarehouseRead {
   readonly id: string;
@@ -435,6 +442,10 @@ function registerMembersTests(): void {
         'workspaceRoleId',
         'workspaceRoleKind',
         'workspaceRoleName',
+        // T46 — the identifying email of `WorkspaceMember` in
+        // contracts/openapi.yaml, read from `accounts.normalized_email` the
+        // way the approved Warehouse member projection reads it.
+        'email',
       ].sort(),
     );
     expect(rows.map((row) => row.userId)).toEqual([firstUserId, secondUserId]);
@@ -442,6 +453,7 @@ function registerMembersTests(): void {
       workspaceRoleId: roleId,
       workspaceRoleName: 'Custom Role',
       workspaceRoleKind: 'custom',
+      email: `member.${firstUserId}@example.test`,
     });
   });
 }
@@ -471,11 +483,15 @@ function registerUsersWithWarehousesTests(): void {
 
     expect(rows).toHaveLength(3);
     expect(rows[0] && Object.keys(rows[0]).sort()).toEqual(
-      ['isWorkspaceMember', 'userId', 'warehouseIds'].sort(),
+      // T46 adds `email` — the identifying email of `WorkspaceUser` in
+      // contracts/openapi.yaml. AC-33's boundary is unchanged: still no
+      // Warehouse Role, asserted exhaustively here and again below.
+      ['isWorkspaceMember', 'userId', 'warehouseIds', 'email'].sort(),
     );
     for (const row of rows) {
       expect(row).not.toHaveProperty('roleId');
       expect(row).not.toHaveProperty('role');
+      expect(row.email).toBe(`member.${row.userId}@example.test`);
     }
     const byUserId = Object.fromEntries(
       rows.map((row) => [row.userId, row.warehouseIds]),

@@ -71,10 +71,39 @@ describeIntegration('ListWorkspaceUsersQuery', () => {
     const users = await createQuery().execute(currentUserFor(own.workspaceId));
 
     for (const user of users) {
-      expect(Object.keys(user).sort()).toEqual(['userId', 'warehouseIds']);
+      // The exhaustive key set is the assertion that matters: AC-33 grants the
+      // Users, the Warehouses each belongs to, whether each is already a
+      // Workspace Member (AC-21) and — since T46 — the identifying email, and
+      // deliberately **not** a Warehouse Role. Any `roleId`/`roleKind` leaking
+      // into the projection fails here.
+      expect(Object.keys(user).sort()).toEqual([
+        'email',
+        'isWorkspaceMember',
+        'userId',
+        'warehouseIds',
+      ]);
       for (const warehouseId of user.warehouseIds) {
         expect(typeof warehouseId).toBe('string');
       }
     }
+  });
+
+  // T46 — `WorkspaceUser.email` of contracts/openapi.yaml, read from
+  // `accounts.normalized_email` exactly as the approved Warehouse member
+  // projection reads it. AC-33 grants this read so "the candidates that
+  // Workspace membership and Warehouse membership assignment act on can be
+  // found"; a raw UUID cannot identify a candidate, and the email identifies
+  // no User the read does not already return.
+  it('carries the identifying email of every User from the account (T46)', async () => {
+    const own = await persistWorkspaceGraph();
+
+    const users = await createQuery().execute(currentUserFor(own.workspaceId));
+
+    expect(
+      users.find((user) => user.userId === own.ownerUserId)?.email,
+    ).toMatch(/^workspace\.owner\..+@example\.test$/u);
+    expect(
+      users.find((user) => user.userId === own.memberUserId)?.email,
+    ).toMatch(/^workspace\.member\..+@example\.test$/u);
   });
 });

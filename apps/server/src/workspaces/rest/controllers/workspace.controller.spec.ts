@@ -493,6 +493,7 @@ describe('WorkspaceController', () => {
         workspaceRoleId: roleId,
         workspaceRoleName: 'Site Administrator',
         workspaceRoleKind: 'custom',
+        email: 'site.administrator@example.test',
       },
     ]);
 
@@ -501,21 +502,36 @@ describe('WorkspaceController', () => {
         request(WorkspacePermissionId.WORKSPACE_MEMBERS_WATCH),
       ),
     ).resolves.toEqual([
-      { userId: id(4), workspaceRoleId: roleId, workspaceRoleKind: 'custom' },
+      {
+        userId: id(4),
+        workspaceRoleId: roleId,
+        workspaceRoleKind: 'custom',
+        email: 'site.administrator@example.test',
+      },
     ]);
   });
 
   it('returns the Users of the Workspace with the Warehouses each belongs to', async () => {
-    jest
-      .mocked(listUsers.execute)
-      .mockResolvedValue([{ userId: id(4), warehouseIds: [id(10)] }]);
+    jest.mocked(listUsers.execute).mockResolvedValue([
+      {
+        userId: id(4),
+        warehouseIds: [id(10)],
+        isWorkspaceMember: true,
+        email: 'candidate@example.test',
+      },
+    ]);
 
     await expect(
       controller.listUsers(
         request(WorkspacePermissionId.WORKSPACE_MEMBERS_WATCH),
       ),
     ).resolves.toEqual([
-      { userId: id(4), warehouses: [{ warehouseId: id(10) }] },
+      {
+        userId: id(4),
+        isWorkspaceMember: true,
+        email: 'candidate@example.test',
+        warehouses: [{ warehouseId: id(10) }],
+      },
     ]);
   });
 
@@ -526,12 +542,81 @@ describe('WorkspaceController', () => {
   // T41 lands, so the query result the controller receives already carries
   // it here; the RED assertion is that `listUsers`' response must carry it
   // too, not the `Omit<>`-narrowed shape the controller currently maps.
+  // T46/AC-33 — `WorkspaceMember.email` is documented by
+  // contracts/openapi.yaml as "the identifying email, carried so the reader
+  // can tell Workspace Members apart", on the same terms as the approved
+  // Warehouse member projection (`ListAccessMembersQuery`). AC-33 grants the
+  // Workspace Members themselves; the email identifies exactly those Users and
+  // widens nothing — in particular it carries no Warehouse Role.
+  it('carries the identifying email of a Workspace Member (T46)', async () => {
+    jest.mocked(listMembers.execute).mockResolvedValue([
+      {
+        userId: id(4),
+        workspaceRoleId: roleId,
+        workspaceRoleName: 'Site Administrator',
+        workspaceRoleKind: 'custom',
+        email: 'site.administrator@example.test',
+      },
+    ]);
+
+    await expect(
+      controller.listMembers(
+        request(WorkspacePermissionId.WORKSPACE_MEMBERS_WATCH),
+      ),
+    ).resolves.toEqual([
+      {
+        userId: id(4),
+        workspaceRoleId: roleId,
+        workspaceRoleKind: 'custom',
+        email: 'site.administrator@example.test',
+      },
+    ]);
+  });
+
+  // T46/AC-33 — the same identifying email on the Users read, which AC-33
+  // grants so "the candidates that Workspace membership and Warehouse
+  // membership assignment act on can be found". The response still carries no
+  // Warehouse Role.
+  it('carries the identifying email of a Workspace User (T46)', async () => {
+    jest.mocked(listUsers.execute).mockResolvedValue([
+      {
+        userId: id(4),
+        warehouseIds: [id(10)],
+        isWorkspaceMember: true,
+        email: 'candidate@example.test',
+      },
+    ]);
+
+    await expect(
+      controller.listUsers(
+        request(WorkspacePermissionId.WORKSPACE_MEMBERS_WATCH),
+      ),
+    ).resolves.toEqual([
+      {
+        userId: id(4),
+        isWorkspaceMember: true,
+        email: 'candidate@example.test',
+        warehouses: [{ warehouseId: id(10) }],
+      },
+    ]);
+  });
+
   it('carries the isWorkspaceMember flag the Users read derives from Workspace membership (T41)', async () => {
     const usersFromQuery: Array<
       WorkspaceUserWithWarehousesRead & { isWorkspaceMember: boolean }
     > = [
-      { userId: id(4), warehouseIds: [id(10)], isWorkspaceMember: true },
-      { userId: id(5), warehouseIds: [], isWorkspaceMember: false },
+      {
+        userId: id(4),
+        warehouseIds: [id(10)],
+        isWorkspaceMember: true,
+        email: 'member@example.test',
+      },
+      {
+        userId: id(5),
+        warehouseIds: [],
+        isWorkspaceMember: false,
+        email: 'candidate@example.test',
+      },
     ];
     jest.mocked(listUsers.execute).mockResolvedValue(usersFromQuery);
 

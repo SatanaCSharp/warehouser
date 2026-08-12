@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { getEntityManager } from 'shared/database/db-transaction-context.service';
+import { AccountEntity } from 'shared/domain/entities/account.entity';
 import { UserEntity } from 'shared/domain/entities/user.entity';
 import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
 import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
@@ -32,11 +33,13 @@ export interface WorkspaceMemberRead {
   readonly workspaceRoleId: string;
   readonly workspaceRoleName: string;
   readonly workspaceRoleKind: 'custom' | 'workspace_owner';
+  readonly email: string;
 }
 export interface WorkspaceUserWithWarehousesRead {
   readonly userId: string;
   readonly warehouseIds: readonly string[];
   readonly isWorkspaceMember: boolean;
+  readonly email: string;
 }
 export interface WorkspaceWarehouseRead {
   readonly id: string;
@@ -117,21 +120,33 @@ export class WorkspaceReadRepository {
   }
 
   listWorkspaceMembers(workspaceId: string): Promise<WorkspaceMemberRead[]> {
-    return getEntityManager(this.dataSource)
-      .getRepository(WorkspaceMembershipEntity)
-      .createQueryBuilder('membership')
-      .innerJoin(
-        WorkspaceRoleEntity,
-        'role',
-        'role.id = membership.workspaceRoleId',
-      )
-      .select('membership.userId', 'userId')
-      .addSelect('membership.workspaceRoleId', 'workspaceRoleId')
-      .addSelect('role.name', 'workspaceRoleName')
-      .addSelect('membership.workspaceRoleKind', 'workspaceRoleKind')
-      .where('membership.workspaceId = :workspaceId', { workspaceId })
-      .orderBy('membership.userId', 'ASC')
-      .getRawMany<WorkspaceMemberRead>();
+    return (
+      getEntityManager(this.dataSource)
+        .getRepository(WorkspaceMembershipEntity)
+        .createQueryBuilder('membership')
+        .innerJoin(
+          WorkspaceRoleEntity,
+          'role',
+          'role.id = membership.workspaceRoleId',
+        )
+        // The identifying email lives on the account of the identity pair, the
+        // same join the approved Warehouse member projection uses
+        // (`listMembersAndAssignments`). Every User has exactly one account
+        // (`chk_users_account_identity_pair`), so this inner join drops nothing.
+        .innerJoin(
+          AccountEntity,
+          'account',
+          'account.userId = membership.userId',
+        )
+        .select('membership.userId', 'userId')
+        .addSelect('membership.workspaceRoleId', 'workspaceRoleId')
+        .addSelect('role.name', 'workspaceRoleName')
+        .addSelect('membership.workspaceRoleKind', 'workspaceRoleKind')
+        .addSelect('account.normalizedEmail', 'email')
+        .where('membership.workspaceId = :workspaceId', { workspaceId })
+        .orderBy('membership.userId', 'ASC')
+        .getRawMany<WorkspaceMemberRead>()
+    );
   }
 
   listWorkspaceUsersWithWarehouses(
@@ -157,7 +172,13 @@ export class WorkspaceReadRepository {
           'workspaceMembership.userId = user.id AND workspaceMembership.workspaceId = :workspaceId',
           { workspaceId },
         )
+        // The identifying email of the identity pair, joined exactly as the
+        // approved Warehouse member projection joins it. It identifies the
+        // Users this read already returns and carries no Warehouse Role, so
+        // AC-33's boundary is unchanged.
+        .innerJoin(AccountEntity, 'account', 'account.userId = user.id')
         .select('user.id', 'userId')
+        .addSelect('account.normalizedEmail', 'email')
         .addSelect(
           "COALESCE(array_agg(DISTINCT membership.warehouse_id) FILTER (WHERE membership.warehouse_id IS NOT NULL), '{}')",
           'warehouseIds',
@@ -168,6 +189,7 @@ export class WorkspaceReadRepository {
         )
         .where('user.workspaceId = :workspaceId', { workspaceId })
         .groupBy('user.id')
+        .addGroupBy('account.normalized_email')
         .orderBy('user.id', 'ASC')
         .getRawMany<WorkspaceUserWithWarehousesRead>()
     );

@@ -58,4 +58,20 @@ describeIntegration('ListWorkspaceMembersQuery', () => {
       false,
     );
   });
+
+  // T46 — contracts/openapi.yaml documents `WorkspaceMember.email` as the
+  // identifying email "carried so the reader can tell Workspace Members
+  // apart", "present on the same terms as the approved Warehouse member
+  // projection" (`AccessReadRepository.listMembersAndAssignments`, which joins
+  // `accounts.normalized_email`). It identifies the very Users AC-33 already
+  // grants, so it widens the read by nothing.
+  it('carries the identifying email of each Workspace Member from the account (T46)', async () => {
+    const own = await persistWorkspaceGraph();
+
+    const members = await createQuery().execute(
+      currentUserFor(own.workspaceId),
+    );
+
+    expect(members[0]?.email).toMatch(/^workspace\.owner\..+@example\.test$/u);
+  });
 });

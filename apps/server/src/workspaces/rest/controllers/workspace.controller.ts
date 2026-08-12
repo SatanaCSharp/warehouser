@@ -243,6 +243,11 @@ export class WorkspaceController {
       userId: member.userId,
       workspaceRoleId: member.workspaceRoleId,
       workspaceRoleKind: member.workspaceRoleKind,
+      // The identifying email the reader tells Workspace Members apart by,
+      // on the same terms as the approved Warehouse member projection
+      // (openapi.yaml `WorkspaceMember.email`). It names the Members AC-33
+      // already grants and adds no Warehouse Role.
+      email: member.email,
     }));
   }
 
@@ -339,6 +344,9 @@ export class WorkspaceController {
     );
     return users.map((user) => ({
       userId: user.userId,
+      // AC-33 grants this read so the candidates of Workspace and Warehouse
+      // membership assignment can be *found*; the email identifies them.
+      email: user.email,
       isWorkspaceMember: user.isWorkspaceMember,
       warehouses: user.warehouseIds.map((warehouseId) => ({ warehouseId })),
     }));

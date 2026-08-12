@@ -765,6 +765,9 @@ describeIntegration('workspace HTTP contract', () => {
           userId: actor.userId,
           workspaceRoleId: fixture.customRoleId,
           workspaceRoleKind: 'custom',
+          // T46 — `WorkspaceMember.email` of contracts/openapi.yaml, so the
+          // reader can tell Workspace Members apart by more than a UUID.
+          email: `member.${actor.userId}@example.test`,
         },
       ]);
     });
@@ -786,6 +789,11 @@ describeIntegration('workspace HTTP contract', () => {
       expect(body).toEqual([
         {
           userId: actor.userId,
+          // T46 — `WorkspaceUser.email` of contracts/openapi.yaml. AC-33
+          // grants this read so the candidates of membership assignment can be
+          // found; still no Warehouse Role in the body.
+          email: `member.${actor.userId}@example.test`,
+          isWorkspaceMember: true,
           warehouses: [{ warehouseId: fixture.warehouseId }],
         },
       ]);
