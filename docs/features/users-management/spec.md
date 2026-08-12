@@ -92,6 +92,16 @@ The committed approach keeps every user-lifecycle action — create, change emai
 **When** they create a new Warehouse Member with an unused email and an initial password
 **Then** the system creates the new Warehouse Member with that Role and confirms the creation to the actor
 
+> **Amended by [`workspaces`](../workspaces/spec.md#1-context) — 2026-08-12.** Creating a member now
+> also establishes the new User's **Workspace relation**, taken from the Workspace that owns the
+> Warehouse they are created in — `users.workspace_id` is non-null, so a User can no longer exist
+> without one. The actor chooses nothing extra and sees no additional step; the relation is derived,
+> not supplied. The Workspace relation is _not_ Workspace membership: the new User becomes a
+> Workspace Member only through the deliberate grant `workspaces` adds (its AC-19/AC-20). The
+> endpoint also moves to `POST /api/v1/warehouses/{warehouseId}/users` because it may no longer infer
+> the actor's single Warehouse — see
+> [T27](../workspaces/tasks/reshape-users-rest.md) and `workspaces` `spec.md` §1's second boundary.
+
 ### AC-02 (US-01) — error
 
 **Given** an authorized Warehouse Member submits an invalid email or a password outside the accepted length for a new Warehouse Member

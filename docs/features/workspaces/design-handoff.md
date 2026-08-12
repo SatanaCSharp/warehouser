@@ -222,9 +222,16 @@ None. Implementation must report any visible deviation for approval.
       protected Manager Role. `spec.md` AC-33 does not include that in the workspace-level read
       scope. Resolve in the contract rather than by widening the UI's read. — owner: Backend Lead,
       due: `api`
-- [ ] **Missing icon components.** ~10 Lucide icons used by this design have no component in
+- [x] **Missing icon components.** ~10 Lucide icons used by this design have no component in
       `apps/web/src/shared/icons/`. Decide whether to hand-roll them following the existing pattern
       or adopt `lucide-react`, and record it. — owner: Frontend Lead, due: `tasks`
+
+      **Resolved (2026-08-12): hand-rolled**, following the existing `shared/icons/` pattern, in
+          [T32](./tasks/shared-icon-components.md) (shipped in commit `b7cc749`). Adding `lucide-react`
+          would have pulled a dependency into the bundle for ten glyphs while leaving the directory with
+          two ways to declare an icon; the existing components already establish the size, `currentColor`
+          and accessibility conventions these must match.
+
 - [ ] **Access v3 shell drift.** The approved `Access / … / v3` frames omit the sidebar that
       `RootLayout.tsx` ships and that these frames depict, so the two feature flows do not match side
       by side. Track as an Access re-migration; it is not a deviation in this feature. — owner:
