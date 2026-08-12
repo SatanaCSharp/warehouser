@@ -11,6 +11,7 @@
     "test:auth-release": "node --test tests/auth/release-gates.spec.mjs",
     "test:access-release": "node --test tests/access/*.spec.mjs",
     "test:users-release": "node --test tests/users/*.spec.mjs",
+    "test:workspaces-release": "node --test tests/workspaces/*.spec.mjs",
     "clean": "turbo run clean",
     "prepare": "husky"
   },
