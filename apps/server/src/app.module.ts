@@ -9,6 +9,7 @@ import { DomainModule } from 'shared/domain/domain.module';
 import { AppLoggerModule } from 'shared/logger/app-logger.module';
 import { createBullMqOptions } from 'shared/queue/bullmq.options';
 import { UsersModule } from 'users/users.module';
+import { WorkspacesRestModule } from 'workspaces';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { UsersModule } from 'users/users.module';
     DomainModule,
     AuthModule,
     AccessRestModule,
+    WorkspacesRestModule,
     BullModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => createBullMqOptions(config),

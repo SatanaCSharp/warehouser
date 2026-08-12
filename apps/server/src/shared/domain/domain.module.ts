@@ -9,15 +9,28 @@ import { SessionEntity } from 'shared/domain/entities/session.entity';
 import { UserEntity } from 'shared/domain/entities/user.entity';
 import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
 import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
+import { WorkspaceMembershipEntity } from 'shared/domain/entities/workspace-membership.entity';
+import { WorkspacePermissionEntity } from 'shared/domain/entities/workspace-permission.entity';
+import { WorkspaceRoleEntity } from 'shared/domain/entities/workspace-role.entity';
+import { WorkspaceRolePermissionEntity } from 'shared/domain/entities/workspace-role-permission.entity';
 import { AccessCurrentUserRepository } from 'shared/domain/repositories/access-current-user.repository';
 import { AccessProvisioningRepository } from 'shared/domain/repositories/access-provisioning.repository';
 import { AccessReadRepository } from 'shared/domain/repositories/access-read.repository';
+import { ActiveWarehouseSelectionRepository } from 'shared/domain/repositories/active-warehouse-selection.repository';
 import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
 import { ManagerTransferRepository } from 'shared/domain/repositories/manager-transfer.repository';
 import { MemberLifecycleRepository } from 'shared/domain/repositories/member-lifecycle.repository';
 import { RoleLifecycleRepository } from 'shared/domain/repositories/role-lifecycle.repository';
+import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
+import { WarehouseMembershipAssignmentRepository } from 'shared/domain/repositories/warehouse-membership-assignment.repository';
 import { WorkspaceCurrentUserRepository } from 'shared/domain/repositories/workspace-current-user.repository';
+import { WorkspaceLifecycleRepository } from 'shared/domain/repositories/workspace-lifecycle.repository';
+import { WorkspaceMembershipRepository } from 'shared/domain/repositories/workspace-membership.repository';
+import { WorkspaceOwnerTransferRepository } from 'shared/domain/repositories/workspace-owner-transfer.repository';
 import { WorkspaceProvisioningRepository } from 'shared/domain/repositories/workspace-provisioning.repository';
+import { WorkspaceReadRepository } from 'shared/domain/repositories/workspace-read.repository';
+import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository';
 
 const domainEntities = [
   AccountEntity,
@@ -28,6 +41,11 @@ const domainEntities = [
   UserEntity,
   WarehouseMembershipEntity,
   WarehouseEntity,
+  WorkspaceEntity,
+  WorkspacePermissionEntity,
+  WorkspaceRoleEntity,
+  WorkspaceRolePermissionEntity,
+  WorkspaceMembershipEntity,
 ];
 
 const domainRepositories = [
@@ -38,8 +56,16 @@ const domainRepositories = [
   ManagerTransferRepository,
   MemberLifecycleRepository,
   RoleLifecycleRepository,
+  ActiveWarehouseSelectionRepository,
+  WarehouseLifecycleRepository,
+  WarehouseMembershipAssignmentRepository,
   WorkspaceCurrentUserRepository,
+  WorkspaceLifecycleRepository,
+  WorkspaceMembershipRepository,
+  WorkspaceOwnerTransferRepository,
   WorkspaceProvisioningRepository,
+  WorkspaceReadRepository,
+  WorkspaceRoleLifecycleRepository,
 ];
 
 @Global()
