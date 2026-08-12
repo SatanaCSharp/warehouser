@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { NameWorkspaceAction } from 'modules/workspace/components/workspace-administration/NameWorkspaceAction';
+import { WarehousesTab } from 'modules/workspace/components/workspace-administration/warehouses/WarehousesTab';
 import {
   hasWorkspacePermission,
   useCurrentWorkspaceContext,
@@ -17,6 +18,14 @@ type AdministrationTab = {
   id: string;
   label: string;
   shortLabel?: string;
+};
+
+// Each tab's content mounts only once its own task wires it; the other tabs
+// deliberately stay unmapped — hence `undefined` — until T38 and T39 add
+// their entries here. A lookup keeps adding a tab a one-line change instead
+// of a growing `if`/ternary chain.
+const tabContentById: Partial<Record<string, ReactElement>> = {
+  warehouses: <WarehousesTab />,
 };
 
 /**
@@ -117,7 +126,7 @@ export const WorkspaceAdministration = (): ReactElement | null => {
 
           {tabs.map(({ id }) => (
             <Tabs.Panel className="px-0 pt-5" id={id} key={id}>
-              {null}
+              {tabContentById[id] ?? null}
             </Tabs.Panel>
           ))}
         </Tabs>
