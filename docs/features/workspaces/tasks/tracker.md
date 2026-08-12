@@ -11,7 +11,7 @@
 | T4  | `workspaces` domain predicates, errors and invariants    | domain    | Backend Lead                 | L        | T3                                    | todo   |
 | T5  | `WorkspacePermissionId` + new stable error codes         | ports     | Backend Lead                 | M        | —                                     | todo   |
 | T6  | `packages/contracts/workspaces` schemas                  | ports     | Backend Lead                 | L        | T5                                    | todo   |
-| T7  | Workspace entities, changed entities, test factories     | infra     | Backend Lead                 | L        | T2                                    | todo   |
+| T7  | Workspace entities, changed entities, test factories     | infra     | Backend Lead                 | L        | T2                                    | done   |
 | T8  | Guard-read repositories (both levels)                    | infra     | Backend Lead                 | M        | T7                                    | todo   |
 | T9  | `WorkspaceReadRepository`                                | infra     | Backend Lead                 | L        | T7                                    | todo   |
 | T10 | Workspace Role / membership / Owner-transfer repos       | infra     | Backend Lead                 | L        | T7                                    | todo   |
