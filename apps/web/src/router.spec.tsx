@@ -1,10 +1,12 @@
 import { RouterProvider } from '@tanstack/react-router';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createAppRouter } from 'router';
+import { ROUTES } from 'shared/constants/routes';
 import { makeStore } from 'store';
 
 import type { AppRouter } from 'router';
@@ -36,6 +38,32 @@ const readableAccess = {
   permissionIds: ['ROLES:WATCH'],
   archivedAt: null,
 } as const;
+
+// The authenticated shell reads the Workspace actor context to decide whether
+// the Workspace navigation entry exists at all (AC-30). That read is not one
+// of the datasets the access cases below are about, so answer it out of band
+// and let each of them keep its own ordered request script.
+const withWorkspaceContext = (
+  requestScript: ReturnType<typeof vi.fn>,
+  workspacePermissionIds: readonly WorkspacePermissionId[] = [],
+): ReturnType<typeof vi.fn> =>
+  vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input instanceof Request ? input.url : input);
+    if (url.includes('/api/v1/workspace/context')) {
+      return Promise.resolve(
+        Response.json({
+          workspace: {
+            id: '00000000-0000-4000-8000-000000000020',
+            name: 'Acme Logistics',
+          },
+          workspacePermissionIds,
+          warehouses: [],
+          effectiveWarehouseId: null,
+        }),
+      );
+    }
+    return requestScript(input, init) as Promise<Response>;
+  });
 
 const renderRoute = (initialEntry: string): RenderedRoute => {
   const store = makeStore();
@@ -267,7 +295,7 @@ describe('router', () => {
           archivedAt: null,
         }),
       );
-    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('fetch', withWorkspaceContext(fetchMock));
 
     renderRoute('/access');
 
@@ -525,7 +553,7 @@ describe('router', () => {
             resolveSignOut = resolve;
           }),
       );
-    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('fetch', withWorkspaceContext(fetchMock));
     const user = userEvent.setup();
     const { router, store } = renderRoute('/login');
 
@@ -556,7 +584,7 @@ describe('router', () => {
           }),
       )
       .mockResolvedValueOnce(Response.json(readableAccess));
-    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('fetch', withWorkspaceContext(fetchMock));
     const { router, store } = renderRoute('/');
 
     expect(store.getState().auth.status).toBe('unknown');
@@ -574,5 +602,86 @@ describe('router', () => {
     expect(router.state.location.pathname).toBe('/');
     expect(store.getState().auth.status).toBe('authenticated');
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+  });
+
+  // AC-30: a User with no Workspace capability in their own Workspace —
+  // including a Warehouse Member who is not a Workspace Member at all — must
+  // never reach the Workspace destination, and the Sidebar must never expose
+  // it as a control. Route visibility is advisory (design-handoff.md
+  // §Implementation constraints); the redirect proves the web omits the
+  // unusable destination rather than rendering it disabled or empty.
+  const stubWorkspaceRouteFetch = (
+    workspacePermissionIds: readonly WorkspacePermissionId[],
+  ): ReturnType<typeof vi.fn> =>
+    vi.fn((input: RequestInfo | URL) => {
+      const url =
+        input instanceof Request
+          ? input.url
+          : input instanceof URL
+            ? input.href
+            : input;
+      if (url.endsWith('/api/v1/auth/session')) {
+        return Promise.resolve(
+          Response.json({
+            user: { id: '00000000-0000-4000-8000-000000000001' },
+          }),
+        );
+      }
+      if (url.endsWith('/api/v1/access/current')) {
+        return Promise.resolve(
+          Response.json({ ...readableAccess, permissionIds: [] }),
+        );
+      }
+      if (url.includes('/api/v1/workspace/context')) {
+        return Promise.resolve(
+          Response.json({
+            workspace: {
+              id: '00000000-0000-4000-8000-000000000020',
+              name: 'Acme Logistics',
+            },
+            workspacePermissionIds,
+            warehouses: [],
+            effectiveWarehouseId: null,
+          }),
+        );
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+  it('redirects a direct navigation to the Workspace route when the actor holds no Workspace capability (AC-30)', async () => {
+    vi.stubGlobal('fetch', stubWorkspaceRouteFetch([]));
+
+    const { router } = renderRoute(ROUTES.WORKSPACE);
+
+    await waitFor(() =>
+      expect(router.state.location.pathname).not.toBe(ROUTES.WORKSPACE),
+    );
+    expect(router.state.location.pathname).toBe(ROUTES.HOME);
+  });
+
+  it('omits the Workspace Sidebar entry and never renders the destination when the actor holds no Workspace capability (AC-30)', async () => {
+    vi.stubGlobal('fetch', stubWorkspaceRouteFetch([]));
+
+    renderRoute(ROUTES.HOME);
+
+    await screen.findByRole('link', { name: 'Dashboard' });
+    expect(
+      screen.queryByRole('link', { name: 'Workspace' }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText('Acme Logistics')).not.toBeInTheDocument();
+  });
+
+  it('admits a direct navigation to the Workspace route when the actor holds any Workspace watch capability', async () => {
+    vi.stubGlobal(
+      'fetch',
+      stubWorkspaceRouteFetch([WorkspacePermissionId.WAREHOUSES_WATCH]),
+    );
+
+    const { router } = renderRoute(ROUTES.WORKSPACE);
+
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe(ROUTES.WORKSPACE),
+    );
+    expect(await screen.findByText('Acme Logistics')).toBeInTheDocument();
   });
 });

@@ -5,7 +5,8 @@ import type { ReactElement, ReactNode } from 'react';
 
 export type WorkspaceGateProps = {
   children: ReactNode;
-  permission: WorkspacePermissionId;
+  /** One required Workspace Permission, or several of which any one admits. */
+  permission: WorkspacePermissionId | readonly WorkspacePermissionId[];
 };
 
 export const WorkspaceGate = ({

@@ -1,6 +1,7 @@
 import {
   activeWarehouseSelectionSchema,
   workspaceContextSchema,
+  workspaceSchema,
 } from '@warehouser/contracts/workspaces';
 
 import { api } from 'shared/api/api-client';
@@ -8,7 +9,9 @@ import { api } from 'shared/api/api-client';
 import type {
   ActiveWarehouseSelection,
   ActiveWarehouseWrite,
+  Workspace,
   WorkspaceContext,
+  WorkspaceRename,
 } from '@warehouser/contracts/workspaces';
 
 const WORKSPACE_PATH = '/api/v1/workspace';
@@ -32,9 +35,42 @@ export const workspaceContextApi = api.injectEndpoints({
       extraOptions: { schema: activeWarehouseSelectionSchema },
       invalidatesTags: ['WorkspaceContext'],
     }),
+    renameWorkspace: build.mutation<Workspace, WorkspaceRename>({
+      query: (body) => ({
+        url: WORKSPACE_PATH,
+        method: 'PATCH',
+        body,
+      }),
+      extraOptions: { schema: workspaceSchema },
+      // AC-29 — the renamed Workspace is what the response actually
+      // committed; patch the cached context directly instead of
+      // invalidating and refetching, which would race a concurrent context
+      // read and could momentarily show the prior name or placeholder.
+      // A rejected rename changes nothing, and the normalized failure is
+      // already reported by the shared error boundary, so this only patches a
+      // committed result.
+      onQueryStarted: async (_input, { dispatch, queryFulfilled }) => {
+        const committed = await queryFulfilled.catch(() => undefined);
+        if (!committed) {
+          return;
+        }
+        dispatch(
+          workspaceContextApi.util.updateQueryData(
+            'getWorkspaceContext',
+            undefined,
+            (draft) => {
+              Object.assign(draft.workspace, committed.data);
+            },
+          ),
+        );
+      },
+    }),
   }),
   overrideExisting: false,
 });
 
-export const { useGetWorkspaceContextQuery, useSetActiveWarehouseMutation } =
-  workspaceContextApi;
+export const {
+  useGetWorkspaceContextQuery,
+  useRenameWorkspaceMutation,
+  useSetActiveWarehouseMutation,
+} = workspaceContextApi;

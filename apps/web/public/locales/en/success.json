@@ -13,5 +13,8 @@
     "deleteRole": "Role deleted.",
     "transferManager": "Warehouse management transferred.",
     "updateRole": "Role updated."
+  },
+  "workspace": {
+    "renameWorkspace": "Workspace named."
   }
 }

@@ -13,5 +13,8 @@
     "deleteRole": "Роль видалено.",
     "transferManager": "Керування складом передано.",
     "updateRole": "Роль оновлено."
+  },
+  "workspace": {
+    "renameWorkspace": "Робочий простір названо."
   }
 }

@@ -14,6 +14,7 @@ export const namespaces = [
   'sign-up',
   'success',
   'validation',
+  'workspace',
 ] as const;
 
 export const i18nReady = i18n

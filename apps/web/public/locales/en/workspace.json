@@ -1,0 +1,220 @@
+{
+  "loading": "Loading workspace",
+  "placeholder": {
+    "name": "Untitled workspace",
+    "badge": "Not named yet"
+  },
+  "descriptions": {
+    "warehouses": "Your workspace owns every warehouse below it, who may enter them, and who may administer the workspace itself.",
+    "workspaceRoles": "Workspace roles decide who may administer this workspace. They never grant anything inside a warehouse.",
+    "members": "Workspace members administer the workspace. Everyone else here belongs to a warehouse but holds no workspace role.",
+    "permissions": "The workspace permission catalogue. Every permission here decides a workspace capability and never grants anything inside a warehouse."
+  },
+  "tabs": {
+    "label": "Workspace sections",
+    "warehouses": "Warehouses",
+    "workspaceRoles": "Workspace roles",
+    "workspaceRolesShort": "Roles",
+    "members": "Members",
+    "permissions": "Permissions"
+  },
+  "nameWorkspace": {
+    "trigger": "Name workspace",
+    "triggerRename": "Rename workspace",
+    "title": "Name your workspace",
+    "titleRename": "Rename your workspace",
+    "description": "A workspace is created without a name. Naming it replaces the placeholder everyone currently sees.",
+    "descriptionRename": "The new name replaces the current one for everyone in this workspace.",
+    "nameLabel": "Workspace name",
+    "nameDescription": "1–100 characters. Control characters are rejected; names need not be unique.",
+    "cancel": "Cancel",
+    "save": "Save name"
+  },
+  "warehouses": {
+    "search": "Search warehouses",
+    "loading": "Loading warehouses",
+    "empty": "This workspace has no warehouse yet.",
+    "peopleWithAccess": "{{count}} people with access",
+    "created": "created {{date}}",
+    "readOnly": "read-only",
+    "chips": {
+      "archived": "Archived",
+      "inOperation": "In operation"
+    },
+    "add": {
+      "trigger": "Add warehouse",
+      "title": "Add a warehouse",
+      "description": "The warehouse is created inside this workspace and you become its warehouse manager.",
+      "nameLabel": "Warehouse name",
+      "nameDescription": "1–100 characters. Two warehouses may share a name.",
+      "noticeTitle": "You will manage it",
+      "noticeDescription": "Creating a warehouse makes you its manager. Nobody else can be placed in it until you define roles there.",
+      "cancel": "Cancel",
+      "submit": "Add warehouse"
+    },
+    "detail": {
+      "back": "All warehouses",
+      "nameLabel": "Warehouse name",
+      "nameDescription": "1–100 characters. Warehouse names need not be unique.",
+      "saveName": "Save name",
+      "cancel": "Cancel",
+      "peopleHeading": "People with access",
+      "peopleDescription": "Giving access places a person in this warehouse with a role defined there. What they may do inside it is decided by that role, not by the workspace — manage those roles on the warehouse's Access page."
+    },
+    "archive": {
+      "trigger": "Archive warehouse",
+      "title": "Archive {{name}}?",
+      "description": "Archiving withdraws a warehouse from operation. It is reversible.",
+      "stopsTitle": "What stops",
+      "stopsDescription": "{{name}} stops being selectable and refuses every change to what it holds.",
+      "keptTitle": "What is kept",
+      "keptDescription": "Its roles, memberships and records are retained and stay readable, and it keeps exactly one manager so it stays administrable when restored.",
+      "cancel": "Cancel",
+      "submit": "Archive warehouse"
+    },
+    "restore": {
+      "trigger": "Restore warehouse"
+    },
+    "archived": {
+      "alertTitle": "This warehouse is archived",
+      "alertDescription": "Its roles, memberships and records stay readable. Nothing inside it can be changed until it is restored."
+    },
+    "lastWarehouse": {
+      "alertTitle": "{{name}} cannot be archived",
+      "alertDescription": "It is the only warehouse of this workspace still in operation, and a workspace always keeps one, so its members are never left without a site to work in.",
+      "addFirst": "Add a warehouse first"
+    },
+    "giveAccess": {
+      "trigger": "Give access",
+      "title": "Give warehouse access",
+      "description": "Place someone from this workspace into one of its warehouses with a role defined there.",
+      "personLabel": "Person",
+      "warehouseLabel": "Warehouse",
+      "roleLabel": "Role in {{name}}",
+      "roleDescription": "You can see this warehouse's role names in order to choose one. This gives you no other authority inside it.",
+      "noticeTitle": "Warehouse manager is not offered",
+      "noticeDescription": "That role changes only through the warehouse's own transfer, and you cannot place yourself into a warehouse that already has members.",
+      "cancel": "Cancel",
+      "submit": "Give access"
+    },
+    "withdrawAccess": {
+      "trigger": "Withdraw access",
+      "title": "Withdraw access to {{name}}?",
+      "description": "The person stops belonging to this warehouse. Their other memberships are unchanged.",
+      "protectedReason": "The warehouse manager's access is withdrawn only through the warehouse's own transfer.",
+      "cancel": "Cancel",
+      "submit": "Withdraw access"
+    }
+  },
+  "workspaceRoles": {
+    "search": "Search workspace roles",
+    "loading": "Loading workspace roles",
+    "empty": "This workspace has no custom workspace role yet.",
+    "memberCount": "{{count}} members",
+    "permissionCount": "{{count}} permissions",
+    "custom": "Custom workspace role",
+    "chips": {
+      "protected": "Protected"
+    },
+    "create": {
+      "trigger": "Create workspace role",
+      "title": "Create a workspace role",
+      "cancel": "Cancel",
+      "submit": "Create role"
+    },
+    "editor": {
+      "nameLabel": "Workspace role name",
+      "nameDescription": "1–100 characters, unique in this workspace. Differently cased names are distinct.",
+      "permissionsHeading": "Workspace permissions",
+      "permissionsDescription": "Changes apply to the next authorization decision. None of these permissions grant anything inside a warehouse.",
+      "cancel": "Cancel",
+      "save": "Save changes"
+    },
+    "delete": {
+      "trigger": "Delete role",
+      "title": "Delete {{name}}?",
+      "description": "{{count}} workspace members hold this role. Every one of them moves to the replacement in the same step.",
+      "replacementLabel": "Move those {{count}} members to",
+      "replacementDescription": "Every workspace member holds exactly one workspace role, so a replacement is required.",
+      "noticeTitle": "Needs both permissions",
+      "noticeDescription": "Moving members is a role assignment, so deleting an assigned role needs delete and assign permission together.",
+      "cancel": "Cancel",
+      "submit": "Delete and move"
+    },
+    "transferOwnership": {
+      "trigger": "Transfer ownership",
+      "title": "Transfer workspace ownership",
+      "description": "Ownership moves in one step. The workspace always has exactly one owner.",
+      "newOwnerLabel": "New owner",
+      "newOwnerDescription": "Must already be a workspace member.",
+      "newRoleLabel": "Your new workspace role",
+      "newRoleDescription": "You must end the transfer holding exactly one workspace role.",
+      "noticeTitle": "You lose owner-only capabilities",
+      "noticeDescription": "After this you can no longer transfer ownership, and only the new owner can transfer it back.",
+      "cancel": "Cancel",
+      "submit": "Transfer ownership"
+    }
+  },
+  "members": {
+    "heading": "Workspace members",
+    "description": "{{count}} people hold a workspace role. Each holds exactly one.",
+    "loading": "Loading workspace members",
+    "empty": "This workspace has no workspace member yet.",
+    "chips": {
+      "owner": "Workspace owner",
+      "protected": "Protected"
+    },
+    "changeRole": {
+      "trigger": "Change role",
+      "title": "Change the workspace role of {{name}}",
+      "roleLabel": "Workspace role",
+      "roleDescription": "Every workspace member holds exactly one workspace role.",
+      "cancel": "Cancel",
+      "submit": "Change role"
+    },
+    "remove": {
+      "trigger": "Remove",
+      "title": "Remove {{name}} from the workspace?",
+      "description": "They keep the warehouses they belong to and stop administering this workspace.",
+      "cancel": "Cancel",
+      "submit": "Remove"
+    },
+    "add": {
+      "trigger": "Add workspace member",
+      "title": "Add a workspace member",
+      "description": "Only people who already belong to a warehouse of this workspace can be made workspace members.",
+      "personLabel": "Person",
+      "roleLabel": "Workspace role",
+      "cancel": "Cancel",
+      "submit": "Add workspace member"
+    },
+    "everyone": {
+      "heading": "Everyone in this workspace",
+      "description": "People who belong to a warehouse of this workspace. Only they can be made workspace members — and any of them can be given access to another warehouse.",
+      "noWarehouse": "No warehouse",
+      "addAsMember": "Add as workspace member",
+      "blockedNote": "{{name}} belongs to no warehouse of this workspace yet, so they cannot be made a workspace member until they are given access to one."
+    }
+  },
+  "permissions": {
+    "heading": "Workspace permissions",
+    "description": "The workspace permission catalogue. None of these permissions grant anything inside a warehouse.",
+    "loading": "Loading workspace permissions",
+    "ownerOnly": "Owner only",
+    "reservedNote": "Transferring ownership is reserved for the protected Workspace owner role and cannot be added to a custom role.",
+    "groups": {
+      "workspace": "Workspace",
+      "workspaceRoles": "Workspace roles",
+      "workspaceMembers": "Workspace members",
+      "warehouses": "Warehouses",
+      "warehouseAccess": "Warehouse access",
+      "reserved": "Reserved"
+    }
+  },
+  "states": {
+    "authorityLost": {
+      "title": "Your workspace authority changed",
+      "description": "Your workspace role changed while this page was open. The controls you may still use have been refreshed."
+    }
+  }
+}

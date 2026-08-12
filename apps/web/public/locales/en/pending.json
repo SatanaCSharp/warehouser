@@ -13,5 +13,8 @@
     "deleteRole": "Deleting the role…",
     "transferManager": "Transferring warehouse management…",
     "updateRole": "Updating the role…"
+  },
+  "workspace": {
+    "renameWorkspace": "Naming the workspace…"
   }
 }

@@ -13,5 +13,8 @@
     "deleteRole": "Видаляємо роль…",
     "transferManager": "Передаємо керування складом…",
     "updateRole": "Оновлюємо роль…"
+  },
+  "workspace": {
+    "renameWorkspace": "Називаємо робочий простір…"
   }
 }

@@ -12,5 +12,11 @@
     "lengthRange": "Warehouse name must contain 1 to 100 characters.",
     "required": "Enter a Warehouse name.",
     "unsupportedCharacter": "Warehouse name contains an unsupported character."
+  },
+  "workspaceName": {
+    "lengthRange": "A workspace name may not exceed 100 characters.",
+    "required": "A workspace name cannot be empty once trimmed.",
+    "unsupportedCharacter": "Workspace name contains an unsupported character.",
+    "server": "Check the workspace name and try again."
   }
 }

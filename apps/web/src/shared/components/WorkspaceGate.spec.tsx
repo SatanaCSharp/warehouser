@@ -75,6 +75,43 @@ describe('WorkspaceGate', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it('renders children when the actor holds any one of several required Workspace Permissions', async () => {
+    stubContext(ownWorkspaceContext);
+    render(
+      <Provider store={makeStore()}>
+        <WorkspaceGate
+          permission={[
+            WorkspacePermissionId.WORKSPACE_MEMBERS_WATCH,
+            WorkspacePermissionId.WAREHOUSES_WATCH,
+          ]}
+        >
+          <p>secret</p>
+        </WorkspaceGate>
+      </Provider>,
+    );
+
+    expect(await screen.findByText('secret')).toBeInTheDocument();
+  });
+
+  it('renders nothing when the actor holds none of several required Workspace Permissions (AC-30)', async () => {
+    const fetchMock = stubContext(noMembershipContext);
+    render(
+      <Provider store={makeStore()}>
+        <WorkspaceGate
+          permission={[
+            WorkspacePermissionId.WORKSPACE_MEMBERS_WATCH,
+            WorkspacePermissionId.WAREHOUSES_WATCH,
+          ]}
+        >
+          <p>secret</p>
+        </WorkspaceGate>
+      </Provider>,
+    );
+
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText('secret')).not.toBeInTheDocument();
+  });
+
   it('renders nothing while the cache resolves and no fallback is given', () => {
     vi.stubGlobal(
       'fetch',

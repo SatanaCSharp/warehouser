@@ -7,7 +7,10 @@ import {
 } from '@tanstack/react-router';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { PermissionId } from '@warehouser/shared-types/enums';
+import {
+  PermissionId,
+  WorkspacePermissionId,
+} from '@warehouser/shared-types/enums';
 import { useState } from 'react';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -15,8 +18,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ROUTES } from 'shared/constants/routes';
 import { Sidebar } from 'shared/layouts/Sidebar';
 import { makeStore } from 'store';
+import { namedWorkspaceContext } from 'test/workspace-fixtures';
 
 import type { AccessProjection } from '@warehouser/contracts/access';
+import type { WorkspaceContext } from '@warehouser/contracts/workspaces';
 import type { ReactElement } from 'react';
 import type { AppStore } from 'store';
 
@@ -36,6 +41,33 @@ const stubAccess = (access: AccessProjection | null): void => {
         ? Promise.resolve(Response.json(access))
         : new Promise<Response>(() => {}),
     ),
+  );
+};
+
+// The Sidebar's Workspace entry reads a different projection
+// (`/api/v1/workspace/context`) than its Access entry
+// (`/api/v1/access/current`), so each Workspace-focused case must answer both
+// requests: Access permissionless so only the Workspace assertions are under
+// test, and the Workspace context carrying the permissions the case names.
+const stubAccessAndWorkspace = (
+  workspaceContext: WorkspaceContext | null,
+): void => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((input: RequestInfo | URL) => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (url.includes('/api/v1/access/current')) {
+        return Promise.resolve(
+          Response.json({ ...baseAccess, permissionIds: [] }),
+        );
+      }
+      if (url.includes('/api/v1/workspace/context')) {
+        return workspaceContext
+          ? Promise.resolve(Response.json(workspaceContext))
+          : new Promise<Response>(() => {});
+      }
+      return Promise.resolve(Response.json({}, { status: 404 }));
+    }),
   );
 };
 
@@ -69,8 +101,13 @@ const renderSidebar = (
     path: ROUTES.ACCESS,
     component: () => null,
   });
+  const workspaceRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: ROUTES.WORKSPACE,
+    component: () => null,
+  });
   const router = createRouter({
-    routeTree: rootRoute.addChildren([homeRoute, accessRoute]),
+    routeTree: rootRoute.addChildren([homeRoute, accessRoute, workspaceRoute]),
     context: { store },
     history: createMemoryHistory({ initialEntries: [initialEntry] }),
   });
@@ -243,5 +280,50 @@ describe('Sidebar', () => {
     await waitFor(() =>
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
     );
+  });
+
+  // AC-30: a User with no Workspace capability must not see the Workspace nav
+  // entry at all — never disabled, never an empty destination. Each case here
+  // proves a *different* single watch Permission is enough to admit the entry
+  // (the destination gates each tab independently), and the final case proves
+  // holding none of them omits the entry entirely.
+  it.each([
+    ['WAREHOUSES:WATCH', WorkspacePermissionId.WAREHOUSES_WATCH],
+    ['WORKSPACE_ROLES:WATCH', WorkspacePermissionId.WORKSPACE_ROLES_WATCH],
+    ['WORKSPACE_MEMBERS:WATCH', WorkspacePermissionId.WORKSPACE_MEMBERS_WATCH],
+  ])('shows Workspace when the actor holds %s', async (_label, permission) => {
+    stubAccessAndWorkspace(namedWorkspaceContext([permission]));
+    renderSidebar();
+
+    expect(
+      await screen.findByRole('link', { name: 'Workspace' }),
+    ).toHaveAttribute('href', ROUTES.WORKSPACE);
+  });
+
+  it('omits the Workspace nav entry — not disabled, not empty — when the actor holds no Workspace capability (AC-30)', async () => {
+    stubAccessAndWorkspace(namedWorkspaceContext([]));
+    renderSidebar();
+
+    await screen.findByRole('link', { name: 'Dashboard' });
+    expect(
+      screen.queryByRole('link', { name: 'Workspace' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Workspace' }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText('Workspace')).not.toBeInTheDocument();
+  });
+
+  it('hides Workspace during the loading window without rendering a skeleton', async () => {
+    stubAccessAndWorkspace(null);
+    renderSidebar();
+
+    expect(
+      await screen.findByRole('link', { name: 'Dashboard' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: 'Workspace' }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/loading/iu)).not.toBeInTheDocument();
   });
 });

@@ -8,6 +8,7 @@ import { accessRoute } from 'modules/access/route';
 import { loginRoute } from 'modules/auth/login/route';
 import { signUpRoute } from 'modules/auth/sign-up/route';
 import { homeRoute } from 'modules/home/route';
+import { workspaceRoute } from 'modules/workspace/route';
 import { rootRoute } from 'routes/__root.route';
 import { store } from 'store';
 
@@ -18,6 +19,7 @@ const routeTree = rootRoute.addChildren([
   accessRoute,
   loginRoute,
   signUpRoute,
+  workspaceRoute,
 ]);
 
 type CreateAppRouterOptions = {

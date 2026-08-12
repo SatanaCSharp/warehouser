@@ -12,6 +12,7 @@ import enSignIn from '../public/locales/en/sign-in.json';
 import enSignUp from '../public/locales/en/sign-up.json';
 import enSuccess from '../public/locales/en/success.json';
 import enValidation from '../public/locales/en/validation.json';
+import enWorkspace from '../public/locales/en/workspace.json';
 import ukAccess from '../public/locales/uk/access.json';
 import ukCommon from '../public/locales/uk/common.json';
 import ukErrors from '../public/locales/uk/errors.json';
@@ -21,6 +22,7 @@ import ukSignIn from '../public/locales/uk/sign-in.json';
 import ukSignUp from '../public/locales/uk/sign-up.json';
 import ukSuccess from '../public/locales/uk/success.json';
 import ukValidation from '../public/locales/uk/validation.json';
+import ukWorkspace from '../public/locales/uk/workspace.json';
 
 const resources = {
   en: {
@@ -33,6 +35,7 @@ const resources = {
     'sign-up': enSignUp,
     success: enSuccess,
     validation: enValidation,
+    workspace: enWorkspace,
   },
   uk: {
     access: ukAccess,
@@ -44,6 +47,7 @@ const resources = {
     'sign-up': ukSignUp,
     success: ukSuccess,
     validation: ukValidation,
+    workspace: ukWorkspace,
   },
 } as const;
 
