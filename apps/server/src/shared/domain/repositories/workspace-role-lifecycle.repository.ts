@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { getEntityManager } from 'shared/database/db-transaction-context.service';
 import { WorkspaceMembershipEntity } from 'shared/domain/entities/workspace-membership.entity';
-import { WorkspacePermissionEntity } from 'shared/domain/entities/workspace-permission.entity';
 import { WorkspaceRoleEntity } from 'shared/domain/entities/workspace-role.entity';
 import { WorkspaceRolePermissionEntity } from 'shared/domain/entities/workspace-role-permission.entity';
 import { DataSource } from 'typeorm';
@@ -12,9 +11,18 @@ export interface WorkspaceCustomRoleWrite {
   readonly name: string;
 }
 
+// A persistence-oriented shape (not the `WorkspacePermissionEntity` class),
+// so callers above the repository boundary — including use cases, which must
+// not depend on TypeORM entities (server-architecture.md "Use cases") — can
+// pass a plain catalogue read result without importing the entity.
+export interface WorkspacePermissionGrant {
+  readonly id: string;
+  readonly kind: 'assignable' | 'reserved';
+}
+
 const permissionRows = (
   workspaceRoleId: string,
-  permissions: readonly WorkspacePermissionEntity[],
+  permissions: readonly WorkspacePermissionGrant[],
 ) =>
   permissions.map((permission) => ({
     workspaceRoleId,
@@ -29,7 +37,7 @@ export class WorkspaceRoleLifecycleRepository {
 
   async createCustomRole(
     input: WorkspaceCustomRoleWrite,
-    permissions: readonly WorkspacePermissionEntity[],
+    permissions: readonly WorkspacePermissionGrant[],
   ): Promise<void> {
     const manager = getEntityManager(this.dataSource);
     await manager.getRepository(WorkspaceRoleEntity).insert({
@@ -64,6 +72,25 @@ export class WorkspaceRoleLifecycleRepository {
       .findOneBy({ workspaceId, id: roleId, kind: 'custom' });
   }
 
+  // Kind-agnostic lock: unlike `findCustomRole`, this matches a Workspace
+  // Role of any `kind` (including the protected `workspace_owner` kind)
+  // scoped to the Workspace, so a caller can distinguish "missing/
+  // cross-Workspace Role" from "Role exists but is protected" instead of
+  // both collapsing to the same outcome. Mirrors
+  // `RoleLifecycleRepository.lockRoleById` one level down.
+  lockRoleById(
+    workspaceId: string,
+    roleId: string,
+  ): Promise<WorkspaceRoleEntity | null> {
+    const manager = getEntityManager(this.dataSource);
+    return manager
+      .getRepository(WorkspaceRoleEntity)
+      .createQueryBuilder('workspaceRole')
+      .where({ id: roleId, workspaceId })
+      .setLock('pessimistic_write')
+      .getOne();
+  }
+
   async updateCustomRole(roleId: string, name: string): Promise<void> {
     const manager = getEntityManager(this.dataSource);
     await manager
@@ -73,7 +100,7 @@ export class WorkspaceRoleLifecycleRepository {
 
   async replaceCustomRolePermissions(
     roleId: string,
-    permissions: readonly WorkspacePermissionEntity[],
+    permissions: readonly WorkspacePermissionGrant[],
   ): Promise<void> {
     const manager = getEntityManager(this.dataSource);
     await manager
