@@ -146,19 +146,6 @@
       "submit": "Delete and move",
       "unassignedDescription": "No workspace member holds this role, so no workspace role assignment changes. Only the role itself is deleted."
     },
-    "transferOwnership": {
-      "trigger": "Transfer ownership",
-      "title": "Transfer workspace ownership",
-      "description": "Ownership moves in one step. The workspace always has exactly one owner.",
-      "newOwnerLabel": "New owner",
-      "newOwnerDescription": "Must already be a workspace member.",
-      "newRoleLabel": "Your new workspace role",
-      "newRoleDescription": "You must end the transfer holding exactly one workspace role.",
-      "noticeTitle": "You lose owner-only capabilities",
-      "noticeDescription": "After this you can no longer transfer ownership, and only the new owner can transfer it back.",
-      "cancel": "Cancel",
-      "submit": "Transfer ownership"
-    },
     "heading": "Workspace roles",
     "listLabel": "Workspace roles",
     "protectedReason": "The workspace owner role is system-managed. It is never renamed, deleted, or given different permissions, and workspace ownership moves only through the protected transfer."
@@ -195,6 +182,23 @@
       "roleLabel": "Workspace role",
       "cancel": "Cancel",
       "submit": "Add workspace member"
+    },
+    "transferOwnership": {
+      "trigger": "Transfer ownership",
+      "title": "Transfer workspace ownership",
+      "description": "Ownership moves in one step. The workspace always has exactly one owner.",
+      "newOwnerLabel": "New owner",
+      "newOwnerDescription": "Must already be a workspace member.",
+      "newRoleLabel": "Your new workspace role",
+      "newRoleDescription": "You must end the transfer holding exactly one workspace role.",
+      "noticeTitle": "You lose owner-only capabilities",
+      "noticeDescription": "After this you can no longer transfer ownership, and only the new owner can transfer it back.",
+      "refusal": {
+        "title": "Create a custom workspace role first",
+        "description": "This workspace has no custom workspace role for you to receive, and you must end the transfer holding exactly one workspace role. Nothing changed."
+      },
+      "cancel": "Cancel",
+      "submit": "Transfer ownership"
     },
     "everyone": {
       "heading": "Everyone in this workspace",

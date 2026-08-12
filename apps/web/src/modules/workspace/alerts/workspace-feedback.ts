@@ -2,14 +2,18 @@ import i18n from 'i18n';
 import { alertActionPromise } from 'shared/alerts/action-feedback';
 
 export type WorkspaceSuccessAction =
+  | 'addWorkspaceMember'
   | 'archiveWarehouse'
+  | 'assignWorkspaceRole'
   | 'createWarehouse'
   | 'createWorkspaceRole'
   | 'deleteWorkspaceRole'
   | 'giveWarehouseAccess'
   | 'renameWarehouse'
+  | 'removeWorkspaceMember'
   | 'renameWorkspace'
   | 'restoreWarehouse'
+  | 'transferWorkspaceOwner'
   | 'updateWorkspaceRole'
   | 'withdrawWarehouseAccess';
 

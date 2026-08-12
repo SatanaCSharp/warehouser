@@ -24,6 +24,10 @@
     "withdrawWarehouseAccess": "Доступ до {{name}} відкликано.",
     "createWorkspaceRole": "Роль робочого простору створено.",
     "updateWorkspaceRole": "Роль робочого простору збережено.",
-    "deleteWorkspaceRole": "Роль робочого простору видалено."
+    "deleteWorkspaceRole": "Роль робочого простору видалено.",
+    "addWorkspaceMember": "Учасника робочого простору додано.",
+    "removeWorkspaceMember": "Учасника робочого простору вилучено.",
+    "assignWorkspaceRole": "Роль робочого простору змінено.",
+    "transferWorkspaceOwner": "Власність над робочим простором передано."
   }
 }

@@ -4,6 +4,7 @@ import compact from 'lodash/compact';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { WorkspaceMembersTab } from 'modules/workspace/components/workspace-administration/members/WorkspaceMembersTab';
 import { NameWorkspaceAction } from 'modules/workspace/components/workspace-administration/NameWorkspaceAction';
 import { WorkspacePermissionsTab } from 'modules/workspace/components/workspace-administration/permissions/WorkspacePermissionsTab';
 import { WorkspaceRolesTab } from 'modules/workspace/components/workspace-administration/roles/WorkspaceRolesTab';
@@ -22,13 +23,13 @@ type AdministrationTab = {
   shortLabel?: string;
 };
 
-// Each tab's content mounts only once its own task wires it; the Members tab
-// deliberately stays unmapped — hence `undefined` — until T39 adds its entry
-// here. A lookup keeps adding a tab a one-line change instead of a growing
+// Every tab the acting member's watch Permissions admit now maps to its own
+// content. A lookup keeps adding a tab a one-line change instead of a growing
 // `if`/ternary chain.
 const tabContentById: Partial<Record<string, ReactElement>> = {
   warehouses: <WarehousesTab />,
   workspaceRoles: <WorkspaceRolesTab />,
+  members: <WorkspaceMembersTab />,
   permissions: <WorkspacePermissionsTab />,
 };
 

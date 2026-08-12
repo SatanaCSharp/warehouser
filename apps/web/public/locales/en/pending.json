@@ -24,6 +24,10 @@
     "withdrawWarehouseAccess": "Withdrawing access to {{name}}…",
     "createWorkspaceRole": "Creating the workspace role…",
     "updateWorkspaceRole": "Saving the workspace role…",
-    "deleteWorkspaceRole": "Deleting the workspace role…"
+    "deleteWorkspaceRole": "Deleting the workspace role…",
+    "addWorkspaceMember": "Adding the workspace member…",
+    "removeWorkspaceMember": "Removing the workspace member…",
+    "assignWorkspaceRole": "Changing the workspace role…",
+    "transferWorkspaceOwner": "Transferring workspace ownership…"
   }
 }

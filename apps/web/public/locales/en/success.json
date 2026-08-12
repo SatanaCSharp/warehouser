@@ -24,6 +24,10 @@
     "withdrawWarehouseAccess": "Access to {{name}} withdrawn.",
     "createWorkspaceRole": "Workspace role created.",
     "updateWorkspaceRole": "Workspace role saved.",
-    "deleteWorkspaceRole": "Workspace role deleted."
+    "deleteWorkspaceRole": "Workspace role deleted.",
+    "addWorkspaceMember": "Workspace member added.",
+    "removeWorkspaceMember": "Workspace member removed.",
+    "assignWorkspaceRole": "Workspace role changed.",
+    "transferWorkspaceOwner": "Workspace ownership transferred."
   }
 }

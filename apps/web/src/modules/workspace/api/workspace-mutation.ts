@@ -33,6 +33,7 @@ export const runWorkspaceMutation = async (
   }
   return {
     success: false,
+    code: result.error.code,
     fieldErrors: result.error.fieldErrors ?? mapFieldErrors(result.error.code),
   };
 };

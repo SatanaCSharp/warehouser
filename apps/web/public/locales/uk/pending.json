@@ -24,6 +24,10 @@
     "withdrawWarehouseAccess": "Відкликаємо доступ до {{name}}…",
     "createWorkspaceRole": "Створення ролі робочого простору…",
     "updateWorkspaceRole": "Збереження ролі робочого простору…",
-    "deleteWorkspaceRole": "Видалення ролі робочого простору…"
+    "deleteWorkspaceRole": "Видалення ролі робочого простору…",
+    "addWorkspaceMember": "Додаємо учасника робочого простору…",
+    "removeWorkspaceMember": "Вилучаємо учасника робочого простору…",
+    "assignWorkspaceRole": "Змінюємо роль робочого простору…",
+    "transferWorkspaceOwner": "Передаємо власність над робочим простором…"
   }
 }
