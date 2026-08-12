@@ -101,8 +101,9 @@
     "withdrawAccess": {
       "trigger": "Withdraw access",
       "title": "Withdraw access to {{name}}?",
-      "description": "The person stops belonging to this warehouse. Their other memberships are unchanged.",
+      "description": "The person stops belonging to this warehouse. Their other memberships are unaffected.",
       "protectedReason": "The warehouse manager's access is withdrawn only through the warehouse's own transfer.",
+      "ownReason": "You cannot withdraw your own warehouse authority.",
       "cancel": "Cancel",
       "submit": "Withdraw access"
     }

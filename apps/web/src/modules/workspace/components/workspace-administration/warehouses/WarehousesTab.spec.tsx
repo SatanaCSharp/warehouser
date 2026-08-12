@@ -4,14 +4,35 @@ import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { WarehousesTab } from 'modules/workspace/components/workspace-administration/warehouses/WarehousesTab';
+import { selectHeroOption } from 'test/hero-select';
 import { renderWithProviders } from 'test/render';
 import {
+  assignableWarehouseRoleIds,
   authenticatedWorkspaceStore,
   namedWorkspaceContext,
+  otherUserIds,
   stubWorkspaceServer,
   warehouseIds,
   workspaceIds,
 } from 'test/workspace-fixtures';
+
+// `alertWorkspaceAction` drives the success/pending toast through this single
+// seam (`web-error-handling.md` §2, §4) — mocking it here, as
+// `router.spec.tsx` already does, lets a spec assert the toast copy without
+// mounting HeroUI's `Toast.Provider` and queue.
+const toast = vi.hoisted(() => {
+  const fn = vi.fn(() => 'pending-key');
+  return Object.assign(fn, {
+    danger: vi.fn((_message: unknown, options?: { onClose?: () => void }) => {
+      options?.onClose?.();
+      return 'toast-key';
+    }),
+    success: vi.fn(() => 'toast-key'),
+    close: vi.fn(),
+  });
+});
+
+vi.mock('shared/alerts/toast', () => ({ toast }));
 
 const watchOnly = [
   WorkspacePermissionId.WAREHOUSES_WATCH,
@@ -23,6 +44,12 @@ const fullAuthority = [
   WorkspacePermissionId.WAREHOUSES_CREATE,
   WorkspacePermissionId.WAREHOUSES_RENAME,
   WorkspacePermissionId.WAREHOUSES_ARCHIVE,
+];
+
+const withAccessManagement = [
+  ...watchOnly,
+  WorkspacePermissionId.WAREHOUSE_MEMBERSHIPS_ASSIGN,
+  WorkspacePermissionId.WAREHOUSE_MEMBERSHIPS_REVOKE,
 ];
 
 const renderTab = (): void => {
@@ -41,10 +68,25 @@ const selectWarehouse = async (
 const detailPane = async (): Promise<HTMLElement> =>
   screen.findByRole('region', { name: /warehouse detail/iu });
 
+/**
+ * HeroUI's `Select` always renders a visually hidden native `<select>` mirror
+ * for form semantics alongside the interactive `ListBox`, so once the popover
+ * is open a plain `getByRole('option', { hidden: true })` matches both nodes.
+ * Filtering to the non-`OPTION` element narrows the assertion to the item a
+ * member can actually activate — the same technique `test/hero-select.ts`
+ * documents and uses.
+ */
+const openOptions = (name: string): HTMLElement[] =>
+  screen
+    .queryAllByRole('option', { name, hidden: true })
+    .filter((candidate) => candidate.tagName !== 'OPTION');
+
 // eslint-disable-next-line max-lines-per-function
 describe('WarehousesTab', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    toast.success.mockClear();
+    toast.danger.mockClear();
   });
 
   describe('the Warehouse list (AC-33, AC-12a)', () => {
@@ -494,6 +536,225 @@ describe('WarehousesTab', () => {
       expect(
         within(detail).queryByRole('button', { name: 'Restore warehouse' }),
       ).not.toBeInTheDocument();
+    });
+  });
+
+  describe('giving warehouse access (AC-23, AC-23a)', () => {
+    const openGiveAccessDialog = async (
+      user: ReturnType<typeof userEvent.setup>,
+    ): Promise<HTMLElement> => {
+      await user.click(
+        await screen.findByRole('button', { name: 'Give access' }),
+      );
+      return screen.findByRole('dialog', { name: /give warehouse access/iu });
+    };
+
+    it("lists the Workspace's other Users, excluding the acting member and anyone already in Central DC, and Central DC's assignable custom Roles from the narrow read", async () => {
+      const user = userEvent.setup();
+      stubWorkspaceServer({
+        context: namedWorkspaceContext(withAccessManagement),
+      });
+
+      renderTab();
+      const dialog = await openGiveAccessDialog(user);
+
+      await user.click(
+        within(dialog).getByRole('button', { name: /person/iu }),
+      );
+      // Anna already belongs to Central DC (excluded, AC-25) and the acting
+      // member (Yurii) can never be their own target (AC-25a) — only Lena, who
+      // belongs to no Warehouse yet, is a valid candidate.
+      expect(openOptions('lena.boiko@example.test')).toHaveLength(1);
+      expect(
+        screen.queryByRole('option', {
+          name: 'anna.kravets@example.test',
+          hidden: true,
+        }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('option', {
+          name: 'yurii@example.test',
+          hidden: true,
+        }),
+      ).not.toBeInTheDocument();
+
+      await user.keyboard('{Escape}');
+      await user.click(
+        within(dialog).getByRole('button', { name: /role in/iu }),
+      );
+      expect(openOptions('Picker')).toHaveLength(1);
+      expect(openOptions('Site Supervisor')).toHaveLength(1);
+    });
+
+    it("requests no data for a Warehouse's members, Roles or resources beyond the two narrow reads (AC-23a)", async () => {
+      const user = userEvent.setup();
+      const requestedUrls = stubWorkspaceServer({
+        context: namedWorkspaceContext(withAccessManagement),
+      });
+
+      renderTab();
+      await openGiveAccessDialog(user);
+
+      await waitFor(() =>
+        expect(
+          requestedUrls.some((url) => url.includes('/assignable-roles')),
+        ).toBe(true),
+      );
+      expect(
+        requestedUrls.some((url) => url.includes('/api/v1/warehouses/')),
+      ).toBe(false);
+    });
+
+    it('states what changes and what is preserved before placing the target User with the chosen Role, and reports the committed outcome by name', async () => {
+      const user = userEvent.setup();
+      const submitted: unknown[] = [];
+      stubWorkspaceServer({
+        context: namedWorkspaceContext(withAccessManagement),
+        onAssignWarehouseMembership: (body) => {
+          submitted.push(body);
+          return undefined;
+        },
+      });
+
+      renderTab();
+      const dialog = await openGiveAccessDialog(user);
+
+      expect(within(dialog).getByText(/warehouse manager/iu)).toBeVisible();
+
+      await selectHeroOption(
+        user,
+        within(dialog).getByRole('button', { name: /person/iu }),
+        'lena.boiko@example.test',
+      );
+      await selectHeroOption(
+        user,
+        within(dialog).getByRole('button', { name: /role in/iu }),
+        'Picker',
+      );
+      await user.click(
+        within(dialog).getByRole('button', { name: 'Give access' }),
+      );
+
+      await waitFor(() =>
+        expect(submitted).toEqual([
+          {
+            userId: otherUserIds.lena,
+            roleId: assignableWarehouseRoleIds.picker,
+          },
+        ]),
+      );
+      await waitFor(() =>
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+      );
+      expect(toast.success).toHaveBeenCalledWith(
+        expect.stringMatching(/central dc/iu),
+      );
+    });
+  });
+
+  describe('withdrawing warehouse access (AC-25b, AC-25c)', () => {
+    const rowFor = (email: string): HTMLElement => {
+      const row = screen.getByText(email).closest('li');
+      if (!row) {
+        throw new Error(`No person row found for ${email}`);
+      }
+      return row;
+    };
+
+    it('states what is preserved, withdraws the membership and removes the person from the pane (AC-25b)', async () => {
+      const user = userEvent.setup();
+      const submitted: unknown[] = [];
+      stubWorkspaceServer({
+        context: namedWorkspaceContext(withAccessManagement),
+        onRevokeWarehouseMembership: () => {
+          submitted.push(true);
+          return undefined;
+        },
+      });
+
+      renderTab();
+      await detailPane();
+
+      await user.click(
+        within(rowFor('anna.kravets@example.test')).getByRole('button', {
+          name: /withdraw access/iu,
+        }),
+      );
+      const dialog = await screen.findByRole('dialog', {
+        name: /withdraw access/iu,
+      });
+      expect(dialog).toHaveTextContent(/other memberships .* unaffected/iu);
+
+      await user.click(
+        within(dialog).getByRole('button', { name: 'Withdraw access' }),
+      );
+
+      await waitFor(() => expect(submitted).toEqual([true]));
+      await waitFor(() =>
+        expect(
+          screen.queryByText('anna.kravets@example.test'),
+        ).not.toBeInTheDocument(),
+      );
+    });
+
+    it("exposes Withdraw access as disabled on the acting member's own row, with the reason accessible to assistive technology (AC-25c)", async () => {
+      stubWorkspaceServer({
+        context: namedWorkspaceContext(withAccessManagement),
+      });
+
+      renderTab();
+      await detailPane();
+
+      // Yurii is the acting member (test/workspace-fixtures.ts) and belongs to
+      // Central DC — a member never withdraws their own Warehouse authority.
+      const ownWithdraw = within(rowFor('yurii@example.test')).getByRole(
+        'button',
+        { name: /withdraw access/iu },
+      );
+      expect(ownWithdraw).toBeDisabled();
+      const describedBy = ownWithdraw.getAttribute('aria-describedby');
+      expect(describedBy).toBeTruthy();
+      expect(document.getElementById(describedBy ?? '')).toHaveTextContent(
+        /own .*(?:warehouse )?authority/iu,
+      );
+    });
+
+    it('handles a server denial of withdrawal independently of the offered control, without disclosing the target (AC-25c)', async () => {
+      const user = userEvent.setup();
+      stubWorkspaceServer({
+        context: namedWorkspaceContext(withAccessManagement),
+        onRevokeWarehouseMembership: () => ({
+          body: {
+            code: 'workspace.manager_transfer_required',
+            message:
+              'Warehouse Manager changes only through the protected transfer.',
+          },
+          status: 409,
+        }),
+      });
+
+      renderTab();
+      await detailPane();
+
+      // The client offers the control on Anna's row — it holds no data that
+      // could mark her membership as protected — and the server is the one
+      // that refuses.
+      const withdraw = within(rowFor('anna.kravets@example.test')).getByRole(
+        'button',
+        { name: /withdraw access/iu },
+      );
+      expect(withdraw).toBeEnabled();
+      await user.click(withdraw);
+      const dialog = await screen.findByRole('dialog', {
+        name: /withdraw access/iu,
+      });
+      await user.click(
+        within(dialog).getByRole('button', { name: 'Withdraw access' }),
+      );
+
+      await waitFor(() => expect(toast.danger).toHaveBeenCalled());
+      expect(toast.success).not.toHaveBeenCalled();
+      expect(screen.getByText('anna.kravets@example.test')).toBeInTheDocument();
     });
   });
 
