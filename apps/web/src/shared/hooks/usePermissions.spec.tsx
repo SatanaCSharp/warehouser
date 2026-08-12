@@ -11,6 +11,7 @@ import {
 import { makeStore } from 'store';
 
 import type { AccessProjection } from '@warehouser/contracts/access';
+import type { WorkspacePermissionId } from '@warehouser/shared-types/enums';
 import type { ReactElement, ReactNode } from 'react';
 import type { AppStore } from 'store';
 
@@ -105,5 +106,19 @@ describe('useCurrentPermissions / useHasPermission', () => {
 
     expect(second.current).toBe(true);
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('PermissionId / WorkspacePermissionId vocabulary separation (AC-31)', () => {
+  it('never accepts the Workspace-level WorkspacePermissionId as the permission hook parameter', () => {
+    type PermissionHookParam = Parameters<typeof useHasPermission>[0];
+    const workspacePermission = 'WORKSPACE:RENAME' as WorkspacePermissionId;
+
+    // @ts-expect-error a Workspace-level WorkspacePermissionId must never satisfy the
+    // Warehouse-level hook's PermissionId parameter — the two authorization vocabularies never
+    // meet (AC-31).
+    const asPermissionHookParam: PermissionHookParam = workspacePermission;
+
+    expect(typeof asPermissionHookParam).toBe('string');
   });
 });

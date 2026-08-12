@@ -7,6 +7,8 @@ import { PermissionGate } from 'shared/components/PermissionGate';
 import { makeStore } from 'store';
 
 import type { AccessProjection } from '@warehouser/contracts/access';
+import type { WorkspacePermissionId } from '@warehouser/shared-types/enums';
+import type { PermissionGateProps } from 'shared/components/PermissionGate';
 
 const access: AccessProjection = {
   warehouseId: '00000000-0000-4000-8000-000000000010',
@@ -87,5 +89,20 @@ describe('PermissionGate', () => {
     );
 
     expect(screen.getByText('secret')).toBeInTheDocument();
+  });
+});
+
+describe('PermissionGateProps / WorkspacePermissionId vocabulary separation (AC-31)', () => {
+  it('never accepts a readonly WorkspacePermissionId[] as the gate permissionIds prop', () => {
+    type GatePermissionIdsProp = PermissionGateProps['permissionIds'];
+    const workspacePermissionIds = [
+      'WORKSPACE:RENAME' as WorkspacePermissionId,
+    ];
+
+    // @ts-expect-error a readonly WorkspacePermissionId[] must never satisfy the Warehouse-level
+    // gate's `permissionIds` prop — the two authorization vocabularies never meet (AC-31).
+    const asGatePermissionIds: GatePermissionIdsProp = workspacePermissionIds;
+
+    expect(Array.isArray(asGatePermissionIds)).toBe(true);
   });
 });

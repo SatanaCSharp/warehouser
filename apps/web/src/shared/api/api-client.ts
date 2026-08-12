@@ -120,6 +120,7 @@ export const api = createApi({
     'AccessMembers',
     'Permissions',
     'Roles',
+    'WorkspaceContext',
   ],
   endpoints: () => ({}),
 });

@@ -19,11 +19,19 @@ export default defineConfig({
         __dirname,
         '../../packages/contracts/src/users/index.ts',
       ),
+      '@warehouser/contracts/workspaces': path.resolve(
+        __dirname,
+        '../../packages/contracts/src/workspaces/index.ts',
+      ),
       '@warehouser/shared-types/enums': path.resolve(
         __dirname,
         '../../packages/shared-types/src/enums/index.ts',
       ),
       access: path.resolve(__dirname, '../../packages/contracts/src/access'),
+      workspaces: path.resolve(
+        __dirname,
+        '../../packages/contracts/src/workspaces',
+      ),
       src: path.resolve(__dirname, './src'),
       App: path.resolve(__dirname, './src/App.tsx'),
       i18n: path.resolve(__dirname, './src/i18n.ts'),
