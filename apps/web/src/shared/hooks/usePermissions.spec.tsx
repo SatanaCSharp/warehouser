@@ -20,6 +20,7 @@ const access: AccessProjection = {
   roleId: '00000000-0000-4000-8000-000000000011',
   roleKind: 'custom',
   permissionIds: [PermissionId.ROLES_WATCH],
+  archivedAt: null,
 };
 
 const withStore =

@@ -34,6 +34,7 @@ const readableAccess = {
   roleId: '00000000-0000-4000-8000-000000000003',
   roleKind: 'custom',
   permissionIds: ['ROLES:WATCH'],
+  archivedAt: null,
 } as const;
 
 const renderRoute = (initialEntry: string): RenderedRoute => {
@@ -106,6 +107,7 @@ describe('router', () => {
           roleId: '00000000-0000-4000-8000-000000000003',
           roleKind: 'custom',
           permissionIds: ['ROLES:WATCH'],
+          archivedAt: null,
         },
       ],
       [
@@ -262,6 +264,7 @@ describe('router', () => {
           roleId: '00000000-0000-4000-8000-000000000003',
           roleKind: 'custom',
           permissionIds: [],
+          archivedAt: null,
         }),
       );
     vi.stubGlobal('fetch', fetchMock);

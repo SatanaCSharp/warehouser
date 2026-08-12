@@ -1,6 +1,10 @@
 import 'reflect-metadata';
 
-import { GUARDS_METADATA, HTTP_CODE_METADATA } from '@nestjs/common/constants';
+import {
+  GUARDS_METADATA,
+  HTTP_CODE_METADATA,
+  PATH_METADATA,
+} from '@nestjs/common/constants';
 import { PermissionId } from '@warehouser/shared-types/enums';
 import { AccessController } from 'access/rest/controllers/access.controller';
 import type { AssignMemberRoleCommand } from 'access/usecases/commands/assign-member-role.command';
@@ -13,6 +17,7 @@ import type { ListAccessPermissionsQuery } from 'access/usecases/queries/list-ac
 import type { ListAccessRolesQuery } from 'access/usecases/queries/list-access-roles.query';
 import type { ReadCurrentAccessQuery } from 'access/usecases/queries/read-current-access.query';
 import type { WarehouseAccessRequest } from 'shared/access/access-request';
+import { READ_TOLERANT_KEY } from 'shared/access/archived-tolerant-read.decorator';
 import { REQUIRED_PERMISSION_KEY } from 'shared/decorators/required-permission.decorator';
 import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
 import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
@@ -122,6 +127,79 @@ describe('AccessController', () => {
     );
     expect(Reflect.getMetadata(HTTP_CODE_METADATA, method('deleteRole'))).toBe(
       204,
+    );
+    expect(
+      Reflect.getMetadata(HTTP_CODE_METADATA, method('transferManager')),
+    ).toBe(200);
+  });
+
+  // -- T26: the named-Warehouse re-shape (AC-03a, AC-12, AC-12a, AC-36) -------------------------
+
+  it('mounts every access handler under the named Warehouse so none can be reached without one (AC-03a)', () => {
+    expect(Reflect.getMetadata(PATH_METADATA, AccessController)).toBe(
+      'api/v1/warehouses/:warehouseId/access',
+    );
+  });
+
+  it('reads the actor projection of the Warehouse named in the path, declaring no Warehouse Permission (AC-05, OQ-2)', async () => {
+    jest.mocked(current.execute).mockResolvedValue({
+      warehouseId: id(2),
+      roleId: id(3),
+      roleKind: 'custom',
+      permissionIds: [],
+      archivedAt: null,
+    });
+
+    await controller.readCurrent(id(2), request(PermissionId.ROLES_WATCH));
+
+    expect(current.execute).toHaveBeenCalledWith(id(1), id(2));
+    // A self-projection read declares no Warehouse Permission: requiring one to read one's own
+    // capabilities would be circular. Membership is still resolved for exactly this
+    // (User, Warehouse) pair inside the query.
+    expect(
+      Reflect.getMetadata(REQUIRED_PERMISSION_KEY, method('readCurrent')),
+    ).toBeUndefined();
+    expect(Reflect.getMetadata(GUARDS_METADATA, method('readCurrent'))).toEqual(
+      [SessionAuthGuard],
+    );
+  });
+
+  it.each([
+    ['listRoles', true],
+    ['listPermissions', true],
+    ['listMembers', true],
+    // The one archived-tolerant *mutation* ADR 0003 admits, because its subject is a membership
+    // edge (AC-11, AC-36).
+    ['transferManager', true],
+    ['createRole', undefined],
+    ['updateRole', undefined],
+    ['deleteRole', undefined],
+    ['assignMemberRole', undefined],
+  ] as const)(
+    '%s declares archived tolerance %s for the reworked Warehouse guard (AC-12, AC-12a)',
+    (handlerName, tolerant) => {
+      expect(Reflect.getMetadata(READ_TOLERANT_KEY, method(handlerName))).toBe(
+        tolerant,
+      );
+    },
+  );
+
+  it('transfers the Manager Role of the guard-derived Warehouse and names both affected members (AC-36)', async () => {
+    jest.mocked(transfer.execute).mockResolvedValue({ managerId: id(5) });
+
+    await expect(
+      controller.transferManager(
+        request(PermissionId.WAREHOUSE_MANAGER_ROLE_REASSIGN),
+        { recipientUserId: id(5), formerManagerRoleId: id(6) },
+      ),
+    ).resolves.toEqual({
+      managerUserId: id(5),
+      formerManagerUserId: id(1),
+      formerManagerRoleId: id(6),
+    });
+    expect(transfer.execute).toHaveBeenCalledWith(
+      expect.objectContaining({ warehouseId: id(2) }),
+      { recipientId: id(5), replacementRoleId: id(6) },
     );
   });
 });

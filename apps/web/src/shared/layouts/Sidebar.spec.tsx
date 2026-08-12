@@ -25,6 +25,7 @@ const baseAccess: AccessProjection = {
   roleId: '00000000-0000-4000-8000-000000000011',
   roleKind: 'custom',
   permissionIds: [],
+  archivedAt: null,
 };
 
 const stubAccess = (access: AccessProjection | null): void => {

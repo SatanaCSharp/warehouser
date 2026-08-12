@@ -11,6 +11,9 @@ export const accessProjectionSchema = z.strictObject({
   roleId: z.string().uuid(),
   roleKind: roleKindSchema,
   permissionIds: z.array(permissionIdSchema),
+  // Marks the named Warehouse as archived so an archived-tolerant read (AC-12a) can present that
+  // state, rather than the read silently looking identical to a live Warehouse.
+  archivedAt: z.string().datetime().nullable(),
 });
 export const roleSchema = z.strictObject({
   id: z.string().uuid(),

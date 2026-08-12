@@ -33,6 +33,7 @@ const stubAccess = (permissionIds: AccessProjection['permissionIds']): void => {
     roleId: '00000000-0000-4000-8000-000000000011',
     roleKind: 'custom',
     permissionIds,
+    archivedAt: null,
   };
   vi.stubGlobal(
     'fetch',

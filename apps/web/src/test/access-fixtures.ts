@@ -103,6 +103,7 @@ export const stubAccessServer = ({
         roleId: accessIds.managerRole,
         roleKind: 'warehouse_manager',
         permissionIds,
+        archivedAt: null,
       },
     ],
     ['/access/roles', asPage(roles)],

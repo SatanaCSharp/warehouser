@@ -22,6 +22,7 @@ export interface CurrentAccessPersistenceResult {
   readonly roleId: string;
   readonly roleKind: 'custom' | 'warehouse_manager';
   readonly permissionIds: readonly string[];
+  readonly archivedAt: Date | null;
 }
 
 @Injectable()
@@ -79,13 +80,17 @@ export class AccessCurrentUserRepository {
     return permissionId ? { ...membership, permissionId, granted: true } : null;
   }
 
+  /** Resolves the actor's own membership projection. Callers that already operate inside one named
+   * Warehouse (the T26 `current` read) pass `warehouseId` so the membership and its archived state
+   * are scoped to that Warehouse rather than resolved ambiguously (AC-03a, AC-12a). */
   async resolveCurrentAccess(
     userId: string,
+    warehouseId?: string,
   ): Promise<CurrentAccessPersistenceResult | null> {
     const manager = getEntityManager(this.dataSource);
     const membership = await manager
       .getRepository(WarehouseMembershipEntity)
-      .findOneBy({ userId });
+      .findOneBy(warehouseId ? { userId, warehouseId } : { userId });
 
     if (!membership) {
       return null;
@@ -96,12 +101,16 @@ export class AccessCurrentUserRepository {
       where: { roleId: membership.roleId },
       order: { permissionId: 'ASC' },
     });
+    const warehouse = await manager
+      .getRepository(WarehouseEntity)
+      .findOneBy({ id: membership.warehouseId });
 
     return {
       warehouseId: membership.warehouseId,
       roleId: membership.roleId,
       roleKind: membership.roleKind,
       permissionIds: grants.map((grant) => grant.permissionId),
+      archivedAt: warehouse ? warehouse.archivedAt : null,
     };
   }
 }
