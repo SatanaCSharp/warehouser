@@ -21,6 +21,9 @@
     "archiveWarehouse": "Склад заархівовано.",
     "restoreWarehouse": "Склад відновлено.",
     "giveWarehouseAccess": "Доступ до {{name}} надано.",
-    "withdrawWarehouseAccess": "Доступ до {{name}} відкликано."
+    "withdrawWarehouseAccess": "Доступ до {{name}} відкликано.",
+    "createWorkspaceRole": "Роль робочого простору створено.",
+    "updateWorkspaceRole": "Роль робочого простору збережено.",
+    "deleteWorkspaceRole": "Роль робочого простору видалено."
   }
 }

@@ -130,7 +130,9 @@
       "permissionsHeading": "Workspace permissions",
       "permissionsDescription": "Changes apply to the next authorization decision. None of these permissions grant anything inside a warehouse.",
       "cancel": "Cancel",
-      "save": "Save changes"
+      "save": "Save changes",
+      "regionLabel": "Workspace role editor",
+      "subtitle": "{{count}} workspace members hold this role."
     },
     "delete": {
       "trigger": "Delete role",
@@ -141,7 +143,8 @@
       "noticeTitle": "Needs both permissions",
       "noticeDescription": "Moving members is a role assignment, so deleting an assigned role needs delete and assign permission together.",
       "cancel": "Cancel",
-      "submit": "Delete and move"
+      "submit": "Delete and move",
+      "unassignedDescription": "No workspace member holds this role, so no workspace role assignment changes. Only the role itself is deleted."
     },
     "transferOwnership": {
       "trigger": "Transfer ownership",
@@ -155,7 +158,10 @@
       "noticeDescription": "After this you can no longer transfer ownership, and only the new owner can transfer it back.",
       "cancel": "Cancel",
       "submit": "Transfer ownership"
-    }
+    },
+    "heading": "Workspace roles",
+    "listLabel": "Workspace roles",
+    "protectedReason": "The workspace owner role is system-managed. It is never renamed, deleted, or given different permissions, and workspace ownership moves only through the protected transfer."
   },
   "members": {
     "heading": "Workspace members",
@@ -211,6 +217,24 @@
       "warehouses": "Warehouses",
       "warehouseAccess": "Warehouse access",
       "reserved": "Reserved"
+    },
+    "items": {
+      "WORKSPACE_RENAME": "Rename workspace",
+      "WORKSPACE_ROLES_WATCH": "View workspace roles",
+      "WORKSPACE_ROLES_CREATE": "Create workspace roles",
+      "WORKSPACE_ROLES_UPDATE": "Update workspace roles",
+      "WORKSPACE_ROLES_DELETE": "Delete workspace roles",
+      "WORKSPACE_ROLES_ASSIGN": "Assign workspace roles",
+      "WORKSPACE_MEMBERS_WATCH": "View workspace members",
+      "WORKSPACE_MEMBERS_ADD": "Add workspace members",
+      "WORKSPACE_MEMBERS_REMOVE": "Remove workspace members",
+      "WAREHOUSES_WATCH": "View warehouses",
+      "WAREHOUSES_CREATE": "Create warehouses",
+      "WAREHOUSES_RENAME": "Rename warehouses",
+      "WAREHOUSES_ARCHIVE": "Archive and restore warehouses",
+      "WAREHOUSE_MEMBERSHIPS_ASSIGN": "Assign warehouse memberships",
+      "WAREHOUSE_MEMBERSHIPS_REVOKE": "Revoke warehouse memberships",
+      "WORKSPACE_OWNER_ROLE_REASSIGN": "Transfer workspace ownership"
     }
   },
   "states": {

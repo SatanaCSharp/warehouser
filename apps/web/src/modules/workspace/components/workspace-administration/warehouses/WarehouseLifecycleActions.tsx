@@ -1,9 +1,10 @@
 import { Alert, Button } from '@heroui/react';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { AddWarehouseAction } from 'modules/workspace/components/workspace-administration/warehouses/AddWarehouseAction';
 import { ArchiveWarehouseDialog } from 'modules/workspace/components/workspace-administration/warehouses/ArchiveWarehouseDialog';
+import { useReturnFocusOnClose } from 'modules/workspace/hooks/useReturnFocusOnClose';
 import { useSetWarehouseArchival } from 'modules/workspace/hooks/useSetWarehouseArchival';
 import { ArchiveIcon, ArrowRightLeftIcon } from 'shared/icons';
 
@@ -32,21 +33,10 @@ export const WarehouseLifecycleActions = ({
   const { t } = useTranslation('workspace');
   const setWarehouseArchival = useSetWarehouseArchival();
   const [isArchiveDialogOpen, setIsArchiveDialogOpen] = useState(false);
-  const archiveTriggerRef = useRef<HTMLButtonElement>(null);
-  const reasonId = `warehouse-archive-reason-${warehouse.id}`;
-
   // Escape dismissal both closes the Modal and returns focus to the trigger
-  // (design-handoff.md §Accessibility). The cleanup runs once the Modal has
-  // actually unmounted, after its own focus trap has released — calling
-  // `.focus()` synchronously inside the close handler races that trap and
-  // loses.
-  useEffect(() => {
-    if (!isArchiveDialogOpen) {
-      return undefined;
-    }
-    const trigger = archiveTriggerRef.current;
-    return () => trigger?.focus();
-  }, [isArchiveDialogOpen]);
+  // (design-handoff.md §Accessibility).
+  const archiveTriggerRef = useReturnFocusOnClose(isArchiveDialogOpen);
+  const reasonId = `warehouse-archive-reason-${warehouse.id}`;
 
   if (!canArchiveWarehouse) {
     return null;

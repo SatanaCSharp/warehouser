@@ -21,6 +21,9 @@
     "archiveWarehouse": "Warehouse archived.",
     "restoreWarehouse": "Warehouse restored.",
     "giveWarehouseAccess": "Access to {{name}} granted.",
-    "withdrawWarehouseAccess": "Access to {{name}} withdrawn."
+    "withdrawWarehouseAccess": "Access to {{name}} withdrawn.",
+    "createWorkspaceRole": "Workspace role created.",
+    "updateWorkspaceRole": "Workspace role saved.",
+    "deleteWorkspaceRole": "Workspace role deleted."
   }
 }

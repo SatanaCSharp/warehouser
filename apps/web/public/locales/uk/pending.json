@@ -21,6 +21,9 @@
     "archiveWarehouse": "Архівуємо склад…",
     "restoreWarehouse": "Відновлюємо склад…",
     "giveWarehouseAccess": "Надаємо доступ до {{name}}…",
-    "withdrawWarehouseAccess": "Відкликаємо доступ до {{name}}…"
+    "withdrawWarehouseAccess": "Відкликаємо доступ до {{name}}…",
+    "createWorkspaceRole": "Створення ролі робочого простору…",
+    "updateWorkspaceRole": "Збереження ролі робочого простору…",
+    "deleteWorkspaceRole": "Видалення ролі робочого простору…"
   }
 }

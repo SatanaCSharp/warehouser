@@ -4,10 +4,13 @@ import { alertActionPromise } from 'shared/alerts/action-feedback';
 export type WorkspaceSuccessAction =
   | 'archiveWarehouse'
   | 'createWarehouse'
+  | 'createWorkspaceRole'
+  | 'deleteWorkspaceRole'
   | 'giveWarehouseAccess'
   | 'renameWarehouse'
   | 'renameWorkspace'
   | 'restoreWarehouse'
+  | 'updateWorkspaceRole'
   | 'withdrawWarehouseAccess';
 
 type MutationOutcome = { data: unknown } | { error: unknown };
