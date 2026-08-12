@@ -158,6 +158,133 @@ export const applicationErrors: Readonly<
         'The Warehouse Manager Role can only be obtained through manager transfer.',
     },
   },
+  [ErrorCode.WORKSPACE_DENIED]: {
+    status: 403,
+    envelope: {
+      code: ErrorCode.WORKSPACE_DENIED,
+      message: 'Access is not permitted.',
+    },
+  },
+  [ErrorCode.WORKSPACE_INVALID_INPUT]: {
+    status: 400,
+    envelope: {
+      code: ErrorCode.WORKSPACE_INVALID_INPUT,
+      message: 'Correct the highlighted Workspace fields.',
+    },
+  },
+  [ErrorCode.WORKSPACE_TARGET_UNAVAILABLE]: {
+    status: 404,
+    envelope: {
+      code: ErrorCode.WORKSPACE_TARGET_UNAVAILABLE,
+      message: 'The selected Workspace target is unavailable.',
+    },
+  },
+  [ErrorCode.WORKSPACE_ROLE_NAME_CONFLICT]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.WORKSPACE_ROLE_NAME_CONFLICT,
+      message: 'Workspace Role names must be unique within the Workspace.',
+    },
+  },
+  [ErrorCode.WORKSPACE_PROTECTED_ROLE]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.WORKSPACE_PROTECTED_ROLE,
+      message: 'The Workspace Owner Role is system-managed.',
+    },
+  },
+  [ErrorCode.WORKSPACE_SYSTEM_MANAGED_PERMISSION]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.WORKSPACE_SYSTEM_MANAGED_PERMISSION,
+      message: 'Workspace Permission definitions are system-managed.',
+    },
+  },
+  [ErrorCode.WORKSPACE_OWNER_TRANSFER_REQUIRED]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.WORKSPACE_OWNER_TRANSFER_REQUIRED,
+      message: 'Use the protected owner-transfer action.',
+    },
+  },
+  [ErrorCode.WORKSPACE_ROLE_ASSIGNMENT_REQUIRED]: {
+    status: 403,
+    envelope: {
+      code: ErrorCode.WORKSPACE_ROLE_ASSIGNMENT_REQUIRED,
+      message: 'You do not have permission to assign this Workspace Role.',
+    },
+  },
+  [ErrorCode.WORKSPACE_REPLACEMENT_ROLE_REQUIRED]: {
+    status: 400,
+    envelope: {
+      code: ErrorCode.WORKSPACE_REPLACEMENT_ROLE_REQUIRED,
+      message: 'Select a different custom replacement Workspace Role.',
+    },
+  },
+  [ErrorCode.WORKSPACE_MEMBER_EXISTS]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.WORKSPACE_MEMBER_EXISTS,
+      message: 'This candidate is already a Workspace Member.',
+    },
+  },
+  [ErrorCode.WORKSPACE_WAREHOUSE_MEMBERSHIP_REQUIRED]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.WORKSPACE_WAREHOUSE_MEMBERSHIP_REQUIRED,
+      message: 'The candidate needs a Warehouse membership first.',
+    },
+  },
+  [ErrorCode.WORKSPACE_SELF_ACTION_DENIED]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.WORKSPACE_SELF_ACTION_DENIED,
+      message: 'You cannot perform this action on your own account.',
+    },
+  },
+  [ErrorCode.WORKSPACE_MANAGER_TRANSFER_REQUIRED]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.WORKSPACE_MANAGER_TRANSFER_REQUIRED,
+      message:
+        'Transfer the Warehouse Manager Role before changing this member.',
+    },
+  },
+  [ErrorCode.WORKSPACE_MEMBERSHIP_EXISTS]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.WORKSPACE_MEMBERSHIP_EXISTS,
+      message: 'This member already has a Role in this Warehouse.',
+    },
+  },
+  [ErrorCode.WORKSPACE_WAREHOUSE_ARCHIVED]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.WORKSPACE_WAREHOUSE_ARCHIVED,
+      message: 'The Warehouse is archived.',
+    },
+  },
+  [ErrorCode.WORKSPACE_LAST_UNARCHIVED_WAREHOUSE]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.WORKSPACE_LAST_UNARCHIVED_WAREHOUSE,
+      message: 'At least one Warehouse must remain unarchived.',
+    },
+  },
+  [ErrorCode.WORKSPACE_CONCURRENT_CHANGE]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.WORKSPACE_CONCURRENT_CHANGE,
+      message: 'Workspace changed concurrently. Refresh and try again.',
+    },
+  },
+  [ErrorCode.ACCESS_WAREHOUSE_ARCHIVED]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.ACCESS_WAREHOUSE_ARCHIVED,
+      message: 'The Warehouse is archived.',
+    },
+  },
 };
 
 export const systemErrors: Readonly<
@@ -217,6 +344,34 @@ export const systemErrors: Readonly<
     envelope: {
       code: ErrorCode.USERS_DELETION_UNAVAILABLE,
       message: 'Member deletion did not complete. Try again.',
+    },
+  },
+  [ErrorCode.WORKSPACE_WAREHOUSE_CREATION_UNAVAILABLE]: {
+    status: 503,
+    envelope: {
+      code: ErrorCode.WORKSPACE_WAREHOUSE_CREATION_UNAVAILABLE,
+      message: 'Warehouse creation did not complete. Try again.',
+    },
+  },
+  [ErrorCode.WORKSPACE_ARCHIVAL_UNAVAILABLE]: {
+    status: 503,
+    envelope: {
+      code: ErrorCode.WORKSPACE_ARCHIVAL_UNAVAILABLE,
+      message: 'Warehouse archival did not complete. Try again.',
+    },
+  },
+  [ErrorCode.WORKSPACE_ROLE_DELETION_UNAVAILABLE]: {
+    status: 503,
+    envelope: {
+      code: ErrorCode.WORKSPACE_ROLE_DELETION_UNAVAILABLE,
+      message: 'Workspace Role deletion did not complete.',
+    },
+  },
+  [ErrorCode.WORKSPACE_OWNER_TRANSFER_UNAVAILABLE]: {
+    status: 503,
+    envelope: {
+      code: ErrorCode.WORKSPACE_OWNER_TRANSFER_UNAVAILABLE,
+      message: 'Owner transfer did not complete.',
     },
   },
 };
