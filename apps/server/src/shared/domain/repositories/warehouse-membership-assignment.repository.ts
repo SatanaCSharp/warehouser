@@ -5,7 +5,7 @@ import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
 import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
 import { DataSource } from 'typeorm';
 
-interface AssignableRoleProjection {
+export interface AssignableRoleProjection {
   readonly id: string;
   readonly name: string;
 }
@@ -70,5 +70,37 @@ export class WarehouseMembershipAssignmentRepository {
     await manager
       .getRepository(WarehouseMembershipEntity)
       .delete({ userId, warehouseId });
+  }
+
+  // Kind-agnostic lock scoped to the named Warehouse: matches a Role of any
+  // `kind` (including the reserved `warehouse_manager` kind), so a caller can
+  // distinguish "missing/cross-Warehouse Role" from "Role exists but is
+  // reserved" instead of both collapsing to `null` (AC-25).
+  lockRole(warehouseId: string, roleId: string): Promise<RoleEntity | null> {
+    const manager = getEntityManager(this.dataSource);
+
+    return manager
+      .getRepository(RoleEntity)
+      .createQueryBuilder('role')
+      .where({ id: roleId, warehouseId })
+      .setLock('pessimistic_write')
+      .getOne();
+  }
+
+  // The composite primary key (`userId`, `warehouseId`) resolves at most one
+  // row, used both to refuse a duplicate grant (AC-25) and to locate the
+  // membership a revocation targets (AC-25b/AC-25c/AC-25d).
+  lockMembership(
+    userId: string,
+    warehouseId: string,
+  ): Promise<WarehouseMembershipEntity | null> {
+    const manager = getEntityManager(this.dataSource);
+
+    return manager
+      .getRepository(WarehouseMembershipEntity)
+      .createQueryBuilder('membership')
+      .where({ userId, warehouseId })
+      .setLock('pessimistic_write')
+      .getOne();
   }
 }

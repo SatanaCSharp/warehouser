@@ -1,4 +1,6 @@
 import dataSource from 'shared/database/data-source';
+import { DbTransactionService } from 'shared/database/db-transaction.service';
+import { DbTransactionContext } from 'shared/database/db-transaction-context.service';
 import { AccountEntity } from 'shared/domain/entities/account.entity';
 import { RoleEntity } from 'shared/domain/entities/role.entity';
 import { UserEntity } from 'shared/domain/entities/user.entity';
@@ -41,6 +43,19 @@ interface MembershipWrite {
   readonly roleId: string;
   readonly roleKind: 'custom';
 }
+interface RoleRead {
+  readonly id: string;
+  readonly warehouseId: string;
+  readonly name: string;
+  readonly kind: 'custom' | 'warehouse_manager';
+}
+interface MembershipRead {
+  readonly userId: string;
+  readonly warehouseId: string;
+  readonly workspaceId: string;
+  readonly roleId: string;
+  readonly roleKind: 'custom' | 'warehouse_manager';
+}
 interface WarehouseMembershipAssignmentRepositoryContract {
   readAssignableRoles(
     warehouseId: string,
@@ -48,11 +63,22 @@ interface WarehouseMembershipAssignmentRepositoryContract {
   ): Promise<AssignableRoleProjection[]>;
   insertMembership(input: MembershipWrite): Promise<void>;
   deleteMembership(userId: string, warehouseId: string): Promise<void>;
+  lockRole(warehouseId: string, roleId: string): Promise<RoleRead | null>;
+  lockMembership(
+    userId: string,
+    warehouseId: string,
+  ): Promise<MembershipRead | null>;
 }
 
 const repository = new WarehouseMembershipAssignmentRepository(
   dataSource,
 ) as unknown as WarehouseMembershipAssignmentRepositoryContract;
+// `lockRole`/`lockMembership` take a pessimistic lock, which requires an
+// already-open transaction outside the `@Transactional()` interceptor this
+// hand-constructed repository never runs behind — `transactions` stands in
+// for that interceptor, matching archive-warehouse.command.integration.spec.ts.
+const context = new DbTransactionContext(dataSource);
+const transactions = new DbTransactionService(dataSource, context);
 
 const seedWorkspace = async (): Promise<string> => {
   const workspace = buildWorkspace();
@@ -320,6 +346,135 @@ const verifyDeleteMembershipNullsOnlyAffectedUser = async (): Promise<void> => {
   expect(userB?.activeWarehouseId).toBe(warehouseId);
 };
 
+const verifyLockRoleFindsRoleOfNamedWarehouse = async (): Promise<void> => {
+  const workspaceId = await seedWorkspace();
+  const warehouseId = await seedWarehouse(workspaceId);
+  const roleId = crypto.randomUUID();
+  await dataSource.manager.getRepository(RoleEntity).insert({
+    id: roleId,
+    warehouseId,
+    name: 'Picker',
+    kind: 'custom',
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  const role = await transactions.executeInTransaction({}, () =>
+    repository.lockRole(warehouseId, roleId),
+  );
+
+  expect(role).toMatchObject({ id: roleId, warehouseId, kind: 'custom' });
+};
+
+const verifyLockRoleReturnsNullForWrongWarehouse = async (): Promise<void> => {
+  const workspaceId = await seedWorkspace();
+  const warehouseId = await seedWarehouse(workspaceId);
+  const otherWarehouseId = await seedWarehouse(workspaceId);
+  const roleId = crypto.randomUUID();
+  await dataSource.manager.getRepository(RoleEntity).insert({
+    id: roleId,
+    warehouseId,
+    name: 'Picker',
+    kind: 'custom',
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  const role = await transactions.executeInTransaction({}, () =>
+    repository.lockRole(otherWarehouseId, roleId),
+  );
+
+  expect(role).toBeNull();
+};
+
+const verifyLockRoleReturnsManagerRoleRatherThanFilteringIt =
+  async (): Promise<void> => {
+    const workspaceId = await seedWorkspace();
+    const warehouseId = await seedWarehouse(workspaceId);
+    const managerRoleId = crypto.randomUUID();
+    await dataSource.manager.getRepository(RoleEntity).insert({
+      id: managerRoleId,
+      warehouseId,
+      name: 'Warehouse Manager',
+      kind: 'warehouse_manager',
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Unlike `readAssignableRoles`, `lockRole` is kind-agnostic: it returns
+    // the protected Warehouse Manager Role rather than hiding it, so a
+    // caller can distinguish "reserved Role" from "missing/cross-Warehouse
+    // Role" (AC-25).
+    const role = await transactions.executeInTransaction({}, () =>
+      repository.lockRole(warehouseId, managerRoleId),
+    );
+
+    expect(role).toMatchObject({
+      id: managerRoleId,
+      warehouseId,
+      kind: 'warehouse_manager',
+    });
+  };
+
+const verifyLockMembershipFindsMembershipByCompositeKey =
+  async (): Promise<void> => {
+    const workspaceId = await seedWorkspace();
+    const warehouseId = await seedWarehouse(workspaceId);
+    const roleId = crypto.randomUUID();
+    await dataSource.manager.getRepository(RoleEntity).insert({
+      id: roleId,
+      warehouseId,
+      name: 'Picker',
+      kind: 'custom',
+      createdAt: now,
+      updatedAt: now,
+    });
+    const targetUserId = crypto.randomUUID();
+    await seedIdentity(
+      targetUserId,
+      workspaceId,
+      `target.${targetUserId}@example.test`,
+    );
+    await dataSource.manager.getRepository(WarehouseMembershipEntity).insert({
+      userId: targetUserId,
+      warehouseId,
+      workspaceId,
+      roleId,
+      roleKind: 'custom',
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const membership = await transactions.executeInTransaction({}, () =>
+      repository.lockMembership(targetUserId, warehouseId),
+    );
+
+    expect(membership).toMatchObject({
+      userId: targetUserId,
+      warehouseId,
+      workspaceId,
+      roleId,
+    });
+  };
+
+const verifyLockMembershipReturnsNullWhenNoRowExists =
+  async (): Promise<void> => {
+    const workspaceId = await seedWorkspace();
+    const warehouseId = await seedWarehouse(workspaceId);
+    const targetUserId = crypto.randomUUID();
+    await seedIdentity(
+      targetUserId,
+      workspaceId,
+      `target.${targetUserId}@example.test`,
+    );
+
+    const membership = await transactions.executeInTransaction({}, () =>
+      repository.lockMembership(targetUserId, warehouseId),
+    );
+
+    expect(membership).toBeNull();
+  };
+
 describeIntegration('WarehouseMembershipAssignmentRepository', () => {
   beforeAll(async () => {
     await dataSource.initialize();
@@ -358,6 +513,35 @@ describeIntegration('WarehouseMembershipAssignmentRepository', () => {
     it(
       "nulls the affected User's active_warehouse_id and no other User's (AC-25b)",
       verifyDeleteMembershipNullsOnlyAffectedUser,
+    );
+  });
+
+  describe('lockRole', () => {
+    it(
+      'locks and returns the Role row for the named Warehouse',
+      verifyLockRoleFindsRoleOfNamedWarehouse,
+    );
+
+    it(
+      'returns null when the Role belongs to a different Warehouse',
+      verifyLockRoleReturnsNullForWrongWarehouse,
+    );
+
+    it(
+      'returns the protected Warehouse Manager Role rather than filtering it (AC-25)',
+      verifyLockRoleReturnsManagerRoleRatherThanFilteringIt,
+    );
+  });
+
+  describe('lockMembership', () => {
+    it(
+      'locks and returns the membership row for the composite (userId, warehouseId) key',
+      verifyLockMembershipFindsMembershipByCompositeKey,
+    );
+
+    it(
+      'returns null when no membership row exists for that pair',
+      verifyLockMembershipReturnsNullWhenNoRowExists,
     );
   });
 });
