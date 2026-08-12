@@ -39,7 +39,7 @@
 | T32 | Missing shared icon components                           | ui        | Frontend Lead                | S        | —                                     | done   |
 | T33 | Workspace actor-context API, capability hook, gate       | ui        | Frontend Lead                | M        | T6                                    | done   |
 | T34 | Warehouse switcher in the application shell              | ui        | Frontend Lead                | L        | T32, T33                              | todo   |
-| T35 | `modules/workspace` route, page shell, tabs, i18n        | ui        | Frontend Lead                | L        | T32, T33                              | todo   |
+| T35 | `modules/workspace` route, page shell, tabs, i18n        | ui        | Frontend Lead                | L        | T32, T33                              | done   |
 | T36 | Warehouses tab: list, detail pane, lifecycle dialogs     | ui        | Frontend Lead                | L        | T35                                   | todo   |
 | T37 | Warehouse access grant / withdrawal from the detail pane | ui        | Frontend Lead                | L        | T36                                   | todo   |
 | T38 | Workspace roles + Permissions tabs                       | ui        | Frontend Lead                | L        | T35                                   | todo   |
