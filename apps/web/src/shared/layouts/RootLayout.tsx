@@ -15,6 +15,7 @@ import { MenuIcon } from 'shared/icons';
 import { Footer } from 'shared/layouts/Footer';
 import { LanguageSelector } from 'shared/layouts/LanguageSelector';
 import { Sidebar } from 'shared/layouts/Sidebar';
+import { WarehouseSwitcher } from 'shared/layouts/WarehouseSwitcher';
 import { useAppSelector } from 'store/hooks';
 
 import type { ReactElement } from 'react';
@@ -67,6 +68,9 @@ export const RootLayout = (): ReactElement => {
               Warehouser
             </RouterLink>
             <div className="flex items-center gap-2 sm:gap-4">
+              <div className="hidden sm:flex">
+                <WarehouseSwitcher />
+              </div>
               <LanguageSelector />
               <SignOutButton />
               <Button
@@ -80,6 +84,9 @@ export const RootLayout = (): ReactElement => {
               </Button>
             </div>
           </header>
+          <div className="w-full border-b border-border bg-surface px-6 py-3 sm:hidden">
+            <WarehouseSwitcher />
+          </div>
           <div className="flex flex-1">
             <Sidebar isOpen={isDrawerOpen} onOpenChange={setIsDrawerOpen} />
             <div className="min-w-0 flex-1">

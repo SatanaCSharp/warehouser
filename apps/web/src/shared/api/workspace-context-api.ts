@@ -33,7 +33,11 @@ export const workspaceContextApi = api.injectEndpoints({
         body,
       }),
       extraOptions: { schema: activeWarehouseSelectionSchema },
-      invalidatesTags: ['WorkspaceContext'],
+      // AC-04 — a denied write leaves the current selection unchanged. A
+      // static tag list invalidates on both success and failure, which would
+      // refetch the context after a denial and could momentarily show a
+      // stale or empty state; only a committed write should trigger it.
+      invalidatesTags: (_result, error) => (error ? [] : ['WorkspaceContext']),
     }),
     renameWorkspace: build.mutation<Workspace, WorkspaceRename>({
       query: (body) => ({
