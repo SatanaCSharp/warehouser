@@ -41,6 +41,18 @@ export interface WorkspaceWarehouseRead {
   readonly name: string;
   readonly archivedAt: Date | null;
 }
+export interface WorkspaceActorIdentityRead {
+  readonly workspaceId: string;
+  readonly workspaceName: string | null;
+  readonly activeWarehouseId: string | null;
+}
+export interface WorkspaceActorWarehouseRead {
+  readonly warehouseId: string;
+  readonly name: string;
+  readonly archivedAt: Date | null;
+  readonly roleId: string;
+  readonly roleKind: 'custom' | 'warehouse_manager';
+}
 
 @Injectable()
 export class WorkspaceReadRepository {
@@ -145,5 +157,72 @@ export class WorkspaceReadRepository {
       .orderBy('warehouse.name', 'ASC')
       .addOrderBy('warehouse.id', 'ASC')
       .getMany();
+  }
+
+  // The actor's own Workspace identity/name, read through
+  // `users.workspace_id` (never re-derived from Workspace membership —
+  // spec.md §1's second boundary), together with the raw stored
+  // `users.active_warehouse_id` value. Every User row references its
+  // Workspace, so this resolves even when the actor holds no Workspace
+  // membership at all (AC-30).
+  getActorIdentity(userId: string): Promise<WorkspaceActorIdentityRead | null> {
+    return getEntityManager(this.dataSource)
+      .getRepository(UserEntity)
+      .createQueryBuilder('user')
+      .innerJoin(
+        WorkspaceEntity,
+        'workspace',
+        'workspace.id = user.workspaceId',
+      )
+      .select('user.workspaceId', 'workspaceId')
+      .addSelect('workspace.name', 'workspaceName')
+      .addSelect('user.activeWarehouseId', 'activeWarehouseId')
+      .where('user.id = :userId', { userId })
+      .getRawOne<WorkspaceActorIdentityRead>()
+      .then((row) => row ?? null);
+  }
+
+  // Every live Warehouse membership the actor holds, each Warehouse's
+  // archived state, and the Role held there (`warehouse_memberships`
+  // already carries `role_id`/`role_kind`, so no join to `roles` is
+  // needed). A withdrawn membership is simply absent from this list.
+  listActorWarehouseMemberships(
+    userId: string,
+  ): Promise<WorkspaceActorWarehouseRead[]> {
+    return getEntityManager(this.dataSource)
+      .getRepository(WarehouseMembershipEntity)
+      .createQueryBuilder('membership')
+      .innerJoin(
+        WarehouseEntity,
+        'warehouse',
+        'warehouse.id = membership.warehouseId',
+      )
+      .select('membership.warehouseId', 'warehouseId')
+      .addSelect('warehouse.name', 'name')
+      .addSelect('warehouse.archivedAt', 'archivedAt')
+      .addSelect('membership.roleId', 'roleId')
+      .addSelect('membership.roleKind', 'roleKind')
+      .where('membership.userId = :userId', { userId })
+      .orderBy('warehouse.name', 'ASC')
+      .addOrderBy('membership.warehouseId', 'ASC')
+      .getRawMany<WorkspaceActorWarehouseRead>();
+  }
+
+  // The actor's Workspace Permission ids, empty when the actor holds no
+  // Workspace membership (AC-30).
+  getActorWorkspacePermissionIds(userId: string): Promise<string[]> {
+    return getEntityManager(this.dataSource)
+      .getRepository(WorkspaceMembershipEntity)
+      .createQueryBuilder('membership')
+      .innerJoin(
+        WorkspaceRolePermissionEntity,
+        'rolePermission',
+        'rolePermission.workspaceRoleId = membership.workspaceRoleId',
+      )
+      .select('rolePermission.workspacePermissionId', 'workspacePermissionId')
+      .where('membership.userId = :userId', { userId })
+      .orderBy('rolePermission.workspacePermissionId', 'ASC')
+      .getRawMany<{ workspacePermissionId: string }>()
+      .then((rows) => rows.map((row) => row.workspacePermissionId));
   }
 }

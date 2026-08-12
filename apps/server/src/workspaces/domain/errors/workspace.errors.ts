@@ -68,3 +68,9 @@ export const workspaceMemberExistsError = (): ApplicationError =>
 // already-a-Member case above (F-3).
 export const workspaceWarehouseMembershipRequiredError = (): ApplicationError =>
   new ApplicationError(ErrorCode.WORKSPACE_WAREHOUSE_MEMBERSHIP_REQUIRED);
+
+// AC-04/AC-11 — an archived Warehouse stops being selectable as the Active
+// Warehouse, distinct from `workspaceTargetUnavailableError()`'s "no
+// membership at all" case.
+export const workspaceWarehouseArchivedError = (): ApplicationError =>
+  new ApplicationError(ErrorCode.WORKSPACE_WAREHOUSE_ARCHIVED);
