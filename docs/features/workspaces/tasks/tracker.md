@@ -28,7 +28,7 @@
 | T21 | Warehouse archive + restore                              | app       | Backend Lead                 | L        | T4, T6, T11                           | done   |
 | T22 | Warehouse membership assign / revoke + assignable Roles  | app       | Backend Lead                 | L        | T4, T6, T11                           | done   |
 | T23 | Active Warehouse selection + actor-context query         | app       | Backend Lead                 | L        | T6, T9, T11                           | done   |
-| T24 | Workspace-level REST controller + module wiring          | ports     | Backend Lead                 | L        | T6, T13, T15, T16, T17, T18, T19, T23 | todo   |
+| T24 | Workspace-level REST controller + module wiring          | ports     | Backend Lead                 | L        | T6, T13, T15, T16, T17, T18, T19, T23 | done   |
 | T25 | Warehouse-record and membership-edge REST routes         | ports     | Backend Lead                 | M        | T6, T13, T20, T21, T22                | todo   |
 | T26 | Re-shape the `access` REST surface                       | ports     | Backend Lead                 | L        | T12, T13                              | done   |
 | T27 | Re-shape the `users` REST surface                        | ports     | Backend Lead                 | M        | T12, T13                              | done   |
@@ -42,9 +42,10 @@
 | T35 | `modules/workspace` route, page shell, tabs, i18n        | ui        | Frontend Lead                | L        | T32, T33                              | done   |
 | T36 | Warehouses tab: list, detail pane, lifecycle dialogs     | ui        | Frontend Lead                | L        | T35                                   | todo   |
 | T37 | Warehouse access grant / withdrawal from the detail pane | ui        | Frontend Lead                | L        | T36                                   | todo   |
-| T38 | Workspace roles + Permissions tabs                       | ui        | Frontend Lead                | L        | T35                                   | todo   |
-| T39 | Workspace members tab + Owner transfer                   | ui        | Frontend Lead                | L        | T35                                   | todo   |
+| T38 | Workspace roles + Permissions tabs                       | ui        | Frontend Lead                | L        | T35, T41                              | todo   |
+| T39 | Workspace members tab + Owner transfer                   | ui        | Frontend Lead                | L        | T35, T41                              | todo   |
 | T40 | Migrate the Warehouse-scoped web surface                 | ui        | Frontend Lead                | L        | T26, T27, T33                         | todo   |
+| T41 | Workspace read projection gaps (counts + member flag)    | infra     | Backend Lead                 | S        | T9, T24                               | todo   |
 
-**Total:** 40 tasks, ~34 person-days (S ≈ ¼–½ day, M ≈ ½–¾ day, L ≈ 1 day; no task exceeds one
+**Total:** 41 tasks (T41 added during `implement` — see the task card), ~34 person-days (S ≈ ¼–½ day, M ≈ ½–¾ day, L ≈ 1 day; no task exceeds one
 working day).
