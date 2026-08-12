@@ -10,6 +10,7 @@ import {
   METHOD_METADATA,
   PATH_METADATA,
 } from '@nestjs/common/constants';
+import { warehouseSchema } from '@warehouser/contracts/workspaces';
 import {
   ErrorCode,
   WorkspacePermissionId,
@@ -246,6 +247,7 @@ describe('WarehouseController', () => {
     jest.mocked(renameWarehouse.execute).mockResolvedValue({
       id: warehouseId,
       name: 'Renamed Warehouse',
+      archivedAt: null,
     });
 
     await expect(
@@ -261,8 +263,39 @@ describe('WarehouseController', () => {
     );
   });
 
+  // RED for T44/AC-11 — openapi.yaml documents `PATCH .../{warehouseId}` as
+  // `200` with the full `Warehouse` body (including `archivedAt`), and the
+  // already-shipped web client (`workspace-warehouses-api.ts`)
+  // Zod-validates the response against `warehouseSchema`. The handler
+  // previously narrowed its return type to `Pick<Warehouse, 'id' | 'name'>`
+  // and dropped `archivedAt`, which fails that validation at runtime.
+  it('AC-11: returns the full Warehouse body, satisfying the same warehouseSchema the web client validates against', async () => {
+    jest.mocked(renameWarehouse.execute).mockResolvedValue({
+      id: warehouseId,
+      name: 'Renamed Warehouse',
+      archivedAt: null,
+    });
+
+    const body = await controller.renameWarehouse(
+      warehouseId,
+      request(WorkspacePermissionId.WAREHOUSES_RENAME),
+      { name: 'Renamed Warehouse' },
+    );
+
+    expect(body).toEqual({
+      id: warehouseId,
+      name: 'Renamed Warehouse',
+      archivedAt: null,
+    });
+    expect(warehouseSchema.parse(body)).toEqual(body);
+  });
+
   it('archives a Warehouse when `archived: true` is submitted (AC-11)', async () => {
-    jest.mocked(archiveWarehouse.execute).mockResolvedValue({ warehouseId });
+    jest.mocked(archiveWarehouse.execute).mockResolvedValue({
+      id: warehouseId,
+      name: 'Test Warehouse North',
+      archivedAt: new Date('2026-08-01T09:00:00.000Z'),
+    });
 
     await controller.setWarehouseArchival(
       warehouseId,
@@ -278,7 +311,11 @@ describe('WarehouseController', () => {
   });
 
   it('restores a Warehouse when `archived: false` is submitted (AC-11)', async () => {
-    jest.mocked(restoreWarehouse.execute).mockResolvedValue({ warehouseId });
+    jest.mocked(restoreWarehouse.execute).mockResolvedValue({
+      id: warehouseId,
+      name: 'Test Warehouse North',
+      archivedAt: null,
+    });
 
     await controller.setWarehouseArchival(
       warehouseId,
@@ -292,6 +329,51 @@ describe('WarehouseController', () => {
     );
     expect(archiveWarehouse.execute).not.toHaveBeenCalled();
   });
+
+  // RED for T44/AC-11 — openapi.yaml documents `PUT .../archival` as `200`
+  // with the full `Warehouse` body, and the already-shipped web client's
+  // `setWarehouseArchival: build.mutation<Warehouse, …>`
+  // (`workspace-warehouses-api.ts`) Zod-validates the response against
+  // `warehouseSchema`. The handler currently answers `204 No Content`
+  // (`@HttpCode(HttpStatus.NO_CONTENT)`, `Promise<void>`), which fails that
+  // client-side validation at runtime because an empty body cannot satisfy a
+  // schema requiring `id`, `name` and `archivedAt`.
+  it.each([
+    [
+      'archiving',
+      true,
+      archiveWarehouse,
+      restoreWarehouse,
+      new Date('2026-08-01T09:00:00.000Z'),
+    ],
+    ['restoring', false, restoreWarehouse, archiveWarehouse, null],
+  ] as const)(
+    'AC-11: answers 200 with the full Warehouse body when %s, satisfying the same warehouseSchema the web client validates against',
+    async (_case, archived, usecase, otherUsecase, archivedAt) => {
+      jest.mocked(usecase.execute).mockResolvedValue({
+        id: warehouseId,
+        name: 'Test Warehouse North',
+        archivedAt,
+      });
+
+      const body = await controller.setWarehouseArchival(
+        warehouseId,
+        request(WorkspacePermissionId.WAREHOUSES_ARCHIVE),
+        { archived },
+      );
+
+      expect(body).toEqual({
+        id: warehouseId,
+        name: 'Test Warehouse North',
+        archivedAt: archivedAt?.toISOString() ?? null,
+      });
+      expect(warehouseSchema.parse(body)).toEqual(body);
+      expect(otherUsecase.execute).not.toHaveBeenCalled();
+      expect(
+        Reflect.getMetadata(HTTP_CODE_METADATA, method('setWarehouseArchival')),
+      ).toBe(200);
+    },
+  );
 
   it('returns only identifiers and names of assignable Roles (AC-23a)', async () => {
     jest.mocked(listAssignableRoles.execute).mockResolvedValue([

@@ -10,6 +10,7 @@ import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user'
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
 import { AccessName } from 'shared/domain/value-objects/access-name';
+import { workspaceWarehouseCreationUnavailableError } from 'workspaces/domain/errors/workspace.errors';
 
 // `AccessName` enforces the Warehouse name rules (trim, grapheme count,
 // control/format detection — the same rule set `WorkspaceName` wraps for
@@ -102,16 +103,25 @@ export class CreateWarehouseCommand {
     const name = validateWarehouseName(input.name);
     const id = this.createWarehouseRuntime.warehouseId();
 
-    await this.warehouseLifecycleRepository.createWarehouse({
-      id,
-      workspaceId: currentUser.workspaceId,
-      name,
-    });
+    // The Warehouse row write and the delegated Manager Role/assignment
+    // provisioning are one failure boundary (AC-07): either failing for a
+    // known infrastructure/technical reason (server-error-handling.md §2)
+    // must translate into the documented 503, preserving the originating
+    // failure as `cause`, rather than propagate an opaque generic 500.
+    try {
+      await this.warehouseLifecycleRepository.createWarehouse({
+        id,
+        workspaceId: currentUser.workspaceId,
+        name,
+      });
 
-    await this.provisionInitialAccess.execute({
-      warehouseId: id,
-      userId: currentUser.userId,
-    });
+      await this.provisionInitialAccess.execute({
+        warehouseId: id,
+        userId: currentUser.userId,
+      });
+    } catch (cause) {
+      throw workspaceWarehouseCreationUnavailableError(cause);
+    }
 
     return { id, name, archivedAt: null };
   }

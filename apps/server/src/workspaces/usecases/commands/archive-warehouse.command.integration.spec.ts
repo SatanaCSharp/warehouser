@@ -288,7 +288,9 @@ describeIntegration('ArchiveWarehouseCommand', () => {
         transactions.executeInTransaction({}, () =>
           createCommand().execute(principal(workspaceId), { warehouseId }),
         ),
-      ).rejects.toThrow();
+      ).rejects.toMatchObject({
+        code: ErrorCode.WORKSPACE_ARCHIVAL_UNAVAILABLE,
+      });
     } finally {
       await dataSource.query(
         'DROP TRIGGER IF EXISTS fail_warehouse_archive ON warehouses',
