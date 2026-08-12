@@ -32,6 +32,12 @@ describe('API feedback', () => {
     // The registry of on-screen failure codes is module state, so each
     // scenario gets a fresh module rather than inheriting the previous one.
     vi.resetModules();
+    // Resetting the registry also re-creates the `i18n` module, whose backend
+    // load is asynchronous. Await it here so every scenario asserts against
+    // loaded translations rather than racing the load and seeing raw keys.
+    const { default: i18n, i18nReady } = await import('i18n');
+    await i18nReady;
+    await i18n.changeLanguage('en');
     ({ alertApiFailure } = await import('shared/alerts/api-feedback'));
   });
 

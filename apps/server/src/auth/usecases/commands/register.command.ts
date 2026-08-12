@@ -10,6 +10,7 @@ import { User } from 'auth/domain/entities/user';
 import {
   AuthEmailAlreadyRegisteredError,
   AuthInvalidInputError,
+  AuthRegistrationUnavailableError,
 } from 'auth/domain/errors/auth.errors';
 import {
   type GeneratedSessionSecret,
@@ -83,7 +84,16 @@ export class RegisterCommand {
       establishedAt: this.runtime.now(),
     });
 
-    await this.registrations.registerIdentity({ account, user, session });
+    // The identity write is the point where a technical failure means the
+    // registration did not happen at all. Classify it as the known
+    // registration-unavailable condition and keep the originating failure as
+    // `cause` so the global filter can log it without exposing it.
+    try {
+      await this.registrations.registerIdentity({ account, user, session });
+    } catch (cause) {
+      throw AuthRegistrationUnavailableError(cause);
+    }
+
     const access = await this.provisionInitialAccess.execute({
       userId: user.id.value,
       warehouseName: input.warehouseName,
