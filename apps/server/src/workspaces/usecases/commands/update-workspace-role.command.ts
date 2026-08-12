@@ -74,10 +74,22 @@ export class UpdateWorkspaceRoleCommand {
       permissions,
     );
 
+    // Renaming/re-permissioning a Role never changes who is assigned to it,
+    // so the current `assignedMemberCount` is read back from the same
+    // aggregation `ListWorkspaceRolesQuery` uses rather than invented here.
+    const roles =
+      await this.workspaceReadRepository.listWorkspaceRolesWithPermissions(
+        currentUser.workspaceId,
+      );
+    const assignedMemberCount =
+      roles.find((candidate) => candidate.id === role.id)
+        ?.assignedMemberCount ?? 0;
+
     return {
       id: role.id,
       name,
       permissionIds: permissions.map((permission) => permission.id),
+      assignedMemberCount,
     };
   }
 }

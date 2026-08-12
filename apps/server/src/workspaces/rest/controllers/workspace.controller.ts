@@ -22,7 +22,6 @@ import type {
   WorkspacePermission,
   WorkspaceRole,
   WorkspaceUser,
-  WorkspaceUserWarehouse,
 } from '@warehouser/contracts/workspaces';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
 import type { WorkspaceAccessRequest } from 'shared/access/access-request';
@@ -52,23 +51,6 @@ import { ListWorkspacePermissionsQuery } from 'workspaces/usecases/queries/list-
 import { ListWorkspaceRolesQuery } from 'workspaces/usecases/queries/list-workspace-roles.query';
 import { ListWorkspaceUsersQuery } from 'workspaces/usecases/queries/list-workspace-users.query';
 import { ReadWorkspaceContextQuery } from 'workspaces/usecases/queries/read-workspace-context.query';
-
-/** `assignedMemberCount` is a documented field of the contract's `WorkspaceRole`, but
- * `WorkspaceReadRepository`'s Role projection (T9) does not aggregate it, so the two Role reads
- * that cannot prove a count answer the contract shape minus that one field rather than inventing
- * a number. Expressed as an `Omit` of the contract type so the difference cannot drift silently. */
-type WorkspaceRoleRead = Omit<WorkspaceRole, 'assignedMemberCount'>;
-
-/** The Users projection is deliberately narrowed in SQL to the Warehouses a User belongs to and
- * **no** Warehouse Role (T9 DoD, AC-33) — that narrowing is what keeps AC-33 from becoming the
- * AC-31 level confusion. It also carries no `isWorkspaceMember` flag. Both differences from the
- * contract's `WorkspaceUser` are expressed here against the contract types. */
-type WorkspaceUserRead = Omit<
-  WorkspaceUser,
-  'email' | 'isWorkspaceMember' | 'warehouses'
-> & {
-  readonly warehouses: readonly Pick<WorkspaceUserWarehouse, 'warehouseId'>[];
-};
 
 /** Every route whose subject is the Workspace itself. Workspace-scoped routes carry **no**
  * Workspace identifier: the guard derives the actor's Workspace from the session, so no handler
@@ -154,7 +136,7 @@ export class WorkspaceController {
   @UseGuards(SessionAuthGuard, WorkspaceAccessGuard)
   async listRoles(
     @Req() request: WorkspaceAccessRequest,
-  ): Promise<WorkspaceRoleRead[]> {
+  ): Promise<WorkspaceRole[]> {
     const roles = await this.listWorkspaceRolesQuery.execute(
       request.workspace!,
     );
@@ -163,6 +145,7 @@ export class WorkspaceController {
       name: role.name,
       kind: role.kind,
       workspacePermissionIds: role.permissionIds as WorkspacePermissionId[],
+      assignedMemberCount: role.assignedMemberCount,
     }));
   }
 
@@ -197,7 +180,7 @@ export class WorkspaceController {
     @Param('workspaceRoleId', new ParseUUIDPipe()) workspaceRoleId: string,
     @Req() request: WorkspaceAccessRequest,
     @Body() input: WorkspaceRoleWriteDto,
-  ): Promise<WorkspaceRoleRead> {
+  ): Promise<WorkspaceRole> {
     const role = await this.updateWorkspaceRoleCommand.execute(
       request.workspace!,
       {
@@ -213,6 +196,7 @@ export class WorkspaceController {
       name: role.name,
       kind: 'custom',
       workspacePermissionIds: role.permissionIds as WorkspacePermissionId[],
+      assignedMemberCount: role.assignedMemberCount,
     };
   }
 
@@ -349,12 +333,13 @@ export class WorkspaceController {
   @UseGuards(SessionAuthGuard, WorkspaceAccessGuard)
   async listUsers(
     @Req() request: WorkspaceAccessRequest,
-  ): Promise<WorkspaceUserRead[]> {
+  ): Promise<WorkspaceUser[]> {
     const users = await this.listWorkspaceUsersQuery.execute(
       request.workspace!,
     );
     return users.map((user) => ({
       userId: user.userId,
+      isWorkspaceMember: user.isWorkspaceMember,
       warehouses: user.warehouseIds.map((warehouseId) => ({ warehouseId })),
     }));
   }

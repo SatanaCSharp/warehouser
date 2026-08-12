@@ -18,6 +18,10 @@ import { ApplicationError } from '@warehouser/shared-types/errors';
 import type { WorkspaceAccessRequest } from 'shared/access/access-request';
 import { REQUIRED_PERMISSION_KEY } from 'shared/decorators/required-permission.decorator';
 import { REQUIRED_WORKSPACE_PERMISSION_KEY } from 'shared/decorators/required-workspace-permission.decorator';
+import type {
+  WorkspaceRoleWithPermissionsRead,
+  WorkspaceUserWithWarehousesRead,
+} from 'shared/domain/repositories/workspace-read.repository';
 import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
 import { WorkspaceAccessGuard } from 'shared/guards/workspace-access.guard';
 import { WorkspaceController } from 'workspaces/rest/controllers/workspace.controller';
@@ -408,6 +412,61 @@ describe('WorkspaceController', () => {
     ]);
   });
 
+  // T41/AC-14/AC-33 — `assignedMemberCount` is a required field of the
+  // contract's `WorkspaceRole` (workspaces-projections.ts). T9's repository
+  // read is expected to aggregate it once T41 lands, so the query result the
+  // controller receives already carries it here; the RED assertion is that
+  // `listRoles`' response must carry it too, not the `Omit<>`-narrowed shape
+  // the controller currently maps.
+  it('carries the assignedMemberCount the Roles read aggregates (T41)', async () => {
+    const rolesFromQuery: Array<
+      WorkspaceRoleWithPermissionsRead & { assignedMemberCount: number }
+    > = [
+      {
+        id: roleId,
+        workspaceId,
+        name: 'Site Administrator',
+        kind: 'custom',
+        permissionIds: [],
+        assignedMemberCount: 3,
+      },
+    ];
+    jest.mocked(listRoles.execute).mockResolvedValue(rolesFromQuery);
+
+    const result = await controller.listRoles(
+      request(WorkspacePermissionId.WORKSPACE_ROLES_WATCH),
+    );
+
+    expect(result[0]).toMatchObject({ assignedMemberCount: 3 });
+  });
+
+  // T41/AC-14a — the update route must also stop dropping
+  // `assignedMemberCount` (both `Omit<>` workarounds in
+  // workspace.controller.ts are named in T41's DoD, not just the create/list
+  // ones).
+  it('carries the assignedMemberCount of an updated Workspace Role (T41)', async () => {
+    const updatedRole: {
+      id: string;
+      name: string;
+      permissionIds: string[];
+      assignedMemberCount: number;
+    } = {
+      id: roleId,
+      name: 'Site Administrator',
+      permissionIds: [],
+      assignedMemberCount: 2,
+    };
+    jest.mocked(updateRole.execute).mockResolvedValue(updatedRole);
+
+    const result = await controller.updateRole(
+      roleId,
+      request(WorkspacePermissionId.WORKSPACE_ROLES_UPDATE),
+      { name: 'Site Administrator', workspacePermissionIds: [] },
+    );
+
+    expect(result).toMatchObject({ assignedMemberCount: 2 });
+  });
+
   it('returns the system Workspace Permission catalogue whole', async () => {
     jest.mocked(listPermissions.execute).mockResolvedValue([
       {
@@ -458,6 +517,30 @@ describe('WorkspaceController', () => {
     ).resolves.toEqual([
       { userId: id(4), warehouses: [{ warehouseId: id(10) }] },
     ]);
+  });
+
+  // T41/AC-33/AC-21 — `isWorkspaceMember` is a required field of the
+  // contract's `WorkspaceUser` (workspaces-projections.ts), derived from
+  // Workspace membership alone (AC-21: it must survive the loss of every
+  // Warehouse membership). T9's repository read is expected to carry it once
+  // T41 lands, so the query result the controller receives already carries
+  // it here; the RED assertion is that `listUsers`' response must carry it
+  // too, not the `Omit<>`-narrowed shape the controller currently maps.
+  it('carries the isWorkspaceMember flag the Users read derives from Workspace membership (T41)', async () => {
+    const usersFromQuery: Array<
+      WorkspaceUserWithWarehousesRead & { isWorkspaceMember: boolean }
+    > = [
+      { userId: id(4), warehouseIds: [id(10)], isWorkspaceMember: true },
+      { userId: id(5), warehouseIds: [], isWorkspaceMember: false },
+    ];
+    jest.mocked(listUsers.execute).mockResolvedValue(usersFromQuery);
+
+    const result = await controller.listUsers(
+      request(WorkspacePermissionId.WORKSPACE_MEMBERS_WATCH),
+    );
+
+    expect(result[0]).toMatchObject({ isWorkspaceMember: true });
+    expect(result[1]).toMatchObject({ isWorkspaceMember: false });
   });
 
   it('completes a created Workspace Role with its provable kind and member count', async () => {
