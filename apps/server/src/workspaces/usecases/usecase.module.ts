@@ -1,4 +1,8 @@
 import { Module } from '@nestjs/common';
+import { ProvisionInitialAccessCommand } from 'access/usecases/commands/provision-initial-access.command';
+import { AccessUsecaseModule } from 'access/usecases/usecase.module';
+import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
+import { WorkspaceProvisioningRepository } from 'shared/domain/repositories/workspace-provisioning.repository';
 import { WorkspaceProvisioningService } from 'workspaces/domain/services/workspace-provisioning.service';
 import { WorkspaceRoleDeletionService } from 'workspaces/domain/services/workspace-role-deletion.service';
 import { AddWorkspaceMemberCommand } from 'workspaces/usecases/commands/add-workspace-member.command';
@@ -24,10 +28,7 @@ import { ListWorkspaceUsersQuery } from 'workspaces/usecases/queries/list-worksp
 import { ListWorkspaceWarehousesQuery } from 'workspaces/usecases/queries/list-workspace-warehouses.query';
 import { ReadWorkspaceContextQuery } from 'workspaces/usecases/queries/read-workspace-context.query';
 
-const workspaceServices = [
-  WorkspaceProvisioningService,
-  WorkspaceRoleDeletionService,
-];
+const workspaceServices = [WorkspaceRoleDeletionService];
 
 const workspaceCommands = [
   RenameWorkspaceCommand,
@@ -39,7 +40,6 @@ const workspaceCommands = [
   AssignWorkspaceRoleCommand,
   TransferWorkspaceOwnerCommand,
   SetActiveWarehouseCommand,
-  CreateWarehouseCommand,
   RenameWarehouseCommand,
   ArchiveWarehouseCommand,
   RestoreWarehouseCommand,
@@ -57,12 +57,62 @@ const workspaceQueries = [
   ListAssignableWarehouseRolesQuery,
 ];
 
+// `WorkspaceProvisioningService` and `CreateWarehouseCommand` depend on
+// `access`'s exported `ProvisionInitialAccessCommand` (`WorkspaceProvisioningService`
+// directly; `CreateWarehouseCommand` through the narrower
+// `ProvisionInitialAccessDelegate` structural type). Both erase to a token
+// Nest cannot resolve from a plain class registration — `ProvisionInitialAccessDelegate`
+// is an interface (`design:paramtypes` emits `Object`) and neither provider
+// otherwise declares where its Access dependency comes from. Wiring them
+// with an explicit factory + `inject` (mirroring `auth`'s
+// `AuthUsecaseModule`) supplies the concrete `ProvisionInitialAccessCommand`
+// instance without changing either class's deliberately structural
+// constructor type.
+const workspaceFactoryProviders = [
+  {
+    provide: WorkspaceProvisioningService,
+    inject: [WorkspaceProvisioningRepository, ProvisionInitialAccessCommand],
+    useFactory: (
+      workspaceProvisioningRepository: WorkspaceProvisioningRepository,
+      provisionInitialAccess: ProvisionInitialAccessCommand,
+    ) =>
+      new WorkspaceProvisioningService(
+        workspaceProvisioningRepository,
+        provisionInitialAccess,
+      ),
+  },
+  {
+    provide: CreateWarehouseCommand,
+    inject: [WarehouseLifecycleRepository, ProvisionInitialAccessCommand],
+    useFactory: (
+      warehouseLifecycleRepository: WarehouseLifecycleRepository,
+      provisionInitialAccess: ProvisionInitialAccessCommand,
+    ) =>
+      new CreateWarehouseCommand(
+        warehouseLifecycleRepository,
+        provisionInitialAccess,
+      ),
+  },
+];
+
 // The application API of `workspaces`. It exports every use case so a
 // transport adapter — the REST module here, `auth`'s registration bootstrap
 // for provisioning — can invoke it without reaching into the module's
 // internals (server-architecture.md, "NestJS modules and exports").
 @Module({
-  providers: [...workspaceServices, ...workspaceCommands, ...workspaceQueries],
-  exports: [...workspaceServices, ...workspaceCommands, ...workspaceQueries],
+  imports: [AccessUsecaseModule],
+  providers: [
+    ...workspaceServices,
+    ...workspaceCommands,
+    ...workspaceQueries,
+    ...workspaceFactoryProviders,
+  ],
+  exports: [
+    ...workspaceServices,
+    ...workspaceCommands,
+    ...workspaceQueries,
+    WorkspaceProvisioningService,
+    CreateWarehouseCommand,
+  ],
 })
 export class WorkspacesUsecaseModule {}

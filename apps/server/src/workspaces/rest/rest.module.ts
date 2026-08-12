@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from 'auth/auth.module';
 import { WorkspaceAccessGuard } from 'shared/guards/workspace-access.guard';
+import { WarehouseController } from 'workspaces/rest/controllers/warehouse.controller';
 import { WorkspaceController } from 'workspaces/rest/controllers/workspace.controller';
 import { WorkspacesUsecaseModule } from 'workspaces/usecases/usecase.module';
 
@@ -9,7 +10,7 @@ import { WorkspacesUsecaseModule } from 'workspaces/usecases/usecase.module';
 // registered here so Nest can construct it for this module's routes.
 @Module({
   imports: [AuthModule, WorkspacesUsecaseModule],
-  controllers: [WorkspaceController],
+  controllers: [WorkspaceController, WarehouseController],
   providers: [WorkspaceAccessGuard],
 })
 export class WorkspacesRestModule {}

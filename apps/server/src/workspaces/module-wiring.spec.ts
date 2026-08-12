@@ -4,6 +4,7 @@ import { MODULE_METADATA } from '@nestjs/common/constants';
 import { AppModule } from 'app.module';
 import { DomainModule } from 'shared/domain/domain.module';
 import { WorkspacesRestModule } from 'workspaces';
+import { WarehouseController } from 'workspaces/rest/controllers/warehouse.controller';
 import { WorkspaceController } from 'workspaces/rest/controllers/workspace.controller';
 import { WorkspacesUsecaseModule } from 'workspaces/usecases/usecase.module';
 
@@ -37,19 +38,25 @@ describe('workspaces module wiring', () => {
     );
   });
 
-  it('serves the Workspace controller from the use-case module', () => {
+  // T25 — the Warehouse-record and membership-edge REST surface is a second
+  // controller of this same Workspace-scoped module, not a new module: its
+  // subject is the Warehouse record and its membership edges, never a
+  // resource a Warehouse owns (sad.md §7).
+  it('serves the Workspace and Warehouse controllers from the use-case module', () => {
     expect(metadata(MODULE_METADATA.CONTROLLERS, WorkspacesRestModule)).toEqual(
-      [WorkspaceController],
+      [WorkspaceController, WarehouseController],
     );
     expect(metadata(MODULE_METADATA.IMPORTS, WorkspacesRestModule)).toContain(
       WorkspacesUsecaseModule,
     );
   });
 
-  it('exports every use case the controller injects', () => {
-    dependenciesOf(WorkspaceController).forEach((dependency) => {
-      expect(usecaseExports).toContain(dependency);
-    });
+  it('exports every use case the controllers inject', () => {
+    [WorkspaceController, WarehouseController].forEach((controller) =>
+      dependenciesOf(controller).forEach((dependency) => {
+        expect(usecaseExports).toContain(dependency);
+      }),
+    );
   });
 
   it('resolves every dependency of every registered use case', () => {
