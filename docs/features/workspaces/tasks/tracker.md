@@ -34,21 +34,36 @@
 | T27 | Re-shape the `users` REST surface                        | ports     | Backend Lead                 | M        | T12, T13                              | done   |
 | T28 | ADR 0003 + `sad.md` §8 classification reconciliation     | docs      | Tech Lead + Security Lead    | S        | —                                     | done   |
 | T29 | Record the supersession of the two approved specs        | docs      | Tech Lead                    | S        | —                                     | done   |
-| T30 | Two-level authorization-coverage architecture check      | tests     | Backend Lead + Security Lead | M        | T24, T25, T26, T27, T28               | todo   |
-| T31 | Workspace load smoke test + timing coverage              | tests     | Backend Lead                 | M        | T24, T25                              | todo   |
+| T30 | Two-level authorization-coverage architecture check      | tests     | Backend Lead + Security Lead | M        | T24, T25, T26, T27, T28               | done   |
+| T31 | Workspace load smoke test + timing coverage              | tests     | Backend Lead                 | M        | T24, T25                              | done   |
 | T32 | Missing shared icon components                           | ui        | Frontend Lead                | S        | —                                     | done   |
 | T33 | Workspace actor-context API, capability hook, gate       | ui        | Frontend Lead                | M        | T6                                    | done   |
-| T34 | Warehouse switcher in the application shell              | ui        | Frontend Lead                | L        | T32, T33                              | todo   |
+| T34 | Warehouse switcher in the application shell              | ui        | Frontend Lead                | L        | T32, T33                              | done   |
 | T35 | `modules/workspace` route, page shell, tabs, i18n        | ui        | Frontend Lead                | L        | T32, T33                              | done   |
 | T36 | Warehouses tab: list, detail pane, lifecycle dialogs     | ui        | Frontend Lead                | L        | T35                                   | done   |
-| T37 | Warehouse access grant / withdrawal from the detail pane | ui        | Frontend Lead                | L        | T36                                   | todo   |
-| T38 | Workspace roles + Permissions tabs                       | ui        | Frontend Lead                | L        | T35, T41                              | todo   |
-| T39 | Workspace members tab + Owner transfer                   | ui        | Frontend Lead                | L        | T35, T41                              | todo   |
+| T37 | Warehouse access grant / withdrawal from the detail pane | ui        | Frontend Lead                | L        | T36                                   | done   |
+| T38 | Workspace roles + Permissions tabs                       | ui        | Frontend Lead                | L        | T35, T41                              | done   |
+| T39 | Workspace members tab + Owner transfer                   | ui        | Frontend Lead                | L        | T35, T41                              | done   |
 | T40 | Migrate the Warehouse-scoped web surface                 | ui        | Frontend Lead                | L        | T26, T27, T33                         | done   |
-| T41 | Workspace read projection gaps (counts + member flag)    | infra     | Backend Lead                 | S        | T9, T24                               | todo   |
+| T41 | Workspace read projection gaps (counts + member flag)    | infra     | Backend Lead                 | S        | T9, T24                               | done   |
 | T42 | Fix `CreateWarehouseCommand` Nest DI wiring              | ports     | Backend Lead                 | S        | —                                     | done   |
-| T43 | Translate infra failures into the documented 503 codes   | app       | Backend Lead                 | S        | T20, T21                              | todo   |
-| T44 | Return the documented `Warehouse` body from archival     | app       | Backend Lead                 | S        | T21, T25                              | todo   |
+| T43 | Translate infra failures into the documented 503 codes   | app       | Backend Lead                 | S        | T20, T21                              | done   |
+| T44 | Return the documented `Warehouse` body from archival     | app       | Backend Lead                 | S        | T21, T25                              | done   |
+| T45 | Render the tab content in the administration panels      | ui        | Frontend Lead                | S        | T36                                   | done   |
+| T46 | Carry the identifying email in the Workspace reads       | infra     | Backend Lead                 | S        | T9, T24                               | done   |
+
+**T46 — projection gap found during `implement` (T38/T39 run).** `contracts/openapi.yaml` documents `email` on both
+`WorkspaceMember` ("carried so the reader can tell Workspace Members apart. Present on the same terms as the approved
+Warehouse member projection") and `WorkspaceUser`, and both contract schemas already allowed it — but neither server
+read projected it, so `grep -rn email apps/server/src/workspaces` returned nothing. The Members tab would have rendered
+raw UUIDs where the approved frames (`edPx9`, `VrGa3`) show a person. The web already degraded gracefully
+(`user.email ?? user.userId`), so nothing crashed and no web test caught it; the Warehouses tab's own spec had been
+papering over it with a fixture that supplied an email the server never sends. Fixed server-side by joining the account
+that owns the address, mirroring the Access-level member projection the contract names as the precedent. Registered as
+its own task rather than absorbed into T39, whose `files_hint` is web-only.
+
+**T45 — tab panels.** Registered here after the fact: the T45 commit (`88d1549`) predates this row and was never added
+to the tracker.
 
 **T42 — defect found during `implement`.** `CreateWarehouseCommand` injects `ProvisionInitialAccessDelegate`, a
 TypeScript **interface**, which erases at runtime so Nest emits `Object` as its token and cannot resolve it
@@ -103,5 +118,5 @@ implementer could not read the HeroUI v3 doc files its manifest required and sub
 produced a false "pre-existing build error" report on the server lane (stale `packages/contracts/dist`). Any future
 worktree-isolated run should build `packages/contracts` first and expect gitignored reference material to be absent.
 
-**Total:** 44 tasks (T41–T44 added during `implement` — see the task cards and the notes above), ~34 person-days (S ≈ ¼–½ day, M ≈ ½–¾ day, L ≈ 1 day; no task exceeds one
+**Total:** 46 tasks (T41–T46 added during `implement` — see the task cards and the notes above), ~34 person-days (S ≈ ¼–½ day, M ≈ ½–¾ day, L ≈ 1 day; no task exceeds one
 working day).

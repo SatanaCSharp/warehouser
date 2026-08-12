@@ -580,6 +580,18 @@
         "apps/server/src/workspaces/usecases/commands/rename-warehouse.command.ts",
         "apps/server/src/workspaces/rest/controllers/warehouse.controller.ts"
       ]
+    },
+    {
+      "id": "T46",
+      "title": "Carry the identifying email in the Workspace Members and Workspace Users reads",
+      "layer": "infra",
+      "deps": ["T9", "T24"],
+      "acs": ["AC-33"],
+      "dod": "Both Workspace-level reads project the identifying email documented by contracts/openapi.yaml, joined from the account that owns it and mirroring the Access-level member projection, without widening the read beyond AC-33 — no Warehouse Role reaches either projection.",
+      "files_hint": [
+        "apps/server/src/shared/domain/repositories/workspace-read.repository.ts",
+        "apps/server/src/workspaces/rest/controllers/workspace.controller.ts"
+      ]
     }
   ]
 }
