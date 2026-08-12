@@ -8,17 +8,17 @@
 | T1  | Promote workspace authority schema migrations (01–03)    | migration | Backend Lead                 | M        | —                                     | done   |
 | T2  | Promote re-key + selection migrations (04–05)            | migration | Backend Lead                 | M        | T1                                    | done   |
 | T3  | Promote `AccessName` + add the Workspace name wrapper    | domain    | Backend Lead                 | S        | —                                     | done   |
-| T4  | `workspaces` domain predicates, errors and invariants    | domain    | Backend Lead                 | L        | T3                                    | todo   |
-| T5  | `WorkspacePermissionId` + new stable error codes         | ports     | Backend Lead                 | M        | —                                     | todo   |
-| T6  | `packages/contracts/workspaces` schemas                  | ports     | Backend Lead                 | L        | T5                                    | todo   |
+| T4  | `workspaces` domain predicates, errors and invariants    | domain    | Backend Lead                 | L        | T3                                    | done   |
+| T5  | `WorkspacePermissionId` + new stable error codes         | ports     | Backend Lead                 | M        | —                                     | done   |
+| T6  | `packages/contracts/workspaces` schemas                  | ports     | Backend Lead                 | L        | T5                                    | done   |
 | T7  | Workspace entities, changed entities, test factories     | infra     | Backend Lead                 | L        | T2                                    | done   |
-| T8  | Guard-read repositories (both levels)                    | infra     | Backend Lead                 | M        | T7                                    | todo   |
-| T9  | `WorkspaceReadRepository`                                | infra     | Backend Lead                 | L        | T7                                    | todo   |
+| T8  | Guard-read repositories (both levels)                    | infra     | Backend Lead                 | M        | T7                                    | done   |
+| T9  | `WorkspaceReadRepository`                                | infra     | Backend Lead                 | L        | T7                                    | done   |
 | T10 | Workspace Role / membership / Owner-transfer repos       | infra     | Backend Lead                 | L        | T7                                    | todo   |
 | T11 | Warehouse lifecycle + membership repos                   | infra     | Backend Lead                 | L        | T7                                    | todo   |
-| T12 | Split provisioning; re-key existing Warehouse writes     | infra     | Backend Lead                 | M        | T7                                    | todo   |
-| T13 | `WorkspaceAccessGuard` + reworked `WarehouseAccessGuard` | ports     | Backend Lead + Security Lead | L        | T5, T8                                | todo   |
-| T14 | Registration bootstrap in `workspaces` provisioning      | app       | Backend Lead                 | M        | T4, T6, T12                           | todo   |
+| T12 | Split provisioning; re-key existing Warehouse writes     | infra     | Backend Lead                 | M        | T7                                    | done   |
+| T13 | `WorkspaceAccessGuard` + reworked `WarehouseAccessGuard` | ports     | Backend Lead + Security Lead | L        | T5, T8                                | done   |
+| T14 | Registration bootstrap in `workspaces` provisioning      | app       | Backend Lead                 | M        | T4, T6, T12                           | done   |
 | T15 | Workspace rename + configuration queries                 | app       | Backend Lead                 | L        | T4, T6, T9                            | todo   |
 | T16 | Workspace Role create + update                           | app       | Backend Lead                 | L        | T4, T6, T10                           | todo   |
 | T17 | Workspace Role deletion with replacement                 | app       | Backend Lead                 | L        | T4, T6, T10                           | todo   |
@@ -31,7 +31,7 @@
 | T24 | Workspace-level REST controller + module wiring          | ports     | Backend Lead                 | L        | T6, T13, T15, T16, T17, T18, T19, T23 | todo   |
 | T25 | Warehouse-record and membership-edge REST routes         | ports     | Backend Lead                 | M        | T6, T13, T20, T21, T22                | todo   |
 | T26 | Re-shape the `access` REST surface                       | ports     | Backend Lead                 | L        | T12, T13                              | todo   |
-| T27 | Re-shape the `users` REST surface                        | ports     | Backend Lead                 | M        | T12, T13                              | todo   |
+| T27 | Re-shape the `users` REST surface                        | ports     | Backend Lead                 | M        | T12, T13                              | done   |
 | T28 | ADR 0003 + `sad.md` §8 classification reconciliation     | docs      | Tech Lead + Security Lead    | S        | —                                     | todo   |
 | T29 | Record the supersession of the two approved specs        | docs      | Tech Lead                    | S        | —                                     | todo   |
 | T30 | Two-level authorization-coverage architecture check      | tests     | Backend Lead + Security Lead | M        | T24, T25, T26, T27, T28               | todo   |

@@ -14,6 +14,7 @@ import { RolePermissionEntity } from 'shared/domain/entities/role-permission.ent
 import { UserEntity } from 'shared/domain/entities/user.entity';
 import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
 import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 import { AccessCurrentUserRepository } from 'shared/domain/repositories/access-current-user.repository';
 import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
 import { MemberLifecycleRepository } from 'shared/domain/repositories/member-lifecycle.repository';
@@ -35,7 +36,12 @@ const uuid = (suffix: string): string =>
   `00000000-0000-4000-8000-${suffix.padStart(12, '0')}`;
 
 // Warehouse A is the actor's own Warehouse; Warehouse B exists only to prove
-// cross-Warehouse Role hiding (AC-09).
+// cross-Warehouse Role hiding (AC-09). Both belong to `workspaceId`.
+// `otherWorkspaceId` owns no Warehouse the actor ever touches; it exists only
+// so AC-24's "and to no other" half has something concrete to be distinct
+// from, rather than an assertion that would pass by omission.
+const workspaceId = uuid('000000000001');
+const otherWorkspaceId = uuid('000000000002');
 const warehouseAId = uuid('100000000001');
 const warehouseBId = uuid('100000000002');
 
@@ -54,7 +60,7 @@ const USERS_DELETE = 'USERS:DELETE';
 const validEmail = 'new.member@example.test';
 const validPassword = 'a-valid-password-1';
 
-// eslint-disable-next-line max-lines-per-function -- integration suite setup is inherently long
+// eslint-disable-next-line max-lines-per-function, max-statements -- integration suite setup is inherently long
 describeIntegration('CreateMemberCommand', () => {
   const context = new DbTransactionContext(dataSource);
   const transactions = new DbTransactionService(dataSource, context);
@@ -125,7 +131,7 @@ describeIntegration('CreateMemberCommand', () => {
     // `permissions` in its own `afterEach`, so start from that same clean
     // slate here too, regardless of what ran before this suite.
     await dataSource.query(
-      'TRUNCATE warehouse_memberships, role_permissions, roles, warehouses, sessions, users, accounts, permissions CASCADE',
+      'TRUNCATE warehouse_memberships, role_permissions, roles, warehouses, workspaces, sessions, users, accounts, permissions CASCADE',
     );
   });
 
@@ -136,7 +142,7 @@ describeIntegration('CreateMemberCommand', () => {
 
   afterEach(async () => {
     await dataSource.query(
-      'TRUNCATE warehouse_memberships, role_permissions, roles, warehouses, sessions, users, accounts, permissions CASCADE',
+      'TRUNCATE warehouse_memberships, role_permissions, roles, warehouses, workspaces, sessions, users, accounts, permissions CASCADE',
     );
   });
 
@@ -151,6 +157,7 @@ describeIntegration('CreateMemberCommand', () => {
   const seedIdentity = async (
     userId: string,
     normalizedEmail: string,
+    userWorkspaceId: string = workspaceId,
   ): Promise<void> => {
     await dataSource.transaction(async (manager) => {
       await manager.insert(AccountEntity, {
@@ -166,6 +173,7 @@ describeIntegration('CreateMemberCommand', () => {
       await manager.insert(UserEntity, {
         id: userId,
         accountId: userId,
+        workspaceId: userWorkspaceId,
         createdAt: now,
         updatedAt: now,
       });
@@ -175,9 +183,26 @@ describeIntegration('CreateMemberCommand', () => {
   const seedBaseline = async (): Promise<void> => {
     const manager = dataSource.manager;
 
+    await manager.getRepository(WorkspaceEntity).insert([
+      { id: workspaceId, name: null, createdAt: now, updatedAt: now },
+      { id: otherWorkspaceId, name: null, createdAt: now, updatedAt: now },
+    ]);
+
     await manager.getRepository(WarehouseEntity).insert([
-      { id: warehouseAId, name: 'Warehouse A', createdAt: now, updatedAt: now },
-      { id: warehouseBId, name: 'Warehouse B', createdAt: now, updatedAt: now },
+      {
+        id: warehouseAId,
+        workspaceId,
+        name: 'Warehouse A',
+        createdAt: now,
+        updatedAt: now,
+      },
+      {
+        id: warehouseBId,
+        workspaceId,
+        name: 'Warehouse B',
+        createdAt: now,
+        updatedAt: now,
+      },
     ]);
 
     await manager.getRepository(PermissionEntity).insert(
@@ -269,6 +294,7 @@ describeIntegration('CreateMemberCommand', () => {
     await manager.getRepository(WarehouseMembershipEntity).insert({
       userId: actorId,
       warehouseId: warehouseAId,
+      workspaceId,
       roleId: actorRoleId,
       roleKind: 'custom',
       createdAt: now,
@@ -323,6 +349,7 @@ describeIntegration('CreateMemberCommand', () => {
       .findOneBy({ userId: newMemberId });
     expect(membership).toMatchObject({
       warehouseId: warehouseAId,
+      workspaceId,
       roleId: permissiveCustomRoleId,
       roleKind: 'custom',
     });
@@ -344,6 +371,58 @@ describeIntegration('CreateMemberCommand', () => {
         warehouseId: warehouseAId,
       }),
     );
+  });
+
+  it('AC-24 (T27 DoD): the created member belongs to the Workspace that owns the Warehouse they were created in, and to no other', async () => {
+    await seedBaseline();
+
+    await transactions.executeInTransaction({}, () =>
+      createCommand().execute(actor(), {
+        email: validEmail,
+        password: validPassword,
+        roleId: permissiveCustomRoleId,
+      }),
+    );
+
+    const createdUser = await dataSource.manager
+      .getRepository(UserEntity)
+      .findOneBy({ id: newMemberId });
+    expect(createdUser?.workspaceId).toBe(workspaceId);
+    expect(createdUser?.workspaceId).not.toBe(otherWorkspaceId);
+
+    const membership = await dataSource.manager
+      .getRepository(WarehouseMembershipEntity)
+      .findOneBy({ userId: newMemberId, warehouseId: warehouseAId });
+    expect(membership?.workspaceId).toBe(workspaceId);
+  });
+
+  it("T27 DoD: the created member's Workspace relation survives losing every Warehouse membership (supports AC-21)", async () => {
+    await seedBaseline();
+
+    await transactions.executeInTransaction({}, () =>
+      createCommand().execute(actor(), {
+        email: validEmail,
+        password: validPassword,
+        roleId: permissiveCustomRoleId,
+      }),
+    );
+
+    await dataSource.manager
+      .getRepository(WarehouseMembershipEntity)
+      .delete({ userId: newMemberId, warehouseId: warehouseAId });
+
+    const remainingMemberships = await dataSource.manager
+      .getRepository(WarehouseMembershipEntity)
+      .countBy({ userId: newMemberId });
+    expect(remainingMemberships).toBe(0);
+
+    // The Workspace relation is a plain reference set at creation time, never
+    // re-derived from Warehouse memberships (spec.md §1, second boundary) —
+    // it must still be there with every membership gone.
+    const survivingUser = await dataSource.manager
+      .getRepository(UserEntity)
+      .findOneBy({ id: newMemberId });
+    expect(survivingUser?.workspaceId).toBe(workspaceId);
   });
 
   it('AC-02: rejects an unsupported email and creates nothing', async () => {

@@ -242,16 +242,22 @@ describeIntegration('MemberLifecycleRepository', () => {
   });
 
   describe('insertMembership', () => {
-    it('inserts a new custom-kind Warehouse Membership row', async () => {
+    it('inserts a new custom-kind Warehouse Membership row carrying workspace_id', async () => {
       await seedWarehouses();
       // insertMembership only writes the membership row; the identity it
       // references must already exist to satisfy the FK, so seed a minimal
       // account/user pair first.
       await seedIdentity(newMemberUserId, 'new-member@example.test');
 
+      // `warehouse_memberships.workspace_id` is NOT NULL under the re-keyed
+      // schema (T2/data-model.md "warehouse_memberships (re-keyed)"), so
+      // `MembershipWrite` must accept and `insertMembership` must persist
+      // `workspaceId` — the production type does not carry this field yet
+      // (T12), which is this test's RED.
       await repository.insertMembership({
         userId: newMemberUserId,
         warehouseId: warehouseAId,
+        workspaceId,
         roleId: roleAId,
         roleKind: 'custom',
       });
@@ -262,6 +268,7 @@ describeIntegration('MemberLifecycleRepository', () => {
       expect(membership).toMatchObject({
         userId: newMemberUserId,
         warehouseId: warehouseAId,
+        workspaceId,
         roleId: roleAId,
         roleKind: 'custom',
       });

@@ -17,6 +17,7 @@ import { ManagerTransferRepository } from 'shared/domain/repositories/manager-tr
 import { MemberLifecycleRepository } from 'shared/domain/repositories/member-lifecycle.repository';
 import { RoleLifecycleRepository } from 'shared/domain/repositories/role-lifecycle.repository';
 import { WorkspaceCurrentUserRepository } from 'shared/domain/repositories/workspace-current-user.repository';
+import { WorkspaceProvisioningRepository } from 'shared/domain/repositories/workspace-provisioning.repository';
 
 const domainEntities = [
   AccountEntity,
@@ -38,6 +39,7 @@ const domainRepositories = [
   MemberLifecycleRepository,
   RoleLifecycleRepository,
   WorkspaceCurrentUserRepository,
+  WorkspaceProvisioningRepository,
 ];
 
 @Global()

@@ -8,6 +8,7 @@ import { DataSource } from 'typeorm';
 export interface MembershipWrite {
   readonly userId: string;
   readonly warehouseId: string;
+  readonly workspaceId: string;
   readonly roleId: string;
   readonly roleKind: 'custom';
 }
@@ -58,6 +59,7 @@ export class MemberLifecycleRepository {
     await manager.getRepository(WarehouseMembershipEntity).insert({
       userId: input.userId,
       warehouseId: input.warehouseId,
+      workspaceId: input.workspaceId,
       roleId: input.roleId,
       roleKind: input.roleKind,
     });

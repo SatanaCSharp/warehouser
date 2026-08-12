@@ -112,6 +112,15 @@ export class CreateMemberCommand {
       );
     assertDefined(currentAccess, targetUnavailableError());
 
+    // The new member's Workspace relation is established from the Workspace
+    // owning the named Warehouse (spec.md §1, second boundary; AC-24) —
+    // read through the shared `WarehouseEntity` row rather than importing
+    // `workspaces` (`users` must not depend on that feature module).
+    const warehouse = await this.memberLifecycleRepository.lockWarehouse(
+      currentUser.warehouseId,
+    );
+    assertDefined(warehouse, targetUnavailableError());
+
     // Lock the selected Role row (sad.md §4: "the selected Role row [is]
     // locked before its current state is re-checked") with a kind-agnostic
     // lookup, so a missing/cross-Warehouse Role (AC-09) is distinguishable
@@ -182,6 +191,7 @@ export class CreateMemberCommand {
       user: {
         id: identityId,
         accountId: identityId,
+        workspaceId: warehouse.workspaceId,
         createdAt: now,
         updatedAt: now,
       },
@@ -190,6 +200,7 @@ export class CreateMemberCommand {
     await this.memberLifecycleRepository.insertMembership({
       userId: identityId,
       warehouseId: currentUser.warehouseId,
+      workspaceId: warehouse.workspaceId,
       roleId: role.id,
       roleKind: 'custom',
     });

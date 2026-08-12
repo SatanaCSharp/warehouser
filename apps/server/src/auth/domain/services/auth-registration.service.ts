@@ -11,6 +11,13 @@ import { AuthenticationRepository } from 'shared/domain/repositories/authenticat
 export interface RegisteredIdentity {
   readonly account: Account;
   readonly user: User;
+  // spec.md §1 (second boundary): a User's Workspace relation is established
+  // when that User is created and never re-derived from Warehouse
+  // memberships afterwards. For a registrant, that relation is the
+  // Workspace registration bootstrap creates in the same transaction
+  // (sad.md §6.1/§4), so it travels with the identity rather than being
+  // written later.
+  readonly workspaceId: string;
   readonly session: Session;
 }
 
@@ -23,7 +30,7 @@ export class AuthRegistrationService {
     const createdAt = new Date();
     await this.authentication.createRegistration({
       account: toAccountEntity(identity.account, createdAt),
-      user: toUserEntity(identity.user, createdAt),
+      user: toUserEntity(identity.user, createdAt, identity.workspaceId),
       session: toSessionEntity(identity.session),
     });
   }
