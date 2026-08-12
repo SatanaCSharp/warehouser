@@ -19,6 +19,8 @@
     "createWarehouse": "Warehouse added.",
     "renameWarehouse": "Warehouse renamed.",
     "archiveWarehouse": "Warehouse archived.",
-    "restoreWarehouse": "Warehouse restored."
+    "restoreWarehouse": "Warehouse restored.",
+    "giveWarehouseAccess": "Access to {{name}} granted.",
+    "withdrawWarehouseAccess": "Access to {{name}} withdrawn."
   }
 }

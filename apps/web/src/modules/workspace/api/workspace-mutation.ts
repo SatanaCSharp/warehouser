@@ -22,8 +22,9 @@ export const runWorkspaceMutation = async (
   action: WorkspaceSuccessAction,
   request: Promise<MutationResult>,
   mapFieldErrors: FieldErrorMap = () => undefined,
+  params?: Record<string, unknown>,
 ): Promise<MutationOutcome> => {
-  const result = await alertWorkspaceAction(action, request);
+  const result = await alertWorkspaceAction(action, request, params);
   if (!('error' in result)) {
     return { success: true };
   }

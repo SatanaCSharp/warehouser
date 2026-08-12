@@ -19,6 +19,8 @@
     "createWarehouse": "Додаємо склад…",
     "renameWarehouse": "Перейменовуємо склад…",
     "archiveWarehouse": "Архівуємо склад…",
-    "restoreWarehouse": "Відновлюємо склад…"
+    "restoreWarehouse": "Відновлюємо склад…",
+    "giveWarehouseAccess": "Надаємо доступ до {{name}}…",
+    "withdrawWarehouseAccess": "Відкликаємо доступ до {{name}}…"
   }
 }

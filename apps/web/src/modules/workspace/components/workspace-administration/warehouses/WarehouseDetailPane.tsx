@@ -1,6 +1,7 @@
 import { Alert, Button, Chip } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 
+import { GiveWarehouseAccessAction } from 'modules/workspace/components/workspace-administration/warehouses/GiveWarehouseAccessAction';
 import { WarehouseLifecycleActions } from 'modules/workspace/components/workspace-administration/warehouses/WarehouseLifecycleActions';
 import { WarehouseNameForm } from 'modules/workspace/components/workspace-administration/warehouses/WarehouseNameForm';
 import { WarehousePeopleList } from 'modules/workspace/components/workspace-administration/warehouses/WarehousePeopleList';
@@ -87,7 +88,14 @@ export const WarehouseDetailPane = ({
         warehouse={warehouse}
       />
 
-      {people ? <WarehousePeopleList people={people} /> : null}
+      {people ? (
+        <div className="flex flex-col gap-3">
+          <div className="flex justify-end">
+            <GiveWarehouseAccessAction warehouse={warehouse} />
+          </div>
+          <WarehousePeopleList people={people} warehouse={warehouse} />
+        </div>
+      ) : null}
     </section>
   );
 };

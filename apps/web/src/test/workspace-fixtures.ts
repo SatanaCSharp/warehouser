@@ -5,6 +5,7 @@ import { authBecameAuthenticated } from 'modules/auth/store/auth.slice';
 import { makeStore } from 'store';
 
 import type {
+  AssignableWarehouseRole,
   Warehouse,
   WorkspaceContext,
   WorkspaceUser,
@@ -24,10 +25,25 @@ export const warehouseIds = {
   oldDepot: '00000000-0000-4000-8000-000000000112',
 };
 
-const otherUserIds = {
+export const otherUserIds = {
   anna: '00000000-0000-4000-8000-000000000120',
   lena: '00000000-0000-4000-8000-000000000121',
 };
+
+export const assignableWarehouseRoleIds = {
+  picker: '00000000-0000-4000-8000-000000000130',
+  supervisor: '00000000-0000-4000-8000-000000000131',
+};
+
+/**
+ * Central DC's assignable custom Roles — the narrow read `WAREHOUSE_MEMBERSHIPS:ASSIGN`
+ * carries: identifiers and names only, the protected Warehouse Manager Role
+ * already excluded by the server (AC-23a, AC-25).
+ */
+export const assignableWarehouseRoles = (): AssignableWarehouseRole[] => [
+  { id: assignableWarehouseRoleIds.picker, name: 'Picker' },
+  { id: assignableWarehouseRoleIds.supervisor, name: 'Site Supervisor' },
+];
 
 /**
  * Three Warehouses of one Workspace: two in operation and one archived, which
@@ -105,10 +121,13 @@ type StubbedResponse = { body: unknown; status: number };
 type StubbedHandler = (body: unknown) => StubbedResponse | undefined;
 
 type WorkspaceServerOptions = {
+  assignableRoles?: AssignableWarehouseRole[];
   context?: WorkspaceContext;
+  onAssignWarehouseMembership?: StubbedHandler;
   onCreateWarehouse?: StubbedHandler;
   onRenameWarehouse?: StubbedHandler;
   onRenameWorkspace?: StubbedHandler;
+  onRevokeWarehouseMembership?: StubbedHandler;
   onSetWarehouseArchival?: StubbedHandler;
   users?: WorkspaceUser[];
   warehouses?: Warehouse[] | 'unavailable';
@@ -132,10 +151,13 @@ const requestMethod = (
 // per resource would scatter the fixture contract across files.
 
 export const stubWorkspaceServer = ({
+  assignableRoles = assignableWarehouseRoles(),
   context = namedWorkspaceContext(Object.values(WorkspacePermissionId)),
+  onAssignWarehouseMembership,
   onCreateWarehouse,
   onRenameWarehouse,
   onRenameWorkspace,
+  onRevokeWarehouseMembership,
   onSetWarehouseArchival,
   users = workspaceUsers(),
   warehouses = workspaceWarehouses(),
@@ -194,6 +216,29 @@ export const stubWorkspaceServer = ({
               )
             : Response.json(warehouses),
         );
+      }
+
+      if (url.includes('/assignable-roles')) {
+        return Promise.resolve(Response.json(assignableRoles));
+      }
+
+      if (url.includes('/memberships')) {
+        if (method === 'POST') {
+          return answer(onAssignWarehouseMembership, {
+            userId: otherUserIds.lena,
+            warehouseId: warehouseIds.central,
+            roleId: assignableWarehouseRoleIds.picker,
+            roleKind: 'custom',
+          });
+        }
+        if (method === 'DELETE') {
+          const result = onRevokeWarehouseMembership?.(body);
+          return Promise.resolve(
+            result
+              ? Response.json(result.body, { status: result.status })
+              : new Response(null, { status: 204 }),
+          );
+        }
       }
 
       if (url.includes('/api/v1/workspace/warehouses/')) {

@@ -19,6 +19,8 @@
     "createWarehouse": "Склад додано.",
     "renameWarehouse": "Склад перейменовано.",
     "archiveWarehouse": "Склад заархівовано.",
-    "restoreWarehouse": "Склад відновлено."
+    "restoreWarehouse": "Склад відновлено.",
+    "giveWarehouseAccess": "Доступ до {{name}} надано.",
+    "withdrawWarehouseAccess": "Доступ до {{name}} відкликано."
   }
 }
