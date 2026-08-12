@@ -30,7 +30,7 @@
 | T23 | Active Warehouse selection + actor-context query         | app       | Backend Lead                 | L        | T6, T9, T11                           | done   |
 | T24 | Workspace-level REST controller + module wiring          | ports     | Backend Lead                 | L        | T6, T13, T15, T16, T17, T18, T19, T23 | todo   |
 | T25 | Warehouse-record and membership-edge REST routes         | ports     | Backend Lead                 | M        | T6, T13, T20, T21, T22                | todo   |
-| T26 | Re-shape the `access` REST surface                       | ports     | Backend Lead                 | L        | T12, T13                              | todo   |
+| T26 | Re-shape the `access` REST surface                       | ports     | Backend Lead                 | L        | T12, T13                              | done   |
 | T27 | Re-shape the `users` REST surface                        | ports     | Backend Lead                 | M        | T12, T13                              | done   |
 | T28 | ADR 0003 + `sad.md` §8 classification reconciliation     | docs      | Tech Lead + Security Lead    | S        | —                                     | done   |
 | T29 | Record the supersession of the two approved specs        | docs      | Tech Lead                    | S        | —                                     | done   |
