@@ -26,7 +26,7 @@
 | T19 | Workspace Owner transfer                                 | app       | Backend Lead                 | M        | T4, T6, T10                           | todo   |
 | T20 | Warehouse create + rename                                | app       | Backend Lead                 | L        | T4, T6, T11, T12                      | done   |
 | T21 | Warehouse archive + restore                              | app       | Backend Lead                 | L        | T4, T6, T11                           | done   |
-| T22 | Warehouse membership assign / revoke + assignable Roles  | app       | Backend Lead                 | L        | T4, T6, T11                           | todo   |
+| T22 | Warehouse membership assign / revoke + assignable Roles  | app       | Backend Lead                 | L        | T4, T6, T11                           | done   |
 | T23 | Active Warehouse selection + actor-context query         | app       | Backend Lead                 | L        | T6, T9, T11                           | todo   |
 | T24 | Workspace-level REST controller + module wiring          | ports     | Backend Lead                 | L        | T6, T13, T15, T16, T17, T18, T19, T23 | todo   |
 | T25 | Warehouse-record and membership-edge REST routes         | ports     | Backend Lead                 | M        | T6, T13, T20, T21, T22                | todo   |
@@ -36,8 +36,8 @@
 | T29 | Record the supersession of the two approved specs        | docs      | Tech Lead                    | S        | —                                     | todo   |
 | T30 | Two-level authorization-coverage architecture check      | tests     | Backend Lead + Security Lead | M        | T24, T25, T26, T27, T28               | todo   |
 | T31 | Workspace load smoke test + timing coverage              | tests     | Backend Lead                 | M        | T24, T25                              | todo   |
-| T32 | Missing shared icon components                           | ui        | Frontend Lead                | S        | —                                     | todo   |
-| T33 | Workspace actor-context API, capability hook, gate       | ui        | Frontend Lead                | M        | T6                                    | todo   |
+| T32 | Missing shared icon components                           | ui        | Frontend Lead                | S        | —                                     | done   |
+| T33 | Workspace actor-context API, capability hook, gate       | ui        | Frontend Lead                | M        | T6                                    | done   |
 | T34 | Warehouse switcher in the application shell              | ui        | Frontend Lead                | L        | T32, T33                              | todo   |
 | T35 | `modules/workspace` route, page shell, tabs, i18n        | ui        | Frontend Lead                | L        | T32, T33                              | todo   |
 | T36 | Warehouses tab: list, detail pane, lifecycle dialogs     | ui        | Frontend Lead                | L        | T35                                   | todo   |
