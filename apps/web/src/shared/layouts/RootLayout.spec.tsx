@@ -5,7 +5,7 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -16,6 +16,7 @@ import { RootLayout } from 'shared/layouts/RootLayout';
 import { makeStore } from 'store';
 
 import type { AccessProjection } from '@warehouser/contracts/access';
+import type { WorkspaceContext } from '@warehouser/contracts/workspaces';
 import type { ReactElement } from 'react';
 import type { AppStore } from 'store';
 
@@ -38,6 +39,48 @@ const stubAccess = (permissionIds: AccessProjection['permissionIds']): void => {
   vi.stubGlobal(
     'fetch',
     vi.fn(() => Promise.resolve(Response.json(access))),
+  );
+};
+
+// T34 — routes both the Workspace-context read (the switcher's data source)
+// and the Warehouse-scoped access read (`useCurrentPermissions`, already
+// exercised by `stubAccess`) so the switcher actually renders instead of
+// falling back to its loading or error state.
+const stubShell = (): void => {
+  const context: WorkspaceContext = {
+    workspace: {
+      id: '00000000-0000-4000-8000-000000000001',
+      name: 'Acme Logistics',
+    },
+    workspacePermissionIds: [],
+    warehouses: [
+      {
+        warehouseId: '00000000-0000-4000-8000-000000000010',
+        name: 'Central DC',
+        archivedAt: null,
+        roleId: '00000000-0000-4000-8000-000000000011',
+        roleKind: 'warehouse_manager',
+      },
+    ],
+    effectiveWarehouseId: '00000000-0000-4000-8000-000000000010',
+  };
+  const access: AccessProjection = {
+    warehouseId: '00000000-0000-4000-8000-000000000010',
+    roleId: '00000000-0000-4000-8000-000000000011',
+    roleKind: 'custom',
+    permissionIds: [],
+    archivedAt: null,
+  };
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((input: Request | string | URL) => {
+      const url = String(input instanceof Request ? input.url : input);
+      return Promise.resolve(
+        Response.json(
+          url.includes('/api/v1/workspace/context') ? context : access,
+        ),
+      );
+    }),
   );
 };
 
@@ -174,5 +217,50 @@ describe('RootLayout', () => {
       name: 'Open navigation',
     });
     expect(toggle.className).toContain('sm:hidden');
+  });
+
+  // T34 — the Warehouse switcher is added to the shell as one component
+  // rendered twice: desktop (`n7Th5`) inside the 80px header, mobile
+  // (`ciqhD`) in a full-width context bar directly beneath the 68px header
+  // (design-handoff.md §Responsive behavior). "Same component identity, same
+  // information, different placement" rules out reflowing one instance with
+  // CSS alone, because the mobile placement sits in a different row outside
+  // the header entirely.
+  describe('the Warehouse switcher shell placement (n7Th5, ciqhD)', () => {
+    it('places the switcher inside the header, hidden below sm', async () => {
+      stubShell();
+      renderAt(ROUTES.HOME, authenticatedStore());
+
+      await screen.findByText('Home content');
+      const header = screen.getByRole('banner');
+      const headerSwitcher = await within(header).findByRole('button', {
+        name: /central dc/iu,
+      });
+      const headerWrapper = headerSwitcher.closest('[class*="sm:flex"]');
+      expect(headerWrapper).not.toBeNull();
+      expect(headerWrapper?.className).toContain('hidden');
+    });
+
+    it('places a second switcher instance in a full-width context bar under the header, hidden at and above sm', async () => {
+      stubShell();
+      renderAt(ROUTES.HOME, authenticatedStore());
+
+      await screen.findByText('Home content');
+      const header = screen.getByRole('banner');
+      const switchers = await screen.findAllByRole('button', {
+        name: /central dc/iu,
+      });
+      expect(switchers).toHaveLength(2);
+
+      const contextBarSwitcher = switchers.find(
+        (candidate) => !header.contains(candidate),
+      );
+      expect(contextBarSwitcher).toBeDefined();
+      const contextBarWrapper = contextBarSwitcher?.closest(
+        '[class*="sm:hidden"]',
+      );
+      expect(contextBarWrapper).not.toBeNull();
+      expect(contextBarWrapper?.className).toContain('w-full');
+    });
   });
 });

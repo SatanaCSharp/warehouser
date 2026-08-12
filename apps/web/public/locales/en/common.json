@@ -14,5 +14,20 @@
     "label": "Change language",
     "english": "English",
     "ukrainian": "Українська"
+  },
+  "workspaceSwitcher": {
+    "label": "Warehouse switcher",
+    "archivedReason": "Archived · not selectable",
+    "empty": {
+      "title": "Choose a warehouse to work in",
+      "description": "You belong to {{count}} warehouses. Nothing is chosen for you when there is more than one, so your next action always applies to the site you meant.",
+      "action": "Choose warehouse"
+    },
+    "selectionEnded": {
+      "title": "{{name}} is no longer available to you",
+      "description": "It was archived, so nothing is selected now. Your access to the other warehouses is unchanged.",
+      "choose": "Choose warehouse",
+      "dismiss": "Dismiss"
+    }
   }
 }
