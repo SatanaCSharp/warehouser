@@ -28,13 +28,23 @@ describe('workspaces/domain module boundaries', () => {
     source: readFileSync(filePath, 'utf8'),
   }));
 
+  // `domain/services/` is exempt from the framework-free scan below: per
+  // `docs/system/server-architecture.md` ("Services"), injectable business
+  // services live under `<feature>/domain/services/` and use NestJS DI —
+  // mirroring the accepted `access/domain/services/role-deletion.service.ts`
+  // (T17). The framework-free constraint applies to domain entities and
+  // value objects, not services.
+  const frameworkFreeDomainSources = domainSources.filter(
+    ({ filePath }) => !filePath.includes(`${join('domain', 'services')}`),
+  );
+
   it('discovers at least one source file under workspaces/domain/', () => {
     // Guards against the scan silently passing over an empty/misnamed
     // directory once the predicates, errors, entities and value objects exist.
     expect(domainSources.length).toBeGreaterThan(0);
   });
 
-  it.each(domainSources)(
+  it.each(frameworkFreeDomainSources)(
     '$filePath imports no NestJS, HTTP, or TypeORM',
     ({ source }) => {
       expect(source).not.toMatch(/from\s+['"]@nestjs\//u);
