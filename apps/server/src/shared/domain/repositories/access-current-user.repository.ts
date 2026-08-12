@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { getEntityManager } from 'shared/database/db-transaction-context.service';
 import { RolePermissionEntity } from 'shared/domain/entities/role-permission.entity';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
 import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
 import { DataSource, In } from 'typeorm';
 
@@ -11,6 +12,10 @@ export interface AccessCurrentUserPersistenceResult {
   readonly roleKind: 'custom' | 'warehouse_manager';
   readonly granted: boolean;
   readonly permissionId: string;
+}
+
+export interface AccessCurrentUserWithWarehousePersistenceResult extends AccessCurrentUserPersistenceResult {
+  readonly archivedAt: Date | null;
 }
 export interface CurrentAccessPersistenceResult {
   readonly warehouseId: string;
@@ -25,19 +30,28 @@ export class AccessCurrentUserRepository {
 
   async resolveRequiredPermission(
     userId: string,
+    warehouseId: string,
     permissionId: string,
-  ): Promise<AccessCurrentUserPersistenceResult | null> {
+  ): Promise<AccessCurrentUserWithWarehousePersistenceResult | null> {
     const manager = getEntityManager(this.dataSource);
     const membership = await manager
       .getRepository(WarehouseMembershipEntity)
-      .findOneBy({ userId });
+      .findOneBy({ userId, warehouseId });
     if (!membership) {
       return null;
     }
     const granted = await manager
       .getRepository(RolePermissionEntity)
       .existsBy({ roleId: membership.roleId, permissionId });
-    return { ...membership, permissionId, granted };
+    const warehouse = await manager
+      .getRepository(WarehouseEntity)
+      .findOneBy({ id: warehouseId });
+    return {
+      ...membership,
+      permissionId,
+      granted,
+      archivedAt: warehouse ? warehouse.archivedAt : null,
+    };
   }
 
   async resolveAnyRequiredPermission(
