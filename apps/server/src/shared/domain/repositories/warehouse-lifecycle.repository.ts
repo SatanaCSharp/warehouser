@@ -28,6 +28,17 @@ export class WarehouseLifecycleRepository {
     });
   }
 
+  lockWarehouse(warehouseId: string): Promise<WarehouseEntity | null> {
+    const manager = getEntityManager(this.dataSource);
+
+    return manager
+      .getRepository(WarehouseEntity)
+      .createQueryBuilder('warehouse')
+      .where('warehouse.id = :warehouseId', { warehouseId })
+      .setLock('pessimistic_write')
+      .getOne();
+  }
+
   async renameWarehouse(warehouseId: string, name: string): Promise<void> {
     const manager = getEntityManager(this.dataSource);
 
