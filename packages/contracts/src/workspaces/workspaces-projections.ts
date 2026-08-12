@@ -55,10 +55,16 @@ export const workspaceMemberSchema = z.strictObject({
   email: z.string().email().max(254).optional(),
 });
 
+// AC-33 — the Workspace-level Users read carries the Warehouses a User belongs
+// to and deliberately **no** Warehouse Role. `WORKSPACE_MEMBERS:WATCH` covers
+// the Users of the Workspace and their Warehouses; it does not cover their
+// Warehouse Roles, so carrying `roleId`/`roleKind` here would either exceed the
+// read the actor holds or invite the AC-31 level confusion the two vocabularies
+// exist to prevent. See sad.md §5, T9's DoD ("projected without any Warehouse
+// Role") and design-handoff.md §"The level boundary is part of the design",
+// which forbids the Warehouse detail pane from showing a person's Role.
 export const workspaceUserWarehouseSchema = z.strictObject({
   warehouseId: z.string().uuid(),
-  roleId: z.string().uuid(),
-  roleKind: warehouseRoleKindSchema,
 });
 
 export const workspaceUserSchema = z.strictObject({

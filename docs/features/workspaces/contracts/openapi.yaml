@@ -2195,13 +2195,17 @@ components:
           items: { $ref: "#/components/schemas/WorkspaceUserWarehouse" }
 
     WorkspaceUserWarehouse:
+      description: >-
+        A Warehouse the User belongs to, carrying deliberately no Warehouse Role
+        (AC-33). WORKSPACE_MEMBERS:WATCH covers the Users of the Workspace and
+        the Warehouses they belong to; it does not cover their Warehouse Roles.
+        See sad.md §5 and design-handoff.md "The level boundary is part of the
+        design" — F-5 in api-sync-report.md.
       type: object
-      required: [warehouseId, roleId, roleKind]
+      required: [warehouseId]
       additionalProperties: false
       properties:
         warehouseId: { type: string, format: uuid }
-        roleId: { type: string, format: uuid }
-        roleKind: { $ref: "#/components/schemas/WarehouseRoleKind" }
 
     WorkspaceOwnerTransfer:
       type: object

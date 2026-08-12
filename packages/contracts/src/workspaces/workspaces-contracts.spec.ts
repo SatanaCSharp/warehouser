@@ -346,10 +346,24 @@ describe('Workspace Members and the Workspace Users candidate list — Workspace
     const valid = {
       userId: id(3),
       isWorkspaceMember: true,
-      warehouses: [{ warehouseId: id(10), roleId: id(22), roleKind: 'custom' }],
+      warehouses: [{ warehouseId: id(10) }],
     };
 
     expect(workspaceUserSchema.parse(valid)).toEqual(valid);
+    // AC-33/AC-31 — a Warehouse Role must never ride along on the
+    // Workspace-level Users read; `strictObject` makes that a parse failure.
+    expect(
+      workspaceUserSchema.safeParse({
+        ...valid,
+        warehouses: [{ warehouseId: id(10), roleId: id(22) }],
+      }).success,
+    ).toBe(false);
+    expect(
+      workspaceUserSchema.safeParse({
+        ...valid,
+        warehouses: [{ warehouseId: id(10), roleKind: 'custom' }],
+      }).success,
+    ).toBe(false);
     expect(
       workspaceUserSchema.safeParse({
         ...valid,
@@ -368,12 +382,23 @@ describe('Workspace Members and the Workspace Users candidate list — Workspace
     ).toBe(false);
   });
 
-  it('accepts the exact WorkspaceUserWarehouse shape and rejects an unknown key (strict)', () => {
-    const valid = { warehouseId: id(10), roleId: id(22), roleKind: 'custom' };
+  it('accepts the exact WorkspaceUserWarehouse shape, carries no Warehouse Role and rejects an unknown key (strict)', () => {
+    const valid = { warehouseId: id(10) };
 
     expect(workspaceUserWarehouseSchema.parse(valid)).toEqual(valid);
     expect(
       workspaceUserWarehouseSchema.safeParse({ ...valid, name: 'North' })
+        .success,
+    ).toBe(false);
+    // AC-33/AC-31 — WORKSPACE_MEMBERS:WATCH does not cover a User's Warehouse
+    // Role, so the level boundary is enforced by the schema, not by convention
+    // (api-sync-report.md F-5).
+    expect(
+      workspaceUserWarehouseSchema.safeParse({ ...valid, roleId: id(22) })
+        .success,
+    ).toBe(false);
+    expect(
+      workspaceUserWarehouseSchema.safeParse({ ...valid, roleKind: 'custom' })
         .success,
     ).toBe(false);
   });

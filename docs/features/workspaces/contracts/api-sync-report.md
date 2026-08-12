@@ -188,14 +188,14 @@ Operations: `listWorkspaceMembers`, `addWorkspaceMember`, `assignWorkspaceMember
 
 ### `WorkspaceUser` / `WorkspaceUserWarehouse` — `listWorkspaceUsers`
 
-| Field                      | Origin                                                                                                                                                                               | Confidence |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------- |
-| `userId`                   | `data-model.md` → `users.id`, scoped by `users.workspace_id` (index `idx_users_workspace_id`)                                                                                        | high       |
-| `email`                    | Existing schema — `accounts.email` (as above)                                                                                                                                        | medium     |
-| `isWorkspaceMember`        | Existence of a `workspace_memberships` row for that `user_id`; AC-33 needs the candidate list to distinguish them, AC-21 needs the flag to survive losing every Warehouse membership | medium     |
-| `warehouses[].warehouseId` | `data-model.md` → `warehouse_memberships.warehouse_id` (index `idx_warehouse_memberships_workspace_user`)                                                                            | high       |
-| `warehouses[].roleId`      | `data-model.md` → `warehouse_memberships.role_id`                                                                                                                                    | high       |
-| `warehouses[].roleKind`    | `data-model.md` → `warehouse_memberships.role_kind`                                                                                                                                  | high       |
+| Field                       | Origin                                                                                                                                                                               | Confidence |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------- |
+| `userId`                    | `data-model.md` → `users.id`, scoped by `users.workspace_id` (index `idx_users_workspace_id`)                                                                                        | high       |
+| `email`                     | Existing schema — `accounts.email` (as above)                                                                                                                                        | medium     |
+| `isWorkspaceMember`         | Existence of a `workspace_memberships` row for that `user_id`; AC-33 needs the candidate list to distinguish them, AC-21 needs the flag to survive losing every Warehouse membership | medium     |
+| `warehouses[].warehouseId`  | `data-model.md` → `warehouse_memberships.warehouse_id` (index `idx_warehouse_memberships_workspace_user`)                                                                            | high       |
+| ~~`warehouses[].roleId`~~   | ~~`data-model.md` → `warehouse_memberships.role_id`~~ — **removed 2026-08-12, see F-5**                                                                                              | withdrawn  |
+| ~~`warehouses[].roleKind`~~ | ~~`data-model.md` → `warehouse_memberships.role_kind`~~ — **removed 2026-08-12, see F-5**                                                                                            | withdrawn  |
 
 ### `WorkspaceOwnerTransfer` / `WorkspaceOwnerTransferResult` — `transferWorkspaceOwner`
 
@@ -593,6 +593,36 @@ handlers, their DTOs, their contracts and their RTK Query endpoints.
 
 - **Owner:** `design` (Tech Lead) — a one-line correction to §7 and the §11 risk row.
 - **Due:** before `tasks`.
+
+### F-5 — `WorkspaceUserWarehouse` carried a Warehouse Role the design forbids (new, found during T24 — **RESOLVED 2026-08-12**)
+
+The drift check derived `warehouses[].roleId` and `warehouses[].roleKind` from
+`warehouse_memberships` columns at "high confidence" and never cross-checked them against the
+**read scope** the design fixes. Three artifacts say the Workspace-level Users read must carry no
+Warehouse Role at all:
+
+- [T9's DoD](../tasks/workspace-read-repository.md) — the Warehouses a User belongs to, "projected
+  without any Warehouse Role (AC-33)".
+- [`sad.md` §5](../sad.md#5-building-blocks-and-ownership) — the same, for the same reason.
+- [`design-handoff.md` §"The level boundary is part of the design"](../design-handoff.md#the-level-boundary-is-part-of-the-design)
+  — **approved**: the Warehouse detail pane shows _who_ has access but never _what Role they hold
+  there_, and "Implementation must not 'improve' this pane by joining in Warehouse Role data."
+
+`WORKSPACE_MEMBERS:WATCH` covers the Users of the Workspace and their Warehouses; it does not cover
+their Warehouse Roles. Serving those fields would either exceed the read the actor holds or invite
+exactly the AC-31 level confusion the two vocabularies exist to prevent — so the **contract was
+wrong**, not the design.
+
+**Resolution:** `roleId` and `roleKind` removed from `WorkspaceUserWarehouse` in both
+[`openapi.yaml`](./openapi.yaml) and `packages/contracts/src/workspaces/workspaces-projections.ts`,
+with a `strictObject` test proving each is now a parse failure rather than merely absent.
+
+This is a **derivation-method finding**, not just a field fix: a field present in the data model is
+not thereby serveable. Every future field origin must be checked against the read scope its
+Permission grants, not only against the column it comes from.
+
+- **Found by:** T24 (`implement`), which followed the design and returned `warehouses: [{ warehouseId }]`.
+- **Owner:** Tech Lead. **Resolved:** 2026-08-12.
 
 ### F-4 — `spec.md` §8's open question is still open and is upstream of this contract
 
