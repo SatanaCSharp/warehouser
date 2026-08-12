@@ -23,7 +23,7 @@
 | T16 | Workspace Role create + update                           | app       | Backend Lead                 | L        | T4, T6, T10                           | done   |
 | T17 | Workspace Role deletion with replacement                 | app       | Backend Lead                 | L        | T4, T6, T10                           | done   |
 | T18 | Workspace membership add / remove / reassign             | app       | Backend Lead                 | L        | T4, T6, T10                           | done   |
-| T19 | Workspace Owner transfer                                 | app       | Backend Lead                 | M        | T4, T6, T10                           | todo   |
+| T19 | Workspace Owner transfer                                 | app       | Backend Lead                 | M        | T4, T6, T10                           | done   |
 | T20 | Warehouse create + rename                                | app       | Backend Lead                 | L        | T4, T6, T11, T12                      | done   |
 | T21 | Warehouse archive + restore                              | app       | Backend Lead                 | L        | T4, T6, T11                           | done   |
 | T22 | Warehouse membership assign / revoke + assignable Roles  | app       | Backend Lead                 | L        | T4, T6, T11                           | done   |
