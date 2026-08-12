@@ -8,6 +8,7 @@ import { RolePermissionEntity } from 'shared/domain/entities/role-permission.ent
 import { UserEntity } from 'shared/domain/entities/user.entity';
 import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
 import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 import { MemberLifecycleRepository } from 'shared/domain/repositories/member-lifecycle.repository';
 
 const describeIntegration =
@@ -15,6 +16,7 @@ const describeIntegration =
 
 const now = new Date('2026-08-06T12:00:00.000Z');
 
+const workspaceId = '00000000-0000-4000-8000-000000000100';
 const warehouseAId = '00000000-0000-4000-8000-000000000101';
 const warehouseBId = '00000000-0000-4000-8000-000000000102';
 const roleAId = '00000000-0000-4000-8000-000000000201';
@@ -26,9 +28,27 @@ const permissionTwoId = 'USERS:PASSWORD_CHANGE';
 
 const seedWarehouses = async (): Promise<void> => {
   const manager = dataSource.manager;
+  await manager.getRepository(WorkspaceEntity).insert({
+    id: workspaceId,
+    name: null,
+    createdAt: now,
+    updatedAt: now,
+  });
   await manager.getRepository(WarehouseEntity).insert([
-    { id: warehouseAId, name: 'Warehouse A', createdAt: now, updatedAt: now },
-    { id: warehouseBId, name: 'Warehouse B', createdAt: now, updatedAt: now },
+    {
+      id: warehouseAId,
+      workspaceId,
+      name: 'Warehouse A',
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: warehouseBId,
+      workspaceId,
+      name: 'Warehouse B',
+      createdAt: now,
+      updatedAt: now,
+    },
   ]);
   await manager.getRepository(RoleEntity).insert([
     {
@@ -73,6 +93,7 @@ const seedIdentity = async (
     await manager.getRepository(UserEntity).insert({
       id: userId,
       accountId: userId,
+      workspaceId,
       createdAt: now,
       updatedAt: now,
     });
@@ -80,7 +101,7 @@ const seedIdentity = async (
 };
 
 const seedMembership = async (
-  warehouseId: string,
+  targetWarehouseId: string,
   roleId: string,
 ): Promise<void> => {
   // `warehouse_memberships.user_id` has a non-deferrable FK to `users(id)`
@@ -89,7 +110,8 @@ const seedMembership = async (
   await seedIdentity(memberUserId, 'member@example.test');
   await dataSource.manager.getRepository(WarehouseMembershipEntity).insert({
     userId: memberUserId,
-    warehouseId,
+    warehouseId: targetWarehouseId,
+    workspaceId,
     roleId,
     roleKind: 'custom',
     createdAt: now,
@@ -108,7 +130,7 @@ describeIntegration('MemberLifecycleRepository', () => {
 
   afterEach(async () => {
     await dataSource.query(
-      'TRUNCATE warehouse_memberships, role_permissions, roles, warehouses, sessions, users, accounts, permissions CASCADE',
+      'TRUNCATE warehouse_memberships, role_permissions, roles, warehouses, workspaces, sessions, users, accounts, permissions CASCADE',
     );
   });
 

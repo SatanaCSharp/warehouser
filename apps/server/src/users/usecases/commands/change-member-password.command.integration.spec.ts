@@ -11,6 +11,7 @@ import { SessionEntity } from 'shared/domain/entities/session.entity';
 import { UserEntity } from 'shared/domain/entities/user.entity';
 import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
 import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 import { AccessCurrentUserRepository } from 'shared/domain/repositories/access-current-user.repository';
 import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
 import { MemberLifecycleRepository } from 'shared/domain/repositories/member-lifecycle.repository';
@@ -31,6 +32,7 @@ const now = new Date('2026-08-06T12:00:00.000Z');
 const uuid = (suffix: string): string =>
   `00000000-0000-4000-8000-${suffix.padStart(12, '0')}`;
 
+const workspaceId = uuid('000000000100');
 const warehouseAId = uuid('000000000101');
 const warehouseBId = uuid('000000000102');
 const managerRoleId = uuid('000000000201');
@@ -85,13 +87,22 @@ describeIntegration('ChangeMemberPasswordCommand', () => {
 
   afterEach(async () => {
     await dataSource.query(
-      'TRUNCATE warehouse_memberships, role_permissions, roles, warehouses, sessions, users, accounts, permissions CASCADE',
+      'TRUNCATE warehouse_memberships, role_permissions, roles, warehouses, workspaces, sessions, users, accounts, permissions CASCADE',
     );
   });
 
   afterAll(async () => {
     await dataSource.destroy();
   });
+
+  const seedWorkspace = async (): Promise<void> => {
+    await dataSource.manager.getRepository(WorkspaceEntity).insert({
+      id: workspaceId,
+      name: null,
+      createdAt: now,
+      updatedAt: now,
+    });
+  };
 
   const seedPermissions = async (ids: readonly string[]): Promise<void> => {
     if (ids.length === 0) {
@@ -110,8 +121,20 @@ describeIntegration('ChangeMemberPasswordCommand', () => {
 
   const seedWarehouses = async (): Promise<void> => {
     await dataSource.manager.getRepository(WarehouseEntity).insert([
-      { id: warehouseAId, name: 'Warehouse A', createdAt: now, updatedAt: now },
-      { id: warehouseBId, name: 'Warehouse B', createdAt: now, updatedAt: now },
+      {
+        id: warehouseAId,
+        workspaceId,
+        name: 'Warehouse A',
+        createdAt: now,
+        updatedAt: now,
+      },
+      {
+        id: warehouseBId,
+        workspaceId,
+        name: 'Warehouse B',
+        createdAt: now,
+        updatedAt: now,
+      },
     ]);
   };
 
@@ -156,7 +179,11 @@ describeIntegration('ChangeMemberPasswordCommand', () => {
       createdAt: now,
       updatedAt: now,
     });
-    const user = userEntityFactory(account, { createdAt: now, updatedAt: now });
+    const user = userEntityFactory(account, {
+      workspaceId,
+      createdAt: now,
+      updatedAt: now,
+    });
     await dataSource.transaction(async (manager) => {
       await manager.insert(AccountEntity, account);
       await manager.insert(UserEntity, user);
@@ -181,6 +208,7 @@ describeIntegration('ChangeMemberPasswordCommand', () => {
       await dataSource.manager.getRepository(WarehouseMembershipEntity).insert({
         userId,
         warehouseId,
+        workspaceId,
         roleId,
         roleKind: 'warehouse_manager',
         createdAt: now,
@@ -193,6 +221,7 @@ describeIntegration('ChangeMemberPasswordCommand', () => {
       warehouseMembershipEntityFactory({
         userId,
         warehouseId,
+        workspaceId,
         roleId,
         createdAt: now,
         updatedAt: now,
@@ -243,6 +272,7 @@ describeIntegration('ChangeMemberPasswordCommand', () => {
 
   it("records the new credential and revokes every prior Session for the target's Account, leaving other accounts untouched", async () => {
     await seedPermissions(['USERS:PASSWORD_CHANGE', 'USERS:EMAIL_UPDATE']);
+    await seedWorkspace();
     await seedWarehouses();
     await seedRole(actorRoleId, warehouseAId, 'custom', [
       'USERS:PASSWORD_CHANGE',
@@ -295,6 +325,7 @@ describeIntegration('ChangeMemberPasswordCommand', () => {
 
   it('rejects a password outside the accepted length and makes no change', async () => {
     await seedPermissions(['USERS:PASSWORD_CHANGE']);
+    await seedWorkspace();
     await seedWarehouses();
     await seedRole(actorRoleId, warehouseAId, 'custom', [
       'USERS:PASSWORD_CHANGE',
@@ -329,6 +360,7 @@ describeIntegration('ChangeMemberPasswordCommand', () => {
 
   it('denies a missing target without disclosing existence', async () => {
     await seedPermissions(['USERS:PASSWORD_CHANGE']);
+    await seedWorkspace();
     await seedWarehouses();
     await seedRole(actorRoleId, warehouseAId, 'custom', [
       'USERS:PASSWORD_CHANGE',
@@ -355,6 +387,7 @@ describeIntegration('ChangeMemberPasswordCommand', () => {
 
   it('denies a cross-Warehouse target without disclosing existence', async () => {
     await seedPermissions(['USERS:PASSWORD_CHANGE']);
+    await seedWorkspace();
     await seedWarehouses();
     await seedRole(actorRoleId, warehouseAId, 'custom', [
       'USERS:PASSWORD_CHANGE',
@@ -385,6 +418,7 @@ describeIntegration('ChangeMemberPasswordCommand', () => {
 
   it('blocks self-targeting', async () => {
     await seedPermissions(['USERS:PASSWORD_CHANGE']);
+    await seedWorkspace();
     await seedWarehouses();
     await seedRole(actorRoleId, warehouseAId, 'custom', [
       'USERS:PASSWORD_CHANGE',
@@ -411,6 +445,7 @@ describeIntegration('ChangeMemberPasswordCommand', () => {
 
   it('blocks a target currently holding the Warehouse Manager Role', async () => {
     await seedPermissions(['USERS:PASSWORD_CHANGE']);
+    await seedWorkspace();
     await seedWarehouses();
     await seedRole(actorRoleId, warehouseAId, 'custom', [
       'USERS:PASSWORD_CHANGE',
@@ -452,6 +487,7 @@ describeIntegration('ChangeMemberPasswordCommand', () => {
       'USERS:EMAIL_UPDATE',
       'USERS:DELETE',
     ]);
+    await seedWorkspace();
     await seedWarehouses();
     // Actor only holds USERS:PASSWORD_CHANGE.
     await seedRole(actorRoleId, warehouseAId, 'custom', [
@@ -488,6 +524,7 @@ describeIntegration('ChangeMemberPasswordCommand', () => {
 
   it('rolls back the credential update when Session revocation fails', async () => {
     await seedPermissions(['USERS:PASSWORD_CHANGE']);
+    await seedWorkspace();
     await seedWarehouses();
     await seedRole(actorRoleId, warehouseAId, 'custom', [
       'USERS:PASSWORD_CHANGE',

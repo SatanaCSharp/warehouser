@@ -15,6 +15,7 @@ import { SessionEntity } from 'shared/domain/entities/session.entity';
 import { UserEntity } from 'shared/domain/entities/user.entity';
 import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
 import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 import { GlobalHttpExceptionFilter } from 'shared/errors/global-http-exception.filter';
 
 const describeIntegration =
@@ -22,6 +23,7 @@ const describeIntegration =
 
 const now = new Date('2026-08-06T12:00:00.000Z');
 
+const workspaceId = '00000000-0000-4000-8000-000000000100';
 const warehouseId = '00000000-0000-4000-8000-000000000101';
 const creatorRoleId = '00000000-0000-4000-8000-000000000201';
 const targetRoleId = '00000000-0000-4000-8000-000000000202';
@@ -63,7 +65,7 @@ describeIntegration('users HTTP contract', () => {
 
   afterEach(async () => {
     await dataSource.query(
-      'TRUNCATE warehouse_memberships, role_permissions, roles, warehouses, sessions, users, accounts, permissions CASCADE',
+      'TRUNCATE warehouse_memberships, role_permissions, roles, warehouses, workspaces, sessions, users, accounts, permissions CASCADE',
     );
   });
 
@@ -73,8 +75,15 @@ describeIntegration('users HTTP contract', () => {
   });
 
   const seedWarehouseAndRoles = async (): Promise<void> => {
+    await dataSource.manager.getRepository(WorkspaceEntity).insert({
+      id: workspaceId,
+      name: null,
+      createdAt: now,
+      updatedAt: now,
+    });
     await dataSource.manager.getRepository(WarehouseEntity).insert({
       id: warehouseId,
+      workspaceId,
       name: 'Warehouse A',
       createdAt: now,
       updatedAt: now,
@@ -150,6 +159,7 @@ describeIntegration('users HTTP contract', () => {
       await manager.getRepository(UserEntity).insert({
         id: userId,
         accountId: userId,
+        workspaceId,
         createdAt: now,
         updatedAt: now,
       });
@@ -164,6 +174,7 @@ describeIntegration('users HTTP contract', () => {
     await dataSource.manager.getRepository(WarehouseMembershipEntity).insert({
       userId,
       warehouseId,
+      workspaceId,
       roleId,
       roleKind,
       createdAt: now,

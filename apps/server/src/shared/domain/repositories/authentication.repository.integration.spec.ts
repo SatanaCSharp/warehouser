@@ -5,6 +5,7 @@ import { SessionEntity } from 'shared/domain/entities/session.entity';
 import { UserEntity } from 'shared/domain/entities/user.entity';
 import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
 import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
 import type { DeepPartial } from 'typeorm';
 
@@ -15,6 +16,8 @@ const now = new Date('2026-08-06T12:00:00.000Z');
 
 const uuid = (suffix: string): string =>
   `00000000-0000-4000-8000-${suffix.padStart(12, '0')}`;
+
+const workspaceId = uuid('000000000900');
 
 const buildAccount = (
   overrides: DeepPartial<AccountEntity> = {},
@@ -35,6 +38,7 @@ const buildUser = (
 ): DeepPartial<UserEntity> => ({
   id: uuid('000000000001'),
   accountId: uuid('000000000001'),
+  workspaceId,
   createdAt: now,
   updatedAt: now,
   ...overrides,
@@ -71,9 +75,18 @@ describeIntegration('AuthenticationRepository — identity lifecycle', () => {
     await dataSource.initialize();
   });
 
+  beforeEach(async () => {
+    await dataSource.manager.getRepository(WorkspaceEntity).insert({
+      id: workspaceId,
+      name: null,
+      createdAt: now,
+      updatedAt: now,
+    });
+  });
+
   afterEach(async () => {
     await dataSource.query(
-      'TRUNCATE warehouse_memberships, role_permissions, roles, warehouses, sessions, users, accounts CASCADE',
+      'TRUNCATE warehouse_memberships, role_permissions, roles, warehouses, workspaces, sessions, users, accounts CASCADE',
     );
   });
 
@@ -209,6 +222,7 @@ describeIntegration('AuthenticationRepository — identity lifecycle', () => {
     await dataSource.manager.insert(SessionEntity, buildSession());
     await dataSource.manager.insert(WarehouseEntity, {
       id: warehouseId,
+      workspaceId,
       name: 'Test Warehouse',
       createdAt: now,
       updatedAt: now,
@@ -224,6 +238,7 @@ describeIntegration('AuthenticationRepository — identity lifecycle', () => {
     await dataSource.manager.insert(WarehouseMembershipEntity, {
       userId: uuid('000000000001'),
       warehouseId,
+      workspaceId,
       roleId,
       roleKind: 'custom',
       createdAt: now,

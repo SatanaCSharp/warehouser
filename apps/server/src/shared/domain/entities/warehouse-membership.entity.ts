@@ -6,8 +6,11 @@ export class WarehouseMembershipEntity {
   @PrimaryColumn('uuid', { name: 'user_id' })
   userId!: string;
 
-  @Column('uuid', { name: 'warehouse_id' })
+  @PrimaryColumn('uuid', { name: 'warehouse_id' })
   warehouseId!: string;
+
+  @Column('uuid', { name: 'workspace_id' })
+  workspaceId!: string;
 
   @Column('uuid', { name: 'role_id' })
   roleId!: string;

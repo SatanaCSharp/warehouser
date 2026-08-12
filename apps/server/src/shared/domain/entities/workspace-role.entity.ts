@@ -1,18 +1,20 @@
 import { Column, Entity, PrimaryColumn } from 'typeorm';
 
-@Entity({ name: 'users' })
-export class UserEntity {
+export type WorkspaceRoleEntityKind = 'custom' | 'workspace_owner';
+
+@Entity({ name: 'workspace_roles' })
+export class WorkspaceRoleEntity {
   @PrimaryColumn('uuid')
   id!: string;
-
-  @Column('uuid', { name: 'account_id' })
-  accountId!: string;
 
   @Column('uuid', { name: 'workspace_id' })
   workspaceId!: string;
 
-  @Column('uuid', { name: 'active_warehouse_id', nullable: true })
-  activeWarehouseId!: string | null;
+  @Column('text')
+  name!: string;
+
+  @Column('varchar', { length: 24 })
+  kind!: WorkspaceRoleEntityKind;
 
   @Column('timestamptz', { name: 'created_at' })
   createdAt!: Date;
