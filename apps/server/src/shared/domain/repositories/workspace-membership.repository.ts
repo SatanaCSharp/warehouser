@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { getEntityManager } from 'shared/database/db-transaction-context.service';
+import { UserEntity } from 'shared/domain/entities/user.entity';
+import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
 import { WorkspaceMembershipEntity } from 'shared/domain/entities/workspace-membership.entity';
 import type { WorkspaceRoleEntityKind } from 'shared/domain/entities/workspace-role.entity';
 import { DataSource } from 'typeorm';
@@ -69,5 +71,32 @@ export class WorkspaceMembershipRepository {
       .where({ userId })
       .setLock('pessimistic_write')
       .getOne();
+  }
+
+  // AC-34 — resolves a candidate's own Workspace without relying on an
+  // existing `workspace_memberships` row (a fresh candidate legitimately has
+  // none yet); `null` covers both a missing User and one already known not to
+  // belong to `principal.workspaceId`, so a caller comparing this value
+  // cannot distinguish the two.
+  async findUserWorkspaceId(userId: string): Promise<string | null> {
+    const manager = getEntityManager(this.dataSource);
+    const user = await manager
+      .getRepository(UserEntity)
+      .findOne({ where: { id: userId }, select: { workspaceId: true } });
+    return user?.workspaceId ?? null;
+  }
+
+  // AC-20 — a command-time-only precondition: does the candidate hold a
+  // Warehouse membership in any Warehouse of this Workspace right now? Not a
+  // database constraint, so Workspace membership never gets re-derived from
+  // it (AC-21).
+  async hasWarehouseMembershipInWorkspace(
+    userId: string,
+    workspaceId: string,
+  ): Promise<boolean> {
+    const manager = getEntityManager(this.dataSource);
+    return manager
+      .getRepository(WarehouseMembershipEntity)
+      .existsBy({ userId, workspaceId });
   }
 }

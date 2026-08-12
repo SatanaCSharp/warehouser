@@ -43,9 +43,28 @@ export const workspaceMembershipExistsError = (): ApplicationError =>
 export const workspaceLastUnarchivedWarehouseError = (): ApplicationError =>
   new ApplicationError(ErrorCode.WORKSPACE_LAST_UNARCHIVED_WAREHOUSE);
 
+// AC-17d — deleting an *assigned* Workspace Role requires
+// `WORKSPACE_ROLES:ASSIGN` in addition to `WORKSPACE_ROLES:DELETE`, since
+// moving every affected Member is itself an assignment; an unassigned Role
+// stays deletable with `WORKSPACE_ROLES:DELETE` alone.
+export const workspaceRoleAssignmentRequiredError = (): ApplicationError =>
+  new ApplicationError(ErrorCode.WORKSPACE_ROLE_ASSIGNMENT_REQUIRED);
+
 // Cross-Workspace targeting: a target outside `principal.workspaceId` must
 // be indistinguishable from a missing target, so this single, argument-free
 // factory serves both call sites — two independent calls always serialize
 // identically, so neither discloses existence (AC-10, AC-24, AC-25d, AC-34).
 export const workspaceTargetUnavailableError = (): ApplicationError =>
   new ApplicationError(ErrorCode.WORKSPACE_TARGET_UNAVAILABLE);
+
+// AC-19/F-3 — a candidate who already holds a Workspace membership is
+// refused with this cause-specific code, distinct from AC-20's
+// `workspaceWarehouseMembershipRequiredError`.
+export const workspaceMemberExistsError = (): ApplicationError =>
+  new ApplicationError(ErrorCode.WORKSPACE_MEMBER_EXISTS);
+
+// AC-20 — a candidate with no Warehouse membership in any Warehouse of this
+// Workspace is refused with this cause-specific code, distinct from the
+// already-a-Member case above (F-3).
+export const workspaceWarehouseMembershipRequiredError = (): ApplicationError =>
+  new ApplicationError(ErrorCode.WORKSPACE_WAREHOUSE_MEMBERSHIP_REQUIRED);
