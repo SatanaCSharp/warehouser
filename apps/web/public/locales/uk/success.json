@@ -15,6 +15,10 @@
     "updateRole": "Роль оновлено."
   },
   "workspace": {
-    "renameWorkspace": "Робочий простір названо."
+    "renameWorkspace": "Робочий простір названо.",
+    "createWarehouse": "Склад додано.",
+    "renameWarehouse": "Склад перейменовано.",
+    "archiveWarehouse": "Склад заархівовано.",
+    "restoreWarehouse": "Склад відновлено."
   }
 }

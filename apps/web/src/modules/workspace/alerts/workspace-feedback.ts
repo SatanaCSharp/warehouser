@@ -1,7 +1,12 @@
 import i18n from 'i18n';
 import { alertActionPromise } from 'shared/alerts/action-feedback';
 
-export type WorkspaceSuccessAction = 'renameWorkspace';
+export type WorkspaceSuccessAction =
+  | 'archiveWarehouse'
+  | 'createWarehouse'
+  | 'renameWarehouse'
+  | 'renameWorkspace'
+  | 'restoreWarehouse';
 
 type MutationOutcome = { data: unknown } | { error: unknown };
 

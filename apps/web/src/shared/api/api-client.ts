@@ -128,6 +128,8 @@ export const api = createApi({
     'Permissions',
     'Roles',
     'WorkspaceContext',
+    'WorkspaceUsers',
+    'WorkspaceWarehouses',
   ],
   endpoints: () => ({}),
 });

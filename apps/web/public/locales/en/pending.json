@@ -15,6 +15,10 @@
     "updateRole": "Updating the role…"
   },
   "workspace": {
-    "renameWorkspace": "Naming the workspace…"
+    "renameWorkspace": "Naming the workspace…",
+    "createWarehouse": "Adding the warehouse…",
+    "renameWarehouse": "Renaming the warehouse…",
+    "archiveWarehouse": "Archiving the warehouse…",
+    "restoreWarehouse": "Restoring the warehouse…"
   }
 }

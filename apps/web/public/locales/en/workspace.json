@@ -53,6 +53,7 @@
       "submit": "Add warehouse"
     },
     "detail": {
+      "regionLabel": "Warehouse detail",
       "back": "All warehouses",
       "nameLabel": "Warehouse name",
       "nameDescription": "1–100 characters. Warehouse names need not be unique.",

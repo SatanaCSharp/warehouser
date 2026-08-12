@@ -4,7 +4,11 @@ import { vi } from 'vitest';
 import { authBecameAuthenticated } from 'modules/auth/store/auth.slice';
 import { makeStore } from 'store';
 
-import type { WorkspaceContext } from '@warehouser/contracts/workspaces';
+import type {
+  Warehouse,
+  WorkspaceContext,
+  WorkspaceUser,
+} from '@warehouser/contracts/workspaces';
 import type { AppStore } from 'store';
 
 export const workspaceIds = {
@@ -13,6 +17,63 @@ export const workspaceIds = {
   warehouseRole: '00000000-0000-4000-8000-000000000103',
   workspace: '00000000-0000-4000-8000-000000000100',
 };
+
+export const warehouseIds = {
+  central: '00000000-0000-4000-8000-000000000110',
+  north: '00000000-0000-4000-8000-000000000111',
+  oldDepot: '00000000-0000-4000-8000-000000000112',
+};
+
+const otherUserIds = {
+  anna: '00000000-0000-4000-8000-000000000120',
+  lena: '00000000-0000-4000-8000-000000000121',
+};
+
+/**
+ * Three Warehouses of one Workspace: two in operation and one archived, which
+ * is the shape every Warehouse-lifecycle case needs (AC-11, AC-11a, AC-12a).
+ */
+export const workspaceWarehouses = (): Warehouse[] => [
+  { id: warehouseIds.central, name: 'Central DC', archivedAt: null },
+  { id: warehouseIds.north, name: 'North Hub', archivedAt: null },
+  {
+    id: warehouseIds.oldDepot,
+    name: 'Old Depot',
+    archivedAt: '2026-08-01T09:00:00.000Z',
+  },
+];
+
+/**
+ * The Workspace's Users with the Warehouses each belongs to — the read AC-33
+ * grants under `WORKSPACE_MEMBERS:WATCH`. It deliberately carries no
+ * Warehouse Role: `workspaceUserWarehouseSchema` only names the Warehouse
+ * (see `workspaces-projections.ts` and `design-handoff.md` §"The level
+ * boundary is part of the design"), so the Warehouse detail pane physically
+ * cannot render one.
+ */
+export const workspaceUsers = (): WorkspaceUser[] => [
+  {
+    userId: workspaceIds.actingUser,
+    email: 'yurii@example.test',
+    isWorkspaceMember: true,
+    warehouses: [
+      { warehouseId: warehouseIds.central },
+      { warehouseId: warehouseIds.north },
+    ],
+  },
+  {
+    userId: otherUserIds.anna,
+    email: 'anna.kravets@example.test',
+    isWorkspaceMember: false,
+    warehouses: [{ warehouseId: warehouseIds.central }],
+  },
+  {
+    userId: otherUserIds.lena,
+    email: 'lena.boiko@example.test',
+    isWorkspaceMember: false,
+    warehouses: [],
+  },
+];
 
 export const namedWorkspaceContext = (
   permissionIds: readonly WorkspacePermissionId[] = [],
@@ -40,53 +101,114 @@ export const unnamedWorkspaceContext = (
   workspace: { id: workspaceIds.workspace, name: null },
 });
 
+type StubbedResponse = { body: unknown; status: number };
+type StubbedHandler = (body: unknown) => StubbedResponse | undefined;
+
 type WorkspaceServerOptions = {
   context?: WorkspaceContext;
-  onRenameWorkspace?: (
-    body: unknown,
-  ) => { body: unknown; status: number } | undefined;
+  onCreateWarehouse?: StubbedHandler;
+  onRenameWarehouse?: StubbedHandler;
+  onRenameWorkspace?: StubbedHandler;
+  onSetWarehouseArchival?: StubbedHandler;
+  users?: WorkspaceUser[];
+  warehouses?: Warehouse[] | 'unavailable';
 };
 
+const jsonBody = (init?: RequestInit): unknown =>
+  typeof init?.body === 'string' ? JSON.parse(init.body) : undefined;
+
+const requestMethod = (
+  input: Request | string | URL,
+  init?: RequestInit,
+): string => init?.method ?? (input instanceof Request ? input.method : 'GET');
+
 /**
- * Answers the Workspace context read (and, once wired, the Workspace rename
- * write) from in-memory fixtures. Returns the URLs requested, which is how a
- * spec proves a dataset the actor may not read is never fetched and that a
- * mutation actually reached the network.
+ * Answers the Workspace context, Warehouse and Workspace-user reads and the
+ * Workspace/Warehouse writes from in-memory fixtures. Returns the URLs
+ * requested, which is how a spec proves a dataset the actor may not read is
+ * never fetched and that a mutation actually reached the network.
  */
+// The stub is one dispatch table over the Workspace HTTP surface; splitting it
+// per resource would scatter the fixture contract across files.
+
 export const stubWorkspaceServer = ({
   context = namedWorkspaceContext(Object.values(WorkspacePermissionId)),
+  onCreateWarehouse,
+  onRenameWarehouse,
   onRenameWorkspace,
+  onSetWarehouseArchival,
+  users = workspaceUsers(),
+  warehouses = workspaceWarehouses(),
 }: WorkspaceServerOptions = {}): string[] => {
   const requestedUrls: string[] = [];
 
   vi.stubGlobal(
     'fetch',
+
     vi.fn((input: Request | string | URL, init?: RequestInit) => {
       const url = String(input instanceof Request ? input.url : input);
+      const method = requestMethod(input, init);
+      const body = jsonBody(init);
       requestedUrls.push(url);
+
+      const answer = (
+        handler: StubbedHandler | undefined,
+        fallback: unknown,
+      ): Promise<Response> =>
+        Promise.resolve(
+          ((result) =>
+            result
+              ? Response.json(result.body, { status: result.status })
+              : Response.json(fallback))(handler?.(body)),
+        );
 
       if (url.includes('/api/v1/workspace/context')) {
         return Promise.resolve(Response.json(context));
       }
 
-      if (
-        url.endsWith('/api/v1/workspace') &&
-        (init?.method === 'PATCH' ||
-          (input instanceof Request && input.method === 'PATCH'))
-      ) {
-        const body: unknown =
-          typeof init?.body === 'string' ? JSON.parse(init.body) : undefined;
-        const result = onRenameWorkspace?.(body);
-        if (result) {
-          return Promise.resolve(
-            Response.json(result.body, {
-              status: result.status,
-            }),
-          );
+      if (url.endsWith('/api/v1/workspace/users')) {
+        return Promise.resolve(Response.json(users));
+      }
+
+      if (url.includes('/archival')) {
+        return answer(onSetWarehouseArchival, {
+          id: warehouseIds.central,
+          name: 'Central DC',
+          archivedAt: '2026-08-12T09:00:00.000Z',
+        });
+      }
+
+      if (url.endsWith('/api/v1/workspace/warehouses')) {
+        if (method === 'POST') {
+          return answer(onCreateWarehouse, {
+            id: '00000000-0000-4000-8000-000000000113',
+            name: 'Southgate Cross-dock',
+            archivedAt: null,
+          });
         }
         return Promise.resolve(
-          Response.json({ id: workspaceIds.workspace, name: 'Acme Logistics' }),
+          warehouses === 'unavailable'
+            ? Response.json(
+                { code: 'api.unexpected', message: 'Unavailable' },
+                { status: 500 },
+              )
+            : Response.json(warehouses),
         );
+      }
+
+      if (url.includes('/api/v1/workspace/warehouses/')) {
+        return answer(onRenameWarehouse, {
+          id: warehouseIds.central,
+          name: 'Central Distribution',
+          archivedAt: null,
+        });
+      }
+
+      if (url.endsWith('/api/v1/workspace') && method === 'PATCH') {
+        return answer(onRenameWorkspace, {
+          id: workspaceIds.workspace,
+          name: 'Acme Logistics',
+        });
       }
 
       return Promise.resolve(Response.json({}, { status: 404 }));
