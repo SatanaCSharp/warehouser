@@ -85,7 +85,15 @@ describeIntegration('RestoreWarehouseCommand', () => {
   const seedArchivedWarehouse = async (
     workspaceId: string,
   ): Promise<string> => {
-    const warehouse = buildWarehouse({ workspaceId, archivedAt: now });
+    // `createdAt` comes from the same frozen clock as `archivedAt`: the factory
+    // would otherwise stamp it from the real clock, and
+    // `chk_warehouses_archival_order` rejects an archival that predates
+    // creation once wall time passes the fixture's timestamp.
+    const warehouse = buildWarehouse({
+      workspaceId,
+      createdAt: now,
+      archivedAt: now,
+    });
     await dataSource.manager.getRepository(WarehouseEntity).insert(warehouse);
     return warehouse.id as string;
   };
