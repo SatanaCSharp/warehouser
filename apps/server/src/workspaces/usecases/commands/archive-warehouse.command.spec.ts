@@ -35,6 +35,7 @@ const warehouseLifecycleRepositoryDouble = () => ({
   lockWarehouse: jest.fn().mockResolvedValue({
     id: warehouseId,
     workspaceId,
+    name: 'Test Warehouse North',
     archivedAt: null,
   }),
   setArchivedAt: jest.fn().mockResolvedValue(undefined),
@@ -64,6 +65,25 @@ describe('ArchiveWarehouseCommand', () => {
     await expect(rejection).rejects.toMatchObject({
       code: ErrorCode.WORKSPACE_ARCHIVAL_UNAVAILABLE,
       cause: writeFailure,
+    });
+  });
+
+  // RED for T44/AC-11 — openapi.yaml documents `PUT .../archival` as `200`
+  // with the full `Warehouse` body, and the already-shipped web client
+  // (`workspace-warehouses-api.ts`) Zod-validates the response against
+  // `warehouseSchema`, which requires `archivedAt`. The command must confirm
+  // the value it just wrote rather than a bare identifier, so the REST
+  // handler stops needing to fabricate a field no command result carries.
+  it('AC-11: returns the full Warehouse record, including the archivedAt it just wrote', async () => {
+    const warehouseLifecycleRepository = warehouseLifecycleRepositoryDouble();
+    const command = new ArchiveWarehouseCommand(warehouseLifecycleRepository);
+
+    const result = await command.execute(currentUser(), { warehouseId });
+
+    expect(result).toEqual({
+      id: warehouseId,
+      name: 'Test Warehouse North',
+      archivedAt: expect.any(Date),
     });
   });
 });

@@ -14,7 +14,9 @@ export interface ArchiveWarehouseInput {
 }
 
 export interface ArchiveWarehouseResult {
-  readonly warehouseId: string;
+  readonly id: string;
+  readonly name: string;
+  readonly archivedAt: Date;
 }
 
 @Injectable()
@@ -53,6 +55,8 @@ export class ArchiveWarehouseCommand {
       workspaceLastUnarchivedWarehouseError(),
     );
 
+    const archivedAt = new Date();
+
     // AC-13 — a failure writing the archived state is a known
     // infrastructure/technical condition (server-error-handling.md §2), not
     // a business rejection, so it translates into the documented 503,
@@ -60,12 +64,12 @@ export class ArchiveWarehouseCommand {
     try {
       await this.warehouseLifecycleRepository.setArchivedAt(
         input.warehouseId,
-        new Date(),
+        archivedAt,
       );
     } catch (cause) {
       throw workspaceArchivalUnavailableError(cause);
     }
 
-    return { warehouseId: input.warehouseId };
+    return { id: input.warehouseId, name: warehouse.name, archivedAt };
   }
 }

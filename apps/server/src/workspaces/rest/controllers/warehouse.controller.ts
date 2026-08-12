@@ -93,10 +93,10 @@ export class WarehouseController {
     };
   }
 
-  // `RenameWarehouseCommand`'s result carries no `archivedAt` (renaming
-  // never changes archived state, and the command does not re-read it). The
-  // response is narrowed to what the command actually proves rather than
-  // fabricating an archived state the command never confirmed.
+  // AC-11 — `RenameWarehouseCommand` now confirms the Warehouse's current
+  // archived state from the row it locked, so the handler returns the full
+  // `Warehouse` body openapi.yaml documents (200), matching what the
+  // already-shipped web client Zod-validates against.
   @Patch(':warehouseId')
   @RequiredWorkspacePermission(WorkspacePermissionId.WAREHOUSES_RENAME)
   @UseGuards(SessionAuthGuard, WorkspaceAccessGuard)
@@ -104,38 +104,46 @@ export class WarehouseController {
     @Param('warehouseId', new ParseUUIDPipe()) warehouseId: string,
     @Req() request: WorkspaceAccessRequest,
     @Body() input: WarehouseWriteDto,
-  ): Promise<Pick<Warehouse, 'id' | 'name'>> {
+  ): Promise<Warehouse> {
     const warehouse = await this.renameWarehouseCommand.execute(
       request.workspace!,
       { warehouseId, name: input.name },
     );
-    return { id: warehouse.id, name: warehouse.name };
+    return {
+      id: warehouse.id,
+      name: warehouse.name,
+      archivedAt: warehouse.archivedAt?.toISOString() ?? null,
+    };
   }
 
   // AC-11 — one contract route (`PUT .../archival`) maps to the two
   // opposite-direction commands; the request body's `archived` flag selects
-  // which one runs. Both commands return only `{ warehouseId }`, so this
-  // handler answers with no content rather than inventing the fields the
-  // contract's `Warehouse` shape would otherwise require.
+  // which one runs. Both commands now confirm the full Warehouse record they
+  // just wrote, so the handler answers 200 with the `Warehouse` body
+  // openapi.yaml documents, matching what the already-shipped web client
+  // Zod-validates against.
   @Put(':warehouseId/archival')
-  @HttpCode(HttpStatus.NO_CONTENT)
+  @HttpCode(HttpStatus.OK)
   @RequiredWorkspacePermission(WorkspacePermissionId.WAREHOUSES_ARCHIVE)
   @UseGuards(SessionAuthGuard, WorkspaceAccessGuard)
   async setWarehouseArchival(
     @Param('warehouseId', new ParseUUIDPipe()) warehouseId: string,
     @Req() request: WorkspaceAccessRequest,
     @Body() input: WarehouseArchivalDto,
-  ): Promise<void> {
-    if (input.archived) {
-      await this.archiveWarehouseCommand.execute(request.workspace!, {
-        warehouseId,
-      });
-      return;
-    }
+  ): Promise<Warehouse> {
+    const warehouse = input.archived
+      ? await this.archiveWarehouseCommand.execute(request.workspace!, {
+          warehouseId,
+        })
+      : await this.restoreWarehouseCommand.execute(request.workspace!, {
+          warehouseId,
+        });
 
-    await this.restoreWarehouseCommand.execute(request.workspace!, {
-      warehouseId,
-    });
+    return {
+      id: warehouse.id,
+      name: warehouse.name,
+      archivedAt: warehouse.archivedAt?.toISOString() ?? null,
+    };
   }
 
   @Get(':warehouseId/assignable-roles')

@@ -14,6 +14,7 @@ export interface RenameWarehouseInput {
 export interface WarehouseWriteProjection {
   readonly id: string;
   readonly name: string;
+  readonly archivedAt: Date | null;
 }
 
 // `WAREHOUSES:RENAME`-guarded. Its subject is the Warehouse record, so it
@@ -50,6 +51,10 @@ export class RenameWarehouseCommand {
       name,
     );
 
-    return { id: input.warehouseId, name };
+    return {
+      id: input.warehouseId,
+      name,
+      archivedAt: warehouse.archivedAt,
+    };
   }
 }

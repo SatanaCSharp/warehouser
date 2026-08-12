@@ -35,6 +35,12 @@ const warehouseLifecycleRepositoryDouble = () => ({
   renameWarehouse: jest.fn().mockResolvedValue(undefined),
   setArchivedAt: jest.fn().mockResolvedValue(undefined),
   lockWorkspaceAndCountNonArchivedWarehouses: jest.fn().mockResolvedValue(1),
+  lockWarehouse: jest.fn().mockResolvedValue({
+    id: warehouseId,
+    workspaceId,
+    name: 'Test Warehouse North',
+    archivedAt: null,
+  }),
 });
 
 describe('RenameWarehouseCommand', () => {
@@ -77,5 +83,28 @@ describe('RenameWarehouseCommand', () => {
         RenameWarehouseCommand.prototype.execute,
       ) as TransactionalMetadata | undefined,
     ).toBeDefined();
+  });
+
+  // RED for T44/AC-11 — openapi.yaml documents `PATCH .../{warehouseId}` as
+  // `200` with the full `Warehouse` body. The command previously returned
+  // `{ id, name }` only (no `archivedAt`), narrowing its result type to
+  // `Pick<Warehouse, 'id' | 'name'>`; it must instead confirm the Warehouse's
+  // current archived state from the row it already locked, so the REST
+  // handler stops needing to fabricate or drop a field the contract's
+  // `Warehouse` shape requires.
+  it('AC-11: returns the full Warehouse record, including its current archived state', async () => {
+    const warehouseLifecycleRepository = warehouseLifecycleRepositoryDouble();
+    const command = new RenameWarehouseCommand(warehouseLifecycleRepository);
+
+    const result = await command.execute(currentUser(), {
+      warehouseId,
+      name: 'Renamed Warehouse',
+    });
+
+    expect(result).toEqual({
+      id: warehouseId,
+      name: 'Renamed Warehouse',
+      archivedAt: null,
+    });
   });
 });

@@ -126,6 +126,7 @@ describeIntegration(
         expect(body).toEqual({
           id: fixture.warehouseId,
           name: 'Renamed Warehouse',
+          archivedAt: null,
         });
       });
 
@@ -152,6 +153,7 @@ describeIntegration(
         expect(body).toEqual({
           id: fixture.warehouseId,
           name: 'Renamed While Archived',
+          archivedAt: expect.any(String),
         });
       });
 

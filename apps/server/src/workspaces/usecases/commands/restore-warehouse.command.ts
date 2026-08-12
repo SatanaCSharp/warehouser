@@ -13,7 +13,9 @@ export interface RestoreWarehouseInput {
 }
 
 export interface RestoreWarehouseResult {
-  readonly warehouseId: string;
+  readonly id: string;
+  readonly name: string;
+  readonly archivedAt: null;
 }
 
 @Injectable()
@@ -52,6 +54,6 @@ export class RestoreWarehouseCommand {
       throw workspaceArchivalUnavailableError(cause);
     }
 
-    return { warehouseId: input.warehouseId };
+    return { id: input.warehouseId, name: warehouse.name, archivedAt: null };
   }
 }
