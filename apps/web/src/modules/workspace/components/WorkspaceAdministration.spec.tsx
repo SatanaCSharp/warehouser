@@ -404,4 +404,87 @@ describe('WorkspaceAdministration', () => {
       ).toHaveLength(0);
     });
   });
+
+  // T45 — regression coverage for the defect where every tab panel rendered
+  // `{null}`, so the Warehouses tab was reachable by URL but showed nothing.
+  // These cases render `WarehousesTab` only by selecting the tab through
+  // `WorkspaceAdministration`, never by mounting `WarehousesTab` directly, so
+  // they fail if the panel wiring regresses even though `WarehousesTab`'s own
+  // suite stays green.
+  describe('rendering the Warehouses tab panel content (AC-12, AC-30)', () => {
+    it('renders the Warehouses tab content — its Warehouse list — reached through WorkspaceAdministration under WAREHOUSES:WATCH', async () => {
+      stubWorkspaceServer({
+        context: namedWorkspaceContext([
+          WorkspacePermissionId.WAREHOUSES_WATCH,
+        ]),
+      });
+
+      renderAdministration();
+
+      const list = await screen.findByRole('list', { name: 'Warehouses' });
+      expect(within(list).getByText('Central DC')).toBeInTheDocument();
+    });
+
+    it('renders no Warehouses content and requests no Warehouse list without WAREHOUSES:WATCH', async () => {
+      const requestedUrls = stubWorkspaceServer({
+        context: namedWorkspaceContext([
+          WorkspacePermissionId.WORKSPACE_ROLES_WATCH,
+        ]),
+      });
+
+      renderAdministration();
+
+      await screen.findByRole('tab', { name: /workspace roles/iu });
+      expect(
+        screen.queryByRole('list', { name: 'Warehouses' }),
+      ).not.toBeInTheDocument();
+      await waitFor(() =>
+        expect(
+          requestedUrls.some((url) =>
+            url.endsWith('/api/v1/workspace/warehouses'),
+          ),
+        ).toBe(false),
+      );
+    });
+
+    // General guard against the same class of defect on the other three tabs.
+    // A blanket "no tab panel is ever empty" assertion would fail today for
+    // `workspaceRoles` (T38) and `members` (T39), whose panels are still
+    // legitimately `{null}` because no task has wired their content yet — so
+    // this table is deliberately explicit about which tabs are shipped.
+    // Add a tab's id here, with a matcher for content only its panel
+    // produces, the same day its content task lands; until then leaving it
+    // out is correct, not an oversight.
+    const shippedTabContent: ReadonlyArray<{
+      accessibleTabName: RegExp;
+      contentMatcher: RegExp;
+      id: string;
+    }> = [
+      {
+        accessibleTabName: /warehouses/iu,
+        contentMatcher: /central dc/iu,
+        id: 'warehouses',
+      },
+    ];
+
+    it.each(shippedTabContent)(
+      'never renders an empty panel for the shipped "$id" tab',
+      async ({ accessibleTabName, contentMatcher }) => {
+        stubWorkspaceServer({
+          context: namedWorkspaceContext(allWatchPermissions),
+        });
+
+        renderAdministration();
+
+        const user = userEvent.setup();
+        await user.click(
+          await screen.findByRole('tab', { name: accessibleTabName }),
+        );
+
+        const panel = await screen.findByRole('tabpanel');
+        expect(panel.textContent?.trim()).not.toBe('');
+        expect(panel.textContent).toMatch(contentMatcher);
+      },
+    );
+  });
 });
