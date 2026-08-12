@@ -287,8 +287,12 @@ describeIntegration('WarehouseLifecycleRepository', () => {
 
   it('serializes two simultaneous archives of the last two non-archived Warehouses so at least one remains non-archived (AC-11a)', async () => {
     const workspaceId = await seedWorkspace();
-    const warehouseA = buildWarehouse({ workspaceId });
-    const warehouseB = buildWarehouse({ workspaceId });
+    // `createdAt` comes from the same frozen clock these tests archive with:
+    // the factory would otherwise stamp it from the real clock, and
+    // `chk_warehouses_archival_order` rejects an archival that predates
+    // creation once wall time passes the fixture's timestamp.
+    const warehouseA = buildWarehouse({ workspaceId, createdAt: now });
+    const warehouseB = buildWarehouse({ workspaceId, createdAt: now });
     await dataSource.manager
       .getRepository(WarehouseEntity)
       .insert([warehouseA, warehouseB]);
@@ -345,8 +349,12 @@ describeIntegration('WarehouseLifecycleRepository', () => {
 
   it('blocks a concurrent Warehouse creation on the same Workspace-row lock, so the locked re-count cannot miss it (AC-11a)', async () => {
     const workspaceId = await seedWorkspace();
-    const warehouseA = buildWarehouse({ workspaceId });
-    const warehouseB = buildWarehouse({ workspaceId });
+    // `createdAt` comes from the same frozen clock these tests archive with:
+    // the factory would otherwise stamp it from the real clock, and
+    // `chk_warehouses_archival_order` rejects an archival that predates
+    // creation once wall time passes the fixture's timestamp.
+    const warehouseA = buildWarehouse({ workspaceId, createdAt: now });
+    const warehouseB = buildWarehouse({ workspaceId, createdAt: now });
     await dataSource.manager
       .getRepository(WarehouseEntity)
       .insert([warehouseA, warehouseB]);

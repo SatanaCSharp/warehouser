@@ -441,6 +441,11 @@ function registerWarehousesTests(): void {
     const betaId = await insertWarehouse(workspaceId, { name: 'Beta' });
     const alphaId = await insertWarehouse(workspaceId, {
       name: 'Alpha',
+      // `createdAt` comes from the same frozen clock as `archivedAt`: the
+      // factory would otherwise stamp it from the real clock, and
+      // `chk_warehouses_archival_order` rejects an archival that predates
+      // creation once wall time passes the fixture's timestamp.
+      createdAt: now,
       archivedAt: now,
     });
 
