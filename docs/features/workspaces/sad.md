@@ -729,9 +729,12 @@ sequenceDiagram
         else the candidate holds no Warehouse membership in any Warehouse of this Workspace
             S-->>UI: deny — only people who already belong to a Warehouse of this Workspace can become Workspace Members (AC-20)
             UI-->>U: explain the precondition
-        else the candidate is already a Workspace Member, or the chosen Workspace Role is the protected Owner Role
-            S-->>UI: deny — Workspace Owner changes only through the protected transfer action (AC-22)
-            UI-->>U: explain the restriction
+        else the candidate is already a Workspace Member
+            S-->>UI: deny — the candidate already holds a Workspace Role (workspace.member_exists)
+            UI-->>U: explain that an existing Member's Workspace Role is reassigned, not added again
+        else the chosen Workspace Role is the protected Owner Role
+            S-->>UI: deny — Workspace Owner changes only through the protected transfer action (AC-22, workspace.owner_transfer_required)
+            UI-->>U: explain the protected transfer
         else
             S->>D: create the Workspace membership carrying exactly that one custom Workspace Role
             Note over S,D: persists Workspace membership (informs data-model indexes)
@@ -1104,14 +1107,19 @@ sequenceDiagram
 
 Recorded here for `design` to reconcile; nothing above was silently changed.
 
-- **AC-11 versus the §6.3 read/mutating classification.** AC-11 keeps the protected Warehouse Manager
-  transfer available on an archived Warehouse, but §5 keeps that transfer in `access` as a
-  Warehouse-scoped mutating operation, and §6.3 denies exactly that. §4's reasoning ("the
-  Workspace-level operations over that Warehouse record are unaffected") does not cover it, because
-  this operation resolves authority through the Warehouse guard. Either the transfer needs a third
-  classification — an archived-tolerant mutation, which the §8 coverage check does not currently
-  admit — or its handler must be Workspace-guarded. §6.7a draws it as Warehouse-scoped and notes the
-  conflict rather than choosing. Owner: Tech Lead + Security Lead, before `tasks`.
+- **AC-11 versus the §6.3 read/mutating classification. — RESOLVED by
+  [ADR 0003](./adr/0003-archived-tolerant-membership-edge-mutations.md).** AC-11 keeps the protected
+  Warehouse Manager transfer available on an archived Warehouse, but §5 keeps that transfer in
+  `access` as a Warehouse-scoped mutating operation, and §6.3 denies exactly that. §4's reasoning
+  ("the Workspace-level operations over that Warehouse record are unaffected") does not cover it,
+  because this operation resolves authority through the Warehouse guard. Either the transfer needed a
+  third classification — an archived-tolerant mutation, which the §8 coverage check did not admit — or
+  its handler had to be Workspace-guarded. §6.7a draws it as Warehouse-scoped and noted the conflict
+  rather than choosing. **Resolution:** the third classification, narrowed to membership-edge
+  mutations, with `transferWarehouseManager` as its only member; Workspace-guarding it was rejected
+  because US-13/AC-36 make the outgoing Warehouse Manager the actor, and a Warehouse Manager need not
+  be a Workspace Member. §8 Authorization coverage below admits the class; the same resolution closes
+  `api-sync-report.md` **OQ-1**. Owner: Tech Lead + Security Lead.
 - **AC-31 is only half a runtime concern.** The type split between `PermissionId` and
   `WorkspacePermissionId` makes level confusion a compile error (§4), so only its runtime half — two
   separate metadata keys, so the wrong guard resolves nothing — is drawn, in §6.2 and §6.3.
@@ -1120,6 +1128,8 @@ Recorded here for `design` to reconcile; nothing above was silently changed.
   are not available and this feature introduces no asynchronous work.
 - **No decision here passes the blast-radius gate**, so no ADR is proposed. The archived-tolerance
   question above becomes ADR-worthy only if it is resolved by adding a third handler classification.
+  It **was** resolved that way, so [ADR 0003](./adr/0003-archived-tolerant-membership-edge-mutations.md)
+  records it and §9 indexes it.
 
 ## 7. Data and interface impact
 
@@ -1165,8 +1175,14 @@ The `api` stage owns exact paths, methods and status codes. The shape decisions 
 - Workspace-scoped routes carry no Workspace identifier and resolve the actor's Workspace from the
   session.
 - Every Warehouse-scoped route names its Warehouse in the path. This re-shapes the existing
-  `/api/v1/access/*` endpoints, which currently imply the actor's single Warehouse — a deliberate
-  breaking change with no deployed consumer other than this repository's web application.
+  `/api/v1/access/*` endpoints **and the four `/api/v1/users/*` handlers**, all of which currently
+  imply the actor's single Warehouse — a deliberate breaking change with no deployed consumer other
+  than this repository's web application. `apps/server/src/users/rest/controllers/users.controller.ts`
+  guards all four (`USERS:CREATE`, `USERS:EMAIL_UPDATE`, `USERS:PASSWORD_CHANGE`, `USERS:DELETE`)
+  with `SessionAuthGuard, WarehouseAccessGuard` and resolves the actor's single membership from the
+  session, so under AC-03a none of them survives either; they move to
+  `/api/v1/warehouses/{warehouseId}/users/...` together with their DTOs, contracts and RTK Query
+  endpoints (`api-sync-report.md` **F-2**, resolved).
 - Warehouse-record and membership-edge routes (create, rename, archive, restore, assign membership,
   revoke membership, read a Warehouse's assignable Roles) are Workspace-scoped routes even though a
   Warehouse identifier appears in their path, because their subject is the record or the edge.
@@ -1217,13 +1233,34 @@ No queue, event, CLI, SDK or worker interface is introduced.
 
 ### Authorization coverage
 
-The existing architecture check that classifies every user-accessible handler extends to two levels: a
-handler outside authentication must declare either a Workspace Permission, or a Warehouse Permission
-together with a `warehouseId` route parameter, or be explicitly listed as infrastructure-exempt or as
-session-only-with-a-documented-membership-check (the selection route in §6.8 is the only member of that
-last class). Warehouse-scoped handlers must additionally be classified read (archived-tolerant) or
-mutating. Metadata coverage alone is not sufficient evidence; unit and integration tests still prove
-each concrete ownership rule.
+The existing architecture check that classifies every user-accessible handler extends to two levels. A
+handler outside authentication must fall into exactly one of these classes:
+
+1. **Workspace-Permission** — declares a `WorkspacePermissionId`, resolved by the Workspace guard.
+2. **Warehouse-Permission** — declares a `PermissionId` **together with** a `warehouseId` route
+   parameter, resolved by the Warehouse guard.
+3. **Infrastructure-exempt** — explicitly listed, with a reason.
+4. **Session-only with a documented membership check** — the selection route in §6.8 is the only
+   member of this class.
+5. **Self-projection read** — a read whose subject is the actor's own capabilities, membership-scoped
+   and declaring **no** Permission, because requiring a Permission to read one's own capabilities
+   would be circular. Members: `GET /api/v1/workspace/context` (which must answer for a User who is
+   no Workspace Member at all, since that empty projection is exactly how AC-30 makes the web omit
+   every Workspace control and destination) and `GET /api/v1/warehouses/{warehouseId}/access/current`.
+   Resolves `api-sync-report.md` **OQ-2**.
+
+Warehouse-scoped handlers (class 2) must additionally be classified **read** (archived-tolerant),
+**mutating** (denied on an archived Warehouse — AC-12), or **archived-tolerant membership-edge
+mutation**. That third classification is admitted by
+[ADR 0003](./adr/0003-archived-tolerant-membership-edge-mutations.md) and is deliberately narrow: it
+covers only mutations whose subject is the relationship between a User and a Warehouse, never the
+Warehouse record, its name, its archived state or anything it contains. In this release it has exactly
+one member, `transferWarehouseManager` (AC-11, AC-36), resolving `api-sync-report.md` **OQ-1**. A
+handler declaring archived tolerance while mutating fails the check unless it is in that admitted
+list, and each addition needs an explicit membership-edge justification at review.
+
+Metadata coverage alone is not sufficient evidence; unit and integration tests still prove each
+concrete ownership rule.
 
 ### Consistency and concurrency
 
@@ -1264,17 +1301,20 @@ is in scope; reviewers and implementers must read the path, not the word.
 
 ## 9. ADR index
 
-| ADR                                                       | Decision                                                                                                             | Status   |
-| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | -------- |
-| [0001](./adr/0001-two-level-request-authorization.md)     | Two sibling guards with separate metadata and vocabularies; the Warehouse is named in the route path                 | Accepted |
-| [0002](./adr/0002-parallel-workspace-authority-tables.md) | Workspace Roles/Permissions/membership as parallel relations rather than a scope discriminator on the Warehouse ones | Accepted |
+| ADR                                                               | Decision                                                                                                                                      | Status   |
+| ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| [0001](./adr/0001-two-level-request-authorization.md)             | Two sibling guards with separate metadata and vocabularies; the Warehouse is named in the route path                                          | Accepted |
+| [0002](./adr/0002-parallel-workspace-authority-tables.md)         | Workspace Roles/Permissions/membership as parallel relations rather than a scope discriminator on the Warehouse ones                          | Accepted |
+| [0003](./adr/0003-archived-tolerant-membership-edge-mutations.md) | A third Warehouse-scoped classification — the archived-tolerant membership-edge mutation — instead of Workspace-guarding the Manager transfer | Accepted |
 
 Inherited system decisions — module placement, PostgreSQL/TypeORM persistence and migrations, Zod
 contracts, the shared-guard location, error handling, logging without telemetry, RTK Query data flow,
 and the UI approval workflow — are not re-decided here. The remaining feature choices (Active
 Warehouse storage and effective-selection derivation, forward-only migrations, `workspaces` → `access`
-delegation for Warehouse provisioning, archived-tolerance declaration, and promoting the name value
-object to `shared/domain/`) do not pass the blast-radius gate and are recorded inline in §4, §5 and §7.
+delegation for Warehouse provisioning, and promoting the name value object to `shared/domain/`) do not
+pass the blast-radius gate and are recorded inline in §4, §5 and §7. Archived-tolerance is the
+exception: it grew a third handler classification enforced by the §8 release gate, which is why it is
+ADR 0003 rather than an inline note.
 The last of those follows the precedent already set by
 [users-management ADR 0001](../users-management/adr/0001-shared-credential-rules-for-member-lifecycle.md)
 rather than re-deciding it.
@@ -1306,7 +1346,7 @@ Pencil handoff are release gates.
 | A new handler declares the wrong level's Permission, or a Warehouse-scoped handler forgets its `warehouseId`.                                                                                                                | Separate types make the first a compile error; the §8 coverage check makes the second a failing architecture test. Both are release gates. Tech Lead.                                                               |
 | Archived-tolerance is declared on a handler that mutates, silently reopening AC-12.                                                                                                                                          | Guard denies by default; the coverage check requires an explicit read/mutating classification, and integration tests assert a denial per mutating Warehouse-scoped endpoint. Backend Lead + Security Lead.          |
 | The same-Workspace-membership and one-Owner invariants may not be fully expressible as database constraints.                                                                                                                 | `data-model` resolves composite references, partial uniqueness and lock strategy, or records the inexpressible part with the command-level guarantee and a PostgreSQL concurrency test. Backend Lead.               |
-| Re-shaping the existing `/api/v1/access/*` paths breaks every current web call at once.                                                                                                                                      | Contract and web changes ship in the same release with no external consumer; `api` records the old-to-new mapping and the `tasks` order keeps server and web in step. Backend Lead + Frontend Lead.                 |
+| Re-shaping the existing `/api/v1/access/*` paths **and the four `/api/v1/users/*` handlers** breaks every current web call at once (`api-sync-report.md` **F-2**).                                                           | Contract and web changes ship in the same release with no external consumer; `api` records the old-to-new mapping for all of them and the `tasks` order keeps server and web in step. Backend Lead + Frontend Lead. |
 | Two capability projections plus per-Warehouse caching make web freshness harder to reason about than the single projection today.                                                                                            | One actor-context query owns Workspace-level truth, one per-Warehouse query owns Warehouse-level truth, both invalidated by tag; no component re-derives authority from another source. Frontend Lead.              |
 | Guard reads double per request at the two levels and could regress the 50 ms target.                                                                                                                                         | One indexed point lookup plus one bounded Permission read per level, only the level a handler declares, measured by the existing timing helper against the §6 target. Backend Lead.                                 |
 | Forward-only migrations assume empty tables for the new non-null relations.                                                                                                                                                  | `spec.md` §1 (fifth boundary) authorizes it; migrations assert emptiness rather than backfilling, and the rebuild procedure is documented in `apps/server/migrations/README.md` alongside the change. Backend Lead. |

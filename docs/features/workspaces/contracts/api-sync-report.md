@@ -481,7 +481,16 @@ web migration together.
 
 ## Sequence gaps found — 3 (all raised upstream, none silently fixed)
 
-### OQ-1 — Warehouse Manager transfer versus the archived classification (carried forward, not new)
+### OQ-1 — Warehouse Manager transfer versus the archived classification — **RESOLVED 2026-08-12**
+
+**Resolution:** [ADR 0003](../adr/0003-archived-tolerant-membership-edge-mutations.md) (Accepted) adds
+the third classification — the archived-tolerant **membership-edge** mutation — and `sad.md` §8 now
+admits it. `transferWarehouseManager` is its only member, so this contract's provisional
+documentation of the operation is promoted to the accepted design **with no path change**. The
+alternative (Workspace-guarding the handler) was rejected because US-13/AC-36 make the outgoing
+Warehouse Manager the actor and a Warehouse Manager need not be a Workspace Member.
+
+<sub>Original finding, retained for the record:</sub>
 
 `sad.md` §6 "Flags raised while drawing these flows" already records this and does not resolve it:
 AC-11 keeps the protected Warehouse Manager transfer available on an archived Warehouse, but §5
@@ -497,7 +506,15 @@ changes its declared vocabulary from `PermissionId` to `WorkspacePermissionId`.
 - **Owner:** Tech Lead + Security Lead (as `sad.md` §6 assigns).
 - **Due:** before `tasks`.
 
-### OQ-2 — `sad.md` §8's handler classification admits no self-projection read (new)
+### OQ-2 — `sad.md` §8's handler classification admits no self-projection read — **RESOLVED 2026-08-12**
+
+**Resolution:** `sad.md` §8 Authorization coverage now enumerates five classes, the fifth being the
+**self-projection read** — membership-scoped, declaring no Permission — with
+`GET /api/v1/workspace/context` and `GET /api/v1/warehouses/{warehouseId}/access/current` named as its
+members. The classification route was taken rather than an exemption list, so the architecture check
+verifies the class rather than skipping the handlers. No contract field or path changes.
+
+<sub>Original finding, retained for the record:</sub>
 
 §8 requires every user-accessible handler outside authentication to be one of: Workspace-Permission;
 Warehouse-Permission **plus** a `warehouseId` route parameter; infrastructure-exempt; or
@@ -523,7 +540,14 @@ these two handlers join an exemption list with a documented reason.
 - **Owner:** `design` (Tech Lead), with Security Lead review — the coverage check is a release gate.
 - **Due:** before `tasks`.
 
-### F-3 — §6.6a lumps two distinct causes into one branch with one message (new, minor)
+### F-3 — §6.6a lumps two distinct causes into one branch with one message — **RESOLVED 2026-08-12**
+
+**Resolution:** `sad.md` §6.6a "Add and remove a Workspace Member" now splits the branch in two —
+"the candidate is already a Workspace Member" (`workspace.member_exists`) and "the chosen Workspace
+Role is the protected Owner Role" (`workspace.owner_transfer_required`, AC-22) — each with its own
+message. The contract is unchanged: one `409` with the two named examples it already carried.
+
+<sub>Original finding, retained for the record:</sub>
 
 In the "Add and remove a Workspace Member" flow, the branch
 `else the candidate is already a Workspace Member, or the chosen Workspace Role is the protected
@@ -548,7 +572,14 @@ throughout: 400 malformed or rule-violating input · 401 no session · 403 autho
 404 non-enumerating unavailable target · 409 state or invariant conflict · 503 the operation could
 not complete (state unchanged) · 500 unexpected.
 
-### F-2 — the breaking surface is wider than `sad.md` §7 and §11 name
+### F-2 — the breaking surface is wider than `sad.md` §7 and §11 name — **RESOLVED 2026-08-12**
+
+**Resolution:** `sad.md` §7 "HTTP and shared contracts" and the §11 risk row now both name the four
+`/api/v1/users/*` handlers alongside `/api/v1/access/*`, together with their DTOs, contracts and RTK
+Query endpoints. The blast radius `tasks` sized against is therefore the full one; the server half is
+[T27](../tasks/reshape-users-rest.md) and the web half is [T40](../tasks/migrate-warehouse-scoped-web.md).
+
+<sub>Original finding, retained for the record:</sub>
 
 §7 says the re-shaping breaks "the existing `/api/v1/access/*` endpoints", and the §11 risk row says
 the same. But `apps/server/src/users/rest/controllers/users.controller.ts` guards all four of its
@@ -586,10 +617,20 @@ description records where the Workspace relation now comes from.
 | Back-feed: operation → story + AC    | ✓ (12 operations attributed to the approved upstream features) |
 | Back-feed: §6 branch → response      | ✓ — 3 upstream gaps raised as OQ-1, OQ-2, F-3                  |
 
-All three core points pass, so the run did not pause. Five items are parked for their upstream
+All three core points pass, so the run did not pause. Five items were parked for their upstream
 owners — **OQ-1**, **OQ-2**, **F-3**, **F-2**, **F-4** — every one of them owned by `design`,
-`sequences` or the Tech Lead, and every one due **before `tasks`**. None of them changes a field or
-a constraint in this contract; OQ-1 and F-2 would change _paths only_.
+`sequences` or the Tech Lead, and every one due **before `tasks`**. None of them changed a field or
+a constraint in this contract.
+
+**Status as of 2026-08-12 (task T28 / T29):**
+
+| Item     | Status                                                                                                                             |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| **OQ-1** | Resolved — [ADR 0003](../adr/0003-archived-tolerant-membership-edge-mutations.md); `sad.md` §6 flag, §8. No path change.           |
+| **OQ-2** | Resolved — `sad.md` §8 gains the self-projection read class. No path change.                                                       |
+| **F-3**  | Resolved — `sad.md` §6.6a branch split into its two causes.                                                                        |
+| **F-2**  | Resolved — `sad.md` §7 and the §11 risk row now name the four `users` handlers.                                                    |
+| **F-4**  | Resolved by [T29](../tasks/record-spec-supersession.md) — both approved specs carry supersession notes and `spec.md` §8 is closed. |
 
 ## Linting
 
