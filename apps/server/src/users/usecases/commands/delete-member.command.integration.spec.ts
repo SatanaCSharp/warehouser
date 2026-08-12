@@ -99,15 +99,18 @@ describeIntegration('DeleteMemberCommand', () => {
   };
 
   const seedPermissions = async (): Promise<void> => {
-    await dataSource.manager.getRepository(PermissionEntity).insert([
-      {
-        id: usersDeletePermissionId,
-        label: 'Delete user',
-        kind: 'assignable',
-        createdAt: now,
-        updatedAt: now,
-      },
-    ]);
+    await dataSource.manager.getRepository(PermissionEntity).upsert(
+      [
+        {
+          id: usersDeletePermissionId,
+          label: 'Delete user',
+          kind: 'assignable',
+          createdAt: now,
+          updatedAt: now,
+        },
+      ],
+      ['id'],
+    );
   };
 
   const seedWarehouses = async (): Promise<void> => {

@@ -92,22 +92,25 @@ describeIntegration('ChangeMemberEmailCommand', () => {
   };
 
   const seedPermissions = async (): Promise<void> => {
-    await dataSource.manager.getRepository(PermissionEntity).insert([
-      {
-        id: emailUpdatePermissionId,
-        label: 'Update user email',
-        kind: 'assignable',
-        createdAt: now,
-        updatedAt: now,
-      },
-      {
-        id: superpowerPermissionId,
-        label: 'Synthetic superpower',
-        kind: 'assignable',
-        createdAt: now,
-        updatedAt: now,
-      },
-    ]);
+    await dataSource.manager.getRepository(PermissionEntity).upsert(
+      [
+        {
+          id: emailUpdatePermissionId,
+          label: 'Update user email',
+          kind: 'assignable',
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: superpowerPermissionId,
+          label: 'Synthetic superpower',
+          kind: 'assignable',
+          createdAt: now,
+          updatedAt: now,
+        },
+      ],
+      ['id'],
+    );
   };
 
   const seedWarehouses = async (): Promise<void> => {

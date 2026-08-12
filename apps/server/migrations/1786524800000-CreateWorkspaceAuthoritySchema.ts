@@ -11,7 +11,7 @@ import {
 // spec.md §1 fixes the initial Workspace Owner Workspace Permission set.
 // `WORKSPACE_OWNER_ROLE:REASSIGN` is the only reserved entry: it stays exclusive to the
 // protected Workspace Owner Role and is ineligible for custom Workspace Roles (AC-18, AC-35).
-const initialWorkspacePermissions = [
+export const initialWorkspacePermissions = [
   ['WORKSPACE:RENAME', 'Rename workspace', 'assignable'],
   ['WORKSPACE_ROLES:WATCH', 'View workspace roles', 'assignable'],
   ['WORKSPACE_ROLES:CREATE', 'Create workspace roles', 'assignable'],

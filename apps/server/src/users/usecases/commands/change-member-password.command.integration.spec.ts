@@ -108,7 +108,7 @@ describeIntegration('ChangeMemberPasswordCommand', () => {
     if (ids.length === 0) {
       return;
     }
-    await dataSource.manager.getRepository(PermissionEntity).insert(
+    await dataSource.manager.getRepository(PermissionEntity).upsert(
       ids.map((id) => ({
         id,
         label: id,
@@ -116,6 +116,7 @@ describeIntegration('ChangeMemberPasswordCommand', () => {
         createdAt: now,
         updatedAt: now,
       })),
+      ['id'],
     );
   };
 

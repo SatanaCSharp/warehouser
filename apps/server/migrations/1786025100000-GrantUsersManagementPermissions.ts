@@ -1,6 +1,6 @@
 import type { MigrationInterface, QueryRunner } from 'typeorm';
 
-const newPermissions = [
+export const newPermissions = [
   ['USERS:EMAIL_UPDATE', 'Update user email', 'assignable'],
   ['USERS:PASSWORD_CHANGE', 'Change user password', 'assignable'],
   ['USERS:DELETE', 'Delete users', 'assignable'],
