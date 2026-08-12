@@ -189,7 +189,17 @@ const expectRoleAndMembershipIntact = async (
 const verifyCreateRenameArchiveRestore = async (): Promise<void> => {
   const fixture = await seedCreatedAndRenamedWarehouse();
 
-  const archivedAt = new Date('2026-08-12T13:00:00.000Z');
+  // `createWarehouse` stamps `createdAt` from the real clock, so the archival
+  // instant is derived from the stored row rather than the suite's frozen
+  // clock: `chk_warehouses_archival_order` rejects an archival that predates
+  // creation, which a fixed timestamp does once wall time passes it.
+  const beforeArchive = await dataSource.manager
+    .getRepository(WarehouseEntity)
+    .findOneBy({ id: fixture.warehouseId });
+  expect(beforeArchive?.createdAt).toBeInstanceOf(Date);
+  const archivedAt = new Date(
+    (beforeArchive?.createdAt ?? now).getTime() + 60_000,
+  );
   await repository.setArchivedAt(fixture.warehouseId, archivedAt);
 
   const archived = await dataSource.manager
