@@ -32,8 +32,8 @@
 | T25 | Warehouse-record and membership-edge REST routes         | ports     | Backend Lead                 | M        | T6, T13, T20, T21, T22                | todo   |
 | T26 | Re-shape the `access` REST surface                       | ports     | Backend Lead                 | L        | T12, T13                              | todo   |
 | T27 | Re-shape the `users` REST surface                        | ports     | Backend Lead                 | M        | T12, T13                              | done   |
-| T28 | ADR 0003 + `sad.md` §8 classification reconciliation     | docs      | Tech Lead + Security Lead    | S        | —                                     | todo   |
-| T29 | Record the supersession of the two approved specs        | docs      | Tech Lead                    | S        | —                                     | todo   |
+| T28 | ADR 0003 + `sad.md` §8 classification reconciliation     | docs      | Tech Lead + Security Lead    | S        | —                                     | done   |
+| T29 | Record the supersession of the two approved specs        | docs      | Tech Lead                    | S        | —                                     | done   |
 | T30 | Two-level authorization-coverage architecture check      | tests     | Backend Lead + Security Lead | M        | T24, T25, T26, T27, T28               | todo   |
 | T31 | Workspace load smoke test + timing coverage              | tests     | Backend Lead                 | M        | T24, T25                              | todo   |
 | T32 | Missing shared icon components                           | ui        | Frontend Lead                | S        | —                                     | done   |
