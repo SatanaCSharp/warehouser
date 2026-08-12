@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 
 import { Injectable } from '@nestjs/common';
-import { AccessName } from 'access/domain/value-objects/access-name';
 import { AccessProvisioningRepository } from 'shared/domain/repositories/access-provisioning.repository';
+import { AccessName } from 'shared/domain/value-objects/access-name';
 
 const MANAGER_PERMISSION_IDS = [
   'ROLES:ASSIGN',

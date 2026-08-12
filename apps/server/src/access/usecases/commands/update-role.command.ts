@@ -5,10 +5,10 @@ import {
   roleNameConflictError,
   roleUnavailableError,
 } from 'access/domain/errors/access.errors';
-import { AccessName } from 'access/domain/value-objects/access-name';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { RoleLifecycleRepository } from 'shared/domain/repositories/role-lifecycle.repository';
+import { AccessName } from 'shared/domain/value-objects/access-name';
 
 export interface UpdateRoleInput {
   readonly roleId: string;
