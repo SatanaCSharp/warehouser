@@ -540,6 +540,46 @@
         "apps/server/src/shared/domain/repositories/workspace-read.repository.ts",
         "apps/server/src/workspaces/rest/controllers/workspace.controller.ts"
       ]
+    },
+    {
+      "id": "T42",
+      "title": "Fix the CreateWarehouseCommand Nest DI wiring",
+      "layer": "ports",
+      "deps": [],
+      "acs": [],
+      "dod": "CreateWarehouseCommand resolves through Nest DI instead of failing on its erased ProvisionInitialAccessDelegate interface token, WorkspacesUsecaseModule wires it with the useFactory + inject pattern already used in auth/usecases/usecase.module.ts, the structural-interface seam on the command is preserved, and a non-Docker-gated DI resolution test compiles the real module graph so a provider that cannot be instantiated by Nest fails the unit suite.",
+      "files_hint": [
+        "apps/server/src/workspaces/usecases/usecase.module.ts",
+        "apps/server/src/workspaces/usecases/commands/create-warehouse.command.ts"
+      ]
+    },
+    {
+      "id": "T43",
+      "title": "Translate infrastructure failures into the documented 503 error codes",
+      "layer": "app",
+      "deps": ["T20", "T21"],
+      "acs": ["AC-13"],
+      "dod": "CreateWarehouseCommand, ArchiveWarehouseCommand and RestoreWarehouseCommand translate an infrastructure write failure into the ApplicationErrors documented in contracts/openapi.yaml (workspace.warehouse_creation_unavailable, workspace.archival_unavailable) with their 503 status, workspace.errors.ts gains the matching factories, and the Docker-gated contract tests T25 already encodes for both branches pass in CI.",
+      "files_hint": [
+        "apps/server/src/workspaces/usecases/commands/create-warehouse.command.ts",
+        "apps/server/src/workspaces/usecases/commands/archive-warehouse.command.ts",
+        "apps/server/src/workspaces/usecases/commands/restore-warehouse.command.ts",
+        "apps/server/src/workspaces/domain/workspace.errors.ts"
+      ]
+    },
+    {
+      "id": "T44",
+      "title": "Return the documented Warehouse body from the archival and rename routes",
+      "layer": "app",
+      "deps": ["T21", "T25"],
+      "acs": ["AC-11"],
+      "dod": "ArchiveWarehouseCommand, RestoreWarehouseCommand and RenameWarehouseCommand return the full Warehouse record (id, name, archivedAt) instead of a bare identifier, the REST handlers for PUT /workspace/warehouses/{warehouseId}/archival and PATCH /workspace/warehouses/{warehouseId} answer 200 with the Warehouse body documented in contracts/openapi.yaml rather than 204, and a contract test proves the response satisfies the same warehouseSchema the web client Zod-validates against so server and client agree at runtime.",
+      "files_hint": [
+        "apps/server/src/workspaces/usecases/commands/archive-warehouse.command.ts",
+        "apps/server/src/workspaces/usecases/commands/restore-warehouse.command.ts",
+        "apps/server/src/workspaces/usecases/commands/rename-warehouse.command.ts",
+        "apps/server/src/workspaces/rest/controllers/warehouse.controller.ts"
+      ]
     }
   ]
 }
