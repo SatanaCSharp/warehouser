@@ -1,0 +1,533 @@
+{
+  "slug": "workspaces",
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "Promote the Workspace authority schema migrations (01–03)",
+      "layer": "migration",
+      "deps": [],
+      "acs": ["AC-35"],
+      "dod": "The three staged migrations are promoted to live apps/server/migrations/ with real timestamps, apply and revert cleanly against the development database, seed exactly the sixteen-row Workspace Permission catalogue with its assignable/reserved classification, and the catalogue-extension pattern (idempotent insert plus idempotent INSERT ... SELECT over every workspace_owner Role) is documented in apps/server/migrations/README.md.",
+      "files_hint": [
+        "docs/features/workspaces/migrations/01-create-workspace-authority-schema.ts",
+        "docs/features/workspaces/migrations/02-add-workspace-relations.ts",
+        "docs/features/workspaces/migrations/03-create-workspace-memberships.ts",
+        "apps/server/migrations/"
+      ]
+    },
+    {
+      "id": "T2",
+      "title": "Promote the Warehouse re-key and Active Warehouse selection migrations (04–05)",
+      "layer": "migration",
+      "deps": ["T1"],
+      "acs": [],
+      "dod": "Both staged migrations are promoted to live apps/server/migrations/, apply and revert cleanly against the development database, warehouse_memberships ends keyed by (user_id, warehouse_id) with the Workspace-carrying composite foreign keys, users.active_warehouse_id carries the column-list ON DELETE SET NULL reference, and both up steps plus 04.down throw the documented rollback-and-replay message when their table is non-empty.",
+      "files_hint": [
+        "docs/features/workspaces/migrations/04-rekey-warehouse-memberships.ts",
+        "docs/features/workspaces/migrations/05-add-active-warehouse-selection.ts",
+        "apps/server/migrations/"
+      ]
+    },
+    {
+      "id": "T3",
+      "title": "Promote AccessName to shared value objects and add the Workspace name wrapper",
+      "layer": "domain",
+      "deps": [],
+      "acs": ["AC-08", "AC-15a", "AC-29a"],
+      "dod": "AccessName moves to apps/server/src/shared/domain/value-objects/ with zero behaviour change and its existing suite green from the new location, access imports from there, and unit tests cover the Workspace-name wrapper's unset state alongside trim, 100-grapheme, control/format-character rejection and no-normalization storage.",
+      "files_hint": [
+        "apps/server/src/shared/domain/value-objects/",
+        "apps/server/src/access/domain/value-objects/access-name.ts"
+      ]
+    },
+    {
+      "id": "T4",
+      "title": "Add the workspaces domain predicates, typed errors and invariant rules",
+      "layer": "domain",
+      "deps": ["T3"],
+      "acs": [
+        "AC-11a",
+        "AC-15",
+        "AC-16",
+        "AC-17c",
+        "AC-18",
+        "AC-21a",
+        "AC-22",
+        "AC-25",
+        "AC-25a",
+        "AC-25c",
+        "AC-26a"
+      ],
+      "dod": "Unit tests cover, in isolation, every predicate and typed error for protected-Owner-Role immutability, reserved Workspace Permission rejection, exact case-sensitive Workspace Role name uniqueness, the sole-Owner rule, the last-non-archived-Warehouse rule, no-replacement-available, self-assignment, protected-Manager targeting and cross-Workspace targets; apps/server/src/workspaces/domain/ has no NestJS, HTTP or TypeORM import.",
+      "files_hint": ["apps/server/src/workspaces/domain/"]
+    },
+    {
+      "id": "T5",
+      "title": "Add WorkspacePermissionId and the new stable error codes to shared-types",
+      "layer": "ports",
+      "deps": [],
+      "acs": ["AC-18", "AC-31"],
+      "dod": "WorkspacePermissionId exists as a vocabulary structurally separate from PermissionId so that passing a Workspace Permission where a Warehouse Permission is expected fails to compile (asserted by a type-level test), the sixteen catalogue identifiers match migration 01 exactly, and the new error codes named in contracts/api-sync-report.md §2 are added to ErrorCode with the contracts suite green.",
+      "files_hint": [
+        "packages/shared-types/src/enums/workspace-permission-id.ts",
+        "packages/shared-types/src/enums/error-code.ts",
+        "packages/shared-types/src/enums/index.ts"
+      ]
+    },
+    {
+      "id": "T6",
+      "title": "Add the packages/contracts/workspaces request and response schemas",
+      "layer": "ports",
+      "deps": ["T5"],
+      "acs": ["AC-32", "AC-33"],
+      "dod": "Strict Zod schemas exist for every Workspace-level operation in contracts/openapi.yaml (actor context, selection write, Workspace rename, Workspace Roles and catalogue, Members, Users, Owner transfer, Warehouse records, assignable Roles, membership edges), a contract spec asserts each schema's field names and optionality match the OpenAPI component of the same name, and no schema accepts a Workspace Permission definition, a label, or a capability projection as input.",
+      "files_hint": [
+        "packages/contracts/src/workspaces/",
+        "packages/contracts/src/index.ts"
+      ]
+    },
+    {
+      "id": "T7",
+      "title": "Add the Workspace persistence entities, change the existing ones, and extend the test factories",
+      "layer": "infra",
+      "deps": ["T2"],
+      "acs": [],
+      "dod": "Five new entities (Workspace, WorkspacePermission, WorkspaceRole, WorkspaceRolePermission, WorkspaceMembership) and the changed UserEntity, WarehouseEntity and WarehouseMembershipEntity match the promoted schema exactly, an integration test persists and reads every one of them, and the factories buildWorkspace/buildWorkspacePermission/buildWorkspaceRole/buildWorkspaceMembership/buildWarehouse/buildWarehouseMembership plus persistWorkspaceGraph produce the fixture data-model.md §Test fixtures specifies using example.test identities only.",
+      "files_hint": [
+        "apps/server/src/shared/domain/entities/",
+        "apps/server/src/test/factories/"
+      ]
+    },
+    {
+      "id": "T8",
+      "title": "Add WorkspaceCurrentUserRepository and re-key AccessCurrentUserRepository",
+      "layer": "infra",
+      "deps": ["T7"],
+      "acs": ["AC-05", "AC-31"],
+      "dod": "Repository integration tests prove the Workspace guard read resolves membership by user_id then the single (workspace_role_id, workspace_permission_id) grant, that the Warehouse guard read takes (userId, warehouseId) and returns the Warehouse's archived_at, that a Permission held only through another Warehouse's Role is not returned, and that both reads stay two indexed point lookups independent of how many memberships the User holds.",
+      "files_hint": [
+        "apps/server/src/shared/domain/repositories/workspace-current-user.repository.ts",
+        "apps/server/src/shared/domain/repositories/access-current-user.repository.ts"
+      ]
+    },
+    {
+      "id": "T9",
+      "title": "Add WorkspaceReadRepository",
+      "layer": "infra",
+      "deps": ["T7"],
+      "acs": ["AC-32", "AC-33", "AC-34"],
+      "dod": "Repository integration tests cover all five projections (Workspace identity and name, Workspace Roles with Permission membership, the catalogue, Workspace Members with Roles, the other Users of the Workspace with the Warehouses each belongs to, and the Warehouses with archived state), assert every query is constrained by workspace_id in SQL and deterministically ordered, and assert a second Workspace's rows are never returned.",
+      "files_hint": [
+        "apps/server/src/shared/domain/repositories/workspace-read.repository.ts"
+      ]
+    },
+    {
+      "id": "T10",
+      "title": "Add the Workspace Role lifecycle, membership and Owner-transfer repositories",
+      "layer": "infra",
+      "deps": ["T7"],
+      "acs": ["AC-17", "AC-19b", "AC-26"],
+      "dod": "Repository integration tests cover scoped Workspace Role create/update/delete, Permission-membership replacement, the atomic assigned-Role replacement (reassign memberships then delete the Role in one transaction), Workspace membership add/remove/reassign with locking reads, and an Owner transfer that locks the workspaces row then both membership rows in user_id order and updates both assignments in one statement — with a concurrent-transfer test proving the sole-Owner partial unique index is the final arbiter.",
+      "files_hint": [
+        "apps/server/src/shared/domain/repositories/workspace-role-lifecycle.repository.ts",
+        "apps/server/src/shared/domain/repositories/workspace-membership.repository.ts",
+        "apps/server/src/shared/domain/repositories/workspace-owner-transfer.repository.ts"
+      ]
+    },
+    {
+      "id": "T11",
+      "title": "Add the Warehouse lifecycle and Warehouse-membership repositories",
+      "layer": "infra",
+      "deps": ["T7"],
+      "acs": ["AC-11a", "AC-23a"],
+      "dod": "Repository integration tests cover creating a Warehouse in a Workspace, renaming it, setting and clearing archived_at, the locked non-archived re-count taken after locking the parent workspaces row (proven against a concurrent archive and a concurrent create), membership insert and delete, and the assignable-Roles read projected to id and name in SQL rather than filtered afterwards.",
+      "files_hint": [
+        "apps/server/src/shared/domain/repositories/warehouse-lifecycle.repository.ts",
+        "apps/server/src/shared/domain/repositories/warehouse-membership-assignment.repository.ts"
+      ]
+    },
+    {
+      "id": "T12",
+      "title": "Split registration provisioning and re-key the existing Warehouse-level writes",
+      "layer": "infra",
+      "deps": ["T7"],
+      "acs": ["AC-01", "AC-36"],
+      "dod": "WorkspaceProvisioningRepository inserts the Workspace, its protected Owner Role, that Role's catalogue grants and the registrant's Workspace membership and fails when any required Workspace Permission identifier is absent; AccessProvisioningRepository no longer inserts the warehouses row and instead takes a warehouseId; and RoleLifecycleRepository, ManagerTransferRepository and MemberLifecycleRepository supply workspace_id on every membership write and match memberships by the composite key — each proven by repository integration tests that join an outer transaction.",
+      "files_hint": [
+        "apps/server/src/shared/domain/repositories/workspace-provisioning.repository.ts",
+        "apps/server/src/shared/domain/repositories/access-provisioning.repository.ts",
+        "apps/server/src/shared/domain/repositories/role-lifecycle.repository.ts",
+        "apps/server/src/shared/domain/repositories/manager-transfer.repository.ts",
+        "apps/server/src/shared/domain/repositories/member-lifecycle.repository.ts"
+      ]
+    },
+    {
+      "id": "T13",
+      "title": "Add WorkspaceAccessGuard and rework WarehouseAccessGuard for the named Warehouse",
+      "layer": "ports",
+      "deps": ["T5", "T8"],
+      "acs": ["AC-03a", "AC-04", "AC-05", "AC-12", "AC-12a", "AC-30", "AC-31"],
+      "dod": "Guard unit tests cover both guards for session composition, the correct metadata key, missing membership, membership in a different Warehouse, a Permission held only in another Warehouse, a Warehouse-scoped request naming no Warehouse (refused, never resolved to a selection or default), archived denial versus declared read tolerance, and a frozen principal that carries no client-supplied value; neither guard reads the stored Active Warehouse.",
+      "files_hint": [
+        "apps/server/src/shared/guards/workspace-access.guard.ts",
+        "apps/server/src/shared/guards/warehouse-access.guard.ts",
+        "apps/server/src/shared/decorators/required-workspace-permission.decorator.ts",
+        "apps/server/src/shared/access/"
+      ]
+    },
+    {
+      "id": "T14",
+      "title": "Move registration bootstrap into workspaces provisioning",
+      "layer": "app",
+      "deps": ["T4", "T6", "T12"],
+      "acs": ["AC-01", "AC-02"],
+      "dod": "Command integration tests prove registration creates exactly one linked Account, User, unnamed Workspace, protected Workspace Owner Role with its initial Permission set, Workspace membership, Warehouse, protected Warehouse Manager Role, Warehouse membership and session inside RegisterCommand's single transaction, and that an injected failure at each stage leaves no row of any of them behind; access receives only a warehouseId and a userId and learns nothing about Workspaces.",
+      "files_hint": [
+        "apps/server/src/workspaces/domain/services/workspace-provisioning.service.ts",
+        "apps/server/src/auth/usecases/commands/register.command.ts",
+        "apps/server/src/access/usecases/commands/provision-initial-access.command.ts"
+      ]
+    },
+    {
+      "id": "T15",
+      "title": "Add the Workspace rename command and the Workspace configuration queries",
+      "layer": "app",
+      "deps": ["T4", "T6", "T9"],
+      "acs": ["AC-29", "AC-29a", "AC-32", "AC-33", "AC-34"],
+      "dod": "Integration tests prove renaming records the trimmed name without Unicode normalization and rejects each broken name rule while leaving the existing name or unnamed state untouched, that each of the four read queries returns only its own Workspace's rows under its own watch Permission, and that a target identifier belonging to another Workspace is indistinguishable from a missing one.",
+      "files_hint": [
+        "apps/server/src/workspaces/usecases/commands/rename-workspace.command.ts",
+        "apps/server/src/workspaces/usecases/queries/"
+      ]
+    },
+    {
+      "id": "T16",
+      "title": "Add the custom Workspace Role create and update commands",
+      "layer": "app",
+      "deps": ["T4", "T6", "T10"],
+      "acs": ["AC-14", "AC-14a", "AC-15", "AC-15a", "AC-16", "AC-18"],
+      "dod": "Command integration tests cover creating a Role with zero or more assignable Permissions, updating its Permission membership including to the empty set, renaming it, exact per-Workspace name-conflict rejection with differently cased names staying distinct, every broken name rule, refusal to rename/delete/re-permission the protected Owner Role, and rejection of an absent, reserved, or definition-mutating Workspace Permission.",
+      "files_hint": [
+        "apps/server/src/workspaces/usecases/commands/create-workspace-role.command.ts",
+        "apps/server/src/workspaces/usecases/commands/update-workspace-role.command.ts"
+      ]
+    },
+    {
+      "id": "T17",
+      "title": "Add the Workspace Role deletion command with replacement",
+      "layer": "app",
+      "deps": ["T4", "T6", "T10"],
+      "acs": ["AC-17", "AC-17a", "AC-17b", "AC-17c", "AC-17d"],
+      "dod": "Command integration tests cover deleting an unassigned Role with no replacement and no assignment change, deleting an assigned Role by moving every affected Member to the replacement in one transaction, denying deletion of an assigned Role when the actor lacks WORKSPACE_ROLES:ASSIGN while the unassigned path stays open to them, denying deletion when the only other Role is the protected Owner Role, and rolling the whole attempt back on an injected failure so no assignment and no Role changes.",
+      "files_hint": [
+        "apps/server/src/workspaces/usecases/commands/delete-workspace-role.command.ts",
+        "apps/server/src/workspaces/domain/services/workspace-role-deletion.service.ts"
+      ]
+    },
+    {
+      "id": "T18",
+      "title": "Add the Workspace membership add, remove and reassign commands",
+      "layer": "app",
+      "deps": ["T4", "T6", "T10"],
+      "acs": ["AC-19", "AC-19a", "AC-19b", "AC-20", "AC-21", "AC-21a", "AC-22"],
+      "dod": "Command integration tests cover adding a candidate who already holds a Warehouse membership in the Workspace with exactly one custom Role, blocking a candidate who holds none, removing a Member so every Warehouse membership survives but Workspace capability stops at the next decision, moving a Member to another custom Role with no Warehouse membership changing, an existing Member keeping their Workspace Role after losing every Warehouse membership, and denial with the cause-specific message for both an already-Member candidate and any attempt to assign or reassign the protected Owner Role or the current Owner.",
+      "files_hint": [
+        "apps/server/src/workspaces/usecases/commands/add-workspace-member.command.ts",
+        "apps/server/src/workspaces/usecases/commands/remove-workspace-member.command.ts",
+        "apps/server/src/workspaces/usecases/commands/assign-workspace-role.command.ts"
+      ]
+    },
+    {
+      "id": "T19",
+      "title": "Add the Workspace Owner transfer command",
+      "layer": "app",
+      "deps": ["T4", "T6", "T10"],
+      "acs": ["AC-26", "AC-26a", "AC-27", "AC-28"],
+      "dod": "Command integration tests prove the recipient becomes the sole Owner and the former Owner receives the selected custom Role as one outcome, and that the transfer is denied while preserving exactly one Owner when no custom Role exists for the outgoing Owner, when the actor is not the Owner or lacks WORKSPACE_OWNER_ROLE:REASSIGN, when the recipient is the actor themself, is no Workspace Member, or belongs to another Workspace, and when two transfers race.",
+      "files_hint": [
+        "apps/server/src/workspaces/usecases/commands/transfer-workspace-owner.command.ts"
+      ]
+    },
+    {
+      "id": "T20",
+      "title": "Add the Warehouse create and rename commands",
+      "layer": "app",
+      "deps": ["T4", "T6", "T11", "T12"],
+      "acs": ["AC-06", "AC-07", "AC-08", "AC-09", "AC-10"],
+      "dod": "Command integration tests prove creating a Warehouse produces the Warehouse, its protected Manager Role and the creator's membership as one outcome with the Warehouse becoming selectable, that a failure establishing the Manager Role or its assignment leaves no Warehouse behind, that renaming records the trimmed name without normalization and permits a duplicate name, that every broken name rule is rejected with the rule named, and that a Warehouse of another Workspace is denied without disclosing that it exists.",
+      "files_hint": [
+        "apps/server/src/workspaces/usecases/commands/create-warehouse.command.ts",
+        "apps/server/src/workspaces/usecases/commands/rename-warehouse.command.ts"
+      ]
+    },
+    {
+      "id": "T21",
+      "title": "Add the Warehouse archive and restore commands",
+      "layer": "app",
+      "deps": ["T4", "T6", "T11"],
+      "acs": ["AC-10", "AC-11", "AC-11a", "AC-13"],
+      "dod": "Command integration tests prove archiving stops the Warehouse being selectable while retaining its Roles, memberships and records, that restoring makes it operable again with those intact, that archiving the last non-archived Warehouse is denied under a concurrent archive and a concurrent create through the locked parent-row re-count, that a cross-Workspace target is denied without disclosure, and that a failed attempt leaves archived state, memberships and Roles unchanged.",
+      "files_hint": [
+        "apps/server/src/workspaces/usecases/commands/archive-warehouse.command.ts",
+        "apps/server/src/workspaces/usecases/commands/restore-warehouse.command.ts"
+      ]
+    },
+    {
+      "id": "T22",
+      "title": "Add the Warehouse membership assign and revoke commands and the assignable-Roles read",
+      "layer": "app",
+      "deps": ["T4", "T6", "T11"],
+      "acs": [
+        "AC-23",
+        "AC-23a",
+        "AC-24",
+        "AC-25",
+        "AC-25a",
+        "AC-25b",
+        "AC-25c",
+        "AC-25d"
+      ],
+      "dod": "Command integration tests prove assignment gives the target exactly the chosen Role in that Warehouse while every existing membership survives, and deny: a target or Warehouse of another Workspace, the protected Manager Role, a second Role in a Warehouse the target already belongs to, and the actor targeting themself; revocation removes the Role and its Permissions at the next decision and leaves other memberships untouched, and denies withdrawing the Manager's membership, the actor's own, or one in another Workspace without disclosure; the assignable-Roles read returns identifiers and names only and grants no other capability in that Warehouse.",
+      "files_hint": [
+        "apps/server/src/workspaces/usecases/commands/assign-warehouse-membership.command.ts",
+        "apps/server/src/workspaces/usecases/commands/revoke-warehouse-membership.command.ts",
+        "apps/server/src/workspaces/usecases/queries/list-assignable-warehouse-roles.query.ts"
+      ]
+    },
+    {
+      "id": "T23",
+      "title": "Add the Active Warehouse selection command and the actor-context query",
+      "layer": "app",
+      "deps": ["T6", "T9", "T11"],
+      "acs": ["AC-03", "AC-03b", "AC-04", "AC-30"],
+      "dod": "Integration tests prove the selection is stored per User and survives a new session, that selecting a Warehouse the member holds no membership in is denied and leaves the stored selection unchanged, and that the actor-context query derives the effective selection at read time — the stored value while it is a live non-archived membership, otherwise the single membership when exactly one exists, otherwise none — so a withdrawn membership or newly archived Warehouse changes the result with no row rewritten, and a User who is no Workspace Member receives the empty projection.",
+      "files_hint": [
+        "apps/server/src/workspaces/usecases/commands/set-active-warehouse.command.ts",
+        "apps/server/src/workspaces/usecases/queries/read-workspace-context.query.ts"
+      ]
+    },
+    {
+      "id": "T24",
+      "title": "Add the Workspace-level REST controller and module wiring",
+      "layer": "ports",
+      "deps": ["T6", "T13", "T15", "T16", "T17", "T18", "T19", "T23"],
+      "acs": ["AC-30", "AC-34"],
+      "dod": "REST contract tests cover every /api/v1/workspace/* path in contracts/openapi.yaml for schema validation, the stable error code and status of each documented failure, non-enumerating cross-Workspace denial, and refusal of a Warehouse Permission declared on a Workspace handler; the module is registered in AppModule and controllers invoke commands and queries only.",
+      "files_hint": [
+        "apps/server/src/workspaces/rest/",
+        "apps/server/src/workspaces/usecases/usecase.module.ts",
+        "apps/server/src/workspaces/index.ts",
+        "apps/server/src/app.module.ts"
+      ]
+    },
+    {
+      "id": "T25",
+      "title": "Add the Warehouse-record and membership-edge REST routes",
+      "layer": "ports",
+      "deps": ["T6", "T13", "T20", "T21", "T22"],
+      "acs": ["AC-10", "AC-25d"],
+      "dod": "REST contract tests cover /api/v1/workspace/warehouses and its sub-paths (record, archival, assignable-roles, memberships) for schema validation, stable error codes and statuses, and prove every one of them resolves authority through the Workspace guard and is therefore unaffected by the Warehouse's archived state, while a Warehouse or membership of another Workspace is denied without disclosing it exists.",
+      "files_hint": [
+        "apps/server/src/workspaces/rest/",
+        "apps/server/src/workspaces/usecases/usecase.module.ts"
+      ]
+    },
+    {
+      "id": "T26",
+      "title": "Re-shape the access REST surface to the named Warehouse",
+      "layer": "ports",
+      "deps": ["T12", "T13"],
+      "acs": ["AC-12", "AC-12a", "AC-36", "AC-36a"],
+      "dod": "Every /api/v1/access/* handler moves to /api/v1/warehouses/{warehouseId}/access/* with its contracts/access schemas re-scoped, each declares read (archived-tolerant) or mutating, REST contract tests prove every mutating handler is denied on an archived Warehouse while its read counterparts still serve AC-12a, and manager-transfer is declared the archived-tolerant membership-edge mutation ADR 0003 admits with tests for the successful transfer, each AC-36a refusal, and a concurrent transfer.",
+      "files_hint": [
+        "apps/server/src/access/rest/",
+        "apps/server/src/access/usecases/",
+        "packages/contracts/src/access/"
+      ]
+    },
+    {
+      "id": "T27",
+      "title": "Re-shape the users REST surface to the named Warehouse",
+      "layer": "ports",
+      "deps": ["T12", "T13"],
+      "acs": ["AC-24"],
+      "dod": "All four /api/v1/users/* handlers move to /api/v1/warehouses/{warehouseId}/users/* with their contracts/users schemas re-scoped, CreateMemberCommand writes the new User's workspace_id from the Workspace owning that Warehouse, and REST contract tests prove each handler resolves the membership in the named Warehouse, is denied on an archived one, and that a member created in a Warehouse belongs to that Warehouse's Workspace and to no other.",
+      "files_hint": [
+        "apps/server/src/users/rest/",
+        "apps/server/src/users/usecases/commands/create-member.command.ts",
+        "packages/contracts/src/users/"
+      ]
+    },
+    {
+      "id": "T28",
+      "title": "Record ADR 0003 and reconcile the sad §8 handler classification",
+      "layer": "docs",
+      "deps": [],
+      "acs": ["AC-11", "AC-36"],
+      "dod": "adr/0003 is Accepted and states that a Warehouse-scoped mutation whose subject is a membership edge may declare archived tolerance, sad.md §6 flags, §8 Authorization coverage and §9 ADR index are updated to admit that third classification plus the self-projection read class covering the two membership-only projections, and contracts/api-sync-report.md OQ-1, OQ-2, F-2 and F-3 are marked resolved with the resolution named.",
+      "files_hint": [
+        "docs/features/workspaces/adr/0003-archived-tolerant-membership-edge-mutations.md",
+        "docs/features/workspaces/sad.md",
+        "docs/features/workspaces/contracts/api-sync-report.md"
+      ]
+    },
+    {
+      "id": "T29",
+      "title": "Record the supersession of the approved access and users-management specs",
+      "layer": "docs",
+      "deps": [],
+      "acs": [],
+      "dod": "docs/features/access/spec.md records that its one-Warehouse-per-member non-goal and invariant are superseded by workspaces with a back-link, docs/features/users-management/spec.md records that member creation now establishes the Workspace relation, and docs/features/workspaces/spec.md §8 closes both open questions — the second with the design-handoff's SELECTION ENDED resolution rather than the spec's looser default.",
+      "files_hint": [
+        "docs/features/access/spec.md",
+        "docs/features/users-management/spec.md",
+        "docs/features/workspaces/spec.md"
+      ]
+    },
+    {
+      "id": "T30",
+      "title": "Extend the authorization-coverage architecture check to two levels",
+      "layer": "tests",
+      "deps": ["T24", "T25", "T26", "T27", "T28"],
+      "acs": ["AC-30", "AC-31"],
+      "dod": "An architecture test fails when any user-accessible handler outside authentication is not exactly one of: Workspace-Permission-declaring, Warehouse-Permission-declaring with a warehouseId route parameter, self-projection read, or listed infrastructure-exempt with a reason; it additionally fails a Warehouse-scoped handler with no read/mutating classification and one declaring archived tolerance without ADR 0003's membership-edge justification; and it asserts workspaces/domain has no framework imports and access does not import workspaces.",
+      "files_hint": ["apps/server/src/test/authorization-coverage.spec.ts"]
+    },
+    {
+      "id": "T31",
+      "title": "Add the Workspace load smoke test and authorization timing coverage",
+      "layer": "tests",
+      "deps": ["T24", "T25"],
+      "acs": [],
+      "dod": "An automated load smoke test sustains at least 50 Workspace operations per second per instance for ten minutes and reports both authorization stages, Workspace read and mutation, and Warehouse selection p95 against the spec §6 targets from the existing withOperationTiming structured fields, and proves the Warehouse authorization stage does not grow with the number of Warehouses a member belongs to; no telemetry is added.",
+      "files_hint": ["apps/server/src/workspaces/workspaces.load.spec.ts"]
+    },
+    {
+      "id": "T32",
+      "title": "Add the missing shared icon components",
+      "layer": "ui",
+      "deps": [],
+      "acs": [],
+      "dod": "The ten Lucide icons the approved frames use that shared/icons/ lacks are added as hand-rolled components following the existing *Icon.tsx pattern and exported from index.ts, each matching the Lucide geometry and inheriting currentColor and size from props; no icon library dependency is added.",
+      "files_hint": ["apps/web/src/shared/icons/"]
+    },
+    {
+      "id": "T33",
+      "title": "Add the Workspace actor-context API, capability hook and Workspace gate",
+      "layer": "ui",
+      "deps": ["T6"],
+      "acs": ["AC-30"],
+      "dod": "shared/api/workspace-context-api.ts injects the actor-context query and the selection mutation into the shared API slice with tags that a Workspace mutation invalidates, useWorkspacePermissions and the Workspace-level gate mirror usePermissions/PermissionGate without ever mixing the two vocabularies, and tests prove a User with no Workspace membership derives no Workspace capability and no Workspace dataset is requested for them.",
+      "files_hint": [
+        "apps/web/src/shared/api/workspace-context-api.ts",
+        "apps/web/src/shared/hooks/useWorkspacePermissions.ts",
+        "apps/web/src/shared/components/"
+      ]
+    },
+    {
+      "id": "T34",
+      "title": "Add the Warehouse switcher to the application shell",
+      "layer": "ui",
+      "deps": ["T32", "T33"],
+      "acs": ["AC-03", "AC-03b", "AC-04"],
+      "dod": "The switcher renders as a select in the desktop header and in a full-width context bar under the 68px mobile header per frames n7Th5/ciqhD/XbWdw, archived memberships stay listed but dimmed, non-selectable and labelled with aria-disabled plus the reason, the current entry carries a check rather than colour alone, the no-Active-Warehouse and selection-ended states render per p2NiLo and pUVt0, and component tests cover selection writing presentation state and the accessible name including the current Warehouse.",
+      "files_hint": [
+        "apps/web/src/shared/layouts/WarehouseSwitcher.tsx",
+        "apps/web/src/shared/layouts/RootLayout.tsx",
+        "apps/web/public/locales/en/common.json"
+      ]
+    },
+    {
+      "id": "T35",
+      "title": "Add the modules/workspace route, page shell, tabs and i18n namespace",
+      "layer": "ui",
+      "deps": ["T32", "T33"],
+      "acs": ["AC-29", "AC-30"],
+      "dod": "The route is registered in shared/constants/routes.ts, the Sidebar Workspace entry and the destination are absent — not disabled or empty — when no Workspace capability opens them, the page renders the four tabs in the approved order with the mobile label shortening, the name-the-Workspace dialog and unnamed-Workspace placeholder work per the approved frames, workspace.json exists in en and uk, and tests cover the route guard redirect and per-watch-permission tab presence.",
+      "files_hint": [
+        "apps/web/src/modules/workspace/route.tsx",
+        "apps/web/src/modules/workspace/page.tsx",
+        "apps/web/src/modules/workspace/components/WorkspaceAdministration.tsx",
+        "apps/web/src/shared/layouts/Sidebar.tsx",
+        "apps/web/src/shared/constants/routes.ts",
+        "apps/web/public/locales/en/workspace.json"
+      ]
+    },
+    {
+      "id": "T36",
+      "title": "Build the Warehouses tab: list, detail pane and lifecycle dialogs",
+      "layer": "ui",
+      "deps": ["T35"],
+      "acs": ["AC-06", "AC-08", "AC-09", "AC-11", "AC-11a", "AC-12a", "AC-33"],
+      "dod": "The list/detail split and its mobile collapse render per frames mY6Hb/NATgU/m6hDj with the add, rename, archive and restore dialogs per ZfNnP/QidCt, archived Warehouses carry a chip and meta text rather than colour alone, the last-non-archived refusal renders the danger alert with the action disabled and the alternative offered per yUU5P, field-bound validation errors name the rule that failed, and the detail pane never renders any person's Warehouse Role.",
+      "files_hint": [
+        "apps/web/src/modules/workspace/components/warehouses/",
+        "apps/web/src/modules/workspace/api/workspace-warehouses-api.ts",
+        "apps/web/public/locales/en/workspace.json"
+      ]
+    },
+    {
+      "id": "T37",
+      "title": "Build Warehouse access grant and withdrawal from the Warehouse detail pane",
+      "layer": "ui",
+      "deps": ["T36"],
+      "acs": ["AC-23", "AC-23a", "AC-25b", "AC-25c"],
+      "dod": "The give-access dialog lists the Workspace's other Users and that Warehouse's assignable custom Roles from the narrow read, the withdraw action is unavailable on the protected Manager's row and on the actor's own with the reason exposed, both dialogs state what changes and what is preserved, and tests cover the success toast naming the committed outcome and a server denial being handled independently of the derived capability.",
+      "files_hint": [
+        "apps/web/src/modules/workspace/components/warehouses/",
+        "apps/web/src/modules/workspace/api/workspace-warehouses-api.ts",
+        "apps/web/public/locales/en/workspace.json"
+      ]
+    },
+    {
+      "id": "T38",
+      "title": "Build the Workspace roles and Permissions tabs",
+      "layer": "ui",
+      "deps": ["T35"],
+      "acs": [
+        "AC-14",
+        "AC-14a",
+        "AC-15",
+        "AC-16",
+        "AC-17",
+        "AC-17a",
+        "AC-18",
+        "AC-32"
+      ],
+      "dod": "The list/editor split renders per sDL1Q/AmkoM with the approved footer order, permission rows render checked and unchecked per woPxV with the reserved row disabled, muted and carrying the Owner only chip plus its reason, the protected Owner Role offers no rename/delete/permission edit, delete-with-replacement prompts for the replacement only when the Role is assigned, and an exact-name conflict states that differently cased names are distinct.",
+      "files_hint": [
+        "apps/web/src/modules/workspace/components/roles/",
+        "apps/web/src/modules/workspace/api/workspace-roles-api.ts",
+        "apps/web/public/locales/en/workspace.json"
+      ]
+    },
+    {
+      "id": "T39",
+      "title": "Build the Workspace members tab and Owner transfer",
+      "layer": "ui",
+      "deps": ["T35"],
+      "acs": ["AC-19", "AC-19a", "AC-19b", "AC-21a", "AC-22", "AC-26", "AC-33"],
+      "dod": "Member rows render per edPx9/VrGa3 with the Owner row showing Protected and offering transfer instead of Change role and Remove, add/change-role/remove dialogs restrict the choice to custom Workspace Roles, the transfer dialog requires a custom Role for the outgoing Owner and states the atomic outcome, and tests cover the add candidate list coming from the Workspace Users read and every affected view refreshing by tag after each mutation.",
+      "files_hint": [
+        "apps/web/src/modules/workspace/components/members/",
+        "apps/web/src/modules/workspace/api/workspace-members-api.ts",
+        "apps/web/public/locales/en/workspace.json"
+      ]
+    },
+    {
+      "id": "T40",
+      "title": "Migrate the Warehouse-scoped web surface to per-Warehouse keying",
+      "layer": "ui",
+      "deps": ["T26", "T27", "T33"],
+      "acs": ["AC-05", "AC-12", "AC-12a", "AC-36"],
+      "dod": "Every access and users query and mutation carries the selected Warehouse and its cache entry is keyed by it, tests prove switching Warehouses refetches rather than reusing another Warehouse's data and that capabilities come from that Warehouse's projection, an archived Warehouse renders its Access page read-only with the reason exposed while its reads still work, and the authority-lost state renders per OD62T without disclosing the target's existence.",
+      "files_hint": [
+        "apps/web/src/modules/access/api/",
+        "apps/web/src/modules/access/hooks/",
+        "apps/web/src/modules/access/components/",
+        "apps/web/src/shared/api/access-permissions-api.ts",
+        "apps/web/public/locales/en/access.json"
+      ]
+    }
+  ]
+}

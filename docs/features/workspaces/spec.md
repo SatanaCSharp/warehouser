@@ -19,9 +19,9 @@ This is needed now because the Warehouse boundary is about to carry stock, Locat
 
 The committed approach introduces the Workspace as a new ownership boundary above the Warehouse. Registration creates a Workspace whose registrant becomes both its Workspace Owner and the Warehouse Manager of the first Warehouse. The Workspace aggregates Warehouses and owns their entire lifecycle — creation, renaming, and reversible archiving — while the Warehouse feature gains no Workspace-aware behaviour of its own. A Warehouse Member may now hold a membership in several Warehouses of their Workspace, and every Warehouse-scoped request names the Warehouse it applies to; the Warehouse a member has selected is presentation state that never grants authority, so authority never travels with them, because each membership carries its own Role. Workspace authorization mirrors the approved Access model exactly one level up: a protected singleton Workspace Owner Role changed only through an atomic transfer, custom Workspace Roles assembled from a system-managed Workspace Permission catalogue, and exactly one Workspace Role per Workspace Member.
 
-The requirements extend the approved Access model rather than replacing it. Warehouse Roles, Warehouse Permissions, the protected Warehouse Manager Role, and its transfer keep the behaviour Access specifies; what changes is that a Warehouse membership is now identified by the pair of User and Warehouse instead of by User alone, and that the Warehouse a request applies to becomes explicit rather than implied. Workspace names follow the Warehouse name rules already approved — trimmed to 1–100 user-perceived characters, rejecting control and format characters, preserving submitted Unicode without normalization, and not required to be unique — except that a Workspace is created without a name and is presented with a placeholder until one is set. The initial Workspace Owner Workspace Permission set is `WORKSPACE:RENAME`, `WORKSPACE_ROLES:WATCH`, `WORKSPACE_ROLES:CREATE`, `WORKSPACE_ROLES:UPDATE`, `WORKSPACE_ROLES:DELETE`, `WORKSPACE_ROLES:ASSIGN`, `WORKSPACE_MEMBERS:WATCH`, `WORKSPACE_MEMBERS:ADD`, `WORKSPACE_MEMBERS:REMOVE`, `WAREHOUSES:WATCH`, `WAREHOUSES:CREATE`, `WAREHOUSES:RENAME`, `WAREHOUSES:ARCHIVE`, `WAREHOUSE_MEMBERSHIPS:ASSIGN`, `WAREHOUSE_MEMBERSHIPS:REVOKE`, and `WORKSPACE_OWNER_ROLE:REASSIGN`; `WAREHOUSES:ARCHIVE` governs both withdrawing and restoring a Warehouse, and `WORKSPACE_OWNER_ROLE:REASSIGN` is reserved to the protected Workspace Owner Role and cannot be included in a custom Workspace Role. This release supersedes the Access non-goal that excluded membership in multiple Warehouses; how that supersession is recorded against the approved Access artifacts is tracked in §8.
+The requirements extend the approved Access model rather than replacing it. Warehouse Roles, Warehouse Permissions, the protected Warehouse Manager Role, and its transfer keep the behaviour Access specifies; what changes is that a Warehouse membership is now identified by the pair of User and Warehouse instead of by User alone, and that the Warehouse a request applies to becomes explicit rather than implied. Workspace names follow the Warehouse name rules already approved — trimmed to 1–100 user-perceived characters, rejecting control and format characters, preserving submitted Unicode without normalization, and not required to be unique — except that a Workspace is created without a name and is presented with a placeholder until one is set. The initial Workspace Owner Workspace Permission set is `WORKSPACE:RENAME`, `WORKSPACE_ROLES:WATCH`, `WORKSPACE_ROLES:CREATE`, `WORKSPACE_ROLES:UPDATE`, `WORKSPACE_ROLES:DELETE`, `WORKSPACE_ROLES:ASSIGN`, `WORKSPACE_MEMBERS:WATCH`, `WORKSPACE_MEMBERS:ADD`, `WORKSPACE_MEMBERS:REMOVE`, `WAREHOUSES:WATCH`, `WAREHOUSES:CREATE`, `WAREHOUSES:RENAME`, `WAREHOUSES:ARCHIVE`, `WAREHOUSE_MEMBERSHIPS:ASSIGN`, `WAREHOUSE_MEMBERSHIPS:REVOKE`, and `WORKSPACE_OWNER_ROLE:REASSIGN`; `WAREHOUSES:ARCHIVE` governs both withdrawing and restoring a Warehouse, and `WORKSPACE_OWNER_ROLE:REASSIGN` is reserved to the protected Workspace Owner Role and cannot be included in a custom Workspace Role. Two of these Workspace Permissions carry a deliberate read alongside the change they authorize, because the operand of that change lives at the other level or outside Workspace membership: `WAREHOUSE_MEMBERSHIPS:ASSIGN` carries a narrow read of the assignable custom Roles of a Warehouse of the actor's own Workspace, limited to their identifiers and names, so the assigner can choose one without holding authority inside that Warehouse; and `WORKSPACE_MEMBERS:WATCH` covers reading the Users of the Workspace and the Warehouses they belong to, not only the Users who are already Workspace Members, so the people that Workspace membership and Warehouse membership assignment act on can be found. This release supersedes the Access non-goal that excluded membership in multiple Warehouses; how that supersession is recorded against the approved Access artifacts is tracked in §8.
 
-Four boundaries this feature depends on are stated here so they are not re-derived downstream. First, the line between the two authority levels is the subject of the operation: an operation whose subject is the Warehouse record itself or a membership edge into it is a Workspace capability, while an operation whose subject is a resource the Warehouse owns — its Roles and, later, its stock, Locations, and movement history — is a Warehouse capability. Second, a User belongs to a Workspace through a relation established at registration and not derived from their Warehouse memberships, so a Workspace Member who holds no Warehouse membership is still a User of that Workspace. Third, a newly created Warehouse holds only its protected Warehouse Manager Role, so placing anyone else into it requires that Warehouse's Warehouse Manager to create custom Roles there first. Fourth, no deployment carries Warehouse or membership data that must survive this change: the schema is rebuilt by rolling back every migration and running them again from the beginning, so this release preserves no pre-existing records.
+Five boundaries this feature depends on are stated here so they are not re-derived downstream. First, the line between the two authority levels is the subject of the operation: an operation whose subject is the Warehouse record itself or a membership edge into it is a Workspace capability, while an operation whose subject is a resource the Warehouse owns — its Roles and, later, its stock, Locations, and movement history — is a Warehouse capability. Second, a User belongs to a Workspace through a relation established when that User is created — at registration for a registrant, and from the Workspace that owns the Warehouse they are created in for a member created by an authorized Warehouse Member — and never re-derived afterwards from their Warehouse memberships, so a Workspace Member who holds no Warehouse membership is still a User of that Workspace. Third, a newly created Warehouse holds only its protected Warehouse Manager Role, so placing anyone else into it requires that Warehouse's Warehouse Manager to create custom Roles there first. Fourth, no deployment carries Warehouse or membership data that must survive this change: the schema is rebuilt by rolling back every migration and running them again from the beginning, so this release preserves no pre-existing records. Fifth, the §6 targets assume an order of magnitude of roughly 50 Warehouses per Workspace, 50 Warehouse memberships per User, and 500 Workspace Members, at which the Workspace and Warehouse lists this feature presents are returned whole rather than in pages; outgrowing that scale is the explicit trigger to revisit §6 and introduce paging, not a silent regression against these targets.
 
 ## 2. Goals
 
@@ -111,11 +111,17 @@ Four boundaries this feature depends on are stated here so they are not re-deriv
 **I want** to view my Workspace's Workspace Roles, Workspace Permission catalogue, Workspace Members, and Warehouses
 **So that** I can understand and administer the Workspace without crossing Workspace boundaries
 
-### US-12: Receive workspace permission updates
+### US-12: Apply workspace permission updates
 
-**As a** Workspace Owner
-**I want** system Workspace Permission updates applied predictably
-**So that** new Workspace capabilities can be administered without manually changing Workspace Permission definitions
+**As a** system maintainer releasing a new Workspace capability
+**I want** the Workspace Permission catalogue updated by the release itself, with no person acting
+**So that** every existing Workspace gains the new capability without anyone editing Workspace Permission definitions by hand
+
+### US-13: Transfer warehouse management
+
+**As a** Warehouse Manager
+**I want** to transfer Warehouse Manager to another member of that same Warehouse and take a Role there myself
+**So that** site administration changes hands without the Warehouse ever having zero or several Warehouse Managers
 
 ## 5. Acceptance criteria
 
@@ -135,7 +141,13 @@ Four boundaries this feature depends on are stated here so they are not re-deriv
 
 **Given** a Warehouse Member holds memberships in more than one Warehouse of their Workspace and the chosen Warehouse is not archived
 **When** the member selects one of those Warehouses as their Active Warehouse and then acts in it
-**Then** the selection persists until they change it and determines what the member is shown, while each action they take names the Warehouse it applies to and is authorized by the Role they hold in that named Warehouse
+**Then** the selection is retained for that member rather than for the device they used, so it is the same wherever they next sign in, persists until they change it, and determines what the member is shown, while each action they take names the Warehouse it applies to and is authorized by the Role they hold in that named Warehouse
+
+### AC-03b (US-02) — happy
+
+**Given** a Warehouse Member has never chosen an Active Warehouse
+**When** the member is shown their Warehouses
+**Then** the system selects the one Warehouse they hold a membership in when that is their only membership, and otherwise leaves them with no Active Warehouse until they choose one, without ever choosing between several memberships on their behalf
 
 ### AC-03a (US-02) — domain invariant
 
@@ -189,7 +201,7 @@ Four boundaries this feature depends on are stated here so they are not re-deriv
 
 **Given** a Workspace Member has warehouse-archive permission and the Warehouse belongs to their Workspace
 **When** the member archives the Warehouse and later restores it
-**Then** the archived Warehouse stops being selectable and stops accepting any change to itself or to what it owns, while its Roles, memberships, and records are retained and remain readable, and restoring it makes it selectable and changeable again with those Roles and memberships intact
+**Then** the archived Warehouse stops being selectable and stops accepting any operation whose subject is a resource it owns, while operations whose subject is the Warehouse record itself or a membership edge into it — renaming it, restoring it, assigning or withdrawing a membership in it, and the protected Warehouse Manager transfer — remain available to whoever holds the applicable authority, and its Roles, memberships, and records are retained and remain readable, so restoring it makes it selectable and operable again with those Roles and memberships intact
 
 ### AC-11a (US-05) — domain invariant
 
@@ -200,7 +212,7 @@ Four boundaries this feature depends on are stated here so they are not re-deriv
 ### AC-12 (US-05) — cross-context
 
 **Given** a Warehouse is archived and a member holds a Warehouse membership and Permission in it
-**When** the member attempts to change that Warehouse or anything it owns, other than the protected Warehouse Manager transfer
+**When** the member attempts to change a resource that Warehouse owns
 **Then** the system denies the change and explains that the Warehouse is archived, while the member's membership, Role, and any membership they hold in other Warehouses are unaffected, and the archived Warehouse keeps exactly one Warehouse Manager so it stays administrable when restored
 
 ### AC-12a (US-05) — happy
@@ -248,8 +260,14 @@ Four boundaries this feature depends on are stated here so they are not re-deriv
 ### AC-17 (US-06) — happy
 
 **Given** a custom Workspace Role is assigned to one or more Workspace Members and a valid replacement custom Workspace Role belongs to the same Workspace
-**When** a Workspace Member with workspace-role-deletion permission deletes the assigned Workspace Role and selects the replacement
+**When** a Workspace Member holding both workspace-role-deletion and workspace-role-assignment permission deletes the assigned Workspace Role and selects the replacement
 **Then** every affected Workspace Member moves to the replacement and the old Workspace Role is deleted as one outcome, so no Workspace Member is left without exactly one Workspace Role
+
+### AC-17d (US-06) — authorization
+
+**Given** a Workspace Member holds workspace-role-deletion permission but not workspace-role-assignment permission
+**When** the member attempts to delete a custom Workspace Role that is assigned to at least one Workspace Member
+**Then** the system denies the deletion and explains that moving the affected Workspace Members to a replacement is a Workspace Role assignment, which requires the workspace-role-assignment permission as well, while deleting an unassigned Workspace Role under AC-17a stays available to them
 
 ### AC-17a (US-06) — happy
 
@@ -323,6 +341,12 @@ Four boundaries this feature depends on are stated here so they are not re-deriv
 **When** the member gives the target User a membership in that Warehouse with that Role
 **Then** the target User holds exactly that Role in that Warehouse, retains every membership they already held, and the Warehouse becomes selectable for them
 
+### AC-23a (US-08) — cross-context
+
+**Given** a Workspace Member has membership-assign permission and the Warehouse belongs to their Workspace
+**When** the member reads that Warehouse's assignable custom Roles in order to choose one for the target User
+**Then** the system allows the read, limited to those Roles' identifiers and names, and grants the member no other capability inside that Warehouse and no visibility into the Roles, members, or resources of a Warehouse belonging to another Workspace
+
 ### AC-24 (US-08) — cross-context
 
 **Given** a Workspace Member has membership-assign permission
@@ -338,8 +362,8 @@ Four boundaries this feature depends on are stated here so they are not re-deriv
 ### AC-25a (US-08) — authorization
 
 **Given** a Workspace Member has membership-assign permission
-**When** the member attempts to grant a Warehouse membership to themself
-**Then** the system denies the action and explains that a member cannot place themself into a Warehouse, so Warehouse authority is always granted by someone else
+**When** the member attempts to grant themself a membership in a Warehouse that already exists
+**Then** the system denies the action and explains that a member cannot place themself into an existing Warehouse, so authority over a Warehouse that already has members is always granted by someone else; adding a Warehouse under AC-06 is the one exception, because a Warehouse at the moment of its creation has no other member who could grant it
 
 ### AC-25b (US-08a) — happy
 
@@ -389,11 +413,17 @@ Four boundaries this feature depends on are stated here so they are not re-deriv
 **When** the member sets or later changes the Workspace name using a valid name
 **Then** the system records the trimmed name, preserves its submitted Unicode without normalization, and presents it to Workspace Members in place of the unnamed-Workspace placeholder, while a valid name may duplicate another Workspace's name
 
+### AC-29a (US-10) — error
+
+**Given** a Workspace Member has workspace-rename permission
+**When** the submitted Workspace name is empty after trimming, exceeds 100 user-perceived characters, or contains a control or format character
+**Then** the system rejects the change, tells the member which Workspace-name rule was not met, and leaves the Workspace's existing name or unnamed state as it was
+
 ### AC-30 (US-10) — authorization
 
 **Given** a User lacks the Workspace Permission required for a Workspace capability in their own Workspace, including a Warehouse Member who is not a Workspace Member at all
 **When** that User attempts to use the capability
-**Then** the server explains that access is not permitted, while the web omits that capability from what it presents rather than showing it in an unusable state
+**Then** the server explains that access is not permitted, while the web omits the control for that capability and also omits any navigation entry or destination whose every capability is unavailable to that User, rather than presenting either in an unusable or empty state
 
 ### AC-31 (US-10) — cross-context
 
@@ -411,7 +441,7 @@ Four boundaries this feature depends on are stated here so they are not re-deriv
 
 **Given** a Workspace Member has `WORKSPACE_MEMBERS:WATCH` or `WAREHOUSES:WATCH`
 **When** the member reviews Workspace membership or the Workspace's Warehouses
-**Then** the member can view the Workspace Members and their Workspace Role assignments, or the Warehouses of that Workspace together with their archived state, according to the watch permission held
+**Then** the member can view the Workspace Members and their Workspace Role assignments together with the other Users of that Workspace and the Warehouses each of them belongs to, so the candidates that Workspace membership and Warehouse membership assignment act on can be found, or the Warehouses of that Workspace together with their archived state, according to the watch permission held
 
 ### AC-34 (US-11) — cross-context
 
@@ -425,18 +455,30 @@ Four boundaries this feature depends on are stated here so they are not re-deriv
 **When** that release's application migration runs, without any person acting
 **Then** a non-reserved Workspace Permission becomes available for custom Workspace Roles and is added to every existing Workspace Owner Role automatically, while a Workspace Permission explicitly classified as reserved remains exclusive to the protected Workspace Owner Role and no existing custom Workspace Role changes
 
+### AC-36 (US-13) — happy
+
+**Given** a Warehouse Manager, a recipient who already holds a membership in that same Warehouse, and a custom Role of that same Warehouse selected for the outgoing Manager
+**When** the Warehouse Manager transfers Warehouse Manager to the recipient
+**Then** the recipient's membership in that Warehouse carries the protected Warehouse Manager Role, the outgoing Manager's membership in that same Warehouse carries the selected custom Role as one outcome, the Warehouse ends with exactly one Warehouse Manager, and every membership either of them holds in another Warehouse is unaffected
+
+### AC-36a (US-13) — domain invariant
+
+**Given** a Warehouse Manager attempts to transfer Warehouse Manager
+**When** the chosen recipient holds no membership in that Warehouse, is the outgoing Manager themself, or no custom Role of that Warehouse is selected for the outgoing Manager
+**Then** the system denies the transfer, preserves exactly one current Warehouse Manager, and explains that Warehouse Manager moves only between members of that same Warehouse and that the outgoing Manager must end the transfer holding exactly one Role there
+
 ## 6. Non-functional requirements
 
 | Aspect                             | Target                                                                                                                                                                                                                     | Measurement                                            |
 | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| Workspace authorization evaluation | Added p95 ≤ 50 ms per protected Workspace operation                                                                                                                                                                        | Structured server timing logs                          |
-| Warehouse authorization evaluation | Added p95 ≤ 50 ms per protected Warehouse operation, unchanged by multi-Warehouse membership                                                                                                                               | Structured server timing logs                          |
+| Workspace authorization evaluation | Authorization stage p95 ≤ 50 ms per protected Workspace operation                                                                                                                                                          | Structured server timing logs                          |
+| Warehouse authorization evaluation | Authorization stage p95 ≤ 50 ms per protected Warehouse operation, and that stage does not grow with the number of Warehouses a member belongs to                                                                          | Structured server timing logs                          |
 | Workspace read latency             | p95 ≤ 250 ms, excluding client network time                                                                                                                                                                                | Structured server timing logs                          |
 | Workspace mutation latency         | p95 ≤ 500 ms, excluding client network time                                                                                                                                                                                | Structured server timing logs                          |
-| Warehouse selection latency        | p95 ≤ 250 ms from selecting a Warehouse to that Warehouse's authority being in effect                                                                                                                                      | Structured server timing logs                          |
+| Warehouse selection latency        | p95 ≤ 250 ms from selecting a Warehouse to that Warehouse's context being shown                                                                                                                                            | Structured server timing logs                          |
 | Protected-operation throughput     | ≥ 50 Workspace operations per second per running service instance for 10 minutes                                                                                                                                           | Automated load smoke test                              |
-| Lifecycle atomicity                | 100% of registration bootstrap, Warehouse creation, assigned Workspace Role deletion, and Workspace Owner transfer outcomes preserve all invariants                                                                        | Integration checks and production reconciliation       |
-| Revocation freshness               | Workspace Permission removal, Workspace Role reassignment, Warehouse membership withdrawal, and archiving affect the next authorization decision; 0 successful uses of removed authority                                   | Integration checks and security-log review             |
+| Lifecycle atomicity                | 100% of registration bootstrap, Warehouse creation, assigned Workspace Role deletion, Workspace Owner transfer, and Warehouse Manager transfer outcomes preserve all invariants                                            | Integration checks                                     |
+| Revocation freshness               | Workspace Permission removal, Workspace Role reassignment, Warehouse membership withdrawal, and archiving affect the next authorization decision; 0 successful uses of removed authority                                   | Integration checks and structured server log review    |
 | Authority staleness                | 0 authorization decisions made from Workspace Roles, Workspace Permissions, or Warehouse memberships held outside the request being authorized — each decision re-reads them from the store, never from a session or token | Automated architecture checks and integration checks   |
 | Workspace authorization coverage   | 100% of user-accessible Workspace capabilities have an explicit Workspace Permission rule and Workspace ownership check                                                                                                    | Automated architecture and integration coverage checks |
 
@@ -449,7 +491,7 @@ Four boundaries this feature depends on are stated here so they are not re-deriv
   - Cross-Workspace reach: deny any action when actor and target Workspace ownership differ, even when the actor holds the matching Workspace Permission, and do not disclose that the target exists.
   - Level confusion: a Workspace Permission never authorizes an operation inside a Warehouse and a Warehouse Permission never authorizes a Workspace capability.
   - Warehouse confusion: a request that does not unambiguously identify the Warehouse it applies to is refused rather than resolved to the actor's current selection or any other default, so authority is never borrowed from another membership. The selected Warehouse is presentation state and is never an input to an authorization decision.
-  - Self-escalation through membership assignment: membership assignment never targets the acting member, never grants the protected Warehouse Manager Role, and never creates a second Role for the same User in one Warehouse, so Warehouse authority is always granted by someone else.
+  - Self-escalation through membership assignment: membership assignment into an existing Warehouse never targets the acting member, never grants the protected Warehouse Manager Role, and never creates a second Role for the same User in one Warehouse, so authority over a Warehouse that already has members is always granted by someone else. Adding a Warehouse is the one place a member takes Warehouse authority directly, because a Warehouse at the moment of its creation has no other member who could grant it; that path is bounded by requiring `WAREHOUSES:CREATE` and by the new Warehouse holding nothing.
   - Ownerless Workspace: removing a Workspace membership never removes the current Workspace Owner, who must be transferred first.
   - Owner-transfer split-brain: transfer completes only when promotion and former-owner reassignment together preserve exactly one Workspace Owner.
   - Operating in an archived Warehouse: an archived Warehouse authorizes nothing, regardless of retained memberships and Permissions.
@@ -467,6 +509,5 @@ Four boundaries this feature depends on are stated here so they are not re-deriv
 
 ## 8. Open questions
 
-- [ ] The approved Access spec excludes membership in multiple Warehouses as a non-goal and states one Warehouse per member as an invariant, both of which this feature reverses. Is that recorded as a change request against Access, or amended in the Access artifacts in place? Default now: raise a change request against Access so the approved spec is superseded rather than silently edited. — owner: Tech Lead, due: before `design`
+- [ ] The approved Access spec excludes membership in multiple Warehouses as a non-goal and states one Warehouse per member as an invariant, both of which this feature reverses; the approved Users-management spec creates a User inside a Warehouse without establishing the Workspace relation that §1 now requires. Is that recorded as change requests against Access and Users-management, or amended in those artifacts in place? Default now: raise a change request against each so the approved specs are superseded rather than silently edited. — owner: Tech Lead, due: before `design`
 - [ ] What is a member shown as their selection when the Warehouse they had selected is archived or their membership in it is withdrawn? This is presentation only — the selection carries no authority — but the member must land somewhere coherent. Default now: fall back to another membership they hold, and otherwise show them no selected Warehouse with an explanation. — owner: PM, due: before `design-ui`
-- [ ] AC-12 and the Workspace glossary express the default that an archived Warehouse keeps exactly one Warehouse Manager and that the protected Warehouse Manager transfer stays available while archived, so a restored Warehouse is always administrable. Confirm that default, or replace it with a rule that blocks transfer until the Warehouse is restored. — owner: Tech Lead, due: before `data-model`
