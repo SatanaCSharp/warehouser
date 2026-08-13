@@ -13,6 +13,7 @@ import { UserEntity } from 'shared/domain/entities/user.entity';
 import { WorkspaceMembershipEntity } from 'shared/domain/entities/workspace-membership.entity';
 import { WorkspaceRoleEntity } from 'shared/domain/entities/workspace-role.entity';
 import { WorkspaceMembershipRepository } from 'shared/domain/repositories/workspace-membership.repository';
+import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository';
 import {
   buildWorkspaceRole,
   persistWorkspaceGraph,
@@ -65,9 +66,18 @@ describeIntegration('AddWorkspaceMemberCommand', () => {
   const workspaceMembershipRepository = new WorkspaceMembershipRepository(
     dataSource,
   );
+  // T57 — the command resolves the chosen Workspace Role before assigning it
+  // (AC-19, AC-34), so it now collaborates with the Role lifecycle repository
+  // too.
+  const workspaceRoleLifecycleRepository = new WorkspaceRoleLifecycleRepository(
+    dataSource,
+  );
 
   const createCommand = (): AddWorkspaceMemberCommandContract =>
-    new AddWorkspaceMemberCommand(workspaceMembershipRepository);
+    new AddWorkspaceMemberCommand(
+      workspaceMembershipRepository,
+      workspaceRoleLifecycleRepository,
+    );
 
   beforeAll(async () => {
     await dataSource.initialize();

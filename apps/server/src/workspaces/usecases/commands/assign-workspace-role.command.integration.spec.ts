@@ -12,6 +12,7 @@ import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-memb
 import { WorkspaceMembershipEntity } from 'shared/domain/entities/workspace-membership.entity';
 import { WorkspaceRoleEntity } from 'shared/domain/entities/workspace-role.entity';
 import { WorkspaceMembershipRepository } from 'shared/domain/repositories/workspace-membership.repository';
+import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository';
 import {
   buildWorkspaceRole,
   persistWorkspaceGraph,
@@ -53,8 +54,18 @@ describeIntegration('AssignWorkspaceRoleCommand', () => {
     dataSource,
   );
 
+  // T57 — the command resolves the destination Workspace Role before
+  // assigning it (AC-19b, AC-34), so it now collaborates with the Role
+  // lifecycle repository too.
+  const workspaceRoleLifecycleRepository = new WorkspaceRoleLifecycleRepository(
+    dataSource,
+  );
+
   const createCommand = (): AssignWorkspaceRoleCommandContract =>
-    new AssignWorkspaceRoleCommand(workspaceMembershipRepository);
+    new AssignWorkspaceRoleCommand(
+      workspaceMembershipRepository,
+      workspaceRoleLifecycleRepository,
+    );
 
   beforeAll(async () => {
     await dataSource.initialize();
@@ -195,6 +206,51 @@ describeIntegration('AssignWorkspaceRoleCommand', () => {
       workspaceRoleKind: 'workspace_owner',
     });
   });
+
+  // The destination Workspace Role is a target too (T57). Before it was
+  // resolved, the composite foreign key on
+  // `workspace_roles(id, workspace_id, kind)` was the only thing refusing a
+  // nonexistent or cross-Workspace Role, and the resulting `QueryFailedError`
+  // is not a documented outcome — contracts/openapi.yaml documents 404
+  // `workspace.target_unavailable`, which both branches must reach
+  // identically so the other Workspace's Role is never disclosed.
+  it.each([
+    ['nonexistent', null],
+    ['of another Workspace', 'other'],
+  ])(
+    'AC-34: denies a destination Workspace Role %s without disclosing whether it exists',
+    async (_case, origin) => {
+      const graph = await persistWorkspaceGraph();
+      const previousRoleId = await makeWorkspaceMember(
+        graph.workspaceId,
+        graph.memberUserId,
+      );
+
+      let workspaceRoleId = randomUUID();
+      if (origin === 'other') {
+        const otherGraph = await persistWorkspaceGraph();
+        const foreignRole = buildWorkspaceRole({
+          workspaceId: otherGraph.workspaceId,
+        });
+        await dataSource.manager
+          .getRepository(WorkspaceRoleEntity)
+          .insert(foreignRole);
+        workspaceRoleId = foreignRole.id as string;
+      }
+
+      await expect(
+        transactions.executeInTransaction({}, () =>
+          createCommand().execute(principal(graph.workspaceId), {
+            targetUserId: graph.memberUserId,
+            workspaceRoleId,
+          }),
+        ),
+      ).rejects.toMatchObject({ code: ErrorCode.WORKSPACE_TARGET_UNAVAILABLE });
+
+      const untouched = await findMembership(graph.memberUserId);
+      expect(untouched?.workspaceRoleId).toBe(previousRoleId);
+    },
+  );
 
   it('AC-34: denies reassigning a target of another Workspace without disclosing it exists', async () => {
     const actingGraph = await persistWorkspaceGraph();

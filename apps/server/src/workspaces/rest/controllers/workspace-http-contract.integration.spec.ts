@@ -888,13 +888,21 @@ describeIntegration('workspace HTTP contract', () => {
       });
     });
 
-    it('reports a cross-Workspace candidate exactly as a missing one (AC-34)', async () => {
+    // Both operands of an addition are targets: the candidate and the chosen
+    // Workspace Role. Each has to fail identically whether it belongs to
+    // another Workspace or does not exist at all, so neither existence is
+    // disclosed. The Workspace Role branch used to reach the composite foreign
+    // key on `workspace_roles(id, workspace_id, kind)` and surface as a
+    // generic 500 instead of the documented 404 (T57).
+    it('reports a cross-Workspace candidate or Workspace Role exactly as a missing one (AC-34)', async () => {
       const fixture = await seedWorkspace();
       const other = await seedWorkspace();
       const otherUserId = await seedUser(other.workspaceId);
       const actor = await seedActor(fixture, [
         WorkspacePermissionId.WORKSPACE_MEMBERS_ADD,
       ]);
+      const candidateId = await seedUser(fixture.workspaceId);
+      await seedWarehouseMembership(candidateId, fixture);
 
       const crossWorkspace = await request(
         'POST',
@@ -908,12 +916,33 @@ describeIntegration('workspace HTTP contract', () => {
         actor.cookie,
         { userId: randomUUID(), workspaceRoleId: fixture.customRoleId },
       );
+      // An otherwise addable candidate, so only the Workspace Role is
+      // unavailable.
+      const crossWorkspaceRole = await request(
+        'POST',
+        '/api/v1/workspace/members',
+        actor.cookie,
+        { userId: candidateId, workspaceRoleId: other.customRoleId },
+      );
+      const missingRole = await request(
+        'POST',
+        '/api/v1/workspace/members',
+        actor.cookie,
+        { userId: candidateId, workspaceRoleId: randomUUID() },
+      );
 
       expect(crossWorkspace.status).toBe(404);
       expect(crossWorkspace.body).toMatchObject({
         code: 'workspace.target_unavailable',
       });
       expect(crossWorkspace).toEqual(missing);
+      expect(crossWorkspaceRole).toEqual(missing);
+      expect(missingRole).toEqual(missing);
+      await expect(
+        dataSource.manager
+          .getRepository(WorkspaceMembershipEntity)
+          .findOneBy({ userId: candidateId }),
+      ).resolves.toBeNull();
     });
 
     it('removes a Workspace membership with 204 (AC-19a)', async () => {
