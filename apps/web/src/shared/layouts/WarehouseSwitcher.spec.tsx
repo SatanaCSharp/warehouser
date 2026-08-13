@@ -188,6 +188,15 @@ const openSwitcher = async (user: UserEvent): Promise<HTMLElement> => {
 const warehousePath = (warehouseId: string): string =>
   `/warehouses/${warehouseId}`;
 
+/**
+ * A row's check indicator — the `ListBox.ItemIndicator` slot, addressed by
+ * HeroUI's own `data-slot`. Every row renders one; only the selected row's
+ * carries `data-visible`, which is what makes it a marker rather than
+ * decoration (CR-AC-01).
+ */
+const indicatorOf = (row: HTMLElement): HTMLElement | null =>
+  row.querySelector<HTMLElement>('[data-slot="list-box-item-indicator"]');
+
 describe('WarehouseSwitcher — grouped structure (CR-AC-01)', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -533,12 +542,25 @@ describe('WarehouseSwitcher — current-row marking (CR-AC-01)', () => {
       name: /central dc/iu,
     });
 
+    const otherRow = within(listbox).getByRole('option', {
+      name: /north hub/iu,
+    });
+
     expect(currentRow).toHaveAttribute('aria-selected', 'true');
     expect(currentRow).toHaveTextContent('Current');
-    expect(currentRow.querySelector('svg')).not.toBeNull();
-    expect(
-      within(listbox).getByRole('option', { name: /north hub/iu }),
-    ).toHaveAttribute('aria-selected', 'false');
+    expect(otherRow).toHaveAttribute('aria-selected', 'false');
+
+    // CR-AC-01 — "marked as current by something other than colour alone". The
+    // check indicator is that non-colour marker, so the assertion has to
+    // DISCRIMINATE: every row renders a level icon, so merely finding an `svg`
+    // (or the indicator element) inside the current row is true of every row
+    // and proves nothing. What separates them is the indicator's own shown
+    // state — `data-visible`, which HeroUI sets from `isSelected` and which
+    // drives the drawn checkmark rather than a colour.
+    expect(indicatorOf(currentRow)).not.toBeNull();
+    expect(indicatorOf(currentRow)).toHaveAttribute('data-visible', 'true');
+    expect(indicatorOf(otherRow)).not.toBeNull();
+    expect(indicatorOf(otherRow)).not.toHaveAttribute('data-visible');
   });
 
   it('marks the Workspace row current inside the Workspace view', async () => {
