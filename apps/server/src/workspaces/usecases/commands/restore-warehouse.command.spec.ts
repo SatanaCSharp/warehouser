@@ -1,5 +1,5 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
-import { SystemError } from '@warehouser/shared-types/errors';
+import { ApplicationError, SystemError } from '@warehouser/shared-types/errors';
 import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
 import {
   TRANSACTIONAL_KEY,
@@ -64,6 +64,45 @@ describe('RestoreWarehouseCommand', () => {
     await expect(rejection).rejects.toMatchObject({
       code: ErrorCode.WORKSPACE_ARCHIVAL_UNAVAILABLE,
       cause: writeFailure,
+    });
+  });
+
+  // RED for T52/AC-13 (review S1-03) — the failure boundary covered only
+  // `setArchivedAt`, so an infrastructure failure resolving the Warehouse
+  // propagated raw to a generic 500 where openapi.yaml documents 503
+  // `workspace.archival_unavailable`.
+  it('AC-13: translates an infrastructure failure resolving the Warehouse into the documented 503 SystemError, preserving the cause', async () => {
+    const warehouseLifecycleRepository = warehouseLifecycleRepositoryDouble();
+    const failure = new Error('connection terminated');
+    warehouseLifecycleRepository.lockWarehouse.mockRejectedValueOnce(failure);
+    const command = new RestoreWarehouseCommand(warehouseLifecycleRepository);
+
+    const rejection = command.execute(currentUser(), { warehouseId });
+
+    await expect(rejection).rejects.toBeInstanceOf(SystemError);
+    await expect(rejection).rejects.toMatchObject({
+      code: ErrorCode.WORKSPACE_ARCHIVAL_UNAVAILABLE,
+      cause: failure,
+    });
+  });
+
+  // The widened boundary must not swallow what it encloses: a business
+  // rejection keeps its own 4xx code (server-error-handling.md §2, §6).
+  it('AC-13: does not mask a cross-Workspace target rejection as an unavailable outcome', async () => {
+    const warehouseLifecycleRepository = warehouseLifecycleRepositoryDouble();
+    warehouseLifecycleRepository.lockWarehouse.mockResolvedValueOnce({
+      id: warehouseId,
+      workspaceId: '00000000-0000-4000-8000-0000000000ff',
+      name: 'Another Workspace Warehouse',
+      archivedAt: new Date('2026-08-01T09:00:00.000Z'),
+    });
+    const command = new RestoreWarehouseCommand(warehouseLifecycleRepository);
+
+    const rejection = command.execute(currentUser(), { warehouseId });
+
+    await expect(rejection).rejects.toBeInstanceOf(ApplicationError);
+    await expect(rejection).rejects.toMatchObject({
+      code: ErrorCode.WORKSPACE_TARGET_UNAVAILABLE,
     });
   });
 

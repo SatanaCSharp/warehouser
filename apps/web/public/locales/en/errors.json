@@ -10,5 +10,9 @@
     "registrationUnavailable": "Sign-up did not complete. Try again.",
     "sessionUnavailable": "Sign-in could not establish a session. Try again.",
     "signOutUnavailable": "Sign-out did not complete. Try again."
+  },
+  "workspace": {
+    "archivalUnavailable": "The change did not complete. The warehouse, its roles and its members are unchanged. Try again.",
+    "warehouseCreationUnavailable": "The warehouse was not created. Nothing was added to your workspace. Try again."
   }
 }

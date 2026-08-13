@@ -3,6 +3,7 @@ import { assert, assertDefined } from '@warehouser/utils/asserts';
 import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
+import { withUnavailableOutcome } from 'workspaces/domain/errors/unavailable-outcome';
 import {
   workspaceArchivalUnavailableError,
   workspaceTargetUnavailableError,
@@ -25,7 +26,22 @@ export class RestoreWarehouseCommand {
   ) {}
 
   @Transactional()
-  async execute(
+  execute(
+    currentUser: WorkspaceCurrentUser,
+    input: RestoreWarehouseInput,
+  ): Promise<RestoreWarehouseResult> {
+    // AC-13 — the same route and code cover archiving and restoring
+    // (sad.md §6.5), and "the change could not complete" is the whole
+    // restoration attempt, not only its final write.
+    // `withUnavailableOutcome` re-raises the business rejections asserted
+    // below untouched (server-error-handling.md §2).
+    return withUnavailableOutcome(
+      () => this.restore(currentUser, input),
+      workspaceArchivalUnavailableError,
+    );
+  }
+
+  private async restore(
     currentUser: WorkspaceCurrentUser,
     input: RestoreWarehouseInput,
   ): Promise<RestoreWarehouseResult> {
@@ -41,18 +57,10 @@ export class RestoreWarehouseCommand {
       workspaceTargetUnavailableError(),
     );
 
-    // AC-13 — a failure clearing the archived state is a known
-    // infrastructure/technical condition (server-error-handling.md §2), not
-    // a business rejection, so it translates into the documented 503,
-    // preserving the originating failure as `cause`.
-    try {
-      await this.warehouseLifecycleRepository.setArchivedAt(
-        input.warehouseId,
-        null,
-      );
-    } catch (cause) {
-      throw workspaceArchivalUnavailableError(cause);
-    }
+    await this.warehouseLifecycleRepository.setArchivedAt(
+      input.warehouseId,
+      null,
+    );
 
     return { id: input.warehouseId, name: warehouse.name, archivedAt: null };
   }

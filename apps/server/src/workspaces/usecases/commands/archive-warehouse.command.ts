@@ -3,6 +3,7 @@ import { assert, assertDefined } from '@warehouser/utils/asserts';
 import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
+import { withUnavailableOutcome } from 'workspaces/domain/errors/unavailable-outcome';
 import {
   workspaceArchivalUnavailableError,
   workspaceLastUnarchivedWarehouseError,
@@ -26,7 +27,24 @@ export class ArchiveWarehouseCommand {
   ) {}
 
   @Transactional()
-  async execute(
+  execute(
+    currentUser: WorkspaceCurrentUser,
+    input: ArchiveWarehouseInput,
+  ): Promise<ArchiveWarehouseResult> {
+    // AC-13 — openapi.yaml documents 503 `workspace.archival_unavailable` for
+    // "the change could not complete", which is the whole archival attempt:
+    // the AC-11a lock-and-count read and the Warehouse lock can fail for the
+    // same infrastructure reasons as the write itself.
+    // `withUnavailableOutcome` re-raises the business rejections asserted
+    // below untouched, so widening the boundary does not turn a refusal into
+    // "try again later" (server-error-handling.md §2).
+    return withUnavailableOutcome(
+      () => this.archive(currentUser, input),
+      workspaceArchivalUnavailableError,
+    );
+  }
+
+  private async archive(
     currentUser: WorkspaceCurrentUser,
     input: ArchiveWarehouseInput,
   ): Promise<ArchiveWarehouseResult> {
@@ -56,19 +74,10 @@ export class ArchiveWarehouseCommand {
     );
 
     const archivedAt = new Date();
-
-    // AC-13 — a failure writing the archived state is a known
-    // infrastructure/technical condition (server-error-handling.md §2), not
-    // a business rejection, so it translates into the documented 503,
-    // preserving the originating failure as `cause`.
-    try {
-      await this.warehouseLifecycleRepository.setArchivedAt(
-        input.warehouseId,
-        archivedAt,
-      );
-    } catch (cause) {
-      throw workspaceArchivalUnavailableError(cause);
-    }
+    await this.warehouseLifecycleRepository.setArchivedAt(
+      input.warehouseId,
+      archivedAt,
+    );
 
     return { id: input.warehouseId, name: warehouse.name, archivedAt };
   }

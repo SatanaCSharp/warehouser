@@ -1,5 +1,5 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
-import { SystemError } from '@warehouser/shared-types/errors';
+import { ApplicationError, SystemError } from '@warehouser/shared-types/errors';
 import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
 import {
   TRANSACTIONAL_KEY,
@@ -67,6 +67,75 @@ describe('ArchiveWarehouseCommand', () => {
       cause: writeFailure,
     });
   });
+
+  // RED for T52/AC-13 (review S1-03) — the failure boundary covered only
+  // `setArchivedAt`, so an infrastructure failure in the AC-11a lock-and-count
+  // read propagated raw to a generic 500 where openapi.yaml documents 503
+  // `workspace.archival_unavailable`. "The change could not complete" covers
+  // the whole archival attempt, not just its final write.
+  it.each([
+    ['lockWorkspaceAndCountNonArchivedWarehouses'],
+    ['lockWarehouse'],
+    ['setArchivedAt'],
+  ])(
+    'AC-13: translates an infrastructure failure in %s into the documented 503 SystemError, preserving the cause',
+    async (failing) => {
+      const warehouseLifecycleRepository = warehouseLifecycleRepositoryDouble();
+      const failure = new Error('connection terminated');
+      warehouseLifecycleRepository[
+        failing as keyof typeof warehouseLifecycleRepository
+      ].mockRejectedValueOnce(failure);
+      const command = new ArchiveWarehouseCommand(warehouseLifecycleRepository);
+
+      const rejection = command.execute(currentUser(), { warehouseId });
+
+      await expect(rejection).rejects.toBeInstanceOf(SystemError);
+      await expect(rejection).rejects.toMatchObject({
+        code: ErrorCode.WORKSPACE_ARCHIVAL_UNAVAILABLE,
+        cause: failure,
+      });
+    },
+  );
+
+  // The widened boundary must not swallow what it encloses: a business
+  // rejection keeps its own 4xx code and a defect stays a defect
+  // (server-error-handling.md §2, §6). Masking either as 503 would tell the
+  // member "try again later" about a refusal that will never succeed.
+  it.each([
+    [
+      'a target outside the actor Workspace',
+      (double: ReturnType<typeof warehouseLifecycleRepositoryDouble>): void => {
+        double.lockWarehouse.mockResolvedValueOnce({
+          id: warehouseId,
+          workspaceId: '00000000-0000-4000-8000-0000000000ff',
+          name: 'Another Workspace Warehouse',
+          archivedAt: null,
+        });
+      },
+      ErrorCode.WORKSPACE_TARGET_UNAVAILABLE,
+    ],
+    [
+      'the last non-archived Warehouse',
+      (double: ReturnType<typeof warehouseLifecycleRepositoryDouble>): void => {
+        double.lockWorkspaceAndCountNonArchivedWarehouses.mockResolvedValueOnce(
+          1,
+        );
+      },
+      ErrorCode.WORKSPACE_LAST_UNARCHIVED_WAREHOUSE,
+    ],
+  ])(
+    'AC-13: does not mask the business rejection for %s as an unavailable outcome',
+    async (_case, arrange, code) => {
+      const warehouseLifecycleRepository = warehouseLifecycleRepositoryDouble();
+      arrange(warehouseLifecycleRepository);
+      const command = new ArchiveWarehouseCommand(warehouseLifecycleRepository);
+
+      const rejection = command.execute(currentUser(), { warehouseId });
+
+      await expect(rejection).rejects.toBeInstanceOf(ApplicationError);
+      await expect(rejection).rejects.toMatchObject({ code });
+    },
+  );
 
   // RED for T44/AC-11 — openapi.yaml documents `PUT .../archival` as `200`
   // with the full `Warehouse` body, and the already-shipped web client

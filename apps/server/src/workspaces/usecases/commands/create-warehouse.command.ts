@@ -10,6 +10,7 @@ import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user'
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
 import { AccessName } from 'shared/domain/value-objects/access-name';
+import { withUnavailableOutcome } from 'workspaces/domain/errors/unavailable-outcome';
 import { workspaceWarehouseCreationUnavailableError } from 'workspaces/domain/errors/workspace.errors';
 
 // `AccessName` enforces the Warehouse name rules (trim, grapheme count,
@@ -108,7 +109,10 @@ export class CreateWarehouseCommand {
     // known infrastructure/technical reason (server-error-handling.md §2)
     // must translate into the documented 503, preserving the originating
     // failure as `cause`, rather than propagate an opaque generic 500.
-    try {
+    // `withUnavailableOutcome` keeps that boundary from swallowing what the
+    // delegated use case raises on its own account — a business rejection
+    // keeps its 4xx code and a defect stays a defect.
+    await withUnavailableOutcome(async () => {
       await this.warehouseLifecycleRepository.createWarehouse({
         id,
         workspaceId: currentUser.workspaceId,
@@ -119,9 +123,7 @@ export class CreateWarehouseCommand {
         warehouseId: id,
         userId: currentUser.userId,
       });
-    } catch (cause) {
-      throw workspaceWarehouseCreationUnavailableError(cause);
-    }
+    }, workspaceWarehouseCreationUnavailableError);
 
     return { id, name, archivedAt: null };
   }
