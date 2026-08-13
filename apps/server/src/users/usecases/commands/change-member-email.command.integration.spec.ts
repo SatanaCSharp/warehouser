@@ -446,6 +446,63 @@ describeIntegration('ChangeMemberEmailCommand', () => {
     );
   });
 
+  // RED for T55/AC-05 (review S1-06) — the actor's Permission ceiling must be
+  // the Role they hold in the Warehouse this request names. Multi-Warehouse
+  // membership is real (AC-23), so an unqualified membership lookup resolves
+  // through the `(user_id, warehouse_id)` key and returns whichever row sorts
+  // first. Warehouse Z's id is seeded below Warehouse A's so that arbitrary
+  // pick lands on the wrong Warehouse deterministically; once the ceiling is
+  // scoped to the named Warehouse, no id ordering can influence it.
+  it('AC-05: computes the actor Permission ceiling from the named Warehouse, never from a Role held in another Warehouse', async () => {
+    await seedPermissions();
+    await seedWorkspace();
+    await seedWarehouses();
+    await seedRoles();
+    await seedActor();
+    await seedIdentity(targetUserId, 'overpowered@example.test');
+    await seedMembership(targetUserId, warehouseAId, overPoweredRoleId);
+
+    const warehouseZId = '00000000-0000-4000-8000-0000000000f1';
+    const elevatedRoleId = '00000000-0000-4000-8000-0000000002f1';
+
+    await dataSource.manager.getRepository(WarehouseEntity).insert({
+      id: warehouseZId,
+      workspaceId,
+      name: 'Warehouse Z',
+      createdAt: now,
+      updatedAt: now,
+    });
+    await dataSource.manager.getRepository(RoleEntity).insert({
+      id: elevatedRoleId,
+      warehouseId: warehouseZId,
+      name: 'Elevated role in another Warehouse',
+      kind: 'custom',
+      createdAt: now,
+      updatedAt: now,
+    });
+    // In Warehouse Z the actor holds ACCESS:SUPERPOWER — the very Permission
+    // that makes the target off limits in Warehouse A.
+    await dataSource.manager.getRepository(RolePermissionEntity).insert({
+      roleId: elevatedRoleId,
+      permissionId: superpowerPermissionId,
+      roleKind: 'custom',
+      permissionKind: 'assignable',
+    });
+    await seedMembership(actorUserId, warehouseZId, elevatedRoleId);
+
+    await expect(
+      transactions.executeInTransaction({}, () =>
+        createCommand().execute(currentActor(), {
+          targetUserId,
+          email: 'new-email@example.test',
+        }),
+      ),
+    ).rejects.toMatchObject({ code: ErrorCode.USERS_PERMISSION_EXCEEDED });
+    await expect(findAccountEmail(targetUserId)).resolves.toBe(
+      'overpowered@example.test',
+    );
+  });
+
   it('rolls back the whole attempt when persistence fails partway through (atomicity)', async () => {
     await seedPermissions();
     await seedWorkspace();

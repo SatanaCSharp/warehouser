@@ -523,6 +523,72 @@ describeIntegration('ChangeMemberPasswordCommand', () => {
     expect(await countActiveSessions(targetUserId)).toBe(1);
   });
 
+  // RED for T55/AC-05 (review S1-06) — the actor's Permission ceiling must be
+  // the Role they hold in the Warehouse this request names. Multi-Warehouse
+  // membership is real (AC-23), so an unqualified membership lookup resolves
+  // through the `(user_id, warehouse_id)` key and returns whichever row sorts
+  // first. Warehouse Z's id is seeded below Warehouse A's so that arbitrary
+  // pick lands on the wrong Warehouse deterministically; once the ceiling is
+  // scoped to the named Warehouse, no id ordering can influence it.
+  it('AC-05: computes the actor Permission ceiling from the named Warehouse, never from a Role held in another Warehouse', async () => {
+    const warehouseZId = uuid('0000000000f1');
+    const elevatedRoleId = uuid('0000000002f1');
+
+    await seedPermissions([
+      'USERS:PASSWORD_CHANGE',
+      'USERS:EMAIL_UPDATE',
+      'USERS:DELETE',
+    ]);
+    await seedWorkspace();
+    await seedWarehouses();
+    await dataSource.manager.getRepository(WarehouseEntity).insert({
+      id: warehouseZId,
+      workspaceId,
+      name: 'Warehouse Z',
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // In Warehouse A the actor holds only USERS:PASSWORD_CHANGE.
+    await seedRole(actorRoleId, warehouseAId, 'custom', [
+      'USERS:PASSWORD_CHANGE',
+    ]);
+    // In Warehouse Z they also hold USERS:DELETE — the Permission that makes
+    // the target off limits in Warehouse A.
+    await seedRole(elevatedRoleId, warehouseZId, 'custom', [
+      'USERS:PASSWORD_CHANGE',
+      'USERS:DELETE',
+    ]);
+    await seedRole(permissionExceedingRoleId, warehouseAId, 'custom', [
+      'USERS:DELETE',
+    ]);
+
+    await seedIdentity(actorUserId);
+    await seedIdentity(targetUserId);
+    await seedMembership(actorUserId, warehouseZId, elevatedRoleId);
+    await seedMembership(actorUserId, warehouseAId, actorRoleId);
+    await seedMembership(targetUserId, warehouseAId, permissionExceedingRoleId);
+    await seedSessions(targetUserId, 1);
+
+    const currentUser = currentUserFor(
+      actorUserId,
+      warehouseAId,
+      actorRoleId,
+      'custom',
+    );
+
+    await expect(
+      transactions.executeInTransaction({}, () =>
+        createCommand().execute(currentUser, {
+          targetUserId,
+          newPassword: 'a-valid-password',
+        }),
+      ),
+    ).rejects.toMatchObject({ code: ErrorCode.USERS_PERMISSION_EXCEEDED });
+
+    expect(await countActiveSessions(targetUserId)).toBe(1);
+  });
+
   it('rolls back the credential update when Session revocation fails', async () => {
     await seedPermissions(['USERS:PASSWORD_CHANGE']);
     await seedWorkspace();

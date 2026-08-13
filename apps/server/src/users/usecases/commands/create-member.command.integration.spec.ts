@@ -549,6 +549,76 @@ describeIntegration('CreateMemberCommand', () => {
     await expect(persistedCounts()).resolves.toEqual(before);
   });
 
+  // RED for T55/AC-05 (review S1-06) — the actor's Permission ceiling must be
+  // the Role they hold *in the Warehouse this request names*, never a Role
+  // they happen to hold elsewhere. Multi-Warehouse membership is real
+  // (AC-23), so `resolveCurrentAccess(userId)` without a `warehouseId` fell
+  // back to `findOneBy({userId})` — an arbitrary membership. When that
+  // arbitrary row is the actor's *other* Warehouse, its Permissions become
+  // the ceiling and the actor grants in Warehouse A a Permission they only
+  // hold in Warehouse B.
+  //
+  // `warehouse_memberships` is keyed `(user_id, warehouse_id)`, so an
+  // unqualified `findOneBy({userId})` resolves through that index and returns
+  // the actor's *lowest* warehouse id. Warehouse Z is seeded below Warehouse
+  // A's id precisely so the arbitrary pick lands on the wrong Warehouse
+  // deterministically. Once the ceiling is resolved for the named Warehouse,
+  // no id ordering can influence it.
+  it('AC-05: computes the actor Permission ceiling from the named Warehouse, never from a Role held in another Warehouse', async () => {
+    await seedBaseline();
+    const manager = dataSource.manager;
+
+    const warehouseZId = uuid('0ffffffffff1');
+    const elevatedRoleId = uuid('2ffffffffff1');
+
+    await manager.getRepository(WarehouseEntity).insert({
+      id: warehouseZId,
+      workspaceId,
+      name: 'Warehouse Z',
+      createdAt: now,
+      updatedAt: now,
+    });
+    await manager.getRepository(RoleEntity).insert({
+      id: elevatedRoleId,
+      warehouseId: warehouseZId,
+      name: 'Elevated role in another Warehouse',
+      kind: 'custom',
+      createdAt: now,
+      updatedAt: now,
+    });
+    // The actor's Warehouse Z Role grants USERS:DELETE — a Permission they do
+    // NOT hold in Warehouse A, where this request acts.
+    await manager.getRepository(RolePermissionEntity).insert({
+      roleId: elevatedRoleId,
+      permissionId: USERS_DELETE,
+      roleKind: 'custom',
+      permissionKind: 'assignable',
+    });
+    await manager.getRepository(WarehouseMembershipEntity).insert({
+      userId: actorId,
+      warehouseId: warehouseZId,
+      workspaceId,
+      roleId: elevatedRoleId,
+      roleKind: 'custom',
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const before = await persistedCounts();
+
+    await expect(
+      transactions.executeInTransaction({}, () =>
+        createCommand().execute(actor(), {
+          email: validEmail,
+          password: validPassword,
+          roleId: overReachingCustomRoleId,
+        }),
+      ),
+    ).rejects.toMatchObject({ code: ErrorCode.USERS_PERMISSION_EXCEEDED });
+
+    await expect(persistedCounts()).resolves.toEqual(before);
+  });
+
   it('AC-12/DoD: atomic rollback — an injected failure on the Warehouse Membership insert leaves no identity behind', async () => {
     await seedBaseline();
     const before = await persistedCounts();

@@ -80,17 +80,24 @@ export class AccessCurrentUserRepository {
     return permissionId ? { ...membership, permissionId, granted: true } : null;
   }
 
-  /** Resolves the actor's own membership projection. Callers that already operate inside one named
-   * Warehouse (the T26 `current` read) pass `warehouseId` so the membership and its archived state
-   * are scoped to that Warehouse rather than resolved ambiguously (AC-03a, AC-12a). */
+  /** Resolves the actor's own membership projection inside one named Warehouse, so the membership
+   * and its archived state are scoped to that Warehouse (AC-03a, AC-12a).
+   *
+   * `warehouseId` is required, not optional. A User legitimately holds a membership in several
+   * Warehouses (AC-23), each with its own Role and therefore its own Permissions, so there is no
+   * such thing as "the" membership of a User: an unqualified lookup resolves through the
+   * `(user_id, warehouse_id)` key and returns whichever row sorts first. Every caller uses this
+   * projection as the actor's Permission ceiling, so an arbitrary pick lets a Role held in one
+   * Warehouse authorize an action in another (AC-05). Making the argument mandatory is what stops
+   * a future caller from reintroducing that. */
   async resolveCurrentAccess(
     userId: string,
-    warehouseId?: string,
+    warehouseId: string,
   ): Promise<CurrentAccessPersistenceResult | null> {
     const manager = getEntityManager(this.dataSource);
     const membership = await manager
       .getRepository(WarehouseMembershipEntity)
-      .findOneBy(warehouseId ? { userId, warehouseId } : { userId });
+      .findOneBy({ userId, warehouseId });
 
     if (!membership) {
       return null;
