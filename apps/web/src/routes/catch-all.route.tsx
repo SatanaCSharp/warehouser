@@ -1,5 +1,6 @@
 import { createRoute, redirect } from '@tanstack/react-router';
 
+import { rootRoute } from 'routes/__root.route';
 import { warehouseRoute } from 'routes/warehouse.route';
 import { ROUTES, ROUTE_SEGMENTS } from 'shared/constants/routes';
 
@@ -25,6 +26,25 @@ export const warehouseCatchAllRoute = createRoute({
       return;
     }
     // TanStack Router handles its redirect descriptor as a thrown control signal.
+    // eslint-disable-next-line @typescript-eslint/only-throw-error
+    throw redirect({ to: ROUTES.HOME });
+  },
+});
+
+// T7 / CH-10 / CR-AC-16 — the root-level splat. An address matching no route,
+// including a bookmarked `/access` that stops resolving under CH-03, is sent to
+// the root, where CR-AC-08 resolves the actor's context. It matches no address
+// to any particular Warehouse and performs no Warehouse resolution of its own.
+//
+// It carries no authentication branch: an unauthenticated actor is sent to
+// sign-in by the existing `requireAuth` on `/`, unchanged. And it can never
+// receive an address naming a Warehouse the actor may not enter — those match
+// the Warehouse branch and are refused in place by CR-AC-07, which is why no
+// path exists from a refusal to the landing resolver.
+export const rootCatchAllRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: ROUTE_SEGMENTS.SPLAT,
+  beforeLoad: () => {
     // eslint-disable-next-line @typescript-eslint/only-throw-error
     throw redirect({ to: ROUTES.HOME });
   },

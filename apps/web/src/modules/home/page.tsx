@@ -2,10 +2,11 @@ import { useTranslation } from 'react-i18next';
 
 import type { ReactElement } from 'react';
 
-// T4 / CR-AC-18 — `/` stops being a dashboard. Until T7 adds the landing
-// rules that redirect an actor with a resolvable context away from here,
-// every actor sees this block, which is the expected intermediate state on
-// this branch (T4's task record "Notes").
+// T4, T7 / CR-AC-18 — `/` stops being a dashboard. It is now the landing
+// resolver (`guards/landing.guard.ts`), so this block renders only for an
+// actor CR-AC-08 reaches rule (3) for: no Workspace administration authority
+// and a null effective Warehouse. Every actor with a resolvable context is
+// redirected away before it renders.
 export const HomePage = (): ReactElement => {
   const { t } = useTranslation('common');
 

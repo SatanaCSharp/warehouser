@@ -548,17 +548,20 @@ describe('router', () => {
   });
 
   it('updates RTK auth state and enters the protected route after sign-in without a success toast', async () => {
+    // T7 — the actor holds no administration authority and the derivation
+    // names no Warehouse, so landing reaches CR-AC-08 rule (3).
     vi.stubGlobal(
       'fetch',
-      vi
-        .fn()
-        .mockResolvedValueOnce(new Response(null, { status: 204 }))
-        .mockResolvedValueOnce(
-          Response.json({
-            user: { id: '00000000-0000-4000-8000-000000000001' },
-          }),
-        )
-        .mockResolvedValueOnce(Response.json(readableAccess)),
+      withWorkspaceContext(
+        vi
+          .fn()
+          .mockResolvedValueOnce(new Response(null, { status: 204 }))
+          .mockResolvedValueOnce(
+            Response.json({
+              user: { id: '00000000-0000-4000-8000-000000000001' },
+            }),
+          ),
+      ),
     );
     const user = userEvent.setup();
     const { router, store } = renderRoute('/login');
@@ -572,9 +575,8 @@ describe('router', () => {
       status: 'authenticated',
       user: { id: '00000000-0000-4000-8000-000000000001' },
     });
-    // T4 — `/` renders the no-context state block rather than a dashboard
-    // (CH-03); the landing rules that would resolve an actor into a
-    // Warehouse or Workspace view are T7's.
+    // CR-AC-08 rule (3) / CR-AC-18 — the actor remains at the root, which
+    // renders the no-context state.
     expect(
       await screen.findByText('Nothing is entered yet'),
     ).toBeInTheDocument();

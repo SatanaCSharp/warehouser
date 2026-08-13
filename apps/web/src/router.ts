@@ -11,7 +11,10 @@ import { homeRoute } from 'modules/home/route';
 import { warehouseDashboardRoute } from 'modules/warehouse/route';
 import { workspaceRoute } from 'modules/workspace/route';
 import { rootRoute } from 'routes/__root.route';
-import { warehouseCatchAllRoute } from 'routes/catch-all.route';
+import {
+  rootCatchAllRoute,
+  warehouseCatchAllRoute,
+} from 'routes/catch-all.route';
 import { warehouseRoute } from 'routes/warehouse.route';
 import { store } from 'store';
 
@@ -31,6 +34,9 @@ const routeTree = rootRoute.addChildren([
     accessRoute,
     warehouseCatchAllRoute,
   ]),
+  // T7 — last root child: the splat ranks below every explicit route, so it
+  // receives only addresses nothing else matched (CR-AC-16).
+  rootCatchAllRoute,
 ]);
 
 type CreateAppRouterOptions = {
