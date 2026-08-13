@@ -5,11 +5,11 @@
 
 | #   | Task                                             | Layer  | Owner         | Estimate | Blocked by      | Status |
 | --- | ------------------------------------------------ | ------ | ------------- | -------- | --------------- | ------ |
-| T1  | Locale keys and the two new icons                | ui     | Frontend Lead | S        | —               | todo   |
-| T2  | `WarehouseEntryRefusal` component                | ui     | Frontend Lead | S        | T1              | todo   |
-| T3  | `resolveWarehouseEntry` entry guard              | app    | Frontend Lead | M        | —               | todo   |
+| T1  | Locale keys and the two new icons                | ui     | Frontend Lead | S        | —               | done   |
+| T2  | `WarehouseEntryRefusal` component                | ui     | Frontend Lead | S        | T1              | done   |
+| T3  | `resolveWarehouseEntry` entry guard              | app    | Frontend Lead | M        | —               | done   |
 | T4  | Warehouse layout route and `useEnteredWarehouse` | wiring | Frontend Lead | M        | T2, T3          | todo   |
-| T5  | `RouteErrorState` component                      | ui     | Frontend Lead | S        | T1              | todo   |
+| T5  | `RouteErrorState` component                      | ui     | Frontend Lead | S        | T1              | done   |
 | T6  | Access relocation and addressed permissions      | app    | Frontend Lead | M        | T4              | todo   |
 | T7  | Landing resolver and root not-found              | app    | Frontend Lead | M        | T4, T5          | todo   |
 | T8  | Entry record and silent-failure allowlist        | app    | Frontend Lead | S        | T4              | todo   |
