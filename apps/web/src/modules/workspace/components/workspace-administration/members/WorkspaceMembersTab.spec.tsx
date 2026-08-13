@@ -307,10 +307,14 @@ describe('WorkspaceMembersTab', () => {
       );
 
       // The Members list and the Users list are both invalidated by the write,
-      // so the new row arrives from a refetch rather than from local state.
-      expect(
-        within(await rowFor('lena.boiko@example.test')).getByText('Auditor'),
-      ).toBeInTheDocument();
+      // so the new row arrives from a refetch rather than from local state —
+      // wait for it rather than reading once, or the assertion races the
+      // refetch whenever the suite is under load.
+      await waitFor(async () =>
+        expect(
+          within(await rowFor('lena.boiko@example.test')).getByText('Auditor'),
+        ).toBeInTheDocument(),
+      );
       expect(
         requestedUrls.filter((url) => url.endsWith('/api/v1/workspace/users'))
           .length,
@@ -426,9 +430,15 @@ describe('WorkspaceMembersTab', () => {
       await waitFor(() =>
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
       );
-      expect(
-        within(await rowFor('anna.kravets@example.test')).getByText('Auditor'),
-      ).toBeInTheDocument();
+      // The row's Role label arrives from the invalidated Members refetch, so
+      // wait for it rather than reading once (same race as the add case above).
+      await waitFor(async () =>
+        expect(
+          within(await rowFor('anna.kravets@example.test')).getByText(
+            'Auditor',
+          ),
+        ).toBeInTheDocument(),
+      );
       expectCommittedOutcome(/role/iu);
     });
 
