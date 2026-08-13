@@ -598,6 +598,29 @@ export const warehouseMemberships = {
   },
 } satisfies Record<string, WarehouseMembershipFixture>;
 
+/**
+ * The server's own derivation of the effective Warehouse, reproduced so a
+ * revised context body stays a body the server could actually return: the
+ * stored selection while it names a live non-archived membership, otherwise
+ * the sole live membership when exactly one exists, otherwise null
+ * (`change.md` §2.1; consumed unchanged by the web per CR-RG-04).
+ */
+const deriveEffectiveWarehouseId = (
+  stored: string | null,
+  memberships: readonly WarehouseMembershipFixture[],
+): string | null => {
+  const live = memberships.filter(
+    (membership) => membership.archivedAt === null,
+  );
+  if (
+    stored !== null &&
+    live.some((membership) => membership.warehouseId === stored)
+  ) {
+    return stored;
+  }
+  return live.length === 1 ? live[0].warehouseId : null;
+};
+
 export type WarehouseSessionRequest = { method: string; url: string };
 
 export type WarehouseSessionRevision = {
@@ -774,6 +797,19 @@ export const stubWarehouseSession = ({
     requests,
     reviseContext: (revision) => {
       Object.assign(state, revision);
+      // The server derives `effectiveWarehouseId`; it is never a value the
+      // client stores independently of the memberships beside it. A revision
+      // that withdraws or archives the named membership must therefore move
+      // the derived value too, or the fixture reports a body the server
+      // cannot produce — a stored selection naming a Warehouse the actor holds
+      // no live membership in — and hides every defect that only appears once
+      // the two disagree the way they really do (CR-AC-20, change.md §2.1).
+      if (revision.effectiveWarehouseId === undefined) {
+        state.effectiveWarehouseId = deriveEffectiveWarehouseId(
+          state.effectiveWarehouseId,
+          state.memberships,
+        );
+      }
     },
     urlsMatching: (pattern) =>
       requests

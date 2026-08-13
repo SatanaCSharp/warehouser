@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 import {
   useGetWorkspaceContextQuery,
@@ -31,8 +31,31 @@ export const useRecordWarehouseEntry = (): void => {
   const { data } = useGetWorkspaceContextQuery();
   const [setActiveWarehouse] = useSetActiveWarehouseMutation();
 
+  // The write records an *entry*, so it is decided once per entered Warehouse
+  // — not every time the context body changes. Reacting to `data` instead
+  // would make an ordinary refetch issue a write: once a membership is
+  // withdrawn or the Warehouse archived, the server's derivation stops naming
+  // the Warehouse the resident actor still holds, the two values diverge, and
+  // the actor would rewrite a stored selection naming a Warehouse they may no
+  // longer enter — which CR-AC-20 forbids ("their stored selection is not
+  // rewritten") and which CR-AC-09 never asked for, because no entry occurred.
+  const decidedFor = useRef<string | null>(null);
+
   useEffect(() => {
-    if (!warehouseId || !data || warehouseId === data.effectiveWarehouseId) {
+    // `data` is the entry-time comparison value, so the decision waits for it
+    // rather than being taken without it; until it arrives nothing is recorded
+    // and the same entry is reconsidered on the next run.
+    if (!warehouseId || !data) {
+      return;
+    }
+    if (decidedFor.current === warehouseId) {
+      return;
+    }
+    decidedFor.current = warehouseId;
+
+    // CR-AC-09 — re-entering or refreshing a Warehouse the effective value
+    // already names writes nothing.
+    if (warehouseId === data.effectiveWarehouseId) {
       return;
     }
     void setActiveWarehouse({ warehouseId });

@@ -1,8 +1,9 @@
-import { screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { useRecordWarehouseEntry } from 'modules/warehouse/hooks/useRecordWarehouseEntry';
 import { toast } from 'shared/alerts/toast';
+import { workspaceContextApi } from 'shared/api/workspace-context-api';
 import { makeStore } from 'store';
 import { accessIds } from 'test/access-fixtures';
 import { renderInEnteredWarehouse } from 'test/render';
@@ -151,6 +152,71 @@ describe('useRecordWarehouseEntry', () => {
     // Stays at exactly one write once everything has settled.
     await screen.findByTestId('rendered');
     expect(writeCalls(fetchMock)).toHaveLength(1);
+  });
+
+  // CR-AC-20 — the write records an entry, so a refetch that merely changes
+  // the context body is not one. Once the membership is withdrawn the server's
+  // derivation stops naming the entered Warehouse, so the two values diverge
+  // while the actor is still resident; reacting to that divergence would
+  // rewrite a stored selection naming a Warehouse they may no longer enter.
+  it('issues no write when a refetch stops naming the entered Warehouse', async () => {
+    let effectiveWarehouseId: string | null = warehouseId;
+    const fetchMock = vi.fn(
+      (input: Request | string | URL, init?: RequestInit) => {
+        const url = requestUrl(input);
+        const method = requestMethod(input, init);
+        if (url === contextPath && method === 'GET') {
+          return Promise.resolve(
+            Response.json(workspaceContext(effectiveWarehouseId)),
+          );
+        }
+        if (url === activeWarehousePath && method === 'PUT') {
+          return Promise.resolve(Response.json({ effectiveWarehouseId }));
+        }
+        return Promise.resolve(Response.json({}, { status: 404 }));
+      },
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const store = makeStore();
+    renderInEnteredWarehouse(<Probe />, store, warehouseId);
+    await screen.findByTestId('rendered');
+    await waitFor(() => expect(contextRequested(fetchMock)).toBe(true));
+    // The entry decision must have been taken against the ORIGINAL body before
+    // the server's answer changes; flipping it earlier would make the write
+    // below an ordinary entry write and the test would pass for that reason
+    // instead of the one it is named for.
+    await act(async () => {
+      await new Promise((resolve) => {
+        setTimeout(resolve, 50);
+      });
+    });
+    expect(writeCalls(fetchMock)).toEqual([]);
+
+    // The membership is withdrawn mid-session: the derivation now answers null
+    // while the actor stays inside the Warehouse its address names.
+    effectiveWarehouseId = null;
+    await act(async () => {
+      await store
+        .dispatch(
+          workspaceContextApi.endpoints.getWorkspaceContext.initiate(
+            undefined,
+            {
+              forceRefetch: true,
+              subscribe: false,
+            },
+          ),
+        )
+        .unwrap();
+      // The new body has to reach the subscribed component and its effect
+      // before the absence of a write means anything; asserting on the tick
+      // the refetch resolves passes whether or not the write is suppressed.
+      await new Promise((resolve) => {
+        setTimeout(resolve, 50);
+      });
+    });
+
+    expect(writeCalls(fetchMock)).toEqual([]);
   });
 
   it('renders without waiting for the write to resolve', async () => {
