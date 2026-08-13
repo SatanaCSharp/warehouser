@@ -4,8 +4,12 @@ import type { MutationOutcome } from 'modules/workspace/types/workspace.types';
 // field and the rule it broke, so the member is told which rule was not met
 // rather than that something was wrong (AC-08). Shared by add and rename,
 // which both write the one Warehouse Name value object.
+// The rule keys are the ones the server actually emits: `AccessName` raises
+// one assertion per rule and every command maps it through the same table
+// (`create-warehouse.command.ts`'s `NAME_RULE_BY_ASSERTION_MESSAGE`), so an
+// empty name arrives as `empty`, never `blank`.
 const validationKeysByRule: Record<string, string> = {
-  blank: 'warehouseName.required',
+  empty: 'warehouseName.required',
   grapheme_length: 'warehouseName.lengthRange',
   control_or_format_character: 'warehouseName.unsupportedCharacter',
 };

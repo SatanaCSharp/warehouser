@@ -13,8 +13,11 @@ export type RenameWorkspace = (
 // A rejected Workspace name arrives as `workspace.invalid_input` naming the
 // field and the rule it broke, so the member is told which rule was not met
 // rather than that something was wrong (AC-29a).
+// The rule keys are the ones the server actually emits (`AccessName` via
+// `rename-workspace.command.ts`'s `NAME_RULE_BY_ASSERTION_MESSAGE`), so an
+// empty name arrives as `empty`, never `blank`.
 const validationKeysByRule: Record<string, string> = {
-  blank: 'workspaceName.required',
+  empty: 'workspaceName.required',
   grapheme_length: 'workspaceName.lengthRange',
   control_or_format_character: 'workspaceName.unsupportedCharacter',
 };
