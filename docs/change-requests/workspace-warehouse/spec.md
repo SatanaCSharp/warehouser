@@ -566,3 +566,23 @@ CR-AC-12, CR-AC-18)
       page? Default now: no — `/workspace` remains the single Workspace destination with today's
       content, and the switcher's Workspace row enters it directly. — owner: Product Owner, due:
       `design`
+- [ ] **Deferred at `review` (2026-08-13).** CR-RG-06 admits exactly two stated overrides, but the
+      narrow-viewport drawer toggle is now rendered conditionally (only when there is a list to open).
+      That is the correct behaviour — keeping the toggle would offer a control that opens nothing,
+      since the sidebar returns `null` in both no-context states — and it is authorized downstream by
+      `sad.md` §5/§8, `design-handoff.md` and `tasks.json` T11. Read literally, though, it is a third
+      chrome change. Amend CR-RG-06's stated-override sentence (§5.1, "Only two things inside this
+      chrome change") to name the drawer toggle rather than reverting the behaviour. — owner: Tech
+      Lead, due: at `ship`, with the canonical reconciliation of CR-AC-15
+- [ ] **Deferred at `review` (2026-08-13).** CR-AC-12 (Workspace-view sidebar contents) and CR-AC-21
+      (a member of W without the capability the surface needs) are implemented and tested but appear
+      in no `sad.md` §6 runtime flow — §6.1–§6.5 name every other criterion. Add a one-step flow for
+      each, or cite them in the bodies of §6.2/§6.3. Documentation-trace gap only; no code change. —
+      owner: Tech Lead, due: at `ship`
+- [ ] **Deferred at `review` (2026-08-13).** The `SDD-AC` commit trailers under-claim four regression
+      boundaries their `tasks.json` entries own — `a8acaba` (CR-RG-02, CR-RG-03), `ae06d75`
+      (CR-RG-04, CR-RG-05), `263cd9d` (CR-RG-06), `8829b8f` (CR-AC-08, CR-AC-16, CR-AC-21,
+      CR-RG-05) — while other commits do carry `CR-RG-*` trailers. All four boundaries were found
+      implemented and tested by tracing the artifacts independently, so this is an index-reliability
+      problem, not a coverage gap: the trailer set cannot be used as the coverage index a reader
+      would expect. Note the discrepancy in the ship record. — owner: Tech Lead, due: at `ship`

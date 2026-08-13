@@ -264,6 +264,205 @@
       "files_hint": [
         "docs/change-requests/workspace-warehouse/tasks/responsive-and-entry-latency-verification.md"
       ]
+    },
+    {
+      "id": "T16",
+      "title": "Fire the stored-selection write on entry, and make the context fixture realistic",
+      "layer": "app",
+      "deps": [],
+      "acs": ["CR-AC-20", "CR-AC-09"],
+      "source_refs": ["_review/review-2026-08-13.md#findings-2-7"],
+      "dod": "reviseContext recomputes effectiveWarehouseId from the revised memberships exactly as the server derivation does (the stored value only while it names a live non-archived membership, else the sole live membership, else null) instead of leaving a stale id; with that realistic body the CR-AC-20 cases in warehouse.route.spec.tsx assert no PUT /workspace/active-warehouse is issued after a membership is withdrawn or the Warehouse archived while the actor is resident; useRecordWarehouseEntry fires the write once per entered warehouseId rather than on every change of the context body, so a refetch whose effectiveWarehouseId stops naming the entered Warehouse issues no write.",
+      "files_hint": [
+        "apps/web/src/test/workspace-fixtures.ts",
+        "apps/web/src/routes/warehouse.route.spec.tsx",
+        "apps/web/src/modules/warehouse/hooks/useRecordWarehouseEntry.ts",
+        "apps/web/src/modules/warehouse/hooks/useRecordWarehouseEntry.spec.tsx"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "T17",
+      "title": "Keep the archived label on a Warehouse archived while the actor is inside it",
+      "layer": "ui",
+      "deps": [],
+      "acs": ["CR-RG-02", "CR-AC-20"],
+      "source_refs": ["_review/review-2026-08-13.md#finding-1"],
+      "dod": "A row that is both the entered context and archived renders the archived label, so CR-RG-02 holds in the CR-AC-20 state; the current marker and the archived label may co-exist on one row; rowTrailingLabel no longer claims an archived row can never be entered; a switcher test covers an entered-then-archived Warehouse.",
+      "files_hint": [
+        "apps/web/src/shared/layouts/WarehouseSwitcher.tsx",
+        "apps/web/src/shared/layouts/WarehouseSwitcher.spec.tsx"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "T18",
+      "title": "Render the Warehouses group only when the actor holds a membership",
+      "layer": "ui",
+      "deps": [],
+      "acs": ["CR-AC-04", "CR-AC-18"],
+      "source_refs": ["_review/review-2026-08-13.md#finding-3"],
+      "dod": "An actor holding no membership at all sees no Warehouses section and no group header, so no navigation surface renders in an empty state outside CR-AC-04 two named exceptions; a switcher test covers warehouses: [].",
+      "files_hint": [
+        "apps/web/src/shared/layouts/WarehouseSwitcher.tsx",
+        "apps/web/src/shared/layouts/WarehouseSwitcher.spec.tsx"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "T19",
+      "title": "Move the retained message out of the header and correct the no-context copy",
+      "layer": "ui",
+      "deps": ["T18"],
+      "acs": ["CR-AC-18", "CR-RG-03"],
+      "source_refs": ["_review/review-2026-08-13.md#findings-5-6"],
+      "dod": "The switcher renders only its trigger and popover inside the shell header; the three retained CR-RG-03 messages render in the page-level state block with their existing copy and intent, so the root shows exactly one heading and the fixed-height header does not overflow; the no-context description no longer says the switcher is below, and no action is named for an actor holding no selectable row; en and uk stay in parity.",
+      "files_hint": [
+        "apps/web/src/shared/layouts/WarehouseSwitcher.tsx",
+        "apps/web/src/modules/home/page.tsx",
+        "apps/web/public/locales/en/common.json",
+        "apps/web/public/locales/uk/common.json"
+      ],
+      "status": "blocked"
+    },
+    {
+      "id": "T20",
+      "title": "Stop dimming the inert Workspace row explanation",
+      "layer": "ui",
+      "deps": [],
+      "acs": ["CR-AC-03"],
+      "source_refs": ["_review/review-2026-08-13.md#finding-16"],
+      "dod": "The sentence explaining why the Workspace row is inert renders at full contrast rather than inheriting the disabled row 50% opacity, because the WCAG disabled-control exemption covers a control own label and not informational text; the row itself stays inert and conveyed as disabled to assistive technology.",
+      "files_hint": [
+        "apps/web/src/shared/layouts/WarehouseSwitcher.tsx",
+        "apps/web/src/shared/layouts/WarehouseSwitcher.spec.tsx"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "T21",
+      "title": "Make the route error retry actually re-run the failed read",
+      "layer": "app",
+      "deps": [],
+      "acs": ["CR-AC-08"],
+      "source_refs": ["_review/review-2026-08-13.md#findings-4-9"],
+      "dod": "Activating the retry control re-issues the failed Workspace-context read rather than only clearing the React error boundary, so a read that succeeds on the second attempt lands the actor; the test asserts that observable outcome instead of asserting the injected callback fired.",
+      "files_hint": [
+        "apps/web/src/shared/components/RouteErrorState.tsx",
+        "apps/web/src/shared/components/RouteErrorState.spec.tsx",
+        "apps/web/src/modules/home/route.spec.tsx"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "T22",
+      "title": "Render the approved landing pending state",
+      "layer": "ui",
+      "deps": [],
+      "acs": ["CR-AC-08"],
+      "source_refs": ["_review/review-2026-08-13.md#finding-15"],
+      "dod": "The root renders the approved pending tile using shell.landing.pendingLabel while the Workspace-context read is unresolved, with a deliberately chosen pending delay rather than the router default; a test asserts the tile renders during that window; the locale key has a non-test reader.",
+      "files_hint": [
+        "apps/web/src/modules/home/route.tsx",
+        "apps/web/src/shared/components/RoutePendingState.tsx",
+        "apps/web/src/modules/home/route.spec.tsx"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "T23",
+      "title": "Fail closed when the Warehouse entry verdict is absent or malformed",
+      "layer": "app",
+      "deps": [],
+      "acs": ["CR-AC-07"],
+      "source_refs": ["_review/review-2026-08-13.md#finding-13"],
+      "dod": "WarehouseLayout renders the Warehouse view only for a verdict that is explicitly entered; an absent, malformed or unrecognized verdict renders the non-disclosing refusal instead of the Warehouse view and its CR-AC-09 write; a test covers the absent-verdict case.",
+      "files_hint": [
+        "apps/web/src/shared/layouts/WarehouseLayout.tsx",
+        "apps/web/src/shared/layouts/WarehouseLayout.spec.tsx"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "T24",
+      "title": "Close the computed-member-access hole in the effectiveWarehouseId check",
+      "layer": "wiring",
+      "deps": [],
+      "acs": [],
+      "source_refs": ["_review/review-2026-08-13.md#finding-14"],
+      "dod": "The architecture check fails on a computed member access such as ctx[effectiveWarehouseId] as well as on the identifier form, so the named spec section 6 control cannot be bypassed by a string key; the three allowlisted readers still lint clean.",
+      "files_hint": ["apps/web/eslint.config.mjs"],
+      "status": "done"
+    },
+    {
+      "id": "T25",
+      "title": "Give every Enter link an accessible name naming its Warehouse",
+      "layer": "ui",
+      "deps": [],
+      "acs": ["CR-AC-13"],
+      "source_refs": ["_review/review-2026-08-13.md#finding-17"],
+      "dod": "Each Enter link exposes an accessible name naming the Warehouse it enters rather than the bare word Enter, so a screen-reader link list distinguishes the rows; the new key exists in en and uk; the visible label is unchanged.",
+      "files_hint": [
+        "apps/web/src/modules/workspace/components/workspace-administration/warehouses/WarehouseList.tsx",
+        "apps/web/public/locales/en/workspace.json",
+        "apps/web/public/locales/uk/workspace.json"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "T26",
+      "title": "Drop the locale keys this change request orphaned",
+      "layer": "ui",
+      "deps": ["T19", "T22", "T25"],
+      "acs": [],
+      "source_refs": ["_review/review-2026-08-13.md#finding-21"],
+      "dod": "Every locale key with no non-test reader that this change request orphaned is removed from en and uk; the i18n spec asserts each removed key no longer resolves, following the convention the suite already establishes; en and uk key sets stay identical across all 8 namespaces.",
+      "files_hint": [
+        "apps/web/public/locales/en/common.json",
+        "apps/web/public/locales/uk/common.json",
+        "apps/web/src/i18n.spec.ts"
+      ],
+      "status": "todo"
+    },
+    {
+      "id": "T27",
+      "title": "Make the registrant landing tests assert CR-AC-10 instead of passing over an error",
+      "layer": "tests",
+      "deps": [],
+      "acs": ["CR-AC-10"],
+      "source_refs": ["_review/review-2026-08-13.md#findings-8-10"],
+      "dod": "The registration landing case stubs the registrant real Workspace context so no route error is raised, and asserts the router settles at the Workspace destination by CR-AC-08 rule 1 rather than asserting a pathname the error state also satisfies; a second assertion covers CR-AC-10 remaining clause, that the switcher offers their first Warehouse beneath the Workspace row.",
+      "files_hint": [
+        "apps/web/src/router.spec.tsx",
+        "apps/web/src/modules/home/route.spec.tsx"
+      ],
+      "status": "todo"
+    },
+    {
+      "id": "T28",
+      "title": "Exercise CR-AC-14 through the production router",
+      "layer": "tests",
+      "deps": ["T16"],
+      "acs": ["CR-AC-14"],
+      "source_refs": ["_review/review-2026-08-13.md#finding-11"],
+      "dod": "One case built on createAppRouter activates the warehouses-tab Enter action and asserts all three CR-AC-14 clauses together on the real route tree: arrival in that Warehouse view, the row marked current in the switcher, and the stored-selection write issued.",
+      "files_hint": ["apps/web/src/router.spec.tsx"],
+      "status": "todo"
+    },
+    {
+      "id": "T29",
+      "title": "Add the planned shell-composition and error-path cases and drop the tautological asserts",
+      "layer": "tests",
+      "deps": ["T19", "T21", "T23"],
+      "acs": ["CR-AC-18", "CR-AC-07", "CR-AC-08", "CR-AC-01"],
+      "source_refs": ["_review/review-2026-08-13.md#findings-9-12"],
+      "dod": "An integration case asserts the whole no-context shell composition the test plan calls for: the grouped switcher with its inert Workspace row, the actor Warehouses, the retained explanation appearing exactly once, and no navigation list; a second case asserts a failed Workspace-context read at a Warehouse address renders the error state rather than a refusal; the assertion that every row contains an svg is replaced by one that distinguishes the current row indicator from a non-current row.",
+      "files_hint": [
+        "apps/web/src/modules/home/route.spec.tsx",
+        "apps/web/src/routes/warehouse.route.spec.tsx",
+        "apps/web/src/shared/layouts/WarehouseSwitcher.spec.tsx"
+      ],
+      "status": "todo"
     }
   ]
 }

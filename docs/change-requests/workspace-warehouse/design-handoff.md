@@ -223,13 +223,41 @@ referenced by `docs/features/workspaces/design-handoff.md`. That document, and
 ship-time canonical reconciliation (CR-AC-15, `change.md` §8) — not before. This file is the
 authoritative source in the meantime.
 
+### Recorded at review (2026-08-13) — pending Design owner confirmation
+
+Four implementation deviations were found by the independent review
+([`_review/review-2026-08-13.md`](./_review/review-2026-08-13.md) findings 18–21) and resolved with
+the user as **recorded rather than fixed**. Each stands until the Design owner confirms or rejects
+it; a rejection returns the item to `implement`.
+
+- **Enter action variant and placement** — ships as `buttonVariants({ variant: 'outline', size: 'sm' })`
+  against the Tokens row's `default` fill, and as a flex sibling **outside** the row card rather than
+  inside the row header beside the name (`zubpS`, `XeG2t`). Consequence: enterable rows render a
+  visibly narrower card than non-enterable ones. — owner: Design owner, due: before `ship`
+- **No-context state block icon** — the `layout-grid` icon the Icons row pins for the no-context state
+  block is not rendered; only the switcher trigger uses it. — owner: Design owner, due: before `ship`
+- **Group label copy** — ships as "Warehouses" / "Склади" against the approved
+  "WAREHOUSES YOU CAN ENTER" (`Qa6Z3`). The approved copy's job is to say the group is enterable,
+  which is what contrasts it with the inert Workspace row above. — owner: Design owner, due: before
+  `ship`
+- **Archived row label copy** — the shipped label "Archived · not selectable"
+  (`workspaceSwitcher.archivedReason`) is replaced by "Archived"
+  (`shell.contextSwitcher.archivedLabel`). The approved frame endorses the shorter label, but
+  CR-RG-02 says archived rows render "exactly as today", so the change needs recording here rather
+  than passing silently. — owner: Design owner, due: before `ship`
+
 ## Open questions
 
-- [ ] Archived rows in the switcher and the warehouses tab are dimmed to 50% opacity, putting their
-      label near 3.5:1 contrast. They are non-actionable and carry the literal text "Archived", so the
-      WCAG disabled-control exemption applies and the treatment reproduces what ships today
-      (CR-RG-02). Default now: keep it. The alternative is to drop the dimming and rely on the muted
-      foreground token plus the label. — owner: Product Owner, due: implementation
+- [x] **Closed at `review` (2026-08-13).** Archived rows in the switcher and the warehouses tab are
+      dimmed to 50% opacity, putting their label near 3.5:1 contrast. They are non-actionable and
+      carry the literal text "Archived", so the WCAG disabled-control exemption applies and the
+      treatment reproduces what ships today (CR-RG-02). **Resolved: the default was kept** — the
+      independent review verified the 50% dimming ships on both the archived rows and the inert
+      Workspace row. One consequence is _not_ covered by the exemption and is being fixed: the inert
+      row's **explanatory sentence** inherits the same dimming
+      ([`_review/review-2026-08-13.md`](./_review/review-2026-08-13.md) finding 16), because the
+      exemption covers a disabled control's own label, not informational text explaining why it is
+      inert.
 - [ ] The access page description still reads "…for your current Warehouse." Accurate but now
       slightly stale in intent, since the address names the Warehouse. Default now: leave it —
       `spec.md` §3 puts the access surface's internals out of scope, and changing it means a locale
