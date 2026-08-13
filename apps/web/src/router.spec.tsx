@@ -359,7 +359,18 @@ describe('router', () => {
       await screen.findByRole('heading', { name: 'Access unavailable' }),
     ).toBeInTheDocument();
     expect(screen.queryByRole('tab')).not.toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    // T8 — entering a Warehouse also records it as the stored selection
+    // (CR-AC-09), so a bare call count no longer isolates what this case is
+    // about. Name the protected datasets instead: none of them may be
+    // requested without the Permission that opens them.
+    const requestedUrls = fetchMock.mock.calls.map(([input]) =>
+      String(input instanceof Request ? input.url : input),
+    );
+    expect(
+      requestedUrls.filter((url) =>
+        /\/access\/(?:roles|permissions|members)$/u.test(url),
+      ),
+    ).toEqual([]);
     expect(
       screen.queryByRole('link', { name: 'Access' }),
     ).not.toBeInTheDocument();
