@@ -29,6 +29,15 @@ export default [
           selector: "Identifier[name='effectiveWarehouseId']",
           message:
             "effectiveWarehouseId is restricted to its three allowlisted readers (landing.guard.ts, WarehouseSwitcher.tsx, useRecordWarehouseEntry.ts). It records where the actor has been and grants nothing; every other screen must take its Warehouse from the route, not this stored selection."
+        },
+        {
+          // `ctx['effectiveWarehouseId']` parses as a Literal, not an
+          // Identifier, so the selector above cannot see it. Without this the
+          // named spec §6 control is bypassable by writing the property as a
+          // string — which would read exactly like the reference it forbids.
+          selector: "Literal[value='effectiveWarehouseId']",
+          message:
+            "effectiveWarehouseId is restricted to its three allowlisted readers (landing.guard.ts, WarehouseSwitcher.tsx, useRecordWarehouseEntry.ts), including when reached through a computed member access or a string key."
         }
       ]
     }
