@@ -18,7 +18,6 @@ import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { workspaceContextApi } from 'shared/api/workspace-context-api';
 import { ROUTES } from 'shared/constants/routes';
 import { WarehouseSwitcher } from 'shared/layouts/WarehouseSwitcher';
 import { makeStore } from 'store';
@@ -38,6 +37,10 @@ import type { AppStore } from 'store';
 // stored-selection write lives in `useRecordWarehouseEntry` (T8), and the row
 // marked current comes from the entered route — never from
 // `effectiveWarehouseId` (CR-AC-09).
+//
+// T19 — the CR-RG-03 retained-message cases moved with the messages themselves
+// to `shared/components/RetainedContextMessage.spec.tsx`; the switcher renders
+// only its trigger and popover now.
 
 const workspaceId = '00000000-0000-4000-8000-000000000001';
 const roleId = '00000000-0000-4000-8000-000000000099';
@@ -67,11 +70,6 @@ const archivedOldDepotEntry: WorkspaceContext['warehouses'][number] = {
   archivedAt: '2026-08-01T09:00:00.000Z',
   roleId,
   roleKind: 'custom',
-};
-
-const liveOldDepotEntry: WorkspaceContext['warehouses'][number] = {
-  ...archivedOldDepotEntry,
-  archivedAt: null,
 };
 
 type ContextOverrides = {
@@ -608,123 +606,5 @@ describe('WarehouseSwitcher — current-row marking (CR-AC-01)', () => {
     for (const option of within(listbox).getAllByRole('option')) {
       expect(option).toHaveAttribute('aria-selected', 'false');
     }
-  });
-});
-
-describe('WarehouseSwitcher — the three retained messages (CR-RG-03)', () => {
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
-  it('renders the never-chosen message beside the control, which stays reachable', async () => {
-    stubFetchSequence(() => jsonResponse(buildContext()));
-    const user = userEvent.setup();
-    renderSwitcherAt(ROUTES.HOME);
-
-    expect(
-      await screen.findByRole('heading', {
-        name: 'Choose a warehouse to work in',
-      }),
-    ).toBeInTheDocument();
-
-    const listbox = await openSwitcher(user);
-    expect(
-      within(listbox).getByRole('option', { name: /north hub/iu }),
-    ).toBeInTheDocument();
-  });
-
-  it('renders the nothing-available message, and no invented action, when no row is selectable (CR-AC-18)', async () => {
-    stubFetchSequence(() =>
-      jsonResponse(buildContext({ warehouses: [archivedOldDepotEntry] })),
-    );
-    const user = userEvent.setup();
-    renderSwitcherAt(ROUTES.HOME);
-
-    expect(
-      await screen.findByRole('heading', {
-        name: 'No warehouse is available to you',
-      }),
-    ).toBeInTheDocument();
-
-    const listbox = await openSwitcher(user);
-    expect(
-      within(listbox).getByRole('option', { name: /old depot/iu }),
-    ).toHaveAttribute('aria-disabled', 'true');
-    expect(
-      screen.queryByRole('button', { name: 'Choose warehouse' }),
-    ).not.toBeInTheDocument();
-  });
-
-  it('renders the selection-ended message beside the control, naming the remembered Warehouse', async () => {
-    const store = makeStore();
-    const fetchMock = stubFetchSequence(
-      () =>
-        jsonResponse(
-          buildContext({
-            effectiveWarehouseId: oldDepotId,
-            warehouses: [centralEntry, liveOldDepotEntry],
-          }),
-        ),
-      () =>
-        jsonResponse(
-          buildContext({
-            effectiveWarehouseId: null,
-            warehouses: [centralEntry],
-          }),
-        ),
-    );
-    renderSwitcherAt(ROUTES.HOME, { store });
-
-    await screen.findByRole('button', { name: /context switcher/iu });
-    store.dispatch(
-      workspaceContextApi.util.invalidateTags(['WorkspaceContext']),
-    );
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
-
-    expect(
-      await screen.findByRole('alert', {
-        name: /old depot is no longer available to you/iu,
-      }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: /context switcher/iu }),
-    ).toBeInTheDocument();
-  });
-
-  it('shows no retained message inside an entered Warehouse whose entry write never landed', async () => {
-    stubFetchSequence(() =>
-      jsonResponse(buildContext({ effectiveWarehouseId: null })),
-    );
-    const user = userEvent.setup();
-    renderSwitcherAt(warehousePath(centralId));
-
-    const listbox = await openSwitcher(user);
-    expect(
-      within(listbox).getByRole('option', { name: /central dc/iu }),
-    ).toHaveAttribute('aria-selected', 'true');
-    expect(
-      screen.queryByRole('heading', {
-        name: 'Choose a warehouse to work in',
-      }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('heading', {
-        name: 'No warehouse is available to you',
-      }),
-    ).not.toBeInTheDocument();
-  });
-
-  it('shows no retained message inside the Workspace view', async () => {
-    stubFetchSequence(() =>
-      jsonResponse(buildContext({ effectiveWarehouseId: null })),
-    );
-    renderSwitcherAt(ROUTES.WORKSPACE);
-
-    await screen.findByRole('button', { name: /context switcher/iu });
-    expect(
-      screen.queryByRole('heading', {
-        name: 'Choose a warehouse to work in',
-      }),
-    ).not.toBeInTheDocument();
   });
 });
