@@ -311,19 +311,20 @@
     },
     {
       "id": "T19",
-      "title": "Move the retained message out of the header and correct the no-context copy",
+      "title": "Move the retained messages to a shell component in the main region",
       "layer": "ui",
-      "deps": ["T18"],
+      "deps": [],
       "acs": ["CR-AC-18", "CR-RG-03"],
       "source_refs": ["_review/review-2026-08-13.md#findings-5-6"],
-      "dod": "The switcher renders only its trigger and popover inside the shell header; the three retained CR-RG-03 messages render in the page-level state block with their existing copy and intent, so the root shows exactly one heading and the fixed-height header does not overflow; the no-context description no longer says the switcher is below, and no action is named for an actor holding no selectable row; en and uk stay in parity.",
+      "dod": "A RetainedContextMessage component is mounted by RootLayout in the main content region, above the routed outlet, so it stays mounted on every page and its remembered-Warehouse memory can still observe effectiveWarehouseId going non-null to null (the selectionEnded variant stays reachable); WarehouseSwitcher renders only its trigger and popover, so the fixed-height header no longer overflows and the root shows one heading; the three CR-RG-03 messages keep their existing copy and intent; the effectiveWarehouseId read moves with the message so the architecture allowlist still names exactly three call sites, and both the eslint allowlist and the spec section 6 wording are updated to name the new site instead of the switcher.",
       "files_hint": [
+        "apps/web/src/shared/layouts/RootLayout.tsx",
+        "apps/web/src/shared/components/RetainedContextMessage.tsx",
         "apps/web/src/shared/layouts/WarehouseSwitcher.tsx",
-        "apps/web/src/modules/home/page.tsx",
-        "apps/web/public/locales/en/common.json",
-        "apps/web/public/locales/uk/common.json"
+        "apps/web/eslint.config.mjs",
+        "docs/change-requests/workspace-warehouse/spec.md"
       ],
-      "status": "blocked"
+      "status": "todo"
     },
     {
       "id": "T20",
@@ -461,6 +462,22 @@
         "apps/web/src/modules/home/route.spec.tsx",
         "apps/web/src/routes/warehouse.route.spec.tsx",
         "apps/web/src/shared/layouts/WarehouseSwitcher.spec.tsx"
+      ],
+      "status": "todo"
+    },
+    {
+      "id": "T30",
+      "title": "Correct the no-context copy direction and its unconditional action",
+      "layer": "ui",
+      "deps": [],
+      "acs": ["CR-AC-18"],
+      "source_refs": ["_review/review-2026-08-13.md#finding-6"],
+      "dod": "The no-context description no longer tells the actor to choose something below, because the switcher is above at every viewport, and no longer names an action unconditionally, because CR-AC-18 paragraph 2 offers no action to an actor holding no selectable row; en and uk stay in parity and the i18n assertions match the new copy.",
+      "files_hint": [
+        "apps/web/public/locales/en/common.json",
+        "apps/web/public/locales/uk/common.json",
+        "apps/web/src/modules/home/page.tsx",
+        "apps/web/src/i18n.spec.ts"
       ],
       "status": "todo"
     }
