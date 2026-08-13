@@ -278,6 +278,90 @@ const registerHappyTransferTest = (): void => {
 
     expect(await ownerCount(graph.workspaceId)).toBe(1);
   });
+
+  // RED for T62/AC-26 (review S1-13) — `uq_workspace_memberships_one_owner`
+  // is a partial unique *index*, which PostgreSQL checks per row and cannot
+  // be deferred. A single `UPDATE ... CASE` over both rows leaves their
+  // update order to the planner, so whenever the recipient's row is written
+  // before the outgoing Owner's is demoted, two rows momentarily claim the
+  // Owner slot and the index raises a duplicate key — a 500 for a legal
+  // transfer.
+  //
+  // The order the planner picks follows the scan, so seeding the recipient's
+  // membership row physically first reproduces it deterministically. The
+  // Warehouse level avoids this by writing two ordered statements
+  // (`manager-transfer.repository.ts`), which is what this asserts.
+  it('AC-26: completes when the recipient membership row is scanned before the outgoing Owner row (the sole-Owner index is checked per row, not deferred)', async () => {
+    const workspaceId = await seedWorkspace();
+    const ownerRole = buildWorkspaceRole({
+      workspaceId,
+      kind: 'workspace_owner',
+      name: 'Workspace Owner',
+    });
+    const replacementRole = buildWorkspaceRole({ workspaceId });
+    const recipientRole = buildWorkspaceRole({ workspaceId });
+    await dataSource.manager
+      .getRepository(WorkspaceRoleEntity)
+      .insert([ownerRole, replacementRole, recipientRole]);
+
+    const ownerUserId = crypto.randomUUID();
+    const recipientUserId = crypto.randomUUID();
+    await seedIdentity(
+      ownerUserId,
+      workspaceId,
+      `owner.${ownerUserId}@example.test`,
+    );
+    await seedIdentity(
+      recipientUserId,
+      workspaceId,
+      `recipient.${recipientUserId}@example.test`,
+    );
+
+    // The recipient's row first, so the seq scan reaches it before the
+    // Owner's — the order a single CASE statement cannot survive.
+    await dataSource.manager.getRepository(WorkspaceMembershipEntity).insert({
+      userId: recipientUserId,
+      workspaceId,
+      workspaceRoleId: recipientRole.id,
+      workspaceRoleKind: 'custom',
+      createdAt: now,
+      updatedAt: now,
+    });
+    await dataSource.manager.getRepository(WorkspaceMembershipEntity).insert({
+      userId: ownerUserId,
+      workspaceId,
+      workspaceRoleId: ownerRole.id,
+      workspaceRoleKind: 'workspace_owner',
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const transferred = await transactions.executeInTransaction({}, () =>
+      repository.transfer({
+        workspaceId,
+        currentOwnerUserId: ownerUserId,
+        currentOwnerReplacementRoleId: replacementRole.id as string,
+        recipientUserId,
+        ownerRoleId: ownerRole.id as string,
+      }),
+    );
+
+    expect(transferred).toBe(true);
+    expect(await ownerCount(workspaceId)).toBe(1);
+    expect(
+      await dataSource.manager
+        .getRepository(WorkspaceMembershipEntity)
+        .findOneBy({ userId: recipientUserId }),
+    ).toMatchObject({ workspaceRoleKind: 'workspace_owner' });
+    expect(
+      await dataSource.manager
+        .getRepository(WorkspaceMembershipEntity)
+        .findOneBy({ userId: ownerUserId }),
+    ).toMatchObject({
+      workspaceRoleId: replacementRole.id,
+      workspaceRoleKind: 'custom',
+    });
+  });
 };
 
 const registerStalePreconditionTest = (): void => {

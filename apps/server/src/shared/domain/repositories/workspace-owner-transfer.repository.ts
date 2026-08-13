@@ -18,9 +18,10 @@ export class WorkspaceOwnerTransferRepository {
 
   // Locks the `workspaces` row first, then both Workspace membership rows in
   // `user_id` order, rechecks their composite Role relations under those
-  // locks, and — only when the precondition still holds — updates both
-  // assignments in one statement. This mirrors `ManagerTransferRepository`
-  // one level down and is the specialization of the lock order data-model.md
+  // locks, and — only when the precondition still holds — vacates the Owner
+  // slot and fills it in two ordered statements. This mirrors
+  // `ManagerTransferRepository` one level down and is the specialization of
+  // the lock order data-model.md
   // "Repository boundaries" fixes: `workspaces` first, so no cycle with a
   // Warehouse-level command is possible.
   async transfer(input: WorkspaceOwnerTransferInput): Promise<boolean> {
@@ -64,25 +65,34 @@ export class WorkspaceOwnerTransferRepository {
       return false;
     }
 
-    await manager
-      .createQueryBuilder()
-      .update(WorkspaceMembershipEntity)
-      .set({
-        workspaceRoleId: () =>
-          'CASE WHEN "user_id" = :recipientUserId THEN CAST(:ownerRoleId AS uuid) ELSE CAST(:currentOwnerReplacementRoleId AS uuid) END',
-        workspaceRoleKind: () =>
-          `CASE WHEN "user_id" = :recipientUserId THEN 'workspace_owner' ELSE 'custom' END`,
-        updatedAt: new Date(),
-      })
-      .where('"user_id" IN (:...userIds)', {
-        userIds: [input.currentOwnerUserId, input.recipientUserId],
-      })
-      .setParameters({
-        recipientUserId: input.recipientUserId,
-        ownerRoleId: input.ownerRoleId,
-        currentOwnerReplacementRoleId: input.currentOwnerReplacementRoleId,
-      })
-      .execute();
+    // Two ordered statements, demotion first — never one `UPDATE ... CASE`
+    // over both rows. `uq_workspace_memberships_one_owner` is a partial
+    // unique *index*: PostgreSQL checks it per row and it cannot be deferred,
+    // so a single statement whose row order the planner chooses can leave two
+    // rows claiming the Owner slot mid-statement and raise a duplicate key
+    // for a legal transfer. Vacating the slot before filling it makes the
+    // order explicit, exactly as `ManagerTransferRepository.assignRole` does
+    // one level down. Both writes share this transaction, so the Workspace is
+    // never observable without an Owner.
+    const now = new Date();
+
+    await manager.getRepository(WorkspaceMembershipEntity).update(
+      { userId: input.currentOwnerUserId },
+      {
+        workspaceRoleId: input.currentOwnerReplacementRoleId,
+        workspaceRoleKind: 'custom',
+        updatedAt: now,
+      },
+    );
+
+    await manager.getRepository(WorkspaceMembershipEntity).update(
+      { userId: input.recipientUserId },
+      {
+        workspaceRoleId: input.ownerRoleId,
+        workspaceRoleKind: 'workspace_owner',
+        updatedAt: now,
+      },
+    );
 
     return true;
   }
