@@ -1,9 +1,20 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import {
+  createMemoryHistory,
+  createRootRouteWithContext,
+  createRoute,
+  createRouter,
+  Outlet,
+  RouterProvider,
+  useParams,
+} from '@tanstack/react-router';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
+import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { WarehousesTab } from 'modules/workspace/components/workspace-administration/warehouses/WarehousesTab';
+import { ROUTES } from 'shared/constants/routes';
 import { selectHeroOption } from 'test/hero-select';
 import { renderWithProviders } from 'test/render';
 import {
@@ -14,7 +25,12 @@ import {
   stubWorkspaceServer,
   warehouseIds,
   workspaceIds,
+  workspaceWarehouses,
 } from 'test/workspace-fixtures';
+
+import type { ContextWarehouse } from '@warehouser/contracts/workspaces';
+import type { ReactElement } from 'react';
+import type { AppStore } from 'store';
 
 // `alertWorkspaceAction` drives the success/pending toast through this single
 // seam (`web-error-handling.md` §2, §4) — mocking it here, as
@@ -54,6 +70,78 @@ const withAccessManagement = [
 
 const renderTab = (): void => {
   renderWithProviders(<WarehousesTab />, authenticatedWorkspaceStore());
+};
+
+const TabRoutePage = (): ReactElement => <WarehousesTab />;
+
+/**
+ * Reads `:warehouseId` off the entered-Warehouse probe route below and
+ * renders it as text, so a test can prove Enter navigated there. Named (not
+ * inline) so `useParams` satisfies the rules-of-hooks component-naming check.
+ */
+const EnteredWarehouseProbe = (): ReactElement => {
+  const { warehouseId } = useParams({ from: ROUTES.WAREHOUSE });
+  return <p>Entered warehouse {warehouseId}</p>;
+};
+
+/**
+ * A minimal router carrying `WarehousesTab` at `ROUTES.WORKSPACE` and a probe
+ * route at `ROUTES.WAREHOUSE`, so the Enter action's `Link` — which throws
+ * outside a `RouterProvider` — can resolve and be activated. Built locally
+ * rather than importing the production `router.ts` / `warehouseRoute`, which
+ * other lanes of this change own concurrently (CR-AC-14).
+ */
+const renderTabWithRouter = (
+  store: AppStore = authenticatedWorkspaceStore(),
+): void => {
+  const rootRoute = createRootRouteWithContext<{ store: AppStore }>()({
+    component: Outlet,
+  });
+  const tabRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: ROUTES.WORKSPACE,
+    component: TabRoutePage,
+  });
+  const enteredWarehouseRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: ROUTES.WAREHOUSE,
+    component: EnteredWarehouseProbe,
+  });
+  const router = createRouter({
+    routeTree: rootRoute.addChildren([tabRoute, enteredWarehouseRoute]),
+    context: { store },
+    history: createMemoryHistory({ initialEntries: [ROUTES.WORKSPACE] }),
+  });
+
+  render(
+    <Provider store={store}>
+      <RouterProvider router={router} />
+    </Provider>,
+  );
+};
+
+/** A membership entry for `WorkspaceContext.warehouses` — the source CR-AC-13
+ * requires the Enter action to read, independent of the tab's own
+ * `WAREHOUSES:WATCH` list. */
+const membershipWarehouse = (
+  warehouseId: string,
+  archivedAt: string | null,
+): ContextWarehouse => ({
+  warehouseId,
+  name: 'Membership',
+  archivedAt,
+  roleId: workspaceIds.warehouseRole,
+  roleKind: 'warehouse_manager',
+});
+
+const warehouseRowFor = async (name: string): Promise<HTMLElement> => {
+  const list = await screen.findByRole('list', { name: 'Warehouses' });
+  const heading = within(list).getByText(name);
+  const row = heading.closest('li');
+  if (!row) {
+    throw new Error(`No warehouse row found for ${name}`);
+  }
+  return row;
 };
 
 const selectWarehouse = async (
@@ -865,6 +953,140 @@ describe('WarehousesTab', () => {
       expect(document.getElementById(describedBy ?? '')).toHaveTextContent(
         /a workspace always keeps one/iu,
       );
+    });
+  });
+
+  describe('the Enter action (CR-AC-04, CR-AC-13, CR-AC-14, CR-RG-02)', () => {
+    it("renders Enter on a row for a non-archived Warehouse in the actor's own membership list", async () => {
+      stubWorkspaceServer({
+        context: {
+          ...namedWorkspaceContext(watchOnly),
+          warehouses: [membershipWarehouse(warehouseIds.central, null)],
+        },
+      });
+
+      renderTabWithRouter();
+
+      const row = await warehouseRowFor('Central DC');
+      expect(
+        within(row).getByRole('link', { name: /enter/iu }),
+      ).toBeInTheDocument();
+    });
+
+    it('omits Enter — hidden, not disabled — on a non-membership row, an archived membership row, and an archived non-membership row', async () => {
+      const farDepotId = '00000000-0000-4000-8000-000000000114';
+      stubWorkspaceServer({
+        context: {
+          ...namedWorkspaceContext(watchOnly),
+          warehouses: [
+            membershipWarehouse(warehouseIds.central, null),
+            membershipWarehouse(
+              warehouseIds.oldDepot,
+              '2026-08-01T09:00:00.000Z',
+            ),
+          ],
+        },
+        warehouses: [
+          ...workspaceWarehouses(),
+          {
+            id: farDepotId,
+            name: 'Far Depot',
+            archivedAt: '2026-08-02T09:00:00.000Z',
+          },
+        ],
+      });
+
+      renderTabWithRouter();
+
+      // North Hub: not a membership, not archived.
+      const nonMember = await warehouseRowFor('North Hub');
+      expect(
+        within(nonMember).queryByRole('link', { name: /enter/iu }),
+      ).not.toBeInTheDocument();
+      expect(
+        within(nonMember).queryByRole('button', { name: /enter/iu }),
+      ).not.toBeInTheDocument();
+
+      // Old Depot: a membership, but archived.
+      const archivedMember = await warehouseRowFor('Old Depot');
+      expect(
+        within(archivedMember).queryByRole('link', { name: /enter/iu }),
+      ).not.toBeInTheDocument();
+
+      // Far Depot: archived and not a membership.
+      const archivedNonMember = await warehouseRowFor('Far Depot');
+      expect(
+        within(archivedNonMember).queryByRole('link', { name: /enter/iu }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("navigates to that Warehouse's view when Enter is activated", async () => {
+      const user = userEvent.setup();
+      stubWorkspaceServer({
+        context: {
+          ...namedWorkspaceContext(watchOnly),
+          warehouses: [membershipWarehouse(warehouseIds.central, null)],
+        },
+      });
+
+      renderTabWithRouter();
+
+      const row = await warehouseRowFor('Central DC');
+      await user.click(within(row).getByRole('link', { name: /enter/iu }));
+
+      expect(
+        await screen.findByText(`Entered warehouse ${warehouseIds.central}`),
+      ).toBeInTheDocument();
+    });
+
+    it('leaves rename, archive/restore and grant/withdraw access reachable on a row that also renders Enter', async () => {
+      const user = userEvent.setup();
+      stubWorkspaceServer({
+        context: {
+          ...namedWorkspaceContext(fullAuthority),
+          warehouses: [membershipWarehouse(warehouseIds.central, null)],
+        },
+      });
+
+      renderTabWithRouter();
+
+      const row = await warehouseRowFor('Central DC');
+      expect(
+        within(row).getByRole('link', { name: /enter/iu }),
+      ).toBeInTheDocument();
+
+      await user.click(
+        within(row).getByRole('button', { name: /central dc/iu }),
+      );
+
+      const detail = await detailPane();
+      expect(
+        within(detail).getByRole('button', { name: 'Save name' }),
+      ).toBeInTheDocument();
+      expect(
+        within(detail).getByRole('button', { name: 'Archive warehouse' }),
+      ).toBeInTheDocument();
+    });
+
+    it('places the selection button before Enter in focus order and never nests Enter inside it', async () => {
+      stubWorkspaceServer({
+        context: {
+          ...namedWorkspaceContext(watchOnly),
+          warehouses: [membershipWarehouse(warehouseIds.central, null)],
+        },
+      });
+
+      renderTabWithRouter();
+
+      const row = await warehouseRowFor('Central DC');
+      const selectButton = within(row).getByRole('button', {
+        name: /central dc/iu,
+      });
+      const enterLink = within(row).getByRole('link', { name: /enter/iu });
+
+      expect(enterLink.closest('button')).toBeNull();
+      const focusable = Array.from(row.querySelectorAll('button, a[href]'));
+      expect(focusable).toEqual([selectButton, enterLink]);
     });
   });
 });
