@@ -4,7 +4,7 @@ import { workspaceContextApi } from 'shared/api/workspace-context-api';
 import { ROUTES } from 'shared/constants/routes';
 import {
   hasWorkspacePermission,
-  workspaceAdministrationWatchPermissionIds,
+  workspaceAdministrationPermissionIds,
 } from 'shared/hooks/useWorkspacePermissions';
 
 import type { RouterContext } from 'routes/__root.route';
@@ -27,7 +27,7 @@ export const requireWorkspaceCapability = async ({
   if (
     !hasWorkspacePermission(
       workspaceContext.workspacePermissionIds,
-      workspaceAdministrationWatchPermissionIds,
+      workspaceAdministrationPermissionIds,
     )
   ) {
     // TanStack Router handles its redirect descriptor as a thrown control signal.

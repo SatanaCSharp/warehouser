@@ -745,4 +745,38 @@ describe('router', () => {
     );
     expect(await screen.findByText('Acme Logistics')).toBeInTheDocument();
   });
+
+  // AC-29 + AC-30: `WORKSPACE:RENAME` is a Workspace capability of this same
+  // destination — the naming control lives in its header, next to the tabs.
+  // A custom Workspace Role holding only that Permission must therefore reach
+  // the destination and be offered the control; redirecting it away would
+  // leave the member holding a Permission they can never exercise.
+  it('admits a direct navigation to the Workspace route, and offers the naming control, when the actor holds only WORKSPACE:RENAME (AC-29, AC-30)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      stubWorkspaceRouteFetch([WorkspacePermissionId.WORKSPACE_RENAME]),
+    );
+
+    const { router } = renderRoute(ROUTES.WORKSPACE);
+
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe(ROUTES.WORKSPACE),
+    );
+    expect(
+      await screen.findByRole('button', { name: /rename workspace/iu }),
+    ).toBeInTheDocument();
+  });
+
+  it('offers the Workspace Sidebar entry when the actor holds only WORKSPACE:RENAME (AC-30)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      stubWorkspaceRouteFetch([WorkspacePermissionId.WORKSPACE_RENAME]),
+    );
+
+    renderRoute(ROUTES.HOME);
+
+    expect(
+      await screen.findByRole('link', { name: 'Workspace' }),
+    ).toHaveAttribute('href', ROUTES.WORKSPACE);
+  });
 });

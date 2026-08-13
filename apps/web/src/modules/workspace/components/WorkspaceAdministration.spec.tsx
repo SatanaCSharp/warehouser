@@ -284,6 +284,27 @@ describe('WorkspaceAdministration', () => {
       ).toHaveValue('Acme Logistics');
     });
 
+    // The rename control is a capability of this destination in its own right,
+    // so an actor holding only `WORKSPACE:RENAME` must find it here — and must
+    // not be shown a tab shell with nothing in it, because AC-30 omits what
+    // the actor cannot use rather than presenting it empty.
+    it('offers the naming control, and no empty tab shell, when WORKSPACE:RENAME is the only Workspace Permission held (AC-29, AC-30)', async () => {
+      stubWorkspaceServer({
+        context: namedWorkspaceContext([
+          WorkspacePermissionId.WORKSPACE_RENAME,
+        ]),
+      });
+
+      renderAdministration();
+
+      expect(
+        await screen.findByRole('button', { name: /rename workspace/iu }),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+      expect(screen.queryByRole('tab')).not.toBeInTheDocument();
+      expect(screen.queryByRole('tabpanel')).not.toBeInTheDocument();
+    });
+
     it('omits the naming control entirely without WORKSPACE:RENAME (AC-30)', async () => {
       stubWorkspaceServer({
         context: unnamedWorkspaceContext([

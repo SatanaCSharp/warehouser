@@ -41,13 +41,21 @@ export const useHasWorkspacePermission = (
   return hasWorkspacePermission(workspacePermissionIds, permission);
 };
 
-// The three watch Permissions that independently open the Workspace
-// administration destination (AC-30, AC-32, AC-33): holding any one of them
-// is enough, because each gates its own tab rather than the destination as a
-// whole.
-export const workspaceAdministrationWatchPermissionIds: readonly WorkspacePermissionId[] =
+/**
+ * Every Workspace Permission that independently opens the Workspace
+ * administration destination (AC-29, AC-30, AC-32, AC-33). Holding any one of
+ * them is enough, because each gates its own part of that destination rather
+ * than the destination as a whole: the three watch Permissions each open one
+ * tab, and `WORKSPACE:RENAME` opens the naming control in the header above
+ * them. This is the single set the navigation entry, the route guard and the
+ * destination's own contents must agree on — a Permission missing here is a
+ * Permission its holder can never exercise, because the web redirects them
+ * away from the only place that offers it.
+ */
+export const workspaceAdministrationPermissionIds: readonly WorkspacePermissionId[] =
   [
     WorkspacePermissionIdValue.WAREHOUSES_WATCH,
     WorkspacePermissionIdValue.WORKSPACE_ROLES_WATCH,
     WorkspacePermissionIdValue.WORKSPACE_MEMBERS_WATCH,
+    WorkspacePermissionIdValue.WORKSPACE_RENAME,
   ];

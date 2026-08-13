@@ -105,37 +105,43 @@ export const WorkspaceAdministration = (): ReactElement | null => {
         <NameWorkspaceAction />
       </header>
 
-      <div className="mx-auto max-w-[1440px]">
-        <Tabs
-          className="w-full"
-          selectedKey={openSection}
-          onSelectionChange={setSelectedTab}
-        >
-          <Tabs.ListContainer>
-            <Tabs.List aria-label={t('tabs.label')} className="w-full">
-              {tabs.map(({ id, label, shortLabel }) => (
-                <Tabs.Tab className="flex-1" id={id} key={id}>
-                  {shortLabel ? (
-                    <>
-                      <span className="hidden sm:inline">{label}</span>
-                      <span className="sm:hidden">{shortLabel}</span>
-                    </>
-                  ) : (
-                    label
-                  )}
-                  <Tabs.Indicator />
-                </Tabs.Tab>
-              ))}
-            </Tabs.List>
-          </Tabs.ListContainer>
+      {/* An actor whose only Workspace Permission gates the header — today
+          `WORKSPACE:RENAME` — admits no tab at all. AC-30 omits what such an
+          actor cannot use rather than presenting it empty, so the tab shell
+          itself goes away instead of rendering an empty tab list. */}
+      {tabs.length > 0 ? (
+        <div className="mx-auto max-w-[1440px]">
+          <Tabs
+            className="w-full"
+            selectedKey={openSection}
+            onSelectionChange={setSelectedTab}
+          >
+            <Tabs.ListContainer>
+              <Tabs.List aria-label={t('tabs.label')} className="w-full">
+                {tabs.map(({ id, label, shortLabel }) => (
+                  <Tabs.Tab className="flex-1" id={id} key={id}>
+                    {shortLabel ? (
+                      <>
+                        <span className="hidden sm:inline">{label}</span>
+                        <span className="sm:hidden">{shortLabel}</span>
+                      </>
+                    ) : (
+                      label
+                    )}
+                    <Tabs.Indicator />
+                  </Tabs.Tab>
+                ))}
+              </Tabs.List>
+            </Tabs.ListContainer>
 
-          {tabs.map(({ id }) => (
-            <Tabs.Panel className="px-0 pt-5" id={id} key={id}>
-              {tabContentById[id] ?? null}
-            </Tabs.Panel>
-          ))}
-        </Tabs>
-      </div>
+            {tabs.map(({ id }) => (
+              <Tabs.Panel className="px-0 pt-5" id={id} key={id}>
+                {tabContentById[id] ?? null}
+              </Tabs.Panel>
+            ))}
+          </Tabs>
+        </div>
+      ) : null}
     </main>
   );
 };

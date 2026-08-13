@@ -298,13 +298,16 @@ describe('Sidebar', () => {
 
   // AC-30: a User with no Workspace capability must not see the Workspace nav
   // entry at all — never disabled, never an empty destination. Each case here
-  // proves a *different* single watch Permission is enough to admit the entry
-  // (the destination gates each tab independently), and the final case proves
-  // holding none of them omits the entry entirely.
+  // proves a *different* single Workspace Permission is enough to admit the
+  // entry, because the destination gates each of its parts independently: the
+  // three watch Permissions each open their own tab, and `WORKSPACE:RENAME`
+  // opens the naming control in the destination's header. The final case
+  // proves holding none of them omits the entry entirely.
   it.each([
     ['WAREHOUSES:WATCH', WorkspacePermissionId.WAREHOUSES_WATCH],
     ['WORKSPACE_ROLES:WATCH', WorkspacePermissionId.WORKSPACE_ROLES_WATCH],
     ['WORKSPACE_MEMBERS:WATCH', WorkspacePermissionId.WORKSPACE_MEMBERS_WATCH],
+    ['WORKSPACE:RENAME', WorkspacePermissionId.WORKSPACE_RENAME],
   ])('shows Workspace when the actor holds %s', async (_label, permission) => {
     stubAccessAndWorkspace(namedWorkspaceContext([permission]));
     renderSidebar();

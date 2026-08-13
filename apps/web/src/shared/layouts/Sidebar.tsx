@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { PermissionGate } from 'shared/components/PermissionGate';
 import { WorkspaceGate } from 'shared/components/WorkspaceGate';
 import { ROUTES } from 'shared/constants/routes';
-import { workspaceAdministrationWatchPermissionIds } from 'shared/hooks/useWorkspacePermissions';
+import { workspaceAdministrationPermissionIds } from 'shared/hooks/useWorkspacePermissions';
 import { Building2Icon, DashboardIcon, ShieldCheckIcon } from 'shared/icons';
 
 import type { ReactElement } from 'react';
@@ -57,9 +57,9 @@ export const Sidebar = ({
       </PermissionGate>
       {/* AC-30 — the Workspace entry is gated by the Workspace-level read, not
           by `PermissionGate`'s Warehouse-level vocabulary, and any one of the
-          watch Permissions admits it because each opens its own section
+          destination's Permissions admits it because each opens its own part
           behind it. Holding none omits the entry entirely. */}
-      <WorkspaceGate permission={workspaceAdministrationWatchPermissionIds}>
+      <WorkspaceGate permission={workspaceAdministrationPermissionIds}>
         <li>
           <RouterLink
             to={ROUTES.WORKSPACE}
