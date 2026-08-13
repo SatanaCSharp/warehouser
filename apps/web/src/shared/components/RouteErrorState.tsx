@@ -1,4 +1,5 @@
 import { Button } from '@heroui/react';
+import { useRouter } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 
 import { TriangleAlertIcon } from 'shared/icons';
@@ -19,6 +20,17 @@ export const RouteErrorState = ({
   reset,
 }: ErrorComponentProps): ReactElement => {
   const { t } = useTranslation('common');
+  const router = useRouter();
+
+  // `reset` alone only clears the React error boundary. The route match is
+  // still in its error state, so it re-throws the same error and the actor
+  // sees the identical screen — a control that appears to retry and does
+  // nothing. Invalidating the router is what re-runs the failed `beforeLoad`,
+  // which is the read CR-AC-08 asks to be retryable.
+  const retry = (): void => {
+    reset();
+    void router.invalidate();
+  };
 
   return (
     <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 px-6 text-center">
@@ -31,7 +43,7 @@ export const RouteErrorState = ({
       <p className="max-w-md text-muted">
         {t('shell.landing.errorDescription')}
       </p>
-      <Button variant="primary" onPress={() => reset()}>
+      <Button variant="primary" onPress={retry}>
         {t('shell.landing.retry')}
       </Button>
     </div>

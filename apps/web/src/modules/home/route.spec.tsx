@@ -1,5 +1,6 @@
 import { RouterProvider } from '@tanstack/react-router';
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -49,6 +50,11 @@ const workspaceContextBody = ({
 type ServerOptions = ContextOverrides & {
   /** Answers the actor-context read with a failure instead of a body. */
   contextFails?: boolean;
+  /**
+   * Fails only the FIRST actor-context read and answers every later one
+   * normally — the shape a retry has to distinguish itself against.
+   */
+  contextFailsOnce?: boolean;
   /** Leaves the actor-context read unresolved, so landing stays pending. */
   contextPending?: boolean;
   authenticated?: boolean;
@@ -57,9 +63,11 @@ type ServerOptions = ContextOverrides & {
 const stubServer = ({
   authenticated = true,
   contextFails = false,
+  contextFailsOnce = false,
   contextPending = false,
   ...context
 }: ServerOptions = {}): ReturnType<typeof vi.fn> => {
+  let contextReads = 0;
   const fetchMock = vi.fn((input: RequestInfo | URL) => {
     const url = String(input instanceof Request ? input.url : input);
     if (url.endsWith('/api/v1/auth/session')) {
@@ -75,8 +83,10 @@ const stubServer = ({
       if (contextPending) {
         return new Promise<Response>(() => {});
       }
+      contextReads += 1;
+      const fails = contextFails || (contextFailsOnce && contextReads === 1);
       return Promise.resolve(
-        contextFails
+        fails
           ? Response.json({}, { status: 500 })
           : Response.json(workspaceContextBody(context)),
       );
@@ -237,6 +247,29 @@ describe('landing resolution at / (T7)', () => {
     ).toBeInTheDocument();
     expect(screen.queryByText(NO_CONTEXT_HEADING)).not.toBeInTheDocument();
     expect(router.state.location.pathname).toBe(ROUTES.HOME);
+  });
+
+  // CR-AC-08 — "a way to retry" means the failed read is re-issued, not that a
+  // button exists. Clearing the React error boundary alone leaves the route
+  // match in its error state, so it re-throws the same error and the actor is
+  // stuck on a screen whose only control does nothing.
+  it('re-runs the failed read and lands the actor when the retry is activated', async () => {
+    stubServer({
+      contextFailsOnce: true,
+      workspacePermissionIds: [WorkspacePermissionId.WAREHOUSES_WATCH],
+    });
+    const user = userEvent.setup();
+
+    const { router } = renderRoute(ROUTES.HOME);
+    expect(await screen.findByText(ERROR_HEADING)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Try again' }));
+
+    // The second read succeeds, so rule (1) resolves and the actor lands.
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe(ROUTES.WORKSPACE),
+    );
+    expect(screen.queryByText(ERROR_HEADING)).not.toBeInTheDocument();
   });
 
   // CR-RG-05 — `workspace.guard.ts` refuses `/workspace` against the identical

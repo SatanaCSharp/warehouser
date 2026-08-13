@@ -1,21 +1,15 @@
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { RouteErrorState } from 'shared/components/RouteErrorState';
 
+// What the retry control actually DOES is asserted where it is observable —
+// `modules/home/route.spec.tsx` fails the Workspace-context read once,
+// activates the control and asserts the actor then lands. Asserting here that
+// the injected `reset` was called would be true by construction for any button
+// wired to its own prop, and stayed green for the whole period in which `reset`
+// alone could not retry anything (CR-AC-08).
 describe('RouteErrorState', () => {
-  it('invokes the router reset function when the retry control is activated', async () => {
-    const user = userEvent.setup();
-    const reset = vi.fn();
-
-    render(<RouteErrorState error={new Error('boom')} reset={reset} />);
-
-    await user.click(screen.getByRole('button', { name: 'Try again' }));
-
-    expect(reset).toHaveBeenCalledTimes(1);
-  });
-
   it('renders the danger-toned heading and body distinct from the no-context state', () => {
     render(<RouteErrorState error={new Error('boom')} reset={vi.fn()} />);
 
