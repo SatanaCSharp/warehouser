@@ -57,14 +57,14 @@
 | T50 | Repair the workspaces load-smoke gate                    | test      | Backend Lead                 | S        | —                                     | done    |
 | T51 | Report a cross-Workspace Warehouse as unavailable        | app       | Backend Lead                 | S        | —                                     | done    |
 | T52 | Raise and surface the archival/creation 503s             | app       | Backend Lead                 | M        | —                                     | done    |
-| T53 | Carry the Workspace bootstrap in the registration reply  | rest      | Backend Lead                 | M        | —                                     | todo    |
-| T54 | Give a member with no Active Warehouse a way forward     | ui        | Frontend Lead                | M        | —                                     | todo    |
+| T53 | Carry the Workspace bootstrap in the registration reply  | rest      | Backend Lead                 | M        | —                                     | done    |
+| T54 | Give a member with no Active Warehouse a way forward     | ui        | Frontend Lead                | M        | —                                     | done    |
 | T55 | Scope the three users current-access reads to Warehouse  | app       | Backend Lead                 | M        | —                                     | done    |
 | T56 | Raise the two unreachable Workspace 503s                 | app       | Backend Lead                 | S        | —                                     | done    |
-| T57 | Resolve `workspaceRoleId` before assigning it            | app       | Backend Lead                 | M        | —                                     | todo    |
+| T57 | Resolve `workspaceRoleId` before assigning it            | app       | Backend Lead                 | M        | —                                     | done    |
 | T58 | One generic unavailable-recipient outcome for transfer   | app       | Backend Lead                 | S        | —                                     | done    |
-| T59 | Admit `WORKSPACE:RENAME` to the watch-permission list    | ui        | Frontend Lead                | S        | —                                     | todo    |
-| T60 | Explain the empty replacement choice; map the refusal    | ui        | Frontend Lead                | M        | —                                     | todo    |
+| T59 | Admit `WORKSPACE:RENAME` to the watch-permission list    | ui        | Frontend Lead                | S        | —                                     | done    |
+| T60 | Explain the empty replacement choice; map the refusal    | ui        | Frontend Lead                | M        | —                                     | done    |
 | T61 | Agree the empty-name rule key between web and server     | ui        | Frontend Lead                | S        | —                                     | done    |
 | T62 | Swap the two Owner memberships in ordered statements     | infra     | Backend Lead                 | S        | T58                                   | done    |
 
