@@ -22,6 +22,24 @@ interface InsertMembershipInput {
 export class WarehouseMembershipAssignmentRepository {
   constructor(private readonly dataSource: DataSource) {}
 
+  // Resolves the owning Workspace of a Warehouse without locking it, so a
+  // read path can tell "a Warehouse of another Workspace" apart from "a
+  // Warehouse of mine that has no assignable Role" before it projects
+  // anything. `readAssignableRoles` cannot make that distinction on its own:
+  // both collapse to an empty rowset (AC-23a).
+  async findWarehouseWorkspaceId(warehouseId: string): Promise<string | null> {
+    const manager = getEntityManager(this.dataSource);
+
+    const warehouse = await manager
+      .getRepository(WarehouseEntity)
+      .createQueryBuilder('warehouse')
+      .select('warehouse.workspaceId', 'workspaceId')
+      .where('warehouse.id = :warehouseId', { warehouseId })
+      .getRawOne<{ workspaceId: string }>();
+
+    return warehouse?.workspaceId ?? null;
+  }
+
   readAssignableRoles(
     warehouseId: string,
     workspaceId: string,

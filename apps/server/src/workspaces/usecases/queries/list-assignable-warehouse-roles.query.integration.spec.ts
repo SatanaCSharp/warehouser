@@ -1,6 +1,10 @@
 import { randomUUID } from 'node:crypto';
 
-import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
+import {
+  ErrorCode,
+  WorkspacePermissionId,
+} from '@warehouser/shared-types/enums';
+import { ApplicationError } from '@warehouser/shared-types/errors';
 import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
 import dataSource from 'shared/database/data-source';
 import { RoleEntity } from 'shared/domain/entities/role.entity';
@@ -11,15 +15,15 @@ import {
   buildWarehouse,
   buildWorkspace,
 } from 'test/factories/entity-factories';
-// `ListAssignableWarehouseRolesQuery` does not exist yet (T22) — this is the
-// RED for AC-23a. Per the task card, spec.md §5 and sad.md §6.6, the
-// implementer creates it as the narrow read carried by
-// `WAREHOUSE_MEMBERSHIPS:ASSIGN`, delegating to the already-implemented
+// AC-23a — the narrow read carried by `WAREHOUSE_MEMBERSHIPS:ASSIGN`, per
+// spec.md §5 and sad.md §6.6. It delegates to
 // `WarehouseMembershipAssignmentRepository.readAssignableRoles` (T11), which
-// projects to `id, name` in SQL, excludes the protected Warehouse Manager
-// Role, and is constrained to a single Warehouse of `currentUser.workspaceId`
-// — so a caller-supplied Warehouse of another Workspace resolves to an empty
-// result rather than disclosing that Warehouse's Roles.
+// projects to `id, name` in SQL and excludes the protected Warehouse Manager
+// Role. The query resolves the named Warehouse *before* projecting, because
+// contracts/openapi.yaml documents `404 workspace.target_unavailable` for a
+// Warehouse of another Workspace — an empty `200 []` is a different outcome
+// and cannot be told apart from an own Warehouse that simply has no custom
+// Role yet (T51 / review S1-02).
 import { ListAssignableWarehouseRolesQuery } from 'workspaces/usecases/queries/list-assignable-warehouse-roles.query';
 
 const describeIntegration =
@@ -144,7 +148,7 @@ describeIntegration('ListAssignableWarehouseRolesQuery', () => {
     }
   });
 
-  it('AC-23a: grants no visibility into the Roles of a Warehouse belonging to another Workspace', async () => {
+  it('AC-23a: reports a Warehouse of another Workspace exactly as a missing one, disclosing neither its Roles nor its existence', async () => {
     const ownWorkspaceId = await seedWorkspace();
 
     const otherWorkspaceId = await seedWorkspace();
@@ -158,8 +162,40 @@ describeIntegration('ListAssignableWarehouseRolesQuery', () => {
       updatedAt: now,
     });
 
-    const roles = await createQuery().execute(principal(ownWorkspaceId), {
-      warehouseId: otherWarehouseId,
+    const crossWorkspace = await createQuery()
+      .execute(principal(ownWorkspaceId), { warehouseId: otherWarehouseId })
+      .catch((error: unknown) => error);
+    const missing = await createQuery()
+      .execute(principal(ownWorkspaceId), { warehouseId: randomUUID() })
+      .catch((error: unknown) => error);
+
+    expect(crossWorkspace).toBeInstanceOf(ApplicationError);
+    expect(crossWorkspace).toMatchObject({
+      code: ErrorCode.WORKSPACE_TARGET_UNAVAILABLE,
+    });
+    // The two outcomes must be indistinguishable, or the refusal itself
+    // discloses that the other Workspace's Warehouse exists.
+    expect(missing).toMatchObject({
+      code: ErrorCode.WORKSPACE_TARGET_UNAVAILABLE,
+    });
+  });
+
+  // The refusal above must not swallow the legitimate empty case: an own
+  // Warehouse that exists but carries no custom Role still answers `[]`.
+  it('AC-23a: returns an empty list for a Warehouse of the actor Workspace that has no custom Role', async () => {
+    const workspaceId = await seedWorkspace();
+    const warehouseId = await seedWarehouse(workspaceId);
+    await dataSource.manager.getRepository(RoleEntity).insert({
+      id: randomUUID(),
+      warehouseId,
+      name: 'Warehouse Manager',
+      kind: 'warehouse_manager',
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const roles = await createQuery().execute(principal(workspaceId), {
+      warehouseId,
     });
 
     expect(roles).toEqual([]);
