@@ -294,13 +294,65 @@ describe('WarehouseSwitcher — selection states', () => {
         name: 'Choose a warehouse to work in',
       }),
     ).toBeInTheDocument();
+    // The prompt is now the accessible name of the select trigger rather
+    // than an inert button's label, so it reads as
+    // "Warehouse switcher, Choose warehouse" (T54).
     expect(
-      screen.getByRole('button', { name: 'Choose warehouse' }),
+      screen.getByRole('button', { name: /choose warehouse/iu }),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole('button', {
         name: /central dc|north hub|old depot/iu,
       }),
+    ).not.toBeInTheDocument();
+  });
+
+  // RED for T54/AC-03b (review S1-05) — the p2NiLo empty state rendered a
+  // `Choose warehouse` button with no `onPress` and no list to choose from, so
+  // a member with several memberships and nothing selected had no way to
+  // select one. `usePermissions` returns `[]` while `effectiveWarehouseId` is
+  // null, which locks every gated control, so the dead end is total: the one
+  // action that would unlock the shell is the one the state does not offer.
+  it('AC-03b: lets the member choose a Warehouse from the no-selection state instead of offering an inert control', async () => {
+    const fetchMock = stubFetchSequence(
+      () => jsonResponse(baseContext(null)),
+      () => jsonResponse({ warehouseId: centralEntry.warehouseId }),
+      () => jsonResponse(baseContext(centralEntry.warehouseId)),
+    );
+    renderWithProviders(<WarehouseSwitcher />);
+
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole('button', { name: /choose warehouse/iu }),
+    );
+
+    // The choice itself has to be reachable from here — a control that opens
+    // nothing is what made this a dead end.
+    await user.click(
+      await screen.findByRole('option', { name: /central dc/iu }),
+    );
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining('/api/v1/workspace/active-warehouse'),
+        expect.objectContaining({ method: 'PUT' }),
+      );
+    });
+  });
+
+  // A member holding no membership at all cannot choose their way out, so the
+  // state must say so rather than offer an action that cannot succeed.
+  it('AC-03b: offers no choice, and explains why, when the member holds no membership', async () => {
+    stubFetchSequence(() => jsonResponse(baseContext(null, [])));
+    renderWithProviders(<WarehouseSwitcher />);
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'No warehouse is available to you',
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /choose warehouse/iu }),
     ).not.toBeInTheDocument();
   });
 

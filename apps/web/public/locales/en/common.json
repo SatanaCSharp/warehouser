@@ -28,6 +28,10 @@
       "description": "It was archived, so nothing is selected now. Your access to the other warehouses is unchanged.",
       "choose": "Choose warehouse",
       "dismiss": "Dismiss"
+    },
+    "unavailable": {
+      "title": "No warehouse is available to you",
+      "description": "You do not belong to any warehouse that can be worked in right now. Ask a workspace administrator for access."
     }
   }
 }
