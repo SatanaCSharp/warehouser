@@ -62,6 +62,9 @@ export const DeleteWorkspaceRoleAction = ({
             if (outcome.success) {
               setIsOpen(false);
             }
+            // The refusal is explained inside the dialog, where the choice that
+            // provoked it was made (AC-17c, AC-17d).
+            return outcome;
           }}
         />
       ) : null}

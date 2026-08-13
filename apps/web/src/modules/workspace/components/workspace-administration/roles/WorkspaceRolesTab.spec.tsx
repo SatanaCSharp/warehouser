@@ -439,6 +439,84 @@ describe('WorkspaceRolesTab', () => {
       await waitFor(() => expect(submitted).toEqual([{}]));
     });
 
+    it('says another custom Role must exist first rather than asking for a replacement that cannot exist (AC-17c)', async () => {
+      const user = userEvent.setup();
+      const submitted: unknown[] = [];
+      stubWorkspaceServer({
+        context: namedWorkspaceContext(fullRoleAuthority),
+        // The Workspace's only custom Workspace Role, and it is assigned: no
+        // replacement other than the protected Owner Role can exist (AC-17c).
+        roles: workspaceRoles().filter(
+          (role) => role.id !== workspaceRoleIds.auditor,
+        ),
+        onDeleteWorkspaceRole: (body) => {
+          submitted.push(body);
+          return undefined;
+        },
+      });
+
+      renderTab();
+      await selectRole(user, 'Operations Lead');
+      await user.click(
+        within(await editor()).getByRole('button', { name: 'Delete role' }),
+      );
+
+      const dialog = await screen.findByRole('dialog', {
+        name: /delete operations lead/iu,
+      });
+      expect(
+        within(dialog).queryByRole('button', { name: /move those/iu }),
+      ).not.toBeInTheDocument();
+      expect(within(dialog).getByRole('alert')).toHaveTextContent(
+        'Create another custom workspace role first',
+      );
+
+      const submit = within(dialog).getByRole('button', {
+        name: 'Delete and move',
+      });
+      expect(submit).toBeDisabled();
+      await user.click(submit);
+      expect(submitted).toEqual([]);
+    });
+
+    it('says the deletion also needs assign permission when the server refuses it (AC-17d)', async () => {
+      const user = userEvent.setup();
+      stubWorkspaceServer({
+        context: namedWorkspaceContext(fullRoleAuthority),
+        onDeleteWorkspaceRole: () => ({
+          body: {
+            code: 'workspace.role_assignment_required',
+            message:
+              'Moving the affected Workspace Members to a replacement requires Workspace Role assignment.',
+          },
+          status: 403,
+        }),
+      });
+
+      renderTab();
+      await selectRole(user, 'Operations Lead');
+      await user.click(
+        within(await editor()).getByRole('button', { name: 'Delete role' }),
+      );
+
+      const dialog = await screen.findByRole('dialog', {
+        name: /delete operations lead/iu,
+      });
+      await selectHeroOption(
+        user,
+        within(dialog).getByRole('button', { name: /move those/iu }),
+        'Auditor',
+      );
+      await user.click(
+        within(dialog).getByRole('button', { name: 'Delete and move' }),
+      );
+
+      expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+        'Also needs permission to assign workspace roles',
+      );
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+
     it('offers no delete control at all without WORKSPACE_ROLES:DELETE (AC-30)', async () => {
       const user = userEvent.setup();
       stubWorkspaceServer({

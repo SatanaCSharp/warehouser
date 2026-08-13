@@ -1,17 +1,20 @@
+import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
+import { DeleteWorkspaceRoleRefusal } from 'modules/workspace/components/workspace-administration/roles/DeleteWorkspaceRoleRefusal';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormSelectField } from 'shared/components/FormSelectField';
 
 import type { WorkspaceRole } from '@warehouser/contracts/workspaces';
+import type { MutationOutcome } from 'modules/workspace/types/workspace.types';
 import type { ReactElement } from 'react';
 
 type DeleteWorkspaceRoleDialogProps = {
   replacements: WorkspaceRole[];
   role: WorkspaceRole;
   onClose: () => void;
-  onDelete: (replacementWorkspaceRoleId?: string) => Promise<void>;
+  onDelete: (replacementWorkspaceRoleId?: string) => Promise<MutationOutcome>;
 };
 
 type DeleteWorkspaceRoleForm = { replacementWorkspaceRoleId: string };
@@ -21,6 +24,12 @@ type DeleteWorkspaceRoleForm = { replacementWorkspaceRoleId: string };
  * every member holding it moves to, and says that both happen as one outcome
  * (AC-17); an unassigned one states that no Workspace Role assignment changes
  * and takes no replacement at all (AC-17a).
+ *
+ * When the assigned Role is the Workspace's only custom one no replacement can
+ * exist — the protected Workspace Owner Role is never assigned this way — so
+ * the member is told what has to exist first instead of being asked to choose
+ * from an empty required list, and a deletion that cannot succeed is not
+ * offered (AC-17c).
  */
 export const DeleteWorkspaceRoleDialog = ({
   replacements,
@@ -29,6 +38,7 @@ export const DeleteWorkspaceRoleDialog = ({
   onDelete,
 }: DeleteWorkspaceRoleDialogProps): ReactElement => {
   const { t } = useTranslation('workspace');
+  const [refusalCode, setRefusalCode] = useState<string>();
   const {
     control,
     formState: { isSubmitting },
@@ -37,10 +47,25 @@ export const DeleteWorkspaceRoleDialog = ({
     defaultValues: { replacementWorkspaceRoleId: '' },
   });
   const isAssigned = role.assignedMemberCount > 0;
+  const hasNoReplacement = isAssigned && replacements.length === 0;
+  const asksForReplacement = isAssigned && !hasNoReplacement;
+
+  const submit = async ({
+    replacementWorkspaceRoleId,
+  }: DeleteWorkspaceRoleForm): Promise<void> => {
+    const outcome = await onDelete(
+      isAssigned ? replacementWorkspaceRoleId : undefined,
+    );
+    if (outcome.success) {
+      return;
+    }
+    setRefusalCode(outcome.code);
+  };
 
   return (
     <FormModalDialog
       cancelLabel={t('workspaceRoles.delete.cancel')}
+      isSubmitDisabled={hasNoReplacement}
       isSubmitting={isSubmitting}
       noValidate
       submitLabel={
@@ -51,11 +76,9 @@ export const DeleteWorkspaceRoleDialog = ({
       submitVariant="danger"
       title={t('workspaceRoles.delete.title', { name: role.name })}
       onClose={onClose}
-      onSubmit={handleSubmit(({ replacementWorkspaceRoleId }) =>
-        onDelete(isAssigned ? replacementWorkspaceRoleId : undefined),
-      )}
+      onSubmit={handleSubmit(submit)}
     >
-      {isAssigned ? (
+      {asksForReplacement ? (
         <>
           <p className="text-muted">
             {t('workspaceRoles.delete.description', {
@@ -94,11 +117,18 @@ export const DeleteWorkspaceRoleDialog = ({
             </p>
           </div>
         </>
-      ) : (
+      ) : null}
+
+      {isAssigned ? null : (
         <p className="text-muted">
           {t('workspaceRoles.delete.unassignedDescription')}
         </p>
       )}
+
+      <DeleteWorkspaceRoleRefusal
+        code={refusalCode}
+        hasNoReplacement={hasNoReplacement}
+      />
     </FormModalDialog>
   );
 };

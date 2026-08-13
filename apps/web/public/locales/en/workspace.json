@@ -142,6 +142,14 @@
       "replacementDescription": "Every workspace member holds exactly one workspace role, so a replacement is required.",
       "noticeTitle": "Needs both permissions",
       "noticeDescription": "Moving members is a role assignment, so deleting an assigned role needs delete and assign permission together.",
+      "onlyCustomRefusal": {
+        "title": "Create another custom workspace role first",
+        "description": "This is the only custom workspace role in this workspace, so the members holding it have nowhere to move. Every workspace member holds exactly one workspace role, and the protected workspace owner role is never assigned this way."
+      },
+      "assignmentRefusal": {
+        "title": "Also needs permission to assign workspace roles",
+        "description": "Moving the affected members to a replacement is a workspace role assignment, so deleting an assigned role needs that permission as well. Nothing changed. Deleting a workspace role nobody holds stays available to you."
+      },
       "cancel": "Cancel",
       "submit": "Delete and move",
       "unassignedDescription": "No workspace member holds this role, so no workspace role assignment changes. Only the role itself is deleted."
