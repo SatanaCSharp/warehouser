@@ -23,36 +23,53 @@
 
 ## Review fix batch (from [`_review/review-2026-08-13.md`](../_review/review-2026-08-13.md))
 
-| #   | Task                                             | Layer  | Blocked by    | Status  |
-| --- | ------------------------------------------------ | ------ | ------------- | ------- |
-| T16 | Entry write once per entered Warehouse + fixture | app    | —             | done    |
-| T17 | Archived label on the entered Warehouse          | ui     | —             | done    |
-| T18 | Suppress the empty Warehouses group              | ui     | —             | done    |
-| T19 | Retained message out of the header + copy        | ui     | T18           | blocked |
-| T20 | Undim the inert-row explanation                  | ui     | —             | done    |
-| T21 | Route error retry re-runs the read               | app    | —             | done    |
-| T22 | Landing pending state                            | ui     | —             | done    |
-| T23 | Fail closed on an absent entry verdict           | app    | —             | done    |
-| T24 | Computed-access hole in the architecture check   | wiring | —             | done    |
-| T25 | Enter actions named per Warehouse                | ui     | —             | done    |
-| T26 | Drop the orphaned locale keys                    | ui     | T19, T22, T25 | todo    |
-| T27 | CR-AC-10 landing tests assert the destination    | tests  | —             | todo    |
-| T28 | CR-AC-14 through the production router           | tests  | T16           | todo    |
-| T29 | Planned shell/error cases + drop tautologies     | tests  | T19, T21, T23 | todo    |
+| #   | Task                                             | Layer  | Blocked by    | Status      |
+| --- | ------------------------------------------------ | ------ | ------------- | ----------- |
+| T16 | Entry write once per entered Warehouse + fixture | app    | —             | done        |
+| T17 | Archived label on the entered Warehouse          | ui     | —             | done        |
+| T18 | Suppress the empty Warehouses group              | ui     | —             | done        |
+| T19 | Retained messages to a shell main-region block   | ui     | —             | done        |
+| T20 | Undim the inert-row explanation                  | ui     | —             | done        |
+| T21 | Route error retry re-runs the read               | app    | —             | done        |
+| T22 | Landing pending state                            | ui     | —             | done        |
+| T23 | Fail closed on an absent entry verdict           | app    | —             | done        |
+| T24 | Computed-access hole in the architecture check   | wiring | —             | done        |
+| T25 | Enter actions named per Warehouse                | ui     | —             | done        |
+| T26 | Drop the orphaned locale keys                    | ui     | —             | done        |
+| T27 | CR-AC-10 landing tests assert the destination    | tests  | —             | done        |
+| T28 | CR-AC-14 through the production router           | tests  | T16           | done        |
+| T29 | Error-path case, tautologies, shell composition  | tests  | T19, T21, T23 | in_progress |
+| T30 | No-context copy direction and action             | ui     | —             | done        |
 
-**T19 is blocked on a design decision, not on effort.** Moving the three CR-RG-03 messages out of
-the fixed-height shell header into the page-level state block makes the `selectionEnded` variant
-unreachable: its `lastSelected` memory has to observe `effectiveWarehouseId` going non-null → null,
-which only a component mounted on every page can see. The page block mounts only at `/`, where
-CR-AC-08 rule (3) guarantees the value is already null. Moving the read also makes the block a
-**fourth** reader of `effectiveWarehouseId`, which the spec §6 allowlist of exactly three named call
-sites forbids — the automated check rejected it. Resolving this needs a decision on where that
-memory lives and whether the allowlist's named sites change. See the review record.
+Two of T29's three parts are committed (the failed-context-read case at a Warehouse address, and
+the replacement of the tautological current-marker assertion). The third — the CR-AC-18 shell
+composition case of [`test-plan.md`](../test-plan.md) — was held until T19 changed the layout it
+asserts, and is being written against the shipped composition now.
 
-**Total:** 15 original tasks + 14 review-fix tasks. T15 is partially complete: the ten entry-latency
-figures are recorded and pass, the four 390px responsive checks still need a person at a real
-narrow viewport — see [the task record](./responsive-and-entry-latency-verification.md). Per the
-review resolution those checks run **after** the fix batch, because T19 and the recorded design
+### What T19 changed, and what it deliberately did not
+
+The three CR-RG-03 messages now live in `shared/components/RetainedContextMessage.tsx`, mounted by
+`RootLayout` in the main content region above the routed outlet. That placement is load-bearing, not
+cosmetic: the `selectionEnded` variant's memory has to observe `effectiveWarehouseId` going
+non-null → null, which only a component mounted on every page can see. An earlier attempt to put the
+block on the `/` page was reverted for exactly that reason — at `/`, CR-AC-08 rule (3) guarantees the
+value is already null, so that message would never have rendered in the running app.
+
+The `effectiveWarehouseId` read moved with the message, so the spec §6 allowlist still names exactly
+three call sites — `landing.guard.ts`, `RetainedContextMessage.tsx`, `useRecordWarehouseEntry.ts` —
+and §6's wording was updated to match. `WarehouseSwitcher.tsx` no longer references the identifier at
+all.
+
+**Known, not fixed:** `/` still renders `HomePage`'s `h1` above the retained message's `h2`. The
+defect finding 5 named is fixed — the block is out of the fixed-height header, no longer overflows
+it, and renders once rather than twice — but collapsing the two headings into one would change
+`HomePage`'s own block, which overlaps the deferred design deviation about that block's missing
+icon. Both belong to the same follow-up.
+
+**Total:** 15 original tasks + 15 review-fix tasks. T15 is partially complete: the ten entry-latency
+figures are recorded and pass, the four 390px responsive checks still need a person at a real narrow
+viewport — see [the task record](./responsive-and-entry-latency-verification.md). Per the review
+resolution those checks run **after** the fix batch, because T19's relocation and the recorded design
 deviations all live in the surfaces they exercise.
 
 Not tracked here: **CR-AC-15** (canonical reconciliation of the seven `change.md` §8 rows) is a

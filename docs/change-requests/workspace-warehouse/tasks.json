@@ -324,7 +324,7 @@
         "apps/web/eslint.config.mjs",
         "docs/change-requests/workspace-warehouse/spec.md"
       ],
-      "status": "todo"
+      "status": "done"
     },
     {
       "id": "T20",
@@ -423,7 +423,7 @@
         "apps/web/public/locales/uk/common.json",
         "apps/web/src/i18n.spec.ts"
       ],
-      "status": "todo"
+      "status": "done"
     },
     {
       "id": "T27",
@@ -437,7 +437,7 @@
         "apps/web/src/router.spec.tsx",
         "apps/web/src/modules/home/route.spec.tsx"
       ],
-      "status": "todo"
+      "status": "done"
     },
     {
       "id": "T28",
@@ -448,7 +448,7 @@
       "source_refs": ["_review/review-2026-08-13.md#finding-11"],
       "dod": "One case built on createAppRouter activates the warehouses-tab Enter action and asserts all three CR-AC-14 clauses together on the real route tree: arrival in that Warehouse view, the row marked current in the switcher, and the stored-selection write issued.",
       "files_hint": ["apps/web/src/router.spec.tsx"],
-      "status": "todo"
+      "status": "done"
     },
     {
       "id": "T29",
@@ -463,7 +463,7 @@
         "apps/web/src/routes/warehouse.route.spec.tsx",
         "apps/web/src/shared/layouts/WarehouseSwitcher.spec.tsx"
       ],
-      "status": "todo"
+      "status": "in_progress"
     },
     {
       "id": "T30",
@@ -479,7 +479,7 @@
         "apps/web/src/modules/home/page.tsx",
         "apps/web/src/i18n.spec.ts"
       ],
-      "status": "todo"
+      "status": "done"
     }
   ]
 }
