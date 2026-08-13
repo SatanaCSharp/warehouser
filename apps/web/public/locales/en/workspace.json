@@ -32,6 +32,7 @@
   },
   "warehouses": {
     "enter": "Enter",
+    "enterNamed": "Enter {{name}}",
     "search": "Search warehouses",
     "loading": "Loading warehouses",
     "empty": "This workspace has no warehouse yet.",

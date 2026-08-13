@@ -110,6 +110,14 @@ export const WarehouseList = ({
                   <RouterLink
                     to={ROUTES.WAREHOUSE}
                     params={{ warehouseId: warehouse.id }}
+                    // Every row renders this same visible word, so the bare
+                    // label leaves a screen-reader link list showing N
+                    // identical "Enter" links with nothing to tell them apart.
+                    // The accessible name names the Warehouse; the visible
+                    // label stays short, as the approved row draws it.
+                    aria-label={t('warehouses.enterNamed', {
+                      name: warehouse.name,
+                    })}
                     className={`mt-4 shrink-0 gap-1.5 ${buttonVariants({ variant: 'outline', size: 'sm' })}`}
                   >
                     <LogInIcon />

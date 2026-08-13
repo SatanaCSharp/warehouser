@@ -973,6 +973,33 @@ describe('WarehousesTab', () => {
       ).toBeInTheDocument();
     });
 
+    // CR-AC-13 — the visible word is the same on every row, so the accessible
+    // name is the only thing that can distinguish them. A screen-reader link
+    // list showing several identical "Enter" links names no destination.
+    it('gives each Enter action an accessible name naming its own Warehouse', async () => {
+      stubWorkspaceServer({
+        context: {
+          ...namedWorkspaceContext(watchOnly),
+          warehouses: [
+            membershipWarehouse(warehouseIds.central, null),
+            membershipWarehouse(warehouseIds.north, null),
+          ],
+        },
+      });
+
+      renderTabWithRouter();
+
+      await warehouseRowFor('Central DC');
+      const names = screen
+        .getAllByRole('link', { name: /enter/iu })
+        .map((link) => link.getAttribute('aria-label'));
+
+      expect(names).toEqual(
+        expect.arrayContaining(['Enter Central DC', 'Enter North Hub']),
+      );
+      expect(new Set(names).size).toBe(names.length);
+    });
+
     it('omits Enter — hidden, not disabled — on a non-membership row, an archived membership row, and an archived non-membership row', async () => {
       const farDepotId = '00000000-0000-4000-8000-000000000114';
       stubWorkspaceServer({
