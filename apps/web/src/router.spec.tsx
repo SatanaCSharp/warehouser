@@ -88,6 +88,100 @@ const withWorkspaceContext = (
     return requestScript(input, init) as Promise<Response>;
   });
 
+// CR-AC-10 — a registrant's own Workspace, as the server describes it once the
+// bootstrap has run: they are its Workspace Owner, so their context carries all
+// four administration Permissions, and their sole live membership is the first
+// Warehouse registration created, which the server's derivation therefore names
+// as the effective one (`change.md` §2.1).
+const registrant = {
+  userId: '00000000-0000-4000-8000-000000000012',
+  workspaceId: '00000000-0000-4000-8000-000000000015',
+  warehouseId: '00000000-0000-4000-8000-000000000013',
+  roleId: '00000000-0000-4000-8000-000000000014',
+  warehouseName: 'Main Warehouse',
+} as const;
+
+const registrantWorkspaceContext = (): Record<string, unknown> => ({
+  workspace: { id: registrant.workspaceId, name: null },
+  workspacePermissionIds: [
+    WorkspacePermissionId.WAREHOUSES_WATCH,
+    WorkspacePermissionId.WORKSPACE_ROLES_WATCH,
+    WorkspacePermissionId.WORKSPACE_MEMBERS_WATCH,
+    WorkspacePermissionId.WORKSPACE_RENAME,
+  ],
+  warehouses: [
+    {
+      warehouseId: registrant.warehouseId,
+      name: registrant.warehouseName,
+      archivedAt: null,
+      roleId: registrant.roleId,
+      roleKind: 'warehouse_manager',
+    },
+  ],
+  effectiveWarehouseId: registrant.warehouseId,
+});
+
+/**
+ * The registration journey answered by URL rather than by an ordered script:
+ * what CR-AC-10 asserts is where the landing resolver puts the registrant and
+ * what the switcher then offers them, and both read the Workspace context —
+ * a read a positional script silently mis-answers (which is exactly how this
+ * case previously passed over a route error).
+ */
+const stubRegistrantServer = (): ReturnType<typeof vi.fn> =>
+  vi.fn((input: RequestInfo | URL) => {
+    const url = String(input instanceof Request ? input.url : input);
+    if (url.endsWith('/api/v1/auth/sign-up')) {
+      // AC-01 — registration answers with the whole bootstrap outcome, not
+      // just the identity and its Warehouse access.
+      return Promise.resolve(
+        Response.json({
+          user: { id: registrant.userId },
+          workspace: { id: registrant.workspaceId, name: null },
+          workspacePermissionIds: ['WORKSPACE:RENAME', 'WAREHOUSES:CREATE'],
+          access: {
+            warehouseId: registrant.warehouseId,
+            roleId: registrant.roleId,
+            roleKind: 'warehouse_manager',
+            permissionIds: ['ROLES:WATCH'],
+            archivedAt: null,
+          },
+          effectiveWarehouseId: registrant.warehouseId,
+        }),
+      );
+    }
+    if (url.endsWith('/api/v1/auth/session')) {
+      return Promise.resolve(new Response(null, { status: 204 }));
+    }
+    if (url.includes('/api/v1/workspace/context')) {
+      return Promise.resolve(Response.json(registrantWorkspaceContext()));
+    }
+    if (url.endsWith('/api/v1/workspace/warehouses')) {
+      return Promise.resolve(
+        Response.json([
+          {
+            id: registrant.warehouseId,
+            name: registrant.warehouseName,
+            archivedAt: null,
+          },
+        ]),
+      );
+    }
+    if (url.endsWith('/api/v1/workspace/users')) {
+      return Promise.resolve(
+        Response.json([
+          {
+            userId: registrant.userId,
+            email: 'new@example.test',
+            isWorkspaceMember: true,
+            warehouses: [{ warehouseId: registrant.warehouseId }],
+          },
+        ]),
+      );
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  });
+
 const renderRoute = (initialEntry: string): RenderedRoute => {
   const store = makeStore();
   const router = createAppRouter({
@@ -462,34 +556,8 @@ describe('router', () => {
     expect(screen.queryByText(memberId)).not.toBeInTheDocument();
   });
 
-  it('creates an account, authenticates the linked user, and enters home', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi
-        .fn()
-        .mockResolvedValueOnce(new Response(null, { status: 204 }))
-        .mockResolvedValueOnce(
-          // AC-01 — registration answers with the whole bootstrap outcome,
-          // not just the identity and its Warehouse access.
-          Response.json({
-            user: { id: '00000000-0000-4000-8000-000000000012' },
-            workspace: {
-              id: '00000000-0000-4000-8000-000000000015',
-              name: null,
-            },
-            workspacePermissionIds: ['WORKSPACE:RENAME', 'WAREHOUSES:CREATE'],
-            access: {
-              warehouseId: '00000000-0000-4000-8000-000000000013',
-              roleId: '00000000-0000-4000-8000-000000000014',
-              roleKind: 'warehouse_manager',
-              permissionIds: ['ROLES:WATCH'],
-              archivedAt: null,
-            },
-            effectiveWarehouseId: '00000000-0000-4000-8000-000000000013',
-          }),
-        )
-        .mockResolvedValueOnce(Response.json(readableAccess)),
-    );
+  it('creates an account, authenticates the linked user, and enters their new Workspace (CR-AC-10)', async () => {
+    vi.stubGlobal('fetch', stubRegistrantServer());
     const user = userEvent.setup();
     const { router, store } = renderRoute('/sign-up');
 
@@ -498,11 +566,39 @@ describe('router', () => {
     await user.type(screen.getByLabelText('Warehouse name'), 'Main Warehouse');
     await user.click(screen.getByRole('button', { name: 'Create account' }));
 
-    await waitFor(() => expect(router.state.location.pathname).toBe('/'));
+    // CR-AC-10 — the registrant's Workspace Owner Role holds all four
+    // administration Permissions, so landing resolves them into the Workspace
+    // view by CR-AC-08 rule (1).
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe(ROUTES.WORKSPACE),
+    );
     expect(store.getState().auth).toEqual({
       status: 'authenticated',
-      user: { id: '00000000-0000-4000-8000-000000000012' },
+      user: { id: registrant.userId },
     });
+
+    // CR-AC-10's second clause — the switcher offers their first Warehouse
+    // beneath the Workspace row. `RootLayout` renders the switcher twice, once
+    // for each viewport, and jsdom applies no media query, so both triggers are
+    // present; either opens the same control.
+    await user.click(
+      (await screen.findAllByRole('button', { name: /context switcher/iu }))[0],
+    );
+    const listbox = await screen.findByRole('listbox');
+    const workspaceRow = within(
+      within(listbox).getByRole('group', { name: 'Workspace' }),
+    ).getByRole('option');
+    const warehouseRows = within(
+      within(listbox).getByRole('group', { name: 'Warehouses' }),
+    ).getAllByRole('option');
+
+    expect(warehouseRows.map((row) => row.textContent)).toEqual([
+      expect.stringContaining('Main Warehouse'),
+    ]);
+    expect(within(listbox).getAllByRole('option')).toEqual([
+      workspaceRow,
+      ...warehouseRows,
+    ]);
   });
 
   it('keeps duplicate sign-up anonymous and offers sign-in', async () => {
