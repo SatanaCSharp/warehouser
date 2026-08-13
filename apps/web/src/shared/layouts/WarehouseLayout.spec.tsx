@@ -8,8 +8,9 @@ import {
 } from '@tanstack/react-router';
 import { render, screen } from '@testing-library/react';
 import { Provider } from 'react-redux';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
+import { useRecordWarehouseEntry } from 'modules/warehouse/hooks/useRecordWarehouseEntry';
 import { ROUTES } from 'shared/constants/routes';
 import { WarehouseLayout } from 'shared/layouts/WarehouseLayout';
 import { makeStore } from 'store';
@@ -23,6 +24,13 @@ import type { AppStore } from 'store';
 // nearest match — no `from` needed, since it is literally that route's
 // component), and renders `<Outlet />` only when `entered`.
 const WAREHOUSE_ID = '00000000-0000-4000-8000-000000000010';
+
+// T8 / CR-AC-09 — the entry-record hook makes its own network calls, which
+// this file's cases have no interest in stubbing. Mocking it here keeps this
+// spec about rendering, and lets it assert precisely where the hook mounts.
+vi.mock('modules/warehouse/hooks/useRecordWarehouseEntry', () => ({
+  useRecordWarehouseEntry: vi.fn(),
+}));
 
 const buildLayoutRouter = (
   verdict: WarehouseEntryVerdict,
@@ -72,6 +80,24 @@ describe('WarehouseLayout', () => {
     renderLayout({ status: 'entered', warehouseId: WAREHOUSE_ID });
 
     expect(await screen.findByText('Dashboard content')).toBeInTheDocument();
+  });
+
+  // T8 / CR-AC-09 — the entry-record write must never run around a refusal;
+  // it is mounted only in the branch that renders the Outlet.
+  it('mounts useRecordWarehouseEntry for an entered verdict and not around a refusal', async () => {
+    vi.mocked(useRecordWarehouseEntry).mockClear();
+    renderLayout({
+      status: 'refused',
+      reason: 'not-a-member',
+      warehouseId: WAREHOUSE_ID,
+    });
+    await screen.findByText("This address isn't available to you");
+    expect(useRecordWarehouseEntry).not.toHaveBeenCalled();
+
+    vi.mocked(useRecordWarehouseEntry).mockClear();
+    renderLayout({ status: 'entered', warehouseId: WAREHOUSE_ID });
+    await screen.findByText('Dashboard content');
+    expect(useRecordWarehouseEntry).toHaveBeenCalled();
   });
 
   it('renders the non-disclosing refusal instead of the Outlet for a non-member verdict', async () => {

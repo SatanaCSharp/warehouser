@@ -1,9 +1,19 @@
 import { Outlet, useMatch } from '@tanstack/react-router';
 
+import { useRecordWarehouseEntry } from 'modules/warehouse/hooks/useRecordWarehouseEntry';
 import { WarehouseEntryRefusal } from 'shared/components/WarehouseEntryRefusal';
 
 import type { WarehouseEntryVerdict } from 'guards/warehouse-entry.guard';
 import type { ReactElement } from 'react';
+
+// T8 / CR-AC-09 — the entry-record write must never run around a refusal.
+// Calling the hook from this private helper, rendered only by the branch
+// below that already resolved to `entered`, makes that scoping a property of
+// *where* the hook is called rather than a condition inside it.
+const EnteredWarehouseOutlet = (): ReactElement => {
+  useRecordWarehouseEntry();
+  return <Outlet />;
+};
 
 // T4 / ADR 0001 — the Warehouse layout route's own component. It is rendered
 // only as `routes/warehouse.route.tsx`'s `component`, so `useMatch()` with no
@@ -20,5 +30,5 @@ export const WarehouseLayout = (): ReactElement => {
     return <WarehouseEntryRefusal reason={verdict.reason ?? 'not-a-member'} />;
   }
 
-  return <Outlet />;
+  return <EnteredWarehouseOutlet />;
 };
