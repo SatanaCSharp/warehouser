@@ -11,7 +11,7 @@
 | T4  | Warehouse layout route and `useEnteredWarehouse` | wiring | Frontend Lead | M        | T2, T3          | done   |
 | T5  | `RouteErrorState` component                      | ui     | Frontend Lead | S        | T1              | done   |
 | T6  | Access relocation and addressed permissions      | app    | Frontend Lead | M        | T4              | done   |
-| T7  | Landing resolver and root not-found              | app    | Frontend Lead | M        | T4, T5          | todo   |
+| T7  | Landing resolver and root not-found              | app    | Frontend Lead | M        | T4, T5          | done   |
 | T8  | Entry record and silent-failure allowlist        | app    | Frontend Lead | S        | T4              | todo   |
 | T9  | Grouped context switcher                         | ui     | Frontend Lead | L        | T1, T4          | todo   |
 | T10 | Context-selected sidebar                         | ui     | Frontend Lead | M        | T4, T6          | todo   |
