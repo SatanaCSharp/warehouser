@@ -45,8 +45,11 @@ export const WarehousesTab = (): ReactElement => {
   // no descendant races it with a second context request of its own.
   const { data: warehouses = [], isLoading: isWarehousesLoading } =
     useListWorkspaceWarehousesQuery();
-  const { isLoading: isContextLoading, workspacePermissionIds } =
-    useCurrentWorkspaceContext();
+  const {
+    isLoading: isContextLoading,
+    workspaceContext,
+    workspacePermissionIds,
+  } = useCurrentWorkspaceContext();
   const canReadPeople = hasWorkspacePermission(
     workspacePermissionIds,
     WorkspacePermissionId.WORKSPACE_MEMBERS_WATCH,
@@ -87,6 +90,12 @@ export const WarehousesTab = (): ReactElement => {
     (warehouse) => warehouse.archivedAt === null,
   ).length;
   const peopleCounts = users ? peopleCountsByWarehouse(users) : undefined;
+  // CR-AC-13 — the same source `WarehouseSwitcher` reads, so the Enter action
+  // and the switcher can never disagree about which Warehouses the actor may
+  // enter. One prop, one hop; no additional query.
+  const membershipWarehouseIds =
+    workspaceContext?.warehouses.map((warehouse) => warehouse.warehouseId) ??
+    [];
 
   const selectWarehouse = (warehouseId: string): void => {
     setSelectedWarehouseId(warehouseId);
@@ -105,6 +114,7 @@ export const WarehousesTab = (): ReactElement => {
         <WarehouseList
           className={isDetailActive ? 'hidden lg:block' : 'lg:block'}
           isLoading={isLoading}
+          membershipWarehouseIds={membershipWarehouseIds}
           peopleCounts={peopleCounts}
           selectedWarehouseId={selectedWarehouse?.id}
           warehouses={warehouses}
