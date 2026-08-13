@@ -1,7 +1,11 @@
-import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
+import {
+  PermissionId,
+  WorkspacePermissionId,
+} from '@warehouser/shared-types/enums';
 import { vi } from 'vitest';
 
 import { authBecameAuthenticated } from 'modules/auth/store/auth.slice';
+import { warehousePath } from 'shared/api/warehouse-path';
 import { makeStore } from 'store';
 
 import type {
@@ -549,4 +553,231 @@ export const authenticatedWorkspaceStore = (
   const store = makeStore();
   store.dispatch(authBecameAuthenticated({ id: userId }));
   return store;
+};
+
+/**
+ * T14 — the identifiers a Warehouse-address session needs. `foreignWorkspace`,
+ * `nonExistent`, `ownWithoutMembership` and `malformed` are the four addresses
+ * CR-AC-07 requires to be indistinguishable from one another; `north`, `south`
+ * and `retired` are the memberships every entry verdict is resolved against.
+ */
+export const warehouseSessionIds = {
+  actor: '00000000-0000-4000-8000-000000000150',
+  foreignWorkspace: '00000000-0000-4000-8000-000000000155',
+  malformed: 'not-a-warehouse-identifier',
+  nonExistent: '00000000-0000-4000-8000-000000000156',
+  north: '00000000-0000-4000-8000-000000000151',
+  ownWithoutMembership: '00000000-0000-4000-8000-000000000154',
+  retired: '00000000-0000-4000-8000-000000000153',
+  role: '00000000-0000-4000-8000-000000000157',
+  south: '00000000-0000-4000-8000-000000000152',
+};
+
+export type WarehouseMembershipFixture = {
+  archivedAt: string | null;
+  name: string;
+  warehouseId: string;
+};
+
+/** Two live memberships and one archived — the shape T14's cases resolve against. */
+export const warehouseMemberships = {
+  north: {
+    archivedAt: null,
+    name: 'North Hub',
+    warehouseId: warehouseSessionIds.north,
+  },
+  retired: {
+    archivedAt: '2026-08-01T09:00:00.000Z',
+    name: 'Old Depot',
+    warehouseId: warehouseSessionIds.retired,
+  },
+  south: {
+    archivedAt: null,
+    name: 'South Cross-dock',
+    warehouseId: warehouseSessionIds.south,
+  },
+} satisfies Record<string, WarehouseMembershipFixture>;
+
+export type WarehouseSessionRequest = { method: string; url: string };
+
+export type WarehouseSessionRevision = {
+  effectiveWarehouseId?: string | null;
+  memberships?: readonly WarehouseMembershipFixture[];
+};
+
+type WarehouseSessionOptions = WarehouseSessionRevision & {
+  /**
+   * What the stored-selection write answers. A non-2xx leaves the recorded
+   * selection untouched, which is CR-AC-09's fire-and-forget failure and the
+   * only way to hold a stored selection that disagrees with the open address.
+   */
+  activeWarehouseWriteStatus?: number;
+  authenticated?: boolean;
+  /** What the actor's Role carries in each Warehouse, keyed by its id. */
+  permissionIdsIn?: Readonly<Record<string, readonly PermissionId[]>>;
+  workspacePermissionIds?: readonly WorkspacePermissionId[];
+};
+
+export type WarehouseSessionStub = {
+  /** Every request the session answered, in order, still filling as it runs. */
+  readonly requests: readonly WarehouseSessionRequest[];
+  /** Changes what the NEXT Workspace-context read answers (CR-AC-20). */
+  reviseContext: (revision: WarehouseSessionRevision) => void;
+  urlsMatching: (pattern: RegExp) => string[];
+};
+
+const asAccessPage = (items: unknown[]): Record<string, unknown> => ({
+  hasNext: false,
+  hasPrev: false,
+  items,
+  nextCursor: null,
+});
+
+/**
+ * One Warehouse's four access reads, each at its own **exact** per-Warehouse
+ * URL built by the production `warehousePath`. A request that forgets its
+ * Warehouse, or names another one, 404s here exactly as it would against the
+ * server — which is how a case proves the request named its Warehouse
+ * (CR-RG-01).
+ */
+const warehouseAccessRoutes = (
+  { archivedAt, name, warehouseId }: WarehouseMembershipFixture,
+  permissionIds: readonly PermissionId[],
+): [string, unknown][] => {
+  const role = {
+    assignedMemberCount: 1,
+    id: warehouseSessionIds.role,
+    kind: 'custom',
+    name: `${name} Operators`,
+    permissionIds: [...permissionIds],
+  };
+  return [
+    [
+      warehousePath(warehouseId, 'access/current'),
+      {
+        archivedAt,
+        permissionIds: [...permissionIds],
+        roleId: warehouseSessionIds.role,
+        roleKind: 'custom',
+        warehouseId,
+      },
+    ],
+    [warehousePath(warehouseId, 'access/roles'), asAccessPage([role])],
+    [
+      warehousePath(warehouseId, 'access/permissions'),
+      asAccessPage([
+        {
+          id: PermissionId.ROLES_WATCH,
+          kind: 'assignable',
+          label: 'View roles',
+        },
+      ]),
+    ],
+    [
+      warehousePath(warehouseId, 'access/members'),
+      asAccessPage([
+        {
+          email: `${name.toLowerCase().replace(/\W+/gu, '-')}@example.test`,
+          roleId: warehouseSessionIds.role,
+          roleKind: 'custom',
+          userId: warehouseSessionIds.actor,
+        },
+      ]),
+    ],
+  ];
+};
+
+/**
+ * T14 — answers a whole Warehouse-address session: the session restore, the
+ * Workspace context, the stored-selection write, and each membership's own
+ * access reads. The context body is re-read on every request, so
+ * `reviseContext` changes what a **refetch** mid-session answers without
+ * re-stubbing anything (CR-AC-20).
+ */
+export const stubWarehouseSession = ({
+  activeWarehouseWriteStatus = 200,
+  authenticated = true,
+  effectiveWarehouseId = null,
+  memberships = [],
+  permissionIdsIn = {},
+  workspacePermissionIds = [],
+}: WarehouseSessionOptions = {}): WarehouseSessionStub => {
+  const requests: WarehouseSessionRequest[] = [];
+  const state = { effectiveWarehouseId, memberships };
+
+  const routes = (): [string, unknown][] => [
+    [
+      '/api/v1/workspace/context',
+      {
+        effectiveWarehouseId: state.effectiveWarehouseId,
+        warehouses: state.memberships.map((membership) => ({
+          ...membership,
+          roleId: warehouseSessionIds.role,
+          roleKind: 'custom',
+        })),
+        workspace: { id: workspaceIds.workspace, name: 'Acme Logistics' },
+        workspacePermissionIds: [...workspacePermissionIds],
+      },
+    ],
+    ...state.memberships.flatMap((membership) =>
+      warehouseAccessRoutes(
+        membership,
+        permissionIdsIn[membership.warehouseId] ?? [],
+      ),
+    ),
+  ];
+
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((input: Request | string | URL, init?: RequestInit) => {
+      const url = String(input instanceof Request ? input.url : input);
+      const method = requestMethod(input, init);
+      requests.push({ method, url });
+
+      if (url === '/api/v1/auth/session') {
+        return Promise.resolve(
+          authenticated
+            ? Response.json({ user: { id: warehouseSessionIds.actor } })
+            : new Response(null, { status: 204 }),
+        );
+      }
+
+      if (url === '/api/v1/workspace/active-warehouse' && method === 'PUT') {
+        if (activeWarehouseWriteStatus !== 200) {
+          return Promise.resolve(
+            Response.json(
+              { code: 'api.unexpected', message: 'Unavailable' },
+              { status: activeWarehouseWriteStatus },
+            ),
+          );
+        }
+        const body = jsonBody(init) as { warehouseId?: string } | undefined;
+        state.effectiveWarehouseId = body?.warehouseId ?? null;
+        return Promise.resolve(
+          Response.json({ effectiveWarehouseId: state.effectiveWarehouseId }),
+        );
+      }
+
+      const route = routes().find(([path]) => path === url);
+      return Promise.resolve(
+        route
+          ? Response.json(route[1])
+          : Response.json(
+              { code: 'api.not_found', message: 'Not found' },
+              { status: 404 },
+            ),
+      );
+    }),
+  );
+
+  return {
+    requests,
+    reviseContext: (revision) => {
+      Object.assign(state, revision);
+    },
+    urlsMatching: (pattern) =>
+      requests
+        .filter((request) => pattern.test(request.url))
+        .map((request) => request.url),
+  };
 };
