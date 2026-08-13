@@ -59,7 +59,7 @@
 | T52 | Raise and surface the archival/creation 503s             | app       | Backend Lead                 | M        | —                                     | done   |
 | T53 | Carry the Workspace bootstrap in the registration reply  | rest      | Backend Lead                 | M        | —                                     | todo   |
 | T54 | Give a member with no Active Warehouse a way forward     | ui        | Frontend Lead                | M        | —                                     | todo   |
-| T55 | Scope the three users current-access reads to Warehouse  | app       | Backend Lead                 | M        | —                                     | todo   |
+| T55 | Scope the three users current-access reads to Warehouse  | app       | Backend Lead                 | M        | —                                     | done   |
 | T56 | Raise the two unreachable Workspace 503s                 | app       | Backend Lead                 | S        | —                                     | done   |
 | T57 | Resolve `workspaceRoleId` before assigning it            | app       | Backend Lead                 | M        | —                                     | todo   |
 | T58 | One generic unavailable-recipient outcome for transfer   | app       | Backend Lead                 | S        | —                                     | done   |
@@ -152,10 +152,17 @@ DATABASE_NAME=warehouser_test RUN_INTEGRATION=1 pnpm --filter @warehouser/server
 and the `.env.example` default is the development database. Wiring the tier into the default gate is
 review finding S2-06 (stage 2), still open.
 
-Baseline at the start of remediation: **12 failed / 852 passed, 7 suites**. After T51, T52, T56,
-T58, T62: **10 failed / 866 passed**. The remaining ten belong to T47, T48, T49 and T50.
+Baseline at the start of remediation: **12 failed / 852 passed, 7 suites**. After T51, T52, T55,
+T56, T58, T61, T62: **10 failed / 869 passed**. The remaining ten belong to T47, T48, T49 and T50.
 
-**Two findings turned out to be more than the review could confirm.** S1-13's duplicate-key was
+**Three findings turned out to be more than the review could confirm.** S1-06 was reported as an
+ambiguous resolution; it is a working privilege escalation. `findOneBy({userId})` resolves through
+the `(user_id, warehouse_id)` key, so the membership it returns is the actor's _lowest_ warehouse
+id — not random, but attacker-influenceable, since a member with a Role in a Warehouse whose id
+sorts first has that Role's Permissions used as their ceiling everywhere. The pre-fix
+`CreateMemberCommand` created a member holding `USERS:DELETE` for an actor who did not hold it in
+the Warehouse they were acting in. `warehouseId` is now a required parameter, so the omission cannot
+recur. S1-13's duplicate-key was
 reproduced deterministically, not just argued: seeding the recipient's membership row physically
 first makes the planner reach it before the outgoing Owner's, and the single `UPDATE ... CASE`
 raises `duplicate key value violates unique constraint "uq_workspace_memberships_one_owner"`. And
