@@ -700,7 +700,14 @@ describeIntegration('warehouse-access HTTP contract', () => {
     expect(body).toMatchObject({ code: 'access.role_name_conflict' });
   });
 
-  it('PATCH /api/v1/warehouses/:warehouseId/access/roles/:roleId returns 404 access.target_unavailable for a Role of another Warehouse', async () => {
+  // The Role is the target this route acts on, and it has answered
+  // `access.role_unavailable` since the `access` feature
+  // (`docs/features/access/contracts/openapi.yaml:521`). Re-shaping the path
+  // under `/warehouses/{warehouseId}` changed the path, not the behaviour, so
+  // the workspaces contract now restates that code through
+  // `WarehouseRoleUnavailable` instead of the member-target response. The 404
+  // and the non-disclosure it guarantees are the same either way (T49).
+  it('PATCH /api/v1/warehouses/:warehouseId/access/roles/:roleId returns 404 access.role_unavailable for a Role of another Warehouse', async () => {
     await seedWarehouseAndRoles();
     await grantPermissions(custodianRoleId, [ROLES_UPDATE]);
     const actorId = randomUUID();
@@ -716,7 +723,7 @@ describeIntegration('warehouse-access HTTP contract', () => {
     );
 
     expect(status).toBe(404);
-    expect(body).toMatchObject({ code: 'access.target_unavailable' });
+    expect(body).toMatchObject({ code: 'access.role_unavailable' });
   });
 
   it.each([

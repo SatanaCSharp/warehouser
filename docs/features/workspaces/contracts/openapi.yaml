@@ -1223,7 +1223,7 @@ paths:
         "400": { $ref: "#/components/responses/InvalidWarehouseRoleInput" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/WarehouseDenied" }
-        "404": { $ref: "#/components/responses/WarehouseTargetUnavailable" }
+        "404": { $ref: "#/components/responses/WarehouseRoleUnavailable" }
         "409": { $ref: "#/components/responses/WarehouseArchivedOrConflict" }
         "500": { $ref: "#/components/responses/InternalError" }
 
@@ -1246,7 +1246,7 @@ paths:
         "400": { $ref: "#/components/responses/InvalidInput" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/WarehouseDenied" }
-        "404": { $ref: "#/components/responses/WarehouseTargetUnavailable" }
+        "404": { $ref: "#/components/responses/WarehouseRoleUnavailable" }
         "409": { $ref: "#/components/responses/WarehouseArchivedOrConflict" }
         "503":
           description: Role deletion did not complete.
@@ -1825,6 +1825,21 @@ components:
           example:
             code: "access.target_unavailable"
             message: "The selected member or Role is unavailable."
+
+    WarehouseRoleUnavailable:
+      description: |
+        The Role the operation acts *on* does not belong to the named Warehouse, or does not exist.
+        Existence is not disclosed. Distinct from `WarehouseTargetUnavailable` only in its code:
+        these routes carry the Role itself as the target and have answered `access.role_unavailable`
+        since the `access` feature (`docs/features/access/contracts/openapi.yaml`). Re-shaping the
+        path under `/warehouses/{warehouseId}` did not change that behaviour, so the code is
+        restated here rather than silently widened.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            code: "access.role_unavailable"
+            message: "The Role is unavailable."
 
     WarehouseArchivedOrConflict:
       description: |
