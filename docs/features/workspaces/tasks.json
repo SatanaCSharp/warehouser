@@ -592,6 +592,217 @@
         "apps/server/src/shared/domain/repositories/workspace-read.repository.ts",
         "apps/server/src/workspaces/rest/controllers/workspace.controller.ts"
       ]
+    },
+    {
+      "id": "T47",
+      "finding": "S1-01a",
+      "title": "Realign the four stale workspaces integration specs to openapi.yaml",
+      "layer": "test",
+      "deps": [],
+      "acs": ["AC-11", "AC-32", "AC-17a", "AC-17c"],
+      "dod": "The archive/restore command specs assert the documented Warehouse body {id,name,archivedAt}; the Workspace roles-list spec asserts assignedMemberCount as openapi.yaml documents it; the two delete-Role suites pass against the shipped behaviour. No spec is loosened — each asserts the full documented shape.",
+      "files_hint": [
+        "apps/server/src/workspaces/usecases/commands/archive-warehouse.command.integration.spec.ts",
+        "apps/server/src/workspaces/usecases/commands/restore-warehouse.command.integration.spec.ts",
+        "apps/server/src/workspaces/rest/controllers/workspace-http-contract.integration.spec.ts"
+      ]
+    },
+    {
+      "id": "T48",
+      "finding": "S1-01b",
+      "title": "Return the documented 200 WorkspaceOwnerTransferResult from owner-transfer",
+      "layer": "rest",
+      "deps": [],
+      "acs": ["AC-26"],
+      "dod": "POST /api/v1/workspace/owner-transfer answers 200 with {ownerUserId,formerOwnerUserId,formerOwnerWorkspaceRoleId} exactly as openapi.yaml documents, not 201 {ownerId}; the contract schema and the DTO agree.",
+      "files_hint": [
+        "apps/server/src/workspaces/rest/controllers/workspace.controller.ts",
+        "apps/server/src/workspaces/usecases/commands/transfer-workspace-owner.command.ts",
+        "packages/contracts/src/workspaces/"
+      ]
+    },
+    {
+      "id": "T49",
+      "finding": "S1-01c",
+      "title": "Restore the two documented access-tier outcomes",
+      "layer": "usecase",
+      "deps": [],
+      "acs": ["AC-36a"],
+      "dod": "A Role of another Warehouse answers 404 access.target_unavailable, and a concurrent manager transfer maps to 409 access.concurrent_change rather than 403, as openapi.yaml and sad.md document.",
+      "files_hint": ["apps/server/src/access/"]
+    },
+    {
+      "id": "T50",
+      "finding": "S1-01d",
+      "title": "Repair the workspaces load-smoke gate",
+      "layer": "test",
+      "deps": [],
+      "acs": ["AC-35"],
+      "dod": "workspaces-load-smoke.integration.spec.ts drives every sampled operation inside a transaction so pessimistic locks are legal, and the throughput/p95 gate evaluates against spec.md §6 instead of erroring.",
+      "files_hint": [
+        "apps/server/src/workspaces/workspaces-load-smoke.integration.spec.ts"
+      ]
+    },
+    {
+      "id": "T51",
+      "finding": "S1-02",
+      "title": "Report a cross-Workspace Warehouse as unavailable from assignable-roles",
+      "layer": "usecase",
+      "deps": [],
+      "acs": ["AC-23a"],
+      "dod": "GET assignable-roles resolves the Warehouse and its Workspace before projecting Roles, so a Warehouse of another Workspace answers 404 workspace.target_unavailable rather than 200 [], and an own-Workspace Warehouse with no custom Role still answers 200 [].",
+      "files_hint": [
+        "apps/server/src/shared/domain/repositories/warehouse-membership-assignment.repository.ts",
+        "apps/server/src/workspaces/usecases/queries/",
+        "apps/server/src/workspaces/rest/controllers/"
+      ]
+    },
+    {
+      "id": "T52",
+      "finding": "S1-03",
+      "title": "Raise and surface the documented archival and creation 503s",
+      "layer": "usecase",
+      "deps": [],
+      "acs": ["AC-13", "AC-07"],
+      "dod": "A failed archival raises workspace.archival_unavailable and a failed Warehouse creation workspace.warehouse_creation_unavailable, both answering 503; the web maps both codes to their own copy instead of the generic failure toast.",
+      "files_hint": [
+        "apps/server/src/workspaces/domain/errors/workspace.errors.ts",
+        "apps/server/src/workspaces/usecases/commands/",
+        "apps/web/src/shared/errors/api-error.ts"
+      ]
+    },
+    {
+      "id": "T53",
+      "finding": "S1-04",
+      "title": "Carry the Workspace bootstrap in the registration response",
+      "layer": "rest",
+      "deps": [],
+      "acs": ["AC-01"],
+      "dod": "POST /api/v1/auth/sign-up returns workspace, workspacePermissionIds, effectiveWarehouseId and access.archivedAt as openapi.yaml documents; registrationResultSchema is extended to match and the controller stops dropping what RegisterCommand already computes.",
+      "files_hint": [
+        "apps/server/src/auth/rest/controllers/auth.controller.ts",
+        "packages/contracts/src/auth/index.ts"
+      ]
+    },
+    {
+      "id": "T54",
+      "finding": "S1-05",
+      "title": "Give a member with no Active Warehouse a way forward",
+      "layer": "web",
+      "deps": [],
+      "acs": ["AC-03b"],
+      "dod": "The no-Active-Warehouse empty state offers a working selection control when the member has selectable Warehouses, and states what to do when they have none; no control renders without a handler.",
+      "files_hint": [
+        "apps/web/src/shared/layouts/WarehouseSwitcher.tsx",
+        "apps/web/src/shared/hooks/usePermissions.ts"
+      ]
+    },
+    {
+      "id": "T55",
+      "finding": "S1-06",
+      "title": "Scope the three users commands current-access reads to their Warehouse",
+      "layer": "usecase",
+      "deps": [],
+      "acs": ["AC-05"],
+      "dod": "create-member, change-member-email and change-member-password resolve current access for the named Warehouse, so an actor Permission ceiling can never be computed from a Role held in another Warehouse; the repository no longer falls back to an arbitrary membership.",
+      "files_hint": [
+        "apps/server/src/users/usecases/commands/create-member.command.ts",
+        "apps/server/src/users/usecases/commands/change-member-email.command.ts",
+        "apps/server/src/users/usecases/commands/change-member-password.command.ts",
+        "apps/server/src/shared/domain/repositories/access-current-user.repository.ts"
+      ]
+    },
+    {
+      "id": "T56",
+      "finding": "S1-07",
+      "title": "Raise the two registered but unreachable Workspace 503s",
+      "layer": "usecase",
+      "deps": [],
+      "acs": ["AC-17b", "AC-26"],
+      "dod": "The Role-deletion and owner-transfer unavailable outcomes are raised by an error factory rather than propagating raw, so each answers its documented 503 instead of a generic 500.",
+      "files_hint": [
+        "apps/server/src/workspaces/domain/errors/workspace.errors.ts",
+        "apps/server/src/workspaces/usecases/commands/"
+      ]
+    },
+    {
+      "id": "T57",
+      "finding": "S1-08",
+      "title": "Resolve workspaceRoleId before assigning it",
+      "layer": "usecase",
+      "deps": [],
+      "acs": ["AC-19", "AC-19b", "AC-34"],
+      "dod": "Adding a Workspace Member and assigning a Workspace Role both resolve the Role within the actor Workspace first, so a foreign or nonexistent Role answers the documented 404 instead of surfacing an unmapped QueryFailedError as 500.",
+      "files_hint": [
+        "apps/server/src/workspaces/usecases/commands/add-workspace-member.command.ts",
+        "apps/server/src/workspaces/usecases/commands/assign-workspace-role.command.ts"
+      ]
+    },
+    {
+      "id": "T58",
+      "finding": "S1-09",
+      "title": "Give owner transfer one generic unavailable-recipient outcome",
+      "layer": "usecase",
+      "deps": [],
+      "acs": ["AC-28"],
+      "dod": "A self-target, a nonmember and a Member of another Workspace all answer 404 workspace.target_unavailable; recipient Workspace membership is tested against workspace_memberships rather than users.workspace_id, so a Warehouse Member who is no Workspace Member never surfaces as 409 concurrent_change.",
+      "files_hint": [
+        "apps/server/src/workspaces/usecases/commands/transfer-workspace-owner.command.ts",
+        "apps/server/src/shared/domain/repositories/workspace-membership.repository.ts"
+      ]
+    },
+    {
+      "id": "T59",
+      "finding": "S1-10",
+      "title": "Admit WORKSPACE:RENAME to the Workspace watch-permission list",
+      "layer": "web",
+      "deps": [],
+      "acs": ["AC-29", "AC-30"],
+      "dod": "A custom Role holding only WORKSPACE:RENAME reaches the destination carrying the rename control instead of being redirected away; the guard, the hook and the sidebar agree on the same permission set.",
+      "files_hint": [
+        "apps/web/src/shared/hooks/useWorkspacePermissions.ts",
+        "apps/web/src/modules/workspace/guards/workspace.guard.ts",
+        "apps/web/src/shared/layouts/Sidebar.tsx"
+      ]
+    },
+    {
+      "id": "T60",
+      "finding": "S1-11",
+      "title": "Explain the empty replacement-Role choice and map the delete refusal",
+      "layer": "web",
+      "deps": [],
+      "acs": ["AC-17c", "AC-17d"],
+      "dod": "Deleting the only custom Role states why no replacement can be chosen instead of rendering an empty required dropdown, and the AC-17d 403 refusal renders its own copy rather than a generic toast.",
+      "files_hint": [
+        "apps/web/src/modules/workspace/components/roles/WorkspaceRoleDirectory.tsx",
+        "apps/web/src/modules/workspace/components/roles/DeleteWorkspaceRoleDialog.tsx",
+        "apps/web/src/modules/workspace/hooks/useDeleteWorkspaceRole.ts"
+      ]
+    },
+    {
+      "id": "T61",
+      "finding": "S1-12",
+      "title": "Agree the empty-name rule key between web and server",
+      "layer": "web",
+      "deps": [],
+      "acs": ["AC-08", "AC-15a"],
+      "dod": "An empty Warehouse name and an empty Workspace Role name are both reported as required, because the web maps the rule key the server actually emits; no raw rule string reaches the member as a translation key.",
+      "files_hint": [
+        "apps/web/src/modules/warehouse/hooks/warehouse-name-validation.ts",
+        "apps/web/src/modules/workspace/hooks/workspace-role-name-validation.ts"
+      ]
+    },
+    {
+      "id": "T62",
+      "finding": "S1-13",
+      "title": "Swap the two Workspace Owner memberships in ordered statements",
+      "layer": "infra",
+      "deps": ["T58"],
+      "acs": ["AC-26"],
+      "dod": "The transfer writes the two membership rows in two ordered statements as the Warehouse level does, so uq_workspace_memberships_one_owner — a non-deferrable partial unique index checked per row — can never raise a duplicate-key 500 for a legal transfer.",
+      "files_hint": [
+        "apps/server/src/shared/domain/repositories/workspace-owner-transfer.repository.ts"
+      ]
     }
   ]
 }
