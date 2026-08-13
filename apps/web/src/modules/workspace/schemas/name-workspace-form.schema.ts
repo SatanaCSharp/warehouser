@@ -16,18 +16,21 @@ const rawNameWorkspaceFormSchema = z.object({ name: z.string() });
 export const nameWorkspaceFormSchema = rawNameWorkspaceFormSchema
   .superRefine((values, context) => {
     const trimmedName = values.name.trim();
+    // Emptiness is checked here rather than through the contract schema: that
+    // schema carries no lower bound, because the server raises the empty-name
+    // rule from the shared name value object as `workspace.invalid_input`.
+    const isEmpty = trimmedName.length === 0;
     const parsed = workspaceRenameSchema.safeParse({ name: trimmedName });
-    if (parsed.success) {
+    if (!isEmpty && parsed.success) {
       return;
     }
 
     context.addIssue({
       code: 'custom',
       path: ['name'],
-      message:
-        trimmedName.length === 0
-          ? nameWorkspaceValidationKeys.required
-          : nameWorkspaceValidationKeys.length,
+      message: isEmpty
+        ? nameWorkspaceValidationKeys.required
+        : nameWorkspaceValidationKeys.length,
     });
   })
   .transform((values) => ({ name: values.name.trim() }));

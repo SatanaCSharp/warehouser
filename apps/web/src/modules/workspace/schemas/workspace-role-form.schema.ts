@@ -22,21 +22,24 @@ const rawWorkspaceRoleFormSchema = z.object({
 export const workspaceRoleFormSchema = rawWorkspaceRoleFormSchema
   .superRefine((values, context) => {
     const trimmedName = values.name.trim();
+    // Emptiness is checked here rather than through the contract schema: that
+    // schema carries no lower bound, because the server raises the empty-name
+    // rule from the shared name value object as `workspace.invalid_input`.
+    const isEmpty = trimmedName.length === 0;
     const parsed = workspaceRoleWriteSchema.safeParse({
       ...values,
       name: trimmedName,
     });
-    if (parsed.success) {
+    if (!isEmpty && parsed.success) {
       return;
     }
 
     context.addIssue({
       code: 'custom',
       path: ['name'],
-      message:
-        trimmedName.length === 0
-          ? workspaceRoleNameValidationKeys.required
-          : workspaceRoleNameValidationKeys.length,
+      message: isEmpty
+        ? workspaceRoleNameValidationKeys.required
+        : workspaceRoleNameValidationKeys.length,
     });
   })
   .transform((values) => ({ ...values, name: values.name.trim() }));

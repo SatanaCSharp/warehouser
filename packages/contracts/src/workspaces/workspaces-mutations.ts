@@ -5,18 +5,34 @@ export const activeWarehouseWriteSchema = z.strictObject({
   warehouseId: z.string().uuid(),
 });
 
+// The name schemas deliberately carry no lower bound. openapi.yaml documents
+// "empty after trimming" as a *business* rejection —
+// `workspace.invalid_input` with `field: name`, `rule: empty` — raised by the
+// shared name value object, which is also what trims. A `min(1)` here makes
+// the transport pipe answer `request.invalid` first, and only for a literally
+// empty string: `'   '` passes it and reaches the domain, so the same member
+// mistake produces two different codes depending on whether they typed a
+// space. The upper bound stays as a payload guard.
 export const workspaceRenameSchema = z.strictObject({
-  name: z.string().min(1).max(100),
+  name: z.string().max(100),
 });
 
 export const workspaceRoleWriteSchema = z.strictObject({
-  name: z.string().min(1).max(100),
+  name: z.string().max(100),
   workspacePermissionIds: z.array(workspacePermissionIdSchema),
 });
 
-export const workspaceRoleDeletionSchema = z.strictObject({
-  replacementWorkspaceRoleId: z.string().uuid().optional(),
-});
+// The request body is optional: openapi.yaml marks it `required: false`
+// because an unassigned Workspace Role is deleted with no body at all
+// (AC-17a). Express 5 leaves `req.body` `undefined` for an absent body, and a
+// bare object schema rejects that as `request.invalid` before the route ever
+// runs — so the absent case is spelled out here, where the wire shape is
+// defined, rather than worked around at the controller.
+export const workspaceRoleDeletionSchema = z
+  .strictObject({
+    replacementWorkspaceRoleId: z.string().uuid().optional(),
+  })
+  .default({});
 
 export const workspaceRoleAssignmentSchema = z.strictObject({
   workspaceRoleId: z.string().uuid(),
@@ -33,7 +49,7 @@ export const workspaceOwnerTransferSchema = z.strictObject({
 });
 
 export const warehouseWriteSchema = z.strictObject({
-  name: z.string().min(1).max(100),
+  name: z.string().max(100),
 });
 
 export const warehouseArchivalSchema = z.strictObject({

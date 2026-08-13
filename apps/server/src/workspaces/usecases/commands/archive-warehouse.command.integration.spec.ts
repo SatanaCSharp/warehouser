@@ -203,7 +203,15 @@ describeIntegration('ArchiveWarehouseCommand', () => {
       createCommand().execute(principal(workspaceId), { warehouseId }),
     );
 
-    expect(result).toMatchObject({ warehouseId });
+    // openapi.yaml answers `PUT .../archival` with the full `Warehouse` body,
+    // and the web client Zod-validates the response against `warehouseSchema`,
+    // so the command confirms the value it just wrote rather than echoing a
+    // bare identifier (T44). This assertion still named the pre-T44 shape.
+    expect(result).toEqual({
+      id: warehouseId,
+      name: expect.any(String),
+      archivedAt: expect.any(Date),
+    });
 
     const archived = await dataSource.manager
       .getRepository(WarehouseEntity)

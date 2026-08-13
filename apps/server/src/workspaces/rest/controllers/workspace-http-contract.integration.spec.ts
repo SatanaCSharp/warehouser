@@ -528,18 +528,24 @@ describeIntegration('workspace HTTP contract', () => {
       );
 
       expect(status).toBe(200);
+      // `assignedMemberCount` is `required` on the `WorkspaceRole` schema
+      // (openapi.yaml): it is what makes deletion require a replacement and
+      // `WORKSPACE_ROLES:ASSIGN` (AC-17, AC-17d). T41 added it; this
+      // assertion still named the projection as it stood before.
       expect(body).toEqual([
         {
           id: fixture.customRoleId,
           name: 'Site Administrator',
           kind: 'custom',
           workspacePermissionIds: [WorkspacePermissionId.WORKSPACE_ROLES_WATCH],
+          assignedMemberCount: expect.any(Number),
         },
         {
           id: fixture.ownerRoleId,
           name: 'Workspace Owner',
           kind: 'workspace_owner',
           workspacePermissionIds: [],
+          assignedMemberCount: expect.any(Number),
         },
       ]);
     });
