@@ -624,6 +624,14 @@ const deriveEffectiveWarehouseId = (
 export type WarehouseSessionRequest = { method: string; url: string };
 
 export type WarehouseSessionRevision = {
+  /**
+   * What the Workspace-context read answers with. A non-200 makes that read
+   * FAIL, which is the state CR-AC-08 distinguishes from an absence of access:
+   * the actor's access is unknown, so the route owes them a retryable error
+   * rather than a refusal or the no-context state. Revisable, so a case can
+   * fail the first read and answer the retry.
+   */
+  contextStatus?: number;
   effectiveWarehouseId?: string | null;
   memberships?: readonly WarehouseMembershipFixture[];
 };
@@ -720,13 +728,14 @@ const warehouseAccessRoutes = (
 export const stubWarehouseSession = ({
   activeWarehouseWriteStatus = 200,
   authenticated = true,
+  contextStatus = 200,
   effectiveWarehouseId = null,
   memberships = [],
   permissionIdsIn = {},
   workspacePermissionIds = [],
 }: WarehouseSessionOptions = {}): WarehouseSessionStub => {
   const requests: WarehouseSessionRequest[] = [];
-  const state = { effectiveWarehouseId, memberships };
+  const state = { contextStatus, effectiveWarehouseId, memberships };
 
   const routes = (): [string, unknown][] => [
     [
@@ -762,6 +771,15 @@ export const stubWarehouseSession = ({
           authenticated
             ? Response.json({ user: { id: warehouseSessionIds.actor } })
             : new Response(null, { status: 204 }),
+        );
+      }
+
+      if (url === '/api/v1/workspace/context' && state.contextStatus !== 200) {
+        return Promise.resolve(
+          Response.json(
+            { code: 'api.unexpected', message: 'Unavailable' },
+            { status: state.contextStatus },
+          ),
         );
       }
 

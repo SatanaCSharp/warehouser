@@ -1,5 +1,6 @@
 import { RouterProvider } from '@tanstack/react-router';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { PermissionId } from '@warehouser/shared-types/enums';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -37,6 +38,8 @@ const NON_DISCLOSING_REFUSAL = "This address isn't available to you";
 const ARCHIVED_REFUSAL = 'This warehouse is archived';
 const WAREHOUSE_CONTENT = 'Design System Preview';
 const NO_CONTEXT_HEADING = 'Nothing is entered yet';
+const ERROR_HEADING = 'Something went wrong';
+const RETRY_LABEL = 'Try again';
 
 const warehouseAddress = (warehouseId: string): string =>
   `/warehouses/${warehouseId}`;
@@ -311,6 +314,77 @@ describe('a refused warehouse address does nothing else (T14, CR-AC-07)', () => 
     expect(router.state.location.pathname).toBe(warehouseAddress(id));
     expect(screen.queryByText(NO_CONTEXT_HEADING)).not.toBeInTheDocument();
     expect(router.history.length).toBe(1);
+  });
+});
+
+describe('a failed context read at a warehouse address (T29, CR-AC-07/08)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+  });
+
+  // CR-AC-08's final paragraph, applied at a Warehouse address rather than at
+  // the root: a failed Workspace-context read means the actor's access is
+  // UNKNOWN, not that they hold none. `resolveWarehouseEntry` unwraps the read,
+  // so the rejection leaves `beforeLoad` and the route's `errorComponent`
+  // renders — with a way to try again.
+  //
+  // The distinction is the whole point of the case. A refusal here would be a
+  // lie about the actor's access, would hide an outage behind CR-AC-07's
+  // deliberately non-disclosing copy, and would silently enlarge the
+  // enumeration surface that criterion governs: a Warehouse the actor may
+  // genuinely enter would read exactly like one they may not.
+  it('renders the retryable error state, not a refusal', async () => {
+    stubWarehouseSession({
+      contextStatus: 500,
+      effectiveWarehouseId: NORTH,
+      memberships: [warehouseMemberships.north],
+    });
+
+    const { router } = renderRoute(warehouseAddress(NORTH));
+
+    expect(
+      await screen.findByRole('heading', { name: ERROR_HEADING }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: RETRY_LABEL })).toBeEnabled();
+
+    // Not a refusal — neither CR-AC-07's non-disclosing one nor CR-AC-17's
+    // archived one — and not the no-context state either.
+    expect(screen.queryByText(NON_DISCLOSING_REFUSAL)).not.toBeInTheDocument();
+    expect(screen.queryByText(ARCHIVED_REFUSAL)).not.toBeInTheDocument();
+    expect(screen.queryByText(NO_CONTEXT_HEADING)).not.toBeInTheDocument();
+    // And not the Warehouse view: an unknown verdict admits nobody.
+    expect(screen.queryByText(WAREHOUSE_CONTENT)).not.toBeInTheDocument();
+    // The actor is left at the address they asked for, unmoved (CR-AC-07).
+    expect(router.state.location.pathname).toBe(warehouseAddress(NORTH));
+    expect(router.history.length).toBe(1);
+  });
+
+  // CR-AC-08 — the retry has to genuinely re-run the failed read, otherwise the
+  // error state is a dead end the actor can only escape by reloading. The read
+  // is answered on the second attempt and the actor lands inside the Warehouse
+  // their membership admits them to.
+  it('enters the warehouse when the retry re-runs a read that then succeeds', async () => {
+    const session = stubWarehouseSession({
+      contextStatus: 500,
+      effectiveWarehouseId: NORTH,
+      memberships: [warehouseMemberships.north],
+    });
+    const user = userEvent.setup();
+
+    renderRoute(warehouseAddress(NORTH));
+    await screen.findByRole('heading', { name: ERROR_HEADING });
+
+    session.reviseContext({ contextStatus: 200 });
+    await user.click(screen.getByRole('button', { name: RETRY_LABEL }));
+
+    expect(await screen.findByText(WAREHOUSE_CONTENT)).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: ERROR_HEADING })).toBeNull();
+    // The retry really re-read the context rather than re-rendering a cached
+    // failure: the read was issued more than once.
+    expect(
+      session.urlsMatching(/\/workspace\/context$/u).length,
+    ).toBeGreaterThan(1);
   });
 });
 
