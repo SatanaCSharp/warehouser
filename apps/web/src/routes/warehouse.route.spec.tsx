@@ -1,6 +1,10 @@
 import { RouterProvider } from '@tanstack/react-router';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
-import { PermissionId } from '@warehouser/shared-types/enums';
+import userEvent from '@testing-library/user-event';
+import {
+  PermissionId,
+  WorkspacePermissionId,
+} from '@warehouser/shared-types/enums';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -13,6 +17,7 @@ import {
   stubWarehouseSession,
   warehouseMemberships,
   warehouseSessionIds,
+  workspaceIds,
 } from 'test/workspace-fixtures';
 
 import type { RenderResult } from '@testing-library/react';
@@ -486,5 +491,159 @@ describe('every warehouse-scoped request names its warehouse (T14, CR-RG-01)', (
     expect(session.urlsMatching(/\/access\/current$/u)).toEqual([
       warehousePath(NORTH, 'access/current'),
     ]);
+  });
+});
+
+// T28 / CR-AC-14 — entering from the Workspace's warehouses tab, exercised
+// through the PRODUCTION route tree (`test-plan.md:83`). The three clauses only
+// compose here: the layout's own entry verdict, `useRecordWarehouseEntry`'s
+// stored-selection write and the shell's switcher all run on this path and on
+// none of the locally built probe routes a component harness can offer, so such
+// a harness can assert that Enter navigates but never that the actor genuinely
+// arrives in that Warehouse, is marked there, and is recorded there.
+//
+// Colocated here rather than in `src/router.spec.tsx` for the reason recorded
+// at the top of this file: that suite is at its `max-lines` budget.
+describe('entering from the warehouses tab (T28, CR-AC-14)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+  });
+
+  type StubbedRequest = { body: unknown; method: string; url: string };
+
+  const ACTIVE_WAREHOUSE_URL = '/api/v1/workspace/active-warehouse';
+
+  /**
+   * A Workspace Member holding `WAREHOUSES:WATCH` — enough to reach the
+   * warehouses tab — whose sole membership is North Hub. The Workspace's own
+   * record list additionally carries South Cross-dock, which they hold no
+   * membership in, so the Enter action activated below is the one CR-AC-13 put
+   * on their own membership row. The context body is rebuilt per request, so
+   * the write the entry issues is reflected by the refetch that follows it,
+   * exactly as the server would answer.
+   */
+  const stubWarehousesTabSession = (): StubbedRequest[] => {
+    const requests: StubbedRequest[] = [];
+    const state = { effectiveWarehouseId: null as string | null };
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input instanceof Request ? input.url : input);
+        const method =
+          init?.method ?? (input instanceof Request ? input.method : 'GET');
+        const body =
+          typeof init?.body === 'string' ? JSON.parse(init.body) : undefined;
+        requests.push({ body, method, url });
+
+        if (url.endsWith('/api/v1/auth/session')) {
+          return Promise.resolve(
+            Response.json({ user: { id: warehouseSessionIds.actor } }),
+          );
+        }
+        if (url === ACTIVE_WAREHOUSE_URL && method === 'PUT') {
+          state.effectiveWarehouseId =
+            (body as { warehouseId?: string } | undefined)?.warehouseId ?? null;
+          return Promise.resolve(
+            Response.json({ effectiveWarehouseId: state.effectiveWarehouseId }),
+          );
+        }
+        if (url.includes('/api/v1/workspace/context')) {
+          return Promise.resolve(
+            Response.json({
+              workspace: { id: workspaceIds.workspace, name: 'Acme Logistics' },
+              workspacePermissionIds: [WorkspacePermissionId.WAREHOUSES_WATCH],
+              warehouses: [
+                {
+                  ...warehouseMemberships.north,
+                  roleId: warehouseSessionIds.role,
+                  roleKind: 'warehouse_manager',
+                },
+              ],
+              effectiveWarehouseId: state.effectiveWarehouseId,
+            }),
+          );
+        }
+        if (url.endsWith('/api/v1/workspace/warehouses')) {
+          return Promise.resolve(
+            Response.json([
+              {
+                id: NORTH,
+                name: warehouseMemberships.north.name,
+                archivedAt: null,
+              },
+              {
+                id: SOUTH,
+                name: warehouseMemberships.south.name,
+                archivedAt: null,
+              },
+            ]),
+          );
+        }
+        if (url === warehousePath(NORTH, 'access/current')) {
+          return Promise.resolve(
+            Response.json({
+              warehouseId: NORTH,
+              roleId: warehouseSessionIds.role,
+              roleKind: 'warehouse_manager',
+              permissionIds: [],
+              archivedAt: null,
+            }),
+          );
+        }
+        throw new Error(`Unexpected request: ${url}`);
+      }),
+    );
+
+    return requests;
+  };
+
+  it('arrives in that warehouse, marks it current in the switcher, and records it as the stored selection', async () => {
+    const requests = stubWarehousesTabSession();
+    const user = userEvent.setup();
+    const { router } = renderRoute(ROUTES.WORKSPACE);
+
+    await user.click(
+      await screen.findByRole('link', {
+        name: `Enter ${warehouseMemberships.north.name}`,
+      }),
+    );
+
+    // (a) The actor arrives in North Hub's Warehouse view — the production
+    // layout's own `entered` verdict, not a probe route standing in for it.
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe(warehouseAddress(NORTH)),
+    );
+    expect(await screen.findByText(WAREHOUSE_CONTENT)).toBeInTheDocument();
+
+    // (b) That row is marked current in the switcher. `RootLayout` renders the
+    // switcher once per viewport and jsdom applies no media query, so both
+    // triggers are present; either opens the same control.
+    await user.click(
+      (await screen.findAllByRole('button', { name: /context switcher/iu }))[0],
+    );
+    const listbox = await screen.findByRole('listbox');
+    const enteredRow = within(listbox).getByRole('option', {
+      name: new RegExp(warehouseMemberships.north.name, 'iu'),
+    });
+    expect(enteredRow).toHaveAttribute('aria-selected', 'true');
+    expect(enteredRow).toHaveTextContent('Current');
+
+    // (c) The entry is written as the stored selection (CR-AC-09), once.
+    await waitFor(() =>
+      expect(
+        requests.filter(
+          (request) =>
+            request.method === 'PUT' && request.url === ACTIVE_WAREHOUSE_URL,
+        ),
+      ).toEqual([
+        {
+          body: { warehouseId: NORTH },
+          method: 'PUT',
+          url: ACTIVE_WAREHOUSE_URL,
+        },
+      ]),
+    );
   });
 });
