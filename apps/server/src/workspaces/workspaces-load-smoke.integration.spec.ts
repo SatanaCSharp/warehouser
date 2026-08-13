@@ -6,6 +6,7 @@ import {
 } from '@warehouser/shared-types/enums';
 import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
 import dataSource from 'shared/database/data-source';
+import { DbTransactionService } from 'shared/database/db-transaction.service';
 import { DbTransactionContext } from 'shared/database/db-transaction-context.service';
 import { RoleEntity } from 'shared/domain/entities/role.entity';
 import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
@@ -131,6 +132,13 @@ interface ThroughputSmokeDeps {
   renameWorkspace: RenameWorkspaceCommand;
   renameWarehouse: RenameWarehouseCommand;
   setActiveWarehouse: SetActiveWarehouseCommand;
+  // Every command sampled below is `@Transactional()`, and each takes a
+  // pessimistic lock. Calling `execute` on the instance runs the method, not
+  // the Nest pipeline that opens the transaction the decorator declares, so
+  // the mutations have to be driven through this service — otherwise the
+  // first lock raises `PessimisticLockTransactionRequiredError` and the gate
+  // errors instead of measuring anything (T50).
+  transactions: DbTransactionService;
 }
 
 // Extracted from the `it` block below purely to keep the describe callback
@@ -147,6 +155,7 @@ const runThroughputSmokeTest = async (
     renameWorkspace,
     rolesQuery,
     setActiveWarehouse,
+    transactions,
     workspaceCurrentUsers,
   } = deps;
 
@@ -223,13 +232,15 @@ const runThroughputSmokeTest = async (
         'workspaces.rename_workspace',
         workspaceScopedActor(graph.ownerUserId, graph.workspaceId),
         () =>
-          renameWorkspace.execute(
-            workspaceCurrentUserFor(
-              graph.workspaceId,
-              graph.ownerUserId,
-              WorkspacePermissionId.WORKSPACE_RENAME,
+          transactions.executeInTransaction({}, () =>
+            renameWorkspace.execute(
+              workspaceCurrentUserFor(
+                graph.workspaceId,
+                graph.ownerUserId,
+                WorkspacePermissionId.WORKSPACE_RENAME,
+              ),
+              { name: `Load Smoke ${randomUUID()}` },
             ),
-            { name: `Load Smoke ${randomUUID()}` },
           ),
       ),
       withOperationTiming(
@@ -237,16 +248,18 @@ const runThroughputSmokeTest = async (
         'workspaces.rename_warehouse',
         workspaceScopedActor(graph.ownerUserId, graph.workspaceId),
         () =>
-          renameWarehouse.execute(
-            workspaceCurrentUserFor(
-              graph.workspaceId,
-              graph.ownerUserId,
-              WorkspacePermissionId.WAREHOUSES_RENAME,
+          transactions.executeInTransaction({}, () =>
+            renameWarehouse.execute(
+              workspaceCurrentUserFor(
+                graph.workspaceId,
+                graph.ownerUserId,
+                WorkspacePermissionId.WAREHOUSES_RENAME,
+              ),
+              {
+                warehouseId: graph.activeWarehouseId,
+                name: `Load Smoke Warehouse ${randomUUID()}`,
+              },
             ),
-            {
-              warehouseId: graph.activeWarehouseId,
-              name: `Load Smoke Warehouse ${randomUUID()}`,
-            },
           ),
       ),
       withOperationTiming(
@@ -254,9 +267,11 @@ const runThroughputSmokeTest = async (
         'workspaces.select_warehouse',
         warehouseScopedActor(graph.memberUserId, graph.activeWarehouseId),
         () =>
-          setActiveWarehouse.execute(graph.memberUserId, {
-            warehouseId: graph.activeWarehouseId,
-          }),
+          transactions.executeInTransaction({}, () =>
+            setActiveWarehouse.execute(graph.memberUserId, {
+              warehouseId: graph.activeWarehouseId,
+            }),
+          ),
       ),
     ]);
     totalOperations += 7;
@@ -378,8 +393,8 @@ const runMembershipIndependenceTest = async (
 };
 
 describeIntegration('Workspace load smoke (spec.md §6)', () => {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- registers ambient transaction storage as a side effect of construction
   const context = new DbTransactionContext(dataSource);
+  const transactions = new DbTransactionService(dataSource, context);
 
   const accessCurrentUsers = new AccessCurrentUserRepository(dataSource);
   const workspaceCurrentUsers = new WorkspaceCurrentUserRepository(dataSource);
@@ -434,6 +449,7 @@ describeIntegration('Workspace load smoke (spec.md §6)', () => {
         renameWorkspace,
         renameWarehouse,
         setActiveWarehouse,
+        transactions,
       }),
     (DURATION_SECONDS + 60) * 1000,
   );
