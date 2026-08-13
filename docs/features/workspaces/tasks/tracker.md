@@ -3,70 +3,70 @@
 > Status of every task in the epic. `implement` updates `done` as it commits each task.
 > States: `todo` · `in_progress` · `blocked` · `review` · `done`.
 
-| #   | Task                                                     | Layer     | Owner                        | Estimate | Blocked by                            | Status |
-| --- | -------------------------------------------------------- | --------- | ---------------------------- | -------- | ------------------------------------- | ------ |
-| T1  | Promote workspace authority schema migrations (01–03)    | migration | Backend Lead                 | M        | —                                     | done   |
-| T2  | Promote re-key + selection migrations (04–05)            | migration | Backend Lead                 | M        | T1                                    | done   |
-| T3  | Promote `AccessName` + add the Workspace name wrapper    | domain    | Backend Lead                 | S        | —                                     | done   |
-| T4  | `workspaces` domain predicates, errors and invariants    | domain    | Backend Lead                 | L        | T3                                    | done   |
-| T5  | `WorkspacePermissionId` + new stable error codes         | ports     | Backend Lead                 | M        | —                                     | done   |
-| T6  | `packages/contracts/workspaces` schemas                  | ports     | Backend Lead                 | L        | T5                                    | done   |
-| T7  | Workspace entities, changed entities, test factories     | infra     | Backend Lead                 | L        | T2                                    | done   |
-| T8  | Guard-read repositories (both levels)                    | infra     | Backend Lead                 | M        | T7                                    | done   |
-| T9  | `WorkspaceReadRepository`                                | infra     | Backend Lead                 | L        | T7                                    | done   |
-| T10 | Workspace Role / membership / Owner-transfer repos       | infra     | Backend Lead                 | L        | T7                                    | done   |
-| T11 | Warehouse lifecycle + membership repos                   | infra     | Backend Lead                 | L        | T7                                    | done   |
-| T12 | Split provisioning; re-key existing Warehouse writes     | infra     | Backend Lead                 | M        | T7                                    | done   |
-| T13 | `WorkspaceAccessGuard` + reworked `WarehouseAccessGuard` | ports     | Backend Lead + Security Lead | L        | T5, T8                                | done   |
-| T14 | Registration bootstrap in `workspaces` provisioning      | app       | Backend Lead                 | M        | T4, T6, T12                           | done   |
-| T15 | Workspace rename + configuration queries                 | app       | Backend Lead                 | L        | T4, T6, T9                            | done   |
-| T16 | Workspace Role create + update                           | app       | Backend Lead                 | L        | T4, T6, T10                           | done   |
-| T17 | Workspace Role deletion with replacement                 | app       | Backend Lead                 | L        | T4, T6, T10                           | done   |
-| T18 | Workspace membership add / remove / reassign             | app       | Backend Lead                 | L        | T4, T6, T10                           | done   |
-| T19 | Workspace Owner transfer                                 | app       | Backend Lead                 | M        | T4, T6, T10                           | done   |
-| T20 | Warehouse create + rename                                | app       | Backend Lead                 | L        | T4, T6, T11, T12                      | done   |
-| T21 | Warehouse archive + restore                              | app       | Backend Lead                 | L        | T4, T6, T11                           | done   |
-| T22 | Warehouse membership assign / revoke + assignable Roles  | app       | Backend Lead                 | L        | T4, T6, T11                           | done   |
-| T23 | Active Warehouse selection + actor-context query         | app       | Backend Lead                 | L        | T6, T9, T11                           | done   |
-| T24 | Workspace-level REST controller + module wiring          | ports     | Backend Lead                 | L        | T6, T13, T15, T16, T17, T18, T19, T23 | done   |
-| T25 | Warehouse-record and membership-edge REST routes         | ports     | Backend Lead                 | M        | T6, T13, T20, T21, T22                | done   |
-| T26 | Re-shape the `access` REST surface                       | ports     | Backend Lead                 | L        | T12, T13                              | done   |
-| T27 | Re-shape the `users` REST surface                        | ports     | Backend Lead                 | M        | T12, T13                              | done   |
-| T28 | ADR 0003 + `sad.md` §8 classification reconciliation     | docs      | Tech Lead + Security Lead    | S        | —                                     | done   |
-| T29 | Record the supersession of the two approved specs        | docs      | Tech Lead                    | S        | —                                     | done   |
-| T30 | Two-level authorization-coverage architecture check      | tests     | Backend Lead + Security Lead | M        | T24, T25, T26, T27, T28               | done   |
-| T31 | Workspace load smoke test + timing coverage              | tests     | Backend Lead                 | M        | T24, T25                              | done   |
-| T32 | Missing shared icon components                           | ui        | Frontend Lead                | S        | —                                     | done   |
-| T33 | Workspace actor-context API, capability hook, gate       | ui        | Frontend Lead                | M        | T6                                    | done   |
-| T34 | Warehouse switcher in the application shell              | ui        | Frontend Lead                | L        | T32, T33                              | done   |
-| T35 | `modules/workspace` route, page shell, tabs, i18n        | ui        | Frontend Lead                | L        | T32, T33                              | done   |
-| T36 | Warehouses tab: list, detail pane, lifecycle dialogs     | ui        | Frontend Lead                | L        | T35                                   | done   |
-| T37 | Warehouse access grant / withdrawal from the detail pane | ui        | Frontend Lead                | L        | T36                                   | done   |
-| T38 | Workspace roles + Permissions tabs                       | ui        | Frontend Lead                | L        | T35, T41                              | done   |
-| T39 | Workspace members tab + Owner transfer                   | ui        | Frontend Lead                | L        | T35, T41                              | done   |
-| T40 | Migrate the Warehouse-scoped web surface                 | ui        | Frontend Lead                | L        | T26, T27, T33                         | done   |
-| T41 | Workspace read projection gaps (counts + member flag)    | infra     | Backend Lead                 | S        | T9, T24                               | done   |
-| T42 | Fix `CreateWarehouseCommand` Nest DI wiring              | ports     | Backend Lead                 | S        | —                                     | done   |
-| T43 | Translate infra failures into the documented 503 codes   | app       | Backend Lead                 | S        | T20, T21                              | done   |
-| T44 | Return the documented `Warehouse` body from archival     | app       | Backend Lead                 | S        | T21, T25                              | done   |
-| T45 | Render the tab content in the administration panels      | ui        | Frontend Lead                | S        | T36                                   | done   |
-| T46 | Carry the identifying email in the Workspace reads       | infra     | Backend Lead                 | S        | T9, T24                               | done   |
-| T47 | Realign the four stale integration specs to openapi.yaml | test      | Backend Lead                 | S        | —                                     | todo   |
-| T48 | Return the documented 200 owner-transfer result          | rest      | Backend Lead                 | S        | —                                     | todo   |
-| T49 | Restore the two documented access-tier outcomes          | app       | Backend Lead                 | M        | —                                     | todo   |
-| T50 | Repair the workspaces load-smoke gate                    | test      | Backend Lead                 | S        | —                                     | todo   |
-| T51 | Report a cross-Workspace Warehouse as unavailable        | app       | Backend Lead                 | S        | —                                     | done   |
-| T52 | Raise and surface the archival/creation 503s             | app       | Backend Lead                 | M        | —                                     | done   |
-| T53 | Carry the Workspace bootstrap in the registration reply  | rest      | Backend Lead                 | M        | —                                     | todo   |
-| T54 | Give a member with no Active Warehouse a way forward     | ui        | Frontend Lead                | M        | —                                     | todo   |
-| T55 | Scope the three users current-access reads to Warehouse  | app       | Backend Lead                 | M        | —                                     | done   |
-| T56 | Raise the two unreachable Workspace 503s                 | app       | Backend Lead                 | S        | —                                     | done   |
-| T57 | Resolve `workspaceRoleId` before assigning it            | app       | Backend Lead                 | M        | —                                     | todo   |
-| T58 | One generic unavailable-recipient outcome for transfer   | app       | Backend Lead                 | S        | —                                     | done   |
-| T59 | Admit `WORKSPACE:RENAME` to the watch-permission list    | ui        | Frontend Lead                | S        | —                                     | todo   |
-| T60 | Explain the empty replacement choice; map the refusal    | ui        | Frontend Lead                | M        | —                                     | todo   |
-| T61 | Agree the empty-name rule key between web and server     | ui        | Frontend Lead                | S        | —                                     | done   |
-| T62 | Swap the two Owner memberships in ordered statements     | infra     | Backend Lead                 | S        | T58                                   | done   |
+| #   | Task                                                     | Layer     | Owner                        | Estimate | Blocked by                            | Status  |
+| --- | -------------------------------------------------------- | --------- | ---------------------------- | -------- | ------------------------------------- | ------- |
+| T1  | Promote workspace authority schema migrations (01–03)    | migration | Backend Lead                 | M        | —                                     | done    |
+| T2  | Promote re-key + selection migrations (04–05)            | migration | Backend Lead                 | M        | T1                                    | done    |
+| T3  | Promote `AccessName` + add the Workspace name wrapper    | domain    | Backend Lead                 | S        | —                                     | done    |
+| T4  | `workspaces` domain predicates, errors and invariants    | domain    | Backend Lead                 | L        | T3                                    | done    |
+| T5  | `WorkspacePermissionId` + new stable error codes         | ports     | Backend Lead                 | M        | —                                     | done    |
+| T6  | `packages/contracts/workspaces` schemas                  | ports     | Backend Lead                 | L        | T5                                    | done    |
+| T7  | Workspace entities, changed entities, test factories     | infra     | Backend Lead                 | L        | T2                                    | done    |
+| T8  | Guard-read repositories (both levels)                    | infra     | Backend Lead                 | M        | T7                                    | done    |
+| T9  | `WorkspaceReadRepository`                                | infra     | Backend Lead                 | L        | T7                                    | done    |
+| T10 | Workspace Role / membership / Owner-transfer repos       | infra     | Backend Lead                 | L        | T7                                    | done    |
+| T11 | Warehouse lifecycle + membership repos                   | infra     | Backend Lead                 | L        | T7                                    | done    |
+| T12 | Split provisioning; re-key existing Warehouse writes     | infra     | Backend Lead                 | M        | T7                                    | done    |
+| T13 | `WorkspaceAccessGuard` + reworked `WarehouseAccessGuard` | ports     | Backend Lead + Security Lead | L        | T5, T8                                | done    |
+| T14 | Registration bootstrap in `workspaces` provisioning      | app       | Backend Lead                 | M        | T4, T6, T12                           | done    |
+| T15 | Workspace rename + configuration queries                 | app       | Backend Lead                 | L        | T4, T6, T9                            | done    |
+| T16 | Workspace Role create + update                           | app       | Backend Lead                 | L        | T4, T6, T10                           | done    |
+| T17 | Workspace Role deletion with replacement                 | app       | Backend Lead                 | L        | T4, T6, T10                           | done    |
+| T18 | Workspace membership add / remove / reassign             | app       | Backend Lead                 | L        | T4, T6, T10                           | done    |
+| T19 | Workspace Owner transfer                                 | app       | Backend Lead                 | M        | T4, T6, T10                           | done    |
+| T20 | Warehouse create + rename                                | app       | Backend Lead                 | L        | T4, T6, T11, T12                      | done    |
+| T21 | Warehouse archive + restore                              | app       | Backend Lead                 | L        | T4, T6, T11                           | done    |
+| T22 | Warehouse membership assign / revoke + assignable Roles  | app       | Backend Lead                 | L        | T4, T6, T11                           | done    |
+| T23 | Active Warehouse selection + actor-context query         | app       | Backend Lead                 | L        | T6, T9, T11                           | done    |
+| T24 | Workspace-level REST controller + module wiring          | ports     | Backend Lead                 | L        | T6, T13, T15, T16, T17, T18, T19, T23 | done    |
+| T25 | Warehouse-record and membership-edge REST routes         | ports     | Backend Lead                 | M        | T6, T13, T20, T21, T22                | done    |
+| T26 | Re-shape the `access` REST surface                       | ports     | Backend Lead                 | L        | T12, T13                              | done    |
+| T27 | Re-shape the `users` REST surface                        | ports     | Backend Lead                 | M        | T12, T13                              | done    |
+| T28 | ADR 0003 + `sad.md` §8 classification reconciliation     | docs      | Tech Lead + Security Lead    | S        | —                                     | done    |
+| T29 | Record the supersession of the two approved specs        | docs      | Tech Lead                    | S        | —                                     | done    |
+| T30 | Two-level authorization-coverage architecture check      | tests     | Backend Lead + Security Lead | M        | T24, T25, T26, T27, T28               | done    |
+| T31 | Workspace load smoke test + timing coverage              | tests     | Backend Lead                 | M        | T24, T25                              | done    |
+| T32 | Missing shared icon components                           | ui        | Frontend Lead                | S        | —                                     | done    |
+| T33 | Workspace actor-context API, capability hook, gate       | ui        | Frontend Lead                | M        | T6                                    | done    |
+| T34 | Warehouse switcher in the application shell              | ui        | Frontend Lead                | L        | T32, T33                              | done    |
+| T35 | `modules/workspace` route, page shell, tabs, i18n        | ui        | Frontend Lead                | L        | T32, T33                              | done    |
+| T36 | Warehouses tab: list, detail pane, lifecycle dialogs     | ui        | Frontend Lead                | L        | T35                                   | done    |
+| T37 | Warehouse access grant / withdrawal from the detail pane | ui        | Frontend Lead                | L        | T36                                   | done    |
+| T38 | Workspace roles + Permissions tabs                       | ui        | Frontend Lead                | L        | T35, T41                              | done    |
+| T39 | Workspace members tab + Owner transfer                   | ui        | Frontend Lead                | L        | T35, T41                              | done    |
+| T40 | Migrate the Warehouse-scoped web surface                 | ui        | Frontend Lead                | L        | T26, T27, T33                         | done    |
+| T41 | Workspace read projection gaps (counts + member flag)    | infra     | Backend Lead                 | S        | T9, T24                               | done    |
+| T42 | Fix `CreateWarehouseCommand` Nest DI wiring              | ports     | Backend Lead                 | S        | —                                     | done    |
+| T43 | Translate infra failures into the documented 503 codes   | app       | Backend Lead                 | S        | T20, T21                              | done    |
+| T44 | Return the documented `Warehouse` body from archival     | app       | Backend Lead                 | S        | T21, T25                              | done    |
+| T45 | Render the tab content in the administration panels      | ui        | Frontend Lead                | S        | T36                                   | done    |
+| T46 | Carry the identifying email in the Workspace reads       | infra     | Backend Lead                 | S        | T9, T24                               | done    |
+| T47 | Realign the four stale integration specs to openapi.yaml | test      | Backend Lead                 | S        | —                                     | done    |
+| T48 | Return the documented 200 owner-transfer result          | rest      | Backend Lead                 | S        | —                                     | done    |
+| T49 | Restore the two documented access-tier outcomes          | app       | Backend Lead                 | M        | —                                     | blocked |
+| T50 | Repair the workspaces load-smoke gate                    | test      | Backend Lead                 | S        | —                                     | done    |
+| T51 | Report a cross-Workspace Warehouse as unavailable        | app       | Backend Lead                 | S        | —                                     | done    |
+| T52 | Raise and surface the archival/creation 503s             | app       | Backend Lead                 | M        | —                                     | done    |
+| T53 | Carry the Workspace bootstrap in the registration reply  | rest      | Backend Lead                 | M        | —                                     | todo    |
+| T54 | Give a member with no Active Warehouse a way forward     | ui        | Frontend Lead                | M        | —                                     | todo    |
+| T55 | Scope the three users current-access reads to Warehouse  | app       | Backend Lead                 | M        | —                                     | done    |
+| T56 | Raise the two unreachable Workspace 503s                 | app       | Backend Lead                 | S        | —                                     | done    |
+| T57 | Resolve `workspaceRoleId` before assigning it            | app       | Backend Lead                 | M        | —                                     | todo    |
+| T58 | One generic unavailable-recipient outcome for transfer   | app       | Backend Lead                 | S        | —                                     | done    |
+| T59 | Admit `WORKSPACE:RENAME` to the watch-permission list    | ui        | Frontend Lead                | S        | —                                     | todo    |
+| T60 | Explain the empty replacement choice; map the refusal    | ui        | Frontend Lead                | M        | —                                     | todo    |
+| T61 | Agree the empty-name rule key between web and server     | ui        | Frontend Lead                | S        | —                                     | done    |
+| T62 | Swap the two Owner memberships in ordered statements     | infra     | Backend Lead                 | S        | T58                                   | done    |
 
 **T46 — projection gap found during `implement` (T38/T39 run).** `contracts/openapi.yaml` documents `email` on both
 `WorkspaceMember` ("carried so the reader can tell Workspace Members apart. Present on the same terms as the approved
@@ -152,8 +152,31 @@ DATABASE_NAME=warehouser_test RUN_INTEGRATION=1 pnpm --filter @warehouser/server
 and the `.env.example` default is the development database. Wiring the tier into the default gate is
 review finding S2-06 (stage 2), still open.
 
-Baseline at the start of remediation: **12 failed / 852 passed, 7 suites**. After T51, T52, T55,
-T56, T58, T61, T62: **10 failed / 869 passed**. The remaining ten belong to T47, T48, T49 and T50.
+Baseline at the start of remediation: **12 failed / 852 passed, 7 suites**. After T47, T48, T50,
+T51, T52, T55, T56, T58, T61, T62: **2 failed / 877 passed**. Both remaining failures belong to
+**T49, which is blocked on a decision** (below).
+
+**T50 changes how long the tier takes.** The load smoke defaults to
+`WORKSPACE_LOAD_DURATION_SECONDS=600`, and it previously errored in milliseconds, so nobody paid
+that cost. Now that it measures, a default `RUN_INTEGRATION=1` run takes ~11 minutes. Local runs
+should set a short duration; the release gate wants the full 600s. Decide where that override lives
+when wiring S2-06.
+
+**T49 is blocked: two artifacts disagree, and the answer changes API behaviour.**
+
+1. `PATCH /warehouses/{id}/access/roles/{roleId}` for a Role of another Workspace answers 404
+   `access.role_unavailable`. `docs/features/access/contracts/openapi.yaml:521` documents exactly
+   that code; the re-shaped route in `docs/features/workspaces/contracts/openapi.yaml:1228` documents
+   the same 404 as `access.target_unavailable` via `WarehouseTargetUnavailable`. The workspaces
+   contract says these routes were _path_ re-shapes with unchanged behaviour, which argues the older
+   code is right and the newer reference is imprecise. Status and non-disclosure are identical either
+   way — only the code differs.
+2. AC-36a's concurrent manager transfer asserts `[200, 409]`. It **passes in isolation** and fails
+   only inside the full suite, where the loser gets `[200, 403]`. Both are contract-conformant: the
+   loser that reaches the database first sees the one-Manager constraint (409), and the loser whose
+   guard read lands after the winner commits genuinely no longer holds
+   `WAREHOUSE_MANAGER_ROLE:REASSIGN` (403). Exactly one Manager survives in both. The test pins one
+   of two legitimate interleavings, which no guard-then-command ordering can guarantee.
 
 **Three findings turned out to be more than the review could confirm.** S1-06 was reported as an
 ambiguous resolution; it is a working privilege escalation. `findOneBy({userId})` resolves through
