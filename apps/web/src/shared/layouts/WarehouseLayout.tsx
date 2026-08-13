@@ -23,11 +23,18 @@ const EnteredWarehouseOutlet = (): ReactElement => {
 export const WarehouseLayout = (): ReactElement => {
   const verdict = useMatch({
     strict: false,
-    select: (match) => match.context as WarehouseEntryVerdict,
+    select: (match) => match.context as WarehouseEntryVerdict | undefined,
   });
 
-  if (verdict.status === 'refused') {
-    return <WarehouseEntryRefusal reason={verdict.reason ?? 'not-a-member'} />;
+  // CR-AC-07 — the single entry-enforcement point of this change, so its
+  // default is closed. Branching on `refused` would admit everything that is
+  // merely not that string — including a verdict the route never published —
+  // and render the Warehouse view plus its CR-AC-09 write on the strength of
+  // an absent value. Only an explicit `entered` enters; anything else is
+  // refused non-disclosingly, which is also the correct answer for a state
+  // that should be unreachable.
+  if (verdict?.status !== 'entered') {
+    return <WarehouseEntryRefusal reason={verdict?.reason ?? 'not-a-member'} />;
   }
 
   return <EnteredWarehouseOutlet />;

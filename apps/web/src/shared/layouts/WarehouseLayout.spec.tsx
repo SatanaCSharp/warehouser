@@ -113,6 +113,29 @@ describe('WarehouseLayout', () => {
     expect(screen.queryByText('Dashboard content')).not.toBeInTheDocument();
   });
 
+  // CR-AC-07 — this is the change's single entry-enforcement point, so its
+  // default must be closed. Branching on `status === 'refused'` admits
+  // everything that is merely *not* that string, including a verdict the route
+  // never published; the Warehouse view and its CR-AC-09 write would then
+  // render on the strength of an absent value.
+  it.each([
+    ['no verdict at all', undefined],
+    ['a verdict of an unrecognized status', { status: 'unknown' }],
+    ['a verdict that is not an object', 'entered'],
+  ])(
+    'refuses rather than entering when beforeLoad publishes %s',
+    async (_case, verdict) => {
+      vi.mocked(useRecordWarehouseEntry).mockClear();
+      renderLayout(verdict as unknown as WarehouseEntryVerdict);
+
+      expect(
+        await screen.findByText("This address isn't available to you"),
+      ).toBeInTheDocument();
+      expect(screen.queryByText('Dashboard content')).not.toBeInTheDocument();
+      expect(useRecordWarehouseEntry).not.toHaveBeenCalled();
+    },
+  );
+
   it('renders the explicit archived refusal instead of the Outlet for an archived verdict', async () => {
     renderLayout({
       status: 'refused',
