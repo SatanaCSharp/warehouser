@@ -15,7 +15,7 @@
 | T8  | Entry record and silent-failure allowlist        | app    | Frontend Lead | S        | T4              | done   |
 | T9  | Grouped context switcher                         | ui     | Frontend Lead | L        | T1, T4          | done   |
 | T10 | Context-selected sidebar                         | ui     | Frontend Lead | M        | T4, T6          | done   |
-| T11 | Shell chrome wiring                              | ui     | Frontend Lead | S        | T9, T10         | todo   |
+| T11 | Shell chrome wiring                              | ui     | Frontend Lead | S        | T9, T10         | done   |
 | T12 | Warehouses-tab Enter action                      | ui     | Frontend Lead | M        | T1, T4          | done   |
 | T13 | `effectiveWarehouseId` architecture check        | wiring | Frontend Lead | S        | T6, T8, T9      | todo   |
 | T14 | Route-integration coverage                       | tests  | Frontend Lead | M        | T6, T7, T8, T10 | todo   |

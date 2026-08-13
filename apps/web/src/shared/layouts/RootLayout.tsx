@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { SignOutButton } from 'modules/auth/sign-out/components/SignOutButton';
 import { selectIsAuthenticated } from 'modules/auth/store/auth.selectors';
 import { ROUTES } from 'shared/constants/routes';
+import { useEnteredContext } from 'shared/hooks/useEnteredContext';
 import { MenuIcon } from 'shared/icons';
 import { Footer } from 'shared/layouts/Footer';
 import { LanguageSelector } from 'shared/layouts/LanguageSelector';
@@ -28,6 +29,10 @@ export const RootLayout = (): ReactElement => {
     select: (state) => state.location.pathname,
   });
   const isAuthRoute = pathname === ROUTES.LOGIN || pathname === ROUTES.SIGN_UP;
+  // T11 / CR-AC-18 — the drawer toggle exists to open the sidebar's list, so it
+  // renders exactly when there is a list to open. Both components read the same
+  // predicate, so no context can offer a control that opens an empty drawer.
+  const hasNavigationList = useEnteredContext().kind !== 'none';
   const oppositeRoute =
     pathname === ROUTES.SIGN_UP ? ROUTES.LOGIN : ROUTES.SIGN_UP;
 
@@ -73,15 +78,17 @@ export const RootLayout = (): ReactElement => {
               </div>
               <LanguageSelector />
               <SignOutButton />
-              <Button
-                isIconOnly
-                variant="ghost"
-                aria-label={t('nav.toggle')}
-                className="sm:hidden"
-                onPress={() => setIsDrawerOpen(true)}
-              >
-                <MenuIcon />
-              </Button>
+              {hasNavigationList ? (
+                <Button
+                  isIconOnly
+                  variant="ghost"
+                  aria-label={t('nav.toggle')}
+                  className="sm:hidden"
+                  onPress={() => setIsDrawerOpen(true)}
+                >
+                  <MenuIcon />
+                </Button>
+              ) : null}
             </div>
           </header>
           <div className="w-full border-b border-border bg-surface px-6 py-3 sm:hidden">

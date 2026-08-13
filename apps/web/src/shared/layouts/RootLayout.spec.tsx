@@ -87,10 +87,16 @@ const stubShell = (): void => {
   );
 };
 
+type RenderExtras = {
+  /** The entry verdict the Warehouse layout publishes for the address. */
+  verdict?: WarehouseEntryVerdict['status'];
+};
+
 const renderAt = (
   initialEntry: string,
   store: AppStore,
   homeContent: ReactElement = <p>Home content</p>,
+  { verdict = 'entered' }: RenderExtras = {},
 ): ReturnType<typeof render> => {
   const rootRoute = createRootRouteWithContext<TestContext>()({
     component: RootLayout,
@@ -117,14 +123,23 @@ const renderAt = (
   const warehouseTestRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: ROUTES.WAREHOUSE,
-    beforeLoad: ({ params }): WarehouseEntryVerdict => ({
-      status: 'entered',
-      warehouseId: params.warehouseId,
-    }),
+    beforeLoad: ({ params }): WarehouseEntryVerdict =>
+      verdict === 'entered'
+        ? { status: 'entered', warehouseId: params.warehouseId }
+        : {
+            status: 'refused',
+            reason: 'not-a-member',
+            warehouseId: params.warehouseId,
+          },
   });
   const warehouseIndexRoute = createRoute({
     getParentRoute: () => warehouseTestRoute,
     path: '/',
+    component: () => homeContent,
+  });
+  const workspaceTestRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: ROUTES.WORKSPACE,
     component: () => homeContent,
   });
   const router = createRouter({
@@ -132,6 +147,7 @@ const renderAt = (
       homeRoute,
       loginRoute,
       signUpRoute,
+      workspaceTestRoute,
       warehouseTestRoute.addChildren([warehouseIndexRoute]),
     ]),
     context: { store },
@@ -236,12 +252,49 @@ describe('RootLayout', () => {
 
   it('hides the drawer toggle at and above sm', async () => {
     stubAccess([]);
-    renderAt(ROUTES.HOME, authenticatedStore());
+    renderAt(WAREHOUSE_ADDRESS, authenticatedStore());
 
     const toggle = await screen.findByRole('button', {
       name: 'Open navigation',
     });
     expect(toggle.className).toContain('sm:hidden');
+  });
+
+  // T11 / CR-AC-18 — with no navigation list there is nothing for a drawer to
+  // contain, so the toggle that opens it must not render. Any context that
+  // renders no sidebar list must therefore render no toggle either, or the
+  // shell offers an affordance that opens an empty panel.
+  describe('the drawer toggle follows the sidebar list (CR-AC-18)', () => {
+    it.each<[string, { entry: string } & RenderExtras]>([
+      ['the no-context state at the root', { entry: ROUTES.HOME }],
+      [
+        'a Warehouse entry refusal',
+        { entry: WAREHOUSE_ADDRESS, verdict: 'refused' },
+      ],
+    ])('renders no drawer toggle in %s', async (_label, options) => {
+      stubShell();
+      renderAt(options.entry, authenticatedStore(), <p>Home content</p>, {
+        verdict: options.verdict,
+      });
+
+      // The switcher still renders — it is the only way out of both states.
+      await screen.findAllByRole('button', { name: /context switcher/iu });
+      expect(
+        screen.queryByRole('button', { name: 'Open navigation' }),
+      ).not.toBeInTheDocument();
+    });
+
+    it.each([
+      ['a Warehouse view', WAREHOUSE_ADDRESS],
+      ['the Workspace view', ROUTES.WORKSPACE],
+    ])('renders the drawer toggle in %s', async (_label, entry) => {
+      stubShell();
+      renderAt(entry, authenticatedStore());
+
+      expect(
+        await screen.findByRole('button', { name: 'Open navigation' }),
+      ).toBeInTheDocument();
+    });
   });
 
   // T34 — the Warehouse switcher is added to the shell as one component

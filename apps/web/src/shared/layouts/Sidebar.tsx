@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { PermissionGate } from 'shared/components/PermissionGate';
 import { WorkspaceGate } from 'shared/components/WorkspaceGate';
 import { ROUTES } from 'shared/constants/routes';
-import { useEnteredWarehouse } from 'shared/hooks/useEnteredWarehouse';
+import { useEnteredContext } from 'shared/hooks/useEnteredContext';
 import { workspaceAdministrationPermissionIds } from 'shared/hooks/useWorkspacePermissions';
 import { Building2Icon, DashboardIcon, ShieldCheckIcon } from 'shared/icons';
 
@@ -37,11 +37,7 @@ export const Sidebar = ({
   onOpenChange,
 }: SidebarProps = {}): ReactElement | null => {
   const { t } = useTranslation('common');
-  const warehouseId = useEnteredWarehouse();
-  const isWorkspaceView = useRouterState({
-    select: (state) =>
-      state.matches.some((match) => match.routeId === ROUTES.WORKSPACE),
-  });
+  const enteredContext = useEnteredContext();
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
@@ -125,13 +121,13 @@ export const Sidebar = ({
   // CR-AC-18 — no context entered: render no list rather than an empty one, and
   // no landmark to announce it. This is also the refusal case (CR-AC-07), whose
   // entries would be addressed inside a Warehouse the actor was just refused.
-  if (!warehouseId && !isWorkspaceView) {
+  if (enteredContext.kind === 'none') {
     return null;
   }
 
   const navList = (onNavigate?: () => void): ReactElement =>
-    warehouseId
-      ? warehouseNavList(warehouseId, onNavigate)
+    enteredContext.kind === 'warehouse'
+      ? warehouseNavList(enteredContext.warehouseId, onNavigate)
       : workspaceNavList(onNavigate);
 
   return (
