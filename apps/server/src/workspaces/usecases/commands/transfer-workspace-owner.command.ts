@@ -7,8 +7,10 @@ import { Transactional } from 'shared/decorators/transactional.decorator';
 import { WorkspaceMembershipRepository } from 'shared/domain/repositories/workspace-membership.repository';
 import { WorkspaceOwnerTransferRepository } from 'shared/domain/repositories/workspace-owner-transfer.repository';
 import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository';
+import { withUnavailableOutcome } from 'workspaces/domain/errors/unavailable-outcome';
 import {
   workspaceConcurrentChangeError,
+  workspaceOwnerTransferUnavailableError,
   workspaceReplacementRoleRequiredError,
   workspaceSelfActionDeniedError,
   workspaceTargetUnavailableError,
@@ -43,7 +45,23 @@ export class TransferWorkspaceOwnerCommand {
   ) {}
 
   @Transactional()
-  async execute(
+  execute(
+    currentUser: WorkspaceCurrentUser,
+    input: TransferWorkspaceOwnerInput,
+  ): Promise<TransferWorkspaceOwnerResult> {
+    // AC-26 — openapi.yaml documents 503
+    // `workspace.owner_transfer_unavailable` for a transfer that did not
+    // complete, distinct from the 409 a *lost race* answers.
+    // `withUnavailableOutcome` re-raises every rejection asserted below
+    // untouched, so AC-27's denial and AC-28's unavailable recipient keep
+    // their own outcomes.
+    return withUnavailableOutcome(
+      () => this.transfer(currentUser, input),
+      workspaceOwnerTransferUnavailableError,
+    );
+  }
+
+  private async transfer(
     currentUser: WorkspaceCurrentUser,
     input: TransferWorkspaceOwnerInput,
   ): Promise<TransferWorkspaceOwnerResult> {
