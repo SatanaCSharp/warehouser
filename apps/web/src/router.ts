@@ -8,8 +8,11 @@ import { accessRoute } from 'modules/access/route';
 import { loginRoute } from 'modules/auth/login/route';
 import { signUpRoute } from 'modules/auth/sign-up/route';
 import { homeRoute } from 'modules/home/route';
+import { warehouseDashboardRoute } from 'modules/warehouse/route';
 import { workspaceRoute } from 'modules/workspace/route';
 import { rootRoute } from 'routes/__root.route';
+import { warehouseCatchAllRoute } from 'routes/catch-all.route';
+import { warehouseRoute } from 'routes/warehouse.route';
 import { store } from 'store';
 
 import type { AppStore } from 'store';
@@ -20,6 +23,7 @@ const routeTree = rootRoute.addChildren([
   loginRoute,
   signUpRoute,
   workspaceRoute,
+  warehouseRoute.addChildren([warehouseDashboardRoute, warehouseCatchAllRoute]),
 ]);
 
 type CreateAppRouterOptions = {

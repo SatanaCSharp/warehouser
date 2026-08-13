@@ -1,7 +1,7 @@
 import { screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { DesignSystemExample } from 'modules/home/components/DesignSystemExample';
+import { DesignSystemExample } from 'modules/warehouse/components/DesignSystemExample';
 import { ROUTES } from 'shared/constants/routes';
 import { renderWithProviders } from 'test/render';
 

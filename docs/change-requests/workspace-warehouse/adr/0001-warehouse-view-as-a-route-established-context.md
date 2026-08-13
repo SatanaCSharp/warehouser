@@ -156,6 +156,87 @@ request.
 - The stored selection survives untouched at the data and contract level; only its web-side meaning
   narrows to CR-AC-08 rule (2).
 
+## Amendment (T4, post-Accepted) — `beforeLoad` re-running is real; preservation is application code
+
+The Negative consequence above states the design "depends on three TanStack Router behaviors that
+must be pinned by tests," including "`beforeLoad` not re-running while navigating between the
+layout's own children." Implementing T4 pinned that behavior with a route-integration test before
+building on it, per `sad.md` §11, and it failed against the installed router.
+
+**Verified behaviour.** `@tanstack/router-core@1.171.14`'s `load-matches.js` `loadMatches()` calls
+`handleBeforeLoad(inner, i)` for **every** currently matched route on **every** navigation. Nothing
+gates that call on `match.cause` (`'stay'` vs `'enter'`); the staleness/`shouldReload` gate that
+gives `loader` its skip-if-fresh behavior does not exist for `beforeLoad` at all —
+`shouldSkipLoader` (the only gate `handleBeforeLoad` consults) checks only SSR/dehydrated state.
+Concretely: navigating from the Warehouse dashboard to the Warehouse-level splat — both children of
+`warehouseRoute`, same `warehouseId`, `cause: 'stay'` on the parent match — still re-invokes
+`warehouseRoute.beforeLoad`. A route-integration test proved this empirically: mutating the cached
+`getWorkspaceContext` RTK Query data directly (no network call, so no re-run could be attributed to
+a refetch) after an entered render, then navigating dashboard → splat, produced a fresh `refused`
+verdict from the re-run `beforeLoad` reading the mutated cache.
+
+**Consequence for the design.** The claim that "CR-AC-20 falls out of _where_ the check runs" is
+false as stated: the router does not give non-re-running `beforeLoad` for free. Verdict
+preservation across internal navigation is therefore **explicit application code** in
+`routes/warehouse.route.tsx`, not an inherited router guarantee. Every other property of the
+Decision outcome is unaffected — the verdict still lives in the match context, `WarehouseLayout` and
+`useEnteredWarehouse` are unchanged, and the refusal still renders in place rather than redirecting.
+
+**The `cause`-alone trap.** The first attempt at preservation kept the previous verdict whenever the
+parent match's `cause` was `'stay'`. This is a security bug, not a performance shortcut: navigating
+from Warehouse W1 to Warehouse W2 also reports `cause: 'stay'` on `warehouseRoute`'s match — same
+route, only the `warehouseId` param changed — so a `cause`-keyed cache would admit the actor to W2 on
+W1's verdict. A route-integration test (`router.spec.tsx`, "re-resolves entry when :warehouseId
+changes, refusing a non-member moved to from an entered Warehouse") pins that this must not happen.
+Preservation must be keyed on `params.warehouseId` matching the cached verdict's own `warehouseId`,
+never on `cause` alone.
+
+**The `warehouseId`-alone trap.** Correcting for the first trap by dropping `cause` entirely and
+keying preservation on `params.warehouseId` alone is also wrong, in the opposite direction: the
+cache then survives the actor *leaving* the Warehouse. An actor who enters W, navigates to the root
+or the Workspace view, has W archived or their membership withdrawn while they are away, and then
+returns to W's address, hits a cache entry still naming W and is admitted on the verdict from their
+previous visit. That breaks CR-AC-17, which refuses an archived Warehouse "whether from a bookmark,
+a restored session, or an address that was live when the tab was opened", and CR-RG-02. A
+route-integration test (`router.spec.tsx`, "re-resolves entry when the same Warehouse is re-entered
+after leaving it (CR-AC-17)") pins it.
+
+**Both signals are required.** The verdict is preserved only while the actor stays continuously
+inside one Warehouse — `cause === 'stay'` **and** the cached `warehouseId` equal to
+`params.warehouseId`. `cause` alone admits W1's verdict in W2; `warehouseId` alone admits a stale
+verdict after re-entry. Each condition covers the case the other misses:
+
+| Navigation                          | `cause`   | `warehouseId` | Outcome              |
+| ----------------------------------- | --------- | ------------- | -------------------- |
+| Dashboard → Access, inside W        | `'stay'`  | unchanged     | preserved (CR-AC-20) |
+| W1 → W2                             | `'stay'`  | changed       | re-resolved          |
+| W → root → W                        | `'enter'` | unchanged     | re-resolved          |
+
+**Mechanism chosen.** `routes/warehouse.route.tsx` keeps a module-scoped `WeakMap<AppStore, {
+warehouseId: string; verdict: WarehouseEntryVerdict }>`, keyed by the request's own `store` instance
+(the same store already threaded through `RouterContext`). On each `beforeLoad` call: if the match's
+`cause` is `'stay'` **and** a cache entry exists for that store whose `warehouseId` matches
+`params.warehouseId`, return the cached verdict without calling `resolveWarehouseEntry` again;
+otherwise call `resolveWarehouseEntry` fresh and record its result keyed by the new `warehouseId`.
+Because the key is the store instance — one
+per app load and one per `makeStore()` in every test — no entry can leak between sessions or test
+runs, and nothing needs manual cleanup (the `WeakMap` drops the entry once its store is
+garbage-collected). This keeps `resolveWarehouseEntry`'s signature and `guards/warehouse-entry.guard.ts`
+untouched (T3's committed work, its own 8 tests unaffected), and keeps `beforeLoad`'s return type a
+plain `WarehouseEntryVerdict` — never `| undefined` — so `useEnteredWarehouse.ts` and
+`routes/catch-all.route.tsx` need no widened context type or casts.
+
+Two alternatives were considered and rejected:
+
+- **A typed carrier on `RouterContext`** (e.g. a mutable `lastWarehouseVerdict` field) — rejected
+  because `RouterContext` is the root context every route in the app shares; adding a field to it
+  widens a type every existing and future route (and every router built for a test) carries, for a
+  concern that belongs to exactly one route.
+- **Reading `match.__beforeLoadContext` directly** — rejected because it is an untyped router
+  internal (`tsc` rejects it: `Property '__beforeLoadContext' does not exist on type
+'RouteMatch<...>'`) and reading it would couple this route to router internals the public API does
+  not expose.
+
 ## Links
 
 - [`sad.md`](../sad.md) §§4–6 — the design this decision anchors

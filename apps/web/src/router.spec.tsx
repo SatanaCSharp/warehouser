@@ -1,11 +1,13 @@
 import { RouterProvider } from '@tanstack/react-router';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
+import remove from 'lodash/remove';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createAppRouter } from 'router';
+import { workspaceContextApi } from 'shared/api/workspace-context-api';
 import { ROUTES } from 'shared/constants/routes';
 import { makeStore } from 'store';
 
@@ -549,8 +551,11 @@ describe('router', () => {
       status: 'authenticated',
       user: { id: '00000000-0000-4000-8000-000000000001' },
     });
+    // T4 — `/` renders the no-context state block rather than a dashboard
+    // (CH-03); the landing rules that would resolve an actor into a
+    // Warehouse or Workspace view are T7's.
     expect(
-      await screen.findByText('Design System Preview'),
+      await screen.findByText('Nothing is entered yet'),
     ).toBeInTheDocument();
     expect(toast.success).not.toHaveBeenCalled();
   });
@@ -649,7 +654,9 @@ describe('router', () => {
     const { router, store } = renderRoute('/');
 
     expect(store.getState().auth.status).toBe('unknown');
-    expect(screen.queryByText('Design System Preview')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Nothing is entered yet'),
+    ).not.toBeInTheDocument();
 
     resolveSession?.(
       Response.json({
@@ -657,8 +664,11 @@ describe('router', () => {
       }),
     );
 
+    // T4 — `/` renders the no-context state block rather than a dashboard
+    // (CH-03); the landing rules that would resolve an actor into a
+    // Warehouse or Workspace view are T7's.
     expect(
-      await screen.findByText('Design System Preview'),
+      await screen.findByText('Nothing is entered yet'),
     ).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/');
     expect(store.getState().auth.status).toBe('authenticated');
@@ -778,5 +788,318 @@ describe('router', () => {
     expect(
       await screen.findByRole('link', { name: 'Workspace' }),
     ).toHaveAttribute('href', ROUTES.WORKSPACE);
+  });
+});
+
+// T4 / ADR 0001 — the Warehouse layout route. `sad.md` §11 requires three
+// TanStack Router v1 behaviors to be pinned by tests before anything is
+// built on them: a parent `beforeLoad`'s return value reaching the match
+// context, `beforeLoad` not re-running while navigating between the
+// layout's own children, and the `$` splat ranking below the layout's
+// explicit children. Each is called out below at the test that pins it.
+describe('Warehouse layout route (T4)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+  });
+
+  const MEMBER_WAREHOUSE_ID = '00000000-0000-4000-8000-000000000040';
+  const ARCHIVED_WAREHOUSE_ID = '00000000-0000-4000-8000-000000000041';
+  const NON_MEMBER_WAREHOUSE_ID = '00000000-0000-4000-8000-000000000099';
+
+  type FixtureWarehouse = {
+    warehouseId: string;
+    name: string;
+    archivedAt: string | null;
+  };
+
+  const stubWarehouseFetch = (
+    warehouses: readonly FixtureWarehouse[],
+  ): ReturnType<typeof vi.fn> =>
+    vi.fn((input: RequestInfo | URL) => {
+      const url =
+        input instanceof Request
+          ? input.url
+          : input instanceof URL
+            ? input.href
+            : input;
+      if (url.endsWith('/api/v1/auth/session')) {
+        return Promise.resolve(
+          Response.json({
+            user: { id: '00000000-0000-4000-8000-000000000001' },
+          }),
+        );
+      }
+      if (url.includes('/api/v1/workspace/context')) {
+        return Promise.resolve(
+          Response.json({
+            workspace: {
+              id: '00000000-0000-4000-8000-000000000020',
+              name: 'Acme Logistics',
+            },
+            workspacePermissionIds: [],
+            warehouses: warehouses.map((warehouse) => ({
+              ...warehouse,
+              roleId: '00000000-0000-4000-8000-000000000030',
+              roleKind: 'custom',
+            })),
+            effectiveWarehouseId: null,
+          }),
+        );
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+  // Pins TanStack behavior #1: a parent `beforeLoad`'s return value reaches
+  // the match context. `WarehouseLayout` renders `<Outlet />` only when it
+  // reads `status: 'entered'` from that context, so the dashboard rendering
+  // at all is proof the verdict `warehouseRoute.beforeLoad` returned reached
+  // its component. `DesignSystemExample` moved unchanged from
+  // `modules/home/components/` renders here.
+  it("publishes the parent beforeLoad's verdict into the match context and enters for a live membership", async () => {
+    vi.stubGlobal(
+      'fetch',
+      stubWarehouseFetch([
+        { warehouseId: MEMBER_WAREHOUSE_ID, name: 'Main', archivedAt: null },
+      ]),
+    );
+
+    const { router } = renderRoute(`/warehouses/${MEMBER_WAREHOUSE_ID}`);
+
+    expect(
+      await screen.findByText('Design System Preview'),
+    ).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe(
+      `/warehouses/${MEMBER_WAREHOUSE_ID}`,
+    );
+  });
+
+  // CR-AC-05 / CR-AC-07 — the address determines the Warehouse, so moving
+  // from an entered Warehouse to one the actor holds no membership in must
+  // re-resolve entry rather than carry the first verdict over. This is the
+  // security-critical companion to the `cause: 'stay'` preservation below:
+  // changing `:warehouseId` is a different match (`cause: 'enter'`), so the
+  // verdict is recomputed; only navigation *within* one Warehouse preserves
+  // it. Without this test, preserving the verdict on 'stay' could silently
+  // admit an actor to W2 on W1's membership.
+  it('re-resolves entry when :warehouseId changes, refusing a non-member moved to from an entered Warehouse', async () => {
+    vi.stubGlobal(
+      'fetch',
+      stubWarehouseFetch([
+        { warehouseId: MEMBER_WAREHOUSE_ID, name: 'Main', archivedAt: null },
+      ]),
+    );
+
+    const { router } = renderRoute(`/warehouses/${MEMBER_WAREHOUSE_ID}`);
+    expect(
+      await screen.findByText('Design System Preview'),
+    ).toBeInTheDocument();
+
+    await act(async () => {
+      await router.navigate({
+        to: ROUTES.WAREHOUSE,
+        params: { warehouseId: NON_MEMBER_WAREHOUSE_ID },
+      });
+    });
+
+    expect(
+      await screen.findByText("This address isn't available to you"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Design System Preview')).not.toBeInTheDocument();
+    expect(router.state.location.pathname).toBe(
+      `/warehouses/${NON_MEMBER_WAREHOUSE_ID}`,
+    );
+  });
+
+  // CR-AC-07 — refused at the requested address: no redirect, no navigation
+  // list, and no Warehouse content around the refusal.
+  it('refuses a non-member in place at the requested address, rendering no Warehouse content', async () => {
+    vi.stubGlobal('fetch', stubWarehouseFetch([]));
+
+    const { router } = renderRoute(`/warehouses/${NON_MEMBER_WAREHOUSE_ID}`);
+
+    expect(
+      await screen.findByText("This address isn't available to you"),
+    ).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe(
+      `/warehouses/${NON_MEMBER_WAREHOUSE_ID}`,
+    );
+    // The Warehouse-view sidebar (CR-AC-11) is out of T4's scope; the
+    // shell's own `Sidebar` still renders its unconditional Dashboard link
+    // to `/` regardless of context. What T4 owns is that no Warehouse
+    // content renders around the refusal.
+    expect(screen.queryByText('Design System Preview')).not.toBeInTheDocument();
+  });
+
+  // Pins TanStack behavior #3: the `$` splat ranks below the layout's
+  // explicit children, so `/warehouses/:id/anything` still matches the
+  // layout route (and its splat child) rather than the root splat — the
+  // structural reason CR-AC-07 precedes CR-AC-16 (ADR 0001). Refused here
+  // too, at the deeper address, never reaching not-found handling.
+  it('refuses an address beneath a non-member warehouse identically, never reaching unmatched-address handling', async () => {
+    vi.stubGlobal('fetch', stubWarehouseFetch([]));
+
+    const { router } = renderRoute(
+      `/warehouses/${NON_MEMBER_WAREHOUSE_ID}/anything`,
+    );
+
+    expect(
+      await screen.findByText("This address isn't available to you"),
+    ).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe(
+      `/warehouses/${NON_MEMBER_WAREHOUSE_ID}/anything`,
+    );
+  });
+
+  // CR-AC-17 — an archived membership is refused with the explicit archived
+  // explanation, distinct from the non-disclosing refusal above.
+  it('refuses an archived membership with the explicit archived explanation', async () => {
+    vi.stubGlobal(
+      'fetch',
+      stubWarehouseFetch([
+        {
+          warehouseId: ARCHIVED_WAREHOUSE_ID,
+          name: 'Retired',
+          archivedAt: '2026-01-01T00:00:00.000Z',
+        },
+      ]),
+    );
+
+    const { router } = renderRoute(`/warehouses/${ARCHIVED_WAREHOUSE_ID}`);
+
+    expect(
+      await screen.findByText('This warehouse is archived'),
+    ).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe(
+      `/warehouses/${ARCHIVED_WAREHOUSE_ID}`,
+    );
+  });
+
+  // Same address the splat matched for a non-member above, but the splat
+  // does reach an entered member — proving the redirect is scoped to that
+  // verdict alone (CR-AC-16's second paragraph: "only a member can ever
+  // reach" it) and confirming again that the splat matched rather than the
+  // root's default-not-found handling.
+  it('redirects an entered member off an unmatched address beneath their own warehouse', async () => {
+    vi.stubGlobal(
+      'fetch',
+      stubWarehouseFetch([
+        { warehouseId: MEMBER_WAREHOUSE_ID, name: 'Main', archivedAt: null },
+      ]),
+    );
+
+    const { router } = renderRoute(
+      `/warehouses/${MEMBER_WAREHOUSE_ID}/anything`,
+    );
+
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe(ROUTES.HOME),
+    );
+  });
+
+  // Pins TanStack behavior #2: `beforeLoad` does not re-run while
+  // navigating between the layout's own children. Mutating the cached
+  // Workspace context directly (no network fetch) simulates the membership
+  // vanishing without triggering `resolveWarehouseEntry` again; navigating
+  // to the splat child (still under the same layout match) must not read
+  // that mutation, or the actor would be evicted from a Warehouse they are
+  // working in — the load-bearing consequence CR-AC-20 and ADR 0001 record.
+  // CR-AC-17 / CR-RG-02 — leaving a Warehouse ends the entry the verdict
+  // records. Returning to that same address is a fresh entry and must be
+  // resolved fresh: an archived Warehouse is refused "whether from a
+  // bookmark, a restored session, or an address that was live when the tab
+  // was opened". Preserving the verdict for the life of the session would
+  // admit the actor to a Warehouse archived while they were away.
+  it('re-resolves entry when the same Warehouse is re-entered after leaving it (CR-AC-17)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      stubWarehouseFetch([
+        { warehouseId: MEMBER_WAREHOUSE_ID, name: 'Main', archivedAt: null },
+      ]),
+    );
+
+    const { router, store } = renderRoute(`/warehouses/${MEMBER_WAREHOUSE_ID}`);
+    expect(
+      await screen.findByText('Design System Preview'),
+    ).toBeInTheDocument();
+
+    await act(async () => {
+      await router.navigate({ to: ROUTES.HOME });
+    });
+
+    // The Warehouse is archived while the actor is away from it.
+    store.dispatch(
+      workspaceContextApi.util.updateQueryData(
+        'getWorkspaceContext',
+        undefined,
+        (draft) => {
+          const archived = draft.warehouses.find(
+            (warehouse) => warehouse.warehouseId === MEMBER_WAREHOUSE_ID,
+          );
+          if (archived) {
+            archived.archivedAt = '2026-08-13T00:00:00.000Z';
+          }
+        },
+      ),
+    );
+
+    await act(async () => {
+      await router.navigate({
+        to: ROUTES.WAREHOUSE,
+        params: { warehouseId: MEMBER_WAREHOUSE_ID },
+      });
+    });
+
+    expect(
+      await screen.findByText('This warehouse is archived'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Design System Preview')).not.toBeInTheDocument();
+  });
+
+  it('does not re-run the layout beforeLoad while navigating between its own children (CR-AC-20)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      stubWarehouseFetch([
+        { warehouseId: MEMBER_WAREHOUSE_ID, name: 'Main', archivedAt: null },
+      ]),
+    );
+
+    const { router, store } = renderRoute(`/warehouses/${MEMBER_WAREHOUSE_ID}`);
+    expect(
+      await screen.findByText('Design System Preview'),
+    ).toBeInTheDocument();
+
+    store.dispatch(
+      workspaceContextApi.util.updateQueryData(
+        'getWorkspaceContext',
+        undefined,
+        (draft) => {
+          remove(
+            draft.warehouses,
+            (warehouse) => warehouse.warehouseId === MEMBER_WAREHOUSE_ID,
+          );
+        },
+      ),
+    );
+
+    await router.navigate({
+      to: '/warehouses/$warehouseId/$',
+      params: { warehouseId: MEMBER_WAREHOUSE_ID, _splat: 'anything' },
+    });
+
+    // If the layout's `beforeLoad` had re-run against the mutated cache, it
+    // would have found no membership and refused — but a refusal renders in
+    // place (CR-AC-07) rather than reaching the splat's redirect, so the
+    // actor would still be at the `/anything` address instead of `/`. The
+    // splat's own `beforeLoad` fired and redirected home unconditionally
+    // (proving the "only a member can ever reach it" branch above), which
+    // is only reachable if the layout's original `entered` verdict was
+    // still in effect — proof the layout's own `beforeLoad` did not re-run.
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe(ROUTES.HOME),
+    );
+    expect(
+      screen.queryByText("This address isn't available to you"),
+    ).not.toBeInTheDocument();
   });
 });
