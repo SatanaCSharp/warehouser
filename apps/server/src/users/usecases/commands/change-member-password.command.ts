@@ -96,6 +96,7 @@ export class ChangeMemberPasswordCommand {
     const currentAccess =
       await this.accessCurrentUserRepository.resolveCurrentAccess(
         currentUser.userId,
+        currentUser.warehouseId,
       );
     assertDefined(currentAccess, targetUnavailableError());
 

@@ -4,6 +4,7 @@ import { RoleEntity } from 'shared/domain/entities/role.entity';
 import { UserEntity } from 'shared/domain/entities/user.entity';
 import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
 import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 import { AccessReadRepository } from 'shared/domain/repositories/access-read.repository';
 
 const describeIntegration =
@@ -11,6 +12,7 @@ const describeIntegration =
 
 const now = new Date('2026-08-06T12:00:00.000Z');
 
+const workspaceId = '00000000-0000-4000-8000-000000000400';
 const warehouseId = '00000000-0000-4000-8000-000000000401';
 const roleId = '00000000-0000-4000-8000-000000000402';
 const memberUserId = '00000000-0000-4000-8000-000000000403';
@@ -25,7 +27,7 @@ describeIntegration('AccessReadRepository.listMembersAndAssignments', () => {
 
   afterEach(async () => {
     await dataSource.query(
-      'TRUNCATE warehouse_memberships, role_permissions, roles, warehouses, sessions, users, accounts CASCADE',
+      'TRUNCATE warehouse_memberships, role_permissions, roles, warehouses, workspaces, sessions, users, accounts CASCADE',
     );
   });
 
@@ -35,8 +37,15 @@ describeIntegration('AccessReadRepository.listMembersAndAssignments', () => {
 
   it("returns each member's normalized email via the accounts.user_id join", async () => {
     const manager = dataSource.manager;
+    await manager.getRepository(WorkspaceEntity).insert({
+      id: workspaceId,
+      name: null,
+      createdAt: now,
+      updatedAt: now,
+    });
     await manager.getRepository(WarehouseEntity).insert({
       id: warehouseId,
+      workspaceId,
       name: 'Warehouse A',
       createdAt: now,
       updatedAt: now,
@@ -66,6 +75,7 @@ describeIntegration('AccessReadRepository.listMembersAndAssignments', () => {
       await trxManager.getRepository(UserEntity).insert({
         id: memberUserId,
         accountId: memberUserId,
+        workspaceId,
         createdAt: now,
         updatedAt: now,
       });
@@ -73,6 +83,7 @@ describeIntegration('AccessReadRepository.listMembersAndAssignments', () => {
     await manager.getRepository(WarehouseMembershipEntity).insert({
       userId: memberUserId,
       warehouseId,
+      workspaceId,
       roleId,
       roleKind: 'custom',
       createdAt: now,

@@ -42,6 +42,7 @@ import { ListAccessPermissionsQuery } from 'access/usecases/queries/list-access-
 import { ListAccessRolesQuery } from 'access/usecases/queries/list-access-roles.query';
 import { ReadCurrentAccessQuery } from 'access/usecases/queries/read-current-access.query';
 import type { WarehouseAccessRequest } from 'shared/access/access-request';
+import { ArchivedTolerantRead } from 'shared/access/archived-tolerant-read.decorator';
 import { RequiredPermission } from 'shared/decorators/required-permission.decorator';
 import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
 import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
@@ -49,7 +50,7 @@ import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
 type RoleResult = RolePage['items'][number];
 type MemberResult = MemberPage['items'][number];
 
-@Controller('api/v1/access')
+@Controller('api/v1/warehouses/:warehouseId/access')
 export class AccessController {
   constructor(
     private readonly readCurrentAccessQuery: ReadCurrentAccessQuery,
@@ -63,16 +64,26 @@ export class AccessController {
     private readonly transferWarehouseManagerCommand: TransferWarehouseManagerCommand,
   ) {}
 
+  // Self-projection: any member of the named Warehouse may read their own membership, so this
+  // handler requires only a valid session, not a specific Permission — `WarehouseAccessGuard`
+  // requires a non-empty Permission list and would deny every actor otherwise. It is
+  // archived-tolerant by construction: the query marks the Warehouse's archived state rather than
+  // refusing the read (AC-12a).
   @Get('current')
   @UseGuards(SessionAuthGuard)
   readCurrent(
+    @Param('warehouseId', new ParseUUIDPipe()) warehouseId: string,
     @Req() request: WarehouseAccessRequest,
   ): Promise<AccessProjection> {
-    return this.readCurrentAccessQuery.execute(request.user!.userId);
+    return this.readCurrentAccessQuery.execute(
+      request.user!.userId,
+      warehouseId,
+    );
   }
 
   @Get('roles')
   @RequiredPermission(PermissionId.ROLES_WATCH)
+  @ArchivedTolerantRead()
   @UseGuards(SessionAuthGuard, WarehouseAccessGuard)
   listRoles(
     @Req() request: WarehouseAccessRequest,
@@ -83,6 +94,7 @@ export class AccessController {
 
   @Get('permissions')
   @RequiredPermission(PermissionId.ROLES_WATCH)
+  @ArchivedTolerantRead()
   @UseGuards(SessionAuthGuard, WarehouseAccessGuard)
   listPermissions(
     @Req() request: WarehouseAccessRequest,
@@ -93,6 +105,7 @@ export class AccessController {
 
   @Get('members')
   @RequiredPermission(PermissionId.USERS_WATCH)
+  @ArchivedTolerantRead()
   @UseGuards(SessionAuthGuard, WarehouseAccessGuard)
   listMembers(
     @Req() request: WarehouseAccessRequest,
@@ -172,8 +185,14 @@ export class AccessController {
     };
   }
 
+  // The one archived-tolerant *mutating* handler ADR 0003 admits: AC-11 keeps this transfer
+  // available while the Warehouse is archived, unlike every other mutating handler on this
+  // controller (AC-12, AC-36, sad.md §6.7a). `WarehouseAccessGuard`'s read-tolerant flag functions
+  // as an archived-bypass regardless of its read-biased name.
   @Post('manager-transfer')
+  @HttpCode(HttpStatus.OK)
   @RequiredPermission(PermissionId.WAREHOUSE_MANAGER_ROLE_REASSIGN)
+  @ArchivedTolerantRead()
   @UseGuards(SessionAuthGuard, WarehouseAccessGuard)
   async transferManager(
     @Req() request: WarehouseAccessRequest,

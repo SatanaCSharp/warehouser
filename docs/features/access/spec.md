@@ -27,12 +27,28 @@ The requirements extend the existing authentication boundary: registration remai
 - Let authorized Warehouse Members define and maintain warehouse-specific custom Roles without changing the system Permission vocabulary.
 - Preserve exactly one Role per Warehouse Member, exactly one Warehouse Manager per Warehouse, and strict Warehouse isolation through every lifecycle operation.
 
+  > **Amended by [`workspaces`](../workspaces/spec.md#1-context) — 2026-08-12.** "Exactly one Role per
+  > Warehouse Member" now reads **per Warehouse**: a member holding memberships in several Warehouses
+  > holds exactly one Role in each. Exactly one Warehouse Manager per Warehouse and strict Warehouse
+  > isolation are unchanged.
+
 ## 3. Non-goals
 
 - Creating additional warehouse members is excluded because worker creation is a separate feature; Access only defines the Role assignment rule that feature must consume.
 - Managing Locations is excluded because this release introduces only the Warehouse ownership boundary needed for future extension.
 - Letting members create, rename, or delete Permission definitions is excluded because Permissions are system-managed vocabulary.
-- Supporting membership in multiple Warehouses or multiple concurrent Roles is excluded because the approved model assigns each member to exactly one Warehouse and one Role.
+- ~~Supporting membership in multiple Warehouses or multiple concurrent Roles is excluded because the approved model assigns each member to exactly one Warehouse and one Role.~~
+
+  > **Superseded by [`workspaces`](../workspaces/spec.md#1-context) — 2026-08-12.** Membership in
+  > multiple Warehouses **is** now supported: `warehouse_memberships` becomes keyed by
+  > (User, Warehouse) rather than by User, and a Warehouse now belongs to a Workspace that aggregates
+  > several of them. Multiple _concurrent_ Roles in one Warehouse remain excluded.
+  >
+  > Nothing in this spec was weakened to make room for it. See
+  > [ADR 0002 — Parallel Workspace authority relations](../workspaces/adr/0002-parallel-workspace-authority-tables.md):
+  > the new authority level was built as parallel relations precisely so that every approved Warehouse
+  > constraint here — the composite Role/Warehouse foreign key, the one-Manager partial uniqueness, and
+  > per-Warehouse Role-name uniqueness — keeps its current strength and is not re-opened.
 
 ## 4. User stories
 

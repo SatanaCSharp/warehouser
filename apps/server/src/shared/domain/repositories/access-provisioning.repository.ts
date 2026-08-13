@@ -8,26 +8,16 @@ import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
 import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
 import { DataSource, In } from 'typeorm';
 
-export interface WarehousePersistenceInput {
-  readonly id: string;
-  readonly name: string;
-}
 export interface RolePersistenceInput {
   readonly id: string;
   readonly warehouseId: string;
   readonly name: string;
   readonly kind: RoleEntityKind;
 }
-export interface MembershipPersistenceInput {
-  readonly userId: string;
-  readonly warehouseId: string;
-  readonly roleId: string;
-  readonly roleKind: RoleEntityKind;
-}
 export interface InitialAccessPersistenceInput {
-  readonly warehouse: WarehousePersistenceInput;
+  readonly warehouseId: string;
+  readonly userId: string;
   readonly managerRole: RolePersistenceInput;
-  readonly managerMembership: MembershipPersistenceInput;
   readonly permissionIds: readonly string[];
 }
 
@@ -44,7 +34,9 @@ export class AccessProvisioningRepository {
       where: { id: In([...input.permissionIds]) },
       order: { id: 'ASC' },
     });
-    await manager.getRepository(WarehouseEntity).insert(input.warehouse);
+    const warehouse = await manager
+      .getRepository(WarehouseEntity)
+      .findOneByOrFail({ id: input.warehouseId });
     await manager.getRepository(RoleEntity).insert(input.managerRole);
     await manager.getRepository(RolePermissionEntity).insert(
       permissions.map((permission) => ({
@@ -54,8 +46,12 @@ export class AccessProvisioningRepository {
         permissionKind: permission.kind,
       })),
     );
-    await manager
-      .getRepository(WarehouseMembershipEntity)
-      .insert(input.managerMembership);
+    await manager.getRepository(WarehouseMembershipEntity).insert({
+      userId: input.userId,
+      warehouseId: input.warehouseId,
+      workspaceId: warehouse.workspaceId,
+      roleId: input.managerRole.id,
+      roleKind: input.managerRole.kind,
+    });
   }
 }

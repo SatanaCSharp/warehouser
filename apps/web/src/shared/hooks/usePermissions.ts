@@ -1,4 +1,5 @@
 import { useGetCurrentAccessQuery } from 'shared/api/access-permissions-api';
+import { useGetWorkspaceContextQuery } from 'shared/api/workspace-context-api';
 
 import type { AccessProjection } from '@warehouser/contracts/access';
 import type { PermissionId } from '@warehouser/shared-types/enums';
@@ -29,10 +30,17 @@ export type CurrentPermissions = {
 };
 
 export const useCurrentPermissions = (): CurrentPermissions => {
-  const { data, isLoading } = useGetCurrentAccessQuery();
+  const { data: context, isLoading: isContextLoading } =
+    useGetWorkspaceContextQuery();
+  const warehouseId = context?.effectiveWarehouseId ?? undefined;
+  const { data, isLoading: isAccessLoading } = useGetCurrentAccessQuery(
+    warehouseId ?? '',
+    { skip: warehouseId === undefined },
+  );
   return {
     access: data,
-    isLoading,
+    isLoading:
+      isContextLoading || (warehouseId !== undefined && isAccessLoading),
     permissionIds: data?.permissionIds ?? [],
   };
 };

@@ -18,11 +18,11 @@ import type { ReactElement } from 'react';
  */
 export const TransferManagerAction = (): ReactElement | null => {
   const { t } = useTranslation('access');
-  const { canTransferManager } = useAccessCapabilities();
+  const { canTransferManager, warehouseId } = useAccessCapabilities();
   const { access } = useCurrentPermissions();
   const members = useAccessMembers();
   const roles = useAccessRoles();
-  const transferManager = useTransferManager();
+  const transferManager = useTransferManager(warehouseId ?? '');
   const [isOpen, setIsOpen] = useState(false);
 
   if (!canTransferManager) {

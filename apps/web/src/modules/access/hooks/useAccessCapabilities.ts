@@ -40,12 +40,20 @@ type ComposedCapabilities = {
   canManageMemberLifecycle: boolean;
 };
 
-export type AccessCapabilities = GrantedCapabilities & ComposedCapabilities;
+type GrantedAndComposedCapabilities = GrantedCapabilities &
+  ComposedCapabilities;
+
+export type AccessCapabilities = GrantedAndComposedCapabilities & {
+  /** Whether the Warehouse the projection was read from is archived (AC-12). */
+  isArchived: boolean;
+  /** The Warehouse the current capability projection was read from. */
+  warehouseId: string | undefined;
+};
 
 /** Holding any one of a capability's Permissions grants that capability. */
 export const deriveAccessCapabilities = (
   permissionIds: readonly string[],
-): AccessCapabilities => {
+): GrantedAndComposedCapabilities => {
   const granted = mapValues(capabilityPermissions, (granting) =>
     hasPermission(permissionIds, granting),
   );
@@ -72,5 +80,11 @@ export const deriveAccessCapabilities = (
  * handed Permission ids from an ancestor, so a refreshed projection narrows
  * every gate at once.
  */
-export const useAccessCapabilities = (): AccessCapabilities =>
-  deriveAccessCapabilities(useCurrentPermissions().permissionIds);
+export const useAccessCapabilities = (): AccessCapabilities => {
+  const { access, permissionIds } = useCurrentPermissions();
+  return {
+    ...deriveAccessCapabilities(permissionIds),
+    isArchived: access !== undefined && access.archivedAt !== null,
+    warehouseId: access?.warehouseId,
+  };
+};

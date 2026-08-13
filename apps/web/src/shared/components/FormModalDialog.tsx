@@ -13,6 +13,8 @@ type FormModalDialogProps = Pick<
 > & {
   cancelLabel: string;
   children: ReactNode;
+  /** Refuses a submission that cannot succeed, without hiding why it is offered. */
+  isSubmitDisabled?: boolean;
   isSubmitting?: boolean;
   noValidate?: boolean;
   onClose: () => void;
@@ -25,6 +27,7 @@ type FormModalDialogProps = Pick<
 export const FormModalDialog = ({
   cancelLabel,
   children,
+  isSubmitDisabled,
   isSubmitting,
   noValidate,
   onClose,
@@ -57,7 +60,7 @@ export const FormModalDialog = ({
             <Button
               type="submit"
               variant={submitVariant}
-              isDisabled={isSubmitting}
+              isDisabled={isSubmitting || isSubmitDisabled}
               isPending={isSubmitting}
             >
               {submitLabel}

@@ -106,6 +106,62 @@ describe('TransferWarehouseManagerCommand', () => {
     expect(repository.lockWarehouse).not.toHaveBeenCalled();
   });
 
+  it('rejects a recipient holding no membership in that Warehouse as an invalid transfer (AC-36a)', async () => {
+    const repository = repositoryDouble();
+    // Only the outgoing Manager's membership is locked in this Warehouse: the recipient is a
+    // member of another Warehouse, or of none.
+    repository.lockMembers.mockResolvedValue([
+      {
+        userId: managerId,
+        roleId: managerRoleId,
+        roleKind: 'warehouse_manager',
+      },
+    ]);
+    const command = new TransferWarehouseManagerCommand(
+      repository as unknown as ManagerTransferRepository,
+    );
+
+    await expect(
+      command.execute(currentUser(), { recipientId, replacementRoleId }),
+    ).rejects.toMatchObject({
+      code: ErrorCode.ACCESS_INVALID_MANAGER_TRANSFER,
+    });
+    // Exactly one Manager is preserved because no reassignment was attempted.
+    expect(repository.assignRole).not.toHaveBeenCalled();
+  });
+
+  it('rejects a replacement Role that is not a custom Role of that Warehouse (AC-36a)', async () => {
+    const repository = repositoryDouble();
+    repository.lockReplacementRole.mockResolvedValue(null);
+    const command = new TransferWarehouseManagerCommand(
+      repository as unknown as ManagerTransferRepository,
+    );
+
+    await expect(
+      command.execute(currentUser(), { recipientId, replacementRoleId }),
+    ).rejects.toMatchObject({
+      code: ErrorCode.ACCESS_INVALID_MANAGER_TRANSFER,
+    });
+    expect(repository.assignRole).not.toHaveBeenCalled();
+  });
+
+  it('scopes both reassignments to the named Warehouse, leaving other-Warehouse memberships untouched (AC-36)', async () => {
+    const repository = repositoryDouble();
+    const command = new TransferWarehouseManagerCommand(
+      repository as unknown as ManagerTransferRepository,
+    );
+
+    await command.execute(currentUser(), { recipientId, replacementRoleId });
+
+    expect(repository.lockMembers).toHaveBeenCalledWith(warehouseId, [
+      managerId,
+      recipientId,
+    ]);
+    for (const call of repository.assignRole.mock.calls) {
+      expect(call[0]).toBe(warehouseId);
+    }
+  });
+
   it('rejects scoped recipient or replacement misses atomically', async () => {
     const repository = repositoryDouble();
     repository.lockWarehouse.mockResolvedValue(null);

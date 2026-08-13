@@ -13,17 +13,19 @@ import type { AccessRole } from 'modules/access/types/access.types';
  * requests it.
  */
 export const useAccessRoles = (): AccessDataset<AccessRole> => {
-  const { canCreateMembers, canManageRoles, canReadMembers, canReadRoles } =
-    useAccessCapabilities();
+  const {
+    canCreateMembers,
+    canManageRoles,
+    canReadMembers,
+    canReadRoles,
+    warehouseId,
+  } = useAccessCapabilities();
 
   return toAccessDataset(
-    useListAccessRolesQuery(undefined, {
-      skip: !(
-        canReadRoles ||
-        canManageRoles ||
-        canReadMembers ||
-        canCreateMembers
-      ),
+    useListAccessRolesQuery(warehouseId ?? '', {
+      skip:
+        warehouseId === undefined ||
+        !(canReadRoles || canManageRoles || canReadMembers || canCreateMembers),
     }),
   );
 };

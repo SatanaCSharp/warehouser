@@ -26,6 +26,30 @@ export const ErrorCode = {
   USERS_PASSWORD_CHANGE_UNAVAILABLE: 'users.password_change_unavailable',
   USERS_DELETION_UNAVAILABLE: 'users.deletion_unavailable',
   INTERNAL_ERROR: 'system.internal_error',
+  WORKSPACE_DENIED: 'workspace.denied',
+  WORKSPACE_INVALID_INPUT: 'workspace.invalid_input',
+  WORKSPACE_TARGET_UNAVAILABLE: 'workspace.target_unavailable',
+  WORKSPACE_ROLE_NAME_CONFLICT: 'workspace.role_name_conflict',
+  WORKSPACE_PROTECTED_ROLE: 'workspace.protected_role',
+  WORKSPACE_SYSTEM_MANAGED_PERMISSION: 'workspace.system_managed_permission',
+  WORKSPACE_OWNER_TRANSFER_REQUIRED: 'workspace.owner_transfer_required',
+  WORKSPACE_ROLE_ASSIGNMENT_REQUIRED: 'workspace.role_assignment_required',
+  WORKSPACE_REPLACEMENT_ROLE_REQUIRED: 'workspace.replacement_role_required',
+  WORKSPACE_MEMBER_EXISTS: 'workspace.member_exists',
+  WORKSPACE_WAREHOUSE_MEMBERSHIP_REQUIRED:
+    'workspace.warehouse_membership_required',
+  WORKSPACE_SELF_ACTION_DENIED: 'workspace.self_action_denied',
+  WORKSPACE_MANAGER_TRANSFER_REQUIRED: 'workspace.manager_transfer_required',
+  WORKSPACE_MEMBERSHIP_EXISTS: 'workspace.membership_exists',
+  WORKSPACE_WAREHOUSE_ARCHIVED: 'workspace.warehouse_archived',
+  WORKSPACE_LAST_UNARCHIVED_WAREHOUSE: 'workspace.last_unarchived_warehouse',
+  WORKSPACE_CONCURRENT_CHANGE: 'workspace.concurrent_change',
+  ACCESS_WAREHOUSE_ARCHIVED: 'access.warehouse_archived',
+  WORKSPACE_WAREHOUSE_CREATION_UNAVAILABLE:
+    'workspace.warehouse_creation_unavailable',
+  WORKSPACE_ARCHIVAL_UNAVAILABLE: 'workspace.archival_unavailable',
+  WORKSPACE_ROLE_DELETION_UNAVAILABLE: 'workspace.role_deletion_unavailable',
+  WORKSPACE_OWNER_TRANSFER_UNAVAILABLE: 'workspace.owner_transfer_unavailable',
 } as const;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

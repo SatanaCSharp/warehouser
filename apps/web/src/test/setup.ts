@@ -12,6 +12,7 @@ import enSignIn from '../../public/locales/en/sign-in.json';
 import enSignUp from '../../public/locales/en/sign-up.json';
 import enSuccess from '../../public/locales/en/success.json';
 import enValidation from '../../public/locales/en/validation.json';
+import enWorkspace from '../../public/locales/en/workspace.json';
 import ukAccess from '../../public/locales/uk/access.json';
 import ukCommon from '../../public/locales/uk/common.json';
 import ukErrors from '../../public/locales/uk/errors.json';
@@ -21,6 +22,7 @@ import ukSignIn from '../../public/locales/uk/sign-in.json';
 import ukSignUp from '../../public/locales/uk/sign-up.json';
 import ukSuccess from '../../public/locales/uk/success.json';
 import ukValidation from '../../public/locales/uk/validation.json';
+import ukWorkspace from '../../public/locales/uk/workspace.json';
 
 const localeResponses: Record<string, object> = {
   '/locales/en/access.json': enAccess,
@@ -32,6 +34,7 @@ const localeResponses: Record<string, object> = {
   '/locales/en/sign-up.json': enSignUp,
   '/locales/en/success.json': enSuccess,
   '/locales/en/validation.json': enValidation,
+  '/locales/en/workspace.json': enWorkspace,
   '/locales/uk/access.json': ukAccess,
   '/locales/uk/common.json': ukCommon,
   '/locales/uk/errors.json': ukErrors,
@@ -41,6 +44,7 @@ const localeResponses: Record<string, object> = {
   '/locales/uk/sign-up.json': ukSignUp,
   '/locales/uk/success.json': ukSuccess,
   '/locales/uk/validation.json': ukValidation,
+  '/locales/uk/workspace.json': ukWorkspace,
 };
 
 vi.stubGlobal(
@@ -82,6 +86,17 @@ globalThis.ResizeObserver = class ResizeObserver {
   unobserve(): void {}
   disconnect(): void {}
 };
+// jsdom implements no Web Animations API. React Aria's shared-element
+// transition (HeroUI's `Tabs.Indicator`) reads `getAnimations()` whenever the
+// selected element moves, so tests that change a selection need the query to
+// exist and report nothing running.
+if (!('getAnimations' in Element.prototype)) {
+  Object.defineProperty(Element.prototype, 'getAnimations', {
+    configurable: true,
+    value: (): Animation[] => [],
+    writable: true,
+  });
+}
 
 // @testing-library/react only auto-registers its afterEach(cleanup) hook when
 // it detects a global `afterEach` at import time. This project doesn't set

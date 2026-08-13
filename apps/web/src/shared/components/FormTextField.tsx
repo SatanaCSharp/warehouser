@@ -23,6 +23,7 @@ import type {
 type FormTextFieldProps = Pick<
   ComponentProps<typeof TextField>,
   | 'className'
+  | 'defaultValue'
   | 'isDisabled'
   | 'isInvalid'
   | 'isRequired'
@@ -49,6 +50,7 @@ export const FormTextField = forwardRef<HTMLInputElement, FormTextFieldProps>(
       autoComplete,
       autoFocus,
       className,
+      defaultValue,
       description,
       errorMessage,
       isDisabled,
@@ -66,6 +68,7 @@ export const FormTextField = forwardRef<HTMLInputElement, FormTextFieldProps>(
   ) => (
     <TextField
       className={className}
+      defaultValue={defaultValue}
       isDisabled={isDisabled}
       isInvalid={isInvalid}
       isRequired={isRequired}

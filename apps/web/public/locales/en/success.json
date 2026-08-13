@@ -13,5 +13,21 @@
     "deleteRole": "Role deleted.",
     "transferManager": "Warehouse management transferred.",
     "updateRole": "Role updated."
+  },
+  "workspace": {
+    "renameWorkspace": "Workspace named.",
+    "createWarehouse": "Warehouse added.",
+    "renameWarehouse": "Warehouse renamed.",
+    "archiveWarehouse": "Warehouse archived.",
+    "restoreWarehouse": "Warehouse restored.",
+    "giveWarehouseAccess": "Access to {{name}} granted.",
+    "withdrawWarehouseAccess": "Access to {{name}} withdrawn.",
+    "createWorkspaceRole": "Workspace role created.",
+    "updateWorkspaceRole": "Workspace role saved.",
+    "deleteWorkspaceRole": "Workspace role deleted.",
+    "addWorkspaceMember": "Workspace member added.",
+    "removeWorkspaceMember": "Workspace member removed.",
+    "assignWorkspaceRole": "Workspace role changed.",
+    "transferWorkspaceOwner": "Workspace ownership transferred."
   }
 }

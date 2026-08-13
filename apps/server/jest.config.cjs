@@ -7,4 +7,5 @@ module.exports = {
   moduleDirectories: ['<rootDir>/src', 'node_modules'],
   testMatch: ['<rootDir>/{src,migrations}/**/*.spec.ts'],
   testRegex: undefined,
+  setupFilesAfterEnv: ['<rootDir>/src/test/restore-catalogues.setup.ts'],
 };

@@ -105,17 +105,57 @@ describe('auth contracts', () => {
     ).toBe(false);
   });
 
-  it('validates the immediate access projection returned by registration', () => {
+  // RED for T53/AC-01 (review S1-04) — openapi.yaml's `RegistrationResult`
+  // requires `[user, workspace, workspacePermissionIds, access,
+  // effectiveWarehouseId]`, and `WarehouseAccessProjection` requires
+  // `archivedAt`. Registration returns the initial Workspace projection
+  // alongside the Warehouse one precisely so the shell needs no second round
+  // trip; the schema was never extended past `{user, access}`, so the fields
+  // `RegisterCommand` already computes were dropped at the boundary.
+  const registrationResult = {
+    user: { id: '00000000-0000-4000-8000-000000000001' },
+    workspace: { id: '00000000-0000-4000-8000-000000000004', name: null },
+    workspacePermissionIds: ['WORKSPACE:RENAME', 'WAREHOUSES:CREATE'],
+    access: {
+      warehouseId: '00000000-0000-4000-8000-000000000002',
+      roleId: '00000000-0000-4000-8000-000000000003',
+      roleKind: 'warehouse_manager',
+      permissionIds: ['ROLES:WATCH'],
+      archivedAt: null,
+    },
+    effectiveWarehouseId: '00000000-0000-4000-8000-000000000002',
+  };
+
+  it('validates the immediate Workspace and access projection returned by registration', () => {
+    expect(registrationResultSchema.parse(registrationResult)).toEqual(
+      registrationResult,
+    );
+  });
+
+  // The sole Warehouse membership registration creates is the effective
+  // selection with no one choosing (AC-03b), so the field is never absent
+  // here — an optional one would let the shell fall back to "nothing
+  // selected" and render the AC-03b empty state to a member who has a
+  // Warehouse.
+  const without = <T extends object>(source: T, field: string): object =>
+    Object.fromEntries(Object.entries(source).filter(([key]) => key !== field));
+
+  it.each(['workspace', 'workspacePermissionIds', 'effectiveWarehouseId'])(
+    'requires %s on the registration result',
+    (field) => {
+      expect(
+        registrationResultSchema.safeParse(without(registrationResult, field))
+          .success,
+      ).toBe(false);
+    },
+  );
+
+  it('requires the archived state on the registration access projection', () => {
     expect(
-      registrationResultSchema.parse({
-        user: { id: '00000000-0000-4000-8000-000000000001' },
-        access: {
-          warehouseId: '00000000-0000-4000-8000-000000000002',
-          roleId: '00000000-0000-4000-8000-000000000003',
-          roleKind: 'warehouse_manager',
-          permissionIds: ['ROLES:WATCH'],
-        },
-      }),
-    ).toMatchObject({ access: { roleKind: 'warehouse_manager' } });
+      registrationResultSchema.safeParse({
+        ...registrationResult,
+        access: without(registrationResult.access, 'archivedAt'),
+      }).success,
+    ).toBe(false);
   });
 });

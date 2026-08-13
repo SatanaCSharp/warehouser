@@ -16,9 +16,9 @@ import type { ReactElement } from 'react';
  */
 export const CreateRoleAction = (): ReactElement | null => {
   const { t } = useTranslation('access');
-  const { canCreateRoles } = useAccessCapabilities();
+  const { canCreateRoles, isArchived, warehouseId } = useAccessCapabilities();
   const permissions = useAccessPermissions();
-  const saveRole = useSaveRole();
+  const saveRole = useSaveRole(warehouseId ?? '');
   const [isOpen, setIsOpen] = useState(false);
 
   if (!canCreateRoles) {
@@ -28,10 +28,12 @@ export const CreateRoleAction = (): ReactElement | null => {
   return (
     <>
       <CreateActionButton
+        isDisabled={isArchived}
         label={t('administration.createRole')}
+        reason={t('archived.reason')}
         onPress={() => setIsOpen(true)}
       />
-      {isOpen ? (
+      {isOpen && !isArchived ? (
         <CreateRoleDialog
           permissions={permissions.items}
           onClose={() => setIsOpen(false)}

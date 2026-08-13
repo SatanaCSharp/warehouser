@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
 import { Injectable } from '@nestjs/common';
-import { AccessName } from 'access/domain/value-objects/access-name';
 import { AccessProvisioningRepository } from 'shared/domain/repositories/access-provisioning.repository';
 
 const MANAGER_PERMISSION_IDS = [
@@ -20,8 +19,8 @@ const MANAGER_PERMISSION_IDS = [
 ] as const;
 
 export interface ProvisionInitialAccessInput {
+  readonly warehouseId: string;
   readonly userId: string;
-  readonly warehouseName: string;
 }
 
 export interface InitialAccessProjection {
@@ -31,6 +30,10 @@ export interface InitialAccessProjection {
   readonly permissionIds: readonly string[];
 }
 
+// `workspaces` creates the Warehouse row itself (sad.md §4: "Its former
+// Warehouse-row creation moves out"). This command is reduced to the
+// Warehouse-provisioning service `workspaces` calls with a `warehouseId` and
+// a `userId`; it learns nothing about Workspaces.
 @Injectable()
 export class ProvisionInitialAccessCommand {
   constructor(
@@ -40,31 +43,22 @@ export class ProvisionInitialAccessCommand {
   async execute(
     input: ProvisionInitialAccessInput,
   ): Promise<InitialAccessProjection> {
-    const warehouseId = randomUUID();
     const roleId = randomUUID();
 
     await this.accessProvisioningRepository.provisionInitialAccess({
-      warehouse: {
-        id: warehouseId,
-        name: AccessName.create(input.warehouseName).value,
-      },
+      warehouseId: input.warehouseId,
+      userId: input.userId,
       managerRole: {
         id: roleId,
-        warehouseId,
+        warehouseId: input.warehouseId,
         name: 'Warehouse Manager',
         kind: 'warehouse_manager',
-      },
-      managerMembership: {
-        userId: input.userId,
-        warehouseId,
-        roleId,
-        roleKind: 'warehouse_manager',
       },
       permissionIds: MANAGER_PERMISSION_IDS,
     });
 
     return {
-      warehouseId,
+      warehouseId: input.warehouseId,
       roleId,
       roleKind: 'warehouse_manager',
       permissionIds: MANAGER_PERMISSION_IDS,

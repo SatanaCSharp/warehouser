@@ -12,6 +12,7 @@ import { SessionEntity } from 'shared/domain/entities/session.entity';
 import { UserEntity } from 'shared/domain/entities/user.entity';
 import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
 import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 import { AccessCurrentUserRepository } from 'shared/domain/repositories/access-current-user.repository';
 import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
 import { MemberLifecycleRepository } from 'shared/domain/repositories/member-lifecycle.repository';
@@ -24,6 +25,7 @@ const describeIntegration =
 
 const now = new Date('2026-08-06T12:00:00.000Z');
 
+const workspaceId = '00000000-0000-4000-8000-000000000100';
 const warehouseAId = '00000000-0000-4000-8000-000000000101';
 const warehouseBId = '00000000-0000-4000-8000-000000000102';
 
@@ -72,7 +74,7 @@ describeIntegration('ChangeMemberEmailCommand', () => {
 
   afterEach(async () => {
     await dataSource.query(
-      'TRUNCATE warehouse_memberships, role_permissions, roles, warehouses, sessions, users, accounts, permissions CASCADE',
+      'TRUNCATE warehouse_memberships, role_permissions, roles, warehouses, workspaces, sessions, users, accounts, permissions CASCADE',
     );
   });
 
@@ -80,29 +82,53 @@ describeIntegration('ChangeMemberEmailCommand', () => {
     await dataSource.destroy();
   });
 
+  const seedWorkspace = async (): Promise<void> => {
+    await dataSource.manager.getRepository(WorkspaceEntity).insert({
+      id: workspaceId,
+      name: null,
+      createdAt: now,
+      updatedAt: now,
+    });
+  };
+
   const seedPermissions = async (): Promise<void> => {
-    await dataSource.manager.getRepository(PermissionEntity).insert([
-      {
-        id: emailUpdatePermissionId,
-        label: 'Update user email',
-        kind: 'assignable',
-        createdAt: now,
-        updatedAt: now,
-      },
-      {
-        id: superpowerPermissionId,
-        label: 'Synthetic superpower',
-        kind: 'assignable',
-        createdAt: now,
-        updatedAt: now,
-      },
-    ]);
+    await dataSource.manager.getRepository(PermissionEntity).upsert(
+      [
+        {
+          id: emailUpdatePermissionId,
+          label: 'Update user email',
+          kind: 'assignable',
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: superpowerPermissionId,
+          label: 'Synthetic superpower',
+          kind: 'assignable',
+          createdAt: now,
+          updatedAt: now,
+        },
+      ],
+      ['id'],
+    );
   };
 
   const seedWarehouses = async (): Promise<void> => {
     await dataSource.manager.getRepository(WarehouseEntity).insert([
-      { id: warehouseAId, name: 'Warehouse A', createdAt: now, updatedAt: now },
-      { id: warehouseBId, name: 'Warehouse B', createdAt: now, updatedAt: now },
+      {
+        id: warehouseAId,
+        workspaceId,
+        name: 'Warehouse A',
+        createdAt: now,
+        updatedAt: now,
+      },
+      {
+        id: warehouseBId,
+        workspaceId,
+        name: 'Warehouse B',
+        createdAt: now,
+        updatedAt: now,
+      },
     ]);
   };
 
@@ -187,6 +213,7 @@ describeIntegration('ChangeMemberEmailCommand', () => {
       await manager.getRepository(UserEntity).insert({
         id: userId,
         accountId: userId,
+        workspaceId,
         createdAt: now,
         updatedAt: now,
       });
@@ -195,13 +222,14 @@ describeIntegration('ChangeMemberEmailCommand', () => {
 
   const seedMembership = async (
     userId: string,
-    warehouseId: string,
+    targetWarehouseId: string,
     roleId: string,
     roleKind: 'custom' | 'warehouse_manager' = 'custom',
   ): Promise<void> => {
     await dataSource.manager.getRepository(WarehouseMembershipEntity).insert({
       userId,
-      warehouseId,
+      warehouseId: targetWarehouseId,
+      workspaceId,
       roleId,
       roleKind,
       createdAt: now,
@@ -230,6 +258,7 @@ describeIntegration('ChangeMemberEmailCommand', () => {
 
   it('changes the target email and leaves the target sessions active (AC-04)', async () => {
     await seedPermissions();
+    await seedWorkspace();
     await seedWarehouses();
     await seedRoles();
     await seedActor();
@@ -278,6 +307,7 @@ describeIntegration('ChangeMemberEmailCommand', () => {
 
   it('rejects an invalid new email format and leaves the target unchanged', async () => {
     await seedPermissions();
+    await seedWorkspace();
     await seedWarehouses();
     await seedRoles();
     await seedActor();
@@ -299,6 +329,7 @@ describeIntegration('ChangeMemberEmailCommand', () => {
 
   it('rejects a duplicate email already registered to another identity (AC-05)', async () => {
     await seedPermissions();
+    await seedWorkspace();
     await seedWarehouses();
     await seedRoles();
     await seedActor();
@@ -321,6 +352,7 @@ describeIntegration('ChangeMemberEmailCommand', () => {
 
   it('denies a missing/cross-Warehouse target without disclosing existence (AC-09)', async () => {
     await seedPermissions();
+    await seedWorkspace();
     await seedWarehouses();
     await seedRoles();
     await seedActor();
@@ -347,6 +379,7 @@ describeIntegration('ChangeMemberEmailCommand', () => {
 
   it('denies self-targeting (AC-18)', async () => {
     await seedPermissions();
+    await seedWorkspace();
     await seedWarehouses();
     await seedRoles();
     await seedActor();
@@ -366,6 +399,7 @@ describeIntegration('ChangeMemberEmailCommand', () => {
 
   it('denies a target currently holding the Warehouse Manager Role (AC-14)', async () => {
     await seedPermissions();
+    await seedWorkspace();
     await seedWarehouses();
     await seedRoles();
     await seedActor();
@@ -392,6 +426,7 @@ describeIntegration('ChangeMemberEmailCommand', () => {
 
   it('denies a target whose Role holds a Permission the actor lacks (AC-19)', async () => {
     await seedPermissions();
+    await seedWorkspace();
     await seedWarehouses();
     await seedRoles();
     await seedActor();
@@ -411,8 +446,66 @@ describeIntegration('ChangeMemberEmailCommand', () => {
     );
   });
 
+  // RED for T55/AC-05 (review S1-06) — the actor's Permission ceiling must be
+  // the Role they hold in the Warehouse this request names. Multi-Warehouse
+  // membership is real (AC-23), so an unqualified membership lookup resolves
+  // through the `(user_id, warehouse_id)` key and returns whichever row sorts
+  // first. Warehouse Z's id is seeded below Warehouse A's so that arbitrary
+  // pick lands on the wrong Warehouse deterministically; once the ceiling is
+  // scoped to the named Warehouse, no id ordering can influence it.
+  it('AC-05: computes the actor Permission ceiling from the named Warehouse, never from a Role held in another Warehouse', async () => {
+    await seedPermissions();
+    await seedWorkspace();
+    await seedWarehouses();
+    await seedRoles();
+    await seedActor();
+    await seedIdentity(targetUserId, 'overpowered@example.test');
+    await seedMembership(targetUserId, warehouseAId, overPoweredRoleId);
+
+    const warehouseZId = '00000000-0000-4000-8000-0000000000f1';
+    const elevatedRoleId = '00000000-0000-4000-8000-0000000002f1';
+
+    await dataSource.manager.getRepository(WarehouseEntity).insert({
+      id: warehouseZId,
+      workspaceId,
+      name: 'Warehouse Z',
+      createdAt: now,
+      updatedAt: now,
+    });
+    await dataSource.manager.getRepository(RoleEntity).insert({
+      id: elevatedRoleId,
+      warehouseId: warehouseZId,
+      name: 'Elevated role in another Warehouse',
+      kind: 'custom',
+      createdAt: now,
+      updatedAt: now,
+    });
+    // In Warehouse Z the actor holds ACCESS:SUPERPOWER — the very Permission
+    // that makes the target off limits in Warehouse A.
+    await dataSource.manager.getRepository(RolePermissionEntity).insert({
+      roleId: elevatedRoleId,
+      permissionId: superpowerPermissionId,
+      roleKind: 'custom',
+      permissionKind: 'assignable',
+    });
+    await seedMembership(actorUserId, warehouseZId, elevatedRoleId);
+
+    await expect(
+      transactions.executeInTransaction({}, () =>
+        createCommand().execute(currentActor(), {
+          targetUserId,
+          email: 'new-email@example.test',
+        }),
+      ),
+    ).rejects.toMatchObject({ code: ErrorCode.USERS_PERMISSION_EXCEEDED });
+    await expect(findAccountEmail(targetUserId)).resolves.toBe(
+      'overpowered@example.test',
+    );
+  });
+
   it('rolls back the whole attempt when persistence fails partway through (atomicity)', async () => {
     await seedPermissions();
+    await seedWorkspace();
     await seedWarehouses();
     await seedRoles();
     await seedActor();

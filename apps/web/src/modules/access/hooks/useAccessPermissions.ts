@@ -7,9 +7,11 @@ import type { AccessPermission } from 'modules/access/types/access.types';
 
 /** The Permission catalogue every Role form grants from. */
 export const useAccessPermissions = (): AccessDataset<AccessPermission> => {
-  const { canReadPermissions } = useAccessCapabilities();
+  const { canReadPermissions, warehouseId } = useAccessCapabilities();
 
   return toAccessDataset(
-    useListAccessPermissionsQuery(undefined, { skip: !canReadPermissions }),
+    useListAccessPermissionsQuery(warehouseId ?? '', {
+      skip: warehouseId === undefined || !canReadPermissions,
+    }),
   );
 };

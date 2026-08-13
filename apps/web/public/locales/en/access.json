@@ -157,5 +157,11 @@
   "denied": {
     "heading": "Access unavailable",
     "description": "You do not have permission to review access configuration."
+  },
+  "archived": {
+    "chip": "Archived",
+    "alertTitle": "This Warehouse is archived",
+    "alertDescription": "Its Roles, members, and records stay readable, but nothing that changes what it owns can be submitted here. Restore it from the Workspace page to resume changes.",
+    "reason": "This action is unavailable while the Warehouse is archived."
   }
 }

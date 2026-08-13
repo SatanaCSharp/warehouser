@@ -17,10 +17,10 @@ import type { ReactElement } from 'react';
  */
 export const MemberAssignmentList = (): ReactElement | null => {
   const { t } = useTranslation('access');
-  const { canAssignRoles } = useAccessCapabilities();
+  const { canAssignRoles, warehouseId } = useAccessCapabilities();
   const members = useAccessMembers();
   const roles = useAccessRoles();
-  const assignMemberRole = useAssignMemberRole();
+  const assignMemberRole = useAssignMemberRole(warehouseId ?? '');
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
 
   if (!canAssignRoles) {

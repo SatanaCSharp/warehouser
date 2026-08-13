@@ -9,7 +9,7 @@ export type PermissionGateProps = {
   fallback?: ReactNode;
   match?: PermissionMatch;
   permission?: PermissionId | readonly PermissionId[];
-  permissionIds?: readonly string[];
+  permissionIds?: readonly PermissionId[];
 };
 
 export const PermissionGate = ({

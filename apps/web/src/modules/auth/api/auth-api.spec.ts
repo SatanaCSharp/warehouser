@@ -38,14 +38,21 @@ describe('authApi', () => {
   });
 
   it('submits Warehouse registration and validates immediate access', async () => {
+    // AC-01 — registration answers with the whole bootstrap outcome, so the
+    // shell has Workspace identity, its Workspace Permissions and the
+    // effective selection without a second round trip.
     const registration = {
       ...user,
+      workspace: { id: '00000000-0000-4000-8000-000000000004', name: null },
+      workspacePermissionIds: ['WORKSPACE:RENAME', 'WAREHOUSES:CREATE'],
       access: {
         warehouseId: '00000000-0000-4000-8000-000000000002',
         roleId: '00000000-0000-4000-8000-000000000003',
         roleKind: 'warehouse_manager',
         permissionIds: ['ROLES:WATCH'],
+        archivedAt: null,
       },
+      effectiveWarehouseId: '00000000-0000-4000-8000-000000000002',
     };
     const fetchMock = vi.fn().mockResolvedValue(Response.json(registration));
     vi.stubGlobal('fetch', fetchMock);

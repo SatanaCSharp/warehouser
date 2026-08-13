@@ -1,8 +1,6 @@
+import { randomUUID } from 'node:crypto';
+
 import { assert } from '@warehouser/utils/asserts';
-import {
-  type InitialAccessProjection,
-  ProvisionInitialAccessCommand,
-} from 'access/usecases/commands/provision-initial-access.command';
 import { type AuthRuntime, authRuntime } from 'auth/domain/auth-runtime';
 import { Account } from 'auth/domain/entities/account';
 import { Session } from 'auth/domain/entities/session';
@@ -10,6 +8,7 @@ import { User } from 'auth/domain/entities/user';
 import {
   AuthEmailAlreadyRegisteredError,
   AuthInvalidInputError,
+  AuthRegistrationUnavailableError,
 } from 'auth/domain/errors/auth.errors';
 import {
   type GeneratedSessionSecret,
@@ -25,6 +24,10 @@ import { isSupportedEmail } from 'shared/domain/security/is-supported-email';
 import { isSupportedPassword } from 'shared/domain/security/is-supported-password';
 import { Password } from 'shared/domain/security/password';
 import { hashPassword } from 'shared/domain/security/password-hashing';
+import type {
+  ProvisionRegistrationResult,
+  WorkspaceProvisioningService,
+} from 'workspaces/domain/services/workspace-provisioning.service';
 
 export interface RegisterInput {
   readonly email: string;
@@ -32,18 +35,17 @@ export interface RegisterInput {
   readonly warehouseName: string;
 }
 
-export interface RegisteredSession {
+export interface RegisteredSession extends ProvisionRegistrationResult {
   readonly userId: string;
   readonly sessionSecret: string;
   readonly expiresAt: Date;
-  readonly access: InitialAccessProjection;
 }
 
 export class RegisterCommand {
   constructor(
     private readonly authentication: AuthenticationRepository,
     private readonly registrations: AuthRegistrationService,
-    private readonly provisionInitialAccess: ProvisionInitialAccessCommand,
+    private readonly workspaceProvisioning: WorkspaceProvisioningService,
     private readonly hash: typeof hashPassword = hashPassword,
     private readonly generateSecret: () => GeneratedSessionSecret = generateSessionSecret,
     private readonly runtime: AuthRuntime = authRuntime,
@@ -82,18 +84,42 @@ export class RegisterCommand {
       digest: SessionDigest.create(generated.digest),
       establishedAt: this.runtime.now(),
     });
+    // The registrant's Workspace relation is established at creation and
+    // never re-derived from Warehouse memberships (spec.md §1, second
+    // boundary), so the Workspace id is generated before the identity write
+    // that references it. `fk_users_workspace_id` is `DEFERRABLE INITIALLY
+    // DEFERRED`, so the User row may be inserted before workspace
+    // provisioning creates the matching Workspace row, as long as both
+    // commit together (sad.md §6.1).
+    const workspaceId = randomUUID();
 
-    await this.registrations.registerIdentity({ account, user, session });
-    const access = await this.provisionInitialAccess.execute({
-      userId: user.id.value,
-      warehouseName: input.warehouseName,
-    });
+    // The identity write and Workspace/Warehouse provisioning are one
+    // failure boundary: a technical failure at either point means the
+    // registration did not happen at all. Classify it as the known
+    // registration-unavailable condition and keep the originating failure as
+    // `cause` so the global filter can log it without exposing it.
+    let provisioning: ProvisionRegistrationResult;
+    try {
+      await this.registrations.registerIdentity({
+        account,
+        user,
+        workspaceId,
+        session,
+      });
+      provisioning = await this.workspaceProvisioning.provisionRegistration({
+        userId: user.id.value,
+        workspaceId,
+        warehouseName: input.warehouseName,
+      });
+    } catch (cause) {
+      throw AuthRegistrationUnavailableError(cause);
+    }
 
     return {
       userId: user.id.value,
       sessionSecret: generated.secret,
       expiresAt: session.expiresAt,
-      access,
+      ...provisioning,
     };
   }
 }

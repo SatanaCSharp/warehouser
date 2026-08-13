@@ -10,16 +10,24 @@ export type TransferManager = (
   formerManagerRoleId: string,
 ) => Promise<MutationOutcome>;
 
-/** Hands the Warehouse Manager role to another member, demoting the actor. */
-export const useTransferManager = (): TransferManager => {
+/**
+ * Hands the Warehouse Manager role to another member of the named Warehouse,
+ * demoting the actor. Stays available on an archived Warehouse because its
+ * subject is a membership edge, not a resource the Warehouse owns (AC-36,
+ * ADR 0003).
+ */
+export const useTransferManager = (warehouseId: string): TransferManager => {
   const [transferManager] = useTransferWarehouseManagerMutation();
 
   return useCallback(
     (recipientUserId, formerManagerRoleId) =>
       runAccessMutation(
         'transferManager',
-        transferManager({ recipientUserId, formerManagerRoleId }),
+        transferManager({
+          warehouseId,
+          input: { recipientUserId, formerManagerRoleId },
+        }),
       ),
-    [transferManager],
+    [transferManager, warehouseId],
   );
 };

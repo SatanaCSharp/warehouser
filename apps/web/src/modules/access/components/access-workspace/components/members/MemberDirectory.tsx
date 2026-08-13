@@ -37,13 +37,17 @@ export const MemberDirectory = ({
   isRefreshing,
   members,
 }: MemberDirectoryProps): ReactElement => {
-  const { canDeleteMembers, canEditMemberEmails, canResetMemberPasswords } =
-    useAccessCapabilities();
+  const {
+    canDeleteMembers,
+    canEditMemberEmails,
+    canResetMemberPasswords,
+    warehouseId,
+  } = useAccessCapabilities();
   const roles = useAccessRoles();
   const actor = useAppSelector(selectCurrentUser);
-  const changeMemberEmail = useChangeMemberEmail();
-  const changeMemberPassword = useChangeMemberPassword();
-  const deleteMember = useDeleteMember();
+  const changeMemberEmail = useChangeMemberEmail(warehouseId ?? '');
+  const changeMemberPassword = useChangeMemberPassword(warehouseId ?? '');
+  const deleteMember = useDeleteMember(warehouseId ?? '');
   const [dialog, setDialog] = useState<MemberDialog | null>(null);
   const closeDialog = (): void => setDialog(null);
 

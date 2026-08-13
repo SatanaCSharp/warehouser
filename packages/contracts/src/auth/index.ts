@@ -1,3 +1,7 @@
+import {
+  workspacePermissionIdSchema,
+  workspaceSchema,
+} from 'workspaces/workspaces-projections';
 import { z } from 'zod';
 
 interface GraphemeSegmenter {
@@ -92,13 +96,27 @@ export const accessProjectionSchema = z
         .max(64)
         .regex(/^[A-Z][A-Z0-9_]*:[A-Z][A-Z0-9_]*$/u),
     ),
+    // The Warehouse's archived state, so the shell renders a retained
+    // Warehouse read-only rather than offering mutations the guard refuses
+    // (AC-12, AC-12a). Always `null` at registration — the Warehouse was
+    // created by the same outcome — but the field is required, so the shell
+    // reads one shape wherever the projection comes from.
+    archivedAt: z.string().datetime().nullable(),
   })
   .strict();
 
+// AC-01 — registration creates the Workspace and its first Warehouse as one
+// outcome, and the response carries the initial Workspace projection
+// alongside the Warehouse one so the shell needs no second round trip.
 export const registrationResultSchema = z
   .object({
     user: userSchema,
+    workspace: workspaceSchema,
+    workspacePermissionIds: z.array(workspacePermissionIdSchema),
     access: accessProjectionSchema,
+    // AC-03b — the sole Warehouse membership registration creates is the
+    // effective selection with no one choosing, so this is never absent.
+    effectiveWarehouseId: z.string().uuid(),
   })
   .strict();
 

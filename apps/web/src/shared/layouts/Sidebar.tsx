@@ -4,8 +4,10 @@ import { PermissionId } from '@warehouser/shared-types/enums';
 import { useTranslation } from 'react-i18next';
 
 import { PermissionGate } from 'shared/components/PermissionGate';
+import { WorkspaceGate } from 'shared/components/WorkspaceGate';
 import { ROUTES } from 'shared/constants/routes';
-import { DashboardIcon, ShieldCheckIcon } from 'shared/icons';
+import { workspaceAdministrationPermissionIds } from 'shared/hooks/useWorkspacePermissions';
+import { Building2Icon, DashboardIcon, ShieldCheckIcon } from 'shared/icons';
 
 import type { ReactElement } from 'react';
 
@@ -22,7 +24,6 @@ export const Sidebar = ({
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
-
   const itemClassName = (isActive: boolean): string =>
     isActive
       ? 'flex items-center gap-2 rounded-lg bg-accent-soft px-3 py-2 text-accent-soft-foreground'
@@ -54,6 +55,22 @@ export const Sidebar = ({
           </RouterLink>
         </li>
       </PermissionGate>
+      {/* AC-30 — the Workspace entry is gated by the Workspace-level read, not
+          by `PermissionGate`'s Warehouse-level vocabulary, and any one of the
+          destination's Permissions admits it because each opens its own part
+          behind it. Holding none omits the entry entirely. */}
+      <WorkspaceGate permission={workspaceAdministrationPermissionIds}>
+        <li>
+          <RouterLink
+            to={ROUTES.WORKSPACE}
+            className={itemClassName(pathname === ROUTES.WORKSPACE)}
+            onClick={onNavigate}
+          >
+            <Building2Icon />
+            {t('nav.workspace')}
+          </RouterLink>
+        </li>
+      </WorkspaceGate>
     </ul>
   );
 

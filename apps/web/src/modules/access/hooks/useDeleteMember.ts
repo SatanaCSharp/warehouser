@@ -7,12 +7,13 @@ import type { MutationOutcome } from 'modules/access/types/access.types';
 
 export type DeleteMember = (userId: string) => Promise<MutationOutcome>;
 
-/** Removes one member from the Warehouse permanently. */
-export const useDeleteMember = (): DeleteMember => {
+/** Removes one member from the named Warehouse permanently. */
+export const useDeleteMember = (warehouseId: string): DeleteMember => {
   const [deleteMember] = useDeleteMemberMutation();
 
   return useCallback(
-    (userId) => runAccessMutation('deleteMember', deleteMember(userId)),
-    [deleteMember],
+    (userId) =>
+      runAccessMutation('deleteMember', deleteMember({ warehouseId, userId })),
+    [deleteMember, warehouseId],
   );
 };

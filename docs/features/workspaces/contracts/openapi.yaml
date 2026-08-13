@@ -1,0 +1,2581 @@
+openapi: 3.1.0
+
+info:
+  title: Workspaces API
+  version: 0.1.0
+  description: |
+    Warehouser currently makes the Warehouse the outermost ownership boundary: a User is created
+    together with exactly one Warehouse at registration and belongs to it for their entire lifetime,
+    so an organization that operates two sites has no way to represent that and nobody owns the
+    Warehouse lifecycle after registration. This API inserts the Workspace above the Warehouse as a
+    second ownership and authorization level. The Workspace level owns the Warehouse lifecycle
+    (create, rename, reversible archiving), Workspace Roles built from a system-managed Workspace
+    Permission catalogue, Workspace membership, and Warehouse-membership assignment and revocation.
+    A member may now hold memberships in several Warehouses of their Workspace, so every
+    Warehouse-scoped route names the Warehouse it applies to and is authorized by the Role held in
+    that named Warehouse; the member's Active Warehouse is presentation state and never an input to
+    an authorization decision.
+
+    Two route families, two authorization levels — the level is readable from the path:
+
+    - `/api/v1/workspace/**` — Workspace-scoped. Carries no Workspace identifier; the actor's
+      Workspace is resolved from the session. Authorized by a Workspace Permission
+      (`WorkspacePermissionId`) against the actor's single Workspace Role. A Warehouse identifier may
+      appear in the path when the subject of the operation is the Warehouse *record* or a membership
+      *edge* into it — those stay Workspace capabilities and stay available while the Warehouse is
+      archived.
+    - `/api/v1/warehouses/{warehouseId}/**` — Warehouse-scoped. Authorized by a Warehouse Permission
+      (`PermissionId`) against the Role of the actor's membership in exactly that Warehouse. A
+      Permission held through another Warehouse's Role grants nothing here. Each handler is
+      classified read (archived-tolerant) or mutating (denied while archived).
+
+    Neither vocabulary substitutes for the other, and neither reaches across a Workspace boundary.
+    Cross-Workspace and cross-Warehouse misses return the same non-enumerating failure as a missing
+    target and never disclose existence.
+
+    **Breaking change.** Every previously Warehouse-implied route moves under
+    `/api/v1/warehouses/{warehouseId}/`. See `api-sync-report.md` § "Old-to-new path mapping".
+
+servers:
+  - url: http://localhost:3000
+    description: Local development
+
+# Every operation requires the session cookie issued by `POST /api/v1/auth/sign-up` and
+# `POST /api/v1/auth/sign-in`. This feature introduces no public endpoint, so no operation
+# overrides with `security: []`. Authentication grants no authority at either level.
+security:
+  - SessionCookie: []
+
+tags:
+  - name: workspace-context
+    description: The actor's own projection of their Workspace, memberships and effective selection.
+  - name: workspace-roles
+    description: Custom Workspace Roles and the system Workspace Permission catalogue.
+  - name: workspace-members
+    description: Workspace membership, Workspace Role assignment and Workspace Owner transfer.
+  - name: workspace-warehouses
+    description: The Warehouse lifecycle and Warehouse-membership edges — Workspace capabilities.
+  - name: warehouse-access
+    description: Roles, Permissions and members inside one named Warehouse — Warehouse capabilities.
+  - name: warehouse-users
+    description: Member lifecycle inside one named Warehouse — Warehouse capabilities.
+  - name: auth
+    description: Registration, whose bootstrap outcome this feature extends.
+
+paths:
+  ##########################################################################################
+  # Workspace-scoped — the actor's own context and selection
+  ##########################################################################################
+
+  /api/v1/workspace/context:
+    get:
+      tags: [workspace-context]
+      summary: Read the actor context
+      description: |
+        The one projection the application shell loads after authentication (sad.md §6.10): Workspace
+        identity and name or its unnamed state, the Workspace Permissions the actor's Workspace Role
+        grants, the Warehouses the actor holds a membership in with their archived state, and the
+        **effective** Active Warehouse selection derived per AC-03b.
+
+        Session-only: it declares no Workspace Permission because it is the actor's projection of
+        themselves. A Warehouse Member who is no Workspace Member at all receives an empty
+        `workspacePermissionIds`, which is how the web omits every Workspace control, navigation
+        entry and destination rather than presenting them unusable (AC-30).
+
+        The effective selection is derived, never the stored value read back: the stored selection
+        when it is still a live, non-archived membership; otherwise the sole membership when the
+        actor holds exactly one; otherwise `null`, because the system never chooses between several
+        memberships on the member's behalf (AC-03, AC-03b).
+      operationId: readWorkspaceContext
+      responses:
+        "200":
+          description: The actor context.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WorkspaceContext" }
+              examples:
+                twoMembershipsNoSelection:
+                  summary: Two memberships, one archived, nothing selected yet (AC-03b)
+                  value:
+                    workspace:
+                      id: "00000000-0000-4000-8000-000000000001"
+                      name: null
+                    workspacePermissionIds:
+                      - "WAREHOUSES:WATCH"
+                      - "WAREHOUSES:CREATE"
+                    warehouses:
+                      - warehouseId: "00000000-0000-4000-8000-000000000010"
+                        name: "Test Warehouse North"
+                        archivedAt: null
+                        roleId: "00000000-0000-4000-8000-000000000020"
+                        roleKind: "warehouse_manager"
+                      - warehouseId: "00000000-0000-4000-8000-000000000011"
+                        name: "Test Warehouse South"
+                        archivedAt: "2026-08-01T09:00:00.000Z"
+                        roleId: "00000000-0000-4000-8000-000000000021"
+                        roleKind: "custom"
+                    effectiveWarehouseId: "00000000-0000-4000-8000-000000000010"
+                noWorkspaceCapabilities:
+                  summary: A Warehouse Member who is no Workspace Member (AC-30)
+                  value:
+                    workspace:
+                      id: "00000000-0000-4000-8000-000000000001"
+                      name: "Test Workspace"
+                    workspacePermissionIds: []
+                    warehouses:
+                      - warehouseId: "00000000-0000-4000-8000-000000000010"
+                        name: "Test Warehouse North"
+                        archivedAt: null
+                        roleId: "00000000-0000-4000-8000-000000000022"
+                        roleKind: "custom"
+                    effectiveWarehouseId: "00000000-0000-4000-8000-000000000010"
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/workspace/active-warehouse:
+    put:
+      tags: [workspace-context]
+      summary: Set the Active Warehouse
+      description: |
+        Selecting is not a capability over a Warehouse resource, so this route declares no Permission
+        at either level (sad.md §6.8). It is the one route classified
+        session-only-with-a-documented-membership-check: the command itself proves the actor holds a
+        live membership in that Warehouse and that the Warehouse is not archived.
+
+        The selection is stored against the member rather than the device, so it is the same wherever
+        they next sign in and persists until changed (AC-03). It is presentation state: no guard or
+        use case ever reads it for an authorization decision.
+      operationId: setActiveWarehouse
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ActiveWarehouseWrite" }
+            example:
+              warehouseId: "00000000-0000-4000-8000-000000000010"
+      responses:
+        "200":
+          description: The selection is retained and persists until changed (AC-03).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ActiveWarehouseSelection" }
+              example:
+                effectiveWarehouseId: "00000000-0000-4000-8000-000000000010"
+        "400": { $ref: "#/components/responses/InvalidInput" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404":
+          description: |
+            The actor holds no membership in that Warehouse. The current selection is unchanged and
+            the Warehouse's contents are not disclosed (AC-04).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example:
+                code: "workspace.target_unavailable"
+                message: "The selected target is unavailable."
+        "409":
+          description: An archived Warehouse stops being selectable (AC-11).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example:
+                code: "workspace.warehouse_archived"
+                message: "The Warehouse is archived."
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  ##########################################################################################
+  # Workspace-scoped — the Workspace record
+  ##########################################################################################
+
+  /api/v1/workspace:
+    patch:
+      tags: [workspace-context]
+      summary: Rename the Workspace
+      description: |
+        Requires `WORKSPACE:RENAME`. A Workspace is created without a name and is presented with a
+        placeholder until one is set; the same Permission authorizes setting it and later changing it
+        (sad.md §6.2a). The trimmed name is stored with its submitted Unicode preserved and no
+        normalization applied, and a valid name may duplicate another Workspace's name (AC-29).
+      operationId: renameWorkspace
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WorkspaceRename" }
+            example:
+              name: "Test Workspace"
+      responses:
+        "200":
+          description: The renamed Workspace (AC-29).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Workspace" }
+              example:
+                id: "00000000-0000-4000-8000-000000000001"
+                name: "Test Workspace"
+        "400":
+          description: |
+            The name is empty after trimming, exceeds 100 user-perceived characters, or carries a
+            control or format character. The existing name or unnamed state is left as it was
+            (AC-29a).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example:
+                code: "workspace.invalid_input"
+                message: "Correct the highlighted Workspace fields."
+                details:
+                  field: "name"
+                  rule: "grapheme_length"
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WorkspaceDenied" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  ##########################################################################################
+  # Workspace-scoped — Workspace Roles and the Workspace Permission catalogue
+  ##########################################################################################
+
+  /api/v1/workspace/roles:
+    get:
+      tags: [workspace-roles]
+      summary: List the Workspace's Workspace Roles
+      description: |
+        Requires `WORKSPACE_ROLES:WATCH` (AC-32). Returned whole and ordered by name at the scale
+        stated in spec.md §1 (roughly 500 Workspace Members per Workspace); outgrowing that scale is
+        the explicit trigger to introduce paging, not a silent regression. Includes the protected
+        Workspace Owner Role, marked by its `kind`, so the web can present it as system-managed
+        rather than editable (AC-16).
+      operationId: listWorkspaceRoles
+      responses:
+        "200":
+          description: The Workspace's Workspace Roles ordered by name.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/WorkspaceRole" }
+              example:
+                - id: "00000000-0000-4000-8000-000000000030"
+                  name: "Site Administrator"
+                  kind: "custom"
+                  workspacePermissionIds: ["WAREHOUSES:WATCH", "WAREHOUSES:RENAME"]
+                  assignedMemberCount: 2
+                - id: "00000000-0000-4000-8000-000000000031"
+                  name: "Workspace Owner"
+                  kind: "workspace_owner"
+                  workspacePermissionIds: ["WORKSPACE:RENAME", "WORKSPACE_OWNER_ROLE:REASSIGN"]
+                  assignedMemberCount: 1
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WorkspaceDenied" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+    post:
+      tags: [workspace-roles]
+      summary: Create a custom Workspace Role
+      description: |
+        Requires `WORKSPACE_ROLES:CREATE`. The Workspace Permission set may be empty (AC-14).
+        Names are exact and case-sensitive within the Workspace, so differently cased names stay
+        distinct (AC-15). Only `assignable` catalogue entries may be chosen; `WORKSPACE_OWNER_ROLE:REASSIGN`
+        is reserved to the protected Workspace Owner Role (AC-18).
+      operationId: createWorkspaceRole
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WorkspaceRoleWrite" }
+            example:
+              name: "Site Administrator"
+              workspacePermissionIds: ["WAREHOUSES:WATCH", "WAREHOUSES:RENAME"]
+      responses:
+        "201":
+          description: The Workspace Role is available for assignment within that Workspace (AC-14).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WorkspaceRole" }
+              example:
+                id: "00000000-0000-4000-8000-000000000030"
+                name: "Site Administrator"
+                kind: "custom"
+                workspacePermissionIds: ["WAREHOUSES:WATCH", "WAREHOUSES:RENAME"]
+                assignedMemberCount: 0
+        "400": { $ref: "#/components/responses/InvalidWorkspaceRoleName" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WorkspaceDenied" }
+        "409": { $ref: "#/components/responses/WorkspaceRoleWriteConflict" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/workspace/roles/{workspaceRoleId}:
+    parameters:
+      - $ref: "#/components/parameters/WorkspaceRoleId"
+    patch:
+      tags: [workspace-roles]
+      summary: Update a custom Workspace Role
+      description: |
+        Requires `WORKSPACE_ROLES:UPDATE`. Changes the name, the assignable Workspace Permission
+        membership, or both; changing the membership to the empty set is valid (AC-14a). The
+        protected Workspace Owner Role can be neither renamed, deleted nor re-permissioned (AC-16),
+        and a Workspace Role of another Workspace is reported as unavailable without disclosing
+        existence (AC-34).
+      operationId: updateWorkspaceRole
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WorkspaceRoleWrite" }
+            example:
+              name: "Site Administrator"
+              workspacePermissionIds: []
+      responses:
+        "200":
+          description: |
+            The change is recorded and the new Workspace Permission membership is used by subsequent
+            authorization decisions (AC-14a).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WorkspaceRole" }
+              example:
+                id: "00000000-0000-4000-8000-000000000030"
+                name: "Site Administrator"
+                kind: "custom"
+                workspacePermissionIds: []
+                assignedMemberCount: 2
+        "400": { $ref: "#/components/responses/InvalidWorkspaceRoleName" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WorkspaceDenied" }
+        "404": { $ref: "#/components/responses/TargetUnavailable" }
+        "409": { $ref: "#/components/responses/WorkspaceRoleWriteConflict" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+    delete:
+      tags: [workspace-roles]
+      summary: Delete a custom Workspace Role, with replacement when it is assigned
+      description: |
+        Requires `WORKSPACE_ROLES:DELETE`. An **unassigned** Workspace Role is deleted with no body
+        and no Workspace Role assignment changes (AC-17a). An **assigned** Workspace Role
+        additionally requires `WORKSPACE_ROLES:ASSIGN` (AC-17d) and a replacement custom Workspace
+        Role of the same Workspace: every affected Workspace Member moves to the replacement and the
+        Role is deleted as one outcome, so no Workspace Member is left without exactly one Workspace
+        Role (AC-17). It is refused when the assigned Role is the Workspace's only custom Workspace
+        Role, because the protected Workspace Owner Role is never assigned this way (AC-17c).
+      operationId: deleteWorkspaceRole
+      requestBody:
+        required: false
+        description: Required when the Workspace Role is assigned to at least one Workspace Member.
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WorkspaceRoleDeletion" }
+            example:
+              replacementWorkspaceRoleId: "00000000-0000-4000-8000-000000000032"
+      responses:
+        "204":
+          description: |
+            Deleted. Every affected Workspace Member moved to the replacement as one outcome
+            (AC-17), or no Workspace Role assignment changed for an unassigned Role (AC-17a).
+        "400":
+          description: |
+            The Workspace Role is assigned and it is the Workspace's only custom Workspace Role, so
+            another custom Workspace Role must exist first (AC-17c); or the submitted replacement is
+            not a usable custom Workspace Role of this Workspace.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example:
+                code: "workspace.replacement_role_required"
+                message: "Select a different custom Workspace Role."
+                details:
+                  reason: "only_custom_role"
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403":
+          description: |
+            The actor lacks `WORKSPACE_ROLES:DELETE` (AC-30), or holds it but not
+            `WORKSPACE_ROLES:ASSIGN` while the Workspace Role is assigned — moving the affected
+            Workspace Members to a replacement is a Workspace Role assignment (AC-17d).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              examples:
+                missingDeletePermission:
+                  summary: AC-30
+                  value:
+                    code: "workspace.denied"
+                    message: "Access is not permitted."
+                missingAssignPermission:
+                  summary: AC-17d
+                  value:
+                    code: "workspace.role_assignment_required"
+                    message: "Moving the affected Workspace Members to a replacement requires Workspace Role assignment."
+        "404": { $ref: "#/components/responses/TargetUnavailable" }
+        "409":
+          description: The target is the protected Workspace Owner Role, which is system-managed (AC-16).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example:
+                code: "workspace.protected_role"
+                message: "The Workspace Owner Role is system-managed."
+        "503":
+          description: |
+            Any affected Workspace Member could not be moved, or the deletion could not complete. No
+            Workspace Role assignment and no Workspace Role changed (AC-17b).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example:
+                code: "workspace.role_deletion_unavailable"
+                message: "Workspace Role deletion did not complete."
+
+  /api/v1/workspace/permissions:
+    get:
+      tags: [workspace-roles]
+      summary: List the system Workspace Permission catalogue
+      description: |
+        Requires `WORKSPACE_ROLES:WATCH` (AC-32). Returned whole and ordered by `kind` then `id`.
+        `kind` governs custom Workspace Role eligibility: an `assignable` entry may be chosen for a
+        custom Workspace Role, a `reserved` entry is exclusive to the protected Workspace Owner Role.
+        No endpoint accepts a Workspace Permission definition or label mutation — the catalogue is
+        system-managed and grows only through a release migration (AC-18, AC-35).
+      operationId: listWorkspacePermissions
+      responses:
+        "200":
+          description: The Workspace Permission catalogue.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/WorkspacePermission" }
+              example:
+                - id: "WAREHOUSES:ARCHIVE"
+                  label: "Archive and restore Warehouses"
+                  kind: "assignable"
+                - id: "WORKSPACE_OWNER_ROLE:REASSIGN"
+                  label: "Transfer Workspace Owner"
+                  kind: "reserved"
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WorkspaceDenied" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  ##########################################################################################
+  # Workspace-scoped — Workspace membership and Owner transfer
+  ##########################################################################################
+
+  /api/v1/workspace/members:
+    get:
+      tags: [workspace-members]
+      summary: List the Workspace Members and their Workspace Roles
+      description: |
+        Requires `WORKSPACE_MEMBERS:WATCH` (AC-33). Returned whole in deterministic User order.
+      operationId: listWorkspaceMembers
+      responses:
+        "200":
+          description: The Workspace Members and their Workspace Role assignments.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/WorkspaceMember" }
+              example:
+                - userId: "00000000-0000-4000-8000-000000000002"
+                  workspaceRoleId: "00000000-0000-4000-8000-000000000031"
+                  workspaceRoleKind: "workspace_owner"
+                  email: "owner@example.test"
+                - userId: "00000000-0000-4000-8000-000000000003"
+                  workspaceRoleId: "00000000-0000-4000-8000-000000000030"
+                  workspaceRoleKind: "custom"
+                  email: "admin@example.test"
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WorkspaceDenied" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+    post:
+      tags: [workspace-members]
+      summary: Add a Workspace Member with a custom Workspace Role
+      description: |
+        Requires `WORKSPACE_MEMBERS:ADD`. Workspace membership is granted deliberately rather than
+        inherited, so the candidate must already hold a Warehouse membership in a Warehouse of this
+        Workspace (AC-20). That is a command-time precondition only: once granted, the Workspace Role
+        and its capabilities survive the loss of every Warehouse membership and end only through an
+        explicit removal (AC-21). The protected Workspace Owner Role can never be granted this way
+        (AC-22).
+      operationId: addWorkspaceMember
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WorkspaceMemberAdd" }
+            example:
+              userId: "00000000-0000-4000-8000-000000000003"
+              workspaceRoleId: "00000000-0000-4000-8000-000000000030"
+      responses:
+        "201":
+          description: |
+            The candidate holds exactly that one Workspace Role and gains the capabilities it grants
+            (AC-19).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WorkspaceMember" }
+              example:
+                userId: "00000000-0000-4000-8000-000000000003"
+                workspaceRoleId: "00000000-0000-4000-8000-000000000030"
+                workspaceRoleKind: "custom"
+                email: "admin@example.test"
+        "400": { $ref: "#/components/responses/InvalidInput" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WorkspaceDenied" }
+        "404": { $ref: "#/components/responses/TargetUnavailable" }
+        "409":
+          description: |
+            The candidate holds no Warehouse membership in any Warehouse of this Workspace (AC-20);
+            is already a Workspace Member; or the chosen Workspace Role is the protected Workspace
+            Owner Role, which changes only through the transfer action (AC-22).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              examples:
+                noWarehouseMembership:
+                  summary: AC-20
+                  value:
+                    code: "workspace.warehouse_membership_required"
+                    message: "Only people who already belong to a Warehouse of this Workspace can become Workspace Members."
+                alreadyAMember:
+                  summary: Already a Workspace Member
+                  value:
+                    code: "workspace.member_exists"
+                    message: "This User is already a Workspace Member."
+                ownerRoleChosen:
+                  summary: AC-22
+                  value:
+                    code: "workspace.owner_transfer_required"
+                    message: "Workspace Owner can change only through the protected transfer action."
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/workspace/members/{userId}:
+    parameters:
+      - $ref: "#/components/parameters/UserId"
+    delete:
+      tags: [workspace-members]
+      summary: Remove a Workspace membership
+      description: |
+        Requires `WORKSPACE_MEMBERS:REMOVE`. Removes the Workspace membership only: the target keeps
+        every Warehouse membership and Role they hold and loses every Workspace capability from the
+        next authorization decision onward (AC-19a). The current Workspace Owner is refused — Owner
+        must be transferred first, so a Workspace is never left without exactly one (AC-21a).
+      operationId: removeWorkspaceMember
+      responses:
+        "204":
+          description: |
+            Removed. Every Warehouse membership and Role is intact; every Workspace capability is
+            lost from the next authorization decision onward (AC-19a).
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WorkspaceDenied" }
+        "404": { $ref: "#/components/responses/TargetUnavailable" }
+        "409":
+          description: The target is the current Workspace Owner, who must be transferred first (AC-21a).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example:
+                code: "workspace.owner_transfer_required"
+                message: "Transfer Workspace Owner before removing this Workspace Member."
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/workspace/members/{userId}/role:
+    parameters:
+      - $ref: "#/components/parameters/UserId"
+    put:
+      tags: [workspace-members]
+      summary: Move a Workspace Member to another custom Workspace Role
+      description: |
+        Requires `WORKSPACE_ROLES:ASSIGN`. The target ends holding exactly that one Workspace Role;
+        the previous Role's capabilities stop applying from the next authorization decision onward
+        and no Warehouse membership or Role changes (AC-19b). Ordinary assignment can neither grant
+        the protected Workspace Owner Role nor move the current Workspace Owner (AC-22).
+      operationId: assignWorkspaceMemberRole
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WorkspaceRoleAssignment" }
+            example:
+              workspaceRoleId: "00000000-0000-4000-8000-000000000030"
+      responses:
+        "200":
+          description: The target holds exactly that one Workspace Role (AC-19b).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WorkspaceMember" }
+              example:
+                userId: "00000000-0000-4000-8000-000000000003"
+                workspaceRoleId: "00000000-0000-4000-8000-000000000030"
+                workspaceRoleKind: "custom"
+                email: "admin@example.test"
+        "400": { $ref: "#/components/responses/InvalidInput" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WorkspaceDenied" }
+        "404": { $ref: "#/components/responses/TargetUnavailable" }
+        "409":
+          description: |
+            The chosen Workspace Role is the protected Workspace Owner Role, or the target is the
+            current Workspace Owner (AC-22).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example:
+                code: "workspace.owner_transfer_required"
+                message: "Workspace Owner can change only through the protected transfer action."
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/workspace/owner-transfer:
+    post:
+      tags: [workspace-members]
+      summary: Transfer Workspace Owner
+      description: |
+        Requires the reserved `WORKSPACE_OWNER_ROLE:REASSIGN`, which belongs only to the protected
+        Workspace Owner Role and is ineligible for custom Workspace Roles. One transaction promotes
+        the recipient and reassigns the former Owner to the selected custom Workspace Role, so the
+        Workspace ends with exactly one Owner and every Workspace Member still holds exactly one
+        Workspace Role (AC-26). The sole-Owner uniqueness constraint is the final arbiter under a
+        concurrent transfer.
+      operationId: transferWorkspaceOwner
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WorkspaceOwnerTransfer" }
+            example:
+              recipientUserId: "00000000-0000-4000-8000-000000000003"
+              formerOwnerWorkspaceRoleId: "00000000-0000-4000-8000-000000000030"
+      responses:
+        "200":
+          description: |
+            The recipient is the sole Workspace Owner and the former Owner holds the selected custom
+            Workspace Role as one outcome (AC-26).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WorkspaceOwnerTransferResult" }
+              example:
+                ownerUserId: "00000000-0000-4000-8000-000000000003"
+                formerOwnerUserId: "00000000-0000-4000-8000-000000000002"
+                formerOwnerWorkspaceRoleId: "00000000-0000-4000-8000-000000000030"
+        "400":
+          description: |
+            The Workspace has no custom Workspace Role for the outgoing Owner to receive, so one must
+            be created first — the outgoing Owner must end the transfer holding exactly one Workspace
+            Role (AC-26a).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example:
+                code: "workspace.replacement_role_required"
+                message: "Create a custom Workspace Role for the outgoing Workspace Owner first."
+                details:
+                  reason: "no_custom_role"
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403":
+          description: |
+            The actor is not the current Workspace Owner, or lacks the reserved owner-transfer
+            Workspace Permission. Exactly one current Workspace Owner is preserved (AC-27).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example:
+                code: "workspace.denied"
+                message: "Access is not permitted."
+        "404":
+          description: |
+            The recipient is the actor, is not a Workspace Member, or is a Workspace Member of
+            another Workspace. One generic unavailable-recipient outcome, so membership of another
+            Workspace is never disclosed. Exactly one current Workspace Owner is preserved (AC-28).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example:
+                code: "workspace.target_unavailable"
+                message: "The selected target is unavailable."
+        "409":
+          description: |
+            The sole-Owner constraint rejected a concurrent transfer. Exactly one current Workspace
+            Owner is preserved (AC-27, AC-28).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example:
+                code: "workspace.concurrent_change"
+                message: "Workspace access changed concurrently. Refresh and try again."
+        "503":
+          description: The transfer did not complete; exactly one current Workspace Owner is preserved.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example:
+                code: "workspace.owner_transfer_unavailable"
+                message: "Workspace Owner transfer did not complete."
+
+  /api/v1/workspace/users:
+    get:
+      tags: [workspace-members]
+      summary: List the Users of the Workspace with the Warehouses each belongs to
+      description: |
+        Requires `WORKSPACE_MEMBERS:WATCH`, which deliberately covers reading the Users of the
+        Workspace and not only the Users who are already Workspace Members, so the candidates that
+        Workspace membership (AC-19) and Warehouse-membership assignment (AC-23) act on can be found
+        (spec.md §1, AC-33). Returned whole in deterministic User order.
+      operationId: listWorkspaceUsers
+      responses:
+        "200":
+          description: The Users of the Workspace and the Warehouses each belongs to.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/WorkspaceUser" }
+              example:
+                - userId: "00000000-0000-4000-8000-000000000003"
+                  email: "admin@example.test"
+                  isWorkspaceMember: true
+                  warehouses:
+                    - warehouseId: "00000000-0000-4000-8000-000000000010"
+                      roleId: "00000000-0000-4000-8000-000000000022"
+                      roleKind: "custom"
+                - userId: "00000000-0000-4000-8000-000000000004"
+                  email: "picker@example.test"
+                  isWorkspaceMember: false
+                  warehouses: []
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WorkspaceDenied" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  ##########################################################################################
+  # Workspace-scoped — the Warehouse record and membership edges
+  # A Warehouse identifier appears in these paths, but their SUBJECT is the Warehouse record or a
+  # membership edge into it, so they are Workspace capabilities and stay available while the
+  # Warehouse is archived (sad.md §7, AC-11).
+  ##########################################################################################
+
+  /api/v1/workspace/warehouses:
+    get:
+      tags: [workspace-warehouses]
+      summary: List the Workspace's Warehouses with their archived state
+      description: |
+        Requires `WAREHOUSES:WATCH` (AC-33). Returned whole and ordered by name at the scale stated
+        in spec.md §1 (roughly 50 Warehouses per Workspace). Archived Warehouses are included and
+        marked, because archiving withdraws a Warehouse from operation without withdrawing the
+        account of what happened in it.
+      operationId: listWorkspaceWarehouses
+      responses:
+        "200":
+          description: The Workspace's Warehouses with their archived state.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Warehouse" }
+              example:
+                - id: "00000000-0000-4000-8000-000000000010"
+                  name: "Test Warehouse North"
+                  archivedAt: null
+                - id: "00000000-0000-4000-8000-000000000011"
+                  name: "Test Warehouse South"
+                  archivedAt: "2026-08-01T09:00:00.000Z"
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WorkspaceDenied" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+    post:
+      tags: [workspace-warehouses]
+      summary: Add a Warehouse to the Workspace
+      description: |
+        Requires `WAREHOUSES:CREATE`. Creates the Warehouse in the actor's Workspace, its protected
+        Warehouse Manager Role, and a membership assigning that Role to the creating member as one
+        outcome; the Warehouse then becomes selectable for them (AC-06). If the Manager Role or its
+        assignment cannot be established the whole outcome rolls back, because a Warehouse never
+        exists with zero or more than one Warehouse Manager (AC-07).
+
+        This is the one path where a member takes Warehouse authority directly — the stated exception
+        to AC-25a — bounded by `WAREHOUSES:CREATE` and by the new Warehouse holding nothing else.
+      operationId: createWarehouse
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WarehouseWrite" }
+            example:
+              name: "Test Warehouse North"
+      responses:
+        "201":
+          description: The new Warehouse, with the creator as its Warehouse Manager (AC-06).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Warehouse" }
+              example:
+                id: "00000000-0000-4000-8000-000000000010"
+                name: "Test Warehouse North"
+                archivedAt: null
+        "400": { $ref: "#/components/responses/InvalidWarehouseName" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WorkspaceDenied" }
+        "503":
+          description: |
+            The Warehouse Manager Role or its assignment to the creator could not be established, so
+            no Warehouse was created (AC-07).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example:
+                code: "workspace.warehouse_creation_unavailable"
+                message: "The Warehouse was not created."
+
+  /api/v1/workspace/warehouses/{warehouseId}:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+    patch:
+      tags: [workspace-warehouses]
+      summary: Rename a Warehouse
+      description: |
+        Requires `WAREHOUSES:RENAME`. The subject is the Warehouse record, so this is a Workspace
+        capability and stays available while that Warehouse is archived (AC-11). The trimmed name is
+        stored with its submitted Unicode preserved and no normalization applied, and a valid name
+        may duplicate another Warehouse's name (AC-09). A Warehouse of another Workspace is reported
+        as unavailable without disclosing that it exists (AC-10).
+      operationId: renameWarehouse
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WarehouseWrite" }
+            example:
+              name: "Test Warehouse North"
+      responses:
+        "200":
+          description: The renamed Warehouse; the new name is what members of it see (AC-09).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Warehouse" }
+              example:
+                id: "00000000-0000-4000-8000-000000000010"
+                name: "Test Warehouse North"
+                archivedAt: null
+        "400": { $ref: "#/components/responses/InvalidWarehouseName" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WorkspaceDenied" }
+        "404": { $ref: "#/components/responses/TargetUnavailable" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/workspace/warehouses/{warehouseId}/archival:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+    put:
+      tags: [workspace-warehouses]
+      summary: Archive or restore a Warehouse
+      description: |
+        Requires `WAREHOUSES:ARCHIVE`, which governs both withdrawing and restoring. Archiving sets
+        archived state only: Roles, memberships and records are retained and stay readable, and
+        restoring makes the Warehouse selectable and operable again with everything intact (AC-11).
+        The command locks the Workspace's Warehouse rows and re-counts the non-archived ones, so two
+        concurrent archivings cannot leave the Workspace without a site to work in (AC-11a).
+      operationId: setWarehouseArchival
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WarehouseArchival" }
+            example:
+              archived: true
+      responses:
+        "200":
+          description: The Warehouse's new archived state (AC-11).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Warehouse" }
+              example:
+                id: "00000000-0000-4000-8000-000000000011"
+                name: "Test Warehouse South"
+                archivedAt: "2026-08-01T09:00:00.000Z"
+        "400": { $ref: "#/components/responses/InvalidInput" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WorkspaceDenied" }
+        "404": { $ref: "#/components/responses/TargetUnavailable" }
+        "409":
+          description: |
+            It is the only Warehouse of the Workspace that is not already archived; a Workspace always
+            keeps at least one, so its members are never left without a site to work in (AC-11a).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example:
+                code: "workspace.last_unarchived_warehouse"
+                message: "A Workspace always keeps at least one Warehouse that is not archived."
+        "503":
+          description: |
+            The change could not complete; the Warehouse's archived state, memberships and Roles are
+            unchanged (AC-13).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example:
+                code: "workspace.archival_unavailable"
+                message: "The change did not complete."
+
+  /api/v1/workspace/warehouses/{warehouseId}/assignable-roles:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+    get:
+      tags: [workspace-warehouses]
+      summary: Read a Warehouse's assignable custom Roles, identifiers and names only
+      description: |
+        The narrow read that `WAREHOUSE_MEMBERSHIPS:ASSIGN` deliberately carries, because the operand
+        of the assignment lives at the other level: it lets the assigner choose a Role of a Warehouse
+        of their own Workspace without holding any authority inside that Warehouse. It is limited to
+        those Roles' identifiers and names, grants no other capability inside that Warehouse, and
+        gives no visibility into the Roles, members or resources of a Warehouse belonging to another
+        Workspace (AC-23a). The protected Warehouse Manager Role is excluded, because it can never be
+        granted by assignment (AC-25).
+      operationId: listAssignableWarehouseRoles
+      responses:
+        "200":
+          description: Identifiers and names only (AC-23a).
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/AssignableWarehouseRole" }
+              example:
+                - id: "00000000-0000-4000-8000-000000000022"
+                  name: "Picker"
+                - id: "00000000-0000-4000-8000-000000000023"
+                  name: "Site Supervisor"
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WorkspaceDenied" }
+        "404": { $ref: "#/components/responses/TargetUnavailable" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/workspace/warehouses/{warehouseId}/memberships:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+    post:
+      tags: [workspace-warehouses]
+      summary: Assign a Warehouse membership to a User of the Workspace
+      description: |
+        Requires `WAREHOUSE_MEMBERSHIPS:ASSIGN`. The subject is a membership edge into the Warehouse,
+        so this is a Workspace capability and stays available while that Warehouse is archived
+        (AC-11). The target User holds exactly that Role in that Warehouse, retains every membership
+        they already held, and the Warehouse becomes selectable for them (AC-23).
+
+        Self-escalation is closed at the command boundary: the assignment never targets the acting
+        member (AC-25a), never grants the protected Warehouse Manager Role, and never creates a
+        second Role for one User in one Warehouse (AC-25). The target User, the Warehouse and the
+        Role must all belong to the actor's own Workspace (AC-24).
+      operationId: assignWarehouseMembership
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WarehouseMembershipAssignment" }
+            example:
+              userId: "00000000-0000-4000-8000-000000000004"
+              roleId: "00000000-0000-4000-8000-000000000022"
+      responses:
+        "201":
+          description: |
+            The target holds exactly that Role there and retains every membership they already held;
+            the Warehouse becomes selectable for them (AC-23).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WarehouseMembership" }
+              example:
+                userId: "00000000-0000-4000-8000-000000000004"
+                warehouseId: "00000000-0000-4000-8000-000000000010"
+                roleId: "00000000-0000-4000-8000-000000000022"
+                roleKind: "custom"
+        "400": { $ref: "#/components/responses/InvalidInput" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WorkspaceDenied" }
+        "404":
+          description: |
+            The target User, the Warehouse or the Role belongs to another Workspace, or does not
+            exist. All of a User's Warehouse memberships belong to Warehouses of one Workspace, and
+            existence is not disclosed (AC-24).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example:
+                code: "workspace.target_unavailable"
+                message: "The selected target is unavailable."
+        "409":
+          description: |
+            The target is the acting member (AC-25a); the chosen Role is the protected Warehouse
+            Manager Role; or the target already holds a membership in that Warehouse (AC-25).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              examples:
+                selfAssignment:
+                  summary: AC-25a
+                  value:
+                    code: "workspace.self_action_denied"
+                    message: "A member cannot place themself into an existing Warehouse."
+                managerRoleChosen:
+                  summary: AC-25, protected Role
+                  value:
+                    code: "workspace.manager_transfer_required"
+                    message: "Warehouse Manager changes only through the protected transfer."
+                membershipExists:
+                  summary: AC-25, one Role per Warehouse
+                  value:
+                    code: "workspace.membership_exists"
+                    message: "A User holds at most one Role in any one Warehouse."
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/workspace/warehouses/{warehouseId}/memberships/{userId}:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+      - $ref: "#/components/parameters/UserId"
+    delete:
+      tags: [workspace-warehouses]
+      summary: Revoke a Warehouse membership
+      description: |
+        Requires `WAREHOUSE_MEMBERSHIPS:REVOKE`. Removes only the named membership: the target loses
+        that Warehouse's Role and every Permission it granted from the next authorization decision
+        onward, that Warehouse stops being selectable for them, and every other membership they hold
+        is unaffected (AC-25b). Revoking clears that member's stored Active Warehouse selection
+        through the selection's referential rule.
+
+        The membership carrying the protected Warehouse Manager Role and the actor's own membership
+        are both refused (AC-25c).
+      operationId: revokeWarehouseMembership
+      responses:
+        "204":
+          description: |
+            Withdrawn. Every other membership the target holds is unaffected, and the loss applies
+            from their next authorization decision onward (AC-25b).
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WorkspaceDenied" }
+        "404":
+          description: |
+            The Warehouse belongs to another Workspace, or the membership does not exist. Neither the
+            Warehouse nor the membership is disclosed (AC-25d).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example:
+                code: "workspace.target_unavailable"
+                message: "The selected target is unavailable."
+        "409":
+          description: |
+            The membership carries the protected Warehouse Manager Role, so a Warehouse is never left
+            without exactly one Manager; or it is the acting member's own, and a member never
+            withdraws their own Warehouse authority (AC-25c).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              examples:
+                managerMembership:
+                  summary: AC-25c, protected Manager
+                  value:
+                    code: "workspace.manager_transfer_required"
+                    message: "Warehouse Manager changes only through the protected transfer."
+                ownMembership:
+                  summary: AC-25c, own membership
+                  value:
+                    code: "workspace.self_action_denied"
+                    message: "A member never withdraws their own Warehouse authority."
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  ##########################################################################################
+  # Warehouse-scoped — re-shaped from /api/v1/access/* (BREAKING)
+  # The Warehouse is named in the path; authority is the Role of the actor's membership in exactly
+  # that Warehouse. A request that does not name a Warehouse matches no route at all (AC-03a).
+  ##########################################################################################
+
+  /api/v1/warehouses/{warehouseId}/access/current:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+    get:
+      tags: [warehouse-access]
+      summary: Read the actor's capabilities in one named Warehouse
+      description: |
+        **Was `GET /api/v1/access/current`**, which resolved the actor's single membership from the
+        session with no Warehouse named anywhere in the request.
+
+        The Warehouse-scoped capability projection for a named Warehouse. It declares no Warehouse
+        Permission because it is the actor's projection of themselves; the Warehouse guard resolves
+        the membership for exactly this (User, Warehouse) pair and denies without disclosure when
+        there is none (AC-04). Classified **read**, so it stays available while the Warehouse is
+        archived and marks it as such (AC-12a).
+
+        A Permission held only through the Role of another Warehouse never appears here: authority is
+        always that of the membership held in the Warehouse being acted on (AC-05).
+      operationId: readWarehouseAccess
+      responses:
+        "200":
+          description: The actor's Role and Permissions in that Warehouse, with its archived state.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WarehouseAccessProjection" }
+              example:
+                warehouseId: "00000000-0000-4000-8000-000000000010"
+                roleId: "00000000-0000-4000-8000-000000000020"
+                roleKind: "warehouse_manager"
+                permissionIds: ["ROLES:WATCH", "ROLES:CREATE", "USERS:WATCH"]
+                archivedAt: null
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/warehouses/{warehouseId}/access/roles:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+    get:
+      tags: [warehouse-access]
+      summary: List the named Warehouse's Roles
+      description: |
+        **Was `GET /api/v1/access/roles`.** Requires `ROLES:WATCH` in that Warehouse. Classified
+        **read**, so an archived Warehouse's retained Roles stay readable and the response marks it
+        archived (AC-12a). The approved cursor page shape is retained unchanged.
+      operationId: listWarehouseRoles
+      parameters:
+        - $ref: "#/components/parameters/AfterUuid"
+        - $ref: "#/components/parameters/BeforeUuid"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: One cursor page of that Warehouse's Roles.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WarehouseRolePage" }
+              example:
+                items:
+                  - id: "00000000-0000-4000-8000-000000000022"
+                    name: "Picker"
+                    kind: "custom"
+                    permissionIds: ["ROLES:WATCH"]
+                    assignedMemberCount: 3
+                hasNext: false
+                hasPrev: false
+                nextCursor: null
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+    post:
+      tags: [warehouse-access]
+      summary: Create a custom Role in the named Warehouse
+      description: |
+        **Was `POST /api/v1/access/roles`.** Requires `ROLES:CREATE` in that Warehouse. Classified
+        **mutating**, so it is denied while the Warehouse is archived (AC-12).
+      operationId: createWarehouseRole
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WarehouseRoleWrite" }
+            example:
+              name: "Picker"
+              permissionIds: ["ROLES:WATCH"]
+      responses:
+        "201":
+          description: The Role is available for assignment within that Warehouse.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WarehouseRole" }
+              example:
+                id: "00000000-0000-4000-8000-000000000022"
+                name: "Picker"
+                kind: "custom"
+                permissionIds: ["ROLES:WATCH"]
+                assignedMemberCount: 0
+        "400": { $ref: "#/components/responses/InvalidWarehouseRoleInput" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "409": { $ref: "#/components/responses/WarehouseArchivedOrConflict" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/warehouses/{warehouseId}/access/roles/{roleId}:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+      - $ref: "#/components/parameters/RoleId"
+    patch:
+      tags: [warehouse-access]
+      summary: Update a custom Role of the named Warehouse
+      description: |
+        **Was `PATCH /api/v1/access/roles/{roleId}`.** Requires `ROLES:UPDATE`. Classified
+        **mutating** (AC-12).
+      operationId: updateWarehouseRole
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WarehouseRoleWrite" }
+            example:
+              name: "Picker"
+              permissionIds: []
+      responses:
+        "200":
+          description: The updated Role.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WarehouseRole" }
+              example:
+                id: "00000000-0000-4000-8000-000000000022"
+                name: "Picker"
+                kind: "custom"
+                permissionIds: []
+                assignedMemberCount: 3
+        "400": { $ref: "#/components/responses/InvalidWarehouseRoleInput" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/WarehouseRoleUnavailable" }
+        "409": { $ref: "#/components/responses/WarehouseArchivedOrConflict" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+    delete:
+      tags: [warehouse-access]
+      summary: Delete a custom Role of the named Warehouse
+      description: |
+        **Was `DELETE /api/v1/access/roles/{roleId}`.** Requires `ROLES:DELETE`. Classified
+        **mutating** (AC-12). The approved replacement-on-delete behaviour is unchanged.
+      operationId: deleteWarehouseRole
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WarehouseRoleDeletion" }
+            example:
+              replacementRoleId: "00000000-0000-4000-8000-000000000023"
+      responses:
+        "204": { description: Deleted. }
+        "400": { $ref: "#/components/responses/InvalidInput" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/WarehouseRoleUnavailable" }
+        "409": { $ref: "#/components/responses/WarehouseArchivedOrConflict" }
+        "503":
+          description: Role deletion did not complete.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example:
+                code: "access.role_deletion_unavailable"
+                message: "Role deletion did not complete."
+
+  /api/v1/warehouses/{warehouseId}/access/permissions:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+    get:
+      tags: [warehouse-access]
+      summary: List the Warehouse Permission catalogue
+      description: |
+        **Was `GET /api/v1/access/permissions`.** Requires `ROLES:WATCH` in that Warehouse.
+        Classified **read** (AC-12a). This is the Warehouse Permission vocabulary
+        (`PermissionId`) — a separate catalogue from the Workspace one at
+        `GET /api/v1/workspace/permissions`, and neither substitutes for the other (AC-31).
+      operationId: listWarehousePermissions
+      parameters:
+        - $ref: "#/components/parameters/AfterPermissionId"
+        - $ref: "#/components/parameters/BeforePermissionId"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: One cursor page of the Warehouse Permission catalogue.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WarehousePermissionPage" }
+              example:
+                items:
+                  - id: "ROLES:WATCH"
+                    label: "View Roles"
+                    kind: "assignable"
+                hasNext: false
+                hasPrev: false
+                nextCursor: null
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/warehouses/{warehouseId}/access/members:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+    get:
+      tags: [warehouse-access]
+      summary: List the named Warehouse's members
+      description: |
+        **Was `GET /api/v1/access/members`.** Requires `USERS:WATCH` in that Warehouse. Classified
+        **read**, so an archived Warehouse's retained memberships stay readable (AC-12a).
+      operationId: listWarehouseMembers
+      parameters:
+        - $ref: "#/components/parameters/AfterUuid"
+        - $ref: "#/components/parameters/BeforeUuid"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: One cursor page of that Warehouse's members.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WarehouseMemberPage" }
+              example:
+                items:
+                  - userId: "00000000-0000-4000-8000-000000000004"
+                    roleId: "00000000-0000-4000-8000-000000000022"
+                    roleKind: "custom"
+                    email: "picker@example.test"
+                hasNext: false
+                hasPrev: false
+                nextCursor: null
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/warehouses/{warehouseId}/access/members/{userId}/role:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+      - $ref: "#/components/parameters/UserId"
+    put:
+      tags: [warehouse-access]
+      summary: Assign a Role to a member of the named Warehouse
+      description: |
+        **Was `PUT /api/v1/access/members/{userId}/role`.** Requires `ROLES:ASSIGN` in that
+        Warehouse. Classified **mutating** (AC-12). Changes the Role of an existing membership in
+        this Warehouse; creating a membership is the Workspace-level
+        `POST /api/v1/workspace/warehouses/{warehouseId}/memberships` (AC-23).
+      operationId: assignWarehouseMemberRole
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WarehouseRoleAssignment" }
+            example:
+              roleId: "00000000-0000-4000-8000-000000000022"
+      responses:
+        "200":
+          description: The member holds exactly that Role in that Warehouse.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WarehouseMember" }
+              example:
+                userId: "00000000-0000-4000-8000-000000000004"
+                roleId: "00000000-0000-4000-8000-000000000022"
+                roleKind: "custom"
+        "400": { $ref: "#/components/responses/InvalidInput" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/WarehouseTargetUnavailable" }
+        "409": { $ref: "#/components/responses/WarehouseArchivedOrConflict" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/warehouses/{warehouseId}/access/manager-transfer:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+    post:
+      tags: [warehouse-access]
+      summary: Transfer Warehouse Manager of the named Warehouse
+      description: |
+        **Was `POST /api/v1/access/manager-transfer`.** Requires `WAREHOUSE_MANAGER_ROLE:REASSIGN` in
+        that Warehouse. The recipient's membership in that Warehouse carries the protected Manager
+        Role and the outgoing Manager's membership carries the selected custom Role as one outcome;
+        the Warehouse ends with exactly one Manager, and every membership either of them holds in
+        another Warehouse is unaffected (AC-36). The one-Manager-per-Warehouse uniqueness constraint
+        is the final arbiter under a concurrent transfer.
+
+        **UNRESOLVED CLASSIFICATION.** AC-11 keeps this transfer available while the Warehouse is
+        archived, but it is a Warehouse-scoped *mutating* operation and sad.md §6.3 denies exactly
+        that. sad.md §6 "Flags raised while drawing these flows" records the conflict without
+        resolving it, and sad.md §8's coverage check admits no archived-tolerant mutation. This
+        contract documents it as archived-tolerant mutating so AC-11 holds, and carries the conflict
+        to `api-sync-report.md` OQ-1 — owner Tech Lead + Security Lead, before `tasks`. The
+        alternative resolution (moving the handler under the Workspace guard) would change this
+        path.
+      operationId: transferWarehouseManager
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WarehouseManagerTransfer" }
+            example:
+              recipientUserId: "00000000-0000-4000-8000-000000000004"
+              formerManagerRoleId: "00000000-0000-4000-8000-000000000022"
+      responses:
+        "200":
+          description: |
+            The recipient's membership carries the Manager Role and the outgoing Manager's carries
+            the selected custom Role as one outcome (AC-36).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WarehouseManagerTransferResult" }
+              example:
+                managerUserId: "00000000-0000-4000-8000-000000000004"
+                formerManagerUserId: "00000000-0000-4000-8000-000000000002"
+                formerManagerRoleId: "00000000-0000-4000-8000-000000000022"
+        "400":
+          description: |
+            The recipient holds no membership in that Warehouse, is the outgoing Manager themself, or
+            no custom Role of that Warehouse was selected. Exactly one current Warehouse Manager is
+            preserved (AC-36a).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example:
+                code: "access.invalid_manager_transfer"
+                message: "Select another member and a valid custom Role."
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "409":
+          description: |
+            The one-Manager constraint rejected a concurrent transfer. Exactly one current Warehouse
+            Manager is preserved (AC-36a).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example:
+                code: "access.concurrent_change"
+                message: "Access changed concurrently. Refresh and try again."
+        "503":
+          description: Manager transfer did not complete.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example:
+                code: "access.manager_transfer_unavailable"
+                message: "Manager transfer did not complete."
+
+  ##########################################################################################
+  # Warehouse-scoped — re-shaped from /api/v1/users/* (BREAKING)
+  # These handlers already use the Warehouse guard and Warehouse Permissions, so AC-03a re-shapes
+  # them exactly as it re-shapes /api/v1/access/*. See api-sync-report.md finding F-2.
+  ##########################################################################################
+
+  /api/v1/warehouses/{warehouseId}/users:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+    post:
+      tags: [warehouse-users]
+      summary: Create a member in the named Warehouse
+      description: |
+        **Was `POST /api/v1/users`.** Requires `USERS:CREATE` in that Warehouse. Classified
+        **mutating** (AC-12).
+
+        The created User's Workspace relation is established from the Workspace owning the Warehouse
+        they are created in, and is never re-derived afterwards from their Warehouse memberships
+        (spec.md §1, second boundary; `users.workspace_id`). The approved Users-management spec
+        creates a User without establishing that relation — spec.md §8 tracks how that supersession
+        is recorded; see `api-sync-report.md` OQ-3.
+      operationId: createWarehouseUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WarehouseUserCreate" }
+            example:
+              email: "picker@example.test"
+              password: "<placeholder-password>"
+              roleId: "00000000-0000-4000-8000-000000000022"
+      responses:
+        "201":
+          description: The member exists in that Warehouse and in its Workspace.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WarehouseUser" }
+              example:
+                userId: "00000000-0000-4000-8000-000000000004"
+                email: "picker@example.test"
+                roleId: "00000000-0000-4000-8000-000000000022"
+        "400": { $ref: "#/components/responses/InvalidInput" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "409": { $ref: "#/components/responses/WarehouseArchivedOrConflict" }
+        "503":
+          description: Member creation did not complete.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example:
+                code: "users.creation_unavailable"
+                message: "Member creation did not complete. Try again."
+
+  /api/v1/warehouses/{warehouseId}/users/{userId}:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+      - $ref: "#/components/parameters/UserId"
+    delete:
+      tags: [warehouse-users]
+      summary: Delete a member of the named Warehouse
+      description: |
+        **Was `DELETE /api/v1/users/{userId}`.** Requires `USERS:DELETE` in that Warehouse.
+        Classified **mutating** (AC-12).
+      operationId: deleteWarehouseUser
+      responses:
+        "204": { description: Deleted. }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/WarehouseTargetUnavailable" }
+        "409": { $ref: "#/components/responses/WarehouseArchivedOrConflict" }
+        "503":
+          description: Member deletion did not complete.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example:
+                code: "users.deletion_unavailable"
+                message: "Member deletion did not complete. Try again."
+
+  /api/v1/warehouses/{warehouseId}/users/{userId}/email:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+      - $ref: "#/components/parameters/UserId"
+    patch:
+      tags: [warehouse-users]
+      summary: Change a member's email in the named Warehouse
+      description: |
+        **Was `PATCH /api/v1/users/{userId}/email`.** Requires `USERS:EMAIL_UPDATE`. Classified
+        **mutating** (AC-12).
+      operationId: changeWarehouseUserEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WarehouseUserEmailChange" }
+            example:
+              email: "picker.new@example.test"
+      responses:
+        "200":
+          description: The member's new email.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WarehouseUserEmail" }
+              example:
+                userId: "00000000-0000-4000-8000-000000000004"
+                email: "picker.new@example.test"
+        "400": { $ref: "#/components/responses/InvalidInput" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/WarehouseTargetUnavailable" }
+        "409": { $ref: "#/components/responses/WarehouseArchivedOrConflict" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/warehouses/{warehouseId}/users/{userId}/password:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+      - $ref: "#/components/parameters/UserId"
+    patch:
+      tags: [warehouse-users]
+      summary: Change a member's password in the named Warehouse
+      description: |
+        **Was `PATCH /api/v1/users/{userId}/password`.** Requires `USERS:PASSWORD_CHANGE`.
+        Classified **mutating** (AC-12).
+      operationId: changeWarehouseUserPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WarehouseUserPasswordChange" }
+            example:
+              password: "<placeholder-password>"
+      responses:
+        "200":
+          description: The password was changed.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WarehouseUserConfirmation" }
+              example:
+                userId: "00000000-0000-4000-8000-000000000004"
+        "400": { $ref: "#/components/responses/InvalidInput" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/WarehouseTargetUnavailable" }
+        "409": { $ref: "#/components/responses/WarehouseArchivedOrConflict" }
+        "503":
+          description: Password change did not complete.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example:
+                code: "users.password_change_unavailable"
+                message: "Password change did not complete. Try again."
+
+  ##########################################################################################
+  # Registration bootstrap — existing endpoint, extended response (BREAKING)
+  ##########################################################################################
+
+  /api/v1/auth/sign-up:
+    post:
+      tags: [auth]
+      summary: Register, creating the Workspace and its first Warehouse
+      description: |
+        Existing endpoint; its **response shape changes**. Registration now creates exactly one
+        linked Account, User, unnamed Workspace, protected Workspace Owner Role and its initial
+        Workspace Permission membership, Workspace membership, Warehouse belonging to that Workspace,
+        protected Warehouse Manager Role, Warehouse membership, and initial session as one outcome,
+        and confirms immediate access (AC-01). The response carries the initial Workspace projection
+        alongside the Warehouse one, so the shell needs no second round trip. Holding that single
+        membership makes that Warehouse the effective selection with no one choosing (AC-03b).
+
+        The request shape is unchanged. Public — this operation overrides the global session
+        requirement.
+      operationId: signUp
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RegistrationInput" }
+            example:
+              email: "owner@example.test"
+              password: "<placeholder-password>"
+              warehouseName: "Test Warehouse North"
+      responses:
+        "201":
+          description: |
+            The session cookie is set and the current User is returned with the initial Workspace and
+            Warehouse projection (AC-01).
+          headers:
+            Set-Cookie:
+              description: The `warehouser_session` cookie.
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RegistrationResult" }
+              example:
+                user:
+                  id: "00000000-0000-4000-8000-000000000002"
+                workspace:
+                  id: "00000000-0000-4000-8000-000000000001"
+                  name: null
+                workspacePermissionIds:
+                  - "WORKSPACE:RENAME"
+                  - "WORKSPACE_ROLES:WATCH"
+                  - "WORKSPACE_ROLES:CREATE"
+                  - "WORKSPACE_ROLES:UPDATE"
+                  - "WORKSPACE_ROLES:DELETE"
+                  - "WORKSPACE_ROLES:ASSIGN"
+                  - "WORKSPACE_MEMBERS:WATCH"
+                  - "WORKSPACE_MEMBERS:ADD"
+                  - "WORKSPACE_MEMBERS:REMOVE"
+                  - "WAREHOUSES:WATCH"
+                  - "WAREHOUSES:CREATE"
+                  - "WAREHOUSES:RENAME"
+                  - "WAREHOUSES:ARCHIVE"
+                  - "WAREHOUSE_MEMBERSHIPS:ASSIGN"
+                  - "WAREHOUSE_MEMBERSHIPS:REVOKE"
+                  - "WORKSPACE_OWNER_ROLE:REASSIGN"
+                access:
+                  warehouseId: "00000000-0000-4000-8000-000000000010"
+                  roleId: "00000000-0000-4000-8000-000000000020"
+                  roleKind: "warehouse_manager"
+                  permissionIds: ["ROLES:WATCH", "ROLES:CREATE", "USERS:WATCH"]
+                  archivedAt: null
+                effectiveWarehouseId: "00000000-0000-4000-8000-000000000010"
+        "400":
+          description: The credentials or the Warehouse name fail their rules. Nothing was created (AC-02).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example:
+                code: "auth.invalid_input"
+                message: "Correct the highlighted authentication fields."
+        "409":
+          description: The email is already registered. Nothing was created (AC-02).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example:
+                code: "auth.email_already_registered"
+                message: "This email is already registered."
+        "503":
+          description: |
+            Any part of the Account, User, Workspace, Workspace Owner assignment, Warehouse, Warehouse
+            Manager assignment or initial-session establishment could not complete. None of those
+            objects or access rights exist (AC-02).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example:
+                code: "auth.registration_unavailable"
+                message: "Sign-up did not complete. Try again."
+
+components:
+  securitySchemes:
+    SessionCookie:
+      type: apiKey
+      in: cookie
+      name: warehouser_session
+      description: |
+        The opaque session cookie issued by `POST /api/v1/auth/sign-up` and
+        `POST /api/v1/auth/sign-in`, resolved to the acting User by `SessionAuthGuard`.
+
+        This is not a bearer token and carries no authority: authentication grants nothing at either
+        level. Every authorization decision re-reads Workspace Roles, Workspace Permissions and
+        Warehouse memberships from the store on the request being authorized, never from the session
+        (spec.md §6 "Authority staleness").
+
+  parameters:
+    WarehouseIdPath:
+      in: path
+      name: warehouseId
+      required: true
+      description: |
+        The Warehouse this request applies to. A Warehouse-scoped request that does not unambiguously
+        name exactly one Warehouse matches no route at all and is refused rather than resolved to the
+        actor's Active Warehouse or any other default (AC-03a).
+      schema: { type: string, format: uuid }
+    WorkspaceRoleId:
+      in: path
+      name: workspaceRoleId
+      required: true
+      schema: { type: string, format: uuid }
+    RoleId:
+      in: path
+      name: roleId
+      required: true
+      schema: { type: string, format: uuid }
+    UserId:
+      in: path
+      name: userId
+      required: true
+      schema: { type: string, format: uuid }
+    AfterUuid:
+      in: query
+      name: after
+      description: Cursor — the id of the last item seen; the page starts after it. Mutually exclusive with `before`.
+      schema: { type: string, format: uuid }
+    BeforeUuid:
+      in: query
+      name: before
+      description: Cursor — the page ends before this id. Mutually exclusive with `after`.
+      schema: { type: string, format: uuid }
+    AfterPermissionId:
+      in: query
+      name: after
+      schema: { $ref: "#/components/schemas/PermissionId" }
+    BeforePermissionId:
+      in: query
+      name: before
+      schema: { $ref: "#/components/schemas/PermissionId" }
+    Limit:
+      in: query
+      name: limit
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+
+  responses:
+    Unauthenticated:
+      description: |
+        No valid session. Authentication alone grants no authority at either level (sad.md §6.2).
+
+        `SessionAuthGuard` raises the framework's unauthorized exception, which the global filter
+        maps to the generic `request.invalid` envelope at status 401 — the existing behaviour, not a
+        code this feature introduces.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            code: "request.invalid"
+            message: "The request is invalid."
+
+    WorkspaceDenied:
+      description: |
+        The actor is not a Workspace Member, or their Workspace Role does not carry the Workspace
+        Permission this operation declares (AC-30). Also returned when a handler declares the other
+        level's Permission, so no Workspace authority resolves and the two vocabularies never
+        substitute for each other (AC-31).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            code: "workspace.denied"
+            message: "Access is not permitted."
+
+    WarehouseDenied:
+      description: |
+        The actor holds no membership in the named Warehouse, so its contents are not disclosed
+        (AC-04); or the Permission is held only through the Role of another Warehouse, because
+        authority is always that of the membership held in the Warehouse being acted on (AC-05); or
+        the handler declared a Workspace Permission instead, so no Warehouse authority resolves
+        (AC-31).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          examples:
+            noMembership:
+              summary: AC-04
+              value:
+                code: "access.membership_required"
+                message: "Warehouse access is unavailable."
+            permissionFromAnotherWarehouse:
+              summary: AC-05
+              value:
+                code: "access.denied"
+                message: "Access is not permitted."
+
+    TargetUnavailable:
+      description: |
+        The target Workspace Role, Member, User, Warehouse or membership belongs to another
+        Workspace, or does not exist. One non-enumerating outcome for both, so existence is never
+        disclosed (AC-10, AC-24, AC-25d, AC-34).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            code: "workspace.target_unavailable"
+            message: "The selected target is unavailable."
+
+    WarehouseTargetUnavailable:
+      description: |
+        The target Role or member does not belong to the named Warehouse, or does not exist.
+        Existence is not disclosed.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            code: "access.target_unavailable"
+            message: "The selected member or Role is unavailable."
+
+    WarehouseRoleUnavailable:
+      description: |
+        The Role the operation acts *on* does not belong to the named Warehouse, or does not exist.
+        Existence is not disclosed. Distinct from `WarehouseTargetUnavailable` only in its code:
+        these routes carry the Role itself as the target and have answered `access.role_unavailable`
+        since the `access` feature (`docs/features/access/contracts/openapi.yaml`). Re-shaping the
+        path under `/warehouses/{warehouseId}` did not change that behaviour, so the code is
+        restated here rather than silently widened.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            code: "access.role_unavailable"
+            message: "The Role is unavailable."
+
+    WarehouseArchivedOrConflict:
+      description: |
+        The Warehouse is archived and this handler is classified mutating, so the change is refused
+        while the membership, its Role and every membership in other Warehouses are unaffected
+        (AC-12); or the approved Warehouse-level conflict applies (duplicate Role name, protected
+        Role, concurrent change).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          examples:
+            archived:
+              summary: AC-12
+              value:
+                code: "access.warehouse_archived"
+                message: "The Warehouse is archived."
+            roleNameConflict:
+              summary: Approved access conflict
+              value:
+                code: "access.role_name_conflict"
+                message: "Role names must be unique within the Warehouse."
+
+    InvalidInput:
+      description: The request failed schema validation.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            code: "request.invalid"
+            message: "The request is invalid."
+
+    InvalidWorkspaceRoleName:
+      description: |
+        The submitted Workspace Role name is empty after trimming, exceeds 100 user-perceived
+        characters, or contains a control or format character (AC-15a).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            code: "workspace.invalid_input"
+            message: "Correct the highlighted Workspace Role fields."
+            details:
+              field: "name"
+              rule: "control_or_format_character"
+
+    InvalidWarehouseName:
+      description: |
+        The submitted Warehouse name is empty after trimming, exceeds 100 user-perceived characters,
+        or contains a control or format character. A valid name may duplicate another Warehouse's
+        name (AC-08).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            code: "workspace.invalid_input"
+            message: "Correct the highlighted Warehouse fields."
+            details:
+              field: "name"
+              rule: "grapheme_length"
+
+    InvalidWarehouseRoleInput:
+      description: The submitted Role name or Permission set failed its rules.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            code: "access.invalid_role"
+            message: "Correct the highlighted Role fields."
+
+    WorkspaceRoleWriteConflict:
+      description: |
+        Another Workspace Role already uses that exact name in this Workspace, while differently
+        cased names stay distinct (AC-15); the target is the protected Workspace Owner Role, which
+        is system-managed (AC-16); or a chosen Workspace Permission is absent from the catalogue, is
+        reserved to the Workspace Owner Role, or a Workspace Permission identifier or label was
+        changed — Workspace Permission definitions are system-managed (AC-18).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          examples:
+            nameConflict:
+              summary: AC-15
+              value:
+                code: "workspace.role_name_conflict"
+                message: "Workspace Role names must be unique within the Workspace."
+            protectedRole:
+              summary: AC-16
+              value:
+                code: "workspace.protected_role"
+                message: "The Workspace Owner Role is system-managed."
+            systemManagedPermission:
+              summary: AC-18
+              value:
+                code: "workspace.system_managed_permission"
+                message: "Workspace Permission definitions are system-managed."
+                details:
+                  reason: "reserved"
+                  workspacePermissionId: "WORKSPACE_OWNER_ROLE:REASSIGN"
+
+    InternalError:
+      description: An unexpected error occurred.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            code: "system.internal_error"
+            message: "An unexpected error occurred."
+
+  schemas:
+    ##########################################################################################
+    # Shared envelope and vocabularies
+    ##########################################################################################
+
+    Error:
+      type: object
+      description: |
+        The unified error envelope produced once by the global exception filter. `code` follows the
+        `module.error_name` convention already established in the repository's error definitions;
+        `message` is the safe, non-enumerating explanation; `details` carries optional structured
+        context and never discloses the existence of a target the actor may not see.
+      required: [code, message]
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          pattern: "^[a-z_]+\\.[a-z_]+$"
+          examples: ["workspace.target_unavailable", "access.warehouse_archived"]
+        message: { type: string }
+        details:
+          type: object
+          additionalProperties: true
+
+    WorkspacePermissionId:
+      type: string
+      maxLength: 64
+      pattern: "^[A-Z][A-Z0-9_]*:[A-Z][A-Z0-9_]*$"
+      description: |
+        A system-defined **Workspace** Permission identifier. A separate vocabulary from
+        `PermissionId`; neither substitutes for the other (AC-31), which the two shared types make a
+        compile error rather than a runtime hole. Deliberately not an enum: a release migration adds
+        entries to the catalogue with no person acting (AC-35).
+      examples:
+        - "WORKSPACE:RENAME"
+        - "WORKSPACE_ROLES:ASSIGN"
+        - "WORKSPACE_MEMBERS:ADD"
+        - "WAREHOUSES:ARCHIVE"
+        - "WAREHOUSE_MEMBERSHIPS:ASSIGN"
+        - "WORKSPACE_OWNER_ROLE:REASSIGN"
+
+    PermissionId:
+      type: string
+      maxLength: 64
+      pattern: "^[A-Z][A-Z0-9_]*:[A-Z][A-Z0-9_]*$"
+      description: |
+        A system-defined **Warehouse** Permission identifier, unchanged by this feature.
+      examples: ["ROLES:WATCH", "USERS:CREATE", "WAREHOUSE_MANAGER_ROLE:REASSIGN"]
+
+    Name:
+      type: string
+      minLength: 1
+      maxLength: 100
+      description: |
+        A trimmed name of 1 to 100 **user-perceived characters** (graphemes) containing no Unicode
+        control or format character. `maxLength` here counts code points, which is the closest
+        JSON-Schema approximation; the authoritative bound is the grapheme count enforced by the
+        shared name value object with `Intl.Segmenter`, exactly as `data-model.md` § "Constraints
+        deliberately not expressed in the schema" records for the database. Submitted Unicode is
+        stored without normalization, so differently normalized names stay distinct.
+
+    ##########################################################################################
+    # Workspace-level projections
+    ##########################################################################################
+
+    Workspace:
+      type: object
+      required: [id, name]
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        name:
+          type: [string, "null"]
+          minLength: 1
+          maxLength: 100
+          description: |
+            `null` is the unnamed state a Workspace is created in and is presented with a placeholder
+            until one is set (AC-29). Workspace names are deliberately not unique.
+
+    WorkspaceContext:
+      type: object
+      required: [workspace, workspacePermissionIds, warehouses, effectiveWarehouseId]
+      additionalProperties: false
+      properties:
+        workspace: { $ref: "#/components/schemas/Workspace" }
+        workspacePermissionIds:
+          type: array
+          description: |
+            The Workspace Permissions the actor's Workspace Role grants. Empty for a Warehouse Member
+            who is no Workspace Member at all, which is how the web omits every Workspace control,
+            navigation entry and destination rather than presenting them unusable (AC-30). This is a
+            projection, never proof of authority — no endpoint accepts it back.
+          items: { $ref: "#/components/schemas/WorkspacePermissionId" }
+        warehouses:
+          type: array
+          description: The Warehouses the actor holds a membership in, with their archived state.
+          items: { $ref: "#/components/schemas/ContextWarehouse" }
+        effectiveWarehouseId:
+          type: [string, "null"]
+          format: uuid
+          description: |
+            The **derived** effective selection, not the stored value read back: the stored selection
+            when it is still a live, non-archived membership; otherwise the sole membership when the
+            actor holds exactly one (AC-03b); otherwise `null`, because the system never chooses
+            between several memberships on the member's behalf. A stale selection therefore cannot
+            outlive the membership behind it.
+
+    ContextWarehouse:
+      type: object
+      required: [warehouseId, name, archivedAt, roleId, roleKind]
+      additionalProperties: false
+      properties:
+        warehouseId: { type: string, format: uuid }
+        name: { $ref: "#/components/schemas/Name" }
+        archivedAt:
+          type: [string, "null"]
+          format: date-time
+          description: |
+            `null` when the Warehouse is not archived. An archived Warehouse is still listed, marked
+            as not selectable (AC-11).
+        roleId: { type: string, format: uuid }
+        roleKind: { $ref: "#/components/schemas/WarehouseRoleKind" }
+
+    ActiveWarehouseSelection:
+      type: object
+      required: [effectiveWarehouseId]
+      additionalProperties: false
+      properties:
+        effectiveWarehouseId:
+          type: [string, "null"]
+          format: uuid
+
+    ActiveWarehouseWrite:
+      type: object
+      required: [warehouseId]
+      additionalProperties: false
+      properties:
+        warehouseId: { type: string, format: uuid }
+
+    WorkspaceRename:
+      type: object
+      required: [name]
+      additionalProperties: false
+      properties:
+        name: { $ref: "#/components/schemas/Name" }
+
+    WorkspaceRoleKind:
+      type: string
+      enum: [custom, workspace_owner]
+      description: |
+        `workspace_owner` marks the protected, system-managed Workspace Role — at most one per
+        Workspace — which can be neither renamed, deleted, re-permissioned (AC-16) nor assigned by
+        ordinary assignment (AC-22).
+
+    WorkspaceRole:
+      type: object
+      required: [id, name, kind, workspacePermissionIds, assignedMemberCount]
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        name:
+          allOf:
+            - $ref: "#/components/schemas/Name"
+          description: |
+            Exact and case-sensitive within the Workspace, so differently cased names stay distinct
+            (AC-15).
+        kind: { $ref: "#/components/schemas/WorkspaceRoleKind" }
+        workspacePermissionIds:
+          type: array
+          description: May be empty (AC-14, AC-14a).
+          items: { $ref: "#/components/schemas/WorkspacePermissionId" }
+        assignedMemberCount:
+          type: integer
+          minimum: 0
+          description: |
+            How many Workspace Members hold this Workspace Role. Non-zero is what makes deletion
+            require both `WORKSPACE_ROLES:DELETE` and `WORKSPACE_ROLES:ASSIGN` plus a replacement
+            (AC-17, AC-17d).
+
+    WorkspaceRoleWrite:
+      type: object
+      required: [name, workspacePermissionIds]
+      additionalProperties: false
+      properties:
+        name: { $ref: "#/components/schemas/Name" }
+        workspacePermissionIds:
+          type: array
+          description: |
+            Only `assignable` catalogue entries. A reserved entry is unrepresentable in a custom
+            Workspace Role and is rejected as system-managed (AC-18).
+          items: { $ref: "#/components/schemas/WorkspacePermissionId" }
+
+    WorkspaceRoleDeletion:
+      type: object
+      additionalProperties: false
+      properties:
+        replacementWorkspaceRoleId:
+          type: string
+          format: uuid
+          description: |
+            A custom Workspace Role of the same Workspace. Required when the Workspace Role being
+            deleted is assigned to at least one Workspace Member, so no Member is left without
+            exactly one Workspace Role (AC-17); omitted for an unassigned Workspace Role (AC-17a).
+
+    WorkspaceRoleAssignment:
+      type: object
+      required: [workspaceRoleId]
+      additionalProperties: false
+      properties:
+        workspaceRoleId: { type: string, format: uuid }
+
+    WorkspaceMember:
+      type: object
+      required: [userId, workspaceRoleId, workspaceRoleKind]
+      additionalProperties: false
+      properties:
+        userId: { type: string, format: uuid }
+        workspaceRoleId: { type: string, format: uuid }
+        workspaceRoleKind: { $ref: "#/components/schemas/WorkspaceRoleKind" }
+        email:
+          type: string
+          format: email
+          maxLength: 254
+          description: |
+            The identifying email, carried so the reader can tell Workspace Members apart. Present on
+            the same terms as the approved Warehouse member projection.
+
+    WorkspaceMemberAdd:
+      type: object
+      required: [userId, workspaceRoleId]
+      additionalProperties: false
+      properties:
+        userId: { type: string, format: uuid }
+        workspaceRoleId:
+          type: string
+          format: uuid
+          description: A custom Workspace Role; the protected Owner Role is refused (AC-22).
+
+    WorkspaceUser:
+      type: object
+      description: |
+        A User of the Workspace, whether or not they are a Workspace Member, with the Warehouses they
+        belong to — the candidate list Workspace membership (AC-19) and Warehouse-membership
+        assignment (AC-23) act on.
+      required: [userId, isWorkspaceMember, warehouses]
+      additionalProperties: false
+      properties:
+        userId: { type: string, format: uuid }
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        isWorkspaceMember:
+          type: boolean
+          description: |
+            A Workspace Member who holds no Warehouse membership is still a User of that Workspace,
+            and keeps their Workspace Role and capabilities (AC-21).
+        warehouses:
+          type: array
+          items: { $ref: "#/components/schemas/WorkspaceUserWarehouse" }
+
+    WorkspaceUserWarehouse:
+      description: >-
+        A Warehouse the User belongs to, carrying deliberately no Warehouse Role
+        (AC-33). WORKSPACE_MEMBERS:WATCH covers the Users of the Workspace and
+        the Warehouses they belong to; it does not cover their Warehouse Roles.
+        See sad.md §5 and design-handoff.md "The level boundary is part of the
+        design" — F-5 in api-sync-report.md.
+      type: object
+      required: [warehouseId]
+      additionalProperties: false
+      properties:
+        warehouseId: { type: string, format: uuid }
+
+    WorkspaceOwnerTransfer:
+      type: object
+      required: [recipientUserId, formerOwnerWorkspaceRoleId]
+      additionalProperties: false
+      properties:
+        recipientUserId:
+          type: string
+          format: uuid
+          description: A different Workspace Member of the same Workspace (AC-28).
+        formerOwnerWorkspaceRoleId:
+          type: string
+          format: uuid
+          description: |
+            The custom Workspace Role the outgoing Owner will hold, so they end the transfer holding
+            exactly one (AC-26, AC-26a).
+
+    WorkspaceOwnerTransferResult:
+      type: object
+      required: [ownerUserId, formerOwnerUserId, formerOwnerWorkspaceRoleId]
+      additionalProperties: false
+      properties:
+        ownerUserId: { type: string, format: uuid }
+        formerOwnerUserId: { type: string, format: uuid }
+        formerOwnerWorkspaceRoleId: { type: string, format: uuid }
+
+    WorkspacePermission:
+      type: object
+      required: [id, label, kind]
+      additionalProperties: false
+      properties:
+        id: { $ref: "#/components/schemas/WorkspacePermissionId" }
+        label:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: System-managed display label; no endpoint accepts a label mutation (AC-18).
+        kind:
+          type: string
+          enum: [assignable, reserved]
+          description: |
+            `assignable` may be chosen for a custom Workspace Role; `reserved` stays exclusive to the
+            protected Workspace Owner Role and stays ineligible for custom Workspace Roles even after
+            a release adds it (AC-18, AC-35).
+
+    ##########################################################################################
+    # Warehouse record and membership edges (Workspace capabilities)
+    ##########################################################################################
+
+    Warehouse:
+      type: object
+      required: [id, name, archivedAt]
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        name: { $ref: "#/components/schemas/Name" }
+        archivedAt:
+          type: [string, "null"]
+          format: date-time
+          description: |
+            `null` = not archived; a timestamp records the reversible withdrawal and when it
+            happened. Restoring clears it and the Warehouse is operable again with its Roles and
+            memberships intact (AC-11).
+
+    WarehouseWrite:
+      type: object
+      required: [name]
+      additionalProperties: false
+      properties:
+        name: { $ref: "#/components/schemas/Name" }
+
+    WarehouseArchival:
+      type: object
+      required: [archived]
+      additionalProperties: false
+      properties:
+        archived:
+          type: boolean
+          description: |
+            The intended archived state. `true` withdraws the Warehouse from operation, `false`
+            restores it; one Workspace Permission (`WAREHOUSES:ARCHIVE`) governs both.
+
+    AssignableWarehouseRole:
+      type: object
+      description: |
+        Identifier and name only — the entire narrow read `WAREHOUSE_MEMBERSHIPS:ASSIGN` carries. It
+        grants no other capability inside that Warehouse (AC-23a).
+      required: [id, name]
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        name: { $ref: "#/components/schemas/Name" }
+
+    WarehouseMembershipAssignment:
+      type: object
+      required: [userId, roleId]
+      additionalProperties: false
+      properties:
+        userId:
+          type: string
+          format: uuid
+          description: |
+            A User of the actor's own Workspace, never the acting member (AC-24, AC-25a).
+        roleId:
+          type: string
+          format: uuid
+          description: |
+            A custom Role of that same Warehouse; the protected Warehouse Manager Role is refused
+            (AC-25).
+
+    WarehouseMembership:
+      type: object
+      required: [userId, warehouseId, roleId, roleKind]
+      additionalProperties: false
+      properties:
+        userId: { type: string, format: uuid }
+        warehouseId: { type: string, format: uuid }
+        roleId: { type: string, format: uuid }
+        roleKind: { $ref: "#/components/schemas/WarehouseRoleKind" }
+
+    ##########################################################################################
+    # Warehouse-level projections (unchanged shapes, now Warehouse-named)
+    ##########################################################################################
+
+    WarehouseRoleKind:
+      type: string
+      enum: [custom, warehouse_manager]
+
+    WarehouseAccessProjection:
+      type: object
+      required: [warehouseId, roleId, roleKind, permissionIds, archivedAt]
+      additionalProperties: false
+      properties:
+        warehouseId: { type: string, format: uuid }
+        roleId: { type: string, format: uuid }
+        roleKind: { $ref: "#/components/schemas/WarehouseRoleKind" }
+        permissionIds:
+          type: array
+          items: { $ref: "#/components/schemas/PermissionId" }
+        archivedAt:
+          type: [string, "null"]
+          format: date-time
+          description: |
+            **New.** The Warehouse's archived state, so the web renders a retained Warehouse
+            read-only rather than offering mutations the guard will refuse (AC-12, AC-12a).
+
+    WarehouseRole:
+      type: object
+      required: [id, name, kind, permissionIds, assignedMemberCount]
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        name: { $ref: "#/components/schemas/Name" }
+        kind: { $ref: "#/components/schemas/WarehouseRoleKind" }
+        permissionIds:
+          type: array
+          items: { $ref: "#/components/schemas/PermissionId" }
+        assignedMemberCount: { type: integer, minimum: 0 }
+
+    WarehouseRoleWrite:
+      type: object
+      required: [name, permissionIds]
+      additionalProperties: false
+      properties:
+        name: { $ref: "#/components/schemas/Name" }
+        permissionIds:
+          type: array
+          items: { $ref: "#/components/schemas/PermissionId" }
+
+    WarehouseRoleDeletion:
+      type: object
+      additionalProperties: false
+      properties:
+        replacementRoleId: { type: string, format: uuid }
+
+    WarehouseRoleAssignment:
+      type: object
+      required: [roleId]
+      additionalProperties: false
+      properties:
+        roleId: { type: string, format: uuid }
+
+    WarehousePermission:
+      type: object
+      required: [id, label, kind]
+      additionalProperties: false
+      properties:
+        id: { $ref: "#/components/schemas/PermissionId" }
+        label: { type: string, minLength: 1, maxLength: 100 }
+        kind: { type: string, enum: [assignable, reserved] }
+
+    WarehouseMember:
+      type: object
+      required: [userId, roleId, roleKind]
+      additionalProperties: false
+      properties:
+        userId: { type: string, format: uuid }
+        roleId: { type: string, format: uuid }
+        roleKind: { $ref: "#/components/schemas/WarehouseRoleKind" }
+        email: { type: string, format: email, maxLength: 254 }
+
+    WarehouseManagerTransfer:
+      type: object
+      required: [recipientUserId, formerManagerRoleId]
+      additionalProperties: false
+      properties:
+        recipientUserId:
+          type: string
+          format: uuid
+          description: A different member who already holds a membership in that same Warehouse (AC-36a).
+        formerManagerRoleId:
+          type: string
+          format: uuid
+          description: A custom Role of that same Warehouse for the outgoing Manager (AC-36a).
+
+    WarehouseManagerTransferResult:
+      type: object
+      required: [managerUserId, formerManagerUserId, formerManagerRoleId]
+      additionalProperties: false
+      properties:
+        managerUserId: { type: string, format: uuid }
+        formerManagerUserId: { type: string, format: uuid }
+        formerManagerRoleId: { type: string, format: uuid }
+
+    ##########################################################################################
+    # Warehouse member lifecycle (unchanged shapes, now Warehouse-named)
+    ##########################################################################################
+
+    WarehouseUserCreate:
+      type: object
+      required: [email, password, roleId]
+      additionalProperties: false
+      properties:
+        email: { type: string, format: email, maxLength: 254 }
+        password: { type: string, minLength: 8, maxLength: 128 }
+        roleId: { type: string, format: uuid }
+
+    WarehouseUser:
+      type: object
+      required: [userId, email, roleId]
+      additionalProperties: false
+      properties:
+        userId: { type: string, format: uuid }
+        email: { type: string, format: email, maxLength: 254 }
+        roleId: { type: string, format: uuid }
+
+    WarehouseUserEmailChange:
+      type: object
+      required: [email]
+      additionalProperties: false
+      properties:
+        email: { type: string, format: email, maxLength: 254 }
+
+    WarehouseUserEmail:
+      type: object
+      required: [userId, email]
+      additionalProperties: false
+      properties:
+        userId: { type: string, format: uuid }
+        email: { type: string, format: email, maxLength: 254 }
+
+    WarehouseUserPasswordChange:
+      type: object
+      required: [password]
+      additionalProperties: false
+      properties:
+        password: { type: string, minLength: 8, maxLength: 128 }
+
+    WarehouseUserConfirmation:
+      type: object
+      required: [userId]
+      additionalProperties: false
+      properties:
+        userId: { type: string, format: uuid }
+
+    ##########################################################################################
+    # Cursor pages — the approved shape, retained so paging can be introduced without a break
+    ##########################################################################################
+
+    WarehouseRolePage:
+      type: object
+      required: [items, hasNext, hasPrev, nextCursor]
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/WarehouseRole" }
+        hasNext: { type: boolean }
+        hasPrev: { type: boolean }
+        nextCursor: { type: [string, "null"] }
+
+    WarehousePermissionPage:
+      type: object
+      required: [items, hasNext, hasPrev, nextCursor]
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/WarehousePermission" }
+        hasNext: { type: boolean }
+        hasPrev: { type: boolean }
+        nextCursor: { type: [string, "null"] }
+
+    WarehouseMemberPage:
+      type: object
+      required: [items, hasNext, hasPrev, nextCursor]
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/WarehouseMember" }
+        hasNext: { type: boolean }
+        hasPrev: { type: boolean }
+        nextCursor: { type: [string, "null"] }
+
+    ##########################################################################################
+    # Registration bootstrap
+    ##########################################################################################
+
+    RegistrationInput:
+      type: object
+      description: Unchanged by this feature.
+      required: [email, password, warehouseName]
+      additionalProperties: false
+      properties:
+        email: { type: string, format: email, maxLength: 254 }
+        password: { type: string, minLength: 8, maxLength: 128 }
+        warehouseName: { $ref: "#/components/schemas/Name" }
+
+    RegistrationResult:
+      type: object
+      description: |
+        **Changed.** Extended with the initial Workspace projection, so the shell has Workspace
+        identity, Workspace Permissions and the effective selection without a second round trip
+        (AC-01).
+      required: [user, workspace, workspacePermissionIds, access, effectiveWarehouseId]
+      additionalProperties: false
+      properties:
+        user:
+          type: object
+          required: [id]
+          additionalProperties: false
+          properties:
+            id: { type: string, format: uuid }
+        workspace: { $ref: "#/components/schemas/Workspace" }
+        workspacePermissionIds:
+          type: array
+          description: |
+            The initial protected Workspace Owner Role's Workspace Permission membership, seeded from
+            the release catalogue (spec.md §1, sixteen entries).
+          items: { $ref: "#/components/schemas/WorkspacePermissionId" }
+        access: { $ref: "#/components/schemas/WarehouseAccessProjection" }
+        effectiveWarehouseId:
+          type: string
+          format: uuid
+          description: |
+            The first Warehouse. Holding exactly one membership makes it the effective selection with
+            no one choosing (AC-03b).

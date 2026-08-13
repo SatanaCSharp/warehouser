@@ -23,6 +23,13 @@ type ApiExtraOptions = {
 const extractFieldErrors = (
   details: Record<string, unknown> | undefined,
 ): Record<string, string> | undefined => {
+  // A rejection that names one field and the rule it broke — the envelope the
+  // Workspace surfaces use — carries the rule as that field's error, so the
+  // owning form can translate the rule instead of a generic message.
+  if (typeof details?.field === 'string' && typeof details.rule === 'string') {
+    return { [details.field]: details.rule };
+  }
+
   const fields = details?.fields;
   if (typeof fields !== 'object' || fields === null || Array.isArray(fields)) {
     return undefined;
@@ -120,6 +127,12 @@ export const api = createApi({
     'AccessMembers',
     'Permissions',
     'Roles',
+    'WorkspaceContext',
+    'WorkspaceMembers',
+    'WorkspacePermissions',
+    'WorkspaceRoles',
+    'WorkspaceUsers',
+    'WorkspaceWarehouses',
   ],
   endpoints: () => ({}),
 });

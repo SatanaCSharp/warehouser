@@ -13,6 +13,7 @@ vi.mock('modules/access/api/access-api', () => ({
   useChangeMemberEmailMutation: () => [changeMemberEmail, {}],
 }));
 
+const warehouseId = '00000000-0000-4000-8000-000000000010';
 const userId = '00000000-0000-4000-8000-000000000001';
 const input = { email: 'new@example.test' };
 
@@ -23,11 +24,15 @@ describe('useChangeMemberEmail', () => {
 
   it('changes a member email and reports success', async () => {
     changeMemberEmail.mockResolvedValue({ data: { userId, ...input } });
-    const { result } = renderHook(() => useChangeMemberEmail());
+    const { result } = renderHook(() => useChangeMemberEmail(warehouseId));
 
     const outcome = await result.current(userId, input);
 
-    expect(changeMemberEmail).toHaveBeenCalledWith({ userId, input });
+    expect(changeMemberEmail).toHaveBeenCalledWith({
+      warehouseId,
+      userId,
+      input,
+    });
     expect(outcome).toEqual({ success: true });
     expect(alertAccessAction).toHaveBeenCalledWith(
       'changeMemberEmail',
@@ -41,7 +46,7 @@ describe('useChangeMemberEmail', () => {
     ['users.permission_exceeded', { email: 'exceeded' }],
   ])('maps the raw code %s to a field error', async (code, fieldErrors) => {
     changeMemberEmail.mockResolvedValue({ error: { code } });
-    const { result } = renderHook(() => useChangeMemberEmail());
+    const { result } = renderHook(() => useChangeMemberEmail(warehouseId));
 
     expect(await result.current(userId, input)).toEqual({
       success: false,

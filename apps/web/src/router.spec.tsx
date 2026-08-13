@@ -1,10 +1,12 @@
 import { RouterProvider } from '@tanstack/react-router';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createAppRouter } from 'router';
+import { ROUTES } from 'shared/constants/routes';
 import { makeStore } from 'store';
 
 import type { AppRouter } from 'router';
@@ -34,7 +36,35 @@ const readableAccess = {
   roleId: '00000000-0000-4000-8000-000000000003',
   roleKind: 'custom',
   permissionIds: ['ROLES:WATCH'],
+  archivedAt: null,
 } as const;
+
+// The authenticated shell reads the Workspace actor context to decide whether
+// the Workspace navigation entry exists at all (AC-30). That read is not one
+// of the datasets the access cases below are about, so answer it out of band
+// and let each of them keep its own ordered request script.
+const withWorkspaceContext = (
+  requestScript: ReturnType<typeof vi.fn>,
+  workspacePermissionIds: readonly WorkspacePermissionId[] = [],
+  effectiveWarehouseId: string | null = null,
+): ReturnType<typeof vi.fn> =>
+  vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input instanceof Request ? input.url : input);
+    if (url.includes('/api/v1/workspace/context')) {
+      return Promise.resolve(
+        Response.json({
+          workspace: {
+            id: '00000000-0000-4000-8000-000000000020',
+            name: 'Acme Logistics',
+          },
+          workspacePermissionIds,
+          warehouses: [],
+          effectiveWarehouseId,
+        }),
+      );
+    }
+    return requestScript(input, init) as Promise<Response>;
+  });
 
 const renderRoute = (initialEntry: string): RenderedRoute => {
   const store = makeStore();
@@ -100,12 +130,25 @@ describe('router', () => {
         { user: { id: '00000000-0000-4000-8000-000000000001' } },
       ],
       [
+        '/workspace/context',
+        {
+          workspace: {
+            id: '00000000-0000-4000-8000-000000000020',
+            name: 'Acme Logistics',
+          },
+          workspacePermissionIds: [],
+          warehouses: [],
+          effectiveWarehouseId: '00000000-0000-4000-8000-000000000002',
+        },
+      ],
+      [
         '/access/current',
         {
           warehouseId: '00000000-0000-4000-8000-000000000002',
           roleId: '00000000-0000-4000-8000-000000000003',
           roleKind: 'custom',
           permissionIds: ['ROLES:WATCH'],
+          archivedAt: null,
         },
       ],
       [
@@ -182,7 +225,20 @@ describe('router', () => {
           }),
         );
       }
-      if (url.endsWith('/api/v1/access/current')) {
+      if (url.includes('/api/v1/workspace/context')) {
+        return Promise.resolve(
+          Response.json({
+            workspace: {
+              id: '00000000-0000-4000-8000-000000000020',
+              name: 'Acme Logistics',
+            },
+            workspacePermissionIds: [],
+            warehouses: [],
+            effectiveWarehouseId: readableAccess.warehouseId,
+          }),
+        );
+      }
+      if (url.endsWith('/access/current')) {
         currentReads += 1;
         return Promise.resolve(
           Response.json({
@@ -191,7 +247,7 @@ describe('router', () => {
           }),
         );
       }
-      if (url.endsWith('/api/v1/access/roles') && init?.method === 'POST') {
+      if (url.endsWith('/access/roles') && init?.method === 'POST') {
         return Promise.resolve(
           Response.json(
             { code: 'access.denied', message: 'Access denied' },
@@ -199,7 +255,7 @@ describe('router', () => {
           ),
         );
       }
-      if (url.endsWith('/api/v1/access/roles')) {
+      if (url.endsWith('/access/roles')) {
         return Promise.resolve(
           Response.json({
             items: [
@@ -217,7 +273,7 @@ describe('router', () => {
           }),
         );
       }
-      if (url.endsWith('/api/v1/access/permissions')) {
+      if (url.endsWith('/access/permissions')) {
         return Promise.resolve(
           Response.json({
             items: [],
@@ -262,9 +318,17 @@ describe('router', () => {
           roleId: '00000000-0000-4000-8000-000000000003',
           roleKind: 'custom',
           permissionIds: [],
+          archivedAt: null,
         }),
       );
-    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal(
+      'fetch',
+      withWorkspaceContext(
+        fetchMock,
+        [],
+        '00000000-0000-4000-8000-000000000002',
+      ),
+    );
 
     renderRoute('/access');
 
@@ -294,14 +358,27 @@ describe('router', () => {
           }),
         );
       }
-      if (url.endsWith('/api/v1/access/current')) {
+      if (url.includes('/api/v1/workspace/context')) {
+        return Promise.resolve(
+          Response.json({
+            workspace: {
+              id: '00000000-0000-4000-8000-000000000020',
+              name: 'Acme Logistics',
+            },
+            workspacePermissionIds: [],
+            warehouses: [],
+            effectiveWarehouseId: readableAccess.warehouseId,
+          }),
+        );
+      }
+      if (url.endsWith('/access/current')) {
         return Promise.resolve(
           Response.json({ ...readableAccess, permissionIds: ['USERS:WATCH'] }),
         );
       }
       // Members' Role-name lookup loads Roles even without a role-admin
       // Permission (US-07) — the Members tab is not gated on that request.
-      if (url.endsWith('/api/v1/access/roles')) {
+      if (url.endsWith('/access/roles')) {
         return Promise.resolve(
           Response.json({
             items: [],
@@ -311,7 +388,7 @@ describe('router', () => {
           }),
         );
       }
-      if (url.endsWith('/api/v1/access/members')) {
+      if (url.endsWith('/access/members')) {
         return Promise.resolve(
           Response.json({
             items: [
@@ -358,14 +435,23 @@ describe('router', () => {
         .fn()
         .mockResolvedValueOnce(new Response(null, { status: 204 }))
         .mockResolvedValueOnce(
+          // AC-01 — registration answers with the whole bootstrap outcome,
+          // not just the identity and its Warehouse access.
           Response.json({
             user: { id: '00000000-0000-4000-8000-000000000012' },
+            workspace: {
+              id: '00000000-0000-4000-8000-000000000015',
+              name: null,
+            },
+            workspacePermissionIds: ['WORKSPACE:RENAME', 'WAREHOUSES:CREATE'],
             access: {
               warehouseId: '00000000-0000-4000-8000-000000000013',
               roleId: '00000000-0000-4000-8000-000000000014',
               roleKind: 'warehouse_manager',
               permissionIds: ['ROLES:WATCH'],
+              archivedAt: null,
             },
+            effectiveWarehouseId: '00000000-0000-4000-8000-000000000013',
           }),
         )
         .mockResolvedValueOnce(Response.json(readableAccess)),
@@ -522,7 +608,10 @@ describe('router', () => {
             resolveSignOut = resolve;
           }),
       );
-    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal(
+      'fetch',
+      withWorkspaceContext(fetchMock, [], readableAccess.warehouseId),
+    );
     const user = userEvent.setup();
     const { router, store } = renderRoute('/login');
 
@@ -553,7 +642,10 @@ describe('router', () => {
           }),
       )
       .mockResolvedValueOnce(Response.json(readableAccess));
-    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal(
+      'fetch',
+      withWorkspaceContext(fetchMock, [], readableAccess.warehouseId),
+    );
     const { router, store } = renderRoute('/');
 
     expect(store.getState().auth.status).toBe('unknown');
@@ -571,5 +663,120 @@ describe('router', () => {
     expect(router.state.location.pathname).toBe('/');
     expect(store.getState().auth.status).toBe('authenticated');
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+  });
+
+  // AC-30: a User with no Workspace capability in their own Workspace —
+  // including a Warehouse Member who is not a Workspace Member at all — must
+  // never reach the Workspace destination, and the Sidebar must never expose
+  // it as a control. Route visibility is advisory (design-handoff.md
+  // §Implementation constraints); the redirect proves the web omits the
+  // unusable destination rather than rendering it disabled or empty.
+  const stubWorkspaceRouteFetch = (
+    workspacePermissionIds: readonly WorkspacePermissionId[],
+  ): ReturnType<typeof vi.fn> =>
+    vi.fn((input: RequestInfo | URL) => {
+      const url =
+        input instanceof Request
+          ? input.url
+          : input instanceof URL
+            ? input.href
+            : input;
+      if (url.endsWith('/api/v1/auth/session')) {
+        return Promise.resolve(
+          Response.json({
+            user: { id: '00000000-0000-4000-8000-000000000001' },
+          }),
+        );
+      }
+      if (url.endsWith('/api/v1/access/current')) {
+        return Promise.resolve(
+          Response.json({ ...readableAccess, permissionIds: [] }),
+        );
+      }
+      if (url.includes('/api/v1/workspace/context')) {
+        return Promise.resolve(
+          Response.json({
+            workspace: {
+              id: '00000000-0000-4000-8000-000000000020',
+              name: 'Acme Logistics',
+            },
+            workspacePermissionIds,
+            warehouses: [],
+            effectiveWarehouseId: null,
+          }),
+        );
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+  it('redirects a direct navigation to the Workspace route when the actor holds no Workspace capability (AC-30)', async () => {
+    vi.stubGlobal('fetch', stubWorkspaceRouteFetch([]));
+
+    const { router } = renderRoute(ROUTES.WORKSPACE);
+
+    await waitFor(() =>
+      expect(router.state.location.pathname).not.toBe(ROUTES.WORKSPACE),
+    );
+    expect(router.state.location.pathname).toBe(ROUTES.HOME);
+  });
+
+  it('omits the Workspace Sidebar entry and never renders the destination when the actor holds no Workspace capability (AC-30)', async () => {
+    vi.stubGlobal('fetch', stubWorkspaceRouteFetch([]));
+
+    renderRoute(ROUTES.HOME);
+
+    await screen.findByRole('link', { name: 'Dashboard' });
+    expect(
+      screen.queryByRole('link', { name: 'Workspace' }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText('Acme Logistics')).not.toBeInTheDocument();
+  });
+
+  it('admits a direct navigation to the Workspace route when the actor holds any Workspace watch capability', async () => {
+    vi.stubGlobal(
+      'fetch',
+      stubWorkspaceRouteFetch([WorkspacePermissionId.WAREHOUSES_WATCH]),
+    );
+
+    const { router } = renderRoute(ROUTES.WORKSPACE);
+
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe(ROUTES.WORKSPACE),
+    );
+    expect(await screen.findByText('Acme Logistics')).toBeInTheDocument();
+  });
+
+  // AC-29 + AC-30: `WORKSPACE:RENAME` is a Workspace capability of this same
+  // destination — the naming control lives in its header, next to the tabs.
+  // A custom Workspace Role holding only that Permission must therefore reach
+  // the destination and be offered the control; redirecting it away would
+  // leave the member holding a Permission they can never exercise.
+  it('admits a direct navigation to the Workspace route, and offers the naming control, when the actor holds only WORKSPACE:RENAME (AC-29, AC-30)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      stubWorkspaceRouteFetch([WorkspacePermissionId.WORKSPACE_RENAME]),
+    );
+
+    const { router } = renderRoute(ROUTES.WORKSPACE);
+
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe(ROUTES.WORKSPACE),
+    );
+    expect(
+      await screen.findByRole('button', { name: /rename workspace/iu }),
+    ).toBeInTheDocument();
+  });
+
+  it('offers the Workspace Sidebar entry when the actor holds only WORKSPACE:RENAME (AC-30)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      stubWorkspaceRouteFetch([WorkspacePermissionId.WORKSPACE_RENAME]),
+    );
+
+    renderRoute(ROUTES.HOME);
+
+    expect(
+      await screen.findByRole('link', { name: 'Workspace' }),
+    ).toHaveAttribute('href', ROUTES.WORKSPACE);
   });
 });

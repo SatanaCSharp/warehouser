@@ -15,6 +15,7 @@ import { SessionEntity } from 'shared/domain/entities/session.entity';
 import { UserEntity } from 'shared/domain/entities/user.entity';
 import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
 import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
 import { ManagerTransferRepository } from 'shared/domain/repositories/manager-transfer.repository';
 import { MemberLifecycleRepository } from 'shared/domain/repositories/member-lifecycle.repository';
@@ -35,6 +36,7 @@ const describeIntegration =
 
 const now = new Date('2026-08-06T12:00:00.000Z');
 
+const workspaceId = '00000000-0000-4000-8000-000000000100';
 const warehouseAId = '00000000-0000-4000-8000-000000000101';
 const warehouseBId = '00000000-0000-4000-8000-000000000102';
 
@@ -79,7 +81,7 @@ describeIntegration('DeleteMemberCommand', () => {
 
   afterEach(async () => {
     await dataSource.query(
-      'TRUNCATE warehouse_memberships, role_permissions, roles, warehouses, sessions, users, accounts, permissions CASCADE',
+      'TRUNCATE warehouse_memberships, role_permissions, roles, warehouses, workspaces, sessions, users, accounts, permissions CASCADE',
     );
   });
 
@@ -87,22 +89,46 @@ describeIntegration('DeleteMemberCommand', () => {
     await dataSource.destroy();
   });
 
+  const seedWorkspace = async (): Promise<void> => {
+    await dataSource.manager.getRepository(WorkspaceEntity).insert({
+      id: workspaceId,
+      name: null,
+      createdAt: now,
+      updatedAt: now,
+    });
+  };
+
   const seedPermissions = async (): Promise<void> => {
-    await dataSource.manager.getRepository(PermissionEntity).insert([
-      {
-        id: usersDeletePermissionId,
-        label: 'Delete user',
-        kind: 'assignable',
-        createdAt: now,
-        updatedAt: now,
-      },
-    ]);
+    await dataSource.manager.getRepository(PermissionEntity).upsert(
+      [
+        {
+          id: usersDeletePermissionId,
+          label: 'Delete user',
+          kind: 'assignable',
+          createdAt: now,
+          updatedAt: now,
+        },
+      ],
+      ['id'],
+    );
   };
 
   const seedWarehouses = async (): Promise<void> => {
     await dataSource.manager.getRepository(WarehouseEntity).insert([
-      { id: warehouseAId, name: 'Warehouse A', createdAt: now, updatedAt: now },
-      { id: warehouseBId, name: 'Warehouse B', createdAt: now, updatedAt: now },
+      {
+        id: warehouseAId,
+        workspaceId,
+        name: 'Warehouse A',
+        createdAt: now,
+        updatedAt: now,
+      },
+      {
+        id: warehouseBId,
+        workspaceId,
+        name: 'Warehouse B',
+        createdAt: now,
+        updatedAt: now,
+      },
     ]);
   };
 
@@ -179,6 +205,7 @@ describeIntegration('DeleteMemberCommand', () => {
       await manager.getRepository(UserEntity).insert({
         id: userId,
         accountId: userId,
+        workspaceId,
         createdAt: now,
         updatedAt: now,
       });
@@ -187,13 +214,14 @@ describeIntegration('DeleteMemberCommand', () => {
 
   const seedMembership = async (
     userId: string,
-    warehouseId: string,
+    targetWarehouseId: string,
     roleId: string,
     roleKind: 'custom' | 'warehouse_manager' = 'custom',
   ): Promise<void> => {
     await dataSource.manager.getRepository(WarehouseMembershipEntity).insert({
       userId,
-      warehouseId,
+      warehouseId: targetWarehouseId,
+      workspaceId,
       roleId,
       roleKind,
       createdAt: now,
@@ -252,6 +280,7 @@ describeIntegration('DeleteMemberCommand', () => {
 
   it('AC-08: deletes the target Membership, Sessions, Account, and User in the data-model deletion-sequencing order, freeing the email for reuse', async () => {
     await seedPermissions();
+    await seedWorkspace();
     await seedWarehouses();
     await seedRoles();
     await seedDeleter();
@@ -351,6 +380,7 @@ describeIntegration('DeleteMemberCommand', () => {
 
   it('AC-09: denies deletion of a missing target without disclosing existence', async () => {
     await seedPermissions();
+    await seedWorkspace();
     await seedWarehouses();
     await seedRoles();
     await seedDeleter();
@@ -369,6 +399,7 @@ describeIntegration('DeleteMemberCommand', () => {
 
   it('AC-09: denies deletion of a target belonging to a different Warehouse without disclosing existence', async () => {
     await seedPermissions();
+    await seedWorkspace();
     await seedWarehouses();
     await seedRoles();
     await seedDeleter();
@@ -393,6 +424,7 @@ describeIntegration('DeleteMemberCommand', () => {
 
   it('AC-11: blocks self-deletion', async () => {
     await seedPermissions();
+    await seedWorkspace();
     await seedWarehouses();
     await seedRoles();
     await seedDeleter();
@@ -411,6 +443,7 @@ describeIntegration('DeleteMemberCommand', () => {
 
   it('AC-13: blocks deletion of a target currently holding the Warehouse Manager Role', async () => {
     await seedPermissions();
+    await seedWorkspace();
     await seedWarehouses();
     await seedRoles();
     await seedDeleter();
@@ -434,6 +467,7 @@ describeIntegration('DeleteMemberCommand', () => {
 
   it('DoD: atomic rollback — an injected failure on the Sessions delete leaves the target fully intact', async () => {
     await seedPermissions();
+    await seedWorkspace();
     await seedWarehouses();
     await seedRoles();
     await seedDeleter();
@@ -493,6 +527,7 @@ describeIntegration('DeleteMemberCommand', () => {
   // `USERS_MANAGER_ROLE_PROTECTED`.
   it('AC-15: a concurrent manager-transfer vs. delete-the-recipient race always lets the transfer complete and refuses the racing delete', async () => {
     await seedPermissions();
+    await seedWorkspace();
     await seedWarehouses();
     await seedRoles();
     await seedDeleter();

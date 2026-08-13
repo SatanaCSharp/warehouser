@@ -10,16 +10,16 @@ export type AssignMemberRole = (
   roleId: string,
 ) => Promise<MutationOutcome>;
 
-/** Moves one member to another Role. */
-export const useAssignMemberRole = (): AssignMemberRole => {
+/** Moves one member to another Role, within the named Warehouse (AC-05). */
+export const useAssignMemberRole = (warehouseId: string): AssignMemberRole => {
   const [assignRole] = useAssignAccessMemberRoleMutation();
 
   return useCallback(
     (userId, roleId) =>
       runAccessMutation(
         'assignRole',
-        assignRole({ userId, input: { roleId } }),
+        assignRole({ warehouseId, userId, input: { roleId } }),
       ),
-    [assignRole],
+    [assignRole, warehouseId],
   );
 };

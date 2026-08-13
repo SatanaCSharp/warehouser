@@ -20,6 +20,10 @@
     "./users": {
       "types": "./dist/users/index.d.ts",
       "default": "./dist/users/index.js"
+    },
+    "./workspaces": {
+      "types": "./dist/workspaces/index.d.ts",
+      "default": "./dist/workspaces/index.js"
     }
   },
   "scripts": {
@@ -29,6 +33,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@warehouser/shared-types": "workspace:*",
     "zod": "catalog:"
   },
   "devDependencies": {

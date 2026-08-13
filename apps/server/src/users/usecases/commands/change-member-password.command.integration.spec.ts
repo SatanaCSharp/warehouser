@@ -11,6 +11,7 @@ import { SessionEntity } from 'shared/domain/entities/session.entity';
 import { UserEntity } from 'shared/domain/entities/user.entity';
 import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
 import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 import { AccessCurrentUserRepository } from 'shared/domain/repositories/access-current-user.repository';
 import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
 import { MemberLifecycleRepository } from 'shared/domain/repositories/member-lifecycle.repository';
@@ -31,6 +32,7 @@ const now = new Date('2026-08-06T12:00:00.000Z');
 const uuid = (suffix: string): string =>
   `00000000-0000-4000-8000-${suffix.padStart(12, '0')}`;
 
+const workspaceId = uuid('000000000100');
 const warehouseAId = uuid('000000000101');
 const warehouseBId = uuid('000000000102');
 const managerRoleId = uuid('000000000201');
@@ -85,7 +87,7 @@ describeIntegration('ChangeMemberPasswordCommand', () => {
 
   afterEach(async () => {
     await dataSource.query(
-      'TRUNCATE warehouse_memberships, role_permissions, roles, warehouses, sessions, users, accounts, permissions CASCADE',
+      'TRUNCATE warehouse_memberships, role_permissions, roles, warehouses, workspaces, sessions, users, accounts, permissions CASCADE',
     );
   });
 
@@ -93,11 +95,20 @@ describeIntegration('ChangeMemberPasswordCommand', () => {
     await dataSource.destroy();
   });
 
+  const seedWorkspace = async (): Promise<void> => {
+    await dataSource.manager.getRepository(WorkspaceEntity).insert({
+      id: workspaceId,
+      name: null,
+      createdAt: now,
+      updatedAt: now,
+    });
+  };
+
   const seedPermissions = async (ids: readonly string[]): Promise<void> => {
     if (ids.length === 0) {
       return;
     }
-    await dataSource.manager.getRepository(PermissionEntity).insert(
+    await dataSource.manager.getRepository(PermissionEntity).upsert(
       ids.map((id) => ({
         id,
         label: id,
@@ -105,13 +116,26 @@ describeIntegration('ChangeMemberPasswordCommand', () => {
         createdAt: now,
         updatedAt: now,
       })),
+      ['id'],
     );
   };
 
   const seedWarehouses = async (): Promise<void> => {
     await dataSource.manager.getRepository(WarehouseEntity).insert([
-      { id: warehouseAId, name: 'Warehouse A', createdAt: now, updatedAt: now },
-      { id: warehouseBId, name: 'Warehouse B', createdAt: now, updatedAt: now },
+      {
+        id: warehouseAId,
+        workspaceId,
+        name: 'Warehouse A',
+        createdAt: now,
+        updatedAt: now,
+      },
+      {
+        id: warehouseBId,
+        workspaceId,
+        name: 'Warehouse B',
+        createdAt: now,
+        updatedAt: now,
+      },
     ]);
   };
 
@@ -156,7 +180,11 @@ describeIntegration('ChangeMemberPasswordCommand', () => {
       createdAt: now,
       updatedAt: now,
     });
-    const user = userEntityFactory(account, { createdAt: now, updatedAt: now });
+    const user = userEntityFactory(account, {
+      workspaceId,
+      createdAt: now,
+      updatedAt: now,
+    });
     await dataSource.transaction(async (manager) => {
       await manager.insert(AccountEntity, account);
       await manager.insert(UserEntity, user);
@@ -181,6 +209,7 @@ describeIntegration('ChangeMemberPasswordCommand', () => {
       await dataSource.manager.getRepository(WarehouseMembershipEntity).insert({
         userId,
         warehouseId,
+        workspaceId,
         roleId,
         roleKind: 'warehouse_manager',
         createdAt: now,
@@ -193,6 +222,7 @@ describeIntegration('ChangeMemberPasswordCommand', () => {
       warehouseMembershipEntityFactory({
         userId,
         warehouseId,
+        workspaceId,
         roleId,
         createdAt: now,
         updatedAt: now,
@@ -243,6 +273,7 @@ describeIntegration('ChangeMemberPasswordCommand', () => {
 
   it("records the new credential and revokes every prior Session for the target's Account, leaving other accounts untouched", async () => {
     await seedPermissions(['USERS:PASSWORD_CHANGE', 'USERS:EMAIL_UPDATE']);
+    await seedWorkspace();
     await seedWarehouses();
     await seedRole(actorRoleId, warehouseAId, 'custom', [
       'USERS:PASSWORD_CHANGE',
@@ -295,6 +326,7 @@ describeIntegration('ChangeMemberPasswordCommand', () => {
 
   it('rejects a password outside the accepted length and makes no change', async () => {
     await seedPermissions(['USERS:PASSWORD_CHANGE']);
+    await seedWorkspace();
     await seedWarehouses();
     await seedRole(actorRoleId, warehouseAId, 'custom', [
       'USERS:PASSWORD_CHANGE',
@@ -329,6 +361,7 @@ describeIntegration('ChangeMemberPasswordCommand', () => {
 
   it('denies a missing target without disclosing existence', async () => {
     await seedPermissions(['USERS:PASSWORD_CHANGE']);
+    await seedWorkspace();
     await seedWarehouses();
     await seedRole(actorRoleId, warehouseAId, 'custom', [
       'USERS:PASSWORD_CHANGE',
@@ -355,6 +388,7 @@ describeIntegration('ChangeMemberPasswordCommand', () => {
 
   it('denies a cross-Warehouse target without disclosing existence', async () => {
     await seedPermissions(['USERS:PASSWORD_CHANGE']);
+    await seedWorkspace();
     await seedWarehouses();
     await seedRole(actorRoleId, warehouseAId, 'custom', [
       'USERS:PASSWORD_CHANGE',
@@ -385,6 +419,7 @@ describeIntegration('ChangeMemberPasswordCommand', () => {
 
   it('blocks self-targeting', async () => {
     await seedPermissions(['USERS:PASSWORD_CHANGE']);
+    await seedWorkspace();
     await seedWarehouses();
     await seedRole(actorRoleId, warehouseAId, 'custom', [
       'USERS:PASSWORD_CHANGE',
@@ -411,6 +446,7 @@ describeIntegration('ChangeMemberPasswordCommand', () => {
 
   it('blocks a target currently holding the Warehouse Manager Role', async () => {
     await seedPermissions(['USERS:PASSWORD_CHANGE']);
+    await seedWorkspace();
     await seedWarehouses();
     await seedRole(actorRoleId, warehouseAId, 'custom', [
       'USERS:PASSWORD_CHANGE',
@@ -452,6 +488,7 @@ describeIntegration('ChangeMemberPasswordCommand', () => {
       'USERS:EMAIL_UPDATE',
       'USERS:DELETE',
     ]);
+    await seedWorkspace();
     await seedWarehouses();
     // Actor only holds USERS:PASSWORD_CHANGE.
     await seedRole(actorRoleId, warehouseAId, 'custom', [
@@ -486,8 +523,75 @@ describeIntegration('ChangeMemberPasswordCommand', () => {
     expect(await countActiveSessions(targetUserId)).toBe(1);
   });
 
+  // RED for T55/AC-05 (review S1-06) — the actor's Permission ceiling must be
+  // the Role they hold in the Warehouse this request names. Multi-Warehouse
+  // membership is real (AC-23), so an unqualified membership lookup resolves
+  // through the `(user_id, warehouse_id)` key and returns whichever row sorts
+  // first. Warehouse Z's id is seeded below Warehouse A's so that arbitrary
+  // pick lands on the wrong Warehouse deterministically; once the ceiling is
+  // scoped to the named Warehouse, no id ordering can influence it.
+  it('AC-05: computes the actor Permission ceiling from the named Warehouse, never from a Role held in another Warehouse', async () => {
+    const warehouseZId = uuid('0000000000f1');
+    const elevatedRoleId = uuid('0000000002f1');
+
+    await seedPermissions([
+      'USERS:PASSWORD_CHANGE',
+      'USERS:EMAIL_UPDATE',
+      'USERS:DELETE',
+    ]);
+    await seedWorkspace();
+    await seedWarehouses();
+    await dataSource.manager.getRepository(WarehouseEntity).insert({
+      id: warehouseZId,
+      workspaceId,
+      name: 'Warehouse Z',
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // In Warehouse A the actor holds only USERS:PASSWORD_CHANGE.
+    await seedRole(actorRoleId, warehouseAId, 'custom', [
+      'USERS:PASSWORD_CHANGE',
+    ]);
+    // In Warehouse Z they also hold USERS:DELETE — the Permission that makes
+    // the target off limits in Warehouse A.
+    await seedRole(elevatedRoleId, warehouseZId, 'custom', [
+      'USERS:PASSWORD_CHANGE',
+      'USERS:DELETE',
+    ]);
+    await seedRole(permissionExceedingRoleId, warehouseAId, 'custom', [
+      'USERS:DELETE',
+    ]);
+
+    await seedIdentity(actorUserId);
+    await seedIdentity(targetUserId);
+    await seedMembership(actorUserId, warehouseZId, elevatedRoleId);
+    await seedMembership(actorUserId, warehouseAId, actorRoleId);
+    await seedMembership(targetUserId, warehouseAId, permissionExceedingRoleId);
+    await seedSessions(targetUserId, 1);
+
+    const currentUser = currentUserFor(
+      actorUserId,
+      warehouseAId,
+      actorRoleId,
+      'custom',
+    );
+
+    await expect(
+      transactions.executeInTransaction({}, () =>
+        createCommand().execute(currentUser, {
+          targetUserId,
+          newPassword: 'a-valid-password',
+        }),
+      ),
+    ).rejects.toMatchObject({ code: ErrorCode.USERS_PERMISSION_EXCEEDED });
+
+    expect(await countActiveSessions(targetUserId)).toBe(1);
+  });
+
   it('rolls back the credential update when Session revocation fails', async () => {
     await seedPermissions(['USERS:PASSWORD_CHANGE']);
+    await seedWorkspace();
     await seedWarehouses();
     await seedRole(actorRoleId, warehouseAId, 'custom', [
       'USERS:PASSWORD_CHANGE',

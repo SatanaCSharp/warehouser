@@ -7,18 +7,37 @@ import { PermissionGate } from 'shared/components/PermissionGate';
 import { makeStore } from 'store';
 
 import type { AccessProjection } from '@warehouser/contracts/access';
+import type { WorkspacePermissionId } from '@warehouser/shared-types/enums';
+import type { PermissionGateProps } from 'shared/components/PermissionGate';
 
 const access: AccessProjection = {
   warehouseId: '00000000-0000-4000-8000-000000000010',
   roleId: '00000000-0000-4000-8000-000000000011',
   roleKind: 'custom',
   permissionIds: [PermissionId.ROLES_WATCH],
+  archivedAt: null,
 };
 
 const stubAccess = (data: AccessProjection): void => {
   vi.stubGlobal(
     'fetch',
-    vi.fn(() => Promise.resolve(Response.json(data))),
+    vi.fn((input: RequestInfo | URL) => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (url.includes('/api/v1/workspace/context')) {
+        return Promise.resolve(
+          Response.json({
+            workspace: {
+              id: '00000000-0000-4000-8000-000000000020',
+              name: 'Acme Logistics',
+            },
+            workspacePermissionIds: [],
+            warehouses: [],
+            effectiveWarehouseId: data.warehouseId,
+          }),
+        );
+      }
+      return Promise.resolve(Response.json(data));
+    }),
   );
 };
 
@@ -87,5 +106,20 @@ describe('PermissionGate', () => {
     );
 
     expect(screen.getByText('secret')).toBeInTheDocument();
+  });
+});
+
+describe('PermissionGateProps / WorkspacePermissionId vocabulary separation (AC-31)', () => {
+  it('never accepts a readonly WorkspacePermissionId[] as the gate permissionIds prop', () => {
+    type GatePermissionIdsProp = PermissionGateProps['permissionIds'];
+    const workspacePermissionIds = [
+      'WORKSPACE:RENAME' as WorkspacePermissionId,
+    ];
+
+    // @ts-expect-error a readonly WorkspacePermissionId[] must never satisfy the Warehouse-level
+    // gate's `permissionIds` prop — the two authorization vocabularies never meet (AC-31).
+    const asGatePermissionIds: GatePermissionIdsProp = workspacePermissionIds;
+
+    expect(Array.isArray(asGatePermissionIds)).toBe(true);
   });
 });

@@ -21,17 +21,19 @@ const fieldErrorsByCode: Record<string, Record<string, string>> = {
 
 const fieldErrorsFor: FieldErrorMap = (code) => fieldErrorsByCode[code];
 
-/** Sets a new password for one member. */
-export const useChangeMemberPassword = (): ChangeMemberPassword => {
+/** Sets a new password for one member, within the named Warehouse (AC-05). */
+export const useChangeMemberPassword = (
+  warehouseId: string,
+): ChangeMemberPassword => {
   const [changeMemberPassword] = useChangeMemberPasswordMutation();
 
   return useCallback(
     (userId, input) =>
       runAccessMutation(
         'changeMemberPassword',
-        changeMemberPassword({ userId, input }),
+        changeMemberPassword({ warehouseId, userId, input }),
         fieldErrorsFor,
       ),
-    [changeMemberPassword],
+    [changeMemberPassword, warehouseId],
   );
 };

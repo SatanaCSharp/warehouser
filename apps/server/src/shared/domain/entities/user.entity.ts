@@ -8,6 +8,12 @@ export class UserEntity {
   @Column('uuid', { name: 'account_id' })
   accountId!: string;
 
+  @Column('uuid', { name: 'workspace_id' })
+  workspaceId!: string;
+
+  @Column('uuid', { name: 'active_warehouse_id', nullable: true })
+  activeWarehouseId!: string | null;
+
   @Column('timestamptz', { name: 'created_at' })
   createdAt!: Date;
 

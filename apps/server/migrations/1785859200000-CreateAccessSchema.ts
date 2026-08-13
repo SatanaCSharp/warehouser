@@ -8,7 +8,7 @@ import {
   TableUnique,
 } from 'typeorm';
 
-const initialPermissions = [
+export const initialPermissions = [
   ['USERS:CREATE', 'Create users', 'assignable'],
   ['ROLES:ASSIGN', 'Assign roles', 'assignable'],
   ['ROLES:CREATE', 'Create roles', 'assignable'],

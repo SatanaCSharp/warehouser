@@ -272,3 +272,26 @@ pnpm --filter @warehouser/server lint
 pnpm --filter @warehouser/server test
 pnpm --filter @warehouser/server build
 ```
+
+### Running the integration tier
+
+Integration specs are named `*.integration.spec.ts` (and a few colocated service specs) and are
+skipped unless `RUN_INTEGRATION=1` is set, so the command above runs the unit tier only.
+
+They execute against a real PostgreSQL database and `TRUNCATE ... CASCADE` between tests. Two
+consequences are easy to get wrong:
+
+- **Point them at a disposable database.** They will erase whatever database they connect to.
+  Never run them against the database you develop against. Create one once and reuse it:
+
+  ```sh
+  psql -h localhost -U warehouser -d postgres -c 'CREATE DATABASE warehouser_test;'
+  DATABASE_NAME=warehouser_test pnpm --filter @warehouser/server migration:run
+  ```
+
+- **Run them serially.** They share one database, so Jest's parallel workers truncate each other's
+  fixtures and the suite fails in ways that disappear when a spec is run alone.
+
+```sh
+DATABASE_NAME=warehouser_test RUN_INTEGRATION=1 pnpm --filter @warehouser/server exec jest --runInBand
+```

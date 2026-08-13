@@ -48,19 +48,31 @@ describe('access contracts', () => {
         roleId: id(2),
         roleKind: 'custom',
         permissionIds: ['ROLES:WATCH'],
+        archivedAt: null,
       }),
     ).toEqual({
       warehouseId: id(1),
       roleId: id(2),
       roleKind: 'custom',
       permissionIds: ['ROLES:WATCH'],
+      archivedAt: null,
     });
+    expect(
+      accessProjectionSchema.parse({
+        warehouseId: id(1),
+        roleId: id(2),
+        roleKind: 'custom',
+        permissionIds: ['ROLES:WATCH'],
+        archivedAt: '2026-08-06T12:00:00.000Z',
+      }).archivedAt,
+    ).toBe('2026-08-06T12:00:00.000Z');
     expect(
       accessProjectionSchema.safeParse({
         warehouseId: id(1),
         roleId: id(2),
         roleKind: 'custom',
         permissionIds: ['ROLES:WATCH'],
+        archivedAt: null,
         userId: id(3),
       }).success,
     ).toBe(false);
@@ -182,6 +194,35 @@ describe('access contracts', () => {
         formerManagerUserId: id(2),
         formerManagerRoleId: id(3),
         warehouseId: id(4),
+      }).success,
+    ).toBe(false);
+  });
+
+  it('requires the archived state on the Warehouse-scoped capability projection (AC-12a)', () => {
+    const projection = {
+      warehouseId: id(1),
+      roleId: id(2),
+      roleKind: 'custom',
+      permissionIds: ['ROLES:WATCH'],
+    };
+
+    // An archived-tolerant read must be able to mark the Warehouse archived, so the field is
+    // required rather than optional and carries the archival instant or `null`.
+    expect(accessProjectionSchema.safeParse(projection).success).toBe(false);
+    expect(
+      accessProjectionSchema.safeParse({ ...projection, archivedAt: null })
+        .success,
+    ).toBe(true);
+    expect(
+      accessProjectionSchema.safeParse({
+        ...projection,
+        archivedAt: '2026-08-06T12:00:00.000Z',
+      }).success,
+    ).toBe(true);
+    expect(
+      accessProjectionSchema.safeParse({
+        ...projection,
+        archivedAt: 'not-a-timestamp',
       }).success,
     ).toBe(false);
   });

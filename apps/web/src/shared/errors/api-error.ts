@@ -8,7 +8,9 @@ export type ErrorTranslationKey =
   | 'auth.invalidInput'
   | 'auth.registrationUnavailable'
   | 'auth.sessionUnavailable'
-  | 'auth.signOutUnavailable';
+  | 'auth.signOutUnavailable'
+  | 'workspace.archivalUnavailable'
+  | 'workspace.warehouseCreationUnavailable';
 
 const errorTranslationKeys: Record<string, ErrorTranslationKey> = {
   'api.network': 'api.network',
@@ -19,6 +21,12 @@ const errorTranslationKeys: Record<string, ErrorTranslationKey> = {
   'auth.registration_unavailable': 'auth.registrationUnavailable',
   'auth.session_unavailable': 'auth.sessionUnavailable',
   'auth.sign_out_unavailable': 'auth.signOutUnavailable',
+  // AC-07/AC-13 — the two Warehouse-lifecycle 503s carry the assurance the
+  // generic failure cannot: the change did not complete *and* nothing was
+  // left half-applied, so retrying is safe.
+  'workspace.archival_unavailable': 'workspace.archivalUnavailable',
+  'workspace.warehouse_creation_unavailable':
+    'workspace.warehouseCreationUnavailable',
 };
 
 const fieldErrorCodes = new Set([

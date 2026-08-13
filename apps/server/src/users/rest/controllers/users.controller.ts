@@ -31,7 +31,7 @@ import { ChangeMemberPasswordCommand } from 'users/usecases/commands/change-memb
 import { CreateMemberCommand } from 'users/usecases/commands/create-member.command';
 import { DeleteMemberCommand } from 'users/usecases/commands/delete-member.command';
 
-@Controller('api/v1/users')
+@Controller('api/v1/warehouses/:warehouseId/users')
 export class UsersController {
   constructor(
     private readonly createMemberCommand: CreateMemberCommand,

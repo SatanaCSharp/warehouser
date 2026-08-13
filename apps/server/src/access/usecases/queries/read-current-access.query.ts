@@ -10,9 +10,15 @@ export class ReadCurrentAccessQuery {
     private readonly accessCurrentUserRepository: AccessCurrentUserRepository,
   ) {}
 
-  async execute(userId: string): Promise<AccessProjection> {
+  async execute(
+    userId: string,
+    warehouseId: string,
+  ): Promise<AccessProjection> {
     const projection =
-      await this.accessCurrentUserRepository.resolveCurrentAccess(userId);
+      await this.accessCurrentUserRepository.resolveCurrentAccess(
+        userId,
+        warehouseId,
+      );
     assertDefined(projection, membershipRequiredError());
 
     return {
@@ -20,6 +26,9 @@ export class ReadCurrentAccessQuery {
       roleId: projection.roleId,
       roleKind: projection.roleKind,
       permissionIds: [...projection.permissionIds],
+      archivedAt: projection.archivedAt
+        ? projection.archivedAt.toISOString()
+        : null,
     };
   }
 }

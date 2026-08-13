@@ -1,5 +1,4 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
-import { ProvisionInitialAccessCommand } from 'access/usecases/commands/provision-initial-access.command';
 import { GeneratedSessionSecret } from 'auth/domain/security/session-secret';
 import {
   AuthRegistrationService,
@@ -8,6 +7,7 @@ import {
 import { RegisterCommand } from 'auth/usecases/commands/register.command';
 import { AccountEntity } from 'shared/domain/entities/account.entity';
 import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
+import { WorkspaceProvisioningService } from 'workspaces/domain/services/workspace-provisioning.service';
 
 const identityId = '00000000-0000-4000-8000-000000000001';
 const sessionId = '00000000-0000-4000-8000-000000000002';
@@ -53,18 +53,22 @@ const generateSecret = (): GeneratedSessionSecret => ({
 const setup = () => {
   const repository = createRepositoryFake();
   const hash = createHashFake();
-  const provision = {
-    execute: jest.fn().mockResolvedValue({
-      warehouseId: '00000000-0000-4000-8000-000000000003',
-      roleId: '00000000-0000-4000-8000-000000000004',
-      roleKind: 'warehouse_manager' as const,
-      permissionIds: ['ROLES:WATCH'],
+  const provisioning = {
+    provisionRegistration: jest.fn().mockResolvedValue({
+      workspace: { id: '00000000-0000-4000-8000-000000000005', name: null },
+      workspacePermissionIds: ['WORKSPACE:RENAME'],
+      access: {
+        warehouseId: '00000000-0000-4000-8000-000000000003',
+        roleId: '00000000-0000-4000-8000-000000000004',
+        roleKind: 'warehouse_manager' as const,
+        permissionIds: ['ROLES:WATCH'],
+      },
     }),
   };
   const command = new RegisterCommand(
     repository as unknown as AuthenticationRepository,
     repository as unknown as AuthRegistrationService,
-    provision as unknown as ProvisionInitialAccessCommand,
+    provisioning as unknown as WorkspaceProvisioningService,
     hash,
     generateSecret,
     {
@@ -73,12 +77,12 @@ const setup = () => {
       sessionId: () => sessionId,
     },
   );
-  return { repository, hash, provision, command };
+  return { repository, hash, provisioning, command };
 };
 
 describe('RegisterCommand', () => {
   it('creates one linked identity and initial persistent session', async () => {
-    const { command, repository, hash, provision } = setup();
+    const { command, repository, hash, provisioning } = setup();
     const password = '  exact password  ';
 
     await expect(
@@ -91,6 +95,8 @@ describe('RegisterCommand', () => {
       userId: identityId,
       sessionSecret: 'opaque-secret',
       expiresAt: new Date('2026-08-24T10:00:00.000Z'),
+      workspace: { id: '00000000-0000-4000-8000-000000000005', name: null },
+      workspacePermissionIds: ['WORKSPACE:RENAME'],
       access: {
         warehouseId: '00000000-0000-4000-8000-000000000003',
         roleId: '00000000-0000-4000-8000-000000000004',
@@ -101,8 +107,10 @@ describe('RegisterCommand', () => {
     expect(hash).toHaveBeenCalledWith(password);
     expect(repository.registered?.account.id.value).toBe(identityId);
     expect(repository.registered?.user.id.value).toBe(identityId);
-    expect(provision.execute).toHaveBeenCalledWith({
+    expect(repository.registered?.workspaceId).toEqual(expect.any(String));
+    expect(provisioning.provisionRegistration).toHaveBeenCalledWith({
       userId: identityId,
+      workspaceId: repository.registered?.workspaceId,
       warehouseName: 'Склад',
     });
   });

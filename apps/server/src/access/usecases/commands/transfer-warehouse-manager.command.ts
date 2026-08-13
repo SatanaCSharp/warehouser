@@ -59,7 +59,11 @@ export class TransferWarehouseManagerCommand {
       (member) => member.userId === input.recipientId,
     );
 
-    assertDefined(recipient, targetUnavailableError());
+    // The recipient holds no membership in the named Warehouse. `openapi.yaml`'s manager-transfer
+    // path documents this as 400 `access.invalid_manager_transfer`, alongside self-transfer and a
+    // missing replacement Role selection (AC-36a) — not the generic 404
+    // `access.target_unavailable` used for a genuinely missing Warehouse above.
+    assertDefined(recipient, invalidManagerTransferError());
 
     assert(
       current?.roleKind === 'warehouse_manager' &&

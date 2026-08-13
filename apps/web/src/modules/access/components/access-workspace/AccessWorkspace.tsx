@@ -1,4 +1,4 @@
-import { Tabs } from '@heroui/react';
+import { Chip, Tabs } from '@heroui/react';
 import compact from 'lodash/compact';
 import { useTranslation } from 'react-i18next';
 
@@ -18,7 +18,7 @@ type WorkspaceTab = { id: string; label: string; panel: ReactNode };
  */
 export const AccessWorkspace = (): ReactElement => {
   const { t } = useTranslation('access');
-  const { canManageRoles, canReadMembers, canReadRoles } =
+  const { canManageRoles, canReadMembers, canReadRoles, isArchived } =
     useAccessCapabilities();
 
   const tabs = compact<WorkspaceTab>([
@@ -42,9 +42,20 @@ export const AccessWorkspace = (): ReactElement => {
   return (
     <main className="w-full bg-surface-secondary/50 px-4 py-7 sm:px-8 lg:px-12 lg:py-9">
       <header className="mx-auto mb-5 max-w-[1440px]">
-        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-          {t('heading')}
-        </h1>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+            {t('heading')}
+          </h1>
+          {isArchived ? (
+            <Chip
+              color="default"
+              title={t('archived.alertDescription')}
+              variant="soft"
+            >
+              {t('archived.chip')}
+            </Chip>
+          ) : null}
+        </div>
         <p className="mt-2 text-muted">{t('description')}</p>
       </header>
 
