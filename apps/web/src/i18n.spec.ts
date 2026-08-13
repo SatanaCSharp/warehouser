@@ -231,8 +231,12 @@ describe('workspace-warehouse T1 shell/enter-action keys', () => {
     expect(instance.t('shell.noContext.heading', { ns: 'common' })).toBe(
       'Nothing is entered yet',
     );
+    // T30 / CR-AC-18 — the line names no direction (the switcher is above the
+    // content at every viewport, never below it) and no action (paragraph 2
+    // offers none at all to an actor holding no selectable row); it states what
+    // the control carries and leaves the offer to the control itself.
     expect(instance.t('shell.noContext.description', { ns: 'common' })).toBe(
-      'Choose the workspace or a warehouse below to get started.',
+      'The context switcher lists the workspace and any warehouses you can enter.',
     );
     expect(instance.t('shell.entryRefusal.heading', { ns: 'common' })).toBe(
       "This address isn't available to you",
@@ -329,6 +333,9 @@ describe('workspace-warehouse T1 shell/enter-action keys', () => {
     ).toBe('Немає доступу');
     expect(instance.t('shell.noContext.heading', { ns: 'common' })).toBe(
       'Ще нічого не обрано',
+    );
+    expect(instance.t('shell.noContext.description', { ns: 'common' })).toBe(
+      'Перемикач контексту показує робочий простір і склади, до яких ви можете увійти.',
     );
     expect(instance.t('shell.entryRefusal.heading', { ns: 'common' })).toBe(
       'Ця адреса вам недоступна',

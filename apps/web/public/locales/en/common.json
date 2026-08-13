@@ -44,7 +44,7 @@
     },
     "noContext": {
       "heading": "Nothing is entered yet",
-      "description": "Choose the workspace or a warehouse below to get started."
+      "description": "The context switcher lists the workspace and any warehouses you can enter."
     },
     "entryRefusal": {
       "heading": "This address isn't available to you",
