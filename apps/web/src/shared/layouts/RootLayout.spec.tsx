@@ -17,10 +17,13 @@ import { makeStore } from 'store';
 
 import type { AccessProjection } from '@warehouser/contracts/access';
 import type { WorkspaceContext } from '@warehouser/contracts/workspaces';
+import type { WarehouseEntryVerdict } from 'guards/warehouse-entry.guard';
 import type { ReactElement } from 'react';
 import type { AppStore } from 'store';
 
 type TestContext = { store: AppStore };
+
+const WAREHOUSE_ADDRESS = '/warehouses/00000000-0000-4000-8000-000000000010';
 
 const authenticatedStore = (): AppStore => {
   const store = makeStore();
@@ -107,8 +110,30 @@ const renderAt = (
     path: ROUTES.SIGN_UP,
     component: () => <p>Sign-up content</p>,
   });
+  // T10 — the Sidebar renders a navigation list only inside an entered context
+  // (CR-AC-11/CR-AC-12), so a case asserting the shell's composition around it
+  // must render at a Warehouse address. The route shares `ROUTES.WAREHOUSE` as
+  // its id, which is the id `useEnteredWarehouse` targets.
+  const warehouseTestRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: ROUTES.WAREHOUSE,
+    beforeLoad: ({ params }): WarehouseEntryVerdict => ({
+      status: 'entered',
+      warehouseId: params.warehouseId,
+    }),
+  });
+  const warehouseIndexRoute = createRoute({
+    getParentRoute: () => warehouseTestRoute,
+    path: '/',
+    component: () => homeContent,
+  });
   const router = createRouter({
-    routeTree: rootRoute.addChildren([homeRoute, loginRoute, signUpRoute]),
+    routeTree: rootRoute.addChildren([
+      homeRoute,
+      loginRoute,
+      signUpRoute,
+      warehouseTestRoute.addChildren([warehouseIndexRoute]),
+    ]),
     context: { store },
     history: createMemoryHistory({ initialEntries: [initialEntry] }),
   });
@@ -152,7 +177,7 @@ describe('RootLayout', () => {
 
   it('composes header + Sidebar + Footer for the authenticated branch, with no inline Access link', async () => {
     stubAccess([]);
-    renderAt(ROUTES.HOME, authenticatedStore());
+    renderAt(WAREHOUSE_ADDRESS, authenticatedStore());
 
     expect(await screen.findByText('Home content')).toBeInTheDocument();
     expect(screen.getByRole('banner')).toBeInTheDocument();
@@ -175,7 +200,7 @@ describe('RootLayout', () => {
   it('opens the Sidebar drawer from the header-hosted toggle', async () => {
     stubAccess([]);
     const user = userEvent.setup();
-    renderAt(ROUTES.HOME, authenticatedStore());
+    renderAt(WAREHOUSE_ADDRESS, authenticatedStore());
 
     await user.click(
       await screen.findByRole('button', { name: 'Open navigation' }),

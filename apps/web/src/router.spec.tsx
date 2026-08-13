@@ -755,7 +755,12 @@ describe('router', () => {
 
     renderRoute(ROUTES.HOME);
 
-    await screen.findByRole('link', { name: 'Dashboard' });
+    // T10 / CR-AC-18 — this actor reaches CR-AC-08 rule (3) and stays at the
+    // root, where the sidebar renders no navigation list at all. AC-30's
+    // guarantee therefore holds a fortiori: there is no Workspace entry to
+    // present, and the destination itself is never rendered.
+    await screen.findByText('Nothing is entered yet');
+    expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
     expect(
       screen.queryByRole('link', { name: 'Workspace' }),
     ).not.toBeInTheDocument();

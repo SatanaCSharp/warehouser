@@ -38,14 +38,25 @@ export type CurrentPermissions = {
 // already-open address shows.
 export const useCurrentPermissions = (): CurrentPermissions => {
   const warehouseId = useEnteredWarehouse();
-  const { data, isLoading: isAccessLoading } = useGetCurrentAccessQuery(
+  // T10 / CR-AC-19 — `currentData`, never `data`. RTK Query's `data` is the
+  // last successful result this hook instance saw for ANY argument, so while
+  // W2's projection is in flight it still reports W1's authority — exactly the
+  // cross-Warehouse leak CH-04 exists to remove. `currentData` is scoped to the
+  // current argument, so the answer is simply absent until the addressed
+  // Warehouse's own projection arrives: no skeleton, no placeholder, and no
+  // held-over value from the Warehouse just left.
+  const { currentData, isFetching } = useGetCurrentAccessQuery(
     warehouseId ?? '',
     { skip: warehouseId === undefined },
   );
   return {
-    access: data,
-    isLoading: warehouseId !== undefined && isAccessLoading,
-    permissionIds: data?.permissionIds ?? [],
+    access: currentData,
+    // Loading means "nothing to show for THIS Warehouse yet". A background
+    // refetch of a Warehouse already resolved keeps its `currentData`, so it
+    // does not re-enter the loading state — the shipped behavior, unchanged.
+    isLoading:
+      warehouseId !== undefined && currentData === undefined && isFetching,
+    permissionIds: currentData?.permissionIds ?? [],
   };
 };
 
