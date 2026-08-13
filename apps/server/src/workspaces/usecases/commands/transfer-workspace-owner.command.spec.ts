@@ -32,7 +32,7 @@ const ownerTransferDouble = () => ({
 });
 
 const membershipDouble = () => ({
-  findUserWorkspaceId: jest.fn().mockResolvedValue(workspaceId),
+  findMembershipWorkspaceId: jest.fn().mockResolvedValue(workspaceId),
 });
 
 const roleLifecycleDouble = () => ({
@@ -58,6 +58,76 @@ const input = {
 };
 
 describe('TransferWorkspaceOwnerCommand', () => {
+  // RED for T58/AC-28 (review S1-09) — contracts/openapi.yaml documents ONE
+  // generic 404 `workspace.target_unavailable` covering all three
+  // unavailable-recipient cases: "The recipient is the actor, is not a
+  // Workspace Member, or is a Workspace Member of another Workspace ... so
+  // membership of another Workspace is never disclosed."
+  //
+  // Two divergences broke that. A self-target raised 409
+  // `workspace.self_action_denied`, a code the route does not document. And
+  // membership was tested with `findUserWorkspaceId`, which reads
+  // `users.workspace_id` — a User can carry that column while holding no
+  // `workspace_memberships` row at all (a Warehouse Member who is no
+  // Workspace Member), so a permanently invalid recipient passed the check
+  // and surfaced as 409 `workspace.concurrent_change`, telling the Owner to
+  // retry something that can never succeed.
+  it.each([
+    [
+      'the actor themself',
+      (): TransferWorkspaceOwnerCommand => build(),
+      {
+        recipientUserId: ownerId,
+        currentOwnerReplacementRoleId: replacementRoleId,
+      },
+    ],
+    [
+      'a User holding no Workspace membership',
+      (): TransferWorkspaceOwnerCommand => {
+        const membership = membershipDouble();
+        membership.findMembershipWorkspaceId.mockResolvedValueOnce(null);
+        return build(ownerTransferDouble(), membership);
+      },
+      input,
+    ],
+    [
+      'a Workspace Member of another Workspace',
+      (): TransferWorkspaceOwnerCommand => {
+        const membership = membershipDouble();
+        membership.findMembershipWorkspaceId.mockResolvedValueOnce(
+          '00000000-0000-4000-8000-0000000000ff',
+        );
+        return build(ownerTransferDouble(), membership);
+      },
+      input,
+    ],
+  ])(
+    'AC-28: answers one generic unavailable-recipient outcome for %s',
+    async (_case, arrange, transferInput) => {
+      const rejection = arrange().execute(currentUser(), transferInput);
+
+      await expect(rejection).rejects.toBeInstanceOf(ApplicationError);
+      await expect(rejection).rejects.toMatchObject({
+        code: ErrorCode.WORKSPACE_TARGET_UNAVAILABLE,
+      });
+    },
+  );
+
+  // The membership test must read `workspace_memberships`, not
+  // `users.workspace_id`: only the former proves the recipient can hold the
+  // Owner Role at all.
+  it('AC-28: tests recipient membership against the Workspace membership rows', async () => {
+    const membership = membershipDouble();
+    await build(ownerTransferDouble(), membership).execute(
+      currentUser(),
+      input,
+    );
+
+    expect(membership.findMembershipWorkspaceId).toHaveBeenCalledWith(
+      recipientId,
+    );
+  });
+
   it('AC-26: translates an infrastructure failure performing the swap into the documented 503 SystemError, preserving the cause', async () => {
     const ownerTransfer = ownerTransferDouble();
     const failure = new Error('connection terminated');

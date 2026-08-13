@@ -12,7 +12,6 @@ import {
   workspaceConcurrentChangeError,
   workspaceOwnerTransferUnavailableError,
   workspaceReplacementRoleRequiredError,
-  workspaceSelfActionDeniedError,
   workspaceTargetUnavailableError,
 } from 'workspaces/domain/errors/workspace.errors';
 import {
@@ -94,27 +93,32 @@ export class TransferWorkspaceOwnerCommand {
       workspaceReplacementRoleRequiredError(),
     );
 
-    // AC-28 — the Owner never selects themself as the recipient.
+    // AC-28 — openapi.yaml documents ONE generic unavailable-recipient
+    // outcome for this route: "The recipient is the actor, is not a Workspace
+    // Member, or is a Workspace Member of another Workspace." All three
+    // resolve to the same 404 so membership of another Workspace is never
+    // disclosed — and so the actor cannot probe for it by comparing codes.
     assert(
       !isMembershipSelfTarget(currentUser.userId, input.recipientUserId),
-      workspaceSelfActionDeniedError(),
+      workspaceTargetUnavailableError(),
     );
 
-    // AC-28 — the recipient must be a Workspace Member of this same
-    // Workspace; a nonmember and a Member of another Workspace fail
-    // identically, mirroring AC-34's pattern. Every User of a Workspace holds
-    // exactly one Workspace membership, so `users.workspace_id` is an
-    // equivalent membership test here. It is deliberately the non-locking
-    // read (`findUserWorkspaceId`, the same one
-    // `AssignWarehouseMembershipCommand` uses for its own AC-24
-    // cross-Workspace check) rather than `lockMembership`, so this command
-    // never takes a `workspace_memberships` row lock ahead of
+    // The membership test reads `workspace_memberships`, not
+    // `users.workspace_id`: a Warehouse Member of this Workspace carries that
+    // column while holding no Workspace membership, and such a recipient can
+    // never hold the Owner Role. Testing the column instead let them past
+    // this check, so the repository's precondition recheck refused them as
+    // `workspace.concurrent_change` — a retriable code for a permanently
+    // invalid recipient.
+    //
+    // It is deliberately the non-locking read rather than `lockMembership`,
+    // so this command never takes a `workspace_memberships` row lock ahead of
     // `WorkspaceOwnerTransferRepository.transfer`'s own `workspaces`-row lock
     // — data-model.md's "Repository boundaries, transactions and locking"
-    // requires the `workspaces` row to be locked first among
-    // Workspace-level rows, and `transfer` owns that lock internally.
+    // requires the `workspaces` row to be locked first among Workspace-level
+    // rows, and `transfer` owns that lock internally.
     const recipientWorkspaceId =
-      await this.workspaceMembershipRepository.findUserWorkspaceId(
+      await this.workspaceMembershipRepository.findMembershipWorkspaceId(
         input.recipientUserId,
       );
     assert(

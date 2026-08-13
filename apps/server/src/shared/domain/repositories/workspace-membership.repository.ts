@@ -86,6 +86,22 @@ export class WorkspaceMembershipRepository {
     return user?.workspaceId ?? null;
   }
 
+  // AC-28 — resolves the Workspace a User is a *Workspace Member* of, from
+  // the membership rows themselves. Deliberately not `findUserWorkspaceId`:
+  // `users.workspace_id` is set for every User of the Workspace, including a
+  // Warehouse Member who holds no Workspace membership at all, so it cannot
+  // answer "may this User receive the Workspace Owner Role". `null` covers a
+  // missing User, a User with no Workspace membership, and one belonging to
+  // another Workspace alike, so a caller comparing this value cannot tell
+  // them apart.
+  async findMembershipWorkspaceId(userId: string): Promise<string | null> {
+    const manager = getEntityManager(this.dataSource);
+    const membership = await manager
+      .getRepository(WorkspaceMembershipEntity)
+      .findOne({ where: { userId }, select: { workspaceId: true } });
+    return membership?.workspaceId ?? null;
+  }
+
   // AC-20 — a command-time-only precondition: does the candidate hold a
   // Warehouse membership in any Warehouse of this Workspace right now? Not a
   // database constraint, so Workspace membership never gets re-derived from

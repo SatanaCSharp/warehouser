@@ -299,7 +299,12 @@ describeIntegration('TransferWorkspaceOwnerCommand', () => {
     });
   });
 
-  it('AC-28: denies the Owner selecting themself as the recipient, preserving exactly one Owner', async () => {
+  // contracts/openapi.yaml gives this route ONE generic unavailable-recipient
+  // outcome — "The recipient is the actor, is not a Workspace Member, or is a
+  // Workspace Member of another Workspace" — so a self-target answers exactly
+  // as the two cases below it do. A distinct `self_action_denied` code would
+  // be a signal the other two deliberately withhold (T58 / review S1-09).
+  it('AC-28: reports the Owner selecting themself as an unavailable recipient, preserving exactly one Owner', async () => {
     const workspaceId = await seedWorkspace();
     const { actor } = await seedOwnerActor(workspaceId);
     const replacementRoleId = await seedCustomRole(
@@ -314,7 +319,7 @@ describeIntegration('TransferWorkspaceOwnerCommand', () => {
           currentOwnerReplacementRoleId: replacementRoleId,
         }),
       ),
-    ).rejects.toMatchObject({ code: ErrorCode.WORKSPACE_SELF_ACTION_DENIED });
+    ).rejects.toMatchObject({ code: ErrorCode.WORKSPACE_TARGET_UNAVAILABLE });
 
     expect(await ownerCount(workspaceId)).toBe(1);
     const untouchedOwner = await dataSource.manager
