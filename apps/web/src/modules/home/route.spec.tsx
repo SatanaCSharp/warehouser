@@ -23,6 +23,7 @@ const SESSION_USER = { id: '00000000-0000-4000-8000-000000000001' };
 
 const NO_CONTEXT_HEADING = 'Nothing is entered yet';
 const ERROR_HEADING = 'Something went wrong';
+const PENDING_LABEL = 'Preparing your workspace…';
 
 type ContextOverrides = {
   effectiveWarehouseId?: string | null;
@@ -229,6 +230,19 @@ describe('landing resolution at / (T7)', () => {
     }).catch(() => undefined);
 
     expect(router.state.location.pathname).toBe(ROUTES.HOME);
+    expect(screen.queryByText(NO_CONTEXT_HEADING)).not.toBeInTheDocument();
+    expect(screen.queryByText(ERROR_HEADING)).not.toBeInTheDocument();
+  });
+
+  // CR-AC-08 — the actor stays at the root while the read is unresolved, so
+  // something has to render there. The approved landing frame draws the
+  // pending tile; without it the window is a blank shell.
+  it('renders the pending state while the context read is unresolved', async () => {
+    stubServer({ contextPending: true });
+
+    renderRoute(ROUTES.HOME);
+
+    expect(await screen.findByText(PENDING_LABEL)).toBeInTheDocument();
     expect(screen.queryByText(NO_CONTEXT_HEADING)).not.toBeInTheDocument();
     expect(screen.queryByText(ERROR_HEADING)).not.toBeInTheDocument();
   });
