@@ -153,7 +153,7 @@ and the `.env.example` default is the development database. Wiring the tier into
 review finding S2-06 (stage 2), still open.
 
 Baseline at the start of remediation: **12 failed / 852 passed, 7 suites**. After T47, T48, T50,
-T51, T52, T55, T56, T58, T61, T62: **2 failed / 877 passed**. Both remaining failures belong to
+T51, T52, T53, T54, T55, T56, T58, T61, T62: **1 failed / 877 passed**. Both remaining failures belong to
 **T49, which is blocked on a decision** (below).
 
 **T50 changes how long the tier takes.** The load smoke defaults to
