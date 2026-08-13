@@ -33,5 +33,36 @@
       "title": "No warehouse is available to you",
       "description": "You do not belong to any warehouse that can be worked in right now. Ask a workspace administrator for access."
     }
+  },
+  "shell": {
+    "contextSwitcher": {
+      "triggerLabel": "Context switcher, {{context}}",
+      "triggerLabelNoContext": "Context switcher, choose a context",
+      "workspaceGroupLabel": "Workspace",
+      "warehousesGroupLabel": "Warehouses",
+      "currentLabel": "Current",
+      "archivedLabel": "Archived",
+      "noAccessLabel": "No access",
+      "workspaceRowLabel": "Workspace",
+      "workspaceNoAccessExplanation": "You do not have access to the workspace."
+    },
+    "noContext": {
+      "heading": "Nothing is entered yet",
+      "description": "Choose the workspace or a warehouse below to get started."
+    },
+    "entryRefusal": {
+      "heading": "This address isn't available to you",
+      "description": "Use the switcher to go somewhere you have access to."
+    },
+    "archivedEntryRefusal": {
+      "heading": "This warehouse is archived",
+      "description": "Archived warehouses can't be entered. Your access to other warehouses is unchanged."
+    },
+    "landing": {
+      "pendingLabel": "Preparing your workspace…",
+      "errorHeading": "Something went wrong",
+      "errorDescription": "We couldn't check your access. Try again.",
+      "retry": "Try again"
+    }
   }
 }

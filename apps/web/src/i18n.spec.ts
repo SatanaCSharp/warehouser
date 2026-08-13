@@ -182,3 +182,141 @@ describe('localization resources', () => {
     );
   });
 });
+
+describe('workspace-warehouse T1 shell/enter-action keys', () => {
+  it('resolves the grouped context-switcher, refusal, no-context and enter-action keys added by workspace-warehouse T1', async () => {
+    const instance = createInstance();
+    await instance.init({
+      fallbackLng: 'en',
+      lng: 'en',
+      ns: namespaces,
+      resources,
+    });
+
+    expect(
+      instance.t('shell.contextSwitcher.triggerLabel', {
+        ns: 'common',
+        context: 'Central DC',
+      }),
+    ).toBe('Context switcher, Central DC');
+    expect(
+      instance.t('shell.contextSwitcher.triggerLabelNoContext', {
+        ns: 'common',
+      }),
+    ).toBe('Context switcher, choose a context');
+    expect(
+      instance.t('shell.contextSwitcher.workspaceGroupLabel', {
+        ns: 'common',
+      }),
+    ).toBe('Workspace');
+    expect(
+      instance.t('shell.contextSwitcher.warehousesGroupLabel', {
+        ns: 'common',
+      }),
+    ).toBe('Warehouses');
+    expect(
+      instance.t('shell.contextSwitcher.currentLabel', { ns: 'common' }),
+    ).toBe('Current');
+    expect(
+      instance.t('shell.contextSwitcher.archivedLabel', { ns: 'common' }),
+    ).toBe('Archived');
+    expect(
+      instance.t('shell.contextSwitcher.noAccessLabel', { ns: 'common' }),
+    ).toBe('No access');
+    expect(
+      instance.t('shell.contextSwitcher.workspaceRowLabel', { ns: 'common' }),
+    ).toBe('Workspace');
+    expect(
+      instance.t('shell.contextSwitcher.workspaceNoAccessExplanation', {
+        ns: 'common',
+      }),
+    ).toBe('You do not have access to the workspace.');
+    expect(instance.t('shell.noContext.heading', { ns: 'common' })).toBe(
+      'Nothing is entered yet',
+    );
+    expect(instance.t('shell.noContext.description', { ns: 'common' })).toBe(
+      'Choose the workspace or a warehouse below to get started.',
+    );
+    expect(instance.t('shell.entryRefusal.heading', { ns: 'common' })).toBe(
+      "This address isn't available to you",
+    );
+    expect(instance.t('shell.entryRefusal.description', { ns: 'common' })).toBe(
+      'Use the switcher to go somewhere you have access to.',
+    );
+    expect(
+      instance.t('shell.archivedEntryRefusal.heading', { ns: 'common' }),
+    ).toBe('This warehouse is archived');
+    expect(
+      instance.t('shell.archivedEntryRefusal.description', { ns: 'common' }),
+    ).toBe(
+      "Archived warehouses can't be entered. Your access to other warehouses is unchanged.",
+    );
+    expect(instance.t('shell.landing.pendingLabel', { ns: 'common' })).toBe(
+      'Preparing your workspace…',
+    );
+    expect(instance.t('shell.landing.errorHeading', { ns: 'common' })).toBe(
+      'Something went wrong',
+    );
+    expect(instance.t('shell.landing.errorDescription', { ns: 'common' })).toBe(
+      "We couldn't check your access. Try again.",
+    );
+    expect(instance.t('shell.landing.retry', { ns: 'common' })).toBe(
+      'Try again',
+    );
+    expect(instance.t('warehouses.enter', { ns: 'workspace' })).toBe('Enter');
+  });
+
+  it('resolves the same shell/enter-action keys in Ukrainian', async () => {
+    const instance = createInstance();
+    await instance.init({
+      fallbackLng: 'en',
+      lng: 'uk',
+      ns: namespaces,
+      resources,
+    });
+
+    expect(
+      instance.t('shell.contextSwitcher.triggerLabel', {
+        ns: 'common',
+        context: 'Central DC',
+      }),
+    ).toBe('Перемикач контексту, Central DC');
+    expect(
+      instance.t('shell.contextSwitcher.triggerLabelNoContext', {
+        ns: 'common',
+      }),
+    ).toBe('Перемикач контексту, оберіть контекст');
+    expect(
+      instance.t('shell.contextSwitcher.workspaceGroupLabel', {
+        ns: 'common',
+      }),
+    ).toBe('Робочий простір');
+    expect(
+      instance.t('shell.contextSwitcher.warehousesGroupLabel', {
+        ns: 'common',
+      }),
+    ).toBe('Склади');
+    expect(
+      instance.t('shell.contextSwitcher.currentLabel', { ns: 'common' }),
+    ).toBe('Поточний');
+    expect(
+      instance.t('shell.contextSwitcher.archivedLabel', { ns: 'common' }),
+    ).toBe('Архівовано');
+    expect(
+      instance.t('shell.contextSwitcher.noAccessLabel', { ns: 'common' }),
+    ).toBe('Немає доступу');
+    expect(instance.t('shell.noContext.heading', { ns: 'common' })).toBe(
+      'Ще нічого не обрано',
+    );
+    expect(instance.t('shell.entryRefusal.heading', { ns: 'common' })).toBe(
+      'Ця адреса вам недоступна',
+    );
+    expect(
+      instance.t('shell.archivedEntryRefusal.heading', { ns: 'common' }),
+    ).toBe('Цей склад в архіві');
+    expect(instance.t('shell.landing.retry', { ns: 'common' })).toBe(
+      'Спробувати знову',
+    );
+    expect(instance.t('warehouses.enter', { ns: 'workspace' })).toBe('Увійти');
+  });
+});

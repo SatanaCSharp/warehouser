@@ -35,6 +35,8 @@ const REQUIRED_ICONS: Record<string, keyof typeof Icons> = {
   'layout-dashboard': 'DashboardIcon',
   'shield-check': 'ShieldCheckIcon',
   'trash-2': 'TrashIcon',
+  'log-in': 'LogInIcon',
+  'layout-grid': 'LayoutGridIcon',
 };
 
 describe('shared/icons', () => {
