@@ -258,8 +258,12 @@ describe('RootLayout', () => {
 
       await screen.findByText('Home content');
       const header = screen.getByRole('banner');
+      // T9 / CR-AC-09 — the stored selection may never name or mark anything,
+      // so at the root the trigger reads its no-context label rather than the
+      // Warehouse `effectiveWarehouseId` happens to name. Query the control by
+      // what it always is.
       const headerSwitcher = await within(header).findByRole('button', {
-        name: /central dc/iu,
+        name: /context switcher/iu,
       });
       const headerWrapper = headerSwitcher.closest('[class*="sm:flex"]');
       expect(headerWrapper).not.toBeNull();
@@ -273,7 +277,7 @@ describe('RootLayout', () => {
       await screen.findByText('Home content');
       const header = screen.getByRole('banner');
       const switchers = await screen.findAllByRole('button', {
-        name: /central dc/iu,
+        name: /context switcher/iu,
       });
       expect(switchers).toHaveLength(2);
 

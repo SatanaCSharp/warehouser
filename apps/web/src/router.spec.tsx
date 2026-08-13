@@ -775,7 +775,11 @@ describe('router', () => {
     expect(
       screen.queryByRole('link', { name: 'Workspace' }),
     ).not.toBeInTheDocument();
-    expect(screen.queryByText('Acme Logistics')).not.toBeInTheDocument();
+    // T9 / CR-AC-03 — the Workspace NAME is no longer evidence of anything
+    // here: the grouped switcher deliberately shows this actor an inert
+    // Workspace row labelled with it. What AC-30 forbids is reaching the
+    // destination, so assert on something the destination itself owns.
+    expect(screen.queryByRole('tab', { name: 'Warehouses' })).toBeNull();
   });
 
   it('admits a direct navigation to the Workspace route when the actor holds any Workspace watch capability', async () => {
@@ -789,7 +793,12 @@ describe('router', () => {
     await waitFor(() =>
       expect(router.state.location.pathname).toBe(ROUTES.WORKSPACE),
     );
-    expect(await screen.findByText('Acme Logistics')).toBeInTheDocument();
+    // T9 / CR-AC-01 — the switcher trigger now names the entered context too,
+    // so the Workspace name appears in several places. Assert on an element the
+    // destination itself owns instead.
+    expect(
+      await screen.findByRole('tab', { name: 'Warehouses' }),
+    ).toBeInTheDocument();
   });
 
   // AC-29 + AC-30: `WORKSPACE:RENAME` is a Workspace capability of this same
