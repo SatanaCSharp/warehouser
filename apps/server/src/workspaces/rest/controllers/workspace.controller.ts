@@ -308,7 +308,11 @@ export class WorkspaceController {
     };
   }
 
+  // AC-26 — the transfer reassigns two existing Workspace memberships as one
+  // outcome; it creates no resource, and openapi.yaml documents 200 with the
+  // transfer result. `@Post` defaults to 201, so the status is stated here.
   @Post('owner-transfer')
+  @HttpCode(HttpStatus.OK)
   @RequiredWorkspacePermission(
     WorkspacePermissionId.WORKSPACE_OWNER_ROLE_REASSIGN,
   )

@@ -880,6 +880,12 @@ describe('WorkspaceController', () => {
     expect(
       Reflect.getMetadata(HTTP_CODE_METADATA, method('removeMember')),
     ).toBe(204);
+    // AC-26 — owner transfer reassigns two existing Workspace memberships; it
+    // creates nothing, and openapi.yaml documents 200 with the transfer
+    // result. `@Post` defaults to 201, so the status has to be stated (T48).
+    expect(
+      Reflect.getMetadata(HTTP_CODE_METADATA, method('transferOwner')),
+    ).toBe(200);
   });
 
   // DoD — no controller on this surface contains business logic: it reaches
