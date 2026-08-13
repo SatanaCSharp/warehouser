@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 
 import { SignOutButton } from 'modules/auth/sign-out/components/SignOutButton';
 import { selectIsAuthenticated } from 'modules/auth/store/auth.selectors';
+import { RetainedContextMessage } from 'shared/components/RetainedContextMessage';
 import { ROUTES } from 'shared/constants/routes';
 import { useEnteredContext } from 'shared/hooks/useEnteredContext';
 import { MenuIcon } from 'shared/icons';
@@ -97,6 +98,14 @@ export const RootLayout = (): ReactElement => {
           <div className="flex flex-1">
             <Sidebar isOpen={isDrawerOpen} onOpenChange={setIsDrawerOpen} />
             <div className="min-w-0 flex-1">
+              {/* T19 / CR-RG-03 — the retained messages are page-level
+                  content, so they mount once here, above the routed outlet,
+                  and never inside the fixed-height header the switcher sits
+                  in. Mounting them on every page is what lets the remembered
+                  Warehouse of the selection-ended message observe the stored
+                  selection ending while the actor is still inside the context
+                  it named (CR-AC-20). */}
+              <RetainedContextMessage />
               <Outlet />
             </div>
           </div>

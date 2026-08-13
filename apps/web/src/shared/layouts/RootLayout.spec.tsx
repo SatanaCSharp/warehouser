@@ -49,7 +49,7 @@ const stubAccess = (permissionIds: AccessProjection['permissionIds']): void => {
 // and the Warehouse-scoped access read (`useCurrentPermissions`, already
 // exercised by `stubAccess`) so the switcher actually renders instead of
 // falling back to its loading or error state.
-const stubShell = (): void => {
+const stubShell = (overrides: Partial<WorkspaceContext> = {}): void => {
   const context: WorkspaceContext = {
     workspace: {
       id: '00000000-0000-4000-8000-000000000001',
@@ -66,6 +66,7 @@ const stubShell = (): void => {
       },
     ],
     effectiveWarehouseId: '00000000-0000-4000-8000-000000000010',
+    ...overrides,
   };
   const access: AccessProjection = {
     warehouseId: '00000000-0000-4000-8000-000000000010',
@@ -343,6 +344,33 @@ describe('RootLayout', () => {
       );
       expect(contextBarWrapper).not.toBeNull();
       expect(contextBarWrapper?.className).toContain('w-full');
+    });
+  });
+
+  // T19 / CR-AC-18, CR-RG-03 (review-2026-08-13 finding 5) — the retained
+  // messages are page-level content, not chrome. Rendering them inside the
+  // switcher put a second heading and, for the selection-ended variant, a
+  // two-button Alert inside the fixed-height `header` — twice over, because the
+  // switcher is mounted once per viewport placement. They mount once here, in
+  // the main content region above the routed outlet, so the memory that makes
+  // the selection-ended variant reachable observes every page.
+  describe('the retained context message placement (CR-RG-03)', () => {
+    it('mounts the retained message once, outside the header and above the outlet', async () => {
+      stubShell({ effectiveWarehouseId: null });
+      renderAt(ROUTES.HOME, authenticatedStore());
+
+      const pageContent = await screen.findByText('Home content');
+      const messages = await screen.findAllByRole('heading', {
+        name: 'Choose a warehouse to work in',
+      });
+
+      expect(messages).toHaveLength(1);
+      expect(screen.getByRole('banner')).not.toContainElement(messages[0]);
+      // The routed page follows the message in document order — the message is
+      // above the outlet, not below it and not inside the page's own content.
+      expect(messages[0].compareDocumentPosition(pageContent)).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      );
     });
   });
 });

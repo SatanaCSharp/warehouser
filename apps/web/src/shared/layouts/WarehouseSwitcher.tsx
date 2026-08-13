@@ -1,14 +1,5 @@
-import {
-  Alert,
-  Button,
-  Description,
-  Header,
-  Label,
-  ListBox,
-  Select,
-} from '@heroui/react';
+import { Description, Header, Label, ListBox, Select } from '@heroui/react';
 import { useNavigate, useRouterState } from '@tanstack/react-router';
-import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ROUTES } from 'shared/constants/routes';
@@ -31,94 +22,16 @@ import type { Key } from 'react-aria-components';
 // The control is navigation, not mutation: the Workspace row and every
 // Warehouse row are destinations, and the stored-selection write of CR-AC-09
 // lives in `useRecordWarehouseEntry`, so every entry path records identically.
-// `effectiveWarehouseId` is read here for exactly one thing — the existing
-// trigger condition of the three retained messages — and never to mark a row:
-// the marked row comes from the entered route alone (CR-AC-09).
+// The switcher reads no stored selection at all: the marked row comes from the
+// entered route alone (CR-AC-09), and the three retained messages of CR-RG-03
+// — the one thing here that ever consulted it — moved with that read to
+// `shared/components/RetainedContextMessage.tsx`, which the shell mounts in the
+// main content region because this slot is a fixed-height header (T19,
+// review-2026-08-13 finding 5).
 
 const WORKSPACE_ROW_KEY = 'workspace';
 
 type ContextWarehouse = WorkspaceContext['warehouses'][number];
-type RememberedWarehouse = { id: string; name: string };
-
-/**
- * CR-RG-03 — the three messages the flat switcher already showed, with their
- * existing copy and intent. The one deliberate change is that each now renders
- * *beside* the grouped control instead of replacing it, so the Workspace row
- * and any selectable Warehouse stay reachable while the message is shown.
- */
-const RetainedSwitcherMessage = ({
-  lastSelected,
-  onDismiss,
-  warehouses,
-}: {
-  lastSelected: RememberedWarehouse | null;
-  onDismiss: () => void;
-  warehouses: ContextWarehouse[];
-}): ReactElement => {
-  const { t } = useTranslation('common');
-
-  // `GET /workspace/context` returns `effectiveWarehouseId: null` for both
-  // "never chosen" and "selection ended" — the contract carries no field
-  // distinguishing them, and the Warehouse a withdrawn membership named can
-  // vanish from `warehouses` entirely, so the only way to name it in this copy
-  // is to remember it across a refetch.
-  if (lastSelected) {
-    const title = t('workspaceSwitcher.selectionEnded.title', {
-      name: lastSelected.name,
-    });
-    return (
-      <Alert status="accent" role="alert" aria-label={title}>
-        <Alert.Indicator />
-        <Alert.Content>
-          <Alert.Title>{title}</Alert.Title>
-          <Alert.Description>
-            {t('workspaceSwitcher.selectionEnded.description')}
-          </Alert.Description>
-        </Alert.Content>
-        <div className="flex gap-2">
-          <Button onPress={onDismiss}>
-            {t('workspaceSwitcher.selectionEnded.choose')}
-          </Button>
-          <Button variant="outline" onPress={onDismiss}>
-            {t('workspaceSwitcher.selectionEnded.dismiss')}
-          </Button>
-        </div>
-      </Alert>
-    );
-  }
-
-  // CR-AC-18 — a member holding no selectable membership is told their access
-  // is unchanged; no action is invented for them, because the grouped control
-  // beside this message already lists everything they hold.
-  const hasSelectableWarehouse = warehouses.some(
-    (warehouse) => warehouse.archivedAt === null,
-  );
-  if (!hasSelectableWarehouse) {
-    return (
-      <div className="flex flex-col items-start gap-2">
-        <WarehouseIcon />
-        <h2 className="text-lg font-bold text-foreground">
-          {t('workspaceSwitcher.unavailable.title')}
-        </h2>
-        <p className="text-sm text-muted">
-          {t('workspaceSwitcher.unavailable.description')}
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col items-start gap-2">
-      <WarehouseIcon />
-      <h2 className="text-lg font-bold text-foreground">
-        {t('workspaceSwitcher.empty.title')}
-      </h2>
-      <p className="text-sm text-muted">
-        {t('workspaceSwitcher.empty.description', { count: warehouses.length })}
-      </p>
-    </div>
-  );
-};
 
 /**
  * The four slots the approved `Shell/Context Row` (`HZRA7`) draws: level icon,
@@ -233,28 +146,12 @@ export const WarehouseSwitcher = (): ReactElement | null => {
       state.matches.some((match) => match.routeId === ROUTES.WORKSPACE),
   });
   const navigate = useNavigate();
-  const [lastSelected, setLastSelected] = useState<RememberedWarehouse | null>(
-    null,
-  );
-
-  useEffect(() => {
-    const activeId = workspaceContext?.effectiveWarehouseId;
-    if (!activeId) {
-      return;
-    }
-    const active = workspaceContext.warehouses.find(
-      (warehouse) => warehouse.warehouseId === activeId,
-    );
-    if (active) {
-      setLastSelected({ id: active.warehouseId, name: active.name });
-    }
-  }, [workspaceContext]);
 
   if (!workspaceContext) {
     return null;
   }
 
-  const { effectiveWarehouseId, warehouses, workspace } = workspaceContext;
+  const { warehouses, workspace } = workspaceContext;
 
   // CR-AC-01 — the Workspace's own name, or the unnamed-Workspace placeholder
   // the Workspace administration surface already shows for one that has none
@@ -306,12 +203,6 @@ export const WarehouseSwitcher = (): ReactElement | null => {
     }
     void navigate({ to: ROUTES.WAREHOUSE, params: { warehouseId: value } });
   };
-
-  // CR-RG-03 — a retained message accompanies the control only while no
-  // context is entered, so an actor inside W whose CR-AC-09 write never landed
-  // never reads "nothing chosen" beside the row marked current.
-  const showRetainedMessage =
-    entered.currentKey === null && effectiveWarehouseId === null;
 
   return (
     <div className="flex w-full flex-col items-start gap-2">
@@ -387,13 +278,6 @@ export const WarehouseSwitcher = (): ReactElement | null => {
           </ListBox>
         </Select.Popover>
       </Select>
-      {showRetainedMessage ? (
-        <RetainedSwitcherMessage
-          lastSelected={lastSelected}
-          onDismiss={() => setLastSelected(null)}
-          warehouses={warehouses}
-        />
-      ) : null}
     </div>
   );
 };
