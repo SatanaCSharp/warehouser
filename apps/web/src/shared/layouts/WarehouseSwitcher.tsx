@@ -126,36 +126,74 @@ const RetainedSwitcherMessage = ({
  */
 const ContextRowContent = ({
   description,
+  dimmed = false,
   Icon,
   name,
-  trailingLabel,
+  trailingLabels,
 }: {
   description?: string;
+  /**
+   * Dims the row's own label and trailing text — the parts the WCAG
+   * disabled-control exemption covers — while leaving {@link description}
+   * readable. The row itself must then not be dimmed as a whole (see
+   * `dimmedRowClassName`), because CSS opacity composites the entire subtree
+   * and a descendant cannot be more opaque than its ancestor.
+   */
+  dimmed?: boolean;
   Icon: typeof WarehouseIcon;
   name: string;
-  trailingLabel?: string;
-}): ReactElement => (
-  <>
-    <Icon />
-    <Label>{name}</Label>
-    {trailingLabel ? (
-      <span className="ms-auto text-xs">{trailingLabel}</span>
-    ) : null}
-    {description ? <Description>{description}</Description> : null}
-    <ListBox.ItemIndicator />
-  </>
-);
+  trailingLabels: string[];
+}): ReactElement => {
+  const dim = dimmed ? 'opacity-50' : undefined;
+  return (
+    <>
+      <span data-dimmed={dimmed} className={dim}>
+        <Icon />
+      </span>
+      <Label data-dimmed={dimmed} className={dim}>
+        {name}
+      </Label>
+      {trailingLabels.length > 0 ? (
+        <span
+          data-dimmed={dimmed}
+          className={`ms-auto flex items-center gap-2 text-xs ${dim ?? ''}`}
+        >
+          {trailingLabels.map((label) => (
+            <span key={label}>{label}</span>
+          ))}
+        </span>
+      ) : null}
+      {description ? <Description>{description}</Description> : null}
+      <ListBox.ItemIndicator />
+    </>
+  );
+};
 
 /**
- * A row carries at most one trailing text. "Current" wins, because a row that
- * would carry an unavailability label — the inert Workspace row, an archived
- * Warehouse — is unreachable and can therefore never be the entered context.
+ * CR-AC-03 — an inert row stays visually disabled, but the dimming is scoped
+ * to its label rather than applied to the whole row, so the sentence explaining
+ * *why* it is inert keeps full contrast. HeroUI dims a disabled row through
+ * `--disabled-opacity`; this cancels that one declaration and nothing else, so
+ * the row keeps every other disabled affordance and stays `aria-disabled`.
  */
-const rowTrailingLabel = (
+const dimmedRowClassName = 'data-disabled:opacity-100';
+
+/**
+ * A row's trailing texts. The two facts are independent and can genuinely
+ * co-exist: CR-AC-20 leaves an actor inside a Warehouse that is archived
+ * underneath them, so the entered row is also the archived one. The
+ * unavailability label comes first because it carries what the actor does not
+ * already know — CR-RG-02 requires it to stay on the row — while "current"
+ * only restates the context they are looking at.
+ */
+const rowTrailingLabels = (
   isCurrent: boolean,
   currentLabel: string,
   unavailableLabel: string | undefined,
-): string | undefined => (isCurrent ? currentLabel : unavailableLabel);
+): string[] =>
+  [unavailableLabel, isCurrent ? currentLabel : undefined].filter(
+    (label): label is string => label !== undefined,
+  );
 
 /**
  * CR-AC-01 / CR-AC-09 — what the trigger names and which row is marked come
@@ -296,12 +334,17 @@ export const WarehouseSwitcher = (): ReactElement | null => {
           <ListBox aria-label={switcherLabel}>
             <ListBox.Section>
               <Header>{t('shell.contextSwitcher.workspaceGroupLabel')}</Header>
-              <ListBox.Item id={WORKSPACE_ROW_KEY} textValue={workspaceName}>
+              <ListBox.Item
+                id={WORKSPACE_ROW_KEY}
+                textValue={workspaceName}
+                className={noAccessExplanation ? dimmedRowClassName : undefined}
+              >
                 <ContextRowContent
                   description={noAccessExplanation}
+                  dimmed={noAccessExplanation !== undefined}
                   Icon={Building2Icon}
                   name={workspaceName}
-                  trailingLabel={rowTrailingLabel(
+                  trailingLabels={rowTrailingLabels(
                     entered.currentKey === WORKSPACE_ROW_KEY,
                     currentLabel,
                     noAccessExplanation &&
@@ -310,26 +353,37 @@ export const WarehouseSwitcher = (): ReactElement | null => {
                 />
               </ListBox.Item>
             </ListBox.Section>
-            <ListBox.Section>
-              <Header>{t('shell.contextSwitcher.warehousesGroupLabel')}</Header>
-              {warehouses.map((warehouse) => (
-                <ListBox.Item
-                  key={warehouse.warehouseId}
-                  id={warehouse.warehouseId}
-                  textValue={warehouse.name}
-                >
-                  <ContextRowContent
-                    Icon={WarehouseIcon}
-                    name={warehouse.name}
-                    trailingLabel={rowTrailingLabel(
-                      entered.currentKey === warehouse.warehouseId,
-                      currentLabel,
-                      warehouse.archivedAt === null ? undefined : archivedLabel,
-                    )}
-                  />
-                </ListBox.Item>
-              ))}
-            </ListBox.Section>
+            {/* CR-AC-04 / CR-AC-18 — the group is a navigation surface, so it
+                is omitted rather than rendered empty for an actor who holds no
+                membership. `ListBox.Section` emits its `role="group"` and its
+                heading regardless of item count, so the suppression has to
+                happen here rather than being left to the collection. */}
+            {warehouses.length > 0 ? (
+              <ListBox.Section>
+                <Header>
+                  {t('shell.contextSwitcher.warehousesGroupLabel')}
+                </Header>
+                {warehouses.map((warehouse) => (
+                  <ListBox.Item
+                    key={warehouse.warehouseId}
+                    id={warehouse.warehouseId}
+                    textValue={warehouse.name}
+                  >
+                    <ContextRowContent
+                      Icon={WarehouseIcon}
+                      name={warehouse.name}
+                      trailingLabels={rowTrailingLabels(
+                        entered.currentKey === warehouse.warehouseId,
+                        currentLabel,
+                        warehouse.archivedAt === null
+                          ? undefined
+                          : archivedLabel,
+                      )}
+                    />
+                  </ListBox.Item>
+                ))}
+              </ListBox.Section>
+            ) : null}
           </ListBox>
         </Select.Popover>
       </Select>

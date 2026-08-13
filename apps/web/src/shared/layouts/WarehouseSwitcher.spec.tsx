@@ -383,6 +383,39 @@ describe('WarehouseSwitcher — the inert Workspace row (CR-AC-03)', () => {
         within(listbox).getByRole('option', { name: /north hub/iu }),
       ).not.toHaveAttribute('aria-disabled', 'true');
     });
+
+    it(`renders the inert-row explanation outside the dimmed row for ${actor}`, async () => {
+      stubFetchSequence(() =>
+        jsonResponse(buildContext({ workspacePermissionIds })),
+      );
+      const user = userEvent.setup();
+      renderSwitcherAt(warehousePath(centralId));
+
+      const listbox = await openSwitcher(user);
+      const workspaceRow = within(listbox).getByRole('option', {
+        name: /untitled workspace/iu,
+      });
+
+      // CR-AC-03 — the sentence explaining why the row is inert must stay
+      // readable. HeroUI dims a disabled row to `--disabled-opacity` (.5), and
+      // CSS opacity composites the whole subtree, so nothing inside a dimmed
+      // row can be more opaque than the row itself. The dimming is therefore
+      // scoped to the row's own label — what the WCAG disabled-control
+      // exemption covers — and never wraps the explanation.
+      const explanation = within(workspaceRow).getByText(
+        'You do not have access to the workspace.',
+      );
+      expect(explanation.closest('[data-dimmed="true"]')).toBeNull();
+
+      // The label the exemption does cover stays dimmed, and the row stays
+      // disabled: this scopes the dimming, it does not remove it.
+      expect(
+        within(workspaceRow)
+          .getByText('Untitled workspace')
+          .closest('[data-dimmed="true"]'),
+      ).not.toBeNull();
+      expect(workspaceRow).toHaveAttribute('aria-disabled', 'true');
+    });
   }
 
   for (const permission of [
@@ -433,6 +466,55 @@ describe('WarehouseSwitcher — archived rows (CR-AC-04, CR-RG-02)', () => {
 
     await user.click(archivedRow);
     expect(harness.currentPath()).toBe(ROUTES.HOME);
+  });
+
+  // CR-RG-02 with CR-AC-20 — archiving W while the actor is inside it does not
+  // evict them, so the entered context and the archived state genuinely
+  // co-exist on one row. The archived label is what tells that resident actor
+  // what happened; dropping it because the row is also current would leave the
+  // switcher silent about the one change it is meant to reflect.
+  it('keeps the archived label on the entered Warehouse when it is archived underneath the actor', async () => {
+    stubFetchSequence(() =>
+      jsonResponse(
+        buildContext({
+          warehouses: [
+            { ...centralEntry, archivedAt: '2026-08-13T00:00:00.000Z' },
+            northEntry,
+          ],
+        }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderSwitcherAt(warehousePath(centralId));
+
+    const listbox = await openSwitcher(user);
+    const enteredRow = within(listbox).getByRole('option', {
+      name: /central dc/iu,
+    });
+
+    expect(enteredRow).toHaveTextContent('Archived');
+    expect(enteredRow).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  // CR-AC-04 / CR-AC-18 — an actor holding no membership at all is the actor
+  // CR-AC-18 ¶2 names. A labelled group with nothing under it is a navigation
+  // surface "shown in a disabled or empty state" outside the two named
+  // exceptions, and the empty affordance CR-AC-18 forbids.
+  it('renders no Warehouses group at all for an actor holding no membership', async () => {
+    stubFetchSequence(() => jsonResponse(buildContext({ warehouses: [] })));
+    const user = userEvent.setup();
+    renderSwitcherAt(ROUTES.HOME);
+
+    const listbox = await openSwitcher(user);
+
+    expect(
+      within(listbox).queryByText('Warehouses', {
+        selector: 'header, header *',
+      }),
+    ).toBeNull();
+    expect(
+      within(listbox).getByRole('option', { name: /untitled workspace/iu }),
+    ).toBeInTheDocument();
   });
 });
 
