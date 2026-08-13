@@ -435,14 +435,23 @@ describe('router', () => {
         .fn()
         .mockResolvedValueOnce(new Response(null, { status: 204 }))
         .mockResolvedValueOnce(
+          // AC-01 — registration answers with the whole bootstrap outcome,
+          // not just the identity and its Warehouse access.
           Response.json({
             user: { id: '00000000-0000-4000-8000-000000000012' },
+            workspace: {
+              id: '00000000-0000-4000-8000-000000000015',
+              name: null,
+            },
+            workspacePermissionIds: ['WORKSPACE:RENAME', 'WAREHOUSES:CREATE'],
             access: {
               warehouseId: '00000000-0000-4000-8000-000000000013',
               roleId: '00000000-0000-4000-8000-000000000014',
               roleKind: 'warehouse_manager',
               permissionIds: ['ROLES:WATCH'],
+              archivedAt: null,
             },
+            effectiveWarehouseId: '00000000-0000-4000-8000-000000000013',
           }),
         )
         .mockResolvedValueOnce(Response.json(readableAccess)),

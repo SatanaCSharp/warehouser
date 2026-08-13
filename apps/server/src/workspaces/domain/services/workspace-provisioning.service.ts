@@ -43,7 +43,10 @@ export interface WorkspaceProjection {
 
 export interface ProvisionRegistrationResult {
   readonly workspace: WorkspaceProjection;
-  readonly workspacePermissionIds: readonly string[];
+  // Narrowed from `string[]` to the vocabulary itself, so the registration
+  // response can be typed by the contract: a widened element type would let
+  // an id outside the catalogue reach `RegistrationResult` (AC-01, AC-18).
+  readonly workspacePermissionIds: readonly (typeof INITIAL_WORKSPACE_OWNER_PERMISSION_IDS)[number][];
   readonly access: InitialAccessProjection;
 }
 

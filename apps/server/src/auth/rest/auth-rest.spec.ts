@@ -14,6 +14,10 @@ const access = {
   roleKind: 'warehouse_manager' as const,
   permissionIds: ['ROLES:WATCH'],
 };
+// AC-01 — `RegisterCommand` spreads the whole provisioning outcome into its
+// result, and openapi.yaml's `RegistrationResult` requires every part of it.
+const workspace = { id: '00000000-0000-4000-8000-000000000004', name: null };
+const workspacePermissionIds = ['WORKSPACE:RENAME', 'WAREHOUSES:CREATE'];
 
 const response = () => ({
   cookie: jest.fn(),
@@ -26,6 +30,8 @@ const setup = () => {
       userId,
       sessionSecret: 'registration-secret',
       expiresAt,
+      workspace,
+      workspacePermissionIds,
       access,
     }),
   };
@@ -66,7 +72,17 @@ describe('AuthController', () => {
         },
         http,
       ),
-    ).resolves.toEqual({ user: { id: userId }, access });
+      // AC-01/AC-03b — the whole bootstrap, so the shell needs no second round
+      // trip: Workspace identity, the Owner Role's Workspace Permissions, the
+      // Warehouse access projection with its archived state, and the sole
+      // membership that is the effective selection with no one choosing.
+    ).resolves.toEqual({
+      user: { id: userId },
+      workspace,
+      workspacePermissionIds,
+      access: { ...access, archivedAt: null },
+      effectiveWarehouseId: access.warehouseId,
+    });
     expect(http.cookie).toHaveBeenCalledWith(
       AUTH_SESSION_COOKIE,
       'registration-secret',
@@ -105,6 +121,8 @@ describe('AuthController', () => {
       userId,
       sessionSecret: 'registration-secret',
       expiresAt,
+      workspace,
+      workspacePermissionIds,
       access,
     });
     await request;

@@ -48,12 +48,26 @@ export class AuthController {
     const result = await this.register.execute(credentials);
     this.cookie.issue(response, result.sessionSecret, result.expiresAt);
 
+    // AC-01/AC-03b — the whole bootstrap outcome, which `RegisterCommand`
+    // already computes: Workspace identity, the Workspace Permissions the
+    // protected Owner Role grants, the Warehouse access projection, and the
+    // effective selection. Returning only `{user, access}` forced the shell
+    // into a second round trip for state this response was extended to carry
+    // (openapi.yaml `RegistrationResult`).
     return {
       user: { id: result.userId },
+      workspace: result.workspace,
+      workspacePermissionIds: [...result.workspacePermissionIds],
       access: {
         ...result.access,
         permissionIds: [...result.access.permissionIds],
+        // The Warehouse was created by this same outcome, so it is never
+        // archived here.
+        archivedAt: null,
       },
+      // Registration creates exactly one Warehouse membership, and a sole
+      // membership is the effective selection with no one choosing (AC-03b).
+      effectiveWarehouseId: result.access.warehouseId,
     };
   }
 
