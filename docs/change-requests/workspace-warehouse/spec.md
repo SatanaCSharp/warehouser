@@ -558,9 +558,10 @@ CR-AC-12, CR-AC-18)
       Default now: leave AC-12a standing and unexposed; correct the wording as a documentation-only
       change outside this request, since this request adds no Warehouse-level capability (§3). —
       owner: Product Owner, due: **before the next `workspaces`-owning change ships**
-- [ ] Does the Warehouse dashboard keep today's `DesignSystemExample` placeholder content? Default
-      now: yes, moved unchanged — designing a Warehouse dashboard is out of scope here. — owner:
-      Product Owner, due: `design-ui`
+- [x] **Closed at `design-ui` (2026-08-13).** Does the Warehouse dashboard keep today's
+      `DesignSystemExample` placeholder content? **Yes** — moved unchanged, drawn in the approved
+      frame `Warehouse / Dashboard / Desktop / v1` (`UOTlR`). Designing real Warehouse dashboard
+      content is a separate feature; see [`design-handoff.md`](./design-handoff.md) § Open questions.
 - [ ] Does the Workspace view need a landing/overview page distinct from the existing administration
       page? Default now: no — `/workspace` remains the single Workspace destination with today's
       content, and the switcher's Workspace row enters it directly. — owner: Product Owner, due:
