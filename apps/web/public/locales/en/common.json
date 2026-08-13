@@ -16,12 +16,9 @@
     "ukrainian": "Українська"
   },
   "workspaceSwitcher": {
-    "label": "Warehouse switcher",
-    "archivedReason": "Archived · not selectable",
     "empty": {
       "title": "Choose a warehouse to work in",
-      "description": "You belong to {{count}} warehouses. Nothing is chosen for you when there is more than one, so your next action always applies to the site you meant.",
-      "action": "Choose warehouse"
+      "description": "You belong to {{count}} warehouses. Nothing is chosen for you when there is more than one, so your next action always applies to the site you meant."
     },
     "selectionEnded": {
       "title": "{{name}} is no longer available to you",
@@ -43,7 +40,6 @@
       "currentLabel": "Current",
       "archivedLabel": "Archived",
       "noAccessLabel": "No access",
-      "workspaceRowLabel": "Workspace",
       "workspaceNoAccessExplanation": "You do not have access to the workspace."
     },
     "noContext": {

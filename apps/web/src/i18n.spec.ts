@@ -224,9 +224,6 @@ describe('workspace-warehouse T1 shell/enter-action keys', () => {
       instance.t('shell.contextSwitcher.noAccessLabel', { ns: 'common' }),
     ).toBe('No access');
     expect(
-      instance.t('shell.contextSwitcher.workspaceRowLabel', { ns: 'common' }),
-    ).toBe('Workspace');
-    expect(
       instance.t('shell.contextSwitcher.workspaceNoAccessExplanation', {
         ns: 'common',
       }),
@@ -264,6 +261,31 @@ describe('workspace-warehouse T1 shell/enter-action keys', () => {
       'Try again',
     );
     expect(instance.t('warehouses.enter', { ns: 'workspace' })).toBe('Enter');
+  });
+
+  it('drops the switcher keys this change request orphaned', async () => {
+    const instance = createInstance();
+    await instance.init({
+      fallbackLng: 'en',
+      lng: 'en',
+      ns: namespaces,
+      resources,
+    });
+
+    expect(instance.exists('workspaceSwitcher.label', { ns: 'common' })).toBe(
+      false,
+    );
+    expect(
+      instance.exists('workspaceSwitcher.archivedReason', { ns: 'common' }),
+    ).toBe(false);
+    expect(
+      instance.exists('workspaceSwitcher.empty.action', { ns: 'common' }),
+    ).toBe(false);
+    expect(
+      instance.exists('shell.contextSwitcher.workspaceRowLabel', {
+        ns: 'common',
+      }),
+    ).toBe(false);
   });
 
   it('resolves the same shell/enter-action keys in Ukrainian', async () => {
