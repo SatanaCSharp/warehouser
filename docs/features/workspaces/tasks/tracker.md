@@ -51,6 +51,22 @@
 | T44 | Return the documented `Warehouse` body from archival     | app       | Backend Lead                 | S        | T21, T25                              | done   |
 | T45 | Render the tab content in the administration panels      | ui        | Frontend Lead                | S        | T36                                   | done   |
 | T46 | Carry the identifying email in the Workspace reads       | infra     | Backend Lead                 | S        | T9, T24                               | done   |
+| T47 | Realign the four stale integration specs to openapi.yaml | test      | Backend Lead                 | S        | —                                     | todo   |
+| T48 | Return the documented 200 owner-transfer result          | rest      | Backend Lead                 | S        | —                                     | todo   |
+| T49 | Restore the two documented access-tier outcomes          | app       | Backend Lead                 | M        | —                                     | todo   |
+| T50 | Repair the workspaces load-smoke gate                    | test      | Backend Lead                 | S        | —                                     | todo   |
+| T51 | Report a cross-Workspace Warehouse as unavailable        | app       | Backend Lead                 | S        | —                                     | done   |
+| T52 | Raise and surface the archival/creation 503s             | app       | Backend Lead                 | M        | —                                     | done   |
+| T53 | Carry the Workspace bootstrap in the registration reply  | rest      | Backend Lead                 | M        | —                                     | todo   |
+| T54 | Give a member with no Active Warehouse a way forward     | ui        | Frontend Lead                | M        | —                                     | todo   |
+| T55 | Scope the three users current-access reads to Warehouse  | app       | Backend Lead                 | M        | —                                     | todo   |
+| T56 | Raise the two unreachable Workspace 503s                 | app       | Backend Lead                 | S        | —                                     | done   |
+| T57 | Resolve `workspaceRoleId` before assigning it            | app       | Backend Lead                 | M        | —                                     | todo   |
+| T58 | One generic unavailable-recipient outcome for transfer   | app       | Backend Lead                 | S        | —                                     | done   |
+| T59 | Admit `WORKSPACE:RENAME` to the watch-permission list    | ui        | Frontend Lead                | S        | —                                     | todo   |
+| T60 | Explain the empty replacement choice; map the refusal    | ui        | Frontend Lead                | M        | —                                     | todo   |
+| T61 | Agree the empty-name rule key between web and server     | ui        | Frontend Lead                | S        | —                                     | done   |
+| T62 | Swap the two Owner memberships in ordered statements     | infra     | Backend Lead                 | S        | T58                                   | done   |
 
 **T46 — projection gap found during `implement` (T38/T39 run).** `contracts/openapi.yaml` documents `email` on both
 `WorkspaceMember` ("carried so the reader can tell Workspace Members apart. Present on the same terms as the approved
@@ -118,5 +134,34 @@ implementer could not read the HeroUI v3 doc files its manifest required and sub
 produced a false "pre-existing build error" report on the server lane (stale `packages/contracts/dist`). Any future
 worktree-isolated run should build `packages/contracts` first and expect gitignored reference material to be absent.
 
-**Total:** 46 tasks (T41–T46 added during `implement` — see the task cards and the notes above), ~34 person-days (S ≈ ¼–½ day, M ≈ ½–¾ day, L ≈ 1 day; no task exceeds one
+## Review remediation — T47–T62 (registered 2026-08-13)
+
+The 2026-08-13 review (`_review/review-2026-08-13.md`) returned **CHANGES REQUESTED** on thirteen
+stage-1 findings. T47–T62 register them one lane per finding; S1-01 splits into four (T47–T50)
+because its twelve integration failures have four independent causes.
+
+**The gate hole is the root cause and is NOT yet closed.** `pnpm test` does not set
+`RUN_INTEGRATION=1`, so 46/46 tasks were marked done over a red integration tier. Every task above
+was re-gated with the tier explicitly enabled:
+
+```sh
+DATABASE_NAME=warehouser_test RUN_INTEGRATION=1 pnpm --filter @warehouser/server exec jest --runInBand
+```
+
+`DATABASE_NAME` must be pinned — these specs `TRUNCATE ... CASCADE` whatever database they reach,
+and the `.env.example` default is the development database. Wiring the tier into the default gate is
+review finding S2-06 (stage 2), still open.
+
+Baseline at the start of remediation: **12 failed / 852 passed, 7 suites**. After T51, T52, T56,
+T58, T62: **10 failed / 866 passed**. The remaining ten belong to T47, T48, T49 and T50.
+
+**Two findings turned out to be more than the review could confirm.** S1-13's duplicate-key was
+reproduced deterministically, not just argued: seeding the recipient's membership row physically
+first makes the planner reach it before the outgoing Owner's, and the single `UPDATE ... CASE`
+raises `duplicate key value violates unique constraint "uq_workspace_memberships_one_owner"`. And
+S1-12's fix exposed a second defect the review did not name — `runWorkspaceMutation` resolves
+`workspaceRoleFieldErrorsByCode` _before_ the rule map runs, so the map also sees already-resolved
+keys; the original `?? rule` passthrough was load-bearing for AC-15's name conflict.
+
+**Total:** 62 tasks (T41–T46 added during `implement`; T47–T62 added from the 2026-08-13 review), ~34 person-days (S ≈ ¼–½ day, M ≈ ½–¾ day, L ≈ 1 day; no task exceeds one
 working day).
