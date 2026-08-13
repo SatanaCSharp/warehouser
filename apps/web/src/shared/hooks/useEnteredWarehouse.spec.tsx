@@ -32,13 +32,20 @@ const Probe = (): ReactElement => {
   return <div data-testid="probe">{warehouseId ?? 'none'}</div>;
 };
 
+/** The same read, rendered above the Warehouse match rather than beneath it. */
+const AncestorProbe = (): ReactElement => {
+  const warehouseId = useEnteredWarehouse();
+  return <div data-testid="ancestor-probe">{warehouseId ?? 'none'}</div>;
+};
+
 const buildProbeRouter = (
   initialEntry: string,
   verdict?: WarehouseEntryVerdict,
+  rootComponent: () => ReactElement = () => <Outlet />,
 ): { router: AnyRouter; store: AppStore } => {
   const store = makeStore();
   const testRootRoute = createRootRouteWithContext<{ store: AppStore }>()({
-    component: () => <Outlet />,
+    component: rootComponent,
   });
   const rootProbeRoute = createRoute({
     getParentRoute: () => testRootRoute,
@@ -82,8 +89,13 @@ const buildProbeRouter = (
 const renderProbe = (
   initialEntry: string,
   verdict?: WarehouseEntryVerdict,
+  rootComponent?: () => ReactElement,
 ): void => {
-  const { router, store } = buildProbeRouter(initialEntry, verdict);
+  const { router, store } = buildProbeRouter(
+    initialEntry,
+    verdict,
+    rootComponent,
+  );
   render(
     <Provider store={store}>
       <RouterProvider router={router} />
@@ -133,5 +145,44 @@ describe('useEnteredWarehouse', () => {
     });
 
     expect(await screen.findByTestId('probe')).toHaveTextContent('none');
+  });
+
+  // T6 / CR-AC-11 — the shell chrome that must follow the entered context
+  // (`Sidebar`) is rendered by the ROOT route, an *ancestor* of the Warehouse
+  // match. A nearest-match read can only ever see the caller's own match and
+  // its ancestors, so it would answer `undefined` here and the Warehouse-view
+  // navigation could never be addressed. This pins the position-independent
+  // read the hook relies on.
+  it('returns the id when read from an ancestor of the Warehouse match', async () => {
+    renderProbe(
+      `/warehouses/${MEMBER_WAREHOUSE_ID}`,
+      { status: 'entered', warehouseId: MEMBER_WAREHOUSE_ID },
+      () => (
+        <>
+          <AncestorProbe />
+          <Outlet />
+        </>
+      ),
+    );
+
+    expect(await screen.findByTestId('ancestor-probe')).toHaveTextContent(
+      MEMBER_WAREHOUSE_ID,
+    );
+  });
+
+  // The id the hook matches on is the one TanStack derives for the Warehouse
+  // layout route. If that derivation ever stops equalling `ROUTES.WAREHOUSE`,
+  // every reader above would silently answer `undefined` rather than fail
+  // loudly, so it is pinned here directly.
+  it('matches the route id TanStack derives for the Warehouse layout route', async () => {
+    const { router } = buildProbeRouter(`/warehouses/${MEMBER_WAREHOUSE_ID}`, {
+      status: 'entered',
+      warehouseId: MEMBER_WAREHOUSE_ID,
+    });
+    await router.load();
+
+    expect(
+      router.state.matches.map((match: { routeId: string }) => match.routeId),
+    ).toContain(ROUTES.WAREHOUSE);
   });
 });

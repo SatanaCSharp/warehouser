@@ -15,13 +15,14 @@ import { useState } from 'react';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { ROUTES } from 'shared/constants/routes';
+import { ROUTES, ROUTE_SEGMENTS } from 'shared/constants/routes';
 import { Sidebar } from 'shared/layouts/Sidebar';
 import { makeStore } from 'store';
 import { namedWorkspaceContext } from 'test/workspace-fixtures';
 
 import type { AccessProjection } from '@warehouser/contracts/access';
 import type { WorkspaceContext } from '@warehouser/contracts/workspaces';
+import type { WarehouseEntryVerdict } from 'guards/warehouse-entry.guard';
 import type { ReactElement } from 'react';
 import type { AppStore } from 'store';
 
@@ -33,6 +34,9 @@ const baseAccess: AccessProjection = {
   archivedAt: null,
 };
 
+// T6 / CR-AC-11 — the Access entry is gated by the projection of the Warehouse
+// the sidebar is rendered inside, so these cases answer that Warehouse's own
+// `access/current` and nothing else.
 const stubAccess = (access: AccessProjection | null): void => {
   vi.stubGlobal(
     'fetch',
@@ -47,7 +51,7 @@ const stubAccess = (access: AccessProjection | null): void => {
             },
             workspacePermissionIds: [],
             warehouses: [],
-            effectiveWarehouseId: baseAccess.warehouseId,
+            effectiveWarehouseId: null,
           }),
         );
       }
@@ -97,10 +101,17 @@ const SidebarWithToggle = (): ReactElement => {
   );
 };
 
+// T6 / CR-AC-11 — the Access entry is addressed within the entered Warehouse,
+// so the sidebar's own cases render inside a Warehouse match. The Warehouse
+// route here shares `ROUTES.WAREHOUSE` as its id — the id `useEnteredWarehouse`
+// targets — without importing the production `warehouseRoute` singleton.
+const WAREHOUSE_ADDRESS = `/warehouses/${baseAccess.warehouseId}`;
+const ACCESS_ADDRESS = `${WAREHOUSE_ADDRESS}/${ROUTE_SEGMENTS.ACCESS}`;
+
 const renderSidebar = (
   store: AppStore = makeStore(),
   component: () => ReactElement = Sidebar,
-  initialEntry: string = '/',
+  initialEntry: string = WAREHOUSE_ADDRESS,
 ): void => {
   const rootRoute = createRootRouteWithContext<TestContext>()({
     component,
@@ -110,18 +121,35 @@ const renderSidebar = (
     path: ROUTES.HOME,
     component: () => null,
   });
-  const accessRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: ROUTES.ACCESS,
-    component: () => null,
-  });
   const workspaceRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: ROUTES.WORKSPACE,
     component: () => null,
   });
+  const warehouseTestRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: ROUTES.WAREHOUSE,
+    beforeLoad: ({ params }): WarehouseEntryVerdict => ({
+      status: 'entered',
+      warehouseId: params.warehouseId,
+    }),
+  });
+  const warehouseIndexRoute = createRoute({
+    getParentRoute: () => warehouseTestRoute,
+    path: '/',
+    component: () => null,
+  });
+  const accessRoute = createRoute({
+    getParentRoute: () => warehouseTestRoute,
+    path: ROUTE_SEGMENTS.ACCESS,
+    component: () => null,
+  });
   const router = createRouter({
-    routeTree: rootRoute.addChildren([homeRoute, accessRoute, workspaceRoute]),
+    routeTree: rootRoute.addChildren([
+      homeRoute,
+      workspaceRoute,
+      warehouseTestRoute.addChildren([warehouseIndexRoute, accessRoute]),
+    ]),
     context: { store },
     history: createMemoryHistory({ initialEntries: [initialEntry] }),
   });
@@ -153,7 +181,7 @@ describe('Sidebar', () => {
 
     expect(await screen.findByRole('link', { name: 'Access' })).toHaveAttribute(
       'href',
-      '/access',
+      ACCESS_ADDRESS,
     );
   });
 
@@ -163,7 +191,7 @@ describe('Sidebar', () => {
 
     expect(await screen.findByRole('link', { name: 'Access' })).toHaveAttribute(
       'href',
-      '/access',
+      ACCESS_ADDRESS,
     );
   });
 
@@ -269,7 +297,7 @@ describe('Sidebar', () => {
 
   it('tints the nav item matching the current route as active', async () => {
     stubAccess({ ...baseAccess, permissionIds: [PermissionId.ROLES_WATCH] });
-    renderSidebar(makeStore(), Sidebar, ROUTES.ACCESS);
+    renderSidebar(makeStore(), Sidebar, ACCESS_ADDRESS);
 
     const dashboardLink = await screen.findByRole('link', {
       name: 'Dashboard',

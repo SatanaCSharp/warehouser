@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { PermissionGate } from 'shared/components/PermissionGate';
 import { WorkspaceGate } from 'shared/components/WorkspaceGate';
 import { ROUTES } from 'shared/constants/routes';
+import { useEnteredWarehouse } from 'shared/hooks/useEnteredWarehouse';
 import { workspaceAdministrationPermissionIds } from 'shared/hooks/useWorkspacePermissions';
 import { Building2Icon, DashboardIcon, ShieldCheckIcon } from 'shared/icons';
 
@@ -21,9 +22,17 @@ export const Sidebar = ({
   onOpenChange,
 }: SidebarProps = {}): ReactElement => {
   const { t } = useTranslation('common');
+  const warehouseId = useEnteredWarehouse();
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
+  // T6 / CR-AC-11 — the Access entry is addressed within the entered Warehouse.
+  // Resolving the pattern from `ROUTES` keeps `shared/constants/routes.ts` the
+  // single owner of every path literal while still allowing the active-item
+  // comparison the other entries use.
+  const accessPathname = warehouseId
+    ? ROUTES.WAREHOUSE_ACCESS.replace('$warehouseId', warehouseId)
+    : undefined;
   const itemClassName = (isActive: boolean): string =>
     isActive
       ? 'flex items-center gap-2 rounded-lg bg-accent-soft px-3 py-2 text-accent-soft-foreground'
@@ -41,20 +50,23 @@ export const Sidebar = ({
           {t('nav.dashboard')}
         </RouterLink>
       </li>
-      <PermissionGate
-        permission={[PermissionId.ROLES_WATCH, PermissionId.USERS_WATCH]}
-      >
-        <li>
-          <RouterLink
-            to={ROUTES.ACCESS}
-            className={itemClassName(pathname === ROUTES.ACCESS)}
-            onClick={onNavigate}
-          >
-            <ShieldCheckIcon />
-            {t('nav.access')}
-          </RouterLink>
-        </li>
-      </PermissionGate>
+      {warehouseId ? (
+        <PermissionGate
+          permission={[PermissionId.ROLES_WATCH, PermissionId.USERS_WATCH]}
+        >
+          <li>
+            <RouterLink
+              to={ROUTES.WAREHOUSE_ACCESS}
+              params={{ warehouseId }}
+              className={itemClassName(pathname === accessPathname)}
+              onClick={onNavigate}
+            >
+              <ShieldCheckIcon />
+              {t('nav.access')}
+            </RouterLink>
+          </li>
+        </PermissionGate>
+      ) : null}
       {/* AC-30 — the Workspace entry is gated by the Workspace-level read, not
           by `PermissionGate`'s Warehouse-level vocabulary, and any one of the
           destination's Permissions admits it because each opens its own part

@@ -17,13 +17,20 @@ import { store } from 'store';
 
 import type { AppStore } from 'store';
 
+// T6 / CH-03 — `accessRoute` is a child of the Warehouse layout, not a root
+// child: every Warehouse-scoped surface is addressed within the Warehouse it
+// operates on, and the splat ranks below the layout's explicit children so
+// `/warehouses/:id/access` reaches the surface rather than not-found handling.
 const routeTree = rootRoute.addChildren([
   homeRoute,
-  accessRoute,
   loginRoute,
   signUpRoute,
   workspaceRoute,
-  warehouseRoute.addChildren([warehouseDashboardRoute, warehouseCatchAllRoute]),
+  warehouseRoute.addChildren([
+    warehouseDashboardRoute,
+    accessRoute,
+    warehouseCatchAllRoute,
+  ]),
 ]);
 
 type CreateAppRouterOptions = {

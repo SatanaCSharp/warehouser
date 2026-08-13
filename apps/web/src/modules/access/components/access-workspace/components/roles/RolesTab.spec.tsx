@@ -10,7 +10,7 @@ import {
   stubAccessServer,
 } from 'test/access-fixtures';
 import { selectHeroOption } from 'test/hero-select';
-import { renderWithProviders } from 'test/render';
+import { renderInEnteredWarehouse } from 'test/render';
 
 const assignMemberRole = vi.hoisted(() => vi.fn());
 const deleteRole = vi.hoisted(() => vi.fn());
@@ -48,7 +48,7 @@ const renderRolesTab = async (
   options: Parameters<typeof stubAccessServer>[0] = {},
 ): Promise<void> => {
   stubAccessServer(options);
-  renderWithProviders(<RolesTab />, authenticatedStore());
+  renderInEnteredWarehouse(<RolesTab />, authenticatedStore());
   await screen.findByLabelText('Search roles');
 };
 
@@ -239,7 +239,7 @@ describe('RolesTab', () => {
 
   it('removes mutation controls when refreshed capabilities no longer allow them', async () => {
     stubAccessServer({ permissionIds: [PermissionId.ROLES_WATCH] });
-    renderWithProviders(<RolesTab />, authenticatedStore());
+    renderInEnteredWarehouse(<RolesTab />, authenticatedStore());
 
     expect(await screen.findByText('Picker')).toBeInTheDocument();
     expect(

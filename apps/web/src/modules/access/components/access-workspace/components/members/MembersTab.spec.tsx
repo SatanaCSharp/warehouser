@@ -11,7 +11,7 @@ import {
   stubAccessServer,
 } from 'test/access-fixtures';
 import { selectHeroOption } from 'test/hero-select';
-import { renderWithProviders } from 'test/render';
+import { renderInEnteredWarehouse } from 'test/render';
 
 import type { AppStore } from 'store';
 
@@ -38,7 +38,7 @@ const renderMembersTab = async (
   store: AppStore = authenticatedStore(),
 ): Promise<void> => {
   stubAccessServer(options);
-  renderWithProviders(<MembersTab />, store);
+  renderInEnteredWarehouse(<MembersTab />, store);
   await screen.findByLabelText('Search members');
 };
 

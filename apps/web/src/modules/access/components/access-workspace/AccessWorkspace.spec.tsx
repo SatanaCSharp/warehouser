@@ -10,7 +10,7 @@ import {
   authenticatedStore,
   stubAccessServer,
 } from 'test/access-fixtures';
-import { renderWithProviders } from 'test/render';
+import { renderInEnteredWarehouse } from 'test/render';
 
 const memberPermissions = [
   PermissionId.USERS_WATCH,
@@ -29,7 +29,7 @@ describe('AccessWorkspace', () => {
     const user = userEvent.setup();
     stubAccessServer({ permissionIds: memberPermissions });
 
-    renderWithProviders(<AccessWorkspace />, authenticatedStore());
+    renderInEnteredWarehouse(<AccessWorkspace />, authenticatedStore());
 
     await user.click(await screen.findByRole('tab', { name: 'Members' }));
 
@@ -46,7 +46,7 @@ describe('AccessWorkspace', () => {
   it('hides the Members tab, its requests, and its data without USERS:WATCH', async () => {
     const requestedUrls = stubAccessServer({ permissionIds: [] });
 
-    renderWithProviders(<AccessWorkspace />, makeStore());
+    renderInEnteredWarehouse(<AccessWorkspace />, makeStore());
 
     await waitFor(() =>
       expect(requestedUrls.some((url) => url.includes('/access/current'))).toBe(
@@ -67,7 +67,7 @@ describe('AccessWorkspace', () => {
     const user = userEvent.setup();
     stubAccessServer({ permissionIds: [PermissionId.USERS_WATCH] });
 
-    renderWithProviders(<AccessWorkspace />, authenticatedStore());
+    renderInEnteredWarehouse(<AccessWorkspace />, authenticatedStore());
 
     await user.click(await screen.findByRole('tab', { name: 'Members' }));
 
@@ -81,7 +81,7 @@ describe('AccessWorkspace', () => {
       permissionIds: [PermissionId.USERS_WATCH, PermissionId.USERS_CREATE],
     });
 
-    renderWithProviders(<AccessWorkspace />, authenticatedStore());
+    renderInEnteredWarehouse(<AccessWorkspace />, authenticatedStore());
 
     await user.click(await screen.findByRole('tab', { name: 'Members' }));
     await user.click(
@@ -105,7 +105,7 @@ describe('AccessWorkspace archived Warehouse (AC-12, AC-12a, AC-36)', () => {
   it('marks the page archived and keeps its retained Roles readable, without a Restore control (AC-12a)', async () => {
     stubAccessServer({ archivedAt });
 
-    renderWithProviders(<AccessWorkspace />, authenticatedStore());
+    renderInEnteredWarehouse(<AccessWorkspace />, authenticatedStore());
 
     expect(await screen.findByText('Archived')).toBeInTheDocument();
     // Reads still work: the Warehouse's retained Roles remain visible.
@@ -120,7 +120,7 @@ describe('AccessWorkspace archived Warehouse (AC-12, AC-12a, AC-36)', () => {
   it('disables mutating controls that change what the archived Warehouse owns and exposes why (AC-12)', async () => {
     stubAccessServer({ archivedAt });
 
-    renderWithProviders(<AccessWorkspace />, authenticatedStore());
+    renderInEnteredWarehouse(<AccessWorkspace />, authenticatedStore());
 
     const createRole = await screen.findByRole('button', {
       name: 'Create role',
@@ -139,7 +139,7 @@ describe('AccessWorkspace archived Warehouse (AC-12, AC-12a, AC-36)', () => {
   it('keeps the Warehouse Manager transfer available and enabled on an archived Warehouse (AC-36)', async () => {
     stubAccessServer({ archivedAt });
 
-    renderWithProviders(<AccessWorkspace />, authenticatedStore());
+    renderInEnteredWarehouse(<AccessWorkspace />, authenticatedStore());
 
     const transfer = await screen.findByRole('button', {
       name: 'Transfer manager',
