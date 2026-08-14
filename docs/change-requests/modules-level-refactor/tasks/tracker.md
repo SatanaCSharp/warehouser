@@ -17,7 +17,7 @@
 | T8  | Move the fourteen access factories, delete the old directory | domain | YuriiH | M        | T7         | done   |
 | T9  | Move the seven workspace role/member/owner commands          | app    | YuriiH | L        | T8         | done   |
 | T10 | Move the four list queries, predicates and deletion service  | app    | YuriiH | M        | T8         | done   |
-| T11 | Move the eleven handlers onto `WorkspaceAccessController`    | ports  | YuriiH | L        | T9, T10    | todo   |
+| T11 | Move the eleven handlers onto `WorkspaceAccessController`    | ports  | YuriiH | L        | T9, T10    | done   |
 | T12 | Trim `workspaces` and prove the graph acyclic                | wiring | YuriiH | M        | T11        | todo   |
 | T13 | Add the two server boundary specs, tighten `users`           | tests  | YuriiH | M        | T12        | todo   |
 | T14 | Promote the six multi-consumer web files                     | ui     | YuriiH | L        | T2, T4     | done   |
