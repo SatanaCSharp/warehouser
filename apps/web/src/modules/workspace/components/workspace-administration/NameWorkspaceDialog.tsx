@@ -1,11 +1,11 @@
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import { useFormFieldErrors } from 'modules/workspace/hooks/useFormFieldErrors';
 import { useRenameWorkspace } from 'modules/workspace/hooks/useRenameWorkspace';
 import { nameWorkspaceFormSchema } from 'modules/workspace/schemas/name-workspace-form.schema';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormTextField } from 'shared/components/FormTextField';
+import { useFormFieldErrors } from 'shared/hooks/useFormFieldErrors';
 
 import type { ReactElement } from 'react';
 

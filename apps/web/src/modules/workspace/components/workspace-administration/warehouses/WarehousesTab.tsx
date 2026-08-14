@@ -4,11 +4,11 @@ import flatMap from 'lodash/flatMap';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useListWorkspaceUsersQuery } from 'modules/workspace/api/workspace-users-api';
 import { useListWorkspaceWarehousesQuery } from 'modules/workspace/api/workspace-warehouses-api';
 import { AddWarehouseAction } from 'modules/workspace/components/workspace-administration/warehouses/AddWarehouseAction';
 import { WarehouseDetailPane } from 'modules/workspace/components/workspace-administration/warehouses/WarehouseDetailPane';
 import { WarehouseList } from 'modules/workspace/components/workspace-administration/warehouses/WarehouseList';
+import { useListWorkspaceUsersQuery } from 'shared/api/workspace-users-api';
 import {
   hasWorkspacePermission,
   useCurrentWorkspaceContext,

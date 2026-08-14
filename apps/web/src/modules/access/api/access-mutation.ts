@@ -2,7 +2,7 @@ import { alertAccessAction } from 'modules/access/alerts/access-feedback';
 import { isApiFailure } from 'shared/api/api-client';
 
 import type { AccessSuccessAction } from 'modules/access/alerts/access-feedback';
-import type { MutationOutcome } from 'modules/access/types/access.types';
+import type { MutationOutcome } from 'shared/api/mutation-outcome';
 
 type MutationResult = { data: unknown } | { error: unknown };
 

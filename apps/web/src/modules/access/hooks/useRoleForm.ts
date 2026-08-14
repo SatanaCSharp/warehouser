@@ -1,13 +1,13 @@
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import { useFormFieldErrors } from 'modules/access/hooks/useFormFieldErrors';
 import { parseRoleForm } from 'modules/access/schemas/role-form';
+import { useFormFieldErrors } from 'shared/hooks/useFormFieldErrors';
 
 import type { RoleWrite } from '@warehouser/contracts/access';
-import type { MutationOutcome } from 'modules/access/types/access.types';
 import type { FormEvent } from 'react';
 import type { Control, FieldErrors, UseFormRegister } from 'react-hook-form';
+import type { MutationOutcome } from 'shared/api/mutation-outcome';
 
 export type RoleFormValues = { name: string; permissionIds: string[] };
 

@@ -1,17 +1,15 @@
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import { useFormFieldErrors } from 'modules/access/hooks/useFormFieldErrors';
 import { parsePasswordChangeForm } from 'modules/access/schemas/password-change-form';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { PasswordInput } from 'shared/components/PasswordInput';
+import { useFormFieldErrors } from 'shared/hooks/useFormFieldErrors';
 
 import type { PasswordChangeInput } from '@warehouser/contracts/users';
-import type {
-  AccessMember,
-  MutationOutcome,
-} from 'modules/access/types/access.types';
+import type { AccessMember } from 'modules/access/types/access.types';
 import type { ReactElement } from 'react';
+import type { MutationOutcome } from 'shared/api/mutation-outcome';
 
 type ResetPasswordDialogProps = {
   member: Pick<AccessMember, 'email' | 'userId'>;

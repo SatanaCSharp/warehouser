@@ -6,7 +6,7 @@ import { runAccessMutation } from 'modules/access/api/access-mutation';
 
 import type { EmailChangeInput } from '@warehouser/contracts/users';
 import type { FieldErrorMap } from 'modules/access/api/access-mutation';
-import type { MutationOutcome } from 'modules/access/types/access.types';
+import type { MutationOutcome } from 'shared/api/mutation-outcome';
 
 export type ChangeMemberEmail = (
   userId: string,

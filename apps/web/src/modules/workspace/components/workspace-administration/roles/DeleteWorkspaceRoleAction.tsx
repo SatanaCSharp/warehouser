@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import { DeleteWorkspaceRoleDialog } from 'modules/workspace/components/workspace-administration/roles/DeleteWorkspaceRoleDialog';
 import { useDeleteWorkspaceRole } from 'modules/workspace/hooks/useDeleteWorkspaceRole';
-import { useReturnFocusOnClose } from 'modules/workspace/hooks/useReturnFocusOnClose';
+import { useReturnFocusOnClose } from 'shared/hooks/useReturnFocusOnClose';
 import { useHasWorkspacePermission } from 'shared/hooks/useWorkspacePermissions';
 
 import type { WorkspaceRole } from '@warehouser/contracts/workspaces';

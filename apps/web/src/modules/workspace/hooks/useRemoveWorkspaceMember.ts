@@ -1,9 +1,9 @@
 import { useCallback } from 'react';
 
 import { useRemoveWorkspaceMemberMutation } from 'modules/workspace/api/workspace-members-api';
-import { runWorkspaceMutation } from 'modules/workspace/api/workspace-mutation';
+import { runWorkspaceMutation } from 'shared/api/workspace-mutation';
 
-import type { MutationOutcome } from 'modules/workspace/types/workspace.types';
+import type { MutationOutcome } from 'shared/api/mutation-outcome';
 
 export type RemoveWorkspaceMember = (
   userId: string,

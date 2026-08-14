@@ -3,11 +3,9 @@ import { useTranslation } from 'react-i18next';
 
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 
-import type {
-  AccessMember,
-  MutationOutcome,
-} from 'modules/access/types/access.types';
+import type { AccessMember } from 'modules/access/types/access.types';
 import type { ReactElement } from 'react';
+import type { MutationOutcome } from 'shared/api/mutation-outcome';
 
 type DeleteMemberDialogProps = {
   member: Pick<AccessMember, 'email' | 'userId'>;

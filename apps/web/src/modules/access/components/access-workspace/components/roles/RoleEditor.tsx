@@ -9,9 +9,9 @@ import type { RoleWrite } from '@warehouser/contracts/access';
 import type {
   AccessPermission,
   AccessRole,
-  MutationOutcome,
 } from 'modules/access/types/access.types';
 import type { ReactElement } from 'react';
+import type { MutationOutcome } from 'shared/api/mutation-outcome';
 
 type RoleEditorProps = {
   canDelete: boolean;

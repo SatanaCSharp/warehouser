@@ -1,6 +1,5 @@
 import { useCallback } from 'react';
 
-import { runWorkspaceMutation } from 'modules/workspace/api/workspace-mutation';
 import {
   useCreateWorkspaceRoleMutation,
   useUpdateWorkspaceRoleMutation,
@@ -9,9 +8,10 @@ import {
   workspaceRoleFieldErrorsByCode,
   workspaceRoleNameValidationKey,
 } from 'modules/workspace/hooks/workspace-role-name-validation';
+import { runWorkspaceMutation } from 'shared/api/workspace-mutation';
 
 import type { WorkspaceRoleWrite } from '@warehouser/contracts/workspaces';
-import type { MutationOutcome } from 'modules/workspace/types/workspace.types';
+import type { MutationOutcome } from 'shared/api/mutation-outcome';
 
 export type SaveWorkspaceRole = (
   input: WorkspaceRoleWrite,

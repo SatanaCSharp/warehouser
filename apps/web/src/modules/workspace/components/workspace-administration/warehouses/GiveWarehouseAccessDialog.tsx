@@ -2,9 +2,9 @@ import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import { selectCurrentUser } from 'modules/auth/store/auth.selectors';
-import { useListWorkspaceUsersQuery } from 'modules/workspace/api/workspace-users-api';
 import { useListAssignableWarehouseRolesQuery } from 'modules/workspace/api/workspace-warehouses-api';
 import { useAssignWarehouseMembership } from 'modules/workspace/hooks/useAssignWarehouseMembership';
+import { useListWorkspaceUsersQuery } from 'shared/api/workspace-users-api';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormSelectField } from 'shared/components/FormSelectField';
 import { useAppSelector } from 'store/hooks';

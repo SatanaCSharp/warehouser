@@ -6,7 +6,7 @@ import { EditEmailDialog } from 'modules/access/components/access-workspace/comp
 import { renderWithProviders } from 'test/render';
 
 import type { EmailChangeInput } from '@warehouser/contracts/users';
-import type { MutationOutcome } from 'modules/access/types/access.types';
+import type { MutationOutcome } from 'shared/api/mutation-outcome';
 
 const targetMember = {
   userId: '00000000-0000-4000-8000-000000000021',

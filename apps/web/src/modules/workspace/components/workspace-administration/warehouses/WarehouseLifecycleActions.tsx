@@ -4,8 +4,8 @@ import { useTranslation } from 'react-i18next';
 
 import { AddWarehouseAction } from 'modules/workspace/components/workspace-administration/warehouses/AddWarehouseAction';
 import { ArchiveWarehouseDialog } from 'modules/workspace/components/workspace-administration/warehouses/ArchiveWarehouseDialog';
-import { useReturnFocusOnClose } from 'modules/workspace/hooks/useReturnFocusOnClose';
 import { useSetWarehouseArchival } from 'modules/workspace/hooks/useSetWarehouseArchival';
+import { useReturnFocusOnClose } from 'shared/hooks/useReturnFocusOnClose';
 import { ArchiveIcon, ArrowRightLeftIcon } from 'shared/icons';
 
 import type { Warehouse } from '@warehouser/contracts/workspaces';

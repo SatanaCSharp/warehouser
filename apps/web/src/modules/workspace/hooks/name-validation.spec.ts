@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { warehouseNameValidationKey } from 'modules/workspace/hooks/warehouse-name-validation';
 import { workspaceRoleNameValidationKey } from 'modules/workspace/hooks/workspace-role-name-validation';
 
-import type { MutationOutcome } from 'modules/workspace/types/workspace.types';
+import type { MutationOutcome } from 'shared/api/mutation-outcome';
 
 // RED for T61/AC-08, AC-15a (review S1-12) — every name rejection is produced
 // by one shared value object, and all three server commands map its

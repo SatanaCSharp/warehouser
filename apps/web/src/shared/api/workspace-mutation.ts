@@ -1,8 +1,8 @@
-import { alertWorkspaceAction } from 'modules/workspace/alerts/workspace-feedback';
+import { alertWorkspaceAction } from 'shared/alerts/workspace-feedback';
 import { isApiFailure } from 'shared/api/api-client';
 
-import type { WorkspaceSuccessAction } from 'modules/workspace/alerts/workspace-feedback';
-import type { MutationOutcome } from 'modules/workspace/types/workspace.types';
+import type { WorkspaceSuccessAction } from 'shared/alerts/workspace-feedback';
+import type { MutationOutcome } from 'shared/api/mutation-outcome';
 
 type MutationResult = { data: unknown } | { error: unknown };
 

@@ -1,19 +1,17 @@
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import { useFormFieldErrors } from 'modules/access/hooks/useFormFieldErrors';
 import { parseCreateMemberForm } from 'modules/access/schemas/create-member-form';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormSelectField } from 'shared/components/FormSelectField';
 import { FormTextField } from 'shared/components/FormTextField';
 import { PasswordInput } from 'shared/components/PasswordInput';
+import { useFormFieldErrors } from 'shared/hooks/useFormFieldErrors';
 
 import type { CreateMemberInput } from '@warehouser/contracts/users';
-import type {
-  AccessRole,
-  MutationOutcome,
-} from 'modules/access/types/access.types';
+import type { AccessRole } from 'modules/access/types/access.types';
 import type { ReactElement } from 'react';
+import type { MutationOutcome } from 'shared/api/mutation-outcome';
 
 type CreateMemberDialogProps = {
   roles: AccessRole[];

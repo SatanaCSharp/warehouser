@@ -20,7 +20,7 @@
 | T11 | Move the eleven handlers onto `WorkspaceAccessController`    | ports  | YuriiH | L        | T9, T10    | todo   |
 | T12 | Trim `workspaces` and prove the graph acyclic                | wiring | YuriiH | M        | T11        | todo   |
 | T13 | Add the two server boundary specs, tighten `users`           | tests  | YuriiH | M        | T12        | todo   |
-| T14 | Promote the six multi-consumer web files                     | ui     | YuriiH | L        | T2, T4     | todo   |
+| T14 | Promote the six multi-consumer web files                     | ui     | YuriiH | L        | T2, T4     | done   |
 | T15 | Move the Warehouse domain into `modules/warehouse`           | ui     | YuriiH | L        | T14        | todo   |
 | T16 | Move the workspace scope of Access into `modules/access`     | ui     | YuriiH | L        | T14        | todo   |
 | T17 | Compose the shell across modules                             | ui     | YuriiH | M        | T15, T16   | todo   |

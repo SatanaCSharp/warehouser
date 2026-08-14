@@ -4,10 +4,10 @@ import { useTranslation } from 'react-i18next';
 
 import { DeleteWorkspaceRoleAction } from 'modules/workspace/components/workspace-administration/roles/DeleteWorkspaceRoleAction';
 import { WorkspacePermissionFieldset } from 'modules/workspace/components/workspace-administration/roles/WorkspacePermissionFieldset';
-import { useFormFieldErrors } from 'modules/workspace/hooks/useFormFieldErrors';
 import { useSaveWorkspaceRole } from 'modules/workspace/hooks/useSaveWorkspaceRole';
 import { workspaceRoleFormSchema } from 'modules/workspace/schemas/workspace-role-form.schema';
 import { FormTextField } from 'shared/components/FormTextField';
+import { useFormFieldErrors } from 'shared/hooks/useFormFieldErrors';
 
 import type {
   WorkspacePermission,

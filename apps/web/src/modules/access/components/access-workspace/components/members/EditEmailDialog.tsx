@@ -1,17 +1,15 @@
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import { useFormFieldErrors } from 'modules/access/hooks/useFormFieldErrors';
 import { parseEmailChangeForm } from 'modules/access/schemas/email-change-form';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormTextField } from 'shared/components/FormTextField';
+import { useFormFieldErrors } from 'shared/hooks/useFormFieldErrors';
 
 import type { EmailChangeInput } from '@warehouser/contracts/users';
-import type {
-  AccessMember,
-  MutationOutcome,
-} from 'modules/access/types/access.types';
+import type { AccessMember } from 'modules/access/types/access.types';
 import type { ReactElement } from 'react';
+import type { MutationOutcome } from 'shared/api/mutation-outcome';
 
 type EditEmailDialogProps = {
   member: Pick<AccessMember, 'email' | 'userId'>;

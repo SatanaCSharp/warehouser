@@ -3,7 +3,7 @@ import { useCallback } from 'react';
 import { useTransferWarehouseManagerMutation } from 'modules/access/api/access-api';
 import { runAccessMutation } from 'modules/access/api/access-mutation';
 
-import type { MutationOutcome } from 'modules/access/types/access.types';
+import type { MutationOutcome } from 'shared/api/mutation-outcome';
 
 export type TransferManager = (
   recipientUserId: string,

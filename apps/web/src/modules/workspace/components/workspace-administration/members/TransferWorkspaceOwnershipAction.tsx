@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { TransferWorkspaceOwnershipDialog } from 'modules/workspace/components/workspace-administration/members/TransferWorkspaceOwnershipDialog';
-import { useReturnFocusOnClose } from 'modules/workspace/hooks/useReturnFocusOnClose';
+import { useReturnFocusOnClose } from 'shared/hooks/useReturnFocusOnClose';
 import { useHasWorkspacePermission } from 'shared/hooks/useWorkspacePermissions';
 import { ArrowRightLeftIcon } from 'shared/icons';
 

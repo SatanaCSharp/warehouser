@@ -7,7 +7,7 @@ export type FieldErrorCodes<TForm extends FieldValues> = Partial<
 /**
  * Checks a validation-error code (client-parsed or server-reported) and, when
  * present, sets the translated message on its react-hook-form field. Centralizes
- * the check-then-setError step repeated across the access workspace's forms
+ * the check-then-setError step repeated across the application's forms
  * (see docs/system/guides/web-error-handling.md §3).
  */
 export const useFormFieldErrors = <TForm extends FieldValues>(

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ChangeWorkspaceRoleDialog } from 'modules/workspace/components/workspace-administration/members/ChangeWorkspaceRoleDialog';
-import { useReturnFocusOnClose } from 'modules/workspace/hooks/useReturnFocusOnClose';
+import { useReturnFocusOnClose } from 'shared/hooks/useReturnFocusOnClose';
 import { useHasWorkspacePermission } from 'shared/hooks/useWorkspacePermissions';
 
 import type { WorkspaceMember } from '@warehouser/contracts/workspaces';

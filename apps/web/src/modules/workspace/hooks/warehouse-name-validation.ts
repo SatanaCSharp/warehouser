@@ -1,4 +1,4 @@
-import type { MutationOutcome } from 'modules/workspace/types/workspace.types';
+import type { MutationOutcome } from 'shared/api/mutation-outcome';
 
 // A rejected Warehouse name arrives as `workspace.invalid_input` naming the
 // field and the rule it broke, so the member is told which rule was not met

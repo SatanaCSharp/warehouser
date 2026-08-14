@@ -5,8 +5,8 @@ import {
 } from '@warehouser/contracts/workspaces';
 import { z } from 'zod';
 
-import { workspaceUsersApi } from 'modules/workspace/api/workspace-users-api';
 import { api } from 'shared/api/api-client';
+import { workspaceUsersApi } from 'shared/api/workspace-users-api';
 
 import type {
   AssignableWarehouseRole,
