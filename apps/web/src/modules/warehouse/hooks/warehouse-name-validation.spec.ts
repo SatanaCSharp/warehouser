@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { workspaceRoleNameValidationKey } from 'modules/access/hooks/workspace-role-name-validation';
 import { warehouseNameValidationKey } from 'modules/warehouse/hooks/warehouse-name-validation';
-import { workspaceRoleNameValidationKey } from 'modules/workspace/hooks/workspace-role-name-validation';
 
 import type { MutationOutcome } from 'shared/api/mutation-outcome';
 
