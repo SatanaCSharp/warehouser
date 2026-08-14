@@ -24,6 +24,17 @@ import type {
   WorkspaceUser,
 } from '@warehouser/contracts/workspaces';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
+import { AddWorkspaceMemberCommand } from 'access/usecases/commands/add-workspace-member.command';
+import { AssignWorkspaceRoleCommand } from 'access/usecases/commands/assign-workspace-role.command';
+import { CreateWorkspaceRoleCommand } from 'access/usecases/commands/create-workspace-role.command';
+import { DeleteWorkspaceRoleCommand } from 'access/usecases/commands/delete-workspace-role.command';
+import { RemoveWorkspaceMemberCommand } from 'access/usecases/commands/remove-workspace-member.command';
+import { TransferWorkspaceOwnerCommand } from 'access/usecases/commands/transfer-workspace-owner.command';
+import { UpdateWorkspaceRoleCommand } from 'access/usecases/commands/update-workspace-role.command';
+import { ListWorkspaceMembersQuery } from 'access/usecases/queries/list-workspace-members.query';
+import { ListWorkspacePermissionsQuery } from 'access/usecases/queries/list-workspace-permissions.query';
+import { ListWorkspaceRolesQuery } from 'access/usecases/queries/list-workspace-roles.query';
+import { ListWorkspaceUsersQuery } from 'access/usecases/queries/list-workspace-users.query';
 import type { WorkspaceAccessRequest } from 'shared/access/access-request';
 import { RequiredWorkspacePermission } from 'shared/decorators/required-workspace-permission.decorator';
 import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
@@ -37,19 +48,8 @@ import {
   WorkspaceRoleDeletionDto,
   WorkspaceRoleWriteDto,
 } from 'workspaces/rest/dtos/workspace-mutation.dto';
-import { AddWorkspaceMemberCommand } from 'workspaces/usecases/commands/add-workspace-member.command';
-import { AssignWorkspaceRoleCommand } from 'workspaces/usecases/commands/assign-workspace-role.command';
-import { CreateWorkspaceRoleCommand } from 'workspaces/usecases/commands/create-workspace-role.command';
-import { DeleteWorkspaceRoleCommand } from 'workspaces/usecases/commands/delete-workspace-role.command';
-import { RemoveWorkspaceMemberCommand } from 'workspaces/usecases/commands/remove-workspace-member.command';
 import { RenameWorkspaceCommand } from 'workspaces/usecases/commands/rename-workspace.command';
 import { SetActiveWarehouseCommand } from 'workspaces/usecases/commands/set-active-warehouse.command';
-import { TransferWorkspaceOwnerCommand } from 'workspaces/usecases/commands/transfer-workspace-owner.command';
-import { UpdateWorkspaceRoleCommand } from 'workspaces/usecases/commands/update-workspace-role.command';
-import { ListWorkspaceMembersQuery } from 'workspaces/usecases/queries/list-workspace-members.query';
-import { ListWorkspacePermissionsQuery } from 'workspaces/usecases/queries/list-workspace-permissions.query';
-import { ListWorkspaceRolesQuery } from 'workspaces/usecases/queries/list-workspace-roles.query';
-import { ListWorkspaceUsersQuery } from 'workspaces/usecases/queries/list-workspace-users.query';
 import { ReadWorkspaceContextQuery } from 'workspaces/usecases/queries/read-workspace-context.query';
 
 /** Every route whose subject is the Workspace itself. Workspace-scoped routes carry **no**

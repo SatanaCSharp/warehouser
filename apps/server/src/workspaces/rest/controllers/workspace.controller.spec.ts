@@ -15,6 +15,17 @@ import {
   WorkspacePermissionId,
 } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
+import type { AddWorkspaceMemberCommand } from 'access/usecases/commands/add-workspace-member.command';
+import type { AssignWorkspaceRoleCommand } from 'access/usecases/commands/assign-workspace-role.command';
+import type { CreateWorkspaceRoleCommand } from 'access/usecases/commands/create-workspace-role.command';
+import type { DeleteWorkspaceRoleCommand } from 'access/usecases/commands/delete-workspace-role.command';
+import type { RemoveWorkspaceMemberCommand } from 'access/usecases/commands/remove-workspace-member.command';
+import type { TransferWorkspaceOwnerCommand } from 'access/usecases/commands/transfer-workspace-owner.command';
+import type { UpdateWorkspaceRoleCommand } from 'access/usecases/commands/update-workspace-role.command';
+import type { ListWorkspaceMembersQuery } from 'access/usecases/queries/list-workspace-members.query';
+import type { ListWorkspacePermissionsQuery } from 'access/usecases/queries/list-workspace-permissions.query';
+import type { ListWorkspaceRolesQuery } from 'access/usecases/queries/list-workspace-roles.query';
+import type { ListWorkspaceUsersQuery } from 'access/usecases/queries/list-workspace-users.query';
 import type { WorkspaceAccessRequest } from 'shared/access/access-request';
 import { REQUIRED_PERMISSION_KEY } from 'shared/decorators/required-permission.decorator';
 import { REQUIRED_WORKSPACE_PERMISSION_KEY } from 'shared/decorators/required-workspace-permission.decorator';
@@ -25,19 +36,8 @@ import type {
 import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
 import { WorkspaceAccessGuard } from 'shared/guards/workspace-access.guard';
 import { WorkspaceController } from 'workspaces/rest/controllers/workspace.controller';
-import type { AddWorkspaceMemberCommand } from 'workspaces/usecases/commands/add-workspace-member.command';
-import type { AssignWorkspaceRoleCommand } from 'workspaces/usecases/commands/assign-workspace-role.command';
-import type { CreateWorkspaceRoleCommand } from 'workspaces/usecases/commands/create-workspace-role.command';
-import type { DeleteWorkspaceRoleCommand } from 'workspaces/usecases/commands/delete-workspace-role.command';
-import type { RemoveWorkspaceMemberCommand } from 'workspaces/usecases/commands/remove-workspace-member.command';
 import type { RenameWorkspaceCommand } from 'workspaces/usecases/commands/rename-workspace.command';
 import type { SetActiveWarehouseCommand } from 'workspaces/usecases/commands/set-active-warehouse.command';
-import type { TransferWorkspaceOwnerCommand } from 'workspaces/usecases/commands/transfer-workspace-owner.command';
-import type { UpdateWorkspaceRoleCommand } from 'workspaces/usecases/commands/update-workspace-role.command';
-import type { ListWorkspaceMembersQuery } from 'workspaces/usecases/queries/list-workspace-members.query';
-import type { ListWorkspacePermissionsQuery } from 'workspaces/usecases/queries/list-workspace-permissions.query';
-import type { ListWorkspaceRolesQuery } from 'workspaces/usecases/queries/list-workspace-roles.query';
-import type { ListWorkspaceUsersQuery } from 'workspaces/usecases/queries/list-workspace-users.query';
 import type { ReadWorkspaceContextQuery } from 'workspaces/usecases/queries/read-workspace-context.query';
 
 const id = (suffix: number): string =>

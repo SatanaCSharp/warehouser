@@ -13,10 +13,10 @@
 | T4  | State the ownership rule in the three module guides          | docs   | YuriiH | L        | T3         | done   |
 | T5  | Promote the three cross-destination error members            | domain | YuriiH | M        | T1, T4     | done   |
 | T6  | Create the `warehouses` module                               | app    | YuriiH | L        | T2, T5     | done   |
-| T7  | Split `warehouse.controller.ts` across two modules           | ports  | YuriiH | L        | T6         | todo   |
-| T8  | Move the fourteen access factories, delete the old directory | domain | YuriiH | M        | T7         | todo   |
-| T9  | Move the seven workspace role/member/owner commands          | app    | YuriiH | L        | T8         | todo   |
-| T10 | Move the four list queries, predicates and deletion service  | app    | YuriiH | M        | T8         | todo   |
+| T7  | Split `warehouse.controller.ts` across two modules           | ports  | YuriiH | L        | T6         | done   |
+| T8  | Move the fourteen access factories, delete the old directory | domain | YuriiH | M        | T7         | done   |
+| T9  | Move the seven workspace role/member/owner commands          | app    | YuriiH | L        | T8         | done   |
+| T10 | Move the four list queries, predicates and deletion service  | app    | YuriiH | M        | T8         | done   |
 | T11 | Move the eleven handlers onto `WorkspaceAccessController`    | ports  | YuriiH | L        | T9, T10    | todo   |
 | T12 | Trim `workspaces` and prove the graph acyclic                | wiring | YuriiH | M        | T11        | todo   |
 | T13 | Add the two server boundary specs, tighten `users`           | tests  | YuriiH | M        | T12        | todo   |
@@ -32,12 +32,21 @@
 
 **Lanes.** `implement` serializes tasks with overlapping `files_hint`. Three lanes matter here:
 
-- **Compile-coupled lane T8 · T9 · T10** — all three carry
+- **Compile-coupled lane T7 · T8 · T9 · T10** — all carry
   `apps/server/src/access/domain/errors/workspace-access.errors.ts`. The fourteen factories cannot be
   committed green apart from their consumers: leaving a consumer in `workspaces` makes it deep-import
   `access/domain/errors` (CR-AC-08), and moving a consumer first makes `access` import `workspaces`,
-  which `tests/access/authorization-coverage.spec.mjs:161` already fails on. They may close with one
-  shared gate and one commit carrying all three `SDD-Task` trailers.
+  which `tests/access/authorization-coverage.spec.mjs:161` already fails on. They close with one
+  shared gate and one commit carrying every task's `SDD-Task` trailers.
+
+  > **Amended during implementation.** The lane was planned as T8 · T9 · T10 with T7 upstream, but
+  > that edge is inverted: `assign-warehouse-membership.command.ts` and
+  > `revoke-warehouse-membership.command.ts` — which **T7** moves into `access` — import both
+  > `workspaces/domain/errors/workspace.errors` and
+  > `workspaces/domain/predicates/workspace-authority.predicates`, so T7 is the _first consumer_ of
+  > what T8 and T10 move. It was folded into the lane by explicit decision and landed as one commit
+  > carrying all four `SDD-Task` trailers — find it by `git log --grep 'SDD-Task: T8'`.
+
 - **Server ports lane T7 · T11 · T13** — all touch `tests/access/authorization-coverage.spec.mjs`,
   whose exemption keys are path-valued and must be re-pathed in the same commit that moves the handler.
 - **Web workspace lane T14 · T15 · T16 · T17** — all remove files from

@@ -7,7 +7,7 @@ import {
 } from 'warehouses/domain/errors/warehouse.errors';
 
 // The three Warehouse-record cases split out of
-// `workspaces/domain/errors/workspace.errors.spec.ts` when the Warehouse
+// `access/domain/errors/workspace-access.errors.spec.ts` when the Warehouse
 // lifecycle commands moved to `warehouses` (CR-AC-05, CH-S1). Three, not
 // four: `workspaceWarehouseArchivedError` went to `shared/errors/` under
 // CR-AC-06's second clause, because its only caller

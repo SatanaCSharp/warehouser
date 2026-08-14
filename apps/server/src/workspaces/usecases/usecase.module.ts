@@ -3,49 +3,19 @@ import { ProvisionInitialAccessCommand } from 'access/usecases/commands/provisio
 import { AccessUsecaseModule } from 'access/usecases/usecase.module';
 import { WorkspaceProvisioningRepository } from 'shared/domain/repositories/workspace-provisioning.repository';
 import { WorkspaceProvisioningService } from 'workspaces/domain/services/workspace-provisioning.service';
-import { WorkspaceRoleDeletionService } from 'workspaces/domain/services/workspace-role-deletion.service';
-import { AddWorkspaceMemberCommand } from 'workspaces/usecases/commands/add-workspace-member.command';
-import { AssignWarehouseMembershipCommand } from 'workspaces/usecases/commands/assign-warehouse-membership.command';
-import { AssignWorkspaceRoleCommand } from 'workspaces/usecases/commands/assign-workspace-role.command';
-import { CreateWorkspaceRoleCommand } from 'workspaces/usecases/commands/create-workspace-role.command';
-import { DeleteWorkspaceRoleCommand } from 'workspaces/usecases/commands/delete-workspace-role.command';
-import { RemoveWorkspaceMemberCommand } from 'workspaces/usecases/commands/remove-workspace-member.command';
 import { RenameWorkspaceCommand } from 'workspaces/usecases/commands/rename-workspace.command';
-import { RevokeWarehouseMembershipCommand } from 'workspaces/usecases/commands/revoke-warehouse-membership.command';
 import { SetActiveWarehouseCommand } from 'workspaces/usecases/commands/set-active-warehouse.command';
-import { TransferWorkspaceOwnerCommand } from 'workspaces/usecases/commands/transfer-workspace-owner.command';
-import { UpdateWorkspaceRoleCommand } from 'workspaces/usecases/commands/update-workspace-role.command';
-import { ListAssignableWarehouseRolesQuery } from 'workspaces/usecases/queries/list-assignable-warehouse-roles.query';
-import { ListWorkspaceMembersQuery } from 'workspaces/usecases/queries/list-workspace-members.query';
-import { ListWorkspacePermissionsQuery } from 'workspaces/usecases/queries/list-workspace-permissions.query';
-import { ListWorkspaceRolesQuery } from 'workspaces/usecases/queries/list-workspace-roles.query';
-import { ListWorkspaceUsersQuery } from 'workspaces/usecases/queries/list-workspace-users.query';
 import { ReadWorkspaceContextQuery } from 'workspaces/usecases/queries/read-workspace-context.query';
 
-const workspaceServices = [WorkspaceRoleDeletionService];
+// The Workspace record and the member's position within it. The role, member,
+// owner-transfer and Warehouse-membership use cases this module used to carry
+// are one capability exercised at two scopes and now live in `access`
+// (CR-AC-06, CH-S2, CH-S3); `WorkspaceController` still serves eleven of their
+// routes and obtains them from `AccessUsecaseModule`, which
+// `WorkspacesRestModule` imports directly until those handlers follow.
+const workspaceCommands = [RenameWorkspaceCommand, SetActiveWarehouseCommand];
 
-const workspaceCommands = [
-  RenameWorkspaceCommand,
-  CreateWorkspaceRoleCommand,
-  UpdateWorkspaceRoleCommand,
-  DeleteWorkspaceRoleCommand,
-  AddWorkspaceMemberCommand,
-  RemoveWorkspaceMemberCommand,
-  AssignWorkspaceRoleCommand,
-  TransferWorkspaceOwnerCommand,
-  SetActiveWarehouseCommand,
-  AssignWarehouseMembershipCommand,
-  RevokeWarehouseMembershipCommand,
-];
-
-const workspaceQueries = [
-  ReadWorkspaceContextQuery,
-  ListWorkspaceRolesQuery,
-  ListWorkspacePermissionsQuery,
-  ListWorkspaceMembersQuery,
-  ListWorkspaceUsersQuery,
-  ListAssignableWarehouseRolesQuery,
-];
+const workspaceQueries = [ReadWorkspaceContextQuery];
 
 // `WorkspaceProvisioningService` depends on `access`'s exported
 // `ProvisionInitialAccessCommand`, which erases to a token Nest cannot
@@ -78,13 +48,11 @@ const workspaceFactoryProviders = [
 @Module({
   imports: [AccessUsecaseModule],
   providers: [
-    ...workspaceServices,
     ...workspaceCommands,
     ...workspaceQueries,
     ...workspaceFactoryProviders,
   ],
   exports: [
-    ...workspaceServices,
     ...workspaceCommands,
     ...workspaceQueries,
     WorkspaceProvisioningService,

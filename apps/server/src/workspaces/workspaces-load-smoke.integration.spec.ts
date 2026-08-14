@@ -4,6 +4,8 @@ import {
   PermissionId,
   WorkspacePermissionId,
 } from '@warehouser/shared-types/enums';
+import { ListWorkspaceMembersQuery } from 'access/usecases/queries/list-workspace-members.query';
+import { ListWorkspaceRolesQuery } from 'access/usecases/queries/list-workspace-roles.query';
 import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
 import dataSource from 'shared/database/data-source';
 import { DbTransactionService } from 'shared/database/db-transaction.service';
@@ -33,8 +35,6 @@ import {
 import { RenameWarehouseCommand } from 'warehouses/usecases/commands/rename-warehouse.command';
 import { RenameWorkspaceCommand } from 'workspaces/usecases/commands/rename-workspace.command';
 import { SetActiveWarehouseCommand } from 'workspaces/usecases/commands/set-active-warehouse.command';
-import { ListWorkspaceMembersQuery } from 'workspaces/usecases/queries/list-workspace-members.query';
-import { ListWorkspaceRolesQuery } from 'workspaces/usecases/queries/list-workspace-roles.query';
 import { ReadWorkspaceContextQuery } from 'workspaces/usecases/queries/read-workspace-context.query';
 
 const describeIntegration =
