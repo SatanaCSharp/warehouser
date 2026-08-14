@@ -26,7 +26,7 @@
 | T17 | Compose the shell across modules                             | ui     | YuriiH | M        | T15, T16   | done   |
 | T18 | Register the `warehouse` namespace, re-home the copy         | ui     | YuriiH | M        | T17        | done   |
 | T19 | Declare each web module's surface and enforce it             | tests  | YuriiH | L        | T18        | done   |
-| T20 | Run the pre-merge verification                               | tests  | YuriiH | M        | T13, T19   | todo   |
+| T20 | Run the pre-merge verification                               | tests  | YuriiH | M        | T13, T19   | done   |
 
 **Total:** 20 tasks, ~16 person-days.
 
