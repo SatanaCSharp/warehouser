@@ -28,7 +28,7 @@ import {
 // Restoring never re-counts non-archived Warehouses — AC-11a only bounds
 // archiving — and this command must never consult archived state as an
 // authorization input.
-import { RestoreWarehouseCommand } from 'workspaces/usecases/commands/restore-warehouse.command';
+import { RestoreWarehouseCommand } from 'warehouses/usecases/commands/restore-warehouse.command';
 
 const describeIntegration =
   process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;

@@ -5,7 +5,7 @@ import { Transactional } from 'shared/decorators/transactional.decorator';
 import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
 import { workspaceTargetUnavailableError } from 'shared/errors/cross-module.errors';
 import { withUnavailableOutcome } from 'shared/errors/unavailable-outcome';
-import { workspaceArchivalUnavailableError } from 'workspaces/domain/errors/workspace.errors';
+import { workspaceArchivalUnavailableError } from 'warehouses/domain/errors/warehouse.errors';
 
 export interface RestoreWarehouseInput {
   readonly warehouseId: string;

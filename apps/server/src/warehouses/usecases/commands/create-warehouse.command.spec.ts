@@ -13,7 +13,7 @@ import {
 // atomic-creation (AC-06/AC-07) and cross-Workspace (AC-10 — n/a to create)
 // behaviour is covered at integration level per test-plan.md's chosen level
 // for those rows.
-import { CreateWarehouseCommand } from 'workspaces/usecases/commands/create-warehouse.command';
+import { CreateWarehouseCommand } from 'warehouses/usecases/commands/create-warehouse.command';
 
 const workspaceId = '00000000-0000-4000-8000-000000000001';
 const actorId = '00000000-0000-4000-8000-000000000002';

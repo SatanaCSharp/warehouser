@@ -3,6 +3,7 @@ import 'reflect-metadata';
 import { MODULE_METADATA } from '@nestjs/common/constants';
 import { AppModule } from 'app.module';
 import { DomainModule } from 'shared/domain/domain.module';
+import { WarehousesUsecaseModule } from 'warehouses/usecases/usecase.module';
 import { WorkspacesRestModule } from 'workspaces';
 import { WarehouseController } from 'workspaces/rest/controllers/warehouse.controller';
 import { WorkspaceController } from 'workspaces/rest/controllers/workspace.controller';
@@ -26,10 +27,15 @@ describe('workspaces module wiring', () => {
     MODULE_METADATA.PROVIDERS,
     WorkspacesUsecaseModule,
   );
-  const usecaseExports = metadata(
-    MODULE_METADATA.EXPORTS,
-    WorkspacesUsecaseModule,
-  );
+  // The Warehouse-record use cases `WarehouseController` injects now live in
+  // `WarehousesUsecaseModule`, which `WorkspacesRestModule` imports beside
+  // `WorkspacesUsecaseModule`. The rule this asserts is unchanged — every use
+  // case a registered controller injects is exported by a use-case module the
+  // REST module imports — only the set of modules supplying it is now two.
+  const usecaseExports = [
+    ...metadata(MODULE_METADATA.EXPORTS, WorkspacesUsecaseModule),
+    ...metadata(MODULE_METADATA.EXPORTS, WarehousesUsecaseModule),
+  ];
   const domainProviders = metadata(MODULE_METADATA.PROVIDERS, DomainModule);
 
   it('registers the Workspace REST module in AppModule', () => {

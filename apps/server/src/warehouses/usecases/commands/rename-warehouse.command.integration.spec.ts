@@ -15,7 +15,7 @@ import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehou
 // `principal.workspaceId` itself (not only the transport guard), store the
 // trimmed/un-normalized name via `WarehouseLifecycleRepository`, and run
 // inside its own `@Transactional()` boundary (sad.md §6.4a).
-import { RenameWarehouseCommand } from 'workspaces/usecases/commands/rename-warehouse.command';
+import { RenameWarehouseCommand } from 'warehouses/usecases/commands/rename-warehouse.command';
 
 const describeIntegration =
   process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;

@@ -8,7 +8,7 @@ import { withUnavailableOutcome } from 'shared/errors/unavailable-outcome';
 import {
   workspaceArchivalUnavailableError,
   workspaceLastUnarchivedWarehouseError,
-} from 'workspaces/domain/errors/workspace.errors';
+} from 'warehouses/domain/errors/warehouse.errors';
 
 export interface ArchiveWarehouseInput {
   readonly warehouseId: string;

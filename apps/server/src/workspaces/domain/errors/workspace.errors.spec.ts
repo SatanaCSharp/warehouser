@@ -1,8 +1,5 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
-import { SystemError } from '@warehouser/shared-types/errors';
 import {
-  workspaceArchivalUnavailableError,
-  workspaceLastUnarchivedWarehouseError,
   workspaceManagerTransferRequiredError,
   workspaceMembershipExistsError,
   workspaceOwnerTransferRequiredError,
@@ -11,7 +8,6 @@ import {
   workspaceRoleNameConflictError,
   workspaceSelfActionDeniedError,
   workspaceSystemManagedPermissionError,
-  workspaceWarehouseCreationUnavailableError,
 } from 'workspaces/domain/errors/workspace.errors';
 
 // T4 — neither this error-factory module nor the `ErrorCode.WORKSPACE_*` entries
@@ -80,46 +76,6 @@ describe('workspace domain error factories', () => {
   it('builds a stable, code-carrying error for a duplicate Warehouse membership', () => {
     expect(workspaceMembershipExistsError()).toMatchObject({
       code: ErrorCode.WORKSPACE_MEMBERSHIP_EXISTS,
-    });
-  });
-
-  // AC-11a — a Workspace always keeps at least one non-archived Warehouse
-  it('builds a stable, code-carrying error for the last non-archived Warehouse', () => {
-    expect(workspaceLastUnarchivedWarehouseError()).toMatchObject({
-      code: ErrorCode.WORKSPACE_LAST_UNARCHIVED_WAREHOUSE,
-    });
-  });
-
-  // AC-07/AC-13 — T43. server-error-handling.md §2 classifies "a known
-  // infrastructure or technical failure" as a `SystemError`, not an
-  // `ApplicationError`; `workspace.warehouse_creation_unavailable` /
-  // `workspace.archival_unavailable` are registered only in
-  // `global-http-exception.filter.ts`'s `systemErrors` map (503), mirroring
-  // the live `AuthRegistrationUnavailableError` precedent
-  // (auth/domain/errors/auth.errors.ts) — an `ApplicationError` with either
-  // code would fall through `applicationErrors` (undefined) to the generic
-  // 500, not the documented 503. Both factories must therefore construct a
-  // `SystemError` and preserve the originating repository failure as `cause`
-  // (§3 "Preserve an originating technical failure as `cause`").
-  it('builds a SystemError for an unavailable Warehouse creation write, preserving the cause', () => {
-    const cause = new Error('write timed out');
-    const error = workspaceWarehouseCreationUnavailableError(cause);
-
-    expect(error).toBeInstanceOf(SystemError);
-    expect(error).toMatchObject({
-      code: ErrorCode.WORKSPACE_WAREHOUSE_CREATION_UNAVAILABLE,
-      cause,
-    });
-  });
-
-  it('builds a SystemError for an unavailable archival/restoration write, preserving the cause', () => {
-    const cause = new Error('connection reset');
-    const error = workspaceArchivalUnavailableError(cause);
-
-    expect(error).toBeInstanceOf(SystemError);
-    expect(error).toMatchObject({
-      code: ErrorCode.WORKSPACE_ARCHIVAL_UNAVAILABLE,
-      cause,
     });
   });
 });

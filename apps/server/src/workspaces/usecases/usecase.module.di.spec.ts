@@ -15,8 +15,9 @@ import { WorkspaceOwnerTransferRepository } from 'shared/domain/repositories/wor
 import { WorkspaceProvisioningRepository } from 'shared/domain/repositories/workspace-provisioning.repository';
 import { WorkspaceReadRepository } from 'shared/domain/repositories/workspace-read.repository';
 import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository';
+import { CreateWarehouseCommand } from 'warehouses/usecases/commands/create-warehouse.command';
+import { WarehousesUsecaseModule } from 'warehouses/usecases/usecase.module';
 import { WorkspaceProvisioningService } from 'workspaces/domain/services/workspace-provisioning.service';
-import { CreateWarehouseCommand } from 'workspaces/usecases/commands/create-warehouse.command';
 import { WorkspacesUsecaseModule } from 'workspaces/usecases/usecase.module';
 
 // Doubles for every `shared/domain/repositories/*` token the real
@@ -64,6 +65,12 @@ import { WorkspacesUsecaseModule } from 'workspaces/usecases/usecase.module';
 })
 class TestDomainDoubleModule {}
 
+// `CreateWarehouseCommand` moved to `WarehousesUsecaseModule` with the rest
+// of the Warehouse record; both modules are compiled together below because
+// the graph they form is the one production boots (`WorkspacesRestModule`
+// imports both until `WarehouseController` follows the commands). The
+// assertions themselves are unchanged.
+//
 // T42: `CreateWarehouseCommand` and `WorkspaceProvisioningService` are
 // registered as plain-class providers whose constructors depend on
 // `AccessUsecaseModule`'s exports (`ProvisionInitialAccessCommand`, and — for
@@ -78,7 +85,11 @@ class TestDomainDoubleModule {}
 describe('WorkspacesUsecaseModule Nest DI graph', () => {
   it('constructs CreateWarehouseCommand and WorkspaceProvisioningService through Nest injection', async () => {
     const moduleRef = await Test.createTestingModule({
-      imports: [TestDomainDoubleModule, WorkspacesUsecaseModule],
+      imports: [
+        TestDomainDoubleModule,
+        WorkspacesUsecaseModule,
+        WarehousesUsecaseModule,
+      ],
     }).compile();
 
     expect(moduleRef.get(CreateWarehouseCommand)).toBeInstanceOf(

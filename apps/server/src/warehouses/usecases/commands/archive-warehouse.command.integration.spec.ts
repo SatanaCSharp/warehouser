@@ -31,7 +31,7 @@ import { IsNull } from 'typeorm';
 // archived state, memberships and Roles unchanged on any failure (AC-13).
 // This command must never consult archived state as an authorization input
 // — only `principal.workspaceId` gates it.
-import { ArchiveWarehouseCommand } from 'workspaces/usecases/commands/archive-warehouse.command';
+import { ArchiveWarehouseCommand } from 'warehouses/usecases/commands/archive-warehouse.command';
 
 const describeIntegration =
   process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;

@@ -22,15 +22,15 @@ import { REQUIRED_WORKSPACE_PERMISSION_KEY } from 'shared/decorators/required-wo
 import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
 import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
 import { WorkspaceAccessGuard } from 'shared/guards/workspace-access.guard';
+import type { ArchiveWarehouseCommand } from 'warehouses/usecases/commands/archive-warehouse.command';
+import type { CreateWarehouseCommand } from 'warehouses/usecases/commands/create-warehouse.command';
+import type { RenameWarehouseCommand } from 'warehouses/usecases/commands/rename-warehouse.command';
+import type { RestoreWarehouseCommand } from 'warehouses/usecases/commands/restore-warehouse.command';
+import type { ListWorkspaceWarehousesQuery } from 'warehouses/usecases/queries/list-workspace-warehouses.query';
 import { WarehouseController } from 'workspaces/rest/controllers/warehouse.controller';
-import type { ArchiveWarehouseCommand } from 'workspaces/usecases/commands/archive-warehouse.command';
 import type { AssignWarehouseMembershipCommand } from 'workspaces/usecases/commands/assign-warehouse-membership.command';
-import type { CreateWarehouseCommand } from 'workspaces/usecases/commands/create-warehouse.command';
-import type { RenameWarehouseCommand } from 'workspaces/usecases/commands/rename-warehouse.command';
-import type { RestoreWarehouseCommand } from 'workspaces/usecases/commands/restore-warehouse.command';
 import type { RevokeWarehouseMembershipCommand } from 'workspaces/usecases/commands/revoke-warehouse-membership.command';
 import type { ListAssignableWarehouseRolesQuery } from 'workspaces/usecases/queries/list-assignable-warehouse-roles.query';
-import type { ListWorkspaceWarehousesQuery } from 'workspaces/usecases/queries/list-workspace-warehouses.query';
 
 const id = (suffix: number): string =>
   `00000000-0000-4000-8000-${suffix.toString().padStart(12, '0')}`;

@@ -6,7 +6,7 @@ import { persistWorkspaceGraph } from 'test/factories/entity-factories';
 // `ListWorkspaceWarehousesQuery` does not exist yet — this is the RED step
 // for T15: the Workspace's Warehouses with archived state, under
 // `WAREHOUSES:WATCH` (AC-33).
-import { ListWorkspaceWarehousesQuery } from 'workspaces/usecases/queries/list-workspace-warehouses.query';
+import { ListWorkspaceWarehousesQuery } from 'warehouses/usecases/queries/list-workspace-warehouses.query';
 
 const describeIntegration =
   process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;

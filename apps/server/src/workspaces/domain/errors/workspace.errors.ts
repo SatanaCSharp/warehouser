@@ -39,10 +39,6 @@ export const workspaceManagerTransferRequiredError = (): ApplicationError =>
 export const workspaceMembershipExistsError = (): ApplicationError =>
   new ApplicationError(ErrorCode.WORKSPACE_MEMBERSHIP_EXISTS);
 
-// AC-11a — a Workspace always keeps at least one non-archived Warehouse.
-export const workspaceLastUnarchivedWarehouseError = (): ApplicationError =>
-  new ApplicationError(ErrorCode.WORKSPACE_LAST_UNARCHIVED_WAREHOUSE);
-
 // AC-17d — deleting an *assigned* Workspace Role requires
 // `WORKSPACE_ROLES:ASSIGN` in addition to `WORKSPACE_ROLES:DELETE`, since
 // moving every affected Member is itself an assignment; an unassigned Role
@@ -68,28 +64,6 @@ export const workspaceWarehouseMembershipRequiredError = (): ApplicationError =>
 // this stable, retriable code rather than an opaque persistence failure.
 export const workspaceConcurrentChangeError = (): ApplicationError =>
   new ApplicationError(ErrorCode.WORKSPACE_CONCURRENT_CHANGE);
-
-// AC-07/AC-13 — T43. The Warehouse row write (creation) fails for a known
-// infrastructure/technical reason (server-error-handling.md §2), not a
-// business rejection, so this is a `SystemError`, matching openapi.yaml's
-// documented 503 `workspace.warehouse_creation_unavailable` and mirroring
-// `global-http-exception.filter.ts`'s `systemErrors` registration for this
-// code (an `ApplicationError` would fall through to the generic 500).
-export const workspaceWarehouseCreationUnavailableError = (
-  cause: unknown,
-): SystemError =>
-  new SystemError(ErrorCode.WORKSPACE_WAREHOUSE_CREATION_UNAVAILABLE, cause);
-
-// AC-13 — the archival/restoration write fails for a known
-// infrastructure/technical reason (server-error-handling.md §2), so this is
-// a `SystemError`, matching openapi.yaml's documented 503
-// `workspace.archival_unavailable` and mirroring
-// `global-http-exception.filter.ts`'s `systemErrors` registration for this
-// code (an `ApplicationError` would fall through to the generic 500).
-export const workspaceArchivalUnavailableError = (
-  cause: unknown,
-): SystemError =>
-  new SystemError(ErrorCode.WORKSPACE_ARCHIVAL_UNAVAILABLE, cause);
 
 // AC-17b — the Role deletion (reassigning every affected Member, then
 // removing the Role) fails for a known infrastructure/technical reason

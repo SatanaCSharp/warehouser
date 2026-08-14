@@ -12,7 +12,7 @@
 | T3  | Add the system ADR and both index entries                    | docs   | YuriiH | M        | —          | done   |
 | T4  | State the ownership rule in the three module guides          | docs   | YuriiH | L        | T3         | done   |
 | T5  | Promote the three cross-destination error members            | domain | YuriiH | M        | T1, T4     | done   |
-| T6  | Create the `warehouses` module                               | app    | YuriiH | L        | T2, T5     | todo   |
+| T6  | Create the `warehouses` module                               | app    | YuriiH | L        | T2, T5     | done   |
 | T7  | Split `warehouse.controller.ts` across two modules           | ports  | YuriiH | L        | T6         | todo   |
 | T8  | Move the fourteen access factories, delete the old directory | domain | YuriiH | M        | T7         | todo   |
 | T9  | Move the seven workspace role/member/owner commands          | app    | YuriiH | L        | T8         | todo   |

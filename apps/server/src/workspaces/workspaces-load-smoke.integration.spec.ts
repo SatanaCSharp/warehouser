@@ -30,7 +30,7 @@ import {
   buildWarehouseMembership,
   persistWorkspaceGraph,
 } from 'test/factories/entity-factories';
-import { RenameWarehouseCommand } from 'workspaces/usecases/commands/rename-warehouse.command';
+import { RenameWarehouseCommand } from 'warehouses/usecases/commands/rename-warehouse.command';
 import { RenameWorkspaceCommand } from 'workspaces/usecases/commands/rename-workspace.command';
 import { SetActiveWarehouseCommand } from 'workspaces/usecases/commands/set-active-warehouse.command';
 import { ListWorkspaceMembersQuery } from 'workspaces/usecases/queries/list-workspace-members.query';

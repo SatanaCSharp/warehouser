@@ -13,7 +13,7 @@ import {
 // missing target) are covered at integration level per test-plan.md's
 // chosen level for those rows, since proving Workspace ownership needs a
 // real target row to be absent or present.
-import { RenameWarehouseCommand } from 'workspaces/usecases/commands/rename-warehouse.command';
+import { RenameWarehouseCommand } from 'warehouses/usecases/commands/rename-warehouse.command';
 
 const workspaceId = '00000000-0000-4000-8000-000000000001';
 const actorId = '00000000-0000-4000-8000-000000000002';

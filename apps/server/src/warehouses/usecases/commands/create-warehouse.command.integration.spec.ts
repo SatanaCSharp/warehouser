@@ -23,7 +23,7 @@ import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehou
 // Manager Role and the creator's membership to `access`'s
 // `ProvisionInitialAccessCommand` (T12), and run inside its own
 // `@Transactional()` boundary (sad.md §6.4).
-import { CreateWarehouseCommand } from 'workspaces/usecases/commands/create-warehouse.command';
+import { CreateWarehouseCommand } from 'warehouses/usecases/commands/create-warehouse.command';
 
 const describeIntegration =
   process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;

@@ -16,7 +16,7 @@ import {
 // `WORKSPACE_ARCHIVAL_UNAVAILABLE` is registered only in
 // `global-http-exception.filter.ts`'s `systemErrors` map (503) — an
 // `ApplicationError` with that code would fall through to the generic 500.
-import { ArchiveWarehouseCommand } from 'workspaces/usecases/commands/archive-warehouse.command';
+import { ArchiveWarehouseCommand } from 'warehouses/usecases/commands/archive-warehouse.command';
 
 const workspaceId = '00000000-0000-4000-8000-000000000001';
 const actorId = '00000000-0000-4000-8000-000000000002';

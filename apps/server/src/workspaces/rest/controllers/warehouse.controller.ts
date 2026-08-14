@@ -23,19 +23,19 @@ import type { WorkspaceAccessRequest } from 'shared/access/access-request';
 import { RequiredWorkspacePermission } from 'shared/decorators/required-workspace-permission.decorator';
 import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
 import { WorkspaceAccessGuard } from 'shared/guards/workspace-access.guard';
+import { ArchiveWarehouseCommand } from 'warehouses/usecases/commands/archive-warehouse.command';
+import { CreateWarehouseCommand } from 'warehouses/usecases/commands/create-warehouse.command';
+import { RenameWarehouseCommand } from 'warehouses/usecases/commands/rename-warehouse.command';
+import { RestoreWarehouseCommand } from 'warehouses/usecases/commands/restore-warehouse.command';
+import { ListWorkspaceWarehousesQuery } from 'warehouses/usecases/queries/list-workspace-warehouses.query';
 import {
   WarehouseArchivalDto,
   WarehouseMembershipAssignmentDto,
   WarehouseWriteDto,
 } from 'workspaces/rest/dtos/warehouse-mutation.dto';
-import { ArchiveWarehouseCommand } from 'workspaces/usecases/commands/archive-warehouse.command';
 import { AssignWarehouseMembershipCommand } from 'workspaces/usecases/commands/assign-warehouse-membership.command';
-import { CreateWarehouseCommand } from 'workspaces/usecases/commands/create-warehouse.command';
-import { RenameWarehouseCommand } from 'workspaces/usecases/commands/rename-warehouse.command';
-import { RestoreWarehouseCommand } from 'workspaces/usecases/commands/restore-warehouse.command';
 import { RevokeWarehouseMembershipCommand } from 'workspaces/usecases/commands/revoke-warehouse-membership.command';
 import { ListAssignableWarehouseRolesQuery } from 'workspaces/usecases/queries/list-assignable-warehouse-roles.query';
-import { ListWorkspaceWarehousesQuery } from 'workspaces/usecases/queries/list-workspace-warehouses.query';
 
 /** Every route whose subject is the Warehouse record itself or a membership edge into it — never
  * a resource a Warehouse owns (spec.md §1, sad.md §7, T25 DoD). Although every mutation and the
