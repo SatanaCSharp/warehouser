@@ -370,6 +370,31 @@ without a per-file exception list (CR-AC-04)
 — assert the new layout with their **rules intact**: paths and path-valued exemption keys updated, no
 rule weakened or deleted to accommodate the move.
 
+### CR-AC-13 (CR-US-03, CH-S6) — boundary-rule precision
+
+> **Added during implementation (T7), by explicit decision.** CR-AC-12 forbids weakening a boundary
+> rule to accommodate a move. This criterion records the one rule change that is **not** an
+> accommodation but a correction, so that the amendment is reviewable rather than silent.
+
+**Given** `findForbiddenImports` in `tests/access/authorization-coverage-classifier.mjs`, whose
+documented contract is to match "bare-specifier imports (`from 'workspaces/...'`) and relative
+imports that traverse into that module"
+**When** a module imports a **published package subpath** whose final segment happens to equal a
+forbidden module name — `@warehouser/contracts/workspaces`
+**Then** the import is permitted, because a scoped package specifier is neither a bare intra-
+application specifier nor a relative traversal, and the implementation was therefore broader than the
+contract it documents
+**And** the narrowing is proved not to weaken the rule: an `access` file importing
+`workspaces/domain/...` still fails, and an `access` file reaching in relatively
+(`../../workspaces/...`) still fails, each pinned by its own fixture
+**And** the reason this surfaced only now is recorded: `access` previously imported only
+`@warehouser/contracts/access`, so no code had exercised the over-broad branch. The three symbols
+`warehouseMembershipAssignmentSchema`, `AssignableWarehouseRole` and `WarehouseMembership` exist only
+under `packages/contracts/src/workspaces/`, and CR-RG-03 freezes contract subpaths in name and
+content, so no module could serve a Warehouse-membership endpoint without this correction
+**And** `guides/adding-and-using-contracts.md` requires every REST request and response shape to come
+from `packages/contracts`, which the uncorrected rule made impossible for all but one module.
+
 ## 5.1 Regression boundaries
 
 These are the substance of this request's safety, not a footnote to it. Every one is verified, not
