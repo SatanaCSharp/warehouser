@@ -395,6 +395,37 @@ content, so no module could serve a Warehouse-membership endpoint without this c
 **And** `guides/adding-and-using-contracts.md` requires every REST request and response shape to come
 from `packages/contracts`, which the uncorrected rule made impossible for all but one module.
 
+### CR-AC-14 (CR-US-03, CH-S6) — boundary-rule precision, second instance
+
+> **Added during implementation (T9), by explicit decision.** The second of the two rule
+> corrections this request required. Like CR-AC-13, it narrows a rule to what it already claims to
+> assert rather than relaxing it to accommodate a move.
+
+**Given** `repository-boundaries.spec.ts`'s command assertion, named "delegates exception handling
+to the global filter", which enforced that name by banning the `try` and `catch` **tokens**
+textually in every `*.command.ts` under `access/usecases/commands`
+**When** a command translates a value-object `AssertionError` into a typed domain error —
+`try { return AccessName.create(input).value } catch (e) { if (e instanceof AssertionError) throw
+typedError(rule); throw e }`
+**Then** the command satisfies the rule, because that construct _is_ delegation: it converts an
+`AssertionError` that would surface as a 500 into an `ApplicationError` the global filter renders as
+a code-specific 4xx, and re-throws everything else untouched
+**And** the rule now forbids what it was written to forbid — a `try` block that wraps an **awaited**
+call, which is where a command could swallow or re-classify a failure the filter owns
+**And** the narrowing is proved not to weaken the rule by two inline teeth checks: a command
+wrapping `await this.repository.persist(...)` is still rejected, and the synchronous translation is
+admitted
+**And** the reason this surfaced only now is recorded: the assertion's scope is a hard-coded
+directory literal naming one module, written when `access` was the only module it covered
+(`2526e57`). The identical idiom already lives in `create-warehouse.command.ts`,
+`rename-workspace.command.ts` and `register.command.ts`, none of which the rule scans — so it was a
+per-module constraint the codebase never honored globally, and CR-AC-06's move of
+`create-workspace-role.command.ts` is simply the first thing to carry a non-conforming file into its
+scope
+**And** the scope stays per-module: widening it repo-wide would fail `auth/register.command.ts`,
+which wraps two awaited persistence calls to produce `AuthRegistrationUnavailableError`, and
+reworking `auth` is outside this request.
+
 ## 5.1 Regression boundaries
 
 These are the substance of this request's safety, not a footnote to it. Every one is verified, not
