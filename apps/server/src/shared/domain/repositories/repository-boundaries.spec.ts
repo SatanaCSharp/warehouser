@@ -27,6 +27,48 @@ describe('shared repository boundaries', () => {
     },
   );
 
+  // CR-AC-08, third clause: "no file under `shared/domain/repositories/` imports a feature module".
+  // This is the rule `server-architecture.md` §"Dependency direction" states as "shared repositories
+  // never depend on dedicated feature modules" and `creating-a-server-repository.md` restates as
+  // "must not import from or otherwise know about a dedicated feature module". It had no executable
+  // form before CH-S6; adding it is a tightening, and it touches none of the rules above.
+  //
+  // Both spellings of the dependency are caught: a bare specifier (intra-application imports resolve
+  // through `baseUrl: ./src`) and a relative traversal out of `shared/` into a module. A scoped
+  // package subpath whose last segment happens to name a module — `@warehouser/contracts/workspaces`
+  // — is neither, and is not a module import (CR-AC-13).
+  const FEATURE_MODULES = [
+    'access',
+    'auth',
+    'users',
+    'warehouses',
+    'workspaces',
+  ];
+
+  const featureModuleImportPattern = (featureModule: string): RegExp =>
+    new RegExp(`from\\s+['"](?:\\.\\.\\/)*${featureModule}\\/`, 'u');
+
+  it.each(repositorySources)(
+    '$fileName imports no feature module',
+    ({ source }) => {
+      for (const featureModule of FEATURE_MODULES) {
+        expect(source).not.toMatch(featureModuleImportPattern(featureModule));
+      }
+    },
+  );
+
+  it.each(FEATURE_MODULES)(
+    'rejects a repository that imports from %s/',
+    (featureModule) => {
+      expect(
+        `import { Thing } from '${featureModule}/domain/errors/some.errors';`,
+      ).toMatch(featureModuleImportPattern(featureModule));
+      expect(
+        `import { Thing } from '../../../${featureModule}/domain/errors/some.errors';`,
+      ).toMatch(featureModuleImportPattern(featureModule));
+    },
+  );
+
   const commandSources = readdirSync(commandDirectory)
     .filter((fileName) => fileName.endsWith('.command.ts'))
     .map((fileName) => ({

@@ -10,6 +10,17 @@ import { join } from 'node:path';
 const usersDirectory = __dirname;
 const appModulePath = join(__dirname, '../app.module.ts');
 
+// CR-AC-08: "`apps/server/src/users/**` production code imports nothing from
+// `access`, `auth`, `warehouses` or `workspaces`". The first two were already
+// asserted here; `warehouses` and `workspaces` are a **new** constraint this
+// change request adds (CH-S6) — a tightening of the list, never a relaxation of
+// the rule, which keeps its original shape: a bare specifier naming a sibling
+// module, since intra-application imports resolve through `baseUrl: ./src`.
+const FORBIDDEN_MODULES = ['access', 'auth', 'warehouses', 'workspaces'];
+
+const forbiddenImportPattern = (featureModule: string): RegExp =>
+  new RegExp(`from\\s+['"]${featureModule}/`, 'u');
+
 const collectTsFiles = (directory: string): string[] =>
   readdirSync(directory).flatMap((entry) => {
     const entryPath = join(directory, entry);
@@ -40,10 +51,23 @@ describe('users module boundaries', () => {
   });
 
   it.each(usersSources)(
-    '$filePath imports no access/* or auth/* feature-owned file',
+    '$filePath imports no access/*, auth/*, warehouses/* or workspaces/* feature-owned file',
     ({ source }) => {
-      expect(source).not.toMatch(/from\s+['"]access\//u);
-      expect(source).not.toMatch(/from\s+['"]auth\//u);
+      for (const featureModule of FORBIDDEN_MODULES) {
+        expect(source).not.toMatch(forbiddenImportPattern(featureModule));
+      }
+    },
+  );
+
+  // Teeth. The list above only means something if every entry rejects — and the
+  // two entries CH-S6 adds have no offending file in the tree today, so without
+  // this case a typo in either would pass unnoticed (CR-AC-12).
+  it.each(FORBIDDEN_MODULES)(
+    'rejects a users file that imports from %s/',
+    (featureModule) => {
+      const offending = `import { something } from '${featureModule}/domain/errors/some.errors';`;
+
+      expect(offending).toMatch(forbiddenImportPattern(featureModule));
     },
   );
 
