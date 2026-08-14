@@ -5,7 +5,17 @@ status: Draft
 owner: 'YuriiH'
 reviewers: ['Product Owner', 'Tech Lead']
 updated_at: '2026-08-14'
-baseline_revision: '6fd9f5a566e80305b55797847602d904ecb4e5f4' # provisional — re-pin to the branch tip when implementation starts; it is the single "before" for CR-AC-11, CR-RG-04, CR-RG-05 and spec.md §6
+baseline_revision: 'd17a7f1770a9f2b4e775dbc3b72c670f658cdaf9' # PINNED (T1) — the single "before" for CR-AC-11, CR-RG-04, CR-RG-05 and spec.md §6. Captured on a clean tree, after the in-flight WarehouseSwitcher work landed (CR-RG-07). No later task may re-pin it: T2's three baselines are captured at this revision, so moving it invalidates them.
+# Known-red carry-through at baseline_revision (recorded by T1, verified by T20).
+# apps/server/src/access/rest/controllers/access-http-contract.integration.spec.ts — "POST
+# /api/v1/warehouses/:warehouseId/access/manager-transfer maps a concurrent transfer to 409
+# access.concurrent_change ... (AC-36a)" fails at the baseline, returning 403 where it expects 409.
+# Both racing requests authenticate as the same Manager; once the winner transfers the role away the
+# loser legitimately fails authorization before reaching the command's concurrency re-check. Red since
+# df929ca ("18 workspace warehouses (#19)") and unrelated to this request. It must fail IDENTICALLY
+# after the refactor — that identity is the CR-RG-01 obligation. Fixing it is a behavioral change and
+# belongs to a separate /fix cycle, never to this request.
+baseline_known_red: 1
 compatibility: 'backward-compatible'
 affected_sources:
   - docs/system/guides/adding-a-web-module.md (no owner-selection step today; see CH-D1)

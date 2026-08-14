@@ -7,7 +7,7 @@
 
 | #   | Task                                                         | Layer  | Owner  | Estimate | Blocked by | Status |
 | --- | ------------------------------------------------------------ | ------ | ------ | -------- | ---------- | ------ |
-| T1  | Pin `baseline_revision` on a clean tree                      | docs   | YuriiH | S        | —          | todo   |
+| T1  | Pin `baseline_revision` on a clean tree                      | docs   | YuriiH | S        | —          | done   |
 | T2  | Commit the three identity baselines and their gates          | tests  | YuriiH | L        | T1         | todo   |
 | T3  | Add the system ADR and both index entries                    | docs   | YuriiH | M        | —          | todo   |
 | T4  | State the ownership rule in the three module guides          | docs   | YuriiH | L        | T3         | todo   |
