@@ -33,12 +33,24 @@ Colocate a component's test with the component after the move — `MemberList.sp
 
 ### When not to nest
 
-Do not nest a component that has more than one consumer. If two owners in the same module need it,
-or another module needs it, keep it at the shared ancestor level instead — the module's
-`components/` root, or `shared/components/` once a second module needs it (see
-[Frontend architecture](../frontend-architecture.md#source-structure)). Nesting encodes exclusive
-ownership; once ownership is no longer exclusive, the file must move back out to where every
-consumer can reach it without reaching into another component's private tree.
+What this rule protects against is a consumer reaching into another component's **private tree**.
+Nesting encodes exclusive ownership; once ownership is no longer exclusive, the file must move back
+out to where every consumer can reach it without reaching past an owner.
+
+So do not nest a sub-page component that has more than one consumer. If two owners in the same
+module need it, keep it at the shared ancestor level instead — the module's `components/` root, or
+`shared/components/` once a second module needs it (see
+[Frontend architecture](../frontend-architecture.md#source-structure)). Sub-page components follow
+this rule unchanged.
+
+A module's **declared public surface** is exempt. A route owner composing another module's
+page-level view — `modules/workspace`'s administration shell rendering the warehouses tab owned by
+`modules/warehouse` — is importing declared surface, not reaching into a private tree. That import
+does not make the view shared and does not promote it to `shared/components/`: the view stays in the
+module of the entity whose invariants it enforces, per
+[Domain-owned flat modules](../adr/14-08-2026-domain-owned-flat-modules.md). Reaching into a
+component another module has _not_ declared is still a violation, and is exactly what this rule
+forbids.
 
 ## Grouping owned components by domain
 

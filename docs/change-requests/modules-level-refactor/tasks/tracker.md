@@ -10,7 +10,7 @@
 | T1  | Pin `baseline_revision` on a clean tree                      | docs   | YuriiH | S        | —          | done   |
 | T2  | Commit the three identity baselines and their gates          | tests  | YuriiH | L        | T1         | todo   |
 | T3  | Add the system ADR and both index entries                    | docs   | YuriiH | M        | —          | done   |
-| T4  | State the ownership rule in the three module guides          | docs   | YuriiH | L        | T3         | todo   |
+| T4  | State the ownership rule in the three module guides          | docs   | YuriiH | L        | T3         | done   |
 | T5  | Promote the three cross-destination error members            | domain | YuriiH | M        | T1, T4     | todo   |
 | T6  | Create the `warehouses` module                               | app    | YuriiH | L        | T2, T5     | todo   |
 | T7  | Split `warehouse.controller.ts` across two modules           | ports  | YuriiH | L        | T6         | todo   |

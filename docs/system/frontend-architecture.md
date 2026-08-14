@@ -65,8 +65,13 @@ apps/web/src/
 ```
 
 Keep logic inside one module until another module genuinely needs it. Promote it to `shared/` or
-root `hooks/` only when reuse exists. Stable platform boundaries—root layout, route constants,
-store creation, and an eventual shared API client—may start outside a feature.
+root `hooks/` only when reuse exists **and no single domain entity owns it** — a generic helper
+several modules use is shared, but behavior belonging to one entity stays in that entity's module
+and is reached through the module's declared public surface instead of being promoted. A
+cross-module import of a declared page-level view is therefore not a reason to move that view into
+`shared/`; see [Domain-owned flat modules](adr/14-08-2026-domain-owned-flat-modules.md). Stable
+platform boundaries—root layout, route constants, store creation, and an eventual shared API
+client—may start outside a feature.
 
 Alerts follow the same ownership rule. Put feedback for a feature-owned action in
 `modules/<module>/alerts/`, even when it uses a shared toast library or translation namespace.
