@@ -6,13 +6,13 @@ import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user'
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { WorkspaceCurrentUserRepository } from 'shared/domain/repositories/workspace-current-user.repository';
 import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository';
-import { withUnavailableOutcome } from 'workspaces/domain/errors/unavailable-outcome';
+import { workspaceTargetUnavailableError } from 'shared/errors/cross-module.errors';
+import { withUnavailableOutcome } from 'shared/errors/unavailable-outcome';
 import {
   workspaceProtectedRoleError,
   workspaceReplacementRoleRequiredError,
   workspaceRoleAssignmentRequiredError,
   workspaceRoleDeletionUnavailableError,
-  workspaceTargetUnavailableError,
 } from 'workspaces/domain/errors/workspace.errors';
 import { isProtectedWorkspaceOwnerRoleKind } from 'workspaces/domain/predicates/workspace-authority.predicates';
 import { WorkspaceRoleDeletionService } from 'workspaces/domain/services/workspace-role-deletion.service';

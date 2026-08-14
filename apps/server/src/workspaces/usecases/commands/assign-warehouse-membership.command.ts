@@ -5,11 +5,11 @@ import { Transactional } from 'shared/decorators/transactional.decorator';
 import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
 import { WarehouseMembershipAssignmentRepository } from 'shared/domain/repositories/warehouse-membership-assignment.repository';
 import { WorkspaceMembershipRepository } from 'shared/domain/repositories/workspace-membership.repository';
+import { workspaceTargetUnavailableError } from 'shared/errors/cross-module.errors';
 import {
   workspaceManagerTransferRequiredError,
   workspaceMembershipExistsError,
   workspaceSelfActionDeniedError,
-  workspaceTargetUnavailableError,
 } from 'workspaces/domain/errors/workspace.errors';
 import {
   createsDuplicateWarehouseMembership,

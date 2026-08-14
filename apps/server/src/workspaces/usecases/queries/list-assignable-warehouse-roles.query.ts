@@ -5,7 +5,7 @@ import {
   AssignableRoleProjection,
   WarehouseMembershipAssignmentRepository,
 } from 'shared/domain/repositories/warehouse-membership-assignment.repository';
-import { workspaceTargetUnavailableError } from 'workspaces/domain/errors/workspace.errors';
+import { workspaceTargetUnavailableError } from 'shared/errors/cross-module.errors';
 
 export interface ListAssignableWarehouseRolesInput {
   readonly warehouseId: string;

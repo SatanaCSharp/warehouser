@@ -3,11 +3,11 @@ import { assert, assertDefined } from '@warehouser/utils/asserts';
 import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
-import { withUnavailableOutcome } from 'workspaces/domain/errors/unavailable-outcome';
+import { workspaceTargetUnavailableError } from 'shared/errors/cross-module.errors';
+import { withUnavailableOutcome } from 'shared/errors/unavailable-outcome';
 import {
   workspaceArchivalUnavailableError,
   workspaceLastUnarchivedWarehouseError,
-  workspaceTargetUnavailableError,
 } from 'workspaces/domain/errors/workspace.errors';
 
 export interface ArchiveWarehouseInput {

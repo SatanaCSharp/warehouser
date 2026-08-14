@@ -4,10 +4,10 @@ import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user'
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { WorkspaceReadRepository } from 'shared/domain/repositories/workspace-read.repository';
 import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository';
+import { workspaceTargetUnavailableError } from 'shared/errors/cross-module.errors';
 import {
   workspaceProtectedRoleError,
   workspaceRoleNameConflictError,
-  workspaceTargetUnavailableError,
 } from 'workspaces/domain/errors/workspace.errors';
 import { isProtectedWorkspaceOwnerRoleKind } from 'workspaces/domain/predicates/workspace-authority.predicates';
 import {

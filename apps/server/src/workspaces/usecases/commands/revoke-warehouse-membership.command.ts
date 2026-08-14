@@ -3,10 +3,10 @@ import { assert, assertDefined } from '@warehouser/utils/asserts';
 import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { WarehouseMembershipAssignmentRepository } from 'shared/domain/repositories/warehouse-membership-assignment.repository';
+import { workspaceTargetUnavailableError } from 'shared/errors/cross-module.errors';
 import {
   workspaceManagerTransferRequiredError,
   workspaceSelfActionDeniedError,
-  workspaceTargetUnavailableError,
 } from 'workspaces/domain/errors/workspace.errors';
 import {
   isMembershipSelfTarget,

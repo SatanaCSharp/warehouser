@@ -4,10 +4,8 @@ import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user'
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { WorkspaceMembershipRepository } from 'shared/domain/repositories/workspace-membership.repository';
 import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository';
-import {
-  workspaceOwnerTransferRequiredError,
-  workspaceTargetUnavailableError,
-} from 'workspaces/domain/errors/workspace.errors';
+import { workspaceTargetUnavailableError } from 'shared/errors/cross-module.errors';
+import { workspaceOwnerTransferRequiredError } from 'workspaces/domain/errors/workspace.errors';
 
 export interface AssignWorkspaceRoleInput {
   readonly targetUserId: string;

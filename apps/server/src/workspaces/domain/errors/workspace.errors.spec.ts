@@ -11,7 +11,6 @@ import {
   workspaceRoleNameConflictError,
   workspaceSelfActionDeniedError,
   workspaceSystemManagedPermissionError,
-  workspaceTargetUnavailableError,
   workspaceWarehouseCreationUnavailableError,
 } from 'workspaces/domain/errors/workspace.errors';
 
@@ -89,28 +88,6 @@ describe('workspace domain error factories', () => {
     expect(workspaceLastUnarchivedWarehouseError()).toMatchObject({
       code: ErrorCode.WORKSPACE_LAST_UNARCHIVED_WAREHOUSE,
     });
-  });
-
-  // Cross-Workspace targeting: a target outside `principal.workspaceId` must be
-  // indistinguishable from a missing target, so this is the one factory used for
-  // both. This test proves that byte-identity structurally: it takes no
-  // arguments that could leak which case triggered it, so two independent calls
-  // from the two call sites always serialize identically — neither discloses
-  // existence.
-  it('produces a byte-identical error whether the target is missing or belongs to another Workspace', () => {
-    const missingTargetError = workspaceTargetUnavailableError();
-    const crossWorkspaceTargetError = workspaceTargetUnavailableError();
-
-    expect(missingTargetError.code).toBe(
-      ErrorCode.WORKSPACE_TARGET_UNAVAILABLE,
-    );
-    expect(JSON.stringify(missingTargetError)).toBe(
-      JSON.stringify(crossWorkspaceTargetError),
-    );
-    expect(missingTargetError.message).toBe(crossWorkspaceTargetError.message);
-    expect(missingTargetError.stack?.split('\n')[0]).toBe(
-      crossWorkspaceTargetError.stack?.split('\n')[0],
-    );
   });
 
   // AC-07/AC-13 — T43. server-error-handling.md §2 classifies "a known

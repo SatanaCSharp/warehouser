@@ -50,13 +50,6 @@ export const workspaceLastUnarchivedWarehouseError = (): ApplicationError =>
 export const workspaceRoleAssignmentRequiredError = (): ApplicationError =>
   new ApplicationError(ErrorCode.WORKSPACE_ROLE_ASSIGNMENT_REQUIRED);
 
-// Cross-Workspace targeting: a target outside `principal.workspaceId` must
-// be indistinguishable from a missing target, so this single, argument-free
-// factory serves both call sites — two independent calls always serialize
-// identically, so neither discloses existence (AC-10, AC-24, AC-25d, AC-34).
-export const workspaceTargetUnavailableError = (): ApplicationError =>
-  new ApplicationError(ErrorCode.WORKSPACE_TARGET_UNAVAILABLE);
-
 // AC-19/F-3 — a candidate who already holds a Workspace membership is
 // refused with this cause-specific code, distinct from AC-20's
 // `workspaceWarehouseMembershipRequiredError`.
@@ -68,12 +61,6 @@ export const workspaceMemberExistsError = (): ApplicationError =>
 // already-a-Member case above (F-3).
 export const workspaceWarehouseMembershipRequiredError = (): ApplicationError =>
   new ApplicationError(ErrorCode.WORKSPACE_WAREHOUSE_MEMBERSHIP_REQUIRED);
-
-// AC-04/AC-11 — an archived Warehouse stops being selectable as the Active
-// Warehouse, distinct from `workspaceTargetUnavailableError()`'s "no
-// membership at all" case.
-export const workspaceWarehouseArchivedError = (): ApplicationError =>
-  new ApplicationError(ErrorCode.WORKSPACE_WAREHOUSE_ARCHIVED);
 
 // AC-26 — the database's `uq_workspace_memberships_one_owner` constraint and
 // `WorkspaceOwnerTransferRepository.transfer`'s own precondition recheck are
