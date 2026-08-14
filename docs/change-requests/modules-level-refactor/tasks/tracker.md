@@ -23,7 +23,7 @@
 | T14 | Promote the six multi-consumer web files                     | ui     | YuriiH | L        | T2, T4     | done   |
 | T15 | Move the Warehouse domain into `modules/warehouse`           | ui     | YuriiH | L        | T14        | done   |
 | T16 | Move the workspace scope of Access into `modules/access`     | ui     | YuriiH | L        | T14        | done   |
-| T17 | Compose the shell across modules                             | ui     | YuriiH | M        | T15, T16   | todo   |
+| T17 | Compose the shell across modules                             | ui     | YuriiH | M        | T15, T16   | done   |
 | T18 | Register the `warehouse` namespace, re-home the copy         | ui     | YuriiH | M        | T17        | todo   |
 | T19 | Declare each web module's surface and enforce it             | tests  | YuriiH | L        | T18        | todo   |
 | T20 | Run the pre-merge verification                               | tests  | YuriiH | M        | T13, T19   | todo   |
