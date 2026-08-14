@@ -1,0 +1,332 @@
+{
+  "kind": "change-request",
+  "slug": "modules-level-refactor",
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "Pin baseline_revision on a clean working tree",
+      "layer": "docs",
+      "deps": [],
+      "acs": ["CR-AC-11", "CR-RG-07"],
+      "dod": "The in-flight WarehouseSwitcher work is committed, `git status` is empty, and change.md's baseline_revision frontmatter holds the branch-tip SHA that every identity comparison in this request resolves against.",
+      "files_hint": ["docs/change-requests/modules-level-refactor/change.md"],
+      "source_refs": []
+    },
+    {
+      "id": "T2",
+      "title": "Commit the three identity baselines and the gates that diff them",
+      "layer": "tests",
+      "deps": ["T1"],
+      "acs": ["CR-AC-11", "CR-RG-01", "CR-RG-04"],
+      "dod": "`node --test tests/**/*.spec.mjs` runs the route-table and split-case gates green against baselines captured at baseline_revision, and the locale snapshot comparison passes from apps/web/src/i18n.spec.ts.",
+      "files_hint": [
+        "tests/refactor/route-table.mjs",
+        "tests/refactor/route-table.baseline.json",
+        "tests/refactor/route-table.spec.mjs",
+        "tests/refactor/split-cases.mjs",
+        "tests/refactor/split-cases.baseline.json",
+        "tests/refactor/split-cases.spec.mjs",
+        "apps/web/src/test/locale-baseline.json",
+        "apps/web/src/i18n.spec.ts"
+      ],
+      "source_refs": []
+    },
+    {
+      "id": "T3",
+      "title": "Add the domain-owned flat-modules system ADR and both index entries in one commit",
+      "layer": "docs",
+      "deps": [],
+      "acs": ["CR-AC-10"],
+      "dod": "docs/system/adr/14-08-2026-domain-owned-flat-modules.md exists with status Accepted covering both applications, and both docs/system indexes carry a 'read before…' entry pointing at it in the same commit.",
+      "files_hint": [
+        "docs/system/adr/14-08-2026-domain-owned-flat-modules.md",
+        "docs/system/web-index.md",
+        "docs/system/server-index.md"
+      ],
+      "source_refs": ["CH-D4", "CH-D5"]
+    },
+    {
+      "id": "T4",
+      "title": "State the ownership rule in the three module guides before any file moves",
+      "layer": "docs",
+      "deps": ["T3"],
+      "acs": ["CR-AC-04", "CR-AC-10"],
+      "dod": "Both module guides carry the four ownership rules (and the server guide the management-versus-enforcement plus module-private clauses), placing-web-components.md no longer forbids a declared-surface import, frontend-architecture.md's promote-to-shared sentence is qualified, and no new guide file was created.",
+      "files_hint": [
+        "docs/system/guides/adding-a-web-module.md",
+        "docs/system/guides/adding-a-server-module.md",
+        "docs/system/guides/placing-web-components.md",
+        "docs/system/frontend-architecture.md"
+      ],
+      "source_refs": ["CH-D1", "CH-D2", "CH-D3", "CH-D6"]
+    },
+    {
+      "id": "T5",
+      "title": "Promote the three cross-destination error members to shared/errors/",
+      "layer": "domain",
+      "deps": ["T1", "T4"],
+      "acs": ["CR-AC-06", "CR-AC-08", "CR-RG-01", "CR-RG-06"],
+      "dod": "workspaceTargetUnavailableError, workspaceWarehouseArchivedError and withUnavailableOutcome resolve from shared/errors/ for every one of their existing call sites, every error code is unchanged, and the server suite is green with only import specifiers and file locations changed.",
+      "files_hint": [
+        "apps/server/src/shared/errors/cross-module.errors.ts",
+        "apps/server/src/shared/errors/unavailable-outcome.ts",
+        "apps/server/src/workspaces/domain/errors/"
+      ],
+      "source_refs": ["CH-S2", "CH-S4"]
+    },
+    {
+      "id": "T6",
+      "title": "Create the warehouses module and move the Warehouse record use cases into it",
+      "layer": "app",
+      "deps": ["T2", "T5"],
+      "acs": ["CR-AC-05", "CR-AC-08", "CR-RG-01"],
+      "dod": "The four lifecycle commands and list-workspace-warehouses.query.ts run from apps/server/src/warehouses/ with their specs, warehouse.errors.ts carries exactly the three factories under unchanged codes, and WarehousesUsecaseModule exports them with no empty directory created.",
+      "files_hint": [
+        "apps/server/src/warehouses/usecases/",
+        "apps/server/src/warehouses/domain/errors/warehouse.errors.ts",
+        "apps/server/src/warehouses/index.ts",
+        "apps/server/src/workspaces/usecases/"
+      ],
+      "source_refs": ["CH-S1"]
+    },
+    {
+      "id": "T7",
+      "title": "Split warehouse.controller.ts across warehouses and access without changing a route",
+      "layer": "ports",
+      "deps": ["T6"],
+      "acs": ["CR-AC-05", "CR-AC-06", "CR-AC-11", "CR-RG-01", "CR-RG-02"],
+      "dod": "The route-table gate is empty-diff with WarehouseController's four record handlers in warehouses and the three membership handlers on access's WarehouseAccessController, the harness resolves from src/test/harnesses/ for both, and authorization-coverage.spec.mjs passes re-pathed with every rule intact.",
+      "files_hint": [
+        "apps/server/src/warehouses/rest/",
+        "apps/server/src/access/rest/controllers/warehouse-access.controller.ts",
+        "apps/server/src/access/usecases/",
+        "apps/server/src/test/harnesses/warehouse-http-contract.harness.ts",
+        "apps/server/src/app.module.ts",
+        "apps/server/src/workspaces/rest/",
+        "tests/access/authorization-coverage.spec.mjs"
+      ],
+      "source_refs": ["CH-S1", "CH-S3", "CH-S5", "CH-S6"]
+    },
+    {
+      "id": "T8",
+      "title": "Move the fourteen access-shaped error factories into access and delete the workspaces error directory",
+      "layer": "domain",
+      "deps": ["T7"],
+      "acs": ["CR-AC-06", "CR-AC-07", "CR-AC-08"],
+      "dod": "access/domain/errors/workspace-access.errors.ts carries the fourteen factories under unchanged codes, workspaces/domain/errors/ no longer exists and left no re-export shim, and workspace.errors.spec.ts's cases are split across the three destinations with none lost.",
+      "files_hint": [
+        "apps/server/src/access/domain/errors/workspace-access.errors.ts",
+        "apps/server/src/access/domain/errors/workspace-access.errors.spec.ts",
+        "apps/server/src/workspaces/domain/errors/"
+      ],
+      "source_refs": ["CH-S2"]
+    },
+    {
+      "id": "T9",
+      "title": "Move the seven workspace role, member and owner-transfer commands into access",
+      "layer": "app",
+      "deps": ["T8"],
+      "acs": ["CR-AC-06", "CR-AC-08", "CR-RG-01", "CR-RG-02"],
+      "dod": "All seven commands and their twelve specs run from access/usecases/commands/ with no assertion changed but import specifiers and file locations, and no production file in access imports workspaces.",
+      "files_hint": [
+        "apps/server/src/access/usecases/commands/",
+        "apps/server/src/access/domain/errors/workspace-access.errors.ts",
+        "apps/server/src/workspaces/usecases/commands/"
+      ],
+      "source_refs": ["CH-S2"]
+    },
+    {
+      "id": "T10",
+      "title": "Move the four workspace list queries, the authority predicates and the role-deletion service into access",
+      "layer": "app",
+      "deps": ["T8"],
+      "acs": ["CR-AC-06", "CR-AC-08", "CR-RG-01"],
+      "dod": "The four list queries, workspace-authority.predicates.ts and workspace-role-deletion.service.ts run from access with their specs unchanged apart from import specifiers, and AccessUsecaseModule exports every provider its new controllers will need.",
+      "files_hint": [
+        "apps/server/src/access/usecases/queries/",
+        "apps/server/src/access/domain/predicates/workspace-authority.predicates.ts",
+        "apps/server/src/access/domain/services/workspace-role-deletion.service.ts",
+        "apps/server/src/access/domain/errors/workspace-access.errors.ts",
+        "apps/server/src/workspaces/usecases/queries/",
+        "apps/server/src/workspaces/domain/"
+      ],
+      "source_refs": ["CH-S2"]
+    },
+    {
+      "id": "T11",
+      "title": "Move the eleven workspace-access handlers onto access's WorkspaceAccessController",
+      "layer": "ports",
+      "deps": ["T9", "T10"],
+      "acs": ["CR-AC-06", "CR-AC-11", "CR-RG-01", "CR-RG-02"],
+      "dod": "The route-table gate is empty-diff with api/v1/workspace served by both controllers and no path shadowed, the role and member DTOs resolve from access, and workspace.controller.spec.ts plus workspace-http-contract.integration.spec.ts split with their case union preserved.",
+      "files_hint": [
+        "apps/server/src/access/rest/controllers/workspace-access.controller.ts",
+        "apps/server/src/access/rest/dtos/",
+        "apps/server/src/access/rest/rest.module.ts",
+        "apps/server/src/workspaces/rest/",
+        "tests/access/authorization-coverage.spec.mjs"
+      ],
+      "source_refs": ["CH-S2", "CH-S6"]
+    },
+    {
+      "id": "T12",
+      "title": "Trim workspaces to its enumerated remainder and prove the module graph acyclic",
+      "layer": "wiring",
+      "deps": ["T11"],
+      "acs": ["CR-AC-07", "CR-AC-08", "CR-AC-09", "CR-RG-01"],
+      "dod": "apps/server/src/workspaces/ contains exactly the files CR-AC-07 enumerates, the DI and smoke specs pass for workspaces and their new warehouses counterparts, and a repository-wide scan for forwardRef( returns zero hits.",
+      "files_hint": [
+        "apps/server/src/workspaces/",
+        "apps/server/src/warehouses/usecases/usecase.module.di.spec.ts",
+        "apps/server/src/warehouses/warehouses-load-smoke.integration.spec.ts",
+        "apps/server/src/app.module.ts"
+      ],
+      "source_refs": ["CH-S4", "CH-S5"]
+    },
+    {
+      "id": "T13",
+      "title": "Add the warehouses and access boundary specs and tighten the users boundary",
+      "layer": "tests",
+      "deps": ["T12"],
+      "acs": [
+        "CR-AC-05",
+        "CR-AC-06",
+        "CR-AC-07",
+        "CR-AC-08",
+        "CR-AC-12",
+        "CR-RG-02"
+      ],
+      "dod": "warehouses/ and access/ each fail a spec naming the file and the rule when given a foreign error factory, predicate or DTO import; users/module-boundaries.spec.ts forbids all four feature modules; and every re-pathed server boundary spec keeps its rule unweakened.",
+      "files_hint": [
+        "apps/server/src/warehouses/module-boundaries.spec.ts",
+        "apps/server/src/access/module-boundaries.spec.ts",
+        "apps/server/src/users/module-boundaries.spec.ts",
+        "apps/server/src/workspaces/domain/module-boundaries.spec.ts",
+        "apps/server/src/shared/domain/repositories/repository-boundaries.spec.ts",
+        "tests/access/authorization-coverage.spec.mjs"
+      ],
+      "source_refs": ["CH-S6"]
+    },
+    {
+      "id": "T14",
+      "title": "Promote the six multi-consumer web files to the composition layer",
+      "layer": "ui",
+      "deps": ["T2", "T4"],
+      "acs": ["CR-AC-03", "CR-AC-04", "CR-RG-01"],
+      "dod": "useFormFieldErrors, useReturnFocusOnClose, MutationOutcome, runWorkspaceMutation, alertWorkspaceAction and workspace-users-api resolve from shared/, both duplicate hook copies and the emptied workspace.types.ts are deleted, and every web spec passes with no assertion changed but import specifiers.",
+      "files_hint": [
+        "apps/web/src/shared/hooks/useFormFieldErrors.ts",
+        "apps/web/src/shared/hooks/useReturnFocusOnClose.ts",
+        "apps/web/src/shared/api/mutation-outcome.ts",
+        "apps/web/src/shared/api/workspace-mutation.ts",
+        "apps/web/src/shared/api/workspace-users-api.ts",
+        "apps/web/src/shared/alerts/workspace-feedback.ts",
+        "apps/web/src/modules/workspace/",
+        "apps/web/src/modules/access/hooks/useFormFieldErrors.ts",
+        "apps/web/src/modules/access/types/access.types.ts"
+      ],
+      "source_refs": ["CH-W3"]
+    },
+    {
+      "id": "T15",
+      "title": "Move the Warehouse domain into modules/warehouse",
+      "layer": "ui",
+      "deps": ["T14"],
+      "acs": ["CR-AC-01", "CR-AC-03", "CR-RG-01"],
+      "dod": "The twelve administration components with WarehousesTab.spec.tsx, warehouse-api.ts, the five warehouse hooks, warehouse-name-validation and warehouse-name-form.schema.ts run from modules/warehouse/, the warehouse half of name-validation.spec.ts colocates with its subject, and no rendered output or assertion changed.",
+      "files_hint": [
+        "apps/web/src/modules/warehouse/components/",
+        "apps/web/src/modules/warehouse/api/warehouse-api.ts",
+        "apps/web/src/modules/warehouse/hooks/",
+        "apps/web/src/modules/warehouse/schemas/warehouse-name-form.schema.ts",
+        "apps/web/src/modules/workspace/"
+      ],
+      "source_refs": ["CH-W1"]
+    },
+    {
+      "id": "T16",
+      "title": "Move the workspace scope of Access into modules/access",
+      "layer": "ui",
+      "deps": ["T14"],
+      "acs": ["CR-AC-02", "CR-AC-03", "CR-RG-01"],
+      "dod": "The twenty-six members, roles and permissions components with their three specs, both API slices, the thirteen workspace hooks, useWorkspacePermissionLabel and workspace-role-form.schema.ts run from modules/access/ as scope-named siblings of the warehouse scope, with the workspace-role half of name-validation.spec.ts beside its subject and no assertion changed.",
+      "files_hint": [
+        "apps/web/src/modules/access/components/workspace-administration/",
+        "apps/web/src/modules/access/api/",
+        "apps/web/src/modules/access/hooks/",
+        "apps/web/src/modules/access/schemas/workspace-role-form.schema.ts",
+        "apps/web/src/modules/workspace/"
+      ],
+      "source_refs": ["CH-W2"]
+    },
+    {
+      "id": "T17",
+      "title": "Compose the administration shell across modules and reduce workspace to its manifest",
+      "layer": "ui",
+      "deps": ["T15", "T16"],
+      "acs": ["CR-AC-03", "CR-AC-04", "CR-RG-01"],
+      "dod": "WorkspaceAdministration renders the same four tabs in the same order under the same gating predicates while importing WarehousesTab from modules/warehouse and the three Workspace*Tab from modules/access, and modules/workspace contains exactly the file set CR-AC-03 enumerates.",
+      "files_hint": [
+        "apps/web/src/modules/workspace/components/WorkspaceAdministration.tsx",
+        "apps/web/src/modules/workspace/components/WorkspaceAdministration.spec.tsx",
+        "apps/web/src/modules/workspace/"
+      ],
+      "source_refs": ["CH-W3"]
+    },
+    {
+      "id": "T18",
+      "title": "Register the warehouse namespace and re-home the moved copy blocks",
+      "layer": "ui",
+      "deps": ["T17"],
+      "acs": ["CR-AC-01", "CR-AC-02", "CR-RG-04", "CR-RG-07"],
+      "dod": "The locale comparison shows every key's value identical to the baseline with key paths moved only for access.json's three scope-named parents, warehouse.json exists in both languages with its block still nested under warehouses, and moved component specs render translated copy rather than raw keys.",
+      "files_hint": [
+        "apps/web/src/i18n.ts",
+        "apps/web/src/test/setup.ts",
+        "apps/web/public/locales/en/warehouse.json",
+        "apps/web/public/locales/uk/warehouse.json",
+        "apps/web/public/locales/en/access.json",
+        "apps/web/public/locales/uk/access.json",
+        "apps/web/public/locales/en/workspace.json",
+        "apps/web/public/locales/uk/workspace.json",
+        "apps/web/src/i18n.spec.ts"
+      ],
+      "source_refs": ["CH-W4"]
+    },
+    {
+      "id": "T19",
+      "title": "Declare each web module's surface and enforce it with a boundary spec",
+      "layer": "tests",
+      "deps": ["T18"],
+      "acs": ["CR-AC-04", "CR-AC-12"],
+      "dod": "The web boundary spec passes with an empty exception list over every importer of modules/**, fails a fixture importing an undeclared path by naming importer, target and rule, asserts the surface keys are exactly the directories under modules/, and holds modules/workspace to its manifest.",
+      "files_hint": [
+        "apps/web/src/test/module-surface.ts",
+        "apps/web/src/modules/module-boundaries.spec.ts",
+        "apps/web/src/modules/fixtures/"
+      ],
+      "source_refs": ["CH-W5"]
+    },
+    {
+      "id": "T20",
+      "title": "Run the pre-merge identity, regression and cost verification",
+      "layer": "tests",
+      "deps": ["T13", "T19"],
+      "acs": [
+        "CR-AC-11",
+        "CR-RG-01",
+        "CR-RG-02",
+        "CR-RG-03",
+        "CR-RG-04",
+        "CR-RG-05",
+        "CR-RG-06",
+        "CR-RG-07"
+      ],
+      "dod": "Every gate is green against baseline_revision with zero behavioral assertions changed, the migrations, contracts, guards, eslint-config and composition-layer diffs are empty or specifier-only, median-of-3 build and test wall-clock is within 110% of baseline, and the web chunk graph gains no eager chunk.",
+      "files_hint": [
+        "docs/change-requests/modules-level-refactor/_review/verification.md"
+      ],
+      "source_refs": []
+    }
+  ]
+}

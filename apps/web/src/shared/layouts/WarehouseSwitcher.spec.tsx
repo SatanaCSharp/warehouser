@@ -342,6 +342,54 @@ describe('WarehouseSwitcher — rows are destinations (CR-AC-02)', () => {
   });
 });
 
+// Dismissal — a switcher opened by mistake has to be closable without
+// entering a context. Both gestures depend on the popover staying modal:
+// React Aria derives `isDismissable` from `!isNonModal`, so a non-modal
+// popover renders no underlay, ignores the outside press outright, and closes
+// on the trigger's blur only for the trigger's own toggle to reopen it.
+describe('WarehouseSwitcher — dismissing the popover', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('closes on a press outside it, entering nothing', async () => {
+    stubFetchSequence(() => jsonResponse(buildContext()));
+    const user = userEvent.setup();
+    const harness = renderSwitcherAt(warehousePath(centralId));
+
+    await openSwitcher(user);
+    await user.click(document.body);
+
+    await waitFor(() =>
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument(),
+    );
+    expect(harness.currentPath()).toBe(warehousePath(centralId));
+  });
+
+  /**
+   * A press aimed at the trigger while the popover is open lands on the
+   * viewport-covering underlay React Aria renders over the page — jsdom does no
+   * hit-testing, so the underlay is pressed directly here — and that press is
+   * what closes the switcher. Without the underlay the same gesture reaches the
+   * trigger itself, whose toggle reopens what the blur just closed.
+   */
+  it('covers its trigger with an underlay whose press closes it, entering nothing', async () => {
+    stubFetchSequence(() => jsonResponse(buildContext()));
+    const user = userEvent.setup();
+    const harness = renderSwitcherAt(warehousePath(centralId));
+
+    await openSwitcher(user);
+    const underlay = screen.getByTestId('underlay');
+    expect(underlay).toHaveStyle({ position: 'fixed', inset: '0px' });
+    await user.click(underlay);
+
+    await waitFor(() =>
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument(),
+    );
+    expect(harness.currentPath()).toBe(warehousePath(centralId));
+  });
+});
+
 describe('WarehouseSwitcher — the inert Workspace row (CR-AC-03)', () => {
   afterEach(() => {
     vi.unstubAllGlobals();

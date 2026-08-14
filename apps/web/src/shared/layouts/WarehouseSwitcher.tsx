@@ -224,14 +224,17 @@ export const WarehouseSwitcher = (): ReactElement | null => {
         <Label className="sr-only">{switcherLabel}</Label>
         <Select.Trigger className="rounded-xl">
           <entered.Icon />
-          <span className="truncate">{entered.name ?? switcherLabel}</span>
+          <span className="pl-1 truncate">{entered.name ?? switcherLabel}</span>
           <Select.Indicator />
         </Select.Trigger>
-        {/* Non-modal: this is a lightweight shell control, not a blocking
-            dialog, so the trigger and the rest of the page stay in the
-            accessibility tree while the popover is open (an inert or archived
-            row stays inert without hiding everything behind it). */}
-        <Select.Popover isNonModal>
+        {/* Modal, the React Aria default for a Select: `usePopover` derives
+            `isDismissable` from `!isNonModal`, so a non-modal popover renders
+            no underlay and ignores an outside press entirely, while a press on
+            the trigger closes it on blur and the button's own toggle reopens it
+            in the same gesture. The underlay is what makes both gestures
+            dismiss the switcher. Inert and archived rows are inside the
+            popover, so hiding the page behind it costs them nothing. */}
+        <Select.Popover>
           <ListBox aria-label={switcherLabel}>
             <ListBox.Section>
               <Header>{t('shell.contextSwitcher.workspaceGroupLabel')}</Header>
