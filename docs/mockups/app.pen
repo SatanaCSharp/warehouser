@@ -54730,7 +54730,7 @@
                           "name": "Icon",
                           "width": 28,
                           "height": 28,
-                          "icon": "shield-alert",
+                          "icon": "shield-x",
                           "library": "lucide",
                           "fill": "$foreground/muted"
                         },
@@ -56076,7 +56076,7 @@
               "name": "Icon",
               "width": 28,
               "height": 28,
-              "icon": "shield-alert",
+              "icon": "shield-x",
               "library": "lucide",
               "fill": "$foreground/muted"
             },

@@ -37,7 +37,6 @@
       "triggerLabelNoContext": "Перемикач контексту, оберіть контекст",
       "workspaceGroupLabel": "Робочий простір",
       "warehousesGroupLabel": "Склади",
-      "currentLabel": "Поточний",
       "archivedLabel": "Архівовано",
       "noAccessLabel": "Немає доступу",
       "workspaceNoAccessExplanation": "У вас немає доступу до робочого простору."

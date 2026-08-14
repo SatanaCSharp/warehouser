@@ -701,7 +701,12 @@ describe('entering from the warehouses tab (T28, CR-AC-14)', () => {
       name: new RegExp(warehouseMemberships.north.name, 'iu'),
     });
     expect(enteredRow).toHaveAttribute('aria-selected', 'true');
-    expect(enteredRow).toHaveTextContent('Current');
+    // The check indicator is the marker CR-AC-01 asks for; `data-visible` is
+    // the state HeroUI sets from `isSelected` and the one thing that separates
+    // the marked row from the rest, which all render an indicator too.
+    expect(
+      enteredRow.querySelector('[data-slot="list-box-item-indicator"]'),
+    ).toHaveAttribute('data-visible', 'true');
 
     // (c) The entry is written as the stored selection (CR-AC-09), once.
     await waitFor(() =>

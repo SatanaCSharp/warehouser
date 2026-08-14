@@ -34,6 +34,22 @@ const WORKSPACE_ROW_KEY = 'workspace';
 type ContextWarehouse = WorkspaceContext['warehouses'][number];
 
 /**
+ * Room the row's own content leaves for the check indicator, which HeroUI
+ * positions absolutely at `end-2` over a 16px box — so it occupies 8–24px in
+ * from the row's inline end and overlaps whatever the content puts there.
+ *
+ * HeroUI means to reserve that track itself: `list-box-item.css` gives any row
+ * holding an indicator `pe-7`. Inside a `Select` popover that reservation is
+ * lost — `select.css` re-declares `.select__popover [data-slot="list-box-item"]
+ * { @apply px-2.5 }`, which outranks it, leaving 10px of end padding against an
+ * indicator that starts 24px in. A utility on the row cannot win that either
+ * (one class against a class-plus-attribute selector), so the clearance is
+ * taken as a margin on the row's own children instead: 20px past a 10px content
+ * edge clears the indicator by 6px.
+ */
+const indicatorClearance = 'me-5';
+
+/**
  * The four slots the approved `Shell/Context Row` (`HZRA7`) draws: level icon,
  * label, one trailing text, check indicator.
  */
@@ -42,7 +58,7 @@ const ContextRowContent = ({
   dimmed = false,
   Icon,
   name,
-  trailingLabels,
+  trailingLabel,
 }: {
   description?: string;
   /**
@@ -55,7 +71,13 @@ const ContextRowContent = ({
   dimmed?: boolean;
   Icon: typeof WarehouseIcon;
   name: string;
-  trailingLabels: string[];
+  /**
+   * Why this row is unavailable, when it is. CR-RG-02 requires that fact to
+   * stay on the row. The entered row carries no trailing word of its own: the
+   * check indicator below is the non-colour marker CR-AC-01 asks for, and a
+   * word restating the context the actor is already looking at earns nothing.
+   */
+  trailingLabel?: string;
 }): ReactElement => {
   const dim = dimmed ? 'opacity-50' : undefined;
   return (
@@ -63,20 +85,26 @@ const ContextRowContent = ({
       <span data-dimmed={dimmed} className={dim}>
         <Icon />
       </span>
-      <Label data-dimmed={dimmed} className={dim}>
-        {name}
-      </Label>
-      {trailingLabels.length > 0 ? (
+      {/* Label and description share one column, per HeroUI's own
+          description-in-a-row pattern: `.list-box-item` is a no-wrap flex row,
+          so a `Description` left as its own child of the row renders *inline*
+          after the label instead of on the second line `HZRA7` draws — and
+          runs under the check indicator on the way. `min-w-0` + `truncate`
+          keep a long Warehouse name from doing the same. */}
+      <div className={`${indicatorClearance} flex min-w-0 flex-col`}>
+        <Label data-dimmed={dimmed} className={`truncate ${dim ?? ''}`}>
+          {name}
+        </Label>
+        {description ? <Description>{description}</Description> : null}
+      </div>
+      {trailingLabel ? (
         <span
           data-dimmed={dimmed}
-          className={`ms-auto flex items-center gap-2 text-xs ${dim ?? ''}`}
+          className={`ms-auto shrink-0 text-xs ${indicatorClearance} ${dim ?? ''}`}
         >
-          {trailingLabels.map((label) => (
-            <span key={label}>{label}</span>
-          ))}
+          {trailingLabel}
         </span>
       ) : null}
-      {description ? <Description>{description}</Description> : null}
       <ListBox.ItemIndicator />
     </>
   );
@@ -90,23 +118,6 @@ const ContextRowContent = ({
  * the row keeps every other disabled affordance and stays `aria-disabled`.
  */
 const dimmedRowClassName = 'data-disabled:opacity-100';
-
-/**
- * A row's trailing texts. The two facts are independent and can genuinely
- * co-exist: CR-AC-20 leaves an actor inside a Warehouse that is archived
- * underneath them, so the entered row is also the archived one. The
- * unavailability label comes first because it carries what the actor does not
- * already know — CR-RG-02 requires it to stay on the row — while "current"
- * only restates the context they are looking at.
- */
-const rowTrailingLabels = (
-  isCurrent: boolean,
-  currentLabel: string,
-  unavailableLabel: string | undefined,
-): string[] =>
-  [unavailableLabel, isCurrent ? currentLabel : undefined].filter(
-    (label): label is string => label !== undefined,
-  );
 
 /**
  * CR-AC-01 / CR-AC-09 — what the trigger names and which row is marked come
@@ -178,7 +189,6 @@ export const WarehouseSwitcher = (): ReactElement | null => {
     ? t('shell.contextSwitcher.triggerLabel', { context: entered.name })
     : t('shell.contextSwitcher.triggerLabelNoContext');
 
-  const currentLabel = t('shell.contextSwitcher.currentLabel');
   const archivedLabel = t('shell.contextSwitcher.archivedLabel');
   const noAccessExplanation = canEnterWorkspace
     ? undefined
@@ -235,12 +245,10 @@ export const WarehouseSwitcher = (): ReactElement | null => {
                   dimmed={noAccessExplanation !== undefined}
                   Icon={Building2Icon}
                   name={workspaceName}
-                  trailingLabels={rowTrailingLabels(
-                    entered.currentKey === WORKSPACE_ROW_KEY,
-                    currentLabel,
+                  trailingLabel={
                     noAccessExplanation &&
-                      t('shell.contextSwitcher.noAccessLabel'),
-                  )}
+                    t('shell.contextSwitcher.noAccessLabel')
+                  }
                 />
               </ListBox.Item>
             </ListBox.Section>
@@ -263,13 +271,11 @@ export const WarehouseSwitcher = (): ReactElement | null => {
                     <ContextRowContent
                       Icon={WarehouseIcon}
                       name={warehouse.name}
-                      trailingLabels={rowTrailingLabels(
-                        entered.currentKey === warehouse.warehouseId,
-                        currentLabel,
+                      trailingLabel={
                         warehouse.archivedAt === null
                           ? undefined
-                          : archivedLabel,
-                      )}
+                          : archivedLabel
+                      }
                     />
                   </ListBox.Item>
                 ))}

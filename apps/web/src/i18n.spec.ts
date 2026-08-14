@@ -215,9 +215,6 @@ describe('workspace-warehouse T1 shell/enter-action keys', () => {
       }),
     ).toBe('Warehouses');
     expect(
-      instance.t('shell.contextSwitcher.currentLabel', { ns: 'common' }),
-    ).toBe('Current');
-    expect(
       instance.t('shell.contextSwitcher.archivedLabel', { ns: 'common' }),
     ).toBe('Archived');
     expect(
@@ -322,9 +319,6 @@ describe('workspace-warehouse T1 shell/enter-action keys', () => {
         ns: 'common',
       }),
     ).toBe('Склади');
-    expect(
-      instance.t('shell.contextSwitcher.currentLabel', { ns: 'common' }),
-    ).toBe('Поточний');
     expect(
       instance.t('shell.contextSwitcher.archivedLabel', { ns: 'common' }),
     ).toBe('Архівовано');

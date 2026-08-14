@@ -219,7 +219,10 @@ describe('WarehousesTab', () => {
       expect(archived?.textContent).toContain('read-only');
     });
 
-    it('marks a non-archived Warehouse with an "In operation" chip rather than colour alone', async () => {
+    // Being in operation is a Warehouse's default state, so the row says
+    // nothing about it — only the departure from that default (archived) is
+    // marked (`zubpS`). The chip is what the archived row above asserts.
+    it('leaves a non-archived Warehouse row unchipped', async () => {
       stubWorkspaceServer({ context: namedWorkspaceContext(watchOnly) });
 
       renderTab();
@@ -228,7 +231,7 @@ describe('WarehousesTab', () => {
       const inOperation = within(list)
         .getAllByRole('listitem')
         .find((entry) => entry.textContent?.includes('Central DC'));
-      expect(inOperation?.textContent).toContain('In operation');
+      expect(inOperation?.textContent).not.toContain('In operation');
       expect(inOperation?.textContent).not.toContain('Archived');
     });
 

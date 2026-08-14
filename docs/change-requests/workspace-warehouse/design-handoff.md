@@ -63,17 +63,17 @@ supersedes_at_ship:
 
 ## Component mapping
 
-| Pencil component/node                                            | Existing code primitive                                                      | Adaptation allowed                                                                                                                                                                                                                                 |
-| ---------------------------------------------------------------- | ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Shell/Context Switcher Trigger` (`Ezu2H`)                       | `shared/layouts/WarehouseSwitcher.tsx` — trigger only                        | HeroUI `Select.Trigger` / `Dropdown` trigger at 36px (desktop) and 40px full-width (mobile context bar). Icon + label + `chevron-down`. Icon and label follow context; the control's box, radius, border and header slot are unchanged (CR-RG-06). |
-| `Shell/Context Row` (`HZRA7`)                                    | New row inside `WarehouseSwitcher.tsx`                                       | HeroUI `ListBox.Item` / `Menu.Item`. Four slots: level icon, label, trailing text, check indicator. Stays in the same file unless the switcher grows a second owned component (see `writing-web-components.md`).                                   |
-| `Popover` frames inside `Qa6Z3`                                  | `Select.Popover` (`isNonModal`), as today                                    | Width 320 desktop / full context-bar width at 390. Group labels are non-interactive section headers, not selectable rows.                                                                                                                          |
-| `Nav · Dashboard` / `Nav · Access` / `Nav · Workspace` (`tvD98`) | `shared/layouts/Sidebar.tsx`, `PermissionGate`, `WorkspaceGate`              | Existing `HeroUI/Sidebar Item` instances, unchanged treatment. Which entries render is context-selected; the active tint (`accent-soft`) and the 240px container are unchanged.                                                                    |
-| `Enter · <Warehouse>` (`KyxMx` instance, 28px)                   | `…/workspace-administration/warehouses/WarehouseList.tsx`                    | HeroUI `Button` as a router `Link` to `ROUTES.WAREHOUSE`, `default` fill, `log-in` icon + "Enter". Sits in the row header beside the name, **outside** the row's selection button — never nested inside it.                                        |
-| `State Block` (in `cJkDD`, `XhXuW`, `msdLz`, `MOuOz`, `ey3Ty`)   | `shared/components/WarehouseEntryRefusal.tsx` (new), `modules/home/page.tsx` | Icon + heading + body, left-aligned in a 560px column. One component with a `reason` switch drives both refusals; the no-context state reuses the same block shape in `HomePage`.                                                                  |
-| `Error` tile in `PV3g8`                                          | `shared/components/RouteErrorState.tsx` (new)                                | `triangle-alert` in `$danger`, heading, body, primary "Try again" that re-runs the failed load.                                                                                                                                                    |
-| `Pending` tile in `PV3g8`                                        | TanStack Router pending component                                            | `HeroUI/Spinner` (`jviAN`) + label. No skeleton of the destination is drawn, because no rule has been evaluated yet.                                                                                                                               |
-| `Denied Panel` in `PV3g8`                                        | `modules/access` denied state, unchanged                                     | Existing `access.denied.heading` / `access.denied.description` copy, rendered inside the Warehouse shell. No new component.                                                                                                                        |
+| Pencil component/node                                            | Existing code primitive                                                      | Adaptation allowed                                                                                                                                                                                                                                                                          |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Shell/Context Switcher Trigger` (`Ezu2H`)                       | `shared/layouts/WarehouseSwitcher.tsx` — trigger only                        | HeroUI `Select.Trigger` / `Dropdown` trigger at 36px (desktop) and 40px full-width (mobile context bar). Icon + label + `chevron-down`. Icon and label follow context; the control's box, radius, border and header slot are unchanged (CR-RG-06).                                          |
+| `Shell/Context Row` (`HZRA7`)                                    | New row inside `WarehouseSwitcher.tsx`                                       | HeroUI `ListBox.Item` / `Menu.Item`. Four slots: level icon, label, trailing text, check indicator. Stays in the same file unless the switcher grows a second owned component (see `writing-web-components.md`).                                                                            |
+| `Popover` frames inside `Qa6Z3`                                  | `Select.Popover` (`isNonModal`), as today                                    | Width 320 desktop / full context-bar width at 390. Group labels are non-interactive section headers, not selectable rows.                                                                                                                                                                   |
+| `Nav · Dashboard` / `Nav · Access` / `Nav · Workspace` (`tvD98`) | `shared/layouts/Sidebar.tsx`, `PermissionGate`, `WorkspaceGate`              | Existing `HeroUI/Sidebar Item` instances, unchanged treatment. Which entries render is context-selected; the active tint (`accent-soft`) and the 240px container are unchanged.                                                                                                             |
+| `Enter · <Warehouse>` (`KyxMx` instance, 28px)                   | `…/workspace-administration/warehouses/WarehouseList.tsx`                    | HeroUI `buttonVariants({ variant: 'tertiary', size: 'sm' })` on a router `Link` to `ROUTES.WAREHOUSE` — the `default` fill over `$default/foreground` — `log-in` icon + "Enter". Sits inside the row card beside the name, **outside** the row's selection button — never nested inside it. |
+| `State Block` (in `cJkDD`, `XhXuW`, `msdLz`, `MOuOz`, `ey3Ty`)   | `shared/components/WarehouseEntryRefusal.tsx` (new), `modules/home/page.tsx` | Icon + heading + body, left-aligned in a 560px column. One component with a `reason` switch drives both refusals; the no-context state reuses the same block shape in `HomePage`.                                                                                                           |
+| `Error` tile in `PV3g8`                                          | `shared/components/RouteErrorState.tsx` (new)                                | `triangle-alert` in `$danger`, heading, body, primary "Try again" that re-runs the failed load.                                                                                                                                                                                             |
+| `Pending` tile in `PV3g8`                                        | TanStack Router pending component                                            | `HeroUI/Spinner` (`jviAN`) + label. No skeleton of the destination is drawn, because no rule has been evaluated yet.                                                                                                                                                                        |
+| `Denied Panel` in `PV3g8`                                        | `modules/access` denied state, unchanged                                     | Existing `access.denied.heading` / `access.denied.description` copy, rendered inside the Warehouse shell. No new component.                                                                                                                                                                 |
 
 ### Icons
 
@@ -176,7 +176,8 @@ change stays understandable with reduced motion enabled.
 
 - The popover exposes a **real group structure** — the Workspace row above a labelled Warehouse group
   — not visual indentation alone. Group labels are section headers, not focusable rows.
-- The current row is marked by a **check indicator and the word "Current"**, never by colour alone.
+- The current row is marked by a **check indicator**, never by colour alone (see the deviation
+  recorded below: the accompanying word "Current" was dropped at the user's request).
 - The inert Workspace row is conveyed as **disabled** to assistive technology, is not a link, and
   cannot be activated by pointer or keyboard, while remaining discoverable together with its
   explanation. It discloses only the Workspace's existence and name — no count, capability, or
@@ -230,10 +231,11 @@ Four implementation deviations were found by the independent review
 the user as **recorded rather than fixed**. Each stands until the Design owner confirms or rejects
 it; a rejection returns the item to `implement`.
 
-- **Enter action variant and placement** — ships as `buttonVariants({ variant: 'outline', size: 'sm' })`
-  against the Tokens row's `default` fill, and as a flex sibling **outside** the row card rather than
-  inside the row header beside the name (`zubpS`, `XeG2t`). Consequence: enterable rows render a
-  visibly narrower card than non-enterable ones. — owner: Design owner, due: before `ship`
+- ~~**Enter action variant and placement**~~ — **closed 2026-08-14 (fixed, not recorded).** The
+  action now ships as `buttonVariants({ variant: 'tertiary', size: 'sm' })` — the Tokens row's
+  `default` fill over `$default/foreground` — inside the row card beside the name, as a flex sibling
+  of the selection button within the card (`zubpS`, `XeG2t`). Every row now draws the same card
+  width whether or not it is enterable.
 - **No-context state block icon** — the `layout-grid` icon the Icons row pins for the no-context state
   block is not rendered; only the switcher trigger uses it. — owner: Design owner, due: before `ship`
 - **Group label copy** — ships as "Warehouses" / "Склади" against the approved
@@ -245,6 +247,19 @@ it; a rejection returns the item to `implement`.
   (`shell.contextSwitcher.archivedLabel`). The approved frame endorses the shorter label, but
   CR-RG-02 says archived rows render "exactly as today", so the change needs recording here rather
   than passing silently. — owner: Design owner, due: before `ship`
+
+### Recorded at the user's request (2026-08-14)
+
+- **No "Current" word on the entered switcher row** — `Qa6Z3` draws the marked row as "Current ✓";
+  the shipped row keeps the check indicator and `aria-selected` and drops the word. CR-AC-01 asks
+  for a marker "other than colour alone", which the indicator supplies on its own, so the criterion
+  still holds. The `shell.contextSwitcher.currentLabel` key is deleted from both locales. — owner:
+  Design owner, due: before `ship`
+- **No "In operation" chip on a warehouses-tab row** — in operation is a Warehouse's default state,
+  so only the departure from it is chipped. This _converges_ on `zubpS`/`XeG2t`, which draw the chip
+  on the archived row only; the shipped list had been adding a `success` chip the frames do not
+  show. `WarehouseDetailPane` still names the state in its header, as `zubpS` draws it. — owner:
+  Design owner, due: before `ship`
 
 ## Open questions
 

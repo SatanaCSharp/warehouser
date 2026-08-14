@@ -51,8 +51,9 @@ Rewrite `shared/layouts/WarehouseSwitcher.tsx` as one grouped control that is **
   semantics and is not weakened.
 - **Archived rows** — listed, dimmed, labelled "Archived", not selectable, exactly as today.
 - **Current marking** — from `useEnteredWarehouse()` and the `/workspace` match, never from
-  `effectiveWarehouseId`; a check indicator plus the word "Current", never colour alone; **no** row
-  marked at the root or around a refusal.
+  `effectiveWarehouseId`; a check indicator, never colour alone; **no** row marked at the root or
+  around a refusal. (The accompanying word "Current" the approved frame draws was dropped on
+  2026-08-14 at the user's request — see `design-handoff.md` § Recorded at the user's request.)
 - **The three retained messages** (`empty`, `selectionEnded`, `unavailable`) render **beside** the
   grouped control with their existing copy and intent, and only when no context is entered — so an
   actor inside W whose entry write failed never sees "nothing chosen" beside a row marked current

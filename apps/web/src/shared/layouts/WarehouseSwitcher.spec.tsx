@@ -530,7 +530,7 @@ describe('WarehouseSwitcher — current-row marking (CR-AC-01)', () => {
     vi.unstubAllGlobals();
   });
 
-  it('marks the entered Warehouse with an indicator and the word Current, not colour alone', async () => {
+  it('marks the entered Warehouse with an indicator, not colour alone', async () => {
     stubFetchSequence(() => jsonResponse(buildContext()));
     const user = userEvent.setup();
     renderSwitcherAt(warehousePath(centralId));
@@ -545,7 +545,6 @@ describe('WarehouseSwitcher — current-row marking (CR-AC-01)', () => {
     });
 
     expect(currentRow).toHaveAttribute('aria-selected', 'true');
-    expect(currentRow).toHaveTextContent('Current');
     expect(otherRow).toHaveAttribute('aria-selected', 'false');
 
     // CR-AC-01 — "marked as current by something other than colour alone". The
@@ -572,7 +571,7 @@ describe('WarehouseSwitcher — current-row marking (CR-AC-01)', () => {
     });
 
     expect(workspaceRow).toHaveAttribute('aria-selected', 'true');
-    expect(workspaceRow).toHaveTextContent('Current');
+    expect(indicatorOf(workspaceRow)).toHaveAttribute('data-visible', 'true');
   });
 
   it('marks no row at the root, even when a stored selection names a live membership', async () => {
@@ -585,8 +584,8 @@ describe('WarehouseSwitcher — current-row marking (CR-AC-01)', () => {
     const listbox = await openSwitcher(user);
     for (const option of within(listbox).getAllByRole('option')) {
       expect(option).toHaveAttribute('aria-selected', 'false');
+      expect(indicatorOf(option)).not.toHaveAttribute('data-visible');
     }
-    expect(within(listbox).queryByText('Current')).not.toBeInTheDocument();
   });
 
   it('marks no row around a refusal', async () => {

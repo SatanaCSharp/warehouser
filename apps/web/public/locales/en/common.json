@@ -37,7 +37,6 @@
       "triggerLabelNoContext": "Context switcher, choose a context",
       "workspaceGroupLabel": "Workspace",
       "warehousesGroupLabel": "Warehouses",
-      "currentLabel": "Current",
       "archivedLabel": "Archived",
       "noAccessLabel": "No access",
       "workspaceNoAccessExplanation": "You do not have access to the workspace."
