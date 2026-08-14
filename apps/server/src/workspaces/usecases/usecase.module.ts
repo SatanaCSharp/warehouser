@@ -9,10 +9,10 @@ import { ReadWorkspaceContextQuery } from 'workspaces/usecases/queries/read-work
 
 // The Workspace record and the member's position within it. The role, member,
 // owner-transfer and Warehouse-membership use cases this module used to carry
-// are one capability exercised at two scopes and now live in `access`
-// (CR-AC-06, CH-S2, CH-S3); `WorkspaceController` still serves eleven of their
-// routes and obtains them from `AccessUsecaseModule`, which
-// `WorkspacesRestModule` imports directly until those handlers follow.
+// are one capability exercised at two scopes and now live in `access` with the
+// eleven routes that invoke them (CR-AC-06, CH-S2, CH-S3), and the Warehouse
+// record moved to `warehouses` (CH-S1). What is left is the enumerated
+// remainder CR-AC-07 fixes.
 const workspaceCommands = [RenameWorkspaceCommand, SetActiveWarehouseCommand];
 
 const workspaceQueries = [ReadWorkspaceContextQuery];

@@ -26,12 +26,12 @@ describe('workspaces module wiring', () => {
     MODULE_METADATA.PROVIDERS,
     WorkspacesUsecaseModule,
   );
-  // The workspace-scoped role, member and owner-transfer use cases
-  // `WorkspaceController` injects now live in `AccessUsecaseModule`, which
-  // `WorkspacesRestModule` imports beside `WorkspacesUsecaseModule`. The rule
+  // The workspace-scoped role, member and owner-transfer use cases live in
+  // `AccessUsecaseModule` now, and so do the handlers that injected them
+  // (CH-S2). `WorkspacesUsecaseModule` still imports `AccessUsecaseModule` for
+  // `WorkspaceProvisioningService`, so its exports stay in scope here. The rule
   // this asserts is unchanged — every use case a registered controller injects
-  // is exported by a use-case module the REST module imports — only the set of
-  // modules supplying it is now two.
+  // is exported by a use-case module the REST module imports.
   const usecaseExports = [
     ...metadata(MODULE_METADATA.EXPORTS, WorkspacesUsecaseModule),
     ...metadata(MODULE_METADATA.EXPORTS, AccessUsecaseModule),
