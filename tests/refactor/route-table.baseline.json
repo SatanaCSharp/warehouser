@@ -1,0 +1,268 @@
+[
+  {
+    "method": "DELETE",
+    "path": "/api/v1/auth/session",
+    "guards": [],
+    "permission": null,
+    "dto": null
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/auth/session",
+    "guards": [],
+    "permission": null,
+    "dto": null
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/auth/sign-in",
+    "guards": [],
+    "permission": null,
+    "dto": "AuthCredentialsDto"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/auth/sign-up",
+    "guards": [],
+    "permission": null,
+    "dto": "RegistrationDto"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/warehouses/:warehouseId/access/current",
+    "guards": ["SessionAuthGuard"],
+    "permission": null,
+    "dto": null
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/warehouses/:warehouseId/access/manager-transfer",
+    "guards": ["SessionAuthGuard", "WarehouseAccessGuard"],
+    "permission": "RequiredPermission(PermissionId.WAREHOUSE_MANAGER_ROLE_REASSIGN)",
+    "dto": "ManagerTransferDto"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/warehouses/:warehouseId/access/members",
+    "guards": ["SessionAuthGuard", "WarehouseAccessGuard"],
+    "permission": "RequiredPermission(PermissionId.USERS_WATCH)",
+    "dto": null
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/warehouses/:warehouseId/access/members/:userId/role",
+    "guards": ["SessionAuthGuard", "WarehouseAccessGuard"],
+    "permission": "RequiredPermission(PermissionId.ROLES_ASSIGN)",
+    "dto": "RoleAssignmentDto"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/warehouses/:warehouseId/access/permissions",
+    "guards": ["SessionAuthGuard", "WarehouseAccessGuard"],
+    "permission": "RequiredPermission(PermissionId.ROLES_WATCH)",
+    "dto": null
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/warehouses/:warehouseId/access/roles",
+    "guards": ["SessionAuthGuard", "WarehouseAccessGuard"],
+    "permission": "RequiredPermission(PermissionId.ROLES_WATCH)",
+    "dto": null
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/warehouses/:warehouseId/access/roles",
+    "guards": ["SessionAuthGuard", "WarehouseAccessGuard"],
+    "permission": "RequiredPermission(PermissionId.ROLES_CREATE)",
+    "dto": "RoleWriteDto"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/warehouses/:warehouseId/access/roles/:roleId",
+    "guards": ["SessionAuthGuard", "WarehouseAccessGuard"],
+    "permission": "RequiredPermission(PermissionId.ROLES_DELETE)",
+    "dto": "RoleDeletionDto"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/warehouses/:warehouseId/access/roles/:roleId",
+    "guards": ["SessionAuthGuard", "WarehouseAccessGuard"],
+    "permission": "RequiredPermission(PermissionId.ROLES_UPDATE)",
+    "dto": "RoleWriteDto"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/warehouses/:warehouseId/users",
+    "guards": ["SessionAuthGuard", "WarehouseAccessGuard"],
+    "permission": "RequiredPermission(PermissionId.USERS_CREATE)",
+    "dto": "CreateMemberDto"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/warehouses/:warehouseId/users/:userId",
+    "guards": ["SessionAuthGuard", "WarehouseAccessGuard"],
+    "permission": "RequiredPermission(PermissionId.USERS_DELETE)",
+    "dto": null
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/warehouses/:warehouseId/users/:userId/email",
+    "guards": ["SessionAuthGuard", "WarehouseAccessGuard"],
+    "permission": "RequiredPermission(PermissionId.USERS_EMAIL_UPDATE)",
+    "dto": "EmailChangeDto"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/warehouses/:warehouseId/users/:userId/password",
+    "guards": ["SessionAuthGuard", "WarehouseAccessGuard"],
+    "permission": "RequiredPermission(PermissionId.USERS_PASSWORD_CHANGE)",
+    "dto": "PasswordChangeDto"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/workspace",
+    "guards": ["SessionAuthGuard", "WorkspaceAccessGuard"],
+    "permission": "RequiredWorkspacePermission(WorkspacePermissionId.WORKSPACE_RENAME)",
+    "dto": "WorkspaceRenameDto"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/workspace/active-warehouse",
+    "guards": ["SessionAuthGuard"],
+    "permission": null,
+    "dto": "ActiveWarehouseWriteDto"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/workspace/context",
+    "guards": ["SessionAuthGuard"],
+    "permission": null,
+    "dto": null
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/workspace/members",
+    "guards": ["SessionAuthGuard", "WorkspaceAccessGuard"],
+    "permission": "RequiredWorkspacePermission(WorkspacePermissionId.WORKSPACE_MEMBERS_WATCH)",
+    "dto": null
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/workspace/members",
+    "guards": ["SessionAuthGuard", "WorkspaceAccessGuard"],
+    "permission": "RequiredWorkspacePermission(WorkspacePermissionId.WORKSPACE_MEMBERS_ADD)",
+    "dto": "WorkspaceMemberAddDto"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/workspace/members/:userId",
+    "guards": ["SessionAuthGuard", "WorkspaceAccessGuard"],
+    "permission": "RequiredWorkspacePermission(WorkspacePermissionId.WORKSPACE_MEMBERS_REMOVE)",
+    "dto": null
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/workspace/members/:userId/role",
+    "guards": ["SessionAuthGuard", "WorkspaceAccessGuard"],
+    "permission": "RequiredWorkspacePermission(WorkspacePermissionId.WORKSPACE_ROLES_ASSIGN)",
+    "dto": "WorkspaceRoleAssignmentDto"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/workspace/owner-transfer",
+    "guards": ["SessionAuthGuard", "WorkspaceAccessGuard"],
+    "permission": "RequiredWorkspacePermission(WorkspacePermissionId.WORKSPACE_OWNER_ROLE_REASSIGN)",
+    "dto": "WorkspaceOwnerTransferDto"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/workspace/permissions",
+    "guards": ["SessionAuthGuard", "WorkspaceAccessGuard"],
+    "permission": "RequiredWorkspacePermission(WorkspacePermissionId.WORKSPACE_ROLES_WATCH)",
+    "dto": null
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/workspace/roles",
+    "guards": ["SessionAuthGuard", "WorkspaceAccessGuard"],
+    "permission": "RequiredWorkspacePermission(WorkspacePermissionId.WORKSPACE_ROLES_WATCH)",
+    "dto": null
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/workspace/roles",
+    "guards": ["SessionAuthGuard", "WorkspaceAccessGuard"],
+    "permission": "RequiredWorkspacePermission(WorkspacePermissionId.WORKSPACE_ROLES_CREATE)",
+    "dto": "WorkspaceRoleWriteDto"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/workspace/roles/:workspaceRoleId",
+    "guards": ["SessionAuthGuard", "WorkspaceAccessGuard"],
+    "permission": "RequiredWorkspacePermission(WorkspacePermissionId.WORKSPACE_ROLES_DELETE)",
+    "dto": "WorkspaceRoleDeletionDto"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/workspace/roles/:workspaceRoleId",
+    "guards": ["SessionAuthGuard", "WorkspaceAccessGuard"],
+    "permission": "RequiredWorkspacePermission(WorkspacePermissionId.WORKSPACE_ROLES_UPDATE)",
+    "dto": "WorkspaceRoleWriteDto"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/workspace/users",
+    "guards": ["SessionAuthGuard", "WorkspaceAccessGuard"],
+    "permission": "RequiredWorkspacePermission(WorkspacePermissionId.WORKSPACE_MEMBERS_WATCH)",
+    "dto": null
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/workspace/warehouses",
+    "guards": ["SessionAuthGuard", "WorkspaceAccessGuard"],
+    "permission": "RequiredWorkspacePermission(WorkspacePermissionId.WAREHOUSES_WATCH)",
+    "dto": null
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/workspace/warehouses",
+    "guards": ["SessionAuthGuard", "WorkspaceAccessGuard"],
+    "permission": "RequiredWorkspacePermission(WorkspacePermissionId.WAREHOUSES_CREATE)",
+    "dto": "WarehouseWriteDto"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/workspace/warehouses/:warehouseId",
+    "guards": ["SessionAuthGuard", "WorkspaceAccessGuard"],
+    "permission": "RequiredWorkspacePermission(WorkspacePermissionId.WAREHOUSES_RENAME)",
+    "dto": "WarehouseWriteDto"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/workspace/warehouses/:warehouseId/archival",
+    "guards": ["SessionAuthGuard", "WorkspaceAccessGuard"],
+    "permission": "RequiredWorkspacePermission(WorkspacePermissionId.WAREHOUSES_ARCHIVE)",
+    "dto": "WarehouseArchivalDto"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/workspace/warehouses/:warehouseId/assignable-roles",
+    "guards": ["SessionAuthGuard", "WorkspaceAccessGuard"],
+    "permission": "RequiredWorkspacePermission(WorkspacePermissionId.WAREHOUSE_MEMBERSHIPS_ASSIGN)",
+    "dto": null
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/workspace/warehouses/:warehouseId/memberships",
+    "guards": ["SessionAuthGuard", "WorkspaceAccessGuard"],
+    "permission": "RequiredWorkspacePermission(WorkspacePermissionId.WAREHOUSE_MEMBERSHIPS_ASSIGN)",
+    "dto": "WarehouseMembershipAssignmentDto"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/workspace/warehouses/:warehouseId/memberships/:userId",
+    "guards": ["SessionAuthGuard", "WorkspaceAccessGuard"],
+    "permission": "RequiredWorkspacePermission(WorkspacePermissionId.WAREHOUSE_MEMBERSHIPS_REVOKE)",
+    "dto": null
+  }
+]
