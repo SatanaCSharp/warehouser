@@ -1,10 +1,10 @@
 import { Alert, Button, Chip } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 
-import { GiveWarehouseAccessAction } from 'modules/workspace/components/workspace-administration/warehouses/GiveWarehouseAccessAction';
-import { WarehouseLifecycleActions } from 'modules/workspace/components/workspace-administration/warehouses/WarehouseLifecycleActions';
-import { WarehouseNameForm } from 'modules/workspace/components/workspace-administration/warehouses/WarehouseNameForm';
-import { WarehousePeopleList } from 'modules/workspace/components/workspace-administration/warehouses/WarehousePeopleList';
+import { GiveWarehouseAccessAction } from 'modules/warehouse/components/workspace-administration/warehouses/GiveWarehouseAccessAction';
+import { WarehouseLifecycleActions } from 'modules/warehouse/components/workspace-administration/warehouses/WarehouseLifecycleActions';
+import { WarehouseNameForm } from 'modules/warehouse/components/workspace-administration/warehouses/WarehouseNameForm';
+import { WarehousePeopleList } from 'modules/warehouse/components/workspace-administration/warehouses/WarehousePeopleList';
 import { ChevronLeftIcon } from 'shared/icons';
 
 import type {

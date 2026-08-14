@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { selectCurrentUser } from 'modules/auth/store/auth.selectors';
-import { WithdrawWarehouseAccessDialog } from 'modules/workspace/components/workspace-administration/warehouses/WithdrawWarehouseAccessDialog';
+import { WithdrawWarehouseAccessDialog } from 'modules/warehouse/components/workspace-administration/warehouses/WithdrawWarehouseAccessDialog';
 import { useHasWorkspacePermission } from 'shared/hooks/useWorkspacePermissions';
 import { useAppSelector } from 'store/hooks';
 

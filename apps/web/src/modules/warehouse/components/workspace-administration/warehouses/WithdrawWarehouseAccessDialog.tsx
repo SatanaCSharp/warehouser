@@ -1,7 +1,7 @@
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import { useRevokeWarehouseMembership } from 'modules/workspace/hooks/useRevokeWarehouseMembership';
+import { useRevokeWarehouseMembership } from 'modules/warehouse/hooks/useRevokeWarehouseMembership';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 
 import type {

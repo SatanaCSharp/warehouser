@@ -4,11 +4,11 @@ import compact from 'lodash/compact';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { WarehousesTab } from 'modules/warehouse/components/workspace-administration/warehouses/WarehousesTab';
 import { WorkspaceMembersTab } from 'modules/workspace/components/workspace-administration/members/WorkspaceMembersTab';
 import { NameWorkspaceAction } from 'modules/workspace/components/workspace-administration/NameWorkspaceAction';
 import { WorkspacePermissionsTab } from 'modules/workspace/components/workspace-administration/permissions/WorkspacePermissionsTab';
 import { WorkspaceRolesTab } from 'modules/workspace/components/workspace-administration/roles/WorkspaceRolesTab';
-import { WarehousesTab } from 'modules/workspace/components/workspace-administration/warehouses/WarehousesTab';
 import {
   hasWorkspacePermission,
   useCurrentWorkspaceContext,

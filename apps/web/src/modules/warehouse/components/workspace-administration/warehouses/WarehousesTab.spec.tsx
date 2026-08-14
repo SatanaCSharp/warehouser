@@ -13,7 +13,7 @@ import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { WarehousesTab } from 'modules/workspace/components/workspace-administration/warehouses/WarehousesTab';
+import { WarehousesTab } from 'modules/warehouse/components/workspace-administration/warehouses/WarehousesTab';
 import { ROUTES } from 'shared/constants/routes';
 import { selectHeroOption } from 'test/hero-select';
 import { renderWithProviders } from 'test/render';

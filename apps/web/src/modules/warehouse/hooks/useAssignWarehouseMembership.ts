@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 
-import { useAssignWarehouseMembershipMutation } from 'modules/workspace/api/workspace-warehouses-api';
+import { useAssignWarehouseMembershipMutation } from 'modules/warehouse/api/warehouse-api';
 import { runWorkspaceMutation } from 'shared/api/workspace-mutation';
 
 import type { WarehouseMembershipAssignment } from '@warehouser/contracts/workspaces';

@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 
-import { warehouseNameValidationKey } from 'modules/workspace/hooks/warehouse-name-validation';
 import { workspaceRoleNameValidationKey } from 'modules/workspace/hooks/workspace-role-name-validation';
 
 import type { MutationOutcome } from 'shared/api/mutation-outcome';
@@ -13,25 +12,17 @@ import type { MutationOutcome } from 'shared/api/mutation-outcome';
 // maps `blank`, a key the server never emits, so an empty name fell through
 // to each map's fallback: "unsupported character" for a Warehouse, and the
 // raw string `empty` — which is not a translation key — for a Role.
+//
+// The Workspace-Role half of this spec. Its Warehouse half now lives beside
+// its own subject at `modules/warehouse/hooks/warehouse-name-validation.spec.ts`
+// (`modules-level-refactor` CH-W1), together with the one case parameterised
+// over both validators.
 describe('name rejection rule keys', () => {
   const outcome = (rule: string): MutationOutcome => ({
     success: false,
     code: 'workspace.invalid_input',
     fieldErrors: { name: rule },
   });
-
-  it.each([
-    ['empty', 'warehouseName.required'],
-    ['grapheme_length', 'warehouseName.lengthRange'],
-    ['control_or_format_character', 'warehouseName.unsupportedCharacter'],
-  ])(
-    'AC-08: translates the Warehouse-name rule %s to its own validation key',
-    (rule, key) => {
-      expect(warehouseNameValidationKey(outcome(rule))).toMatchObject({
-        fieldErrors: { name: key },
-      });
-    },
-  );
 
   it.each([
     ['empty', 'workspaceRoleName.required'],
@@ -59,36 +50,4 @@ describe('name rejection rule keys', () => {
       }),
     ).toMatchObject({ fieldErrors: { name: 'workspaceRoleName.duplicate' } });
   });
-
-  // A rule the web does not know must still resolve to a real translation
-  // key. Passing the server's raw string through renders the code itself.
-  it.each([
-    [
-      'Warehouse',
-      warehouseNameValidationKey,
-      [
-        'warehouseName.required',
-        'warehouseName.lengthRange',
-        'warehouseName.unsupportedCharacter',
-      ],
-    ],
-    [
-      'Workspace Role',
-      workspaceRoleNameValidationKey,
-      [
-        'workspaceRoleName.required',
-        'workspaceRoleName.lengthRange',
-        'workspaceRoleName.unsupportedCharacter',
-        'workspaceRoleName.server',
-      ],
-    ],
-  ])(
-    'never surfaces an unrecognised %s rule as a raw translation key',
-    (_name, translate, knownKeys) => {
-      const result = translate(outcome('a_rule_added_later'));
-
-      expect(result.fieldErrors?.name).not.toBe('a_rule_added_later');
-      expect(knownKeys).toContain(result.fieldErrors?.name);
-    },
-  );
 });
