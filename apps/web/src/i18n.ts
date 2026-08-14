@@ -14,6 +14,7 @@ export const namespaces = [
   'sign-up',
   'success',
   'validation',
+  'warehouse',
   'workspace',
 ] as const;
 

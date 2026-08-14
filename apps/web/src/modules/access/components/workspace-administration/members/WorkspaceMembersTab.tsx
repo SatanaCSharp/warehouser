@@ -20,13 +20,13 @@ import type { ReactElement } from 'react';
  * so showing one before the other would state the wrong thing for a render.
  */
 export const WorkspaceMembersTab = (): ReactElement => {
-  const { t } = useTranslation('workspace');
+  const { t } = useTranslation('access');
   const members = useWorkspaceMembers();
   const users = useWorkspaceUsers();
 
   if (!members || !users) {
     return (
-      <div aria-label={t('members.loading')} className="space-y-3">
+      <div aria-label={t('workspaceMembers.loading')} className="space-y-3">
         {[0, 1, 2].map((skeletonId) => (
           <Skeleton className="h-[72px] rounded-xl" key={skeletonId} />
         ))}
@@ -35,7 +35,7 @@ export const WorkspaceMembersTab = (): ReactElement => {
   }
 
   return (
-    <section aria-label={t('members.heading')}>
+    <section aria-label={t('workspaceMembers.heading')}>
       <div className="mb-5 flex flex-wrap justify-end gap-2">
         <AddWorkspaceMemberAction />
       </div>

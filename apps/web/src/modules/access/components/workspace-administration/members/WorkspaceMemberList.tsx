@@ -18,14 +18,14 @@ type WorkspaceMemberListProps = { members: WorkspaceMember[] };
 export const WorkspaceMemberList = ({
   members,
 }: WorkspaceMemberListProps): ReactElement => {
-  const { t } = useTranslation('workspace');
+  const { t } = useTranslation('access');
   const { isReady, roles } = useWorkspaceRoles();
 
   // A row states the one Workspace Role its member holds, so the list waits for
   // the Roles read rather than rendering rows that name nothing for a heartbeat.
   if (!isReady) {
     return (
-      <div aria-label={t('members.loading')} className="space-y-3">
+      <div aria-label={t('workspaceMembers.loading')} className="space-y-3">
         {[0, 1, 2].map((skeletonId) => (
           <Skeleton className="h-[72px] rounded-xl" key={skeletonId} />
         ))}
@@ -35,12 +35,12 @@ export const WorkspaceMemberList = ({
 
   return (
     <div>
-      <h2 className="text-sm font-semibold">{t('members.heading')}</h2>
+      <h2 className="text-sm font-semibold">{t('workspaceMembers.heading')}</h2>
       <p className="mt-1 text-sm text-muted">
-        {t('members.description', { count: members.length })}
+        {t('workspaceMembers.description', { count: members.length })}
       </p>
 
-      <ul aria-label={t('members.heading')} className="mt-3 space-y-3">
+      <ul aria-label={t('workspaceMembers.heading')} className="mt-3 space-y-3">
         {members.map((member) => (
           <WorkspaceMemberRow
             key={member.userId}
@@ -53,7 +53,7 @@ export const WorkspaceMemberList = ({
       </ul>
 
       {members.length === 0 ? (
-        <p className="mt-3 text-muted">{t('members.empty')}</p>
+        <p className="mt-3 text-muted">{t('workspaceMembers.empty')}</p>
       ) : null}
     </div>
   );

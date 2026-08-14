@@ -22,7 +22,7 @@ type CreateWorkspaceRoleActionProps = {
 export const CreateWorkspaceRoleAction = ({
   permissions,
 }: CreateWorkspaceRoleActionProps): ReactElement | null => {
-  const { t } = useTranslation('workspace');
+  const { t } = useTranslation('access');
   const canCreateWorkspaceRole = useHasWorkspacePermission(
     WorkspacePermissionId.WORKSPACE_ROLES_CREATE,
   );

@@ -21,7 +21,7 @@ type AddWarehouseDialogProps = {
 export const AddWarehouseDialog = ({
   onClose,
 }: AddWarehouseDialogProps): ReactElement => {
-  const { t } = useTranslation('workspace');
+  const { t } = useTranslation('warehouse');
   const { t: translateValidation } = useTranslation('validation');
   const createWarehouse = useCreateWarehouse();
   const {

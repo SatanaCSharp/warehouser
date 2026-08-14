@@ -16,7 +16,7 @@ import type { ReactElement } from 'react';
  * says why it can never belong to a custom Workspace Role.
  */
 export const WorkspacePermissionsTab = (): ReactElement => {
-  const { t } = useTranslation('workspace');
+  const { t } = useTranslation('access');
   const permissionLabel = useWorkspacePermissionLabel();
   const canWatchWorkspaceRoles = useHasWorkspacePermission(
     WorkspacePermissionId.WORKSPACE_ROLES_WATCH,
@@ -27,7 +27,7 @@ export const WorkspacePermissionsTab = (): ReactElement => {
 
   if (!permissions) {
     return (
-      <div aria-label={t('permissions.loading')} className="space-y-3">
+      <div aria-label={t('workspacePermissions.loading')} className="space-y-3">
         {[0, 1].map((skeletonId) => (
           <Skeleton className="h-16 rounded-lg" key={skeletonId} />
         ))}
@@ -36,15 +36,18 @@ export const WorkspacePermissionsTab = (): ReactElement => {
   }
 
   return (
-    <section aria-label={t('permissions.heading')} className="space-y-6">
-      <p className="text-muted">{t('permissions.description')}</p>
+    <section
+      aria-label={t('workspacePermissions.heading')}
+      className="space-y-6"
+    >
+      <p className="text-muted">{t('workspacePermissions.description')}</p>
       {groupWorkspacePermissions(permissions).map((group) => (
         <div key={group.id}>
           <h3 className="mb-3 font-semibold">
-            {t(`permissions.groups.${group.id}`)}
+            {t(`workspacePermissions.groups.${group.id}`)}
           </h3>
           <ul
-            aria-label={t(`permissions.groups.${group.id}`)}
+            aria-label={t(`workspacePermissions.groups.${group.id}`)}
             className="space-y-3"
           >
             {group.permissions.map((permission) => (
@@ -58,13 +61,13 @@ export const WorkspacePermissionsTab = (): ReactElement => {
                   </span>
                   {permission.kind === 'reserved' ? (
                     <Chip size="sm" variant="soft">
-                      {t('permissions.ownerOnly')}
+                      {t('workspacePermissions.ownerOnly')}
                     </Chip>
                   ) : null}
                 </div>
                 {permission.kind === 'reserved' ? (
                   <p className="mt-1 text-sm text-muted">
-                    {t('permissions.reservedNote')}
+                    {t('workspacePermissions.reservedNote')}
                   </p>
                 ) : null}
               </li>

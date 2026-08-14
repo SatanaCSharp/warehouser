@@ -21,7 +21,7 @@ export const ArchiveWarehouseDialog = ({
   warehouse,
   onClose,
 }: ArchiveWarehouseDialogProps): ReactElement => {
-  const { t } = useTranslation('workspace');
+  const { t } = useTranslation('warehouse');
   const setWarehouseArchival = useSetWarehouseArchival();
   const [isSubmitting, setIsSubmitting] = useState(false);
 

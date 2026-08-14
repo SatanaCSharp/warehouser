@@ -11,8 +11,11 @@ import type { WorkspacePermission } from '@warehouser/contracts/workspaces';
 export const useWorkspacePermissionLabel = (): ((
   permission: WorkspacePermission,
 ) => string) => {
-  const { t } = useTranslation('workspace');
+  const { t } = useTranslation('access');
 
   return (permission) =>
-    t(`permissions.items.${permission.id.replace(':', '_')}`, permission.label);
+    t(
+      `workspacePermissions.items.${permission.id.replace(':', '_')}`,
+      permission.label,
+    );
 };

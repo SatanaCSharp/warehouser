@@ -33,7 +33,7 @@ type TransferWorkspaceOwnershipForm = {
 export const TransferWorkspaceOwnershipDialog = ({
   onClose,
 }: TransferWorkspaceOwnershipDialogProps): ReactElement => {
-  const { t } = useTranslation('workspace');
+  const { t } = useTranslation('access');
   const members = useWorkspaceMembers();
   const { customRoles } = useWorkspaceRoles();
   const transferWorkspaceOwner = useTransferWorkspaceOwner();
@@ -63,15 +63,17 @@ export const TransferWorkspaceOwnershipDialog = ({
 
   return (
     <FormModalDialog
-      cancelLabel={t('members.transferOwnership.cancel')}
+      cancelLabel={t('workspaceMembers.transferOwnership.cancel')}
       isSubmitting={isSubmitting}
       noValidate
-      submitLabel={t('members.transferOwnership.submit')}
-      title={t('members.transferOwnership.title')}
+      submitLabel={t('workspaceMembers.transferOwnership.submit')}
+      title={t('workspaceMembers.transferOwnership.title')}
       onClose={onClose}
       onSubmit={handleSubmit(submit)}
     >
-      <p className="text-muted">{t('members.transferOwnership.description')}</p>
+      <p className="text-muted">
+        {t('workspaceMembers.transferOwnership.description')}
+      </p>
       <Controller
         control={control}
         name="recipientUserId"
@@ -80,8 +82,10 @@ export const TransferWorkspaceOwnershipDialog = ({
           <FormSelectField
             isRequired
             validationBehavior="aria"
-            description={t('members.transferOwnership.newOwnerDescription')}
-            label={t('members.transferOwnership.newOwnerLabel')}
+            description={t(
+              'workspaceMembers.transferOwnership.newOwnerDescription',
+            )}
+            label={t('workspaceMembers.transferOwnership.newOwnerLabel')}
             name={field.name}
             options={recipients.map((member) => ({
               id: member.userId,
@@ -101,8 +105,10 @@ export const TransferWorkspaceOwnershipDialog = ({
           <FormSelectField
             isRequired
             validationBehavior="aria"
-            description={t('members.transferOwnership.newRoleDescription')}
-            label={t('members.transferOwnership.newRoleLabel')}
+            description={t(
+              'workspaceMembers.transferOwnership.newRoleDescription',
+            )}
+            label={t('workspaceMembers.transferOwnership.newRoleLabel')}
             name={field.name}
             options={customRoles.map((role) => ({
               id: role.id,
@@ -116,10 +122,10 @@ export const TransferWorkspaceOwnershipDialog = ({
       />
       <div className="rounded-lg border border-border bg-surface-secondary p-3">
         <p className="font-semibold">
-          {t('members.transferOwnership.noticeTitle')}
+          {t('workspaceMembers.transferOwnership.noticeTitle')}
         </p>
         <p className="text-sm text-muted">
-          {t('members.transferOwnership.noticeDescription')}
+          {t('workspaceMembers.transferOwnership.noticeDescription')}
         </p>
       </div>
       <WorkspaceRefusalAlert code={refusalCode} />

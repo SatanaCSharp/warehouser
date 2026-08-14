@@ -23,7 +23,7 @@ type AddWorkspaceMemberForm = { userId: string; workspaceRoleId: string };
 export const AddWorkspaceMemberDialog = ({
   onClose,
 }: AddWorkspaceMemberDialogProps): ReactElement => {
-  const { t } = useTranslation('workspace');
+  const { t } = useTranslation('access');
   const users = useWorkspaceUsers();
   const { customRoles } = useWorkspaceRoles();
   const addWorkspaceMember = useAddWorkspaceMember();
@@ -48,15 +48,15 @@ export const AddWorkspaceMemberDialog = ({
 
   return (
     <FormModalDialog
-      cancelLabel={t('members.add.cancel')}
+      cancelLabel={t('workspaceMembers.add.cancel')}
       isSubmitting={isSubmitting}
       noValidate
-      submitLabel={t('members.add.submit')}
-      title={t('members.add.title')}
+      submitLabel={t('workspaceMembers.add.submit')}
+      title={t('workspaceMembers.add.title')}
       onClose={onClose}
       onSubmit={handleSubmit(submit)}
     >
-      <p className="text-muted">{t('members.add.description')}</p>
+      <p className="text-muted">{t('workspaceMembers.add.description')}</p>
       <Controller
         control={control}
         name="userId"
@@ -65,7 +65,7 @@ export const AddWorkspaceMemberDialog = ({
           <FormSelectField
             isRequired
             validationBehavior="aria"
-            label={t('members.add.personLabel')}
+            label={t('workspaceMembers.add.personLabel')}
             name={field.name}
             options={candidates.map((user) => ({
               id: user.userId,
@@ -85,7 +85,7 @@ export const AddWorkspaceMemberDialog = ({
           <FormSelectField
             isRequired
             validationBehavior="aria"
-            label={t('members.add.roleLabel')}
+            label={t('workspaceMembers.add.roleLabel')}
             name={field.name}
             options={customRoles.map((role) => ({
               id: role.id,

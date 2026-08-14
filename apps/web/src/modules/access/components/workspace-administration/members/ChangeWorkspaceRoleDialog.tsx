@@ -28,7 +28,7 @@ export const ChangeWorkspaceRoleDialog = ({
   member,
   onClose,
 }: ChangeWorkspaceRoleDialogProps): ReactElement => {
-  const { t } = useTranslation('workspace');
+  const { t } = useTranslation('access');
   const { customRoles } = useWorkspaceRoles();
   const assignWorkspaceRole = useAssignWorkspaceRole();
   const [refusalCode, setRefusalCode] = useState<string>();
@@ -53,11 +53,11 @@ export const ChangeWorkspaceRoleDialog = ({
 
   return (
     <FormModalDialog
-      cancelLabel={t('members.changeRole.cancel')}
+      cancelLabel={t('workspaceMembers.changeRole.cancel')}
       isSubmitting={isSubmitting}
       noValidate
-      submitLabel={t('members.changeRole.submit')}
-      title={t('members.changeRole.title', {
+      submitLabel={t('workspaceMembers.changeRole.submit')}
+      title={t('workspaceMembers.changeRole.title', {
         name: member.email ?? member.userId,
       })}
       onClose={onClose}
@@ -71,8 +71,8 @@ export const ChangeWorkspaceRoleDialog = ({
           <FormSelectField
             isRequired
             validationBehavior="aria"
-            description={t('members.changeRole.roleDescription')}
-            label={t('members.changeRole.roleLabel')}
+            description={t('workspaceMembers.changeRole.roleDescription')}
+            label={t('workspaceMembers.changeRole.roleLabel')}
             name={field.name}
             options={customRoles
               .filter((role) => role.id !== member.workspaceRoleId)

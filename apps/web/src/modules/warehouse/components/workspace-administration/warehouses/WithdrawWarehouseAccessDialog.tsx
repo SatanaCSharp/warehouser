@@ -28,7 +28,7 @@ export const WithdrawWarehouseAccessDialog = ({
   warehouse,
   onClose,
 }: WithdrawWarehouseAccessDialogProps): ReactElement => {
-  const { t } = useTranslation('workspace');
+  const { t } = useTranslation('warehouse');
   const revokeWarehouseMembership = useRevokeWarehouseMembership();
   const {
     formState: { isSubmitting },

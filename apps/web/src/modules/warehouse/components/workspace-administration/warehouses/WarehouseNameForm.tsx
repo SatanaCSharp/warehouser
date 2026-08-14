@@ -27,7 +27,7 @@ export const WarehouseNameForm = ({
   canRenameWarehouse,
   warehouse,
 }: WarehouseNameFormProps): ReactElement | null => {
-  const { t } = useTranslation('workspace');
+  const { t } = useTranslation('warehouse');
   const { t: translateValidation } = useTranslation('validation');
   const renameWarehouse = useRenameWarehouse();
   const {

@@ -12,6 +12,7 @@ import enSignIn from '../../public/locales/en/sign-in.json';
 import enSignUp from '../../public/locales/en/sign-up.json';
 import enSuccess from '../../public/locales/en/success.json';
 import enValidation from '../../public/locales/en/validation.json';
+import enWarehouse from '../../public/locales/en/warehouse.json';
 import enWorkspace from '../../public/locales/en/workspace.json';
 import ukAccess from '../../public/locales/uk/access.json';
 import ukCommon from '../../public/locales/uk/common.json';
@@ -22,6 +23,7 @@ import ukSignIn from '../../public/locales/uk/sign-in.json';
 import ukSignUp from '../../public/locales/uk/sign-up.json';
 import ukSuccess from '../../public/locales/uk/success.json';
 import ukValidation from '../../public/locales/uk/validation.json';
+import ukWarehouse from '../../public/locales/uk/warehouse.json';
 import ukWorkspace from '../../public/locales/uk/workspace.json';
 
 const localeResponses: Record<string, object> = {
@@ -34,6 +36,7 @@ const localeResponses: Record<string, object> = {
   '/locales/en/sign-up.json': enSignUp,
   '/locales/en/success.json': enSuccess,
   '/locales/en/validation.json': enValidation,
+  '/locales/en/warehouse.json': enWarehouse,
   '/locales/en/workspace.json': enWorkspace,
   '/locales/uk/access.json': ukAccess,
   '/locales/uk/common.json': ukCommon,
@@ -44,6 +47,7 @@ const localeResponses: Record<string, object> = {
   '/locales/uk/sign-up.json': ukSignUp,
   '/locales/uk/success.json': ukSuccess,
   '/locales/uk/validation.json': ukValidation,
+  '/locales/uk/warehouse.json': ukWarehouse,
   '/locales/uk/workspace.json': ukWorkspace,
 };
 

@@ -23,7 +23,7 @@ export const RemoveWorkspaceMemberDialog = ({
   member,
   onClose,
 }: RemoveWorkspaceMemberDialogProps): ReactElement => {
-  const { t } = useTranslation('workspace');
+  const { t } = useTranslation('access');
   const removeWorkspaceMember = useRemoveWorkspaceMember();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [refusalCode, setRefusalCode] = useState<string>();
@@ -43,18 +43,18 @@ export const RemoveWorkspaceMemberDialog = ({
 
   return (
     <FormModalDialog
-      cancelLabel={t('members.remove.cancel')}
+      cancelLabel={t('workspaceMembers.remove.cancel')}
       isSubmitting={isSubmitting}
       noValidate
-      submitLabel={t('members.remove.submit')}
+      submitLabel={t('workspaceMembers.remove.submit')}
       submitVariant="danger"
-      title={t('members.remove.title', {
+      title={t('workspaceMembers.remove.title', {
         name: member.email ?? member.userId,
       })}
       onClose={onClose}
       onSubmit={submit}
     >
-      <p className="text-muted">{t('members.remove.description')}</p>
+      <p className="text-muted">{t('workspaceMembers.remove.description')}</p>
       <WorkspaceRefusalAlert code={refusalCode} />
     </FormModalDialog>
   );

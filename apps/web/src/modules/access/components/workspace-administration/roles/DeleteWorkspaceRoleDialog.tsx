@@ -37,7 +37,7 @@ export const DeleteWorkspaceRoleDialog = ({
   onClose,
   onDelete,
 }: DeleteWorkspaceRoleDialogProps): ReactElement => {
-  const { t } = useTranslation('workspace');
+  const { t } = useTranslation('access');
   const [refusalCode, setRefusalCode] = useState<string>();
   const {
     control,

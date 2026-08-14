@@ -16,7 +16,7 @@ import type { ReactElement } from 'react';
  * control at all rather than a disabled one (AC-30).
  */
 export const AddWorkspaceMemberAction = (): ReactElement | null => {
-  const { t } = useTranslation('workspace');
+  const { t } = useTranslation('access');
   const canAddWorkspaceMember = useHasWorkspacePermission(
     WorkspacePermissionId.WORKSPACE_MEMBERS_ADD,
   );
@@ -35,7 +35,7 @@ export const AddWorkspaceMemberAction = (): ReactElement | null => {
         onPress={() => setIsOpen(true)}
       >
         <UserPlusIcon />
-        {t('members.add.trigger')}
+        {t('workspaceMembers.add.trigger')}
       </Button>
       {isOpen ? (
         <AddWorkspaceMemberDialog onClose={() => setIsOpen(false)} />

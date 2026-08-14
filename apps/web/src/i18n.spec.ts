@@ -13,6 +13,7 @@ import enSignIn from '../public/locales/en/sign-in.json';
 import enSignUp from '../public/locales/en/sign-up.json';
 import enSuccess from '../public/locales/en/success.json';
 import enValidation from '../public/locales/en/validation.json';
+import enWarehouse from '../public/locales/en/warehouse.json';
 import enWorkspace from '../public/locales/en/workspace.json';
 import ukAccess from '../public/locales/uk/access.json';
 import ukCommon from '../public/locales/uk/common.json';
@@ -23,6 +24,7 @@ import ukSignIn from '../public/locales/uk/sign-in.json';
 import ukSignUp from '../public/locales/uk/sign-up.json';
 import ukSuccess from '../public/locales/uk/success.json';
 import ukValidation from '../public/locales/uk/validation.json';
+import ukWarehouse from '../public/locales/uk/warehouse.json';
 import ukWorkspace from '../public/locales/uk/workspace.json';
 
 const resources = {
@@ -36,6 +38,7 @@ const resources = {
     'sign-up': enSignUp,
     success: enSuccess,
     validation: enValidation,
+    warehouse: enWarehouse,
     workspace: enWorkspace,
   },
   uk: {
@@ -48,6 +51,7 @@ const resources = {
     'sign-up': ukSignUp,
     success: ukSuccess,
     validation: ukValidation,
+    warehouse: ukWarehouse,
     workspace: ukWorkspace,
   },
 } as const;
@@ -429,7 +433,7 @@ describe('workspace-warehouse T1 shell/enter-action keys', () => {
     expect(instance.t('shell.landing.retry', { ns: 'common' })).toBe(
       'Try again',
     );
-    expect(instance.t('warehouses.enter', { ns: 'workspace' })).toBe('Enter');
+    expect(instance.t('warehouses.enter', { ns: 'warehouse' })).toBe('Enter');
   });
 
   it('drops the switcher keys this change request orphaned', async () => {
@@ -508,6 +512,6 @@ describe('workspace-warehouse T1 shell/enter-action keys', () => {
     expect(instance.t('shell.landing.retry', { ns: 'common' })).toBe(
       'Спробувати знову',
     );
-    expect(instance.t('warehouses.enter', { ns: 'workspace' })).toBe('Увійти');
+    expect(instance.t('warehouses.enter', { ns: 'warehouse' })).toBe('Увійти');
   });
 });

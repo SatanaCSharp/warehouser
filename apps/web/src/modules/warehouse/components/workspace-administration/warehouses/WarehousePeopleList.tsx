@@ -37,7 +37,7 @@ export const WarehousePeopleList = ({
   people,
   warehouse,
 }: WarehousePeopleListProps): ReactElement => {
-  const { t } = useTranslation('workspace');
+  const { t } = useTranslation('warehouse');
   const actor = useAppSelector(selectCurrentUser);
   const canWithdraw = useHasWorkspacePermission(
     WorkspacePermissionId.WAREHOUSE_MEMBERSHIPS_REVOKE,

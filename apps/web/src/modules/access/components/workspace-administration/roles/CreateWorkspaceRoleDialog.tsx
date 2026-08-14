@@ -26,7 +26,7 @@ export const CreateWorkspaceRoleDialog = ({
   permissions,
   onClose,
 }: CreateWorkspaceRoleDialogProps): ReactElement => {
-  const { t } = useTranslation('workspace');
+  const { t } = useTranslation('access');
   const { t: translateValidation } = useTranslation('validation');
   const saveWorkspaceRole = useSaveWorkspaceRole();
   const {

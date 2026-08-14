@@ -18,7 +18,7 @@ type WorkspaceUserListProps = { users: WorkspaceUser[] };
 export const WorkspaceUserList = ({
   users,
 }: WorkspaceUserListProps): ReactElement | null => {
-  const { t } = useTranslation('workspace');
+  const { t } = useTranslation('access');
   const others = users.filter((user) => !user.isWorkspaceMember);
 
   if (others.length === 0) {
@@ -27,12 +27,17 @@ export const WorkspaceUserList = ({
 
   return (
     <div className="mt-8">
-      <h2 className="text-sm font-semibold">{t('members.everyone.heading')}</h2>
+      <h2 className="text-sm font-semibold">
+        {t('workspaceMembers.everyone.heading')}
+      </h2>
       <p className="mt-1 text-sm text-muted">
-        {t('members.everyone.description')}
+        {t('workspaceMembers.everyone.description')}
       </p>
 
-      <ul aria-label={t('members.everyone.heading')} className="mt-3 space-y-2">
+      <ul
+        aria-label={t('workspaceMembers.everyone.heading')}
+        className="mt-3 space-y-2"
+      >
         {others.map((user) => (
           <li
             className="rounded-lg border border-border bg-surface p-3"
@@ -42,13 +47,13 @@ export const WorkspaceUserList = ({
               <span>{user.email ?? user.userId}</span>
               {user.warehouses.length === 0 ? (
                 <Chip size="sm" variant="soft">
-                  {t('members.everyone.noWarehouse')}
+                  {t('workspaceMembers.everyone.noWarehouse')}
                 </Chip>
               ) : null}
             </div>
             {user.warehouses.length === 0 ? (
               <p className="mt-1 text-sm text-muted">
-                {t('members.everyone.blockedNote', {
+                {t('workspaceMembers.everyone.blockedNote', {
                   name: user.email ?? user.userId,
                 })}
               </p>

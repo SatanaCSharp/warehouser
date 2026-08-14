@@ -26,7 +26,7 @@ export const DeleteWorkspaceRoleAction = ({
   replacements,
   role,
 }: DeleteWorkspaceRoleActionProps): ReactElement | null => {
-  const { t } = useTranslation('workspace');
+  const { t } = useTranslation('access');
   const canDeleteWorkspaceRole = useHasWorkspacePermission(
     WorkspacePermissionId.WORKSPACE_ROLES_DELETE,
   );

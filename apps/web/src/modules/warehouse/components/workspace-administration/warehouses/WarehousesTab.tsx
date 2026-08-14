@@ -37,7 +37,7 @@ const peopleForWarehouse = (
  * requested only under its own watch Permission.
  */
 export const WarehousesTab = (): ReactElement => {
-  const { t } = useTranslation('workspace');
+  const { t } = useTranslation('warehouse');
   // Declared before the single Workspace context read below, so this tab's
   // own Warehouse list request is always the first network call this tab
   // makes — every capability this tab and its children need is derived from

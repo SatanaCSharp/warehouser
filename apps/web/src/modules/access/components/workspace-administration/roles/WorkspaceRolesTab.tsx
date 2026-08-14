@@ -20,7 +20,7 @@ import type { ReactElement } from 'react';
  * or retained.
  */
 export const WorkspaceRolesTab = (): ReactElement => {
-  const { t } = useTranslation('workspace');
+  const { t } = useTranslation('access');
   const canWatchWorkspaceRoles = useHasWorkspacePermission(
     WorkspacePermissionId.WORKSPACE_ROLES_WATCH,
   );

@@ -38,7 +38,7 @@ export const WarehouseDetailPane = ({
   warehouse,
   onBack,
 }: WarehouseDetailPaneProps): ReactElement => {
-  const { t } = useTranslation('workspace');
+  const { t } = useTranslation('warehouse');
   const isArchived = warehouse.archivedAt !== null;
 
   return (

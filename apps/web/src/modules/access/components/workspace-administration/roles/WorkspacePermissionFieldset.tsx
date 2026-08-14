@@ -25,7 +25,7 @@ export const WorkspacePermissionFieldset = ({
   selectedIds,
   onChange,
 }: WorkspacePermissionFieldsetProps): ReactElement => {
-  const { t } = useTranslation('workspace');
+  const { t } = useTranslation('access');
 
   return (
     <fieldset className="space-y-3">

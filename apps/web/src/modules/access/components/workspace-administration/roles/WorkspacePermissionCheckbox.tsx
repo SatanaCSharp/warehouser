@@ -36,7 +36,7 @@ export const WorkspacePermissionCheckbox = ({
   permission,
   onChange,
 }: WorkspacePermissionCheckboxProps): ReactElement => {
-  const { t } = useTranslation('workspace');
+  const { t } = useTranslation('access');
   const permissionLabel = useWorkspacePermissionLabel();
   const isReserved = permission.kind === 'reserved';
 
@@ -57,13 +57,13 @@ export const WorkspacePermissionCheckbox = ({
         </Checkbox>
         {isReserved ? (
           <Chip size="sm" variant="soft">
-            {t('permissions.ownerOnly')}
+            {t('workspacePermissions.ownerOnly')}
           </Chip>
         ) : null}
       </div>
       {isReserved ? (
         <p className="ml-7 text-sm text-muted">
-          {t('permissions.reservedNote')}
+          {t('workspacePermissions.reservedNote')}
         </p>
       ) : null}
     </li>

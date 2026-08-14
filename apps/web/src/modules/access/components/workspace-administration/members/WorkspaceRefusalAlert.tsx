@@ -15,9 +15,13 @@ const refusalCopyByCode: Record<string, string> = {
   // The Workspace Role the actor was relying on changed mid-session: explain it
   // safely and disclose nothing about the target (design-handoff.md §States,
   // `OD62T`). The Workspace context is refreshed by the write's own tags.
-  'workspace.denied': 'states.authorityLost',
+  // This one refusal is the administration shell's own state copy, so it stays
+  // in `workspace.json` while the membership copy lives in `access.json`; the
+  // lookup is the single place that difference is expressed.
+  'workspace.denied': 'workspace:states.authorityLost',
   // The outgoing Owner has no custom Workspace Role to receive (AC-26a).
-  'workspace.replacement_role_required': 'members.transferOwnership.refusal',
+  'workspace.replacement_role_required':
+    'access:workspaceMembers.transferOwnership.refusal',
 };
 
 /**
@@ -27,7 +31,7 @@ const refusalCopyByCode: Record<string, string> = {
 export const WorkspaceRefusalAlert = ({
   code,
 }: WorkspaceRefusalAlertProps): ReactElement | null => {
-  const { t } = useTranslation('workspace');
+  const { t } = useTranslation(['access', 'workspace']);
   const copyKey = code === undefined ? undefined : refusalCopyByCode[code];
 
   if (!copyKey) {

@@ -46,7 +46,11 @@ export const WarehouseList = ({
   warehouses,
   onSelect,
 }: WarehouseListProps): ReactElement => {
-  const { t } = useTranslation('workspace');
+  const { t } = useTranslation('warehouse');
+  // The list is labelled with the administration shell's own tab label, which
+  // stays in `workspace.json` with the rest of `tabs.*` because the shell reads
+  // it too (CR-RG-04).
+  const { t: translateWorkspace } = useTranslation('workspace');
   const [query, setQuery] = useState('');
   const normalizedQuery = query.trim().toLocaleLowerCase();
   const visibleWarehouses = warehouses.filter((warehouse) =>
@@ -70,7 +74,10 @@ export const WarehouseList = ({
     );
   } else {
     content = (
-      <ul aria-label={t('tabs.warehouses')} className="mt-3 space-y-3">
+      <ul
+        aria-label={translateWorkspace('tabs.warehouses')}
+        className="mt-3 space-y-3"
+      >
         {visibleWarehouses.map((warehouse) => {
           const isSelected = warehouse.id === selectedWarehouseId;
           const isArchived = warehouse.archivedAt !== null;

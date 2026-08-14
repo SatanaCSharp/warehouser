@@ -17,7 +17,7 @@ import type { ReactElement } from 'react';
  * actor without it is offered no transfer control anywhere (AC-27, AC-30).
  */
 export const TransferWorkspaceOwnershipAction = (): ReactElement | null => {
-  const { t } = useTranslation('workspace');
+  const { t } = useTranslation('access');
   const canTransferWorkspaceOwner = useHasWorkspacePermission(
     WorkspacePermissionId.WORKSPACE_OWNER_ROLE_REASSIGN,
   );
@@ -37,7 +37,7 @@ export const TransferWorkspaceOwnershipAction = (): ReactElement | null => {
         onPress={() => setIsOpen(true)}
       >
         <ArrowRightLeftIcon />
-        {t('members.transferOwnership.trigger')}
+        {t('workspaceMembers.transferOwnership.trigger')}
       </Button>
       {isOpen ? (
         <TransferWorkspaceOwnershipDialog onClose={() => setIsOpen(false)} />

@@ -22,7 +22,7 @@ type RemoveWorkspaceMemberActionProps = { member: WorkspaceMember };
 export const RemoveWorkspaceMemberAction = ({
   member,
 }: RemoveWorkspaceMemberActionProps): ReactElement | null => {
-  const { t } = useTranslation('workspace');
+  const { t } = useTranslation('access');
   const canRemoveWorkspaceMember = useHasWorkspacePermission(
     WorkspacePermissionId.WORKSPACE_MEMBERS_REMOVE,
   );
@@ -43,7 +43,7 @@ export const RemoveWorkspaceMemberAction = ({
         variant="danger-soft"
         onPress={() => setIsOpen(true)}
       >
-        {t('members.remove.trigger')}
+        {t('workspaceMembers.remove.trigger')}
       </Button>
       {isOpen ? (
         <RemoveWorkspaceMemberDialog

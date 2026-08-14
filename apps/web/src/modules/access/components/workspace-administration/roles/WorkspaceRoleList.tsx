@@ -23,7 +23,7 @@ export const WorkspaceRoleList = ({
   selectedRoleId,
   onSelect,
 }: WorkspaceRoleListProps): ReactElement => {
-  const { t } = useTranslation('workspace');
+  const { t } = useTranslation('access');
   const [query, setQuery] = useState('');
   const normalizedQuery = query.trim().toLocaleLowerCase();
   const visibleRoles = roles.filter((role) =>

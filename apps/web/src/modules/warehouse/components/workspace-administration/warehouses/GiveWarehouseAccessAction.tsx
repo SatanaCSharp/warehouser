@@ -25,7 +25,7 @@ type GiveWarehouseAccessActionProps = {
 export const GiveWarehouseAccessAction = ({
   warehouse,
 }: GiveWarehouseAccessActionProps): ReactElement | null => {
-  const { t } = useTranslation('workspace');
+  const { t } = useTranslation('warehouse');
   const canGiveAccess = useHasWorkspacePermission(
     WorkspacePermissionId.WAREHOUSE_MEMBERSHIPS_ASSIGN,
   );

@@ -30,7 +30,7 @@ export const WarehouseLifecycleActions = ({
   isOnlyNonArchived,
   warehouse,
 }: WarehouseLifecycleActionsProps): ReactElement | null => {
-  const { t } = useTranslation('workspace');
+  const { t } = useTranslation('warehouse');
   const setWarehouseArchival = useSetWarehouseArchival();
   const [isArchiveDialogOpen, setIsArchiveDialogOpen] = useState(false);
   // Escape dismissal both closes the Modal and returns focus to the trigger

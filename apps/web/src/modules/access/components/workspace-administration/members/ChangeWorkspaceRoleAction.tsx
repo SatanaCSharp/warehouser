@@ -21,7 +21,7 @@ type ChangeWorkspaceRoleActionProps = { member: WorkspaceMember };
 export const ChangeWorkspaceRoleAction = ({
   member,
 }: ChangeWorkspaceRoleActionProps): ReactElement | null => {
-  const { t } = useTranslation('workspace');
+  const { t } = useTranslation('access');
   const canAssignWorkspaceRole = useHasWorkspacePermission(
     WorkspacePermissionId.WORKSPACE_ROLES_ASSIGN,
   );
@@ -40,7 +40,7 @@ export const ChangeWorkspaceRoleAction = ({
         variant="outline"
         onPress={() => setIsOpen(true)}
       >
-        {t('members.changeRole.trigger')}
+        {t('workspaceMembers.changeRole.trigger')}
       </Button>
       {isOpen ? (
         <ChangeWorkspaceRoleDialog

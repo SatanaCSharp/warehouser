@@ -1,0 +1,82 @@
+{
+  "warehouses": {
+    "enter": "Enter",
+    "enterNamed": "Enter {{name}}",
+    "search": "Search warehouses",
+    "loading": "Loading warehouses",
+    "empty": "This workspace has no warehouse yet.",
+    "peopleWithAccess": "{{count}} people with access",
+    "created": "created {{date}}",
+    "readOnly": "read-only",
+    "chips": {
+      "archived": "Archived",
+      "inOperation": "In operation"
+    },
+    "add": {
+      "trigger": "Add warehouse",
+      "title": "Add a warehouse",
+      "description": "The warehouse is created inside this workspace and you become its warehouse manager.",
+      "nameLabel": "Warehouse name",
+      "nameDescription": "1–100 characters. Two warehouses may share a name.",
+      "noticeTitle": "You will manage it",
+      "noticeDescription": "Creating a warehouse makes you its manager. Nobody else can be placed in it until you define roles there.",
+      "cancel": "Cancel",
+      "submit": "Add warehouse"
+    },
+    "detail": {
+      "regionLabel": "Warehouse detail",
+      "back": "All warehouses",
+      "nameLabel": "Warehouse name",
+      "nameDescription": "1–100 characters. Warehouse names need not be unique.",
+      "saveName": "Save name",
+      "cancel": "Cancel",
+      "peopleHeading": "People with access",
+      "peopleDescription": "Giving access places a person in this warehouse with a role defined there. What they may do inside it is decided by that role, not by the workspace — manage those roles on the warehouse's Access page."
+    },
+    "archive": {
+      "trigger": "Archive warehouse",
+      "title": "Archive {{name}}?",
+      "description": "Archiving withdraws a warehouse from operation. It is reversible.",
+      "stopsTitle": "What stops",
+      "stopsDescription": "{{name}} stops being selectable and refuses every change to what it holds.",
+      "keptTitle": "What is kept",
+      "keptDescription": "Its roles, memberships and records are retained and stay readable, and it keeps exactly one manager so it stays administrable when restored.",
+      "cancel": "Cancel",
+      "submit": "Archive warehouse"
+    },
+    "restore": {
+      "trigger": "Restore warehouse"
+    },
+    "archived": {
+      "alertTitle": "This warehouse is archived",
+      "alertDescription": "Its roles, memberships and records stay readable. Nothing inside it can be changed until it is restored."
+    },
+    "lastWarehouse": {
+      "alertTitle": "{{name}} cannot be archived",
+      "alertDescription": "It is the only warehouse of this workspace still in operation, and a workspace always keeps one, so its members are never left without a site to work in.",
+      "addFirst": "Add a warehouse first"
+    },
+    "giveAccess": {
+      "trigger": "Give access",
+      "title": "Give warehouse access",
+      "description": "Place someone from this workspace into one of its warehouses with a role defined there.",
+      "personLabel": "Person",
+      "warehouseLabel": "Warehouse",
+      "roleLabel": "Role in {{name}}",
+      "roleDescription": "You can see this warehouse's role names in order to choose one. This gives you no other authority inside it.",
+      "noticeTitle": "Warehouse manager is not offered",
+      "noticeDescription": "That role changes only through the warehouse's own transfer, and you cannot place yourself into a warehouse that already has members.",
+      "cancel": "Cancel",
+      "submit": "Give access"
+    },
+    "withdrawAccess": {
+      "trigger": "Withdraw access",
+      "title": "Withdraw access to {{name}}?",
+      "description": "The person stops belonging to this warehouse. Their other memberships are unaffected.",
+      "protectedReason": "The warehouse manager's access is withdrawn only through the warehouse's own transfer.",
+      "ownReason": "You cannot withdraw your own warehouse authority.",
+      "cancel": "Cancel",
+      "submit": "Withdraw access"
+    }
+  }
+}

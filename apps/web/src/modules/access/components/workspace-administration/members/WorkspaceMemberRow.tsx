@@ -26,7 +26,7 @@ export const WorkspaceMemberRow = ({
   member,
   roleName,
 }: WorkspaceMemberRowProps): ReactElement => {
-  const { t } = useTranslation('workspace');
+  const { t } = useTranslation('access');
   const identity = member.email ?? member.userId;
 
   return (
@@ -50,7 +50,7 @@ export const WorkspaceMemberRow = ({
         {member.workspaceRoleKind === 'workspace_owner' ? (
           <>
             <Chip color="accent" size="sm" variant="soft">
-              {t('members.chips.protected')}
+              {t('workspaceMembers.chips.protected')}
             </Chip>
             <TransferWorkspaceOwnershipAction />
           </>

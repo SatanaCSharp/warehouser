@@ -35,7 +35,7 @@ export const GiveWarehouseAccessDialog = ({
   warehouse,
   onClose,
 }: GiveWarehouseAccessDialogProps): ReactElement => {
-  const { t } = useTranslation('workspace');
+  const { t } = useTranslation('warehouse');
   const actor = useAppSelector(selectCurrentUser);
   const { data: users = [] } = useListWorkspaceUsersQuery();
   const { data: roles = [] } = useListAssignableWarehouseRolesQuery(

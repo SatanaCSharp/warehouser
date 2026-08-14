@@ -38,7 +38,7 @@ export const DeleteWorkspaceRoleRefusal = ({
   code,
   hasNoReplacement,
 }: DeleteWorkspaceRoleRefusalProps): ReactElement | null => {
-  const { t } = useTranslation('workspace');
+  const { t } = useTranslation('access');
   const copyKey = hasNoReplacement
     ? 'onlyCustomRefusal'
     : refusalCopyByCode[code ?? ''];
