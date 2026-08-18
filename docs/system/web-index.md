@@ -57,11 +57,19 @@ first, then read only the entries that cover the change you are making. Paths ar
 
 ## Decisions
 
-- [Domain-owned flat modules](adr/14-08-2026-domain-owned-flat-modules.md) — why a module is named
-  for the domain entity that owns its behavior, why modules are flat by identity rather than by
-  directory depth, and why cross-module access goes through a declared public surface that binds the
-  composition layer too. Read before creating a module, placing a file in one, or importing across
-  module boundaries.
+- [Scope-of-exercise tiebreak for sole-consumer slices](adr/18-08-2026-scope-of-exercise-placement-tiebreak.md)
+  — **Accepted; this is the decision that governs placement.** Keeps the owning-entity rule below as
+  the default and adds one tiebreak: where a slice's sole consumer exercises its capabilities at
+  another scope, placement follows the scope of exercise. Also fixes the test for what makes a
+  directory a module's _home_ rather than a component grouping, and states that a directory or
+  namespace names the domain its contents address, not the module that renders them. Read before
+  creating a module, placing a file in one, or importing across module boundaries.
+- [Domain-owned flat modules](adr/14-08-2026-domain-owned-flat-modules.md) — **Superseded** by the
+  decision above, and preserved as the record of why modules are named for the domain entity that
+  owns their behavior, why they are flat by identity rather than by directory depth, and why
+  cross-module access goes through a declared public surface that binds the composition layer too.
+  Everything it decides still holds except the owning-entity tiebreak the successor narrows; read it
+  for the reasoning, and the successor for the rule.
 - [RTK Query for web API calls](adr/02-08-2026-rtk-query-for-web-api-calls.md) — why server-state
   access goes through one injected API slice with a shared base query. Read before adding any
   server call or considering a different data-fetching approach.

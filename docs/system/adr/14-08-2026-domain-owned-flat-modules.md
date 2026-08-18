@@ -1,6 +1,6 @@
 # Domain-Owned Flat Modules in Both Applications
 
-Status: Accepted
+Status: Superseded by [Scope-of-exercise tiebreak for sole-consumer slices](./18-08-2026-scope-of-exercise-placement-tiebreak.md)
 
 Date: 2026-08-14
 
