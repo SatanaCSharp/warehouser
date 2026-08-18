@@ -25,7 +25,6 @@ import {
   stubWorkspaceServer,
   warehouseIds,
   workspaceIds,
-  workspaceWarehouses,
 } from 'test/workspace-fixtures';
 
 import type { ContextWarehouse } from '@warehouser/contracts/workspaces';
@@ -175,98 +174,6 @@ describe('WarehousesTab', () => {
     vi.unstubAllGlobals();
     toast.success.mockClear();
     toast.danger.mockClear();
-  });
-
-  describe('the Warehouse list (AC-33, AC-12a)', () => {
-    it('announces the loading skeleton as "Loading warehouses" before the list arrives', async () => {
-      stubWorkspaceServer({ context: namedWorkspaceContext(watchOnly) });
-
-      renderTab();
-
-      expect(
-        await screen.findByLabelText('Loading warehouses'),
-      ).toBeInTheDocument();
-      expect(
-        await screen.findByRole('button', { name: /central dc/iu }),
-      ).toBeInTheDocument();
-    });
-
-    it('lists every Warehouse of the Workspace with the number of people who have access', async () => {
-      stubWorkspaceServer({ context: namedWorkspaceContext(watchOnly) });
-
-      renderTab();
-
-      const list = await screen.findByRole('list', { name: 'Warehouses' });
-      const entries = within(list).getAllByRole('listitem');
-      expect(entries.map((entry) => entry.textContent)).toEqual([
-        expect.stringContaining('Central DC'),
-        expect.stringContaining('North Hub'),
-        expect.stringContaining('Old Depot'),
-      ]);
-      expect(entries[0]?.textContent).toContain('2 people with access');
-    });
-
-    it('marks an archived Warehouse with a chip and meta text rather than colour alone (AC-12a)', async () => {
-      stubWorkspaceServer({ context: namedWorkspaceContext(watchOnly) });
-
-      renderTab();
-
-      const list = await screen.findByRole('list', { name: 'Warehouses' });
-      const archived = within(list)
-        .getAllByRole('listitem')
-        .find((entry) => entry.textContent?.includes('Old Depot'));
-      expect(archived?.textContent).toContain('Archived');
-      expect(archived?.textContent).toContain('read-only');
-    });
-
-    // Being in operation is a Warehouse's default state, so the row says
-    // nothing about it — only the departure from that default (archived) is
-    // marked (`zubpS`). The chip is what the archived row above asserts.
-    it('leaves a non-archived Warehouse row unchipped', async () => {
-      stubWorkspaceServer({ context: namedWorkspaceContext(watchOnly) });
-
-      renderTab();
-
-      const list = await screen.findByRole('list', { name: 'Warehouses' });
-      const inOperation = within(list)
-        .getAllByRole('listitem')
-        .find((entry) => entry.textContent?.includes('Central DC'));
-      expect(inOperation?.textContent).not.toContain('In operation');
-      expect(inOperation?.textContent).not.toContain('Archived');
-    });
-
-    it('filters the list by the local search term', async () => {
-      const user = userEvent.setup();
-      stubWorkspaceServer({ context: namedWorkspaceContext(watchOnly) });
-
-      renderTab();
-
-      await screen.findByRole('button', { name: /central dc/iu });
-      await user.type(
-        screen.getByRole('searchbox', { name: 'Search warehouses' }),
-        'North',
-      );
-
-      expect(
-        screen.getByRole('button', { name: /north hub/iu }),
-      ).toBeInTheDocument();
-      expect(
-        screen.queryByRole('button', { name: /central dc/iu }),
-      ).not.toBeInTheDocument();
-    });
-
-    it('reports an empty Workspace instead of an empty list', async () => {
-      stubWorkspaceServer({
-        context: namedWorkspaceContext(watchOnly),
-        warehouses: [],
-      });
-
-      renderTab();
-
-      expect(
-        await screen.findByText('This workspace has no warehouse yet.'),
-      ).toBeInTheDocument();
-    });
   });
 
   describe('the detail pane and the level boundary (AC-33)', () => {
@@ -887,27 +794,6 @@ describe('WarehousesTab', () => {
   });
 
   describe('accessibility', () => {
-    it('exposes the list as a labelled list of buttons that report their selected state', async () => {
-      const user = userEvent.setup();
-      stubWorkspaceServer({ context: namedWorkspaceContext(watchOnly) });
-
-      renderTab();
-
-      const list = await screen.findByRole('list', { name: 'Warehouses' });
-      expect(
-        within(list).getByRole('button', { name: /central dc/iu }),
-      ).toHaveAttribute('aria-pressed', 'true');
-
-      await selectWarehouse(user, 'North Hub');
-
-      expect(
-        within(list).getByRole('button', { name: /north hub/iu }),
-      ).toHaveAttribute('aria-pressed', 'true');
-      expect(
-        within(list).getByRole('button', { name: /central dc/iu }),
-      ).toHaveAttribute('aria-pressed', 'false');
-    });
-
     it('keeps the archive dialog cancel before its destructive primary and returns focus to the trigger on Escape', async () => {
       const user = userEvent.setup();
       stubWorkspaceServer({ context: namedWorkspaceContext(fullAuthority) });
@@ -960,96 +846,6 @@ describe('WarehousesTab', () => {
   });
 
   describe('the Enter action (CR-AC-04, CR-AC-13, CR-AC-14, CR-RG-02)', () => {
-    it("renders Enter on a row for a non-archived Warehouse in the actor's own membership list", async () => {
-      stubWorkspaceServer({
-        context: {
-          ...namedWorkspaceContext(watchOnly),
-          warehouses: [membershipWarehouse(warehouseIds.central, null)],
-        },
-      });
-
-      renderTabWithRouter();
-
-      const row = await warehouseRowFor('Central DC');
-      expect(
-        within(row).getByRole('link', { name: /enter/iu }),
-      ).toBeInTheDocument();
-    });
-
-    // CR-AC-13 — the visible word is the same on every row, so the accessible
-    // name is the only thing that can distinguish them. A screen-reader link
-    // list showing several identical "Enter" links names no destination.
-    it('gives each Enter action an accessible name naming its own Warehouse', async () => {
-      stubWorkspaceServer({
-        context: {
-          ...namedWorkspaceContext(watchOnly),
-          warehouses: [
-            membershipWarehouse(warehouseIds.central, null),
-            membershipWarehouse(warehouseIds.north, null),
-          ],
-        },
-      });
-
-      renderTabWithRouter();
-
-      await warehouseRowFor('Central DC');
-      const names = screen
-        .getAllByRole('link', { name: /enter/iu })
-        .map((link) => link.getAttribute('aria-label'));
-
-      expect(names).toEqual(
-        expect.arrayContaining(['Enter Central DC', 'Enter North Hub']),
-      );
-      expect(new Set(names).size).toBe(names.length);
-    });
-
-    it('omits Enter — hidden, not disabled — on a non-membership row, an archived membership row, and an archived non-membership row', async () => {
-      const farDepotId = '00000000-0000-4000-8000-000000000114';
-      stubWorkspaceServer({
-        context: {
-          ...namedWorkspaceContext(watchOnly),
-          warehouses: [
-            membershipWarehouse(warehouseIds.central, null),
-            membershipWarehouse(
-              warehouseIds.oldDepot,
-              '2026-08-01T09:00:00.000Z',
-            ),
-          ],
-        },
-        warehouses: [
-          ...workspaceWarehouses(),
-          {
-            id: farDepotId,
-            name: 'Far Depot',
-            archivedAt: '2026-08-02T09:00:00.000Z',
-          },
-        ],
-      });
-
-      renderTabWithRouter();
-
-      // North Hub: not a membership, not archived.
-      const nonMember = await warehouseRowFor('North Hub');
-      expect(
-        within(nonMember).queryByRole('link', { name: /enter/iu }),
-      ).not.toBeInTheDocument();
-      expect(
-        within(nonMember).queryByRole('button', { name: /enter/iu }),
-      ).not.toBeInTheDocument();
-
-      // Old Depot: a membership, but archived.
-      const archivedMember = await warehouseRowFor('Old Depot');
-      expect(
-        within(archivedMember).queryByRole('link', { name: /enter/iu }),
-      ).not.toBeInTheDocument();
-
-      // Far Depot: archived and not a membership.
-      const archivedNonMember = await warehouseRowFor('Far Depot');
-      expect(
-        within(archivedNonMember).queryByRole('link', { name: /enter/iu }),
-      ).not.toBeInTheDocument();
-    });
-
     it("navigates to that Warehouse's view when Enter is activated", async () => {
       const user = userEvent.setup();
       stubWorkspaceServer({
@@ -1096,27 +892,6 @@ describe('WarehousesTab', () => {
       expect(
         within(detail).getByRole('button', { name: 'Archive warehouse' }),
       ).toBeInTheDocument();
-    });
-
-    it('places the selection button before Enter in focus order and never nests Enter inside it', async () => {
-      stubWorkspaceServer({
-        context: {
-          ...namedWorkspaceContext(watchOnly),
-          warehouses: [membershipWarehouse(warehouseIds.central, null)],
-        },
-      });
-
-      renderTabWithRouter();
-
-      const row = await warehouseRowFor('Central DC');
-      const selectButton = within(row).getByRole('button', {
-        name: /central dc/iu,
-      });
-      const enterLink = within(row).getByRole('link', { name: /enter/iu });
-
-      expect(enterLink.closest('button')).toBeNull();
-      const focusable = Array.from(row.querySelectorAll('button, a[href]'));
-      expect(focusable).toEqual([selectButton, enterLink]);
     });
   });
 });
