@@ -1,8 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { createRequire } from 'node:module';
-import { pathToFileURL } from 'node:url';
 
 // T1 — the capture script for the three `baseline_revision` comparison artifacts of the
 // `refactor-warehouse-components` change request.
@@ -29,8 +27,8 @@ import {
   NEIGHBOUR_TREES_PATH,
   WAREHOUSES_TAB_CASES_PATH,
   WAREHOUSES_TAB_SPEC_AT_BASELINE,
-  stripContentHash,
 } from './baselines.mjs';
+import { buildWebBundle, normalizeOutput } from './chunk-manifest.mjs';
 import {
   assertGroupsAccountForEveryCase,
   extractGroupedCases,
@@ -122,96 +120,15 @@ const assertTreeMatchesBaseline = () => {
   }
 };
 
-/**
- * Only modules the request can actually move are recorded.
- *
- * A dependency's position inside the vendor chunk is not something CR-RG-05 has an opinion about,
- * and recording all of it would make the artifact churn on every lockfile bump. The chunk
- * inventory below is what carries the "no new eager chunk" half of the criterion, and it is
- * complete.
- */
-const isTrackedModule = (path) =>
-  (path.startsWith('apps/web/src/') || path.startsWith('packages/')) &&
-  !path.includes('node_modules');
-
-const toRepoRelative = (modulePath) =>
-  modulePath.replace(`${process.cwd()}/`, '').replace(/^\0/u, '');
-
-/**
- * A chunk identity that survives hash stripping.
- *
- * Stripping the content hash alone is not enough to name a chunk: every lazy route emits a chunk
- * called `page-<hash>.js`, so four distinct route boundaries collapse onto one key and the
- * manifest silently loses exactly the structure CR-RG-05 exists to protect ("every lazy
- * `import('./page')` route boundary is preserved"). A chunk that fronts a module is therefore
- * keyed by that module, which is stable across builds and is the thing the criterion names.
- */
-const chunkKey = (item) => {
-  const stripped = stripContentHash(item.fileName);
-
-  return item.facadeModuleId
-    ? `${stripped} [${toRepoRelative(item.facadeModuleId)}]`
-    : stripped;
-};
-
 const captureChunkManifest = async () => {
   assertTreeMatchesBaseline();
 
-  const require = createRequire(
-    pathToFileURL(`${process.cwd()}/apps/web/package.json`),
-  );
-  const { build } = await import(pathToFileURL(require.resolve('vite')).href);
-
-  const result = await build({
-    root: 'apps/web',
-    configFile: 'apps/web/vite.config.ts',
-    logLevel: 'silent',
-  });
-  const [{ output }] = Array.isArray(result) ? result : [result];
-
-  const modules = [];
-  const chunks = [];
-  const seen = new Set();
-
-  for (const item of output) {
-    const key = chunkKey(item);
-
-    // A collision would make the manifest quietly lossy in the same way the un-disambiguated
-    // filename was, so it refuses instead.
-    if (seen.has(key)) {
-      throw new Error(
-        `two output files normalize to the same chunk key '${key}' — ` +
-          'the manifest would lose one of them',
-      );
-    }
-    seen.add(key);
-
-    if (item.type !== 'chunk') {
-      chunks.push([key, { type: 'asset' }]);
-      continue;
-    }
-
-    chunks.push([
-      key,
-      {
-        type: 'chunk',
-        isEntry: item.isEntry,
-        isDynamicEntry: item.isDynamicEntry,
-      },
-    ]);
-
-    for (const modulePath of Object.keys(item.modules)) {
-      const relative = toRepoRelative(modulePath);
-      if (isTrackedModule(relative)) {
-        modules.push([relative, key]);
-      }
-    }
-  }
+  const { modules, chunks } = normalizeOutput(await buildWebBundle());
 
   writeArtifact(CHUNK_MANIFEST_PATH, {
     baselineRevision: BASELINE_REVISION,
-    modules: sortObject(modules),
-    chunks: sortObject(chunks),
+    modules,
+    chunks,
   });
 };
 
