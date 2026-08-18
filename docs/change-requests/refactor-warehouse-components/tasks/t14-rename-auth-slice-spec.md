@@ -8,7 +8,7 @@ files_hint: ['apps/web/src/modules/auth/store']
 source_refs: ['apps/web/src/modules/auth/store/authSlice.spec.ts']
 owner: 'YuriiH'
 estimate: 'S'
-status: 'todo'
+status: 'done'
 ---
 
 # T14 — Rename `authSlice.spec.ts` and guard the absence of `store/` scaffolding

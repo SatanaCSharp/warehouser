@@ -8,7 +8,7 @@ files_hint: ['docs/system/guides/placing-web-components.md']
 source_refs: ['docs/system/guides/placing-web-components.md']
 owner: 'YuriiH'
 estimate: 'S'
-status: 'todo'
+status: 'done'
 ---
 
 # T4 — Reconcile `placing-web-components.md` §"When not to nest"

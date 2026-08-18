@@ -8,7 +8,7 @@ files_hint: ['docs/system/guides/adding-a-web-module.md']
 source_refs: ['docs/system/guides/adding-a-web-module.md']
 owner: 'YuriiH'
 estimate: 'M'
-status: 'todo'
+status: 'done'
 ---
 
 # T5 — Reconcile `adding-a-web-module.md` at its four contradicting statements

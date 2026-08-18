@@ -19,7 +19,7 @@ source_refs:
   ]
 owner: 'YuriiH'
 estimate: 'L'
-status: 'todo'
+status: 'done'
 ---
 
 # T6 — Reorganize `shared/api` into four domain directories and rewrite its 68 importers

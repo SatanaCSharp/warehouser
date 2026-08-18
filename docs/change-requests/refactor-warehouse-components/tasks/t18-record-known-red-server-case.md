@@ -11,7 +11,7 @@ files_hint:
 source_refs: []
 owner: 'YuriiH'
 estimate: 'S'
-status: 'todo'
+status: 'done'
 ---
 
 # T18 — Record CR-RG-06's known-red server case as identically failing at `HEAD`

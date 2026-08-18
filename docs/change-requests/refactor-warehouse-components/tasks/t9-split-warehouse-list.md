@@ -18,7 +18,7 @@ source_refs:
   ]
 owner: 'YuriiH'
 estimate: 'M'
-status: 'todo'
+status: 'done'
 ---
 
 # T9 — Split `WarehouseList.tsx` into five flat siblings

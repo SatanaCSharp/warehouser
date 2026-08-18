@@ -8,7 +8,7 @@ files_hint: ['docs/system/adr']
 source_refs: ['docs/system/adr/14-08-2026-domain-owned-flat-modules.md']
 owner: 'YuriiH'
 estimate: 'L'
-status: 'todo'
+status: 'done'
 ---
 
 # T2 — Author CH-D2's system ADR — the narrowed placement rule

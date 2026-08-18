@@ -16,7 +16,7 @@ source_refs:
   ]
 owner: 'YuriiH'
 estimate: 'S'
-status: 'todo'
+status: 'done'
 ---
 
 # T3 — Supersede ADR 14-08-2026 and re-list both ADRs in `web-index.md`

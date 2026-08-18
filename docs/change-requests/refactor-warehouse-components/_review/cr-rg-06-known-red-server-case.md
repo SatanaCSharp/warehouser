@@ -4,8 +4,16 @@
 - **Task:** T18
 - **Criterion:** [`spec.md` CR-RG-06](../spec.md#cr-rg-06--the-known-red-baseline-spec)
 - **`baseline_revision`:** `42f1205d552f8284f8ec57358ad9022340b5f76e`
-- **`HEAD` at the time of this record:** `38e6e93f2f0bc731b23e3185fc7cc9b4e118395c`
-- **Recorded status: `blocked`.** Not `satisfied`.
+- **`HEAD` at the time of the original attempt:** `38e6e93f2f0bc731b23e3185fc7cc9b4e118395c`
+- **`HEAD` at the time of the resolving run:** `7051a742f95fb1e96efac1f57f6a6af316da7d69`
+- **Recorded status: `SATISFIED`.**
+
+> **Superseded record.** This file first recorded `blocked`, because no container runtime was
+> available and `spec.md` is explicit that an unrunnable suite is not evidence of identical failure.
+> At review (`review-2026-08-18.md` S7) a runtime **was** available, the suite was executed, and the
+> criterion is now discharged on real evidence. The original attempt is kept below unedited — it is
+> the honest record of what was true then — and the resolving run is appended under
+> §"The resolving run".
 
 ## What CR-RG-06 requires
 
@@ -128,7 +136,8 @@ a pass," and "there is no mocked-store fallback; a passing mock is not a passing
 No mocked store was substituted, no assertion was relaxed, and the known-red case was **not** made
 to pass. Per `spec.md` §3, fixing it is a behavior change belonging to a separate `/fix`.
 
-**CR-RG-06 status: `blocked`.**
+**CR-RG-06 status at the time of the original attempt: `blocked`.** Superseded — see
+§"The resolving run".
 
 ## Bounding evidence (CR-RG-07) — and what it does not discharge
 
@@ -179,3 +188,98 @@ discharge this criterion."
 
 Only this document. No file under `apps/` was modified; `git status --short -- apps/` was verified
 before commit.
+
+---
+
+## The resolving run
+
+Recorded at review on 2026-08-18 (`review-2026-08-18.md` S7). A container runtime became available,
+so the criterion was discharged the way `spec.md` requires: by running the suite.
+
+### Environment
+
+```
+docker info --format '{{.ServerVersion}} {{.OperatingSystem}}'
+24.0.6 Docker Desktop
+```
+
+`warehouser-postgres-1` (`postgres:17-alpine`) and `warehouser-redis-1` were already up and healthy
+from the root `docker-compose.yml`, and `localhost:5432` accepted connections.
+
+### The dirty-database false positive, and how it was excluded
+
+Run against the developer's own persistent `postgres-data` volume, the suite reported **two**
+failures, one more than `baseline_known_red: 1`. The extra one was **not** an assertion failure:
+
+```
+● GET /api/v1/warehouses/:warehouseId/access/current returns the actor projection … (AC-05)
+  QueryFailedError: update or delete on table "permissions" violates foreign key constraint
+  "fk_role_permissions_permission" on table "role_permissions"
+      at grantPermissions (…/access-http-contract.integration.spec.ts:96:5)
+```
+
+That is the spec's own seed helper colliding with rows left in a shared dev database, not a
+behavioral difference — and `apps/server` is byte-identical to `baseline_revision`, so no code
+change could produce it. It was excluded by re-running against a throwaway database rather than by
+being argued away, and the developer's data was left untouched:
+
+```sh
+docker exec warehouser-postgres-1 psql -U warehouser -d warehouser \
+  -c "CREATE DATABASE warehouser_crrg06 OWNER warehouser;"
+DATABASE_NAME=warehouser_crrg06 pnpm --filter @warehouser/server migration:run
+cd apps/server && DATABASE_NAME=warehouser_crrg06 RUN_INTEGRATION=1 \
+  npx jest src/access/rest/controllers/access-http-contract.integration.spec.ts
+```
+
+### Result against a clean database
+
+```
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 31 passed, 32 total
+```
+
+**Exactly one failure — matching `baseline_known_red: 1`** — and it is the pinned case, failing on
+the pinned assertion with the pinned received value:
+
+```
+● warehouse-access HTTP contract › POST /api/v1/warehouses/:warehouseId/access/manager-transfer
+  maps a concurrent transfer to 409 access.concurrent_change and preserves exactly one Manager (AC-36a)
+
+    expect(received).toEqual(expected) // deep equality
+
+      Array [
+        200,
+    -   409,
+    +   403,
+      ]
+
+    > 632 |     expect(statuses).toEqual([200, 409]);
+      at Object.<anonymous> (…/access-http-contract.integration.spec.ts:632:22)
+```
+
+### Why this is _identical_ failure, not merely similar failure
+
+CR-RG-06 asks for failure identical to `baseline_revision` — same assertion, same
+403-where-409-expected. Both halves are established, the second one provably:
+
+- **Same assertion, same received value.** Line 632, `expect(statuses).toEqual([200, 409])`,
+  received `[200, 403]` — the failure mode `change.md` frontmatter documents verbatim.
+- **The bytes that ran are the baseline's bytes.** The spec file's blob hash is identical at both
+  revisions, and the whole server tree is unchanged:
+
+  ```sh
+  git rev-parse 42f1205:apps/server/src/access/rest/controllers/access-http-contract.integration.spec.ts
+  079d4594be97f2a541e5022bd30c2007d6db3d3e
+  git rev-parse HEAD:apps/server/src/access/rest/controllers/access-http-contract.integration.spec.ts
+  079d4594be97f2a541e5022bd30c2007d6db3d3e
+
+  git diff --name-status 42f1205..HEAD -- apps/server packages/contracts   # empty
+  ```
+
+  A run at `baseline_revision` therefore executes the same bytes against the same schema. Identity
+  is established by construction, not inferred from resemblance.
+
+Nothing was made to pass: the known-red case is still red, still out of scope, and still belongs to
+a separate `/fix`.
+
+**CR-RG-06 status: `SATISFIED`.**

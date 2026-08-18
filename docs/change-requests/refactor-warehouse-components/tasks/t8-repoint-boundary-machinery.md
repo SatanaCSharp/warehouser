@@ -18,7 +18,7 @@ source_refs:
   ]
 owner: 'YuriiH'
 estimate: 'S'
-status: 'todo'
+status: 'done'
 ---
 
 # T8 — Repoint the boundary machinery's stale paths and qualify its predecessor identifiers

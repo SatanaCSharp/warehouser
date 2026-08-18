@@ -8,7 +8,7 @@ files_hint: ['apps/web/src/test/baselines']
 source_refs: []
 owner: 'YuriiH'
 estimate: 'M'
-status: 'todo'
+status: 'done'
 ---
 
 # T16 — Guard the CR-RG-07 neighbour trees against `baseline_revision`

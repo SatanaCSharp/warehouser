@@ -15,7 +15,7 @@ source_refs:
   ]
 owner: 'YuriiH'
 estimate: 'S'
-status: 'todo'
+status: 'done'
 ---
 
 # T10 — Split `WarehousePeopleList.tsx` into `WarehousePersonRow`

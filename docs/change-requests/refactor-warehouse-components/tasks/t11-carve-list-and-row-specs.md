@@ -16,7 +16,7 @@ source_refs:
   ]
 owner: 'YuriiH'
 estimate: 'L'
-status: 'todo'
+status: 'done'
 ---
 
 # T11 — Carve `WarehouseList.spec.tsx` and `WarehouseRow.spec.tsx` out of `WarehousesTab.spec.tsx`

@@ -8,7 +8,7 @@ files_hint: ['apps/web/src/test/baselines', 'apps/web/vite.config.ts']
 source_refs: []
 owner: 'YuriiH'
 estimate: 'M'
-status: 'todo'
+status: 'done'
 ---
 
 # T17 — Produce and compare the CR-RG-05 normalized chunk manifest

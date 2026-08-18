@@ -8,7 +8,7 @@ files_hint: ['docs/change-requests/refactor-warehouse-components/change.md']
 source_refs: ['docs/change-requests/refactor-warehouse-components/change.md']
 owner: 'YuriiH'
 estimate: 'S'
-status: 'todo'
+status: 'done'
 ---
 
 # T15 — Re-run and record the CR-AC-06 `useState` audit at `HEAD`

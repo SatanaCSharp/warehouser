@@ -12,7 +12,7 @@ files_hint:
 source_refs: []
 owner: 'YuriiH'
 estimate: 'S'
-status: 'todo'
+status: 'done'
 ---
 
 # T13 — Assert case-count identity — 39 cases, distributed 25/7/4/3

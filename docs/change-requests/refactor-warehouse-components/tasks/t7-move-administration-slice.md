@@ -26,7 +26,7 @@ source_refs:
   ]
 owner: 'YuriiH'
 estimate: 'L'
-status: 'todo'
+status: 'done'
 ---
 
 # T7 — Move the 22-file administration slice into `modules/workspace`, content-free

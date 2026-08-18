@@ -225,6 +225,7 @@ changed `providesTags` value, an altered cache key or a re-ordered endpoint buil
 seven moved modules is diffed against `baseline_revision` with rename detection
 (`git diff -M --find-copies-harder <baseline> -- <old> <new>`), and the review records that every
 hunk is an import specifier. No exported symbol, endpoint, tag or cache key differs.
+Recorded in [`_review/cr-ac-05-shared-api-equivalence.md`](./_review/cr-ac-05-shared-api-equivalence.md).
 
 ### CR-AC-06 (CR-US-02, CH-W7) — the state audit
 
@@ -298,8 +299,17 @@ content-hashed and a raw `dist/assets` listing is not comparable. The comparison
 **normalized module→chunk manifest**: build at `baseline_revision` and at `HEAD` with
 `pnpm --filter @warehouser/web build`, emit the Rollup output map, strip content hashes from chunk
 names, rewrite every moved source path to its post-move path, sort, and diff. The criterion passes
-when that diff is empty. A build that cannot be produced at `baseline_revision` leaves CR-RG-05
-**unverified**, not satisfied.
+when that diff contains nothing but **source files that did not exist at `baseline_revision`**, each
+enumerated by name in `tests/refactor/moved-modules.mjs` and each required to land in the very chunk
+its parent component occupies. A build that cannot be produced at `baseline_revision` leaves
+CR-RG-05 **unverified**, not satisfied.
+
+> Amended at review per `_review/review-2026-08-18.md` S8. The original text demanded an _empty_
+> diff, which CR-AC-04 makes unreachable: the split creates five components the baseline cannot
+> know about. An empty diff could then only be manufactured by filtering real modules out of the
+> comparison — so the criterion is stated as what it actually protects (no new eager chunk, every
+> lazy route boundary preserved), with the additions admitted by name rather than by silence. The
+> set of chunk keys and their `isEntry`/`isDynamicEntry` flags remains identical to baseline.
 
 ### CR-RG-06 — the known-red baseline spec
 
@@ -382,10 +392,21 @@ into the sections named. One question with `due: /design` was absent from this l
 
 ### Still open
 
-- [ ] `shared/api/warehouse/warehouse-path.ts` keeps a domain-named directory inside the composition
-      layer. This is legal under the existing promotion rule (its consumers live in `guards/` and
-      `shared/hooks/`), which this request does not change, but it reads oddly beside CH-D2's
-      scope-placement rule. Default now: accept it as-is. — owner: Tech Lead, due: `/design`
+None. The one question carried to `/design` is recorded below.
+
+### Closed at `/design`
+
+- [x] **Does `shared/api/warehouse/warehouse-path.ts` keep a domain-named directory inside the
+      composition layer?** Yes, and the oddness dissolves — resolved in [`sad.md` §5.5](./sad.md).
+      A name states the domain its contents address, not the module that renders them, so a
+      `warehouse/` directory inside `shared/api/` names the paths it builds and confers no module
+      identity (the new ADR's home-versus-grouping test). Its four consumers at `HEAD` are
+      `modules/access/api/access-api.ts`, `shared/api/access/access-permissions-api.ts`,
+      `test/workspace-fixtures.ts` and `routes/warehouse.route.spec.tsx`. — resolved by: Tech Lead
+
+      > Closed at review per `_review/review-2026-08-18.md` S9. `/design` answered this and
+          > `spec.md` was amended for O1 and O2, but the box was never ticked and its consumer list
+          > named `guards/` and `shared/hooks/`, which no longer hold a consumer.
 
 ### Closed at `/clarify`
 

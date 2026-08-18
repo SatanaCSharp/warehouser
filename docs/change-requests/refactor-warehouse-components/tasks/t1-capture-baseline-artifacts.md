@@ -8,7 +8,7 @@ files_hint: ['apps/web/src/test/baselines']
 source_refs: []
 owner: 'YuriiH'
 estimate: 'M'
-status: 'todo'
+status: 'done'
 ---
 
 # T1 — Capture the three `baseline_revision` comparison artifacts
