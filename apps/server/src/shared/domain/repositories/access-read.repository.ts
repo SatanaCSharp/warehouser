@@ -56,8 +56,13 @@ export class AccessReadRepository {
         'COUNT(DISTINCT membership.user_id)::int',
         'assignedMemberCount',
       )
+      // `DISTINCT` is load-bearing: this query joins `role_permissions` **and**
+      // `warehouse_memberships`, so the two left joins multiply into one row per
+      // (permission, member) pair. Without it a Role holding P Permissions and M
+      // Members aggregates every Permission M times — correct only while M <= 1.
+      // `assignedMemberCount` above is guarded the same way.
       .addSelect(
-        "COALESCE(array_agg(grantRow.permission_id ORDER BY grantRow.permission_id) FILTER (WHERE grantRow.permission_id IS NOT NULL), '{}')",
+        "COALESCE(array_agg(DISTINCT grantRow.permission_id) FILTER (WHERE grantRow.permission_id IS NOT NULL), '{}')",
         'permissionIds',
       )
       .where('role.warehouseId = :warehouseId', { warehouseId })

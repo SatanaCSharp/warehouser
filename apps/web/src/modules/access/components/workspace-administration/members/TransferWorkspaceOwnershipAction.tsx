@@ -4,8 +4,9 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { TransferWorkspaceOwnershipDialog } from 'modules/access/components/workspace-administration/members/TransferWorkspaceOwnershipDialog';
-import { useReturnFocusOnClose } from 'shared/hooks/useReturnFocusOnClose';
-import { useHasWorkspacePermission } from 'shared/hooks/useWorkspacePermissions';
+import { Conditional } from 'shared/components/Conditional';
+import { useReturnFocusOnClose } from 'shared/hooks/effects/useReturnFocusOnClose';
+import { useHasWorkspacePermission } from 'shared/hooks/queries/useWorkspacePermissions';
 import { ArrowRightLeftIcon } from 'shared/icons';
 
 import type { ReactElement } from 'react';
@@ -24,24 +25,23 @@ export const TransferWorkspaceOwnershipAction = (): ReactElement | null => {
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useReturnFocusOnClose(isOpen);
 
+  const onPress = (): void => setIsOpen(true);
+
+  const onClose = (): void => setIsOpen(false);
+
   if (!canTransferWorkspaceOwner) {
     return null;
   }
 
   return (
     <>
-      <Button
-        ref={triggerRef}
-        size="sm"
-        variant="outline"
-        onPress={() => setIsOpen(true)}
-      >
+      <Button ref={triggerRef} size="sm" variant="outline" onPress={onPress}>
         <ArrowRightLeftIcon />
         {t('workspaceMembers.transferOwnership.trigger')}
       </Button>
-      {isOpen ? (
-        <TransferWorkspaceOwnershipDialog onClose={() => setIsOpen(false)} />
-      ) : null}
+      <Conditional when={isOpen}>
+        <TransferWorkspaceOwnershipDialog onClose={onClose} />
+      </Conditional>
     </>
   );
 };

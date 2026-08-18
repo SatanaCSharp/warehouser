@@ -9,7 +9,7 @@ import type {
   AccessMember,
   AccessRole,
 } from 'modules/access/types/access.types';
-import type { ReactElement, ReactNode } from 'react';
+import type { ChangeEvent, ReactElement, ReactNode } from 'react';
 
 /** Which of the list's four mutually exclusive states is on screen. */
 type MemberListStatus = 'empty' | 'loading' | 'ready' | 'searchEmpty';
@@ -79,6 +79,9 @@ export const MemberList = ({
 }: MemberListProps): ReactElement => {
   const { t } = useTranslation('access');
   const [query, setQuery] = useState('');
+
+  const onChangeQuery = (event: ChangeEvent<HTMLInputElement>): void =>
+    setQuery(event.target.value);
   const roleNameById = new Map(roles.map((role) => [role.id, role.name]));
   const normalizedQuery = query.trim().toLocaleLowerCase();
   const visibleMembers = members.filter((member) =>
@@ -105,7 +108,7 @@ export const MemberList = ({
           aria-label={t('members.search')}
           placeholder={t('members.search')}
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={onChangeQuery}
         />
       </InputGroup>
 

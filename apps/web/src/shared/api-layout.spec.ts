@@ -35,7 +35,7 @@ const API_DIRECTORY = posix.join(SRC_DIRECTORY, 'shared/api');
 /** `sad.md` §5.5's tree: every file `shared/api` may hold, and where. */
 const API_LAYOUT: Readonly<Record<string, readonly string[]>> = {
   access: ['access-permissions-api.spec.ts', 'access-permissions-api.ts'],
-  client: ['api-client.ts', 'mutation-outcome.ts'],
+  client: ['api-client.ts', 'mutation-outcome.ts', 'run-mutation.ts'],
   warehouse: ['warehouse-path.ts'],
   workspace: [
     'workspace-context-api.spec.ts',

@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
-import { useAccessPermissions } from 'modules/access/hooks/useAccessPermissions';
-import { usePermissionLabel } from 'modules/access/hooks/usePermissionLabel';
+import { usePermissionLabel } from 'modules/access/hooks/projections/usePermissionLabel';
+import { useAccessPermissions } from 'modules/access/hooks/queries/useAccessPermissions';
 import { DatasetCard } from 'shared/components/DatasetCard';
 
 import type { ReactElement } from 'react';

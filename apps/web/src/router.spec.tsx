@@ -646,9 +646,10 @@ describe('router', () => {
     const { router } = renderRoute('/');
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/login'));
-    expect(
-      await screen.findByText('Your session ended. Sign in again to continue.'),
-    ).toBeVisible();
+    // The guard cannot tell a first-time visitor from an expired session — both
+    // arrive here anonymous — so the notice states what to do rather than
+    // asserting a session that may never have existed.
+    expect(await screen.findByText('Sign in to continue.')).toBeVisible();
     expect(
       screen.getByRole('heading', { name: 'Sign in to your account' }),
     ).toHaveFocus();

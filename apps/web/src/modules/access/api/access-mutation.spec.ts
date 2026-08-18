@@ -39,6 +39,7 @@ describe('runAccessMutation', () => {
 
     expect(outcome).toEqual({
       success: false,
+      code: 'auth.email_already_registered',
       fieldErrors: { email: 'validation.email.taken' },
     });
   });
@@ -58,6 +59,7 @@ describe('runAccessMutation', () => {
 
     expect(outcome).toEqual({
       success: false,
+      code: 'users.permission_exceeded',
       fieldErrors: { roleId: 'exceeded' },
     });
   });

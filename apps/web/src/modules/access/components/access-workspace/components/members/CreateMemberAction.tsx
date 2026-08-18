@@ -3,9 +3,10 @@ import { useTranslation } from 'react-i18next';
 
 import { CreateActionButton } from 'modules/access/components/access-workspace/components/CreateActionButton';
 import { CreateMemberDialog } from 'modules/access/components/access-workspace/components/members/CreateMemberDialog';
-import { useAccessCapabilities } from 'modules/access/hooks/useAccessCapabilities';
-import { useAccessRoles } from 'modules/access/hooks/useAccessRoles';
-import { useCreateMember } from 'modules/access/hooks/useCreateMember';
+import { useCreateMember } from 'modules/access/hooks/mutations/useCreateMember';
+import { useAccessCapabilities } from 'modules/access/hooks/projections/useAccessCapabilities';
+import { useAccessRoles } from 'modules/access/hooks/queries/useAccessRoles';
+import { Conditional } from 'shared/components/Conditional';
 
 import type { ReactElement } from 'react';
 
@@ -21,6 +22,10 @@ export const CreateMemberAction = (): ReactElement | null => {
   const createMember = useCreateMember(warehouseId ?? '');
   const [isOpen, setIsOpen] = useState(false);
 
+  const onPress = (): void => setIsOpen(true);
+
+  const onClose = (): void => setIsOpen(false);
+
   if (!canCreateMembers) {
     return null;
   }
@@ -31,15 +36,15 @@ export const CreateMemberAction = (): ReactElement | null => {
         isDisabled={isArchived}
         label={t('administration.createMember.open')}
         reason={t('archived.reason')}
-        onPress={() => setIsOpen(true)}
+        onPress={onPress}
       />
-      {isOpen && !isArchived ? (
+      <Conditional when={isOpen && !isArchived}>
         <CreateMemberDialog
           roles={roles.items}
-          onClose={() => setIsOpen(false)}
+          onClose={onClose}
           onSave={createMember}
         />
-      ) : null}
+      </Conditional>
     </>
   );
 };

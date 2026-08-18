@@ -3,9 +3,10 @@ import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
 import { useTranslation } from 'react-i18next';
 
 import { useListWorkspacePermissionsQuery } from 'modules/access/api/workspace-roles-api';
-import { useWorkspacePermissionLabel } from 'modules/access/hooks/useWorkspacePermissionLabel';
-import { groupWorkspacePermissions } from 'modules/access/hooks/workspace-permission-groups';
-import { useHasWorkspacePermission } from 'shared/hooks/useWorkspacePermissions';
+import { useWorkspacePermissionLabel } from 'modules/access/hooks/projections/useWorkspacePermissionLabel';
+import { groupWorkspacePermissions } from 'modules/access/utils/workspace-permission-groups';
+import { Conditional } from 'shared/components/Conditional';
+import { useHasWorkspacePermission } from 'shared/hooks/queries/useWorkspacePermissions';
 
 import type { ReactElement } from 'react';
 
@@ -59,17 +60,17 @@ export const WorkspacePermissionsTab = (): ReactElement => {
                   <span className="font-medium">
                     {permissionLabel(permission)}
                   </span>
-                  {permission.kind === 'reserved' ? (
+                  <Conditional when={permission.kind === 'reserved'}>
                     <Chip size="sm" variant="soft">
                       {t('workspacePermissions.ownerOnly')}
                     </Chip>
-                  ) : null}
+                  </Conditional>
                 </div>
-                {permission.kind === 'reserved' ? (
+                <Conditional when={permission.kind === 'reserved'}>
                   <p className="mt-1 text-sm text-muted">
                     {t('workspacePermissions.reservedNote')}
                   </p>
-                ) : null}
+                </Conditional>
               </li>
             ))}
           </ul>

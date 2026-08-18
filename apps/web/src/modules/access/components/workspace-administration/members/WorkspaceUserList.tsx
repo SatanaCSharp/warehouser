@@ -1,6 +1,8 @@
 import { Chip } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 
+import { Conditional } from 'shared/components/Conditional';
+
 import type { WorkspaceUser } from '@warehouser/contracts/workspaces';
 import type { ReactElement } from 'react';
 
@@ -45,19 +47,19 @@ export const WorkspaceUserList = ({
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span>{user.email ?? user.userId}</span>
-              {user.warehouses.length === 0 ? (
+              <Conditional when={user.warehouses.length === 0}>
                 <Chip size="sm" variant="soft">
                   {t('workspaceMembers.everyone.noWarehouse')}
                 </Chip>
-              ) : null}
+              </Conditional>
             </div>
-            {user.warehouses.length === 0 ? (
+            <Conditional when={user.warehouses.length === 0}>
               <p className="mt-1 text-sm text-muted">
                 {t('workspaceMembers.everyone.blockedNote', {
                   name: user.email ?? user.userId,
                 })}
               </p>
-            ) : null}
+            </Conditional>
           </li>
         ))}
       </ul>

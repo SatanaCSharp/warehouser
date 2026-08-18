@@ -8,7 +8,8 @@ import type { AccessRole } from 'modules/access/types/access.types';
 import type { ReactElement } from 'react';
 
 type AssignRoleDialogProps = {
-  memberId: string;
+  /** Named by address, not by id — the member projection carries both. */
+  memberEmail: string;
   roles: AccessRole[];
   onClose: () => void;
   onSave: (roleId: string) => Promise<void>;
@@ -17,7 +18,7 @@ type AssignRoleDialogProps = {
 type AssignRoleForm = { roleId: string };
 
 export const AssignRoleDialog = ({
-  memberId,
+  memberEmail,
   roles,
   onClose,
   onSave,
@@ -53,7 +54,7 @@ export const AssignRoleDialog = ({
           />
         )}
       />
-      <p className="font-mono text-sm">{memberId}</p>
+      <p className="text-sm">{memberEmail}</p>
     </FormModalDialog>
   );
 };

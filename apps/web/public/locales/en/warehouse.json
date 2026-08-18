@@ -5,7 +5,8 @@
     "search": "Search warehouses",
     "loading": "Loading warehouses",
     "empty": "This workspace has no warehouse yet.",
-    "peopleWithAccess": "{{count}} people with access",
+    "peopleWithAccess": "{{count}} person with access",
+    "peopleWithAccess_other": "{{count}} people with access",
     "created": "created {{date}}",
     "readOnly": "read-only",
     "chips": {
@@ -77,6 +78,7 @@
       "ownReason": "You cannot withdraw your own warehouse authority.",
       "cancel": "Cancel",
       "submit": "Withdraw access"
-    }
+    },
+    "noMatches": "No warehouse matches “{{query}}”."
   }
 }

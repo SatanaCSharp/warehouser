@@ -1,3 +1,5 @@
+import union from 'lodash/union';
+import without from 'lodash/without';
 import { useTranslation } from 'react-i18next';
 
 import { WorkspacePermissionCheckbox } from 'modules/access/components/workspace-administration/roles/WorkspacePermissionCheckbox';
@@ -27,6 +29,15 @@ export const WorkspacePermissionFieldset = ({
 }: WorkspacePermissionFieldsetProps): ReactElement => {
   const { t } = useTranslation('access');
 
+  const onTogglePermission =
+    (permissionId: WorkspacePermissionId) =>
+    (isSelected: boolean): void =>
+      onChange(
+        isSelected
+          ? union(selectedIds, [permissionId])
+          : without(selectedIds, permissionId),
+      );
+
   return (
     <fieldset className="space-y-3">
       <legend className="font-semibold">
@@ -42,13 +53,7 @@ export const WorkspacePermissionFieldset = ({
             isDisabled={isDisabled || permission.kind === 'reserved'}
             isSelected={selectedIds.includes(permission.id)}
             permission={permission}
-            onChange={(isSelected) =>
-              onChange(
-                isSelected
-                  ? [...selectedIds, permission.id]
-                  : selectedIds.filter((id) => id !== permission.id),
-              )
-            }
+            onChange={onTogglePermission(permission.id)}
           />
         ))}
       </ul>

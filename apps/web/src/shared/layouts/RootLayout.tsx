@@ -10,9 +10,10 @@ import { useTranslation } from 'react-i18next';
 
 import { SignOutButton } from 'modules/auth/sign-out/components/SignOutButton';
 import { selectIsAuthenticated } from 'modules/auth/store/auth.selectors';
+import { Conditional } from 'shared/components/Conditional';
 import { RetainedContextMessage } from 'shared/components/RetainedContextMessage';
 import { ROUTES } from 'shared/constants/routes';
-import { useEnteredContext } from 'shared/hooks/useEnteredContext';
+import { useEnteredContext } from 'shared/hooks/projections/useEnteredContext';
 import { MenuIcon } from 'shared/icons';
 import { Footer } from 'shared/layouts/Footer';
 import { LanguageSelector } from 'shared/layouts/LanguageSelector';
@@ -36,6 +37,8 @@ export const RootLayout = (): ReactElement => {
   const hasNavigationList = useEnteredContext().kind !== 'none';
   const oppositeRoute =
     pathname === ROUTES.SIGN_UP ? ROUTES.LOGIN : ROUTES.SIGN_UP;
+
+  const onOpenDrawer = (): void => setIsDrawerOpen(true);
 
   return (
     <div className="min-h-dvh bg-background text-foreground">
@@ -79,17 +82,17 @@ export const RootLayout = (): ReactElement => {
               </div>
               <LanguageSelector />
               <SignOutButton />
-              {hasNavigationList ? (
+              <Conditional when={hasNavigationList}>
                 <Button
                   isIconOnly
                   variant="ghost"
                   aria-label={t('nav.toggle')}
                   className="sm:hidden"
-                  onPress={() => setIsDrawerOpen(true)}
+                  onPress={onOpenDrawer}
                 >
                   <MenuIcon />
                 </Button>
-              ) : null}
+              </Conditional>
             </div>
           </header>
           <div className="w-full border-b border-border bg-surface px-6 py-3 sm:hidden">

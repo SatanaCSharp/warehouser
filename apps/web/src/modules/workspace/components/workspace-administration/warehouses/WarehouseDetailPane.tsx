@@ -5,6 +5,7 @@ import { GiveWarehouseAccessAction } from 'modules/workspace/components/workspac
 import { WarehouseLifecycleActions } from 'modules/workspace/components/workspace-administration/warehouses/WarehouseLifecycleActions';
 import { WarehouseNameForm } from 'modules/workspace/components/workspace-administration/warehouses/WarehouseNameForm';
 import { WarehousePeopleList } from 'modules/workspace/components/workspace-administration/warehouses/WarehousePeopleList';
+import { Conditional } from 'shared/components/Conditional';
 import { ChevronLeftIcon } from 'shared/icons';
 
 import type {
@@ -41,6 +42,18 @@ export const WarehouseDetailPane = ({
   const { t } = useTranslation('warehouse');
   const isArchived = warehouse.archivedAt !== null;
 
+  // The panel reads the people list, so it is resolved here rather than gated
+  // inline: `Conditional` evaluates both arms, and the list is undefined until
+  // the read the actor is entitled to has arrived.
+  const peoplePanel = !people ? null : (
+    <div className="flex flex-col gap-3">
+      <div className="flex justify-end">
+        <GiveWarehouseAccessAction warehouse={warehouse} />
+      </div>
+      <WarehousePeopleList people={people} warehouse={warehouse} />
+    </div>
+  );
+
   return (
     <section
       aria-label={t('warehouses.detail.regionLabel')}
@@ -64,7 +77,7 @@ export const WarehouseDetailPane = ({
         </Chip>
       </div>
 
-      {isArchived ? (
+      <Conditional when={isArchived}>
         <Alert status="warning">
           <Alert.Indicator />
           <Alert.Content>
@@ -74,7 +87,7 @@ export const WarehouseDetailPane = ({
             </Alert.Description>
           </Alert.Content>
         </Alert>
-      ) : null}
+      </Conditional>
 
       <WarehouseNameForm
         canRenameWarehouse={canRenameWarehouse}
@@ -88,14 +101,7 @@ export const WarehouseDetailPane = ({
         warehouse={warehouse}
       />
 
-      {people ? (
-        <div className="flex flex-col gap-3">
-          <div className="flex justify-end">
-            <GiveWarehouseAccessAction warehouse={warehouse} />
-          </div>
-          <WarehousePeopleList people={people} warehouse={warehouse} />
-        </div>
-      ) : null}
+      {peoplePanel}
     </section>
   );
 };

@@ -1,7 +1,8 @@
 import { Checkbox } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 
-import { usePermissionLabel } from 'modules/access/hooks/usePermissionLabel';
+import { usePermissionLabel } from 'modules/access/hooks/projections/usePermissionLabel';
+import { Conditional } from 'shared/components/Conditional';
 
 import type { AccessPermission } from 'modules/access/types/access.types';
 import type { ReactElement } from 'react';
@@ -42,11 +43,11 @@ export const PermissionCheckbox = ({
           <span className="font-medium">{permissionLabel(permission)}</span>
         </Checkbox.Content>
       </Checkbox>
-      {permission.kind === 'reserved' ? (
+      <Conditional when={permission.kind === 'reserved'}>
         <p className="ml-7 text-sm text-muted">
           {t('administration.roleEditor.reserved')}
         </p>
-      ) : null}
+      </Conditional>
     </div>
   );
 };

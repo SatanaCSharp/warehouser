@@ -2,13 +2,14 @@ import { Description, Header, Label, ListBox, Select } from '@heroui/react';
 import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 
+import { Conditional } from 'shared/components/Conditional';
 import { ROUTES } from 'shared/constants/routes';
-import { useEnteredWarehouse } from 'shared/hooks/useEnteredWarehouse';
+import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
 import {
   hasWorkspacePermission,
   useCurrentWorkspaceContext,
   workspaceAdministrationPermissionIds,
-} from 'shared/hooks/useWorkspacePermissions';
+} from 'shared/hooks/queries/useWorkspacePermissions';
 import { Building2Icon, LayoutGridIcon, WarehouseIcon } from 'shared/icons';
 
 import type { WorkspaceContext } from '@warehouser/contracts/workspaces';
@@ -95,16 +96,18 @@ const ContextRowContent = ({
         <Label data-dimmed={dimmed} className={`truncate ${dim ?? ''}`}>
           {name}
         </Label>
-        {description ? <Description>{description}</Description> : null}
+        <Conditional when={description}>
+          <Description>{description}</Description>
+        </Conditional>
       </div>
-      {trailingLabel ? (
+      <Conditional when={trailingLabel}>
         <span
           data-dimmed={dimmed}
           className={`ms-auto shrink-0 text-xs ${indicatorClearance} ${dim ?? ''}`}
         >
           {trailingLabel}
         </span>
-      ) : null}
+      </Conditional>
       <ListBox.ItemIndicator />
     </>
   );
@@ -260,7 +263,7 @@ export const WarehouseSwitcher = (): ReactElement | null => {
                 membership. `ListBox.Section` emits its `role="group"` and its
                 heading regardless of item count, so the suppression has to
                 happen here rather than being left to the collection. */}
-            {warehouses.length > 0 ? (
+            <Conditional when={warehouses.length > 0}>
               <ListBox.Section>
                 <Header>
                   {t('shell.contextSwitcher.warehousesGroupLabel')}
@@ -283,7 +286,7 @@ export const WarehouseSwitcher = (): ReactElement | null => {
                   </ListBox.Item>
                 ))}
               </ListBox.Section>
-            ) : null}
+            </Conditional>
           </ListBox>
         </Select.Popover>
       </Select>

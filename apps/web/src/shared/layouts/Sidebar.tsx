@@ -6,8 +6,8 @@ import { useTranslation } from 'react-i18next';
 import { PermissionGate } from 'shared/components/PermissionGate';
 import { WorkspaceGate } from 'shared/components/WorkspaceGate';
 import { ROUTES } from 'shared/constants/routes';
-import { useEnteredContext } from 'shared/hooks/useEnteredContext';
-import { workspaceAdministrationPermissionIds } from 'shared/hooks/useWorkspacePermissions';
+import { useEnteredContext } from 'shared/hooks/projections/useEnteredContext';
+import { workspaceAdministrationPermissionIds } from 'shared/hooks/queries/useWorkspacePermissions';
 import { Building2Icon, DashboardIcon, ShieldCheckIcon } from 'shared/icons';
 
 import type { ReactElement } from 'react';

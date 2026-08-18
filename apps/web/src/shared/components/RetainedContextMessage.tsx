@@ -2,8 +2,8 @@ import { Alert, Button } from '@heroui/react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useEnteredContext } from 'shared/hooks/useEnteredContext';
-import { useCurrentWorkspaceContext } from 'shared/hooks/useWorkspacePermissions';
+import { useEnteredContext } from 'shared/hooks/projections/useEnteredContext';
+import { useCurrentWorkspaceContext } from 'shared/hooks/queries/useWorkspacePermissions';
 import { WarehouseIcon } from 'shared/icons';
 
 import type { WorkspaceContext } from '@warehouser/contracts/workspaces';
@@ -58,6 +58,8 @@ export const RetainedContextMessage = (): ReactElement | null => {
     }
   }, [workspaceContext]);
 
+  const onDismiss = (): void => setLastSelected(null);
+
   if (!workspaceContext) {
     return null;
   }
@@ -90,10 +92,10 @@ export const RetainedContextMessage = (): ReactElement | null => {
           </Alert.Description>
         </Alert.Content>
         <div className="flex gap-2">
-          <Button onPress={() => setLastSelected(null)}>
+          <Button onPress={onDismiss}>
             {t('workspaceSwitcher.selectionEnded.choose')}
           </Button>
-          <Button variant="outline" onPress={() => setLastSelected(null)}>
+          <Button variant="outline" onPress={onDismiss}>
             {t('workspaceSwitcher.selectionEnded.dismiss')}
           </Button>
         </div>

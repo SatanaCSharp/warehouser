@@ -5,7 +5,8 @@ import { useTranslation } from 'react-i18next';
 
 import { selectCurrentUser } from 'modules/auth/store/auth.selectors';
 import { WithdrawWarehouseAccessDialog } from 'modules/workspace/components/workspace-administration/warehouses/WithdrawWarehouseAccessDialog';
-import { useHasWorkspacePermission } from 'shared/hooks/useWorkspacePermissions';
+import { Conditional } from 'shared/components/Conditional';
+import { useHasWorkspacePermission } from 'shared/hooks/queries/useWorkspacePermissions';
 import { useAppSelector } from 'store/hooks';
 
 import type {
@@ -49,34 +50,38 @@ export const WarehousePersonRow = ({
   const isSelf = person.userId === actor?.id;
   const reasonId = `withdraw-own-reason-${person.userId}`;
 
+  const onPress = (): void => setIsWithdrawing(true);
+
+  const onClose = (): void => setIsWithdrawing(false);
+
   return (
     <li className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface p-3">
       <span>{person.email}</span>
-      {canWithdraw ? (
+      <Conditional when={canWithdraw}>
         <>
           <Button
             size="sm"
             variant="outline"
             aria-describedby={isSelf ? reasonId : undefined}
             isDisabled={isSelf}
-            onPress={() => setIsWithdrawing(true)}
+            onPress={onPress}
           >
             {t('warehouses.withdrawAccess.trigger')}
           </Button>
-          {isSelf ? (
+          <Conditional when={isSelf}>
             <span id={reasonId} className="sr-only">
               {t('warehouses.withdrawAccess.ownReason')}
             </span>
-          ) : null}
+          </Conditional>
         </>
-      ) : null}
-      {isWithdrawing ? (
+      </Conditional>
+      <Conditional when={isWithdrawing}>
         <WithdrawWarehouseAccessDialog
           person={person}
           warehouse={warehouse}
-          onClose={() => setIsWithdrawing(false)}
+          onClose={onClose}
         />
-      ) : null}
+      </Conditional>
     </li>
   );
 };

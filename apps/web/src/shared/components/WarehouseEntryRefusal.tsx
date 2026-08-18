@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
+import { Conditional } from 'shared/components/Conditional';
 import { ArchiveIcon, ShieldXIcon } from 'shared/icons';
 
 import type { WarehouseEntryVerdict } from 'guards/warehouse-entry.guard';
@@ -41,11 +42,11 @@ export const WarehouseEntryRefusal = ({
           {heading}
         </h1>
         <p className="mt-3 text-muted">{description}</p>
-        {isArchived ? (
+        <Conditional when={isArchived}>
           <p className="mt-3 text-muted">
             {t('shell.entryRefusal.description')}
           </p>
-        ) : null}
+        </Conditional>
       </div>
     </main>
   );

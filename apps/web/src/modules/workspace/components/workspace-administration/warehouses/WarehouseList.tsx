@@ -58,6 +58,16 @@ export const WarehouseList = ({
         {t('warehouses.empty')}
       </p>
     );
+  } else if (visibleWarehouses.length === 0) {
+    // Branching on `warehouses` alone left a search that matches nothing
+    // rendering an empty `<ul>` and no explanation, while the detail pane still
+    // showed the previously selected Warehouse — so the list read as broken
+    // rather than as filtered.
+    content = (
+      <p role="status" className="mt-3 text-muted">
+        {t('warehouses.noMatches', { query: query.trim() })}
+      </p>
+    );
   } else {
     content = (
       <ul

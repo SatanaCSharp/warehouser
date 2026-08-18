@@ -32,8 +32,8 @@ import {
 // boundary scans filter spec files out. This is a scan *scope*, not an
 // exception: the rule binds the production import graph, and a spec that
 // exercises two modules' validators in one `it.each` (as
-// `modules/workspace/hooks/warehouse-name-validation.spec.ts` does against
-// `modules/access/hooks/workspace-role-name-validation`) is test-only coupling,
+// `modules/workspace/utils/warehouse-name-validation.spec.ts` does against
+// `modules/access/utils/workspace-role-name-validation`) is test-only coupling,
 // not a production boundary crossing. The exception list this spec consults is
 // genuinely empty: every production import resolves to a declared entry.
 
@@ -279,7 +279,7 @@ describe('web module boundaries', () => {
       expect(rest).toStrictEqual([]);
       expect(violation.importer).toBe(fixture);
       expect(violation.target).toBe(
-        'modules/workspace/hooks/useRenameWorkspace',
+        'modules/workspace/hooks/mutations/useRenameWorkspace',
       );
       expect(violation.message).toContain(fixture);
       expect(violation.message).toContain(

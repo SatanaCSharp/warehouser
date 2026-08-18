@@ -1,9 +1,9 @@
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import { useAddWorkspaceMember } from 'modules/access/hooks/useAddWorkspaceMember';
-import { useWorkspaceRoles } from 'modules/access/hooks/useWorkspaceRoles';
-import { useWorkspaceUsers } from 'modules/access/hooks/useWorkspaceUsers';
+import { useAddWorkspaceMember } from 'modules/access/hooks/mutations/useAddWorkspaceMember';
+import { useWorkspaceRoles } from 'modules/access/hooks/queries/useWorkspaceRoles';
+import { useWorkspaceUsers } from 'modules/access/hooks/queries/useWorkspaceUsers';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormSelectField } from 'shared/components/FormSelectField';
 

@@ -2,11 +2,11 @@ import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import { WorkspacePermissionFieldset } from 'modules/access/components/workspace-administration/roles/WorkspacePermissionFieldset';
-import { useSaveWorkspaceRole } from 'modules/access/hooks/useSaveWorkspaceRole';
+import { useSaveWorkspaceRole } from 'modules/access/hooks/mutations/useSaveWorkspaceRole';
 import { workspaceRoleFormSchema } from 'modules/access/schemas/workspace-role-form.schema';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormTextField } from 'shared/components/FormTextField';
-import { useFormFieldErrors } from 'shared/hooks/useFormFieldErrors';
+import { useFormFieldErrors } from 'shared/hooks/forms/useFormFieldErrors';
 
 import type { WorkspacePermission } from '@warehouser/contracts/workspaces';
 import type { WorkspaceRoleFormValues } from 'modules/access/schemas/workspace-role-form.schema';

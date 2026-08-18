@@ -1,11 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
 import { Injectable, Optional } from '@nestjs/common';
-import { ErrorCode } from '@warehouser/shared-types/enums';
-import {
-  ApplicationError,
-  AssertionError,
-} from '@warehouser/shared-types/errors';
 import { assert } from '@warehouser/utils/asserts';
 import {
   workspaceRoleNameConflictError,
@@ -22,47 +17,16 @@ import { WorkspaceReadRepository } from 'shared/domain/repositories/workspace-re
 import type { WorkspacePermissionGrant } from 'shared/domain/repositories/workspace-role-lifecycle.repository';
 import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository';
 import { AccessName } from 'shared/domain/value-objects/access-name';
-
-// `AccessName` enforces the Workspace Role name rules (trim, grapheme count,
-// control/format detection — a Workspace Role name has no unset state, so it
-// is used directly, exactly as `create-warehouse.command.ts`'s
-// `validateWarehouseName` does). This map only names *which* broken rule an
-// `AssertionError` corresponds to, so AC-15a can tell the caller which one
-// failed, mirroring `rename-workspace.command.ts`'s
-// `NAME_RULE_BY_ASSERTION_MESSAGE`.
-const NAME_RULE_BY_ASSERTION_MESSAGE: Record<string, string> = {
-  'Name must not be empty': 'empty',
-  'Name must contain at most 100 user-perceived characters': 'grapheme_length',
-  'Name must not contain control or format characters':
-    'control_or_format_character',
-};
-
-// Named error factory (server-error-handling.md §3): every Workspace Role
-// name rejection carries `field: 'name'` and the specific rule that was
-// broken (AC-15a).
-export const workspaceRoleInvalidNameError = (rule: string): ApplicationError =>
-  new ApplicationError(ErrorCode.WORKSPACE_INVALID_INPUT, {
-    field: 'name',
-    rule,
-  });
+import { validatedName } from 'shared/errors/invalid-name.error';
 
 // Trims, validates and returns a storable Workspace Role name via the shared
-// `AccessName` value object. Preserves submitted Unicode without
+// `AccessName` value object (AC-15a). Preserves submitted Unicode without
 // normalization (AC-14a) — only whitespace trimming is applied. Exported for
 // `update-workspace-role.command.ts` to reuse, mirroring
 // `rename-warehouse.command.ts` reusing `create-warehouse.command.ts`'s
 // `validateWarehouseName`.
-export const validateWorkspaceRoleName = (input: string): string => {
-  try {
-    return AccessName.create(input).value;
-  } catch (error) {
-    if (error instanceof AssertionError) {
-      const rule = NAME_RULE_BY_ASSERTION_MESSAGE[error.message] ?? 'invalid';
-      throw workspaceRoleInvalidNameError(rule);
-    }
-    throw error;
-  }
-};
+export const validateWorkspaceRoleName = (input: string): string =>
+  validatedName(() => AccessName.create(input).value);
 
 // AC-18 — every submitted Workspace Permission id must exist in the system
 // catalogue, be `assignable` (never `reserved`), and never be the reserved

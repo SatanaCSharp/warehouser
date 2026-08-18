@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { WorkspaceRefusalAlert } from 'modules/access/components/workspace-administration/members/WorkspaceRefusalAlert';
-import { useRemoveWorkspaceMember } from 'modules/access/hooks/useRemoveWorkspaceMember';
+import { useRemoveWorkspaceMember } from 'modules/access/hooks/mutations/useRemoveWorkspaceMember';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 
 import type { WorkspaceMember } from '@warehouser/contracts/workspaces';

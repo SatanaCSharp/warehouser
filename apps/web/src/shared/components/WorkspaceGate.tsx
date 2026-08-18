@@ -1,7 +1,8 @@
-import { useHasWorkspacePermission } from 'shared/hooks/useWorkspacePermissions';
+import { Conditional } from 'shared/components/Conditional';
+import { useHasWorkspacePermission } from 'shared/hooks/queries/useWorkspacePermissions';
 
 import type { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import type { ReactElement, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 export type WorkspaceGateProps = {
   children: ReactNode;
@@ -12,8 +13,8 @@ export type WorkspaceGateProps = {
 export const WorkspaceGate = ({
   children,
   permission,
-}: WorkspaceGateProps): ReactElement => {
+}: WorkspaceGateProps): ReactNode => {
   const isAllowed = useHasWorkspacePermission(permission);
 
-  return <>{isAllowed ? children : null}</>;
+  return <Conditional when={isAllowed}>{children}</Conditional>;
 };

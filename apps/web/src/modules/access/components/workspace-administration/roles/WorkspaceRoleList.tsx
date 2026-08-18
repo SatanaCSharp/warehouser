@@ -2,10 +2,11 @@ import { Chip, InputGroup } from '@heroui/react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Conditional } from 'shared/components/Conditional';
 import { SearchIcon } from 'shared/icons';
 
 import type { WorkspaceRole } from '@warehouser/contracts/workspaces';
-import type { ReactElement } from 'react';
+import type { ChangeEvent, ReactElement } from 'react';
 
 type WorkspaceRoleListProps = {
   roles: WorkspaceRole[];
@@ -31,6 +32,11 @@ export const WorkspaceRoleList = ({
   );
   const hasCustomRole = roles.some((role) => role.kind === 'custom');
 
+  const onChangeQuery = (event: ChangeEvent<HTMLInputElement>): void =>
+    setQuery(event.target.value);
+
+  const onSelectRole = (roleId: string) => (): void => onSelect(roleId);
+
   return (
     <div>
       <InputGroup className="h-12 border border-border bg-surface shadow-none">
@@ -41,7 +47,7 @@ export const WorkspaceRoleList = ({
           aria-label={t('workspaceRoles.search')}
           placeholder={t('workspaceRoles.search')}
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={onChangeQuery}
         />
       </InputGroup>
 
@@ -54,15 +60,15 @@ export const WorkspaceRoleList = ({
                 aria-pressed={isSelected}
                 className={`w-full rounded-xl border bg-surface p-4 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${isSelected ? 'border-2 border-accent' : 'border-border hover:border-accent/40'}`}
                 type="button"
-                onClick={() => onSelect(role.id)}
+                onClick={onSelectRole(role.id)}
               >
                 <span className="flex items-center justify-between gap-2">
                   <span className="font-semibold">{role.name}</span>
-                  {role.kind === 'workspace_owner' ? (
+                  <Conditional when={role.kind === 'workspace_owner'}>
                     <Chip color="accent" size="sm" variant="soft">
                       {t('workspaceRoles.chips.protected')}
                     </Chip>
-                  ) : null}
+                  </Conditional>
                 </span>
                 <span className="mt-2 block text-sm text-muted">
                   {t('workspaceRoles.memberCount', {
@@ -79,9 +85,9 @@ export const WorkspaceRoleList = ({
         })}
       </ul>
 
-      {hasCustomRole ? null : (
+      <Conditional when={!hasCustomRole}>
         <p className="mt-3 text-muted">{t('workspaceRoles.empty')}</p>
-      )}
+      </Conditional>
     </div>
   );
 };

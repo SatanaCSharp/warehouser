@@ -3,12 +3,20 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { AssignRoleDialog } from 'modules/access/components/access-workspace/components/roles/AssignRoleDialog';
-import { useAccessCapabilities } from 'modules/access/hooks/useAccessCapabilities';
-import { useAccessMembers } from 'modules/access/hooks/useAccessMembers';
-import { useAccessRoles } from 'modules/access/hooks/useAccessRoles';
-import { useAssignMemberRole } from 'modules/access/hooks/useAssignMemberRole';
+import { useAssignMemberRole } from 'modules/access/hooks/mutations/useAssignMemberRole';
+import { useAccessCapabilities } from 'modules/access/hooks/projections/useAccessCapabilities';
+import { useAccessMembers } from 'modules/access/hooks/queries/useAccessMembers';
+import { useAccessRoles } from 'modules/access/hooks/queries/useAccessRoles';
 
 import type { ReactElement } from 'react';
+
+/**
+ * Members are named by the address people recognize. `email` is optional in the
+ * projection, so the opaque id stays as the fallback for the one case that has
+ * nothing better to show.
+ */
+const nameOf = (member: { email?: string; userId: string }): string =>
+  member.email ?? member.userId;
 
 /**
  * Keyboard-reachable role reassignment for each member, revealed on focus. The
@@ -23,9 +31,40 @@ export const MemberAssignmentList = (): ReactElement | null => {
   const assignMemberRole = useAssignMemberRole(warehouseId ?? '');
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
 
+  const onOpenAssignment = (userId: string) => (): void =>
+    setSelectedMemberId(userId);
+
+  const onCloseAssignment = (): void => setSelectedMemberId(null);
+
+  const onSaveAssignment =
+    (userId: string) =>
+    async (roleId: string): Promise<void> => {
+      const outcome = await assignMemberRole(userId, roleId);
+      if (outcome.success) {
+        onCloseAssignment();
+      }
+    };
+
   if (!canAssignRoles) {
     return null;
   }
+
+  // The dialog reads the member it was opened for, so it is resolved here
+  // rather than gated inline: `Conditional` evaluates both arms, and a member
+  // only exists once one is selected.
+  const assignRoleDialog =
+    selectedMemberId === null ? null : (
+      <AssignRoleDialog
+        memberEmail={nameOf(
+          members.items.find(
+            (member) => member.userId === selectedMemberId,
+          ) ?? { userId: selectedMemberId },
+        )}
+        roles={roles.items.filter((role) => role.kind === 'custom')}
+        onClose={onCloseAssignment}
+        onSave={onSaveAssignment(selectedMemberId)}
+      />
+    );
 
   return (
     <>
@@ -37,33 +76,21 @@ export const MemberAssignmentList = (): ReactElement | null => {
               className="flex items-center justify-between gap-3 rounded-lg border border-border p-3"
               key={member.userId}
             >
-              <span className="font-mono text-sm">{member.userId}</span>
+              <span className="text-sm">{nameOf(member)}</span>
               <Button
                 size="sm"
                 variant="outline"
-                onPress={() => setSelectedMemberId(member.userId)}
+                onPress={onOpenAssignment(member.userId)}
               >
                 {t('administration.assignment.open', {
-                  userId: member.userId,
+                  email: nameOf(member),
                 })}
               </Button>
             </div>
           ))}
       </div>
 
-      {selectedMemberId ? (
-        <AssignRoleDialog
-          memberId={selectedMemberId}
-          roles={roles.items.filter((role) => role.kind === 'custom')}
-          onClose={() => setSelectedMemberId(null)}
-          onSave={async (roleId) => {
-            const outcome = await assignMemberRole(selectedMemberId, roleId);
-            if (outcome.success) {
-              setSelectedMemberId(null);
-            }
-          }}
-        />
-      ) : null}
+      {assignRoleDialog}
     </>
   );
 };

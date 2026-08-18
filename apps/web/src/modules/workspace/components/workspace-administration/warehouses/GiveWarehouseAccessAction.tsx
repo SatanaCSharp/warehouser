@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { GiveWarehouseAccessDialog } from 'modules/workspace/components/workspace-administration/warehouses/GiveWarehouseAccessDialog';
-import { useHasWorkspacePermission } from 'shared/hooks/useWorkspacePermissions';
+import { Conditional } from 'shared/components/Conditional';
+import { useHasWorkspacePermission } from 'shared/hooks/queries/useWorkspacePermissions';
 import { UserPlusIcon } from 'shared/icons';
 
 import type { Warehouse } from '@warehouser/contracts/workspaces';
@@ -31,22 +32,23 @@ export const GiveWarehouseAccessAction = ({
   );
   const [isOpen, setIsOpen] = useState(false);
 
+  const onPress = (): void => setIsOpen(true);
+
+  const onClose = (): void => setIsOpen(false);
+
   if (!canGiveAccess) {
     return null;
   }
 
   return (
     <>
-      <Button variant="outline" onPress={() => setIsOpen(true)}>
+      <Button variant="outline" onPress={onPress}>
         <UserPlusIcon />
         {t('warehouses.giveAccess.trigger')}
       </Button>
-      {isOpen ? (
-        <GiveWarehouseAccessDialog
-          warehouse={warehouse}
-          onClose={() => setIsOpen(false)}
-        />
-      ) : null}
+      <Conditional when={isOpen}>
+        <GiveWarehouseAccessDialog warehouse={warehouse} onClose={onClose} />
+      </Conditional>
     </>
   );
 };

@@ -139,7 +139,10 @@ export const accessApi = api.injectEndpoints({
         body: input,
       }),
       extraOptions: { schema: memberMutationResultSchema },
-      invalidatesTags: warehouseTags('AccessMembers', 'CurrentAccess'),
+      // `Roles` too: a Role carries `assignedMemberCount`, so moving a Member
+      // between Roles restates two of them. Without it the Roles list keeps
+      // rendering the counts it read before the move.
+      invalidatesTags: warehouseTags('AccessMembers', 'Roles', 'CurrentAccess'),
     }),
     // Archived-tolerant by ADR 0003: the Manager transfer's subject is a
     // membership edge, so it stays available on an archived Warehouse (AC-36).
@@ -165,7 +168,9 @@ export const accessApi = api.injectEndpoints({
         body: input,
       }),
       extraOptions: { schema: memberSchema },
-      invalidatesTags: warehouseTags('AccessMembers', 'CurrentAccess'),
+      // A new Member is created already holding a Role, which raises that
+      // Role's `assignedMemberCount` (see `assignAccessMemberRole`).
+      invalidatesTags: warehouseTags('AccessMembers', 'Roles', 'CurrentAccess'),
     }),
     changeMemberEmail: build.mutation<MemberEmail, EmailChangeMutation>({
       query: ({ warehouseId, userId, input }) => ({
@@ -194,7 +199,9 @@ export const accessApi = api.injectEndpoints({
         method: 'DELETE',
       }),
       extraOptions: { emptyResponse: null },
-      invalidatesTags: warehouseTags('AccessMembers', 'CurrentAccess'),
+      // Removing a Member lowers the `assignedMemberCount` of whichever Role
+      // they held (see `assignAccessMemberRole`).
+      invalidatesTags: warehouseTags('AccessMembers', 'Roles', 'CurrentAccess'),
     }),
   }),
   overrideExisting: false,

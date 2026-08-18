@@ -7,6 +7,8 @@ import {
 } from '@heroui/react';
 import { forwardRef } from 'react';
 
+import { Conditional } from 'shared/components/Conditional';
+
 import type {
   ComponentProps,
   ComponentPropsWithoutRef,
@@ -85,7 +87,9 @@ export const FormTextField = forwardRef<HTMLInputElement, FormTextFieldProps>(
         onBlur={onBlur}
         onChange={onChange}
       />
-      {description ? <Description>{description}</Description> : null}
+      <Conditional when={description}>
+        <Description>{description}</Description>
+      </Conditional>
       <FieldError>{errorMessage}</FieldError>
     </TextField>
   ),

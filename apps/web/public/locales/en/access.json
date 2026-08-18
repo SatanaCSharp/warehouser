@@ -69,7 +69,8 @@
       "name": "Role name",
       "selectedName": "Selected role name",
       "permissions": "Permissions",
-      "subtitle": "Custom role · {{count}} assigned members",
+      "subtitle": "Custom role · {{count}} assigned member",
+      "subtitle_other": "Custom role · {{count}} assigned members",
       "hint": "Changes apply to the next authorization decision. Manager-only permissions stay unavailable.",
       "reserved": "Reserved for the protected Warehouse Manager role.",
       "validation": {
@@ -82,7 +83,7 @@
       "saveChanges": "Save changes"
     },
     "assignment": {
-      "open": "Change role for {{userId}}",
+      "open": "Change role for {{email}}",
       "title": "Assign member role",
       "role": "Role",
       "save": "Assign role"
@@ -99,8 +100,8 @@
       "title": "Transfer Warehouse Manager",
       "recipient": "New manager",
       "replacement": "Your replacement role",
-      "recipientSummary": "{{userId}} will become Warehouse Manager.",
-      "managerSummary": "{{userId}} will become {{role}}.",
+      "recipientSummary": "{{email}} will become Warehouse Manager.",
+      "managerSummary": "{{email}} will become {{role}}.",
       "save": "Transfer management"
     },
     "createMember": {
@@ -121,7 +122,8 @@
           "invalid": "Use 8 to 128 characters."
         },
         "role": {
-          "exceeded": "A new member's role can never exceed your own permissions."
+          "exceeded": "A new member's role can never exceed your own permissions.",
+          "required": "Select a role."
         }
       }
     },
@@ -168,8 +170,10 @@
     "search": "Search workspace roles",
     "loading": "Loading workspace roles",
     "empty": "This workspace has no custom workspace role yet.",
-    "memberCount": "{{count}} members",
-    "permissionCount": "{{count}} permissions",
+    "memberCount": "{{count}} member",
+    "memberCount_other": "{{count}} members",
+    "permissionCount": "{{count}} permission",
+    "permissionCount_other": "{{count}} permissions",
     "custom": "Custom workspace role",
     "chips": {
       "protected": "Protected"
@@ -188,13 +192,16 @@
       "cancel": "Cancel",
       "save": "Save changes",
       "regionLabel": "Workspace role editor",
-      "subtitle": "{{count}} workspace members hold this role."
+      "subtitle": "{{count}} workspace member holds this role.",
+      "subtitle_other": "{{count}} workspace members hold this role."
     },
     "delete": {
       "trigger": "Delete role",
       "title": "Delete {{name}}?",
-      "description": "{{count}} workspace members hold this role. Every one of them moves to the replacement in the same step.",
-      "replacementLabel": "Move those {{count}} members to",
+      "description": "{{count}} workspace member holds this role. They move to the replacement in the same step.",
+      "description_other": "{{count}} workspace members hold this role. Every one of them moves to the replacement in the same step.",
+      "replacementLabel": "Move that member to",
+      "replacementLabel_other": "Move those {{count}} members to",
       "replacementDescription": "Every workspace member holds exactly one workspace role, so a replacement is required.",
       "noticeTitle": "Needs both permissions",
       "noticeDescription": "Moving members is a role assignment, so deleting an assigned role needs delete and assign permission together.",
@@ -216,7 +223,8 @@
   },
   "workspaceMembers": {
     "heading": "Workspace members",
-    "description": "{{count}} people hold a workspace role. Each holds exactly one.",
+    "description": "{{count}} person holds a workspace role. They hold exactly one.",
+    "description_other": "{{count}} people hold a workspace role. Each holds exactly one.",
     "loading": "Loading workspace members",
     "empty": "This workspace has no workspace member yet.",
     "chips": {

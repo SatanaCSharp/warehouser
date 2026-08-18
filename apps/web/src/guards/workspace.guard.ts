@@ -5,7 +5,7 @@ import { ROUTES } from 'shared/constants/routes';
 import {
   hasWorkspacePermission,
   workspaceAdministrationPermissionIds,
-} from 'shared/hooks/useWorkspacePermissions';
+} from 'shared/hooks/queries/useWorkspacePermissions';
 
 import type { RouterContext } from 'routes/__root.route';
 

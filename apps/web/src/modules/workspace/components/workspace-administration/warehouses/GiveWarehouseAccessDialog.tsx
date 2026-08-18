@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { selectCurrentUser } from 'modules/auth/store/auth.selectors';
 import { useListAssignableWarehouseRolesQuery } from 'modules/workspace/api/warehouse-api';
-import { useAssignWarehouseMembership } from 'modules/workspace/hooks/useAssignWarehouseMembership';
+import { useAssignWarehouseMembership } from 'modules/workspace/hooks/mutations/useAssignWarehouseMembership';
 import { useListWorkspaceUsersQuery } from 'shared/api/workspace/workspace-users-api';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormSelectField } from 'shared/components/FormSelectField';

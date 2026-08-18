@@ -1,9 +1,12 @@
 import { Button, FieldError, Input, Label, TextField } from '@heroui/react';
+import union from 'lodash/union';
+import without from 'lodash/without';
 import { Controller } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import { PermissionCheckbox } from 'modules/access/components/access-workspace/components/roles/PermissionCheckbox';
-import { useRoleForm } from 'modules/access/hooks/useRoleForm';
+import { useRoleForm } from 'modules/access/hooks/forms/useRoleForm';
+import { Conditional } from 'shared/components/Conditional';
 
 import type { RoleWrite } from '@warehouser/contracts/access';
 import type {
@@ -70,7 +73,7 @@ export const RoleEditor = ({
           </p>
         </div>
         <div className="flex gap-2">
-          {canDelete && !isProtected ? (
+          <Conditional when={canDelete && !isProtected}>
             <Button
               variant="ghost"
               size="sm"
@@ -79,8 +82,8 @@ export const RoleEditor = ({
             >
               {t('administration.deleteRole')}
             </Button>
-          ) : null}
-          {isEditable ? (
+          </Conditional>
+          <Conditional when={isEditable}>
             <Button
               variant="primary"
               type="submit"
@@ -90,7 +93,7 @@ export const RoleEditor = ({
             >
               {t('administration.roleEditor.saveChanges')}
             </Button>
-          ) : null}
+          </Conditional>
         </div>
       </div>
 
@@ -127,32 +130,37 @@ export const RoleEditor = ({
         <Controller
           control={control}
           name="permissionIds"
-          render={({ field }) => (
-            <>
-              {permissions.map((permission) => {
-                const isDisabled =
-                  !isEditable || permission.kind === 'reserved';
-                const isGranted =
-                  isProtected || field.value.includes(permission.id);
-                return (
-                  <PermissionCheckbox
-                    key={permission.id}
-                    className={rowClassName(isGranted, isDisabled)}
-                    isDisabled={isDisabled}
-                    isSelected={isGranted}
-                    permission={permission}
-                    onChange={(isSelected) =>
-                      field.onChange(
-                        isSelected
-                          ? [...field.value, permission.id]
-                          : field.value.filter((id) => id !== permission.id),
-                      )
-                    }
-                  />
+          render={({ field }) => {
+            const onTogglePermission =
+              (permissionId: string) =>
+              (isSelected: boolean): void =>
+                field.onChange(
+                  isSelected
+                    ? union(field.value, [permissionId])
+                    : without(field.value, permissionId),
                 );
-              })}
-            </>
-          )}
+
+            return (
+              <>
+                {permissions.map((permission) => {
+                  const isDisabled =
+                    !isEditable || permission.kind === 'reserved';
+                  const isGranted =
+                    isProtected || field.value.includes(permission.id);
+                  return (
+                    <PermissionCheckbox
+                      key={permission.id}
+                      className={rowClassName(isGranted, isDisabled)}
+                      isDisabled={isDisabled}
+                      isSelected={isGranted}
+                      permission={permission}
+                      onChange={onTogglePermission(permission.id)}
+                    />
+                  );
+                })}
+              </>
+            );
+          }}
         />
       </fieldset>
     </form>

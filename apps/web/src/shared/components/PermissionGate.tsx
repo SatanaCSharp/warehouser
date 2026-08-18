@@ -1,8 +1,12 @@
-import { hasPermission, useHasPermission } from 'shared/hooks/usePermissions';
+import { Conditional } from 'shared/components/Conditional';
+import {
+  hasPermission,
+  useHasPermission,
+} from 'shared/hooks/queries/usePermissions';
 
 import type { PermissionId } from '@warehouser/shared-types/enums';
-import type { ReactElement, ReactNode } from 'react';
-import type { PermissionMatch } from 'shared/hooks/usePermissions';
+import type { ReactNode } from 'react';
+import type { PermissionMatch } from 'shared/hooks/queries/usePermissions';
 
 export type PermissionGateProps = {
   children: ReactNode;
@@ -18,7 +22,7 @@ export const PermissionGate = ({
   match = 'any',
   permission,
   permissionIds,
-}: PermissionGateProps): ReactElement => {
+}: PermissionGateProps): ReactNode => {
   const cachedIsAllowed = useHasPermission(permission, match);
 
   const isAllowed =
@@ -26,5 +30,9 @@ export const PermissionGate = ({
       ? cachedIsAllowed
       : hasPermission(permissionIds, permission, match);
 
-  return <>{isAllowed ? children : fallback}</>;
+  return (
+    <Conditional when={isAllowed} otherwise={fallback}>
+      {children}
+    </Conditional>
+  );
 };

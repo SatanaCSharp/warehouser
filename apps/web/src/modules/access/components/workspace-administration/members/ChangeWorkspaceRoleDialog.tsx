@@ -3,8 +3,8 @@ import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import { WorkspaceRefusalAlert } from 'modules/access/components/workspace-administration/members/WorkspaceRefusalAlert';
-import { useAssignWorkspaceRole } from 'modules/access/hooks/useAssignWorkspaceRole';
-import { useWorkspaceRoles } from 'modules/access/hooks/useWorkspaceRoles';
+import { useAssignWorkspaceRole } from 'modules/access/hooks/mutations/useAssignWorkspaceRole';
+import { useWorkspaceRoles } from 'modules/access/hooks/queries/useWorkspaceRoles';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormSelectField } from 'shared/components/FormSelectField';
 

@@ -17,16 +17,16 @@ const deleteRole = vi.hoisted(() => vi.fn());
 const saveRole = vi.hoisted(() => vi.fn());
 const transferManager = vi.hoisted(() => vi.fn());
 
-vi.mock('modules/access/hooks/useAssignMemberRole', () => ({
+vi.mock('modules/access/hooks/mutations/useAssignMemberRole', () => ({
   useAssignMemberRole: () => assignMemberRole,
 }));
-vi.mock('modules/access/hooks/useDeleteRole', () => ({
+vi.mock('modules/access/hooks/mutations/useDeleteRole', () => ({
   useDeleteRole: () => deleteRole,
 }));
-vi.mock('modules/access/hooks/useSaveRole', () => ({
+vi.mock('modules/access/hooks/mutations/useSaveRole', () => ({
   useSaveRole: () => saveRole,
 }));
-vi.mock('modules/access/hooks/useTransferManager', () => ({
+vi.mock('modules/access/hooks/mutations/useTransferManager', () => ({
   useTransferManager: () => transferManager,
 }));
 
@@ -131,7 +131,7 @@ describe('RolesTab', () => {
 
     await user.click(
       await screen.findByRole('button', {
-        name: `Change role for ${accessIds.member}`,
+        name: 'Change role for member@example.test',
       }),
     );
     const dialog = screen.getByRole('dialog', { name: 'Assign member role' });
@@ -197,22 +197,24 @@ describe('RolesTab', () => {
     const dialog = screen.getByRole('dialog', {
       name: 'Transfer Warehouse Manager',
     });
+    // Both sides of the swap are named by email — the address the acting
+    // manager recognizes — never by the opaque user id.
     expect(
       within(dialog).queryByRole('option', {
-        name: accessIds.manager,
+        name: 'manager@example.test',
         hidden: true,
       }),
     ).not.toBeInTheDocument();
     expect(
       within(dialog).getByRole('option', {
-        name: accessIds.member,
+        name: 'member@example.test',
         hidden: true,
       }),
     ).toBeInTheDocument();
     await selectHeroOption(
       user,
       within(dialog).getByRole('button', { name: /New manager/u }),
-      accessIds.member,
+      'member@example.test',
     );
     await selectHeroOption(
       user,
@@ -220,11 +222,11 @@ describe('RolesTab', () => {
       'Auditor',
     );
     expect(
-      within(dialog).getByText(`${accessIds.manager} will become Auditor.`),
+      within(dialog).getByText('manager@example.test will become Auditor.'),
     ).toBeVisible();
     expect(
       within(dialog).getByText(
-        `${accessIds.member} will become Warehouse Manager.`,
+        'member@example.test will become Warehouse Manager.',
       ),
     ).toBeVisible();
     await user.click(

@@ -4,8 +4,9 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { AddWorkspaceMemberDialog } from 'modules/access/components/workspace-administration/members/AddWorkspaceMemberDialog';
-import { useReturnFocusOnClose } from 'shared/hooks/useReturnFocusOnClose';
-import { useHasWorkspacePermission } from 'shared/hooks/useWorkspacePermissions';
+import { Conditional } from 'shared/components/Conditional';
+import { useReturnFocusOnClose } from 'shared/hooks/effects/useReturnFocusOnClose';
+import { useHasWorkspacePermission } from 'shared/hooks/queries/useWorkspacePermissions';
 import { UserPlusIcon } from 'shared/icons';
 
 import type { ReactElement } from 'react';
@@ -23,23 +24,23 @@ export const AddWorkspaceMemberAction = (): ReactElement | null => {
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useReturnFocusOnClose(isOpen);
 
+  const onPress = (): void => setIsOpen(true);
+
+  const onClose = (): void => setIsOpen(false);
+
   if (!canAddWorkspaceMember) {
     return null;
   }
 
   return (
     <>
-      <Button
-        ref={triggerRef}
-        variant="primary"
-        onPress={() => setIsOpen(true)}
-      >
+      <Button ref={triggerRef} variant="primary" onPress={onPress}>
         <UserPlusIcon />
         {t('workspaceMembers.add.trigger')}
       </Button>
-      {isOpen ? (
-        <AddWorkspaceMemberDialog onClose={() => setIsOpen(false)} />
-      ) : null}
+      <Conditional when={isOpen}>
+        <AddWorkspaceMemberDialog onClose={onClose} />
+      </Conditional>
     </>
   );
 };

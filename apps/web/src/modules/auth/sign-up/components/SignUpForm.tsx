@@ -8,11 +8,12 @@ import {
   signUpFormSchema,
   type SignUpFormValues,
 } from 'modules/auth/sign-up/schemas/sign-up-form.schema';
+import { Conditional } from 'shared/components/Conditional';
 import { FormTextField } from 'shared/components/FormTextField';
 import { PasswordInput } from 'shared/components/PasswordInput';
 import { ROUTES } from 'shared/constants/routes';
 
-import type { ReactElement } from 'react';
+import type { FormEvent, ReactElement } from 'react';
 
 type Props = {
   emailError?: string;
@@ -34,12 +35,13 @@ export const SignUpForm = ({ emailError, onSubmit }: Props): ReactElement => {
     ? translateValidation(errors.email.message)
     : emailError;
 
+  // `handleSubmit` returns a promise the DOM handler must not; discarding it
+  // here keeps the rejection with React Hook Form, which already owns it.
+  const onSubmitForm = (event: FormEvent<HTMLFormElement>): void =>
+    void handleSubmit(onSubmit)(event);
+
   return (
-    <form
-      onSubmit={(event) => void handleSubmit(onSubmit)(event)}
-      className="flex flex-col gap-4"
-      noValidate
-    >
+    <form onSubmit={onSubmitForm} className="flex flex-col gap-4" noValidate>
       <FormTextField
         label={t('form.email.label')}
         placeholder={t('form.email.placeholder')}
@@ -51,11 +53,11 @@ export const SignUpForm = ({ emailError, onSubmit }: Props): ReactElement => {
         errorMessage={emailMessage}
         {...register('email')}
       />
-      {emailError ? (
+      <Conditional when={emailError}>
         <RouterLink to={ROUTES.LOGIN} className="link text-accent">
           {t('duplicate.signIn')}
         </RouterLink>
-      ) : null}
+      </Conditional>
       <PasswordInput
         label={t('form.password.label')}
         placeholder={t('form.password.placeholder')}

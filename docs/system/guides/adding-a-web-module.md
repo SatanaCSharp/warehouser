@@ -88,7 +88,8 @@ modules/inventory/
 ├── page.tsx
 ├── components/
 ├── alerts/      # only for inventory-specific feedback
-├── hooks/       # only if needed
+├── hooks/       # only if needed; queries/ mutations/ forms/ projections/ effects/
+├── utils/       # only for pure helpers the module owns; never hooks
 ├── schemas/     # only for browser-local validation
 ├── api/         # only when the feature calls the server
 └── store/       # only when the feature owns RTK state
@@ -97,7 +98,8 @@ modules/inventory/
     └── inventory.selectors.ts
 ```
 
-Do not create empty optional directories.
+Do not create empty optional directories. Inside `hooks/`, file each hook by what it does rather
+than by which screen calls it — see [Placing web hooks](placing-web-hooks.md).
 
 ## 5. Define a lazy route
 

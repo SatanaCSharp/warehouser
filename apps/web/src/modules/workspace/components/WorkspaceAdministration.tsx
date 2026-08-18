@@ -9,10 +9,11 @@ import { WorkspacePermissionsTab } from 'modules/access/components/workspace-adm
 import { WorkspaceRolesTab } from 'modules/access/components/workspace-administration/roles/WorkspaceRolesTab';
 import { NameWorkspaceAction } from 'modules/workspace/components/workspace-administration/NameWorkspaceAction';
 import { WarehousesTab } from 'modules/workspace/components/workspace-administration/warehouses/WarehousesTab';
+import { Conditional } from 'shared/components/Conditional';
 import {
   hasWorkspacePermission,
   useCurrentWorkspaceContext,
-} from 'shared/hooks/useWorkspacePermissions';
+} from 'shared/hooks/queries/useWorkspacePermissions';
 
 import type { ReactElement } from 'react';
 import type { Key } from 'react-aria-components';
@@ -92,15 +93,15 @@ export const WorkspaceAdministration = (): ReactElement | null => {
         <div className="flex flex-col items-start gap-2">
           <h1 className="flex flex-wrap items-center gap-3 text-3xl font-semibold tracking-tight sm:text-4xl">
             {name ?? t('placeholder.name')}
-            {name === null ? (
+            <Conditional when={name === null}>
               <Chip color="warning" variant="soft" size="sm">
                 {t('placeholder.badge')}
               </Chip>
-            ) : null}
+            </Conditional>
           </h1>
-          {openSection ? (
+          <Conditional when={openSection}>
             <p className="text-muted">{t(`descriptions.${openSection}`)}</p>
-          ) : null}
+          </Conditional>
         </div>
         <NameWorkspaceAction />
       </header>
@@ -109,7 +110,7 @@ export const WorkspaceAdministration = (): ReactElement | null => {
           `WORKSPACE:RENAME` — admits no tab at all. AC-30 omits what such an
           actor cannot use rather than presenting it empty, so the tab shell
           itself goes away instead of rendering an empty tab list. */}
-      {tabs.length > 0 ? (
+      <Conditional when={tabs.length > 0}>
         <div className="mx-auto max-w-[1440px]">
           <Tabs
             className="w-full"
@@ -141,7 +142,7 @@ export const WorkspaceAdministration = (): ReactElement | null => {
             ))}
           </Tabs>
         </div>
-      ) : null}
+      </Conditional>
     </main>
   );
 };

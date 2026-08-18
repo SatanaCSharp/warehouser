@@ -37,37 +37,44 @@ export const FormModalDialog = ({
   submitLabel,
   submitVariant = 'primary',
   title,
-}: FormModalDialogProps): ReactElement => (
-  <Modal.Backdrop
-    isOpen
-    onOpenChange={(open) => {
-      if (!open) {
-        onClose();
-      }
-    }}
-  >
-    <Modal.Container scroll={scroll} size={size}>
-      <Modal.Dialog>
-        <form noValidate={noValidate} onSubmit={onSubmit}>
-          <Modal.Header>
-            <Modal.Heading>{title}</Modal.Heading>
-          </Modal.Header>
-          <Modal.Body className="flex flex-col gap-4">{children}</Modal.Body>
-          <Modal.Footer>
-            <Button variant="ghost" isDisabled={isSubmitting} onPress={onClose}>
-              {cancelLabel}
-            </Button>
-            <Button
-              type="submit"
-              variant={submitVariant}
-              isDisabled={isSubmitting || isSubmitDisabled}
-              isPending={isSubmitting}
-            >
-              {submitLabel}
-            </Button>
-          </Modal.Footer>
-        </form>
-      </Modal.Dialog>
-    </Modal.Container>
-  </Modal.Backdrop>
-);
+}: FormModalDialogProps): ReactElement => {
+  // The dialog is mounted only while open, so the only transition it can
+  // report is the one that closes it.
+  const onOpenChange = (open: boolean): void => {
+    if (!open) {
+      onClose();
+    }
+  };
+
+  return (
+    <Modal.Backdrop isOpen onOpenChange={onOpenChange}>
+      <Modal.Container scroll={scroll} size={size}>
+        <Modal.Dialog>
+          <form noValidate={noValidate} onSubmit={onSubmit}>
+            <Modal.Header>
+              <Modal.Heading>{title}</Modal.Heading>
+            </Modal.Header>
+            <Modal.Body className="flex flex-col gap-4">{children}</Modal.Body>
+            <Modal.Footer>
+              <Button
+                variant="ghost"
+                isDisabled={isSubmitting}
+                onPress={onClose}
+              >
+                {cancelLabel}
+              </Button>
+              <Button
+                type="submit"
+                variant={submitVariant}
+                isDisabled={isSubmitting || isSubmitDisabled}
+                isPending={isSubmitting}
+              >
+                {submitLabel}
+              </Button>
+            </Modal.Footer>
+          </form>
+        </Modal.Dialog>
+      </Modal.Container>
+    </Modal.Backdrop>
+  );
+};

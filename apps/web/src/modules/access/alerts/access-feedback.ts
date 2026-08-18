@@ -1,5 +1,6 @@
-import i18n from 'i18n';
-import { alertActionPromise } from 'shared/alerts/action-feedback';
+import { alertScopedAction } from 'shared/alerts/action-feedback';
+
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 export type AccessSuccessAction =
   | 'assignRole'
@@ -12,18 +13,8 @@ export type AccessSuccessAction =
   | 'transferManager'
   | 'updateRole';
 
-type MutationOutcome = { data: unknown } | { error: unknown };
-
-/**
- * Reports an access administration mutation through a promise toast: the
- * action-specific pending description while the request runs, then the matching
- * success description once the workflow completed.
- */
-export const alertAccessAction = async <TResult extends MutationOutcome>(
+/** Reports an access administration mutation through a promise toast. */
+export const alertAccessAction = async <TResult extends MutationResult>(
   action: AccessSuccessAction,
   request: Promise<TResult>,
-): Promise<TResult> =>
-  alertActionPromise(request, {
-    loading: i18n.t(`access.${action}`, { ns: 'pending' }),
-    success: i18n.t(`access.${action}`, { ns: 'success' }),
-  });
+): Promise<TResult> => alertScopedAction('access', action, request);

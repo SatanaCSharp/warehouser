@@ -36,4 +36,18 @@ export const i18nReady = i18n
     },
   });
 
+/**
+ * `index.html` can only ship one static `lang`, and the detector may resolve a
+ * different language before the first paint — so the document would keep
+ * declaring English while rendering Ukrainian, and assistive technology would
+ * pronounce it as English. i18next owns the active language, so it also owns
+ * the attribute that announces it.
+ */
+const syncDocumentLanguage = (language: string): void => {
+  document.documentElement.lang = language;
+};
+
+i18n.on('languageChanged', syncDocumentLanguage);
+void i18nReady.then(() => syncDocumentLanguage(i18n.resolvedLanguage ?? 'en'));
+
 export default i18n;

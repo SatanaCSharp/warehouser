@@ -20,16 +20,16 @@ const changeMemberPassword = vi.hoisted(() => vi.fn());
 const createMember = vi.hoisted(() => vi.fn());
 const deleteMember = vi.hoisted(() => vi.fn());
 
-vi.mock('modules/access/hooks/useChangeMemberEmail', () => ({
+vi.mock('modules/access/hooks/mutations/useChangeMemberEmail', () => ({
   useChangeMemberEmail: () => changeMemberEmail,
 }));
-vi.mock('modules/access/hooks/useChangeMemberPassword', () => ({
+vi.mock('modules/access/hooks/mutations/useChangeMemberPassword', () => ({
   useChangeMemberPassword: () => changeMemberPassword,
 }));
-vi.mock('modules/access/hooks/useCreateMember', () => ({
+vi.mock('modules/access/hooks/mutations/useCreateMember', () => ({
   useCreateMember: () => createMember,
 }));
-vi.mock('modules/access/hooks/useDeleteMember', () => ({
+vi.mock('modules/access/hooks/mutations/useDeleteMember', () => ({
   useDeleteMember: () => deleteMember,
 }));
 

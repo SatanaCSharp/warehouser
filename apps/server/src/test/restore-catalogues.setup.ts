@@ -31,6 +31,27 @@ const catalogues = [
   },
 ] as const;
 
+/**
+ * Restoring is not enough on its own. A spec that inserts a fixture Permission
+ * and then fails — or is interrupted — before its own cleanup leaves that row
+ * in the catalogue for good, and a catalogue id is a closed `z.enum` in
+ * `packages/contracts`: one unknown id fails validation for the entire
+ * catalogue response and blanks every screen that reads it. Sweeping the
+ * reserved prefix keeps a crashed run from outliving itself.
+ *
+ * The grants go first because `fk_workspace_role_permissions_permission` is
+ * `ON DELETE RESTRICT`, so a fixture Permission still referenced by a Role
+ * cannot be removed while that grant exists.
+ */
+const fixtureSweeps = [
+  {
+    table: 'workspace_permissions',
+    grantTable: 'workspace_role_permissions',
+    grantColumn: 'workspace_permission_id',
+    idPrefix: 'WORKSPACE_PERMISSIONS_FIXTURE:',
+  },
+] as const;
+
 const restoreCatalogues = async (): Promise<void> => {
   // A dedicated connection, so this never interferes with the shared
   // `dataSource` singleton each spec initializes and destroys itself.
@@ -47,6 +68,16 @@ const restoreCatalogues = async (): Promise<void> => {
   await connection.initialize();
 
   try {
+    for (const { table, grantTable, grantColumn, idPrefix } of fixtureSweeps) {
+      await connection.query(
+        `DELETE FROM ${grantTable} WHERE ${grantColumn} LIKE $1`,
+        [`${idPrefix}%`],
+      );
+      await connection.query(`DELETE FROM ${table} WHERE id LIKE $1`, [
+        `${idPrefix}%`,
+      ]);
+    }
+
     for (const { table, rows } of catalogues) {
       const values = rows
         .map(

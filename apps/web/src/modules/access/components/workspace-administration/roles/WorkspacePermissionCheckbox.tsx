@@ -1,7 +1,8 @@
 import { Checkbox, Chip } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 
-import { useWorkspacePermissionLabel } from 'modules/access/hooks/useWorkspacePermissionLabel';
+import { useWorkspacePermissionLabel } from 'modules/access/hooks/projections/useWorkspacePermissionLabel';
+import { Conditional } from 'shared/components/Conditional';
 
 import type { WorkspacePermission } from '@warehouser/contracts/workspaces';
 import type { ReactElement } from 'react';
@@ -55,17 +56,17 @@ export const WorkspacePermissionCheckbox = ({
             <span className="font-medium">{permissionLabel(permission)}</span>
           </Checkbox.Content>
         </Checkbox>
-        {isReserved ? (
+        <Conditional when={isReserved}>
           <Chip size="sm" variant="soft">
             {t('workspacePermissions.ownerOnly')}
           </Chip>
-        ) : null}
+        </Conditional>
       </div>
-      {isReserved ? (
+      <Conditional when={isReserved}>
         <p className="ml-7 text-sm text-muted">
           {t('workspacePermissions.reservedNote')}
         </p>
-      ) : null}
+      </Conditional>
     </li>
   );
 };

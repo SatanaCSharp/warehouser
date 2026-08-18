@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { parsePasswordChangeForm } from 'modules/access/schemas/password-change-form';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { PasswordInput } from 'shared/components/PasswordInput';
-import { useFormFieldErrors } from 'shared/hooks/useFormFieldErrors';
+import { useFormFieldErrors } from 'shared/hooks/forms/useFormFieldErrors';
 
 import type { PasswordChangeInput } from '@warehouser/contracts/users';
 import type { AccessMember } from 'modules/access/types/access.types';

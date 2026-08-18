@@ -3,9 +3,9 @@ import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import { WorkspaceRefusalAlert } from 'modules/access/components/workspace-administration/members/WorkspaceRefusalAlert';
-import { useTransferWorkspaceOwner } from 'modules/access/hooks/useTransferWorkspaceOwner';
-import { useWorkspaceMembers } from 'modules/access/hooks/useWorkspaceMembers';
-import { useWorkspaceRoles } from 'modules/access/hooks/useWorkspaceRoles';
+import { useTransferWorkspaceOwner } from 'modules/access/hooks/mutations/useTransferWorkspaceOwner';
+import { useWorkspaceMembers } from 'modules/access/hooks/queries/useWorkspaceMembers';
+import { useWorkspaceRoles } from 'modules/access/hooks/queries/useWorkspaceRoles';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormSelectField } from 'shared/components/FormSelectField';
 

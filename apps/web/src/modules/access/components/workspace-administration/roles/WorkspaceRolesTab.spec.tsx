@@ -79,7 +79,8 @@ describe('WorkspaceRolesTab', () => {
         expect.stringContaining('Operations Lead'),
         expect.stringContaining('Auditor'),
       ]);
-      expect(entries[1]?.textContent).toContain('1 members');
+      // Singular at one, plural at two — both keys carry plural forms.
+      expect(entries[1]?.textContent).toContain('1 member');
       expect(entries[1]?.textContent).toContain('2 permissions');
     });
 
@@ -385,13 +386,13 @@ describe('WorkspaceRolesTab', () => {
         name: /delete operations lead/iu,
       });
       expect(dialog).toHaveTextContent(
-        '1 workspace members hold this role. Every one of them moves to the replacement in the same step.',
+        '1 workspace member holds this role. They move to the replacement in the same step.',
       );
       expect(dialog).toHaveTextContent(/needs both permissions/iu);
 
       await selectHeroOption(
         user,
-        within(dialog).getByRole('button', { name: /move those/iu }),
+        within(dialog).getByRole('button', { name: /move (?:that|those)/iu }),
         'Auditor',
       );
       await user.click(
@@ -426,7 +427,7 @@ describe('WorkspaceRolesTab', () => {
         name: /delete auditor/iu,
       });
       expect(
-        within(dialog).queryByRole('button', { name: /move those/iu }),
+        within(dialog).queryByRole('button', { name: /move (?:that|those)/iu }),
       ).not.toBeInTheDocument();
       expect(dialog).toHaveTextContent(
         'No workspace member holds this role, so no workspace role assignment changes.',
@@ -465,7 +466,7 @@ describe('WorkspaceRolesTab', () => {
         name: /delete operations lead/iu,
       });
       expect(
-        within(dialog).queryByRole('button', { name: /move those/iu }),
+        within(dialog).queryByRole('button', { name: /move (?:that|those)/iu }),
       ).not.toBeInTheDocument();
       expect(within(dialog).getByRole('alert')).toHaveTextContent(
         'Create another custom workspace role first',
@@ -504,7 +505,7 @@ describe('WorkspaceRolesTab', () => {
       });
       await selectHeroOption(
         user,
-        within(dialog).getByRole('button', { name: /move those/iu }),
+        within(dialog).getByRole('button', { name: /move (?:that|those)/iu }),
         'Auditor',
       );
       await user.click(

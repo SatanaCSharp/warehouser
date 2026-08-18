@@ -55,7 +55,7 @@ const normalizeError = (payload: unknown): ApiFailure => {
   };
 };
 
-export const apiBaseQuery: BaseQueryFn<
+const apiBaseQuery: BaseQueryFn<
   string | FetchArgs,
   unknown,
   ApiFailure,

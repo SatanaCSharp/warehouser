@@ -5,9 +5,9 @@ import { MemberAssignmentList } from 'modules/access/components/access-workspace
 import { RoleDirectory } from 'modules/access/components/access-workspace/components/roles/RoleDirectory';
 import { RolesDatasetCard } from 'modules/access/components/access-workspace/components/roles/RolesDatasetCard';
 import { TransferManagerAction } from 'modules/access/components/access-workspace/components/roles/TransferManagerAction';
-import { useAccessCapabilities } from 'modules/access/hooks/useAccessCapabilities';
-import { useAccessPermissions } from 'modules/access/hooks/useAccessPermissions';
-import { useAccessRoles } from 'modules/access/hooks/useAccessRoles';
+import { useAccessCapabilities } from 'modules/access/hooks/projections/useAccessCapabilities';
+import { useAccessPermissions } from 'modules/access/hooks/queries/useAccessPermissions';
+import { useAccessRoles } from 'modules/access/hooks/queries/useAccessRoles';
 
 import type { ReactElement } from 'react';
 

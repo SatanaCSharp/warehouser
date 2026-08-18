@@ -3,11 +3,14 @@ import { useTranslation } from 'react-i18next';
 
 import { CreateActionButton } from 'modules/access/components/access-workspace/components/CreateActionButton';
 import { CreateRoleDialog } from 'modules/access/components/access-workspace/components/roles/CreateRoleDialog';
-import { useAccessCapabilities } from 'modules/access/hooks/useAccessCapabilities';
-import { useAccessPermissions } from 'modules/access/hooks/useAccessPermissions';
-import { useSaveRole } from 'modules/access/hooks/useSaveRole';
+import { useSaveRole } from 'modules/access/hooks/mutations/useSaveRole';
+import { useAccessCapabilities } from 'modules/access/hooks/projections/useAccessCapabilities';
+import { useAccessPermissions } from 'modules/access/hooks/queries/useAccessPermissions';
+import { Conditional } from 'shared/components/Conditional';
 
+import type { RoleWrite } from '@warehouser/contracts/access';
 import type { ReactElement } from 'react';
+import type { MutationOutcome } from 'shared/api/client/mutation-outcome';
 
 /**
  * The Create Role workflow, whole: the trigger, the dialog it opens, and the
@@ -21,6 +24,18 @@ export const CreateRoleAction = (): ReactElement | null => {
   const saveRole = useSaveRole(warehouseId ?? '');
   const [isOpen, setIsOpen] = useState(false);
 
+  const onPress = (): void => setIsOpen(true);
+
+  const onClose = (): void => setIsOpen(false);
+
+  const onSave = async (input: RoleWrite): Promise<MutationOutcome> => {
+    const outcome = await saveRole(input);
+    if (outcome.success) {
+      onClose();
+    }
+    return outcome;
+  };
+
   if (!canCreateRoles) {
     return null;
   }
@@ -31,21 +46,15 @@ export const CreateRoleAction = (): ReactElement | null => {
         isDisabled={isArchived}
         label={t('administration.createRole')}
         reason={t('archived.reason')}
-        onPress={() => setIsOpen(true)}
+        onPress={onPress}
       />
-      {isOpen && !isArchived ? (
+      <Conditional when={isOpen && !isArchived}>
         <CreateRoleDialog
           permissions={permissions.items}
-          onClose={() => setIsOpen(false)}
-          onSave={async (input) => {
-            const outcome = await saveRole(input);
-            if (outcome.success) {
-              setIsOpen(false);
-            }
-            return outcome;
-          }}
+          onClose={onClose}
+          onSave={onSave}
         />
-      ) : null}
+      </Conditional>
     </>
   );
 };

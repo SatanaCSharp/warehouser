@@ -106,17 +106,20 @@ describe('the Warehouse administration component split (CR-AC-04)', () => {
       });
     });
 
-    it('keeps the three-way content branch in WarehouseList', () => {
-      // The flat loading / empty / present assignment is the branching CR-AC-04
-      // protects, not an `if` chain it forbids: only the branch *bodies*
-      // extract, and the one-element empty state stays inline
-      // (`sad.md` §5.3, O3).
+    it('keeps the flat content branch in WarehouseList', () => {
+      // The flat loading / empty / no-matches / present assignment is the
+      // branching CR-AC-04 protects, not an `if` chain it forbids: only the
+      // branch *bodies* extract, and the one-element status states stay inline
+      // (`sad.md` §5.3, O3). The no-matches arm is a distinct outcome from the
+      // empty workspace — a filtered-out list is not an unpopulated one — so it
+      // is its own flat arm rather than a condition folded into the empty one.
       const source = sourceOf('WarehouseList.tsx');
 
       expect(source).toContain('if (isLoading) {');
       expect(source).toContain('} else if (warehouses.length === 0) {');
+      expect(source).toContain('} else if (visibleWarehouses.length === 0) {');
       expect(source).toContain('} else {');
-      expect([...source.matchAll(/^\s*content = /gmu)]).toHaveLength(3);
+      expect([...source.matchAll(/^\s*content = /gmu)]).toHaveLength(4);
       expect(source).toContain('<p role="status"');
     });
 

@@ -2,7 +2,8 @@ import { Skeleton } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 
 import { WorkspaceMemberRow } from 'modules/access/components/workspace-administration/members/WorkspaceMemberRow';
-import { useWorkspaceRoles } from 'modules/access/hooks/useWorkspaceRoles';
+import { useWorkspaceRoles } from 'modules/access/hooks/queries/useWorkspaceRoles';
+import { Conditional } from 'shared/components/Conditional';
 
 import type { WorkspaceMember } from '@warehouser/contracts/workspaces';
 import type { ReactElement } from 'react';
@@ -52,9 +53,9 @@ export const WorkspaceMemberList = ({
         ))}
       </ul>
 
-      {members.length === 0 ? (
+      <Conditional when={members.length === 0}>
         <p className="mt-3 text-muted">{t('workspaceMembers.empty')}</p>
-      ) : null}
+      </Conditional>
     </div>
   );
 };

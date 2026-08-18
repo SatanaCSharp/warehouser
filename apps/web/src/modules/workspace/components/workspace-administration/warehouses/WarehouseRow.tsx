@@ -2,6 +2,7 @@ import { Chip } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 
 import { WarehouseEnterLink } from 'modules/workspace/components/workspace-administration/warehouses/WarehouseEnterLink';
+import { Conditional } from 'shared/components/Conditional';
 
 import type { Warehouse } from '@warehouser/contracts/workspaces';
 import type { ReactElement } from 'react';
@@ -39,6 +40,9 @@ export const WarehouseRow = ({
   const isArchived = warehouse.archivedAt !== null;
   const canEnter = !isArchived && membershipWarehouseIds.includes(warehouse.id);
 
+  const onSelectWarehouse = (warehouseId: string) => (): void =>
+    onSelect(warehouseId);
+
   return (
     <div
       className={`flex items-start gap-2 rounded-xl border bg-surface p-4 transition-colors ${isSelected ? 'border-2 border-accent' : 'border-border hover:border-accent/40'}`}
@@ -47,25 +51,29 @@ export const WarehouseRow = ({
         type="button"
         aria-pressed={isSelected}
         className="flex-1 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-        onClick={() => onSelect(warehouse.id)}
+        onClick={onSelectWarehouse(warehouse.id)}
       >
         <span className="block font-semibold">{warehouse.name}</span>
         <span className="mt-2 block text-sm text-muted">
-          {isArchived ? t('warehouses.readOnly') : null}
-          {isArchived && peopleCount !== undefined ? ' · ' : null}
-          {peopleCount !== undefined
-            ? t('warehouses.peopleWithAccess', {
-                count: peopleCount,
-              })
-            : null}
+          <Conditional when={isArchived}>
+            {t('warehouses.readOnly')}
+          </Conditional>
+          <Conditional when={isArchived && peopleCount !== undefined}>
+            {' · '}
+          </Conditional>
+          <Conditional when={peopleCount !== undefined}>
+            {t('warehouses.peopleWithAccess', { count: peopleCount })}
+          </Conditional>
         </span>
       </button>
-      {isArchived ? (
+      <Conditional when={isArchived}>
         <Chip color="default" size="sm" variant="soft">
           {t('warehouses.chips.archived')}
         </Chip>
-      ) : null}
-      {canEnter ? <WarehouseEnterLink warehouse={warehouse} /> : null}
+      </Conditional>
+      <Conditional when={canEnter}>
+        <WarehouseEnterLink warehouse={warehouse} />
+      </Conditional>
     </div>
   );
 };

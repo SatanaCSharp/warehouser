@@ -65,7 +65,7 @@ export const MODULE_SURFACE = {
     // router.ts
     'modules/warehouse/route',
     // shared/layouts/WarehouseLayout.tsx
-    'modules/warehouse/hooks/useRecordWarehouseEntry',
+    'modules/warehouse/hooks/effects/useRecordWarehouseEntry',
   ],
   workspace: [
     // router.ts
@@ -110,18 +110,18 @@ export const WORKSPACE_MODULE_MANIFEST = [
   'components/workspace-administration/warehouses/WarehousesTab.spec.tsx',
   'components/workspace-administration/warehouses/WarehousesTab.tsx',
   'components/workspace-administration/warehouses/WithdrawWarehouseAccessDialog.tsx',
-  'hooks/useAssignWarehouseMembership.ts',
-  'hooks/useCreateWarehouse.ts',
-  'hooks/useRenameWarehouse.ts',
-  'hooks/useRenameWorkspace.ts',
-  'hooks/useRevokeWarehouseMembership.ts',
-  'hooks/useSetWarehouseArchival.ts',
-  'hooks/warehouse-name-validation.spec.ts',
-  'hooks/warehouse-name-validation.ts',
+  'hooks/mutations/useAssignWarehouseMembership.ts',
+  'hooks/mutations/useCreateWarehouse.ts',
+  'hooks/mutations/useRenameWarehouse.ts',
+  'hooks/mutations/useRenameWorkspace.ts',
+  'hooks/mutations/useRevokeWarehouseMembership.ts',
+  'hooks/mutations/useSetWarehouseArchival.ts',
   'page.tsx',
   'route.tsx',
   'schemas/name-workspace-form.schema.ts',
   'schemas/warehouse-name-form.schema.ts',
+  'utils/warehouse-name-validation.spec.ts',
+  'utils/warehouse-name-validation.ts',
 ] as const;
 
 /**
@@ -134,8 +134,8 @@ export const WORKSPACE_MODULE_MANIFEST = [
 export const WAREHOUSE_MODULE_MANIFEST = [
   'components/DesignSystemExample.spec.tsx',
   'components/DesignSystemExample.tsx',
-  'hooks/useRecordWarehouseEntry.spec.tsx',
-  'hooks/useRecordWarehouseEntry.ts',
+  'hooks/effects/useRecordWarehouseEntry.spec.tsx',
+  'hooks/effects/useRecordWarehouseEntry.ts',
   'page.tsx',
   'route.tsx',
 ] as const;
@@ -163,14 +163,14 @@ export const ADMINISTRATION_SLICE_FILES = [
   'components/workspace-administration/warehouses/WarehousesTab.spec.tsx',
   'components/workspace-administration/warehouses/WarehousesTab.tsx',
   'components/workspace-administration/warehouses/WithdrawWarehouseAccessDialog.tsx',
-  'hooks/useAssignWarehouseMembership.ts',
-  'hooks/useCreateWarehouse.ts',
-  'hooks/useRenameWarehouse.ts',
-  'hooks/useRevokeWarehouseMembership.ts',
-  'hooks/useSetWarehouseArchival.ts',
-  'hooks/warehouse-name-validation.spec.ts',
-  'hooks/warehouse-name-validation.ts',
+  'hooks/mutations/useAssignWarehouseMembership.ts',
+  'hooks/mutations/useCreateWarehouse.ts',
+  'hooks/mutations/useRenameWarehouse.ts',
+  'hooks/mutations/useRevokeWarehouseMembership.ts',
+  'hooks/mutations/useSetWarehouseArchival.ts',
   'schemas/warehouse-name-form.schema.ts',
+  'utils/warehouse-name-validation.spec.ts',
+  'utils/warehouse-name-validation.ts',
 ] as const;
 
 /**

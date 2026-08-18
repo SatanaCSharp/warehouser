@@ -32,7 +32,7 @@ const lastVerdictByStore = new WeakMap<
 // T4 / ADR 0001 — the Warehouse layout route. It owns no feature content: it
 // resolves entry once per addressed Warehouse in `beforeLoad` and publishes
 // the verdict into the match context, which `WarehouseLayout` and every
-// descendant reads through `shared/hooks/useEnteredWarehouse.ts`. Placed
+// descendant reads through `shared/hooks/projections/useEnteredWarehouse.ts`. Placed
 // beside `__root.route.tsx` (sad.md §5 "Placement note") because it is
 // application shell, not a feature — the parent every current and future
 // Warehouse-scoped module attaches to.

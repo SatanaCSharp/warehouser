@@ -3,6 +3,7 @@ import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import { DeleteWorkspaceRoleRefusal } from 'modules/access/components/workspace-administration/roles/DeleteWorkspaceRoleRefusal';
+import { Conditional } from 'shared/components/Conditional';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormSelectField } from 'shared/components/FormSelectField';
 
@@ -78,7 +79,7 @@ export const DeleteWorkspaceRoleDialog = ({
       onClose={onClose}
       onSubmit={handleSubmit(submit)}
     >
-      {asksForReplacement ? (
+      <Conditional when={asksForReplacement}>
         <>
           <p className="text-muted">
             {t('workspaceRoles.delete.description', {
@@ -117,13 +118,13 @@ export const DeleteWorkspaceRoleDialog = ({
             </p>
           </div>
         </>
-      ) : null}
+      </Conditional>
 
-      {isAssigned ? null : (
+      <Conditional when={!isAssigned}>
         <p className="text-muted">
           {t('workspaceRoles.delete.unassignedDescription')}
         </p>
-      )}
+      </Conditional>
 
       <DeleteWorkspaceRoleRefusal
         code={refusalCode}

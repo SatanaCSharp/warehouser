@@ -4,16 +4,21 @@ import { DeleteMemberDialog } from 'modules/access/components/access-workspace/c
 import { EditEmailDialog } from 'modules/access/components/access-workspace/components/members/EditEmailDialog';
 import { MemberList } from 'modules/access/components/access-workspace/components/members/MemberList';
 import { ResetPasswordDialog } from 'modules/access/components/access-workspace/components/members/ResetPasswordDialog';
-import { useAccessCapabilities } from 'modules/access/hooks/useAccessCapabilities';
-import { useAccessRoles } from 'modules/access/hooks/useAccessRoles';
-import { useChangeMemberEmail } from 'modules/access/hooks/useChangeMemberEmail';
-import { useChangeMemberPassword } from 'modules/access/hooks/useChangeMemberPassword';
-import { useDeleteMember } from 'modules/access/hooks/useDeleteMember';
+import { useChangeMemberEmail } from 'modules/access/hooks/mutations/useChangeMemberEmail';
+import { useChangeMemberPassword } from 'modules/access/hooks/mutations/useChangeMemberPassword';
+import { useDeleteMember } from 'modules/access/hooks/mutations/useDeleteMember';
+import { useAccessCapabilities } from 'modules/access/hooks/projections/useAccessCapabilities';
+import { useAccessRoles } from 'modules/access/hooks/queries/useAccessRoles';
 import { selectCurrentUser } from 'modules/auth/store/auth.selectors';
 import { useAppSelector } from 'store/hooks';
 
+import type {
+  EmailChangeInput,
+  PasswordChangeInput,
+} from '@warehouser/contracts/users';
 import type { AccessMember } from 'modules/access/types/access.types';
 import type { ReactElement } from 'react';
+import type { MutationOutcome } from 'shared/api/client/mutation-outcome';
 
 type MemberDirectoryProps = {
   isRefreshing: boolean;
@@ -49,7 +54,57 @@ export const MemberDirectory = ({
   const changeMemberPassword = useChangeMemberPassword(warehouseId ?? '');
   const deleteMember = useDeleteMember(warehouseId ?? '');
   const [dialog, setDialog] = useState<MemberDialog | null>(null);
-  const closeDialog = (): void => setDialog(null);
+
+  const onCloseDialog = (): void => setDialog(null);
+
+  const onOpenDialog =
+    (kind: MemberDialog['kind']) =>
+    (member: AccessMember): void =>
+      setDialog({ kind, member });
+
+  const onSaveEmail =
+    (member: AccessMember) =>
+    (input: EmailChangeInput): Promise<MutationOutcome> =>
+      changeMemberEmail(member.userId, input);
+
+  const onSavePassword =
+    (member: AccessMember) =>
+    (input: PasswordChangeInput): Promise<MutationOutcome> =>
+      changeMemberPassword(member.userId, input);
+
+  const onConfirmDelete =
+    (member: AccessMember) => (): Promise<MutationOutcome> =>
+      deleteMember(member.userId);
+
+  // Every dialog reads the member its row was opened for, so the open one is
+  // resolved by a lookup here rather than gated inline: `Conditional` evaluates
+  // both arms, and no member exists until a row opens one.
+  const openDialog =
+    dialog === null
+      ? null
+      : {
+          editEmail: (
+            <EditEmailDialog
+              member={dialog.member}
+              onClose={onCloseDialog}
+              onSave={onSaveEmail(dialog.member)}
+            />
+          ),
+          resetPassword: (
+            <ResetPasswordDialog
+              member={dialog.member}
+              onClose={onCloseDialog}
+              onSave={onSavePassword(dialog.member)}
+            />
+          ),
+          deleteMember: (
+            <DeleteMemberDialog
+              member={dialog.member}
+              onClose={onCloseDialog}
+              onDelete={onConfirmDelete(dialog.member)}
+            />
+          ),
+        }[dialog.kind];
 
   return (
     <>
@@ -61,36 +116,12 @@ export const MemberDirectory = ({
         isLoading={isRefreshing || actor === null}
         members={members}
         roles={roles.items}
-        onDeleteMember={(member) => setDialog({ kind: 'deleteMember', member })}
-        onEditEmail={(member) => setDialog({ kind: 'editEmail', member })}
-        onResetPassword={(member) =>
-          setDialog({ kind: 'resetPassword', member })
-        }
+        onDeleteMember={onOpenDialog('deleteMember')}
+        onEditEmail={onOpenDialog('editEmail')}
+        onResetPassword={onOpenDialog('resetPassword')}
       />
 
-      {dialog?.kind === 'editEmail' ? (
-        <EditEmailDialog
-          member={dialog.member}
-          onClose={closeDialog}
-          onSave={(input) => changeMemberEmail(dialog.member.userId, input)}
-        />
-      ) : null}
-
-      {dialog?.kind === 'resetPassword' ? (
-        <ResetPasswordDialog
-          member={dialog.member}
-          onClose={closeDialog}
-          onSave={(input) => changeMemberPassword(dialog.member.userId, input)}
-        />
-      ) : null}
-
-      {dialog?.kind === 'deleteMember' ? (
-        <DeleteMemberDialog
-          member={dialog.member}
-          onClose={closeDialog}
-          onDelete={() => deleteMember(dialog.member.userId)}
-        />
-      ) : null}
+      {openDialog}
     </>
   );
 };

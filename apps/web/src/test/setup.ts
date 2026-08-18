@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/vitest';
 
-import { cleanup } from '@testing-library/react';
+import { cleanup, configure } from '@testing-library/react';
 import { afterEach, vi } from 'vitest';
 
 import enAccess from '../../public/locales/en/access.json';
@@ -25,6 +25,16 @@ import ukSuccess from '../../public/locales/uk/success.json';
 import ukValidation from '../../public/locales/uk/validation.json';
 import ukWarehouse from '../../public/locales/uk/warehouse.json';
 import ukWorkspace from '../../public/locales/uk/workspace.json';
+
+// Testing Library gives every `findBy*` query 1000ms by default. Route-level
+// specs await a lazily imported page, so their first assertion covers a
+// dynamic import plus a provider render — comfortably under a second on an
+// idle machine, and not always under one when the suite runs beside the other
+// workspace tasks (`turbo run lint test build` fans out across packages).
+// Raising the async window here, once, keeps those specs deterministic without
+// weakening what any of them asserts; `testTimeout` still bounds a genuinely
+// stuck test at Vitest's 5s default.
+configure({ asyncUtilTimeout: 4000 });
 
 const localeResponses: Record<string, object> = {
   '/locales/en/access.json': enAccess,

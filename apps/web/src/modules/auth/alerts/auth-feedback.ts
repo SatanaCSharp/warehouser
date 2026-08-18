@@ -1,20 +1,10 @@
-import i18n from 'i18n';
-import { alertActionPromise } from 'shared/alerts/action-feedback';
+import { alertScopedAction } from 'shared/alerts/action-feedback';
 
-type MutationOutcome = { data: unknown } | { error: unknown };
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
-const alertAuthAction = async <TResult extends MutationOutcome>(
-  action: 'signOut' | 'signUp',
+export const alertSignUpAction = async <TResult extends MutationResult>(
   request: Promise<TResult>,
-): Promise<TResult> =>
-  alertActionPromise(request, {
-    loading: i18n.t(`auth.${action}`, { ns: 'pending' }),
-    success: i18n.t(`auth.${action}`, { ns: 'success' }),
-  });
-
-export const alertSignUpAction = async <TResult extends MutationOutcome>(
-  request: Promise<TResult>,
-): Promise<TResult> => alertAuthAction('signUp', request);
+): Promise<TResult> => alertScopedAction('auth', 'signUp', request);
 
 /**
  * A successful login is the documented exception to the success-toast policy,
@@ -22,6 +12,6 @@ export const alertSignUpAction = async <TResult extends MutationOutcome>(
  */
 export const alertSignInSuccess = (): void => {};
 
-export const alertSignOutAction = async <TResult extends MutationOutcome>(
+export const alertSignOutAction = async <TResult extends MutationResult>(
   request: Promise<TResult>,
-): Promise<TResult> => alertAuthAction('signOut', request);
+): Promise<TResult> => alertScopedAction('auth', 'signOut', request);

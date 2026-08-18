@@ -4,10 +4,11 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { NameWorkspaceDialog } from 'modules/workspace/components/workspace-administration/NameWorkspaceDialog';
+import { Conditional } from 'shared/components/Conditional';
 import {
   useCurrentWorkspaceContext,
   useHasWorkspacePermission,
-} from 'shared/hooks/useWorkspacePermissions';
+} from 'shared/hooks/queries/useWorkspacePermissions';
 import { PencilIcon } from 'shared/icons';
 
 import type { ReactElement } from 'react';
@@ -25,6 +26,10 @@ export const NameWorkspaceAction = (): ReactElement | null => {
     WorkspacePermissionId.WORKSPACE_RENAME,
   );
 
+  const onPress = (): void => setIsOpen(true);
+
+  const onClose = (): void => setIsOpen(false);
+
   if (!canRenameWorkspace || !workspaceContext) {
     return null;
   }
@@ -36,19 +41,16 @@ export const NameWorkspaceAction = (): ReactElement | null => {
       <Button
         variant="secondary"
         className="w-full sm:w-auto"
-        onPress={() => setIsOpen(true)}
+        onPress={onPress}
       >
         <PencilIcon />
         {currentName === null
           ? t('nameWorkspace.trigger')
           : t('nameWorkspace.triggerRename')}
       </Button>
-      {isOpen ? (
-        <NameWorkspaceDialog
-          currentName={currentName}
-          onClose={() => setIsOpen(false)}
-        />
-      ) : null}
+      <Conditional when={isOpen}>
+        <NameWorkspaceDialog currentName={currentName} onClose={onClose} />
+      </Conditional>
     </>
   );
 };

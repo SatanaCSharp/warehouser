@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { AccessWorkspace } from 'modules/access/components/access-workspace/AccessWorkspace';
 import { PermissionGate } from 'shared/components/PermissionGate';
-import { useCurrentPermissions } from 'shared/hooks/usePermissions';
+import { useCurrentPermissions } from 'shared/hooks/queries/usePermissions';
 
 import type { ReactElement } from 'react';
 

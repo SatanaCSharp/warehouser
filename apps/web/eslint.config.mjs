@@ -17,7 +17,7 @@ export default [
     ignores: [
       'src/guards/landing.guard.ts',
       'src/shared/components/RetainedContextMessage.tsx',
-      'src/modules/warehouse/hooks/useRecordWarehouseEntry.ts',
+      'src/modules/warehouse/hooks/effects/useRecordWarehouseEntry.ts',
       '**/*.spec.ts',
       '**/*.spec.tsx',
       'src/test/**',

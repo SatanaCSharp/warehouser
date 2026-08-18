@@ -12,6 +12,8 @@ import { EmailAddress } from 'shared/domain/security/email-address';
 import { isSupportedEmail } from 'shared/domain/security/is-supported-email';
 import { withOperationTiming } from 'shared/logger/with-operation-timing';
 import {
+  emailAlreadyRegisteredError,
+  invalidInputError,
   managerRoleProtectedError,
   permissionExceededError,
   selfActionDeniedError,
@@ -43,20 +45,6 @@ export interface ChangeMemberEmailRuntime {
 // factories (`users` never imports `access/*`/`auth/*`).
 const targetUnavailableError = (): ApplicationError =>
   new ApplicationError(ErrorCode.ACCESS_TARGET_UNAVAILABLE);
-
-// AC-02/AC-05 reuse `auth`'s registration-time credential rules and stable
-// error codes verbatim (spec.md §5 note; ADR-0001) — constructed directly
-// here rather than importing `auth/domain/errors/*`, which is `auth`-owned.
-const invalidInputError = (
-  fields?: Readonly<Record<string, string>>,
-): ApplicationError =>
-  new ApplicationError(
-    ErrorCode.AUTH_INVALID_INPUT,
-    fields ? { fields } : undefined,
-  );
-
-const emailAlreadyRegisteredError = (): ApplicationError =>
-  new ApplicationError(ErrorCode.AUTH_EMAIL_ALREADY_REGISTERED);
 
 const defaultRuntime: ChangeMemberEmailRuntime = {
   now: () => new Date(),

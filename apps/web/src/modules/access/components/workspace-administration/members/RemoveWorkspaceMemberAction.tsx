@@ -4,8 +4,9 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { RemoveWorkspaceMemberDialog } from 'modules/access/components/workspace-administration/members/RemoveWorkspaceMemberDialog';
-import { useReturnFocusOnClose } from 'shared/hooks/useReturnFocusOnClose';
-import { useHasWorkspacePermission } from 'shared/hooks/useWorkspacePermissions';
+import { Conditional } from 'shared/components/Conditional';
+import { useReturnFocusOnClose } from 'shared/hooks/effects/useReturnFocusOnClose';
+import { useHasWorkspacePermission } from 'shared/hooks/queries/useWorkspacePermissions';
 
 import type { WorkspaceMember } from '@warehouser/contracts/workspaces';
 import type { ReactElement } from 'react';
@@ -31,6 +32,10 @@ export const RemoveWorkspaceMemberAction = ({
   // (design-handoff.md §Accessibility).
   const triggerRef = useReturnFocusOnClose(isOpen);
 
+  const onPress = (): void => setIsOpen(true);
+
+  const onClose = (): void => setIsOpen(false);
+
   if (!canRemoveWorkspaceMember) {
     return null;
   }
@@ -41,16 +46,13 @@ export const RemoveWorkspaceMemberAction = ({
         ref={triggerRef}
         size="sm"
         variant="danger-soft"
-        onPress={() => setIsOpen(true)}
+        onPress={onPress}
       >
         {t('workspaceMembers.remove.trigger')}
       </Button>
-      {isOpen ? (
-        <RemoveWorkspaceMemberDialog
-          member={member}
-          onClose={() => setIsOpen(false)}
-        />
-      ) : null}
+      <Conditional when={isOpen}>
+        <RemoveWorkspaceMemberDialog member={member} onClose={onClose} />
+      </Conditional>
     </>
   );
 };

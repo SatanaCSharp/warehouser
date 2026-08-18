@@ -12,3 +12,14 @@ export type MutationOutcome = {
   code?: string;
   fieldErrors?: Record<string, string>;
 };
+
+/** What an RTK Query mutation trigger resolves to, before it is normalized. */
+export type MutationResult = { data: unknown } | { error: unknown };
+
+/**
+ * Maps a server error code to the form fields that code invalidates. Build one
+ * from a code→fields table with `fieldErrorMapFrom` (`shared/utils`).
+ */
+export type FieldErrorMap = (
+  code: string,
+) => Record<string, string> | undefined;

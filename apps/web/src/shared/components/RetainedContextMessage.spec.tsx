@@ -14,7 +14,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { workspaceContextApi } from 'shared/api/workspace/workspace-context-api';
 import { RetainedContextMessage } from 'shared/components/RetainedContextMessage';
 import { ROUTES } from 'shared/constants/routes';
-import { useCurrentWorkspaceContext } from 'shared/hooks/useWorkspacePermissions';
+import { useCurrentWorkspaceContext } from 'shared/hooks/queries/useWorkspacePermissions';
 import { makeStore } from 'store';
 
 import type { WorkspaceContext } from '@warehouser/contracts/workspaces';

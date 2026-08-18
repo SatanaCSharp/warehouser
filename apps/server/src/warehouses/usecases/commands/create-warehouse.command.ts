@@ -1,54 +1,19 @@
 import { randomUUID } from 'node:crypto';
 
 import { Injectable, Optional } from '@nestjs/common';
-import { ErrorCode } from '@warehouser/shared-types/enums';
-import {
-  ApplicationError,
-  AssertionError,
-} from '@warehouser/shared-types/errors';
 import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
 import { AccessName } from 'shared/domain/value-objects/access-name';
+import { validatedName } from 'shared/errors/invalid-name.error';
 import { withUnavailableOutcome } from 'shared/errors/unavailable-outcome';
 import { workspaceWarehouseCreationUnavailableError } from 'warehouses/domain/errors/warehouse.errors';
 
-// `AccessName` enforces the Warehouse name rules (trim, grapheme count,
-// control/format detection — the same rule set `WorkspaceName` wraps for
-// Workspaces, since a Warehouse name has no unset state). This map only
-// names *which* broken rule an `AssertionError` corresponds to, so AC-08 can
-// tell the member which one failed, mirroring
-// `rename-workspace.command.ts`'s `NAME_RULE_BY_ASSERTION_MESSAGE`.
-const NAME_RULE_BY_ASSERTION_MESSAGE: Record<string, string> = {
-  'Name must not be empty': 'empty',
-  'Name must contain at most 100 user-perceived characters': 'grapheme_length',
-  'Name must not contain control or format characters':
-    'control_or_format_character',
-};
-
-// Named error factory (server-error-handling.md §3): every Warehouse-name
-// rejection carries `field: 'name'` and the specific rule that was broken
-// (AC-08).
-export const warehouseInvalidNameError = (rule: string): ApplicationError =>
-  new ApplicationError(ErrorCode.WORKSPACE_INVALID_INPUT, {
-    field: 'name',
-    rule,
-  });
-
 // Trims, validates and returns a storable Warehouse name via the shared
-// `AccessName` value object. Preserves submitted Unicode without
+// `AccessName` value object (AC-08). Preserves submitted Unicode without
 // normalization (AC-09) — only whitespace trimming is applied.
-export const validateWarehouseName = (input: string): string => {
-  try {
-    return AccessName.create(input).value;
-  } catch (error) {
-    if (error instanceof AssertionError) {
-      const rule = NAME_RULE_BY_ASSERTION_MESSAGE[error.message] ?? 'invalid';
-      throw warehouseInvalidNameError(rule);
-    }
-    throw error;
-  }
-};
+export const validateWarehouseName = (input: string): string =>
+  validatedName(() => AccessName.create(input).value);
 
 // Narrow structural type for `access`'s `ProvisionInitialAccessCommand`
 // (T12): only the `execute` method this command calls. Kept structural

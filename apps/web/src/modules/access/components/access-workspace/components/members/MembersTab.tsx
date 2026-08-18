@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { CreateMemberAction } from 'modules/access/components/access-workspace/components/members/CreateMemberAction';
 import { MemberDirectory } from 'modules/access/components/access-workspace/components/members/MemberDirectory';
 import { MembersDatasetCard } from 'modules/access/components/access-workspace/components/members/MembersDatasetCard';
-import { useAccessCapabilities } from 'modules/access/hooks/useAccessCapabilities';
-import { useAccessMembers } from 'modules/access/hooks/useAccessMembers';
+import { useAccessCapabilities } from 'modules/access/hooks/projections/useAccessCapabilities';
+import { useAccessMembers } from 'modules/access/hooks/queries/useAccessMembers';
 
 import type { ReactElement } from 'react';
 

@@ -68,6 +68,10 @@ export const CreateRoleAction = (): ReactElement | null => {
   const saveRole = useSaveRole();
   const [isOpen, setIsOpen] = useState(false);
 
+  const onPress = (): void => setIsOpen(true);
+
+  const onClose = (): void => setIsOpen(false);
+
   if (!canCreateRoles) {
     return null;
   }
@@ -76,15 +80,15 @@ export const CreateRoleAction = (): ReactElement | null => {
     <>
       <CreateActionButton
         label={t('administration.createRole')}
-        onPress={() => setIsOpen(true)}
+        onPress={onPress}
       />
-      {isOpen ? (
+      <Conditional when={isOpen}>
         <CreateRoleDialog
           permissions={permissions.items}
-          onClose={() => setIsOpen(false)}
+          onClose={onClose}
           onSave={/* … */}
         />
-      ) : null}
+      </Conditional>
     </>
   );
 };
@@ -208,15 +212,67 @@ const actions = compact<RowAction>([
 ]);
 ```
 
-**Never nest ternaries in JSX beyond one level.** A ladder of `a ? x : b ? y : c ? z : w` is a set of
-early returns wearing a disguise — extract the ladder into a small component or helper that returns
-early instead. A single `condition ? <Thing /> : null` inline is fine.
+**Never branch between elements with a ternary.** A ladder of `a ? x : b ? y : c ? z : w` is a set
+of early returns wearing a disguise — extract it into a small component or helper that returns early
+instead. A single `condition ? <Thing /> : null` is a `Conditional`:
+[Writing web conditional components](writing-web-conditional-components.md) states that rule in
+full, including what to do when the branch's props only exist under the condition. A ternary that
+picks a _value_ — `className={isSelected ? 'a' : 'b'}`, `{isSubmitting ? t('saving') : t('save')}` —
+is not a branch between elements and stays as it is.
 
 Prefer rendering nothing over accepting a visibility flag. A component that gates itself
 (`if (!canCreateRoles) return null`) removes a branch from its parent and keeps the rule next to the
 control it protects.
 
-## 7. Own transient UI state where it is triggered
+## 7. Declare every event handler before the return
+
+An event handler is named, typed and declared in the component body, above the `return`. The JSX
+passes the reference and nothing else. No arrow function is written inside a JSX attribute — not for
+`onPress`, `onClick`, `onSelect`, `onChange`, `onSubmit`, `onAction`, `onClose`, or any other
+handler prop.
+
+```tsx
+// Avoid — the behaviour is buried in the markup, and the reader has to
+// re-derive what the handler does at every site that passes one.
+<Button size="sm" variant="outline" onPress={() => setSelectedMemberId(member.userId)}>
+
+// Prefer — the behaviour is declared once, named, and the markup reads as markup.
+const onPress = (memberId: string) => (): void => setSelectedMemberId(memberId);
+
+<Button size="sm" variant="outline" onPress={onPress(member.userId)}>
+```
+
+Three rules make this mechanical:
+
+- **Name the handler after the prop it is passed to** — `onPress`, `onClose`, `onSelect`. When one
+  component has two handlers for the same event, qualify each with what it acts on:
+  `onPressArchive`, `onPressRestore`.
+- **Curry when the handler needs a per-item argument.** A handler that a list row supplies a value
+  to is declared as `(id: string) => (): void => …` and passed as `onPress(row.id)`. The outer call
+  binds the row; the inner function is the handler.
+- **Declare before every return, not just the last one.** A component that gates itself with an
+  early `return null` still declares its handlers above that guard, so there is one place to look.
+
+Give each handler an explicit return type, as every other declaration in `apps/web` does. A handler
+that must discard a promise the DOM will not await says so:
+
+```tsx
+// `handleSubmit` returns a promise the DOM handler must not; discarding it
+// here keeps the rejection with React Hook Form, which already owns it.
+const onSubmitForm = (event: FormEvent<HTMLFormElement>): void =>
+  void handleSubmit(onSubmit)(event);
+```
+
+An arrow component with an implicit return (`(props) => (<div />)`) has no body to declare into.
+Give it a block body and a `return` the moment it needs a handler; do not inline one to avoid the
+conversion.
+
+Two things this rule does not ask for. It is not `useCallback`: memoize only when a profile or a
+memoized child makes it matter, and let the plain declaration be the default. And it does not
+override §5 — a handler that only forwards to a prop the parent already owns (`onSelect={onSelect}`)
+is passed directly, because there is nothing left to name.
+
+## 8. Own transient UI state where it is triggered
 
 Keep dialog, selection, and search state in the component that opens or owns the control, and no
 higher. A search term nothing outside a list reads belongs inside that list, not in its parent's
@@ -237,7 +293,7 @@ type MemberDialog = {
 Render the open one inline with flat guards, one per line. Because a dialog is mounted only while
 open, it seeds itself from the member it was opened for and needs no reset effect.
 
-## 8. Prefer the simplest thing that works
+## 9. Prefer the simplest thing that works
 
 - **No indirection for a handful of cases.** A registry of slot descriptors to render three tabs
   costs more to follow than three JSX elements. Add the abstraction when the list is open-ended or
@@ -254,7 +310,7 @@ open, it seeds itself from the member it was opened for and needs no reset effec
 - **Delete dead branches.** A prop, mode, or view no caller uses is not flexibility; it is a
   permanently untested path. Remove it.
 
-## 9. Verify before completing
+## 10. Verify before completing
 
 Check the component you wrote against this list:
 
@@ -262,7 +318,9 @@ Check the component you wrote against this list:
 - no value drilled more than two hops;
 - no data or capability read that could be read one level lower;
 - each dependency is the narrowest one that does the job;
-- no nested ternary ladder and no `if` chain that is really a lookup;
+- no ternary choosing between elements, and no `if` chain that is really a lookup;
+- every branch gated by `Conditional`, or resolved to a named element above the return;
+- every event handler declared and named above the return, and the JSX passes the reference;
 - transient UI state lives with the control that owns it;
 - tests colocated with the component, querying by role, label, and name.
 

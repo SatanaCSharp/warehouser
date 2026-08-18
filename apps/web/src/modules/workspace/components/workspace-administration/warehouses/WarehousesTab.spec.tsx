@@ -232,8 +232,10 @@ describe('WarehousesTab', () => {
       // reaches Old Depot, so it carries no count at all
       // (`test/workspace-fixtures.ts`).
       expect(textOf('Central DC')).toContain('2 people with access');
-      expect(textOf('North Hub')).toContain('1 people with access');
-      expect(textOf('Old Depot')).not.toContain('people with access');
+      // Singular where the count is one — the key carries plural forms, so a
+      // sole member is a "person", not "1 people".
+      expect(textOf('North Hub')).toContain('1 person with access');
+      expect(textOf('Old Depot')).not.toContain('with access');
     });
 
     /**

@@ -8,7 +8,7 @@ import {
 } from 'modules/access/api/workspace-roles-api';
 import { CreateWorkspaceRoleAction } from 'modules/access/components/workspace-administration/roles/CreateWorkspaceRoleAction';
 import { WorkspaceRoleDirectory } from 'modules/access/components/workspace-administration/roles/WorkspaceRoleDirectory';
-import { useHasWorkspacePermission } from 'shared/hooks/useWorkspacePermissions';
+import { useHasWorkspacePermission } from 'shared/hooks/queries/useWorkspacePermissions';
 
 import type { ReactElement } from 'react';
 

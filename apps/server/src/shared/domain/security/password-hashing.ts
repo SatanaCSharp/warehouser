@@ -14,7 +14,7 @@ export interface ScryptParameters {
   readonly maxMemory: number;
 }
 
-export const productionScryptParameters: ScryptParameters = {
+const productionScryptParameters: ScryptParameters = {
   cost: 131_072,
   blockSize: 8,
   parallelization: 1,

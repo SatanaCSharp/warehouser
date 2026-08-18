@@ -1,11 +1,11 @@
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import { useCreateWarehouse } from 'modules/workspace/hooks/useCreateWarehouse';
+import { useCreateWarehouse } from 'modules/workspace/hooks/mutations/useCreateWarehouse';
 import { warehouseNameFormSchema } from 'modules/workspace/schemas/warehouse-name-form.schema';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormTextField } from 'shared/components/FormTextField';
-import { useFormFieldErrors } from 'shared/hooks/useFormFieldErrors';
+import { useFormFieldErrors } from 'shared/hooks/forms/useFormFieldErrors';
 
 import type { WarehouseNameFormValues } from 'modules/workspace/schemas/warehouse-name-form.schema';
 import type { ReactElement } from 'react';

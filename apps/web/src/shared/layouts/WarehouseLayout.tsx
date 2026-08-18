@@ -1,6 +1,6 @@
 import { Outlet, useMatch } from '@tanstack/react-router';
 
-import { useRecordWarehouseEntry } from 'modules/warehouse/hooks/useRecordWarehouseEntry';
+import { useRecordWarehouseEntry } from 'modules/warehouse/hooks/effects/useRecordWarehouseEntry';
 import { WarehouseEntryRefusal } from 'shared/components/WarehouseEntryRefusal';
 
 import type { WarehouseEntryVerdict } from 'guards/warehouse-entry.guard';

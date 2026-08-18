@@ -1,8 +1,10 @@
+import union from 'lodash/union';
+import without from 'lodash/without';
 import { Controller } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import { PermissionCheckbox } from 'modules/access/components/access-workspace/components/roles/PermissionCheckbox';
-import { useRoleForm } from 'modules/access/hooks/useRoleForm';
+import { useRoleForm } from 'modules/access/hooks/forms/useRoleForm';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormTextField } from 'shared/components/FormTextField';
 
@@ -55,25 +57,30 @@ export const CreateRoleDialog = ({
         <Controller
           control={control}
           name="permissionIds"
-          render={({ field }) => (
-            <>
-              {permissions.map((permission) => (
-                <PermissionCheckbox
-                  key={permission.id}
-                  isDisabled={permission.kind === 'reserved'}
-                  isSelected={field.value.includes(permission.id)}
-                  permission={permission}
-                  onChange={(isSelected) =>
-                    field.onChange(
-                      isSelected
-                        ? [...field.value, permission.id]
-                        : field.value.filter((id) => id !== permission.id),
-                    )
-                  }
-                />
-              ))}
-            </>
-          )}
+          render={({ field }) => {
+            const onTogglePermission =
+              (permissionId: string) =>
+              (isSelected: boolean): void =>
+                field.onChange(
+                  isSelected
+                    ? union(field.value, [permissionId])
+                    : without(field.value, permissionId),
+                );
+
+            return (
+              <>
+                {permissions.map((permission) => (
+                  <PermissionCheckbox
+                    key={permission.id}
+                    isDisabled={permission.kind === 'reserved'}
+                    isSelected={field.value.includes(permission.id)}
+                    permission={permission}
+                    onChange={onTogglePermission(permission.id)}
+                  />
+                ))}
+              </>
+            );
+          }}
         />
       </fieldset>
     </FormModalDialog>

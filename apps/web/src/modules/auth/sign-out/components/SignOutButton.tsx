@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { alertSignOutAction } from 'modules/auth/alerts/auth-feedback';
 import { useSignOutMutation } from 'modules/auth/api/auth-api';
 import { authBecameAnonymous } from 'modules/auth/store/auth.slice';
+import { Conditional } from 'shared/components/Conditional';
 import { ROUTES } from 'shared/constants/routes';
 import { LogOutIcon } from 'shared/icons';
 import { useAppDispatch } from 'store/hooks';
@@ -29,6 +30,8 @@ export const SignOutButton = (): ReactElement => {
 
   const label = isSigningOut ? t('auth.signingOut') : t('auth.signOut');
 
+  const onPress = (): void => void handleSignOut();
+
   return (
     <Button
       variant="outline"
@@ -36,9 +39,11 @@ export const SignOutButton = (): ReactElement => {
       aria-label={label}
       isDisabled={isSigningOut}
       isPending={isSigningOut}
-      onPress={() => void handleSignOut()}
+      onPress={onPress}
     >
-      {isSigningOut ? null : <LogOutIcon />}
+      <Conditional when={!isSigningOut}>
+        <LogOutIcon />
+      </Conditional>
       <span className="hidden sm:inline">{label}</span>
     </Button>
   );

@@ -40,6 +40,40 @@ export const TransferManagerDialog = ({
   const recipient = useWatch({ control, name: 'recipient' });
   const replacement = useWatch({ control, name: 'replacement' });
   const replacementRole = roles.find((role) => role.id === replacement);
+  // Both sides of the swap are named by the address people recognize. The
+  // member projection carries `email` alongside `userId`, so showing the opaque
+  // id here only ever asked a manager to pick their successor out of a list of
+  // UUIDs.
+  const recipientMember = members.find((member) => member.userId === recipient);
+  // `email` is optional in the projection, so the id remains the fallback for
+  // the one case that has nothing better to show.
+  const nameOf = (member: AccessMember): string =>
+    member.email ?? member.userId;
+
+  const onSubmitTransfer = handleSubmit((values) =>
+    onTransfer(values.recipient, values.replacement),
+  );
+
+  // Each summary names a member the form has selected, so it is resolved here
+  // rather than gated inline: `Conditional` evaluates both arms, and neither
+  // member exists before the corresponding choice is made.
+  const recipientSummary = !recipientMember ? null : (
+    <p>
+      {t('administration.transfer.recipientSummary', {
+        email: nameOf(recipientMember),
+      })}
+    </p>
+  );
+
+  const managerSummary =
+    !currentManager || !replacementRole ? null : (
+      <p>
+        {t('administration.transfer.managerSummary', {
+          email: nameOf(currentManager),
+          role: replacementRole.name,
+        })}
+      </p>
+    );
 
   return (
     <FormModalDialog
@@ -48,9 +82,7 @@ export const TransferManagerDialog = ({
       submitLabel={t('administration.transfer.save')}
       size="lg"
       onClose={onClose}
-      onSubmit={handleSubmit((values) =>
-        onTransfer(values.recipient, values.replacement),
-      )}
+      onSubmit={onSubmitTransfer}
     >
       <Controller
         control={control}
@@ -65,7 +97,7 @@ export const TransferManagerDialog = ({
             name={field.name}
             options={members
               .filter((member) => member.roleKind !== 'warehouse_manager')
-              .map((member) => ({ id: member.userId, label: member.userId }))}
+              .map((member) => ({ id: member.userId, label: nameOf(member) }))}
             value={field.value}
             onBlur={field.onBlur}
             onChange={field.onChange}
@@ -90,19 +122,8 @@ export const TransferManagerDialog = ({
           />
         )}
       />
-      {recipient ? (
-        <p>
-          {t('administration.transfer.recipientSummary', { userId: recipient })}
-        </p>
-      ) : null}
-      {currentManager && replacementRole ? (
-        <p>
-          {t('administration.transfer.managerSummary', {
-            userId: currentManager.userId,
-            role: replacementRole.name,
-          })}
-        </p>
-      ) : null}
+      {recipientSummary}
+      {managerSummary}
     </FormModalDialog>
   );
 };

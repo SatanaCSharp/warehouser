@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useSetWarehouseArchival } from 'modules/workspace/hooks/useSetWarehouseArchival';
+import { useSetWarehouseArchival } from 'modules/workspace/hooks/mutations/useSetWarehouseArchival';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 
 import type { Warehouse } from '@warehouser/contracts/workspaces';

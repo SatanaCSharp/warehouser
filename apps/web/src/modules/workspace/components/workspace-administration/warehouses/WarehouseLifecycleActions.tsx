@@ -4,8 +4,9 @@ import { useTranslation } from 'react-i18next';
 
 import { AddWarehouseAction } from 'modules/workspace/components/workspace-administration/warehouses/AddWarehouseAction';
 import { ArchiveWarehouseDialog } from 'modules/workspace/components/workspace-administration/warehouses/ArchiveWarehouseDialog';
-import { useSetWarehouseArchival } from 'modules/workspace/hooks/useSetWarehouseArchival';
-import { useReturnFocusOnClose } from 'shared/hooks/useReturnFocusOnClose';
+import { useSetWarehouseArchival } from 'modules/workspace/hooks/mutations/useSetWarehouseArchival';
+import { Conditional } from 'shared/components/Conditional';
+import { useReturnFocusOnClose } from 'shared/hooks/effects/useReturnFocusOnClose';
 import { ArchiveIcon, ArrowRightLeftIcon } from 'shared/icons';
 
 import type { Warehouse } from '@warehouser/contracts/workspaces';
@@ -38,16 +39,19 @@ export const WarehouseLifecycleActions = ({
   const archiveTriggerRef = useReturnFocusOnClose(isArchiveDialogOpen);
   const reasonId = `warehouse-archive-reason-${warehouse.id}`;
 
+  const onRestore = (): void => void setWarehouseArchival(warehouse.id, false);
+
+  const onPressArchive = (): void => setIsArchiveDialogOpen(true);
+
+  const onCloseArchiveDialog = (): void => setIsArchiveDialogOpen(false);
+
   if (!canArchiveWarehouse) {
     return null;
   }
 
   if (warehouse.archivedAt !== null) {
     return (
-      <Button
-        variant="outline"
-        onPress={() => setWarehouseArchival(warehouse.id, false)}
-      >
+      <Button variant="outline" onPress={onRestore}>
         <ArrowRightLeftIcon />
         {t('warehouses.restore.trigger')}
       </Button>
@@ -56,7 +60,7 @@ export const WarehouseLifecycleActions = ({
 
   return (
     <>
-      {isOnlyNonArchived ? (
+      <Conditional when={isOnlyNonArchived}>
         <Alert id={reasonId} role="alert" status="danger">
           <Alert.Indicator />
           <Alert.Content>
@@ -70,31 +74,31 @@ export const WarehouseLifecycleActions = ({
             </Alert.Description>
           </Alert.Content>
         </Alert>
-      ) : null}
+      </Conditional>
       <div className="flex flex-wrap gap-2">
         <Button
           ref={archiveTriggerRef}
           variant="danger-soft"
           aria-describedby={isOnlyNonArchived ? reasonId : undefined}
           isDisabled={isOnlyNonArchived}
-          onPress={() => setIsArchiveDialogOpen(true)}
+          onPress={onPressArchive}
         >
           <ArchiveIcon />
           {t('warehouses.archive.trigger')}
         </Button>
-        {isOnlyNonArchived ? (
+        <Conditional when={isOnlyNonArchived}>
           <AddWarehouseAction
             canCreateWarehouse={canCreateWarehouse}
             label={t('warehouses.lastWarehouse.addFirst')}
           />
-        ) : null}
+        </Conditional>
       </div>
-      {isArchiveDialogOpen ? (
+      <Conditional when={isArchiveDialogOpen}>
         <ArchiveWarehouseDialog
           warehouse={warehouse}
-          onClose={() => setIsArchiveDialogOpen(false)}
+          onClose={onCloseArchiveDialog}
         />
-      ) : null}
+      </Conditional>
     </>
   );
 };

@@ -4,8 +4,9 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ChangeWorkspaceRoleDialog } from 'modules/access/components/workspace-administration/members/ChangeWorkspaceRoleDialog';
-import { useReturnFocusOnClose } from 'shared/hooks/useReturnFocusOnClose';
-import { useHasWorkspacePermission } from 'shared/hooks/useWorkspacePermissions';
+import { Conditional } from 'shared/components/Conditional';
+import { useReturnFocusOnClose } from 'shared/hooks/effects/useReturnFocusOnClose';
+import { useHasWorkspacePermission } from 'shared/hooks/queries/useWorkspacePermissions';
 
 import type { WorkspaceMember } from '@warehouser/contracts/workspaces';
 import type { ReactElement } from 'react';
@@ -28,26 +29,22 @@ export const ChangeWorkspaceRoleAction = ({
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useReturnFocusOnClose(isOpen);
 
+  const onPress = (): void => setIsOpen(true);
+
+  const onClose = (): void => setIsOpen(false);
+
   if (!canAssignWorkspaceRole) {
     return null;
   }
 
   return (
     <>
-      <Button
-        ref={triggerRef}
-        size="sm"
-        variant="outline"
-        onPress={() => setIsOpen(true)}
-      >
+      <Button ref={triggerRef} size="sm" variant="outline" onPress={onPress}>
         {t('workspaceMembers.changeRole.trigger')}
       </Button>
-      {isOpen ? (
-        <ChangeWorkspaceRoleDialog
-          member={member}
-          onClose={() => setIsOpen(false)}
-        />
-      ) : null}
+      <Conditional when={isOpen}>
+        <ChangeWorkspaceRoleDialog member={member} onClose={onClose} />
+      </Conditional>
     </>
   );
 };

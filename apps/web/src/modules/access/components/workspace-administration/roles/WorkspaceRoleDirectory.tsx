@@ -3,7 +3,7 @@ import { useState } from 'react';
 
 import { WorkspaceRoleEditor } from 'modules/access/components/workspace-administration/roles/WorkspaceRoleEditor';
 import { WorkspaceRoleList } from 'modules/access/components/workspace-administration/roles/WorkspaceRoleList';
-import { useHasWorkspacePermission } from 'shared/hooks/useWorkspacePermissions';
+import { useHasWorkspacePermission } from 'shared/hooks/queries/useWorkspacePermissions';
 
 import type {
   WorkspacePermission,
@@ -38,6 +38,25 @@ export const WorkspaceRoleDirectory = ({
   const selectedRole =
     roles.find((role) => role.id === selectedRoleId) ?? roles[0];
 
+  // The editor reads the Role it was opened for, so it is resolved here rather
+  // than gated inline: `Conditional` evaluates both arms, and no Role exists
+  // until the list has one to select.
+  const roleEditor = !selectedRole ? null : (
+    // Keying by Role id remounts the editor on a selection change, so the
+    // form re-seeds from the newly selected Role without an effect that
+    // resets it — and a background refresh cannot discard edits in
+    // progress on the Role that is still selected.
+    <WorkspaceRoleEditor
+      key={selectedRole.id}
+      canUpdate={canUpdateWorkspaceRole}
+      permissions={permissions}
+      replacements={roles.filter(
+        (role) => role.kind === 'custom' && role.id !== selectedRole.id,
+      )}
+      role={selectedRole}
+    />
+  );
+
   return (
     <div className="grid items-start gap-6 lg:grid-cols-[340px_minmax(0,1fr)]">
       <WorkspaceRoleList
@@ -46,21 +65,7 @@ export const WorkspaceRoleDirectory = ({
         onSelect={setSelectedRoleId}
       />
 
-      {selectedRole ? (
-        // Keying by Role id remounts the editor on a selection change, so the
-        // form re-seeds from the newly selected Role without an effect that
-        // resets it — and a background refresh cannot discard edits in
-        // progress on the Role that is still selected.
-        <WorkspaceRoleEditor
-          key={selectedRole.id}
-          canUpdate={canUpdateWorkspaceRole}
-          permissions={permissions}
-          replacements={roles.filter(
-            (role) => role.kind === 'custom' && role.id !== selectedRole.id,
-          )}
-          role={selectedRole}
-        />
-      ) : null}
+      {roleEditor}
     </div>
   );
 };

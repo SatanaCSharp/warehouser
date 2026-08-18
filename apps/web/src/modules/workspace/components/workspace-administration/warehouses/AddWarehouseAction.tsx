@@ -2,6 +2,7 @@ import { Button } from '@heroui/react';
 import { useState } from 'react';
 
 import { AddWarehouseDialog } from 'modules/workspace/components/workspace-administration/warehouses/AddWarehouseDialog';
+import { Conditional } from 'shared/components/Conditional';
 import { PlusIcon } from 'shared/icons';
 
 import type { ReactElement } from 'react';
@@ -30,21 +31,23 @@ export const AddWarehouseAction = ({
 }: AddWarehouseActionProps): ReactElement | null => {
   const [isOpen, setIsOpen] = useState(false);
 
+  const onPress = (): void => setIsOpen(true);
+
+  const onClose = (): void => setIsOpen(false);
+
   if (!canCreateWarehouse) {
     return null;
   }
 
   return (
     <>
-      <Button
-        className={className}
-        variant="primary"
-        onPress={() => setIsOpen(true)}
-      >
+      <Button className={className} variant="primary" onPress={onPress}>
         <PlusIcon />
         {label}
       </Button>
-      {isOpen ? <AddWarehouseDialog onClose={() => setIsOpen(false)} /> : null}
+      <Conditional when={isOpen}>
+        <AddWarehouseDialog onClose={onClose} />
+      </Conditional>
     </>
   );
 };

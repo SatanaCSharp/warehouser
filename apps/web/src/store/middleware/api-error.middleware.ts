@@ -6,7 +6,7 @@ import { isApiFailure } from 'shared/api/client/api-client';
 import type { Middleware } from '@reduxjs/toolkit';
 
 // T8 / CR-AC-09 — the entry-record write (`setActiveWarehouse`, issued by
-// `modules/warehouse/hooks/useRecordWarehouseEntry`) only records where the
+// `modules/warehouse/hooks/effects/useRecordWarehouseEntry`) only records where the
 // actor has been and grants nothing, so its failure must never surface an
 // alert over an otherwise-working Warehouse view. This named allowlist is
 // the one documented exception to the single alert path

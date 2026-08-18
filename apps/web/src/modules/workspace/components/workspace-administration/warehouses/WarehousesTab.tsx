@@ -12,7 +12,7 @@ import { useListWorkspaceUsersQuery } from 'shared/api/workspace/workspace-users
 import {
   hasWorkspacePermission,
   useCurrentWorkspaceContext,
-} from 'shared/hooks/useWorkspacePermissions';
+} from 'shared/hooks/queries/useWorkspacePermissions';
 
 import type { WorkspaceUser } from '@warehouser/contracts/workspaces';
 import type { ReactElement } from 'react';
@@ -102,6 +102,31 @@ export const WarehousesTab = (): ReactElement => {
     setIsDetailActive(true);
   };
 
+  const onBack = (): void => setIsDetailActive(false);
+
+  // The pane reads the Warehouse it was opened for, so it is resolved here
+  // rather than gated inline: `Conditional` evaluates both arms, and no
+  // Warehouse is selected while the list is still loading.
+  const detailPane =
+    isLoading || !selectedWarehouse ? null : (
+      <WarehouseDetailPane
+        key={selectedWarehouse.id}
+        canArchiveWarehouse={canArchiveWarehouse}
+        canCreateWarehouse={canCreateWarehouse}
+        canRenameWarehouse={canRenameWarehouse}
+        isOnlyNonArchived={
+          selectedWarehouse.archivedAt === null && nonArchivedCount === 1
+        }
+        people={
+          canReadPeople && users
+            ? peopleForWarehouse(users, selectedWarehouse.id)
+            : undefined
+        }
+        warehouse={selectedWarehouse}
+        onBack={onBack}
+      />
+    );
+
   return (
     <div className="grid gap-6 lg:grid-cols-[340px_minmax(0,1fr)]">
       <div>
@@ -122,24 +147,7 @@ export const WarehousesTab = (): ReactElement => {
         />
       </div>
 
-      {!isLoading && selectedWarehouse ? (
-        <WarehouseDetailPane
-          key={selectedWarehouse.id}
-          canArchiveWarehouse={canArchiveWarehouse}
-          canCreateWarehouse={canCreateWarehouse}
-          canRenameWarehouse={canRenameWarehouse}
-          isOnlyNonArchived={
-            selectedWarehouse.archivedAt === null && nonArchivedCount === 1
-          }
-          people={
-            canReadPeople && users
-              ? peopleForWarehouse(users, selectedWarehouse.id)
-              : undefined
-          }
-          warehouse={selectedWarehouse}
-          onBack={() => setIsDetailActive(false)}
-        />
-      ) : null}
+      {detailPane}
     </div>
   );
 };

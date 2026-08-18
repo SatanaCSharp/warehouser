@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { CreateWorkspaceRoleDialog } from 'modules/access/components/workspace-administration/roles/CreateWorkspaceRoleDialog';
-import { useHasWorkspacePermission } from 'shared/hooks/useWorkspacePermissions';
+import { Conditional } from 'shared/components/Conditional';
+import { useHasWorkspacePermission } from 'shared/hooks/queries/useWorkspacePermissions';
 import { PlusIcon } from 'shared/icons';
 
 import type { WorkspacePermission } from '@warehouser/contracts/workspaces';
@@ -28,22 +29,26 @@ export const CreateWorkspaceRoleAction = ({
   );
   const [isOpen, setIsOpen] = useState(false);
 
+  const onPress = (): void => setIsOpen(true);
+
+  const onClose = (): void => setIsOpen(false);
+
   if (!canCreateWorkspaceRole) {
     return null;
   }
 
   return (
     <>
-      <Button variant="primary" onPress={() => setIsOpen(true)}>
+      <Button variant="primary" onPress={onPress}>
         <PlusIcon />
         {t('workspaceRoles.create.trigger')}
       </Button>
-      {isOpen ? (
+      <Conditional when={isOpen}>
         <CreateWorkspaceRoleDialog
           permissions={permissions}
-          onClose={() => setIsOpen(false)}
+          onClose={onClose}
         />
-      ) : null}
+      </Conditional>
     </>
   );
 };

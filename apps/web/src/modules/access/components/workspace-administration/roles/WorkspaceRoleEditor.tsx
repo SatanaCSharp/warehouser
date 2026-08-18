@@ -4,10 +4,11 @@ import { useTranslation } from 'react-i18next';
 
 import { DeleteWorkspaceRoleAction } from 'modules/access/components/workspace-administration/roles/DeleteWorkspaceRoleAction';
 import { WorkspacePermissionFieldset } from 'modules/access/components/workspace-administration/roles/WorkspacePermissionFieldset';
-import { useSaveWorkspaceRole } from 'modules/access/hooks/useSaveWorkspaceRole';
+import { useSaveWorkspaceRole } from 'modules/access/hooks/mutations/useSaveWorkspaceRole';
 import { workspaceRoleFormSchema } from 'modules/access/schemas/workspace-role-form.schema';
+import { Conditional } from 'shared/components/Conditional';
 import { FormTextField } from 'shared/components/FormTextField';
-import { useFormFieldErrors } from 'shared/hooks/useFormFieldErrors';
+import { useFormFieldErrors } from 'shared/hooks/forms/useFormFieldErrors';
 
 import type {
   WorkspacePermission,
@@ -76,6 +77,8 @@ export const WorkspaceRoleEditor = ({
     }
   };
 
+  const onDiscard = (): void => reset();
+
   return (
     <form
       aria-label={t('workspaceRoles.editor.regionLabel')}
@@ -96,7 +99,7 @@ export const WorkspaceRoleEditor = ({
         </div>
       </div>
 
-      {isEditable ? (
+      <Conditional when={isEditable}>
         <FormTextField
           className="mt-5"
           isRequired
@@ -109,7 +112,7 @@ export const WorkspaceRoleEditor = ({
           description={t('workspaceRoles.editor.nameDescription')}
           {...register('name')}
         />
-      ) : null}
+      </Conditional>
 
       <div className="mt-6">
         <Controller
@@ -136,13 +139,13 @@ export const WorkspaceRoleEditor = ({
         <div>
           <DeleteWorkspaceRoleAction replacements={replacements} role={role} />
         </div>
-        {isEditable ? (
+        <Conditional when={isEditable}>
           <div className="flex gap-2">
             <Button
               isDisabled={isSubmitting}
               size="sm"
               variant="ghost"
-              onPress={() => reset()}
+              onPress={onDiscard}
             >
               {t('workspaceRoles.editor.cancel')}
             </Button>
@@ -156,7 +159,7 @@ export const WorkspaceRoleEditor = ({
               {t('workspaceRoles.editor.save')}
             </Button>
           </div>
-        ) : null}
+        </Conditional>
       </div>
     </form>
   );

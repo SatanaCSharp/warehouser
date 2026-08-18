@@ -6,7 +6,7 @@ import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormSelectField } from 'shared/components/FormSelectField';
 import { FormTextField } from 'shared/components/FormTextField';
 import { PasswordInput } from 'shared/components/PasswordInput';
-import { useFormFieldErrors } from 'shared/hooks/useFormFieldErrors';
+import { useFormFieldErrors } from 'shared/hooks/forms/useFormFieldErrors';
 
 import type { CreateMemberInput } from '@warehouser/contracts/users';
 import type { AccessRole } from 'modules/access/types/access.types';
@@ -120,7 +120,12 @@ export const CreateMemberDialog = ({
       <Controller
         control={control}
         name="roleId"
-        rules={{ required: true }}
+        // A bare `required: true` sets an error whose message is the empty
+        // string, so the dialog refused to submit while rendering nothing to
+        // explain why — and because `handleSubmit` never ran, the email and
+        // password were never validated either. The message makes the refusal
+        // visible and keeps it on the same translated path as the other fields.
+        rules={{ required: translateValidation('roleId', 'required') }}
         render={({ field }) => (
           <FormSelectField
             isRequired

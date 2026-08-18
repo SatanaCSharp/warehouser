@@ -5,7 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { MembersTab } from 'modules/access/components/access-workspace/components/members/MembersTab';
 import { PermissionsTab } from 'modules/access/components/access-workspace/components/permissions/PermissionsTab';
 import { RolesTab } from 'modules/access/components/access-workspace/components/roles/RolesTab';
-import { useAccessCapabilities } from 'modules/access/hooks/useAccessCapabilities';
+import { useAccessCapabilities } from 'modules/access/hooks/projections/useAccessCapabilities';
+import { Conditional } from 'shared/components/Conditional';
 
 import type { ReactElement, ReactNode } from 'react';
 
@@ -46,7 +47,7 @@ export const AccessWorkspace = (): ReactElement => {
           <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
             {t('heading')}
           </h1>
-          {isArchived ? (
+          <Conditional when={isArchived}>
             <Chip
               color="default"
               title={t('archived.alertDescription')}
@@ -54,7 +55,7 @@ export const AccessWorkspace = (): ReactElement => {
             >
               {t('archived.chip')}
             </Chip>
-          ) : null}
+          </Conditional>
         </div>
         <p className="mt-2 text-muted">{t('description')}</p>
       </header>

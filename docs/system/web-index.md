@@ -29,8 +29,19 @@ first, then read only the entries that cover the change you are making. Paths ar
   gains a second component.
 - [Writing web components](guides/writing-web-components.md) — decides **what goes inside** a
   component file: one exported component per file, single reason to change, the two-hop prop budget,
-  flat branching over `if` chains and nested ternaries, and transient UI state owned by its trigger.
-  Use when writing or refactoring any React component.
+  flat branching over `if` chains and element ternaries, event handlers declared and named above the
+  `return`, and transient UI state owned by its trigger. Use when writing or refactoring any React
+  component.
+- [Writing web conditional components](guides/writing-web-conditional-components.md) — how a
+  condition that decides which element renders is expressed inside JSX:
+  `shared/components/Conditional` instead of a
+  `condition ? <Thing /> : null` ternary or an `&&` gate, why both of its arms are evaluated, and
+  how to resolve a branch whose props only exist under the condition. Use whenever a component
+  renders something only some of the time.
+- [Placing web hooks](guides/placing-web-hooks.md) — decides **which directory a hook file goes in**:
+  the five names every `hooks/` directory uses (`queries`, `mutations`, `forms`, `projections`,
+  `effects`), why a file that declares no hook belongs in `utils/` instead, and when a helper is
+  promoted to `shared/utils`. Use when adding a hook, splitting one, or adding a pure helper.
 - [Sharing web state with context](guides/sharing-web-state-with-context.md) — the only permitted
   React context shape: a state provider plus a dispatch provider in one file under
   `modules/<module>/context/`, consumed through named hooks. Use only after prop drilling and module

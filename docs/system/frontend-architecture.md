@@ -43,6 +43,12 @@ apps/web/src/
 │       ├── alerts/          # module-specific user feedback adapters
 │       ├── context/         # state + handlers provider pairs; create only when drilling fails
 │       ├── hooks/           # create only when the module needs them
+│       │   ├── queries/     # reads of server state
+│       │   ├── mutations/   # writes of server state
+│       │   ├── forms/       # form sessions
+│       │   ├── projections/ # derivations over state already loaded
+│       │   └── effects/     # hooks whose product is a browser side effect
+│       ├── utils/           # module-owned pure helpers; never hooks
 │       ├── schemas/         # browser-only validation
 │       ├── api/             # module-owned server calls/query adapters
 │       └── store/           # module-owned RTK state
@@ -52,32 +58,39 @@ apps/web/src/
 ├── guards/                  # plain route access functions
 ├── shared/
 │   ├── alerts/              # generic alerts reused across modules
+│   ├── api/                 # shared query client, mutation runner, cross-module endpoints
 │   ├── components/          # reused by at least two modules
 │   ├── constants/
-│   └── layouts/
+│   ├── hooks/               # same five subdirectories as a module's hooks/
+│   ├── layouts/
+│   └── utils/               # generic pure helpers owned by no single entity
 ├── store/
 │   ├── index.ts             # root reducer, store factory, production store, types
 │   ├── hooks.ts             # typed dispatch and selector hooks
 │   └── middleware/          # generic application-wide Redux middleware
-├── hooks/                   # reusable app-level non-data hooks
 ├── styles/                  # global.css: HeroUI import + CSS-variable theme overrides
 └── test/                    # provider renderer and global test setup
 ```
 
-Keep logic inside one module until another module genuinely needs it. Promote it to `shared/` or
-root `hooks/` only when reuse exists **and no single domain entity owns it** — a generic helper
+Keep logic inside one module until another module genuinely needs it. Promote it to `shared/` only
+when reuse exists **and no single domain entity owns it** — a generic helper
 several modules use is shared, but behavior belonging to one entity stays in that entity's module
 and is reached through the module's declared public surface instead of being promoted. A
 cross-module import of a declared page-level view is therefore not a reason to move that view into
 `shared/`; see [Domain-owned flat modules](adr/14-08-2026-domain-owned-flat-modules.md). Stable
-platform boundaries—root layout, route constants, store creation, and an eventual shared API
-client—may start outside a feature.
+platform boundaries—root layout, route constants, store creation, and the shared API client—may
+start outside a feature.
 
 Alerts follow the same ownership rule. Put feedback for a feature-owned action in
 `modules/<module>/alerts/`, even when it uses a shared toast library or translation namespace.
 For example, sign-up and sign-out success alerts belong to `modules/auth/alerts/`. Use
 `shared/alerts/` only for presentation behavior that applies across feature modules, such as the
 generic normalized API-failure alert. Colocate each alert adapter's test with the adapter.
+
+Hooks and pure helpers are filed by what they do, not by which screen calls them: every `hooks/`
+directory uses the five names above, and a file that declares no hook belongs in a `utils/`
+directory instead. Follow [Placing web hooks](guides/placing-web-hooks.md) for the full rule and for
+the module-versus-shared promotion test it applies.
 
 Use Lodash for collection, object, and other data-structure operations when it provides the
 operation. Import the needed function directly so the web bundle includes only what it uses, and
@@ -124,6 +137,14 @@ There is no Warehouser UI wrapper package today, so do not invent imports from o
 standardizes behavior used by multiple modules. See
 [HeroUI design principles](guides/heroui-design-principles.md) for how HeroUI's own conventions
 apply here.
+
+Conditional rendering has one form: `shared/components/Conditional`. No ternary and no `&&` chooses
+between elements in JSX; a ternary picking a value, such as a `className` or a label, is unaffected.
+See
+[Writing web conditional components](guides/writing-web-conditional-components.md), including what
+to do when the gated branch reads a value that only exists under the condition. Event handlers are
+declared and named in the component body above the `return`, and the JSX passes the reference —
+[Writing web components](guides/writing-web-components.md) §7.
 
 When a component in `components/` is the exclusive owner of other components — rendered only by it,
 by no sibling and no other module — nest the owned components one level down in a `components/`
@@ -215,6 +236,10 @@ setup in `src/test`.
 - Use a fresh RTK store and memory-history router per test.
 - Prefer accessible Testing Library queries by role, label, and name.
 - Add `data-testid` only when there is no stable semantic query; do not require it on every node.
+- `src/test/setup.ts` raises Testing Library's `asyncUtilTimeout` above its 1s default, because a
+  route-level spec's first `findBy*` awaits a lazily imported page and the suite runs beside the
+  other workspace tasks. Do not re-tighten it per assertion; Vitest's `testTimeout` still bounds a
+  genuinely stuck test.
 - Test guards through navigation behavior and feature stores as pure state behavior where useful.
 - Test submission orchestration at the page or route level; keep form tests focused on validation
   and emitted values.

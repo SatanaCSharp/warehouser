@@ -12,6 +12,7 @@ import { isSupportedPassword } from 'shared/domain/security/is-supported-passwor
 import { hashPassword } from 'shared/domain/security/password-hashing';
 import { withOperationTiming } from 'shared/logger/with-operation-timing';
 import {
+  invalidInputError,
   managerRoleProtectedError,
   permissionExceededError,
   selfActionDeniedError,
@@ -33,17 +34,6 @@ export interface ChangeMemberPasswordInput {
 // never imports `access/*`/`auth/*`).
 const targetUnavailableError = (): ApplicationError =>
   new ApplicationError(ErrorCode.ACCESS_TARGET_UNAVAILABLE);
-
-// AC-07 reuses `auth`'s registration-time password rules and stable error
-// code verbatim (spec.md §5 note; ADR-0001) — constructed directly here
-// rather than importing `auth/domain/errors/*`, which is `auth`-owned.
-const invalidInputError = (
-  fields?: Readonly<Record<string, string>>,
-): ApplicationError =>
-  new ApplicationError(
-    ErrorCode.AUTH_INVALID_INPUT,
-    fields ? { fields } : undefined,
-  );
 
 @Injectable()
 export class ChangeMemberPasswordCommand {

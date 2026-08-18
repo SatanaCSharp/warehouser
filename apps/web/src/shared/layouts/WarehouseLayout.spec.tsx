@@ -10,7 +10,7 @@ import { render, screen } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { describe, expect, it, vi } from 'vitest';
 
-import { useRecordWarehouseEntry } from 'modules/warehouse/hooks/useRecordWarehouseEntry';
+import { useRecordWarehouseEntry } from 'modules/warehouse/hooks/effects/useRecordWarehouseEntry';
 import { ROUTES } from 'shared/constants/routes';
 import { WarehouseLayout } from 'shared/layouts/WarehouseLayout';
 import { makeStore } from 'store';
@@ -28,7 +28,7 @@ const WAREHOUSE_ID = '00000000-0000-4000-8000-000000000010';
 // T8 / CR-AC-09 — the entry-record hook makes its own network calls, which
 // this file's cases have no interest in stubbing. Mocking it here keeps this
 // spec about rendering, and lets it assert precisely where the hook mounts.
-vi.mock('modules/warehouse/hooks/useRecordWarehouseEntry', () => ({
+vi.mock('modules/warehouse/hooks/effects/useRecordWarehouseEntry', () => ({
   useRecordWarehouseEntry: vi.fn(),
 }));
 
