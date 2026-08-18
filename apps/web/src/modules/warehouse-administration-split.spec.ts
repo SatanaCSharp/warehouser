@@ -37,6 +37,17 @@ const LIST_SPLIT_FILES = [
   'WarehouseSearchField.tsx',
 ] as const;
 
+/**
+ * The two files `sad.md` §5.3's second table fixes for the
+ * `WarehousePeopleList` split. The three-file shape that also extracted a
+ * `WithdrawWarehouseAccessAction` is rejected there, because it pushes
+ * `warehouse` to three hops from the list.
+ */
+const PEOPLE_SPLIT_FILES = [
+  'WarehousePeopleList.tsx',
+  'WarehousePersonRow.tsx',
+] as const;
+
 const COMPONENT_EXPORT = /^export const (?<name>[A-Z][A-Za-z0-9]*)/gmu;
 
 const pathOf = (file: string): string => posix.join(WAREHOUSES_DIRECTORY, file);
@@ -120,6 +131,64 @@ describe('the Warehouse administration component split (CR-AC-04)', () => {
         'WarehouseListSkeleton.tsx': [],
         'WarehouseRow.tsx': [],
         'WarehouseSearchField.tsx': [],
+      });
+    });
+  });
+
+  describe('the WarehousePeopleList split', () => {
+    it('realizes exactly the two files the design artifact fixes', () => {
+      expect(
+        PEOPLE_SPLIT_FILES.filter((file) => existsSync(pathOf(file))),
+      ).toStrictEqual([...PEOPLE_SPLIT_FILES]);
+    });
+
+    it('exports exactly one component per file, named after the file', () => {
+      expect(
+        Object.fromEntries(
+          PEOPLE_SPLIT_FILES.map((file) => [file, componentExportsOf(file)]),
+        ),
+      ).toStrictEqual({
+        'WarehousePeopleList.tsx': ['WarehousePeopleList'],
+        'WarehousePersonRow.tsx': ['WarehousePersonRow'],
+      });
+    });
+
+    it('leaves the list with no state and the row with a boolean open flag', () => {
+      // The point of the split (`sad.md` §5.3, §8): the row is mounted per
+      // person, so the dialog seeds itself from the person it was opened for
+      // and `WorkspaceUser | null` becomes a boolean one level down. The
+      // `useState` count drops by exactly one.
+      expect(sourceOf('WarehousePeopleList.tsx')).not.toContain('useState');
+      expect(sourceOf('WarehousePersonRow.tsx')).toContain('useState(false)');
+    });
+
+    it('keeps the withdraw affordance whole inside the row (CR-RG-03)', () => {
+      // The gate's `<>…</>` fragment emits no element, so the sr-only reason
+      // stays the Button's sibling inside the same `<li>` and the rendered DOM
+      // is unchanged. Both live in the row, with the list owning only the
+      // labelled `<ul>` and its map.
+      const list = sourceOf('WarehousePeopleList.tsx');
+      const row = sourceOf('WarehousePersonRow.tsx');
+
+      expect(list).toContain('<ul');
+      expect(list).not.toContain('<li');
+      expect(list).not.toContain('sr-only');
+      expect(list).not.toContain('WithdrawWarehouseAccessDialog');
+      expect(row).toContain('<li');
+      expect(row).toContain('aria-describedby');
+      expect(row).toContain('className="sr-only"');
+      expect(row).toContain('WAREHOUSE_MEMBERSHIPS_REVOKE');
+      expect(row).toContain('<WithdrawWarehouseAccessDialog');
+    });
+
+    it('introduces no nested ternary anywhere in the split', () => {
+      expect(
+        Object.fromEntries(
+          PEOPLE_SPLIT_FILES.map((file) => [file, nestedTernaryLines(file)]),
+        ),
+      ).toStrictEqual({
+        'WarehousePeopleList.tsx': [],
+        'WarehousePersonRow.tsx': [],
       });
     });
   });
