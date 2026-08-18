@@ -176,12 +176,20 @@ of a cross-module surface import; and `web-index.md` lists both ADRs with correc
   module that renders it, so `public/locales/{en,uk}/warehouse.json` stays a `warehouse` namespace.
 
 **And** `adding-a-web-module.md` carries the scope carve-out in §1 **and retains no statement
-contradicting CH-D2**. Three locations require reconciliation, not one: §1's "a capability exercised
-at several scopes lives in one module … never in a second module"; §1's closing pointer routing the
-reader to ADR 14-08 as the governing decision; and §"Common failures", whose first bullet currently
-reads _"Placing an entity's code in the module of the entity that contains it — Warehouse
-administration under `modules/workspace/` because a Workspace contains Warehouses"_ — i.e. it names
-this request's outcome as a failure.
+contradicting CH-D2**. Four locations require reconciliation, not one: §1's "a capability exercised
+at several scopes lives in one module … never in a second module"; §1's flatness paragraph, "a
+second domain entity never acquires a home inside another module's tree", which read alongside ADR
+14-08's worked example names this request's target directory — it gains
+[`sad.md` §4.2](./sad.md#42-the-flatness-test-becomes-is-it-a-home-not-does-its-name-mention-another-entity)'s
+home-vs-grouping test (module identity — a name in the module list, a surface entry, its own
+`route.tsx`/`page.tsx` — is what makes a directory a home; a directory with none of those is a
+component grouping); §1's closing pointer routing the reader to ADR 14-08 as the governing decision;
+and §"Common failures", whose first bullet currently reads _"Placing an entity's code in the module
+of the entity that contains it — Warehouse administration under `modules/workspace/` because a
+Workspace contains Warehouses"_ — i.e. it names this request's outcome as a failure.
+
+> Amended after `/design` per `sad.md` §11 O1. The third statement was absent from the original
+> enumeration, so a conforming implementation could have left a live guide contradicting CH-D2.
 
 ### CR-AC-04 (CR-US-03, CH-W5) — the splits
 
@@ -313,16 +321,22 @@ criterion.
 **When** their trees are compared to `baseline_revision`
 **Then** each neighbour's permitted diff is exactly this and nothing more:
 
-| Tree                                | Permitted diff at `HEAD`                                                                                                                                                     |
-| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `modules/access`                    | `shared/api` import specifiers in its 33 importing files. `components/workspace-administration/*` is **unmoved** and otherwise unedited — no file added, removed or renamed. |
-| `modules/home`                      | **None.** It imports no `shared/api` module, so its tree is byte-identical.                                                                                                  |
-| `modules/auth`                      | The CR-AC-06 spec filename, plus `shared/api` import specifiers in its 2 importing files.                                                                                    |
-| `apps/server`, `packages/contracts` | **None.** Unchanged.                                                                                                                                                         |
+| Tree                                | Permitted diff at `HEAD`                                                                                                                                                                                                                                                                        |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `modules/access`                    | `shared/api` import specifiers in its 33 importing files, **plus the single comment hunk at `hooks/workspace-role-name-validation.spec.ts:17-18`** re-pointing a moved path. `components/workspace-administration/*` is **unmoved** and otherwise unedited — no file added, removed or renamed. |
+| `modules/home`                      | **None.** It imports no `shared/api` module, so its tree is byte-identical.                                                                                                                                                                                                                     |
+| `modules/auth`                      | The CR-AC-06 spec filename, plus `shared/api` import specifiers in its 2 importing files.                                                                                                                                                                                                       |
+| `apps/server`, `packages/contracts` | **None.** Unchanged.                                                                                                                                                                                                                                                                            |
 
 "Unmoved" is not "unedited": CH-W6 is path-only churn and reaches `modules/access` legitimately.
-Any hunk in these trees that is not an import specifier — or, for `modules/auth`, the rename — is a
-CR-RG-07 failure.
+Any hunk in these trees that is not an import specifier — or, for `modules/access`, the one comment
+hunk named above; or, for `modules/auth`, the rename — is a CR-RG-07 failure.
+
+> Amended after `/design` per `sad.md` §11 O2. `workspace-role-name-validation.spec.ts:17-18` names
+> `modules/warehouse/hooks/warehouse-name-validation.spec.ts` as where its Warehouse half lives; the
+> move makes that path dangling. The original table forbade the fix that CR-AC-02's "no stale
+> reference survives" requires. The carve-out is exactly one comment hunk — nothing executable in
+> `modules/access` may change.
 
 ## 6. Non-functional requirements
 
@@ -382,7 +396,7 @@ into the sections named. One question with `due: /design` was absent from this l
       "organize by consumer" rejection directly. The access tabs stay put **unconditionally** (§3).
       Written into §1, §3 and CR-AC-03. — resolved by: Product Owner
 - [x] **Does the `warehouse` i18n namespace stay?** Yes, unchanged. `public/locales/{en,uk}/
-  warehouse.json` keeps its name; CH-D2 states that a namespace names the domain its copy
+warehouse.json` keeps its name; CH-D2 states that a namespace names the domain its copy
       describes, not the module that renders it. Confirmed against the tree: `workspace.json`
       already defines `tabs.warehouses`, so folding would collide, and `WarehouseList.tsx:49-53`
       deliberately reads both namespaces. Written into CR-AC-03. — resolved by: Tech Lead
