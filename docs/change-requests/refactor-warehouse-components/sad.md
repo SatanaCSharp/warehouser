@@ -382,12 +382,17 @@ set of them — the boundary CH-D2 draws — and because its single outside cons
 `shared/layouts/WarehouseLayout.tsx`, is the composition layer rather than a view, route or handler
 of another entity's module, so the tiebreak's second condition fails and it does not fire on the
 hook either. (`store/middleware/api-error.middleware.ts` names the hook in a comment and imports
-nothing from it.) It imports `shared/api/workspace-context-api`
+nothing from it.) It imports `shared/api/workspace/workspace-context-api`
 and `shared/hooks/useEnteredWarehouse`, never the moving set.
 
 `spec.md` §3 corrects `change.md` §4.1's defence of this residual: future in-Warehouse entities
 become flat top-level sibling modules, not growth inside `modules/warehouse`. This design records
-that the residual is justified by its two current consumers, not by a promised future.
+that the residual is justified by its current consumer, not by a promised future:
+`useRecordWarehouseEntry` has exactly one production importer outside the module,
+`shared/layouts/WarehouseLayout.tsx`, and that importer is the **composition layer** rather than
+another entity's module — so the tiebreak's second condition never fires and the default keeps the
+hook where it is. (`store/middleware/api-error.middleware.ts` names the hook in a comment and
+imports nothing from it; the spec reference is test-only, which the ADR's scan excludes.)
 
 ### 5.3 The CH-W5 component split — fixes CR-AC-04's file set
 
@@ -436,6 +441,20 @@ the gate's `<>…</>` fragment produces no element, so the `<span class="sr-only
 Hop budget counted from `WarehousePeopleList`: `warehouse` travels list → row (1) → dialog (2). A
 three-file shape that also extracted a `WithdrawWarehouseAccessAction` would push it to three hops
 and is rejected for that reason.
+
+**This is a second counting root, and the chain it sits in is four hops deep.** `spec.md` CR-AC-04
+settles one root — `WarehouseList`, which holds at two (`WarehouseList` → `WarehouseRow`) with no
+leaf gaining a hook, context or store read. The people-list chain is longer and was already long at
+`baseline_revision`: `WarehousesTab` → `WarehouseDetailPane` → `WarehousePeopleList` → dialog was
+three hops before this request, and re-parenting the dialog onto `WarehousePersonRow` makes it four.
+[`writing-web-components.md`](../../system/guides/writing-web-components.md) allows parent → child →
+child, so the chain exceeded the guide before the split and exceeds it by one more after.
+
+Recorded as an **accepted, out-of-scope consequence**, not as a satisfied budget. The split is still
+the right shape — `writing-web-components.md` requires the state to be owned by the control that
+triggers it, which is what moved `target` off the list — and shortening the chain means restructuring
+`WarehousesTab`'s detail pane, which is behavior-adjacent work no criterion in this request covers.
+A request that flattens the detail-pane chain is the place to fix it.
 
 `selectCurrentUser` call-site count is unchanged at three — `MemberDirectory.tsx` in
 `modules/access`, and `GiveWarehouseAccessDialog.tsx` + `WarehousePersonRow.tsx` in
@@ -496,7 +515,7 @@ shared/api/
 ```
 
 `warehouse-path.ts` keeps a one-file directory deliberately. Its consumers are
-`modules/access/api/access-api.ts`, `shared/api/access-permissions-api.ts`,
+`modules/access/api/access-api.ts`, `shared/api/access/access-permissions-api.ts`,
 `test/workspace-fixtures.ts` and `routes/warehouse.route.spec.tsx` — four consumers in three trees,
 none of them `modules/workspace` or `modules/warehouse`. CH-D2's sole-consumer tiebreak therefore
 never reaches it, the existing promotion rule that put it in `shared/` is untouched, and §4.5's
@@ -721,14 +740,14 @@ mobile widths the responsive cases pin.
 
 ### Risks
 
-| ID  | Risk                                                                                                                                                                                                                                                                       | Mitigation                                                                                                                                                                                                                                                                                                                      |
-| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| R1  | **The spec re-split is where a regression can hide.** 39 cases move or re-mount; an expectation quietly weakened to make an isolated mount pass would ship a real behavior change under a "nothing changed" claim. This is the largest single piece of work in the request | §4.6's subject rule decides movement mechanically; §5.4's per-`describe` table is fixed before implementation; case-count identity (39 baseline names, none lost; 42 total at `HEAD`) and per-expectation diff review are the gate; any expectation edited to pass is an abort under `change.md` §6                             |
-| R2  | **The same files are moved twice in one branch.** `modules-level-refactor` moved them out of `modules/workspace` four commits ago; a reviewer reading the branch sees churn with no behavior delta, and ADR authority is weakened either way the episode ends              | Recorded openly in `change.md` §1.2 and §7. §4.1 requires CH-D2 to answer the predecessor's objection rather than ignore it, and §4.7 lands the documentation first so no window exists in which `docs/system` contradicts the tree                                                                                             |
-| R3  | **Import rewriting is unassisted.** No tsconfig `paths`; 68 files for CH-W6 and every specifier naming the 22 moved files for step 2. A wrong specifier that still type-checks is a silent change                                                                          | Step 1 (`shared/api`) proves the rewrite on 68 files before step 2 depends on it; `build` + `test` + `lint` after every step; the boundary spec catches any specifier that crosses a module wrongly; §4.3's rename-detected diff catches any hunk that is not an import specifier                                               |
-| R4  | **`modules/warehouse` shrinks to six files, two of which are a demo.** A reviewer may reasonably read this as dissolving the module rather than relocating a slice — `change.md` §4.1 calls this the strongest argument against the request                                | §5.2 replaces `change.md` §4.1's defence (which `spec.md` §3 already corrected) with a current-consumer one: `useRecordWarehouseEntry` has two consumers outside the module, so the module is not a shell. The decision to keep it is the Product Owner's, closed at `/clarify`                                                 |
-| R5  | **CR-RG-05 and CR-RG-06 can both end "unverified" rather than "satisfied"** — one needs a baseline build, the other a container runtime                                                                                                                                    | Both criteria already state the failure mode as blocked-not-satisfied. Neither may be marked passing on a green unit suite alone; the review records the actual status                                                                                                                                                          |
-| R6  | **A future contributor over-applies CH-D2's tiebreak** and moves any single-consumer slice to its consumer's module, re-deriving the layout ADR 14-08 was written to correct                                                                                               | The tiebreak is scoped to a _sole_ consumer exercising capabilities at a _different scope_, both of which are import-graph facts. §4.2's home-vs-grouping test and CR-AC-02's zero-exception surface declaration are the mechanical backstops; the ownership judgment remains a human review step, as ADR 14-08 already records |
+| ID  | Risk                                                                                                                                                                                                                                                                       | Mitigation                                                                                                                                                                                                                                                                                                                                             |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| R1  | **The spec re-split is where a regression can hide.** 39 cases move or re-mount; an expectation quietly weakened to make an isolated mount pass would ship a real behavior change under a "nothing changed" claim. This is the largest single piece of work in the request | §4.6's subject rule decides movement mechanically; §5.4's per-`describe` table is fixed before implementation; case-count identity (39 baseline names, none lost; 42 total at `HEAD`) and per-expectation diff review are the gate; any expectation edited to pass is an abort under `change.md` §6                                                    |
+| R2  | **The same files are moved twice in one branch.** `modules-level-refactor` moved them out of `modules/workspace` four commits ago; a reviewer reading the branch sees churn with no behavior delta, and ADR authority is weakened either way the episode ends              | Recorded openly in `change.md` §1.2 and §7. §4.1 requires CH-D2 to answer the predecessor's objection rather than ignore it, and §4.7 lands the documentation first so no window exists in which `docs/system` contradicts the tree                                                                                                                    |
+| R3  | **Import rewriting is unassisted.** No tsconfig `paths`; 68 files for CH-W6 and every specifier naming the 22 moved files for step 2. A wrong specifier that still type-checks is a silent change                                                                          | Step 1 (`shared/api`) proves the rewrite on 68 files before step 2 depends on it; `build` + `test` + `lint` after every step; the boundary spec catches any specifier that crosses a module wrongly; §4.3's rename-detected diff catches any hunk that is not an import specifier                                                                      |
+| R4  | **`modules/warehouse` shrinks to six files, two of which are a demo.** A reviewer may reasonably read this as dissolving the module rather than relocating a slice — `change.md` §4.1 calls this the strongest argument against the request                                | §5.2 replaces `change.md` §4.1's defence (which `spec.md` §3 already corrected) with a current-consumer one: `useRecordWarehouseEntry`'s one outside consumer is the composition layer, not another entity's module, so the tiebreak does not fire and the module is not a shell. The decision to keep it is the Product Owner's, closed at `/clarify` |
+| R5  | **CR-RG-05 and CR-RG-06 can both end "unverified" rather than "satisfied"** — one needs a baseline build, the other a container runtime                                                                                                                                    | Both criteria already state the failure mode as blocked-not-satisfied. Neither may be marked passing on a green unit suite alone; the review records the actual status                                                                                                                                                                                 |
+| R6  | **A future contributor over-applies CH-D2's tiebreak** and moves any single-consumer slice to its consumer's module, re-deriving the layout ADR 14-08 was written to correct                                                                                               | The tiebreak is scoped to a _sole_ consumer exercising capabilities at a _different scope_, both of which are import-graph facts. §4.2's home-vs-grouping test and CR-AC-02's zero-exception surface declaration are the mechanical backstops; the ownership judgment remains a human review step, as ADR 14-08 already records                        |
 
 ### Open questions
 

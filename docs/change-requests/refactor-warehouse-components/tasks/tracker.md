@@ -34,7 +34,7 @@ not `tasks.json` tasks.
 | #   | Follow-up                                                                                                                          | Findings       | Status |
 | --- | ---------------------------------------------------------------------------------------------------------------------------------- | -------------- | ------ |
 | R1  | Rest the ADR's access-tab exemption on the condition that actually fails; delimit a slice; mirror into `placing-web-components.md` | S1, S2, Q2     | done   |
-| R2  | Correct `useRecordWarehouseEntry`'s consumer count in all four places                                                              | Q1             | done   |
+| R2  | Correct `useRecordWarehouseEntry`'s consumer count everywhere it is stated — six places, not four                                  | Q1, round2-R4  | done   |
 | R3  | Name the successor ADR beside the Superseded one in the boundary machinery                                                         | Q3             | done   |
 | R4  | Re-pin the people-count derivation and the anti-flash loading composition                                                          | S3, S4         | done   |
 | R5  | Assert the revoke gate's absent branch                                                                                             | S5             | done   |
