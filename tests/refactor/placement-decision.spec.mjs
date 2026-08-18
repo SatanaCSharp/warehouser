@@ -10,8 +10,9 @@ import { BASELINE_REVISION } from './baselines.mjs';
 //
 // What this file can decide: that the new ADR exists, reads Accepted and carries each clause the
 // criterion enumerates, that the predecessor is superseded with a resolving forward link and an
-// otherwise intact body, and that the index lists both with the status each file declares. It grows
-// with the rest of the documentation lane — T4 and T5 add the guide reconciliations.
+// otherwise intact body, that the index lists both with the status each file declares, and that no
+// system guide still teaches the pre-move arrangement. It grows with the rest of the documentation
+// lane — T5 adds the four-location reconciliation of `adding-a-web-module.md`.
 //
 // What it cannot decide, and does not pretend to: whether the ADR's prose actually narrows the
 // predecessor rather than restating it, and whether a contributor can apply the tiebreak without
@@ -109,5 +110,62 @@ test('the web index lists both ADRs with the status each file declares', () => {
     index,
     /Superseded/u,
     'the index does not mark the predecessor superseded',
+  );
+});
+
+// CR-AC-03: `placing-web-components.md` no longer uses the warehouses tab as its worked example of
+// a legal cross-module surface import. The scan covers both guides because the criterion is that a
+// contributor cannot find the stale example anywhere, not that one file was edited.
+test('no system guide still teaches the pre-move warehouses-tab arrangement', () => {
+  const guides = [
+    'docs/system/guides/placing-web-components.md',
+    'docs/system/guides/adding-a-web-module.md',
+  ];
+
+  for (const guide of guides) {
+    const source = read(guide);
+
+    assert.doesNotMatch(
+      source,
+      /modules\/warehouse\/components\/workspace-administration/u,
+      `${guide} still names the pre-move path`,
+    );
+    assert.doesNotMatch(
+      source,
+      /warehouses tab owned by/iu,
+      `${guide} still teaches the warehouses tab as a cross-module surface import`,
+    );
+  }
+});
+
+// The replacement has to be an import that still exists once the move lands, or the guide goes
+// stale again one task later. The surviving cross-module surface entries are enumerated in
+// `test/module-surface.ts`, and the administration shell's import of the access tabs is the closest
+// structural analogue of the example being retired.
+test('the placement guides replacement example survives the move', () => {
+  const guide = read('docs/system/guides/placing-web-components.md');
+
+  assert.match(guide, /WorkspaceMembersTab/u);
+  assert.match(guide, /modules\/access/u);
+});
+
+// sad.md §4.4 leans on this section to place the split siblings flat inside `warehouses/`, so the
+// reconciliation must not disturb it.
+test('the grouping-by-domain section is untouched by the reconciliation', () => {
+  const section = (source) =>
+    source.slice(source.indexOf('## Grouping owned components by domain'));
+
+  const baseline = execFileSync(
+    'git',
+    [
+      'show',
+      `${BASELINE_REVISION}:docs/system/guides/placing-web-components.md`,
+    ],
+    { encoding: 'utf8' },
+  );
+
+  assert.equal(
+    section(read('docs/system/guides/placing-web-components.md')),
+    section(baseline),
   );
 });

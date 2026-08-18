@@ -44,13 +44,20 @@ module need it, keep it at the shared ancestor level instead — the module's `c
 this rule unchanged.
 
 A module's **declared public surface** is exempt. A route owner composing another module's
-page-level view — `modules/workspace`'s administration shell rendering the warehouses tab owned by
-`modules/warehouse` — is importing declared surface, not reaching into a private tree. That import
-does not make the view shared and does not promote it to `shared/components/`: the view stays in the
-module of the entity whose invariants it enforces, per
-[Domain-owned flat modules](../adr/14-08-2026-domain-owned-flat-modules.md). Reaching into a
-component another module has _not_ declared is still a violation, and is exactly what this rule
-forbids.
+page-level view — `modules/workspace`'s administration shell rendering `WorkspaceMembersTab`,
+`WorkspaceRolesTab` and `WorkspacePermissionsTab`, all owned by `modules/access` — is importing
+declared surface, not reaching into a private tree. That import does not make the view shared and
+does not promote it to `shared/components/`: the view stays in the module the placement rule
+assigns it to. Reaching into a component another module has _not_ declared is still a violation, and
+is exactly what this rule forbids.
+
+Which module that is, is not this guide's decision — see
+[Scope-of-exercise tiebreak for sole-consumer slices](../adr/18-08-2026-scope-of-exercise-placement-tiebreak.md).
+Note that a cross-module surface import is not automatically the right arrangement: where the
+imported slice's **sole** consumer is that route owner, the tiebreak moves the slice into the
+consumer's module and the import becomes intra-module. The three access tabs above are not such a
+slice — `modules/access` owns Warehouse-scoped views of the same capabilities — which is why they
+stay where they are and remain the worked example here.
 
 ## Grouping owned components by domain
 
