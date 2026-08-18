@@ -7,7 +7,7 @@ import { useFormFieldErrors } from 'shared/hooks/useFormFieldErrors';
 import type { RoleWrite } from '@warehouser/contracts/access';
 import type { FormEvent } from 'react';
 import type { Control, FieldErrors, UseFormRegister } from 'react-hook-form';
-import type { MutationOutcome } from 'shared/api/mutation-outcome';
+import type { MutationOutcome } from 'shared/api/client/mutation-outcome';
 
 export type RoleFormValues = { name: string; permissionIds: string[] };
 

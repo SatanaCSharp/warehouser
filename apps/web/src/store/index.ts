@@ -1,7 +1,7 @@
 import { combineReducers, configureStore } from '@reduxjs/toolkit';
 
 import { authReducer } from 'modules/auth/store/auth.slice';
-import { api } from 'shared/api/api-client';
+import { api } from 'shared/api/client/api-client';
 import { apiErrorMiddleware } from 'store/middleware/api-error.middleware';
 
 const rootReducer = combineReducers({

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { accessPermissionsApi } from 'shared/api/access-permissions-api';
+import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
 import { makeStore } from 'store';
 import { accessIds, accessPath } from 'test/access-fixtures';
 

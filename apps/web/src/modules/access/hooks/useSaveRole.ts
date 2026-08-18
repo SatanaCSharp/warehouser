@@ -7,7 +7,7 @@ import {
 import { runAccessMutation } from 'modules/access/api/access-mutation';
 
 import type { RoleWrite } from '@warehouser/contracts/access';
-import type { MutationOutcome } from 'shared/api/mutation-outcome';
+import type { MutationOutcome } from 'shared/api/client/mutation-outcome';
 
 export type SaveRole = (
   input: RoleWrite,

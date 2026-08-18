@@ -8,7 +8,7 @@ import { FormSelectField } from 'shared/components/FormSelectField';
 
 import type { WorkspaceRole } from '@warehouser/contracts/workspaces';
 import type { ReactElement } from 'react';
-import type { MutationOutcome } from 'shared/api/mutation-outcome';
+import type { MutationOutcome } from 'shared/api/client/mutation-outcome';
 
 type DeleteWorkspaceRoleDialogProps = {
   replacements: WorkspaceRole[];

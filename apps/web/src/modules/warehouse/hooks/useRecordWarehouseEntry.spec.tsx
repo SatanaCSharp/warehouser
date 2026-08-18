@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { useRecordWarehouseEntry } from 'modules/warehouse/hooks/useRecordWarehouseEntry';
 import { toast } from 'shared/alerts/toast';
-import { workspaceContextApi } from 'shared/api/workspace-context-api';
+import { workspaceContextApi } from 'shared/api/workspace/workspace-context-api';
 import { makeStore } from 'store';
 import { accessIds } from 'test/access-fixtures';
 import { renderInEnteredWarehouse } from 'test/render';

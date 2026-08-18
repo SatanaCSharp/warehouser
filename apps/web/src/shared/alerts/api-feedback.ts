@@ -2,7 +2,7 @@ import i18n from 'i18n';
 import { toast } from 'shared/alerts/toast';
 import { getTranslatedApiError } from 'shared/errors/api-error';
 
-import type { ApiFailure } from 'shared/api/api-client';
+import type { ApiFailure } from 'shared/api/client/api-client';
 
 // The HeroUI queue has no `toastId` equivalent, so the adapter keeps its own
 // registry of the failure codes currently on screen. It is what stops one

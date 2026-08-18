@@ -12,8 +12,8 @@ import {
   memberSchema,
 } from '@warehouser/contracts/users';
 
-import { api } from 'shared/api/api-client';
-import { warehousePath } from 'shared/api/warehouse-path';
+import { api } from 'shared/api/client/api-client';
+import { warehousePath } from 'shared/api/warehouse/warehouse-path';
 
 import type { TagDescription } from '@reduxjs/toolkit/query';
 import type {

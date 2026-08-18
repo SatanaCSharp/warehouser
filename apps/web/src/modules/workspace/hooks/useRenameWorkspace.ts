@@ -1,10 +1,10 @@
 import { useCallback } from 'react';
 
-import { useRenameWorkspaceMutation } from 'shared/api/workspace-context-api';
-import { runWorkspaceMutation } from 'shared/api/workspace-mutation';
+import { useRenameWorkspaceMutation } from 'shared/api/workspace/workspace-context-api';
+import { runWorkspaceMutation } from 'shared/api/workspace/workspace-mutation';
 
 import type { WorkspaceRename } from '@warehouser/contracts/workspaces';
-import type { MutationOutcome } from 'shared/api/mutation-outcome';
+import type { MutationOutcome } from 'shared/api/client/mutation-outcome';
 
 export type RenameWorkspace = (
   input: WorkspaceRename,

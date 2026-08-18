@@ -9,8 +9,8 @@ import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createAppRouter } from 'router';
-import { warehousePath } from 'shared/api/warehouse-path';
-import { workspaceContextApi } from 'shared/api/workspace-context-api';
+import { warehousePath } from 'shared/api/warehouse/warehouse-path';
+import { workspaceContextApi } from 'shared/api/workspace/workspace-context-api';
 import { ROUTES } from 'shared/constants/routes';
 import { makeStore } from 'store';
 import {

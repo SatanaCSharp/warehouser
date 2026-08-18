@@ -6,7 +6,7 @@ import { ResetPasswordDialog } from 'modules/access/components/access-workspace/
 import { renderWithProviders } from 'test/render';
 
 import type { PasswordChangeInput } from '@warehouser/contracts/users';
-import type { MutationOutcome } from 'shared/api/mutation-outcome';
+import type { MutationOutcome } from 'shared/api/client/mutation-outcome';
 
 const targetMember = {
   userId: '00000000-0000-4000-8000-000000000022',

@@ -4,7 +4,7 @@ import {
 } from '@warehouser/contracts/workspaces';
 import { z } from 'zod';
 
-import { api } from 'shared/api/api-client';
+import { api } from 'shared/api/client/api-client';
 
 import type {
   WorkspaceMember,
@@ -13,7 +13,7 @@ import type {
   WorkspaceOwnerTransferResult,
   WorkspaceRoleAssignment,
 } from '@warehouser/contracts/workspaces';
-import type { ApiFailure } from 'shared/api/api-client';
+import type { ApiFailure } from 'shared/api/client/api-client';
 
 const WORKSPACE_MEMBERS_PATH = '/api/v1/workspace/members';
 const WORKSPACE_OWNER_TRANSFER_PATH = '/api/v1/workspace/owner-transfer';

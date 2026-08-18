@@ -9,7 +9,7 @@ import { FormTextField } from 'shared/components/FormTextField';
 import type { RoleWrite } from '@warehouser/contracts/access';
 import type { AccessPermission } from 'modules/access/types/access.types';
 import type { ReactElement } from 'react';
-import type { MutationOutcome } from 'shared/api/mutation-outcome';
+import type { MutationOutcome } from 'shared/api/client/mutation-outcome';
 
 type CreateRoleDialogProps = {
   permissions: AccessPermission[];

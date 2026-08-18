@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { workspaceContextApi } from 'shared/api/workspace-context-api';
+import { workspaceContextApi } from 'shared/api/workspace/workspace-context-api';
 import { makeStore } from 'store';
 
 import type { WorkspaceContext } from '@warehouser/contracts/workspaces';
@@ -127,7 +127,7 @@ describe('workspaceContextApi', () => {
   });
 
   it('exposes generated hooks for the actor context and selection', async () => {
-    const module = await import('shared/api/workspace-context-api');
+    const module = await import('shared/api/workspace/workspace-context-api');
 
     expect(module.useGetWorkspaceContextQuery).toBeTypeOf('function');
     expect(module.useSetActiveWarehouseMutation).toBeTypeOf('function');

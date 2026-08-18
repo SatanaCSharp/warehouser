@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react';
 import {
   useGetWorkspaceContextQuery,
   useSetActiveWarehouseMutation,
-} from 'shared/api/workspace-context-api';
+} from 'shared/api/workspace/workspace-context-api';
 import { useEnteredWarehouse } from 'shared/hooks/useEnteredWarehouse';
 
 // T8 / CR-AC-09 — records the entered Warehouse as the actor's stored

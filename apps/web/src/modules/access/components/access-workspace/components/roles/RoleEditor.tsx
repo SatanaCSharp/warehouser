@@ -11,7 +11,7 @@ import type {
   AccessRole,
 } from 'modules/access/types/access.types';
 import type { ReactElement } from 'react';
-import type { MutationOutcome } from 'shared/api/mutation-outcome';
+import type { MutationOutcome } from 'shared/api/client/mutation-outcome';
 
 type RoleEditorProps = {
   canDelete: boolean;

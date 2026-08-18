@@ -1,10 +1,10 @@
 import { useCallback } from 'react';
 
 import { useAssignWarehouseMembershipMutation } from 'modules/warehouse/api/warehouse-api';
-import { runWorkspaceMutation } from 'shared/api/workspace-mutation';
+import { runWorkspaceMutation } from 'shared/api/workspace/workspace-mutation';
 
 import type { WarehouseMembershipAssignment } from '@warehouser/contracts/workspaces';
-import type { MutationOutcome } from 'shared/api/mutation-outcome';
+import type { MutationOutcome } from 'shared/api/client/mutation-outcome';
 
 export type AssignWarehouseMembership = (
   warehouseId: string,

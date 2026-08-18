@@ -11,7 +11,7 @@ import { PermissionId } from '@warehouser/shared-types/enums';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { workspaceContextApi } from 'shared/api/workspace-context-api';
+import { workspaceContextApi } from 'shared/api/workspace/workspace-context-api';
 import { ROUTES } from 'shared/constants/routes';
 import {
   hasPermission,

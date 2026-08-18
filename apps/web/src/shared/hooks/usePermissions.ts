@@ -1,4 +1,4 @@
-import { useGetCurrentAccessQuery } from 'shared/api/access-permissions-api';
+import { useGetCurrentAccessQuery } from 'shared/api/access/access-permissions-api';
 import { useEnteredWarehouse } from 'shared/hooks/useEnteredWarehouse';
 
 import type { AccessProjection } from '@warehouser/contracts/access';

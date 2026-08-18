@@ -8,7 +8,7 @@ import { useListWorkspaceWarehousesQuery } from 'modules/warehouse/api/warehouse
 import { AddWarehouseAction } from 'modules/warehouse/components/workspace-administration/warehouses/AddWarehouseAction';
 import { WarehouseDetailPane } from 'modules/warehouse/components/workspace-administration/warehouses/WarehouseDetailPane';
 import { WarehouseList } from 'modules/warehouse/components/workspace-administration/warehouses/WarehouseList';
-import { useListWorkspaceUsersQuery } from 'shared/api/workspace-users-api';
+import { useListWorkspaceUsersQuery } from 'shared/api/workspace/workspace-users-api';
 import {
   hasWorkspacePermission,
   useCurrentWorkspaceContext,

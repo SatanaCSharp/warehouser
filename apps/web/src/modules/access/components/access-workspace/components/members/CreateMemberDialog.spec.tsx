@@ -8,7 +8,7 @@ import { renderWithProviders } from 'test/render';
 
 import type { RolePage } from '@warehouser/contracts/access';
 import type { CreateMemberInput } from '@warehouser/contracts/users';
-import type { MutationOutcome } from 'shared/api/mutation-outcome';
+import type { MutationOutcome } from 'shared/api/client/mutation-outcome';
 
 const pickerRoleId = '00000000-0000-4000-8000-000000000012';
 const auditorRoleId = '00000000-0000-4000-8000-000000000013';

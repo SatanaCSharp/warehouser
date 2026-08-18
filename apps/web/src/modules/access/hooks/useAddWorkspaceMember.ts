@@ -1,10 +1,10 @@
 import { useCallback } from 'react';
 
 import { useAddWorkspaceMemberMutation } from 'modules/access/api/workspace-members-api';
-import { runWorkspaceMutation } from 'shared/api/workspace-mutation';
+import { runWorkspaceMutation } from 'shared/api/workspace/workspace-mutation';
 
 import type { WorkspaceMemberAdd } from '@warehouser/contracts/workspaces';
-import type { MutationOutcome } from 'shared/api/mutation-outcome';
+import type { MutationOutcome } from 'shared/api/client/mutation-outcome';
 
 export type AddWorkspaceMember = (
   member: WorkspaceMemberAdd,

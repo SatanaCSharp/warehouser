@@ -1,6 +1,6 @@
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
 
-import { useListWorkspaceUsersQuery } from 'shared/api/workspace-users-api';
+import { useListWorkspaceUsersQuery } from 'shared/api/workspace/workspace-users-api';
 import { useHasWorkspacePermission } from 'shared/hooks/useWorkspacePermissions';
 
 import type { WorkspaceUser } from '@warehouser/contracts/workspaces';

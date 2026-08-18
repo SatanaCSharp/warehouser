@@ -1,9 +1,9 @@
 import { useCallback } from 'react';
 
 import { useDeleteWorkspaceRoleMutation } from 'modules/access/api/workspace-roles-api';
-import { runWorkspaceMutation } from 'shared/api/workspace-mutation';
+import { runWorkspaceMutation } from 'shared/api/workspace/workspace-mutation';
 
-import type { MutationOutcome } from 'shared/api/mutation-outcome';
+import type { MutationOutcome } from 'shared/api/client/mutation-outcome';
 
 export type DeleteWorkspaceRole = (
   workspaceRoleId: string,

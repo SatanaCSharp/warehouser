@@ -3,7 +3,7 @@ import { useCallback } from 'react';
 import { useDeleteAccessRoleMutation } from 'modules/access/api/access-api';
 import { runAccessMutation } from 'modules/access/api/access-mutation';
 
-import type { MutationOutcome } from 'shared/api/mutation-outcome';
+import type { MutationOutcome } from 'shared/api/client/mutation-outcome';
 
 export type DeleteRole = (
   roleId: string,

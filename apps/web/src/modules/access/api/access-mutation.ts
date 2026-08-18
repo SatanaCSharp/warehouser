@@ -1,8 +1,8 @@
 import { alertAccessAction } from 'modules/access/alerts/access-feedback';
-import { isApiFailure } from 'shared/api/api-client';
+import { isApiFailure } from 'shared/api/client/api-client';
 
 import type { AccessSuccessAction } from 'modules/access/alerts/access-feedback';
-import type { MutationOutcome } from 'shared/api/mutation-outcome';
+import type { MutationOutcome } from 'shared/api/client/mutation-outcome';
 
 type MutationResult = { data: unknown } | { error: unknown };
 

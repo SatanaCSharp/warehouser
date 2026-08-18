@@ -4,7 +4,7 @@ import {
 } from '@warehouser/contracts/workspaces';
 import { z } from 'zod';
 
-import { api } from 'shared/api/api-client';
+import { api } from 'shared/api/client/api-client';
 
 import type {
   WorkspacePermission,

@@ -5,7 +5,7 @@ import {
 import { vi } from 'vitest';
 
 import { authBecameAuthenticated } from 'modules/auth/store/auth.slice';
-import { warehousePath } from 'shared/api/warehouse-path';
+import { warehousePath } from 'shared/api/warehouse/warehouse-path';
 import { makeStore } from 'store';
 
 import type {

@@ -1,9 +1,9 @@
 import { useCallback } from 'react';
 
 import { useSetWarehouseArchivalMutation } from 'modules/warehouse/api/warehouse-api';
-import { runWorkspaceMutation } from 'shared/api/workspace-mutation';
+import { runWorkspaceMutation } from 'shared/api/workspace/workspace-mutation';
 
-import type { MutationOutcome } from 'shared/api/mutation-outcome';
+import type { MutationOutcome } from 'shared/api/client/mutation-outcome';
 
 export type SetWarehouseArchival = (
   warehouseId: string,

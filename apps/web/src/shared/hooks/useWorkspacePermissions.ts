@@ -1,6 +1,6 @@
 import { WorkspacePermissionId as WorkspacePermissionIdValue } from '@warehouser/shared-types/enums';
 
-import { useGetWorkspaceContextQuery } from 'shared/api/workspace-context-api';
+import { useGetWorkspaceContextQuery } from 'shared/api/workspace/workspace-context-api';
 
 import type { WorkspaceContext } from '@warehouser/contracts/workspaces';
 import type { WorkspacePermissionId } from '@warehouser/shared-types/enums';

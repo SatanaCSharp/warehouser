@@ -4,7 +4,7 @@ import {
   workspaceSchema,
 } from '@warehouser/contracts/workspaces';
 
-import { api } from 'shared/api/api-client';
+import { api } from 'shared/api/client/api-client';
 
 import type {
   ActiveWarehouseSelection,

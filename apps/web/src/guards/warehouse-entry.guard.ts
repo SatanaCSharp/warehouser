@@ -1,4 +1,4 @@
-import { workspaceContextApi } from 'shared/api/workspace-context-api';
+import { workspaceContextApi } from 'shared/api/workspace/workspace-context-api';
 
 import type { RouterContext } from 'routes/__root.route';
 

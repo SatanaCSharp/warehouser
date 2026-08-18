@@ -1,7 +1,7 @@
 import { isRejectedWithValue } from '@reduxjs/toolkit';
 
 import { alertApiFailure } from 'shared/alerts/api-feedback';
-import { isApiFailure } from 'shared/api/api-client';
+import { isApiFailure } from 'shared/api/client/api-client';
 
 import type { Middleware } from '@reduxjs/toolkit';
 

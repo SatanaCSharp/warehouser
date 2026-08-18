@@ -9,7 +9,7 @@ import { useFormFieldErrors } from 'shared/hooks/useFormFieldErrors';
 import type { EmailChangeInput } from '@warehouser/contracts/users';
 import type { AccessMember } from 'modules/access/types/access.types';
 import type { ReactElement } from 'react';
-import type { MutationOutcome } from 'shared/api/mutation-outcome';
+import type { MutationOutcome } from 'shared/api/client/mutation-outcome';
 
 type EditEmailDialogProps = {
   member: Pick<AccessMember, 'email' | 'userId'>;

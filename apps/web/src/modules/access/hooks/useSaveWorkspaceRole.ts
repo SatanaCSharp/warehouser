@@ -8,10 +8,10 @@ import {
   workspaceRoleFieldErrorsByCode,
   workspaceRoleNameValidationKey,
 } from 'modules/access/hooks/workspace-role-name-validation';
-import { runWorkspaceMutation } from 'shared/api/workspace-mutation';
+import { runWorkspaceMutation } from 'shared/api/workspace/workspace-mutation';
 
 import type { WorkspaceRoleWrite } from '@warehouser/contracts/workspaces';
-import type { MutationOutcome } from 'shared/api/mutation-outcome';
+import type { MutationOutcome } from 'shared/api/client/mutation-outcome';
 
 export type SaveWorkspaceRole = (
   input: WorkspaceRoleWrite,
