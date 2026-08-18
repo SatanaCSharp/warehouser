@@ -227,3 +227,88 @@ test('the guides promotion rule survives the reconciliation', () => {
     'the promotion rule spec.md §3 depends on was reworded or dropped',
   );
 });
+
+// R1 and R2 of `_review/review-2026-08-18-round-2.md`. Round 1 (S1/S2) required the tiebreak's
+// second condition to stop reading on the location of the consumer's module; the rewrite reached
+// the ADR and `placing-web-components.md` and left `adding-a-web-module.md` on the old phrasing,
+// while the ADR's replacement borrowed a phrase the canonical glossary already owns.
+//
+// `docs/features/workspaces/CONTEXT.md` uses "the subject of the operation" to decide Workspace
+// Capability versus Warehouse Capability, and applies it to exactly these operations in the
+// opposite direction: "the Warehouse record itself or a membership edge into it is a Workspace
+// Capability". A tiebreak that borrows the phrase inherits that answer and derives "do not move"
+// for the slice this request moved. The condition therefore reads on the *scope of the entity whose
+// invariants the slice enforces* — ADR 14-08's own default subject, plus a glossary fact about
+// where that entity lives — which separates the two worked examples from one consistent reading.
+//
+// These assertions pin the wording, not the judgement: whether the rule is applicable without
+// re-deciding per case stays with the named reviewer in test-plan.md § "Review gates".
+
+const PLACING_WEB_COMPONENTS = 'docs/system/guides/placing-web-components.md';
+
+// Emphasis, line wrapping and apostrophe style are not the rule; normalize them away so a re-wrap
+// or a typographic apostrophe cannot fail an assertion about what a document says.
+const normalize = (source) =>
+  source
+    .replace(/[*_`]/gu, '')
+    .replace(/[‘’]/gu, "'")
+    .replace(/\s+/gu, ' ');
+
+const decisionSection = (adr) =>
+  adr.slice(adr.indexOf('## Decision'), adr.indexOf('## Alternatives'));
+
+test('the tiebreaks second condition does not borrow the glossarys capability test', () => {
+  const decision = normalize(decisionSection(read(PLACEMENT_ADR)));
+
+  // The phrase may appear — the ADR has to name it to disclaim it — but it may never be the
+  // instruction. What is forbidden is directing the reader to decide by it.
+  assert.doesNotMatch(
+    decision,
+    /Read the subject of the operation/iu,
+    'the Decision instructs the reader to decide by the phrase the glossary already owns, which answers it the other way',
+  );
+  assert.match(
+    decision,
+    /scope of the entity whose invariants/iu,
+    'the Decision does not state the second condition on entity scope',
+  );
+  // Naming the collision is what stops it recurring: a later editor who does not know the glossary
+  // owns the phrase is exactly how it got here.
+  assert.match(
+    decision,
+    /not the glossary's Workspace-Capability test/iu,
+    'the Decision does not record why it may not borrow the glossarys capability test',
+  );
+});
+
+test('every governing document states the second condition in the same terms', () => {
+  for (const path of [PLACEMENT_ADR, ADDING_A_WEB_MODULE, PLACING_WEB_COMPONENTS]) {
+    const prose = normalize(read(path));
+
+    assert.match(
+      prose,
+      /scope of the entity whose invariants/iu,
+      `${path} does not state the second condition on entity scope`,
+    );
+    assert.doesNotMatch(
+      prose,
+      /lives in another entity's module/iu,
+      `${path} still decides the second condition by the location of the consumer`,
+    );
+  }
+});
+
+test('both worked examples derive from the stated condition', () => {
+  const decision = normalize(decisionSection(read(PLACEMENT_ADR)));
+
+  assert.match(
+    decision,
+    /Workspace-scoped/u,
+    'the exempt example does not name the owning entities scope',
+  );
+  assert.match(
+    decision,
+    /Warehouse-scoped|at the Warehouse scope/u,
+    'the moving example does not name the owning entities scope',
+  );
+});

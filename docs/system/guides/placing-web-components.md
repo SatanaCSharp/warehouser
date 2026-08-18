@@ -54,12 +54,14 @@ is exactly what this rule forbids.
 Which module that is, is not this guide's decision — see
 [Scope-of-exercise tiebreak for sole-consumer slices](../adr/18-08-2026-scope-of-exercise-placement-tiebreak.md).
 Note that a cross-module surface import is not automatically the right arrangement: where the
-imported slice's **sole** consumer is that route owner _and_ the slice's operations are performed
-at a different scope than the entity that owns them, the tiebreak moves the slice into the
-consumer's module and the import becomes intra-module. Both conditions must hold. The three access
-tabs above are a sole-consumer slice, so the first holds; the second does not, because Workspace
-Role and Workspace membership are owned by the Workspace and exercised while administering that
-same Workspace. That is why they stay where they are and remain the worked example here.
+imported slice's **sole** consumer is that route owner _and_ the slice's operations are performed at
+a different scope than the **scope of the entity whose invariants the slice enforces**, the tiebreak
+moves the slice into the consumer's module and the import becomes intra-module. Both conditions must
+hold, and the second is read on entity scope rather than on where the consumer lives. The three
+access tabs above are a sole-consumer slice, so the first holds; the second does not, because the
+invariants they enforce are a Workspace Role's and a Workspace membership's — both Workspace-scoped
+per the glossary — and they are exercised at that same Workspace scope. That is why they stay where
+they are and remain the worked example here.
 
 ## Grouping owned components by domain
 

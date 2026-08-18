@@ -49,8 +49,8 @@ layer differs in reach rather than exemption. This decision adds one tiebreak to
 otherwise applies as written.
 
 **The tiebreak.** Where a slice's **sole** consumer exercises the slice's capabilities at a
-different scope than the entity that owns them, placement follows the scope of exercise rather than
-the owning entity.
+different scope than the entity whose invariants the slice enforces, placement follows the scope of
+exercise rather than the owning entity.
 
 Both conditions are facts about the import graph, decidable by a scan rather than by judgement:
 
@@ -63,12 +63,27 @@ Both conditions are facts about the import graph, decidable by a scan rather tha
   slice stays where the default puts it. Test-only references do not count as consumers, because
   the production import graph never sees them.
 - _A different scope of exercise_ — the scope at which the slice's operations are performed differs
-  from the scope of the entity that owns them. Read the **subject of the operation**, not the
-  location of the consumer: a slice whose operations act on a Warehouse is owned at the Warehouse
-  scope, and if its sole consumer performs them while administering a Workspace, the two disagree.
-  Where the owning scope and the scope of exercise are the same — a Workspace-owned capability
-  exercised while administering that same Workspace — there is no disagreement to break, whichever
-  module the consumer happens to live in.
+  from the scope of the entity whose invariants the slice enforces. Read the **scope of the entity
+  whose invariants the slice enforces** — ADR 14-08's own subject, plus one glossary fact about
+  where that entity lives — and not the location of the consumer. The glossaries state the scope
+  outright: a Warehouse is "the operational boundary that owns warehouse Roles and warehouse
+  resources", so a slice enforcing Warehouse invariants is **Warehouse-scoped**; a Workspace Role is
+  "a named, **Workspace-scoped** aggregation" and Workspace membership is Workspace-scoped on the
+  same terms. Where the two scopes differ — a Warehouse-scoped slice whose sole consumer exercises
+  it while administering a Workspace — they disagree and the tiebreak fires. Where they agree there
+  is nothing to break, whichever module the consumer happens to live in.
+
+  **This is not the glossary's Workspace-Capability test, and may not be read as it.**
+  [`docs/features/workspaces/CONTEXT.md`](../../features/workspaces/CONTEXT.md) decides Workspace
+  Capability versus Warehouse Capability by the _subject of the operation_, and by that test
+  administering the set of Warehouses is a **Workspace** Capability — "the Warehouse record itself
+  or a membership edge into it" — which is why every gate in the moved slice is a
+  `WorkspacePermissionId`. That test classifies **authorization**, and it is correct as written.
+  This condition asks a different question: **whose invariants does this code enforce, and at what
+  scope does that entity live.** Borrowing the glossary's phrase here would inherit the glossary's
+  answer, derive the opposite placement, and put this document in conflict with the domain model it
+  serves — so the wording is deliberately kept distinct. § Context records that the domain boundary
+  does not separate these two cases; this condition is not that boundary.
 
 A slice that fails either test is placed by the default. This is deliberately narrow: it decides a
 tiebreak between two modules that already exist, and it decides it the same way every time it is
@@ -98,12 +113,20 @@ the canonical glossaries refuse it, as § Context records. In particular, the ac
 decision, not a domain one — and the honest reason is the second condition, not the first. They
 **are** a sole-consumer slice: `modules/workspace/components/WorkspaceAdministration.tsx` is their
 only importer from outside, so the first condition is met and cannot carry the exemption. What
-fails is the second: Workspace Role and Workspace membership are owned by the Workspace and
-exercised while administering that same Workspace, so the owning scope and the scope of exercise
-agree and there is nothing for the tiebreak to break. The Warehouses tab differed on exactly that
-point — its operations act on a Warehouse while being performed at the Workspace scope. If the
-access tabs ever acquire operations whose subject sits at another scope, the tiebreak applies to
-them on the same terms as anything else, and no domain argument stands in the way.
+fails is the second, and both worked examples derive from it the same way:
+
+- **The access tabs stay.** The invariants those views enforce are a Workspace Role's and a
+  Workspace membership's, and the glossary states both are **Workspace-scoped**. They are exercised
+  while administering a Workspace. Owning entity's scope and scope of exercise are both the
+  Workspace: they agree, so there is nothing for the tiebreak to break and the default places them.
+- **The Warehouses tab moved.** The invariants that slice enforces are a Warehouse's — its name, its
+  archival state and its membership edges, carried by `warehouse-name-validation`,
+  `warehouse-name-form.schema` and `warehouse-api` — and a Warehouse is **Warehouse-scoped**. They
+  are exercised while administering a Workspace. The two scopes differ, so the tiebreak fires.
+
+One reading, applied twice, two different answers. If the access tabs ever acquire views enforcing
+the invariants of an entity that lives at another scope, the tiebreak applies to them on the same
+terms as anything else, and no domain argument stands in the way.
 
 **Home versus grouping.** A directory is a module's **home** when it has module identity: a name in
 the module list, an entry in the surface declaration, and its own `route.tsx`/`page.tsx`. A

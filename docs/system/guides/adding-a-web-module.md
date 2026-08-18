@@ -16,11 +16,21 @@ appears in file and component names (`WorkspaceRolesTab`, `WarehouseRolesTab`), 
 module.
 
 **One carve-out, and it is narrow.** Where a slice's **sole** consumer exercises the slice's
-capabilities at a different scope than the entity that owns them, placement follows the scope of
-exercise instead. Both conditions are import-graph facts: enumerate the slice, count the importers
-outside it, and check whether that single importer lives in another entity's module. Two importers,
-or an importer inside the owning module, and the rule above applies unchanged. Do not reach for this
-because a slice currently has one consumer and the arrangement would read better — run the scan.
+capabilities at a different scope than the entity whose invariants the slice enforces, placement
+follows the scope of exercise instead. Enumerate the slice, count the importers outside it, then
+read the **scope of the entity whose invariants the slice enforces** — not the location of the
+consumer. The glossary states that scope for you: a Warehouse is the operational boundary, so a
+slice enforcing Warehouse invariants is Warehouse-scoped; a Workspace Role is "a named,
+Workspace-scoped aggregation", and Workspace membership is Workspace-scoped on the same terms. Two
+importers, or the two scopes agreeing, and the rule above applies unchanged.
+
+The worked pair: the Warehouses tab enforces a Warehouse's invariants (Warehouse-scoped) while being
+exercised at the Workspace scope, so it moved to `modules/workspace`; the access tabs enforce
+Workspace Role and Workspace membership invariants (Workspace-scoped) and are exercised at that same
+Workspace scope, so they stay in `modules/access` — even though both are sole-consumer slices of the
+same shell. Do not reach for this because a slice currently has one consumer and the arrangement
+would read better, and do not reach for it because the consumer sits in another module — run the
+scan, then compare the two scopes.
 
 Modules are flat. The module list is exactly the directories directly under `modules/`; only those
 have a name and a public surface. A module may organize material for _its own entity_ into
