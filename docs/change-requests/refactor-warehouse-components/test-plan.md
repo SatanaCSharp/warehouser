@@ -249,14 +249,14 @@ uncovered criterion, not a formality.
 no rate, no duration and no latency threshold to sustain, and none is invented. Its six rows are
 zero-threshold structural budgets, each already covered above:
 
-| §6 row                 | Where it is proved                                                          |
-| ---------------------- | --------------------------------------------------------------------------- |
-| Bundle: eager chunks   | CR-RG-05 — the normalized manifest diff is empty, or the row is unverified  |
-| Boundary exceptions    | CR-AC-02 — the exception list is empty at **every** step, not only the last |
-| Test expectation drift | CR-RG-01 plus the classification table — zero changed, zero deleted         |
-| Type safety            | The build gate, green at every step                                         |
-| Lint                   | The lint gate, green at every step                                          |
-| Component size         | CR-AC-04's file set, plus the hop-budget review gate                        |
+| §6 row                 | Where it is proved                                                                                                         |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Bundle: eager chunks   | CR-RG-05 — the normalized manifest diff is empty apart from the five enumerated CH-W5 components, or the row is unverified |
+| Boundary exceptions    | CR-AC-02 — the exception list is empty at **every** step, not only the last                                                |
+| Test expectation drift | CR-RG-01 plus the classification table — zero changed, zero deleted                                                        |
+| Type safety            | The build gate, green at every step                                                                                        |
+| Lint                   | The lint gate, green at every step                                                                                         |
+| Component size         | CR-AC-04's file set, plus the hop-budget review gate                                                                       |
 
 ## CI placement
 
