@@ -1,7 +1,4 @@
-import {
-  extractCaseNamesFromSource,
-  stripComments,
-} from './split-cases.mjs';
+import { extractCaseNamesFromSource, stripComments } from './split-cases.mjs';
 
 // Case extraction that keeps the enclosing `describe`, for the T1 baseline capture of the
 // `refactor-warehouse-components` change request.
@@ -74,7 +71,10 @@ export const extractGroupedCases = (rawSource) => {
  */
 export const assertGroupsAccountForEveryCase = (rawSource, groups) => {
   const declared = extractCaseNamesFromSource(stripComments(rawSource)).length;
-  const grouped = groups.reduce((total, group) => total + group.cases.length, 0);
+  const grouped = groups.reduce(
+    (total, group) => total + group.cases.length,
+    0,
+  );
 
   if (declared !== grouped) {
     throw new Error(

@@ -5,7 +5,7 @@
 
 | #   | Task                                                                                       | Layer | Owner  | Estimate | Blocked by     | Status |
 | --- | ------------------------------------------------------------------------------------------ | ----- | ------ | -------- | -------------- | ------ |
-| T1  | Capture the three `baseline_revision` comparison artifacts                                 | tests | YuriiH | M        | —              | todo   |
+| T1  | Capture the three `baseline_revision` comparison artifacts                                 | tests | YuriiH | M        | —              | done   |
 | T2  | Author CH-D2's system ADR — the narrowed placement rule                                    | docs  | YuriiH | L        | —              | todo   |
 | T3  | Supersede ADR 14-08-2026 and re-list both ADRs in `web-index.md`                           | docs  | YuriiH | S        | T2             | todo   |
 | T4  | Reconcile `placing-web-components.md` §"When not to nest"                                  | docs  | YuriiH | S        | T2             | todo   |
