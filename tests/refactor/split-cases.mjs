@@ -15,7 +15,7 @@ const CASE_TOKEN_PATTERN = /\b(?:it|test)\b/gu;
 const MODIFIER_PATTERN = /^\.(\w+)/u;
 const QUOTES = new Set(["'", '"', '`']);
 
-const stripComments = (source) =>
+export const stripComments = (source) =>
   source
     .replace(/\/\*[\s\S]*?\*\//gu, '')
     .split('\n')
@@ -86,9 +86,14 @@ const readLiteral = (source, index) => {
   return null;
 };
 
-/** Every case title declared in one spec file, in declaration order. */
-export const extractCaseNames = (filePath) => {
-  const source = stripComments(readFileSync(filePath, 'utf8'));
+/**
+ * Every case title declared in `source`, in declaration order.
+ *
+ * Takes already-stripped source text rather than a path so a caller that needs to slice a file up
+ * — the `describe`-grouped capture of `tests/refactor/grouped-cases.mjs` — can reuse the same
+ * tokenizer on a fragment instead of re-implementing it.
+ */
+export const extractCaseNamesFromSource = (source) => {
   const names = [];
 
   for (const match of source.matchAll(CASE_TOKEN_PATTERN)) {
@@ -132,6 +137,10 @@ export const extractCaseNames = (filePath) => {
 
   return names;
 };
+
+/** Every case title declared in one spec file, in declaration order. */
+export const extractCaseNames = (filePath) =>
+  extractCaseNamesFromSource(stripComments(readFileSync(filePath, 'utf8')));
 
 /** The sorted union of every case title declared across `specFiles` — the identity CR-RG-01 holds
  * constant while the four splitting specs are broken up. */
