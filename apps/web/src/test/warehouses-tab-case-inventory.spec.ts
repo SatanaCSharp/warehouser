@@ -22,9 +22,21 @@ import baseline from 'test/baselines/warehouses-tab-cases.json';
  * once and belongs to none of them; `docs/system/frontend-architecture.md`
  * §"Testing" reserves that directory for cross-cutting test support.
  *
- * Scope — T11 and T12. It pins the three files they carve out and the names
- * those files take away from the tab spec, leaving the tab at 25. The full
- * four-file, 39-case union identity gate is T13's.
+ * Scope. It pins the three files T11 and T12 carve out, the names those files
+ * take away from the tab spec, and — over all four files at once — that the
+ * union is exactly the baseline's 39 names, distributed 25 / 7 / 4 / 3, with
+ * every name declared exactly once. Every assertion reports the offending
+ * **case name**, because a bare count tells a reviewer that something was lost
+ * without telling them what.
+ *
+ * What this gate cannot decide. Case-count identity is necessary, not
+ * sufficient: CR-RG-01 also requires that every moved expectation's subject and
+ * expected value be diff-identical, which is a review gate on T11 and T12. A
+ * green run here says no case was dropped, renamed or duplicated. It says
+ * nothing about what the surviving cases assert.
+ *
+ * `test-plan.md` §"CI placement" retires this gate after ship: it has no
+ * meaning against a tree where the pre-split file no longer exists.
  */
 
 const WAREHOUSES_DIRECTORY = posix.join(
@@ -126,6 +138,54 @@ const DIALOG_FOCUS_CASES = [
   'exposes the reason the archive action is unavailable rather than only dimming it (AC-11a)',
 ];
 
+/**
+ * The 25 the split does not take, derived from the frozen baseline by removing
+ * the 14 it moves — the baseline is *compared*, never regenerated from the
+ * post-split tree (`test-plan.md` §"Test data").
+ */
+const TAB_SPEC_CASES = baseline.cases.filter(
+  (name) => !MOVED_CASES.includes(name),
+);
+
+/** Exact, not a lower bound — and it also rejects a fifth colocated spec. */
+const EXPECTED_DISTRIBUTION: Record<string, number> = {
+  'WarehousesTab.spec.tsx': 25,
+  'WarehouseList.spec.tsx': 7,
+  'WarehouseRow.spec.tsx': 4,
+  'WarehousePeopleList.spec.tsx': 3,
+};
+
+const occurrences = (names: string[]): Map<string, number> =>
+  names.reduce(
+    (counts, name) => counts.set(name, (counts.get(name) ?? 0) + 1),
+    new Map<string, number>(),
+  );
+
+/**
+ * The whole point of the gate: a dropped, renamed or duplicated case is
+ * reported *by name*. A rename shows as one `missing` and one `unexpected`,
+ * which reads as the rename it is.
+ */
+const identityAgainstBaseline = (
+  declared: string[],
+): {
+  missing: string[];
+  unexpected: string[];
+  duplicated: string[];
+} => {
+  const counts = occurrences(declared);
+  return {
+    missing: baseline.cases.filter((name) => !counts.has(name)).sort(),
+    unexpected: [...counts.keys()]
+      .filter((name) => !baseline.cases.includes(name))
+      .sort(),
+    duplicated: [...counts.entries()]
+      .filter(([, count]) => count > 1)
+      .map(([name, count]) => `${name} (declared ${count} times)`)
+      .sort(),
+  };
+};
+
 describe('the Warehouses tab case inventory (CR-RG-01)', () => {
   it('draws every case it moves from the frozen baseline, spelled identically', () => {
     expect(baseline.caseCount).toBe(39);
@@ -155,10 +215,13 @@ describe('the Warehouses tab case inventory (CR-RG-01)', () => {
     );
   });
 
-  it('leaves the tab spec the 25 cases the split does not take', () => {
+  it('leaves the tab spec exactly the 25 baseline cases the split does not take', () => {
     const tabCases = caseNamesIn('WarehousesTab.spec.tsx');
 
-    expect(tabCases).toHaveLength(25);
+    expect(TAB_SPEC_CASES).toHaveLength(25);
+    // Named, not counted: this diff spells out which case went missing, was
+    // renamed, or arrived that the baseline does not know about.
+    expect([...tabCases].sort()).toEqual([...TAB_SPEC_CASES].sort());
     expect(tabCases.filter((name) => MOVED_CASES.includes(name))).toEqual([]);
     expect(
       [
@@ -169,13 +232,24 @@ describe('the Warehouses tab case inventory (CR-RG-01)', () => {
     ).toEqual([]);
   });
 
-  it('keeps every moved case reachable exactly once across the colocated specs', () => {
-    const allCases = specFileNames().flatMap(caseNamesIn);
+  it('declares exactly the 39 baseline cases across the four specs, each exactly once', () => {
+    const declared = specFileNames().flatMap(caseNamesIn);
 
     expect(
-      MOVED_CASES.map(
-        (name) => allCases.filter((candidate) => candidate === name).length,
+      identityAgainstBaseline(declared),
+      'a case was dropped, renamed or duplicated during the split',
+    ).toEqual({ missing: [], unexpected: [], duplicated: [] });
+    expect(declared).toHaveLength(baseline.caseCount);
+  });
+
+  it('distributes the 39 cases exactly 25 / 7 / 4 / 3, with no fifth spec', () => {
+    expect(
+      Object.fromEntries(
+        specFileNames().map((fileName) => [
+          fileName,
+          caseNamesIn(fileName).length,
+        ]),
       ),
-    ).toEqual(MOVED_CASES.map(() => 1));
+    ).toEqual(EXPECTED_DISTRIBUTION);
   });
 });
