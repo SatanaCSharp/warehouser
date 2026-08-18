@@ -8,8 +8,8 @@
 | T1  | Capture the three `baseline_revision` comparison artifacts                                 | tests | YuriiH | M        | —              | done   |
 | T2  | Author CH-D2's system ADR — the narrowed placement rule                                    | docs  | YuriiH | L        | —              | done   |
 | T3  | Supersede ADR 14-08-2026 and re-list both ADRs in `web-index.md`                           | docs  | YuriiH | S        | T2             | done   |
-| T4  | Reconcile `placing-web-components.md` §"When not to nest"                                  | docs  | YuriiH | S        | T2             | todo   |
-| T5  | Reconcile `adding-a-web-module.md` at its four contradicting statements                    | docs  | YuriiH | M        | T2             | todo   |
+| T4  | Reconcile `placing-web-components.md` §"When not to nest"                                  | docs  | YuriiH | S        | T2             | done   |
+| T5  | Reconcile `adding-a-web-module.md` at its four contradicting statements                    | docs  | YuriiH | M        | T2             | done   |
 | T6  | Reorganize `shared/api` into four domain directories and rewrite its 68 importers          | infra | YuriiH | L        | T1, T3, T4, T5 | todo   |
 | T7  | Move the 22-file administration slice into `modules/workspace`, content-free               | ui    | YuriiH | L        | T6             | todo   |
 | T8  | Repoint the boundary machinery's stale paths and qualify its predecessor identifiers       | tests | YuriiH | S        | T7             | todo   |

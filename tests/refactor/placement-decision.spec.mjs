@@ -11,8 +11,8 @@ import { BASELINE_REVISION } from './baselines.mjs';
 // What this file can decide: that the new ADR exists, reads Accepted and carries each clause the
 // criterion enumerates, that the predecessor is superseded with a resolving forward link and an
 // otherwise intact body, that the index lists both with the status each file declares, and that no
-// system guide still teaches the pre-move arrangement. It grows with the rest of the documentation
-// lane — T5 adds the four-location reconciliation of `adding-a-web-module.md`.
+// system guide still teaches the pre-move arrangement, and that `adding-a-web-module.md` is
+// reconciled at all four locations sad.md §11 O1 raised the criterion to.
 //
 // What it cannot decide, and does not pretend to: whether the ADR's prose actually narrows the
 // predecessor rather than restating it, and whether a contributor can apply the tiebreak without
@@ -24,6 +24,7 @@ const ADR_DIRECTORY = 'docs/system/adr';
 const PLACEMENT_ADR = `${ADR_DIRECTORY}/18-08-2026-scope-of-exercise-placement-tiebreak.md`;
 const PREDECESSOR = `${ADR_DIRECTORY}/14-08-2026-domain-owned-flat-modules.md`;
 const WEB_INDEX = 'docs/system/web-index.md';
+const ADDING_A_WEB_MODULE = 'docs/system/guides/adding-a-web-module.md';
 
 const read = (path) => readFileSync(path, 'utf8');
 
@@ -167,5 +168,62 @@ test('the grouping-by-domain section is untouched by the reconciliation', () => 
   assert.equal(
     section(read('docs/system/guides/placing-web-components.md')),
     section(baseline),
+  );
+});
+
+// The four locations sad.md §11 O1 raised CR-AC-03 to. Each is keyed on wording the reconciliation
+// must *introduce*, not only on the old sentence being absent: deleting a paragraph would also pass
+// a "no longer contradicts" scan while leaving the guide silent exactly where CH-D2 needs it to
+// speak.
+test('adding-a-web-module reconciles all four contradicting statements', () => {
+  const guide = read(ADDING_A_WEB_MODULE);
+  // Emphasis stripped and the separator loosened: the guide writes `**sole** consumer` in the
+  // carve-out and `sole-consumer scan` in Common failures, and neither spelling is a different rule.
+  const prose = guide.replace(/[*_]/gu, '').replace(/-/gu, ' ');
+
+  assert.match(
+    prose,
+    /sole consumer/iu,
+    'the cross-scope sentence did not gain the sole-consumer carve-out',
+  );
+  assert.match(
+    prose,
+    /module identity/iu,
+    'the flatness paragraph did not gain the home-vs-grouping test',
+  );
+  assert.ok(
+    guide.includes('18-08-2026-scope-of-exercise-placement-tiebreak.md'),
+    'the closing pointer still routes to the superseded ADR as the governing decision',
+  );
+  assert.doesNotMatch(
+    guide,
+    /Warehouse administration under `modules\/workspace\/` because a Workspace contains Warehouses/u,
+    'Common failures still names this requests outcome as a failure',
+  );
+});
+
+// The Common-failures bullet must still forbid placement-by-containment — the failure it was
+// written for is real. What changes is that the failure is deciding by containment *without* the
+// scan, not the arrangement this request produces.
+test('Common failures still forbids placement by containment', () => {
+  const guide = read(ADDING_A_WEB_MODULE);
+
+  const failures = guide.slice(guide.indexOf('## Common failures'));
+  assert.match(failures, /contains it/iu);
+});
+
+// spec.md §3 keeps the promotion rule load-bearing: future in-Warehouse entities become flat
+// top-level siblings rather than growing inside modules/warehouse. A reconciliation that softened
+// it would quietly reopen the nesting the predecessor ADR closed.
+test('the guides promotion rule survives the reconciliation', () => {
+  // Collapsed, because the sentence is wrapped across a line break and re-wrapping a paragraph is
+  // not a change to what it says.
+  const guide = read(ADDING_A_WEB_MODULE).replace(/\s+/gu, ' ');
+
+  assert.ok(
+    guide.includes(
+      'A module that seems to need a submodule is a module that should be promoted to its own top-level sibling.',
+    ),
+    'the promotion rule spec.md §3 depends on was reworded or dropped',
   );
 });

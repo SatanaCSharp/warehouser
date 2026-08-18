@@ -8,13 +8,19 @@ approved Pencil handoff described in the root README.
 
 Name the module for the domain entity that owns the behavior — `inventory`, `warehouse`, `access`.
 Ownership follows the entity whose invariants the code enforces, not the entity that contains it and
-not the screen or URL that consumes it: Warehouse administration belongs to `modules/warehouse` even
-when the only page rendering it today is the workspace page.
+not the screen or URL that consumes it.
 
 Extend an existing owner instead of adding a second module for the same entity. A capability
 exercised at several scopes lives in one module and carries the views for every scope; the scope
 appears in file and component names (`WorkspaceRolesTab`, `WarehouseRolesTab`), never in a second
 module.
+
+**One carve-out, and it is narrow.** Where a slice's **sole** consumer exercises the slice's
+capabilities at a different scope than the entity that owns them, placement follows the scope of
+exercise instead. Both conditions are import-graph facts: enumerate the slice, count the importers
+outside it, and check whether that single importer lives in another entity's module. Two importers,
+or an importer inside the owning module, and the rule above applies unchanged. Do not reach for this
+because a slice currently has one consumer and the arrangement would read better — run the scan.
 
 Modules are flat. The module list is exactly the directories directly under `modules/`; only those
 have a name and a public surface. A module may organize material for _its own entity_ into
@@ -22,9 +28,20 @@ sub-directories — `modules/auth/` holds `login/`, `sign-up/` and `sign-out/` s
 one module — but a second domain entity never acquires a home inside another module's tree. A module
 that seems to need a submodule is a module that should be promoted to its own top-level sibling.
 
+What makes a directory a **home** is module identity, not its name: an entry in the module list, an
+entry in the surface declaration, and its own `route.tsx`/`page.tsx`. A directory named for an
+entity but holding none of those is a **component grouping**, which
+[Placing web components](placing-web-components.md) § "Grouping owned components by domain"
+prescribes — `modules/access/components/workspace-administration/members/` is one, and a directory
+named for another entity is one on identical terms. So read the directory's identity, not the
+entity its name mentions.
+
 The decision behind these rules, and its consequences, are recorded in
-[Domain-owned flat modules](../adr/14-08-2026-domain-owned-flat-modules.md). Read it before adding a
-module or deciding which module a file belongs to.
+[Scope-of-exercise tiebreak for sole-consumer slices](../adr/18-08-2026-scope-of-exercise-placement-tiebreak.md),
+which narrows and supersedes
+[Domain-owned flat modules](../adr/14-08-2026-domain-owned-flat-modules.md). Read the first before
+adding a module or deciding which module a file belongs to; read the second for the reasoning it
+preserves.
 
 ## 2. Import other modules through their declared surface
 
@@ -208,8 +225,9 @@ change, also complete the viewport/state comparison required by the approved des
 
 ## Common failures
 
-- Placing an entity's code in the module of the entity that contains it — Warehouse administration
-  under `modules/workspace/` because a Workspace contains Warehouses.
+- Placing an entity's code in the module of the entity that contains it, on containment alone —
+  without running the sole-consumer scan §1 requires. Containment is not a placement argument; a
+  slice with two consumers stays with its owning entity however neatly it nests under another.
 - Creating a nested submodule inside another module instead of a flat top-level sibling.
 - Importing another module's undeclared hook, API slice, schema, type, or sub-component instead of
   its declared public surface.
