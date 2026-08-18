@@ -272,7 +272,20 @@ Governing rule, [`frontend-architecture.md`](../../system/frontend-architecture.
 infrastructure": _"Add a slice only for state used across modules or needed globally across routes.
 Server-owned resource data belongs to an RTK Query API slice rather than an ordinary state slice."_
 
-Every `useState` in the three named modules at `baseline_revision`:
+The audit was first taken at `baseline_revision` and **re-taken at `HEAD`** after the move (CH-W1,
+CH-W2) and the splits (CH-W5). §4.2.2 is the current enumeration and is the one CR-AC-06 is judged
+against; §4.2.1 is retained, clearly marked as historical, only so a reader can see what changed.
+
+**Which modules are enumerated.** CH-W7's row names `modules/{warehouse,workspace,auth}`;
+[T15](./tasks/t15-record-usestate-audit.md) names `modules/{warehouse,workspace,access}`. The two
+readings disagree on the third module, so §4.2.2 enumerates **all four** rather than picking one.
+That is a superset of either reading, and the wording disagreement is recorded here as a finding
+rather than settled by silently choosing.
+
+#### 4.2.1 The enumeration at `baseline_revision` — historical, superseded by §4.2.2
+
+Line numbers below are pre-move and pre-split and no longer resolve; the paths are the
+`baseline_revision` ones.
 
 | Location                                                                                              | State                                   | Verdict                                                                      |
 | ----------------------------------------------------------------------------------------------------- | --------------------------------------- | ---------------------------------------------------------------------------- |
@@ -284,13 +297,110 @@ Every `useState` in the three named modules at `baseline_revision`:
 | `WarehousePeopleList.tsx:45`                                                                          | `target`                                | Removed by the CH-W5 split.                                                  |
 | `auth/sign-up/page.tsx:22`                                                                            | `emailError`                            | Form-local. Stays local.                                                     |
 
-Server-owned data is already correctly in RTK Query (`workspace-context-api`, `warehouse-api`,
-`workspace-users-api`). `modules/auth/store/` already conforms exactly to the documented
-`actions` / `slice` / `selectors` convention.
+Seven audit entries, covering ten `useState` calls in `modules/warehouse` (8) and
+`modules/workspace` (2), plus one in `modules/auth`. `modules/access` was not enumerated at
+baseline; it is enumerated at `HEAD` below.
 
-**Conclusion: no state qualifies for a slice.** CH-W7 is therefore an audit plus one filename fix.
-Creating `modules/warehouse/store/` or `modules/workspace/store/` as empty scaffolding was
-considered and rejected at intake.
+#### 4.2.2 The enumeration at `HEAD`
+
+`modules/warehouse` now holds **zero** `useState`. The whole Warehouse administration slice left it
+under CH-W1/CH-W2, and what remains — `route.tsx`, `page.tsx`,
+`components/DesignSystemExample.tsx`, `hooks/useRecordWarehouseEntry.ts` — declares no local state.
+
+**`modules/workspace` — 10 calls in 9 files. Six audit entries.**
+
+| Location                                                                                                                                                                                                                                                | State                                   | Verdict                                                                      |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- | ---------------------------------------------------------------------------- |
+| `components/WorkspaceAdministration.tsx:46`                                                                                                                                                                                                             | `selectedTab`                           | Transient; one consumer. Stays local.                                        |
+| `components/workspace-administration/warehouses/WarehousesTab.tsx:72,75`                                                                                                                                                                                | `selectedWarehouseId`, `isDetailActive` | Transient; one consumer. Stays local.                                        |
+| `components/workspace-administration/warehouses/WarehouseList.tsx:46`                                                                                                                                                                                   | `query`                                 | Owned by its search field. Stays local.                                      |
+| `.../warehouses/AddWarehouseAction.tsx:31`, `.../warehouses/GiveWarehouseAccessAction.tsx:32`, `.../workspace-administration/NameWorkspaceAction.tsx:22`, `.../warehouses/WarehouseLifecycleActions.tsx:35`, `.../warehouses/WarehousePersonRow.tsx:47` | dialog-open flags                       | Owned by the control that triggers them — explicitly required to stay local. |
+| `components/workspace-administration/warehouses/ArchiveWarehouseDialog.tsx:26`                                                                                                                                                                          | `isSubmitting`                          | Transient. Stays local.                                                      |
+| —                                                                                                                                                                                                                                                       | `WarehousePeopleList`'s `target`        | **Gone.** Removed by the CH-W5 split; see §4.2.3.                            |
+
+`WarehousePersonRow.tsx:47`'s `isWithdrawing` is the newcomer, and it joins the existing dialog-open
+row rather than adding one: the row is mounted per person, so the withdraw dialog seeds itself from
+the person it was opened for and the flag is a plain `useState(false)` owned by the button that sets
+it — exactly what [`writing-web-components.md`](../../system/guides/writing-web-components.md)
+requires of transient UI state.
+
+Two further `useState` calls exist in `modules/workspace`, both in **test harnesses** added by the
+CH-W5 split specs — `.../warehouses/WarehouseList.spec.tsx:66` and
+`.../warehouses/WarehouseRow.spec.tsx:68`, each holding a `selectedWarehouseId` so the split leaf
+can be mounted from plain props (CR-AC-04). They are excluded from the audit, which governs where
+**production** state lives; they are named here so the enumeration accounts for every occurrence in
+the tree.
+
+**`modules/auth` — 1 call.**
+
+| Location                   | State        | Verdict                  |
+| -------------------------- | ------------ | ------------------------ |
+| `auth/sign-up/page.tsx:22` | `emailError` | Form-local. Stays local. |
+
+**`modules/access` — 22 calls in 20 files. Untouched by this request.**
+
+CR-RG-07 permits only import specifiers in this tree, plus one comment hunk; no `useState` was
+added, removed or moved in it. Every occurrence is one of four kinds, and each stays local for the
+same reason its `workspace` counterpart does.
+
+| Kind                           | Locations                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | Verdict                                   |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| dialog-open flags              | `access-workspace/components/members/CreateMemberAction.tsx:22`, `access-workspace/components/roles/CreateRoleAction.tsx:22`, `access-workspace/components/roles/TransferManagerAction.tsx:26`, `workspace-administration/members/AddWorkspaceMemberAction.tsx:23`, `.../members/ChangeWorkspaceRoleAction.tsx:28`, `.../members/RemoveWorkspaceMemberAction.tsx:29`, `.../members/TransferWorkspaceOwnershipAction.tsx:24`, `workspace-administration/roles/CreateWorkspaceRoleAction.tsx:29`, `.../roles/DeleteWorkspaceRoleAction.tsx:34` | Owned by the control that triggers them.  |
+| list search queries            | `access-workspace/components/members/MemberList.tsx:81`, `access-workspace/components/roles/RoleList.tsx:26`, `workspace-administration/roles/WorkspaceRoleList.tsx:27`                                                                                                                                                                                                                                                                                                                                                                      | Owned by their search field. Stay local.  |
+| selection and pending-target   | `access-workspace/components/members/MemberDirectory.tsx:51` (`dialog`), `access-workspace/components/roles/MemberAssignmentList.tsx:24` (`selectedMemberId`), `access-workspace/components/roles/RoleDirectory.tsx:40,44` (`selectedRoleId`, `rolePendingDeletion`), `workspace-administration/roles/WorkspaceRoleDirectory.tsx:35` (`selectedRoleId`)                                                                                                                                                                                      | Transient; one consumer each. Stay local. |
+| in-flight and refusal feedback | `workspace-administration/members/ChangeWorkspaceRoleDialog.tsx:34`, `.../members/RemoveWorkspaceMemberDialog.tsx:28,29`, `.../members/TransferWorkspaceOwnershipDialog.tsx:40`, `workspace-administration/roles/DeleteWorkspaceRoleDialog.tsx:41`                                                                                                                                                                                                                                                                                           | Transient, dialog-scoped. Stay local.     |
+
+Totals at `HEAD`: `warehouse` 0, `workspace` 10 production (+2 harness), `auth` 1, `access` 22 —
+**33 production calls, all accounted for**.
+
+#### 4.2.3 The delta, stated precisely
+
+CR-AC-06 and [`sad.md` §8](./sad.md) say the `useState` count "drops by exactly one". Two different
+things can be counted here, and only one of them drops. Both are stated so neither is overclaimed:
+
+- **Audit entries — 7 at baseline, 6 at `HEAD`: −1, as recorded.** The
+  `WarehousePeopleList.tsx` / `WorkspaceUser | null` entry is gone. Its replacement in
+  `WarehousePersonRow.tsx` is a `useState(false)` open flag, which is not a new kind of state: it is
+  an instance of the table's pre-existing "dialog-open flags — owned by the control that triggers
+  them" entry and joins it rather than adding a seventh.
+- **Raw `useState` calls — 10 before, 10 after, across `modules/warehouse` + `modules/workspace`
+  combined: unchanged.** One call was removed from `WarehousePeopleList` and one was added in
+  `WarehousePersonRow`. Counting the two new split-spec harnesses, the raw figure in the tree rises
+  to 12.
+
+**The reading applied is the first**, because it is the one the criterion's own stated reason
+supports: `sad.md` §8 attributes the drop to `WorkspaceUser | null` "becom[ing] a boolean at the
+row", and a boolean at the row is still a `useState` call. What the split removed is a _kind_ of
+state — a list-level handle on a selected `WorkspaceUser`, the only piece of non-trivial local state
+the audit had to reason about — not a call. The substance the audit exists to check holds exactly:
+no state grew in scope, and the one entry that could have argued for a slice collapsed into a
+transient flag owned by its trigger, one level down.
+
+**The criterion's wording is imprecise, and that is recorded as a finding rather than papered
+over.** "The `useState` count drops by exactly one" does not say whether it counts calls or audit
+entries, and read literally as calls it is false. `spec.md` and `sad.md` are not edited here — the
+[review gate](./test-plan.md#review-gates) that names this audit is where the wording is
+adjudicated. A reviewer reading it as a raw call count should treat CR-AC-06 as met on substance and
+the wording as a follow-up amendment, not treat the request as failing; a reviewer reading it as
+audit entries should find it met as written.
+
+#### 4.2.4 The slice test, re-applied to the post-split state
+
+Applying `frontend-architecture.md`'s rule to §4.2.2's enumeration: no state is _used across
+modules_ — every entry has exactly one consuming component, and the two that cross a component
+boundary at all (`selectedWarehouseId`, `selectedTab`) are passed as props inside one tab. No state
+is _needed globally across routes_ — every entry is discarded when its dialog closes, its list
+unmounts or its tab is left. And no entry holds _server-owned resource data_: that is already in RTK
+Query (`workspace-context-api`, `warehouse-api`, `workspace-users-api`), which the move relocated by
+directory without touching an endpoint, tag or cache key.
+
+**Conclusion: unchanged from baseline — no state qualifies for a slice.** CH-W7 is therefore an
+audit plus one filename fix. No slice was added, no context was introduced, and no empty `store/`
+scaffolding was created in `warehouse` or `workspace`; that last part is mechanically enforced by
+T14's guard, `apps/web/src/modules/state-placement.spec.ts` ("keeps a store directory only where a
+slice is warranted", "registers no state slice beyond the baseline inventory"), so
+`modules/auth/store/` remains the only one. `modules/auth/store/` itself still conforms exactly to
+the documented `actions` / `slice` / `selectors` convention.
 
 If the selected Warehouse should survive navigation, that is a **behavior change** requiring its own
 `CR-AC` row and is not part of this request. Raised in §9.
