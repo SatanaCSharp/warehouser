@@ -10,7 +10,9 @@
 
 > **Superseded record.** This file first recorded `blocked`, because no container runtime was
 > available and `spec.md` is explicit that an unrunnable suite is not evidence of identical failure.
-> At review (`review-2026-08-18.md` S7) a runtime **was** available, the suite was executed, and the
+> A runtime became available **after** that review — its S7 row records the opposite environment as
+> its own observation (`docker info` non-zero, `localhost:5432` closed) and its §4 concludes
+> `blocked, not satisfied`, which was true at `7051a74`. The suite was subsequently executed and the
 > criterion is now discharged on real evidence. The original attempt is kept below unedited — it is
 > the honest record of what was true then — and the resolving run is appended under
 > §"The resolving run".
@@ -193,8 +195,10 @@ before commit.
 
 ## The resolving run
 
-Recorded at review on 2026-08-18 (`review-2026-08-18.md` S7). A container runtime became available,
-so the criterion was discharged the way `spec.md` requires: by running the suite.
+Recorded on 2026-08-18, **after** the review at `7051a74` that found no runtime and concluded
+`blocked, not satisfied` (`review-2026-08-18.md` S7 and §4). A container runtime became available
+between that review and this run, so the criterion was discharged the way `spec.md` requires: by
+running the suite. The round-2 review re-ran it independently and reproduced the same result.
 
 ### Environment
 

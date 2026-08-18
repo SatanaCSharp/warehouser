@@ -102,4 +102,11 @@ Two mechanical cross-checks, both clean:
   `workspace-context-api.spec.ts`.
 - **Zero** stale root specifiers survive: a repo-wide grep for
   `from 'shared/api/{api-client,mutation-outcome,warehouse-path,workspace-context-api,workspace-users-api,workspace-mutation,access-permissions-api}'`
-  returns 0 hits, and 70 files resolve through the new paths.
+  returns 0 hits, and **68** files resolve through the new paths.
+
+  The count is files containing a `shared/api/{client,workspace,access,warehouse}/` specifier. A
+  looser grep for the string `shared/api/` returns 70, and the two extra files are not importers:
+  `shared/api-layout.spec.ts` names the four directories as data and imports nothing, and
+  `test/baselines/module-chunk-manifest.json` is a frozen artifact that by design records the
+  **pre-move** root paths — citing it as evidence that files resolve through the new paths would
+  invert what it contains.
