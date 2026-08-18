@@ -12,8 +12,8 @@ import {
   WORKSPACE_MODULE_MANIFEST,
 } from 'test/module-surface';
 
-// The first import-boundary enforcement `apps/web` has ever had (CH-W5). It
-// encodes the rule stated in
+// The first import-boundary enforcement `apps/web` has ever had
+// (modules-level-refactor CH-W5). It encodes the rule stated in
 // `docs/system/adr/14-08-2026-domain-owned-flat-modules.md`: code lives in the
 // module of the entity whose invariants it enforces, and reaches other modules
 // only through their declared public surface.
@@ -30,7 +30,7 @@ import {
 // boundary scans filter spec files out. This is a scan *scope*, not an
 // exception: the rule binds the production import graph, and a spec that
 // exercises two modules' validators in one `it.each` (as
-// `modules/warehouse/hooks/warehouse-name-validation.spec.ts` does against
+// `modules/workspace/hooks/warehouse-name-validation.spec.ts` does against
 // `modules/access/hooks/workspace-role-name-validation`) is test-only coupling,
 // not a production boundary crossing. The exception list this spec consults is
 // genuinely empty: every production import resolves to a declared entry.
@@ -45,7 +45,7 @@ const FIXTURES_DIRECTORY = posix.join(
 );
 
 const SURFACE_RULE =
-  'a file may reach into modules/<x>/ only through that module\u2019s declared public surface, declared in apps/web/src/test/module-surface.ts (CR-AC-04)';
+  'a file may reach into modules/<x>/ only through that module\u2019s declared public surface, declared in apps/web/src/test/module-surface.ts (modules-level-refactor CR-AC-04)';
 
 const IMPORT_SPECIFIER =
   /(?:from|import)\s*\(?\s*['"](?<specifier>[^'"]+)['"]\s*\)?/gu;
@@ -98,6 +98,54 @@ const canonicalTarget = (importer: string, specifier: string): string => {
 
   return resolved.replace(/\.(?:tsx?|jsx?)$/u, '');
 };
+
+/**
+ * The two files that make up the boundary machinery: this spec and the surface
+ * declaration it reads.
+ */
+const MACHINERY_FILES = [
+  'modules/module-boundaries.spec.ts',
+  'test/module-surface.ts',
+] as const;
+
+/**
+ * The pre-move home of the warehouse-name validation spec. Written with a
+ * unicode escape for its final character so this guard's own source is not a
+ * hit for the scan below.
+ */
+const MOVED_VALIDATION_SPEC =
+  'modules/warehouse/hooks/warehouse-name-validatio\u006E';
+
+/**
+ * The `modules-level-refactor` identifiers the boundary machinery cites, each
+ * of which this request re-uses for something unrelated. Their digits are
+ * escaped for the same reason as `MOVED_VALIDATION_SPEC`: this list must not
+ * read as one of the unqualified citations it looks for.
+ */
+const PREDECESSOR_IDENTIFIERS = [
+  'CH-W\u0035',
+  'CR-AC-0\u0033',
+  'CR-AC-0\u0034',
+] as const;
+
+/** The request that owns those identifiers, as written before each citation. */
+const PREDECESSOR_REQUEST = 'modules-level-refactor';
+
+/**
+ * Every source under `apps/web/src`, relative to `src` — specs and comments
+ * included, because a stale reference is a documentation defect that no
+ * production scan would see.
+ *
+ * `test/baselines/*.json` are excluded on purpose: they are frozen artifacts
+ * that record the tree at `baseline_revision`, so they legitimately name
+ * pre-move paths. Scanning them would make this guard fight the baselines it
+ * exists to protect.
+ */
+const scannedSources = (): string[] =>
+  globSync('**/*.{ts,tsx,json}', { cwd: SRC_DIRECTORY })
+    .map((entry) => entry.split('\\').join('/'))
+    .filter((entry) => !entry.startsWith('test/baselines/'))
+    .sort();
 
 interface Violation {
   readonly importer: string;
@@ -240,7 +288,7 @@ describe('web module boundaries', () => {
   });
 
   describe('modules/workspace file manifest', () => {
-    it('contains exactly the files CR-AC-03 enumerates', () => {
+    it('contains exactly the files modules-level-refactor CR-AC-03 enumerates', () => {
       // Any file added here fails until someone deliberately amends the
       // manifest — which is the point: the mechanical checks cannot answer
       // "whose invariants does this file enforce?", so the manifest forces a
@@ -273,6 +321,37 @@ describe('web module boundaries', () => {
       expect(resolvesIn('workspace')).toStrictEqual([
         ...ADMINISTRATION_SLICE_FILES,
       ]);
+    });
+  });
+
+  describe('boundary machinery references', () => {
+    it('leaves no source naming the pre-move warehouse-name validation spec', () => {
+      const offenders = scannedSources().filter((entry) =>
+        readFileSync(posix.join(SRC_DIRECTORY, entry), 'utf8').includes(
+          MOVED_VALIDATION_SPEC,
+        ),
+      );
+
+      expect(offenders).toStrictEqual([]);
+    });
+
+    it('qualifies every re-used predecessor identifier with its owning request', () => {
+      // The machinery cites three predecessor identifiers to explain why the
+      // predecessor's code exists, and this request re-uses all three numbers
+      // for unrelated things. Each citation therefore names its owning request:
+      // they are qualified, never renumbered.
+      const unqualified = MACHINERY_FILES.flatMap((file) => {
+        const source = readFileSync(posix.join(SRC_DIRECTORY, file), 'utf8');
+
+        return PREDECESSOR_IDENTIFIERS.filter((identifier) =>
+          source
+            .split(`${PREDECESSOR_REQUEST} ${identifier}`)
+            .join('')
+            .includes(identifier),
+        ).map((identifier) => `${file} cites an unqualified ${identifier}`);
+      });
+
+      expect(unqualified).toStrictEqual([]);
     });
   });
 });

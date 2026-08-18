@@ -50,7 +50,7 @@ export const MODULE_SURFACE = {
     // shared/layouts/RootLayout.tsx
     'modules/auth/sign-out/components/SignOutButton',
     // guards/auth.guard.ts, guards/anonymous-user.guard.ts, shared/layouts/RootLayout.tsx,
-    // and the three selectCurrentUser call sites in modules/access and modules/warehouse
+    // and the three selectCurrentUser call sites in modules/access and modules/workspace
     'modules/auth/store/auth.selectors',
     // store/index.ts, test/access-fixtures.ts, test/workspace-fixtures.ts
     'modules/auth/store/auth.slice',
@@ -72,7 +72,8 @@ export const MODULE_SURFACE = {
 } as const satisfies Record<string, readonly string[]>;
 
 /**
- * The exact file manifest of `modules/workspace`, per CR-AC-03.
+ * The exact file manifest of `modules/workspace`, per the criterion that
+ * introduced it (modules-level-refactor CR-AC-03).
  *
  * The mechanical checks — the surface declaration, the import graph and this
  * manifest — cannot decide *whose invariants does this file enforce?*; that

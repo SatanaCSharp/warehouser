@@ -14,9 +14,9 @@ import type { MutationOutcome } from 'shared/api/client/mutation-outcome';
 // raw string `empty` — which is not a translation key — for a Role.
 //
 // The Workspace-Role half of this spec. Its Warehouse half now lives beside
-// its own subject at `modules/warehouse/hooks/warehouse-name-validation.spec.ts`
-// (`modules-level-refactor` CH-W1), together with the one case parameterised
-// over both validators.
+// its own subject at `modules/workspace/hooks/warehouse-name-validation.spec.ts`
+// (`modules-level-refactor` CH-W1, re-homed by this request's CH-W2), together
+// with the one case parameterised over both validators.
 describe('name rejection rule keys', () => {
   const outcome = (rule: string): MutationOutcome => ({
     success: false,
