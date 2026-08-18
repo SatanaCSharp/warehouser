@@ -17,7 +17,7 @@
 | T10 | Split `WarehousePeopleList.tsx` into `WarehousePersonRow`                                  | ui    | YuriiH | S        | T7             | done   |
 | T11 | Carve `WarehouseList.spec.tsx` and `WarehouseRow.spec.tsx` out of `WarehousesTab.spec.tsx` | tests | YuriiH | L        | T9             | done   |
 | T12 | Carve `WarehousePeopleList.spec.tsx` out of `WarehousesTab.spec.tsx`                       | tests | YuriiH | M        | T10, T11       | done   |
-| T13 | Assert case-count identity — 39 cases, distributed 25/7/4/3                                | tests | YuriiH | S        | T11, T12       | done   |
+| T13 | Assert case-count identity — the 39 baseline cases, none lost, plus enumerated additions   | tests | YuriiH | S        | T11, T12       | done   |
 | T14 | Rename `authSlice.spec.ts` and guard the absence of `store/` scaffolding                   | tests | YuriiH | S        | T7             | done   |
 | T15 | Re-run and record the CR-AC-06 `useState` audit at `HEAD`                                  | docs  | YuriiH | S        | T9, T10, T14   | done   |
 | T16 | Guard the CR-RG-07 neighbour trees against `baseline_revision`                             | tests | YuriiH | M        | T7, T14        | done   |
@@ -56,7 +56,7 @@ not `tasks.json` tasks.
 | CR-AC-04  | T9, T10                   | satisfied | file set vs. `sad.md` §5.3; hop budgets                                                                                                                                                                  |
 | CR-AC-05  | T6                        | satisfied | [`_review/cr-ac-05-shared-api-equivalence.md`](../_review/cr-ac-05-shared-api-equivalence.md)                                                                                                            |
 | CR-AC-06  | T14, T15                  | satisfied | `useState` audit re-run at `HEAD`                                                                                                                                                                        |
-| CR-RG-01  | T1, T7, T11, T12, T13, R4 | satisfied | zero assertion drift over 39 cases; derivations re-pinned at review                                                                                                                                      |
+| CR-RG-01  | T1, T7, T11, T12, T13, R4 | satisfied | zero assertion drift over the 39 baseline cases and their 96 expectations; derivations re-pinned at review                                                                                               |
 | CR-RG-02  | T9, T11                   | satisfied | four clauses asserted in `WarehouseRow.spec.tsx`                                                                                                                                                         |
 | CR-RG-03  | T10, T12, R5              | satisfied | own-row disabled + revoke gate's absent branch asserted                                                                                                                                                  |
 | CR-RG-04  | T11, T13                  | satisfied | conditional fetch preserved; four permission cases in the tab                                                                                                                                            |

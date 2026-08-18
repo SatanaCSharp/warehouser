@@ -1,6 +1,6 @@
 ---
 id: T18
-title: "Record CR-RG-06's known-red server case as identically failing at `HEAD`"
+title: 'Record the CR-RG-06 attempt and its outcome'
 layer: 'tests'
 deps: ['T7']
 acs: ['CR-RG-06']
@@ -14,7 +14,7 @@ estimate: 'S'
 status: 'done'
 ---
 
-# T18 — Record CR-RG-06's known-red server case as identically failing at `HEAD`
+# T18 — Record the CR-RG-06 attempt and its outcome
 
 ## Why
 

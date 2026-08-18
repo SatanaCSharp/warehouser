@@ -1,6 +1,6 @@
 ---
 id: T13
-title: 'Assert case-count identity — 39 cases, distributed 25/7/4/3'
+title: 'Assert case-count identity — the 39 baseline cases, none lost, plus enumerated additions'
 layer: 'tests'
 deps: ['T11', 'T12']
 acs: ['CR-RG-01', 'CR-RG-04']
@@ -15,7 +15,7 @@ estimate: 'S'
 status: 'done'
 ---
 
-# T13 — Assert case-count identity — 39 cases, distributed 25/7/4/3
+# T13 — Assert case-count identity — the 39 baseline cases, none lost, plus enumerated additions
 
 ## Why
 
@@ -26,7 +26,8 @@ status: 'done'
 Add a static test that reads the case names from `WarehousesTab.spec.tsx`, `WarehouseList.spec.tsx`, `WarehouseRow.spec.tsx` and `WarehousePeopleList.spec.tsx`, and asserts against the committed baseline inventory:
 
 - the union is exactly the baseline's 39 names — none added, none missing, none renamed;
-- the per-file distribution is 25 / 7 / 4 / 3;
+- the per-file distribution is 27 / 7 / 4 / 4 — the baseline's 25 / 7 / 4 / 3 plus the three
+  additions review S3/S4/S5 required, each admitted by name in the gate's `ADDED_CASES`;
 - each name appears exactly once across the four files.
 
 The failure message must name the offending case, not just the count.

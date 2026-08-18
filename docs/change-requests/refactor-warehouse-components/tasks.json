@@ -188,11 +188,11 @@
     },
     {
       "id": "T13",
-      "title": "Assert case-count identity — 39 cases, distributed 25/7/4/3",
+      "title": "Assert case-count identity — the 39 baseline cases, none lost, plus enumerated additions",
       "layer": "tests",
       "deps": ["T11", "T12"],
       "acs": ["CR-RG-01", "CR-RG-04"],
-      "dod": "A test compares the four post-split spec files' case inventory against `test/baselines/warehouses-tab-cases.json` and asserts 39 total, distributed 25/7/4/3, with every baseline case name still present exactly once.",
+      "dod": "A test compares the four post-split spec files' case inventory against `test/baselines/warehouses-tab-cases.json` and asserts every one of the 39 baseline case names is still present exactly once, plus any case admitted by name in the gate's enumerated additions — 42 total at `HEAD`, distributed 27/7/4/4.",
       "files_hint": [
         "apps/web/src/test/baselines",
         "apps/web/src/modules/workspace/components/workspace-administration/warehouses"
@@ -245,7 +245,7 @@
     },
     {
       "id": "T18",
-      "title": "Record CR-RG-06's known-red server case as identically failing at `HEAD`",
+      "title": "Record the CR-RG-06 attempt and its outcome",
       "layer": "tests",
       "deps": ["T7"],
       "acs": ["CR-RG-06"],
