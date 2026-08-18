@@ -18,7 +18,9 @@ type WithdrawWarehouseAccessDialogProps = {
 
 /**
  * Withdraws one person's membership in this Warehouse (AC-25b). Owned
- * exclusively by `WarehousePeopleList`, which is the only trigger for it.
+ * exclusively by `WarehousePersonRow`, which is the only trigger for it — the
+ * CH-W5 split moved that trigger down from `WarehousePeopleList` together with
+ * the open-flag that controls it.
  * The server, not this dialog, is what refuses the protected Warehouse
  * Manager's row and the actor's own row (AC-25c) — this confirmation makes
  * the same request regardless of which row opened it.

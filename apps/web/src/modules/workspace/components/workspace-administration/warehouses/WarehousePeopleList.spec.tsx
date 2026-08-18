@@ -195,5 +195,32 @@ describe('WarehousePeopleList', () => {
         /own .*(?:warehouse )?authority/iu,
       );
     });
+
+    /**
+     * Added at review (`_review/review-2026-08-18.md` S5). `WarehousePersonRow`
+     * gates the whole withdraw affordance on
+     * `WAREHOUSE_MEMBERSHIPS:REVOKE`, and CH-W5 moved that gate out of
+     * `WarehousePeopleList` into a leaf with no spec of its own. The absent
+     * branch was left asserted only by a source-text grep, which cannot see
+     * whether the gate still renders nothing. This is an **added** expectation,
+     * which CR-RG-01 permits; it deletes and rewrites none.
+     */
+    it('offers no withdraw control at all to an actor without WAREHOUSE_MEMBERSHIPS:REVOKE', async () => {
+      await renderPeoplePane(watchOnly);
+      const detail = await detailPane();
+
+      // The pane still renders the people it was given — this is the gate
+      // hiding one control, not the pane failing to render.
+      expect(
+        within(detail).getByText('yurii@example.test'),
+      ).toBeInTheDocument();
+      expect(
+        within(detail).getByText('anna.kravets@example.test'),
+      ).toBeInTheDocument();
+      // Hidden, never disabled: a disabled control would still be found here.
+      expect(
+        within(detail).queryByRole('button', { name: /withdraw access/iu }),
+      ).not.toBeInTheDocument();
+    });
   });
 });

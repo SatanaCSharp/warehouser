@@ -24,8 +24,10 @@ import baseline from 'test/baselines/warehouses-tab-cases.json';
  *
  * Scope. It pins the three files T11 and T12 carve out, the names those files
  * take away from the tab spec, and — over all four files at once — that the
- * union is exactly the baseline's 39 names, distributed 25 / 7 / 4 / 3, with
- * every name declared exactly once. Every assertion reports the offending
+ * union is exactly the baseline's 39 names **plus the additions enumerated in
+ * `ADDED_CASES`**, distributed 27 / 7 / 4 / 4, with every name declared exactly
+ * once. Every baseline name must still be present: the additions widen what may
+ * appear, never what may disappear. Every assertion reports the offending
  * **case name**, because a bare count tells a reviewer that something was lost
  * without telling them what.
  *
@@ -112,6 +114,38 @@ const MOVED_CASES = [
 ];
 
 /**
+ * Cases **added after** `baseline_revision`, enumerated by name and by owning
+ * file so an addition stays as reviewable as a deletion.
+ *
+ * The three findings that required them are recorded in
+ * `docs/change-requests/refactor-warehouse-components/_review/review-2026-08-18.md`
+ * (S3, S4, S5): the split moved a derivation and a permission gate behind
+ * harness props, leaving three clauses of CR-RG-01 and CR-RG-03 asserted by
+ * nothing that could fail. CR-RG-01 forbids deleting or rewriting an
+ * expectation; it explicitly permits adding one.
+ *
+ * This list is the same device `tests/refactor/moved-modules.mjs` uses to admit
+ * the CH-W5 leaves into the CR-RG-05 chunk manifest: the baseline stays
+ * *compared, never regenerated*, and everything not in the baseline must be
+ * named here to pass. An addition nobody enumerated still fails as
+ * `unexpected`.
+ */
+const ADDED_CASES: Record<string, string[]> = {
+  'WarehousesTab.spec.tsx': [
+    'derives each row people count from the Workspace users the server returns',
+    'holds the loading skeleton until the people counts arrive, not only until the list does',
+  ],
+  'WarehousePeopleList.spec.tsx': [
+    'offers no withdraw control at all to an actor without WAREHOUSE_MEMBERSHIPS:REVOKE',
+  ],
+};
+
+const addedIn = (specFileName: string): string[] =>
+  ADDED_CASES[specFileName] ?? [];
+
+const ALL_ADDED_CASES = Object.values(ADDED_CASES).flat();
+
+/**
  * The four cases CR-RG-04 pins to the tab spec, because each asserts a request
  * that must not fire or a control the whole tab must not offer — neither is
  * visible to a child mounted in isolation.
@@ -149,10 +183,11 @@ const TAB_SPEC_CASES = baseline.cases.filter(
 
 /** Exact, not a lower bound — and it also rejects a fifth colocated spec. */
 const EXPECTED_DISTRIBUTION: Record<string, number> = {
-  'WarehousesTab.spec.tsx': 25,
-  'WarehouseList.spec.tsx': 7,
-  'WarehouseRow.spec.tsx': 4,
-  'WarehousePeopleList.spec.tsx': 3,
+  'WarehousesTab.spec.tsx': 25 + addedIn('WarehousesTab.spec.tsx').length,
+  'WarehouseList.spec.tsx': 7 + addedIn('WarehouseList.spec.tsx').length,
+  'WarehouseRow.spec.tsx': 4 + addedIn('WarehouseRow.spec.tsx').length,
+  'WarehousePeopleList.spec.tsx':
+    3 + addedIn('WarehousePeopleList.spec.tsx').length,
 };
 
 const occurrences = (names: string[]): Map<string, number> =>
@@ -177,7 +212,10 @@ const identityAgainstBaseline = (
   return {
     missing: baseline.cases.filter((name) => !counts.has(name)).sort(),
     unexpected: [...counts.keys()]
-      .filter((name) => !baseline.cases.includes(name))
+      .filter(
+        (name) =>
+          !baseline.cases.includes(name) && !ALL_ADDED_CASES.includes(name),
+      )
       .sort(),
     duplicated: [...counts.entries()]
       .filter(([, count]) => count > 1)
@@ -199,19 +237,22 @@ describe('the Warehouses tab case inventory (CR-RG-01)', () => {
 
   it('gives WarehouseList.spec.tsx exactly the seven list cases', () => {
     expect([...caseNamesIn('WarehouseList.spec.tsx')].sort()).toEqual(
-      [...LIST_SPEC_CASES].sort(),
+      [...LIST_SPEC_CASES, ...addedIn('WarehouseList.spec.tsx')].sort(),
     );
   });
 
   it('gives WarehouseRow.spec.tsx exactly the four row-scoped Enter cases', () => {
     expect([...caseNamesIn('WarehouseRow.spec.tsx')].sort()).toEqual(
-      [...ROW_SPEC_CASES].sort(),
+      [...ROW_SPEC_CASES, ...addedIn('WarehouseRow.spec.tsx')].sort(),
     );
   });
 
   it('gives WarehousePeopleList.spec.tsx exactly the three people-pane cases', () => {
     expect([...caseNamesIn('WarehousePeopleList.spec.tsx')].sort()).toEqual(
-      [...PEOPLE_LIST_SPEC_CASES].sort(),
+      [
+        ...PEOPLE_LIST_SPEC_CASES,
+        ...addedIn('WarehousePeopleList.spec.tsx'),
+      ].sort(),
     );
   });
 
@@ -221,7 +262,9 @@ describe('the Warehouses tab case inventory (CR-RG-01)', () => {
     expect(TAB_SPEC_CASES).toHaveLength(25);
     // Named, not counted: this diff spells out which case went missing, was
     // renamed, or arrived that the baseline does not know about.
-    expect([...tabCases].sort()).toEqual([...TAB_SPEC_CASES].sort());
+    expect([...tabCases].sort()).toEqual(
+      [...TAB_SPEC_CASES, ...addedIn('WarehousesTab.spec.tsx')].sort(),
+    );
     expect(tabCases.filter((name) => MOVED_CASES.includes(name))).toEqual([]);
     expect(
       [
@@ -232,17 +275,17 @@ describe('the Warehouses tab case inventory (CR-RG-01)', () => {
     ).toEqual([]);
   });
 
-  it('declares exactly the 39 baseline cases across the four specs, each exactly once', () => {
+  it('declares the 39 baseline cases plus the enumerated additions, each exactly once', () => {
     const declared = specFileNames().flatMap(caseNamesIn);
 
     expect(
       identityAgainstBaseline(declared),
       'a case was dropped, renamed or duplicated during the split',
     ).toEqual({ missing: [], unexpected: [], duplicated: [] });
-    expect(declared).toHaveLength(baseline.caseCount);
+    expect(declared).toHaveLength(baseline.caseCount + ALL_ADDED_CASES.length);
   });
 
-  it('distributes the 39 cases exactly 25 / 7 / 4 / 3, with no fifth spec', () => {
+  it('distributes the cases exactly 27 / 7 / 4 / 4, with no fifth spec', () => {
     expect(
       Object.fromEntries(
         specFileNames().map((fileName) => [

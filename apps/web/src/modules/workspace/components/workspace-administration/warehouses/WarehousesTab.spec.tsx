@@ -71,6 +71,38 @@ const renderTab = (): void => {
   renderWithProviders(<WarehousesTab />, authenticatedWorkspaceStore());
 };
 
+/**
+ * Holds the Workspace-users response open until `release()` is called, leaving
+ * the warehouses and context reads free to settle. That opens the one render
+ * window `WarehousesTab`'s `canReadPeople && !users` clause exists to cover —
+ * the moment the list could paint without its per-Warehouse people counts.
+ *
+ * Added at review (`_review/review-2026-08-18.md` S4): CH-W5 turned `isLoading`
+ * into a `WarehouseList` prop, so the composition that computes it lost its
+ * only assertion driven by a real query lifecycle. Wraps whatever `fetch`
+ * `stubWorkspaceServer` installed, so it must be called after it.
+ */
+const deferWorkspaceUsers = (): { release: () => void } => {
+  const stubbed = globalThis.fetch;
+  let release = (): void => undefined;
+  const held = new Promise<void>((resolve) => {
+    release = () => resolve();
+  });
+
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (input: Request | string | URL, init?: RequestInit) => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (url.endsWith('/api/v1/workspace/users')) {
+        await held;
+      }
+      return stubbed(input, init);
+    }),
+  );
+
+  return { release };
+};
+
 const TabRoutePage = (): ReactElement => <WarehousesTab />;
 
 /**
@@ -177,6 +209,66 @@ describe('WarehousesTab', () => {
   });
 
   describe('the detail pane and the level boundary (AC-33)', () => {
+    /**
+     * Added at review (`_review/review-2026-08-18.md` S3). CR-RG-01 names the
+     * per-Warehouse people counts as behaviour that must be identical, but
+     * after CH-W5 the only case asserting them feeds `WarehouseList` a literal
+     * `peopleCounts` prop, leaving `peopleCountsByWarehouse` — the derivation
+     * itself — asserted by nothing that can fail. This drives it end to end
+     * from the users the server returns.
+     */
+    it('derives each row people count from the Workspace users the server returns', async () => {
+      stubWorkspaceServer({ context: namedWorkspaceContext(fullAuthority) });
+
+      renderTab();
+
+      const list = await screen.findByRole('list', { name: 'Warehouses' });
+      const textOf = (name: string): string | null =>
+        within(list)
+          .getAllByRole('listitem')
+          .find((entry) => entry.textContent?.includes(name))?.textContent ??
+        null;
+      // Yurii and Anna reach Central DC; Yurii alone reaches North Hub; nobody
+      // reaches Old Depot, so it carries no count at all
+      // (`test/workspace-fixtures.ts`).
+      expect(textOf('Central DC')).toContain('2 people with access');
+      expect(textOf('North Hub')).toContain('1 people with access');
+      expect(textOf('Old Depot')).not.toContain('people with access');
+    });
+
+    /**
+     * Added at review (`_review/review-2026-08-18.md` S4) — the other half of
+     * the same regression: the anti-flash clause of `isLoading`. Without
+     * `canReadPeople && !users` the list paints as soon as the warehouses and
+     * context arrive, and the counts appear a heartbeat later.
+     */
+    it('holds the loading skeleton until the people counts arrive, not only until the list does', async () => {
+      stubWorkspaceServer({ context: namedWorkspaceContext(fullAuthority) });
+      const { release } = deferWorkspaceUsers();
+
+      renderTab();
+
+      expect(
+        await screen.findByLabelText('Loading warehouses'),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('list', { name: 'Warehouses' }),
+      ).not.toBeInTheDocument();
+
+      release();
+
+      const list = await screen.findByRole('list', { name: 'Warehouses' });
+      expect(
+        within(list)
+          .getAllByRole('listitem')
+          .find((entry) => entry.textContent?.includes('Central DC'))
+          ?.textContent,
+      ).toContain('2 people with access');
+      expect(
+        screen.queryByLabelText('Loading warehouses'),
+      ).not.toBeInTheDocument();
+    });
+
     it('omits the people list entirely without WORKSPACE_MEMBERS:WATCH and never requests it (AC-30)', async () => {
       const requestedUrls = stubWorkspaceServer({
         context: namedWorkspaceContext([
