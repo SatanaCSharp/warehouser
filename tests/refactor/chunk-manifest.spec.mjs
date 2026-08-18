@@ -16,8 +16,8 @@ import test from 'node:test';
 // the bundle moved, not that the artifact is stale.
 //
 // One honest deviation from CR-RG-05's Method, recorded rather than hidden: the Method predates
-// the component splits and asks for an *empty* module-level diff. Five components (CH-W9's four
-// `WarehouseList` leaves and CH-W10's `WarehousePersonRow`) did not exist at
+// the component splits and asks for an *empty* module-level diff. Five components (CH-W5's four
+// `WarehouseList` leaves and its `WarehousePersonRow`) did not exist at
 // `baseline_revision`, so a literally empty module-level diff is unreachable and manufacturing one
 // would mean filtering real modules out of the comparison. They are therefore admitted by name in
 // `moved-modules.mjs` and held to what the criterion actually protects — "no new eager chunk

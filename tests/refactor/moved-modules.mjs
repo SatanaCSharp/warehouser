@@ -64,7 +64,7 @@ const WAREHOUSES_TAB_SLICE = [
   'schemas/warehouse-name-form.schema.ts',
 ];
 
-/** CH-W7 (T7): the Warehouse administration slice, `modules/warehouse` → `modules/workspace`. */
+/** CH-W1 + CH-W2 (T7): the Warehouse administration slice, `modules/warehouse` → `modules/workspace`. */
 const SLICE_MOVES = WAREHOUSES_TAB_SLICE.map((suffix) => [
   `apps/web/src/modules/warehouse/${suffix}`,
   `apps/web/src/modules/workspace/${suffix}`,

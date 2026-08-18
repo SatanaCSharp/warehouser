@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import test from 'node:test';
 
@@ -72,6 +73,49 @@ test('the neighbour-tree digest covers all five trees CR-RG-07 fences', () => {
     assert.ok(
       Object.keys(files).length > 0,
       `expected ${tree} to digest at least one file`,
+    );
+  }
+});
+
+/** The blobs git actually records for `tree` at `baseline_revision`. */
+const blobsAtBaseline = (tree) =>
+  Object.fromEntries(
+    execFileSync(
+      'git',
+      ['ls-tree', '-r', '--format=%(objectname) %(path)', BASELINE_REVISION, '--', tree],
+      { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 },
+    )
+      .split('\n')
+      .filter(Boolean)
+      .map((line) => {
+        const separator = line.indexOf(' ');
+        return [line.slice(separator + 1), line.slice(0, separator)];
+      }),
+  );
+
+/**
+ * Added at review (`_review/review-2026-08-18.md` Q7). Every other assertion in
+ * this file reads the digest's own `baselineRevision` **field** — a string the
+ * capture script writes. A digest captured at `HEAD` that merely *claims*
+ * `42f1205…` would satisfy all of them, and the whole CR-RG-07 fence would then
+ * compare `HEAD` against `HEAD` and pass vacuously: the exact silent-invalidation
+ * failure this file exists to make loud.
+ *
+ * So verify the claim against git rather than trusting it: every recorded path
+ * and blob hash must be the blob that revision actually holds, in both
+ * directions. This is the one assertion in the suite that cannot be satisfied by
+ * a regenerated artifact.
+ */
+test('every digested blob is the blob baseline_revision actually holds', () => {
+  const digest = readArtifact(NEIGHBOUR_TREES_PATH);
+
+  for (const [tree, recorded] of Object.entries(digest.trees)) {
+    assert.deepEqual(
+      recorded,
+      blobsAtBaseline(tree),
+      `${tree}: the digest does not match the tree at ${BASELINE_REVISION} — ` +
+        'it was regenerated against another revision, so the CR-RG-07 fence ' +
+        'would compare HEAD against HEAD',
     );
   }
 });
