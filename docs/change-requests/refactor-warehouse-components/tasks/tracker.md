@@ -10,7 +10,7 @@
 | T3  | Supersede ADR 14-08-2026 and re-list both ADRs in `web-index.md`                           | docs  | YuriiH | S        | T2             | done   |
 | T4  | Reconcile `placing-web-components.md` §"When not to nest"                                  | docs  | YuriiH | S        | T2             | done   |
 | T5  | Reconcile `adding-a-web-module.md` at its four contradicting statements                    | docs  | YuriiH | M        | T2             | done   |
-| T6  | Reorganize `shared/api` into four domain directories and rewrite its 68 importers          | infra | YuriiH | L        | T1, T3, T4, T5 | todo   |
+| T6  | Reorganize `shared/api` into four domain directories and rewrite its 68 importers          | infra | YuriiH | L        | T1, T3, T4, T5 | done   |
 | T7  | Move the 22-file administration slice into `modules/workspace`, content-free               | ui    | YuriiH | L        | T6             | todo   |
 | T8  | Repoint the boundary machinery's stale paths and qualify its predecessor identifiers       | tests | YuriiH | S        | T7             | todo   |
 | T9  | Split `WarehouseList.tsx` into five flat siblings                                          | ui    | YuriiH | M        | T7             | todo   |
