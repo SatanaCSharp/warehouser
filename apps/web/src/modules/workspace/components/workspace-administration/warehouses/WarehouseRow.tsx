@@ -22,7 +22,8 @@ type WarehouseRowProps = {
  *
  * CR-AC-13 — the row also carries an Enter link, but only for a non-archived
  * Warehouse present in `membershipWarehouseIds`. Every other row renders no
- * Enter control at all: hidden, never disabled (CR-RG-02). `canEnter` is
+ * Enter control at all: hidden, never disabled (modules-level-refactor
+ * CR-AC-04, re-pinned here as CR-RG-02). `canEnter` is
  * derived here, next to the single inline guard that applies it, so the rule
  * reads beside the control it protects and the membership set travels no
  * further down than this row.
