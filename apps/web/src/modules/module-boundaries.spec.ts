@@ -1,12 +1,14 @@
-import { globSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, globSync, readdirSync, readFileSync } from 'node:fs';
 import { posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
 import {
+  ADMINISTRATION_SLICE_FILES,
   MODULE_SURFACE,
   MODULES_FIXTURES_DIRECTORY,
+  WAREHOUSE_MODULE_MANIFEST,
   WORKSPACE_MODULE_MANIFEST,
 } from 'test/module-surface';
 
@@ -60,6 +62,24 @@ const productionFiles = (): string[] =>
     .map((entry) => entry.split('\\').join('/'))
     .filter((entry) => !isSpecFile(entry) && !isFixtureFile(entry))
     .sort();
+
+/** Every file of one module, relative to that module's root, sorted. */
+const moduleFiles = (moduleName: string): string[] => {
+  const moduleDirectory = posix.join(MODULES_DIRECTORY, moduleName);
+
+  return globSync('**/*', { cwd: moduleDirectory, withFileTypes: true })
+    .filter((entry) => entry.isFile())
+    .map((entry) =>
+      posix
+        .relative(
+          moduleDirectory,
+          posix.join(entry.parentPath.split('\\').join('/'), entry.name),
+        )
+        .split('\\')
+        .join('/'),
+    )
+    .sort();
+};
 
 /** The module a file belongs to, or `null` for the composition layer. */
 const owningModule = (relativePath: string): string | null =>
@@ -225,23 +245,34 @@ describe('web module boundaries', () => {
       // manifest — which is the point: the mechanical checks cannot answer
       // "whose invariants does this file enforce?", so the manifest forces a
       // human to answer it rather than skip it (CR-AC-12).
-      const workspaceFiles = globSync('**/*', {
-        cwd: posix.join(MODULES_DIRECTORY, 'workspace'),
-        withFileTypes: true,
-      })
-        .filter((entry) => entry.isFile())
-        .map((entry) =>
-          posix
-            .relative(
-              posix.join(MODULES_DIRECTORY, 'workspace'),
-              posix.join(entry.parentPath.split('\\').join('/'), entry.name),
-            )
-            .split('\\')
-            .join('/'),
-        )
-        .sort();
+      expect(moduleFiles('workspace')).toStrictEqual([
+        ...WORKSPACE_MODULE_MANIFEST,
+      ]);
+    });
+  });
 
-      expect(workspaceFiles).toStrictEqual([...WORKSPACE_MODULE_MANIFEST]);
+  describe('modules/warehouse file manifest', () => {
+    it('retains exactly the six files CR-AC-01 enumerates', () => {
+      // The in-Warehouse destination and nothing else. `useRecordWarehouseEntry`
+      // stays because it serves *entering* a Warehouse rather than
+      // administering the set of them, and because two files outside the module
+      // import it, so the sole-consumer tiebreak does not reach it
+      // (`docs/system/adr/18-08-2026-scope-of-exercise-placement-tiebreak.md`).
+      expect(moduleFiles('warehouse')).toStrictEqual([
+        ...WAREHOUSE_MODULE_MANIFEST,
+      ]);
+    });
+
+    it('resolves the administration slice under workspace, never warehouse', () => {
+      const resolvesIn = (moduleName: string): string[] =>
+        ADMINISTRATION_SLICE_FILES.filter((file) =>
+          existsSync(posix.join(MODULES_DIRECTORY, moduleName, file)),
+        );
+
+      expect(resolvesIn('warehouse')).toStrictEqual([]);
+      expect(resolvesIn('workspace')).toStrictEqual([
+        ...ADMINISTRATION_SLICE_FILES,
+      ]);
     });
   });
 });

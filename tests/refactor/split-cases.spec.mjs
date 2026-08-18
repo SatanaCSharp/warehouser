@@ -24,7 +24,7 @@ const SUBJECT_SPECS = [
   'apps/server/src/workspaces/rest/controllers/workspace-http-contract.integration.spec.ts',
   'apps/server/src/access/rest/controllers/workspace-access-http-contract.integration.spec.ts',
   'apps/web/src/modules/access/hooks/workspace-role-name-validation.spec.ts',
-  'apps/web/src/modules/warehouse/hooks/warehouse-name-validation.spec.ts',
+  'apps/web/src/modules/workspace/hooks/warehouse-name-validation.spec.ts',
 ];
 
 const baseline = JSON.parse(readFileSync(BASELINE_PATH, 'utf8'));

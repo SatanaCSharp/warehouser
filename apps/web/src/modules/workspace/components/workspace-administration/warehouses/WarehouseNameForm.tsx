@@ -2,13 +2,13 @@ import { Button } from '@heroui/react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import { useRenameWarehouse } from 'modules/warehouse/hooks/useRenameWarehouse';
-import { warehouseNameFormSchema } from 'modules/warehouse/schemas/warehouse-name-form.schema';
+import { useRenameWarehouse } from 'modules/workspace/hooks/useRenameWarehouse';
+import { warehouseNameFormSchema } from 'modules/workspace/schemas/warehouse-name-form.schema';
 import { FormTextField } from 'shared/components/FormTextField';
 import { useFormFieldErrors } from 'shared/hooks/useFormFieldErrors';
 
 import type { Warehouse } from '@warehouser/contracts/workspaces';
-import type { WarehouseNameFormValues } from 'modules/warehouse/schemas/warehouse-name-form.schema';
+import type { WarehouseNameFormValues } from 'modules/workspace/schemas/warehouse-name-form.schema';
 import type { ReactElement } from 'react';
 
 type WarehouseNameFormProps = {

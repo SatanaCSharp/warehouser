@@ -7,8 +7,8 @@ import { useTranslation } from 'react-i18next';
 import { WorkspaceMembersTab } from 'modules/access/components/workspace-administration/members/WorkspaceMembersTab';
 import { WorkspacePermissionsTab } from 'modules/access/components/workspace-administration/permissions/WorkspacePermissionsTab';
 import { WorkspaceRolesTab } from 'modules/access/components/workspace-administration/roles/WorkspaceRolesTab';
-import { WarehousesTab } from 'modules/warehouse/components/workspace-administration/warehouses/WarehousesTab';
 import { NameWorkspaceAction } from 'modules/workspace/components/workspace-administration/NameWorkspaceAction';
+import { WarehousesTab } from 'modules/workspace/components/workspace-administration/warehouses/WarehousesTab';
 import {
   hasWorkspacePermission,
   useCurrentWorkspaceContext,

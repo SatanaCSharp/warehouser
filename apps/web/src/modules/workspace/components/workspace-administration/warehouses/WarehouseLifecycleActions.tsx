@@ -2,9 +2,9 @@ import { Alert, Button } from '@heroui/react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { AddWarehouseAction } from 'modules/warehouse/components/workspace-administration/warehouses/AddWarehouseAction';
-import { ArchiveWarehouseDialog } from 'modules/warehouse/components/workspace-administration/warehouses/ArchiveWarehouseDialog';
-import { useSetWarehouseArchival } from 'modules/warehouse/hooks/useSetWarehouseArchival';
+import { AddWarehouseAction } from 'modules/workspace/components/workspace-administration/warehouses/AddWarehouseAction';
+import { ArchiveWarehouseDialog } from 'modules/workspace/components/workspace-administration/warehouses/ArchiveWarehouseDialog';
+import { useSetWarehouseArchival } from 'modules/workspace/hooks/useSetWarehouseArchival';
 import { useReturnFocusOnClose } from 'shared/hooks/useReturnFocusOnClose';
 import { ArchiveIcon, ArrowRightLeftIcon } from 'shared/icons';
 

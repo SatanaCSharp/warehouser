@@ -62,8 +62,6 @@ export const MODULE_SURFACE = {
   warehouse: [
     // router.ts
     'modules/warehouse/route',
-    // modules/workspace/components/WorkspaceAdministration.tsx
-    'modules/warehouse/components/workspace-administration/warehouses/WarehousesTab',
     // shared/layouts/WarehouseLayout.tsx
     'modules/warehouse/hooks/useRecordWarehouseEntry',
   ],
@@ -83,14 +81,85 @@ export const MODULE_SURFACE = {
  * someone deliberately amends this list, which is the point.
  */
 export const WORKSPACE_MODULE_MANIFEST = [
+  'api/warehouse-api.ts',
   'components/WorkspaceAdministration.spec.tsx',
   'components/WorkspaceAdministration.tsx',
   'components/workspace-administration/NameWorkspaceAction.tsx',
   'components/workspace-administration/NameWorkspaceDialog.tsx',
+  'components/workspace-administration/warehouses/AddWarehouseAction.tsx',
+  'components/workspace-administration/warehouses/AddWarehouseDialog.tsx',
+  'components/workspace-administration/warehouses/ArchiveWarehouseDialog.tsx',
+  'components/workspace-administration/warehouses/GiveWarehouseAccessAction.tsx',
+  'components/workspace-administration/warehouses/GiveWarehouseAccessDialog.tsx',
+  'components/workspace-administration/warehouses/WarehouseDetailPane.tsx',
+  'components/workspace-administration/warehouses/WarehouseLifecycleActions.tsx',
+  'components/workspace-administration/warehouses/WarehouseList.tsx',
+  'components/workspace-administration/warehouses/WarehouseNameForm.tsx',
+  'components/workspace-administration/warehouses/WarehousePeopleList.tsx',
+  'components/workspace-administration/warehouses/WarehousesTab.spec.tsx',
+  'components/workspace-administration/warehouses/WarehousesTab.tsx',
+  'components/workspace-administration/warehouses/WithdrawWarehouseAccessDialog.tsx',
+  'hooks/useAssignWarehouseMembership.ts',
+  'hooks/useCreateWarehouse.ts',
+  'hooks/useRenameWarehouse.ts',
   'hooks/useRenameWorkspace.ts',
+  'hooks/useRevokeWarehouseMembership.ts',
+  'hooks/useSetWarehouseArchival.ts',
+  'hooks/warehouse-name-validation.spec.ts',
+  'hooks/warehouse-name-validation.ts',
   'page.tsx',
   'route.tsx',
   'schemas/name-workspace-form.schema.ts',
+  'schemas/warehouse-name-form.schema.ts',
+] as const;
+
+/**
+ * The exact file manifest of `modules/warehouse`, per CR-AC-01.
+ *
+ * The module keeps the in-Warehouse destination and nothing else. Both
+ * colocated specs are retained — neither deleted nor relocated — so a reader
+ * can tell "the administration slice left" from "the module was dissolved".
+ */
+export const WAREHOUSE_MODULE_MANIFEST = [
+  'components/DesignSystemExample.spec.tsx',
+  'components/DesignSystemExample.tsx',
+  'hooks/useRecordWarehouseEntry.spec.tsx',
+  'hooks/useRecordWarehouseEntry.ts',
+  'page.tsx',
+  'route.tsx',
+] as const;
+
+/**
+ * The 22 files of the Warehouse administration slice, relative to their module
+ * root.
+ *
+ * The move preserves each file's module-relative path, so one list decides both
+ * halves of CR-AC-01: every entry resolves under `modules/workspace/` and none
+ * resolves under `modules/warehouse/`.
+ */
+export const ADMINISTRATION_SLICE_FILES = [
+  'api/warehouse-api.ts',
+  'components/workspace-administration/warehouses/AddWarehouseAction.tsx',
+  'components/workspace-administration/warehouses/AddWarehouseDialog.tsx',
+  'components/workspace-administration/warehouses/ArchiveWarehouseDialog.tsx',
+  'components/workspace-administration/warehouses/GiveWarehouseAccessAction.tsx',
+  'components/workspace-administration/warehouses/GiveWarehouseAccessDialog.tsx',
+  'components/workspace-administration/warehouses/WarehouseDetailPane.tsx',
+  'components/workspace-administration/warehouses/WarehouseLifecycleActions.tsx',
+  'components/workspace-administration/warehouses/WarehouseList.tsx',
+  'components/workspace-administration/warehouses/WarehouseNameForm.tsx',
+  'components/workspace-administration/warehouses/WarehousePeopleList.tsx',
+  'components/workspace-administration/warehouses/WarehousesTab.spec.tsx',
+  'components/workspace-administration/warehouses/WarehousesTab.tsx',
+  'components/workspace-administration/warehouses/WithdrawWarehouseAccessDialog.tsx',
+  'hooks/useAssignWarehouseMembership.ts',
+  'hooks/useCreateWarehouse.ts',
+  'hooks/useRenameWarehouse.ts',
+  'hooks/useRevokeWarehouseMembership.ts',
+  'hooks/useSetWarehouseArchival.ts',
+  'hooks/warehouse-name-validation.spec.ts',
+  'hooks/warehouse-name-validation.ts',
+  'schemas/warehouse-name-form.schema.ts',
 ] as const;
 
 /**

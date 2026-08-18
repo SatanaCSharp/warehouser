@@ -3,7 +3,7 @@ import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { GiveWarehouseAccessDialog } from 'modules/warehouse/components/workspace-administration/warehouses/GiveWarehouseAccessDialog';
+import { GiveWarehouseAccessDialog } from 'modules/workspace/components/workspace-administration/warehouses/GiveWarehouseAccessDialog';
 import { useHasWorkspacePermission } from 'shared/hooks/useWorkspacePermissions';
 import { UserPlusIcon } from 'shared/icons';
 

@@ -1,7 +1,7 @@
 import { Button } from '@heroui/react';
 import { useState } from 'react';
 
-import { AddWarehouseDialog } from 'modules/warehouse/components/workspace-administration/warehouses/AddWarehouseDialog';
+import { AddWarehouseDialog } from 'modules/workspace/components/workspace-administration/warehouses/AddWarehouseDialog';
 import { PlusIcon } from 'shared/icons';
 
 import type { ReactElement } from 'react';

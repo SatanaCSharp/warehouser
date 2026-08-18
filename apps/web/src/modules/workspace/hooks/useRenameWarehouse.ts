@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 
-import { useRenameWarehouseMutation } from 'modules/warehouse/api/warehouse-api';
-import { warehouseNameValidationKey } from 'modules/warehouse/hooks/warehouse-name-validation';
+import { useRenameWarehouseMutation } from 'modules/workspace/api/warehouse-api';
+import { warehouseNameValidationKey } from 'modules/workspace/hooks/warehouse-name-validation';
 import { runWorkspaceMutation } from 'shared/api/workspace/workspace-mutation';
 
 import type { WarehouseWrite } from '@warehouser/contracts/workspaces';
