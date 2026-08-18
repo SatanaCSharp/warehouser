@@ -14,9 +14,11 @@ import {
 
 // The first import-boundary enforcement `apps/web` has ever had
 // (modules-level-refactor CH-W5). It encodes the rule stated in
-// `docs/system/adr/14-08-2026-domain-owned-flat-modules.md`: code lives in the
-// module of the entity whose invariants it enforces, and reaches other modules
-// only through their declared public surface.
+// `docs/system/adr/14-08-2026-domain-owned-flat-modules.md` (Superseded; the
+// public-surface rule it states is preserved verbatim and narrowed by
+// `docs/system/adr/18-08-2026-scope-of-exercise-placement-tiebreak.md`): code
+// lives in the module of the entity whose invariants it enforces, and reaches
+// other modules only through their declared public surface.
 //
 // Style follows the repository's existing enforcement pattern — a static source
 // scan (`globSync`/`readFileSync` + regex), as in
@@ -303,8 +305,10 @@ describe('web module boundaries', () => {
     it('retains exactly the six files CR-AC-01 enumerates', () => {
       // The in-Warehouse destination and nothing else. `useRecordWarehouseEntry`
       // stays because it serves *entering* a Warehouse rather than
-      // administering the set of them, and because two files outside the module
-      // import it, so the sole-consumer tiebreak does not reach it
+      // administering the set of them, and because its one outside importer is
+      // the composition layer (`shared/layouts/WarehouseLayout.tsx`) rather than
+      // another entity's module, so the tiebreak's scope condition fails and it
+      // does not reach the hook
       // (`docs/system/adr/18-08-2026-scope-of-exercise-placement-tiebreak.md`).
       expect(moduleFiles('warehouse')).toStrictEqual([
         ...WAREHOUSE_MODULE_MANIFEST,

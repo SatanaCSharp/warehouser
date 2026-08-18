@@ -54,14 +54,21 @@ the owning entity.
 
 Both conditions are facts about the import graph, decidable by a scan rather than by judgement:
 
-- _Sole consumer_ — exactly one file outside the slice imports anything in it. Enumerate the slice,
-  grep every specifier that names any of its files, and count the importers that are not themselves
-  members. Two importers, and the tiebreak does not fire; the slice stays where the default puts
-  it. Test-only references do not count as consumers, because the production import graph never
-  sees them.
-- _A different scope of exercise_ — that one consumer is a view, route or handler belonging to a
-  different entity's module, and the operations the slice performs are performed there. If the sole
-  consumer lives in the owning entity's own module, there is no disagreement to break.
+- _Sole consumer_ — exactly one file outside the slice imports anything in it. **A slice is the
+  transitive set of files reachable only from the disputed views:** start from those views, add
+  every file they import that nothing outside the set imports, and repeat until the set closes.
+  That delimitation is what makes the count reproducible; without it the same case can be
+  enumerated two ways and answered two ways. Grep every specifier that names any member and count
+  the importers that are not themselves members. Two importers, and the tiebreak does not fire; the
+  slice stays where the default puts it. Test-only references do not count as consumers, because
+  the production import graph never sees them.
+- _A different scope of exercise_ — the scope at which the slice's operations are performed differs
+  from the scope of the entity that owns them. Read the **subject of the operation**, not the
+  location of the consumer: a slice whose operations act on a Warehouse is owned at the Warehouse
+  scope, and if its sole consumer performs them while administering a Workspace, the two disagree.
+  Where the owning scope and the scope of exercise are the same — a Workspace-owned capability
+  exercised while administering that same Workspace — there is no disagreement to break, whichever
+  module the consumer happens to live in.
 
 A slice that fails either test is placed by the default. This is deliberately narrow: it decides a
 tiebreak between two modules that already exist, and it decides it the same way every time it is
@@ -88,10 +95,15 @@ the argument is allowed to decide:
 distinction is **not** a rule of this repository, and nothing here may be cited as though it were:
 the canonical glossaries refuse it, as § Context records. In particular, the access tabs
 (`modules/access/components/workspace-administration/*`) stay in `modules/access` on a **placement**
-decision, not a domain one — they are not a sole-consumer slice by the scan above, because
-`modules/access` owns Warehouse-scoped views of the same capabilities. If those views ever become
-sole-consumer, the tiebreak applies to them on the same terms as anything else, and no domain
-argument stands in the way.
+decision, not a domain one — and the honest reason is the second condition, not the first. They
+**are** a sole-consumer slice: `modules/workspace/components/WorkspaceAdministration.tsx` is their
+only importer from outside, so the first condition is met and cannot carry the exemption. What
+fails is the second: Workspace Role and Workspace membership are owned by the Workspace and
+exercised while administering that same Workspace, so the owning scope and the scope of exercise
+agree and there is nothing for the tiebreak to break. The Warehouses tab differed on exactly that
+point — its operations act on a Warehouse while being performed at the Workspace scope. If the
+access tabs ever acquire operations whose subject sits at another scope, the tiebreak applies to
+them on the same terms as anything else, and no domain argument stands in the way.
 
 **Home versus grouping.** A directory is a module's **home** when it has module identity: a name in
 the module list, an entry in the surface declaration, and its own `route.tsx`/`page.tsx`. A
@@ -146,8 +158,12 @@ evidence of module ownership — the home test above is.
   nothing.
 - **`modules/warehouse` becomes small.** After the first application of this rule it holds the
   in-Warehouse route, page, entry hook and a design-system example. A small module is not a
-  dissolved one: `useRecordWarehouseEntry` has two consumers outside it, so the module still owns
-  behavior that other trees depend on.
+  dissolved one: `useRecordWarehouseEntry` is imported from outside by exactly one production file,
+  `shared/layouts/WarehouseLayout.tsx`. That single consumer is the composition layer, not a view,
+  route or handler belonging to another entity's module, so the second condition fails and the
+  tiebreak does not reach the hook. (`store/middleware/api-error.middleware.ts` names the hook only
+  in a comment and imports nothing from it; the spec reference is test-only, which the scan
+  excludes.)
 - **Future in-Warehouse entities do not grow inside it.** Locations, crate/pallet acceptance and
   anything else a Warehouse comes to own become flat top-level sibling modules under ADR 14-08's
   promotion rule, which this decision preserves unchanged.

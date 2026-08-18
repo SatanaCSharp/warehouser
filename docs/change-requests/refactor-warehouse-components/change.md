@@ -175,9 +175,10 @@ modules/warehouse/hooks/warehouse-name-validation.spec.ts → modules/workspace/
 modules/warehouse/schemas/warehouse-name-form.schema.ts   → modules/workspace/schemas/
 ```
 
-`modules/warehouse/hooks/useRecordWarehouseEntry.ts` **stays**: it is consumed by
-`shared/layouts/WarehouseLayout.tsx` and `store/middleware/api-error.middleware.ts`, and it serves
-entering a Warehouse rather than administering one — the exact boundary CH-D2 draws.
+`modules/warehouse/hooks/useRecordWarehouseEntry.ts` **stays**: its one production consumer is
+`shared/layouts/WarehouseLayout.tsx` (`store/middleware/api-error.middleware.ts` mentions it only in
+a comment and imports nothing from it), and it serves entering a Warehouse rather than administering
+one — the exact boundary CH-D2 draws.
 
 `modules/module-boundaries.spec.ts`'s scan-scope comment names
 `modules/warehouse/hooks/warehouse-name-validation.spec.ts` as its example of test-only cross-module

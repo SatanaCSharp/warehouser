@@ -377,9 +377,11 @@ modules/warehouse/
 ```
 
 `useRecordWarehouseEntry` stays because it serves **entering** a Warehouse, not administering the
-set of them — the boundary CH-D2 draws — and because it has two consumers outside the module
-(`shared/layouts/WarehouseLayout.tsx` and `store/middleware/api-error.middleware.ts`), so the
-sole-consumer tiebreak does not fire on it either. It imports `shared/api/workspace-context-api`
+set of them — the boundary CH-D2 draws — and because its single outside consumer,
+`shared/layouts/WarehouseLayout.tsx`, is the composition layer rather than a view, route or handler
+of another entity's module, so the tiebreak's second condition fails and it does not fire on the
+hook either. (`store/middleware/api-error.middleware.ts` names the hook in a comment and imports
+nothing from it.) It imports `shared/api/workspace-context-api`
 and `shared/hooks/useEnteredWarehouse`, never the moving set.
 
 `spec.md` §3 corrects `change.md` §4.1's defence of this residual: future in-Warehouse entities

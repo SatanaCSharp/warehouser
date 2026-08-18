@@ -8,7 +8,9 @@
  * than only a sibling's, not in **exemption**: it may not reach past a surface
  * into a module's internals. See
  * `docs/system/adr/14-08-2026-domain-owned-flat-modules.md` §"Public surface"
- * and `docs/system/guides/adding-a-web-module.md` §2.
+ * (Superseded; that rule is preserved verbatim and narrowed by
+ * `docs/system/adr/18-08-2026-scope-of-exercise-placement-tiebreak.md`) and
+ * `docs/system/guides/adding-a-web-module.md` §2.
  *
  * This is an **enumerated declaration read as data**, not a set of per-module
  * `index.ts` barrels: a barrel is a real module with real imports, so
