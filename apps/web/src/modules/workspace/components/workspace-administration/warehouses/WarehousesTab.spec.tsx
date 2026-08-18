@@ -177,45 +177,6 @@ describe('WarehousesTab', () => {
   });
 
   describe('the detail pane and the level boundary (AC-33)', () => {
-    it('shows who has access to the selected Warehouse and never what Role they hold there', async () => {
-      stubWorkspaceServer({ context: namedWorkspaceContext(watchOnly) });
-
-      renderTab();
-
-      const detail = await detailPane();
-      expect(
-        within(detail).getByRole('heading', { name: /central dc/iu }),
-      ).toBeInTheDocument();
-      expect(
-        within(detail).getByText('yurii@example.test'),
-      ).toBeInTheDocument();
-      expect(
-        within(detail).getByText('anna.kravets@example.test'),
-      ).toBeInTheDocument();
-      // Anna belongs to Central DC; Lena belongs to no Warehouse at all.
-      expect(
-        within(detail).queryByText('lena.boiko@example.test'),
-      ).not.toBeInTheDocument();
-
-      // AC-33 covers the Users and the Warehouses they belong to — not their
-      // Warehouse Roles. Neither the protected Manager Role nor any Role
-      // identifier may reach this pane (design-handoff.md §The level boundary).
-      expect(detail.textContent).not.toMatch(/manager/iu);
-      expect(detail.textContent).not.toContain(workspaceIds.warehouseRole);
-    });
-
-    it('carries the line that says which level decides what a person may do inside the Warehouse', async () => {
-      stubWorkspaceServer({ context: namedWorkspaceContext(watchOnly) });
-
-      renderTab();
-
-      expect(
-        within(await detailPane()).getByText(
-          /what they may do inside it is decided by that role, not by the workspace/iu,
-        ),
-      ).toBeInTheDocument();
-    });
-
     it('omits the people list entirely without WORKSPACE_MEMBERS:WATCH and never requests it (AC-30)', async () => {
       const requestedUrls = stubWorkspaceServer({
         context: namedWorkspaceContext([
@@ -692,28 +653,6 @@ describe('WarehousesTab', () => {
         expect(
           screen.queryByText('anna.kravets@example.test'),
         ).not.toBeInTheDocument(),
-      );
-    });
-
-    it("exposes Withdraw access as disabled on the acting member's own row, with the reason accessible to assistive technology (AC-25c)", async () => {
-      stubWorkspaceServer({
-        context: namedWorkspaceContext(withAccessManagement),
-      });
-
-      renderTab();
-      await detailPane();
-
-      // Yurii is the acting member (test/workspace-fixtures.ts) and belongs to
-      // Central DC — a member never withdraws their own Warehouse authority.
-      const ownWithdraw = within(rowFor('yurii@example.test')).getByRole(
-        'button',
-        { name: /withdraw access/iu },
-      );
-      expect(ownWithdraw).toBeDisabled();
-      const describedBy = ownWithdraw.getAttribute('aria-describedby');
-      expect(describedBy).toBeTruthy();
-      expect(document.getElementById(describedBy ?? '')).toHaveTextContent(
-        /own .*(?:warehouse )?authority/iu,
       );
     });
 

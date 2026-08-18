@@ -22,10 +22,9 @@ import baseline from 'test/baselines/warehouses-tab-cases.json';
  * once and belongs to none of them; `docs/system/frontend-architecture.md`
  * §"Testing" reserves that directory for cross-cutting test support.
  *
- * Scope — T11 only. It pins the two files T11 carves out and the names they
- * take away from the tab spec. The full four-file, 39-case identity gate
- * arrives with `WarehousePeopleList.spec.tsx` in T12/T13; this gate is
- * deliberately silent about the three cases that move there.
+ * Scope — T11 and T12. It pins the three files they carve out and the names
+ * those files take away from the tab spec, leaving the tab at 25. The full
+ * four-file, 39-case union identity gate is T13's.
  */
 
 const WAREHOUSES_DIRECTORY = posix.join(
@@ -82,7 +81,23 @@ const ROW_SPEC_CASES = [
   'places the selection button before Enter in focus order and never nests Enter inside it',
 ];
 
-const MOVED_CASES = [...LIST_SPEC_CASES, ...ROW_SPEC_CASES];
+/**
+ * Two blocks split rather than move whole (`sad.md` §5.4). These three name
+ * the people pane as their subject; the three that stay assert orchestration
+ * outcomes — a request that must not fire, a mutation, and a server denial —
+ * which a child mounted in isolation cannot see (`sad.md` §4.6).
+ */
+const PEOPLE_LIST_SPEC_CASES = [
+  'shows who has access to the selected Warehouse and never what Role they hold there',
+  'carries the line that says which level decides what a person may do inside the Warehouse',
+  "exposes Withdraw access as disabled on the acting member's own row, with the reason accessible to assistive technology (AC-25c)",
+];
+
+const MOVED_CASES = [
+  ...LIST_SPEC_CASES,
+  ...ROW_SPEC_CASES,
+  ...PEOPLE_LIST_SPEC_CASES,
+];
 
 /**
  * The four cases CR-RG-04 pins to the tab spec, because each asserts a request
@@ -94,6 +109,15 @@ const PERMISSION_CASES = [
   'omits the add control entirely without WAREHOUSES:CREATE (AC-30)',
   'offers no editable name at all without WAREHOUSES:RENAME (AC-30)',
   'omits both lifecycle controls without WAREHOUSES:ARCHIVE (AC-30)',
+];
+
+/**
+ * The other half of the withdraw block, which stays: a mutation and a server
+ * denial, neither visible to the people list mounted in isolation (CR-RG-03).
+ */
+const WITHDRAW_ORCHESTRATION_CASES = [
+  'states what is preserved, withdraws the membership and removes the person from the pane (AC-25b)',
+  'handles a server denial of withdrawal independently of the offered control, without disclosing the target (AC-25c)',
 ];
 
 /** The two dialog focus cases of the accessibility block, which stay. */
@@ -125,15 +149,23 @@ describe('the Warehouses tab case inventory (CR-RG-01)', () => {
     );
   });
 
-  it('leaves the tab spec the 28 cases the split does not take', () => {
+  it('gives WarehousePeopleList.spec.tsx exactly the three people-pane cases', () => {
+    expect([...caseNamesIn('WarehousePeopleList.spec.tsx')].sort()).toEqual(
+      [...PEOPLE_LIST_SPEC_CASES].sort(),
+    );
+  });
+
+  it('leaves the tab spec the 25 cases the split does not take', () => {
     const tabCases = caseNamesIn('WarehousesTab.spec.tsx');
 
-    expect(tabCases).toHaveLength(28);
+    expect(tabCases).toHaveLength(25);
     expect(tabCases.filter((name) => MOVED_CASES.includes(name))).toEqual([]);
     expect(
-      [...PERMISSION_CASES, ...DIALOG_FOCUS_CASES].filter(
-        (name) => !tabCases.includes(name),
-      ),
+      [
+        ...PERMISSION_CASES,
+        ...WITHDRAW_ORCHESTRATION_CASES,
+        ...DIALOG_FOCUS_CASES,
+      ].filter((name) => !tabCases.includes(name)),
     ).toEqual([]);
   });
 

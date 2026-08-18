@@ -99,6 +99,7 @@ export const WORKSPACE_MODULE_MANIFEST = [
   'components/workspace-administration/warehouses/WarehouseList.tsx',
   'components/workspace-administration/warehouses/WarehouseListSkeleton.tsx',
   'components/workspace-administration/warehouses/WarehouseNameForm.tsx',
+  'components/workspace-administration/warehouses/WarehousePeopleList.spec.tsx',
   'components/workspace-administration/warehouses/WarehousePeopleList.tsx',
   'components/workspace-administration/warehouses/WarehousePersonRow.tsx',
   'components/workspace-administration/warehouses/WarehouseRow.spec.tsx',
