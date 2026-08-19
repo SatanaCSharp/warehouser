@@ -1,12 +1,10 @@
-import { Button } from '@heroui/react';
+import { Button, Modal } from '@heroui/react';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { AddWorkspaceMemberDialog } from 'modules/access/components/workspace-administration/members/AddWorkspaceMemberDialog';
-import { Conditional } from 'shared/components/Conditional';
-import { useReturnFocusOnClose } from 'shared/hooks/effects/useReturnFocusOnClose';
-import { useHasWorkspacePermission } from 'shared/hooks/queries/useWorkspacePermissions';
+import { TriggeredDialog } from 'shared/components/TriggeredDialog';
+import { WorkspacePermissionGate } from 'shared/components/WorkspacePermissionGate';
 import { UserPlusIcon } from 'shared/icons';
 
 import type { ReactElement } from 'react';
@@ -14,33 +12,26 @@ import type { ReactElement } from 'react';
 /**
  * The add-Workspace-Member workflow, whole: its gate, its trigger and the
  * dialog it opens. An actor without `WORKSPACE_MEMBERS:ADD` is offered no
- * control at all rather than a disabled one (AC-30).
+ * control at all rather than a disabled one (AC-30). The `Modal` around the
+ * pair owns whether the dialog is open, and returns focus to the trigger once
+ * it closes (design-handoff.md §Accessibility).
  */
-export const AddWorkspaceMemberAction = (): ReactElement | null => {
+export const AddWorkspaceMemberAction = (): ReactElement => {
   const { t } = useTranslation('access');
-  const canAddWorkspaceMember = useHasWorkspacePermission(
-    WorkspacePermissionId.WORKSPACE_MEMBERS_ADD,
-  );
-  const [isOpen, setIsOpen] = useState(false);
-  const triggerRef = useReturnFocusOnClose(isOpen);
-
-  const onPress = (): void => setIsOpen(true);
-
-  const onClose = (): void => setIsOpen(false);
-
-  if (!canAddWorkspaceMember) {
-    return null;
-  }
 
   return (
-    <>
-      <Button ref={triggerRef} variant="primary" onPress={onPress}>
-        <UserPlusIcon />
-        {t('workspaceMembers.add.trigger')}
-      </Button>
-      <Conditional when={isOpen}>
-        <AddWorkspaceMemberDialog onClose={onClose} />
-      </Conditional>
-    </>
+    <WorkspacePermissionGate
+      permission={WorkspacePermissionId.WORKSPACE_MEMBERS_ADD}
+    >
+      <Modal>
+        <Button variant="primary">
+          <UserPlusIcon />
+          {t('workspaceMembers.add.trigger')}
+        </Button>
+        <TriggeredDialog>
+          <AddWorkspaceMemberDialog />
+        </TriggeredDialog>
+      </Modal>
+    </WorkspacePermissionGate>
   );
 };

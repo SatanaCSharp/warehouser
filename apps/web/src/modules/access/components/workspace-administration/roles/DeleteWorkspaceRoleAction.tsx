@@ -1,17 +1,16 @@
-import { Button } from '@heroui/react';
+import { Button, Modal } from '@heroui/react';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useDeleteWorkspaceRoleMutation } from 'modules/access/api/workspace-roles-api';
 import { DeleteWorkspaceRoleDialog } from 'modules/access/components/workspace-administration/roles/DeleteWorkspaceRoleDialog';
-import { useDeleteWorkspaceRole } from 'modules/access/hooks/mutations/useDeleteWorkspaceRole';
 import { Conditional } from 'shared/components/Conditional';
-import { useReturnFocusOnClose } from 'shared/hooks/effects/useReturnFocusOnClose';
-import { useHasWorkspacePermission } from 'shared/hooks/queries/useWorkspacePermissions';
+import { TriggeredDialog } from 'shared/components/TriggeredDialog';
+import { WorkspacePermissionGate } from 'shared/components/WorkspacePermissionGate';
 
 import type { WorkspaceRole } from '@warehouser/contracts/workspaces';
 import type { ReactElement } from 'react';
-import type { MutationOutcome } from 'shared/api/client/mutation-outcome';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 type DeleteWorkspaceRoleActionProps = {
   replacements: WorkspaceRole[];
@@ -27,57 +26,44 @@ type DeleteWorkspaceRoleActionProps = {
 export const DeleteWorkspaceRoleAction = ({
   replacements,
   role,
-}: DeleteWorkspaceRoleActionProps): ReactElement | null => {
+}: DeleteWorkspaceRoleActionProps): ReactElement => {
   const { t } = useTranslation('access');
-  const canDeleteWorkspaceRole = useHasWorkspacePermission(
-    WorkspacePermissionId.WORKSPACE_ROLES_DELETE,
-  );
-  const deleteWorkspaceRole = useDeleteWorkspaceRole();
-  const [isOpen, setIsOpen] = useState(false);
-  const triggerRef = useReturnFocusOnClose(isOpen);
+  const [deleteWorkspaceRole] = useDeleteWorkspaceRoleMutation();
 
-  const onPress = (): void => setIsOpen(true);
-
-  const onClose = (): void => setIsOpen(false);
-
-  const onDelete = async (
+  // The refusal is explained inside the dialog, where the choice that provoked
+  // it was made (AC-17c, AC-17d), and the dialog closes itself on success.
+  const onDelete = (
     replacementWorkspaceRoleId?: string,
-  ): Promise<MutationOutcome> => {
-    const outcome = await deleteWorkspaceRole(
-      role.id,
+  ): Promise<MutationResult> =>
+    deleteWorkspaceRole({
+      workspaceRoleId: role.id,
       replacementWorkspaceRoleId,
-    );
-    if (outcome.success) {
-      onClose();
-    }
-    // The refusal is explained inside the dialog, where the choice that
-    // provoked it was made (AC-17c, AC-17d).
-    return outcome;
-  };
+    });
 
-  if (!canDeleteWorkspaceRole || role.kind !== 'custom') {
-    return null;
-  }
-
+  // Two rules, two gates: the actor's Workspace Permission, and the protected
+  // Workspace Owner Role that offers deletion to nobody (AC-16).
   return (
-    <>
-      <Button
-        ref={triggerRef}
-        className="bg-danger-soft text-danger-soft-foreground hover:bg-danger-soft-hover"
-        size="sm"
-        variant="ghost"
-        onPress={onPress}
-      >
-        {t('workspaceRoles.delete.trigger')}
-      </Button>
-      <Conditional when={isOpen}>
-        <DeleteWorkspaceRoleDialog
-          replacements={replacements}
-          role={role}
-          onClose={onClose}
-          onDelete={onDelete}
-        />
+    <WorkspacePermissionGate
+      permission={WorkspacePermissionId.WORKSPACE_ROLES_DELETE}
+    >
+      <Conditional when={role.kind === 'custom'}>
+        <Modal>
+          <Button
+            className="bg-danger-soft text-danger-soft-foreground hover:bg-danger-soft-hover"
+            size="sm"
+            variant="ghost"
+          >
+            {t('workspaceRoles.delete.trigger')}
+          </Button>
+          <TriggeredDialog>
+            <DeleteWorkspaceRoleDialog
+              replacements={replacements}
+              role={role}
+              onDelete={onDelete}
+            />
+          </TriggeredDialog>
+        </Modal>
       </Conditional>
-    </>
+    </WorkspacePermissionGate>
   );
 };

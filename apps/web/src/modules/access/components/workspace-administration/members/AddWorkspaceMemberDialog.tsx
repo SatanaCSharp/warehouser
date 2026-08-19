@@ -1,15 +1,13 @@
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import { useAddWorkspaceMember } from 'modules/access/hooks/mutations/useAddWorkspaceMember';
+import { useAddWorkspaceMemberMutation } from 'modules/access/api/workspace-members-api';
 import { useWorkspaceRoles } from 'modules/access/hooks/queries/useWorkspaceRoles';
 import { useWorkspaceUsers } from 'modules/access/hooks/queries/useWorkspaceUsers';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormSelectField } from 'shared/components/FormSelectField';
 
 import type { ReactElement } from 'react';
-
-type AddWorkspaceMemberDialogProps = { onClose: () => void };
 
 type AddWorkspaceMemberForm = { userId: string; workspaceRoleId: string };
 
@@ -20,18 +18,12 @@ type AddWorkspaceMemberForm = { userId: string; workspaceRoleId: string };
  * they belong to a Warehouse of this Workspace (AC-20) and hold no Workspace
  * Role yet. The protected Workspace Owner Role is never a choice (AC-22).
  */
-export const AddWorkspaceMemberDialog = ({
-  onClose,
-}: AddWorkspaceMemberDialogProps): ReactElement => {
+export const AddWorkspaceMemberDialog = (): ReactElement => {
   const { t } = useTranslation('access');
   const users = useWorkspaceUsers();
   const { customRoles } = useWorkspaceRoles();
-  const addWorkspaceMember = useAddWorkspaceMember();
-  const {
-    control,
-    formState: { isSubmitting },
-    handleSubmit,
-  } = useForm<AddWorkspaceMemberForm>({
+  const [addWorkspaceMember] = useAddWorkspaceMemberMutation();
+  const form = useForm<AddWorkspaceMemberForm>({
     defaultValues: { userId: '', workspaceRoleId: '' },
   });
 
@@ -39,26 +31,17 @@ export const AddWorkspaceMemberDialog = ({
     (user) => !user.isWorkspaceMember && user.warehouses.length > 0,
   );
 
-  const submit = async (values: AddWorkspaceMemberForm): Promise<void> => {
-    const outcome = await addWorkspaceMember(values);
-    if (outcome.success) {
-      onClose();
-    }
-  };
-
   return (
     <FormModalDialog
       cancelLabel={t('workspaceMembers.add.cancel')}
-      isSubmitting={isSubmitting}
-      noValidate
       submitLabel={t('workspaceMembers.add.submit')}
       title={t('workspaceMembers.add.title')}
-      onClose={onClose}
-      onSubmit={handleSubmit(submit)}
+      form={form}
+      onSubmit={addWorkspaceMember}
     >
       <p className="text-muted">{t('workspaceMembers.add.description')}</p>
       <Controller
-        control={control}
+        control={form.control}
         name="userId"
         rules={{ required: true }}
         render={({ field }) => (
@@ -78,7 +61,7 @@ export const AddWorkspaceMemberDialog = ({
         )}
       />
       <Controller
-        control={control}
+        control={form.control}
         name="workspaceRoleId"
         rules={{ required: true }}
         render={({ field }) => (

@@ -88,19 +88,17 @@ keyed by that state rather than stacking guards:
 
 ```tsx
 const openDialog =
-  dialog === null
-    ? null
-    : {
-        editEmail: (
-          <EditEmailDialog member={dialog.member} onClose={onCloseDialog} />
-        ),
-        resetPassword: (
-          <ResetPasswordDialog member={dialog.member} onClose={onCloseDialog} />
-        ),
-        deleteMember: (
-          <DeleteMemberDialog member={dialog.member} onClose={onCloseDialog} />
-        ),
-      }[dialog.kind];
+  dialog === null ? null : (
+    <DialogHost onClose={onCloseDialog}>
+      {
+        {
+          editEmail: <EditEmailDialog member={dialog.member} />,
+          resetPassword: <ResetPasswordDialog member={dialog.member} />,
+          deleteMember: <DeleteMemberDialog member={dialog.member} />,
+        }[dialog.kind]
+      }
+    </DialogHost>
+  );
 ```
 
 Building three elements to render one is cheap — element creation runs no hooks and has no effects.
@@ -109,22 +107,23 @@ Reading three stacked `Conditional`s that each re-test the same `dialog.kind` is
 ## 4. A component that gates itself needs no `Conditional` at all
 
 Prefer rendering nothing over accepting a visibility flag. A component that answers the question
-itself removes the branch from its parent and keeps the rule beside the control it protects:
+itself removes the branch from its parent and keeps the rule beside the control it protects. When the
+question is a Permission, the answer is a gate rather than a branch
+([Gate web controls declaratively](../adr/19-08-2026-declarative-permission-gates.md)):
 
 ```tsx
-export const CreateRoleAction = (): ReactElement | null => {
-  const { canCreateRoles } = useAccessCapabilities();
-
-  if (!canCreateRoles) {
-    return null;
-  }
-
-  return; /* … */
-};
+export const CreateRoleAction = (): ReactElement => (
+  <WarehousePermissionGate permission={PermissionId.ROLES_CREATE}>
+    {/* … */}
+  </WarehousePermissionGate>
+);
 ```
 
 Its parent renders `<CreateRoleAction />` and passes nothing. Use `Conditional` for a branch inside
-one component's own tree; use a self-gating component for a whole workflow.
+one component's own tree; use a self-gating component for a whole workflow; use
+`WarehousePermissionGate` (or
+`WorkspacePermissionGate` at the Workspace level) whenever the condition is authorization — including inside a
+`Conditional`, when authorization and record state both apply and each keeps its own gate.
 
 Whole-component states that are mutually exclusive — loading, empty, error, ready — are early
 returns for the same reason. Put the exits at the top so the happy path is unindented and reads
@@ -136,4 +135,5 @@ last.
   `{condition && <Thing />}` anywhere in the tree;
 - every branch whose props depend on the condition is resolved to a named element before the return;
 - no stack of `Conditional`s testing the same value — that is a lookup;
-- a workflow that may not be offered at all gates itself and returns `null`.
+- a workflow that may not be offered at all gates itself, and gates on a Permission with
+  `WarehousePermissionGate` / `WorkspacePermissionGate` rather than a `canDoThing` boolean.

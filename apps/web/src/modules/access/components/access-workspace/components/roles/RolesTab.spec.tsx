@@ -13,21 +13,22 @@ import { selectHeroOption } from 'test/hero-select';
 import { renderInEnteredWarehouse } from 'test/render';
 
 const assignMemberRole = vi.hoisted(() => vi.fn());
+const createRole = vi.hoisted(() => vi.fn());
 const deleteRole = vi.hoisted(() => vi.fn());
-const saveRole = vi.hoisted(() => vi.fn());
+const updateRole = vi.hoisted(() => vi.fn());
 const transferManager = vi.hoisted(() => vi.fn());
 
-vi.mock('modules/access/hooks/mutations/useAssignMemberRole', () => ({
-  useAssignMemberRole: () => assignMemberRole,
-}));
-vi.mock('modules/access/hooks/mutations/useDeleteRole', () => ({
-  useDeleteRole: () => deleteRole,
-}));
-vi.mock('modules/access/hooks/mutations/useSaveRole', () => ({
-  useSaveRole: () => saveRole,
-}));
-vi.mock('modules/access/hooks/mutations/useTransferManager', () => ({
-  useTransferManager: () => transferManager,
+// The components trigger the generated hooks directly, so the mutations are
+// stubbed at the endpoint that declares them. Everything else in the slice —
+// the reads this tab renders from — stays real and is served by
+// `stubAccessServer`.
+vi.mock('modules/access/api/access-api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('modules/access/api/access-api')>()),
+  useAssignAccessMemberRoleMutation: () => [assignMemberRole, {}],
+  useCreateAccessRoleMutation: () => [createRole, {}],
+  useDeleteAccessRoleMutation: () => [deleteRole, {}],
+  useUpdateAccessRoleMutation: () => [updateRole, {}],
+  useTransferWarehouseManagerMutation: () => [transferManager, {}],
 }));
 
 /**
@@ -62,7 +63,7 @@ describe('RolesTab', () => {
 
   it('creates an empty-grant role and explains why reserved permissions are disabled', async () => {
     const user = userEvent.setup();
-    saveRole.mockResolvedValue({ success: true });
+    createRole.mockResolvedValue({ data: null });
     await renderRolesTab();
 
     await user.click(screen.getByRole('button', { name: 'Create role' }));
@@ -81,15 +82,15 @@ describe('RolesTab', () => {
     );
     await user.click(within(dialog).getByRole('button', { name: 'Save role' }));
 
-    expect(saveRole).toHaveBeenCalledWith({
-      name: 'Stock Counter',
-      permissionIds: [],
+    expect(createRole).toHaveBeenCalledWith({
+      warehouseId: accessIds.warehouse,
+      input: { name: 'Stock Counter', permissionIds: [] },
     });
   });
 
   it('keeps a failed workflow open instead of reporting success', async () => {
     const user = userEvent.setup();
-    saveRole.mockResolvedValue({ success: false });
+    createRole.mockResolvedValue({ error: { code: 'access.refused' } });
     await renderRolesTab();
 
     await user.click(screen.getByRole('button', { name: 'Create role' }));
@@ -122,7 +123,7 @@ describe('RolesTab', () => {
     );
 
     expect(await screen.findByText(message)).toBeVisible();
-    expect(saveRole).not.toHaveBeenCalled();
+    expect(createRole).not.toHaveBeenCalled();
   });
 
   it('omits the protected manager role from ordinary assignment choices', async () => {
@@ -148,7 +149,7 @@ describe('RolesTab', () => {
 
   it('requires a replacement when deleting an assigned role and closes on success', async () => {
     const user = userEvent.setup();
-    deleteRole.mockResolvedValue({ success: true });
+    deleteRole.mockResolvedValue({ data: null });
     await renderRolesTab();
 
     await user.click(screen.getByRole('button', { name: 'Delete' }));
@@ -166,10 +167,11 @@ describe('RolesTab', () => {
       within(dialog).getByRole('button', { name: 'Replace and delete' }),
     );
 
-    expect(deleteRole).toHaveBeenCalledWith(
-      accessIds.pickerRole,
-      accessIds.auditorRole,
-    );
+    expect(deleteRole).toHaveBeenCalledWith({
+      warehouseId: accessIds.warehouse,
+      roleId: accessIds.pickerRole,
+      input: { replacementRoleId: accessIds.auditorRole },
+    });
     // Success is reported by the mutation's toast, so all the surface owes the
     // actor here is a dismissed dialog.
     await waitFor(() =>
@@ -190,7 +192,7 @@ describe('RolesTab', () => {
 
   it('transfers management only to another member and names both affected members', async () => {
     const user = userEvent.setup();
-    transferManager.mockResolvedValue({ success: true });
+    transferManager.mockResolvedValue({ data: null });
     await renderRolesTab();
 
     await user.click(screen.getByRole('button', { name: 'Transfer manager' }));
@@ -233,10 +235,13 @@ describe('RolesTab', () => {
       within(dialog).getByRole('button', { name: 'Transfer management' }),
     );
 
-    expect(transferManager).toHaveBeenCalledWith(
-      accessIds.member,
-      accessIds.auditorRole,
-    );
+    expect(transferManager).toHaveBeenCalledWith({
+      warehouseId: accessIds.warehouse,
+      input: {
+        recipientUserId: accessIds.member,
+        formerManagerRoleId: accessIds.auditorRole,
+      },
+    });
   });
 
   it('removes mutation controls when refreshed capabilities no longer allow them', async () => {
@@ -253,5 +258,109 @@ describe('RolesTab', () => {
     expect(
       screen.queryByRole('button', { name: /Change role for/u }),
     ).not.toBeInTheDocument();
+  });
+});
+
+// The editor is the surface aligned with the Workspace Role editor: the name
+// field only exists while the Role is editable, the grants are a list of
+// checkboxes, and the footer carries delete / cancel / save.
+describe('RolesTab role editor', () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  const editor = (): HTMLElement =>
+    screen.getByRole('form', { name: 'Edit role' });
+
+  const selectRole = async (
+    user: ReturnType<typeof userEvent.setup>,
+    name: string,
+  ): Promise<void> => {
+    await user.click(
+      within(screen.getByRole('list', { name: 'Warehouse roles' })).getByRole(
+        'button',
+        { name: new RegExp(`^${name}`, 'u') },
+      ),
+    );
+  };
+
+  it('renames the selected role and grants a permission in one save', async () => {
+    const user = userEvent.setup();
+    updateRole.mockResolvedValue({ data: null });
+    await renderRolesTab();
+
+    const pane = editor();
+    const name = within(pane).getByRole('textbox', { name: 'Role name' });
+    // The field is seeded from the selected Role, so the rename starts from
+    // the name on screen rather than from an empty box.
+    expect(name).toHaveValue('Picker');
+    await user.clear(name);
+    await user.type(name, 'Stock Picker');
+    await user.click(
+      within(pane).getByRole('checkbox', { name: 'View roles' }),
+    );
+    await user.click(
+      within(pane).getByRole('button', { name: 'Save changes' }),
+    );
+
+    await waitFor(() =>
+      expect(updateRole).toHaveBeenCalledWith({
+        warehouseId: accessIds.warehouse,
+        roleId: accessIds.pickerRole,
+        input: {
+          name: 'Stock Picker',
+          permissionIds: [PermissionId.ROLES_WATCH],
+        },
+      }),
+    );
+  });
+
+  it('discards edits back to the selected role on cancel', async () => {
+    const user = userEvent.setup();
+    await renderRolesTab();
+
+    const pane = editor();
+    const permission = within(pane).getByRole('checkbox', {
+      name: 'View roles',
+    });
+    await user.type(
+      within(pane).getByRole('textbox', { name: 'Role name' }),
+      ' edited',
+    );
+    await user.click(permission);
+    await user.click(within(pane).getByRole('button', { name: 'Cancel' }));
+
+    expect(
+      within(pane).getByRole('textbox', { name: 'Role name' }),
+    ).toHaveValue('Picker');
+    expect(permission).not.toBeChecked();
+    expect(updateRole).not.toHaveBeenCalled();
+  });
+
+  it('offers the protected manager role no name, no save and no delete', async () => {
+    const user = userEvent.setup();
+    await renderRolesTab();
+
+    await selectRole(user, 'Warehouse Manager');
+
+    const pane = editor();
+    expect(
+      within(pane).queryByRole('textbox', { name: 'Role name' }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(pane).queryByRole('button', { name: 'Save changes' }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(pane).queryByRole('button', { name: 'Delete' }),
+    ).not.toBeInTheDocument();
+    // Every Permission reads as granted and locked, so the grants the Role
+    // carries are still legible where they cannot be changed.
+    const grants = within(pane).getAllByRole('checkbox');
+    expect(grants).toHaveLength(2);
+    grants.forEach((grant) => {
+      expect(grant).toBeChecked();
+      expect(grant).toBeDisabled();
+    });
   });
 });

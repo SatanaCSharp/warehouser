@@ -4,6 +4,10 @@ import {
 } from '@warehouser/contracts/workspaces';
 import { z } from 'zod';
 
+import {
+  workspaceRoleFieldErrors,
+  workspaceRoleNameValidationKey,
+} from 'modules/access/utils/workspace-role-name-validation';
 import { api } from 'shared/api/client/api-client';
 
 import type {
@@ -12,6 +16,7 @@ import type {
   WorkspaceRoleDeletion,
   WorkspaceRoleWrite,
 } from '@warehouser/contracts/workspaces';
+import type { ApiFailure } from 'shared/api/client/api-client';
 
 const WORKSPACE_ROLES_PATH = '/api/v1/workspace/roles';
 const WORKSPACE_PERMISSIONS_PATH = '/api/v1/workspace/permissions';
@@ -21,6 +26,15 @@ const workspacePermissionListSchema = z.array(workspacePermissionSchema);
 
 type WorkspaceRoleUpdate = WorkspaceRoleWrite & { workspaceRoleId: string };
 type WorkspaceRoleDelete = WorkspaceRoleDeletion & { workspaceRoleId: string };
+
+/**
+ * Create and update write the same name-and-grants pair, so both explain a
+ * rejected name on the field that carries it (AC-14, AC-14a, AC-15). The code
+ * table resolves first, so a name conflict reaches the mapper already carrying
+ * its own key and passes through untouched.
+ */
+const workspaceRoleNameErrors = (failure: ApiFailure): ApiFailure =>
+  workspaceRoleNameValidationKey(workspaceRoleFieldErrors(failure));
 
 /**
  * The Workspace Role lifecycle and the system Permission catalogue (sad.md
@@ -48,6 +62,7 @@ export const workspaceRolesApi = api.injectEndpoints({
     createWorkspaceRole: build.mutation<WorkspaceRole, WorkspaceRoleWrite>({
       query: (body) => ({ url: WORKSPACE_ROLES_PATH, method: 'POST', body }),
       extraOptions: { schema: workspaceRoleSchema },
+      transformErrorResponse: workspaceRoleNameErrors,
       invalidatesTags: ['WorkspaceRoles'],
     }),
     updateWorkspaceRole: build.mutation<WorkspaceRole, WorkspaceRoleUpdate>({
@@ -57,6 +72,7 @@ export const workspaceRolesApi = api.injectEndpoints({
         body,
       }),
       extraOptions: { schema: workspaceRoleSchema },
+      transformErrorResponse: workspaceRoleNameErrors,
       invalidatesTags: ['WorkspaceContext', 'WorkspaceRoles'],
     }),
     deleteWorkspaceRole: build.mutation<null, WorkspaceRoleDelete>({

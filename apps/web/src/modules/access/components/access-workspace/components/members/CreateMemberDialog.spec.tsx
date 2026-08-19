@@ -3,12 +3,13 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { CreateMemberDialog } from 'modules/access/components/access-workspace/components/members/CreateMemberDialog';
+import { DialogHost } from 'shared/components/DialogHost';
 import { selectHeroOption } from 'test/hero-select';
 import { renderWithProviders } from 'test/render';
 
 import type { RolePage } from '@warehouser/contracts/access';
 import type { CreateMemberInput } from '@warehouser/contracts/users';
-import type { MutationOutcome } from 'shared/api/client/mutation-outcome';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 const pickerRoleId = '00000000-0000-4000-8000-000000000012';
 const auditorRoleId = '00000000-0000-4000-8000-000000000013';
@@ -50,15 +51,12 @@ const renderDialog = (
 } => {
   const onClose = vi.fn();
   const onSave = vi
-    .fn<(input: CreateMemberInput) => Promise<MutationOutcome>>()
-    .mockResolvedValue({ success: true });
+    .fn<(input: CreateMemberInput) => Promise<MutationResult>>()
+    .mockResolvedValue({ data: null });
   renderWithProviders(
-    <CreateMemberDialog
-      roles={roles}
-      onClose={onClose}
-      onSave={onSave}
-      {...overrides}
-    />,
+    <DialogHost onClose={onClose}>
+      <CreateMemberDialog roles={roles} onSave={onSave} {...overrides} />
+    </DialogHost>,
   );
   return { onClose, onSave };
 };
@@ -134,14 +132,15 @@ describe('CreateMemberDialog', () => {
 
   it('renders the duplicate-email explanation reported by the server (AC-05)', async () => {
     const user = userEvent.setup();
-    const onClose = vi.fn();
     const onSave = vi
-      .fn<(input: CreateMemberInput) => Promise<MutationOutcome>>()
+      .fn<(input: CreateMemberInput) => Promise<MutationResult>>()
       .mockResolvedValue({
-        success: false,
-        fieldErrors: { email: 'duplicate' },
+        error: {
+          code: 'access.refused',
+          fieldErrors: { email: 'duplicate' },
+        },
       });
-    renderDialog({ onClose, onSave });
+    const { onClose } = renderDialog({ onSave });
 
     const dialog = screen.getByRole('dialog', { name: 'Create member' });
     await fillAndSubmit(user, dialog, {
@@ -158,14 +157,15 @@ describe('CreateMemberDialog', () => {
 
   it("renders the permission-exceeded explanation when the role exceeds the actor's own permissions (AC-16)", async () => {
     const user = userEvent.setup();
-    const onClose = vi.fn();
     const onSave = vi
-      .fn<(input: CreateMemberInput) => Promise<MutationOutcome>>()
+      .fn<(input: CreateMemberInput) => Promise<MutationResult>>()
       .mockResolvedValue({
-        success: false,
-        fieldErrors: { roleId: 'exceeded' },
+        error: {
+          code: 'access.refused',
+          fieldErrors: { roleId: 'exceeded' },
+        },
       });
-    renderDialog({ onClose, onSave });
+    const { onClose } = renderDialog({ onSave });
 
     const dialog = screen.getByRole('dialog', { name: 'Create member' });
     await fillAndSubmit(user, dialog, {

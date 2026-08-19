@@ -1,50 +1,39 @@
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useSetWarehouseArchival } from 'modules/workspace/hooks/mutations/useSetWarehouseArchival';
-import { FormModalDialog } from 'shared/components/FormModalDialog';
+import { useSetWarehouseArchivalMutation } from 'modules/workspace/api/warehouse-api';
+import { ConfirmAlertDialog } from 'shared/components/ConfirmAlertDialog';
 
 import type { Warehouse } from '@warehouser/contracts/workspaces';
-import type { FormEventHandler, ReactElement } from 'react';
+import type { ReactElement } from 'react';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 type ArchiveWarehouseDialogProps = {
   warehouse: Warehouse;
-  onClose: () => void;
 };
 
 /**
  * Withdraws a Warehouse from operation (AC-11): names what stops, what is
  * kept, and what the boundary refuses, before committing. Owned exclusively
  * by the Warehouse detail pane's "Archive warehouse" action.
+ *
+ * Nothing here is filled in or validated, so it is a `ConfirmAlertDialog`
+ * (`docs/system/guides/web-dialogs.md`).
  */
 export const ArchiveWarehouseDialog = ({
   warehouse,
-  onClose,
 }: ArchiveWarehouseDialogProps): ReactElement => {
   const { t } = useTranslation('warehouse');
-  const setWarehouseArchival = useSetWarehouseArchival();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [setWarehouseArchival] = useSetWarehouseArchivalMutation();
 
-  const submit: FormEventHandler<HTMLFormElement> = (event) => {
-    event.preventDefault();
-    setIsSubmitting(true);
-    void setWarehouseArchival(warehouse.id, true).then((result) => {
-      setIsSubmitting(false);
-      if (result.success) {
-        onClose();
-      }
-    });
-  };
+  const onConfirm = (): Promise<MutationResult> =>
+    setWarehouseArchival({ warehouseId: warehouse.id, archived: true });
 
   return (
-    <FormModalDialog
+    <ConfirmAlertDialog
       title={t('warehouses.archive.title', { name: warehouse.name })}
       cancelLabel={t('warehouses.archive.cancel')}
-      submitLabel={t('warehouses.archive.submit')}
-      submitVariant="danger"
-      isSubmitting={isSubmitting}
-      onClose={onClose}
-      onSubmit={submit}
+      confirmLabel={t('warehouses.archive.submit')}
+      onConfirm={onConfirm}
     >
       <p className="text-muted">{t('warehouses.archive.description')}</p>
       <div>
@@ -59,6 +48,6 @@ export const ArchiveWarehouseDialog = ({
           {t('warehouses.archive.keptDescription')}
         </p>
       </div>
-    </FormModalDialog>
+    </ConfirmAlertDialog>
   );
 };

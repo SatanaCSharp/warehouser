@@ -50,9 +50,6 @@ const MemberListBody = ({
 
 export type MemberListProps = {
   actorUserId: string;
-  canDeleteMember: boolean;
-  canEditEmail: boolean;
-  canResetPassword: boolean;
   isLoading: boolean;
   members: AccessMember[];
   roles: AccessRole[];
@@ -63,13 +60,11 @@ export type MemberListProps = {
 
 /**
  * The searchable member list. The search term is local — nothing outside this
- * list reads it — and each row decides its own controls from what it is handed.
+ * list reads it — and each row decides for itself which of its actions the
+ * actor may run, so no capability travels through this file.
  */
 export const MemberList = ({
   actorUserId,
-  canDeleteMember,
-  canEditEmail,
-  canResetPassword,
   isLoading,
   members,
   roles,
@@ -116,9 +111,6 @@ export const MemberList = ({
         {visibleMembers.map((member) => (
           <MemberRow
             key={member.userId}
-            canDeleteMember={canDeleteMember}
-            canEditEmail={canEditEmail}
-            canResetPassword={canResetPassword}
             isSelf={member.userId === actorUserId}
             member={member}
             roleName={roleNameById.get(member.roleId) ?? ''}

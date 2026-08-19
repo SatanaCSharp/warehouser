@@ -105,6 +105,75 @@ const rowFor = async (email: string): Promise<HTMLElement> => {
 };
 
 /**
+ * A row's workflows live behind its kebab menu, exactly as a Warehouse member
+ * row's do. Opening it is therefore the first half of every interaction, and
+ * the menu itself renders in a portal — so items are queried from `screen`,
+ * never from within the row that opened it.
+ */
+const openRowMenu = async (
+  user: ReturnType<typeof userEvent.setup>,
+  email: string,
+): Promise<HTMLElement> => {
+  await user.click(
+    within(await rowFor(email)).getByRole('button', {
+      name: `Actions for ${email}`,
+    }),
+  );
+  return screen.getByRole('menu', { name: `Actions for ${email}` });
+};
+
+/**
+ * Dismisses the open menu and waits for it to go. React Aria marks the rest of
+ * the page `aria-hidden` while a menu is open, so a row lookup that runs before
+ * the menu has finished closing finds no list at all.
+ */
+const closeRowMenu = async (
+  user: ReturnType<typeof userEvent.setup>,
+): Promise<void> => {
+  await user.keyboard('{Escape}');
+  await waitFor(() =>
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument(),
+  );
+};
+
+/** Opens `email`'s menu and runs the named workflow from it. */
+const runRowAction = async (
+  user: ReturnType<typeof userEvent.setup>,
+  email: string,
+  action: string,
+): Promise<void> => {
+  const menu = await openRowMenu(user, email);
+  await user.click(within(menu).getByRole('menuitem', { name: action }));
+};
+
+/**
+ * Whether `email`'s row offers the named workflow at all. A capability gate is
+ * asserted through this rather than through a bare `queryByRole('button')`:
+ * once the triggers moved into the menu, no row renders a button by that name
+ * whether the actor is permissioned or not, so the old query would pass without
+ * testing the gate.
+ */
+const rowOffersAction = async (
+  user: ReturnType<typeof userEvent.setup>,
+  email: string,
+  action: string,
+): Promise<boolean> => {
+  const trigger = within(await rowFor(email)).queryByRole('button', {
+    name: `Actions for ${email}`,
+  });
+  if (trigger === null) {
+    return false;
+  }
+  await user.click(trigger);
+  const offered =
+    within(
+      screen.getByRole('menu', { name: `Actions for ${email}` }),
+    ).queryByRole('menuitem', { name: action }) !== null;
+  await closeRowMenu(user);
+  return offered;
+};
+
+/**
  * The toast must name the outcome that committed in translated copy — a raw
  * i18next key such as `workspace.addWorkspaceMember` is exactly what
  * `adding-and-maintaining-web-localization.md` forbids reaching a user, so the
@@ -176,37 +245,49 @@ describe('WorkspaceMembersTab', () => {
 
   describe('the Workspace Owner row (AC-21a, AC-22)', () => {
     it('exposes Protected and offers only the transfer — never Change role, never Remove', async () => {
+      const user = userEvent.setup();
       stubWorkspaceServer({ context: namedWorkspaceContext(ownerAuthority) });
 
       renderTab();
 
+      // The chip stays on the row itself; the workflow the Owner Role may still
+      // move through lives in the row's menu beside it.
       const owner = await rowFor('yurii@example.test');
       expect(owner.textContent).toContain('Protected');
+      const ownerMenu = await openRowMenu(user, 'yurii@example.test');
       expect(
-        within(owner).getByRole('button', { name: 'Transfer ownership' }),
+        within(ownerMenu).getByRole('menuitem', { name: 'Transfer ownership' }),
       ).toBeInTheDocument();
       expect(
-        within(owner).queryByRole('button', { name: 'Change role' }),
+        within(ownerMenu).queryByRole('menuitem', { name: 'Change role' }),
       ).not.toBeInTheDocument();
       expect(
-        within(owner).queryByRole('button', { name: 'Remove' }),
+        within(ownerMenu).queryByRole('menuitem', { name: 'Remove' }),
       ).not.toBeInTheDocument();
+      await closeRowMenu(user);
 
       // Every other Member keeps the ordinary pair, so the Owner row's absence
       // of them is the protection and not a missing capability.
-      const anna = await rowFor('anna.kravets@example.test');
+      const annaMenu = await openRowMenu(user, 'anna.kravets@example.test');
       expect(
-        within(anna).getByRole('button', { name: 'Change role' }),
+        within(annaMenu).getByRole('menuitem', { name: 'Change role' }),
       ).toBeInTheDocument();
       expect(
-        within(anna).getByRole('button', { name: 'Remove' }),
+        within(annaMenu).getByRole('menuitem', { name: 'Remove' }),
       ).toBeInTheDocument();
       expect(
-        within(anna).queryByRole('button', { name: 'Transfer ownership' }),
+        within(annaMenu).queryByRole('menuitem', {
+          name: 'Transfer ownership',
+        }),
       ).not.toBeInTheDocument();
+      await closeRowMenu(user);
+      expect(
+        (await rowFor('anna.kravets@example.test')).textContent,
+      ).not.toContain('Protected');
     });
 
     it('offers no transfer control at all without the protected owner-transfer permission (AC-27, AC-30)', async () => {
+      const user = userEvent.setup();
       stubWorkspaceServer({
         context: namedWorkspaceContext(fullMemberAuthority),
       });
@@ -215,8 +296,13 @@ describe('WorkspaceMembersTab', () => {
 
       await memberList();
       expect(
-        screen.queryByRole('button', { name: 'Transfer ownership' }),
-      ).not.toBeInTheDocument();
+        await rowOffersAction(user, 'yurii@example.test', 'Transfer ownership'),
+      ).toBe(false);
+      // The Owner row still states its protection, so the missing transfer
+      // reads as a capability the actor lacks rather than as a bare row.
+      expect((await rowFor('yurii@example.test')).textContent).toContain(
+        'Protected',
+      );
     });
   });
 
@@ -375,11 +461,7 @@ describe('WorkspaceMembersTab', () => {
     const openChangeRoleDialog = async (
       user: ReturnType<typeof userEvent.setup>,
     ): Promise<HTMLElement> => {
-      await user.click(
-        within(await rowFor('anna.kravets@example.test')).getByRole('button', {
-          name: 'Change role',
-        }),
-      );
+      await runRowAction(user, 'anna.kravets@example.test', 'Change role');
       return screen.findByRole('dialog', {
         name: /change the workspace role of/iu,
       });
@@ -459,6 +541,7 @@ describe('WorkspaceMembersTab', () => {
     });
 
     it('offers no change-role control at all without WORKSPACE_ROLES:ASSIGN (AC-30)', async () => {
+      const user = userEvent.setup();
       stubWorkspaceServer({
         context: namedWorkspaceContext([
           ...watchOnly,
@@ -469,13 +552,8 @@ describe('WorkspaceMembersTab', () => {
       renderTab();
 
       expect(
-        within(await rowFor('anna.kravets@example.test')).queryByRole(
-          'button',
-          {
-            name: 'Change role',
-          },
-        ),
-      ).not.toBeInTheDocument();
+        await rowOffersAction(user, 'anna.kravets@example.test', 'Change role'),
+      ).toBe(false);
     });
   });
 
@@ -498,13 +576,9 @@ describe('WorkspaceMembersTab', () => {
       });
 
       renderTab();
-      await user.click(
-        within(await rowFor('anna.kravets@example.test')).getByRole('button', {
-          name: 'Remove',
-        }),
-      );
+      await runRowAction(user, 'anna.kravets@example.test', 'Remove');
 
-      const dialog = await screen.findByRole('dialog', {
+      const dialog = await screen.findByRole('alertdialog', {
         name: /remove .* from the workspace/iu,
       });
       expect(dialog).toHaveTextContent(
@@ -530,6 +604,7 @@ describe('WorkspaceMembersTab', () => {
     });
 
     it('offers no remove control at all without WORKSPACE_MEMBERS:REMOVE (AC-30)', async () => {
+      const user = userEvent.setup();
       stubWorkspaceServer({
         context: namedWorkspaceContext([
           ...watchOnly,
@@ -540,13 +615,8 @@ describe('WorkspaceMembersTab', () => {
       renderTab();
 
       expect(
-        within(await rowFor('anna.kravets@example.test')).queryByRole(
-          'button',
-          {
-            name: 'Remove',
-          },
-        ),
-      ).not.toBeInTheDocument();
+        await rowOffersAction(user, 'anna.kravets@example.test', 'Remove'),
+      ).toBe(false);
     });
   });
 
@@ -554,11 +624,7 @@ describe('WorkspaceMembersTab', () => {
     const openTransferDialog = async (
       user: ReturnType<typeof userEvent.setup>,
     ): Promise<HTMLElement> => {
-      await user.click(
-        within(await rowFor('yurii@example.test')).getByRole('button', {
-          name: 'Transfer ownership',
-        }),
-      );
+      await runRowAction(user, 'yurii@example.test', 'Transfer ownership');
       return screen.findByRole('dialog', {
         name: /transfer workspace ownership/iu,
       });
@@ -747,12 +813,8 @@ describe('WorkspaceMembersTab', () => {
       });
 
       renderTab();
-      await user.click(
-        within(await rowFor('anna.kravets@example.test')).getByRole('button', {
-          name: 'Remove',
-        }),
-      );
-      const dialog = await screen.findByRole('dialog', {
+      await runRowAction(user, 'anna.kravets@example.test', 'Remove');
+      const dialog = await screen.findByRole('alertdialog', {
         name: /remove .* from the workspace/iu,
       });
       await user.click(within(dialog).getByRole('button', { name: 'Remove' }));
@@ -811,12 +873,15 @@ describe('WorkspaceMembersTab', () => {
       });
 
       renderTab();
+      // Focus returns to the kebab that opened the menu — the control the actor
+      // last operated on the page, now that the trigger is a menu item that no
+      // longer exists once the menu has closed.
       const trigger = within(
         await rowFor('anna.kravets@example.test'),
-      ).getByRole('button', { name: 'Remove' });
-      await user.click(trigger);
+      ).getByRole('button', { name: 'Actions for anna.kravets@example.test' });
+      await runRowAction(user, 'anna.kravets@example.test', 'Remove');
 
-      const dialog = await screen.findByRole('dialog', {
+      const dialog = await screen.findByRole('alertdialog', {
         name: /remove .* from the workspace/iu,
       });
       expect(dialog.contains(document.activeElement)).toBe(true);
@@ -832,9 +897,9 @@ describe('WorkspaceMembersTab', () => {
 
       await user.keyboard('{Escape}');
       await waitFor(() =>
-        expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+        expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument(),
       );
-      expect(trigger).toHaveFocus();
+      await waitFor(() => expect(trigger).toHaveFocus());
     });
   });
 });

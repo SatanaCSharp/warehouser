@@ -9,14 +9,17 @@ import type {
   AccessRole,
 } from 'modules/access/types/access.types';
 import type { ReactElement } from 'react';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 type TransferManagerDialogProps = {
   /** The member holding the Warehouse Manager role today — the acting user. */
   currentManager?: AccessMember;
   members: AccessMember[];
   roles: AccessRole[];
-  onClose: () => void;
-  onTransfer: (recipientId: string, replacementRoleId: string) => Promise<void>;
+  onTransfer: (
+    recipientId: string,
+    replacementRoleId: string,
+  ) => Promise<MutationResult>;
 };
 
 type TransferForm = { recipient: string; replacement: string };
@@ -30,13 +33,13 @@ export const TransferManagerDialog = ({
   currentManager,
   members,
   roles,
-  onClose,
   onTransfer,
 }: TransferManagerDialogProps): ReactElement => {
   const { t } = useTranslation('access');
-  const { control, handleSubmit } = useForm<TransferForm>({
+  const form = useForm<TransferForm>({
     defaultValues: { recipient: '', replacement: '' },
   });
+  const { control } = form;
   const recipient = useWatch({ control, name: 'recipient' });
   const replacement = useWatch({ control, name: 'replacement' });
   const replacementRole = roles.find((role) => role.id === replacement);
@@ -50,9 +53,10 @@ export const TransferManagerDialog = ({
   const nameOf = (member: AccessMember): string =>
     member.email ?? member.userId;
 
-  const onSubmitTransfer = handleSubmit((values) =>
-    onTransfer(values.recipient, values.replacement),
-  );
+  // The role has only moved once the server says so, and `FormModalDialog`
+  // closes on that answer alone — a refusal leaves both choices on screen.
+  const onSubmit = (values: TransferForm): Promise<MutationResult> =>
+    onTransfer(values.recipient, values.replacement);
 
   // Each summary names a member the form has selected, so it is resolved here
   // rather than gated inline: `Conditional` evaluates both arms, and neither
@@ -81,8 +85,8 @@ export const TransferManagerDialog = ({
       cancelLabel={t('administration.cancel')}
       submitLabel={t('administration.transfer.save')}
       size="lg"
-      onClose={onClose}
-      onSubmit={onSubmitTransfer}
+      form={form}
+      onSubmit={onSubmit}
     >
       <Controller
         control={control}

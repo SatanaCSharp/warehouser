@@ -2,14 +2,13 @@ import { Spinner } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 
 import { AccessWorkspace } from 'modules/access/components/access-workspace/AccessWorkspace';
-import { PermissionGate } from 'shared/components/PermissionGate';
 import { useCurrentPermissions } from 'shared/hooks/queries/usePermissions';
 
 import type { ReactElement } from 'react';
 
 export const AccessPage = (): ReactElement => {
   const { t } = useTranslation('access');
-  const { access, isLoading } = useCurrentPermissions();
+  const { access, isLoading, permissionIds } = useCurrentPermissions();
 
   if (isLoading) {
     return (
@@ -27,15 +26,16 @@ export const AccessPage = (): ReactElement => {
     </main>
   );
 
-  if (!access) {
+  // The workspace is a destination, not a control: an actor who holds no
+  // Warehouse Permission at all is told why they are not in it, rather than
+  // being shown nothing. Which parts of it they then get is each surface's own
+  // gate to answer
+  // (`docs/system/adr/19-08-2026-declarative-permission-gates.md`).
+  if (!access || permissionIds.length === 0) {
     return denied;
   }
 
-  return (
-    <PermissionGate fallback={denied}>
-      <AccessWorkspace />
-    </PermissionGate>
-  );
+  return <AccessWorkspace />;
 };
 
 export default AccessPage;

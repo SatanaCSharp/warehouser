@@ -1,16 +1,16 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useRemoveWorkspaceMemberMutation } from 'modules/access/api/workspace-members-api';
 import { WorkspaceRefusalAlert } from 'modules/access/components/workspace-administration/members/WorkspaceRefusalAlert';
-import { useRemoveWorkspaceMember } from 'modules/access/hooks/mutations/useRemoveWorkspaceMember';
-import { FormModalDialog } from 'shared/components/FormModalDialog';
+import { ConfirmAlertDialog } from 'shared/components/ConfirmAlertDialog';
 
 import type { WorkspaceMember } from '@warehouser/contracts/workspaces';
-import type { FormEvent, ReactElement } from 'react';
+import type { ReactElement } from 'react';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 type RemoveWorkspaceMemberDialogProps = {
   member: WorkspaceMember;
-  onClose: () => void;
 };
 
 /**
@@ -18,44 +18,32 @@ type RemoveWorkspaceMemberDialogProps = {
  * keeps every Warehouse they belong to and only stops administering this
  * Workspace (AC-19a). A refusal is explained here, where the decision was made,
  * and nothing about the target is disclosed beyond what the row already showed.
+ *
+ * Nothing here is filled in or validated, so it is a `ConfirmAlertDialog`
+ * (`docs/system/guides/web-dialogs.md`).
  */
 export const RemoveWorkspaceMemberDialog = ({
   member,
-  onClose,
 }: RemoveWorkspaceMemberDialogProps): ReactElement => {
   const { t } = useTranslation('access');
-  const removeWorkspaceMember = useRemoveWorkspaceMember();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [removeWorkspaceMember] = useRemoveWorkspaceMemberMutation();
   const [refusalCode, setRefusalCode] = useState<string>();
 
-  const submit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
-    event.preventDefault();
-    setIsSubmitting(true);
-    const outcome = await removeWorkspaceMember(member.userId);
-    setIsSubmitting(false);
-
-    if (outcome.success) {
-      onClose();
-      return;
-    }
-    setRefusalCode(outcome.code);
-  };
+  const onConfirm = (): Promise<MutationResult> =>
+    removeWorkspaceMember(member.userId);
 
   return (
-    <FormModalDialog
-      cancelLabel={t('workspaceMembers.remove.cancel')}
-      isSubmitting={isSubmitting}
-      noValidate
-      submitLabel={t('workspaceMembers.remove.submit')}
-      submitVariant="danger"
+    <ConfirmAlertDialog
       title={t('workspaceMembers.remove.title', {
         name: member.email ?? member.userId,
       })}
-      onClose={onClose}
-      onSubmit={submit}
+      cancelLabel={t('workspaceMembers.remove.cancel')}
+      confirmLabel={t('workspaceMembers.remove.submit')}
+      onConfirm={onConfirm}
+      onRefusal={setRefusalCode}
     >
       <p className="text-muted">{t('workspaceMembers.remove.description')}</p>
       <WorkspaceRefusalAlert code={refusalCode} />
-    </FormModalDialog>
+    </ConfirmAlertDialog>
   );
 };

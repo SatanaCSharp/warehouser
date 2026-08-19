@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { workspaceRoleNameValidationKey } from 'modules/access/utils/workspace-role-name-validation';
 
-import type { MutationOutcome } from 'shared/api/client/mutation-outcome';
+import type { ApiFailure } from 'shared/api/client/api-client';
 
 // RED for T61/AC-08, AC-15a (review S1-12) — every name rejection is produced
 // by one shared value object, and all three server commands map its
@@ -18,8 +18,9 @@ import type { MutationOutcome } from 'shared/api/client/mutation-outcome';
 // (`modules-level-refactor` CH-W1, re-homed by this request's CH-W2), together
 // with the one case parameterised over both validators.
 describe('name rejection rule keys', () => {
-  const outcome = (rule: string): MutationOutcome => ({
-    success: false,
+  // The mapper runs as the endpoint's `transformErrorResponse`, so what it
+  // reads is the normalized API failure, not the outcome a form later sees.
+  const failure = (rule: string): ApiFailure => ({
     code: 'workspace.invalid_input',
     fieldErrors: { name: rule },
   });
@@ -31,20 +32,19 @@ describe('name rejection rule keys', () => {
   ])(
     'AC-15a: translates the Workspace Role-name rule %s to its own validation key',
     (rule, key) => {
-      expect(workspaceRoleNameValidationKey(outcome(rule))).toMatchObject({
+      expect(workspaceRoleNameValidationKey(failure(rule))).toMatchObject({
         fieldErrors: { name: key },
       });
     },
   );
 
-  // `runWorkspaceMutation` resolves `workspaceRoleFieldErrorsFor` before
-  // this hook runs, so AC-15's exact-name conflict reaches it already keyed.
+  // The endpoint composes `workspaceRoleFieldErrors` ahead of this mapper, so
+  // AC-15's exact-name conflict reaches it already keyed.
   // Re-mapping a resolved key would replace the copy that explains
   // differently cased names stay distinct with the generic server message.
   it('AC-15: leaves an already-resolved validation key untouched', () => {
     expect(
       workspaceRoleNameValidationKey({
-        success: false,
         code: 'workspace.role_name_conflict',
         fieldErrors: { name: 'workspaceRoleName.duplicate' },
       }),

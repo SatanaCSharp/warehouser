@@ -38,10 +38,22 @@ first, then read only the entries that cover the change you are making. Paths ar
   `condition ? <Thing /> : null` ternary or an `&&` gate, why both of its arms are evaluated, and
   how to resolve a branch whose props only exist under the condition. Use whenever a component
   renders something only some of the time.
+- [Writing web dialogs](guides/web-dialogs.md) — the two components every modal workflow is built
+  from and which one it takes: `FormModalDialog` when anything is validated, `ConfirmAlertDialog`
+  when there is one decision and nothing to fill in. Covers the submit sequence `FormModalDialog`
+  owns (validate → field errors → request → close only on success), how to write the `parse` step
+  and its `translateValidation`, where a refusal code is explained, and who owns the open state.
+  Use whenever adding or changing a dialog, and before assembling `Modal.*` or `AlertDialog.*`
+  parts in a feature file.
 - [Placing web hooks](guides/placing-web-hooks.md) — decides **which directory a hook file goes in**:
   the five names every `hooks/` directory uses (`queries`, `mutations`, `forms`, `projections`,
   `effects`), why a file that declares no hook belongs in `utils/` instead, and when a helper is
   promoted to `shared/utils`. Use when adding a hook, splitting one, or adding a pure helper.
+- [Placing web tests](guides/placing-web-tests.md) — decides **where a spec file goes**: beside its
+  subject by default, never one level above it, and — when no single file owns the behaviour — in its
+  own dedicated directory under `src/test/`. Covers structural gates, specs spanning several owners,
+  and what stays at the root of `src/test/`. Use when adding a spec, or when a spec covers more than
+  one file.
 - [Sharing web state with context](guides/sharing-web-state-with-context.md) — the only permitted
   React context shape: a state provider plus a dispatch provider in one file under
   `modules/<module>/context/`, consumed through named hooks. Use only after prop drilling and module
@@ -68,6 +80,27 @@ first, then read only the entries that cover the change you are making. Paths ar
 
 ## Decisions
 
+- [Gate web controls declaratively, never with capability booleans](adr/19-08-2026-declarative-permission-gates.md)
+  — **Accepted; this is the decision that governs authorization in the UI.** Every decision about what
+  the acting user may be offered is a gate component at the control it protects
+  (`WarehousePermissionGate` at the Warehouse level, `WorkspacePermissionGate` at the Workspace level — one
+  interface, `children` plus a required `permission`), or — inside a React Aria collection that admits
+  no gate element — a descriptor carrying the same `permission` field, filtered by
+  `usePermittedItems` / `useWorkspacePermittedItems`. Permissions are named as `PermissionId` /
+  `WorkspacePermissionId` members at the surface that needs them; there is no capability table and no
+  component takes a capability as a prop. A Permission is read as a boolean only where the answer
+  feeds a query `skip`, a disabled control, or the choice between two whole surfaces — and only in the
+  file that uses it. Read before gating any control, adding a Permission-dependent prop, or deriving a
+  `canDoThing` value.
+- [Trigger RTK Query's generated mutation hooks directly from components](adr/19-08-2026-generated-mutation-hooks-in-components.md)
+  — **Accepted; this is the decision that governs how a component runs a mutation.** A component calls
+  the generated `use<Endpoint>Mutation` hook itself; a mutation gets no wrapper hook whose only job is
+  to decorate it. The three things such wrappers used to do now sit with their owners: the toast is a
+  registry entry in `shared/alerts/mutation-actions.ts` raised by `mutationFeedbackMiddleware`, the
+  field-error policy is the endpoint's `transformErrorResponse`, and `FormModalDialog` /
+  `ConfirmAlertDialog` normalize the settled request with `mutationOutcome()`. A `use…` mutation hook
+  is justified only when it composes more than one request. Read before adding a mutation endpoint, a
+  success toast, or any hook under `hooks/mutations/`.
 - [Scope-of-exercise tiebreak for sole-consumer slices](adr/18-08-2026-scope-of-exercise-placement-tiebreak.md)
   — **Accepted; this is the decision that governs placement.** Keeps the owning-entity rule below as
   the default and adds one tiebreak: where a slice's sole consumer exercises its capabilities at

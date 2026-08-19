@@ -5,6 +5,7 @@ import {
 } from '@warehouser/contracts/workspaces';
 import { z } from 'zod';
 
+import { warehouseNameValidationKey } from 'modules/workspace/utils/warehouse-name-validation';
 import { api } from 'shared/api/client/api-client';
 import { workspaceUsersApi } from 'shared/api/workspace/workspace-users-api';
 
@@ -26,10 +27,22 @@ const assignableWarehouseRoleListSchema = z.array(
 
 type WarehouseRename = WarehouseWrite & { warehouseId: string };
 type WarehouseArchivalChange = WarehouseArchival & { warehouseId: string };
+/**
+ * The membership commands name the Warehouse they act on twice: `warehouseId`
+ * addresses it, and `warehouseName` is what the outcome's toast interpolates
+ * so it names what changed rather than only naming the action
+ * (`shared/alerts/mutation-actions.ts`). The name is stripped from the body
+ * below — the server is told the identifier, never the caller's copy of it.
+ */
 type WarehouseMembershipAssign = WarehouseMembershipAssignment & {
   warehouseId: string;
+  warehouseName: string;
 };
-type WarehouseMembershipRevoke = { userId: string; warehouseId: string };
+type WarehouseMembershipRevoke = {
+  userId: string;
+  warehouseId: string;
+  warehouseName: string;
+};
 
 /**
  * The Workspace's Warehouse record endpoints (sad.md §6.4, §6.4a, §6.5). Every
@@ -51,6 +64,7 @@ export const workspaceWarehousesApi = api.injectEndpoints({
     createWarehouse: build.mutation<Warehouse, WarehouseWrite>({
       query: (body) => ({ url: WAREHOUSES_PATH, method: 'POST', body }),
       extraOptions: { schema: warehouseSchema },
+      transformErrorResponse: warehouseNameValidationKey,
       invalidatesTags: [
         'WorkspaceContext',
         'WorkspaceUsers',
@@ -64,6 +78,7 @@ export const workspaceWarehousesApi = api.injectEndpoints({
         body,
       }),
       extraOptions: { schema: warehouseSchema },
+      transformErrorResponse: warehouseNameValidationKey,
       invalidatesTags: ['WorkspaceContext', 'WorkspaceWarehouses'],
     }),
     setWarehouseArchival: build.mutation<Warehouse, WarehouseArchivalChange>({
@@ -90,10 +105,13 @@ export const workspaceWarehousesApi = api.injectEndpoints({
       WarehouseMembership,
       WarehouseMembershipAssign
     >({
-      query: ({ warehouseId, ...body }) => ({
+      // The body is named field by field rather than by rest-spreading the
+      // argument: `warehouseName` rides along only for the toast, and the
+      // server is told the identifier, never the caller's copy of the name.
+      query: ({ warehouseId, roleId, userId }) => ({
         url: `${WAREHOUSES_PATH}/${warehouseId}/memberships`,
         method: 'POST',
-        body,
+        body: { roleId, userId },
       }),
       extraOptions: { schema: warehouseMembershipSchema },
       invalidatesTags: ['WorkspaceContext', 'WorkspaceUsers'],

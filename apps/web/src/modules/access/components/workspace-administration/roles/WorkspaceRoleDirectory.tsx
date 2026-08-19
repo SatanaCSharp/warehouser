@@ -1,9 +1,7 @@
-import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
 import { useState } from 'react';
 
 import { WorkspaceRoleEditor } from 'modules/access/components/workspace-administration/roles/WorkspaceRoleEditor';
 import { WorkspaceRoleList } from 'modules/access/components/workspace-administration/roles/WorkspaceRoleList';
-import { useHasWorkspacePermission } from 'shared/hooks/queries/useWorkspacePermissions';
 
 import type {
   WorkspacePermission,
@@ -29,9 +27,6 @@ export const WorkspaceRoleDirectory = ({
   permissions,
   roles,
 }: WorkspaceRoleDirectoryProps): ReactElement => {
-  const canUpdateWorkspaceRole = useHasWorkspacePermission(
-    WorkspacePermissionId.WORKSPACE_ROLES_UPDATE,
-  );
   const [selectedRoleId, setSelectedRoleId] = useState(() =>
     defaultRoleId(roles),
   );
@@ -48,7 +43,6 @@ export const WorkspaceRoleDirectory = ({
     // progress on the Role that is still selected.
     <WorkspaceRoleEditor
       key={selectedRole.id}
-      canUpdate={canUpdateWorkspaceRole}
       permissions={permissions}
       replacements={roles.filter(
         (role) => role.kind === 'custom' && role.id !== selectedRole.id,

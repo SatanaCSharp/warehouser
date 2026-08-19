@@ -1,16 +1,14 @@
 import { Button, Chip, Dropdown, Label } from '@heroui/react';
-import compact from 'lodash/compact';
+import { PermissionId } from '@warehouser/shared-types/enums';
 import { useTranslation } from 'react-i18next';
 
+import { usePermittedItems } from 'shared/hooks/projections/usePermittedItems';
 import { KebabIcon, KeyIcon, MailIcon, TrashIcon } from 'shared/icons';
 
 import type { AccessMember } from 'modules/access/types/access.types';
 import type { Key, ReactElement, ReactNode } from 'react';
 
 export type MemberRowProps = {
-  canDeleteMember: boolean;
-  canEditEmail: boolean;
-  canResetPassword: boolean;
   isSelf: boolean;
   member: AccessMember;
   roleName: string;
@@ -23,6 +21,8 @@ type RowAction = {
   icon: ReactNode;
   id: string;
   label: string;
+  /** The Permission that offers this action (AC-30). */
+  permission: PermissionId;
   variant?: 'danger';
   run: () => void;
 };
@@ -95,11 +95,14 @@ const MemberRowTrailing = ({
  * acting user's own row carry a chip instead of a menu — neither may be
  * administered from here (AC-11/13/14/18) — and the menu itself offers only
  * the actions the actor is permissioned for.
+ *
+ * `Dropdown.Menu` is a React Aria collection, so each action names the
+ * Permission that offers it in its own descriptor and `usePermittedItems` drops
+ * the rest — the collection form of `WarehousePermissionGate`
+ * (`docs/system/adr/19-08-2026-declarative-permission-gates.md`). The row reads
+ * that itself: the authority to edit an email is not the list's to know.
  */
 export const MemberRow = ({
-  canDeleteMember,
-  canEditEmail,
-  canResetPassword,
   isSelf,
   member,
   roleName,
@@ -111,23 +114,26 @@ export const MemberRow = ({
   const isProtected = member.roleKind === 'warehouse_manager';
   const actionsLabel = t('members.actions', { email: member.email });
 
-  const actions = compact<RowAction>([
-    canEditEmail && {
+  const actions = usePermittedItems<RowAction>([
+    {
       icon: <MailIcon />,
       id: 'editEmail',
       label: t('members.menu.editEmail'),
+      permission: PermissionId.USERS_EMAIL_UPDATE,
       run: () => onEditEmail(member),
     },
-    canResetPassword && {
+    {
       icon: <KeyIcon />,
       id: 'resetPassword',
       label: t('members.menu.resetPassword'),
+      permission: PermissionId.USERS_PASSWORD_CHANGE,
       run: () => onResetPassword(member),
     },
-    canDeleteMember && {
+    {
       icon: <TrashIcon />,
       id: 'deleteMember',
       label: t('members.menu.deleteMember'),
+      permission: PermissionId.USERS_DELETE,
       variant: 'danger',
       run: () => onDeleteMember(member),
     },

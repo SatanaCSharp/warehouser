@@ -346,11 +346,17 @@ describe('WarehousesTab', () => {
       expect(
         await screen.findByText('Enter a Warehouse name.'),
       ).toBeInTheDocument();
-      const created = requestedUrls.filter(
-        (url, index) =>
-          url.endsWith('/api/v1/workspace/warehouses') && index > 0,
+      // The subject is unchanged — no create request fired — but it is counted
+      // rather than positioned: the tab's controls now read the Workspace
+      // context through their own gates, and a child's effect runs before its
+      // parent's, so the context read is no longer guaranteed to arrive after
+      // the Warehouse list read. Every request to this path is therefore the
+      // list read, and there must still be exactly the one
+      // (`docs/system/adr/19-08-2026-declarative-permission-gates.md`).
+      const created = requestedUrls.filter((url) =>
+        url.endsWith('/api/v1/workspace/warehouses'),
       );
-      expect(created).toHaveLength(0);
+      expect(created).toHaveLength(1);
     });
 
     it('binds a server-rejected name to the field, naming the rule that failed (AC-08)', async () => {
@@ -493,7 +499,7 @@ describe('WarehousesTab', () => {
       await user.click(
         await screen.findByRole('button', { name: 'Archive warehouse' }),
       );
-      const dialog = await screen.findByRole('dialog', {
+      const dialog = await screen.findByRole('alertdialog', {
         name: /archive central dc/iu,
       });
       expect(within(dialog).getByText('What stops')).toBeInTheDocument();
@@ -646,6 +652,13 @@ describe('WarehousesTab', () => {
       });
 
       renderTab();
+      // The Roles read belongs to the dialog, so it waits for the dialog: the
+      // trigger's presence in the detail pane requests nothing.
+      await screen.findByRole('button', { name: 'Give access' });
+      expect(
+        requestedUrls.some((url) => url.includes('/assignable-roles')),
+      ).toBe(false);
+
       await openGiveAccessDialog(user);
 
       await waitFor(() =>
@@ -733,7 +746,7 @@ describe('WarehousesTab', () => {
           name: /withdraw access/iu,
         }),
       );
-      const dialog = await screen.findByRole('dialog', {
+      const dialog = await screen.findByRole('alertdialog', {
         name: /withdraw access/iu,
       });
       expect(dialog).toHaveTextContent(/other memberships .* unaffected/iu);
@@ -776,7 +789,7 @@ describe('WarehousesTab', () => {
       );
       expect(withdraw).toBeEnabled();
       await user.click(withdraw);
-      const dialog = await screen.findByRole('dialog', {
+      const dialog = await screen.findByRole('alertdialog', {
         name: /withdraw access/iu,
       });
       await user.click(
@@ -837,7 +850,7 @@ describe('WarehousesTab', () => {
         name: 'Archive warehouse',
       });
       await user.click(trigger);
-      const dialog = await screen.findByRole('dialog', {
+      const dialog = await screen.findByRole('alertdialog', {
         name: /archive central dc/iu,
       });
 
@@ -852,9 +865,9 @@ describe('WarehousesTab', () => {
 
       await user.keyboard('{Escape}');
       await waitFor(() =>
-        expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+        expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument(),
       );
-      expect(trigger).toHaveFocus();
+      await waitFor(() => expect(trigger).toHaveFocus());
     });
 
     it('exposes the reason the archive action is unavailable rather than only dimming it (AC-11a)', async () => {

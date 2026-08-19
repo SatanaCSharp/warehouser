@@ -58,7 +58,7 @@ apps/web/src/
 ├── guards/                  # plain route access functions
 ├── shared/
 │   ├── alerts/              # generic alerts reused across modules
-│   ├── api/                 # shared query client, mutation runner, cross-module endpoints
+│   ├── api/                 # shared query client, outcome normalizer, cross-module endpoints
 │   ├── components/          # reused by at least two modules
 │   ├── constants/
 │   ├── hooks/               # same five subdirectories as a module's hooks/
@@ -231,7 +231,9 @@ module-named namespace rather than being moved into the module source tree. Foll
 ## Testing
 
 Colocate component, page, hook, schema, and slice tests with their owner. Keep cross-cutting test
-setup in `src/test`.
+setup in `src/test`. A spec never sits one level above its subject; when no single file owns the
+behaviour it goes in its own dedicated directory under `src/test/`. See
+[Placing web tests](guides/placing-web-tests.md).
 
 - Use a fresh RTK store and memory-history router per test.
 - Prefer accessible Testing Library queries by role, label, and name.

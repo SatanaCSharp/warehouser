@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { workspaceRoleNameValidationKey } from 'modules/access/utils/workspace-role-name-validation';
 import { warehouseNameValidationKey } from 'modules/workspace/utils/warehouse-name-validation';
 
-import type { MutationOutcome } from 'shared/api/client/mutation-outcome';
+import type { ApiFailure } from 'shared/api/client/api-client';
 
 // RED for T61/AC-08, AC-15a (review S1-12) — every name rejection is produced
 // by one shared value object, and all three server commands map its
@@ -20,8 +20,9 @@ import type { MutationOutcome } from 'shared/api/client/mutation-outcome';
 // declared once, here, rather than duplicated across the two halves: it is one
 // case title, and duplicating it would report a case this split never added.
 describe('name rejection rule keys', () => {
-  const outcome = (rule: string): MutationOutcome => ({
-    success: false,
+  // The mapper runs as the endpoint's `transformErrorResponse`, so what it
+  // reads is the normalized API failure, not the outcome a form later sees.
+  const failure = (rule: string): ApiFailure => ({
     code: 'workspace.invalid_input',
     fieldErrors: { name: rule },
   });
@@ -33,7 +34,7 @@ describe('name rejection rule keys', () => {
   ])(
     'AC-08: translates the Warehouse-name rule %s to its own validation key',
     (rule, key) => {
-      expect(warehouseNameValidationKey(outcome(rule))).toMatchObject({
+      expect(warehouseNameValidationKey(failure(rule))).toMatchObject({
         fieldErrors: { name: key },
       });
     },
@@ -64,7 +65,7 @@ describe('name rejection rule keys', () => {
   ])(
     'never surfaces an unrecognised %s rule as a raw translation key',
     (_name, translate, knownKeys) => {
-      const result = translate(outcome('a_rule_added_later'));
+      const result = translate(failure('a_rule_added_later'));
 
       expect(result.fieldErrors?.name).not.toBe('a_rule_added_later');
       expect(knownKeys).toContain(result.fieldErrors?.name);

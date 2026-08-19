@@ -15,9 +15,6 @@ import type {
 import type { ReactElement } from 'react';
 
 type WarehouseDetailPaneProps = {
-  canArchiveWarehouse: boolean;
-  canCreateWarehouse: boolean;
-  canRenameWarehouse: boolean;
   isOnlyNonArchived: boolean;
   people: WorkspaceUser[] | undefined;
   warehouse: Warehouse;
@@ -29,11 +26,13 @@ type WarehouseDetailPaneProps = {
  * (AC-12a), its lifecycle actions (AC-11, AC-11a), and who has access to it
  * (AC-33) — never what Role they hold there (design-handoff.md §"The level
  * boundary is part of the design").
+ *
+ * The pane carries no authority of its own: every control below gates itself on
+ * the Workspace Permission it needs, so nothing here decides who may rename,
+ * archive or grant access
+ * (`docs/system/adr/19-08-2026-declarative-permission-gates.md`).
  */
 export const WarehouseDetailPane = ({
-  canArchiveWarehouse,
-  canCreateWarehouse,
-  canRenameWarehouse,
   isOnlyNonArchived,
   people,
   warehouse,
@@ -89,14 +88,9 @@ export const WarehouseDetailPane = ({
         </Alert>
       </Conditional>
 
-      <WarehouseNameForm
-        canRenameWarehouse={canRenameWarehouse}
-        warehouse={warehouse}
-      />
+      <WarehouseNameForm warehouse={warehouse} />
 
       <WarehouseLifecycleActions
-        canArchiveWarehouse={canArchiveWarehouse}
-        canCreateWarehouse={canCreateWarehouse}
         isOnlyNonArchived={isOnlyNonArchived}
         warehouse={warehouse}
       />

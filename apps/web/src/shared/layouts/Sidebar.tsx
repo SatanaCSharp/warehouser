@@ -3,8 +3,8 @@ import { Link as RouterLink, useRouterState } from '@tanstack/react-router';
 import { PermissionId } from '@warehouser/shared-types/enums';
 import { useTranslation } from 'react-i18next';
 
-import { PermissionGate } from 'shared/components/PermissionGate';
-import { WorkspaceGate } from 'shared/components/WorkspaceGate';
+import { WarehousePermissionGate } from 'shared/components/WarehousePermissionGate';
+import { WorkspacePermissionGate } from 'shared/components/WorkspacePermissionGate';
 import { ROUTES } from 'shared/constants/routes';
 import { useEnteredContext } from 'shared/hooks/projections/useEnteredContext';
 import { workspaceAdministrationPermissionIds } from 'shared/hooks/queries/useWorkspacePermissions';
@@ -76,7 +76,7 @@ export const Sidebar = ({
           Warehouse's own projection. Its falsy/loading behavior is inherited
           verbatim: absent while unresolved, present once it arrives, never a
           held-over value from the Warehouse just left. */}
-      <PermissionGate
+      <WarehousePermissionGate
         permission={[PermissionId.ROLES_WATCH, PermissionId.USERS_WATCH]}
       >
         <li>
@@ -93,17 +93,19 @@ export const Sidebar = ({
             {t('nav.access')}
           </RouterLink>
         </li>
-      </PermissionGate>
+      </WarehousePermissionGate>
     </ul>
   );
 
   const workspaceNavList = (onNavigate?: () => void): ReactElement => (
     <ul className="space-y-1 p-4">
-      {/* AC-30 — gated by the Workspace-level read, not by `PermissionGate`'s
-          Warehouse-level vocabulary, and any one of the destination's
+      {/* AC-30 — gated by the Workspace-level read, not by the Warehouse-level
+          gate's vocabulary, and any one of the destination's
           Permissions admits it because each opens its own part behind it.
           Holding none omits the entry entirely. */}
-      <WorkspaceGate permission={workspaceAdministrationPermissionIds}>
+      <WorkspacePermissionGate
+        permission={workspaceAdministrationPermissionIds}
+      >
         <li>
           <RouterLink
             to={ROUTES.WORKSPACE}
@@ -114,7 +116,7 @@ export const Sidebar = ({
             {t('nav.workspace')}
           </RouterLink>
         </li>
-      </WorkspaceGate>
+      </WorkspacePermissionGate>
     </ul>
   );
 

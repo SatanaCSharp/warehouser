@@ -4,56 +4,38 @@ import { useTranslation } from 'react-i18next';
 import { parseEmailChangeForm } from 'modules/access/schemas/email-change-form';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormTextField } from 'shared/components/FormTextField';
-import { useFormFieldErrors } from 'shared/hooks/forms/useFormFieldErrors';
 
 import type { EmailChangeInput } from '@warehouser/contracts/users';
 import type { AccessMember } from 'modules/access/types/access.types';
 import type { ReactElement } from 'react';
-import type { MutationOutcome } from 'shared/api/client/mutation-outcome';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import type { FormParseResult } from 'shared/utils/form-parse';
 
 type EditEmailDialogProps = {
   member: Pick<AccessMember, 'email' | 'userId'>;
-  onClose: () => void;
-  onSave: (input: EmailChangeInput) => Promise<MutationOutcome>;
+  onSave: (input: EmailChangeInput) => Promise<MutationResult>;
 };
 
 type EditEmailForm = { email: string };
 
 export const EditEmailDialog = ({
   member,
-  onClose,
   onSave,
 }: EditEmailDialogProps): ReactElement => {
   const { t } = useTranslation('access');
+  const form = useForm<EditEmailForm>({ defaultValues: { email: '' } });
   const {
     formState: { errors, isSubmitting },
-    handleSubmit,
     register,
-    setError,
-  } = useForm<EditEmailForm>({ defaultValues: { email: '' } });
-  const { setFieldError } = useFormFieldErrors<EditEmailForm>(setError);
+  } = form;
+
   const translateValidation = (code: string): string =>
     t(`administration.editEmail.validation.${code}`);
 
-  const submit = async ({ email }: EditEmailForm): Promise<void> => {
-    const parsed = parseEmailChangeForm(email);
-    if (!parsed.success) {
-      setFieldError('email', parsed.error.email, translateValidation);
-      return;
-    }
-
-    const result = await onSave(parsed.data);
-    if (result.success) {
-      onClose();
-      return;
-    }
-    if (
-      setFieldError('email', result.fieldErrors?.email, translateValidation)
-    ) {
-      return;
-    }
-    onClose();
-  };
+  const parse = ({
+    email,
+  }: EditEmailForm): FormParseResult<EditEmailForm, EmailChangeInput> =>
+    parseEmailChangeForm(email);
 
   return (
     <FormModalDialog
@@ -62,10 +44,10 @@ export const EditEmailDialog = ({
       submitLabel={t('administration.editEmail.save')}
       size="lg"
       scroll="inside"
-      noValidate
-      isSubmitting={isSubmitting}
-      onClose={onClose}
-      onSubmit={handleSubmit(submit)}
+      form={form}
+      parse={parse}
+      translateValidation={translateValidation}
+      onSubmit={onSave}
     >
       <FormTextField
         autoFocus

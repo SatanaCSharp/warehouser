@@ -1,6 +1,5 @@
 import { Chip, Spinner, Tabs } from '@heroui/react';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import compact from 'lodash/compact';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -10,10 +9,8 @@ import { WorkspaceRolesTab } from 'modules/access/components/workspace-administr
 import { NameWorkspaceAction } from 'modules/workspace/components/workspace-administration/NameWorkspaceAction';
 import { WarehousesTab } from 'modules/workspace/components/workspace-administration/warehouses/WarehousesTab';
 import { Conditional } from 'shared/components/Conditional';
-import {
-  hasWorkspacePermission,
-  useCurrentWorkspaceContext,
-} from 'shared/hooks/queries/useWorkspacePermissions';
+import { useWorkspacePermittedItems } from 'shared/hooks/projections/useWorkspacePermittedItems';
+import { useCurrentWorkspaceContext } from 'shared/hooks/queries/useWorkspacePermissions';
 
 import type { ReactElement } from 'react';
 import type { Key } from 'react-aria-components';
@@ -21,6 +18,8 @@ import type { Key } from 'react-aria-components';
 type AdministrationTab = {
   id: string;
   label: string;
+  /** The watch Permission that admits this tab (AC-30). */
+  permission: WorkspacePermissionId;
   shortLabel?: string;
 };
 
@@ -39,14 +38,42 @@ const tabContentById: Partial<Record<string, ReactElement>> = {
  * heading with its naming affordance, the section description, and the tabs
  * the acting member's watch Permissions admit (AC-30, AC-32, AC-33). Their
  * order and count never change. Each tab loads its own data once its own task
- * wires it — nothing is fetched here beyond the Workspace context every
- * capability is derived from.
+ * wires it — nothing is fetched here beyond the Workspace context the tab bar is
+ * resolved from.
+ *
+ * `Tabs.List` and `Tabs.Panel` are React Aria collections, so each tab names the
+ * Permission that admits it in its own descriptor and `useWorkspacePermittedItems`
+ * drops the rest — the collection form of `WorkspacePermissionGate`
+ * (`docs/system/adr/19-08-2026-declarative-permission-gates.md`). Nothing else on
+ * this page decides authority: the naming affordance gates itself.
  */
 export const WorkspaceAdministration = (): ReactElement | null => {
   const { t } = useTranslation('workspace');
   const [selectedTab, setSelectedTab] = useState<Key | null>(null);
-  const { isLoading, workspaceContext, workspacePermissionIds } =
-    useCurrentWorkspaceContext();
+  const { isLoading, workspaceContext } = useCurrentWorkspaceContext();
+  const tabs = useWorkspacePermittedItems<AdministrationTab>([
+    {
+      id: 'warehouses',
+      label: t('tabs.warehouses'),
+      permission: WorkspacePermissionId.WAREHOUSES_WATCH,
+    },
+    {
+      id: 'workspaceRoles',
+      label: t('tabs.workspaceRoles'),
+      permission: WorkspacePermissionId.WORKSPACE_ROLES_WATCH,
+      shortLabel: t('tabs.workspaceRolesShort'),
+    },
+    {
+      id: 'members',
+      label: t('tabs.members'),
+      permission: WorkspacePermissionId.WORKSPACE_MEMBERS_WATCH,
+    },
+    {
+      id: 'permissions',
+      label: t('tabs.permissions'),
+      permission: WorkspacePermissionId.WORKSPACE_ROLES_WATCH,
+    },
+  ]);
 
   if (isLoading) {
     return (
@@ -60,29 +87,6 @@ export const WorkspaceAdministration = (): ReactElement | null => {
   if (!workspaceContext) {
     return null;
   }
-
-  const tabs = compact<AdministrationTab>([
-    hasWorkspacePermission(
-      workspacePermissionIds,
-      WorkspacePermissionId.WAREHOUSES_WATCH,
-    ) && { id: 'warehouses', label: t('tabs.warehouses') },
-    hasWorkspacePermission(
-      workspacePermissionIds,
-      WorkspacePermissionId.WORKSPACE_ROLES_WATCH,
-    ) && {
-      id: 'workspaceRoles',
-      label: t('tabs.workspaceRoles'),
-      shortLabel: t('tabs.workspaceRolesShort'),
-    },
-    hasWorkspacePermission(
-      workspacePermissionIds,
-      WorkspacePermissionId.WORKSPACE_MEMBERS_WATCH,
-    ) && { id: 'members', label: t('tabs.members') },
-    hasWorkspacePermission(
-      workspacePermissionIds,
-      WorkspacePermissionId.WORKSPACE_ROLES_WATCH,
-    ) && { id: 'permissions', label: t('tabs.permissions') },
-  ]);
 
   const { name } = workspaceContext.workspace;
   const openSection = (selectedTab ?? tabs[0]?.id) as string | undefined;

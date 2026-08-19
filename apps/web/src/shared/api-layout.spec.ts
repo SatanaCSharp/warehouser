@@ -8,12 +8,12 @@ import type { Dirent } from 'node:fs';
 
 // The static layout guard over `shared/api` (refactor-warehouse-components
 // CR-AC-05). It encodes the tree fixed by that request's `sad.md` §5.5: seven
-// modules and two colocated specs, filed under four directories that each name
-// the domain their contents address, with nothing left at the root.
+// modules and their colocated specs, filed under four directories that each
+// name the domain their contents address, with nothing left at the root.
 //
 // Style follows the repository's existing enforcement pattern — a static source
 // scan (`globSync`/`readFileSync` + regex), as in
-// `apps/web/src/modules/module-boundaries.spec.ts` — rather than a dependency
+// `apps/web/src/test/module-boundaries/module-boundaries.spec.ts` — rather than a dependency
 // graph tool or an ESLint plugin, neither of which this repository has.
 //
 // PLACEMENT — this spec sits at `shared/`, one level above the tree it scans,
@@ -35,12 +35,11 @@ const API_DIRECTORY = posix.join(SRC_DIRECTORY, 'shared/api');
 /** `sad.md` §5.5's tree: every file `shared/api` may hold, and where. */
 const API_LAYOUT: Readonly<Record<string, readonly string[]>> = {
   access: ['access-permissions-api.spec.ts', 'access-permissions-api.ts'],
-  client: ['api-client.ts', 'mutation-outcome.ts', 'run-mutation.ts'],
+  client: ['api-client.ts', 'mutation-outcome.spec.ts', 'mutation-outcome.ts'],
   warehouse: ['warehouse-path.ts'],
   workspace: [
     'workspace-context-api.spec.ts',
     'workspace-context-api.ts',
-    'workspace-mutation.ts',
     'workspace-users-api.ts',
   ],
 };

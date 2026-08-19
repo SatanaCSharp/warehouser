@@ -11,9 +11,11 @@ import {
   memberEmailSchema,
   memberSchema,
 } from '@warehouser/contracts/users';
+import { ErrorCode } from '@warehouser/shared-types/enums';
 
 import { api } from 'shared/api/client/api-client';
 import { warehousePath } from 'shared/api/warehouse/warehouse-path';
+import { fieldErrorsForCode } from 'shared/utils/field-errors';
 
 import type { TagDescription } from '@reduxjs/toolkit/query';
 import type {
@@ -37,6 +39,26 @@ import type {
 
 type Role = RolePage['items'][number];
 type Member = MemberPage['items'][number];
+
+/** Which field explains a rejected creation when the server named none. */
+const createMemberFieldErrors = fieldErrorsForCode({
+  [ErrorCode.AUTH_EMAIL_ALREADY_REGISTERED]: { email: 'duplicate' },
+  [ErrorCode.USERS_PERMISSION_EXCEEDED]: { roleId: 'exceeded' },
+  [ErrorCode.USERS_RESERVED_ROLE_SELECTION]: { roleId: 'exceeded' },
+});
+
+/** Every rejection of an email change is explained on the email field. */
+const emailChangeFieldErrors = fieldErrorsForCode({
+  [ErrorCode.AUTH_EMAIL_ALREADY_REGISTERED]: { email: 'duplicate' },
+  [ErrorCode.USERS_MANAGER_ROLE_PROTECTED]: { email: 'protected' },
+  [ErrorCode.USERS_PERMISSION_EXCEEDED]: { email: 'exceeded' },
+});
+
+/** Every rejection of a password reset is explained on the password field. */
+const passwordChangeFieldErrors = fieldErrorsForCode({
+  [ErrorCode.USERS_MANAGER_ROLE_PROTECTED]: { password: 'protected' },
+  [ErrorCode.USERS_PERMISSION_EXCEEDED]: { password: 'exceeded' },
+});
 
 /** Every Warehouse-scoped request names the Warehouse it acts in (AC-05). */
 type InWarehouse<TRest = unknown> = { warehouseId: string } & TRest;
@@ -168,6 +190,7 @@ export const accessApi = api.injectEndpoints({
         body: input,
       }),
       extraOptions: { schema: memberSchema },
+      transformErrorResponse: createMemberFieldErrors,
       // A new Member is created already holding a Role, which raises that
       // Role's `assignedMemberCount` (see `assignAccessMemberRole`).
       invalidatesTags: warehouseTags('AccessMembers', 'Roles', 'CurrentAccess'),
@@ -179,6 +202,7 @@ export const accessApi = api.injectEndpoints({
         body: input,
       }),
       extraOptions: { schema: memberEmailSchema },
+      transformErrorResponse: emailChangeFieldErrors,
       invalidatesTags: warehouseTags('AccessMembers', 'CurrentAccess'),
     }),
     changeMemberPassword: build.mutation<
@@ -191,6 +215,7 @@ export const accessApi = api.injectEndpoints({
         body: input,
       }),
       extraOptions: { schema: memberConfirmationSchema },
+      transformErrorResponse: passwordChangeFieldErrors,
       invalidatesTags: warehouseTags('AccessMembers', 'CurrentAccess'),
     }),
     deleteMember: build.mutation<null, InWarehouse<{ userId: string }>>({

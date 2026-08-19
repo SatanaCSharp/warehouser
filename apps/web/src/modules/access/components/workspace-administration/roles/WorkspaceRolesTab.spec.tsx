@@ -587,7 +587,7 @@ describe('WorkspaceRolesTab', () => {
       await waitFor(() =>
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
       );
-      expect(trigger).toHaveFocus();
+      await waitFor(() => expect(trigger).toHaveFocus());
     });
   });
 });

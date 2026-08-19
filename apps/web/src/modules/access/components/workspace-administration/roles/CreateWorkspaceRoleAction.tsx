@@ -1,11 +1,10 @@
-import { Button } from '@heroui/react';
+import { Button, Modal } from '@heroui/react';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { CreateWorkspaceRoleDialog } from 'modules/access/components/workspace-administration/roles/CreateWorkspaceRoleDialog';
-import { Conditional } from 'shared/components/Conditional';
-import { useHasWorkspacePermission } from 'shared/hooks/queries/useWorkspacePermissions';
+import { TriggeredDialog } from 'shared/components/TriggeredDialog';
+import { WorkspacePermissionGate } from 'shared/components/WorkspacePermissionGate';
 import { PlusIcon } from 'shared/icons';
 
 import type { WorkspacePermission } from '@warehouser/contracts/workspaces';
@@ -22,33 +21,22 @@ type CreateWorkspaceRoleActionProps = {
  */
 export const CreateWorkspaceRoleAction = ({
   permissions,
-}: CreateWorkspaceRoleActionProps): ReactElement | null => {
+}: CreateWorkspaceRoleActionProps): ReactElement => {
   const { t } = useTranslation('access');
-  const canCreateWorkspaceRole = useHasWorkspacePermission(
-    WorkspacePermissionId.WORKSPACE_ROLES_CREATE,
-  );
-  const [isOpen, setIsOpen] = useState(false);
-
-  const onPress = (): void => setIsOpen(true);
-
-  const onClose = (): void => setIsOpen(false);
-
-  if (!canCreateWorkspaceRole) {
-    return null;
-  }
 
   return (
-    <>
-      <Button variant="primary" onPress={onPress}>
-        <PlusIcon />
-        {t('workspaceRoles.create.trigger')}
-      </Button>
-      <Conditional when={isOpen}>
-        <CreateWorkspaceRoleDialog
-          permissions={permissions}
-          onClose={onClose}
-        />
-      </Conditional>
-    </>
+    <WorkspacePermissionGate
+      permission={WorkspacePermissionId.WORKSPACE_ROLES_CREATE}
+    >
+      <Modal>
+        <Button variant="primary">
+          <PlusIcon />
+          {t('workspaceRoles.create.trigger')}
+        </Button>
+        <TriggeredDialog>
+          <CreateWorkspaceRoleDialog permissions={permissions} />
+        </TriggeredDialog>
+      </Modal>
+    </WorkspacePermissionGate>
   );
 };

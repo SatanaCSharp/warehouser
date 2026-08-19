@@ -1,15 +1,18 @@
 import { useState } from 'react';
 
+import {
+  useChangeMemberEmailMutation,
+  useChangeMemberPasswordMutation,
+  useDeleteMemberMutation,
+} from 'modules/access/api/access-api';
 import { DeleteMemberDialog } from 'modules/access/components/access-workspace/components/members/DeleteMemberDialog';
 import { EditEmailDialog } from 'modules/access/components/access-workspace/components/members/EditEmailDialog';
 import { MemberList } from 'modules/access/components/access-workspace/components/members/MemberList';
 import { ResetPasswordDialog } from 'modules/access/components/access-workspace/components/members/ResetPasswordDialog';
-import { useChangeMemberEmail } from 'modules/access/hooks/mutations/useChangeMemberEmail';
-import { useChangeMemberPassword } from 'modules/access/hooks/mutations/useChangeMemberPassword';
-import { useDeleteMember } from 'modules/access/hooks/mutations/useDeleteMember';
-import { useAccessCapabilities } from 'modules/access/hooks/projections/useAccessCapabilities';
+import { useAccessScope } from 'modules/access/hooks/projections/useAccessScope';
 import { useAccessRoles } from 'modules/access/hooks/queries/useAccessRoles';
 import { selectCurrentUser } from 'modules/auth/store/auth.selectors';
+import { DialogHost } from 'shared/components/DialogHost';
 import { useAppSelector } from 'store/hooks';
 
 import type {
@@ -18,7 +21,7 @@ import type {
 } from '@warehouser/contracts/users';
 import type { AccessMember } from 'modules/access/types/access.types';
 import type { ReactElement } from 'react';
-import type { MutationOutcome } from 'shared/api/client/mutation-outcome';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 type MemberDirectoryProps = {
   isRefreshing: boolean;
@@ -42,17 +45,12 @@ export const MemberDirectory = ({
   isRefreshing,
   members,
 }: MemberDirectoryProps): ReactElement => {
-  const {
-    canDeleteMembers,
-    canEditMemberEmails,
-    canResetMemberPasswords,
-    warehouseId,
-  } = useAccessCapabilities();
+  const { warehouseId } = useAccessScope();
   const roles = useAccessRoles();
   const actor = useAppSelector(selectCurrentUser);
-  const changeMemberEmail = useChangeMemberEmail(warehouseId ?? '');
-  const changeMemberPassword = useChangeMemberPassword(warehouseId ?? '');
-  const deleteMember = useDeleteMember(warehouseId ?? '');
+  const [changeMemberEmail] = useChangeMemberEmailMutation();
+  const [changeMemberPassword] = useChangeMemberPasswordMutation();
+  const [deleteMember] = useDeleteMemberMutation();
   const [dialog, setDialog] = useState<MemberDialog | null>(null);
 
   const onCloseDialog = (): void => setDialog(null);
@@ -64,55 +62,63 @@ export const MemberDirectory = ({
 
   const onSaveEmail =
     (member: AccessMember) =>
-    (input: EmailChangeInput): Promise<MutationOutcome> =>
-      changeMemberEmail(member.userId, input);
+    (input: EmailChangeInput): Promise<MutationResult> =>
+      changeMemberEmail({
+        warehouseId: warehouseId ?? '',
+        userId: member.userId,
+        input,
+      });
 
   const onSavePassword =
     (member: AccessMember) =>
-    (input: PasswordChangeInput): Promise<MutationOutcome> =>
-      changeMemberPassword(member.userId, input);
+    (input: PasswordChangeInput): Promise<MutationResult> =>
+      changeMemberPassword({
+        warehouseId: warehouseId ?? '',
+        userId: member.userId,
+        input,
+      });
 
   const onConfirmDelete =
-    (member: AccessMember) => (): Promise<MutationOutcome> =>
-      deleteMember(member.userId);
+    (member: AccessMember) => (): Promise<MutationResult> =>
+      deleteMember({ warehouseId: warehouseId ?? '', userId: member.userId });
 
   // Every dialog reads the member its row was opened for, so the open one is
   // resolved by a lookup here rather than gated inline: `Conditional` evaluates
-  // both arms, and no member exists until a row opens one.
+  // both arms, and no member exists until a row opens one. A row is not a
+  // trigger the dialog can sit beside, so `DialogHost` holds the open state the
+  // dialog closes itself through.
   const openDialog =
-    dialog === null
-      ? null
-      : {
-          editEmail: (
-            <EditEmailDialog
-              member={dialog.member}
-              onClose={onCloseDialog}
-              onSave={onSaveEmail(dialog.member)}
-            />
-          ),
-          resetPassword: (
-            <ResetPasswordDialog
-              member={dialog.member}
-              onClose={onCloseDialog}
-              onSave={onSavePassword(dialog.member)}
-            />
-          ),
-          deleteMember: (
-            <DeleteMemberDialog
-              member={dialog.member}
-              onClose={onCloseDialog}
-              onDelete={onConfirmDelete(dialog.member)}
-            />
-          ),
-        }[dialog.kind];
+    dialog === null ? null : (
+      <DialogHost onClose={onCloseDialog}>
+        {
+          {
+            editEmail: (
+              <EditEmailDialog
+                member={dialog.member}
+                onSave={onSaveEmail(dialog.member)}
+              />
+            ),
+            resetPassword: (
+              <ResetPasswordDialog
+                member={dialog.member}
+                onSave={onSavePassword(dialog.member)}
+              />
+            ),
+            deleteMember: (
+              <DeleteMemberDialog
+                member={dialog.member}
+                onDelete={onConfirmDelete(dialog.member)}
+              />
+            ),
+          }[dialog.kind]
+        }
+      </DialogHost>
+    );
 
   return (
     <>
       <MemberList
         actorUserId={actor?.id ?? ''}
-        canDeleteMember={canDeleteMembers}
-        canEditEmail={canEditMemberEmails}
-        canResetPassword={canResetMemberPasswords}
         isLoading={isRefreshing || actor === null}
         members={members}
         roles={roles.items}

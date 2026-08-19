@@ -5,6 +5,8 @@ import {
 } from '@warehouser/contracts/workspaces';
 
 import { api } from 'shared/api/client/api-client';
+import { fieldErrorsForCode } from 'shared/utils/field-errors';
+import { nameValidationKeyMapper } from 'shared/utils/name-validation';
 
 import type {
   ActiveWarehouseSelection,
@@ -13,8 +15,23 @@ import type {
   WorkspaceContext,
   WorkspaceRename,
 } from '@warehouser/contracts/workspaces';
+import type { ApiFailure } from 'shared/api/client/api-client';
 
 const WORKSPACE_PATH = '/api/v1/workspace';
+
+/** A rejection that names no rule still binds to the only field this form has. */
+const workspaceNameFieldErrors = fieldErrorsForCode({
+  'workspace.invalid_input': { name: 'workspaceName.server' },
+});
+
+/** Translates a Workspace-name rejection's rule into its key (AC-29a). */
+const workspaceNameValidationKey = nameValidationKeyMapper({
+  prefix: 'workspaceName',
+  fallbackSuffix: 'server',
+});
+
+const workspaceNameErrors = (failure: ApiFailure): ApiFailure =>
+  workspaceNameValidationKey(workspaceNameFieldErrors(failure));
 
 export const workspaceContextApi = api.injectEndpoints({
   endpoints: (build) => ({
@@ -46,6 +63,7 @@ export const workspaceContextApi = api.injectEndpoints({
         body,
       }),
       extraOptions: { schema: workspaceSchema },
+      transformErrorResponse: workspaceNameErrors,
       // AC-29 — the renamed Workspace is what the response actually
       // committed; patch the cached context directly instead of
       // invalidating and refetching, which would race a concurrent context

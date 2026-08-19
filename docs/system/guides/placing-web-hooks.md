@@ -19,19 +19,20 @@ are for.
 
 Every `hooks/` directory — a module's or `shared/`'s — uses the same five names.
 
-| Directory      | What lives there                                                     | Examples                                                           |
-| -------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| `queries/`     | Reads server state. An RTK Query binding plus the gating it owns.    | `useAccessRoles`, `useWorkspaceMembers`, `usePermissions`          |
-| `mutations/`   | Writes server state. One action, bound to one mutation runner.       | `useCreateMember`, `useSetWarehouseArchival`                       |
-| `forms/`       | Owns a form session: registration, client validation, error mapping. | `useRoleForm`, `useFormFieldErrors`                                |
-| `projections/` | Derives a value from state already loaded. Reads and writes nothing. | `useAccessCapabilities`, `usePermissionLabel`, `useEnteredContext` |
-| `effects/`     | Its product is a browser side effect, not a value.                   | `useReturnFocusOnClose`, `useRecordWarehouseEntry`                 |
+| Directory      | What lives there                                                                                                        | Examples                                                                         |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `queries/`     | Reads server state. An RTK Query binding plus the gating it owns.                                                       | `useAccessRoles`, `useWorkspaceMembers`, `usePermissions`                        |
+| `mutations/`   | Writes server state by **composing** more than one request. A single endpoint gets no hook — trigger its generated one. | `useSaveDraftThenPublish`                                                        |
+| `forms/`       | Owns a form session: registration, client validation, error mapping.                                                    | `useRoleForm`, `useFormFieldErrors`                                              |
+| `projections/` | Derives a value from state already loaded. Reads and writes nothing.                                                    | `useAccessScope`, `usePermittedItems`, `usePermissionLabel`, `useEnteredContext` |
+| `effects/`     | Its product is a browser side effect, not a value.                                                                      | `useCloseDialog`, `useRecordWarehouseEntry`                                      |
 
 Three rules settle the cases that look ambiguous:
 
-- **A hook that calls a query hook is not automatically a query.** `useAccessCapabilities` reads the
-  cached current-access projection through `useCurrentPermissions`, but its own job is deciding what
-  the actor may do. It is a projection. Ask what the hook is _for_, not what it happens to call.
+- **A hook that calls a query hook is not automatically a query.** `usePermittedItems` reads the
+  cached current-access projection through `useCurrentPermissions`, but its own job is deciding which
+  of a surface's descriptors the actor is offered. It is a projection. Ask what the hook is _for_, not
+  what it happens to call.
 - **A gate belongs to the read it gates.** `useWorkspaceRoles` decides from a Permission whether the
   query fires at all. That gate is part of the read, so it stays in `queries/` rather than being
   split into a projection its caller has to combine.
@@ -51,7 +52,7 @@ functions, lookup tables, and the types they carry go to a `utils/` directory:
   flattens that module's page envelope; `workspace/utils/warehouse-name-validation.ts` translates a
   Warehouse-name rejection.
 - `shared/utils/` when the helper is generic and at least two modules need it, and no single domain
-  entity owns it — `fieldErrorMapFrom`, `nameValidationKeyMapper`, `refineName`,
+  entity owns it — `fieldErrorsForCode`, `nameValidationKeyMapper`, `refineName`,
   `permissionTranslationKey`.
 
 The promotion test is the one in [Frontend architecture](../frontend-architecture.md): reuse alone
@@ -72,7 +73,7 @@ three components calling `useAccessRoles()` share one request and one cache entr
 ## 5. Colocate the test
 
 A hook's spec sits beside it, in the same directory it was filed into —
-`hooks/mutations/useCreateMember.spec.ts`. Moving a hook moves its spec.
+`hooks/queries/useAccessRoles.spec.ts`. Moving a hook moves its spec.
 
 ## 6. Verify before completing
 

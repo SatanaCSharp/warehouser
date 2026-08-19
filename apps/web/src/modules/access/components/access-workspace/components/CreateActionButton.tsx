@@ -9,18 +9,17 @@ type CreateActionButtonProps = {
   label: string;
   /** Exposed as the disabled control's reason (AC-12) — a hover/focus tooltip. */
   reason?: string;
-  onPress: () => void;
 };
 
 /**
  * Primary "create" trigger of a workspace toolbar: icon-only on narrow
- * viewports, icon plus label from `sm` up, labelled either way.
+ * viewports, icon plus label from `sm` up, labelled either way. It opens the
+ * `Modal` it is rendered in, which owns the dialog's open state.
  */
 export const CreateActionButton = ({
   isDisabled = false,
   label,
   reason,
-  onPress,
 }: CreateActionButtonProps): ReactElement => {
   const button = (
     <Button
@@ -28,7 +27,6 @@ export const CreateActionButton = ({
       aria-label={label}
       className="w-10 min-w-10 gap-0 px-0 font-semibold sm:w-auto sm:min-w-40 sm:gap-2 sm:px-4"
       isDisabled={isDisabled}
-      onPress={onPress}
     >
       <PlusIcon />
       <span className="hidden sm:inline">{label}</span>

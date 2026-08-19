@@ -1,11 +1,14 @@
 import { useState } from 'react';
 
+import {
+  useDeleteAccessRoleMutation,
+  useUpdateAccessRoleMutation,
+} from 'modules/access/api/access-api';
 import { DeleteRoleDialog } from 'modules/access/components/access-workspace/components/roles/DeleteRoleDialog';
 import { RoleEditor } from 'modules/access/components/access-workspace/components/roles/RoleEditor';
 import { RoleList } from 'modules/access/components/access-workspace/components/roles/RoleList';
-import { useDeleteRole } from 'modules/access/hooks/mutations/useDeleteRole';
-import { useSaveRole } from 'modules/access/hooks/mutations/useSaveRole';
-import { useAccessCapabilities } from 'modules/access/hooks/projections/useAccessCapabilities';
+import { useAccessScope } from 'modules/access/hooks/projections/useAccessScope';
+import { DialogHost } from 'shared/components/DialogHost';
 
 import type { RoleWrite } from '@warehouser/contracts/access';
 import type {
@@ -13,7 +16,7 @@ import type {
   AccessRole,
 } from 'modules/access/types/access.types';
 import type { ReactElement } from 'react';
-import type { MutationOutcome } from 'shared/api/client/mutation-outcome';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 type RoleDirectoryProps = {
   permissions: AccessPermission[];
@@ -32,10 +35,9 @@ export const RoleDirectory = ({
   permissions,
   roles,
 }: RoleDirectoryProps): ReactElement => {
-  const { canDeleteRoles, canUpdateRoles, isArchived, warehouseId } =
-    useAccessCapabilities();
-  const saveRole = useSaveRole(warehouseId ?? '');
-  const deleteRole = useDeleteRole(warehouseId ?? '');
+  const { isArchived, warehouseId } = useAccessScope();
+  const [updateRole] = useUpdateAccessRoleMutation();
+  const [deleteRole] = useDeleteAccessRoleMutation();
   // An archived Warehouse's Roles start unselected: nothing here is editable,
   // so nothing opens the editor pane by default (AC-12a) — the actor still
   // reads a Role's grants by selecting it from the list.
@@ -54,17 +56,17 @@ export const RoleDirectory = ({
 
   const onSaveRole =
     (roleId: string) =>
-    (input: RoleWrite): Promise<MutationOutcome> =>
-      saveRole(input, roleId);
+    (input: RoleWrite): Promise<MutationResult> =>
+      updateRole({ warehouseId: warehouseId ?? '', roleId, input });
 
   const onConfirmDeletion =
     (role: AccessRole) =>
-    async (replacementRoleId: string | null): Promise<void> => {
-      const outcome = await deleteRole(role.id, replacementRoleId);
-      if (outcome.success) {
-        onCloseDeletion();
-      }
-    };
+    (replacementRoleId: string | null): Promise<MutationResult> =>
+      deleteRole({
+        warehouseId: warehouseId ?? '',
+        roleId: role.id,
+        input: { replacementRoleId },
+      });
 
   // Both panes read the record they were opened for, so each is resolved here
   // rather than gated inline: `Conditional` evaluates both arms, and neither
@@ -76,8 +78,6 @@ export const RoleDirectory = ({
     // progress on the Role that is still selected.
     <RoleEditor
       key={selectedRole.id}
-      canDelete={canDeleteRoles && !isArchived}
-      canUpdate={canUpdateRoles && !isArchived}
       permissions={permissions}
       role={selectedRole}
       onDelete={onDeleteRole(selectedRole)}
@@ -87,12 +87,13 @@ export const RoleDirectory = ({
 
   const deleteRoleDialog =
     rolePendingDeletion === null ? null : (
-      <DeleteRoleDialog
-        role={rolePendingDeletion}
-        roles={roles.filter((role) => role.kind === 'custom')}
-        onClose={onCloseDeletion}
-        onDelete={onConfirmDeletion(rolePendingDeletion)}
-      />
+      <DialogHost onClose={onCloseDeletion}>
+        <DeleteRoleDialog
+          role={rolePendingDeletion}
+          roles={roles.filter((role) => role.kind === 'custom')}
+          onDelete={onConfirmDeletion(rolePendingDeletion)}
+        />
+      </DialogHost>
     );
 
   return (

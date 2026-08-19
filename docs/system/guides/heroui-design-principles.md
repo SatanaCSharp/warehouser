@@ -39,6 +39,18 @@ monolithic component through a large prop surface. Import named parts or use dot
 consistently within a file. Omit parts a feature does not need instead of passing props to hide
 them.
 
+### Dialogs let the Modal own the open state
+
+Wrap a trigger and the dialog it opens in a HeroUI `Modal` and let it do the work React Aria already
+does: it opens the dialog from the control beside it, traps focus inside it, and returns focus to the
+trigger on close — with `shared/components/TriggeredDialog` between them, so the dialog is mounted
+only while it is open. A component that keeps its own `isOpen`
+boolean, calls `.focus()` on a trigger ref, or threads an `onClose` down to a dialog is
+re-implementing that. The dialog closes itself — declaratively with `<Button slot="close">` (what
+`shared/components/FormModalDialog` renders for cancel), or with `useCloseDialog()` when a mutation
+succeeding is what closes it. Where no control sits beside the dialog — a list row that opens one
+per record — `shared/components/DialogHost` supplies the same open state.
+
 ## 4. Progressive disclosure
 
 Start from the simplest valid usage and add props only as the feature's requirements demand it:
@@ -127,7 +139,8 @@ components directly in module code.
 
 - Choosing a `variant` for its look instead of its semantic role (e.g. using `danger` for a merely
   attention-grabbing button).
-- Re-implementing keyboard or focus behavior that React Aria already provides through the component.
+- Re-implementing keyboard or focus behavior that React Aria already provides through the component,
+  including holding a dialog's open state and restoring focus to its trigger by hand.
 - Passing every available prop up front instead of starting from the minimal usage.
 - Hand-writing BEM class strings instead of importing `@heroui/styles` variant functions.
 - Overriding a component's computed style with ad hoc `className` rules for a change that belongs in

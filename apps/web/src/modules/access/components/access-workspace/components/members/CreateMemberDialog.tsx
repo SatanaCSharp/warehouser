@@ -6,80 +6,59 @@ import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormSelectField } from 'shared/components/FormSelectField';
 import { FormTextField } from 'shared/components/FormTextField';
 import { PasswordInput } from 'shared/components/PasswordInput';
-import { useFormFieldErrors } from 'shared/hooks/forms/useFormFieldErrors';
 
 import type { CreateMemberInput } from '@warehouser/contracts/users';
 import type { AccessRole } from 'modules/access/types/access.types';
 import type { ReactElement } from 'react';
-import type { MutationOutcome } from 'shared/api/client/mutation-outcome';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import type { FormParseResult } from 'shared/utils/form-parse';
 
 type CreateMemberDialogProps = {
   roles: AccessRole[];
-  onClose: () => void;
-  onSave: (input: CreateMemberInput) => Promise<MutationOutcome>;
+  onSave: (input: CreateMemberInput) => Promise<MutationResult>;
 };
 
 type CreateMemberForm = { email: string; password: string; roleId: string };
 
+/** Which validation namespace explains each field's rejection. */
+const VALIDATION_NAMESPACE: Record<keyof CreateMemberForm, string> = {
+  email: 'email',
+  password: 'password',
+  roleId: 'role',
+};
+
 export const CreateMemberDialog = ({
   roles,
-  onClose,
   onSave,
 }: CreateMemberDialogProps): ReactElement => {
   const { t } = useTranslation('access');
+  const form = useForm<CreateMemberForm>({
+    defaultValues: { email: '', password: '', roleId: '' },
+  });
   const {
     control,
     formState: { errors, isSubmitting },
-    handleSubmit,
     register,
-    setError,
-  } = useForm<CreateMemberForm>({
-    defaultValues: { email: '', password: '', roleId: '' },
-  });
-  const { setFieldErrors } = useFormFieldErrors<CreateMemberForm>(setError);
-
-  const validationNamespace: Record<keyof CreateMemberForm, string> = {
-    email: 'email',
-    password: 'password',
-    roleId: 'role',
-  };
+  } = form;
 
   const translateValidation = (
-    field: keyof CreateMemberForm,
     code: string,
+    field: keyof CreateMemberForm,
   ): string =>
     t(
-      `administration.createMember.validation.${validationNamespace[field]}.${code}`,
+      `administration.createMember.validation.${VALIDATION_NAMESPACE[field]}.${code}`,
     );
+
+  const parse = ({
+    email,
+    password,
+    roleId,
+  }: CreateMemberForm): FormParseResult<CreateMemberForm, CreateMemberInput> =>
+    parseCreateMemberForm(email, password, roleId);
 
   const selectableRoles = roles.filter(
     (role) => role.kind !== 'warehouse_manager',
   );
-
-  const submit = async ({
-    email,
-    password,
-    roleId,
-  }: CreateMemberForm): Promise<void> => {
-    const parsed = parseCreateMemberForm(email, password, roleId);
-    if (!parsed.success) {
-      setFieldErrors(
-        { email: parsed.error.email, password: parsed.error.password },
-        translateValidation,
-      );
-      return;
-    }
-
-    const result = await onSave(parsed.data);
-    if (result.success) {
-      onClose();
-      return;
-    }
-    setFieldErrors(
-      { email: result.fieldErrors?.email, roleId: result.fieldErrors?.roleId },
-      translateValidation,
-    );
-  };
 
   return (
     <FormModalDialog
@@ -88,10 +67,10 @@ export const CreateMemberDialog = ({
       submitLabel={t('administration.createMember.save')}
       size="lg"
       scroll="inside"
-      noValidate
-      isSubmitting={isSubmitting}
-      onClose={onClose}
-      onSubmit={handleSubmit(submit)}
+      form={form}
+      parse={parse}
+      translateValidation={translateValidation}
+      onSubmit={onSave}
     >
       <FormTextField
         autoFocus
@@ -125,7 +104,7 @@ export const CreateMemberDialog = ({
         // explain why — and because `handleSubmit` never ran, the email and
         // password were never validated either. The message makes the refusal
         // visible and keeps it on the same translated path as the other fields.
-        rules={{ required: translateValidation('roleId', 'required') }}
+        rules={{ required: translateValidation('required', 'roleId') }}
         render={({ field }) => (
           <FormSelectField
             isRequired

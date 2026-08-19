@@ -2,7 +2,6 @@ import { Button } from '@heroui/react';
 import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 
-import { alertSignOutAction } from 'modules/auth/alerts/auth-feedback';
 import { useSignOutMutation } from 'modules/auth/api/auth-api';
 import { authBecameAnonymous } from 'modules/auth/store/auth.slice';
 import { Conditional } from 'shared/components/Conditional';
@@ -19,7 +18,7 @@ export const SignOutButton = (): ReactElement => {
   const [signOut, { isLoading: isSigningOut }] = useSignOutMutation();
 
   const handleSignOut = async (): Promise<void> => {
-    const result = await alertSignOutAction(signOut());
+    const result = await signOut();
     if ('error' in result) {
       return;
     }

@@ -1,42 +1,70 @@
 import { Chip, Tabs } from '@heroui/react';
-import compact from 'lodash/compact';
+import { PermissionId } from '@warehouser/shared-types/enums';
 import { useTranslation } from 'react-i18next';
 
 import { MembersTab } from 'modules/access/components/access-workspace/components/members/MembersTab';
 import { PermissionsTab } from 'modules/access/components/access-workspace/components/permissions/PermissionsTab';
 import { RolesTab } from 'modules/access/components/access-workspace/components/roles/RolesTab';
-import { useAccessCapabilities } from 'modules/access/hooks/projections/useAccessCapabilities';
+import { useAccessScope } from 'modules/access/hooks/projections/useAccessScope';
 import { Conditional } from 'shared/components/Conditional';
+import { usePermittedItems } from 'shared/hooks/projections/usePermittedItems';
 
 import type { ReactElement, ReactNode } from 'react';
 
-type WorkspaceTab = { id: string; label: string; panel: ReactNode };
+type WorkspaceTab = {
+  id: string;
+  label: string;
+  panel: ReactNode;
+  /** The Permissions that put this tab on the bar; any one of them is enough. */
+  permission: readonly PermissionId[];
+};
+
+/**
+ * The Roles tab is on the bar for an actor who may only read Roles as well as for
+ * one who may administer them — `RolesTab` decides which of the two surfaces they
+ * get. Every other tab is one watch Permission.
+ */
+const rolesTabPermissions = [
+  PermissionId.ROLES_WATCH,
+  PermissionId.ROLES_ASSIGN,
+  PermissionId.ROLES_CREATE,
+  PermissionId.ROLES_DELETE,
+  PermissionId.ROLES_UPDATE,
+  PermissionId.WAREHOUSE_MANAGER_ROLE_REASSIGN,
+];
 
 /**
  * Composition root of the access workspace: it renders the tabs the acting user
  * may see. What a tab shows lives in that tab's own component, and each tab
  * loads the data and mutations it needs itself — none of it is decided here.
+ *
+ * `Tabs.List` and `Tabs.Panel` are React Aria collections, so each tab carries
+ * the Permissions that offer it in its own descriptor and `usePermittedItems`
+ * drops the rest — the collection form of `WarehousePermissionGate`
+ * (`docs/system/adr/19-08-2026-declarative-permission-gates.md`).
  */
 export const AccessWorkspace = (): ReactElement => {
   const { t } = useTranslation('access');
-  const { canManageRoles, canReadMembers, canReadRoles, isArchived } =
-    useAccessCapabilities();
+  const { isArchived } = useAccessScope();
 
-  const tabs = compact<WorkspaceTab>([
-    (canReadRoles || canManageRoles) && {
+  const tabs = usePermittedItems<WorkspaceTab>([
+    {
       id: 'roles',
       label: t('navigation.roles'),
       panel: <RolesTab />,
+      permission: rolesTabPermissions,
     },
-    canReadMembers && {
+    {
       id: 'members',
       label: t('navigation.members'),
       panel: <MembersTab />,
+      permission: [PermissionId.USERS_WATCH],
     },
-    canReadRoles && {
+    {
       id: 'permissions',
       label: t('navigation.permissions'),
       panel: <PermissionsTab />,
+      permission: [PermissionId.ROLES_WATCH],
     },
   ]);
 

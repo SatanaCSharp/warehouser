@@ -2,16 +2,14 @@ import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
+import { useTransferWorkspaceOwnerMutation } from 'modules/access/api/workspace-members-api';
 import { WorkspaceRefusalAlert } from 'modules/access/components/workspace-administration/members/WorkspaceRefusalAlert';
-import { useTransferWorkspaceOwner } from 'modules/access/hooks/mutations/useTransferWorkspaceOwner';
 import { useWorkspaceMembers } from 'modules/access/hooks/queries/useWorkspaceMembers';
 import { useWorkspaceRoles } from 'modules/access/hooks/queries/useWorkspaceRoles';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormSelectField } from 'shared/components/FormSelectField';
 
 import type { ReactElement } from 'react';
-
-type TransferWorkspaceOwnershipDialogProps = { onClose: () => void };
 
 type TransferWorkspaceOwnershipForm = {
   formerOwnerWorkspaceRoleId: string;
@@ -30,19 +28,13 @@ type TransferWorkspaceOwnershipForm = {
  * member row that triggers this workflow free of both datasets
  * (writing-web-components.md §4).
  */
-export const TransferWorkspaceOwnershipDialog = ({
-  onClose,
-}: TransferWorkspaceOwnershipDialogProps): ReactElement => {
+export const TransferWorkspaceOwnershipDialog = (): ReactElement => {
   const { t } = useTranslation('access');
   const members = useWorkspaceMembers();
   const { customRoles } = useWorkspaceRoles();
-  const transferWorkspaceOwner = useTransferWorkspaceOwner();
+  const [transferWorkspaceOwner] = useTransferWorkspaceOwnerMutation();
   const [refusalCode, setRefusalCode] = useState<string>();
-  const {
-    control,
-    formState: { isSubmitting },
-    handleSubmit,
-  } = useForm<TransferWorkspaceOwnershipForm>({
+  const form = useForm<TransferWorkspaceOwnershipForm>({
     defaultValues: { formerOwnerWorkspaceRoleId: '', recipientUserId: '' },
   });
 
@@ -50,32 +42,20 @@ export const TransferWorkspaceOwnershipDialog = ({
     (member) => member.workspaceRoleKind !== 'workspace_owner',
   );
 
-  const submit = async (
-    values: TransferWorkspaceOwnershipForm,
-  ): Promise<void> => {
-    const outcome = await transferWorkspaceOwner(values);
-    if (outcome.success) {
-      onClose();
-      return;
-    }
-    setRefusalCode(outcome.code);
-  };
-
   return (
     <FormModalDialog
       cancelLabel={t('workspaceMembers.transferOwnership.cancel')}
-      isSubmitting={isSubmitting}
-      noValidate
       submitLabel={t('workspaceMembers.transferOwnership.submit')}
       title={t('workspaceMembers.transferOwnership.title')}
-      onClose={onClose}
-      onSubmit={handleSubmit(submit)}
+      form={form}
+      onRefusal={setRefusalCode}
+      onSubmit={transferWorkspaceOwner}
     >
       <p className="text-muted">
         {t('workspaceMembers.transferOwnership.description')}
       </p>
       <Controller
-        control={control}
+        control={form.control}
         name="recipientUserId"
         rules={{ required: true }}
         render={({ field }) => (
@@ -98,7 +78,7 @@ export const TransferWorkspaceOwnershipDialog = ({
         )}
       />
       <Controller
-        control={control}
+        control={form.control}
         name="formerOwnerWorkspaceRoleId"
         rules={{ required: true }}
         render={({ field }) => (

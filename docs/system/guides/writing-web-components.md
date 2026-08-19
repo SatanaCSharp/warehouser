@@ -61,41 +61,35 @@ The Action shape is the one that keeps workflows from leaking upward. A trigger,
 mutation belong together in a component small enough to read at once:
 
 ```tsx
-export const CreateRoleAction = (): ReactElement | null => {
+export const CreateRoleAction = (): ReactElement => {
   const { t } = useTranslation('access');
-  const { canCreateRoles } = useAccessCapabilities();
   const permissions = useAccessPermissions();
   const saveRole = useSaveRole();
-  const [isOpen, setIsOpen] = useState(false);
-
-  const onPress = (): void => setIsOpen(true);
-
-  const onClose = (): void => setIsOpen(false);
-
-  if (!canCreateRoles) {
-    return null;
-  }
 
   return (
-    <>
-      <CreateActionButton
-        label={t('administration.createRole')}
-        onPress={onPress}
-      />
-      <Conditional when={isOpen}>
-        <CreateRoleDialog
-          permissions={permissions.items}
-          onClose={onClose}
-          onSave={/* … */}
-        />
-      </Conditional>
-    </>
+    <WarehousePermissionGate permission={PermissionId.ROLES_CREATE}>
+      <Modal>
+        <CreateActionButton label={t('administration.createRole')} />
+        <TriggeredDialog>
+          <CreateRoleDialog permissions={permissions.items} onSave={saveRole} />
+        </TriggeredDialog>
+      </Modal>
+    </WarehousePermissionGate>
   );
 };
 ```
 
+The `Modal` root is HeroUI's dialog trigger: it owns whether the dialog is open, opens it from the
+control beside it, and returns focus to that control once it closes;
+`shared/components/TriggeredDialog` mounts the dialog only while it is open, so the dialog's reads
+and form state start when the actor opens it. An Action therefore holds no `isOpen` state, declares
+no `onPress`/`onClose` pair, and hands the dialog no `onClose` — see §8.
+
 Its parent renders `<CreateRoleAction />` and passes nothing. The parent does not know the action
-needs Permissions, whether the actor may use it, or that it opens a dialog.
+needs Permissions, whether the actor may use it, or that it opens a dialog. The gate is the whole
+answer to "may this actor use it?" —
+[Gate web controls declaratively](../adr/19-08-2026-declarative-permission-gates.md) is the decision
+that forbids the `canCreateRoles` boolean this example used to test.
 
 ## 4. Read data where you use it
 
@@ -110,9 +104,11 @@ Read server data and derived authorization through hooks, at the component that 
 - Wrap each dataset in a module hook that owns its own gating, so no caller repeats a `skip`
   condition or unwraps a page envelope. `useAccessRoles` decides from capabilities whether the query
   fires at all; callers just read `.items` and `.isReady`.
-- Gate controls on a capability hook (`useAccessCapabilities`) or `PermissionGate`, not on a
-  `permissionIds` array threaded down from a page. A refreshed projection then narrows every gate at
-  once.
+- Gate controls with `WarehousePermissionGate` / `WorkspacePermissionGate` at the control itself, never on a capability
+  boolean or a `permissionIds` array threaded down from a page. A refreshed projection then narrows
+  every gate at once. A Permission that decides a _value_ — a query's `skip`, an `isDisabled` — is
+  read with `useHasPermission` in the file that uses it and goes no further. See
+  [Gate web controls declaratively](../adr/19-08-2026-declarative-permission-gates.md).
 
 Do not introduce a React context to escape prop drilling for state that already lives in Redux or
 RTK Query — [Frontend architecture](../frontend-architecture.md) forbids the parallel source of
@@ -133,27 +129,32 @@ Props are still the right tool for:
 
 Give a component the smallest interface that does its job.
 
-Prefer one hook per action over one object carrying every action. A dialog that only creates a
-member should depend on `useCreateMember`, not on a nine-method administration interface that also
-deletes roles and transfers management. Each hook stays a thin binding over one shared runner, so
-per-action files cost little:
+Prefer one action over one object carrying every action. A dialog that only creates a member
+should depend on that one mutation, not on a nine-method administration interface that also deletes
+roles and transfers management.
 
-```ts
-export const useDeleteMember = (): DeleteMember => {
-  const [deleteMember] = useDeleteMemberMutation();
+Take the action from the generated RTK Query hook directly. A mutation gets no wrapper hook of its
+own: its toast is declared in `shared/alerts/mutation-actions.ts`, its field errors on the endpoint,
+and `FormModalDialog` normalizes the result
+(`docs/system/adr/19-08-2026-generated-mutation-hooks-in-components.md`).
 
-  return useCallback(
-    (userId) => runAccessMutation('deleteMember', deleteMember(userId)),
-    [deleteMember],
-  );
-};
+```tsx
+const [deleteMember] = useDeleteMemberMutation();
+
+const onConfirmDelete = (): Promise<MutationResult> =>
+  deleteMember({ warehouseId, userId: member.userId });
 ```
+
+Write a `use…` mutation hook only when it **composes** — more than one request, or a decision
+between requests.
 
 Keep form components depending on an abstraction, not on the transport. A form owns field
 registration, client validation, and submission state, then reports validated values through
-`onSave`; its owner performs the request, maps server field errors, and closes the dialog. This is
-the ownership rule in [Frontend architecture](../frontend-architecture.md) and it is what lets a form
-be tested without a store or a stubbed network.
+`onSave`; its owner performs the request. This is the ownership rule in
+[Frontend architecture](../frontend-architecture.md) and it is what lets a form be tested without a
+store or a stubbed network. A dialog shows the server's field errors and decides from the outcome
+whether to close — which it does itself (§8), so `onSave` hands over the request and returns its
+`MutationResult` rather than the caller closing on the dialog's behalf.
 
 ## 6. Keep branching flat
 
@@ -164,12 +165,19 @@ cover nearly every case.
 happy path is unindented and reads last:
 
 ```tsx
+const canReadMembers = useHasPermission(PermissionId.USERS_WATCH);
+
 if (!canReadMembers || !members.isReady) {
   return <MembersDatasetCard dataset={members} />;
 }
 
 return <section>{/* the real thing */}</section>;
 ```
+
+A gate renders its children or nothing, so choosing between **two surfaces** — the editable one and a
+read-only card — stays an early return, and the Permission is read here for that reason. A control
+that is simply withheld is a gate instead
+([Gate web controls declaratively](../adr/19-08-2026-declarative-permission-gates.md)).
 
 **Map values with a lookup, not a chain.** An `if`/`else if` sequence that turns one value into
 another value is data pretending to be control flow:
@@ -194,23 +202,30 @@ const fieldErrorsFor: FieldErrorMap = (code) => fieldErrorsByCode[code];
 ```
 
 **Build a list of descriptors, then render it.** When branches decide _which items appear_, compute
-the items first and let the JSX stay a single `map`. Use Lodash `compact` to drop the ones the actor
-may not have:
+the items first and let the JSX stay a single `map`. Where the branch is a Permission, the descriptor
+names it in a `permission` field and the collection gate drops the ones the actor may not have — the
+same field `WarehousePermissionGate` takes, for a `Dropdown.Menu` no gate element can sit inside
+([Gate web controls declaratively](../adr/19-08-2026-declarative-permission-gates.md)):
 
 ```tsx
-const actions = compact<RowAction>([
-  canEditEmail && {
+const actions = usePermittedItems<RowAction>([
+  {
     id: 'editEmail',
     label: t('members.menu.editEmail'),
+    permission: PermissionId.USERS_EMAIL_UPDATE,
     run: () => onEditEmail(member),
   },
-  canDeleteMember && {
+  {
     id: 'deleteMember',
     label: t('members.menu.deleteMember'),
+    permission: PermissionId.USERS_DELETE,
     run: () => onDeleteMember(member),
   },
 ]);
 ```
+
+For a branch that is _not_ a Permission — record state, identity, a feature the row does not carry —
+build the list with Lodash `compact` and a predicate per entry.
 
 **Never branch between elements with a ternary.** A ladder of `a ? x : b ? y : c ? z : w` is a set
 of early returns wearing a disguise — extract it into a small component or helper that returns early
@@ -220,9 +235,10 @@ full, including what to do when the branch's props only exist under the conditio
 picks a _value_ — `className={isSelected ? 'a' : 'b'}`, `{isSubmitting ? t('saving') : t('save')}` —
 is not a branch between elements and stays as it is.
 
-Prefer rendering nothing over accepting a visibility flag. A component that gates itself
-(`if (!canCreateRoles) return null`) removes a branch from its parent and keeps the rule next to the
-control it protects.
+Prefer rendering nothing over accepting a visibility flag. A component that gates itself — with
+`WarehousePermissionGate` for a Permission, an early `return` for a whole-component state — removes a
+branch
+from its parent and keeps the rule next to the control it protects.
 
 ## 7. Declare every event handler before the return
 
@@ -272,16 +288,26 @@ memoized child makes it matter, and let the plain declaration be the default. An
 override §5 — a handler that only forwards to a prop the parent already owns (`onSelect={onSelect}`)
 is passed directly, because there is nothing left to name.
 
-## 8. Own transient UI state where it is triggered
+## 8. Own transient UI state where it is triggered — and do not keep what a Modal already owns
 
-Keep dialog, selection, and search state in the component that opens or owns the control, and no
-higher. A search term nothing outside a list reads belongs inside that list, not in its parent's
-props.
+Keep selection and search state in the component that owns the control, and no higher. A search term
+nothing outside a list reads belongs inside that list, not in its parent's props.
+
+**Whether a dialog is open is not state a component keeps.** Wrap the trigger and the dialog in a
+HeroUI `Modal` and let it own that:
+
+- the control beside the dialog opens it, so no `onPress` sets a flag;
+- `TriggeredDialog` mounts the dialog only while it is open, so nothing it reads is requested before
+  the actor asks for it, and it still seeds itself from what it was opened for with no reset effect;
+- focus returns to the trigger when it closes, with nothing to arrange;
+- the cancel control is a `<Button slot="close">` — `shared/components/FormModalDialog` already
+  renders one — and a dialog that must close because a mutation succeeded calls
+  `useCloseDialog()`. Neither an Action nor a list passes an `onClose` down.
 
 Do not build a module-wide "which workflow is open" union routed through a central switch. That
 turns every unrelated workflow into a shared type, a shared reducer, and a shared render site. Where
-several dialogs genuinely share one trigger surface — the rows of a list — keep the state local and
-narrow:
+several dialogs genuinely share one trigger surface — the rows of a list — the state to keep is the
+record a row opened one for, never a boolean:
 
 ```tsx
 type MemberDialog = {
@@ -290,8 +316,9 @@ type MemberDialog = {
 };
 ```
 
-Render the open one inline with flat guards, one per line. Because a dialog is mounted only while
-open, it seeds itself from the member it was opened for and needs no reset effect.
+A row is not a control the dialog can sit beside, so wrap the resolved dialog in
+`shared/components/DialogHost`: it publishes the open state a `Modal` would have owned, and reports
+the close once — where the record it was opened for is dropped.
 
 ## 9. Prefer the simplest thing that works
 
@@ -316,12 +343,14 @@ Check the component you wrote against this list:
 
 - one exported component, named after its file;
 - no value drilled more than two hops;
-- no data or capability read that could be read one level lower;
+- no data or capability read that could be read one level lower, and no capability accepted as a
+  prop at all;
 - each dependency is the narrowest one that does the job;
 - no ternary choosing between elements, and no `if` chain that is really a lookup;
 - every branch gated by `Conditional`, or resolved to a named element above the return;
 - every event handler declared and named above the return, and the JSX passes the reference;
-- transient UI state lives with the control that owns it;
+- transient UI state lives with the control that owns it, and no component keeps a dialog's open
+  flag;
 - tests colocated with the component, querying by role, label, and name.
 
 Then run the checks from [Frontend architecture](../frontend-architecture.md):

@@ -20,17 +20,16 @@ const changeMemberPassword = vi.hoisted(() => vi.fn());
 const createMember = vi.hoisted(() => vi.fn());
 const deleteMember = vi.hoisted(() => vi.fn());
 
-vi.mock('modules/access/hooks/mutations/useChangeMemberEmail', () => ({
-  useChangeMemberEmail: () => changeMemberEmail,
-}));
-vi.mock('modules/access/hooks/mutations/useChangeMemberPassword', () => ({
-  useChangeMemberPassword: () => changeMemberPassword,
-}));
-vi.mock('modules/access/hooks/mutations/useCreateMember', () => ({
-  useCreateMember: () => createMember,
-}));
-vi.mock('modules/access/hooks/mutations/useDeleteMember', () => ({
-  useDeleteMember: () => deleteMember,
+// The components trigger the generated hooks directly, so the mutations are
+// stubbed at the endpoint that declares them. Everything else in the slice —
+// the reads this tab renders from — stays real and is served by
+// `stubAccessServer`.
+vi.mock('modules/access/api/access-api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('modules/access/api/access-api')>()),
+  useChangeMemberEmailMutation: () => [changeMemberEmail, {}],
+  useChangeMemberPasswordMutation: () => [changeMemberPassword, {}],
+  useCreateMemberMutation: () => [createMember, {}],
+  useDeleteMemberMutation: () => [deleteMember, {}],
 }));
 
 const renderMembersTab = async (
@@ -65,7 +64,7 @@ describe('MembersTab', () => {
 
   it('creates a member through the Create Member dialog when authorized (AC-01, AC-03)', async () => {
     const user = userEvent.setup();
-    createMember.mockResolvedValue({ success: true });
+    createMember.mockResolvedValue({ data: null });
     await renderMembersTab({
       permissionIds: [PermissionId.USERS_WATCH, PermissionId.USERS_CREATE],
     });
@@ -90,9 +89,12 @@ describe('MembersTab', () => {
     );
 
     expect(createMember).toHaveBeenCalledWith({
-      email: 'new.member@example.test',
-      password: 'a-strong-password',
-      roleId: accessIds.pickerRole,
+      warehouseId: accessIds.warehouse,
+      input: {
+        email: 'new.member@example.test',
+        password: 'a-strong-password',
+        roleId: accessIds.pickerRole,
+      },
     });
   });
 
@@ -106,7 +108,7 @@ describe('MembersTab', () => {
 
   it('changes a member email through the Edit Email dialog when authorized (AC-04)', async () => {
     const user = userEvent.setup();
-    changeMemberEmail.mockResolvedValue({ success: true });
+    changeMemberEmail.mockResolvedValue({ data: null });
     await renderMembersTab();
 
     await openRowMenu(user);
@@ -122,8 +124,10 @@ describe('MembersTab', () => {
       within(dialog).getByRole('button', { name: 'Save email' }),
     );
 
-    expect(changeMemberEmail).toHaveBeenCalledWith(accessIds.member, {
-      email: 'member.new@example.test',
+    expect(changeMemberEmail).toHaveBeenCalledWith({
+      warehouseId: accessIds.warehouse,
+      userId: accessIds.member,
+      input: { email: 'member.new@example.test' },
     });
   });
 
@@ -146,7 +150,7 @@ describe('MembersTab', () => {
 
   it('resets a member password through the Reset Password dialog when authorized (AC-06)', async () => {
     const user = userEvent.setup();
-    changeMemberPassword.mockResolvedValue({ success: true });
+    changeMemberPassword.mockResolvedValue({ data: null });
     await renderMembersTab();
 
     await openRowMenu(user);
@@ -162,26 +166,33 @@ describe('MembersTab', () => {
       within(dialog).getByRole('button', { name: 'Reset password' }),
     );
 
-    expect(changeMemberPassword).toHaveBeenCalledWith(accessIds.member, {
-      password: 'a-new-strong-password',
+    expect(changeMemberPassword).toHaveBeenCalledWith({
+      warehouseId: accessIds.warehouse,
+      userId: accessIds.member,
+      input: { password: 'a-new-strong-password' },
     });
   });
 
   it('deletes a member after confirmation through the delete dialog when authorized (AC-08)', async () => {
     const user = userEvent.setup();
-    deleteMember.mockResolvedValue({ success: true });
+    deleteMember.mockResolvedValue({ data: null });
     await renderMembersTab();
 
     await openRowMenu(user);
     await user.click(screen.getByRole('menuitem', { name: 'Delete member' }));
-    const dialog = screen.getByRole('dialog', {
+    // The confirmation validates nothing, so it is an `AlertDialog`
+    // (`docs/system/guides/web-dialogs.md`) and announces itself as one.
+    const dialog = screen.getByRole('alertdialog', {
       name: 'Delete member@example.test',
     });
     await user.click(
       within(dialog).getByRole('button', { name: 'Delete member' }),
     );
 
-    expect(deleteMember).toHaveBeenCalledWith(accessIds.member);
+    expect(deleteMember).toHaveBeenCalledWith({
+      warehouseId: accessIds.warehouse,
+      userId: accessIds.member,
+    });
   });
 
   it('hides the kebab trigger entirely when the actor holds no per-row action permission', async () => {

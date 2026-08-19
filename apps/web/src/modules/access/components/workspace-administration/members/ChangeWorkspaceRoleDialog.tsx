@@ -2,18 +2,18 @@ import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
+import { useAssignWorkspaceRoleMutation } from 'modules/access/api/workspace-members-api';
 import { WorkspaceRefusalAlert } from 'modules/access/components/workspace-administration/members/WorkspaceRefusalAlert';
-import { useAssignWorkspaceRole } from 'modules/access/hooks/mutations/useAssignWorkspaceRole';
 import { useWorkspaceRoles } from 'modules/access/hooks/queries/useWorkspaceRoles';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormSelectField } from 'shared/components/FormSelectField';
 
 import type { WorkspaceMember } from '@warehouser/contracts/workspaces';
 import type { ReactElement } from 'react';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 type ChangeWorkspaceRoleDialogProps = {
   member: WorkspaceMember;
-  onClose: () => void;
 };
 
 type ChangeWorkspaceRoleForm = { workspaceRoleId: string };
@@ -26,45 +26,33 @@ type ChangeWorkspaceRoleForm = { workspaceRoleId: string };
  */
 export const ChangeWorkspaceRoleDialog = ({
   member,
-  onClose,
 }: ChangeWorkspaceRoleDialogProps): ReactElement => {
   const { t } = useTranslation('access');
   const { customRoles } = useWorkspaceRoles();
-  const assignWorkspaceRole = useAssignWorkspaceRole();
+  const [assignWorkspaceRole] = useAssignWorkspaceRoleMutation();
   const [refusalCode, setRefusalCode] = useState<string>();
-  const {
-    control,
-    formState: { isSubmitting },
-    handleSubmit,
-  } = useForm<ChangeWorkspaceRoleForm>({
+  const form = useForm<ChangeWorkspaceRoleForm>({
     defaultValues: { workspaceRoleId: '' },
   });
 
-  const submit = async ({
+  const onSubmit = ({
     workspaceRoleId,
-  }: ChangeWorkspaceRoleForm): Promise<void> => {
-    const outcome = await assignWorkspaceRole(member.userId, workspaceRoleId);
-    if (outcome.success) {
-      onClose();
-      return;
-    }
-    setRefusalCode(outcome.code);
-  };
+  }: ChangeWorkspaceRoleForm): Promise<MutationResult> =>
+    assignWorkspaceRole({ userId: member.userId, workspaceRoleId });
 
   return (
     <FormModalDialog
       cancelLabel={t('workspaceMembers.changeRole.cancel')}
-      isSubmitting={isSubmitting}
-      noValidate
       submitLabel={t('workspaceMembers.changeRole.submit')}
       title={t('workspaceMembers.changeRole.title', {
         name: member.email ?? member.userId,
       })}
-      onClose={onClose}
-      onSubmit={handleSubmit(submit)}
+      form={form}
+      onRefusal={setRefusalCode}
+      onSubmit={onSubmit}
     >
       <Controller
-        control={control}
+        control={form.control}
         name="workspaceRoleId"
         rules={{ required: true }}
         render={({ field }) => (

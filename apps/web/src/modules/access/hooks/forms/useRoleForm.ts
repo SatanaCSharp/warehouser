@@ -1,19 +1,24 @@
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import { parseRoleForm } from 'modules/access/schemas/role-form';
+import { parseRoleFormValues } from 'modules/access/schemas/role-form';
+import { mutationOutcome } from 'shared/api/client/mutation-outcome';
 import { useFormFieldErrors } from 'shared/hooks/forms/useFormFieldErrors';
 
 import type { RoleWrite } from '@warehouser/contracts/access';
+import type { RoleFormValues } from 'modules/access/schemas/role-form';
 import type { FormEvent } from 'react';
-import type { Control, FieldErrors, UseFormRegister } from 'react-hook-form';
-import type { MutationOutcome } from 'shared/api/client/mutation-outcome';
-
-export type RoleFormValues = { name: string; permissionIds: string[] };
+import type {
+  Control,
+  FieldErrors,
+  UseFormRegister,
+  UseFormReset,
+} from 'react-hook-form';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 type RoleFormOptions = {
   defaultValues: RoleFormValues;
-  onSave: (input: RoleWrite) => Promise<MutationOutcome>;
+  onSave: (input: RoleWrite) => Promise<MutationResult>;
 };
 
 type RoleFormSession = {
@@ -21,14 +26,20 @@ type RoleFormSession = {
   errors: FieldErrors<RoleFormValues>;
   isSubmitting: boolean;
   register: UseFormRegister<RoleFormValues>;
+  /** Returns the fields to the Role they were seeded from, discarding edits. */
+  reset: UseFormReset<RoleFormValues>;
   submit: (event: FormEvent<HTMLFormElement>) => Promise<void>;
 };
 
 /**
- * The Role name-and-grants form, shared by the create dialog and the inline
- * editor: it validates against the Role contract before the request leaves the
- * browser, and turns a rejection the server explains on the name into the same
- * inline message.
+ * The Role name-and-grants form of the inline Role editor: it validates
+ * against the Role contract before the request leaves the browser, and turns a
+ * rejection the server explains on the name into the same inline message.
+ *
+ * The create dialog runs the same validation through `FormModalDialog`, which
+ * owns the submit sequence for every dialog
+ * (`docs/system/guides/web-dialogs.md`). This hook exists for the editor,
+ * which is an inline form and has no dialog to close.
  */
 export const useRoleForm = ({
   defaultValues,
@@ -40,24 +51,27 @@ export const useRoleForm = ({
     formState: { errors, isSubmitting },
     handleSubmit,
     register,
+    reset,
     setError,
   } = useForm<RoleFormValues>({ defaultValues });
   const { setFieldError } = useFormFieldErrors<RoleFormValues>(setError);
   const translateValidation = (code: string): string =>
     t(`administration.roleEditor.validation.${code}`);
 
-  const submit = handleSubmit(async ({ name, permissionIds }) => {
-    const parsed = parseRoleForm(name, permissionIds);
+  const submit = handleSubmit(async (values) => {
+    const parsed = parseRoleFormValues(values);
     if (!parsed.success) {
-      setFieldError('name', parsed.error, translateValidation);
+      setFieldError('name', parsed.error.name, translateValidation);
       return;
     }
 
-    const result = await onSave(parsed.data);
-    if (!result.success && result.fieldErrors?.name) {
+    // Not a `FormModalDialog`: the editor stays on the page rather than
+    // closing, so it normalizes the settled request itself.
+    const outcome = mutationOutcome(await onSave(parsed.data));
+    if (!outcome.success && outcome.fieldErrors?.name) {
       setFieldError('name', 'server', translateValidation);
     }
   });
 
-  return { control, errors, isSubmitting, register, submit };
+  return { control, errors, isSubmitting, register, reset, submit };
 };

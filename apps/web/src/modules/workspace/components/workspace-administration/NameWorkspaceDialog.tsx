@@ -1,20 +1,21 @@
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import { useRenameWorkspace } from 'modules/workspace/hooks/mutations/useRenameWorkspace';
 import { nameWorkspaceFormSchema } from 'modules/workspace/schemas/name-workspace-form.schema';
+import { useRenameWorkspaceMutation } from 'shared/api/workspace/workspace-context-api';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormTextField } from 'shared/components/FormTextField';
-import { useFormFieldErrors } from 'shared/hooks/forms/useFormFieldErrors';
+import { parseWithSchema } from 'shared/utils/form-parse';
 
+import type { NameWorkspaceFormValues } from 'modules/workspace/schemas/name-workspace-form.schema';
 import type { ReactElement } from 'react';
-
-type NameWorkspaceForm = { name: string };
 
 type NameWorkspaceDialogProps = {
   currentName: string | null;
-  onClose: () => void;
 };
+
+/** AC-29a — the browser pre-check the dialog runs before the request leaves. */
+const parse = parseWithSchema(nameWorkspaceFormSchema);
 
 /**
  * Names an unnamed Workspace, or changes its existing name (AC-29). Owned
@@ -22,43 +23,17 @@ type NameWorkspaceDialogProps = {
  */
 export const NameWorkspaceDialog = ({
   currentName,
-  onClose,
 }: NameWorkspaceDialogProps): ReactElement => {
   const { t } = useTranslation('workspace');
   const { t: translateValidation } = useTranslation('validation');
-  const renameWorkspace = useRenameWorkspace();
-  const {
-    formState: { errors, isSubmitting },
-    handleSubmit,
-    register,
-    setError,
-  } = useForm<NameWorkspaceForm>({
+  const [renameWorkspace] = useRenameWorkspaceMutation();
+  const form = useForm<NameWorkspaceFormValues>({
     defaultValues: { name: currentName ?? '' },
   });
-  const { setFieldError } = useFormFieldErrors<NameWorkspaceForm>(setError);
-
-  const submit = async ({ name }: NameWorkspaceForm): Promise<void> => {
-    const parsedName = nameWorkspaceFormSchema.safeParse({ name });
-    if (!parsedName.success) {
-      setFieldError(
-        'name',
-        parsedName.error.issues[0]?.message,
-        translateValidation,
-      );
-      return;
-    }
-
-    const result = await renameWorkspace(parsedName.data);
-    if (result.success) {
-      onClose();
-      return;
-    }
-    if (setFieldError('name', result.fieldErrors?.name, translateValidation)) {
-      return;
-    }
-    onClose();
-  };
-
+  const {
+    formState: { errors, isSubmitting },
+    register,
+  } = form;
   const isUnnamed = currentName === null;
 
   return (
@@ -68,10 +43,10 @@ export const NameWorkspaceDialog = ({
       }
       cancelLabel={t('nameWorkspace.cancel')}
       submitLabel={t('nameWorkspace.save')}
-      noValidate
-      isSubmitting={isSubmitting}
-      onClose={onClose}
-      onSubmit={handleSubmit(submit)}
+      form={form}
+      parse={parse}
+      translateValidation={translateValidation}
+      onSubmit={renameWorkspace}
     >
       <p className="text-muted">
         {isUnnamed

@@ -49,7 +49,11 @@ import type { AppStore } from 'store';
  *
  * The store and the stubbed context are not optional here, unlike the two
  * leaves T11 carved out: `WarehousePersonRow` is an Action row, and it reads
- * the acting member and `WAREHOUSE_MEMBERSHIPS:REVOKE` itself.
+ * the acting member and `WAREHOUSE_MEMBERSHIPS:REVOKE` itself. Every other
+ * control of the pane now reads its own Workspace Permission the same way
+ * (`docs/system/adr/19-08-2026-declarative-permission-gates.md`), so the
+ * stubbed context — not a harness prop — is what decides which of them the
+ * cases below can see.
  */
 
 /** Central DC — the Warehouse the tab selects first. */
@@ -110,9 +114,6 @@ const renderPeoplePane = async (
 
   renderWithProviders(
     <WarehouseDetailPane
-      canArchiveWarehouse={false}
-      canCreateWarehouse={false}
-      canRenameWarehouse={false}
       isOnlyNonArchived={false}
       people={centralDcPeople()}
       warehouse={centralDc()}

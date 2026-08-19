@@ -9,13 +9,12 @@ import { FormSelectField } from 'shared/components/FormSelectField';
 
 import type { WorkspaceRole } from '@warehouser/contracts/workspaces';
 import type { ReactElement } from 'react';
-import type { MutationOutcome } from 'shared/api/client/mutation-outcome';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 type DeleteWorkspaceRoleDialogProps = {
   replacements: WorkspaceRole[];
   role: WorkspaceRole;
-  onClose: () => void;
-  onDelete: (replacementWorkspaceRoleId?: string) => Promise<MutationOutcome>;
+  onDelete: (replacementWorkspaceRoleId?: string) => Promise<MutationResult>;
 };
 
 type DeleteWorkspaceRoleForm = { replacementWorkspaceRoleId: string };
@@ -35,40 +34,26 @@ type DeleteWorkspaceRoleForm = { replacementWorkspaceRoleId: string };
 export const DeleteWorkspaceRoleDialog = ({
   replacements,
   role,
-  onClose,
   onDelete,
 }: DeleteWorkspaceRoleDialogProps): ReactElement => {
   const { t } = useTranslation('access');
   const [refusalCode, setRefusalCode] = useState<string>();
-  const {
-    control,
-    formState: { isSubmitting },
-    handleSubmit,
-  } = useForm<DeleteWorkspaceRoleForm>({
+  const form = useForm<DeleteWorkspaceRoleForm>({
     defaultValues: { replacementWorkspaceRoleId: '' },
   });
   const isAssigned = role.assignedMemberCount > 0;
   const hasNoReplacement = isAssigned && replacements.length === 0;
   const asksForReplacement = isAssigned && !hasNoReplacement;
 
-  const submit = async ({
+  const onSubmit = ({
     replacementWorkspaceRoleId,
-  }: DeleteWorkspaceRoleForm): Promise<void> => {
-    const outcome = await onDelete(
-      isAssigned ? replacementWorkspaceRoleId : undefined,
-    );
-    if (outcome.success) {
-      return;
-    }
-    setRefusalCode(outcome.code);
-  };
+  }: DeleteWorkspaceRoleForm): Promise<MutationResult> =>
+    onDelete(isAssigned ? replacementWorkspaceRoleId : undefined);
 
   return (
     <FormModalDialog
       cancelLabel={t('workspaceRoles.delete.cancel')}
       isSubmitDisabled={hasNoReplacement}
-      isSubmitting={isSubmitting}
-      noValidate
       submitLabel={
         isAssigned
           ? t('workspaceRoles.delete.submit')
@@ -76,8 +61,9 @@ export const DeleteWorkspaceRoleDialog = ({
       }
       submitVariant="danger"
       title={t('workspaceRoles.delete.title', { name: role.name })}
-      onClose={onClose}
-      onSubmit={handleSubmit(submit)}
+      form={form}
+      onRefusal={setRefusalCode}
+      onSubmit={onSubmit}
     >
       <Conditional when={asksForReplacement}>
         <>
@@ -87,7 +73,7 @@ export const DeleteWorkspaceRoleDialog = ({
             })}
           </p>
           <Controller
-            control={control}
+            control={form.control}
             name="replacementWorkspaceRoleId"
             rules={{ required: true }}
             render={({ field }) => (
