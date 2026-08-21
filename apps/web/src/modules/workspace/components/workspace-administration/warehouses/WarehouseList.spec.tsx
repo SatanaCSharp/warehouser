@@ -1,7 +1,6 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
-import { Provider } from 'react-redux';
 import { describe, expect, it } from 'vitest';
 
 import { WarehouseList } from 'modules/workspace/components/workspace-administration/warehouses/WarehouseList';
@@ -12,13 +11,20 @@ import type { Warehouse } from '@warehouser/contracts/workspaces';
 import type { ReactElement } from 'react';
 
 /**
- * The seven cases `sad.md` §5.4 assigns to `WarehouseList`: the six of the
- * former "the Warehouse list (AC-33, AC-12a)" block, plus the one accessibility
- * case whose subject is the list itself. Each is carried over from
- * `WarehousesTab.spec.tsx` at
+ * The cases `sad.md` §5.4 assigns to `WarehouseList`: the "the Warehouse list
+ * (AC-33, AC-12a)" block, plus the one accessibility case whose subject is the
+ * list itself. Each is carried over from `WarehousesTab.spec.tsx` at
  * `baseline_revision = 42f1205d552f8284f8ec57358ad9022340b5f76e` with every
  * expectation's subject and expected value unchanged; only the mount changed
  * (CR-RG-01 §"Assertion drift, defined").
+ *
+ * The seventh — "announces the loading skeleton as \"Loading warehouses\"
+ * before the list arrives" — is **deleted** by global-loader CH-08/CH-14
+ * (CR-AC-08): `/workspace`'s route loader awaits the Warehouse list before the
+ * destination paints, so the list has no loading window of its own and the
+ * skeleton it announced no longer exists. The search-empty case below replaces
+ * it in the count and is enumerated in
+ * `test/warehouses-tab-case-inventory/warehouses-tab-case-inventory.spec.ts`.
  *
  * The list is mounted on **plain props with no server stub**: it reads nothing
  * of its own, and a leaf that could not mount without a stub would have
@@ -49,7 +55,6 @@ const peopleCounts = {
 };
 
 type HarnessProps = {
-  isLoading?: boolean;
   warehouses?: Warehouse[];
 };
 
@@ -60,7 +65,6 @@ type HarnessProps = {
  * row has been chosen yet.
  */
 const WarehouseListHarness = ({
-  isLoading = false,
   warehouses = workspaceWarehouses(),
 }: HarnessProps): ReactElement => {
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<
@@ -69,7 +73,6 @@ const WarehouseListHarness = ({
 
   return (
     <WarehouseList
-      isLoading={isLoading}
       membershipWarehouseIds={[]}
       peopleCounts={peopleCounts}
       selectedWarehouseId={selectedWarehouseId}
@@ -80,34 +83,18 @@ const WarehouseListHarness = ({
 };
 
 /**
- * Returns the one transition a case needs — the list arriving after its
- * skeleton — because `isLoading` is a prop here rather than a query state.
+ * The empty query cache asserted here is a **setup-level assertion** pinning
+ * the harness (permitted by CR-RG-01, and required by CR-AC-04's plain-props
+ * clause): the list is given a real store and issues no request against it.
  *
- * The empty query cache asserted below is a **new setup-level assertion**
- * pinning the harness (permitted by CR-RG-01, and required by CR-AC-04's
- * plain-props clause): the list is given a real store and issues no request
- * against it.
+ * It returned a `showListArriving` transition until global-loader CH-14 removed
+ * the readiness prop that transition drove; the list now renders the data it is
+ * handed and has no second state to arrive at.
  */
-const renderList = (
-  props: HarnessProps = {},
-): { showListArriving: () => void } => {
+const renderList = (props: HarnessProps = {}): void => {
   const store = makeStore();
-  const { rerender } = renderWithProviders(
-    <WarehouseListHarness {...props} />,
-    store,
-  );
+  renderWithProviders(<WarehouseListHarness {...props} />, store);
   expect(store.getState().api.queries).toEqual({});
-
-  return {
-    showListArriving: () => {
-      rerender(
-        <Provider store={store}>
-          <WarehouseListHarness {...props} isLoading={false} />
-        </Provider>,
-      );
-      expect(store.getState().api.queries).toEqual({});
-    },
-  };
 };
 
 const selectWarehouse = async (
@@ -121,20 +108,6 @@ const selectWarehouse = async (
 
 describe('WarehouseList', () => {
   describe('the Warehouse list (AC-33, AC-12a)', () => {
-    it('announces the loading skeleton as "Loading warehouses" before the list arrives', async () => {
-      const { showListArriving } = renderList({ isLoading: true });
-
-      expect(
-        await screen.findByLabelText('Loading warehouses'),
-      ).toBeInTheDocument();
-
-      showListArriving();
-
-      expect(
-        await screen.findByRole('button', { name: /central dc/iu }),
-      ).toBeInTheDocument();
-    });
-
     it('lists every Warehouse of the Workspace with the number of people who have access', async () => {
       renderList();
 
@@ -198,6 +171,33 @@ describe('WarehouseList', () => {
       expect(
         await screen.findByText('This workspace has no warehouse yet.'),
       ).toBeInTheDocument();
+    });
+
+    // Added by global-loader (CR-RG-05, CR-AC-08). `warehouses.noMatches` was
+    // the third arm of a four-way branch whose first arm CH-14 deletes; the
+    // criterion requires it to keep rendering its own message, distinct from
+    // the empty Workspace above, so it gets a case of its own rather than
+    // riding on the filter case that only asserts which rows survive.
+    it('names the search term that matched nothing instead of showing an empty list', async () => {
+      const user = userEvent.setup();
+
+      renderList();
+
+      await screen.findByRole('button', { name: /central dc/iu });
+      await user.type(
+        screen.getByRole('searchbox', { name: 'Search warehouses' }),
+        'Southern',
+      );
+
+      expect(
+        await screen.findByText('No warehouse matches \u201cSouthern\u201d.'),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('list', { name: 'Warehouses' }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('This workspace has no warehouse yet.'),
+      ).not.toBeInTheDocument();
     });
   });
 

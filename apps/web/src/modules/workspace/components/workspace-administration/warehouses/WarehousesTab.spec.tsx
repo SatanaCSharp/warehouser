@@ -71,38 +71,6 @@ const renderTab = (): void => {
   renderWithProviders(<WarehousesTab />, authenticatedWorkspaceStore());
 };
 
-/**
- * Holds the Workspace-users response open until `release()` is called, leaving
- * the warehouses and context reads free to settle. That opens the one render
- * window `WarehousesTab`'s `canReadPeople && !users` clause exists to cover —
- * the moment the list could paint without its per-Warehouse people counts.
- *
- * Added at review (`_review/review-2026-08-18.md` S4): CH-W5 turned `isLoading`
- * into a `WarehouseList` prop, so the composition that computes it lost its
- * only assertion driven by a real query lifecycle. Wraps whatever `fetch`
- * `stubWorkspaceServer` installed, so it must be called after it.
- */
-const deferWorkspaceUsers = (): { release: () => void } => {
-  const stubbed = globalThis.fetch;
-  let release = (): void => undefined;
-  const held = new Promise<void>((resolve) => {
-    release = () => resolve();
-  });
-
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(async (input: Request | string | URL, init?: RequestInit) => {
-      const url = String(input instanceof Request ? input.url : input);
-      if (url.endsWith('/api/v1/workspace/users')) {
-        await held;
-      }
-      return stubbed(input, init);
-    }),
-  );
-
-  return { release };
-};
-
 const TabRoutePage = (): ReactElement => <WarehousesTab />;
 
 /**
@@ -231,44 +199,19 @@ describe('WarehousesTab', () => {
       // Yurii and Anna reach Central DC; Yurii alone reaches North Hub; nobody
       // reaches Old Depot, so it carries no count at all
       // (`test/workspace-fixtures.ts`).
-      expect(textOf('Central DC')).toContain('2 people with access');
+      //
+      // Awaited rather than read on the render that first shows the list: the
+      // route loader awaits the Workspace users, but this spec mounts the tab
+      // directly, so the counts land on the render after the list itself
+      // (global-loader CH-14 removed the readiness branch that used to hold
+      // both back together). Same subject, same expected values.
+      await waitFor(() =>
+        expect(textOf('Central DC')).toContain('2 people with access'),
+      );
       // Singular where the count is one — the key carries plural forms, so a
       // sole member is a "person", not "1 people".
       expect(textOf('North Hub')).toContain('1 person with access');
       expect(textOf('Old Depot')).not.toContain('with access');
-    });
-
-    /**
-     * Added at review (`_review/review-2026-08-18.md` S4) — the other half of
-     * the same regression: the anti-flash clause of `isLoading`. Without
-     * `canReadPeople && !users` the list paints as soon as the warehouses and
-     * context arrive, and the counts appear a heartbeat later.
-     */
-    it('holds the loading skeleton until the people counts arrive, not only until the list does', async () => {
-      stubWorkspaceServer({ context: namedWorkspaceContext(fullAuthority) });
-      const { release } = deferWorkspaceUsers();
-
-      renderTab();
-
-      expect(
-        await screen.findByLabelText('Loading warehouses'),
-      ).toBeInTheDocument();
-      expect(
-        screen.queryByRole('list', { name: 'Warehouses' }),
-      ).not.toBeInTheDocument();
-
-      release();
-
-      const list = await screen.findByRole('list', { name: 'Warehouses' });
-      expect(
-        within(list)
-          .getAllByRole('listitem')
-          .find((entry) => entry.textContent?.includes('Central DC'))
-          ?.textContent,
-      ).toContain('2 people with access');
-      expect(
-        screen.queryByLabelText('Loading warehouses'),
-      ).not.toBeInTheDocument();
     });
 
     it('omits the people list entirely without WORKSPACE_MEMBERS:WATCH and never requests it (AC-30)', async () => {
@@ -719,8 +662,12 @@ describe('WarehousesTab', () => {
   });
 
   describe('withdrawing warehouse access (AC-25b, AC-25c)', () => {
-    const rowFor = (email: string): HTMLElement => {
-      const row = screen.getByText(email).closest('li');
+    // Awaited rather than read synchronously: this spec mounts the tab
+    // directly, so the Workspace users land on the render after the pane
+    // itself now that global-loader CH-14 has removed the readiness branch
+    // that held the pane back until they arrived.
+    const rowFor = async (email: string): Promise<HTMLElement> => {
+      const row = (await screen.findByText(email)).closest('li');
       if (!row) {
         throw new Error(`No person row found for ${email}`);
       }
@@ -742,7 +689,7 @@ describe('WarehousesTab', () => {
       await detailPane();
 
       await user.click(
-        within(rowFor('anna.kravets@example.test')).getByRole('button', {
+        within(await rowFor('anna.kravets@example.test')).getByRole('button', {
           name: /withdraw access/iu,
         }),
       );
@@ -783,10 +730,9 @@ describe('WarehousesTab', () => {
       // The client offers the control on Anna's row — it holds no data that
       // could mark her membership as protected — and the server is the one
       // that refuses.
-      const withdraw = within(rowFor('anna.kravets@example.test')).getByRole(
-        'button',
-        { name: /withdraw access/iu },
-      );
+      const withdraw = within(
+        await rowFor('anna.kravets@example.test'),
+      ).getByRole('button', { name: /withdraw access/iu });
       expect(withdraw).toBeEnabled();
       await user.click(withdraw);
       const dialog = await screen.findByRole('alertdialog', {

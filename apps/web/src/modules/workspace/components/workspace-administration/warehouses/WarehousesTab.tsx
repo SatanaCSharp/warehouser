@@ -43,18 +43,15 @@ const peopleForWarehouse = (
  */
 export const WarehousesTab = (): ReactElement => {
   const { t } = useTranslation('warehouse');
-  // Declared before the Workspace context read below, so this tab's own
-  // Warehouse list request is always the first network call it makes. A
-  // descendant gate reads the same cached context entry rather than issuing a
-  // second request, because RTK Query deduplicates the subscription this read
-  // has already opened.
-  const { data: warehouses = [], isLoading: isWarehousesLoading } =
-    useListWorkspaceWarehousesQuery();
-  const {
-    isLoading: isContextLoading,
-    workspaceContext,
-    workspacePermissionIds,
-  } = useCurrentWorkspaceContext();
+  // Both reads are cache reads: `/workspace`'s route loader dispatched them and
+  // awaited them before this tab was committed, and a descendant gate reads the
+  // same cached context entry rather than issuing a second request, because RTK
+  // Query deduplicates the subscription this read has already opened. The
+  // declaration order carries no ordering intent — the loader dispatches the
+  // destination's reads together (global-loader CH-14).
+  const { data: warehouses = [] } = useListWorkspaceWarehousesQuery();
+  const { workspaceContext, workspacePermissionIds } =
+    useCurrentWorkspaceContext();
   // The one Permission this tab still reads itself, because it decides a
   // *request* rather than an element: a dataset the actor may not read is never
   // fetched (AC-30). Every control below gates itself
@@ -70,15 +67,6 @@ export const WarehousesTab = (): ReactElement => {
     string | undefined
   >(undefined);
   const [isDetailActive, setIsDetailActive] = useState(false);
-
-  // Neither pane renders ahead of the datasets it needs — the detail pane's
-  // people list would otherwise flash in a heartbeat after the list itself,
-  // and its per-Warehouse people count would flash in even later. Reads
-  // `users === undefined` rather than the query's own `isLoading`, which
-  // still reads `false` for the one render where a newly un-skipped query
-  // has not started fetching yet.
-  const isLoading =
-    isWarehousesLoading || isContextLoading || (canReadPeople && !users);
 
   const selectedWarehouse =
     warehouses.find((warehouse) => warehouse.id === selectedWarehouseId) ??
@@ -102,24 +90,23 @@ export const WarehousesTab = (): ReactElement => {
   const onBack = (): void => setIsDetailActive(false);
 
   // The pane reads the Warehouse it was opened for, so it is resolved here
-  // rather than gated inline: `Conditional` evaluates both arms, and no
-  // Warehouse is selected while the list is still loading.
-  const detailPane =
-    isLoading || !selectedWarehouse ? null : (
-      <WarehouseDetailPane
-        key={selectedWarehouse.id}
-        isOnlyNonArchived={
-          selectedWarehouse.archivedAt === null && nonArchivedCount === 1
-        }
-        people={
-          canReadPeople && users
-            ? peopleForWarehouse(users, selectedWarehouse.id)
-            : undefined
-        }
-        warehouse={selectedWarehouse}
-        onBack={onBack}
-      />
-    );
+  // rather than gated inline: `Conditional` evaluates both arms, and an empty
+  // Workspace selects none.
+  const detailPane = !selectedWarehouse ? null : (
+    <WarehouseDetailPane
+      key={selectedWarehouse.id}
+      isOnlyNonArchived={
+        selectedWarehouse.archivedAt === null && nonArchivedCount === 1
+      }
+      people={
+        canReadPeople && users
+          ? peopleForWarehouse(users, selectedWarehouse.id)
+          : undefined
+      }
+      warehouse={selectedWarehouse}
+      onBack={onBack}
+    />
+  );
 
   return (
     <div className="grid gap-6 lg:grid-cols-[340px_minmax(0,1fr)]">
@@ -129,7 +116,6 @@ export const WarehousesTab = (): ReactElement => {
         </div>
         <WarehouseList
           className={isDetailActive ? 'hidden lg:block' : 'lg:block'}
-          isLoading={isLoading}
           membershipWarehouseIds={membershipWarehouseIds}
           peopleCounts={peopleCounts}
           selectedWarehouseId={selectedWarehouse?.id}

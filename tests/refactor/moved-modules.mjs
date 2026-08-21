@@ -79,7 +79,12 @@ export const POST_MOVE_TO_BASELINE_PATH = new Map(
 );
 
 /**
- * The five components the splits carved out, and the component each was carved out of.
+ * The components the splits carved out that still exist, and the component each was carved out of.
+ *
+ * `WarehouseListSkeleton.tsx` was one of them until global-loader CH-08 deleted it
+ * (`docs/change-requests/global-loader/sad.md` §5.3). The assertions below require every named
+ * path to exist at `HEAD`, so a deleted split component is removed from this map rather than left
+ * naming a file that is gone.
  *
  * These are the one category CR-RG-05's Method could not anticipate: they are *new source files*,
  * so a module-level diff cannot be empty while they exist, and no rewrite makes them disappear.
@@ -92,10 +97,6 @@ const WAREHOUSES =
 
 export const SPLIT_MODULE_PARENTS = new Map([
   [`${WAREHOUSES}/WarehouseSearchField.tsx`, `${WAREHOUSES}/WarehouseList.tsx`],
-  [
-    `${WAREHOUSES}/WarehouseListSkeleton.tsx`,
-    `${WAREHOUSES}/WarehouseList.tsx`,
-  ],
   [`${WAREHOUSES}/WarehouseRow.tsx`, `${WAREHOUSES}/WarehouseList.tsx`],
   [`${WAREHOUSES}/WarehouseEnterLink.tsx`, `${WAREHOUSES}/WarehouseList.tsx`],
   [

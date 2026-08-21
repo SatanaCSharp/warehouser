@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { WarehouseListSkeleton } from 'modules/workspace/components/workspace-administration/warehouses/WarehouseListSkeleton';
 import { WarehouseRow } from 'modules/workspace/components/workspace-administration/warehouses/WarehouseRow';
 import { WarehouseSearchField } from 'modules/workspace/components/workspace-administration/warehouses/WarehouseSearchField';
 
@@ -10,7 +9,6 @@ import type { ReactElement } from 'react';
 
 type WarehouseListProps = {
   className?: string;
-  isLoading: boolean;
   membershipWarehouseIds: readonly string[];
   peopleCounts: Record<string, number> | undefined;
   selectedWarehouseId: string | undefined;
@@ -28,10 +26,13 @@ type WarehouseListProps = {
  * bodies extract (refactor-warehouse-components CR-AC-04). The empty state is
  * the exception: one `<p role="status">` is below the threshold at which
  * indirection pays, so it stays inline rather than becoming a file of its own.
+ *
+ * There is no fourth, loading arm: `/workspace`'s route loader awaits the
+ * Warehouse list before the destination is committed, so the list is never
+ * mounted without it (global-loader CH-14).
  */
 export const WarehouseList = ({
   className,
-  isLoading,
   membershipWarehouseIds,
   peopleCounts,
   selectedWarehouseId,
@@ -50,9 +51,7 @@ export const WarehouseList = ({
   );
 
   let content: ReactElement;
-  if (isLoading) {
-    content = <WarehouseListSkeleton />;
-  } else if (warehouses.length === 0) {
+  if (warehouses.length === 0) {
     content = (
       <p role="status" className="mt-3 text-muted">
         {t('warehouses.empty')}

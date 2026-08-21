@@ -102,7 +102,6 @@ export const WORKSPACE_MODULE_MANIFEST = [
   'components/workspace-administration/warehouses/WarehouseLifecycleActions.tsx',
   'components/workspace-administration/warehouses/WarehouseList.spec.tsx',
   'components/workspace-administration/warehouses/WarehouseList.tsx',
-  'components/workspace-administration/warehouses/WarehouseListSkeleton.tsx',
   'components/workspace-administration/warehouses/WarehouseNameForm.tsx',
   'components/workspace-administration/warehouses/WarehousePeopleList.spec.tsx',
   'components/workspace-administration/warehouses/WarehousePeopleList.tsx',

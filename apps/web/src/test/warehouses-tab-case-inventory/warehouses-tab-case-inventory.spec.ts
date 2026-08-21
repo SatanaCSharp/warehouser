@@ -26,11 +26,13 @@ import baseline from 'test/baselines/warehouses-tab-cases.json';
  * Scope. It pins the three files T11 and T12 carve out, the names those files
  * take away from the tab spec, and — over all four files at once — that the
  * union is exactly the baseline's 39 names **plus the additions enumerated in
- * `ADDED_CASES`**, distributed 27 / 7 / 4 / 4, with every name declared exactly
- * once. Every baseline name must still be present: the additions widen what may
- * appear, never what may disappear. Every assertion reports the offending
- * **case name**, because a bare count tells a reviewer that something was lost
- * without telling them what.
+ * `ADDED_CASES`, less the deletions enumerated in `DELETED_CASES`**,
+ * distributed 26 / 7 / 4 / 4, with every name declared exactly once. Every
+ * baseline name not enumerated as deleted must still be present: the additions
+ * widen what may appear, never what may disappear, and a disappearance is
+ * legal only where a later change request removed the *subject* and said so by
+ * name. Every assertion reports the offending **case name**, because a bare
+ * count tells a reviewer that something was lost without telling them what.
  *
  * What this gate cannot decide. Case-count identity is necessary, not
  * sufficient: CR-RG-01 also requires that every moved expectation's subject and
@@ -134,15 +136,52 @@ const MOVED_CASES = [
 const ADDED_CASES: Record<string, string[]> = {
   'WarehousesTab.spec.tsx': [
     'derives each row people count from the Workspace users the server returns',
-    'holds the loading skeleton until the people counts arrive, not only until the list does',
+  ],
+  'WarehouseList.spec.tsx': [
+    // global-loader CR-RG-05: `warehouses.noMatches` was the third arm of the
+    // four-way branch whose loading arm CH-14 deletes, and the criterion
+    // requires it to keep rendering its own message. It had no case of its own
+    // before, so removing the deleted arm without adding this one would have
+    // left the surviving arm unasserted.
+    'names the search term that matched nothing instead of showing an empty list',
   ],
   'WarehousePeopleList.spec.tsx': [
     'offers no withdraw control at all to an actor without WAREHOUSE_MEMBERSHIPS:REVOKE',
   ],
 };
 
+/**
+ * Cases **deleted after** `baseline_revision`, enumerated by name for the same
+ * reason `ADDED_CASES` enumerates an addition: the baseline stays *compared,
+ * never regenerated*, so a case that leaves the tree must be named here or the
+ * gate reports it as `missing`.
+ *
+ * Both name a waiting affordance global-loader CH-08 removes (CR-AC-08).
+ * `/workspace`'s route loader awaits the Warehouse list, the Workspace context
+ * and the Workspace users before the destination paints, so neither the
+ * skeleton the first case announced nor the anti-flash clause the second
+ * pinned still exists to assert. The subject is gone, not the assertion:
+ * CR-RG-01 forbids dropping an expectation whose subject survives, which is
+ * why every other baseline name is still required below.
+ *
+ * The second is a former `ADDED_CASES` entry rather than a baseline name, so it
+ * is deleted by removing it from that list above; it is recorded here so a
+ * reader sees both halves of the same removal in one place.
+ */
+const DELETED_CASES = [
+  'announces the loading skeleton as "Loading warehouses" before the list arrives',
+] as const;
+
+const survives = (name: string): boolean =>
+  !DELETED_CASES.includes(name as (typeof DELETED_CASES)[number]);
+
 const addedIn = (specFileName: string): string[] =>
   ADDED_CASES[specFileName] ?? [];
+
+/** The cases one spec file must declare: what it was assigned, less what this
+ * change request deleted, plus what it gained. */
+const expectedIn = (specFileName: string, assigned: string[]): string[] =>
+  [...assigned, ...addedIn(specFileName)].filter(survives);
 
 const ALL_ADDED_CASES = Object.values(ADDED_CASES).flat();
 
@@ -182,10 +221,13 @@ const TAB_SPEC_CASES = baseline.cases.filter(
   (name) => !MOVED_CASES.includes(name),
 );
 
-/** Exact, not a lower bound — and it also rejects a fifth colocated spec. */
+/** Exact, not a lower bound — and it also rejects a fifth colocated spec. The
+ * list spec keeps seven of its own: six of the seven it was assigned, the
+ * seventh deleted with the skeleton, plus the search-empty case that replaces
+ * it. */
 const EXPECTED_DISTRIBUTION: Record<string, number> = {
   'WarehousesTab.spec.tsx': 25 + addedIn('WarehousesTab.spec.tsx').length,
-  'WarehouseList.spec.tsx': 7 + addedIn('WarehouseList.spec.tsx').length,
+  'WarehouseList.spec.tsx': 6 + addedIn('WarehouseList.spec.tsx').length,
   'WarehouseRow.spec.tsx': 4 + addedIn('WarehouseRow.spec.tsx').length,
   'WarehousePeopleList.spec.tsx':
     3 + addedIn('WarehousePeopleList.spec.tsx').length,
@@ -211,7 +253,9 @@ const identityAgainstBaseline = (
 } => {
   const counts = occurrences(declared);
   return {
-    missing: baseline.cases.filter((name) => !counts.has(name)).sort(),
+    missing: baseline.cases
+      .filter((name) => !counts.has(name) && survives(name))
+      .sort(),
     unexpected: [...counts.keys()]
       .filter(
         (name) =>
@@ -236,24 +280,23 @@ describe('the Warehouses tab case inventory (CR-RG-01)', () => {
     ).toEqual([]);
   });
 
-  it('gives WarehouseList.spec.tsx exactly the seven list cases', () => {
+  it('gives WarehouseList.spec.tsx its six surviving list cases and the search-empty one', () => {
     expect([...caseNamesIn('WarehouseList.spec.tsx')].sort()).toEqual(
-      [...LIST_SPEC_CASES, ...addedIn('WarehouseList.spec.tsx')].sort(),
+      expectedIn('WarehouseList.spec.tsx', [...LIST_SPEC_CASES]).sort(),
     );
   });
 
   it('gives WarehouseRow.spec.tsx exactly the four row-scoped Enter cases', () => {
     expect([...caseNamesIn('WarehouseRow.spec.tsx')].sort()).toEqual(
-      [...ROW_SPEC_CASES, ...addedIn('WarehouseRow.spec.tsx')].sort(),
+      expectedIn('WarehouseRow.spec.tsx', [...ROW_SPEC_CASES]).sort(),
     );
   });
 
   it('gives WarehousePeopleList.spec.tsx exactly the three people-pane cases', () => {
     expect([...caseNamesIn('WarehousePeopleList.spec.tsx')].sort()).toEqual(
-      [
+      expectedIn('WarehousePeopleList.spec.tsx', [
         ...PEOPLE_LIST_SPEC_CASES,
-        ...addedIn('WarehousePeopleList.spec.tsx'),
-      ].sort(),
+      ]).sort(),
     );
   });
 
@@ -264,7 +307,7 @@ describe('the Warehouses tab case inventory (CR-RG-01)', () => {
     // Named, not counted: this diff spells out which case went missing, was
     // renamed, or arrived that the baseline does not know about.
     expect([...tabCases].sort()).toEqual(
-      [...TAB_SPEC_CASES, ...addedIn('WarehousesTab.spec.tsx')].sort(),
+      expectedIn('WarehousesTab.spec.tsx', TAB_SPEC_CASES).sort(),
     );
     expect(tabCases.filter((name) => MOVED_CASES.includes(name))).toEqual([]);
     expect(
@@ -276,17 +319,21 @@ describe('the Warehouses tab case inventory (CR-RG-01)', () => {
     ).toEqual([]);
   });
 
-  it('declares the 39 baseline cases plus the enumerated additions, each exactly once', () => {
+  it('declares the baseline cases less the enumerated deletions plus the enumerated additions, each exactly once', () => {
     const declared = specFileNames().flatMap(caseNamesIn);
 
     expect(
       identityAgainstBaseline(declared),
       'a case was dropped, renamed or duplicated during the split',
     ).toEqual({ missing: [], unexpected: [], duplicated: [] });
-    expect(declared).toHaveLength(baseline.caseCount + ALL_ADDED_CASES.length);
+    expect(declared).toHaveLength(
+      baseline.caseCount + ALL_ADDED_CASES.length - DELETED_CASES.length,
+    );
+    // A deleted case is deleted, not relocated: no spec may still declare one.
+    expect(declared.filter((name) => !survives(name))).toEqual([]);
   });
 
-  it('distributes the cases exactly 27 / 7 / 4 / 4, with no fifth spec', () => {
+  it('distributes the cases exactly 26 / 7 / 4 / 4, with no fifth spec', () => {
     expect(
       Object.fromEntries(
         specFileNames().map((fileName) => [

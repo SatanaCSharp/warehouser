@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -30,17 +30,28 @@ const WAREHOUSES_DIRECTORY = posix.join(
 );
 
 /**
- * The five files `sad.md` §5.3 fixes for the `WarehouseList` split — the
- * directory plus its four presentational leaves. `sad.md` §4.4 terminates the
- * nesting recursion at the domain group, so all five are flat siblings.
+ * The files `sad.md` §5.3 fixes for the `WarehouseList` split — the directory
+ * plus its presentational leaves. `sad.md` §4.4 terminates the nesting
+ * recursion at the domain group, so all of them are flat siblings.
+ *
+ * `WarehouseListSkeleton.tsx` was the fifth. global-loader CH-08 deletes it
+ * (`docs/change-requests/global-loader/sad.md` §5.3): `/workspace`'s loader
+ * awaits the Warehouse list before the destination paints, so the list has no
+ * loading window of its own left to fill. It is pinned as *deleted* by
+ * `DELETED_LIST_FILES` below rather than dropped from this list silently.
  */
 const LIST_SPLIT_FILES = [
   'WarehouseEnterLink.tsx',
   'WarehouseList.tsx',
-  'WarehouseListSkeleton.tsx',
   'WarehouseRow.tsx',
   'WarehouseSearchField.tsx',
 ] as const;
+
+/**
+ * The file global-loader CH-08 removes from the split, named so the deletion
+ * stays as reviewable as the split that created it (CR-AC-08).
+ */
+const DELETED_LIST_FILES = ['WarehouseListSkeleton.tsx'] as const;
 
 /**
  * The two files `sad.md` §5.3's second table fixes for the
@@ -91,7 +102,7 @@ const nestedTernaryLines = (file: string): string[] => {
 
 describe('the Warehouse administration component split (CR-AC-04)', () => {
   describe('the WarehouseList split', () => {
-    it('realizes exactly the five files the design artifact fixes', () => {
+    it('realizes exactly the four files the design artifact still fixes', () => {
       expect(
         LIST_SPLIT_FILES.filter((file) => existsSync(pathOf(file))),
       ).toStrictEqual([...LIST_SPLIT_FILES]);
@@ -105,26 +116,26 @@ describe('the Warehouse administration component split (CR-AC-04)', () => {
       ).toStrictEqual({
         'WarehouseEnterLink.tsx': ['WarehouseEnterLink'],
         'WarehouseList.tsx': ['WarehouseList'],
-        'WarehouseListSkeleton.tsx': ['WarehouseListSkeleton'],
         'WarehouseRow.tsx': ['WarehouseRow'],
         'WarehouseSearchField.tsx': ['WarehouseSearchField'],
       });
     });
 
     it('keeps the flat content branch in WarehouseList', () => {
-      // The flat loading / empty / no-matches / present assignment is the
-      // branching CR-AC-04 protects, not an `if` chain it forbids: only the
-      // branch *bodies* extract, and the one-element status states stay inline
+      // The flat empty / no-matches / present assignment is the branching
+      // CR-AC-04 protects, not an `if` chain it forbids: only the branch
+      // *bodies* extract, and the one-element status states stay inline
       // (`sad.md` §5.3, O3). The no-matches arm is a distinct outcome from the
       // empty workspace — a filtered-out list is not an unpopulated one — so it
       // is its own flat arm rather than a condition folded into the empty one.
+      // The fourth arm was the loading one, deleted with the skeleton by
+      // global-loader CH-14; the three that carry a message survive unchanged.
       const source = sourceOf('WarehouseList.tsx');
 
-      expect(source).toContain('if (isLoading) {');
-      expect(source).toContain('} else if (warehouses.length === 0) {');
+      expect(source).toContain('if (warehouses.length === 0) {');
       expect(source).toContain('} else if (visibleWarehouses.length === 0) {');
       expect(source).toContain('} else {');
-      expect([...source.matchAll(/^\s*content = /gmu)]).toHaveLength(4);
+      expect([...source.matchAll(/^\s*content = /gmu)]).toHaveLength(3);
       expect(source).toContain('<p role="status"');
     });
 
@@ -136,10 +147,57 @@ describe('the Warehouse administration component split (CR-AC-04)', () => {
       ).toStrictEqual({
         'WarehouseEnterLink.tsx': [],
         'WarehouseList.tsx': [],
-        'WarehouseListSkeleton.tsx': [],
         'WarehouseRow.tsx': [],
         'WarehouseSearchField.tsx': [],
       });
+    });
+  });
+
+  // global-loader CH-08 and CH-14 (CR-AC-08). `/workspace`'s route loader now
+  // awaits the Warehouse list, the Workspace context and the Workspace users
+  // before the destination is committed, so the tab has no window in which it
+  // is mounted without them. The readiness branches that filled that window are
+  // dead code, and `writing-web-components.md` §9 deletes a dead branch rather
+  // than leaving it behind the new route boundary.
+  //
+  // These cases live beside the split above because their subject is the same
+  // one: which files this directory holds and what shape the `WarehouseList`
+  // branch takes. Behaviour — that the empty, no-matches and populated arms
+  // still render their own copy — is asserted by `WarehouseList.spec.tsx`.
+  describe('the readiness branches global-loader deletes (CR-AC-08)', () => {
+    it('deletes the list skeleton and leaves no sibling naming it', () => {
+      const namingIt = readdirSync(WAREHOUSES_DIRECTORY).filter((entry) =>
+        readFileSync(pathOf(entry), 'utf8').includes('WarehouseListSkeleton'),
+      );
+
+      expect(
+        DELETED_LIST_FILES.filter((file) => existsSync(pathOf(file))),
+      ).toStrictEqual([]);
+      expect(namingIt).toStrictEqual([]);
+    });
+
+    it('leaves WarehouseListProps declaring no isLoading', () => {
+      const source = sourceOf('WarehouseList.tsx');
+
+      expect(source).toContain('type WarehouseListProps = {');
+      expect(source).not.toContain('isLoading');
+    });
+
+    it('leaves WarehousesTab deriving no readiness and declaring no query order', () => {
+      const source = sourceOf('WarehousesTab.tsx');
+
+      expect(source).not.toContain('isLoading');
+      expect(source).not.toContain('isWarehousesLoading');
+      expect(source).not.toContain('isContextLoading');
+      // The superseded ordering intent: the tab declared its Warehouse-list
+      // query first so that read would be its first network call. The loader
+      // dispatches the destination's reads together, which supersedes it
+      // (`change.md` §9, resolved at `design`).
+      expect(source).not.toContain('first network call');
+      // What replaces the readiness term in the pane's own gate (CH-14).
+      expect(source).toContain(
+        'const detailPane = !selectedWarehouse ? null : (',
+      );
     });
   });
 
