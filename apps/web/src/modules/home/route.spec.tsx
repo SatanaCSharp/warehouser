@@ -23,6 +23,8 @@ const SESSION_USER = { id: '00000000-0000-4000-8000-000000000001' };
 
 const NO_CONTEXT_HEADING = 'Nothing is entered yet';
 const ERROR_HEADING = 'Something went wrong';
+/** The Workspace administration destination's own heading — its name. */
+const WORKSPACE_HEADING = 'Acme';
 const PENDING_LABEL = 'Preparing your workspace…';
 
 type ContextOverrides = {
@@ -283,6 +285,14 @@ describe('landing resolution at / (T7)', () => {
     await waitFor(() =>
       expect(router.state.location.pathname).toBe(ROUTES.WORKSPACE),
     );
+    // Landing is the destination on screen, not the address alone.
+    // `workspaceRoute` paints `RoutePendingState` over the window its own
+    // guard awaits (global-loader T1, CR-AC-02), and React keeps the tree that
+    // fallback replaced mounted-but-hidden until the window closes — so the
+    // error state is asserted gone once the destination has actually painted.
+    expect(
+      await screen.findByRole('heading', { name: WORKSPACE_HEADING }),
+    ).toBeInTheDocument();
     expect(screen.queryByText(ERROR_HEADING)).not.toBeInTheDocument();
   });
 

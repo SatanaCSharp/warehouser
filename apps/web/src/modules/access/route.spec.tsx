@@ -3,12 +3,25 @@ import { act, render, screen } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { accessRoute } from 'modules/access/route';
 import { createAppRouter } from 'router';
+import { RouteErrorState } from 'shared/components/RouteErrorState';
+import { RoutePendingState } from 'shared/components/RoutePendingState';
 import { ROUTES } from 'shared/constants/routes';
 import { makeStore } from 'store';
+import {
+  stubWarehouseSession,
+  warehouseMemberships,
+  warehouseSessionIds,
+} from 'test/workspace-fixtures';
 
 import type { AppRouter } from 'router';
 import type { AppStore } from 'store';
+
+const NON_DISCLOSING_REFUSAL = "This address isn't available to you";
+// `common.json` `shell.landing.pendingLabel` — the copy `RoutePendingState`
+// renders, and after CH-12 the application's only waiting copy.
+const PENDING_LABEL = 'Preparing your workspace…';
 
 const readableAccess = {
   warehouseId: '00000000-0000-4000-8000-000000000002',
@@ -231,5 +244,62 @@ describe('Warehouse access address (T6)', () => {
       screen.queryByText("This address isn't available to you"),
     ).not.toBeInTheDocument();
     expect(screen.queryByRole('tab')).not.toBeInTheDocument();
+  });
+});
+
+// T1 / CH-02, CH-02a — the access surface's own pending and error contract.
+// `accessRoute` is a CHILD of the Warehouse layout route, so the two await
+// windows it sits between — the parent's entry verdict and (from T5) its own
+// loader — must resolve to ONE pending state rather than two
+// ([ADR 0002](../../../../docs/change-requests/global-loader/adr/0002-one-pending-boundary-per-route-branch.md)).
+describe("the access route's pending contract (T1, CR-AC-02, CR-RG-04)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+  });
+
+  // ADR 0002's decision outcome, asserted on the shipped route object because
+  // it is the declaration itself that carries the behaviour: the
+  // `pendingComponent` this route never renders is what registers the
+  // router's commit timer (`setupPendingTimeout` gates on its presence), and
+  // `wrapInSuspense: false` is what suppresses this route's own Suspense
+  // boundary so the loader suspends into `warehouseRoute`'s instead. Deleting
+  // either line reads as tidying up a mistake and breaks a different
+  // criterion — CR-AC-02 for the first, CR-AC-13 for the second — so the
+  // pairing is pinned here as well as behaviourally (`sad.md` §11, risk 2).
+  it('declares the branch shared pending boundary rather than one of its own', () => {
+    expect(accessRoute.options.pendingComponent).toBe(RoutePendingState);
+    expect(accessRoute.options.errorComponent).toBe(RouteErrorState);
+    expect(accessRoute.options.pendingMs).toBe(150);
+    // TanStack's default is 500 ms, which would hold the fallback on screen
+    // after its data had arrived (`sad.md` §5.1).
+    expect(accessRoute.options.pendingMinMs).toBe(0);
+    expect(accessRoute.options.wrapInSuspense).toBe(false);
+  });
+
+  // CR-RG-04, a merge blocker, at the CHILD address — where the parent guard
+  // RETURNS a refused verdict rather than throwing, so this route's own load
+  // still runs. Declaring a pending contract here must not turn that refusal
+  // into a wait, a redirect or a disclosure: `WarehouseLayout` renders
+  // `WarehouseEntryRefusal` in place, with the same non-disclosing reason, and
+  // nothing is asked about the Warehouse the actor was just refused — the
+  // baseline CH-16's verdict gate has to preserve when T5 adds the loader.
+  it('refuses in place at a refused warehouse access address, never pending and never a redirect', async () => {
+    const session = stubWarehouseSession({
+      effectiveWarehouseId: warehouseSessionIds.north,
+      memberships: [warehouseMemberships.north],
+    });
+    const refused = warehouseSessionIds.ownWithoutMembership;
+
+    const { router } = renderRoute(accessAddress(refused));
+
+    const refusal = await screen.findByRole('heading', {
+      name: NON_DISCLOSING_REFUSAL,
+    });
+    expect(refusal.closest('main')?.textContent).not.toContain(refused);
+    expect(screen.queryByText(PENDING_LABEL)).not.toBeInTheDocument();
+    expect(router.state.location.pathname).toBe(accessAddress(refused));
+    expect(router.history.length).toBe(1);
+    expect(session.urlsMatching(/\/access\//u)).toEqual([]);
   });
 });

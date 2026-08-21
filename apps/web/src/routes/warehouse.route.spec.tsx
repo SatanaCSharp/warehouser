@@ -9,6 +9,7 @@ import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createAppRouter } from 'router';
+import { warehouseRoute } from 'routes/warehouse.route';
 import { warehousePath } from 'shared/api/warehouse/warehouse-path';
 import { workspaceContextApi } from 'shared/api/workspace/workspace-context-api';
 import { ROUTES } from 'shared/constants/routes';
@@ -44,6 +45,10 @@ const WAREHOUSE_CONTENT = 'Design System Preview';
 const NO_CONTEXT_HEADING = 'Nothing is entered yet';
 const ERROR_HEADING = 'Something went wrong';
 const RETRY_LABEL = 'Try again';
+const ACCESS_HEADING = 'Access';
+// `common.json` `shell.landing.pendingLabel` — the copy `RoutePendingState`
+// renders, and after CH-12 the application's only waiting copy.
+const PENDING_LABEL = 'Preparing your workspace…';
 
 const warehouseAddress = (warehouseId: string): string =>
   `/warehouses/${warehouseId}`;
@@ -723,5 +728,206 @@ describe('entering from the warehouses tab (T28, CR-AC-14)', () => {
         },
       ]),
     );
+  });
+});
+
+/**
+ * How long the delayed Workspace-context read below is held for. Comfortably
+ * past `warehouseRoute`'s 150 ms `pendingMs`, so the pending window is a fact
+ * of the fixture rather than a race against the router's timer, and short
+ * enough that the case stays well inside Vitest's `testTimeout`.
+ */
+const DELAYED_CONTEXT_MS = 400;
+
+/**
+ * Holds the Workspace-context read the entry verdict awaits, so the window
+ * `pendingComponent` covers is long enough to observe. It wraps whatever stub
+ * is already installed rather than replacing it, so the session keeps
+ * answering the session restore, the access reads and the writes unchanged.
+ */
+const delayContextRead = (delayMs: number): void => {
+  const answer = globalThis.fetch;
+
+  vi.stubGlobal(
+    'fetch',
+    (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+      const url = String(input instanceof Request ? input.url : input);
+      const answered = answer(input, init);
+
+      if (!url.includes('/api/v1/workspace/context')) {
+        return answered;
+      }
+
+      return new Promise<Response>((resolve) => {
+        setTimeout(() => resolve(answered), delayMs);
+      });
+    },
+  );
+};
+
+/**
+ * Counts how many times the pending state appears while `navigate` is in
+ * flight. Taken from the DOM mutations themselves rather than from the settled
+ * tree, because a fallback that is inserted and removed inside one commit
+ * would be invisible to any assertion made afterwards — and "it was never
+ * painted" is precisely what CR-AC-16 claims.
+ */
+const pendingPaintsDuring = async (
+  navigate: () => Promise<void>,
+): Promise<number> => {
+  let paints = document.body.textContent?.includes(PENDING_LABEL) ? 1 : 0;
+  const observer = new MutationObserver((records) => {
+    const inserted = records.some((record) =>
+      [...record.addedNodes].some((node) =>
+        node.textContent?.includes(PENDING_LABEL),
+      ),
+    );
+    if (inserted || document.body.textContent?.includes(PENDING_LABEL)) {
+      paints += 1;
+    }
+  });
+
+  observer.observe(document.body, {
+    characterData: true,
+    childList: true,
+    subtree: true,
+  });
+  await navigate();
+  observer.disconnect();
+
+  return paints;
+};
+
+// T1 / CH-02 — the Warehouse layout route's pending contract. `beforeLoad`
+// resolves the entry verdict over the network, and until this change nothing
+// painted for that window: the actor sat on the page they came from
+// (`change.md` §3, CH-02). The three cases below are the pair `sad.md` §5.1
+// makes of `pendingComponent` and `pendingMs: 150` — the window is painted
+// when it is real, and is not painted for the microtask an in-Warehouse
+// navigation costs — plus CR-RG-04's merge blocker, which the first two must
+// not disturb.
+describe('the warehouse route paints its await window (T1, CR-AC-02)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+  });
+
+  // CR-AC-02 — "`RoutePendingState` is on screen while `beforeLoad`/`loader`
+  // is outstanding, and is replaced by the destination when the route
+  // settles". Asserted through the production route tree, so the shipped
+  // `pendingComponent` is the one under test: a re-declared probe route would
+  // stay green after the declaration was deleted.
+  it('paints the pending state while the entry verdict is outstanding and replaces it with the destination', async () => {
+    stubWarehouseSession({
+      effectiveWarehouseId: NORTH,
+      memberships: [warehouseMemberships.north],
+    });
+    delayContextRead(DELAYED_CONTEXT_MS);
+
+    renderRoute(warehouseAddress(NORTH));
+
+    expect(await screen.findByText(PENDING_LABEL)).toBeInTheDocument();
+    // CR-RG-08 — the shell around the outlet paints nothing of its own while
+    // the pending state is up: one waiting affordance, and it is this one.
+    expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+
+    expect(await screen.findByText(WAREHOUSE_CONTENT)).toBeInTheDocument();
+    expect(screen.queryByText(PENDING_LABEL)).not.toBeInTheDocument();
+  });
+
+  // CR-AC-16, in `sad.md` §11's amended form — a `cause === 'stay'`
+  // navigation between two of a Warehouse's surfaces does not paint for a
+  // wait shorter than 150 ms. `beforeLoad` is `async` unconditionally and
+  // awaits `requireAuth` before its `lastVerdictByStore` lookup, so even the
+  // cached-verdict path resolves through a microtask on every internal
+  // navigation; `pendingMs: 150` is what keeps that microtask from replacing
+  // the live destination.
+  //
+  // The threshold is asserted beside the behaviour deliberately. A warm stay
+  // navigation settles inside a microtask, which no in-process observation can
+  // separate from a `setTimeout(0)` — so the no-paint assertion alone would
+  // stay green after `pendingMs` was set to `0`, which is the one edit
+  // CR-AC-16 exists to forbid (`spec.md` CR-AC-16, ADR 0002's table).
+  it('does not paint the pending state on a cause=stay navigation shorter than 150 ms', async () => {
+    stubWarehouseSession({
+      effectiveWarehouseId: NORTH,
+      memberships: [warehouseMemberships.north],
+      permissionIdsIn: { [NORTH]: [PermissionId.ROLES_WATCH] },
+    });
+    const { router } = renderRoute(warehouseAddress(NORTH));
+    expect(await screen.findByText(WAREHOUSE_CONTENT)).toBeInTheDocument();
+
+    // Warm both surfaces first, so the navigation under test is the warm
+    // return `sad.md` §6.3 describes rather than a first visit that has a
+    // module chunk and two network rounds still ahead of it.
+    await act(async () => {
+      await router.navigate({
+        to: ROUTES.WAREHOUSE_ACCESS,
+        params: { warehouseId: NORTH },
+      });
+    });
+    expect(
+      await screen.findByRole('heading', { name: ACCESS_HEADING }),
+    ).toBeInTheDocument();
+    await act(async () => {
+      await router.navigate({
+        to: ROUTES.WAREHOUSE,
+        params: { warehouseId: NORTH },
+      });
+    });
+    expect(await screen.findByText(WAREHOUSE_CONTENT)).toBeInTheDocument();
+
+    const paints = await pendingPaintsDuring(async () => {
+      await act(async () => {
+        await router.navigate({
+          to: ROUTES.WAREHOUSE_ACCESS,
+          params: { warehouseId: NORTH },
+        });
+      });
+    });
+
+    expect(paints).toBe(0);
+    expect(warehouseRoute.options.pendingMs).toBe(150);
+    // TanStack's own default is 500 ms, which would hold the fallback on
+    // screen after its data had arrived (`sad.md` §5.1).
+    expect(warehouseRoute.options.pendingMinMs).toBe(0);
+    // The live destination was replaced by the finished one, not by a wait.
+    expect(
+      screen.getByRole('heading', { name: ACCESS_HEADING }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(PENDING_LABEL)).not.toBeInTheDocument();
+  });
+
+  // CR-RG-04, a merge blocker — `warehouseRoute.beforeLoad` RETURNS a refused
+  // verdict rather than throwing, so declaring a `pendingComponent` beside it
+  // must leave the refusal exactly where it was: rendered in place at the
+  // requested address, with the same non-disclosing reason. A refusal is a
+  // resolved outcome, so once the verdict settles it is never a pending state
+  // and never a redirect. The context read is held so the refusal is reached
+  // THROUGH the new pending window rather than instead of one.
+  it('still refuses in place after the pending window, never as a pending state and never as a redirect', async () => {
+    const session = stubWarehouseSession({
+      effectiveWarehouseId: NORTH,
+      memberships: [warehouseMemberships.north],
+    });
+    delayContextRead(DELAYED_CONTEXT_MS);
+    const refused = warehouseSessionIds.ownWithoutMembership;
+
+    const { router } = renderRoute(warehouseAddress(refused));
+
+    const refusal = await screen.findByRole('heading', {
+      name: NON_DISCLOSING_REFUSAL,
+    });
+    expect(refusal.closest('main')?.textContent).not.toContain(refused);
+    expect(screen.queryByText(ARCHIVED_REFUSAL)).not.toBeInTheDocument();
+    // Resolved, so the pending state is gone rather than left standing.
+    expect(screen.queryByText(PENDING_LABEL)).not.toBeInTheDocument();
+    // In place: the actor is at the address they asked for, and nothing
+    // navigated on their behalf.
+    expect(router.state.location.pathname).toBe(warehouseAddress(refused));
+    expect(router.history.length).toBe(1);
+    expect(screen.queryByText(NO_CONTEXT_HEADING)).not.toBeInTheDocument();
+    // And the refusal costs no request into the Warehouse it named.
+    expect(session.urlsMatching(/\/access\//u)).toEqual([]);
   });
 });

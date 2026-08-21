@@ -4,6 +4,7 @@ import { requireAuth } from 'guards/auth.guard';
 import { resolveWarehouseEntry } from 'guards/warehouse-entry.guard';
 import { rootRoute } from 'routes/__root.route';
 import { RouteErrorState } from 'shared/components/RouteErrorState';
+import { RoutePendingState } from 'shared/components/RoutePendingState';
 import { ROUTES } from 'shared/constants/routes';
 import { WarehouseLayout } from 'shared/layouts/WarehouseLayout';
 
@@ -41,6 +42,17 @@ export const warehouseRoute = createRoute({
   path: ROUTES.WAREHOUSE,
   component: WarehouseLayout,
   errorComponent: RouteErrorState,
+  pendingComponent: RoutePendingState,
+  // T1 / CR-AC-16 — `beforeLoad` below is `async` unconditionally and awaits
+  // `requireAuth` before its `lastVerdictByStore` lookup, so even a cached
+  // verdict resolves through a microtask on every navigation that stays
+  // inside a Warehouse. 150 ms is what keeps that microtask from painting
+  // over a live destination; the router's own default is 1000 ms, which would
+  // leave a real entry-verdict round trip unpainted (CR-AC-02).
+  pendingMs: 150,
+  // TanStack's default is 500 ms, which would hold the pending state on
+  // screen after the verdict had arrived (`sad.md` §5.1).
+  pendingMinMs: 0,
   beforeLoad: async ({
     context,
     params,

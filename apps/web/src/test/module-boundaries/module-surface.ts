@@ -114,6 +114,9 @@ export const WORKSPACE_MODULE_MANIFEST = [
   'components/workspace-administration/warehouses/WarehousesTab.tsx',
   'components/workspace-administration/warehouses/WithdrawWarehouseAccessDialog.tsx',
   'page.tsx',
+  // T1 / global-loader CR-AC-02 — the colocated spec for the route's pending
+  // and error contract, filed beside its subject (`placing-web-tests.md` §1).
+  'route.spec.tsx',
   'route.tsx',
   'schemas/name-workspace-form.schema.ts',
   'schemas/warehouse-name-form.schema.ts',
