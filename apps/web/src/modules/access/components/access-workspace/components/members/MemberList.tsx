@@ -1,4 +1,4 @@
-import { InputGroup, Skeleton } from '@heroui/react';
+import { InputGroup } from '@heroui/react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -11,8 +11,8 @@ import type {
 } from 'modules/access/types/access.types';
 import type { ChangeEvent, ReactElement, ReactNode } from 'react';
 
-/** Which of the list's four mutually exclusive states is on screen. */
-type MemberListStatus = 'empty' | 'loading' | 'ready' | 'searchEmpty';
+/** Which of the list's three mutually exclusive states is on screen. */
+type MemberListStatus = 'empty' | 'ready' | 'searchEmpty';
 
 const MemberListBody = ({
   children,
@@ -22,16 +22,6 @@ const MemberListBody = ({
   status: MemberListStatus;
 }): ReactElement => {
   const { t } = useTranslation('access');
-
-  if (status === 'loading') {
-    return (
-      <div aria-label={t('members.loading')} className="mt-3 space-y-3">
-        {[0, 1, 2].map((skeletonId) => (
-          <Skeleton key={skeletonId} className="h-[72px] rounded-xl" />
-        ))}
-      </div>
-    );
-  }
 
   if (status === 'empty') {
     return <p className="mt-3 text-muted">{t('members.empty')}</p>;
@@ -49,8 +39,12 @@ const MemberListBody = ({
 };
 
 export type MemberListProps = {
-  actorUserId: string;
-  isLoading: boolean;
+  /**
+   * The acting user, or `undefined` while the auth store has not resolved one.
+   * Undefined is not defaulted away: a fallback id would compare unequal to
+   * every member and render every row as somebody else's (CR-RG-01).
+   */
+  actorUserId: string | undefined;
   members: AccessMember[];
   roles: AccessRole[];
   onDeleteMember: (member: AccessMember) => void;
@@ -65,7 +59,6 @@ export type MemberListProps = {
  */
 export const MemberList = ({
   actorUserId,
-  isLoading,
   members,
   roles,
   onDeleteMember,
@@ -84,9 +77,6 @@ export const MemberList = ({
   );
 
   const status = (): MemberListStatus => {
-    if (isLoading) {
-      return 'loading';
-    }
     if (members.length === 0) {
       return 'empty';
     }
@@ -111,7 +101,7 @@ export const MemberList = ({
         {visibleMembers.map((member) => (
           <MemberRow
             key={member.userId}
-            isSelf={member.userId === actorUserId}
+            actorUserId={actorUserId}
             member={member}
             roleName={roleNameById.get(member.roleId) ?? ''}
             onDeleteMember={onDeleteMember}

@@ -9,7 +9,8 @@ import type { AccessMember } from 'modules/access/types/access.types';
 import type { Key, ReactElement, ReactNode } from 'react';
 
 export type MemberRowProps = {
-  isSelf: boolean;
+  /** The acting user, or `undefined` while the auth store has not resolved one. */
+  actorUserId: string | undefined;
   member: AccessMember;
   roleName: string;
   onDeleteMember: (member: AccessMember) => void;
@@ -30,18 +31,21 @@ type RowAction = {
 /**
  * What the row carries on its trailing edge: a chip for a row that may not be
  * administered from here, otherwise the actions menu — and nothing at all for
- * an actor permissioned for none of them. The three cases are mutually
- * exclusive whole-component states, so they are early returns rather than the
- * ternary ladder they would otherwise be inside `MemberRow`'s JSX.
+ * an unresolved actor, or an actor permissioned for none of them. The cases are
+ * mutually exclusive whole-component states, so they are early returns rather
+ * than the ternary ladder they would otherwise be inside `MemberRow`'s JSX, and
+ * each states one rule: record state, then identity, then authorization.
  */
 const MemberRowTrailing = ({
   actions,
   actionsLabel,
+  isActorResolved,
   isProtected,
   isSelf,
 }: {
   actions: RowAction[];
   actionsLabel: string;
+  isActorResolved: boolean;
   isProtected: boolean;
   isSelf: boolean;
 }): ReactElement | null => {
@@ -61,6 +65,15 @@ const MemberRowTrailing = ({
         {t('members.you')}
       </Chip>
     );
+  }
+
+  // An unresolved actor cannot be compared against a member id, so no row may
+  // present itself as somebody else's: every destructive control is withheld
+  // until the actor resolves (CR-RG-01). This is identity, not a Permission,
+  // which is why it is an early return beside `isSelf` rather than a gate
+  // (`docs/system/adr/19-08-2026-declarative-permission-gates.md`).
+  if (!isActorResolved) {
+    return null;
   }
 
   if (actions.length === 0) {
@@ -96,6 +109,12 @@ const MemberRowTrailing = ({
  * administered from here (AC-11/13/14/18) — and the menu itself offers only
  * the actions the actor is permissioned for.
  *
+ * Who the acting user is arrives as `actorUserId`, which is `undefined` while
+ * the auth store has not resolved one — during sign-out, which dispatches
+ * `authBecameAnonymous()` while this list is still mounted. The row answers
+ * that itself rather than being told `isSelf`, so an unresolved actor cannot be
+ * silently rendered as "everybody else" (CR-RG-01).
+ *
  * `Dropdown.Menu` is a React Aria collection, so each action names the
  * Permission that offers it in its own descriptor and `usePermittedItems` drops
  * the rest — the collection form of `WarehousePermissionGate`
@@ -103,7 +122,7 @@ const MemberRowTrailing = ({
  * that itself: the authority to edit an email is not the list's to know.
  */
 export const MemberRow = ({
-  isSelf,
+  actorUserId,
   member,
   roleName,
   onDeleteMember,
@@ -112,6 +131,8 @@ export const MemberRow = ({
 }: MemberRowProps): ReactElement => {
   const { t } = useTranslation('access');
   const isProtected = member.roleKind === 'warehouse_manager';
+  const isActorResolved = actorUserId !== undefined;
+  const isSelf = member.userId === actorUserId;
   const actionsLabel = t('members.actions', { email: member.email });
 
   const actions = usePermittedItems<RowAction>([
@@ -152,6 +173,7 @@ export const MemberRow = ({
       <MemberRowTrailing
         actions={actions}
         actionsLabel={actionsLabel}
+        isActorResolved={isActorResolved}
         isProtected={isProtected}
         isSelf={isSelf}
       />

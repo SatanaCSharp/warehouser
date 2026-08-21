@@ -24,7 +24,6 @@ import type { ReactElement } from 'react';
 import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 type MemberDirectoryProps = {
-  isRefreshing: boolean;
   members: AccessMember[];
 };
 
@@ -36,13 +35,14 @@ type MemberDialog = {
 
 /**
  * The member list and the dialogs its rows open. It resolves the acting user
- * itself because self-row gating (AC-11/AC-18) must never fall back to treating
- * every row as not-self while the auth store hasn't hydrated yet — the list
- * stays a loading skeleton instead of rendering live destructive controls
- * against an unresolved actor id.
+ * itself and hands the answer down **unresolved when it is unresolved**: an
+ * actor the auth store has not settled arrives as `undefined`, never as a
+ * defaulted id, so self-row gating (AC-11/AC-18) cannot silently evaluate every
+ * row as somebody else's. `MemberRow` withholds every destructive control for
+ * as long as that lasts (CR-RG-01). The rows themselves stay painted — a
+ * background refetch never replaces what the actor is reading (CR-AC-10).
  */
 export const MemberDirectory = ({
-  isRefreshing,
   members,
 }: MemberDirectoryProps): ReactElement => {
   const { warehouseId } = useAccessScope();
@@ -118,8 +118,7 @@ export const MemberDirectory = ({
   return (
     <>
       <MemberList
-        actorUserId={actor?.id ?? ''}
-        isLoading={isRefreshing || actor === null}
+        actorUserId={actor?.id}
         members={members}
         roles={roles.items}
         onDeleteMember={onOpenDialog('deleteMember')}

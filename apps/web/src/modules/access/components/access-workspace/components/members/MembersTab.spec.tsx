@@ -1,12 +1,16 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PermissionId } from '@warehouser/shared-types/enums';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { accessApi } from 'modules/access/api/access-api';
 import { MembersTab } from 'modules/access/components/access-workspace/components/members/MembersTab';
-import { makeStore } from 'store';
+import { authBecameAnonymous } from 'modules/auth/store/auth.slice';
+import { api } from 'shared/api/client/api-client';
 import {
   accessIds,
+  accessMembers,
+  accessPath,
   authenticatedStore,
   stubAccessServer,
 } from 'test/access-fixtures';
@@ -39,6 +43,76 @@ const renderMembersTab = async (
   stubAccessServer(options);
   renderInEnteredWarehouse(<MembersTab />, store);
   await screen.findByLabelText('Search members');
+};
+
+/**
+ * Holds the next members read open, so a spec can assert what is on screen
+ * *while* the refetch is in flight rather than after it has settled.
+ */
+const holdMembersRead = (): { memberReads: string[]; release: () => void } => {
+  const memberReads: string[] = [];
+  let release = (): void => {};
+  const held = new Promise<void>((resolve) => {
+    release = (): void => resolve();
+  });
+  const membersUrl = accessPath(accessIds.warehouse, 'members');
+
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (input: Request | string | URL) => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (url === membersUrl) {
+        memberReads.push(url);
+        await held;
+      }
+      return Response.json({
+        hasNext: false,
+        hasPrev: false,
+        nextCursor: null,
+        items: accessMembers,
+      });
+    }),
+  );
+
+  return { memberReads, release };
+};
+
+/**
+ * Records every commit in which the painted member rows are gone or a waiting
+ * affordance stands in their place. A point-in-time assertion cannot see a
+ * skeleton that appears and disappears between two awaits; this can, which is
+ * what makes CR-AC-10 falsifiable rather than merely timed well.
+ */
+const watchPaintedRows = (): { losses: string[]; stop: () => void } => {
+  const losses: string[] = [];
+  const observer = new MutationObserver(() => {
+    if (
+      screen.queryByRole('listitem', { name: /member@example\.test/u }) === null
+    ) {
+      losses.push('the painted rows were removed');
+    }
+    if (screen.queryByLabelText('Loading members') !== null) {
+      losses.push('a skeleton was painted over the rows');
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  return { losses, stop: (): void => observer.disconnect() };
+};
+
+/**
+ * Lets React commit everything the refetch has already scheduled. Its scheduler
+ * commits on a later task than the one the request went out on, so a state the
+ * tree renders *only* while the request is out is not on screen the moment the
+ * request leaves — an assertion made before this would read a stale tree and
+ * pass over a skeleton that was about to appear.
+ */
+const flushRenders = async (): Promise<void> => {
+  await act(async () => {
+    await new Promise((resolve) => {
+      setTimeout(resolve, 80);
+    });
+  });
 };
 
 const openRowMenu = async (
@@ -206,17 +280,88 @@ describe('MembersTab', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('defers the member list to a loading skeleton until the actor id is known (AC-11/18)', async () => {
-    // An unauthenticated-looking store (no authBecameAuthenticated dispatch)
-    // reproduces the auth store not having hydrated yet — self-row gating must
-    // never fall back to treating every row as not-self while the actor id is
-    // unresolved.
-    await renderMembersTab({}, makeStore());
+  // CR-RG-01, the merge blocker. `SignOutButton.tsx:26-27` dispatches
+  // `authBecameAnonymous()` *before* awaiting `navigate`, so the actor is
+  // unresolved while this list is still mounted and painted. The skeleton that
+  // used to hide that window is gone (CH-11); what replaces it is the type —
+  // `actorUserId` is `string | undefined` and a row withholds every destructive
+  // control while it is undefined. This case drives that window specifically:
+  // `requireAuth` covers route entry, not this teardown.
+  it('renders no row as not-self and offers no destructive control once the actor becomes anonymous mid-session (CR-RG-01)', async () => {
+    const store = authenticatedStore(accessIds.member);
+    await renderMembersTab({}, store);
+    const ownRow = (): HTMLElement =>
+      screen.getByRole('listitem', { name: /member@example\.test/u });
+    // The actor's own row is painted, and painted as self, before the window
+    // opens — without this the assertions below could pass on an empty list.
+    expect(within(ownRow()).getByText('You')).toBeInTheDocument();
 
-    expect(screen.getByLabelText('Loading members')).toBeInTheDocument();
+    act(() => {
+      store.dispatch(authBecameAnonymous());
+    });
+
+    // The rows the actor is reading stay on screen …
+    expect(ownRow()).toBeInTheDocument();
     expect(
-      screen.queryByRole('listitem', { name: /member@example\.test/u }),
+      screen.getByRole('listitem', { name: /manager@example\.test/u }),
+    ).toBeInTheDocument();
+    // … and none of them is offered against an unresolved actor id: the
+    // actions menu is the whole not-self rendering, and no row carries one.
+    expect(within(ownRow()).queryByRole('button')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /^Actions for/u }),
     ).not.toBeInTheDocument();
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
+
+  // CR-AC-10's component-level clause. Its route-level clause — that the loader
+  // does not re-run and `RoutePendingState` never mounts — is pinned in
+  // `test/route-readiness/`, which deliberately leaves this half to the tab that
+  // owns the subscriber.
+  it('leaves the painted rows on screen while a background refetch of the members tag is in flight (CR-AC-10)', async () => {
+    const store = authenticatedStore();
+    await renderMembersTab({}, store);
+    const memberRow = (): HTMLElement | null =>
+      screen.queryByRole('listitem', { name: /member@example\.test/u });
+    // The cache entry's own status is what says the request is out; the
+    // hook-only `isFetching` flag is not on this selector's result.
+    const membersRequestStatus = (): string =>
+      accessApi.endpoints.listAccessMembers.select(accessIds.warehouse)(
+        store.getState(),
+      ).status;
+    expect(memberRow()).toBeInTheDocument();
+
+    // The refetch is held open so the in-flight window is a real one; resolved
+    // immediately it would prove nothing about what is on screen while the
+    // request is out.
+    const refetch = holdMembersRead();
+    const painted = watchPaintedRows();
+
+    act(() => {
+      store.dispatch(
+        api.util.invalidateTags([
+          { type: 'AccessMembers', id: accessIds.warehouse },
+        ]),
+      );
+    });
+    // The mounted tab is the subscriber RTK Query refetches in place, so the
+    // invalidation genuinely reaches the network — without this the case would
+    // prove only that nothing happened at all.
+    await waitFor(() => expect(refetch.memberReads).toHaveLength(1));
+    await flushRenders();
+    expect(membersRequestStatus()).toBe('pending');
+    expect(memberRow()).toBeInTheDocument();
+    expect(screen.queryByLabelText('Loading members')).not.toBeInTheDocument();
+
+    refetch.release();
+    await waitFor(() => expect(membersRequestStatus()).toBe('fulfilled'));
+    await flushRenders();
+    painted.stop();
+
+    // The rows the actor was reading were on screen for every commit from the
+    // invalidation until the new data arrived.
+    expect(painted.losses).toEqual([]);
+    expect(memberRow()).toBeInTheDocument();
   });
 
   it('hides destructive controls and shows a You chip on the actor’s own row (AC-11/18)', async () => {

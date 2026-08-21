@@ -80,8 +80,8 @@ const members: AccessMember[] = [
  * projection already in the cache the rows read.
  *
  * Seeding the cache rather than waiting for a request keeps every case below
- * asserting against resolved markup — including the loading and empty cases,
- * which render no row and would therefore have no projection read to wait for.
+ * asserting against resolved markup — including the empty case, which renders
+ * no row and would therefore have no projection read to wait for.
  */
 const renderMemberList = async (
   overrides: Partial<MemberListProps> = {},
@@ -104,7 +104,6 @@ const renderMemberList = async (
   );
   const props: MemberListProps = {
     actorUserId: actorId,
-    isLoading: false,
     members,
     roles,
     onDeleteMember: vi.fn(),
@@ -141,13 +140,6 @@ const openPickerMenu = async (
 describe('MemberList', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
-  });
-
-  it('shows a loading skeleton and no member rows while loading', async () => {
-    await renderMemberList({ isLoading: true });
-
-    expect(screen.getByLabelText('Loading members')).toBeInTheDocument();
-    expect(screen.queryByText('picker@example.test')).not.toBeInTheDocument();
   });
 
   it('shows the empty state when there are no members', async () => {
@@ -347,5 +339,23 @@ describe('MemberList', () => {
     await renderMemberList({}, []);
 
     expect(within(pickerRow()).queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  // CR-RG-01 at the unit level. An unresolved actor is carried by the prop type
+  // — `actorUserId` is `string | undefined` — rather than by a list-level
+  // branch, so the rows stay painted and every row withholds its menu. The
+  // `?? ''` fallback this replaces made an unresolved actor compare unequal to
+  // every member id, offering the whole menu on every row including the
+  // actor's own.
+  it('keeps every row painted and offers no destructive control while the actor is unresolved (CR-RG-01)', async () => {
+    await renderMemberList({ actorUserId: undefined });
+
+    const actorRow = screen.getByRole('listitem', {
+      name: /actor@example\.test/u,
+    });
+    expect(pickerRow()).toBeInTheDocument();
+    expect(actorRow).toBeInTheDocument();
+    expect(within(pickerRow()).queryByRole('button')).not.toBeInTheDocument();
+    expect(within(actorRow).queryByRole('button')).not.toBeInTheDocument();
   });
 });

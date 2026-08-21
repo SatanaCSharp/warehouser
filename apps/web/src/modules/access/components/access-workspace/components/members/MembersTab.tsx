@@ -32,10 +32,7 @@ export const MembersTab = (): ReactElement => {
       <div className="mb-5 flex flex-wrap justify-end gap-2">
         <CreateMemberAction />
       </div>
-      <MemberDirectory
-        isRefreshing={members.isFetching}
-        members={members.items}
-      />
+      <MemberDirectory members={members.items} />
     </section>
   );
 };
