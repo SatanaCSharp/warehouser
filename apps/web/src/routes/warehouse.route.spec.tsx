@@ -492,9 +492,18 @@ describe('nothing evicts an actor from a warehouse (T14, CR-AC-20)', () => {
     expect(screen.queryByText(ARCHIVED_REFUSAL)).not.toBeInTheDocument();
     // The refused reads still named W — the act was refused, not redirected,
     // and W's Roles were never disclosed.
-    expect(session.urlsMatching(/\/access\/roles$/u)).toEqual([
-      warehousePath(NORTH, 'access/roles'),
-    ]);
+    //
+    // Asserted as the SET of addresses those reads named rather than as a
+    // single request. Since T5 the read is issued twice for a withdrawn
+    // membership: `accessRoute`'s loader issues it, the server refuses it, and
+    // RTK Query re-issues it for the mounted hook because a rejected entry
+    // carries no `fulfilledTimeStamp` to serve the first subscriber from. Both
+    // attempts name W and both are refused, which is the whole of what this
+    // case claims; the request count is not — `global-loader/spec.md` §6
+    // records it as deliberately no longer at baseline.
+    expect(new Set(session.urlsMatching(/\/access\/roles$/u))).toStrictEqual(
+      new Set([warehousePath(NORTH, 'access/roles')]),
+    );
     expect(screen.queryByText('North Hub Operators')).not.toBeInTheDocument();
   });
 });

@@ -1,5 +1,6 @@
 import { createRoute, lazyRouteComponent } from '@tanstack/react-router';
 
+import { loadAccessSurface } from 'modules/access/loaders/access-surface.loader';
 import { warehouseRoute } from 'routes/warehouse.route';
 import { RouteErrorState } from 'shared/components/RouteErrorState';
 import { RoutePendingState } from 'shared/components/RoutePendingState';
@@ -23,6 +24,12 @@ export const accessRoute = createRoute({
   path: ROUTE_SEGMENTS.ACCESS,
   component: lazyRouteComponent(() => import('./page'), 'AccessPage'),
   errorComponent: RouteErrorState,
+  // T5 / CH-04, CH-16 — wiring only. Every dispatch lives in the named loader
+  // function, because `frontend-architecture.md` §Route permits this file
+  // "loader wiring" and forbids it "RTK dispatch, or direct API calls"
+  // (ADR 0001). The loader's own gate is what keeps a refused address at zero
+  // requests (CR-AC-14).
+  loader: loadAccessSurface,
   // T1 / CR-AC-02 — this route never renders this component. It is declared
   // because `setupPendingTimeout` registers the router's commit timer only for
   // a route that has a `pendingComponent`, and the router clears a parent's

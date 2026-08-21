@@ -3,6 +3,7 @@ import { act, render, screen } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { loadAccessSurface } from 'modules/access/loaders/access-surface.loader';
 import { accessRoute } from 'modules/access/route';
 import { createAppRouter } from 'router';
 import { RouteErrorState } from 'shared/components/RouteErrorState';
@@ -275,6 +276,15 @@ describe("the access route's pending contract (T1, CR-AC-02, CR-RG-04)", () => {
     // after its data had arrived (`sad.md` §5.1).
     expect(accessRoute.options.pendingMinMs).toBe(0);
     expect(accessRoute.options.wrapInSuspense).toBe(false);
+  });
+
+  // T5 / CH-04 — the route declares the loader and holds no dispatch of its
+  // own, which is the whole of what `frontend-architecture.md` §Route permits
+  // it ("loader wiring", never "RTK dispatch, or direct API calls") and what
+  // ADR 0001 decides. Asserted by identity so that replacing the wiring with an
+  // inline function — the shape the §Route rule forbids — fails here.
+  it('wires its await window to the module-owned loader (T5, CH-04)', () => {
+    expect(accessRoute.options.loader).toBe(loadAccessSurface);
   });
 
   // CR-RG-04, a merge blocker, at the CHILD address — where the parent guard
