@@ -7,7 +7,7 @@
 | --- | ------------------------------------------------------------- | ------ | ------ | -------- | -------------------------------- | ----------- |
 | T1  | Declare the pending and error contract on the three routes    | wiring | YuriiH | M        | —                                | in_progress |
 | T2  | Single-source the access Permission sets, apply the widening  | ui     | YuriiH | S        | —                                | done        |
-| T3  | Add the access Workspace-administration dataset loader        | ui     | YuriiH | M        | —                                | in_progress |
+| T3  | Add the access Workspace-administration dataset loader        | ui     | YuriiH | M        | —                                | done        |
 | T4  | Add `loadWorkspaceAdministration`, wire `workspaceRoute`      | ui     | YuriiH | M        | T1, T3                           | todo        |
 | T5  | Add `loadAccessSurface`, wire `accessRoute`                   | ui     | YuriiH | M        | T1, T2                           | todo        |
 | T6  | Force-mount every admitted tab panel                          | ui     | YuriiH | S        | T4, T5                           | todo        |
