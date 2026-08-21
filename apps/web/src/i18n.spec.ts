@@ -515,3 +515,68 @@ describe('workspace-warehouse T1 shell/enter-action keys', () => {
     expect(instance.t('warehouses.enter', { ns: 'warehouse' })).toBe('Увійти');
   });
 });
+
+// --- global-loader CR-AC-12 / CH-12 -------------------------------------------------------------
+//
+// Every destination now paints complete behind a route loader, so the seven per-language skeleton
+// labels those destinations used to announce themselves with have no reader left. They are pinned
+// as *absent* rather than merely unused: an orphaned `loading` key is an invitation to write an
+// eighth waiting affordance against it, which is the outcome `spec.md` §6 (seven affordances → one)
+// exists to prevent. `common.json` `shell.landing.pendingLabel` — `RoutePendingState.tsx:22`'s copy
+// — is the one that survives, so it is asserted present in the same breath.
+
+type LocaleNamespace = keyof (typeof resources)['en'];
+
+/** The seven keys CR-AC-12 enumerates, each named by the namespace that used to hold it. */
+const ORPHANED_WAITING_KEYS: [namespace: LocaleNamespace, key: string][] = [
+  ['access', 'loading'],
+  ['access', 'members.loading'],
+  ['access', 'workspaceRoles.loading'],
+  ['access', 'workspaceMembers.loading'],
+  ['access', 'workspacePermissions.loading'],
+  ['warehouse', 'warehouses.loading'],
+  ['workspace', 'loading'],
+];
+
+describe('global-loader waiting copy (CR-AC-12)', () => {
+  it.each(supportedLanguages)(
+    'holds none of the seven orphaned skeleton labels in %s',
+    (language) => {
+      const present = ORPHANED_WAITING_KEYS.filter(([namespace, key]) =>
+        translationKeys(resources[language][namespace]).includes(key),
+      ).map(([namespace, key]) => `${namespace}:${key}`);
+
+      expect(present).toEqual([]);
+    },
+  );
+
+  it('keeps both languages on the identical key set after the removal', () => {
+    for (const namespace of namespaces) {
+      expect(translationKeys(resources.uk[namespace]).sort()).toEqual(
+        translationKeys(resources.en[namespace]).sort(),
+      );
+    }
+  });
+
+  it.each(supportedLanguages)(
+    'keeps the surviving pending label the application renders in %s',
+    async (language) => {
+      const instance = createInstance();
+      await instance.init({
+        fallbackLng: 'en',
+        lng: language,
+        ns: namespaces,
+        resources,
+      });
+
+      expect(
+        translationKeys(resources[language].common).includes(
+          'shell.landing.pendingLabel',
+        ),
+      ).toBe(true);
+      expect(
+        instance.t('shell.landing.pendingLabel', { ns: 'common' }),
+      ).not.toBe('shell.landing.pendingLabel');
+    },
+  );
+});

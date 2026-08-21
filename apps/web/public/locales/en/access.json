@@ -1,7 +1,6 @@
 {
   "heading": "Access",
   "description": "Manage roles, permissions, and member assignments for your current Warehouse.",
-  "loading": "Loading access",
   "navigation": {
     "label": "Access sections",
     "roles": "Roles",
@@ -28,7 +27,6 @@
     "you": "You",
     "search": "Search members",
     "searchEmpty": "No members match your search.",
-    "loading": "Loading members",
     "actions": "Actions for {{email}}",
     "menu": {
       "editEmail": "Edit email",
@@ -168,7 +166,6 @@
   },
   "workspaceRoles": {
     "search": "Search workspace roles",
-    "loading": "Loading workspace roles",
     "empty": "This workspace has no custom workspace role yet.",
     "memberCount": "{{count}} member",
     "memberCount_other": "{{count}} members",
@@ -225,7 +222,6 @@
     "heading": "Workspace members",
     "description": "{{count}} person holds a workspace role. They hold exactly one.",
     "description_other": "{{count}} people hold a workspace role. Each holds exactly one.",
-    "loading": "Loading workspace members",
     "empty": "This workspace has no workspace member yet.",
     "chips": {
       "owner": "Workspace owner",
@@ -283,7 +279,6 @@
   "workspacePermissions": {
     "heading": "Workspace permissions",
     "description": "The workspace permission catalogue. None of these permissions grant anything inside a warehouse.",
-    "loading": "Loading workspace permissions",
     "ownerOnly": "Owner only",
     "reservedNote": "Transferring ownership is reserved for the protected Workspace owner role and cannot be added to a custom role.",
     "groups": {

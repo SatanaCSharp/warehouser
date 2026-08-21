@@ -3,7 +3,6 @@
     "enter": "Увійти",
     "enterNamed": "Увійти до {{name}}",
     "search": "Пошук складів",
-    "loading": "Завантаження складів",
     "empty": "У цьому робочому просторі ще немає складів.",
     "peopleWithAccess": "{{count}} особа має доступ",
     "peopleWithAccess_many": "{{count}} осіб мають доступ",
