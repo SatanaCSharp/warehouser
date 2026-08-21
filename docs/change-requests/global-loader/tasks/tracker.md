@@ -23,7 +23,7 @@
 | T16 | Remove the seven readiness fields from the five contracts     | ui     | YuriiH | M        | T9, T10, T11, T12, T13, T14, T15 | done   |
 | T17 | Remove the fourteen orphaned translation keys                 | ui     | YuriiH | S        | T16                              | done   |
 | T18 | Add the readiness-removal repository scan                     | tests  | YuriiH | M        | T16, T17                         | done   |
-| T19 | Reconcile the nine `docs/system` rows                         | docs   | YuriiH | M        | T18                              | todo   |
+| T19 | Reconcile the nine `docs/system` rows                         | docs   | YuriiH | M        | T18                              | done   |
 
 **Total:** 19 tasks, ~16.5 person-days.
 
