@@ -1,7 +1,10 @@
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
 
 import { useListWorkspaceRolesQuery } from 'modules/access/api/workspace-roles-api';
-import { useHasWorkspacePermission } from 'shared/hooks/queries/useWorkspacePermissions';
+import {
+  hasWorkspacePermission,
+  useCurrentWorkspaceContext,
+} from 'shared/hooks/queries/useWorkspacePermissions';
 
 import type { WorkspaceRole } from '@warehouser/contracts/workspaces';
 
@@ -10,6 +13,11 @@ export type WorkspaceRoleChoices = {
    * Whether the answer is final: the read completed, or the actor may not make
    * it at all. A member row that would otherwise render before it can name the
    * Role it shows waits for this instead.
+   *
+   * The Workspace context is part of that answer. Until it resolves, the actor
+   * holds no Permission *yet* rather than none at all, so reporting readiness
+   * from the Permission alone would call an empty list final for the render
+   * before the context arrives.
    */
   isReady: boolean;
   /** Every Workspace Role, which is what names the Role a member holds. */
@@ -28,7 +36,9 @@ export type WorkspaceRoleChoices = {
  * that actor: nothing offers a Role choice they cannot name.
  */
 export const useWorkspaceRoles = (): WorkspaceRoleChoices => {
-  const canWatchWorkspaceRoles = useHasWorkspacePermission(
+  const { isLoading, workspacePermissionIds } = useCurrentWorkspaceContext();
+  const canWatchWorkspaceRoles = hasWorkspacePermission(
+    workspacePermissionIds,
     WorkspacePermissionId.WORKSPACE_ROLES_WATCH,
   );
   const { data } = useListWorkspaceRolesQuery(undefined, {
@@ -37,7 +47,7 @@ export const useWorkspaceRoles = (): WorkspaceRoleChoices => {
   const roles = data ?? [];
 
   return {
-    isReady: !canWatchWorkspaceRoles || data !== undefined,
+    isReady: !isLoading && (!canWatchWorkspaceRoles || data !== undefined),
     roles,
     customRoles: roles.filter((role) => role.kind === 'custom'),
   };

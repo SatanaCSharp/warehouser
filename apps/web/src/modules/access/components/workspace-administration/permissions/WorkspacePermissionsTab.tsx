@@ -1,12 +1,10 @@
 import { Chip, Skeleton } from '@heroui/react';
-import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
 import { useTranslation } from 'react-i18next';
 
-import { useListWorkspacePermissionsQuery } from 'modules/access/api/workspace-roles-api';
 import { useWorkspacePermissionLabel } from 'modules/access/hooks/projections/useWorkspacePermissionLabel';
+import { useWorkspacePermissionCatalogue } from 'modules/access/hooks/queries/useWorkspacePermissionCatalogue';
 import { groupWorkspacePermissions } from 'modules/access/utils/workspace-permission-groups';
 import { Conditional } from 'shared/components/Conditional';
-import { useHasWorkspacePermission } from 'shared/hooks/queries/useWorkspacePermissions';
 
 import type { ReactElement } from 'react';
 
@@ -15,23 +13,20 @@ import type { ReactElement } from 'react';
  * classification (AC-32). The catalogue is system-managed (AC-18), so this tab
  * offers no control at all — the reserved entry stands in its own group and
  * says why it can never belong to a custom Workspace Role.
+ *
+ * The read owns its own `WORKSPACE_ROLES:WATCH` gate, so this tab neither
+ * repeats that condition nor requests a catalogue its actor may not read.
  */
 export const WorkspacePermissionsTab = (): ReactElement => {
   const { t } = useTranslation('access');
   const permissionLabel = useWorkspacePermissionLabel();
-  const canWatchWorkspaceRoles = useHasWorkspacePermission(
-    WorkspacePermissionId.WORKSPACE_ROLES_WATCH,
-  );
-  const { data: permissions } = useListWorkspacePermissionsQuery(undefined, {
-    skip: !canWatchWorkspaceRoles,
-  });
+  const { isReady, permissions } = useWorkspacePermissionCatalogue();
 
-  if (!permissions) {
+  if (!isReady) {
     return (
       <div aria-label={t('workspacePermissions.loading')} className="space-y-3">
-        {[0, 1].map((skeletonId) => (
-          <Skeleton className="h-16 rounded-lg" key={skeletonId} />
-        ))}
+        <Skeleton className="h-16 rounded-lg" />
+        <Skeleton className="h-16 rounded-lg" />
       </div>
     );
   }

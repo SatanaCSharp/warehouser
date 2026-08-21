@@ -30,6 +30,12 @@ const roleAdministrationPermissions = [
  * tab reads the Permission itself and returns one of two whole-component states.
  * A gate renders its children or nothing; it does not choose between two
  * surfaces (`docs/system/adr/19-08-2026-declarative-permission-gates.md`).
+ *
+ * The Permission catalogue is read here only to time that choice: the editable
+ * surface must not appear before the grants it edits exist, or the editor's
+ * Permission rows arrive a heartbeat after the Role list. Each component that
+ * grants from the catalogue — `CreateRoleAction`, `RoleEditor` — reads it
+ * where it uses it, so nothing is threaded down on the way there.
  */
 export const RolesTab = (): ReactElement => {
   const { t } = useTranslation('access');
@@ -47,7 +53,7 @@ export const RolesTab = (): ReactElement => {
         <CreateRoleAction />
         <TransferManagerAction />
       </div>
-      <RoleDirectory permissions={permissions.items} roles={roles.items} />
+      <RoleDirectory roles={roles.items} />
       <MemberAssignmentList />
     </section>
   );

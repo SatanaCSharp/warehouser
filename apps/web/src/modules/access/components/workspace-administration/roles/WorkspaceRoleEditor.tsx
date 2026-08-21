@@ -1,27 +1,25 @@
 import { Button } from '@heroui/react';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import { Controller, useForm } from 'react-hook-form';
+import { Controller } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import { useUpdateWorkspaceRoleMutation } from 'modules/access/api/workspace-roles-api';
 import { DeleteWorkspaceRoleAction } from 'modules/access/components/workspace-administration/roles/DeleteWorkspaceRoleAction';
 import { WorkspacePermissionFieldset } from 'modules/access/components/workspace-administration/roles/WorkspacePermissionFieldset';
-import { workspaceRoleFormSchema } from 'modules/access/schemas/workspace-role-form.schema';
-import { mutationOutcome } from 'shared/api/client/mutation-outcome';
+import { useWorkspaceRoleForm } from 'modules/access/hooks/forms/useWorkspaceRoleForm';
+import { useWorkspacePermissionCatalogue } from 'modules/access/hooks/queries/useWorkspacePermissionCatalogue';
 import { Conditional } from 'shared/components/Conditional';
 import { FormTextField } from 'shared/components/FormTextField';
-import { useFormFieldErrors } from 'shared/hooks/forms/useFormFieldErrors';
 import { useHasWorkspacePermission } from 'shared/hooks/queries/useWorkspacePermissions';
 
 import type {
-  WorkspacePermission,
   WorkspaceRole,
+  WorkspaceRoleWrite,
 } from '@warehouser/contracts/workspaces';
-import type { WorkspaceRoleFormValues } from 'modules/access/schemas/workspace-role-form.schema';
 import type { ReactElement } from 'react';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 type WorkspaceRoleEditorProps = {
-  permissions: WorkspacePermission[];
   replacements: WorkspaceRole[];
   role: WorkspaceRole;
 };
@@ -36,60 +34,41 @@ type WorkspaceRoleEditorProps = {
  * system-managed rather than leaving the missing controls unexplained (AC-16).
  *
  * `WORKSPACE_ROLES:UPDATE` is read here rather than handed down as a boolean,
- * and it is read with `useHasWorkspacePermission` rather than `WorkspacePermissionGate`
- * because the answer feeds `isDisabled` on the Permission fieldset as well as
- * deciding which controls render
+ * and it is read with `useHasWorkspacePermission` rather than
+ * `WorkspacePermissionGate` because the answer feeds `isDisabled` on the
+ * Permission fieldset as well as deciding which controls render
  * (`docs/system/adr/19-08-2026-declarative-permission-gates.md`).
+ *
+ * The Permission catalogue is read here for the same reason: this is the
+ * component that grants from it. The read owns its own skip condition and RTK
+ * Query serves every caller from one cache entry, so reading it beside the
+ * fieldset costs no extra request and keeps the Roles tab from threading the
+ * catalogue through the directory on its way here.
  */
 export const WorkspaceRoleEditor = ({
-  permissions,
   replacements,
   role,
 }: WorkspaceRoleEditorProps): ReactElement => {
   const { t } = useTranslation('access');
-  const { t: translateValidation } = useTranslation('validation');
   const [updateWorkspaceRole] = useUpdateWorkspaceRoleMutation();
-  const {
-    control,
-    formState: { errors, isSubmitting },
-    handleSubmit,
-    register,
-    reset,
-    setError,
-  } = useForm<WorkspaceRoleFormValues>({
-    defaultValues: {
-      name: role.name,
-      workspacePermissionIds: role.workspacePermissionIds,
-    },
-  });
-  const { setFieldError } =
-    useFormFieldErrors<WorkspaceRoleFormValues>(setError);
+  const { permissions } = useWorkspacePermissionCatalogue();
   const canUpdate = useHasWorkspacePermission(
     WorkspacePermissionId.WORKSPACE_ROLES_UPDATE,
   );
   const isProtected = role.kind === 'workspace_owner';
   const isEditable = canUpdate && !isProtected;
 
-  const submit = async (values: WorkspaceRoleFormValues): Promise<void> => {
-    const parsed = workspaceRoleFormSchema.safeParse(values);
-    if (!parsed.success) {
-      setFieldError(
-        'name',
-        parsed.error.issues[0]?.message,
-        translateValidation,
-      );
-      return;
-    }
+  const onSave = (input: WorkspaceRoleWrite): Promise<MutationResult> =>
+    updateWorkspaceRole({ workspaceRoleId: role.id, ...input });
 
-    // Not a `FormModalDialog`: the editor stays on the page rather than
-    // closing, so it normalizes the settled request itself.
-    const outcome = mutationOutcome(
-      await updateWorkspaceRole({ workspaceRoleId: role.id, ...parsed.data }),
-    );
-    if (!outcome.success) {
-      setFieldError('name', outcome.fieldErrors?.name, translateValidation);
-    }
-  };
+  const { control, errors, isSubmitting, register, reset, submit } =
+    useWorkspaceRoleForm({
+      defaultValues: {
+        name: role.name,
+        workspacePermissionIds: role.workspacePermissionIds,
+      },
+      onSave,
+    });
 
   const onDiscard = (): void => reset();
 
@@ -98,7 +77,7 @@ export const WorkspaceRoleEditor = ({
       aria-label={t('workspaceRoles.editor.regionLabel')}
       className="rounded-xl border border-border bg-surface p-5 sm:p-6"
       noValidate
-      onSubmit={handleSubmit(submit)}
+      onSubmit={submit}
     >
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>

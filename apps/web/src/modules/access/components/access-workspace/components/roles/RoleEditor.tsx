@@ -6,21 +6,18 @@ import { useTranslation } from 'react-i18next';
 import { PermissionFieldset } from 'modules/access/components/access-workspace/components/roles/PermissionFieldset';
 import { useRoleForm } from 'modules/access/hooks/forms/useRoleForm';
 import { useAccessScope } from 'modules/access/hooks/projections/useAccessScope';
+import { useAccessPermissions } from 'modules/access/hooks/queries/useAccessPermissions';
 import { Conditional } from 'shared/components/Conditional';
 import { FormTextField } from 'shared/components/FormTextField';
 import { WarehousePermissionGate } from 'shared/components/WarehousePermissionGate';
 import { useHasPermission } from 'shared/hooks/queries/usePermissions';
 
 import type { RoleWrite } from '@warehouser/contracts/access';
-import type {
-  AccessPermission,
-  AccessRole,
-} from 'modules/access/types/access.types';
+import type { AccessRole } from 'modules/access/types/access.types';
 import type { ReactElement } from 'react';
 import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 type RoleEditorProps = {
-  permissions: AccessPermission[];
   role: AccessRole;
   onDelete: () => void;
   onSave: (input: RoleWrite) => Promise<MutationResult>;
@@ -41,14 +38,20 @@ type RoleEditorProps = {
  * and whether *this* Role in *this* Warehouse can be edited at all, which is
  * record state. Deleting is gated the same way, one rule per gate
  * (`docs/system/adr/19-08-2026-declarative-permission-gates.md`).
+ *
+ * The Permission catalogue is read here rather than handed down, because this
+ * is the component that grants from it. `useAccessPermissions` owns its own
+ * skip condition and RTK Query serves every caller from one cache entry, so
+ * reading it beside the fieldset costs no extra request and keeps the Roles
+ * tab from threading the catalogue through the directory on its way here.
  */
 export const RoleEditor = ({
-  permissions,
   role,
   onDelete,
   onSave,
 }: RoleEditorProps): ReactElement => {
   const { t } = useTranslation('access');
+  const permissions = useAccessPermissions();
   const { control, errors, isSubmitting, register, reset, submit } =
     useRoleForm({
       defaultValues: { name: role.name, permissionIds: role.permissionIds },
@@ -102,10 +105,10 @@ export const RoleEditor = ({
           render={({ field }) => (
             <PermissionFieldset
               isDisabled={!isEditable}
-              permissions={permissions}
+              permissions={permissions.items}
               selectedIds={
                 isProtected
-                  ? permissions.map((permission) => permission.id)
+                  ? permissions.items.map((permission) => permission.id)
                   : field.value
               }
               onChange={field.onChange}

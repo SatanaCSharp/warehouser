@@ -1,9 +1,9 @@
-import { Skeleton } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 
 import { AddWorkspaceMemberAction } from 'modules/access/components/workspace-administration/members/AddWorkspaceMemberAction';
 import { WorkspaceMemberList } from 'modules/access/components/workspace-administration/members/WorkspaceMemberList';
 import { WorkspaceUserList } from 'modules/access/components/workspace-administration/members/WorkspaceUserList';
+import { WorkspaceListSkeleton } from 'modules/access/components/workspace-administration/WorkspaceListSkeleton';
 import { useWorkspaceMembers } from 'modules/access/hooks/queries/useWorkspaceMembers';
 import { useWorkspaceUsers } from 'modules/access/hooks/queries/useWorkspaceUsers';
 
@@ -25,13 +25,7 @@ export const WorkspaceMembersTab = (): ReactElement => {
   const users = useWorkspaceUsers();
 
   if (!members || !users) {
-    return (
-      <div aria-label={t('workspaceMembers.loading')} className="space-y-3">
-        {[0, 1, 2].map((skeletonId) => (
-          <Skeleton className="h-[72px] rounded-xl" key={skeletonId} />
-        ))}
-      </div>
-    );
+    return <WorkspaceListSkeleton label={t('workspaceMembers.loading')} />;
   }
 
   return (

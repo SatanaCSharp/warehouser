@@ -1,7 +1,7 @@
-import { Skeleton } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 
 import { WorkspaceMemberRow } from 'modules/access/components/workspace-administration/members/WorkspaceMemberRow';
+import { WorkspaceListSkeleton } from 'modules/access/components/workspace-administration/WorkspaceListSkeleton';
 import { useWorkspaceRoles } from 'modules/access/hooks/queries/useWorkspaceRoles';
 import { Conditional } from 'shared/components/Conditional';
 
@@ -25,13 +25,7 @@ export const WorkspaceMemberList = ({
   // A row states the one Workspace Role its member holds, so the list waits for
   // the Roles read rather than rendering rows that name nothing for a heartbeat.
   if (!isReady) {
-    return (
-      <div aria-label={t('workspaceMembers.loading')} className="space-y-3">
-        {[0, 1, 2].map((skeletonId) => (
-          <Skeleton className="h-[72px] rounded-xl" key={skeletonId} />
-        ))}
-      </div>
-    );
+    return <WorkspaceListSkeleton label={t('workspaceMembers.loading')} />;
   }
 
   return (

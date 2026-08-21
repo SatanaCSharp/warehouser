@@ -3,14 +3,10 @@ import { useState } from 'react';
 import { WorkspaceRoleEditor } from 'modules/access/components/workspace-administration/roles/WorkspaceRoleEditor';
 import { WorkspaceRoleList } from 'modules/access/components/workspace-administration/roles/WorkspaceRoleList';
 
-import type {
-  WorkspacePermission,
-  WorkspaceRole,
-} from '@warehouser/contracts/workspaces';
+import type { WorkspaceRole } from '@warehouser/contracts/workspaces';
 import type { ReactElement } from 'react';
 
 type WorkspaceRoleDirectoryProps = {
-  permissions: WorkspacePermission[];
   roles: WorkspaceRole[];
 };
 
@@ -24,7 +20,6 @@ const defaultRoleId = (roles: WorkspaceRole[]): string | undefined =>
  * behind.
  */
 export const WorkspaceRoleDirectory = ({
-  permissions,
   roles,
 }: WorkspaceRoleDirectoryProps): ReactElement => {
   const [selectedRoleId, setSelectedRoleId] = useState(() =>
@@ -43,7 +38,6 @@ export const WorkspaceRoleDirectory = ({
     // progress on the Role that is still selected.
     <WorkspaceRoleEditor
       key={selectedRole.id}
-      permissions={permissions}
       replacements={roles.filter(
         (role) => role.kind === 'custom' && role.id !== selectedRole.id,
       )}

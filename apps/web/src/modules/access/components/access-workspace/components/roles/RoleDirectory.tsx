@@ -11,15 +11,11 @@ import { useAccessScope } from 'modules/access/hooks/projections/useAccessScope'
 import { DialogHost } from 'shared/components/DialogHost';
 
 import type { RoleWrite } from '@warehouser/contracts/access';
-import type {
-  AccessPermission,
-  AccessRole,
-} from 'modules/access/types/access.types';
+import type { AccessRole } from 'modules/access/types/access.types';
 import type { ReactElement } from 'react';
 import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 type RoleDirectoryProps = {
-  permissions: AccessPermission[];
   roles: AccessRole[];
 };
 
@@ -31,10 +27,7 @@ const defaultRoleId = (roles: AccessRole[]): string | undefined =>
  * to this pair — nothing outside reads it — and is derived on every render, so
  * deleting the selected Role cannot leave a stale id behind.
  */
-export const RoleDirectory = ({
-  permissions,
-  roles,
-}: RoleDirectoryProps): ReactElement => {
+export const RoleDirectory = ({ roles }: RoleDirectoryProps): ReactElement => {
   const { isArchived, warehouseId } = useAccessScope();
   const [updateRole] = useUpdateAccessRoleMutation();
   const [deleteRole] = useDeleteAccessRoleMutation();
@@ -78,7 +71,6 @@ export const RoleDirectory = ({
     // progress on the Role that is still selected.
     <RoleEditor
       key={selectedRole.id}
-      permissions={permissions}
       role={selectedRole}
       onDelete={onDeleteRole(selectedRole)}
       onSave={onSaveRole(selectedRole.id)}
