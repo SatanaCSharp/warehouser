@@ -113,6 +113,14 @@ export const WORKSPACE_MODULE_MANIFEST = [
   'components/workspace-administration/warehouses/WarehousesTab.spec.tsx',
   'components/workspace-administration/warehouses/WarehousesTab.tsx',
   'components/workspace-administration/warehouses/WithdrawWarehouseAccessDialog.tsx',
+  // T4 / global-loader CH-03 — `/workspace`'s route loader and its colocated
+  // spec. The function holds the dispatches `route.tsx` may not
+  // (`frontend-architecture.md` §Route), and `loaders/` is where a
+  // module-owned route loader lives (global-loader ADR 0001). Cited by change
+  // row rather than by criterion: this file may name no unqualified
+  // `CR-AC-0…` identifier, which the predecessor request owns.
+  'loaders/workspace-administration.loader.spec.ts',
+  'loaders/workspace-administration.loader.ts',
   'page.tsx',
   // T1 / global-loader CR-AC-02 — the colocated spec for the route's pending
   // and error contract, filed beside its subject (`placing-web-tests.md` §1).

@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { loadWorkspaceAdministration } from 'modules/workspace/loaders/workspace-administration.loader';
 import { workspaceRoute } from 'modules/workspace/route';
 import { createAppRouter } from 'router';
 import { RouteErrorState } from 'shared/components/RouteErrorState';
@@ -119,5 +120,13 @@ describe('the workspace route paints its await window (T1, CR-AC-02)', () => {
     expect(workspaceRoute.options.errorComponent).toBe(RouteErrorState);
     expect(workspaceRoute.options.pendingMs).toBe(0);
     expect(workspaceRoute.options.pendingMinMs).toBe(0);
+  });
+
+  // T4 / CH-03 — the destination's datasets are awaited by the route, and the
+  // function that dispatches them lives in `loaders/` rather than here, so
+  // `route.tsx` keeps the shape `frontend-architecture.md` §Route gives it:
+  // loader *wiring*, and no dispatch (ADR 0001).
+  it('declares the workspace administration loader (CR-AC-03)', () => {
+    expect(workspaceRoute.options.loader).toBe(loadWorkspaceAdministration);
   });
 });
