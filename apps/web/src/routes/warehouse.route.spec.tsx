@@ -539,7 +539,14 @@ describe('every warehouse-scoped request names its warehouse (T14, CR-RG-01)', (
     });
 
     renderRoute(accessAddress(NORTH));
-    expect(await screen.findByText('North Hub Operators')).toBeInTheDocument();
+    // Scoped to the selected Roles panel: CR-AC-03 force-mounts every admitted
+    // panel, so the Members panel names each member's Role at the same time
+    // (`global-loader/sad.md` §11, risk row 3). Narrowed to where the Role list
+    // is read, not relaxed.
+    const rolesPanel = await screen.findByRole('tabpanel');
+    expect(
+      await within(rolesPanel).findByText('North Hub Operators'),
+    ).toBeInTheDocument();
     await waitFor(() =>
       expect(screen.getByRole('tab', { name: 'Members' })).toBeInTheDocument(),
     );

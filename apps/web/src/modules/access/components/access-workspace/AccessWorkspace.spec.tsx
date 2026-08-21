@@ -7,6 +7,7 @@ import { AccessWorkspace } from 'modules/access/components/access-workspace/Acce
 import { makeStore } from 'store';
 import {
   accessIds,
+  accessPath,
   authenticatedStore,
   stubAccessServer,
 } from 'test/access-fixtures';
@@ -108,8 +109,13 @@ describe('AccessWorkspace archived Warehouse (AC-12, AC-12a, AC-36)', () => {
     renderInEnteredWarehouse(<AccessWorkspace />, authenticatedStore());
 
     expect(await screen.findByText('Archived')).toBeInTheDocument();
-    // Reads still work: the Warehouse's retained Roles remain visible.
-    expect(await screen.findByText('Picker')).toBeInTheDocument();
+    // Reads still work: the Warehouse's retained Roles remain visible. Scoped
+    // to the selected Roles panel — CR-AC-03 force-mounts every admitted panel,
+    // so the Members panel's own Role names are in the DOM at the same time
+    // (`global-loader/sad.md` §11, risk row 3). The assertion is narrowed to
+    // where the Roles are read, not relaxed.
+    const rolesPanel = await screen.findByRole('tabpanel');
+    expect(await within(rolesPanel).findByText('Picker')).toBeInTheDocument();
     // Restoring is the Warehouse record's own operation and lives on the
     // Workspace surface, not here.
     expect(
@@ -145,5 +151,57 @@ describe('AccessWorkspace archived Warehouse (AC-12, AC-12a, AC-36)', () => {
       name: 'Transfer manager',
     });
     expect(transfer).toBeEnabled();
+  });
+});
+
+// CR-AC-03's third clause on the access surface. `loadAccessSurface` dispatches
+// with `subscribe: false` (`sad.md` §4.4), so a loader-filled entry holds no
+// subscriber of its own. Every admitted panel is force-mounted so each admitted
+// tab's own query hook mounts on first paint and retains that entry for the
+// destination's lifetime.
+describe('AccessWorkspace force-mounted tab panels (CR-AC-03)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  /**
+   * A read-only Roles actor: `RolesTab` returns its dataset card rather than
+   * the editable surface, so nothing under the selected tab reads the Members
+   * dataset. The Members request is therefore the Members panel's own, and
+   * only a committed panel can issue it.
+   */
+  const readRolesAndMembers = [
+    PermissionId.ROLES_WATCH,
+    PermissionId.USERS_WATCH,
+  ];
+
+  it("mounts and subscribes every admitted tab's own query hook on first paint, with no tab opened", async () => {
+    const requestedUrls = stubAccessServer({
+      permissionIds: readRolesAndMembers,
+    });
+
+    renderInEnteredWarehouse(<AccessWorkspace />, authenticatedStore());
+
+    expect(
+      await screen.findByRole('region', { name: 'Members' }),
+    ).toBeInTheDocument();
+    expect(requestedUrls).toContain(accessPath(accessIds.warehouse, 'members'));
+  });
+
+  it('marks every unselected panel inert, so only the selected one is on the accessibility tree', async () => {
+    // React Aria mounts a force-mounted panel **inert but present**: it carries
+    // no `tabpanel` role and its subtree is out of the keyboard order and the
+    // accessibility tree (`sad.md` §8). jsdom applies no stylesheet, so the
+    // attribute React Aria sets is what the guarantee is read from.
+    stubAccessServer({ permissionIds: readRolesAndMembers });
+
+    renderInEnteredWarehouse(<AccessWorkspace />, authenticatedStore());
+
+    const members = await screen.findByRole('region', { name: 'Members' });
+    const roles = screen.getByRole('heading', { name: 'Roles' });
+
+    expect(screen.getAllByRole('tabpanel')).toHaveLength(1);
+    expect(roles.closest('[inert]')).toBeNull();
+    expect(members.closest('[inert]')).not.toBeNull();
   });
 });

@@ -1,9 +1,10 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { WorkspaceAdministration } from 'modules/workspace/components/WorkspaceAdministration';
+import { loadWorkspaceAdministration } from 'modules/workspace/loaders/workspace-administration.loader';
 import { renderWithProviders } from 'test/render';
 import {
   authenticatedWorkspaceStore,
@@ -507,5 +508,143 @@ describe('WorkspaceAdministration', () => {
         expect(panel.textContent).toMatch(contentMatcher);
       },
     );
+  });
+});
+
+// CR-AC-03's third clause — force-mounted panels. The loaders dispatch with
+// `subscribe: false` (`sad.md` §4.4), so a loader-filled entry holds no
+// subscriber of its own and RTK Query starts its 60-second `keepUnusedDataFor`
+// timer the moment the read settles. Force-mounting every admitted panel is
+// what gives each admitted tab's own query hook a mount on first paint, and
+// with it the subscription that retains the entry for the destination's
+// lifetime. Without it an unopened admitted tab's entry is evicted after a
+// minute's dwell, and — with no readiness term left after CH-09 — that tab
+// paints its empty message for a dataset merely in flight.
+describe('WorkspaceAdministration force-mounted tab panels (CR-AC-03)', () => {
+  /** RTK Query's default `keepUnusedDataFor`, in milliseconds. */
+  const RETENTION_WINDOW_MS = 60_000;
+
+  const CONTEXT_URL = '/api/v1/workspace/context';
+  const MEMBERS_URL = '/api/v1/workspace/members';
+  const PERMISSIONS_URL = '/api/v1/workspace/permissions';
+  const ROLES_URL = '/api/v1/workspace/roles';
+  const USERS_URL = '/api/v1/workspace/users';
+  const WAREHOUSES_URL = '/api/v1/workspace/warehouses';
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it("mounts and subscribes every admitted tab's own query hook on first paint, with no tab opened", async () => {
+    const requestedUrls = stubWorkspaceServer({
+      context: namedWorkspaceContext(allWatchPermissions),
+    });
+
+    renderAdministration();
+
+    await screen.findByRole('tablist', { name: 'Workspace sections' });
+    // Every admitted tab's dataset, not only the selected tab's: a panel that
+    // is not committed runs no hook, so this list is the observable form of
+    // "each admitted tab's own query hook mounts on first paint".
+    await waitFor(() =>
+      expect([...new Set(requestedUrls)].sort()).toStrictEqual([
+        CONTEXT_URL,
+        MEMBERS_URL,
+        PERMISSIONS_URL,
+        ROLES_URL,
+        USERS_URL,
+        WAREHOUSES_URL,
+      ]),
+    );
+  });
+
+  it('reads only, so a committed but unselected panel writes nothing', async () => {
+    // Force-mounting commits four surfaces that own mutations. Committing them
+    // must stay inert in the strong sense: no panel may issue a write merely
+    // because it was mounted behind the selected one.
+    stubWorkspaceServer({
+      context: namedWorkspaceContext(allWatchPermissions),
+    });
+
+    renderAdministration();
+
+    await screen.findByRole('region', { name: 'Workspace roles' });
+    const methods = vi
+      .mocked(globalThis.fetch)
+      .mock.calls.map(([, init]) => init?.method ?? 'GET');
+    expect([...new Set(methods)]).toStrictEqual(['GET']);
+  });
+
+  it('keeps an unopened admitted tab past keepUnusedDataFor, so opening it issues no request and shows no empty message', async () => {
+    // CR-AC-03's own falsifier. The clock is faked before the loader runs,
+    // because the removal timeout is scheduled the moment a subscriber-less
+    // read settles — a clock installed afterwards would never see it.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const requestedUrls = stubWorkspaceServer({
+      context: namedWorkspaceContext(allWatchPermissions),
+    });
+    const store = authenticatedWorkspaceStore();
+
+    await loadWorkspaceAdministration({ context: { store } });
+    renderWithProviders(<WorkspaceAdministration />, store);
+    // Scoped to the selected panel: every admitted tab's content is in the DOM
+    // at once now, and the Permissions tab's `Warehouses` group carries the
+    // same accessible name as the Warehouses list (`sad.md` §11, risk row 3).
+    await within(await screen.findByRole('tabpanel')).findByRole('list', {
+      name: 'Warehouses',
+    });
+
+    requestedUrls.length = 0;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(RETENTION_WINDOW_MS * 2);
+    });
+
+    await user.click(screen.getByRole('tab', { name: /workspace roles/iu }));
+
+    expect(
+      within(screen.getByRole('tabpanel')).getByRole('region', {
+        name: 'Workspace roles',
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('This workspace has no custom workspace role yet.'),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('This workspace has no workspace member yet.'),
+    ).not.toBeInTheDocument();
+    expect(requestedUrls).toStrictEqual([]);
+  });
+
+  it('marks every unselected panel inert, so only the selected one is on the accessibility tree', async () => {
+    // React Aria mounts a force-mounted panel **inert but present**: it carries
+    // no `tabpanel` role and its subtree is out of the keyboard order and the
+    // accessibility tree, which is the whole of `sad.md` §8's accessibility
+    // clause. jsdom applies no stylesheet, so the attribute React Aria sets is
+    // what the guarantee is read from.
+    stubWorkspaceServer({
+      context: namedWorkspaceContext(allWatchPermissions),
+    });
+
+    renderAdministration();
+
+    const unselected = [
+      await screen.findByRole('region', { name: 'Workspace roles' }),
+      screen.getByRole('region', { name: 'Workspace members' }),
+      screen.getByRole('region', { name: 'Workspace permissions' }),
+    ];
+    const selected = screen.getByRole('tabpanel');
+
+    // Exactly one panel carries the `tabpanel` role, and it is the selected
+    // one — the three force-mounted siblings are present but inert.
+    expect(screen.getAllByRole('tabpanel')).toHaveLength(1);
+    expect(
+      within(selected).getByRole('list', { name: 'Warehouses' }),
+    ).toBeInTheDocument();
+    expect(selected).not.toHaveAttribute('inert');
+    unselected.forEach((content) => {
+      expect(content.closest('[inert]')).not.toBeNull();
+    });
   });
 });

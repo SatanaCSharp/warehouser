@@ -91,8 +91,14 @@ export const AccessWorkspace = (): ReactElement => {
             </Tabs.List>
           </Tabs.ListContainer>
 
+          {/* `shouldForceMount` mounts every admitted panel inert but present,
+              so each admitted tab's own query hook subscribes on first paint
+              and holds the entry `loadAccessSurface` filled with
+              `subscribe: false` — which otherwise has no subscriber and is
+              evicted after RTK Query's `keepUnusedDataFor` window (CR-AC-03,
+              `global-loader/sad.md` §4.4). */}
           {tabs.map(({ id, panel }) => (
-            <Tabs.Panel className="px-0 pt-5" id={id} key={id}>
+            <Tabs.Panel className="px-0 pt-5" id={id} key={id} shouldForceMount>
               {panel}
             </Tabs.Panel>
           ))}
