@@ -17,12 +17,10 @@ export const RolesDatasetCard = ({
 
   return (
     <DatasetCard
-      empty={dataset.isReady && dataset.items.length === 0}
+      empty={dataset.items.length === 0}
       emptyLabel={t('roles.empty')}
       error={dataset.isError}
       errorLabel={t('roles.error')}
-      loading={dataset.isLoading}
-      loadingLabel={`${t('roles.heading')}…`}
       title={t('roles.heading')}
     >
       <ul className="divide-y divide-border" aria-label={t('roles.listLabel')}>

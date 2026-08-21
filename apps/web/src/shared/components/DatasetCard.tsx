@@ -1,4 +1,4 @@
-import { Card, Skeleton } from '@heroui/react';
+import { Card } from '@heroui/react';
 
 import type { ReactElement, ReactNode } from 'react';
 
@@ -8,8 +8,6 @@ type DatasetCardProps = {
   emptyLabel: string;
   error: boolean;
   errorLabel: string;
-  loading: boolean;
-  loadingLabel: string;
   title: string;
 };
 
@@ -25,27 +23,16 @@ const DatasetMessage = ({
   </p>
 );
 
-const DatasetSkeleton = ({ label }: { label: string }): ReactElement => (
-  <div aria-label={label} className="space-y-3">
-    <Skeleton className="h-16 rounded-lg" />
-    <Skeleton className="h-16 rounded-lg" />
-  </div>
-);
-
 export const DatasetCard = ({
   children,
   empty,
   emptyLabel,
   error,
   errorLabel,
-  loading,
-  loadingLabel,
   title,
 }: DatasetCardProps): ReactElement => {
   let content = children;
-  if (loading) {
-    content = <DatasetSkeleton label={loadingLabel} />;
-  } else if (error) {
+  if (error) {
     content = <DatasetMessage error label={errorLabel} />;
   } else if (empty) {
     content = <DatasetMessage error={false} label={emptyLabel} />;

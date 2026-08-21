@@ -16,12 +16,10 @@ export const MembersDatasetCard = ({
 
   return (
     <DatasetCard
-      empty={dataset.isReady && dataset.items.length === 0}
+      empty={dataset.items.length === 0}
       emptyLabel={t('members.empty')}
       error={dataset.isError}
       errorLabel={t('members.error')}
-      loading={dataset.isLoading}
-      loadingLabel={`${t('members.heading')}…`}
       title={t('members.heading')}
     >
       <ul

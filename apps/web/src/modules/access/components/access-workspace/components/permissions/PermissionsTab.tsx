@@ -14,12 +14,10 @@ export const PermissionsTab = (): ReactElement => {
 
   return (
     <DatasetCard
-      empty={permissions.isReady && permissions.items.length === 0}
+      empty={permissions.items.length === 0}
       emptyLabel={t('permissions.empty')}
       error={permissions.isError}
       errorLabel={t('permissions.error')}
-      loading={permissions.isLoading}
-      loadingLabel={`${t('permissions.heading')}…`}
       title={t('permissions.heading')}
     >
       <ul
