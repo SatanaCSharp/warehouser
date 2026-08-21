@@ -11,7 +11,7 @@
 | T4  | Add `loadWorkspaceAdministration`, wire `workspaceRoute`      | ui     | YuriiH | M        | T1, T3                           | done   |
 | T5  | Add `loadAccessSurface`, wire `accessRoute`                   | ui     | YuriiH | M        | T1, T2                           | done   |
 | T6  | Force-mount every admitted tab panel                          | ui     | YuriiH | S        | T4, T5                           | done   |
-| T7  | Pin route readiness across the four routes                    | tests  | YuriiH | L        | T4, T5, T6                       | todo   |
+| T7  | Pin route readiness across the four routes                    | tests  | YuriiH | L        | T4, T5, T6                       | done   |
 | T8  | Pin loader and hook Permission parity in both directions      | tests  | YuriiH | M        | T2, T4, T5                       | done   |
 | T9  | Remove `DatasetCard`'s loading contract, update three callers | ui     | YuriiH | M        | T7                               | todo   |
 | T10 | Delete the two skeletons and the Warehouses-side branches     | ui     | YuriiH | M        | T7                               | todo   |
