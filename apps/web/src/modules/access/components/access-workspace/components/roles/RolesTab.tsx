@@ -6,7 +6,6 @@ import { MemberAssignmentList } from 'modules/access/components/access-workspace
 import { RoleDirectory } from 'modules/access/components/access-workspace/components/roles/RoleDirectory';
 import { RolesDatasetCard } from 'modules/access/components/access-workspace/components/roles/RolesDatasetCard';
 import { TransferManagerAction } from 'modules/access/components/access-workspace/components/roles/TransferManagerAction';
-import { useAccessPermissions } from 'modules/access/hooks/queries/useAccessPermissions';
 import { useAccessRoles } from 'modules/access/hooks/queries/useAccessRoles';
 import { useHasPermission } from 'shared/hooks/queries/usePermissions';
 
@@ -22,28 +21,30 @@ const roleAdministrationPermissions = [
 ];
 
 /**
- * Roles tab body. An actor who may administer Roles gets the editable surface
- * once the datasets it edits have arrived; everyone else — and everyone still
- * waiting on those datasets — gets the read-only card.
+ * Roles tab body. An actor who may administer Roles gets the editable surface;
+ * everyone else gets the read-only card, and so does anyone — permitted or
+ * not — whose Roles read failed.
  *
  * The read-only card is an *alternative surface*, not a withheld control, so this
  * tab reads the Permission itself and returns one of two whole-component states.
  * A gate renders its children or nothing; it does not choose between two
  * surfaces (`docs/system/adr/19-08-2026-declarative-permission-gates.md`).
  *
- * The Permission catalogue is read here only to time that choice: the editable
- * surface must not appear before the grants it edits exist, or the editor's
- * Permission rows arrive a heartbeat after the Role list. Each component that
- * grants from the catalogue — `CreateRoleAction`, `RoleEditor` — reads it
- * where it uses it, so nothing is threaded down on the way there.
+ * Readiness is not among the questions asked here: the route awaits every
+ * dataset this tab paints before the destination mounts (CR-AC-04). What
+ * remains is the permission arm and an explicit error arm — the card is the
+ * only renderer of `roles.error`, so a permitted actor whose read failed must
+ * reach it rather than an empty directory reporting that no Roles exist
+ * (CR-AC-15). The catalogue a Role form grants from is read where it is
+ * granted — `CreateRoleAction`, `RoleEditor` — and its own failure is reported
+ * by the Permissions tab, so it does not withhold the Roles that did arrive.
  */
 export const RolesTab = (): ReactElement => {
   const { t } = useTranslation('access');
   const canAdministerRoles = useHasPermission(roleAdministrationPermissions);
-  const permissions = useAccessPermissions();
   const roles = useAccessRoles();
 
-  if (!canAdministerRoles || !roles.isReady || !permissions.isReady) {
+  if (!canAdministerRoles || roles.isError) {
     return <RolesDatasetCard dataset={roles} />;
   }
 

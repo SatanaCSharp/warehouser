@@ -1,16 +1,24 @@
+import { readFileSync } from 'node:fs';
+import { posix } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PermissionId } from '@warehouser/shared-types/enums';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { RolesTab } from 'modules/access/components/access-workspace/components/roles/RolesTab';
+import { loadAccessSurface } from 'modules/access/loaders/access-surface.loader';
 import {
   accessIds,
   authenticatedStore,
+  failAccessRead,
   stubAccessServer,
 } from 'test/access-fixtures';
 import { selectHeroOption } from 'test/hero-select';
 import { renderInEnteredWarehouse } from 'test/render';
+
+import type { AppStore } from 'store';
 
 const assignMemberRole = vi.hoisted(() => vi.fn());
 const createRole = vi.hoisted(() => vi.fn());
@@ -31,6 +39,13 @@ vi.mock('modules/access/api/access-api', async (importOriginal) => ({
   useTransferWarehouseManagerMutation: () => [transferManager, {}],
 }));
 
+// `new URL('./x', import.meta.url)` is rewritten by Vite into an asset URL, so
+// the subject is resolved from this spec's own directory instead.
+const source = readFileSync(
+  posix.join(posix.dirname(fileURLToPath(import.meta.url)), 'RolesTab.tsx'),
+  'utf8',
+);
+
 /**
  * HeroUI v3 renders a Select's required state on the field root
  * (`data-required`), not on the trigger button and not on the hidden native
@@ -45,11 +60,29 @@ const requiredSelectFieldFor = (
     .getByRole('button', { name: label })
     .closest('[data-slot="select"]');
 
+/**
+ * The store the route hands its destination: the shipped loader has already
+ * filled every dataset the tab paints (CR-AC-04), so the first render is the
+ * one the actor sees. A spec that skipped this would mount a tree whose reads
+ * are still out — a state the route no longer produces, and one this tab
+ * stopped branching on when its readiness term was removed (CR-AC-15).
+ *
+ * It settles rather than rejects on a failed dataset (CH-15), so a case may
+ * pair it with `failAccessRead` to arrange CR-AC-15 exactly: the primary read
+ * succeeded, one dataset did not, and the destination still paints.
+ */
+const loadAccessSurfaceInto = async (store: AppStore): Promise<void> =>
+  loadAccessSurface({
+    context: { store, status: 'entered', warehouseId: accessIds.warehouse },
+  });
+
 const renderRolesTab = async (
   options: Parameters<typeof stubAccessServer>[0] = {},
 ): Promise<void> => {
   stubAccessServer(options);
-  renderInEnteredWarehouse(<RolesTab />, authenticatedStore());
+  const store = authenticatedStore();
+  await loadAccessSurfaceInto(store);
+  renderInEnteredWarehouse(<RolesTab />, store);
   await screen.findByLabelText('Search roles');
 };
 
@@ -244,9 +277,15 @@ describe('RolesTab', () => {
     });
   });
 
+  // CR-RG-05 / CR-RG-07 — the alternative-surface arm this tab keeps. A
+  // `ROLES:WATCH`-only actor is admitted to the tab and gets the read-only
+  // card, which is a permission distinction rather than a readiness one, so it
+  // survives the readiness term's removal untouched.
   it('removes mutation controls when refreshed capabilities no longer allow them', async () => {
     stubAccessServer({ permissionIds: [PermissionId.ROLES_WATCH] });
-    renderInEnteredWarehouse(<RolesTab />, authenticatedStore());
+    const store = authenticatedStore();
+    await loadAccessSurfaceInto(store);
+    renderInEnteredWarehouse(<RolesTab />, store);
 
     expect(await screen.findByText('Picker')).toBeInTheDocument();
     expect(
@@ -258,6 +297,72 @@ describe('RolesTab', () => {
     expect(
       screen.queryByRole('button', { name: /Change role for/u }),
     ).not.toBeInTheDocument();
+    // What the actor gets instead is the read-only card: the Roles are listed
+    // as text, with neither the directory's search field nor a selectable Role.
+    expect(screen.queryByLabelText('Search roles')).not.toBeInTheDocument();
+    expect(
+      within(screen.getByRole('list', { name: 'Warehouse roles' })).queryByRole(
+        'button',
+      ),
+    ).not.toBeInTheDocument();
+  });
+});
+
+// The two arms this tab keeps once its readiness term is gone: the permission
+// arm above, and the error arm below. They are grouped apart from the workflows
+// because each arranges a *failed* read rather than the served one every
+// workflow case renders against.
+describe('RolesTab dataset arms', () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  // CR-AC-15's falsifier. The `!roles.isReady` term is what reaches
+  // `RolesDatasetCard` — the only renderer of `roles.error` — today. Dropping
+  // it in favour of the permission term alone would send this permitted actor
+  // into `RoleDirectory` with `items: []` and tell them no Roles exist.
+  it('states that the Roles read failed rather than that there are none, for a permitted actor (CR-AC-15)', async () => {
+    stubAccessServer();
+    failAccessRead('roles');
+    const store = authenticatedStore();
+    await loadAccessSurfaceInto(store);
+    renderInEnteredWarehouse(<RolesTab />, store);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Roles could not be loaded safely. Try again.',
+    );
+    // Neither the editable directory nor the empty message: a failed read is
+    // not an empty one.
+    expect(screen.queryByLabelText('Search roles')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('No roles are available.'),
+    ).not.toBeInTheDocument();
+  });
+
+  // The other half of CR-AC-15: a *secondary* dataset that failed does not
+  // withhold the surface whose own dataset arrived. The Permission catalogue is
+  // read here only to time the choice today; once the route awaits it, the
+  // Roles the actor may administer are painted regardless.
+  it('paints the editable Roles surface when only the Permission catalogue read failed (CR-AC-15)', async () => {
+    stubAccessServer();
+    failAccessRead('permissions');
+    const store = authenticatedStore();
+    await loadAccessSurfaceInto(store);
+    renderInEnteredWarehouse(<RolesTab />, store);
+
+    expect(await screen.findByLabelText('Search roles')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Create role' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('Roles could not be loaded safely. Try again.'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('branches on permission and error alone, never on readiness (CR-AC-15)', () => {
+    expect(source).not.toMatch(/is(?:Ready|Loading|Fetching)/u);
+    expect(source).toContain('roles.isError');
   });
 });
 

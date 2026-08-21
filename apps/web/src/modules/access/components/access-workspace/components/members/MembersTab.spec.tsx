@@ -1,3 +1,7 @@
+import { readFileSync } from 'node:fs';
+import { posix } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PermissionId } from '@warehouser/shared-types/enums';
@@ -5,6 +9,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { accessApi } from 'modules/access/api/access-api';
 import { MembersTab } from 'modules/access/components/access-workspace/components/members/MembersTab';
+import { loadAccessSurface } from 'modules/access/loaders/access-surface.loader';
 import { authBecameAnonymous } from 'modules/auth/store/auth.slice';
 import { api } from 'shared/api/client/api-client';
 import {
@@ -12,6 +17,7 @@ import {
   accessMembers,
   accessPath,
   authenticatedStore,
+  failAccessRead,
   stubAccessServer,
 } from 'test/access-fixtures';
 import { selectHeroOption } from 'test/hero-select';
@@ -36,11 +42,35 @@ vi.mock('modules/access/api/access-api', async (importOriginal) => ({
   useDeleteMemberMutation: () => [deleteMember, {}],
 }));
 
+// `new URL('./x', import.meta.url)` is rewritten by Vite into an asset URL, so
+// the subject is resolved from this spec's own directory instead.
+const source = readFileSync(
+  posix.join(posix.dirname(fileURLToPath(import.meta.url)), 'MembersTab.tsx'),
+  'utf8',
+);
+
+/**
+ * The store the route hands its destination: the shipped loader has already
+ * filled every dataset the tab paints (CR-AC-04), so the first render is the
+ * one the actor sees. A spec that skipped this would mount a tree whose reads
+ * are still out — a state the route no longer produces, and one this tab
+ * stopped branching on when its readiness term was removed (CR-AC-15).
+ *
+ * It settles rather than rejects on a failed dataset (CH-15), so a case may
+ * pair it with `failAccessRead` to arrange CR-AC-15 exactly: the primary read
+ * succeeded, one dataset did not, and the destination still paints.
+ */
+const loadAccessSurfaceInto = async (store: AppStore): Promise<void> =>
+  loadAccessSurface({
+    context: { store, status: 'entered', warehouseId: accessIds.warehouse },
+  });
+
 const renderMembersTab = async (
   options: Parameters<typeof stubAccessServer>[0] = {},
   store: AppStore = authenticatedStore(),
 ): Promise<void> => {
   stubAccessServer(options);
+  await loadAccessSurfaceInto(store);
   renderInEnteredWarehouse(<MembersTab />, store);
   await screen.findByLabelText('Search members');
 };
@@ -370,5 +400,44 @@ describe('MembersTab', () => {
     const row = screen.getByRole('listitem', { name: /member@example\.test/u });
     expect(within(row).getByText('You')).toBeInTheDocument();
     expect(within(row).queryByRole('button')).not.toBeInTheDocument();
+  });
+});
+
+// The two arms this tab keeps once its readiness term is gone: the permission
+// arm and the error arm. They are grouped apart from the workflows because they
+// arrange a *failed* read rather than the served one every workflow case
+// renders against.
+describe('MembersTab dataset arms', () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  // CR-AC-15's falsifier. The `!members.isReady` term is what reaches
+  // `MembersDatasetCard` — the only renderer of the Members error — today.
+  // Dropping it in favour of the permission term alone would send this
+  // permitted actor into `MemberDirectory` with `items: []` and tell them no
+  // Members exist.
+  it('states that the Members read failed rather than that there are none, for a permitted actor (CR-AC-15)', async () => {
+    stubAccessServer();
+    failAccessRead('members');
+    const store = authenticatedStore();
+    await loadAccessSurfaceInto(store);
+    renderInEnteredWarehouse(<MembersTab />, store);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Members could not be loaded safely. Try again.',
+    );
+    // Neither the administration directory nor the empty message: a failed read
+    // is not an empty one.
+    expect(screen.queryByLabelText('Search members')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('No members are available.'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('branches on permission and error alone, never on readiness (CR-AC-15)', () => {
+    expect(source).not.toMatch(/is(?:Ready|Loading|Fetching)/u);
+    expect(source).toContain('members.isError');
   });
 });
