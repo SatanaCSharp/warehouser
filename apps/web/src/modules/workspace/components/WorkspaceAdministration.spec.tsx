@@ -1,11 +1,25 @@
-import { act, screen, waitFor, within } from '@testing-library/react';
+import { readFileSync } from 'node:fs';
+import { posix } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import {
+  createMemoryHistory,
+  createRootRouteWithContext,
+  createRoute,
+  createRouter,
+  Outlet,
+  RouterProvider,
+} from '@tanstack/react-router';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
+import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { WorkspaceAdministration } from 'modules/workspace/components/WorkspaceAdministration';
 import { loadWorkspaceAdministration } from 'modules/workspace/loaders/workspace-administration.loader';
-import { renderWithProviders } from 'test/render';
+import { workspaceContextApi } from 'shared/api/workspace/workspace-context-api';
+import { ROUTES } from 'shared/constants/routes';
 import {
   authenticatedWorkspaceStore,
   namedWorkspaceContext,
@@ -13,17 +27,86 @@ import {
   unnamedWorkspaceContext,
 } from 'test/workspace-fixtures';
 
+import type { ReactElement } from 'react';
+import type { AppStore } from 'store';
+
+const ADMINISTRATION_SOURCE = posix.join(
+  posix.dirname(fileURLToPath(import.meta.url)),
+  'WorkspaceAdministration.tsx',
+);
+
+const administrationSource = (): string =>
+  readFileSync(ADMINISTRATION_SOURCE, 'utf8');
+
 const allWatchPermissions = [
   WorkspacePermissionId.WAREHOUSES_WATCH,
   WorkspacePermissionId.WORKSPACE_ROLES_WATCH,
   WorkspacePermissionId.WORKSPACE_MEMBERS_WATCH,
 ];
 
-const renderAdministration = (): void => {
-  renderWithProviders(
-    <WorkspaceAdministration />,
-    authenticatedWorkspaceStore(),
+const AdministrationRoutePage = (): ReactElement => <WorkspaceAdministration />;
+
+/** The address `WarehouseEnterLink` resolves; it renders no destination here. */
+const EnteredWarehouseProbe = (): ReactElement => <p>Entered a warehouse</p>;
+
+/**
+ * T12 — the destination is rendered inside a match whose id is
+ * `ROUTES.WORKSPACE`, which is where `useWorkspaceAdministrationContext` reads
+ * its guarantee from (`global-loader/sad.md` §4.6). The tree is built here
+ * rather than imported from `router.ts`, so the production `workspaceRoute`
+ * singleton is never mutated by a spec — the same shape
+ * `WarehousesTab.spec.tsx` and `useEnteredWarehouse.spec.tsx` already use.
+ */
+const renderInWorkspaceRoute = (store: AppStore): void => {
+  const testRootRoute = createRootRouteWithContext<{ store: AppStore }>()({
+    component: () => <Outlet />,
+  });
+  const warehouseProbeRoute = createRoute({
+    component: EnteredWarehouseProbe,
+    getParentRoute: () => testRootRoute,
+    path: ROUTES.WAREHOUSE,
+  });
+  const workspaceTestRoute = createRoute({
+    component: AdministrationRoutePage,
+    getParentRoute: () => testRootRoute,
+    path: ROUTES.WORKSPACE,
+  });
+
+  const router = createRouter({
+    context: { store },
+    history: createMemoryHistory({ initialEntries: [ROUTES.WORKSPACE] }),
+    routeTree: testRootRoute.addChildren([
+      warehouseProbeRoute,
+      workspaceTestRoute,
+    ]),
+  });
+
+  render(
+    <Provider store={store}>
+      <RouterProvider router={router} />
+    </Provider>,
   );
+};
+
+/**
+ * What `requireWorkspaceCapability` has already awaited by the time the
+ * destination renders in the app (`guards/workspace.guard.ts`), done here so
+ * every case below starts from the cache state production guarantees.
+ */
+const primeWorkspaceContext = async (store: AppStore): Promise<void> => {
+  await store
+    .dispatch(
+      workspaceContextApi.endpoints.getWorkspaceContext.initiate(undefined, {
+        subscribe: false,
+      }),
+    )
+    .unwrap();
+};
+
+const renderAdministration = async (): Promise<void> => {
+  const store = authenticatedWorkspaceStore();
+  await primeWorkspaceContext(store);
+  renderInWorkspaceRoute(store);
 };
 
 // The shell's cases stay in one suite because every one of them is about the
@@ -40,7 +123,7 @@ describe('WorkspaceAdministration', () => {
       context: namedWorkspaceContext(allWatchPermissions),
     });
 
-    renderAdministration();
+    await renderAdministration();
 
     const tabs = await screen.findAllByRole('tab');
     expect(tabs.map((tab) => tab.textContent)).toEqual([
@@ -56,7 +139,7 @@ describe('WorkspaceAdministration', () => {
       context: namedWorkspaceContext([WorkspacePermissionId.WAREHOUSES_WATCH]),
     });
 
-    renderAdministration();
+    await renderAdministration();
 
     expect(
       await screen.findByRole('tab', { name: /warehouses/iu }),
@@ -84,7 +167,7 @@ describe('WorkspaceAdministration', () => {
       ]),
     });
 
-    renderAdministration();
+    await renderAdministration();
 
     expect(
       await screen.findByRole('tab', { name: /workspace roles/iu }),
@@ -104,7 +187,7 @@ describe('WorkspaceAdministration', () => {
       ]),
     });
 
-    renderAdministration();
+    await renderAdministration();
 
     expect(
       await screen.findByRole('tab', { name: /^members$/iu }),
@@ -123,7 +206,7 @@ describe('WorkspaceAdministration', () => {
       context: namedWorkspaceContext(allWatchPermissions),
     });
 
-    renderAdministration();
+    await renderAdministration();
 
     expect(
       await screen.findByText(/your workspace owns every warehouse below it/iu),
@@ -148,7 +231,7 @@ describe('WorkspaceAdministration', () => {
         context: unnamedWorkspaceContext(),
       });
 
-      renderAdministration();
+      await renderAdministration();
 
       const heading = await screen.findByRole('heading', { level: 1 });
       const headerRow = heading.closest('header');
@@ -161,7 +244,7 @@ describe('WorkspaceAdministration', () => {
     it('stacks the page action full width below the sm breakpoint', async () => {
       stubWorkspaceServer({ context: unnamedWorkspaceContext() });
 
-      renderAdministration();
+      await renderAdministration();
 
       const action = await screen.findByRole('button', {
         name: /name workspace/iu,
@@ -175,7 +258,7 @@ describe('WorkspaceAdministration', () => {
         context: namedWorkspaceContext(allWatchPermissions),
       });
 
-      renderAdministration();
+      await renderAdministration();
 
       const fullLabel = await screen.findByText('Workspace roles');
       const shortLabel = screen.getByText('Roles');
@@ -191,7 +274,7 @@ describe('WorkspaceAdministration', () => {
         context: namedWorkspaceContext(allWatchPermissions),
       });
 
-      renderAdministration();
+      await renderAdministration();
 
       expect(
         await screen.findByRole('heading', {
@@ -215,7 +298,7 @@ describe('WorkspaceAdministration', () => {
         ]),
       });
 
-      renderAdministration();
+      await renderAdministration();
 
       const action = await screen.findByRole('button', {
         name: /name workspace/iu,
@@ -249,7 +332,7 @@ describe('WorkspaceAdministration', () => {
         ]),
       });
 
-      renderAdministration();
+      await renderAdministration();
 
       expect(await screen.findByText('Untitled workspace')).toBeInTheDocument();
       expect(screen.getByText('Not named yet')).toBeInTheDocument();
@@ -274,7 +357,7 @@ describe('WorkspaceAdministration', () => {
         ]),
       });
 
-      renderAdministration();
+      await renderAdministration();
 
       await user.click(
         await screen.findByRole('button', { name: /rename workspace/iu }),
@@ -296,7 +379,7 @@ describe('WorkspaceAdministration', () => {
         ]),
       });
 
-      renderAdministration();
+      await renderAdministration();
 
       expect(
         await screen.findByRole('button', { name: /rename workspace/iu }),
@@ -313,7 +396,7 @@ describe('WorkspaceAdministration', () => {
         ]),
       });
 
-      renderAdministration();
+      await renderAdministration();
 
       expect(await screen.findByText('Untitled workspace')).toBeInTheDocument();
       expect(
@@ -336,7 +419,7 @@ describe('WorkspaceAdministration', () => {
         }),
       });
 
-      renderAdministration();
+      await renderAdministration();
 
       await user.click(
         await screen.findByRole('button', { name: /name workspace/iu }),
@@ -376,7 +459,7 @@ describe('WorkspaceAdministration', () => {
         }),
       });
 
-      renderAdministration();
+      await renderAdministration();
 
       await user.click(
         await screen.findByRole('button', { name: /name workspace/iu }),
@@ -405,7 +488,7 @@ describe('WorkspaceAdministration', () => {
         ]),
       });
 
-      renderAdministration();
+      await renderAdministration();
 
       await user.click(
         await screen.findByRole('button', { name: /name workspace/iu }),
@@ -441,7 +524,7 @@ describe('WorkspaceAdministration', () => {
         ]),
       });
 
-      renderAdministration();
+      await renderAdministration();
 
       const list = await screen.findByRole('list', { name: 'Warehouses' });
       expect(within(list).getByText('Central DC')).toBeInTheDocument();
@@ -454,7 +537,7 @@ describe('WorkspaceAdministration', () => {
         ]),
       });
 
-      renderAdministration();
+      await renderAdministration();
 
       await screen.findByRole('tab', { name: /workspace roles/iu });
       expect(
@@ -496,7 +579,7 @@ describe('WorkspaceAdministration', () => {
           context: namedWorkspaceContext(allWatchPermissions),
         });
 
-        renderAdministration();
+        await renderAdministration();
 
         const user = userEvent.setup();
         await user.click(
@@ -508,6 +591,62 @@ describe('WorkspaceAdministration', () => {
         expect(panel.textContent).toMatch(contentMatcher);
       },
     );
+  });
+
+  // T12 / CH-05, CH-13 — both branches this file used to open with were
+  // unreachable: `guards/workspace.guard.ts` unwraps `getWorkspaceContext` in
+  // `beforeLoad`, so the entry is fulfilled before the destination renders and
+  // neither `isLoading` nor a missing context was ever observed here. What
+  // replaces them is a type: `useWorkspaceAdministrationContext` returns a
+  // non-optional `WorkspaceContext` inside the guarded route (CR-AC-05 as
+  // amended by `global-loader/sad.md` §11).
+  describe('the removed readiness branches (CR-AC-05)', () => {
+    it('holds no loading branch and imports no Spinner', () => {
+      const source = administrationSource();
+
+      expect(source).not.toMatch(/\bSpinner\b/u);
+      expect(source).not.toMatch(/\bis(?:Ready|Loading|Fetching)\b/u);
+      expect(source).not.toMatch(/t\('loading'\)/u);
+    });
+
+    it('holds no `if (!workspaceContext) return null` and returns ReactElement', () => {
+      const source = administrationSource();
+
+      expect(source).not.toMatch(/if \(!workspaceContext\)/u);
+      expect(source).not.toMatch(/return null/u);
+      expect(source).not.toContain('ReactElement | null');
+      expect(source).toMatch(
+        /export const WorkspaceAdministration = \(\): ReactElement =>/u,
+      );
+    });
+
+    it('reads the route-scoped projection rather than the shell contract', () => {
+      const source = administrationSource();
+
+      expect(source).toContain('useWorkspaceAdministrationContext');
+      expect(source).not.toContain('useCurrentWorkspaceContext');
+    });
+
+    it('still names the Workspace and its sections with the context the route guaranteed', async () => {
+      // The surviving arm, unchanged: the heading, the placeholder chip's
+      // condition and the section description all read the same context.
+      stubWorkspaceServer({
+        context: namedWorkspaceContext(allWatchPermissions),
+      });
+
+      await renderAdministration();
+
+      expect(
+        await screen.findByRole('heading', {
+          level: 1,
+          name: /acme logistics/iu,
+        }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(/your workspace owns every warehouse below it/iu),
+      ).toBeInTheDocument();
+      expect(screen.queryByText('Not named yet')).not.toBeInTheDocument();
+    });
   });
 });
 
@@ -541,7 +680,7 @@ describe('WorkspaceAdministration force-mounted tab panels (CR-AC-03)', () => {
       context: namedWorkspaceContext(allWatchPermissions),
     });
 
-    renderAdministration();
+    await renderAdministration();
 
     await screen.findByRole('tablist', { name: 'Workspace sections' });
     // Every admitted tab's dataset, not only the selected tab's: a panel that
@@ -567,7 +706,7 @@ describe('WorkspaceAdministration force-mounted tab panels (CR-AC-03)', () => {
       context: namedWorkspaceContext(allWatchPermissions),
     });
 
-    renderAdministration();
+    await renderAdministration();
 
     await screen.findByRole('region', { name: 'Workspace roles' });
     const methods = vi
@@ -588,7 +727,7 @@ describe('WorkspaceAdministration force-mounted tab panels (CR-AC-03)', () => {
     const store = authenticatedWorkspaceStore();
 
     await loadWorkspaceAdministration({ context: { store } });
-    renderWithProviders(<WorkspaceAdministration />, store);
+    renderInWorkspaceRoute(store);
     // Scoped to the selected panel: every admitted tab's content is in the DOM
     // at once now, and the Permissions tab's `Warehouses` group carries the
     // same accessible name as the Warehouses list (`sad.md` §11, risk row 3).
@@ -627,7 +766,7 @@ describe('WorkspaceAdministration force-mounted tab panels (CR-AC-03)', () => {
       context: namedWorkspaceContext(allWatchPermissions),
     });
 
-    renderAdministration();
+    await renderAdministration();
 
     // The three access panels now paint their own surface on the first render
     // and fill in as their reads arrive (T11, CR-AC-08), so awaiting one of

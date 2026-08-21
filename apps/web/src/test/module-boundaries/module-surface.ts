@@ -112,6 +112,17 @@ export const WORKSPACE_MODULE_MANIFEST = [
   'components/workspace-administration/warehouses/WarehousesTab.spec.tsx',
   'components/workspace-administration/warehouses/WarehousesTab.tsx',
   'components/workspace-administration/warehouses/WithdrawWarehouseAccessDialog.tsx',
+  // T12 / global-loader CH-05, CH-13 — the route-scoped projection that turns
+  // the Workspace context guaranteed by `workspaceRoute.beforeLoad` into a
+  // non-optional value, and its colocated spec. It derives from state already
+  // loaded and reads and writes nothing, so `hooks/projections/` is its
+  // directory (`placing-web-hooks.md` §2). It enforces a Workspace's own
+  // invariant — which context the Workspace destination is administering — and
+  // is exercised at the Workspace scope, so the default places it here and the
+  // scope-of-exercise tiebreak has nothing to break
+  // (`docs/system/adr/18-08-2026-scope-of-exercise-placement-tiebreak.md`).
+  'hooks/projections/useWorkspaceAdministrationContext.spec.tsx',
+  'hooks/projections/useWorkspaceAdministrationContext.ts',
   // T4 / global-loader CH-03 — `/workspace`'s route loader and its colocated
   // spec. The function holds the dispatches `route.tsx` may not
   // (`frontend-architecture.md` §Route), and `loaders/` is where a

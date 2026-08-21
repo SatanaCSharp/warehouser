@@ -16,7 +16,7 @@
 | T9  | Remove `DatasetCard`'s loading contract, update three callers | ui     | YuriiH | M        | T7                               | done        |
 | T10 | Delete the two skeletons and the Warehouses-side branches     | ui     | YuriiH | M        | T7                               | done        |
 | T11 | Drop the four Workspace-administration tab readiness arms     | ui     | YuriiH | S        | T7                               | done        |
-| T12 | Give `WorkspaceAdministration` a route-scoped projection      | ui     | YuriiH | M        | T7                               | in_progress |
+| T12 | Give `WorkspaceAdministration` a route-scoped projection      | ui     | YuriiH | M        | T7                               | done        |
 | T13 | Remove `AccessPage`'s loading branch                          | ui     | YuriiH | S        | T7                               | done        |
 | T14 | Carry the unresolved actor in the type                        | ui     | YuriiH | M        | T7                               | in_progress |
 | T15 | Collapse the `RolesTab` and `MembersTab` guards               | ui     | YuriiH | S        | T2, T7                           | todo        |

@@ -1,4 +1,4 @@
-import { Chip, Spinner, Tabs } from '@heroui/react';
+import { Chip, Tabs } from '@heroui/react';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -8,9 +8,9 @@ import { WorkspacePermissionsTab } from 'modules/access/components/workspace-adm
 import { WorkspaceRolesTab } from 'modules/access/components/workspace-administration/roles/WorkspaceRolesTab';
 import { NameWorkspaceAction } from 'modules/workspace/components/workspace-administration/NameWorkspaceAction';
 import { WarehousesTab } from 'modules/workspace/components/workspace-administration/warehouses/WarehousesTab';
+import { useWorkspaceAdministrationContext } from 'modules/workspace/hooks/projections/useWorkspaceAdministrationContext';
 import { Conditional } from 'shared/components/Conditional';
 import { useWorkspacePermittedItems } from 'shared/hooks/projections/useWorkspacePermittedItems';
-import { useCurrentWorkspaceContext } from 'shared/hooks/queries/useWorkspacePermissions';
 
 import type { ReactElement } from 'react';
 import type { Key } from 'react-aria-components';
@@ -46,11 +46,17 @@ const tabContentById: Partial<Record<string, ReactElement>> = {
  * drops the rest — the collection form of `WorkspacePermissionGate`
  * (`docs/system/adr/19-08-2026-declarative-permission-gates.md`). Nothing else on
  * this page decides authority: the naming affordance gates itself.
+ *
+ * It holds no readiness branch. `workspaceRoute` awaits the Workspace context
+ * in its guard and every admitted tab's dataset in its loader, so the
+ * destination is only ever rendered once its context has arrived — which is
+ * what `useWorkspaceAdministrationContext` states as a type (CR-AC-05,
+ * `global-loader/sad.md` §4.6).
  */
-export const WorkspaceAdministration = (): ReactElement | null => {
+export const WorkspaceAdministration = (): ReactElement => {
   const { t } = useTranslation('workspace');
   const [selectedTab, setSelectedTab] = useState<Key | null>(null);
-  const { isLoading, workspaceContext } = useCurrentWorkspaceContext();
+  const { workspace } = useWorkspaceAdministrationContext();
   const tabs = useWorkspacePermittedItems<AdministrationTab>([
     {
       id: 'warehouses',
@@ -75,20 +81,7 @@ export const WorkspaceAdministration = (): ReactElement | null => {
     },
   ]);
 
-  if (isLoading) {
-    return (
-      <div className="flex min-h-64 flex-col items-center justify-center gap-2">
-        <Spinner />
-        <span className="text-muted">{t('loading')}</span>
-      </div>
-    );
-  }
-
-  if (!workspaceContext) {
-    return null;
-  }
-
-  const { name } = workspaceContext.workspace;
+  const { name } = workspace;
   const openSection = (selectedTab ?? tabs[0]?.id) as string | undefined;
 
   return (
