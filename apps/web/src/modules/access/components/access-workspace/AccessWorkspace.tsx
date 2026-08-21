@@ -6,6 +6,7 @@ import { MembersTab } from 'modules/access/components/access-workspace/component
 import { PermissionsTab } from 'modules/access/components/access-workspace/components/permissions/PermissionsTab';
 import { RolesTab } from 'modules/access/components/access-workspace/components/roles/RolesTab';
 import { useAccessScope } from 'modules/access/hooks/projections/useAccessScope';
+import { rolesTabPermissions } from 'modules/access/utils/access-permission-sets';
 import { Conditional } from 'shared/components/Conditional';
 import { usePermittedItems } from 'shared/hooks/projections/usePermittedItems';
 
@@ -18,20 +19,6 @@ type WorkspaceTab = {
   /** The Permissions that put this tab on the bar; any one of them is enough. */
   permission: readonly PermissionId[];
 };
-
-/**
- * The Roles tab is on the bar for an actor who may only read Roles as well as for
- * one who may administer them — `RolesTab` decides which of the two surfaces they
- * get. Every other tab is one watch Permission.
- */
-const rolesTabPermissions = [
-  PermissionId.ROLES_WATCH,
-  PermissionId.ROLES_ASSIGN,
-  PermissionId.ROLES_CREATE,
-  PermissionId.ROLES_DELETE,
-  PermissionId.ROLES_UPDATE,
-  PermissionId.WAREHOUSE_MANAGER_ROLE_REASSIGN,
-];
 
 /**
  * Composition root of the access workspace: it renders the tabs the acting user
