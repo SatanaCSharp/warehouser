@@ -48,6 +48,7 @@ apps/web/src/
 │       │   ├── forms/       # form sessions
 │       │   ├── projections/ # derivations over state already loaded
 │       │   └── effects/     # hooks whose product is a browser side effect
+│       ├── loaders/         # plain route data functions; only when a route awaits data
 │       ├── utils/           # module-owned pure helpers; never hooks
 │       ├── schemas/         # browser-only validation
 │       ├── api/             # module-owned server calls/query adapters
@@ -92,6 +93,17 @@ directory uses the five names above, and a file that declares no hook belongs in
 directory instead. Follow [Placing web hooks](guides/placing-web-hooks.md) for the full rule and for
 the module-versus-shared promotion test it applies.
 
+`modules/<module>/loaders/` holds **plain route data functions** — what `guards/` is at the
+composition layer, at module scope. A loader is created only when a route awaits data, and the
+module that owns the datasets owns the loader; `route.tsx` imports it and wires it to the `loader:`
+option. Three rules come with the directory: a loader **dispatches, it does not decide access**
+(a redirect or an entry verdict stays in `guards/`); a loader **imports no page and no component**,
+because it is reachable from the router chunk and would defeat the lazy `import('./page')`
+boundary; and a destination composed from more than one module reaches the other module's datasets
+through a **contribution function on that module's declared public surface**, never past it. The
+decision and its alternatives are recorded in
+[Module-owned route loaders](../change-requests/global-loader/adr/0001-module-owned-route-loaders.md).
+
 Use Lodash for collection, object, and other data-structure operations when it provides the
 operation. Import the needed function directly so the web bundle includes only what it uses, and
 prefer it to a hand-written imperative loop or custom equivalent.
@@ -105,9 +117,16 @@ prefer it to a hand-written imperative loop or custom equivalent.
 - parent and path;
 - lazy page import;
 - route access guard;
-- route-specific search validation or loader wiring when needed.
+- route-specific search validation, or loader wiring when the destination needs data before it
+  paints.
 
 It contains no feature JSX, form handling, RTK dispatch, or direct API calls.
+
+A route **awaits the data its destination paints**: a destination that renders a dataset declares a
+`loader` for it, so the page mounts with that data present rather than assembling itself afterwards
+(§Page). Loader wiring means the `loader:` option naming a module-owned loader function — the
+dispatches themselves live in `modules/<module>/loaders/` (§Source structure), never in this file.
+A route that renders no server data declares no loader; do not add an empty one.
 
 ### Page
 
@@ -117,7 +136,16 @@ several children share it or the state is route-level. Data used by one componen
 component or a module-local hook.
 
 Avoid absolute rules that all queries must be in pages or must be in leaf components. Use the
-narrowest owner that can coordinate the complete loading, error, empty, and success behavior.
+narrowest owner that can coordinate the complete error, empty, and success behavior.
+
+**First-paint readiness of a destination is owned by its route, not by a component.** The route
+awaits the data its destination paints (§Route), so by the time a page or one of its components
+renders, that data is already there and there is no waiting window left for it to own. A component
+therefore declares no spinner, no skeleton, no readiness branch and no waiting copy of its own for
+data its route awaited; the one waiting affordance the application renders is the route's
+`pendingComponent`. The narrowest-owner rule above is unchanged for the other three states:
+error, empty and success stay with the narrowest component that can coordinate them, so a permitted
+actor whose read failed still reaches that component's own error arm rather than an empty surface.
 
 ### Components
 

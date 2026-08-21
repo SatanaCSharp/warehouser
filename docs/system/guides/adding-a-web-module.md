@@ -89,6 +89,7 @@ modules/inventory/
 ├── components/
 ├── alerts/      # only for inventory-specific feedback
 ├── hooks/       # only if needed; queries/ mutations/ forms/ projections/ effects/
+├── loaders/     # only when the route awaits data; plain route data functions
 ├── utils/       # only for pure helpers the module owns; never hooks
 ├── schemas/     # only for browser-local validation
 ├── api/         # only when the feature calls the server
@@ -120,6 +121,39 @@ export const inventoryRoute = createRoute({
 
 Use `requireAuth` for authenticated routes, `requireAnonymous` for guest-only routes, and omit
 `beforeLoad` for public routes. Do not add a no-op guard.
+
+### When the route declares a loader
+
+**Declare a `loader` when the destination paints server data.** First-paint readiness belongs to the
+route ([Frontend architecture](../frontend-architecture.md) §Page), so the route awaits every
+dataset the destination shows — including the datasets of panels the actor's Permissions admit —
+and the page mounts with them present. A destination that paints no server data declares no loader;
+do not add an empty one, for the same reason you do not add a no-op guard. Declare
+`pendingComponent` and `errorComponent` alongside it, so the awaited window and a failed primary
+read both paint.
+
+**The loader function goes in `modules/<module>/loaders/`**, named for the destination it fills
+(`workspace-administration.loader.ts`), with its spec beside it. `route.tsx` imports it and wires it
+to the `loader:` option and holds no dispatch of its own — §5's file is routing concerns only:
+
+```ts
+import { loadInventory } from 'modules/inventory/loaders/inventory.loader';
+
+export const inventoryRoute = createRoute({
+  // …
+  loader: loadInventory,
+  errorComponent: RouteErrorState,
+  pendingComponent: RoutePendingState,
+});
+```
+
+The module that owns the datasets owns the loader. Where a destination is composed from more than
+one module, the composing module's loader calls a **contribution function the other module exports
+on its declared public surface** (§2) and never reaches past it. A loader dispatches; it does not
+decide access — a redirect or an entry verdict stays in `guards/` and a loader reads the verdict the
+guard already published. A loader imports no page and no component: it is reachable from the router
+chunk, so an import of the page would defeat the lazy `import('./page')` above. See
+[Module-owned route loaders](../../change-requests/global-loader/adr/0001-module-owned-route-loaders.md).
 
 ## 6. Add the page and components
 
@@ -215,7 +249,8 @@ hardcode user-visible strings or move module-specific copy into `common`.
 Colocate tests with the code they cover. At minimum, cover:
 
 - client validation and valid form output;
-- loading, empty, error, and success UI required by the feature;
+- the empty, error, and success UI required by the feature, and — where the route declares a
+  loader — that the destination paints only once the loader has settled;
 - submit/API/RTK/navigation orchestration;
 - authenticated, anonymous, or public route behavior;
 - accessible names, labels, and keyboard interaction.
@@ -244,6 +279,10 @@ change, also complete the viewport/state comparison required by the approved des
 - Importing another module's undeclared hook, API slice, schema, type, or sub-component instead of
   its declared public surface.
 - Rendering a feature component directly from `router.ts` instead of adding a module route/page.
+- Dispatching from `route.tsx`, or filing a route loader in `guards/`, `utils/` or `api/` instead of
+  the module's `loaders/`.
+- Letting a component wait for data its route should have awaited — a spinner, a skeleton or an
+  `isLoading` branch inside the destination.
 - Adding a second auth context beside Redux Toolkit.
 - Placing a feature slice under root `store/` instead of `modules/<module>/store/`.
 - Adding `<module>.reducer.ts` only to re-export `<module>Slice.reducer`.

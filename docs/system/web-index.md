@@ -7,10 +7,12 @@ first, then read only the entries that cover the change you are making. Paths ar
 ## Architecture
 
 - [Frontend architecture](frontend-architecture.md) — durable structure and ownership rules for
-  `apps/web`: bootstrap/provider chain, the `src/` directory layout, route/page/component
-  responsibilities, Redux Toolkit and RTK Query boundaries, guards, path constants, validation
-  ownership, and the testing and UI-design boundaries. Read before any `apps/web` change, and always
-  before adding a directory, slice, provider, or new layer.
+  `apps/web`: bootstrap/provider chain, the `src/` directory layout including module-owned
+  `loaders/`, route/page/component responsibilities — the route owns a destination's first-paint
+  readiness while the narrowest component owns error, empty and success — Redux Toolkit and RTK
+  Query boundaries, guards, path constants, validation ownership, and the testing and UI-design
+  boundaries. Read before any `apps/web` change, and always before adding a directory, slice,
+  provider, or new layer.
 - [System architecture description](sad.md) — repository-wide context, solution strategy, and
   cross-cutting concepts (contracts, frontend state and routing, localization, UI delivery). Read
   when a change touches more than `apps/web` or when you need the rationale behind a frontend rule.
@@ -21,8 +23,9 @@ first, then read only the entries that cover the change you are making. Paths ar
 ## Guides
 
 - [Adding a web module](guides/adding-a-web-module.md) — end-to-end procedure for a new route-owned
-  feature: declare the path, create the module, wire route/page, add store and API slices. Use when
-  adding a new route or feature module, or when moving state between modules.
+  feature: declare the path, create the module, wire route/page, declare the route's loader when the
+  destination paints server data, add store and API slices. Use when adding a new route or feature
+  module, or when moving state between modules.
 - [Placing web components](guides/placing-web-components.md) — decides **where** a component file
   goes: the ownership-nesting rule, when to group owned components by domain, and when a component
   must stay unnested because it has more than one consumer. Use whenever a `components/` directory

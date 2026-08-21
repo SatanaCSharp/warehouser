@@ -18,8 +18,8 @@ A component file exports exactly one component, named after the file. `MemberRow
 is what the directory structure in [Placing web components](placing-web-components.md) is for.
 
 A file may keep small private render helpers that only its exported component uses and that are
-never exported (`DatasetCard.tsx` keeps `DatasetMessage` and `DatasetSkeleton` this way). Move a
-helper into its own file as soon as any of these becomes true:
+never exported (`DatasetCard.tsx` keeps `DatasetMessage` this way). Move a helper into its own file
+as soon as any of these becomes true:
 
 - a second component renders it;
 - it needs a props type worth naming and exporting;
@@ -48,8 +48,10 @@ on submit_ should not also own the markup for every row it renders.
 The repository uses four recurring shapes. Naming the shape you are writing usually answers what
 belongs in the file:
 
-- **Tab / panel container** — resolves capabilities and datasets, then chooses between a read-only
-  card and the editable surface. Example: `MembersTab.tsx`.
+- **Tab / panel container** — resolves capabilities and renders the datasets its route already
+  awaited, choosing between a read-only card and the editable surface. It does not resolve the
+  datasets itself and asks no readiness question: the route awaited them before the destination
+  mounted ([Frontend architecture](../frontend-architecture.md) §Page). Example: `MembersTab.tsx`.
 - **Directory** — owns selection and dialog state for a collection, renders the list plus the
   dialogs its rows open. Example: `MemberDirectory.tsx`.
 - **Action** — one workflow end to end: its permission gate, its trigger, the dialog it opens, and
@@ -103,7 +105,9 @@ Read server data and derived authorization through hooks, at the component that 
   requests.
 - Wrap each dataset in a module hook that owns its own gating, so no caller repeats a `skip`
   condition or unwraps a page envelope. `useAccessRoles` decides from capabilities whether the query
-  fires at all; callers just read `.items` and `.isReady`.
+  fires at all; callers just read `.items`. A hook returns the data it has and reports no readiness:
+  the route awaited the dataset, so there is nothing for a caller to wait on
+  ([Frontend architecture](../frontend-architecture.md) §Page).
 - Gate controls with `WarehousePermissionGate` / `WorkspacePermissionGate` at the control itself, never on a capability
   boolean or a `permissionIds` array threaded down from a page. A refreshed projection then narrows
   every gate at once. A Permission that decides a _value_ — a query's `skip`, an `isDisabled` — is
@@ -166,8 +170,9 @@ happy path is unindented and reads last:
 
 ```tsx
 const canReadMembers = useHasPermission(PermissionId.USERS_WATCH);
+const members = useAccessMembers();
 
-if (!canReadMembers || !members.isReady) {
+if (!canReadMembers || members.isError) {
   return <MembersDatasetCard dataset={members} />;
 }
 
@@ -178,6 +183,13 @@ A gate renders its children or nothing, so choosing between **two surfaces** —
 read-only card — stays an early return, and the Permission is read here for that reason. A control
 that is simply withheld is a gate instead
 ([Gate web controls declaratively](../adr/19-08-2026-declarative-permission-gates.md)).
+
+Readiness is not one of the whole-component states, because there is no waiting window here to
+exit: the route awaited `members` before this component mounted
+([Frontend architecture](../frontend-architecture.md) §Page). Nor is _empty_ an early return —
+`MembersDatasetCard` resolves `items.length === 0` into the card's own empty message, and the error
+arm above is an early return only because that card is the sole renderer of the members error. What
+is left is the permission arm and the failed read.
 
 **Map values with a lookup, not a chain.** An `if`/`else if` sequence that turns one value into
 another value is data pretending to be control flow:
