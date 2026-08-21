@@ -107,19 +107,21 @@ const projectionRequests = (fetchMock: ReturnType<typeof vi.fn>): string[] =>
  * re-entry.
  */
 const Probe = (): ReactElement => {
-  const {
-    access: projection,
-    isLoading,
-    permissionIds,
-  } = useCurrentPermissions();
+  const { access: projection, permissionIds } = useCurrentPermissions();
   return (
     <>
       <div data-testid="permissions">{permissionIds.join(',') || 'none'}</div>
       <div data-testid="projection">{projection?.warehouseId ?? 'none'}</div>
-      <div data-testid="loading">{String(isLoading)}</div>
     </>
   );
 };
+
+/** T16 / CR-AC-09 — the fields the contract still declares, in the answer. */
+const ContractProbe = (): ReactElement => (
+  <div data-testid="contract">
+    {Object.keys(useCurrentPermissions()).sort().join(',')}
+  </div>
+);
 
 const HasRolesWatchProbe = (): ReactElement => (
   <div data-testid="has-roles-watch">
@@ -261,9 +263,12 @@ describe('useCurrentPermissions / useHasPermission', () => {
     const fetchMock = stubProjections(warehouseId, access);
     renderProbe({ initialEntry: ROUTES.HOME });
 
-    await waitFor(() =>
-      expect(screen.getByTestId('loading')).toHaveTextContent('false'),
-    );
+    // T16 / CR-AC-09 — the contract carries no readiness field to settle on any
+    // more, so the render's own request window is flushed instead: any
+    // projection read this hook would issue has been issued by now.
+    await act(async () => {
+      await Promise.resolve();
+    });
     expect(screen.getByTestId('permissions')).toHaveTextContent('none');
     expect(screen.getByTestId('projection')).toHaveTextContent('none');
     expect(projectionRequests(fetchMock)).toEqual([]);
@@ -278,9 +283,9 @@ describe('useCurrentPermissions / useHasPermission', () => {
       initialEntry: warehouseAddress(warehouseId),
     });
 
-    await waitFor(() =>
-      expect(screen.getByTestId('loading')).toHaveTextContent('false'),
-    );
+    await act(async () => {
+      await Promise.resolve();
+    });
     expect(screen.getByTestId('permissions')).toHaveTextContent('none');
     expect(projectionRequests(fetchMock)).toEqual([]);
   });
@@ -346,6 +351,86 @@ describe('useCurrentPermissions / useHasPermission', () => {
     );
     expect(screen.getByTestId('projection')).toHaveTextContent(
       otherWarehouseId,
+    );
+  });
+
+  // CR-RG-03's falsifier, pinned at the hook. The route loader narrows the
+  // window in which the leak is observable through the UI, so the boundary is
+  // asserted here: across the argument change, while W2's projection is still
+  // in flight, the hook must report NOTHING. RTK Query's `data` is the last
+  // successful result this hook instance saw for ANY argument, so replacing
+  // `currentData` with `data` in `usePermissions.ts` reports W1's Warehouse and
+  // W1's Permissions for W2 — and fails the two assertions below.
+  it('reports no authority for the newly addressed Warehouse while its projection is in flight (CR-RG-03)', async () => {
+    let releaseOtherProjection = (): void => {};
+    const otherProjectionArrives = new Promise<void>((resolve) => {
+      releaseOtherProjection = resolve;
+    });
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = requestUrl(input);
+      if (url === contextPath) {
+        return Response.json(workspaceContext(null));
+      }
+      if (url === currentPath(warehouseId)) {
+        return Response.json(access);
+      }
+      if (url === currentPath(otherWarehouseId)) {
+        await otherProjectionArrives;
+        return Response.json(otherAccess);
+      }
+      return Response.json({}, { status: 404 });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { router } = renderProbe({
+      initialEntry: warehouseAddress(warehouseId),
+    });
+    await waitFor(() =>
+      expect(screen.getByTestId('permissions')).toHaveTextContent(
+        PermissionId.ROLES_WATCH,
+      ),
+    );
+
+    await act(async () => {
+      await router.navigate({
+        to: ROUTES.WAREHOUSE,
+        params: { warehouseId: otherWarehouseId },
+      });
+    });
+
+    await waitFor(() =>
+      expect(screen.getByTestId('projection')).toHaveTextContent('none'),
+    );
+    expect(screen.getByTestId('permissions')).toHaveTextContent('none');
+
+    await act(async () => {
+      releaseOtherProjection();
+      await otherProjectionArrives;
+    });
+    await waitFor(() =>
+      expect(screen.getByTestId('permissions')).toHaveTextContent(
+        PermissionId.USERS_WATCH,
+      ),
+    );
+    expect(screen.getByTestId('projection')).toHaveTextContent(
+      otherWarehouseId,
+    );
+  });
+
+  // CR-AC-09 — `CurrentPermissions` declares no `isLoading`. The route loader
+  // has already awaited this projection, so the hook reports the answer it has
+  // and nothing about how it got there.
+  it('reports exactly the projection and its Permission ids (CR-AC-09)', async () => {
+    stubProjections(null, access);
+    renderProbe({
+      initialEntry: warehouseAddress(warehouseId),
+      probe: ContractProbe,
+    });
+
+    await waitFor(() =>
+      expect(screen.getByTestId('contract')).toHaveTextContent(
+        /^access,permissionIds$/u,
+      ),
     );
   });
 

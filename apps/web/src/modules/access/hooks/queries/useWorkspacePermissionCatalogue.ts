@@ -8,17 +8,12 @@ import {
 
 import type { WorkspacePermission } from '@warehouser/contracts/workspaces';
 
+/**
+ * CH-09 — `isReady` is removed (CR-AC-09). The Workspace route's loader awaits
+ * this read before the destination paints, so a surface that grants from the
+ * catalogue shows its Permission rows with the Role's name rather than after it.
+ */
 export type WorkspacePermissionCatalogue = {
-  /**
-   * Whether the answer is final: the read completed, or the actor may not make
-   * it at all. A surface that grants from the catalogue waits for this rather
-   * than showing a Role's Permission rows a heartbeat after its name.
-   *
-   * The Workspace context is part of that answer, exactly as it is for
-   * `useWorkspaceRoles`: until it resolves the actor holds no Permission *yet*
-   * rather than none at all.
-   */
-  isReady: boolean;
   /** Every system Workspace Permission, assignable and reserved alike. */
   permissions: WorkspacePermission[];
 };
@@ -34,7 +29,7 @@ export type WorkspacePermissionCatalogue = {
  */
 export const useWorkspacePermissionCatalogue =
   (): WorkspacePermissionCatalogue => {
-    const { isLoading, workspacePermissionIds } = useCurrentWorkspaceContext();
+    const { workspacePermissionIds } = useCurrentWorkspaceContext();
     const canWatchWorkspaceRoles = hasWorkspacePermission(
       workspacePermissionIds,
       WorkspacePermissionId.WORKSPACE_ROLES_WATCH,
@@ -44,7 +39,6 @@ export const useWorkspacePermissionCatalogue =
     });
 
     return {
-      isReady: !isLoading && (!canWatchWorkspaceRoles || data !== undefined),
       permissions: data ?? [],
     };
   };

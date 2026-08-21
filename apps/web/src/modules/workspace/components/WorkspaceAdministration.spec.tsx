@@ -540,9 +540,17 @@ describe('WorkspaceAdministration', () => {
       await renderAdministration();
 
       await screen.findByRole('tab', { name: /workspace roles/iu });
+      // The Permissions tab's `Warehouses` Permission group carries the same
+      // accessible name as the Warehouses list (`sad.md` §11, risk row 3), and
+      // that tab is admitted and force-mounted for this actor — so a
+      // `list`-by-name query here matches whichever of the two happened to
+      // render first. The absence of the Warehouses tab is what actually
+      // establishes the absence of its panel, and a Warehouse record is what
+      // only the Warehouses list renders.
       expect(
-        screen.queryByRole('list', { name: 'Warehouses' }),
+        screen.queryByRole('tab', { name: 'Warehouses' }),
       ).not.toBeInTheDocument();
+      expect(screen.queryByText('Central DC')).not.toBeInTheDocument();
       await waitFor(() =>
         expect(
           requestedUrls.some((url) =>

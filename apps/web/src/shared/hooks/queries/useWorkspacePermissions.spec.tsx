@@ -13,6 +13,7 @@ import { makeStore } from 'store';
 import type { WorkspaceContext } from '@warehouser/contracts/workspaces';
 import type { PermissionId } from '@warehouser/shared-types/enums';
 import type { ReactElement, ReactNode } from 'react';
+import type { CurrentWorkspaceContext } from 'shared/hooks/queries/useWorkspacePermissions';
 import type { AppStore } from 'store';
 
 const ownWorkspaceContext: WorkspaceContext = {
@@ -82,7 +83,7 @@ describe('useCurrentWorkspaceContext / useHasWorkspacePermission', () => {
       wrapper: withStore(),
     });
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    await waitFor(() => expect(result.current.workspaceContext).toBeDefined());
 
     expect(result.current.workspacePermissionIds).toEqual([
       WorkspacePermissionId.WAREHOUSES_WATCH,
@@ -123,7 +124,7 @@ describe('useCurrentWorkspaceContext / useHasWorkspacePermission', () => {
     const { result: first } = renderHook(() => useCurrentWorkspaceContext(), {
       wrapper: withStore(store),
     });
-    await waitFor(() => expect(first.current.isLoading).toBe(false));
+    await waitFor(() => expect(first.current.workspaceContext).toBeDefined());
 
     const { result: second } = renderHook(
       () => useHasWorkspacePermission(WorkspacePermissionId.WAREHOUSES_WATCH),
@@ -132,6 +133,40 @@ describe('useCurrentWorkspaceContext / useHasWorkspacePermission', () => {
 
     expect(second.current).toBe(true);
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  // CR-AC-09 / CH-09 — `CurrentWorkspaceContext` declares no `isLoading`. The
+  // Workspace route's guard has already awaited this read for every destination
+  // that depends on it, so the contract reports the answer and nothing about
+  // how it got there.
+  it('reports exactly the Workspace context and its Permission ids (CR-AC-09)', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(Response.json(ownWorkspaceContext));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { result } = renderHook(() => useCurrentWorkspaceContext(), {
+      wrapper: withStore(),
+    });
+
+    await waitFor(() => expect(result.current.workspaceContext).toBeDefined());
+    expect(Object.keys(result.current).sort()).toEqual([
+      'workspaceContext',
+      'workspacePermissionIds',
+    ]);
+  });
+
+  // sad.md 4.6 / CR-RG-08 — `workspaceContext` stays OPTIONAL on the shared
+  // contract. `WarehouseSwitcher` and `RetainedContextMessage` read it from the
+  // shell, where no route has awaited it, and the shell must keep observing
+  // that absence. The non-optional type is delivered by the route-scoped
+  // projection `useWorkspaceAdministrationContext`, not by narrowing here — so
+  // narrowing this field stops this assignment compiling.
+  it('leaves the Workspace context optional for the shell (CR-AC-05, CR-RG-08)', () => {
+    const absentInTheShell: CurrentWorkspaceContext['workspaceContext'] =
+      undefined;
+
+    expect(absentInTheShell).toBeUndefined();
   });
 });
 

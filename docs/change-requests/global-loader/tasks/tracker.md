@@ -20,7 +20,7 @@
 | T13 | Remove `AccessPage`'s loading branch                          | ui     | YuriiH | S        | T7                               | done   |
 | T14 | Carry the unresolved actor in the type                        | ui     | YuriiH | M        | T7                               | done   |
 | T15 | Collapse the `RolesTab` and `MembersTab` guards               | ui     | YuriiH | S        | T2, T7                           | done   |
-| T16 | Remove the seven readiness fields from the five contracts     | ui     | YuriiH | M        | T9, T10, T11, T12, T13, T14, T15 | todo   |
+| T16 | Remove the seven readiness fields from the five contracts     | ui     | YuriiH | M        | T9, T10, T11, T12, T13, T14, T15 | done   |
 | T17 | Remove the fourteen orphaned translation keys                 | ui     | YuriiH | S        | T16                              | todo   |
 | T18 | Add the readiness-removal repository scan                     | tests  | YuriiH | M        | T16, T17                         | todo   |
 | T19 | Reconcile the nine `docs/system` rows                         | docs   | YuriiH | M        | T18                              | todo   |

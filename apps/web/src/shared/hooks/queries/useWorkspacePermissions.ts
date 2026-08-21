@@ -19,16 +19,25 @@ export const hasWorkspacePermission = (
       workspacePermissionIds.includes(required),
   );
 
+/**
+ * CH-09 — `isLoading` is removed (CR-AC-09): the Workspace route's guard has
+ * awaited this read for every destination that depends on it.
+ *
+ * `workspaceContext` deliberately stays **optional** (`sad.md` §4.6). The shell
+ * — `WarehouseSwitcher` and `RetainedContextMessage` — reads this same contract
+ * where no route has awaited the context, and CR-RG-08 requires it to keep
+ * observing that absence. The non-optional type is delivered where the guarantee
+ * actually holds, by the route-scoped projection
+ * `modules/workspace/hooks/projections/useWorkspaceAdministrationContext.ts`.
+ */
 export type CurrentWorkspaceContext = {
-  isLoading: boolean;
   workspaceContext: WorkspaceContext | undefined;
   workspacePermissionIds: readonly WorkspacePermissionId[];
 };
 
 export const useCurrentWorkspaceContext = (): CurrentWorkspaceContext => {
-  const { data, isLoading } = useGetWorkspaceContextQuery();
+  const { data } = useGetWorkspaceContextQuery();
   return {
-    isLoading,
     workspaceContext: data,
     workspacePermissionIds: data?.workspacePermissionIds ?? [],
   };

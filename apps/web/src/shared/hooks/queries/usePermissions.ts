@@ -25,7 +25,6 @@ export const hasPermission = (
 
 export type CurrentPermissions = {
   access: AccessProjection | undefined;
-  isLoading: boolean;
   permissionIds: readonly string[];
 };
 
@@ -45,17 +44,16 @@ export const useCurrentPermissions = (): CurrentPermissions => {
   // current argument, so the answer is simply absent until the addressed
   // Warehouse's own projection arrives: no skeleton, no placeholder, and no
   // held-over value from the Warehouse just left.
-  const { currentData, isFetching } = useGetCurrentAccessQuery(
-    warehouseId ?? '',
-    { skip: warehouseId === undefined },
-  );
+  //
+  // T16 / CH-09 — `isLoading` is gone from the contract (CR-AC-09); the route
+  // loader awaits this projection before the destination paints, so no caller
+  // has a waiting state left to render. The `currentData` read below is NOT
+  // part of that removal (CR-RG-03).
+  const { currentData } = useGetCurrentAccessQuery(warehouseId ?? '', {
+    skip: warehouseId === undefined,
+  });
   return {
     access: currentData,
-    // Loading means "nothing to show for THIS Warehouse yet". A background
-    // refetch of a Warehouse already resolved keeps its `currentData`, so it
-    // does not re-enter the loading state — the shipped behavior, unchanged.
-    isLoading:
-      warehouseId !== undefined && currentData === undefined && isFetching,
     permissionIds: currentData?.permissionIds ?? [],
   };
 };
