@@ -1,4 +1,3 @@
-import { Spinner } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 
 import { AccessWorkspace } from 'modules/access/components/access-workspace/AccessWorkspace';
@@ -8,16 +7,7 @@ import type { ReactElement } from 'react';
 
 export const AccessPage = (): ReactElement => {
   const { t } = useTranslation('access');
-  const { access, isLoading, permissionIds } = useCurrentPermissions();
-
-  if (isLoading) {
-    return (
-      <div className="flex min-h-64 flex-col items-center justify-center gap-2">
-        <Spinner />
-        <span className="text-muted">{t('loading')}</span>
-      </div>
-    );
-  }
+  const { access, permissionIds } = useCurrentPermissions();
 
   const denied = (
     <main className="mx-auto max-w-3xl px-6 py-12">
