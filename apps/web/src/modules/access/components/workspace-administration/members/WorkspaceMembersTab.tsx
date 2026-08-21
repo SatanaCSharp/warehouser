@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { AddWorkspaceMemberAction } from 'modules/access/components/workspace-administration/members/AddWorkspaceMemberAction';
 import { WorkspaceMemberList } from 'modules/access/components/workspace-administration/members/WorkspaceMemberList';
 import { WorkspaceUserList } from 'modules/access/components/workspace-administration/members/WorkspaceUserList';
-import { WorkspaceListSkeleton } from 'modules/access/components/workspace-administration/WorkspaceListSkeleton';
 import { useWorkspaceMembers } from 'modules/access/hooks/queries/useWorkspaceMembers';
 import { useWorkspaceUsers } from 'modules/access/hooks/queries/useWorkspaceUsers';
 
@@ -15,26 +14,37 @@ import type { ReactElement } from 'react';
  * member from (AC-19 – AC-22, AC-33).
  *
  * Both datasets are gated by `WORKSPACE_MEMBERS:WATCH` inside their own hooks,
- * so an actor without it fetches and retains neither. Neither pane renders
- * ahead of both reads: the candidate list depends on who is already a member,
- * so showing one before the other would state the wrong thing for a render.
+ * so an actor without it fetches and retains neither. It names no wait of its
+ * own: `workspaceRoute`'s loader awaits both before the destination paints, so
+ * neither pane can arrive after the tab (`global-loader/change.md` CH-08,
+ * CH-14, `sad.md` §4.8).
  */
 export const WorkspaceMembersTab = (): ReactElement => {
   const { t } = useTranslation('access');
   const members = useWorkspaceMembers();
   const users = useWorkspaceUsers();
 
-  if (!members || !users) {
-    return <WorkspaceListSkeleton label={t('workspaceMembers.loading')} />;
-  }
+  // Each pane reads the dataset it was given, so it is resolved here rather
+  // than gated inline: `Conditional` evaluates both arms, and neither list
+  // exists until its read has answered.
+  //
+  // `useWorkspaceMembers` and `useWorkspaceUsers` still report `undefined` for
+  // a read that was skipped, failed or evicted, and defaulting that to `[]`
+  // would state `workspaceMembers.empty` — "this workspace has no workspace
+  // member yet" — about a Workspace nobody asked (CR-RG-05). An unanswered
+  // read therefore states nothing, and the pane that has its answer states it.
+  const memberList = !members ? null : (
+    <WorkspaceMemberList members={members} />
+  );
+  const userList = !users ? null : <WorkspaceUserList users={users} />;
 
   return (
     <section aria-label={t('workspaceMembers.heading')}>
       <div className="mb-5 flex flex-wrap justify-end gap-2">
         <AddWorkspaceMemberAction />
       </div>
-      <WorkspaceMemberList members={members} />
-      <WorkspaceUserList users={users} />
+      {memberList}
+      {userList}
     </section>
   );
 };

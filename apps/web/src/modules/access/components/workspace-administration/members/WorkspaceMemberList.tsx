@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
 import { WorkspaceMemberRow } from 'modules/access/components/workspace-administration/members/WorkspaceMemberRow';
-import { WorkspaceListSkeleton } from 'modules/access/components/workspace-administration/WorkspaceListSkeleton';
 import { useWorkspaceRoles } from 'modules/access/hooks/queries/useWorkspaceRoles';
 import { Conditional } from 'shared/components/Conditional';
 
@@ -15,18 +14,17 @@ type WorkspaceMemberListProps = { members: WorkspaceMember[] };
  * they hold. The Role name comes from the Workspace Roles read rather than from
  * the row, so a member row stays presentational and every row names a Role the
  * same way.
+ *
+ * It names no wait of its own. `workspaceRoute`'s loader awaits the Members and
+ * the Roles together before the destination paints, so no row can render ahead
+ * of the Role it names and the list has no heartbeat to hide
+ * (`global-loader/change.md` CH-14, `sad.md` §4.8).
  */
 export const WorkspaceMemberList = ({
   members,
 }: WorkspaceMemberListProps): ReactElement => {
   const { t } = useTranslation('access');
-  const { isReady, roles } = useWorkspaceRoles();
-
-  // A row states the one Workspace Role its member holds, so the list waits for
-  // the Roles read rather than rendering rows that name nothing for a heartbeat.
-  if (!isReady) {
-    return <WorkspaceListSkeleton label={t('workspaceMembers.loading')} />;
-  }
+  const { roles } = useWorkspaceRoles();
 
   return (
     <div>

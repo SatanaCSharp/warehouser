@@ -1,3 +1,7 @@
+import { readFileSync } from 'node:fs';
+import { posix } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
@@ -42,6 +46,13 @@ const fullRoleAuthority = [
   WorkspacePermissionId.WORKSPACE_ROLES_ASSIGN,
 ];
 
+const TAB_SOURCE = posix.join(
+  posix.dirname(fileURLToPath(import.meta.url)),
+  'WorkspaceRolesTab.tsx',
+);
+
+const tabSource = (): string => readFileSync(TAB_SOURCE, 'utf8');
+
 const renderTab = (): void => {
   renderWithProviders(<WorkspaceRolesTab />, authenticatedWorkspaceStore());
 };
@@ -72,8 +83,12 @@ describe('WorkspaceRolesTab', () => {
 
       renderTab();
 
+      // The tab now paints its own surface at once and fills in as the Roles
+      // read arrives — in the app that is the route loader's doing, and in a
+      // component spec the read still settles after the first paint. The rows
+      // are therefore read once the list has them (T11, CR-AC-08).
       const list = await screen.findByRole('list', { name: 'Workspace roles' });
-      const entries = within(list).getAllByRole('listitem');
+      const entries = await within(list).findAllByRole('listitem');
       expect(entries.map((entry) => entry.textContent)).toEqual([
         expect.stringContaining('Workspace owner'),
         expect.stringContaining('Operations Lead'),
@@ -90,9 +105,9 @@ describe('WorkspaceRolesTab', () => {
       renderTab();
 
       const list = await screen.findByRole('list', { name: 'Workspace roles' });
-      const owner = within(list)
-        .getAllByRole('listitem')
-        .find((entry) => entry.textContent?.includes('Workspace owner'));
+      const owner = (await within(list).findAllByRole('listitem')).find(
+        (entry) => entry.textContent?.includes('Workspace owner'),
+      );
       expect(owner?.textContent).toContain('Protected');
     });
 
@@ -543,13 +558,14 @@ describe('WorkspaceRolesTab', () => {
 
       renderTab();
 
+      // The protected Role is what proves the read arrived, so it is awaited
+      // first: the empty message is now painted before the list has answered
+      // as well as after, and asserting it first would prove nothing (T11).
       expect(
-        await screen.findByText(
-          'This workspace has no custom workspace role yet.',
-        ),
+        await screen.findByRole('button', { name: /workspace owner/iu }),
       ).toBeInTheDocument();
       expect(
-        screen.getByRole('button', { name: /workspace owner/iu }),
+        screen.getByText('This workspace has no custom workspace role yet.'),
       ).toBeInTheDocument();
     });
   });
@@ -588,6 +604,41 @@ describe('WorkspaceRolesTab', () => {
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
       );
       await waitFor(() => expect(trigger).toHaveFocus());
+    });
+  });
+
+  // T11 / CH-08, CH-14 — `WorkspaceRolesTab.tsx:31` held both reads behind one
+  // readiness term, and `WorkspaceListSkeleton` was what it rendered.
+  // `workspaceRoute`'s loader awaits both before the destination paints, so the
+  // arm is unreachable and the route owns the wait (CR-AC-08, `sad.md` §4.8).
+  describe('the collapsed readiness arm (CR-AC-08, CR-RG-05)', () => {
+    it('imports no WorkspaceListSkeleton and holds no readiness term', () => {
+      const source = tabSource();
+
+      expect(source).not.toMatch(/WorkspaceListSkeleton/u);
+      expect(source).not.toMatch(/\bis(?:Ready|Loading|Fetching)\b/u);
+      expect(source).not.toMatch(/workspaceRoles\.loading/u);
+    });
+
+    it('introduces no `?? []` default in place of the arm it dropped', () => {
+      expect(tabSource()).not.toContain('?? []');
+    });
+
+    it('names no wait at the first paint, while both reads are still in flight', async () => {
+      // The actor holds `WORKSPACE_ROLES:WATCH`, so both reads are issued
+      // rather than skipped and the first paint is the one moment the
+      // collapsed arm was reachable from. Asserting before the await is what
+      // makes this fail while the arm is there.
+      stubWorkspaceServer({ context: namedWorkspaceContext(watchOnly) });
+
+      renderTab();
+
+      expect(
+        screen.queryByLabelText('Loading workspace roles'),
+      ).not.toBeInTheDocument();
+      expect(
+        await screen.findByRole('region', { name: 'Workspace roles' }),
+      ).toBeInTheDocument();
     });
   });
 });

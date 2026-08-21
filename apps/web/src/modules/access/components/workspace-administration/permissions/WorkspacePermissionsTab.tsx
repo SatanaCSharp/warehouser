@@ -1,4 +1,4 @@
-import { Chip, Skeleton } from '@heroui/react';
+import { Chip } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 
 import { useWorkspacePermissionLabel } from 'modules/access/hooks/projections/useWorkspacePermissionLabel';
@@ -16,20 +16,16 @@ import type { ReactElement } from 'react';
  *
  * The read owns its own `WORKSPACE_ROLES:WATCH` gate, so this tab neither
  * repeats that condition nor requests a catalogue its actor may not read.
+ *
+ * It names no wait of its own. `workspaceRoute`'s loader awaits the catalogue
+ * before the destination paints, so first-paint readiness is the route's and
+ * `RoutePendingState` is the one waiting affordance the application has
+ * (`global-loader/change.md` CH-08, `sad.md` §4.8).
  */
 export const WorkspacePermissionsTab = (): ReactElement => {
   const { t } = useTranslation('access');
   const permissionLabel = useWorkspacePermissionLabel();
-  const { isReady, permissions } = useWorkspacePermissionCatalogue();
-
-  if (!isReady) {
-    return (
-      <div aria-label={t('workspacePermissions.loading')} className="space-y-3">
-        <Skeleton className="h-16 rounded-lg" />
-        <Skeleton className="h-16 rounded-lg" />
-      </div>
-    );
-  }
+  const { permissions } = useWorkspacePermissionCatalogue();
 
   return (
     <section

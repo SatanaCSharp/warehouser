@@ -629,19 +629,24 @@ describe('WorkspaceAdministration force-mounted tab panels (CR-AC-03)', () => {
 
     renderAdministration();
 
+    // The three access panels now paint their own surface on the first render
+    // and fill in as their reads arrive (T11, CR-AC-08), so awaiting one of
+    // them no longer waits for anything. The Warehouses list is what the
+    // selected panel is read from, so it is what this case awaits.
+    const selected = await screen.findByRole('tabpanel');
+    expect(
+      await within(selected).findByRole('list', { name: 'Warehouses' }),
+    ).toBeInTheDocument();
+
     const unselected = [
-      await screen.findByRole('region', { name: 'Workspace roles' }),
+      screen.getByRole('region', { name: 'Workspace roles' }),
       screen.getByRole('region', { name: 'Workspace members' }),
       screen.getByRole('region', { name: 'Workspace permissions' }),
     ];
-    const selected = screen.getByRole('tabpanel');
 
     // Exactly one panel carries the `tabpanel` role, and it is the selected
     // one — the three force-mounted siblings are present but inert.
     expect(screen.getAllByRole('tabpanel')).toHaveLength(1);
-    expect(
-      within(selected).getByRole('list', { name: 'Warehouses' }),
-    ).toBeInTheDocument();
     expect(selected).not.toHaveAttribute('inert');
     unselected.forEach((content) => {
       expect(content.closest('[inert]')).not.toBeNull();

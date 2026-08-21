@@ -1,3 +1,7 @@
+import { readFileSync } from 'node:fs';
+import { posix } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
@@ -61,6 +65,22 @@ const ownerAuthority = [
   ...fullMemberAuthority,
   WorkspacePermissionId.WORKSPACE_OWNER_ROLE_REASSIGN,
 ];
+
+const DIRECTORY = posix.dirname(fileURLToPath(import.meta.url));
+
+/**
+ * The tab and the list it exclusively owns and exclusively mounts. CH-14 names
+ * a readiness branch in each (`WorkspaceMembersTab.tsx:27`,
+ * `WorkspaceMemberList.tsx:27`), and `WorkspaceMemberList.tsx` keeps no spec of
+ * its own — it is reached only through this tab, so its structural row is
+ * asserted from its owner's spec rather than from a directory above either
+ * (`placing-web-tests.md` §1, §2).
+ */
+const collapsedSources = (): [name: string, source: string][] =>
+  ['WorkspaceMembersTab.tsx', 'WorkspaceMemberList.tsx'].map((name) => [
+    name,
+    readFileSync(posix.join(DIRECTORY, name), 'utf8'),
+  ]);
 
 const renderTab = (): void => {
   renderWithProviders(<WorkspaceMembersTab />, authenticatedWorkspaceStore());
@@ -200,7 +220,13 @@ describe('WorkspaceMembersTab', () => {
 
       renderTab();
 
-      const entries = within(await memberList()).getAllByRole('listitem');
+      // A row's Workspace Role name comes from the Workspace Roles read, which
+      // `workspaceRoute`'s loader awaits alongside the Members; in a component
+      // spec the two settle independently, so the rows are read once one of
+      // them names its Role (T11, CR-AC-08).
+      const list = await memberList();
+      await within(list).findByText('Operations Lead');
+      const entries = within(list).getAllByRole('listitem');
       expect(entries.map((entry) => entry.textContent)).toEqual([
         expect.stringContaining('yurii@example.test'),
         expect.stringContaining('anna.kravets@example.test'),
@@ -900,6 +926,79 @@ describe('WorkspaceMembersTab', () => {
         expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument(),
       );
       await waitFor(() => expect(trigger).toHaveFocus());
+    });
+  });
+
+  // T11 / CH-08, CH-14 — both files held the Members surface behind a
+  // `WorkspaceListSkeleton`. `workspaceRoute`'s loader awaits the Members, the
+  // Users and the Roles before the destination paints, so the wait belongs to
+  // the route and these arms are unreachable (CR-AC-08, `sad.md` §4.8).
+  describe('the collapsed readiness arms (CR-AC-08, CR-RG-05)', () => {
+    it.each(collapsedSources())(
+      '%s imports no WorkspaceListSkeleton and holds no readiness term',
+      (_name, source) => {
+        expect(source).not.toMatch(/WorkspaceListSkeleton/u);
+        expect(source).not.toMatch(/\bis(?:Ready|Loading|Fetching)\b/u);
+        expect(source).not.toMatch(/workspaceMembers\.loading/u);
+      },
+    );
+
+    it.each(collapsedSources())(
+      '%s introduces no `?? []` default in place of the arm it dropped',
+      (_name, source) => {
+        // `useWorkspaceMembers` and `useWorkspaceUsers` are not among CH-09's
+        // five contract files, so `undefined` survives this change in the
+        // type. Defaulting it would state `workspaceMembers.empty` after a
+        // failed or evicted read, which is exactly what CR-RG-05 forbids.
+        expect(source).not.toContain('?? []');
+      },
+    );
+
+    it('names no wait at the first paint, while all three reads are still in flight', async () => {
+      // The actor holds both watch Permissions, so the Members, the Users and
+      // the Roles are all issued rather than skipped, and the first paint is
+      // the one moment the collapsed arms were reachable from.
+      stubWorkspaceServer({ context: namedWorkspaceContext(watchOnly) });
+
+      renderTab();
+
+      expect(
+        screen.queryByLabelText('Loading workspace members'),
+      ).not.toBeInTheDocument();
+      expect(
+        await screen.findByRole('region', { name: 'Workspace members' }),
+      ).toBeInTheDocument();
+    });
+
+    it('still says the Workspace has no workspace member yet when the read arrives empty (CR-RG-05)', async () => {
+      stubWorkspaceServer({
+        context: namedWorkspaceContext(watchOnly),
+        members: [],
+      });
+
+      renderTab();
+
+      expect(
+        await screen.findByText('This workspace has no workspace member yet.'),
+      ).toBeInTheDocument();
+    });
+
+    it('never says that to an actor who may merely not read the Members (CR-RG-05)', async () => {
+      // The `?? []` falsifier: an actor outside `WORKSPACE_MEMBERS:WATCH`
+      // fetches nothing, so the answer is unknown rather than empty, and the
+      // surface must state nothing rather than a false one.
+      stubWorkspaceServer({
+        context: namedWorkspaceContext([
+          WorkspacePermissionId.WAREHOUSES_WATCH,
+        ]),
+      });
+
+      renderTab();
+
+      await screen.findByRole('region', { name: 'Workspace members' });
+      expect(
+        screen.queryByText('This workspace has no workspace member yet.'),
+      ).not.toBeInTheDocument();
     });
   });
 });

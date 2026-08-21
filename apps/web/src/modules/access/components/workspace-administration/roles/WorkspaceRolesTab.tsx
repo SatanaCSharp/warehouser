@@ -2,8 +2,6 @@ import { useTranslation } from 'react-i18next';
 
 import { CreateWorkspaceRoleAction } from 'modules/access/components/workspace-administration/roles/CreateWorkspaceRoleAction';
 import { WorkspaceRoleDirectory } from 'modules/access/components/workspace-administration/roles/WorkspaceRoleDirectory';
-import { WorkspaceListSkeleton } from 'modules/access/components/workspace-administration/WorkspaceListSkeleton';
-import { useWorkspacePermissionCatalogue } from 'modules/access/hooks/queries/useWorkspacePermissionCatalogue';
 import { useWorkspaceRoles } from 'modules/access/hooks/queries/useWorkspaceRoles';
 
 import type { ReactElement } from 'react';
@@ -17,20 +15,17 @@ import type { ReactElement } from 'react';
  * retained for an actor who may not read them, and this tab repeats no `skip`
  * condition.
  *
- * The catalogue is read here only to time the surface: neither pane renders
- * ahead of the datasets it needs, or the editor's Permission rows would flash
- * in a heartbeat after the list. Each component that grants from the catalogue
- * — `CreateWorkspaceRoleAction`, `WorkspaceRoleEditor` — reads it where it uses
+ * It names no wait of its own, and no longer reads the Permission catalogue to
+ * time one. `workspaceRoute`'s loader awaits the Roles and the catalogue
+ * together before the destination paints, so nothing can arrive after the tab
+ * and there is no heartbeat left to hide (`global-loader/change.md` CH-08,
+ * CH-14, `sad.md` §4.8). Each component that grants from the catalogue —
+ * `CreateWorkspaceRoleAction`, `WorkspaceRoleEditor` — reads it where it uses
  * it, so nothing is threaded down on the way there.
  */
 export const WorkspaceRolesTab = (): ReactElement => {
   const { t } = useTranslation('access');
-  const { isReady: isCatalogueReady } = useWorkspacePermissionCatalogue();
-  const { isReady: areRolesReady, roles } = useWorkspaceRoles();
-
-  if (!areRolesReady || !isCatalogueReady) {
-    return <WorkspaceListSkeleton label={t('workspaceRoles.loading')} />;
-  }
+  const { roles } = useWorkspaceRoles();
 
   return (
     <section aria-label={t('workspaceRoles.heading')}>
