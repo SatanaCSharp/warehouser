@@ -1,20 +1,21 @@
 import { useState } from 'react';
 
+import {
+  useDeleteAccessRoleMutation,
+  useUpdateAccessRoleMutation,
+} from 'modules/access/api/access-api';
 import { DeleteRoleDialog } from 'modules/access/components/access-workspace/components/roles/DeleteRoleDialog';
 import { RoleEditor } from 'modules/access/components/access-workspace/components/roles/RoleEditor';
 import { RoleList } from 'modules/access/components/access-workspace/components/roles/RoleList';
-import { useAccessCapabilities } from 'modules/access/hooks/useAccessCapabilities';
-import { useDeleteRole } from 'modules/access/hooks/useDeleteRole';
-import { useSaveRole } from 'modules/access/hooks/useSaveRole';
+import { useAccessScope } from 'modules/access/hooks/projections/useAccessScope';
+import { DialogHost } from 'shared/components/DialogHost';
 
-import type {
-  AccessPermission,
-  AccessRole,
-} from 'modules/access/types/access.types';
+import type { RoleWrite } from '@warehouser/contracts/access';
+import type { AccessRole } from 'modules/access/types/access.types';
 import type { ReactElement } from 'react';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 type RoleDirectoryProps = {
-  permissions: AccessPermission[];
   roles: AccessRole[];
 };
 
@@ -26,14 +27,10 @@ const defaultRoleId = (roles: AccessRole[]): string | undefined =>
  * to this pair — nothing outside reads it — and is derived on every render, so
  * deleting the selected Role cannot leave a stale id behind.
  */
-export const RoleDirectory = ({
-  permissions,
-  roles,
-}: RoleDirectoryProps): ReactElement => {
-  const { canDeleteRoles, canUpdateRoles, isArchived, warehouseId } =
-    useAccessCapabilities();
-  const saveRole = useSaveRole(warehouseId ?? '');
-  const deleteRole = useDeleteRole(warehouseId ?? '');
+export const RoleDirectory = ({ roles }: RoleDirectoryProps): ReactElement => {
+  const { isArchived, warehouseId } = useAccessScope();
+  const [updateRole] = useUpdateAccessRoleMutation();
+  const [deleteRole] = useDeleteAccessRoleMutation();
   // An archived Warehouse's Roles start unselected: nothing here is editable,
   // so nothing opens the editor pane by default (AC-12a) — the actor still
   // reads a Role's grants by selecting it from the list.
@@ -45,6 +42,52 @@ export const RoleDirectory = ({
   const selectedRole =
     roles.find((role) => role.id === selectedRoleId) ?? roles[0];
 
+  const onDeleteRole = (role: AccessRole) => (): void =>
+    setRolePendingDeletion(role);
+
+  const onCloseDeletion = (): void => setRolePendingDeletion(null);
+
+  const onSaveRole =
+    (roleId: string) =>
+    (input: RoleWrite): Promise<MutationResult> =>
+      updateRole({ warehouseId: warehouseId ?? '', roleId, input });
+
+  const onConfirmDeletion =
+    (role: AccessRole) =>
+    (replacementRoleId: string | null): Promise<MutationResult> =>
+      deleteRole({
+        warehouseId: warehouseId ?? '',
+        roleId: role.id,
+        input: { replacementRoleId },
+      });
+
+  // Both panes read the record they were opened for, so each is resolved here
+  // rather than gated inline: `Conditional` evaluates both arms, and neither
+  // record exists until something is selected.
+  const roleEditor = !selectedRole ? null : (
+    // Keying by Role id remounts the editor on a selection change, so the
+    // form re-seeds from the newly selected Role without an effect that
+    // resets it — and a background refresh can no longer discard edits in
+    // progress on the Role that is still selected.
+    <RoleEditor
+      key={selectedRole.id}
+      role={selectedRole}
+      onDelete={onDeleteRole(selectedRole)}
+      onSave={onSaveRole(selectedRole.id)}
+    />
+  );
+
+  const deleteRoleDialog =
+    rolePendingDeletion === null ? null : (
+      <DialogHost onClose={onCloseDeletion}>
+        <DeleteRoleDialog
+          role={rolePendingDeletion}
+          roles={roles.filter((role) => role.kind === 'custom')}
+          onDelete={onConfirmDeletion(rolePendingDeletion)}
+        />
+      </DialogHost>
+    );
+
   return (
     <div className="grid items-start gap-5 lg:grid-cols-[370px_minmax(0,1fr)]">
       <RoleList
@@ -53,38 +96,9 @@ export const RoleDirectory = ({
         onSelect={setSelectedRoleId}
       />
 
-      {selectedRole ? (
-        // Keying by Role id remounts the editor on a selection change, so the
-        // form re-seeds from the newly selected Role without an effect that
-        // resets it — and a background refresh can no longer discard edits in
-        // progress on the Role that is still selected.
-        <RoleEditor
-          key={selectedRole.id}
-          canDelete={canDeleteRoles && !isArchived}
-          canUpdate={canUpdateRoles && !isArchived}
-          permissions={permissions}
-          role={selectedRole}
-          onDelete={() => setRolePendingDeletion(selectedRole)}
-          onSave={(input) => saveRole(input, selectedRole.id)}
-        />
-      ) : null}
+      {roleEditor}
 
-      {rolePendingDeletion ? (
-        <DeleteRoleDialog
-          role={rolePendingDeletion}
-          roles={roles.filter((role) => role.kind === 'custom')}
-          onClose={() => setRolePendingDeletion(null)}
-          onDelete={async (replacementRoleId) => {
-            const outcome = await deleteRole(
-              rolePendingDeletion.id,
-              replacementRoleId,
-            );
-            if (outcome.success) {
-              setRolePendingDeletion(null);
-            }
-          }}
-        />
-      ) : null}
+      {deleteRoleDialog}
     </div>
   );
 };

@@ -3,10 +3,11 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ResetPasswordDialog } from 'modules/access/components/access-workspace/components/members/ResetPasswordDialog';
+import { DialogHost } from 'shared/components/DialogHost';
 import { renderWithProviders } from 'test/render';
 
 import type { PasswordChangeInput } from '@warehouser/contracts/users';
-import type { MutationOutcome } from 'modules/access/types/access.types';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 const targetMember = {
   userId: '00000000-0000-4000-8000-000000000022',
@@ -21,15 +22,16 @@ const renderDialog = (
 } => {
   const onClose = vi.fn();
   const onSave = vi
-    .fn<(input: PasswordChangeInput) => Promise<MutationOutcome>>()
-    .mockResolvedValue({ success: true });
+    .fn<(input: PasswordChangeInput) => Promise<MutationResult>>()
+    .mockResolvedValue({ data: null });
   renderWithProviders(
-    <ResetPasswordDialog
-      member={targetMember}
-      onClose={onClose}
-      onSave={onSave}
-      {...overrides}
-    />,
+    <DialogHost onClose={onClose}>
+      <ResetPasswordDialog
+        member={targetMember}
+        onSave={onSave}
+        {...overrides}
+      />
+    </DialogHost>,
   );
   return { onClose, onSave };
 };
@@ -76,14 +78,15 @@ describe('ResetPasswordDialog', () => {
 
   it('renders the protected-Manager-target explanation reported by the server (AC-14)', async () => {
     const user = userEvent.setup();
-    const onClose = vi.fn();
     const onSave = vi
-      .fn<(input: PasswordChangeInput) => Promise<MutationOutcome>>()
+      .fn<(input: PasswordChangeInput) => Promise<MutationResult>>()
       .mockResolvedValue({
-        success: false,
-        fieldErrors: { password: 'protected' },
+        error: {
+          code: 'access.refused',
+          fieldErrors: { password: 'protected' },
+        },
       });
-    renderDialog({ onClose, onSave });
+    const { onClose } = renderDialog({ onSave });
 
     const dialog = screen.getByRole('dialog', { name: dialogName });
     await fillAndSubmit(user, dialog, 'a-strong-password');
@@ -98,14 +101,15 @@ describe('ResetPasswordDialog', () => {
 
   it('renders the permission-exceeded-target explanation reported by the server (AC-19)', async () => {
     const user = userEvent.setup();
-    const onClose = vi.fn();
     const onSave = vi
-      .fn<(input: PasswordChangeInput) => Promise<MutationOutcome>>()
+      .fn<(input: PasswordChangeInput) => Promise<MutationResult>>()
       .mockResolvedValue({
-        success: false,
-        fieldErrors: { password: 'exceeded' },
+        error: {
+          code: 'access.refused',
+          fieldErrors: { password: 'exceeded' },
+        },
       });
-    renderDialog({ onClose, onSave });
+    const { onClose } = renderDialog({ onSave });
 
     const dialog = screen.getByRole('dialog', { name: dialogName });
     await fillAndSubmit(user, dialog, 'a-strong-password');

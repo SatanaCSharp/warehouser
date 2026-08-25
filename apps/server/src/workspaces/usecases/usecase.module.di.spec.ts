@@ -16,7 +16,9 @@ import { WorkspaceProvisioningRepository } from 'shared/domain/repositories/work
 import { WorkspaceReadRepository } from 'shared/domain/repositories/workspace-read.repository';
 import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository';
 import { WorkspaceProvisioningService } from 'workspaces/domain/services/workspace-provisioning.service';
-import { CreateWarehouseCommand } from 'workspaces/usecases/commands/create-warehouse.command';
+import { RenameWorkspaceCommand } from 'workspaces/usecases/commands/rename-workspace.command';
+import { SetActiveWarehouseCommand } from 'workspaces/usecases/commands/set-active-warehouse.command';
+import { ReadWorkspaceContextQuery } from 'workspaces/usecases/queries/read-workspace-context.query';
 import { WorkspacesUsecaseModule } from 'workspaces/usecases/usecase.module';
 
 // Doubles for every `shared/domain/repositories/*` token the real
@@ -64,28 +66,38 @@ import { WorkspacesUsecaseModule } from 'workspaces/usecases/usecase.module';
 })
 class TestDomainDoubleModule {}
 
-// T42: `CreateWarehouseCommand` and `WorkspaceProvisioningService` are
-// registered as plain-class providers whose constructors depend on
-// `AccessUsecaseModule`'s exports (`ProvisionInitialAccessCommand`, and — for
-// `CreateWarehouseCommand` — a structural interface no real provider ever
-// satisfies). Static wiring checks and command unit specs that construct
-// these classes with `new` never exercise Nest's actual injector, so the
-// boot-time failure went undetected (module-wiring.spec.ts explicitly
-// whitelists interface-typed, `Object`-erased parameters as `@Optional()`
-// runtime seams, which this parameter is not). This spec compiles the real
-// `WorkspacesUsecaseModule` graph through Nest's DI container — the only way
-// to observe this failure without a database.
+// `CreateWarehouseCommand` moved to `WarehousesUsecaseModule` with the rest of
+// the Warehouse record, and its half of this check moved with it to
+// `warehouses/usecases/usecase.module.di.spec.ts` (CH-S5). What is compiled
+// here is now the `workspaces` graph alone: this module and the
+// `AccessUsecaseModule` it imports. The rule is unchanged.
+//
+// T42: `WorkspaceProvisioningService` is registered through a provider whose
+// constructor depends on `AccessUsecaseModule`'s exported
+// `ProvisionInitialAccessCommand`. Static wiring checks and command unit specs
+// that construct these classes with `new` never exercise Nest's actual
+// injector, so a boot-time resolution failure went undetected
+// (module-wiring.spec.ts explicitly whitelists interface-typed,
+// `Object`-erased parameters as `@Optional()` runtime seams). This spec
+// compiles the real `WorkspacesUsecaseModule` graph through Nest's DI
+// container — the only way to observe that failure without a database.
 describe('WorkspacesUsecaseModule Nest DI graph', () => {
-  it('constructs CreateWarehouseCommand and WorkspaceProvisioningService through Nest injection', async () => {
+  it('constructs every exported Workspace use case and WorkspaceProvisioningService through Nest injection', async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [TestDomainDoubleModule, WorkspacesUsecaseModule],
     }).compile();
 
-    expect(moduleRef.get(CreateWarehouseCommand)).toBeInstanceOf(
-      CreateWarehouseCommand,
-    );
     expect(moduleRef.get(WorkspaceProvisioningService)).toBeInstanceOf(
       WorkspaceProvisioningService,
+    );
+    expect(moduleRef.get(RenameWorkspaceCommand)).toBeInstanceOf(
+      RenameWorkspaceCommand,
+    );
+    expect(moduleRef.get(SetActiveWarehouseCommand)).toBeInstanceOf(
+      SetActiveWarehouseCommand,
+    );
+    expect(moduleRef.get(ReadWorkspaceContextQuery)).toBeInstanceOf(
+      ReadWorkspaceContextQuery,
     );
   });
 });

@@ -1,12 +1,6 @@
-import { Button } from '@heroui/react';
-import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { selectCurrentUser } from 'modules/auth/store/auth.selectors';
-import { WithdrawWarehouseAccessDialog } from 'modules/workspace/components/workspace-administration/warehouses/WithdrawWarehouseAccessDialog';
-import { useHasWorkspacePermission } from 'shared/hooks/useWorkspacePermissions';
-import { useAppSelector } from 'store/hooks';
+import { WarehousePersonRow } from 'modules/workspace/components/workspace-administration/warehouses/WarehousePersonRow';
 
 import type {
   Warehouse,
@@ -26,23 +20,14 @@ type WarehousePeopleListProps = {
  * and the Warehouses they belong to, not their Warehouse Roles (AC-33,
  * design-handoff.md §"The level boundary is part of the design").
  *
- * Each row also owns "Withdraw access" (AC-25b, AC-25c). The acting member's
- * own row is disabled with its reason exposed to assistive technology — a
- * member never withdraws their own Warehouse authority. The protected
- * Warehouse Manager's row cannot be distinguished from this narrow read (no
- * Warehouse Role reaches this pane), so that half of AC-25c is refused by the
- * server rather than guessed at here.
+ * Each row owns "Withdraw access" and the state that opens it
+ * (`WarehousePersonRow`); this list owns only the labelled collection.
  */
 export const WarehousePeopleList = ({
   people,
   warehouse,
 }: WarehousePeopleListProps): ReactElement => {
-  const { t } = useTranslation('workspace');
-  const actor = useAppSelector(selectCurrentUser);
-  const canWithdraw = useHasWorkspacePermission(
-    WorkspacePermissionId.WAREHOUSE_MEMBERSHIPS_REVOKE,
-  );
-  const [target, setTarget] = useState<WorkspaceUser | null>(null);
+  const { t } = useTranslation('warehouse');
 
   return (
     <div>
@@ -56,46 +41,14 @@ export const WarehousePeopleList = ({
         aria-label={t('warehouses.detail.peopleHeading')}
         className="mt-3 space-y-2"
       >
-        {people.map((person) => {
-          const isSelf = person.userId === actor?.id;
-          const reasonId = `withdraw-own-reason-${person.userId}`;
-
-          return (
-            <li
-              key={person.userId}
-              className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface p-3"
-            >
-              <span>{person.email}</span>
-              {canWithdraw ? (
-                <>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    aria-describedby={isSelf ? reasonId : undefined}
-                    isDisabled={isSelf}
-                    onPress={() => setTarget(person)}
-                  >
-                    {t('warehouses.withdrawAccess.trigger')}
-                  </Button>
-                  {isSelf ? (
-                    <span id={reasonId} className="sr-only">
-                      {t('warehouses.withdrawAccess.ownReason')}
-                    </span>
-                  ) : null}
-                </>
-              ) : null}
-            </li>
-          );
-        })}
+        {people.map((person) => (
+          <WarehousePersonRow
+            key={person.userId}
+            person={person}
+            warehouse={warehouse}
+          />
+        ))}
       </ul>
-
-      {target ? (
-        <WithdrawWarehouseAccessDialog
-          person={target}
-          warehouse={warehouse}
-          onClose={() => setTarget(null)}
-        />
-      ) : null}
     </div>
   );
 };

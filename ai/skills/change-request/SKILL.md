@@ -9,7 +9,8 @@ description: >
   "replace the current behavior", "/change-request {slug}", and requests that deliberately amend,
   replace, or remove an existing rule. Creates docs/change-requests/{slug}/change.md, spec.md,
   .size, and .route, then hands the universal work item to the normal clarify/design/tasks/
-  implement/review/ship pipeline. Do not use for a new capability (specify) or a regression (fix).
+  implement/code-review-front-end/code-review-back-end/review/ship pipeline. Do not use for a new
+  capability (specify) or a regression (fix).
 ---
 
 # Change request
@@ -101,9 +102,14 @@ in this request. Do not hide feature creation inside a change request.
 - Tasks use `CR-AC-*` in `acs` and add top-level `kind: "change-request"` plus
   `source_refs: [...]` where the task changes previously documented behavior.
 - Implementation commits add `SDD-Change: <slug>` and `SDD-AC: CR-AC-NN` trailers.
-- Review compares `change.md`, `spec.md`, affected sources at `baseline_revision`, implementation,
-  and tests. It checks changed behavior, removed behavior, and explicitly unchanged regression
-  boundaries.
+- The app-scoped conformance reviews run first for whichever apps the change touched —
+  `/code-review-front-end change-request:<slug>` for `apps/web`, `/code-review-back-end
+change-request:<slug>` for `apps/server`. They judge the change against `docs/system` and count a
+  rule violation only where the change wrote or moved the line; a violation already present at
+  `baseline_revision` in an untouched file is an observation, not a blocker.
+- Review then compares `change.md`, `spec.md`, affected sources at `baseline_revision`,
+  implementation, and tests. It checks changed behavior, removed behavior, and explicitly unchanged
+  regression boundaries.
 - Ship reconciles canonical feature/system specifications only after PASS, with explicit reviewed
   edits and backlinks to this change request. It does not create or move a feature roadmap item.
 

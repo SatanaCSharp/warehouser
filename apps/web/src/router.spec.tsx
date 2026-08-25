@@ -1,11 +1,13 @@
 import { RouterProvider } from '@tanstack/react-router';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
+import remove from 'lodash/remove';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createAppRouter } from 'router';
+import { workspaceContextApi } from 'shared/api/workspace/workspace-context-api';
 import { ROUTES } from 'shared/constants/routes';
 import { makeStore } from 'store';
 
@@ -39,6 +41,25 @@ const readableAccess = {
   archivedAt: null,
 } as const;
 
+// T6 / CH-03 — the access surface is a child of the Warehouse layout, so every
+// case that opens it names the Warehouse it is opening in the address.
+const accessAddress = (
+  warehouseId: string = readableAccess.warehouseId,
+): string => `/warehouses/${warehouseId}/access`;
+
+// T6 / CR-AC-07 — reaching a Warehouse address at all requires a membership in
+// the addressed Warehouse, which the actor context is the sole source of.
+const membershipsIn = (
+  ...warehouseIds: readonly string[]
+): Record<string, unknown>[] =>
+  warehouseIds.map((warehouseId, index) => ({
+    warehouseId,
+    name: `Warehouse ${index + 1}`,
+    archivedAt: null,
+    roleId: readableAccess.roleId,
+    roleKind: 'custom',
+  }));
+
 // The authenticated shell reads the Workspace actor context to decide whether
 // the Workspace navigation entry exists at all (AC-30). That read is not one
 // of the datasets the access cases below are about, so answer it out of band
@@ -47,6 +68,7 @@ const withWorkspaceContext = (
   requestScript: ReturnType<typeof vi.fn>,
   workspacePermissionIds: readonly WorkspacePermissionId[] = [],
   effectiveWarehouseId: string | null = null,
+  warehouses: readonly Record<string, unknown>[] = [],
 ): ReturnType<typeof vi.fn> =>
   vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input instanceof Request ? input.url : input);
@@ -58,12 +80,106 @@ const withWorkspaceContext = (
             name: 'Acme Logistics',
           },
           workspacePermissionIds,
-          warehouses: [],
+          warehouses,
           effectiveWarehouseId,
         }),
       );
     }
     return requestScript(input, init) as Promise<Response>;
+  });
+
+// CR-AC-10 — a registrant's own Workspace, as the server describes it once the
+// bootstrap has run: they are its Workspace Owner, so their context carries all
+// four administration Permissions, and their sole live membership is the first
+// Warehouse registration created, which the server's derivation therefore names
+// as the effective one (`change.md` §2.1).
+const registrant = {
+  userId: '00000000-0000-4000-8000-000000000012',
+  workspaceId: '00000000-0000-4000-8000-000000000015',
+  warehouseId: '00000000-0000-4000-8000-000000000013',
+  roleId: '00000000-0000-4000-8000-000000000014',
+  warehouseName: 'Main Warehouse',
+} as const;
+
+const registrantWorkspaceContext = (): Record<string, unknown> => ({
+  workspace: { id: registrant.workspaceId, name: null },
+  workspacePermissionIds: [
+    WorkspacePermissionId.WAREHOUSES_WATCH,
+    WorkspacePermissionId.WORKSPACE_ROLES_WATCH,
+    WorkspacePermissionId.WORKSPACE_MEMBERS_WATCH,
+    WorkspacePermissionId.WORKSPACE_RENAME,
+  ],
+  warehouses: [
+    {
+      warehouseId: registrant.warehouseId,
+      name: registrant.warehouseName,
+      archivedAt: null,
+      roleId: registrant.roleId,
+      roleKind: 'warehouse_manager',
+    },
+  ],
+  effectiveWarehouseId: registrant.warehouseId,
+});
+
+/**
+ * The registration journey answered by URL rather than by an ordered script:
+ * what CR-AC-10 asserts is where the landing resolver puts the registrant and
+ * what the switcher then offers them, and both read the Workspace context —
+ * a read a positional script silently mis-answers (which is exactly how this
+ * case previously passed over a route error).
+ */
+const stubRegistrantServer = (): ReturnType<typeof vi.fn> =>
+  vi.fn((input: RequestInfo | URL) => {
+    const url = String(input instanceof Request ? input.url : input);
+    if (url.endsWith('/api/v1/auth/sign-up')) {
+      // AC-01 — registration answers with the whole bootstrap outcome, not
+      // just the identity and its Warehouse access.
+      return Promise.resolve(
+        Response.json({
+          user: { id: registrant.userId },
+          workspace: { id: registrant.workspaceId, name: null },
+          workspacePermissionIds: ['WORKSPACE:RENAME', 'WAREHOUSES:CREATE'],
+          access: {
+            warehouseId: registrant.warehouseId,
+            roleId: registrant.roleId,
+            roleKind: 'warehouse_manager',
+            permissionIds: ['ROLES:WATCH'],
+            archivedAt: null,
+          },
+          effectiveWarehouseId: registrant.warehouseId,
+        }),
+      );
+    }
+    if (url.endsWith('/api/v1/auth/session')) {
+      return Promise.resolve(new Response(null, { status: 204 }));
+    }
+    if (url.includes('/api/v1/workspace/context')) {
+      return Promise.resolve(Response.json(registrantWorkspaceContext()));
+    }
+    if (url.endsWith('/api/v1/workspace/warehouses')) {
+      return Promise.resolve(
+        Response.json([
+          {
+            id: registrant.warehouseId,
+            name: registrant.warehouseName,
+            archivedAt: null,
+          },
+        ]),
+      );
+    }
+    if (url.endsWith('/api/v1/workspace/users')) {
+      return Promise.resolve(
+        Response.json([
+          {
+            userId: registrant.userId,
+            email: 'new@example.test',
+            isWorkspaceMember: true,
+            warehouses: [{ warehouseId: registrant.warehouseId }],
+          },
+        ]),
+      );
+    }
+    throw new Error(`Unexpected request: ${url}`);
   });
 
 const renderRoute = (initialEntry: string): RenderedRoute => {
@@ -120,7 +236,7 @@ describe('router', () => {
     );
   });
 
-  it('loads only role-authorized access datasets at /access', async () => {
+  it('loads only role-authorized access datasets at the Warehouse access address', async () => {
     // Routed by path rather than by call order: which datasets are requested is
     // the contract here, not the order the workspace's tabs happen to ask for
     // them in.
@@ -137,8 +253,8 @@ describe('router', () => {
             name: 'Acme Logistics',
           },
           workspacePermissionIds: [],
-          warehouses: [],
-          effectiveWarehouseId: '00000000-0000-4000-8000-000000000002',
+          warehouses: membershipsIn(readableAccess.warehouseId),
+          effectiveWarehouseId: null,
         },
       ],
       [
@@ -189,7 +305,7 @@ describe('router', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
 
-    renderRoute('/access');
+    renderRoute(accessAddress());
 
     expect(
       await screen.findByRole('heading', { name: 'Access' }),
@@ -233,8 +349,8 @@ describe('router', () => {
               name: 'Acme Logistics',
             },
             workspacePermissionIds: [],
-            warehouses: [],
-            effectiveWarehouseId: readableAccess.warehouseId,
+            warehouses: membershipsIn(readableAccess.warehouseId),
+            effectiveWarehouseId: null,
           }),
         );
       }
@@ -287,7 +403,7 @@ describe('router', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
 
-    renderRoute('/access');
+    renderRoute(accessAddress());
     await user.click(
       await screen.findByRole('button', { name: 'Create role' }),
     );
@@ -326,17 +442,29 @@ describe('router', () => {
       withWorkspaceContext(
         fetchMock,
         [],
-        '00000000-0000-4000-8000-000000000002',
+        null,
+        membershipsIn(readableAccess.warehouseId),
       ),
     );
 
-    renderRoute('/access');
+    renderRoute(accessAddress());
 
     expect(
       await screen.findByRole('heading', { name: 'Access unavailable' }),
     ).toBeInTheDocument();
     expect(screen.queryByRole('tab')).not.toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    // T8 — entering a Warehouse also records it as the stored selection
+    // (CR-AC-09), so a bare call count no longer isolates what this case is
+    // about. Name the protected datasets instead: none of them may be
+    // requested without the Permission that opens them.
+    const requestedUrls = fetchMock.mock.calls.map(([input]) =>
+      String(input instanceof Request ? input.url : input),
+    );
+    expect(
+      requestedUrls.filter((url) =>
+        /\/access\/(?:roles|permissions|members)$/u.test(url),
+      ),
+    ).toEqual([]);
     expect(
       screen.queryByRole('link', { name: 'Access' }),
     ).not.toBeInTheDocument();
@@ -366,8 +494,8 @@ describe('router', () => {
               name: 'Acme Logistics',
             },
             workspacePermissionIds: [],
-            warehouses: [],
-            effectiveWarehouseId: readableAccess.warehouseId,
+            warehouses: membershipsIn(readableAccess.warehouseId),
+            effectiveWarehouseId: null,
           }),
         );
       }
@@ -409,7 +537,7 @@ describe('router', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
 
-    renderRoute('/access');
+    renderRoute(accessAddress());
 
     expect(
       await screen.findByRole('heading', { name: 'Access' }),
@@ -428,34 +556,8 @@ describe('router', () => {
     expect(screen.queryByText(memberId)).not.toBeInTheDocument();
   });
 
-  it('creates an account, authenticates the linked user, and enters home', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi
-        .fn()
-        .mockResolvedValueOnce(new Response(null, { status: 204 }))
-        .mockResolvedValueOnce(
-          // AC-01 — registration answers with the whole bootstrap outcome,
-          // not just the identity and its Warehouse access.
-          Response.json({
-            user: { id: '00000000-0000-4000-8000-000000000012' },
-            workspace: {
-              id: '00000000-0000-4000-8000-000000000015',
-              name: null,
-            },
-            workspacePermissionIds: ['WORKSPACE:RENAME', 'WAREHOUSES:CREATE'],
-            access: {
-              warehouseId: '00000000-0000-4000-8000-000000000013',
-              roleId: '00000000-0000-4000-8000-000000000014',
-              roleKind: 'warehouse_manager',
-              permissionIds: ['ROLES:WATCH'],
-              archivedAt: null,
-            },
-            effectiveWarehouseId: '00000000-0000-4000-8000-000000000013',
-          }),
-        )
-        .mockResolvedValueOnce(Response.json(readableAccess)),
-    );
+  it('creates an account, authenticates the linked user, and enters their new Workspace (CR-AC-10)', async () => {
+    vi.stubGlobal('fetch', stubRegistrantServer());
     const user = userEvent.setup();
     const { router, store } = renderRoute('/sign-up');
 
@@ -464,11 +566,39 @@ describe('router', () => {
     await user.type(screen.getByLabelText('Warehouse name'), 'Main Warehouse');
     await user.click(screen.getByRole('button', { name: 'Create account' }));
 
-    await waitFor(() => expect(router.state.location.pathname).toBe('/'));
+    // CR-AC-10 — the registrant's Workspace Owner Role holds all four
+    // administration Permissions, so landing resolves them into the Workspace
+    // view by CR-AC-08 rule (1).
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe(ROUTES.WORKSPACE),
+    );
     expect(store.getState().auth).toEqual({
       status: 'authenticated',
-      user: { id: '00000000-0000-4000-8000-000000000012' },
+      user: { id: registrant.userId },
     });
+
+    // CR-AC-10's second clause — the switcher offers their first Warehouse
+    // beneath the Workspace row. `RootLayout` renders the switcher twice, once
+    // for each viewport, and jsdom applies no media query, so both triggers are
+    // present; either opens the same control.
+    await user.click(
+      (await screen.findAllByRole('button', { name: /context switcher/iu }))[0],
+    );
+    const listbox = await screen.findByRole('listbox');
+    const workspaceRow = within(
+      within(listbox).getByRole('group', { name: 'Workspace' }),
+    ).getByRole('option');
+    const warehouseRows = within(
+      within(listbox).getByRole('group', { name: 'Warehouses' }),
+    ).getAllByRole('option');
+
+    expect(warehouseRows.map((row) => row.textContent)).toEqual([
+      expect.stringContaining('Main Warehouse'),
+    ]);
+    expect(within(listbox).getAllByRole('option')).toEqual([
+      workspaceRow,
+      ...warehouseRows,
+    ]);
   });
 
   it('keeps duplicate sign-up anonymous and offers sign-in', async () => {
@@ -516,26 +646,30 @@ describe('router', () => {
     const { router } = renderRoute('/');
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/login'));
-    expect(
-      await screen.findByText('Your session ended. Sign in again to continue.'),
-    ).toBeVisible();
+    // The guard cannot tell a first-time visitor from an expired session — both
+    // arrive here anonymous — so the notice states what to do rather than
+    // asserting a session that may never have existed.
+    expect(await screen.findByText('Sign in to continue.')).toBeVisible();
     expect(
       screen.getByRole('heading', { name: 'Sign in to your account' }),
     ).toHaveFocus();
   });
 
   it('updates RTK auth state and enters the protected route after sign-in without a success toast', async () => {
+    // T7 — the actor holds no administration authority and the derivation
+    // names no Warehouse, so landing reaches CR-AC-08 rule (3).
     vi.stubGlobal(
       'fetch',
-      vi
-        .fn()
-        .mockResolvedValueOnce(new Response(null, { status: 204 }))
-        .mockResolvedValueOnce(
-          Response.json({
-            user: { id: '00000000-0000-4000-8000-000000000001' },
-          }),
-        )
-        .mockResolvedValueOnce(Response.json(readableAccess)),
+      withWorkspaceContext(
+        vi
+          .fn()
+          .mockResolvedValueOnce(new Response(null, { status: 204 }))
+          .mockResolvedValueOnce(
+            Response.json({
+              user: { id: '00000000-0000-4000-8000-000000000001' },
+            }),
+          ),
+      ),
     );
     const user = userEvent.setup();
     const { router, store } = renderRoute('/login');
@@ -549,8 +683,10 @@ describe('router', () => {
       status: 'authenticated',
       user: { id: '00000000-0000-4000-8000-000000000001' },
     });
+    // CR-AC-08 rule (3) / CR-AC-18 — the actor remains at the root, which
+    // renders the no-context state.
     expect(
-      await screen.findByText('Design System Preview'),
+      await screen.findByText('Nothing is entered yet'),
     ).toBeInTheDocument();
     expect(toast.success).not.toHaveBeenCalled();
   });
@@ -593,6 +729,9 @@ describe('router', () => {
 
   it('revokes the current session before feedback and Visitor navigation', async () => {
     let resolveSignOut: ((response: Response) => void) | undefined;
+    // T6 / CR-AC-06 — `/` is outside every Warehouse view, so no access
+    // projection is read there any more: the script is sign-in, session,
+    // sign-out.
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(new Response(null, { status: 204 }))
@@ -601,17 +740,13 @@ describe('router', () => {
           user: { id: '00000000-0000-4000-8000-000000000001' },
         }),
       )
-      .mockResolvedValueOnce(Response.json(readableAccess))
       .mockImplementationOnce(
         () =>
           new Promise<Response>((resolve) => {
             resolveSignOut = resolve;
           }),
       );
-    vi.stubGlobal(
-      'fetch',
-      withWorkspaceContext(fetchMock, [], readableAccess.warehouseId),
-    );
+    vi.stubGlobal('fetch', withWorkspaceContext(fetchMock));
     const user = userEvent.setup();
     const { router, store } = renderRoute('/login');
 
@@ -633,23 +768,19 @@ describe('router', () => {
 
   it('waits for restoration and admits a valid session to the protected route', async () => {
     let resolveSession: ((response: Response) => void) | undefined;
-    const fetchMock = vi
-      .fn()
-      .mockImplementationOnce(
-        () =>
-          new Promise<Response>((resolve) => {
-            resolveSession = resolve;
-          }),
-      )
-      .mockResolvedValueOnce(Response.json(readableAccess));
-    vi.stubGlobal(
-      'fetch',
-      withWorkspaceContext(fetchMock, [], readableAccess.warehouseId),
+    const fetchMock = vi.fn().mockImplementationOnce(
+      () =>
+        new Promise<Response>((resolve) => {
+          resolveSession = resolve;
+        }),
     );
+    vi.stubGlobal('fetch', withWorkspaceContext(fetchMock));
     const { router, store } = renderRoute('/');
 
     expect(store.getState().auth.status).toBe('unknown');
-    expect(screen.queryByText('Design System Preview')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Nothing is entered yet'),
+    ).not.toBeInTheDocument();
 
     resolveSession?.(
       Response.json({
@@ -657,12 +788,19 @@ describe('router', () => {
       }),
     );
 
+    // T4 — `/` renders the no-context state block rather than a dashboard
+    // (CH-03); the landing rules that would resolve an actor into a
+    // Warehouse or Workspace view are T7's.
     expect(
-      await screen.findByText('Design System Preview'),
+      await screen.findByText('Nothing is entered yet'),
     ).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/');
     expect(store.getState().auth.status).toBe('authenticated');
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    // T6 / CR-AC-06 — the session restore is the ONLY request the root makes:
+    // outside a Warehouse view there is no addressed Warehouse, so no access
+    // projection is read. (The actor-context read is answered out of band by
+    // `withWorkspaceContext` and never reaches this script.)
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
   });
 
   // AC-30: a User with no Workspace capability in their own Workspace —
@@ -725,11 +863,20 @@ describe('router', () => {
 
     renderRoute(ROUTES.HOME);
 
-    await screen.findByRole('link', { name: 'Dashboard' });
+    // T10 / CR-AC-18 — this actor reaches CR-AC-08 rule (3) and stays at the
+    // root, where the sidebar renders no navigation list at all. AC-30's
+    // guarantee therefore holds a fortiori: there is no Workspace entry to
+    // present, and the destination itself is never rendered.
+    await screen.findByText('Nothing is entered yet');
+    expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
     expect(
       screen.queryByRole('link', { name: 'Workspace' }),
     ).not.toBeInTheDocument();
-    expect(screen.queryByText('Acme Logistics')).not.toBeInTheDocument();
+    // T9 / CR-AC-03 — the Workspace NAME is no longer evidence of anything
+    // here: the grouped switcher deliberately shows this actor an inert
+    // Workspace row labelled with it. What AC-30 forbids is reaching the
+    // destination, so assert on something the destination itself owns.
+    expect(screen.queryByRole('tab', { name: 'Warehouses' })).toBeNull();
   });
 
   it('admits a direct navigation to the Workspace route when the actor holds any Workspace watch capability', async () => {
@@ -743,7 +890,12 @@ describe('router', () => {
     await waitFor(() =>
       expect(router.state.location.pathname).toBe(ROUTES.WORKSPACE),
     );
-    expect(await screen.findByText('Acme Logistics')).toBeInTheDocument();
+    // T9 / CR-AC-01 — the switcher trigger now names the entered context too,
+    // so the Workspace name appears in several places. Assert on an element the
+    // destination itself owns instead.
+    expect(
+      await screen.findByRole('tab', { name: 'Warehouses' }),
+    ).toBeInTheDocument();
   });
 
   // AC-29 + AC-30: `WORKSPACE:RENAME` is a Workspace capability of this same
@@ -778,5 +930,324 @@ describe('router', () => {
     expect(
       await screen.findByRole('link', { name: 'Workspace' }),
     ).toHaveAttribute('href', ROUTES.WORKSPACE);
+  });
+});
+
+// T4 / ADR 0001 — the Warehouse layout route. `sad.md` §11 requires three
+// TanStack Router v1 behaviors to be pinned by tests before anything is
+// built on them: a parent `beforeLoad`'s return value reaching the match
+// context, `beforeLoad` not re-running while navigating between the
+// layout's own children, and the `$` splat ranking below the layout's
+// explicit children. Each is called out below at the test that pins it.
+//
+// Kept as one suite for the same reason `describe('router')` above is: each
+// case must exercise the real production route tree through `renderRoute`, and
+// the shared Warehouse fixtures below are what make the entry verdicts
+// comparable across them.
+// eslint-disable-next-line max-lines-per-function
+describe('Warehouse layout route (T4)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+  });
+
+  const MEMBER_WAREHOUSE_ID = '00000000-0000-4000-8000-000000000040';
+  const ARCHIVED_WAREHOUSE_ID = '00000000-0000-4000-8000-000000000041';
+  const NON_MEMBER_WAREHOUSE_ID = '00000000-0000-4000-8000-000000000099';
+
+  type FixtureWarehouse = {
+    warehouseId: string;
+    name: string;
+    archivedAt: string | null;
+  };
+
+  const stubWarehouseFetch = (
+    warehouses: readonly FixtureWarehouse[],
+  ): ReturnType<typeof vi.fn> =>
+    vi.fn((input: RequestInfo | URL) => {
+      const url =
+        input instanceof Request
+          ? input.url
+          : input instanceof URL
+            ? input.href
+            : input;
+      if (url.endsWith('/api/v1/auth/session')) {
+        return Promise.resolve(
+          Response.json({
+            user: { id: '00000000-0000-4000-8000-000000000001' },
+          }),
+        );
+      }
+      if (url.includes('/api/v1/workspace/context')) {
+        return Promise.resolve(
+          Response.json({
+            workspace: {
+              id: '00000000-0000-4000-8000-000000000020',
+              name: 'Acme Logistics',
+            },
+            workspacePermissionIds: [],
+            warehouses: warehouses.map((warehouse) => ({
+              ...warehouse,
+              roleId: '00000000-0000-4000-8000-000000000030',
+              roleKind: 'custom',
+            })),
+            effectiveWarehouseId: null,
+          }),
+        );
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+  // Pins TanStack behavior #1: a parent `beforeLoad`'s return value reaches
+  // the match context. `WarehouseLayout` renders `<Outlet />` only when it
+  // reads `status: 'entered'` from that context, so the dashboard rendering
+  // at all is proof the verdict `warehouseRoute.beforeLoad` returned reached
+  // its component. `DesignSystemExample` moved unchanged from
+  // `modules/home/components/` renders here.
+  it("publishes the parent beforeLoad's verdict into the match context and enters for a live membership", async () => {
+    vi.stubGlobal(
+      'fetch',
+      stubWarehouseFetch([
+        { warehouseId: MEMBER_WAREHOUSE_ID, name: 'Main', archivedAt: null },
+      ]),
+    );
+
+    const { router } = renderRoute(`/warehouses/${MEMBER_WAREHOUSE_ID}`);
+
+    expect(
+      await screen.findByText('Design System Preview'),
+    ).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe(
+      `/warehouses/${MEMBER_WAREHOUSE_ID}`,
+    );
+  });
+
+  // CR-AC-05 / CR-AC-07 — the address determines the Warehouse, so moving
+  // from an entered Warehouse to one the actor holds no membership in must
+  // re-resolve entry rather than carry the first verdict over. This is the
+  // security-critical companion to the `cause: 'stay'` preservation below:
+  // changing `:warehouseId` is a different match (`cause: 'enter'`), so the
+  // verdict is recomputed; only navigation *within* one Warehouse preserves
+  // it. Without this test, preserving the verdict on 'stay' could silently
+  // admit an actor to W2 on W1's membership.
+  it('re-resolves entry when :warehouseId changes, refusing a non-member moved to from an entered Warehouse', async () => {
+    vi.stubGlobal(
+      'fetch',
+      stubWarehouseFetch([
+        { warehouseId: MEMBER_WAREHOUSE_ID, name: 'Main', archivedAt: null },
+      ]),
+    );
+
+    const { router } = renderRoute(`/warehouses/${MEMBER_WAREHOUSE_ID}`);
+    expect(
+      await screen.findByText('Design System Preview'),
+    ).toBeInTheDocument();
+
+    await act(async () => {
+      await router.navigate({
+        to: ROUTES.WAREHOUSE,
+        params: { warehouseId: NON_MEMBER_WAREHOUSE_ID },
+      });
+    });
+
+    expect(
+      await screen.findByText("This address isn't available to you"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Design System Preview')).not.toBeInTheDocument();
+    expect(router.state.location.pathname).toBe(
+      `/warehouses/${NON_MEMBER_WAREHOUSE_ID}`,
+    );
+  });
+
+  // CR-AC-07 — refused at the requested address: no redirect, no navigation
+  // list, and no Warehouse content around the refusal.
+  it('refuses a non-member in place at the requested address, rendering no Warehouse content', async () => {
+    vi.stubGlobal('fetch', stubWarehouseFetch([]));
+
+    const { router } = renderRoute(`/warehouses/${NON_MEMBER_WAREHOUSE_ID}`);
+
+    expect(
+      await screen.findByText("This address isn't available to you"),
+    ).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe(
+      `/warehouses/${NON_MEMBER_WAREHOUSE_ID}`,
+    );
+    // The Warehouse-view sidebar (CR-AC-11) is out of T4's scope; the
+    // shell's own `Sidebar` still renders its unconditional Dashboard link
+    // to `/` regardless of context. What T4 owns is that no Warehouse
+    // content renders around the refusal.
+    expect(screen.queryByText('Design System Preview')).not.toBeInTheDocument();
+  });
+
+  // Pins TanStack behavior #3: the `$` splat ranks below the layout's
+  // explicit children, so `/warehouses/:id/anything` still matches the
+  // layout route (and its splat child) rather than the root splat — the
+  // structural reason CR-AC-07 precedes CR-AC-16 (ADR 0001). Refused here
+  // too, at the deeper address, never reaching not-found handling.
+  it('refuses an address beneath a non-member warehouse identically, never reaching unmatched-address handling', async () => {
+    vi.stubGlobal('fetch', stubWarehouseFetch([]));
+
+    const { router } = renderRoute(
+      `/warehouses/${NON_MEMBER_WAREHOUSE_ID}/anything`,
+    );
+
+    expect(
+      await screen.findByText("This address isn't available to you"),
+    ).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe(
+      `/warehouses/${NON_MEMBER_WAREHOUSE_ID}/anything`,
+    );
+  });
+
+  // CR-AC-17 — an archived membership is refused with the explicit archived
+  // explanation, distinct from the non-disclosing refusal above.
+  it('refuses an archived membership with the explicit archived explanation', async () => {
+    vi.stubGlobal(
+      'fetch',
+      stubWarehouseFetch([
+        {
+          warehouseId: ARCHIVED_WAREHOUSE_ID,
+          name: 'Retired',
+          archivedAt: '2026-01-01T00:00:00.000Z',
+        },
+      ]),
+    );
+
+    const { router } = renderRoute(`/warehouses/${ARCHIVED_WAREHOUSE_ID}`);
+
+    expect(
+      await screen.findByText('This warehouse is archived'),
+    ).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe(
+      `/warehouses/${ARCHIVED_WAREHOUSE_ID}`,
+    );
+  });
+
+  // Same address the splat matched for a non-member above, but the splat
+  // does reach an entered member — proving the redirect is scoped to that
+  // verdict alone (CR-AC-16's second paragraph: "only a member can ever
+  // reach" it) and confirming again that the splat matched rather than the
+  // root's default-not-found handling.
+  it('redirects an entered member off an unmatched address beneath their own warehouse', async () => {
+    vi.stubGlobal(
+      'fetch',
+      stubWarehouseFetch([
+        { warehouseId: MEMBER_WAREHOUSE_ID, name: 'Main', archivedAt: null },
+      ]),
+    );
+
+    const { router } = renderRoute(
+      `/warehouses/${MEMBER_WAREHOUSE_ID}/anything`,
+    );
+
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe(ROUTES.HOME),
+    );
+  });
+
+  // Pins TanStack behavior #2: `beforeLoad` does not re-run while
+  // navigating between the layout's own children. Mutating the cached
+  // Workspace context directly (no network fetch) simulates the membership
+  // vanishing without triggering `resolveWarehouseEntry` again; navigating
+  // to the splat child (still under the same layout match) must not read
+  // that mutation, or the actor would be evicted from a Warehouse they are
+  // working in — the load-bearing consequence CR-AC-20 and ADR 0001 record.
+  // CR-AC-17 / CR-RG-02 — leaving a Warehouse ends the entry the verdict
+  // records. Returning to that same address is a fresh entry and must be
+  // resolved fresh: an archived Warehouse is refused "whether from a
+  // bookmark, a restored session, or an address that was live when the tab
+  // was opened". Preserving the verdict for the life of the session would
+  // admit the actor to a Warehouse archived while they were away.
+  it('re-resolves entry when the same Warehouse is re-entered after leaving it (CR-AC-17)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      stubWarehouseFetch([
+        { warehouseId: MEMBER_WAREHOUSE_ID, name: 'Main', archivedAt: null },
+      ]),
+    );
+
+    const { router, store } = renderRoute(`/warehouses/${MEMBER_WAREHOUSE_ID}`);
+    expect(
+      await screen.findByText('Design System Preview'),
+    ).toBeInTheDocument();
+
+    await act(async () => {
+      await router.navigate({ to: ROUTES.HOME });
+    });
+
+    // The Warehouse is archived while the actor is away from it.
+    store.dispatch(
+      workspaceContextApi.util.updateQueryData(
+        'getWorkspaceContext',
+        undefined,
+        (draft) => {
+          const archived = draft.warehouses.find(
+            (warehouse) => warehouse.warehouseId === MEMBER_WAREHOUSE_ID,
+          );
+          if (archived) {
+            archived.archivedAt = '2026-08-13T00:00:00.000Z';
+          }
+        },
+      ),
+    );
+
+    await act(async () => {
+      await router.navigate({
+        to: ROUTES.WAREHOUSE,
+        params: { warehouseId: MEMBER_WAREHOUSE_ID },
+      });
+    });
+
+    expect(
+      await screen.findByText('This warehouse is archived'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Design System Preview')).not.toBeInTheDocument();
+  });
+
+  it('does not re-run the layout beforeLoad while navigating between its own children (CR-AC-20)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      stubWarehouseFetch([
+        { warehouseId: MEMBER_WAREHOUSE_ID, name: 'Main', archivedAt: null },
+      ]),
+    );
+
+    const { router, store } = renderRoute(`/warehouses/${MEMBER_WAREHOUSE_ID}`);
+    expect(
+      await screen.findByText('Design System Preview'),
+    ).toBeInTheDocument();
+
+    store.dispatch(
+      workspaceContextApi.util.updateQueryData(
+        'getWorkspaceContext',
+        undefined,
+        (draft) => {
+          remove(
+            draft.warehouses,
+            (warehouse) => warehouse.warehouseId === MEMBER_WAREHOUSE_ID,
+          );
+        },
+      ),
+    );
+
+    await router.navigate({
+      to: '/warehouses/$warehouseId/$',
+      params: { warehouseId: MEMBER_WAREHOUSE_ID, _splat: 'anything' },
+    });
+
+    // If the layout's `beforeLoad` had re-run against the mutated cache, it
+    // would have found no membership and refused — but a refusal renders in
+    // place (CR-AC-07) rather than reaching the splat's redirect, so the
+    // actor would still be at the `/anything` address instead of `/`. The
+    // splat's own `beforeLoad` fired and redirected home unconditionally
+    // (proving the "only a member can ever reach it" branch above), which
+    // is only reachable if the layout's original `entered` verdict was
+    // still in effect — proof the layout's own `beforeLoad` did not re-run.
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe(ROUTES.HOME),
+    );
+    expect(
+      screen.queryByText("This address isn't available to you"),
+    ).not.toBeInTheDocument();
   });
 });

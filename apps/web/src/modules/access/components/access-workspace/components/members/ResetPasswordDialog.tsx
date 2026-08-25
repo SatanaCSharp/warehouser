@@ -1,69 +1,43 @@
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import { useFormFieldErrors } from 'modules/access/hooks/useFormFieldErrors';
 import { parsePasswordChangeForm } from 'modules/access/schemas/password-change-form';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { PasswordInput } from 'shared/components/PasswordInput';
 
 import type { PasswordChangeInput } from '@warehouser/contracts/users';
-import type {
-  AccessMember,
-  MutationOutcome,
-} from 'modules/access/types/access.types';
+import type { AccessMember } from 'modules/access/types/access.types';
 import type { ReactElement } from 'react';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import type { FormParseResult } from 'shared/utils/form-parse';
 
 type ResetPasswordDialogProps = {
   member: Pick<AccessMember, 'email' | 'userId'>;
-  onClose: () => void;
-  onSave: (input: PasswordChangeInput) => Promise<MutationOutcome>;
+  onSave: (input: PasswordChangeInput) => Promise<MutationResult>;
 };
 
 type ResetPasswordForm = { password: string };
 
 export const ResetPasswordDialog = ({
   member,
-  onClose,
   onSave,
 }: ResetPasswordDialogProps): ReactElement => {
   const { t } = useTranslation('access');
+  const form = useForm<ResetPasswordForm>({ defaultValues: { password: '' } });
   const {
     formState: { errors, isSubmitting },
-    handleSubmit,
     register,
-    setError,
-  } = useForm<ResetPasswordForm>({ defaultValues: { password: '' } });
-  const { setFieldError } = useFormFieldErrors<ResetPasswordForm>(setError);
+  } = form;
 
   const translateValidation = (code: string): string =>
     t(`administration.resetPassword.validation.${code}`);
 
-  const submit = async ({ password }: ResetPasswordForm): Promise<void> => {
-    const parsed = parsePasswordChangeForm(password);
-
-    if (!parsed.success) {
-      setFieldError('password', parsed.error.password, translateValidation);
-      return;
-    }
-
-    const result = await onSave(parsed.data);
-
-    if (result.success) {
-      onClose();
-      return;
-    }
-
-    if (
-      setFieldError(
-        'password',
-        result.fieldErrors?.password,
-        translateValidation,
-      )
-    ) {
-      return;
-    }
-    onClose();
-  };
+  const parse = ({
+    password,
+  }: ResetPasswordForm): FormParseResult<
+    ResetPasswordForm,
+    PasswordChangeInput
+  > => parsePasswordChangeForm(password);
 
   return (
     <FormModalDialog
@@ -72,10 +46,10 @@ export const ResetPasswordDialog = ({
       submitLabel={t('administration.resetPassword.save')}
       size="lg"
       scroll="inside"
-      noValidate
-      isSubmitting={isSubmitting}
-      onClose={onClose}
-      onSubmit={handleSubmit(submit)}
+      form={form}
+      parse={parse}
+      translateValidation={translateValidation}
+      onSubmit={onSave}
     >
       <PasswordInput
         autoFocus

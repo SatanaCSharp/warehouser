@@ -3,10 +3,11 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { EditEmailDialog } from 'modules/access/components/access-workspace/components/members/EditEmailDialog';
+import { DialogHost } from 'shared/components/DialogHost';
 import { renderWithProviders } from 'test/render';
 
 import type { EmailChangeInput } from '@warehouser/contracts/users';
-import type { MutationOutcome } from 'modules/access/types/access.types';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 const targetMember = {
   userId: '00000000-0000-4000-8000-000000000021',
@@ -21,15 +22,12 @@ const renderDialog = (
 } => {
   const onClose = vi.fn();
   const onSave = vi
-    .fn<(input: EmailChangeInput) => Promise<MutationOutcome>>()
-    .mockResolvedValue({ success: true });
+    .fn<(input: EmailChangeInput) => Promise<MutationResult>>()
+    .mockResolvedValue({ data: null });
   renderWithProviders(
-    <EditEmailDialog
-      member={targetMember}
-      onClose={onClose}
-      onSave={onSave}
-      {...overrides}
-    />,
+    <DialogHost onClose={onClose}>
+      <EditEmailDialog member={targetMember} onSave={onSave} {...overrides} />
+    </DialogHost>,
   );
   return { onClose, onSave };
 };
@@ -74,14 +72,15 @@ describe('EditEmailDialog', () => {
 
   it('renders the duplicate-email explanation reported by the server (AC-05)', async () => {
     const user = userEvent.setup();
-    const onClose = vi.fn();
     const onSave = vi
-      .fn<(input: EmailChangeInput) => Promise<MutationOutcome>>()
+      .fn<(input: EmailChangeInput) => Promise<MutationResult>>()
       .mockResolvedValue({
-        success: false,
-        fieldErrors: { email: 'duplicate' },
+        error: {
+          code: 'access.refused',
+          fieldErrors: { email: 'duplicate' },
+        },
       });
-    renderDialog({ onClose, onSave });
+    const { onClose } = renderDialog({ onSave });
 
     const dialog = screen.getByRole('dialog', { name: dialogName });
     await fillAndSubmit(user, dialog, 'taken@example.test');
@@ -94,14 +93,15 @@ describe('EditEmailDialog', () => {
 
   it('renders the protected-Manager-target explanation reported by the server (AC-14)', async () => {
     const user = userEvent.setup();
-    const onClose = vi.fn();
     const onSave = vi
-      .fn<(input: EmailChangeInput) => Promise<MutationOutcome>>()
+      .fn<(input: EmailChangeInput) => Promise<MutationResult>>()
       .mockResolvedValue({
-        success: false,
-        fieldErrors: { email: 'protected' },
+        error: {
+          code: 'access.refused',
+          fieldErrors: { email: 'protected' },
+        },
       });
-    renderDialog({ onClose, onSave });
+    const { onClose } = renderDialog({ onSave });
 
     const dialog = screen.getByRole('dialog', { name: dialogName });
     await fillAndSubmit(user, dialog, 'jane.new@example.test');
@@ -116,14 +116,15 @@ describe('EditEmailDialog', () => {
 
   it('renders the permission-exceeded-target explanation reported by the server (AC-19)', async () => {
     const user = userEvent.setup();
-    const onClose = vi.fn();
     const onSave = vi
-      .fn<(input: EmailChangeInput) => Promise<MutationOutcome>>()
+      .fn<(input: EmailChangeInput) => Promise<MutationResult>>()
       .mockResolvedValue({
-        success: false,
-        fieldErrors: { email: 'exceeded' },
+        error: {
+          code: 'access.refused',
+          fieldErrors: { email: 'exceeded' },
+        },
       });
-    renderDialog({ onClose, onSave });
+    const { onClose } = renderDialog({ onSave });
 
     const dialog = screen.getByRole('dialog', { name: dialogName });
     await fillAndSubmit(user, dialog, 'jane.new@example.test');

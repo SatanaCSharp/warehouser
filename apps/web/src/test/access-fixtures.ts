@@ -165,6 +165,40 @@ export const stubAccessServer = ({
   return requestedUrls;
 };
 
+/**
+ * Fails exactly one Warehouse-scoped access read while `stubAccessServer`'s
+ * in-memory backend keeps answering everything else, so a spec can render a
+ * **permitted** actor whose dataset request failed (CR-AC-15). The failure is
+ * the contract's REST error envelope, so it normalizes at the shared base query
+ * exactly as the server's would
+ * (`docs/system/guides/web-error-handling.md` §1).
+ *
+ * Call it after `stubAccessServer`, whose stub it wraps rather than replaces —
+ * the delegated requests are still recorded in the array that returned.
+ */
+export const failAccessRead = (
+  resource: string,
+  warehouseId: string = accessIds.warehouse,
+): void => {
+  const served = globalThis.fetch;
+  const failingUrl = accessPath(warehouseId, resource);
+
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((input: Request | string | URL, init?: RequestInit) => {
+      const url = String(input instanceof Request ? input.url : input);
+      return url === failingUrl
+        ? Promise.resolve(
+            Response.json(
+              { code: 'access.unavailable', message: 'The read failed.' },
+              { status: 500 },
+            ),
+          )
+        : served(input, init);
+    }),
+  );
+};
+
 export const authenticatedStore = (
   userId: string = accessIds.actingUser,
 ): AppStore => {

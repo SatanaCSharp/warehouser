@@ -8,9 +8,33 @@ persistence, also follow [Creating a server repository](creating-a-server-reposi
 ## 1. Choose the owner
 
 Name the module for the business entity or cohesive business capability that owns the behavior,
-for example `inventory`, `warehouse`, or `shipment`. Extend an existing owner instead of creating a
-second module for the same entity. Do not begin in `shared/`; promote an abstraction only after its
-cross-module responsibility is clear.
+for example `inventory`, `warehouse`, or `shipment`. Ownership follows the entity whose invariants
+the code enforces — not the entity that contains it, and not the URL prefix it is served under.
+`@Controller` prefixes are declared independently of source location, so a module's URL and its
+owning module are allowed to disagree. Extend an existing owner instead of creating a second module
+for the same entity. Do not begin in `shared/`; promote an abstraction only after its cross-module
+responsibility is clear.
+
+Modules are flat. The module list is exactly the directories directly under `src/`; only those have
+a name, a barrel and a public surface. A module contains layer directories (`domain/`, `usecases/`,
+`rest/`, `handlers/`), never another module. A module that seems to need a submodule is a module
+that should become its own top-level sibling.
+
+A capability exercised at several scopes lives in one module and carries the use cases, controllers
+and endpoints for every scope. Workspace-scoped and warehouse-scoped access management are one
+`access` module, not two; the scope appears in file and symbol names
+(`AssignWorkspaceRoleCommand`), never in a second module.
+
+Management is owned by a feature module; **enforcement is not**. NestJS authentication and
+authorization guards stay in `apps/server/src/shared/guards/`, TypeORM persistence entities in
+`apps/server/src/shared/domain/entities/`, and repositories in
+`apps/server/src/shared/domain/repositories/`. Registering a guard in a module is not owning it, and
+no module should gain a dependency on another module merely to obtain a guard.
+
+The decision behind these rules, and its consequences, are recorded in
+[Domain-owned flat modules](../adr/14-08-2026-domain-owned-flat-modules.md). Read it before adding a
+module, deciding which module a use case or controller belongs to, or adding a cross-module
+dependency.
 
 ## 2. Create only the required structure
 
@@ -141,6 +165,12 @@ loop or a new custom helper.
 Use `src/shared/domain/` only for genuine cross-module pure fabrications. Do not place feature-owned
 entities or repositories there pre-emptively.
 
+A module's error factories, domain predicates and DTOs are **module-private**. Another module
+reaches them only through an exported use-case module — never by importing
+`<module>/domain/errors/`, `<module>/domain/*.predicates.ts` or `<module>/rest/dtos/` directly. When
+a second module needs the behavior behind one of them, export a use case that performs it, or move
+the shared concept to `src/shared/`; do not widen an import into another module's internals.
+
 ## 9. Add tests
 
 Colocate tests with the implementation. Reuse or add shared support under:
@@ -170,6 +200,11 @@ When contracts or shared utilities change, build and test their packages as well
 
 ## Common failures
 
+- Putting an entity's use cases in the module of the entity that contains it — warehouse lifecycle
+  under `workspaces/` because a Workspace contains Warehouses.
+- Splitting one capability across two modules by the scope that invokes it.
+- Importing another module's error factory, domain predicate, or DTO instead of an exported use-case
+  module.
 - Putting business logic in a REST controller or BullMQ handler.
 - Calling repositories directly from transport adapters.
 - Letting services call commands or queries.

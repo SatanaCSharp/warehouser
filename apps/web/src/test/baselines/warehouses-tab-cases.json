@@ -1,0 +1,137 @@
+{
+  "baselineRevision": "42f1205d552f8284f8ec57358ad9022340b5f76e",
+  "source": "apps/web/src/modules/warehouse/components/workspace-administration/warehouses/WarehousesTab.spec.tsx",
+  "caseCount": 39,
+  "groups": [
+    {
+      "describe": "the Warehouse list (AC-33, AC-12a)",
+      "cases": [
+        "announces the loading skeleton as \"Loading warehouses\" before the list arrives",
+        "lists every Warehouse of the Workspace with the number of people who have access",
+        "marks an archived Warehouse with a chip and meta text rather than colour alone (AC-12a)",
+        "leaves a non-archived Warehouse row unchipped",
+        "filters the list by the local search term",
+        "reports an empty Workspace instead of an empty list"
+      ]
+    },
+    {
+      "describe": "the detail pane and the level boundary (AC-33)",
+      "cases": [
+        "shows who has access to the selected Warehouse and never what Role they hold there",
+        "carries the line that says which level decides what a person may do inside the Warehouse",
+        "omits the people list entirely without WORKSPACE_MEMBERS:WATCH and never requests it (AC-30)"
+      ]
+    },
+    {
+      "describe": "adding a Warehouse (AC-06, AC-08)",
+      "cases": [
+        "adds the Warehouse and reports the outcome that committed",
+        "names the broken Warehouse-name rule on the field and makes no request (AC-08)",
+        "binds a server-rejected name to the field, naming the rule that failed (AC-08)",
+        "omits the add control entirely without WAREHOUSES:CREATE (AC-30)"
+      ]
+    },
+    {
+      "describe": "renaming a Warehouse (AC-09)",
+      "cases": [
+        "keeps Save name dimmed and non-actionable until the name changes",
+        "submits the trimmed name and reports the committed rename",
+        "stays available while the Warehouse is archived, because its subject is the Warehouse record (AC-11)",
+        "offers no editable name at all without WAREHOUSES:RENAME (AC-30)"
+      ]
+    },
+    {
+      "describe": "archiving and restoring (AC-11, AC-11a, AC-12a)",
+      "cases": [
+        "names what stops, what is kept, and archives the Warehouse",
+        "presents an archived Warehouse read-only, keeping Restore warehouse available (AC-12a)",
+        "restores an archived Warehouse without a confirmation step",
+        "refuses to archive the only Warehouse still in operation and offers the alternative (AC-11a)",
+        "omits both lifecycle controls without WAREHOUSES:ARCHIVE (AC-30)"
+      ]
+    },
+    {
+      "describe": "giving warehouse access (AC-23, AC-23a)",
+      "cases": [
+        "lists the Workspace's other Users, excluding the acting member and anyone already in Central DC, and Central DC's assignable custom Roles from the narrow read",
+        "requests no data for a Warehouse's members, Roles or resources beyond the two narrow reads (AC-23a)",
+        "states what changes and what is preserved before placing the target User with the chosen Role, and reports the committed outcome by name"
+      ]
+    },
+    {
+      "describe": "withdrawing warehouse access (AC-25b, AC-25c)",
+      "cases": [
+        "states what is preserved, withdraws the membership and removes the person from the pane (AC-25b)",
+        "exposes Withdraw access as disabled on the acting member's own row, with the reason accessible to assistive technology (AC-25c)",
+        "handles a server denial of withdrawal independently of the offered control, without disclosing the target (AC-25c)"
+      ]
+    },
+    {
+      "describe": "responsive behaviour (desktop 1440 / mobile 390)",
+      "cases": [
+        "puts the 340px list and the detail pane side by side with a 24px gap from the split-view breakpoint up",
+        "collapses to full-width cards below the breakpoint and gives the detail screen an \"All warehouses\" affordance"
+      ]
+    },
+    {
+      "describe": "accessibility",
+      "cases": [
+        "exposes the list as a labelled list of buttons that report their selected state",
+        "keeps the archive dialog cancel before its destructive primary and returns focus to the trigger on Escape",
+        "exposes the reason the archive action is unavailable rather than only dimming it (AC-11a)"
+      ]
+    },
+    {
+      "describe": "the Enter action (CR-AC-04, CR-AC-13, CR-AC-14, CR-RG-02)",
+      "cases": [
+        "renders Enter on a row for a non-archived Warehouse in the actor's own membership list",
+        "gives each Enter action an accessible name naming its own Warehouse",
+        "omits Enter — hidden, not disabled — on a non-membership row, an archived membership row, and an archived non-membership row",
+        "navigates to that Warehouse's view when Enter is activated",
+        "leaves rename, archive/restore and grant/withdraw access reachable on a row that also renders Enter",
+        "places the selection button before Enter in focus order and never nests Enter inside it"
+      ]
+    }
+  ],
+  "cases": [
+    "adds the Warehouse and reports the outcome that committed",
+    "announces the loading skeleton as \"Loading warehouses\" before the list arrives",
+    "binds a server-rejected name to the field, naming the rule that failed (AC-08)",
+    "carries the line that says which level decides what a person may do inside the Warehouse",
+    "collapses to full-width cards below the breakpoint and gives the detail screen an \"All warehouses\" affordance",
+    "exposes Withdraw access as disabled on the acting member's own row, with the reason accessible to assistive technology (AC-25c)",
+    "exposes the list as a labelled list of buttons that report their selected state",
+    "exposes the reason the archive action is unavailable rather than only dimming it (AC-11a)",
+    "filters the list by the local search term",
+    "gives each Enter action an accessible name naming its own Warehouse",
+    "handles a server denial of withdrawal independently of the offered control, without disclosing the target (AC-25c)",
+    "keeps Save name dimmed and non-actionable until the name changes",
+    "keeps the archive dialog cancel before its destructive primary and returns focus to the trigger on Escape",
+    "leaves a non-archived Warehouse row unchipped",
+    "leaves rename, archive/restore and grant/withdraw access reachable on a row that also renders Enter",
+    "lists every Warehouse of the Workspace with the number of people who have access",
+    "lists the Workspace's other Users, excluding the acting member and anyone already in Central DC, and Central DC's assignable custom Roles from the narrow read",
+    "marks an archived Warehouse with a chip and meta text rather than colour alone (AC-12a)",
+    "names the broken Warehouse-name rule on the field and makes no request (AC-08)",
+    "names what stops, what is kept, and archives the Warehouse",
+    "navigates to that Warehouse's view when Enter is activated",
+    "offers no editable name at all without WAREHOUSES:RENAME (AC-30)",
+    "omits Enter — hidden, not disabled — on a non-membership row, an archived membership row, and an archived non-membership row",
+    "omits both lifecycle controls without WAREHOUSES:ARCHIVE (AC-30)",
+    "omits the add control entirely without WAREHOUSES:CREATE (AC-30)",
+    "omits the people list entirely without WORKSPACE_MEMBERS:WATCH and never requests it (AC-30)",
+    "places the selection button before Enter in focus order and never nests Enter inside it",
+    "presents an archived Warehouse read-only, keeping Restore warehouse available (AC-12a)",
+    "puts the 340px list and the detail pane side by side with a 24px gap from the split-view breakpoint up",
+    "refuses to archive the only Warehouse still in operation and offers the alternative (AC-11a)",
+    "renders Enter on a row for a non-archived Warehouse in the actor's own membership list",
+    "reports an empty Workspace instead of an empty list",
+    "requests no data for a Warehouse's members, Roles or resources beyond the two narrow reads (AC-23a)",
+    "restores an archived Warehouse without a confirmation step",
+    "shows who has access to the selected Warehouse and never what Role they hold there",
+    "states what changes and what is preserved before placing the target User with the chosen Role, and reports the committed outcome by name",
+    "states what is preserved, withdraws the membership and removes the person from the pane (AC-25b)",
+    "stays available while the Warehouse is archived, because its subject is the Warehouse record (AC-11)",
+    "submits the trimmed name and reports the committed rename"
+  ]
+}

@@ -1,4 +1,4 @@
-import type { ApiFailure } from 'shared/api/api-client';
+import type { ApiFailure } from 'shared/api/client/api-client';
 
 export type ErrorTranslationKey =
   | 'api.network'

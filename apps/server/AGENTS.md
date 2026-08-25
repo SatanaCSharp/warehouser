@@ -21,8 +21,9 @@ it for any non-trivial change and follow the modular-monolith boundaries it defi
 - Use `@warehouser/contracts` for every REST request and response schema.
 - Reuse `@warehouser/utils`; move a generally reusable utility there instead of duplicating it.
 - Use PostgreSQL through TypeORM. Put concrete repositories in
-  `src/shared/domain/repositories/`; every new repository must extend `BaseRepository<TEntity>` as
-  described in `creating-a-server-repository.md`.
+  `src/shared/domain/repositories/`, each shaped around a cohesive persistence operation rather than
+  one table, as described in `creating-a-server-repository.md`. Do not extend or introduce
+  `BaseRepository`, a generic CRUD base, or a repository port.
 - Use reviewed TypeORM migrations for schema changes; never enable runtime synchronization.
 - Use BullMQ for asynchronous operations and scheduled jobs when its infrastructure is introduced.
   Do not add a second job or cron mechanism.

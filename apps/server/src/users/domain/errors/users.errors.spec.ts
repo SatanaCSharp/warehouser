@@ -1,5 +1,7 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import {
+  emailAlreadyRegisteredError,
+  invalidInputError,
   managerRoleProtectedError,
   permissionExceededError,
   reservedRoleSelectionError,
@@ -32,6 +34,29 @@ describe('users domain error factories', () => {
   it('builds a stable, code-carrying error for a reserved-Role selection', () => {
     expect(reservedRoleSelectionError()).toMatchObject({
       code: ErrorCode.USERS_RESERVED_ROLE_SELECTION,
+    });
+  });
+
+  // AC-02 / AC-05 / AC-07 — the two factories this module declares for the
+  // `auth` credential rules it reuses verbatim. They were declared once per
+  // command until they were consolidated here, so their codes are pinned in
+  // one place rather than in each command's own spec.
+  it('names the invalid field on a rejected credential', () => {
+    expect(invalidInputError({ email: 'unsupported' })).toMatchObject({
+      code: ErrorCode.AUTH_INVALID_INPUT,
+      details: { fields: { email: 'unsupported' } },
+    });
+  });
+
+  it('omits details when no field is named', () => {
+    expect(invalidInputError()).toMatchObject({
+      code: ErrorCode.AUTH_INVALID_INPUT,
+    });
+  });
+
+  it('builds a stable, code-carrying error for an already-registered email', () => {
+    expect(emailAlreadyRegisteredError()).toMatchObject({
+      code: ErrorCode.AUTH_EMAIL_ALREADY_REGISTERED,
     });
   });
 });

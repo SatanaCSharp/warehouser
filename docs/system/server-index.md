@@ -41,6 +41,11 @@ index first, then read only the entries that cover the change you are making. Pa
 
 ## Decisions
 
+- [Domain-owned flat modules](adr/14-08-2026-domain-owned-flat-modules.md) — why a module is named
+  for the domain entity that owns its behavior, why one entity owns one top-level module and modules
+  do not nest, why a module's URL prefix and its owning module may disagree, and why guards,
+  TypeORM entities and repositories stay in `shared/`. Read before adding a module, deciding which
+  module a use case or controller belongs to, or adding a cross-module dependency.
 - [PostgreSQL persistence with TypeORM](adr/21-07-2026-postgresql-with-typeorm.md) — why PostgreSQL
   and TypeORM are the persistence baseline and why runtime schema synchronization stays disabled.
   Read before any schema or migration work.

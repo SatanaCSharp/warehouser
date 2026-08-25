@@ -5,6 +5,7 @@ import { GiveWarehouseAccessAction } from 'modules/workspace/components/workspac
 import { WarehouseLifecycleActions } from 'modules/workspace/components/workspace-administration/warehouses/WarehouseLifecycleActions';
 import { WarehouseNameForm } from 'modules/workspace/components/workspace-administration/warehouses/WarehouseNameForm';
 import { WarehousePeopleList } from 'modules/workspace/components/workspace-administration/warehouses/WarehousePeopleList';
+import { Conditional } from 'shared/components/Conditional';
 import { ChevronLeftIcon } from 'shared/icons';
 
 import type {
@@ -14,9 +15,6 @@ import type {
 import type { ReactElement } from 'react';
 
 type WarehouseDetailPaneProps = {
-  canArchiveWarehouse: boolean;
-  canCreateWarehouse: boolean;
-  canRenameWarehouse: boolean;
   isOnlyNonArchived: boolean;
   people: WorkspaceUser[] | undefined;
   warehouse: Warehouse;
@@ -28,18 +26,32 @@ type WarehouseDetailPaneProps = {
  * (AC-12a), its lifecycle actions (AC-11, AC-11a), and who has access to it
  * (AC-33) — never what Role they hold there (design-handoff.md §"The level
  * boundary is part of the design").
+ *
+ * The pane carries no authority of its own: every control below gates itself on
+ * the Workspace Permission it needs, so nothing here decides who may rename,
+ * archive or grant access
+ * (`docs/system/adr/19-08-2026-declarative-permission-gates.md`).
  */
 export const WarehouseDetailPane = ({
-  canArchiveWarehouse,
-  canCreateWarehouse,
-  canRenameWarehouse,
   isOnlyNonArchived,
   people,
   warehouse,
   onBack,
 }: WarehouseDetailPaneProps): ReactElement => {
-  const { t } = useTranslation('workspace');
+  const { t } = useTranslation('warehouse');
   const isArchived = warehouse.archivedAt !== null;
+
+  // The panel reads the people list, so it is resolved here rather than gated
+  // inline: `Conditional` evaluates both arms, and the list is undefined until
+  // the read the actor is entitled to has arrived.
+  const peoplePanel = !people ? null : (
+    <div className="flex flex-col gap-3">
+      <div className="flex justify-end">
+        <GiveWarehouseAccessAction warehouse={warehouse} />
+      </div>
+      <WarehousePeopleList people={people} warehouse={warehouse} />
+    </div>
+  );
 
   return (
     <section
@@ -64,7 +76,7 @@ export const WarehouseDetailPane = ({
         </Chip>
       </div>
 
-      {isArchived ? (
+      <Conditional when={isArchived}>
         <Alert status="warning">
           <Alert.Indicator />
           <Alert.Content>
@@ -74,28 +86,16 @@ export const WarehouseDetailPane = ({
             </Alert.Description>
           </Alert.Content>
         </Alert>
-      ) : null}
+      </Conditional>
 
-      <WarehouseNameForm
-        canRenameWarehouse={canRenameWarehouse}
-        warehouse={warehouse}
-      />
+      <WarehouseNameForm warehouse={warehouse} />
 
       <WarehouseLifecycleActions
-        canArchiveWarehouse={canArchiveWarehouse}
-        canCreateWarehouse={canCreateWarehouse}
         isOnlyNonArchived={isOnlyNonArchived}
         warehouse={warehouse}
       />
 
-      {people ? (
-        <div className="flex flex-col gap-3">
-          <div className="flex justify-end">
-            <GiveWarehouseAccessAction warehouse={warehouse} />
-          </div>
-          <WarehousePeopleList people={people} warehouse={warehouse} />
-        </div>
-      ) : null}
+      {peoplePanel}
     </section>
   );
 };

@@ -22,7 +22,7 @@ answer that applies:
 | Instead of a context                                  | Do this                                                                                                                  |
 | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | Server data drilled through a subtree                 | Call the module's dataset hook at the consumer. RTK Query dedupes the subscription (`useAccessRoles`).                   |
-| Capability or permission flags drilled to leaves      | Call `useAccessCapabilities()` at the control being gated.                                                               |
+| Capability or permission flags drilled to leaves      | Gate the control with `WarehousePermissionGate` / `WorkspacePermissionGate` where it is written; never drill either.     |
 | A value only the deepest leaf uses                    | Move the state down to the leaf. Nothing above it needs to know.                                                         |
 | Mid-level components forwarding props they never read | Invert with composition: have the owner pass rendered `children` or element slots, so the middle layer forwards nothing. |
 | A trigger, its dialog, and its mutation drilled apart | Extract an Action component (`CreateRoleAction`) that owns all three and takes no props.                                 |
@@ -32,9 +32,12 @@ levels**, and the subtree between the owner and the consumers has **no reason to
 Typical shapes that qualify: a multi-step wizard, a table whose toolbar and row menus share one
 selection, an editor whose deep leaves toggle items in a shared draft.
 
-A concrete boundary from the current tree: `MemberDirectory` owns the open-dialog state and passes
-three callbacks through `MemberList` to `MemberRow` — two hops, still props. The day a row menu
-component appears below `MemberRow`, that becomes a third hop, and the directory gets a context.
+A concrete boundary from the current tree: `MemberDirectory` owns which member a row opened a dialog
+for and passes three callbacks through `MemberList` to `MemberRow` — two hops, still props. What the
+actor may _do_ with those callbacks is not drilled beside them: the row gates each action on its own
+Permission. The day a
+row menu component appears below `MemberRow`, that becomes a third hop, and the directory gets a
+context. Whether the dialog is open is not part of that state: a `Modal` or `DialogHost` owns it.
 
 ## 2. Do not context state that already has an owner
 
@@ -43,7 +46,10 @@ These are not context candidates, and adding one creates a second source of trut
 - **Cross-module or route-level state** belongs to a Redux slice under `modules/<module>/store/`.
   [Frontend architecture](../frontend-architecture.md) forbids a parallel context for it.
 - **Server-owned data** belongs to the RTK Query API slice, read through a module dataset hook.
-- **Derived authorization** belongs to `useAccessCapabilities()` or `PermissionGate`.
+- **Derived authorization** belongs to `WarehousePermissionGate` / `WorkspacePermissionGate` at the control, or — inside a
+  React Aria collection — to a descriptor's own `permission` field
+  ([Gate web controls declaratively](../adr/19-08-2026-declarative-permission-gates.md)). It is never
+  drilled and never contexted.
 - **Form field state** belongs to React Hook Form. When fields are spread across a deep subtree, use
   RHF's own `FormProvider` / `useFormContext`; do not hand-roll a context around `control`.
 

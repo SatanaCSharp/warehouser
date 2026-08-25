@@ -5,7 +5,7 @@ import { ActiveWarehouseSelectionRepository } from 'shared/domain/repositories/a
 import {
   workspaceTargetUnavailableError,
   workspaceWarehouseArchivedError,
-} from 'workspaces/domain/errors/workspace.errors';
+} from 'shared/errors/cross-module.errors';
 
 export interface SetActiveWarehouseInput {
   readonly warehouseId: string;

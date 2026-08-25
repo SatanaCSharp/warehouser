@@ -1,45 +1,48 @@
-import { useState } from 'react';
+import { Modal } from '@heroui/react';
+import { PermissionId } from '@warehouser/shared-types/enums';
 import { useTranslation } from 'react-i18next';
 
+import { useCreateMemberMutation } from 'modules/access/api/access-api';
 import { CreateActionButton } from 'modules/access/components/access-workspace/components/CreateActionButton';
 import { CreateMemberDialog } from 'modules/access/components/access-workspace/components/members/CreateMemberDialog';
-import { useAccessCapabilities } from 'modules/access/hooks/useAccessCapabilities';
-import { useAccessRoles } from 'modules/access/hooks/useAccessRoles';
-import { useCreateMember } from 'modules/access/hooks/useCreateMember';
+import { useAccessScope } from 'modules/access/hooks/projections/useAccessScope';
+import { useAccessRoles } from 'modules/access/hooks/queries/useAccessRoles';
+import { Conditional } from 'shared/components/Conditional';
+import { TriggeredDialog } from 'shared/components/TriggeredDialog';
+import { WarehousePermissionGate } from 'shared/components/WarehousePermissionGate';
 
+import type { CreateMemberInput } from '@warehouser/contracts/users';
 import type { ReactElement } from 'react';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 /**
- * The Create Member workflow, whole: the trigger, the dialog it opens, and the
- * mutation it runs. An actor without USERS:CREATE gets no trigger at all
- * (AC-03), and the dialog closes itself once the member exists.
+ * The Create Member workflow, whole: its gate, the trigger, the dialog it opens,
+ * and the mutation it runs. An actor without `USERS:CREATE` gets no trigger at
+ * all (AC-03), and the dialog closes itself once the member exists.
  */
-export const CreateMemberAction = (): ReactElement | null => {
+export const CreateMemberAction = (): ReactElement => {
   const { t } = useTranslation('access');
-  const { canCreateMembers, isArchived, warehouseId } = useAccessCapabilities();
+  const { isArchived, warehouseId } = useAccessScope();
   const roles = useAccessRoles();
-  const createMember = useCreateMember(warehouseId ?? '');
-  const [isOpen, setIsOpen] = useState(false);
+  const [createMember] = useCreateMemberMutation();
 
-  if (!canCreateMembers) {
-    return null;
-  }
+  const onSave = (input: CreateMemberInput): Promise<MutationResult> =>
+    createMember({ warehouseId: warehouseId ?? '', input });
 
   return (
-    <>
-      <CreateActionButton
-        isDisabled={isArchived}
-        label={t('administration.createMember.open')}
-        reason={t('archived.reason')}
-        onPress={() => setIsOpen(true)}
-      />
-      {isOpen && !isArchived ? (
-        <CreateMemberDialog
-          roles={roles.items}
-          onClose={() => setIsOpen(false)}
-          onSave={createMember}
+    <WarehousePermissionGate permission={PermissionId.USERS_CREATE}>
+      <Modal>
+        <CreateActionButton
+          isDisabled={isArchived}
+          label={t('administration.createMember.open')}
+          reason={t('archived.reason')}
         />
-      ) : null}
-    </>
+        <TriggeredDialog>
+          <Conditional when={!isArchived}>
+            <CreateMemberDialog roles={roles.items} onSave={onSave} />
+          </Conditional>
+        </TriggeredDialog>
+      </Modal>
+    </WarehousePermissionGate>
   );
 };

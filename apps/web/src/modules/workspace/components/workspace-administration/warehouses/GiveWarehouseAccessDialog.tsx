@@ -2,19 +2,21 @@ import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import { selectCurrentUser } from 'modules/auth/store/auth.selectors';
-import { useListWorkspaceUsersQuery } from 'modules/workspace/api/workspace-users-api';
-import { useListAssignableWarehouseRolesQuery } from 'modules/workspace/api/workspace-warehouses-api';
-import { useAssignWarehouseMembership } from 'modules/workspace/hooks/useAssignWarehouseMembership';
+import {
+  useAssignWarehouseMembershipMutation,
+  useListAssignableWarehouseRolesQuery,
+} from 'modules/workspace/api/warehouse-api';
+import { useListWorkspaceUsersQuery } from 'shared/api/workspace/workspace-users-api';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormSelectField } from 'shared/components/FormSelectField';
 import { useAppSelector } from 'store/hooks';
 
 import type { Warehouse } from '@warehouser/contracts/workspaces';
 import type { ReactElement } from 'react';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 type GiveWarehouseAccessDialogProps = {
   warehouse: Warehouse;
-  onClose: () => void;
 };
 
 type GiveWarehouseAccessForm = { roleId: string; userId: string };
@@ -33,20 +35,15 @@ type GiveWarehouseAccessForm = { roleId: string; userId: string };
  */
 export const GiveWarehouseAccessDialog = ({
   warehouse,
-  onClose,
 }: GiveWarehouseAccessDialogProps): ReactElement => {
-  const { t } = useTranslation('workspace');
+  const { t } = useTranslation('warehouse');
   const actor = useAppSelector(selectCurrentUser);
   const { data: users = [] } = useListWorkspaceUsersQuery();
   const { data: roles = [] } = useListAssignableWarehouseRolesQuery(
     warehouse.id,
   );
-  const assignWarehouseMembership = useAssignWarehouseMembership();
-  const {
-    control,
-    formState: { isSubmitting },
-    handleSubmit,
-  } = useForm<GiveWarehouseAccessForm>({
+  const [assignWarehouseMembership] = useAssignWarehouseMembershipMutation();
+  const form = useForm<GiveWarehouseAccessForm>({
     defaultValues: { roleId: '', userId: '' },
   });
 
@@ -60,33 +57,24 @@ export const GiveWarehouseAccessDialog = ({
       ),
   );
 
-  const submit = async ({
-    roleId,
-    userId,
-  }: GiveWarehouseAccessForm): Promise<void> => {
-    const result = await assignWarehouseMembership(
-      warehouse.id,
-      warehouse.name,
-      { roleId, userId },
-    );
-    if (result.success) {
-      onClose();
-    }
-  };
+  const onSubmit = (values: GiveWarehouseAccessForm): Promise<MutationResult> =>
+    assignWarehouseMembership({
+      warehouseId: warehouse.id,
+      warehouseName: warehouse.name,
+      ...values,
+    });
 
   return (
     <FormModalDialog
       title={t('warehouses.giveAccess.title')}
       cancelLabel={t('warehouses.giveAccess.cancel')}
       submitLabel={t('warehouses.giveAccess.submit')}
-      noValidate
-      isSubmitting={isSubmitting}
-      onClose={onClose}
-      onSubmit={handleSubmit(submit)}
+      form={form}
+      onSubmit={onSubmit}
     >
       <p className="text-muted">{t('warehouses.giveAccess.description')}</p>
       <Controller
-        control={control}
+        control={form.control}
         name="userId"
         rules={{ required: true }}
         render={({ field }) => (
@@ -106,7 +94,7 @@ export const GiveWarehouseAccessDialog = ({
         )}
       />
       <Controller
-        control={control}
+        control={form.control}
         name="roleId"
         rules={{ required: true }}
         render={({ field }) => (

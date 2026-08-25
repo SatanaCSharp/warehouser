@@ -1,66 +1,43 @@
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import { useCreateWarehouse } from 'modules/workspace/hooks/useCreateWarehouse';
-import { useFormFieldErrors } from 'modules/workspace/hooks/useFormFieldErrors';
+import { useCreateWarehouseMutation } from 'modules/workspace/api/warehouse-api';
 import { warehouseNameFormSchema } from 'modules/workspace/schemas/warehouse-name-form.schema';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormTextField } from 'shared/components/FormTextField';
+import { parseWithSchema } from 'shared/utils/form-parse';
 
 import type { WarehouseNameFormValues } from 'modules/workspace/schemas/warehouse-name-form.schema';
 import type { ReactElement } from 'react';
 
-type AddWarehouseDialogProps = {
-  onClose: () => void;
-};
+/** AC-08 — the browser pre-check the dialog runs before the request leaves. */
+const parse = parseWithSchema(warehouseNameFormSchema);
 
 /**
  * Adds a Warehouse to the Workspace (AC-06, AC-08). Owned exclusively by
  * `AddWarehouseAction`, which is the only trigger for it.
  */
-export const AddWarehouseDialog = ({
-  onClose,
-}: AddWarehouseDialogProps): ReactElement => {
-  const { t } = useTranslation('workspace');
+export const AddWarehouseDialog = (): ReactElement => {
+  const { t } = useTranslation('warehouse');
   const { t: translateValidation } = useTranslation('validation');
-  const createWarehouse = useCreateWarehouse();
+  const [createWarehouse] = useCreateWarehouseMutation();
+  const form = useForm<WarehouseNameFormValues>({
+    defaultValues: { name: '' },
+  });
   const {
     formState: { errors, isSubmitting },
-    handleSubmit,
     register,
-    setError,
-  } = useForm<WarehouseNameFormValues>({ defaultValues: { name: '' } });
-  const { setFieldError } =
-    useFormFieldErrors<WarehouseNameFormValues>(setError);
-
-  const submit = async ({ name }: WarehouseNameFormValues): Promise<void> => {
-    const parsedName = warehouseNameFormSchema.safeParse({ name });
-    if (!parsedName.success) {
-      setFieldError(
-        'name',
-        parsedName.error.issues[0]?.message,
-        translateValidation,
-      );
-      return;
-    }
-
-    const result = await createWarehouse(parsedName.data);
-    if (result.success) {
-      onClose();
-      return;
-    }
-    setFieldError('name', result.fieldErrors?.name, translateValidation);
-  };
+  } = form;
 
   return (
     <FormModalDialog
       title={t('warehouses.add.title')}
       cancelLabel={t('warehouses.add.cancel')}
       submitLabel={t('warehouses.add.submit')}
-      noValidate
-      isSubmitting={isSubmitting}
-      onClose={onClose}
-      onSubmit={handleSubmit(submit)}
+      form={form}
+      parse={parse}
+      translateValidation={translateValidation}
+      onSubmit={createWarehouse}
     >
       <p className="text-muted">{t('warehouses.add.description')}</p>
       <FormTextField

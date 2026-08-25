@@ -1,7 +1,7 @@
 import { registrationInputSchema } from '@warehouser/contracts/auth';
 import { z } from 'zod';
 
-export const signUpValidationKeys = {
+const signUpValidationKeys = {
   emailInvalid: 'email.invalid',
   passwordLength: 'password.lengthRange',
   warehouseNameLength: 'warehouseName.lengthRange',

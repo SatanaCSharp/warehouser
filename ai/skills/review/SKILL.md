@@ -22,6 +22,8 @@ root and never create a feature directory. All feature-root paths below mean `wo
 
 The independent review gate. After `implement` has written + tested + committed the code, `review` looks at the **whole change at once, with fresh eyes** — does it actually satisfy every acceptance criterion, and is it good code? This is distinct from the per-task gate inside `implement` (which proves each task green): `review` is the cross-cutting, clean-context pass a human reviewer would do on the PR.
 
+Two narrower gates run **before** this one and are not repeated here: [`code-review-front-end`](../code-review-front-end/SKILL.md) and [`code-review-back-end`](../code-review-back-end/SKILL.md) judge the `apps/web` and `apps/server` parts of the diff against `docs/system` ([`../_shared/system-conformance.md`](../_shared/system-conformance.md)). Read their records under `<work_item_root>/_review/` first: an architecture point they already resolved is not re-litigated here, and an unresolved **blocking** conformance finding means the change is not ready for this gate — send it back rather than reviewing around it. When one of them was skipped for an app the diff touched, say so in the record; `review` does not silently absorb their scope.
+
 It reuses the shared clean-context discipline ([`../_shared/critic.md`](../_shared/critic.md)) and the [`reviewer`](../../agents/reviewer.md) subagent (read-only). Question phrasing per [`../_shared/ask-style.md`](../_shared/ask-style.md).
 
 Review-record prose follows `artifact_language` (carry the language in the reviewer's dispatch prompt) — the verdict literals `PASS` / `CHANGES REQUESTED` / `REVIEW_CLEAN` and cited identifiers stay English → [`../_shared/artifact-language.md`](../_shared/artifact-language.md).

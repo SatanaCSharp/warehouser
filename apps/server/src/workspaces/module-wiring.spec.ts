@@ -1,10 +1,10 @@
 import 'reflect-metadata';
 
 import { MODULE_METADATA } from '@nestjs/common/constants';
+import { AccessUsecaseModule } from 'access/usecases/usecase.module';
 import { AppModule } from 'app.module';
 import { DomainModule } from 'shared/domain/domain.module';
 import { WorkspacesRestModule } from 'workspaces';
-import { WarehouseController } from 'workspaces/rest/controllers/warehouse.controller';
 import { WorkspaceController } from 'workspaces/rest/controllers/workspace.controller';
 import { WorkspacesUsecaseModule } from 'workspaces/usecases/usecase.module';
 
@@ -26,10 +26,16 @@ describe('workspaces module wiring', () => {
     MODULE_METADATA.PROVIDERS,
     WorkspacesUsecaseModule,
   );
-  const usecaseExports = metadata(
-    MODULE_METADATA.EXPORTS,
-    WorkspacesUsecaseModule,
-  );
+  // The workspace-scoped role, member and owner-transfer use cases live in
+  // `AccessUsecaseModule` now, and so do the handlers that injected them
+  // (CH-S2). `WorkspacesUsecaseModule` still imports `AccessUsecaseModule` for
+  // `WorkspaceProvisioningService`, so its exports stay in scope here. The rule
+  // this asserts is unchanged — every use case a registered controller injects
+  // is exported by a use-case module the REST module imports.
+  const usecaseExports = [
+    ...metadata(MODULE_METADATA.EXPORTS, WorkspacesUsecaseModule),
+    ...metadata(MODULE_METADATA.EXPORTS, AccessUsecaseModule),
+  ];
   const domainProviders = metadata(MODULE_METADATA.PROVIDERS, DomainModule);
 
   it('registers the Workspace REST module in AppModule', () => {
@@ -38,13 +44,13 @@ describe('workspaces module wiring', () => {
     );
   });
 
-  // T25 — the Warehouse-record and membership-edge REST surface is a second
-  // controller of this same Workspace-scoped module, not a new module: its
-  // subject is the Warehouse record and its membership edges, never a
-  // resource a Warehouse owns (sad.md §7).
+  // The Warehouse-record and membership-edge REST surface left this module with
+  // its handlers: the record half to `warehouses`, the membership half to
+  // `access` (CH-S1, CH-S3). What remains here is the controller whose subject
+  // is the Workspace itself. Only the controller inventory changed (CR-RG-01).
   it('serves the Workspace and Warehouse controllers from the use-case module', () => {
     expect(metadata(MODULE_METADATA.CONTROLLERS, WorkspacesRestModule)).toEqual(
-      [WorkspaceController, WarehouseController],
+      [WorkspaceController],
     );
     expect(metadata(MODULE_METADATA.IMPORTS, WorkspacesRestModule)).toContain(
       WorkspacesUsecaseModule,
@@ -52,7 +58,7 @@ describe('workspaces module wiring', () => {
   });
 
   it('exports every use case the controllers inject', () => {
-    [WorkspaceController, WarehouseController].forEach((controller) =>
+    [WorkspaceController].forEach((controller) =>
       dependenciesOf(controller).forEach((dependency) => {
         expect(usecaseExports).toContain(dependency);
       }),

@@ -1,18 +1,16 @@
-import { Chip, Spinner, Tabs } from '@heroui/react';
+import { Chip, Tabs } from '@heroui/react';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import compact from 'lodash/compact';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { WorkspaceMembersTab } from 'modules/workspace/components/workspace-administration/members/WorkspaceMembersTab';
+import { WorkspaceMembersTab } from 'modules/access/components/workspace-administration/members/WorkspaceMembersTab';
+import { WorkspacePermissionsTab } from 'modules/access/components/workspace-administration/permissions/WorkspacePermissionsTab';
+import { WorkspaceRolesTab } from 'modules/access/components/workspace-administration/roles/WorkspaceRolesTab';
 import { NameWorkspaceAction } from 'modules/workspace/components/workspace-administration/NameWorkspaceAction';
-import { WorkspacePermissionsTab } from 'modules/workspace/components/workspace-administration/permissions/WorkspacePermissionsTab';
-import { WorkspaceRolesTab } from 'modules/workspace/components/workspace-administration/roles/WorkspaceRolesTab';
 import { WarehousesTab } from 'modules/workspace/components/workspace-administration/warehouses/WarehousesTab';
-import {
-  hasWorkspacePermission,
-  useCurrentWorkspaceContext,
-} from 'shared/hooks/useWorkspacePermissions';
+import { useWorkspaceAdministrationContext } from 'modules/workspace/hooks/projections/useWorkspaceAdministrationContext';
+import { Conditional } from 'shared/components/Conditional';
+import { useWorkspacePermittedItems } from 'shared/hooks/projections/useWorkspacePermittedItems';
 
 import type { ReactElement } from 'react';
 import type { Key } from 'react-aria-components';
@@ -20,6 +18,8 @@ import type { Key } from 'react-aria-components';
 type AdministrationTab = {
   id: string;
   label: string;
+  /** The watch Permission that admits this tab (AC-30). */
+  permission: WorkspacePermissionId;
   shortLabel?: string;
 };
 
@@ -38,52 +38,50 @@ const tabContentById: Partial<Record<string, ReactElement>> = {
  * heading with its naming affordance, the section description, and the tabs
  * the acting member's watch Permissions admit (AC-30, AC-32, AC-33). Their
  * order and count never change. Each tab loads its own data once its own task
- * wires it — nothing is fetched here beyond the Workspace context every
- * capability is derived from.
+ * wires it — nothing is fetched here beyond the Workspace context the tab bar is
+ * resolved from.
+ *
+ * `Tabs.List` and `Tabs.Panel` are React Aria collections, so each tab names the
+ * Permission that admits it in its own descriptor and `useWorkspacePermittedItems`
+ * drops the rest — the collection form of `WorkspacePermissionGate`
+ * (`docs/system/adr/19-08-2026-declarative-permission-gates.md`). Nothing else on
+ * this page decides authority: the naming affordance gates itself.
+ *
+ * It holds no readiness branch. `workspaceRoute` awaits the Workspace context
+ * in its guard and every admitted tab's dataset in its loader, so the
+ * destination is only ever rendered once its context has arrived — which is
+ * what `useWorkspaceAdministrationContext` states as a type (CR-AC-05,
+ * `global-loader/sad.md` §4.6).
  */
-export const WorkspaceAdministration = (): ReactElement | null => {
+export const WorkspaceAdministration = (): ReactElement => {
   const { t } = useTranslation('workspace');
   const [selectedTab, setSelectedTab] = useState<Key | null>(null);
-  const { isLoading, workspaceContext, workspacePermissionIds } =
-    useCurrentWorkspaceContext();
-
-  if (isLoading) {
-    return (
-      <div className="flex min-h-64 flex-col items-center justify-center gap-2">
-        <Spinner />
-        <span className="text-muted">{t('loading')}</span>
-      </div>
-    );
-  }
-
-  if (!workspaceContext) {
-    return null;
-  }
-
-  const tabs = compact<AdministrationTab>([
-    hasWorkspacePermission(
-      workspacePermissionIds,
-      WorkspacePermissionId.WAREHOUSES_WATCH,
-    ) && { id: 'warehouses', label: t('tabs.warehouses') },
-    hasWorkspacePermission(
-      workspacePermissionIds,
-      WorkspacePermissionId.WORKSPACE_ROLES_WATCH,
-    ) && {
+  const { workspace } = useWorkspaceAdministrationContext();
+  const tabs = useWorkspacePermittedItems<AdministrationTab>([
+    {
+      id: 'warehouses',
+      label: t('tabs.warehouses'),
+      permission: WorkspacePermissionId.WAREHOUSES_WATCH,
+    },
+    {
       id: 'workspaceRoles',
       label: t('tabs.workspaceRoles'),
+      permission: WorkspacePermissionId.WORKSPACE_ROLES_WATCH,
       shortLabel: t('tabs.workspaceRolesShort'),
     },
-    hasWorkspacePermission(
-      workspacePermissionIds,
-      WorkspacePermissionId.WORKSPACE_MEMBERS_WATCH,
-    ) && { id: 'members', label: t('tabs.members') },
-    hasWorkspacePermission(
-      workspacePermissionIds,
-      WorkspacePermissionId.WORKSPACE_ROLES_WATCH,
-    ) && { id: 'permissions', label: t('tabs.permissions') },
+    {
+      id: 'members',
+      label: t('tabs.members'),
+      permission: WorkspacePermissionId.WORKSPACE_MEMBERS_WATCH,
+    },
+    {
+      id: 'permissions',
+      label: t('tabs.permissions'),
+      permission: WorkspacePermissionId.WORKSPACE_ROLES_WATCH,
+    },
   ]);
 
-  const { name } = workspaceContext.workspace;
+  const { name } = workspace;
   const openSection = (selectedTab ?? tabs[0]?.id) as string | undefined;
 
   return (
@@ -92,15 +90,15 @@ export const WorkspaceAdministration = (): ReactElement | null => {
         <div className="flex flex-col items-start gap-2">
           <h1 className="flex flex-wrap items-center gap-3 text-3xl font-semibold tracking-tight sm:text-4xl">
             {name ?? t('placeholder.name')}
-            {name === null ? (
+            <Conditional when={name === null}>
               <Chip color="warning" variant="soft" size="sm">
                 {t('placeholder.badge')}
               </Chip>
-            ) : null}
+            </Conditional>
           </h1>
-          {openSection ? (
+          <Conditional when={openSection}>
             <p className="text-muted">{t(`descriptions.${openSection}`)}</p>
-          ) : null}
+          </Conditional>
         </div>
         <NameWorkspaceAction />
       </header>
@@ -109,7 +107,7 @@ export const WorkspaceAdministration = (): ReactElement | null => {
           `WORKSPACE:RENAME` — admits no tab at all. AC-30 omits what such an
           actor cannot use rather than presenting it empty, so the tab shell
           itself goes away instead of rendering an empty tab list. */}
-      {tabs.length > 0 ? (
+      <Conditional when={tabs.length > 0}>
         <div className="mx-auto max-w-[1440px]">
           <Tabs
             className="w-full"
@@ -134,14 +132,34 @@ export const WorkspaceAdministration = (): ReactElement | null => {
               </Tabs.List>
             </Tabs.ListContainer>
 
+            {/* `shouldForceMount` mounts every admitted panel inert but
+                present, so each admitted tab's own query hook subscribes on
+                first paint and holds the entry the route loader filled with
+                `subscribe: false` — which otherwise has no subscriber and is
+                evicted after RTK Query's `keepUnusedDataFor` window
+                (CR-AC-03, `global-loader/sad.md` §4.4).
+
+                `data-[inert]:hidden` is not decoration. React Aria marks an
+                unselected force-mounted panel `inert`, which removes it from
+                the accessibility tree and the keyboard order but leaves it
+                **on screen** — its own contract requires the caller to supply
+                the visibility rule, and neither `@heroui/styles`'
+                `.tabs__panel` nor `styles/global.css` has one. Without this
+                class all four admitted tabs paint stacked under the tab
+                bar. */}
             {tabs.map(({ id }) => (
-              <Tabs.Panel className="px-0 pt-5" id={id} key={id}>
+              <Tabs.Panel
+                className="px-0 pt-5 data-[inert]:hidden"
+                id={id}
+                key={id}
+                shouldForceMount
+              >
                 {tabContentById[id] ?? null}
               </Tabs.Panel>
             ))}
           </Tabs>
         </div>
-      ) : null}
+      </Conditional>
     </main>
   );
 };

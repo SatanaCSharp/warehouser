@@ -33,12 +33,35 @@ Colocate a component's test with the component after the move — `MemberList.sp
 
 ### When not to nest
 
-Do not nest a component that has more than one consumer. If two owners in the same module need it,
-or another module needs it, keep it at the shared ancestor level instead — the module's
-`components/` root, or `shared/components/` once a second module needs it (see
-[Frontend architecture](../frontend-architecture.md#source-structure)). Nesting encodes exclusive
-ownership; once ownership is no longer exclusive, the file must move back out to where every
-consumer can reach it without reaching into another component's private tree.
+What this rule protects against is a consumer reaching into another component's **private tree**.
+Nesting encodes exclusive ownership; once ownership is no longer exclusive, the file must move back
+out to where every consumer can reach it without reaching past an owner.
+
+So do not nest a sub-page component that has more than one consumer. If two owners in the same
+module need it, keep it at the shared ancestor level instead — the module's `components/` root, or
+`shared/components/` once a second module needs it (see
+[Frontend architecture](../frontend-architecture.md#source-structure)). Sub-page components follow
+this rule unchanged.
+
+A module's **declared public surface** is exempt. A route owner composing another module's
+page-level view — `modules/workspace`'s administration shell rendering `WorkspaceMembersTab`,
+`WorkspaceRolesTab` and `WorkspacePermissionsTab`, all owned by `modules/access` — is importing
+declared surface, not reaching into a private tree. That import does not make the view shared and
+does not promote it to `shared/components/`: the view stays in the module the placement rule
+assigns it to. Reaching into a component another module has _not_ declared is still a violation, and
+is exactly what this rule forbids.
+
+Which module that is, is not this guide's decision — see
+[Scope-of-exercise tiebreak for sole-consumer slices](../adr/18-08-2026-scope-of-exercise-placement-tiebreak.md).
+Note that a cross-module surface import is not automatically the right arrangement: where the
+imported slice's **sole** consumer is that route owner _and_ the slice's operations are performed at
+a different scope than the **scope of the entity whose invariants the slice enforces**, the tiebreak
+moves the slice into the consumer's module and the import becomes intra-module. Both conditions must
+hold, and the second is read on entity scope rather than on where the consumer lives. The three
+access tabs above are a sole-consumer slice, so the first holds; the second does not, because the
+invariants they enforce are a Workspace Role's and a Workspace membership's — both Workspace-scoped
+per the glossary — and they are exercised at that same Workspace scope. That is why they stay where
+they are and remain the worked example here.
 
 ## Grouping owned components by domain
 

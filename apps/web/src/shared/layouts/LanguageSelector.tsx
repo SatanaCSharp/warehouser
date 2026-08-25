@@ -1,9 +1,10 @@
 import { Button, Dropdown, Label } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 
+import { Conditional } from 'shared/components/Conditional';
 import { CheckIcon, ChevronDownIcon, GlobeIcon } from 'shared/icons';
 
-import type { ReactElement } from 'react';
+import type { Key, ReactElement } from 'react';
 
 type SupportedLanguage = 'en' | 'uk';
 
@@ -22,6 +23,10 @@ export const LanguageSelector = (): ReactElement => {
   const currentLabel = LANGUAGE_LABELS[baseLanguage];
   const accessibleLabel = `${t('language.label')}: ${currentLabel}`;
 
+  const onSelectLanguage = (key: Key): void => {
+    void i18n.changeLanguage(String(key));
+  };
+
   return (
     <Dropdown>
       <Button
@@ -36,17 +41,19 @@ export const LanguageSelector = (): ReactElement => {
       <Dropdown.Popover>
         <Dropdown.Menu
           aria-label={t('language.label')}
-          onAction={(key) => {
-            void i18n.changeLanguage(String(key));
-          }}
+          onAction={onSelectLanguage}
         >
           <Dropdown.Item id="en" textValue={LANGUAGE_LABELS.en}>
             <Label>{LANGUAGE_LABELS.en}</Label>
-            {baseLanguage === 'en' ? <CheckIcon /> : null}
+            <Conditional when={baseLanguage === 'en'}>
+              <CheckIcon />
+            </Conditional>
           </Dropdown.Item>
           <Dropdown.Item id="uk" textValue={LANGUAGE_LABELS.uk}>
             <Label>{LANGUAGE_LABELS.uk}</Label>
-            {baseLanguage === 'uk' ? <CheckIcon /> : null}
+            <Conditional when={baseLanguage === 'uk'}>
+              <CheckIcon />
+            </Conditional>
           </Dropdown.Item>
         </Dropdown.Menu>
       </Dropdown.Popover>

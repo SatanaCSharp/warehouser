@@ -8,6 +8,8 @@ import {
 } from '@heroui/react';
 import { forwardRef, useState } from 'react';
 
+import { Conditional } from 'shared/components/Conditional';
+
 import type {
   ComponentProps,
   ComponentPropsWithoutRef,
@@ -67,6 +69,8 @@ export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
   ) => {
     const [isVisible, setIsVisible] = useState(false);
 
+    const onToggleVisibility = (): void => setIsVisible((visible) => !visible);
+
     return (
       <TextField
         className={className}
@@ -93,13 +97,15 @@ export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
               className="min-h-11 min-w-11 text-sm"
               size="sm"
               variant="ghost"
-              onPress={() => setIsVisible((visible) => !visible)}
+              onPress={onToggleVisibility}
             >
               {isVisible ? (hideText ?? hideLabel) : (showText ?? showLabel)}
             </Button>
           </InputGroup.Suffix>
         </InputGroup>
-        {description ? <Description>{description}</Description> : null}
+        <Conditional when={description}>
+          <Description>{description}</Description>
+        </Conditional>
         <FieldError>{errorMessage}</FieldError>
       </TextField>
     );

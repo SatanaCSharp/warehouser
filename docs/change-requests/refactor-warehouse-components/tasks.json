@@ -1,0 +1,259 @@
+{
+  "slug": "refactor-warehouse-components",
+  "kind": "change-request",
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "Capture the three `baseline_revision` comparison artifacts",
+      "layer": "tests",
+      "deps": [],
+      "acs": ["CR-RG-01", "CR-RG-05", "CR-RG-07"],
+      "dod": "The three baseline artifacts are committed under `apps/web/src/test/baselines/`, each regenerated from `42f1205` alone and reproducible by re-running its capture script.",
+      "files_hint": ["apps/web/src/test/baselines"],
+      "source_refs": []
+    },
+    {
+      "id": "T2",
+      "title": "Author CH-D2's system ADR — the narrowed placement rule",
+      "layer": "docs",
+      "deps": [],
+      "acs": ["CR-AC-03"],
+      "dod": "A new Accepted system ADR exists carrying all four clauses CR-AC-03 enumerates plus `sad.md` §4.2's home-vs-grouping test and §4.5's naming rule, and a reviewer can apply its tiebreak to a new slice without re-deciding per case.",
+      "files_hint": ["docs/system/adr"],
+      "source_refs": ["docs/system/adr/14-08-2026-domain-owned-flat-modules.md"]
+    },
+    {
+      "id": "T3",
+      "title": "Supersede ADR 14-08-2026 and re-list both ADRs in `web-index.md`",
+      "layer": "docs",
+      "deps": ["T2"],
+      "acs": ["CR-AC-03"],
+      "dod": "ADR 14-08-2026 reads `Superseded by …` with a working forward link and a body diffing to zero content changes, and `web-index.md` lists both ADRs with correct status.",
+      "files_hint": [
+        "docs/system/adr/14-08-2026-domain-owned-flat-modules.md",
+        "docs/system/web-index.md"
+      ],
+      "source_refs": [
+        "docs/system/adr/14-08-2026-domain-owned-flat-modules.md",
+        "docs/system/web-index.md"
+      ]
+    },
+    {
+      "id": "T4",
+      "title": "Reconcile `placing-web-components.md` §\"When not to nest\"",
+      "layer": "docs",
+      "deps": ["T2"],
+      "acs": ["CR-AC-03"],
+      "dod": "`placing-web-components.md` no longer uses the warehouses tab as its worked example of a legal cross-module surface import, and its replacement example is a cross-module import that still exists at `HEAD`.",
+      "files_hint": ["docs/system/guides/placing-web-components.md"],
+      "source_refs": ["docs/system/guides/placing-web-components.md"]
+    },
+    {
+      "id": "T5",
+      "title": "Reconcile `adding-a-web-module.md` at its four contradicting statements",
+      "layer": "docs",
+      "deps": ["T2"],
+      "acs": ["CR-AC-03"],
+      "dod": "`adding-a-web-module.md` carries the scope carve-out in §1 and retains no statement contradicting CH-D2 at any of the four locations CR-AC-03 enumerates.",
+      "files_hint": ["docs/system/guides/adding-a-web-module.md"],
+      "source_refs": ["docs/system/guides/adding-a-web-module.md"]
+    },
+    {
+      "id": "T6",
+      "title": "Reorganize `shared/api` into four domain directories and rewrite its 68 importers",
+      "layer": "infra",
+      "deps": ["T1", "T3", "T4", "T5"],
+      "acs": ["CR-AC-05", "CR-RG-07"],
+      "dod": "The nine `shared/api` files resolve under `client/`, `workspace/`, `access/` and `warehouse/` with nothing at the root, every importer resolves through the new path, and each moved module's rename-detected diff against `42f1205` contains import-specifier hunks only.",
+      "files_hint": ["apps/web/src/shared/api"],
+      "source_refs": [
+        "apps/web/src/shared/api/api-client.ts",
+        "apps/web/src/shared/api/mutation-outcome.ts",
+        "apps/web/src/shared/api/workspace-context-api.ts",
+        "apps/web/src/shared/api/workspace-context-api.spec.ts",
+        "apps/web/src/shared/api/workspace-users-api.ts",
+        "apps/web/src/shared/api/workspace-mutation.ts",
+        "apps/web/src/shared/api/access-permissions-api.ts",
+        "apps/web/src/shared/api/access-permissions-api.spec.ts",
+        "apps/web/src/shared/api/warehouse-path.ts"
+      ]
+    },
+    {
+      "id": "T7",
+      "title": "Move the 22-file administration slice into `modules/workspace`, content-free",
+      "layer": "ui",
+      "deps": ["T6"],
+      "acs": ["CR-AC-01", "CR-AC-02", "CR-RG-01"],
+      "dod": "All 22 files resolve under `modules/workspace/`, none under `modules/warehouse/`, `modules/warehouse` retains exactly its six files, `WORKSPACE_MODULE_MANIFEST` lists the 38 files of `sad.md` §5.1, `MODULE_SURFACE.warehouse` drops to two entries with zero exceptions, and every hunk in the diff is an import specifier, the surface declaration or the manifest.",
+      "files_hint": [
+        "apps/web/src/modules/warehouse",
+        "apps/web/src/modules/workspace",
+        "apps/web/src/test/module-surface.ts"
+      ],
+      "source_refs": [
+        "apps/web/src/modules/warehouse/components/workspace-administration/warehouses",
+        "apps/web/src/modules/warehouse/api/warehouse-api.ts",
+        "apps/web/src/modules/warehouse/hooks/useAssignWarehouseMembership.ts",
+        "apps/web/src/modules/warehouse/hooks/useCreateWarehouse.ts",
+        "apps/web/src/modules/warehouse/hooks/useRenameWarehouse.ts",
+        "apps/web/src/modules/warehouse/hooks/useRevokeWarehouseMembership.ts",
+        "apps/web/src/modules/warehouse/hooks/useSetWarehouseArchival.ts",
+        "apps/web/src/modules/warehouse/hooks/warehouse-name-validation.ts",
+        "apps/web/src/modules/warehouse/hooks/warehouse-name-validation.spec.ts",
+        "apps/web/src/modules/warehouse/schemas/warehouse-name-form.schema.ts",
+        "apps/web/src/test/module-surface.ts"
+      ]
+    },
+    {
+      "id": "T8",
+      "title": "Repoint the boundary machinery's stale paths and qualify its predecessor identifiers",
+      "layer": "tests",
+      "deps": ["T7"],
+      "acs": ["CR-AC-02", "CR-RG-07"],
+      "dod": "No stale path or ambiguous predecessor identifier survives in the boundary machinery: a grep for `modules/warehouse/hooks/warehouse-name-validation` across `apps/web/src` returns zero hits, and each re-used identifier names its owning request.",
+      "files_hint": [
+        "apps/web/src/modules/module-boundaries.spec.ts",
+        "apps/web/src/test/module-surface.ts",
+        "apps/web/src/modules/access/hooks/workspace-role-name-validation.spec.ts"
+      ],
+      "source_refs": [
+        "apps/web/src/modules/module-boundaries.spec.ts",
+        "apps/web/src/test/module-surface.ts",
+        "apps/web/src/modules/access/hooks/workspace-role-name-validation.spec.ts"
+      ]
+    },
+    {
+      "id": "T9",
+      "title": "Split `WarehouseList.tsx` into five flat siblings",
+      "layer": "ui",
+      "deps": ["T7"],
+      "acs": ["CR-AC-04", "CR-RG-02"],
+      "dod": "`WarehouseList.tsx`, `WarehouseSearchField.tsx`, `WarehouseListSkeleton.tsx`, `WarehouseRow.tsx` and `WarehouseEnterLink.tsx` each export exactly one component, match `sad.md` §5.3's props/owns/reads table, and keep `warehouse` at a two-hop maximum counted from `WarehouseList`.",
+      "files_hint": [
+        "apps/web/src/modules/workspace/components/workspace-administration/warehouses/WarehouseList.tsx",
+        "apps/web/src/modules/workspace/components/workspace-administration/warehouses/WarehouseSearchField.tsx",
+        "apps/web/src/modules/workspace/components/workspace-administration/warehouses/WarehouseListSkeleton.tsx",
+        "apps/web/src/modules/workspace/components/workspace-administration/warehouses/WarehouseRow.tsx",
+        "apps/web/src/modules/workspace/components/workspace-administration/warehouses/WarehouseEnterLink.tsx"
+      ],
+      "source_refs": [
+        "apps/web/src/modules/warehouse/components/workspace-administration/warehouses/WarehouseList.tsx"
+      ]
+    },
+    {
+      "id": "T10",
+      "title": "Split `WarehousePeopleList.tsx` into `WarehousePersonRow`",
+      "layer": "ui",
+      "deps": ["T7"],
+      "acs": ["CR-AC-04", "CR-RG-03"],
+      "dod": "`WarehousePeopleList.tsx` (101 → ~35 lines) and `WarehousePersonRow.tsx` each export one component, the `WorkspaceUser | null` state becomes a boolean owned by the row, and the rendered DOM is unchanged.",
+      "files_hint": [
+        "apps/web/src/modules/workspace/components/workspace-administration/warehouses/WarehousePeopleList.tsx",
+        "apps/web/src/modules/workspace/components/workspace-administration/warehouses/WarehousePersonRow.tsx"
+      ],
+      "source_refs": [
+        "apps/web/src/modules/warehouse/components/workspace-administration/warehouses/WarehousePeopleList.tsx"
+      ]
+    },
+    {
+      "id": "T11",
+      "title": "Carve `WarehouseList.spec.tsx` and `WarehouseRow.spec.tsx` out of `WarehousesTab.spec.tsx`",
+      "layer": "tests",
+      "deps": ["T9"],
+      "acs": ["CR-RG-01", "CR-RG-02", "CR-RG-04"],
+      "dod": "`WarehouseList.spec.tsx` holds 7 cases and `WarehouseRow.spec.tsx` holds 4, each moved expectation's subject and expected value diff-identical to `42f1205`, with no expectation deleted.",
+      "files_hint": [
+        "apps/web/src/modules/workspace/components/workspace-administration/warehouses/WarehousesTab.spec.tsx",
+        "apps/web/src/modules/workspace/components/workspace-administration/warehouses/WarehouseList.spec.tsx",
+        "apps/web/src/modules/workspace/components/workspace-administration/warehouses/WarehouseRow.spec.tsx"
+      ],
+      "source_refs": [
+        "apps/web/src/modules/warehouse/components/workspace-administration/warehouses/WarehousesTab.spec.tsx"
+      ]
+    },
+    {
+      "id": "T12",
+      "title": "Carve `WarehousePeopleList.spec.tsx` out of `WarehousesTab.spec.tsx`",
+      "layer": "tests",
+      "deps": ["T10", "T11"],
+      "acs": ["CR-RG-01", "CR-RG-03"],
+      "dod": "`WarehousePeopleList.spec.tsx` holds 3 cases split out of two `describe` blocks, each expectation's subject and expected value diff-identical to `42f1205`, with the orchestration cases left behind.",
+      "files_hint": [
+        "apps/web/src/modules/workspace/components/workspace-administration/warehouses/WarehousesTab.spec.tsx",
+        "apps/web/src/modules/workspace/components/workspace-administration/warehouses/WarehousePeopleList.spec.tsx"
+      ],
+      "source_refs": [
+        "apps/web/src/modules/warehouse/components/workspace-administration/warehouses/WarehousesTab.spec.tsx"
+      ]
+    },
+    {
+      "id": "T13",
+      "title": "Assert case-count identity — the 39 baseline cases, none lost, plus enumerated additions",
+      "layer": "tests",
+      "deps": ["T11", "T12"],
+      "acs": ["CR-RG-01", "CR-RG-04"],
+      "dod": "A test compares the four post-split spec files' case inventory against `test/baselines/warehouses-tab-cases.json` and asserts every one of the 39 baseline case names is still present exactly once, plus any case admitted by name in the gate's enumerated additions — 42 total at `HEAD`, distributed 27/7/4/4.",
+      "files_hint": [
+        "apps/web/src/test/baselines",
+        "apps/web/src/modules/workspace/components/workspace-administration/warehouses"
+      ],
+      "source_refs": []
+    },
+    {
+      "id": "T14",
+      "title": "Rename `authSlice.spec.ts` and guard the absence of `store/` scaffolding",
+      "layer": "tests",
+      "deps": ["T7"],
+      "acs": ["CR-AC-06"],
+      "dod": "`modules/auth/store/auth.slice.spec.ts` exists with `authSlice.spec.ts` gone and its assertions diff-identical, and a guard asserts that `modules/warehouse` and `modules/workspace` contain no `store/` directory.",
+      "files_hint": ["apps/web/src/modules/auth/store"],
+      "source_refs": ["apps/web/src/modules/auth/store/authSlice.spec.ts"]
+    },
+    {
+      "id": "T15",
+      "title": "Re-run and record the CR-AC-06 `useState` audit at `HEAD`",
+      "layer": "docs",
+      "deps": ["T9", "T10", "T14"],
+      "acs": ["CR-AC-06"],
+      "dod": "`change.md` §4.2's audit table is re-run over the three modules at `HEAD`, accounts for every `useState` occurrence, and records the count dropping by exactly one for the reason `sad.md` §8 gives.",
+      "files_hint": [
+        "docs/change-requests/refactor-warehouse-components/change.md"
+      ],
+      "source_refs": [
+        "docs/change-requests/refactor-warehouse-components/change.md"
+      ]
+    },
+    {
+      "id": "T16",
+      "title": "Guard the CR-RG-07 neighbour trees against `baseline_revision`",
+      "layer": "tests",
+      "deps": ["T7", "T14"],
+      "acs": ["CR-RG-07"],
+      "dod": "A guard compares `modules/access`, `modules/home`, `modules/auth`, `apps/server` and `packages/contracts` against `test/baselines/neighbour-trees.json` and admits exactly the diffs CR-RG-07's table permits — nothing more.",
+      "files_hint": ["apps/web/src/test/baselines"],
+      "source_refs": []
+    },
+    {
+      "id": "T17",
+      "title": "Produce and compare the CR-RG-05 normalized chunk manifest",
+      "layer": "tests",
+      "deps": ["T13", "T15", "T16"],
+      "acs": ["CR-RG-05"],
+      "dod": "The `HEAD` module→chunk manifest — hashes stripped, moved source paths rewritten to their post-move form, sorted — diffs empty against `test/baselines/module-chunk-manifest.json`, or the criterion is recorded **unverified** with the reason.",
+      "files_hint": ["apps/web/src/test/baselines", "apps/web/vite.config.ts"],
+      "source_refs": []
+    },
+    {
+      "id": "T18",
+      "title": "Record the CR-RG-06 attempt and its outcome",
+      "layer": "tests",
+      "deps": ["T7"],
+      "acs": ["CR-RG-06"],
+      "dod": "The server integration suite runs at `HEAD` and its manager-transfer concurrency case fails identically to `42f1205` — same assertion, same 403-where-409-expected — or the criterion is recorded **blocked** for want of a container runtime.",
+      "files_hint": [
+        "apps/server/src/access/rest/controllers/access-http-contract.integration.spec.ts"
+      ],
+      "source_refs": []
+    }
+  ]
+}

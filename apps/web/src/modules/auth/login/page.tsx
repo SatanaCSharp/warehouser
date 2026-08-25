@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useSignInMutation } from 'modules/auth/api/auth-api';
 import { LoginForm } from 'modules/auth/login/components/LoginForm';
 import { authBecameAuthenticated } from 'modules/auth/store/auth.slice';
+import { Conditional } from 'shared/components/Conditional';
 import { ROUTES } from 'shared/constants/routes';
 import { useAppDispatch } from 'store/hooks';
 
@@ -67,11 +68,11 @@ export const LoginPage = (): ReactElement => {
             {t('title')}
           </h2>
           <p className="text-muted">{t('description')}</p>
-          {reason === 'session-ended' ? (
+          <Conditional when={reason === 'session-ended'}>
             <p className="mt-3 rounded-lg bg-warning-soft p-3 text-sm text-warning-soft-foreground">
               {t('sessionEnded')}
             </p>
-          ) : null}
+          </Conditional>
         </Card.Header>
         <Card.Content className="gap-5 px-6 pb-8 sm:px-8">
           <LoginForm onSubmit={handleSubmit} />

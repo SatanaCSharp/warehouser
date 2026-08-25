@@ -4,15 +4,15 @@ import flatMap from 'lodash/flatMap';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useListWorkspaceUsersQuery } from 'modules/workspace/api/workspace-users-api';
-import { useListWorkspaceWarehousesQuery } from 'modules/workspace/api/workspace-warehouses-api';
+import { useListWorkspaceWarehousesQuery } from 'modules/workspace/api/warehouse-api';
 import { AddWarehouseAction } from 'modules/workspace/components/workspace-administration/warehouses/AddWarehouseAction';
 import { WarehouseDetailPane } from 'modules/workspace/components/workspace-administration/warehouses/WarehouseDetailPane';
 import { WarehouseList } from 'modules/workspace/components/workspace-administration/warehouses/WarehouseList';
+import { useListWorkspaceUsersQuery } from 'shared/api/workspace/workspace-users-api';
 import {
   hasWorkspacePermission,
   useCurrentWorkspaceContext,
-} from 'shared/hooks/useWorkspacePermissions';
+} from 'shared/hooks/queries/useWorkspacePermissions';
 
 import type { WorkspaceUser } from '@warehouser/contracts/workspaces';
 import type { ReactElement } from 'react';
@@ -35,33 +35,35 @@ const peopleForWarehouse = (
  * Warehouse's detail pane, and the dialogs that change it (AC-06, AC-08,
  * AC-09, AC-11, AC-11a, AC-12a, AC-33). Each dataset is rendered and
  * requested only under its own watch Permission.
+ *
+ * The tab decides no control's authority. It resolves the Warehouse list, the
+ * people read it is entitled to, and which Warehouse is selected; who may
+ * create, rename, archive or grant access is each control's own gate to answer
+ * (`docs/system/adr/19-08-2026-declarative-permission-gates.md`).
  */
 export const WarehousesTab = (): ReactElement => {
-  const { t } = useTranslation('workspace');
-  // Declared before the single Workspace context read below, so this tab's
-  // own Warehouse list request is always the first network call this tab
-  // makes — every capability this tab and its children need is derived from
-  // that one context read rather than an independent hook call per leaf, so
-  // no descendant races it with a second context request of its own.
-  const { data: warehouses = [], isLoading: isWarehousesLoading } =
+  const { t } = useTranslation('warehouse');
+  // Both reads are cache reads: `/workspace`'s route loader dispatched them and
+  // awaited them before this tab was committed, and a descendant gate reads the
+  // same cached context entry rather than issuing a second request, because RTK
+  // Query deduplicates the subscription this read has already opened. The
+  // declaration order carries no ordering intent — the loader dispatches the
+  // destination's reads together (global-loader CH-14).
+  // `isError` travels one hop to the list that renders it. The route's loader
+  // settles this read, so the tab is committed on a rejected one and the list
+  // must say so rather than state the Workspace has no Warehouse
+  // (`frontend-architecture.md` §Page).
+  const { data: warehouses = [], isError: isWarehouseReadFailed } =
     useListWorkspaceWarehousesQuery();
-  const { isLoading: isContextLoading, workspacePermissionIds } =
+  const { workspaceContext, workspacePermissionIds } =
     useCurrentWorkspaceContext();
+  // The one Permission this tab still reads itself, because it decides a
+  // *request* rather than an element: a dataset the actor may not read is never
+  // fetched (AC-30). Every control below gates itself
+  // (`docs/system/adr/19-08-2026-declarative-permission-gates.md`).
   const canReadPeople = hasWorkspacePermission(
     workspacePermissionIds,
     WorkspacePermissionId.WORKSPACE_MEMBERS_WATCH,
-  );
-  const canCreateWarehouse = hasWorkspacePermission(
-    workspacePermissionIds,
-    WorkspacePermissionId.WAREHOUSES_CREATE,
-  );
-  const canRenameWarehouse = hasWorkspacePermission(
-    workspacePermissionIds,
-    WorkspacePermissionId.WAREHOUSES_RENAME,
-  );
-  const canArchiveWarehouse = hasWorkspacePermission(
-    workspacePermissionIds,
-    WorkspacePermissionId.WAREHOUSES_ARCHIVE,
   );
   const { data: users } = useListWorkspaceUsersQuery(undefined, {
     skip: !canReadPeople,
@@ -71,15 +73,6 @@ export const WarehousesTab = (): ReactElement => {
   >(undefined);
   const [isDetailActive, setIsDetailActive] = useState(false);
 
-  // Neither pane renders ahead of the datasets it needs — the detail pane's
-  // people list would otherwise flash in a heartbeat after the list itself,
-  // and its per-Warehouse people count would flash in even later. Reads
-  // `users === undefined` rather than the query's own `isLoading`, which
-  // still reads `false` for the one render where a newly un-skipped query
-  // has not started fetching yet.
-  const isLoading =
-    isWarehousesLoading || isContextLoading || (canReadPeople && !users);
-
   const selectedWarehouse =
     warehouses.find((warehouse) => warehouse.id === selectedWarehouseId) ??
     warehouses[0];
@@ -87,24 +80,49 @@ export const WarehousesTab = (): ReactElement => {
     (warehouse) => warehouse.archivedAt === null,
   ).length;
   const peopleCounts = users ? peopleCountsByWarehouse(users) : undefined;
+  // CR-AC-13 — the same source `WarehouseSwitcher` reads, so the Enter action
+  // and the switcher can never disagree about which Warehouses the actor may
+  // enter. One prop, one hop; no additional query.
+  const membershipWarehouseIds =
+    workspaceContext?.warehouses.map((warehouse) => warehouse.warehouseId) ??
+    [];
 
   const selectWarehouse = (warehouseId: string): void => {
     setSelectedWarehouseId(warehouseId);
     setIsDetailActive(true);
   };
 
+  const onBack = (): void => setIsDetailActive(false);
+
+  // The pane reads the Warehouse it was opened for, so it is resolved here
+  // rather than gated inline: `Conditional` evaluates both arms, and an empty
+  // Workspace selects none.
+  const detailPane = !selectedWarehouse ? null : (
+    <WarehouseDetailPane
+      key={selectedWarehouse.id}
+      isOnlyNonArchived={
+        selectedWarehouse.archivedAt === null && nonArchivedCount === 1
+      }
+      people={
+        canReadPeople && users
+          ? peopleForWarehouse(users, selectedWarehouse.id)
+          : undefined
+      }
+      warehouse={selectedWarehouse}
+      onBack={onBack}
+    />
+  );
+
   return (
     <div className="grid gap-6 lg:grid-cols-[340px_minmax(0,1fr)]">
       <div>
         <div className="mb-4 flex justify-end">
-          <AddWarehouseAction
-            canCreateWarehouse={canCreateWarehouse}
-            label={t('warehouses.add.trigger')}
-          />
+          <AddWarehouseAction label={t('warehouses.add.trigger')} />
         </div>
         <WarehouseList
           className={isDetailActive ? 'hidden lg:block' : 'lg:block'}
-          isLoading={isLoading}
+          isError={isWarehouseReadFailed}
+          membershipWarehouseIds={membershipWarehouseIds}
           peopleCounts={peopleCounts}
           selectedWarehouseId={selectedWarehouse?.id}
           warehouses={warehouses}
@@ -112,24 +130,7 @@ export const WarehousesTab = (): ReactElement => {
         />
       </div>
 
-      {!isLoading && selectedWarehouse ? (
-        <WarehouseDetailPane
-          key={selectedWarehouse.id}
-          canArchiveWarehouse={canArchiveWarehouse}
-          canCreateWarehouse={canCreateWarehouse}
-          canRenameWarehouse={canRenameWarehouse}
-          isOnlyNonArchived={
-            selectedWarehouse.archivedAt === null && nonArchivedCount === 1
-          }
-          people={
-            canReadPeople && users
-              ? peopleForWarehouse(users, selectedWarehouse.id)
-              : undefined
-          }
-          warehouse={selectedWarehouse}
-          onBack={() => setIsDetailActive(false)}
-        />
-      ) : null}
+      {detailPane}
     </div>
   );
 };

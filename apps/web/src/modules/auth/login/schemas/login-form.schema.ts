@@ -1,13 +1,10 @@
 import { authCredentialsSchema } from '@warehouser/contracts/auth';
 import { z } from 'zod';
 
-export const loginValidationKeys = {
+const loginValidationKeys = {
   emailInvalid: 'email.invalid',
   passwordLength: 'password.lengthRange',
 } as const;
-
-export type LoginValidationKey =
-  (typeof loginValidationKeys)[keyof typeof loginValidationKeys];
 
 const rawLoginFormSchema = z.object({
   email: z.string(),

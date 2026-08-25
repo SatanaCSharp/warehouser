@@ -1,9 +1,20 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import {
+  createMemoryHistory,
+  createRootRouteWithContext,
+  createRoute,
+  createRouter,
+  Outlet,
+  RouterProvider,
+  useParams,
+} from '@tanstack/react-router';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
+import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { WarehousesTab } from 'modules/workspace/components/workspace-administration/warehouses/WarehousesTab';
+import { ROUTES } from 'shared/constants/routes';
 import { selectHeroOption } from 'test/hero-select';
 import { renderWithProviders } from 'test/render';
 import {
@@ -15,6 +26,10 @@ import {
   warehouseIds,
   workspaceIds,
 } from 'test/workspace-fixtures';
+
+import type { ContextWarehouse } from '@warehouser/contracts/workspaces';
+import type { ReactElement } from 'react';
+import type { AppStore } from 'store';
 
 // `alertWorkspaceAction` drives the success/pending toast through this single
 // seam (`web-error-handling.md` §2, §4) — mocking it here, as
@@ -56,6 +71,78 @@ const renderTab = (): void => {
   renderWithProviders(<WarehousesTab />, authenticatedWorkspaceStore());
 };
 
+const TabRoutePage = (): ReactElement => <WarehousesTab />;
+
+/**
+ * Reads `:warehouseId` off the entered-Warehouse probe route below and
+ * renders it as text, so a test can prove Enter navigated there. Named (not
+ * inline) so `useParams` satisfies the rules-of-hooks component-naming check.
+ */
+const EnteredWarehouseProbe = (): ReactElement => {
+  const { warehouseId } = useParams({ from: ROUTES.WAREHOUSE });
+  return <p>Entered warehouse {warehouseId}</p>;
+};
+
+/**
+ * A minimal router carrying `WarehousesTab` at `ROUTES.WORKSPACE` and a probe
+ * route at `ROUTES.WAREHOUSE`, so the Enter action's `Link` — which throws
+ * outside a `RouterProvider` — can resolve and be activated. Built locally
+ * rather than importing the production `router.ts` / `warehouseRoute`, which
+ * other lanes of this change own concurrently (CR-AC-14).
+ */
+const renderTabWithRouter = (
+  store: AppStore = authenticatedWorkspaceStore(),
+): void => {
+  const rootRoute = createRootRouteWithContext<{ store: AppStore }>()({
+    component: Outlet,
+  });
+  const tabRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: ROUTES.WORKSPACE,
+    component: TabRoutePage,
+  });
+  const enteredWarehouseRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: ROUTES.WAREHOUSE,
+    component: EnteredWarehouseProbe,
+  });
+  const router = createRouter({
+    routeTree: rootRoute.addChildren([tabRoute, enteredWarehouseRoute]),
+    context: { store },
+    history: createMemoryHistory({ initialEntries: [ROUTES.WORKSPACE] }),
+  });
+
+  render(
+    <Provider store={store}>
+      <RouterProvider router={router} />
+    </Provider>,
+  );
+};
+
+/** A membership entry for `WorkspaceContext.warehouses` — the source CR-AC-13
+ * requires the Enter action to read, independent of the tab's own
+ * `WAREHOUSES:WATCH` list. */
+const membershipWarehouse = (
+  warehouseId: string,
+  archivedAt: string | null,
+): ContextWarehouse => ({
+  warehouseId,
+  name: 'Membership',
+  archivedAt,
+  roleId: workspaceIds.warehouseRole,
+  roleKind: 'warehouse_manager',
+});
+
+const warehouseRowFor = async (name: string): Promise<HTMLElement> => {
+  const list = await screen.findByRole('list', { name: 'Warehouses' });
+  const heading = within(list).getByText(name);
+  const row = heading.closest('li');
+  if (!row) {
+    throw new Error(`No warehouse row found for ${name}`);
+  }
+  return row;
+};
+
 const selectWarehouse = async (
   user: ReturnType<typeof userEvent.setup>,
   name: string,
@@ -89,133 +176,42 @@ describe('WarehousesTab', () => {
     toast.danger.mockClear();
   });
 
-  describe('the Warehouse list (AC-33, AC-12a)', () => {
-    it('announces the loading skeleton as "Loading warehouses" before the list arrives', async () => {
-      stubWorkspaceServer({ context: namedWorkspaceContext(watchOnly) });
-
-      renderTab();
-
-      expect(
-        await screen.findByLabelText('Loading warehouses'),
-      ).toBeInTheDocument();
-      expect(
-        await screen.findByRole('button', { name: /central dc/iu }),
-      ).toBeInTheDocument();
-    });
-
-    it('lists every Warehouse of the Workspace with the number of people who have access', async () => {
-      stubWorkspaceServer({ context: namedWorkspaceContext(watchOnly) });
-
-      renderTab();
-
-      const list = await screen.findByRole('list', { name: 'Warehouses' });
-      const entries = within(list).getAllByRole('listitem');
-      expect(entries.map((entry) => entry.textContent)).toEqual([
-        expect.stringContaining('Central DC'),
-        expect.stringContaining('North Hub'),
-        expect.stringContaining('Old Depot'),
-      ]);
-      expect(entries[0]?.textContent).toContain('2 people with access');
-    });
-
-    it('marks an archived Warehouse with a chip and meta text rather than colour alone (AC-12a)', async () => {
-      stubWorkspaceServer({ context: namedWorkspaceContext(watchOnly) });
-
-      renderTab();
-
-      const list = await screen.findByRole('list', { name: 'Warehouses' });
-      const archived = within(list)
-        .getAllByRole('listitem')
-        .find((entry) => entry.textContent?.includes('Old Depot'));
-      expect(archived?.textContent).toContain('Archived');
-      expect(archived?.textContent).toContain('read-only');
-    });
-
-    it('marks a non-archived Warehouse with an "In operation" chip rather than colour alone', async () => {
-      stubWorkspaceServer({ context: namedWorkspaceContext(watchOnly) });
-
-      renderTab();
-
-      const list = await screen.findByRole('list', { name: 'Warehouses' });
-      const inOperation = within(list)
-        .getAllByRole('listitem')
-        .find((entry) => entry.textContent?.includes('Central DC'));
-      expect(inOperation?.textContent).toContain('In operation');
-      expect(inOperation?.textContent).not.toContain('Archived');
-    });
-
-    it('filters the list by the local search term', async () => {
-      const user = userEvent.setup();
-      stubWorkspaceServer({ context: namedWorkspaceContext(watchOnly) });
-
-      renderTab();
-
-      await screen.findByRole('button', { name: /central dc/iu });
-      await user.type(
-        screen.getByRole('searchbox', { name: 'Search warehouses' }),
-        'North',
-      );
-
-      expect(
-        screen.getByRole('button', { name: /north hub/iu }),
-      ).toBeInTheDocument();
-      expect(
-        screen.queryByRole('button', { name: /central dc/iu }),
-      ).not.toBeInTheDocument();
-    });
-
-    it('reports an empty Workspace instead of an empty list', async () => {
-      stubWorkspaceServer({
-        context: namedWorkspaceContext(watchOnly),
-        warehouses: [],
-      });
-
-      renderTab();
-
-      expect(
-        await screen.findByText('This workspace has no warehouse yet.'),
-      ).toBeInTheDocument();
-    });
-  });
-
   describe('the detail pane and the level boundary (AC-33)', () => {
-    it('shows who has access to the selected Warehouse and never what Role they hold there', async () => {
-      stubWorkspaceServer({ context: namedWorkspaceContext(watchOnly) });
+    /**
+     * Added at review (`_review/review-2026-08-18.md` S3). CR-RG-01 names the
+     * per-Warehouse people counts as behaviour that must be identical, but
+     * after CH-W5 the only case asserting them feeds `WarehouseList` a literal
+     * `peopleCounts` prop, leaving `peopleCountsByWarehouse` — the derivation
+     * itself — asserted by nothing that can fail. This drives it end to end
+     * from the users the server returns.
+     */
+    it('derives each row people count from the Workspace users the server returns', async () => {
+      stubWorkspaceServer({ context: namedWorkspaceContext(fullAuthority) });
 
       renderTab();
 
-      const detail = await detailPane();
-      expect(
-        within(detail).getByRole('heading', { name: /central dc/iu }),
-      ).toBeInTheDocument();
-      expect(
-        within(detail).getByText('yurii@example.test'),
-      ).toBeInTheDocument();
-      expect(
-        within(detail).getByText('anna.kravets@example.test'),
-      ).toBeInTheDocument();
-      // Anna belongs to Central DC; Lena belongs to no Warehouse at all.
-      expect(
-        within(detail).queryByText('lena.boiko@example.test'),
-      ).not.toBeInTheDocument();
-
-      // AC-33 covers the Users and the Warehouses they belong to — not their
-      // Warehouse Roles. Neither the protected Manager Role nor any Role
-      // identifier may reach this pane (design-handoff.md §The level boundary).
-      expect(detail.textContent).not.toMatch(/manager/iu);
-      expect(detail.textContent).not.toContain(workspaceIds.warehouseRole);
-    });
-
-    it('carries the line that says which level decides what a person may do inside the Warehouse', async () => {
-      stubWorkspaceServer({ context: namedWorkspaceContext(watchOnly) });
-
-      renderTab();
-
-      expect(
-        within(await detailPane()).getByText(
-          /what they may do inside it is decided by that role, not by the workspace/iu,
-        ),
-      ).toBeInTheDocument();
+      const list = await screen.findByRole('list', { name: 'Warehouses' });
+      const textOf = (name: string): string | null =>
+        within(list)
+          .getAllByRole('listitem')
+          .find((entry) => entry.textContent?.includes(name))?.textContent ??
+        null;
+      // Yurii and Anna reach Central DC; Yurii alone reaches North Hub; nobody
+      // reaches Old Depot, so it carries no count at all
+      // (`test/workspace-fixtures.ts`).
+      //
+      // Awaited rather than read on the render that first shows the list: the
+      // route loader awaits the Workspace users, but this spec mounts the tab
+      // directly, so the counts land on the render after the list itself
+      // (global-loader CH-14 removed the readiness branch that used to hold
+      // both back together). Same subject, same expected values.
+      await waitFor(() =>
+        expect(textOf('Central DC')).toContain('2 people with access'),
+      );
+      // Singular where the count is one — the key carries plural forms, so a
+      // sole member is a "person", not "1 people".
+      expect(textOf('North Hub')).toContain('1 person with access');
+      expect(textOf('Old Depot')).not.toContain('with access');
     });
 
     it('omits the people list entirely without WORKSPACE_MEMBERS:WATCH and never requests it (AC-30)', async () => {
@@ -293,11 +289,17 @@ describe('WarehousesTab', () => {
       expect(
         await screen.findByText('Enter a Warehouse name.'),
       ).toBeInTheDocument();
-      const created = requestedUrls.filter(
-        (url, index) =>
-          url.endsWith('/api/v1/workspace/warehouses') && index > 0,
+      // The subject is unchanged — no create request fired — but it is counted
+      // rather than positioned: the tab's controls now read the Workspace
+      // context through their own gates, and a child's effect runs before its
+      // parent's, so the context read is no longer guaranteed to arrive after
+      // the Warehouse list read. Every request to this path is therefore the
+      // list read, and there must still be exactly the one
+      // (`docs/system/adr/19-08-2026-declarative-permission-gates.md`).
+      const created = requestedUrls.filter((url) =>
+        url.endsWith('/api/v1/workspace/warehouses'),
       );
-      expect(created).toHaveLength(0);
+      expect(created).toHaveLength(1);
     });
 
     it('binds a server-rejected name to the field, naming the rule that failed (AC-08)', async () => {
@@ -440,7 +442,7 @@ describe('WarehousesTab', () => {
       await user.click(
         await screen.findByRole('button', { name: 'Archive warehouse' }),
       );
-      const dialog = await screen.findByRole('dialog', {
+      const dialog = await screen.findByRole('alertdialog', {
         name: /archive central dc/iu,
       });
       expect(within(dialog).getByText('What stops')).toBeInTheDocument();
@@ -593,6 +595,13 @@ describe('WarehousesTab', () => {
       });
 
       renderTab();
+      // The Roles read belongs to the dialog, so it waits for the dialog: the
+      // trigger's presence in the detail pane requests nothing.
+      await screen.findByRole('button', { name: 'Give access' });
+      expect(
+        requestedUrls.some((url) => url.includes('/assignable-roles')),
+      ).toBe(false);
+
       await openGiveAccessDialog(user);
 
       await waitFor(() =>
@@ -653,8 +662,12 @@ describe('WarehousesTab', () => {
   });
 
   describe('withdrawing warehouse access (AC-25b, AC-25c)', () => {
-    const rowFor = (email: string): HTMLElement => {
-      const row = screen.getByText(email).closest('li');
+    // Awaited rather than read synchronously: this spec mounts the tab
+    // directly, so the Workspace users land on the render after the pane
+    // itself now that global-loader CH-14 has removed the readiness branch
+    // that held the pane back until they arrived.
+    const rowFor = async (email: string): Promise<HTMLElement> => {
+      const row = (await screen.findByText(email)).closest('li');
       if (!row) {
         throw new Error(`No person row found for ${email}`);
       }
@@ -676,11 +689,11 @@ describe('WarehousesTab', () => {
       await detailPane();
 
       await user.click(
-        within(rowFor('anna.kravets@example.test')).getByRole('button', {
+        within(await rowFor('anna.kravets@example.test')).getByRole('button', {
           name: /withdraw access/iu,
         }),
       );
-      const dialog = await screen.findByRole('dialog', {
+      const dialog = await screen.findByRole('alertdialog', {
         name: /withdraw access/iu,
       });
       expect(dialog).toHaveTextContent(/other memberships .* unaffected/iu);
@@ -694,28 +707,6 @@ describe('WarehousesTab', () => {
         expect(
           screen.queryByText('anna.kravets@example.test'),
         ).not.toBeInTheDocument(),
-      );
-    });
-
-    it("exposes Withdraw access as disabled on the acting member's own row, with the reason accessible to assistive technology (AC-25c)", async () => {
-      stubWorkspaceServer({
-        context: namedWorkspaceContext(withAccessManagement),
-      });
-
-      renderTab();
-      await detailPane();
-
-      // Yurii is the acting member (test/workspace-fixtures.ts) and belongs to
-      // Central DC — a member never withdraws their own Warehouse authority.
-      const ownWithdraw = within(rowFor('yurii@example.test')).getByRole(
-        'button',
-        { name: /withdraw access/iu },
-      );
-      expect(ownWithdraw).toBeDisabled();
-      const describedBy = ownWithdraw.getAttribute('aria-describedby');
-      expect(describedBy).toBeTruthy();
-      expect(document.getElementById(describedBy ?? '')).toHaveTextContent(
-        /own .*(?:warehouse )?authority/iu,
       );
     });
 
@@ -739,13 +730,12 @@ describe('WarehousesTab', () => {
       // The client offers the control on Anna's row — it holds no data that
       // could mark her membership as protected — and the server is the one
       // that refuses.
-      const withdraw = within(rowFor('anna.kravets@example.test')).getByRole(
-        'button',
-        { name: /withdraw access/iu },
-      );
+      const withdraw = within(
+        await rowFor('anna.kravets@example.test'),
+      ).getByRole('button', { name: /withdraw access/iu });
       expect(withdraw).toBeEnabled();
       await user.click(withdraw);
-      const dialog = await screen.findByRole('dialog', {
+      const dialog = await screen.findByRole('alertdialog', {
         name: /withdraw access/iu,
       });
       await user.click(
@@ -796,27 +786,6 @@ describe('WarehousesTab', () => {
   });
 
   describe('accessibility', () => {
-    it('exposes the list as a labelled list of buttons that report their selected state', async () => {
-      const user = userEvent.setup();
-      stubWorkspaceServer({ context: namedWorkspaceContext(watchOnly) });
-
-      renderTab();
-
-      const list = await screen.findByRole('list', { name: 'Warehouses' });
-      expect(
-        within(list).getByRole('button', { name: /central dc/iu }),
-      ).toHaveAttribute('aria-pressed', 'true');
-
-      await selectWarehouse(user, 'North Hub');
-
-      expect(
-        within(list).getByRole('button', { name: /north hub/iu }),
-      ).toHaveAttribute('aria-pressed', 'true');
-      expect(
-        within(list).getByRole('button', { name: /central dc/iu }),
-      ).toHaveAttribute('aria-pressed', 'false');
-    });
-
     it('keeps the archive dialog cancel before its destructive primary and returns focus to the trigger on Escape', async () => {
       const user = userEvent.setup();
       stubWorkspaceServer({ context: namedWorkspaceContext(fullAuthority) });
@@ -827,7 +796,7 @@ describe('WarehousesTab', () => {
         name: 'Archive warehouse',
       });
       await user.click(trigger);
-      const dialog = await screen.findByRole('dialog', {
+      const dialog = await screen.findByRole('alertdialog', {
         name: /archive central dc/iu,
       });
 
@@ -842,9 +811,9 @@ describe('WarehousesTab', () => {
 
       await user.keyboard('{Escape}');
       await waitFor(() =>
-        expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+        expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument(),
       );
-      expect(trigger).toHaveFocus();
+      await waitFor(() => expect(trigger).toHaveFocus());
     });
 
     it('exposes the reason the archive action is unavailable rather than only dimming it (AC-11a)', async () => {
@@ -865,6 +834,56 @@ describe('WarehousesTab', () => {
       expect(document.getElementById(describedBy ?? '')).toHaveTextContent(
         /a workspace always keeps one/iu,
       );
+    });
+  });
+
+  describe('the Enter action (CR-AC-04, CR-AC-13, CR-AC-14, CR-RG-02)', () => {
+    it("navigates to that Warehouse's view when Enter is activated", async () => {
+      const user = userEvent.setup();
+      stubWorkspaceServer({
+        context: {
+          ...namedWorkspaceContext(watchOnly),
+          warehouses: [membershipWarehouse(warehouseIds.central, null)],
+        },
+      });
+
+      renderTabWithRouter();
+
+      const row = await warehouseRowFor('Central DC');
+      await user.click(within(row).getByRole('link', { name: /enter/iu }));
+
+      expect(
+        await screen.findByText(`Entered warehouse ${warehouseIds.central}`),
+      ).toBeInTheDocument();
+    });
+
+    it('leaves rename, archive/restore and grant/withdraw access reachable on a row that also renders Enter', async () => {
+      const user = userEvent.setup();
+      stubWorkspaceServer({
+        context: {
+          ...namedWorkspaceContext(fullAuthority),
+          warehouses: [membershipWarehouse(warehouseIds.central, null)],
+        },
+      });
+
+      renderTabWithRouter();
+
+      const row = await warehouseRowFor('Central DC');
+      expect(
+        within(row).getByRole('link', { name: /enter/iu }),
+      ).toBeInTheDocument();
+
+      await user.click(
+        within(row).getByRole('button', { name: /central dc/iu }),
+      );
+
+      const detail = await detailPane();
+      expect(
+        within(detail).getByRole('button', { name: 'Save name' }),
+      ).toBeInTheDocument();
+      expect(
+        within(detail).getByRole('button', { name: 'Archive warehouse' }),
+      ).toBeInTheDocument();
     });
   });
 });

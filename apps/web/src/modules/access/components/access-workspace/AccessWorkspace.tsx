@@ -1,41 +1,57 @@
 import { Chip, Tabs } from '@heroui/react';
-import compact from 'lodash/compact';
+import { PermissionId } from '@warehouser/shared-types/enums';
 import { useTranslation } from 'react-i18next';
 
 import { MembersTab } from 'modules/access/components/access-workspace/components/members/MembersTab';
 import { PermissionsTab } from 'modules/access/components/access-workspace/components/permissions/PermissionsTab';
 import { RolesTab } from 'modules/access/components/access-workspace/components/roles/RolesTab';
-import { useAccessCapabilities } from 'modules/access/hooks/useAccessCapabilities';
+import { useAccessScope } from 'modules/access/hooks/projections/useAccessScope';
+import { rolesTabPermissions } from 'modules/access/utils/access-permission-sets';
+import { Conditional } from 'shared/components/Conditional';
+import { usePermittedItems } from 'shared/hooks/projections/usePermittedItems';
 
 import type { ReactElement, ReactNode } from 'react';
 
-type WorkspaceTab = { id: string; label: string; panel: ReactNode };
+type WorkspaceTab = {
+  id: string;
+  label: string;
+  panel: ReactNode;
+  /** The Permissions that put this tab on the bar; any one of them is enough. */
+  permission: readonly PermissionId[];
+};
 
 /**
  * Composition root of the access workspace: it renders the tabs the acting user
  * may see. What a tab shows lives in that tab's own component, and each tab
  * loads the data and mutations it needs itself — none of it is decided here.
+ *
+ * `Tabs.List` and `Tabs.Panel` are React Aria collections, so each tab carries
+ * the Permissions that offer it in its own descriptor and `usePermittedItems`
+ * drops the rest — the collection form of `WarehousePermissionGate`
+ * (`docs/system/adr/19-08-2026-declarative-permission-gates.md`).
  */
 export const AccessWorkspace = (): ReactElement => {
   const { t } = useTranslation('access');
-  const { canManageRoles, canReadMembers, canReadRoles, isArchived } =
-    useAccessCapabilities();
+  const { isArchived } = useAccessScope();
 
-  const tabs = compact<WorkspaceTab>([
-    (canReadRoles || canManageRoles) && {
+  const tabs = usePermittedItems<WorkspaceTab>([
+    {
       id: 'roles',
       label: t('navigation.roles'),
       panel: <RolesTab />,
+      permission: rolesTabPermissions,
     },
-    canReadMembers && {
+    {
       id: 'members',
       label: t('navigation.members'),
       panel: <MembersTab />,
+      permission: [PermissionId.USERS_WATCH],
     },
-    canReadRoles && {
+    {
       id: 'permissions',
       label: t('navigation.permissions'),
       panel: <PermissionsTab />,
+      permission: [PermissionId.ROLES_WATCH],
     },
   ]);
 
@@ -46,7 +62,7 @@ export const AccessWorkspace = (): ReactElement => {
           <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
             {t('heading')}
           </h1>
-          {isArchived ? (
+          <Conditional when={isArchived}>
             <Chip
               color="default"
               title={t('archived.alertDescription')}
@@ -54,7 +70,7 @@ export const AccessWorkspace = (): ReactElement => {
             >
               {t('archived.chip')}
             </Chip>
-          ) : null}
+          </Conditional>
         </div>
         <p className="mt-2 text-muted">{t('description')}</p>
       </header>
@@ -75,8 +91,27 @@ export const AccessWorkspace = (): ReactElement => {
             </Tabs.List>
           </Tabs.ListContainer>
 
+          {/* `shouldForceMount` mounts every admitted panel inert but present,
+              so each admitted tab's own query hook subscribes on first paint
+              and holds the entry `loadAccessSurface` filled with
+              `subscribe: false` — which otherwise has no subscriber and is
+              evicted after RTK Query's `keepUnusedDataFor` window (CR-AC-03,
+              `global-loader/sad.md` §4.4).
+
+              `data-[inert]:hidden` is not decoration. React Aria marks an
+              unselected force-mounted panel `inert`, which removes it from the
+              accessibility tree and the keyboard order but leaves it **on
+              screen** — its own contract requires the caller to supply the
+              visibility rule, and neither `@heroui/styles`' `.tabs__panel` nor
+              `styles/global.css` has one. Without this class every admitted
+              tab paints stacked under the tab bar. */}
           {tabs.map(({ id, panel }) => (
-            <Tabs.Panel className="px-0 pt-5" id={id} key={id}>
+            <Tabs.Panel
+              className="px-0 pt-5 data-[inert]:hidden"
+              id={id}
+              key={id}
+              shouldForceMount
+            >
               {panel}
             </Tabs.Panel>
           ))}

@@ -43,6 +43,13 @@ apps/web/src/
 │       ├── alerts/          # module-specific user feedback adapters
 │       ├── context/         # state + handlers provider pairs; create only when drilling fails
 │       ├── hooks/           # create only when the module needs them
+│       │   ├── queries/     # reads of server state
+│       │   ├── mutations/   # writes of server state
+│       │   ├── forms/       # form sessions
+│       │   ├── projections/ # derivations over state already loaded
+│       │   └── effects/     # hooks whose product is a browser side effect
+│       ├── loaders/         # plain route data functions; only when a route awaits data
+│       ├── utils/           # module-owned pure helpers; never hooks
 │       ├── schemas/         # browser-only validation
 │       ├── api/             # module-owned server calls/query adapters
 │       └── store/           # module-owned RTK state
@@ -52,27 +59,50 @@ apps/web/src/
 ├── guards/                  # plain route access functions
 ├── shared/
 │   ├── alerts/              # generic alerts reused across modules
+│   ├── api/                 # shared query client, outcome normalizer, cross-module endpoints
 │   ├── components/          # reused by at least two modules
 │   ├── constants/
-│   └── layouts/
+│   ├── hooks/               # same five subdirectories as a module's hooks/
+│   ├── layouts/
+│   └── utils/               # generic pure helpers owned by no single entity
 ├── store/
 │   ├── index.ts             # root reducer, store factory, production store, types
 │   ├── hooks.ts             # typed dispatch and selector hooks
 │   └── middleware/          # generic application-wide Redux middleware
-├── hooks/                   # reusable app-level non-data hooks
 ├── styles/                  # global.css: HeroUI import + CSS-variable theme overrides
 └── test/                    # provider renderer and global test setup
 ```
 
-Keep logic inside one module until another module genuinely needs it. Promote it to `shared/` or
-root `hooks/` only when reuse exists. Stable platform boundaries—root layout, route constants,
-store creation, and an eventual shared API client—may start outside a feature.
+Keep logic inside one module until another module genuinely needs it. Promote it to `shared/` only
+when reuse exists **and no single domain entity owns it** — a generic helper
+several modules use is shared, but behavior belonging to one entity stays in that entity's module
+and is reached through the module's declared public surface instead of being promoted. A
+cross-module import of a declared page-level view is therefore not a reason to move that view into
+`shared/`; see [Domain-owned flat modules](adr/14-08-2026-domain-owned-flat-modules.md). Stable
+platform boundaries—root layout, route constants, store creation, and the shared API client—may
+start outside a feature.
 
 Alerts follow the same ownership rule. Put feedback for a feature-owned action in
 `modules/<module>/alerts/`, even when it uses a shared toast library or translation namespace.
 For example, sign-up and sign-out success alerts belong to `modules/auth/alerts/`. Use
 `shared/alerts/` only for presentation behavior that applies across feature modules, such as the
 generic normalized API-failure alert. Colocate each alert adapter's test with the adapter.
+
+Hooks and pure helpers are filed by what they do, not by which screen calls them: every `hooks/`
+directory uses the five names above, and a file that declares no hook belongs in a `utils/`
+directory instead. Follow [Placing web hooks](guides/placing-web-hooks.md) for the full rule and for
+the module-versus-shared promotion test it applies.
+
+`modules/<module>/loaders/` holds **plain route data functions** — what `guards/` is at the
+composition layer, at module scope. A loader is created only when a route awaits data, and the
+module that owns the datasets owns the loader; `route.tsx` imports it and wires it to the `loader:`
+option. Three rules come with the directory: a loader **dispatches, it does not decide access**
+(a redirect or an entry verdict stays in `guards/`); a loader **imports no page and no component**,
+because it is reachable from the router chunk and would defeat the lazy `import('./page')`
+boundary; and a destination composed from more than one module reaches the other module's datasets
+through a **contribution function on that module's declared public surface**, never past it. The
+decision and its alternatives are recorded in
+[Module-owned route loaders](../change-requests/global-loader/adr/0001-module-owned-route-loaders.md).
 
 Use Lodash for collection, object, and other data-structure operations when it provides the
 operation. Import the needed function directly so the web bundle includes only what it uses, and
@@ -87,9 +117,16 @@ prefer it to a hand-written imperative loop or custom equivalent.
 - parent and path;
 - lazy page import;
 - route access guard;
-- route-specific search validation or loader wiring when needed.
+- route-specific search validation, or loader wiring when the destination needs data before it
+  paints.
 
 It contains no feature JSX, form handling, RTK dispatch, or direct API calls.
+
+A route **awaits the data its destination paints**: a destination that renders a dataset declares a
+`loader` for it, so the page mounts with that data present rather than assembling itself afterwards
+(§Page). Loader wiring means the `loader:` option naming a module-owned loader function — the
+dispatches themselves live in `modules/<module>/loaders/` (§Source structure), never in this file.
+A route that renders no server data declares no loader; do not add an empty one.
 
 ### Page
 
@@ -99,7 +136,16 @@ several children share it or the state is route-level. Data used by one componen
 component or a module-local hook.
 
 Avoid absolute rules that all queries must be in pages or must be in leaf components. Use the
-narrowest owner that can coordinate the complete loading, error, empty, and success behavior.
+narrowest owner that can coordinate the complete error, empty, and success behavior.
+
+**First-paint readiness of a destination is owned by its route, not by a component.** The route
+awaits the data its destination paints (§Route), so by the time a page or one of its components
+renders, that data is already there and there is no waiting window left for it to own. A component
+therefore declares no spinner, no skeleton, no readiness branch and no waiting copy of its own for
+data its route awaited; the one waiting affordance the application renders is the route's
+`pendingComponent`. The narrowest-owner rule above is unchanged for the other three states:
+error, empty and success stay with the narrowest component that can coordinate them, so a permitted
+actor whose read failed still reaches that component's own error arm rather than an empty surface.
 
 ### Components
 
@@ -119,6 +165,14 @@ There is no Warehouser UI wrapper package today, so do not invent imports from o
 standardizes behavior used by multiple modules. See
 [HeroUI design principles](guides/heroui-design-principles.md) for how HeroUI's own conventions
 apply here.
+
+Conditional rendering has one form: `shared/components/Conditional`. No ternary and no `&&` chooses
+between elements in JSX; a ternary picking a value, such as a `className` or a label, is unaffected.
+See
+[Writing web conditional components](guides/writing-web-conditional-components.md), including what
+to do when the gated branch reads a value that only exists under the condition. Event handlers are
+declared and named in the component body above the `return`, and the JSX passes the reference —
+[Writing web components](guides/writing-web-components.md) §7.
 
 When a component in `components/` is the exclusive owner of other components — rendered only by it,
 by no sibling and no other module — nest the owned components one level down in a `components/`
@@ -205,11 +259,17 @@ module-named namespace rather than being moved into the module source tree. Foll
 ## Testing
 
 Colocate component, page, hook, schema, and slice tests with their owner. Keep cross-cutting test
-setup in `src/test`.
+setup in `src/test`. A spec never sits one level above its subject; when no single file owns the
+behaviour it goes in its own dedicated directory under `src/test/`. See
+[Placing web tests](guides/placing-web-tests.md).
 
 - Use a fresh RTK store and memory-history router per test.
 - Prefer accessible Testing Library queries by role, label, and name.
 - Add `data-testid` only when there is no stable semantic query; do not require it on every node.
+- `src/test/setup.ts` raises Testing Library's `asyncUtilTimeout` above its 1s default, because a
+  route-level spec's first `findBy*` awaits a lazily imported page and the suite runs beside the
+  other workspace tasks. Do not re-tighten it per assertion; Vitest's `testTimeout` still bounds a
+  genuinely stuck test.
 - Test guards through navigation behavior and feature stores as pure state behavior where useful.
 - Test submission orchestration at the page or route level; keep form tests focused on validation
   and emitted values.

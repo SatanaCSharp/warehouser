@@ -3,11 +3,10 @@ import { useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { alertSignUpAction } from 'modules/auth/alerts/auth-feedback';
 import { useSignUpMutation } from 'modules/auth/api/auth-api';
 import { SignUpForm } from 'modules/auth/sign-up/components/SignUpForm';
 import { authBecameAuthenticated } from 'modules/auth/store/auth.slice';
-import { isApiFailure } from 'shared/api/api-client';
+import { isApiFailure } from 'shared/api/client/api-client';
 import { ROUTES } from 'shared/constants/routes';
 import { useAppDispatch } from 'store/hooks';
 
@@ -25,7 +24,7 @@ export const SignUpPage = (): ReactElement => {
   const handleSubmit = async (values: SignUpFormValues): Promise<void> => {
     setEmailError(undefined);
 
-    const result = await alertSignUpAction(signUp(values));
+    const result = await signUp(values);
     if ('error' in result) {
       if (
         isApiFailure(result.error) &&

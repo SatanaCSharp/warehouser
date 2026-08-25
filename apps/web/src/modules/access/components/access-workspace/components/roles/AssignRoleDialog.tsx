@@ -6,37 +6,38 @@ import { FormSelectField } from 'shared/components/FormSelectField';
 
 import type { AccessRole } from 'modules/access/types/access.types';
 import type { ReactElement } from 'react';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 type AssignRoleDialogProps = {
-  memberId: string;
+  /** Named by address, not by id — the member projection carries both. */
+  memberEmail: string;
   roles: AccessRole[];
-  onClose: () => void;
-  onSave: (roleId: string) => Promise<void>;
+  onSave: (roleId: string) => Promise<MutationResult>;
 };
 
 type AssignRoleForm = { roleId: string };
 
 export const AssignRoleDialog = ({
-  memberId,
+  memberEmail,
   roles,
-  onClose,
   onSave,
 }: AssignRoleDialogProps): ReactElement => {
   const { t } = useTranslation('access');
-  const { control, handleSubmit } = useForm<AssignRoleForm>({
-    defaultValues: { roleId: '' },
-  });
+  const form = useForm<AssignRoleForm>({ defaultValues: { roleId: '' } });
+
+  const onSubmit = ({ roleId }: AssignRoleForm): Promise<MutationResult> =>
+    onSave(roleId);
 
   return (
     <FormModalDialog
       title={t('administration.assignment.title')}
       cancelLabel={t('administration.cancel')}
       submitLabel={t('administration.assignment.save')}
-      onClose={onClose}
-      onSubmit={handleSubmit(({ roleId }) => onSave(roleId))}
+      form={form}
+      onSubmit={onSubmit}
     >
       <Controller
-        control={control}
+        control={form.control}
         name="roleId"
         rules={{ required: true }}
         render={({ field }) => (
@@ -53,7 +54,7 @@ export const AssignRoleDialog = ({
           />
         )}
       />
-      <p className="font-mono text-sm">{memberId}</p>
+      <p className="text-sm">{memberEmail}</p>
     </FormModalDialog>
   );
 };

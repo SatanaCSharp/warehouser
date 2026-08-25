@@ -1,15 +1,35 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { PermissionId } from '@warehouser/shared-types/enums';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { MemberList } from 'modules/access/components/access-workspace/components/members/MemberList';
-import { renderWithProviders } from 'test/render';
+import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
+import {
+  accessIds,
+  authenticatedStore,
+  stubAccessServer,
+} from 'test/access-fixtures';
+import { renderInEnteredWarehouse } from 'test/render';
 
 import type { MemberListProps } from 'modules/access/components/access-workspace/components/members/MemberList';
 import type {
   AccessMember,
   AccessRole,
 } from 'modules/access/types/access.types';
+
+/**
+ * Each row decides for itself which of its three actions the actor may run, from
+ * the cached current-access projection of the addressed Warehouse
+ * (`docs/system/adr/19-08-2026-declarative-permission-gates.md`). So a case that
+ * varies authority varies the *stubbed projection*, not a harness prop: what
+ * these cases assert is the gate every actor really meets.
+ */
+const lifecyclePermissions = [
+  PermissionId.USERS_EMAIL_UPDATE,
+  PermissionId.USERS_PASSWORD_CHANGE,
+  PermissionId.USERS_DELETE,
+];
 
 const managerId = '00000000-0000-4000-8000-000000000001';
 const pickerId = '00000000-0000-4000-8000-000000000002';
@@ -55,15 +75,35 @@ const members: AccessMember[] = [
   },
 ];
 
-const renderMemberList = (
+/**
+ * Renders the list for an actor holding `permissionIds`, with that actor's
+ * projection already in the cache the rows read.
+ *
+ * Seeding the cache rather than waiting for a request keeps every case below
+ * asserting against resolved markup — including the empty case, which renders
+ * no row and would therefore have no projection read to wait for.
+ */
+const renderMemberList = async (
   overrides: Partial<MemberListProps> = {},
-): MemberListProps => {
+  permissionIds: readonly PermissionId[] = lifecyclePermissions,
+): Promise<MemberListProps> => {
+  stubAccessServer({ permissionIds });
+  const store = authenticatedStore(actorId);
+  await store.dispatch(
+    accessPermissionsApi.util.upsertQueryData(
+      'getCurrentAccess',
+      accessIds.warehouse,
+      {
+        warehouseId: accessIds.warehouse,
+        roleId: accessIds.managerRole,
+        roleKind: 'warehouse_manager',
+        permissionIds: [...permissionIds],
+        archivedAt: null,
+      },
+    ),
+  );
   const props: MemberListProps = {
     actorUserId: actorId,
-    canDeleteMember: true,
-    canEditEmail: true,
-    canResetPassword: true,
-    isLoading: false,
     members,
     roles,
     onDeleteMember: vi.fn(),
@@ -71,7 +111,16 @@ const renderMemberList = (
     onResetPassword: vi.fn(),
     ...overrides,
   };
-  renderWithProviders(<MemberList {...props} />);
+  renderInEnteredWarehouse(
+    <MemberList {...props} />,
+    store,
+    accessIds.warehouse,
+  );
+  // The mount is a Warehouse address the router resolves, so the search field —
+  // the one control every state of the list renders — is what says the subject
+  // is on screen.
+  await screen.findByLabelText('Search members');
+
   return props;
 };
 
@@ -89,22 +138,19 @@ const openPickerMenu = async (
 };
 
 describe('MemberList', () => {
-  it('shows a loading skeleton and no member rows while loading', () => {
-    renderMemberList({ isLoading: true });
-
-    expect(screen.getByLabelText('Loading members')).toBeInTheDocument();
-    expect(screen.queryByText('picker@example.test')).not.toBeInTheDocument();
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
-  it('shows the empty state when there are no members', () => {
-    renderMemberList({ members: [] });
+  it('shows the empty state when there are no members', async () => {
+    await renderMemberList({ members: [] });
 
     expect(screen.getByText('No members are available.')).toBeInTheDocument();
   });
 
   it('shows the search-empty state when the query matches nothing', async () => {
     const user = userEvent.setup();
-    renderMemberList();
+    await renderMemberList();
 
     await user.type(
       screen.getByLabelText('Search members'),
@@ -118,7 +164,7 @@ describe('MemberList', () => {
 
   it('filters visible members by the search query', async () => {
     const user = userEvent.setup();
-    renderMemberList();
+    await renderMemberList();
 
     await user.type(screen.getByLabelText('Search members'), 'picker@');
 
@@ -126,8 +172,8 @@ describe('MemberList', () => {
     expect(screen.queryByText('manager@example.test')).not.toBeInTheDocument();
   });
 
-  it('renders a member row with email, role, and one kebab trigger identifying the member', () => {
-    renderMemberList();
+  it('renders a member row with email, role, and one kebab trigger identifying the member', async () => {
+    await renderMemberList();
 
     expect(
       within(pickerRow()).getByText('picker@example.test'),
@@ -142,7 +188,7 @@ describe('MemberList', () => {
 
   it('opens the menu with only the true-capability actions and invokes the matching callback on selection', async () => {
     const user = userEvent.setup();
-    const props = renderMemberList();
+    const props = await renderMemberList();
 
     await openPickerMenu(user);
     const menu = screen.getByRole('menu', {
@@ -172,7 +218,7 @@ describe('MemberList', () => {
 
   it('invokes onResetPassword and onDeleteMember for their respective menu items', async () => {
     const user = userEvent.setup();
-    const props = renderMemberList();
+    const props = await renderMemberList();
 
     await openPickerMenu(user);
     await user.click(screen.getByRole('menuitem', { name: 'Reset password' }));
@@ -189,7 +235,7 @@ describe('MemberList', () => {
 
   it('closes the menu on Escape and returns focus to the trigger', async () => {
     const user = userEvent.setup();
-    renderMemberList();
+    await renderMemberList();
 
     const trigger = await openPickerMenu(user);
     expect(screen.getByRole('menu')).toBeInTheDocument();
@@ -204,7 +250,7 @@ describe('MemberList', () => {
 
   it('opens the menu when the focused trigger receives Enter or Space', async () => {
     const user = userEvent.setup();
-    renderMemberList();
+    await renderMemberList();
 
     const trigger = within(pickerRow()).getByRole('button', {
       name: 'Actions for picker@example.test',
@@ -225,7 +271,7 @@ describe('MemberList', () => {
 
   it('closes the menu on an outside click', async () => {
     const user = userEvent.setup();
-    renderMemberList();
+    await renderMemberList();
 
     await openPickerMenu(user);
     expect(screen.getByRole('menu')).toBeInTheDocument();
@@ -239,7 +285,7 @@ describe('MemberList', () => {
 
   it('moves focus among menu items with Arrow Up/Down', async () => {
     const user = userEvent.setup();
-    renderMemberList();
+    await renderMemberList();
 
     await openPickerMenu(user);
     const items = within(screen.getByRole('menu')).getAllByRole('menuitem');
@@ -254,8 +300,8 @@ describe('MemberList', () => {
     expect(items[0]).toHaveFocus();
   });
 
-  it('shows a Protected chip and no action controls for the Warehouse Manager row', () => {
-    renderMemberList();
+  it('shows a Protected chip and no action controls for the Warehouse Manager row', async () => {
+    await renderMemberList();
 
     const row = screen.getByRole('listitem', {
       name: /manager@example\.test/u,
@@ -264,8 +310,8 @@ describe('MemberList', () => {
     expect(within(row).queryByRole('button')).not.toBeInTheDocument();
   });
 
-  it('shows a You chip and no action controls for the acting member’s own row', () => {
-    renderMemberList();
+  it('shows a You chip and no action controls for the acting member’s own row', async () => {
+    await renderMemberList();
 
     const row = screen.getByRole('listitem', { name: /actor@example\.test/u });
     expect(within(row).getByText('You')).toBeInTheDocument();
@@ -274,11 +320,7 @@ describe('MemberList', () => {
 
   it('hides only the actions the actor is not permissioned for', async () => {
     const user = userEvent.setup();
-    renderMemberList({
-      canDeleteMember: false,
-      canEditEmail: true,
-      canResetPassword: false,
-    });
+    await renderMemberList({}, [PermissionId.USERS_EMAIL_UPDATE]);
 
     await openPickerMenu(user);
     const menu = screen.getByRole('menu');
@@ -293,13 +335,27 @@ describe('MemberList', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('renders no kebab trigger when the actor holds none of the lifecycle permissions', () => {
-    renderMemberList({
-      canDeleteMember: false,
-      canEditEmail: false,
-      canResetPassword: false,
-    });
+  it('renders no kebab trigger when the actor holds none of the lifecycle permissions', async () => {
+    await renderMemberList({}, []);
 
     expect(within(pickerRow()).queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  // CR-RG-01 at the unit level. An unresolved actor is carried by the prop type
+  // — `actorUserId` is `string | undefined` — rather than by a list-level
+  // branch, so the rows stay painted and every row withholds its menu. The
+  // `?? ''` fallback this replaces made an unresolved actor compare unequal to
+  // every member id, offering the whole menu on every row including the
+  // actor's own.
+  it('keeps every row painted and offers no destructive control while the actor is unresolved (CR-RG-01)', async () => {
+    await renderMemberList({ actorUserId: undefined });
+
+    const actorRow = screen.getByRole('listitem', {
+      name: /actor@example\.test/u,
+    });
+    expect(pickerRow()).toBeInTheDocument();
+    expect(actorRow).toBeInTheDocument();
+    expect(within(pickerRow()).queryByRole('button')).not.toBeInTheDocument();
+    expect(within(actorRow).queryByRole('button')).not.toBeInTheDocument();
   });
 });

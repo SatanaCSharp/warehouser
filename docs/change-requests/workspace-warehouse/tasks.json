@@ -1,0 +1,485 @@
+{
+  "slug": "workspace-warehouse",
+  "kind": "change-request",
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "Add the new context-switcher/refusal/no-context locale keys and the two new icons",
+      "layer": "ui",
+      "deps": [],
+      "acs": ["CR-AC-03", "CR-AC-07", "CR-AC-14", "CR-AC-17", "CR-AC-18"],
+      "source_refs": ["change.md#CH-01", "change.md#CH-08"],
+      "dod": "en/common.json, uk/common.json, en/workspace.json and uk/workspace.json gain matching keys for the grouped-switcher trigger label, the Workspace row label and its unnamed-Workspace placeholder, the two group labels, the current/archived/no-access trailing labels and the inert-row explanation, both refusal states, the no-context state, the landing pending and error states, and the Enter action; the three retained workspaceSwitcher.* message keys are left untouched with their existing copy; LogInIcon and LayoutGridIcon are added to shared/icons following the existing wrapper pattern and exported from shared/icons/index.ts; the existing localization parity test asserts identical key sets across en and uk for all 8 namespaces and the icons spec covers both new icons.",
+      "files_hint": [
+        "apps/web/public/locales/en/common.json",
+        "apps/web/public/locales/uk/common.json",
+        "apps/web/public/locales/en/workspace.json",
+        "apps/web/public/locales/uk/workspace.json",
+        "apps/web/src/shared/icons/LogInIcon.tsx",
+        "apps/web/src/shared/icons/LayoutGridIcon.tsx",
+        "apps/web/src/shared/icons/index.ts",
+        "apps/web/src/shared/icons/icons.spec.tsx",
+        "apps/web/src/i18n.spec.ts"
+      ]
+    },
+    {
+      "id": "T2",
+      "title": "Build the WarehouseEntryRefusal component with both refusal reasons",
+      "layer": "ui",
+      "deps": ["T1"],
+      "acs": ["CR-AC-07", "CR-AC-17"],
+      "source_refs": ["change.md#CH-03", "change.md#CH-04"],
+      "dod": "shared/components/WarehouseEntryRefusal.tsx renders a page-level state block (icon + heading + body in a left-aligned 560px column, per design-handoff.md's State Block mapping) selected by a reason prop of 'not-a-member' | 'archived'; component unit tests assert the not-a-member copy names no Warehouse, id, existence, Role, member or record and is byte-identical whatever the id, that the archived copy names the archived state and nothing further, that neither branch renders any Warehouse content or navigation list, and that both point at the context switcher as the way out.",
+      "files_hint": [
+        "apps/web/src/shared/components/WarehouseEntryRefusal.tsx",
+        "apps/web/src/shared/components/WarehouseEntryRefusal.spec.tsx"
+      ]
+    },
+    {
+      "id": "T3",
+      "title": "Implement the resolveWarehouseEntry entry-verdict guard",
+      "layer": "app",
+      "deps": [],
+      "acs": ["CR-AC-07", "CR-AC-17", "CR-RG-02"],
+      "source_refs": ["change.md#CH-04"],
+      "dod": "guards/warehouse-entry.guard.ts exports resolveWarehouseEntry(context, warehouseId) as a plain function with no React import that dispatches getWorkspaceContext through the store with subscribe:false and returns { status: 'entered' | 'refused', reason?: 'not-a-member' | 'archived', warehouseId }; guard unit tests assert an identical 'not-a-member' verdict for a non-existent id, a foreign-Workspace id, an own-Workspace id the actor holds no membership in and a malformed id, that no shape validation runs before the membership lookup, that a membership in an archived Warehouse yields 'archived', that a live membership yields 'entered', and that the function never throws a redirect.",
+      "files_hint": [
+        "apps/web/src/guards/warehouse-entry.guard.ts",
+        "apps/web/src/guards/warehouse-entry.guard.spec.ts"
+      ]
+    },
+    {
+      "id": "T4",
+      "title": "Establish the Warehouse layout route, its dashboard child and useEnteredWarehouse",
+      "layer": "wiring",
+      "deps": ["T2", "T3"],
+      "acs": ["CR-AC-05", "CR-AC-07", "CR-AC-17", "CR-AC-20"],
+      "source_refs": ["change.md#CH-03", "change.md#CH-10"],
+      "dod": "shared/constants/routes.ts gains WAREHOUSE and WAREHOUSE_ACCESS plus a ROUTE_SEGMENTS sibling for relative child segments (ACCESS still declared, removed by T6); routes/warehouse.route.tsx declares the layout route running requireAuth then resolveWarehouseEntry and returning the verdict into the match context; shared/layouts/WarehouseLayout.tsx renders Outlet for 'entered' and WarehouseEntryRefusal otherwise; shared/hooks/useEnteredWarehouse.ts reads that match non-throwing and returns the id only for 'entered'; modules/warehouse/{route,page}.tsx renders DesignSystemExample moved unchanged from modules/home/components; routes/catch-all.route.tsx declares the Warehouse-level splat child; router.ts registers the layout with its dashboard, splat children; modules/home/page.tsx renders the no-context state block; route-integration tests pin the three TanStack Router v1 behaviors the design rests on (a parent beforeLoad return value reaching the match context, beforeLoad not re-running while navigating between the layout's children, and the $ splat ranking below explicit children) and assert that /warehouses/X and any address beneath it render the refusal in place at the requested address with no redirect and no access-projection request.",
+      "files_hint": [
+        "apps/web/src/shared/constants/routes.ts",
+        "apps/web/src/routes/warehouse.route.tsx",
+        "apps/web/src/routes/catch-all.route.tsx",
+        "apps/web/src/shared/layouts/WarehouseLayout.tsx",
+        "apps/web/src/shared/layouts/WarehouseLayout.spec.tsx",
+        "apps/web/src/shared/hooks/useEnteredWarehouse.ts",
+        "apps/web/src/shared/hooks/useEnteredWarehouse.spec.tsx",
+        "apps/web/src/modules/warehouse/route.tsx",
+        "apps/web/src/modules/warehouse/page.tsx",
+        "apps/web/src/modules/warehouse/components/DesignSystemExample.tsx",
+        "apps/web/src/modules/warehouse/components/DesignSystemExample.spec.tsx",
+        "apps/web/src/modules/home/page.tsx",
+        "apps/web/src/router.ts",
+        "apps/web/src/router.spec.tsx"
+      ]
+    },
+    {
+      "id": "T5",
+      "title": "Build the RouteErrorState component with a retry that re-runs the failed load",
+      "layer": "ui",
+      "deps": ["T1"],
+      "acs": ["CR-AC-08"],
+      "source_refs": [],
+      "dod": "shared/components/RouteErrorState.tsx renders the application's standard route error state — triangle-alert in $danger, heading, body, and a primary Try again control that re-runs the failed load — and component unit tests assert the retry invokes the router's reset/invalidate path and that the component is distinct from the no-context state.",
+      "files_hint": [
+        "apps/web/src/shared/components/RouteErrorState.tsx",
+        "apps/web/src/shared/components/RouteErrorState.spec.tsx"
+      ]
+    },
+    {
+      "id": "T6",
+      "title": "Move the access surface under the Warehouse layout and read the Warehouse from the address",
+      "layer": "app",
+      "deps": ["T4"],
+      "acs": ["CR-AC-06", "CR-AC-11", "CR-AC-21"],
+      "source_refs": [
+        "change.md#CH-03",
+        "change.md#CH-04",
+        "docs/features/workspaces/spec.md#ac-03-us-02--happy"
+      ],
+      "dod": "modules/access/route.tsx becomes a child of warehouseRoute at ROUTE_SEGMENTS.ACCESS with no beforeLoad of its own; ROUTES.ACCESS is deleted and every reference to it updated in the same change; useCurrentPermissions reads useEnteredWarehouse() instead of context.effectiveWarehouseId, yielding permissionIds [] and skipping the projection query outside a Warehouse view; usePermissions unit tests assert the projection is requested for the addressed Warehouse and that changing the stored selection changes nothing about an open address; a route-integration test asserts /warehouses/W1/access and /warehouses/W2/access each show their own named Warehouse's Roles, Permission catalogue and members, and that a member of W whose Role carries neither ROLES:WATCH nor USERS:WATCH is admitted to the address and sees the existing unpopulated access state rather than a refusal or a redirect.",
+      "files_hint": [
+        "apps/web/src/modules/access/route.tsx",
+        "apps/web/src/shared/constants/routes.ts",
+        "apps/web/src/shared/hooks/usePermissions.ts",
+        "apps/web/src/shared/hooks/usePermissions.spec.tsx",
+        "apps/web/src/shared/layouts/Sidebar.tsx",
+        "apps/web/src/shared/layouts/Sidebar.spec.tsx",
+        "apps/web/src/router.ts",
+        "apps/web/src/router.spec.tsx"
+      ]
+    },
+    {
+      "id": "T7",
+      "title": "Implement the landing resolver on / and the root not-found redirect",
+      "layer": "app",
+      "deps": ["T4", "T5"],
+      "acs": [
+        "CR-AC-08",
+        "CR-AC-10",
+        "CR-AC-16",
+        "CR-AC-18",
+        "CR-RG-04",
+        "CR-RG-05"
+      ],
+      "source_refs": ["change.md#CH-06", "change.md#CH-10"],
+      "dod": "guards/landing.guard.ts exports resolveLandingContext evaluating CR-AC-08's three rules in order and throwing at most one redirect; modules/home/route.tsx runs requireAuth then resolveLandingContext and carries RouteErrorState as its errorComponent; routes/catch-all.route.tsx gains the root splat redirecting to ROUTES.HOME; guard unit tests assert rule (1) fires for an actor holding any one of the four administration Permissions, rule (2) consumes effectiveWarehouseId unchanged with no membership-picking logic, and several live memberships with no valid stored selection reaches rule (3); route-integration tests assert exactly one navigation resolves landing, that no rule is evaluated while the context read is unresolved, that a failed read renders RouteErrorState and not the no-context state, that a registrant holding Workspace Owner lands in /workspace, and that no actor is redirected twice between / and /workspace.",
+      "files_hint": [
+        "apps/web/src/guards/landing.guard.ts",
+        "apps/web/src/guards/landing.guard.spec.ts",
+        "apps/web/src/modules/home/route.tsx",
+        "apps/web/src/routes/catch-all.route.tsx",
+        "apps/web/src/router.ts",
+        "apps/web/src/router.spec.tsx"
+      ]
+    },
+    {
+      "id": "T8",
+      "title": "Record the entered Warehouse as the stored selection without blocking entry",
+      "layer": "app",
+      "deps": ["T4"],
+      "acs": ["CR-AC-09"],
+      "source_refs": [
+        "change.md#CH-05",
+        "docs/features/workspaces/spec.md#ac-03-us-02--happy"
+      ],
+      "dod": "modules/warehouse/hooks/useRecordWarehouseEntry.ts compares the entered Warehouse against effectiveWarehouseId and dispatches setActiveWarehouse only when they differ, fire-and-forget after render and awaited by no route, guard or gate; WarehouseLayout mounts it only in the entered branch; store/middleware/api-error.middleware.ts gains a named silent-failure allowlist whose only member is setActiveWarehouse; hook unit tests assert no write on refresh or re-entry of the Warehouse the effective value already names, a write on entry to a different Warehouse, and that a rejected write leaves the Warehouse view rendered with its membership capabilities intact and raises no alert; a middleware unit test asserts every other rejected endpoint still alerts.",
+      "files_hint": [
+        "apps/web/src/modules/warehouse/hooks/useRecordWarehouseEntry.ts",
+        "apps/web/src/modules/warehouse/hooks/useRecordWarehouseEntry.spec.tsx",
+        "apps/web/src/shared/layouts/WarehouseLayout.tsx",
+        "apps/web/src/store/middleware/api-error.middleware.ts",
+        "apps/web/src/store/middleware/api-error.middleware.spec.ts"
+      ]
+    },
+    {
+      "id": "T9",
+      "title": "Replace the flat switcher with the grouped context switcher",
+      "layer": "ui",
+      "deps": ["T1", "T4"],
+      "acs": [
+        "CR-AC-01",
+        "CR-AC-02",
+        "CR-AC-03",
+        "CR-AC-04",
+        "CR-RG-02",
+        "CR-RG-03"
+      ],
+      "source_refs": [
+        "change.md#CH-01",
+        "change.md#CH-02",
+        "docs/features/workspaces/spec.md#ac-30-us-10--authorization"
+      ],
+      "dod": "shared/layouts/WarehouseSwitcher.tsx renders one grouped control at all times — a single Workspace row labelled with the Workspace name or its unnamed placeholder above a labelled, nested group of the actor's Warehouses — where both levels are destinations that navigate on selection and never mutate; the Workspace row is inert (not a link, not activatable by pointer or keyboard, conveyed as disabled, carrying its one-line explanation and nothing beyond the Workspace name) exactly when hasWorkspacePermission(workspacePermissionIds, workspaceAdministrationPermissionIds) is false; archived rows stay listed, dimmed, labelled Archived and unselectable; current-row marking comes from useEnteredWarehouse() and the /workspace match via a check indicator, never colour alone, with no row marked at the root or around a refusal; the three retained messages render beside the control with their existing copy and only when no context is entered; component unit tests cover every state above plus that no credential is requested on selection and that group labels are non-focusable section headers.",
+      "files_hint": [
+        "apps/web/src/shared/layouts/WarehouseSwitcher.tsx",
+        "apps/web/src/shared/layouts/WarehouseSwitcher.spec.tsx"
+      ]
+    },
+    {
+      "id": "T10",
+      "title": "Make the sidebar context-selected",
+      "layer": "ui",
+      "deps": ["T4", "T6"],
+      "acs": ["CR-AC-04", "CR-AC-11", "CR-AC-12", "CR-AC-18", "CR-AC-19"],
+      "source_refs": [
+        "change.md#CH-07",
+        "docs/change-requests/web-shell-navigation/spec.md#cr-ac-02-cr-us-01-ch-02--sidebar-navigation-gating-and-responsive-behavior"
+      ],
+      "dod": "shared/layouts/Sidebar.tsx selects its list from the entered context — in a Warehouse view Dashboard and Access, both addressed within that :warehouseId with Access still gated by the unchanged ROLES_WATCH ∪ USERS_WATCH PermissionGate; in the Workspace view the Workspace administration entry only; in no context no list and no <nav> landmark at all — with no entry from one level appearing in the other; component unit tests assert each list, that no Warehouse-view entry survives into the Workspace view or vice versa, that around a refusal no list renders, and that during a W1→W2 switch the Access entry is absent while W2's projection is unresolved and then appears, with no skeleton, placeholder or held-over W1 value.",
+      "files_hint": [
+        "apps/web/src/shared/layouts/Sidebar.tsx",
+        "apps/web/src/shared/layouts/Sidebar.spec.tsx"
+      ]
+    },
+    {
+      "id": "T11",
+      "title": "Wire the shell chrome to the entered context without changing anything else in it",
+      "layer": "ui",
+      "deps": ["T9", "T10"],
+      "acs": ["CR-AC-18", "CR-RG-06"],
+      "source_refs": ["change.md#CH-06", "change.md#CH-07"],
+      "dod": "shared/layouts/RootLayout.tsx renders the narrow-viewport drawer toggle only when the sidebar has a list to show, so no context can open an empty drawer, and keeps rendering the grouped switcher in the same two places (header at/above sm, context bar below sm); component unit tests assert the toggle is absent in the no-context state and around a refusal, present in both entered contexts, and that the brand link, language selector, sign-out control, footer, the 240px persistent sidebar container, the drawer's focus trap and focus return, and the auth-route and chrome-less branches all render and behave exactly as before.",
+      "files_hint": [
+        "apps/web/src/shared/layouts/RootLayout.tsx",
+        "apps/web/src/shared/layouts/RootLayout.spec.tsx"
+      ]
+    },
+    {
+      "id": "T12",
+      "title": "Add the Enter action to the Workspace warehouses tab",
+      "layer": "ui",
+      "deps": ["T1", "T4"],
+      "acs": ["CR-AC-04", "CR-AC-13", "CR-AC-14", "CR-RG-02"],
+      "source_refs": ["change.md#CH-08"],
+      "dod": "WarehousesTab passes the actor's own membership ids from the GET /workspace/context read it already performs down to WarehouseList as one prop; WarehouseList's row becomes a container holding the existing selection button plus, only for a non-archived Warehouse present in that membership list, a trailing Enter link to ROUTES.WAREHOUSE — never nested inside the selection button — with every other row rendering no Enter control at all; component unit tests assert Enter is present for a non-archived membership row, absent (not disabled) for a non-membership row, an archived membership row and an archived non-membership row, that rename, archive/restore and grant/withdraw remain unchanged on every row, and that row focus order places the selection button before Enter.",
+      "files_hint": [
+        "apps/web/src/modules/workspace/components/workspace-administration/warehouses/WarehousesTab.tsx",
+        "apps/web/src/modules/workspace/components/workspace-administration/warehouses/WarehouseList.tsx",
+        "apps/web/src/modules/workspace/components/workspace-administration/warehouses/WarehousesTab.spec.tsx"
+      ]
+    },
+    {
+      "id": "T13",
+      "title": "Enforce the effectiveWarehouseId allowlist with an architecture check",
+      "layer": "wiring",
+      "deps": ["T6", "T8", "T9"],
+      "acs": ["CR-AC-06", "CR-AC-09"],
+      "source_refs": ["change.md#CH-04", "change.md#CH-05"],
+      "dod": "apps/web/eslint.config.mjs restricts any effectiveWarehouseId reference in the non-test sources of apps/web/src to an explicit three-file allowlist — the landing resolver, the switcher and the entry write — and pnpm --filter @warehouser/web lint passes on the change while failing on a deliberately added fourth reference, verified once and reverted.",
+      "files_hint": ["apps/web/eslint.config.mjs"]
+    },
+    {
+      "id": "T14",
+      "title": "Cover entry, refusal, landing, not-found and no-eviction end to end",
+      "layer": "tests",
+      "deps": ["T6", "T7", "T8", "T10"],
+      "acs": [
+        "CR-AC-05",
+        "CR-AC-06",
+        "CR-AC-07",
+        "CR-AC-08",
+        "CR-AC-16",
+        "CR-AC-20",
+        "CR-AC-21",
+        "CR-RG-01",
+        "CR-RG-05"
+      ],
+      "source_refs": ["change.md#CH-03", "change.md#CH-04", "change.md#CH-10"],
+      "dod": "router.spec.tsx and the shared fixtures cover, through createAppRouter({ appStore, initialEntries }): two independent memory routers holding two different Warehouse addresses in one session neither of which re-points the other; a non-member address and any address beneath it rendering the non-disclosing refusal at the requested address with no stored-selection write, no access-projection request and no sidebar; an archived membership address rendering the archived refusal; unmatched addresses including a bookmarked /access landing at / and resolving, with an unauthenticated actor still reaching sign-in; a Workspace-context refetch that archives W or withdraws the membership while the actor is inside W leaving them in W's view at the same address; a member of W without ROLES:WATCH/USERS:WATCH admitted to W's access address; and every Warehouse-scoped request still naming its Warehouse explicitly through warehousePath.",
+      "files_hint": [
+        "apps/web/src/router.spec.tsx",
+        "apps/web/src/test/workspace-fixtures.ts",
+        "apps/web/src/test/access-fixtures.ts"
+      ]
+    },
+    {
+      "id": "T15",
+      "title": "Verify the 390px switcher fit and the entry-latency ceiling manually",
+      "layer": "tests",
+      "deps": ["T11", "T12"],
+      "acs": ["CR-AC-01", "CR-AC-02", "CR-AC-14", "CR-RG-06"],
+      "source_refs": [],
+      "dod": "A recorded manual run confirms at a 390px viewport that the grouped switcher with its Workspace row and nested group fits the existing context bar without horizontal overflow and its popover does not overflow the viewport, that the restructured warehouses-tab row and the no-context shell render without a drawer toggle, and that five consecutive runs from activating a switcher row and from activating an Enter action to the Warehouse view being rendered with its own access projection resolved each complete within 250 ms measured by client-side navigation timing, with the five figures written into the task record.",
+      "files_hint": [
+        "docs/change-requests/workspace-warehouse/tasks/responsive-and-entry-latency-verification.md"
+      ]
+    },
+    {
+      "id": "T16",
+      "title": "Fire the stored-selection write on entry, and make the context fixture realistic",
+      "layer": "app",
+      "deps": [],
+      "acs": ["CR-AC-20", "CR-AC-09"],
+      "source_refs": ["_review/review-2026-08-13.md#findings-2-7"],
+      "dod": "reviseContext recomputes effectiveWarehouseId from the revised memberships exactly as the server derivation does (the stored value only while it names a live non-archived membership, else the sole live membership, else null) instead of leaving a stale id; with that realistic body the CR-AC-20 cases in warehouse.route.spec.tsx assert no PUT /workspace/active-warehouse is issued after a membership is withdrawn or the Warehouse archived while the actor is resident; useRecordWarehouseEntry fires the write once per entered warehouseId rather than on every change of the context body, so a refetch whose effectiveWarehouseId stops naming the entered Warehouse issues no write.",
+      "files_hint": [
+        "apps/web/src/test/workspace-fixtures.ts",
+        "apps/web/src/routes/warehouse.route.spec.tsx",
+        "apps/web/src/modules/warehouse/hooks/useRecordWarehouseEntry.ts",
+        "apps/web/src/modules/warehouse/hooks/useRecordWarehouseEntry.spec.tsx"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "T17",
+      "title": "Keep the archived label on a Warehouse archived while the actor is inside it",
+      "layer": "ui",
+      "deps": [],
+      "acs": ["CR-RG-02", "CR-AC-20"],
+      "source_refs": ["_review/review-2026-08-13.md#finding-1"],
+      "dod": "A row that is both the entered context and archived renders the archived label, so CR-RG-02 holds in the CR-AC-20 state; the current marker and the archived label may co-exist on one row; rowTrailingLabel no longer claims an archived row can never be entered; a switcher test covers an entered-then-archived Warehouse.",
+      "files_hint": [
+        "apps/web/src/shared/layouts/WarehouseSwitcher.tsx",
+        "apps/web/src/shared/layouts/WarehouseSwitcher.spec.tsx"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "T18",
+      "title": "Render the Warehouses group only when the actor holds a membership",
+      "layer": "ui",
+      "deps": [],
+      "acs": ["CR-AC-04", "CR-AC-18"],
+      "source_refs": ["_review/review-2026-08-13.md#finding-3"],
+      "dod": "An actor holding no membership at all sees no Warehouses section and no group header, so no navigation surface renders in an empty state outside CR-AC-04 two named exceptions; a switcher test covers warehouses: [].",
+      "files_hint": [
+        "apps/web/src/shared/layouts/WarehouseSwitcher.tsx",
+        "apps/web/src/shared/layouts/WarehouseSwitcher.spec.tsx"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "T19",
+      "title": "Move the retained messages to a shell component in the main region",
+      "layer": "ui",
+      "deps": [],
+      "acs": ["CR-AC-18", "CR-RG-03"],
+      "source_refs": ["_review/review-2026-08-13.md#findings-5-6"],
+      "dod": "A RetainedContextMessage component is mounted by RootLayout in the main content region, above the routed outlet, so it stays mounted on every page and its remembered-Warehouse memory can still observe effectiveWarehouseId going non-null to null (the selectionEnded variant stays reachable); WarehouseSwitcher renders only its trigger and popover, so the fixed-height header no longer overflows and the root shows one heading; the three CR-RG-03 messages keep their existing copy and intent; the effectiveWarehouseId read moves with the message so the architecture allowlist still names exactly three call sites, and both the eslint allowlist and the spec section 6 wording are updated to name the new site instead of the switcher.",
+      "files_hint": [
+        "apps/web/src/shared/layouts/RootLayout.tsx",
+        "apps/web/src/shared/components/RetainedContextMessage.tsx",
+        "apps/web/src/shared/layouts/WarehouseSwitcher.tsx",
+        "apps/web/eslint.config.mjs",
+        "docs/change-requests/workspace-warehouse/spec.md"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "T20",
+      "title": "Stop dimming the inert Workspace row explanation",
+      "layer": "ui",
+      "deps": [],
+      "acs": ["CR-AC-03"],
+      "source_refs": ["_review/review-2026-08-13.md#finding-16"],
+      "dod": "The sentence explaining why the Workspace row is inert renders at full contrast rather than inheriting the disabled row 50% opacity, because the WCAG disabled-control exemption covers a control own label and not informational text; the row itself stays inert and conveyed as disabled to assistive technology.",
+      "files_hint": [
+        "apps/web/src/shared/layouts/WarehouseSwitcher.tsx",
+        "apps/web/src/shared/layouts/WarehouseSwitcher.spec.tsx"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "T21",
+      "title": "Make the route error retry actually re-run the failed read",
+      "layer": "app",
+      "deps": [],
+      "acs": ["CR-AC-08"],
+      "source_refs": ["_review/review-2026-08-13.md#findings-4-9"],
+      "dod": "Activating the retry control re-issues the failed Workspace-context read rather than only clearing the React error boundary, so a read that succeeds on the second attempt lands the actor; the test asserts that observable outcome instead of asserting the injected callback fired.",
+      "files_hint": [
+        "apps/web/src/shared/components/RouteErrorState.tsx",
+        "apps/web/src/shared/components/RouteErrorState.spec.tsx",
+        "apps/web/src/modules/home/route.spec.tsx"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "T22",
+      "title": "Render the approved landing pending state",
+      "layer": "ui",
+      "deps": [],
+      "acs": ["CR-AC-08"],
+      "source_refs": ["_review/review-2026-08-13.md#finding-15"],
+      "dod": "The root renders the approved pending tile using shell.landing.pendingLabel while the Workspace-context read is unresolved, with a deliberately chosen pending delay rather than the router default; a test asserts the tile renders during that window; the locale key has a non-test reader.",
+      "files_hint": [
+        "apps/web/src/modules/home/route.tsx",
+        "apps/web/src/shared/components/RoutePendingState.tsx",
+        "apps/web/src/modules/home/route.spec.tsx"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "T23",
+      "title": "Fail closed when the Warehouse entry verdict is absent or malformed",
+      "layer": "app",
+      "deps": [],
+      "acs": ["CR-AC-07"],
+      "source_refs": ["_review/review-2026-08-13.md#finding-13"],
+      "dod": "WarehouseLayout renders the Warehouse view only for a verdict that is explicitly entered; an absent, malformed or unrecognized verdict renders the non-disclosing refusal instead of the Warehouse view and its CR-AC-09 write; a test covers the absent-verdict case.",
+      "files_hint": [
+        "apps/web/src/shared/layouts/WarehouseLayout.tsx",
+        "apps/web/src/shared/layouts/WarehouseLayout.spec.tsx"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "T24",
+      "title": "Close the computed-member-access hole in the effectiveWarehouseId check",
+      "layer": "wiring",
+      "deps": [],
+      "acs": [],
+      "source_refs": ["_review/review-2026-08-13.md#finding-14"],
+      "dod": "The architecture check fails on a computed member access such as ctx[effectiveWarehouseId] as well as on the identifier form, so the named spec section 6 control cannot be bypassed by a string key; the three allowlisted readers still lint clean.",
+      "files_hint": ["apps/web/eslint.config.mjs"],
+      "status": "done"
+    },
+    {
+      "id": "T25",
+      "title": "Give every Enter link an accessible name naming its Warehouse",
+      "layer": "ui",
+      "deps": [],
+      "acs": ["CR-AC-13"],
+      "source_refs": ["_review/review-2026-08-13.md#finding-17"],
+      "dod": "Each Enter link exposes an accessible name naming the Warehouse it enters rather than the bare word Enter, so a screen-reader link list distinguishes the rows; the new key exists in en and uk; the visible label is unchanged.",
+      "files_hint": [
+        "apps/web/src/modules/workspace/components/workspace-administration/warehouses/WarehouseList.tsx",
+        "apps/web/public/locales/en/workspace.json",
+        "apps/web/public/locales/uk/workspace.json"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "T26",
+      "title": "Drop the locale keys this change request orphaned",
+      "layer": "ui",
+      "deps": ["T19", "T22", "T25"],
+      "acs": [],
+      "source_refs": ["_review/review-2026-08-13.md#finding-21"],
+      "dod": "Every locale key with no non-test reader that this change request orphaned is removed from en and uk; the i18n spec asserts each removed key no longer resolves, following the convention the suite already establishes; en and uk key sets stay identical across all 8 namespaces.",
+      "files_hint": [
+        "apps/web/public/locales/en/common.json",
+        "apps/web/public/locales/uk/common.json",
+        "apps/web/src/i18n.spec.ts"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "T27",
+      "title": "Make the registrant landing tests assert CR-AC-10 instead of passing over an error",
+      "layer": "tests",
+      "deps": [],
+      "acs": ["CR-AC-10"],
+      "source_refs": ["_review/review-2026-08-13.md#findings-8-10"],
+      "dod": "The registration landing case stubs the registrant real Workspace context so no route error is raised, and asserts the router settles at the Workspace destination by CR-AC-08 rule 1 rather than asserting a pathname the error state also satisfies; a second assertion covers CR-AC-10 remaining clause, that the switcher offers their first Warehouse beneath the Workspace row.",
+      "files_hint": [
+        "apps/web/src/router.spec.tsx",
+        "apps/web/src/modules/home/route.spec.tsx"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "T28",
+      "title": "Exercise CR-AC-14 through the production router",
+      "layer": "tests",
+      "deps": ["T16"],
+      "acs": ["CR-AC-14"],
+      "source_refs": ["_review/review-2026-08-13.md#finding-11"],
+      "dod": "One case built on createAppRouter activates the warehouses-tab Enter action and asserts all three CR-AC-14 clauses together on the real route tree: arrival in that Warehouse view, the row marked current in the switcher, and the stored-selection write issued.",
+      "files_hint": ["apps/web/src/router.spec.tsx"],
+      "status": "done"
+    },
+    {
+      "id": "T29",
+      "title": "Add the planned shell-composition and error-path cases and drop the tautological asserts",
+      "layer": "tests",
+      "deps": ["T19", "T21", "T23"],
+      "acs": ["CR-AC-18", "CR-AC-07", "CR-AC-08", "CR-AC-01"],
+      "source_refs": ["_review/review-2026-08-13.md#findings-9-12"],
+      "dod": "An integration case asserts the whole no-context shell composition the test plan calls for: the grouped switcher with its inert Workspace row, the actor Warehouses, the retained explanation appearing exactly once, and no navigation list; a second case asserts a failed Workspace-context read at a Warehouse address renders the error state rather than a refusal; the assertion that every row contains an svg is replaced by one that distinguishes the current row indicator from a non-current row.",
+      "files_hint": [
+        "apps/web/src/modules/home/route.spec.tsx",
+        "apps/web/src/routes/warehouse.route.spec.tsx",
+        "apps/web/src/shared/layouts/WarehouseSwitcher.spec.tsx"
+      ],
+      "status": "in_progress"
+    },
+    {
+      "id": "T30",
+      "title": "Correct the no-context copy direction and its unconditional action",
+      "layer": "ui",
+      "deps": [],
+      "acs": ["CR-AC-18"],
+      "source_refs": ["_review/review-2026-08-13.md#finding-6"],
+      "dod": "The no-context description no longer tells the actor to choose something below, because the switcher is above at every viewport, and no longer names an action unconditionally, because CR-AC-18 paragraph 2 offers no action to an actor holding no selectable row; en and uk stay in parity and the i18n assertions match the new copy.",
+      "files_hint": [
+        "apps/web/public/locales/en/common.json",
+        "apps/web/public/locales/uk/common.json",
+        "apps/web/src/modules/home/page.tsx",
+        "apps/web/src/i18n.spec.ts"
+      ],
+      "status": "done"
+    }
+  ]
+}

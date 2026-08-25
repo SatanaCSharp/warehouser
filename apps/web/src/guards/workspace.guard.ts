@@ -1,11 +1,11 @@
 import { redirect } from '@tanstack/react-router';
 
-import { workspaceContextApi } from 'shared/api/workspace-context-api';
+import { workspaceContextApi } from 'shared/api/workspace/workspace-context-api';
 import { ROUTES } from 'shared/constants/routes';
 import {
   hasWorkspacePermission,
   workspaceAdministrationPermissionIds,
-} from 'shared/hooks/useWorkspacePermissions';
+} from 'shared/hooks/queries/useWorkspacePermissions';
 
 import type { RouterContext } from 'routes/__root.route';
 

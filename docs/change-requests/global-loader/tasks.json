@@ -1,0 +1,391 @@
+{
+  "slug": "global-loader",
+  "kind": "change-request",
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "Declare the pending and error contract on the three unpainted authenticated routes",
+      "layer": "wiring",
+      "deps": [],
+      "acs": ["CR-AC-02", "CR-AC-16", "CR-RG-04", "CR-RG-08"],
+      "source_refs": [
+        "change.md#3-override-map CH-02",
+        "change.md#3-override-map CH-02a",
+        "sad.md#51-route-declarations-after-the-change",
+        "adr/0002-one-pending-boundary-per-route-branch.md"
+      ],
+      "dod": "workspaceRoute, warehouseRoute and accessRoute declare RoutePendingState / RouteErrorState with sad.md §5.1's exact pendingMs, pendingMinMs and wrapInSuspense values plus the three required comments, and colocated specs assert a cause==='stay' navigation shorter than 150 ms paints no pending state while a refused Warehouse still renders WarehouseEntryRefusal in place.",
+      "files_hint": [
+        "apps/web/src/modules/workspace/route.tsx",
+        "apps/web/src/modules/access/route.tsx",
+        "apps/web/src/modules/access/route.spec.tsx",
+        "apps/web/src/routes/warehouse.route.tsx",
+        "apps/web/src/routes/warehouse.route.spec.tsx"
+      ]
+    },
+    {
+      "id": "T2",
+      "title": "Single-source the access Permission sets and apply the one intended widening",
+      "layer": "ui",
+      "deps": [],
+      "acs": ["CR-RG-02"],
+      "source_refs": [
+        "spec.md#cr-rg-02--the-loaders-fetch-exactly-what-the-actors-admitted-surfaces-fetch",
+        "sad.md#45-a-permission-set-is-declared-once-and-read-by-both-the-hook-and-the-loader"
+      ],
+      "dod": "rolesTabPermissions, rolesReadPermissions and membersReadPermissions are declared once under modules/access/utils/; useAccessRoles, useAccessMembers, useAccessPermissions and AccessWorkspace's tab descriptor read them instead of literals; useAccessPermissions' skip set is rolesTabPermissions itself; and a spec asserts a ROLES:ASSIGN-only actor is now inside the catalogue's set while no other set changed membership.",
+      "files_hint": [
+        "apps/web/src/modules/access/utils/access-permission-sets.ts",
+        "apps/web/src/modules/access/hooks/queries/useAccessRoles.ts",
+        "apps/web/src/modules/access/hooks/queries/useAccessMembers.ts",
+        "apps/web/src/modules/access/hooks/queries/useAccessPermissions.ts",
+        "apps/web/src/modules/access/components/access-workspace/AccessWorkspace.tsx"
+      ]
+    },
+    {
+      "id": "T3",
+      "title": "Add the access module's Workspace-administration dataset loader and its surface entry",
+      "layer": "ui",
+      "deps": [],
+      "acs": ["CR-AC-03", "CR-RG-02"],
+      "source_refs": [
+        "change.md#3-override-map CH-03",
+        "sad.md#54-dependency-direction-across-the-module-boundary",
+        "adr/0001-module-owned-route-loaders.md"
+      ],
+      "dod": "loadWorkspaceAdministrationAccessDatasets accepts resolved workspacePermissionIds, dispatches listWorkspaceMembers, listWorkspaceRoles and listWorkspacePermissions under their own WORKSPACE_MEMBERS:WATCH / WORKSPACE_ROLES:WATCH gates with subscribe: false, returns the dispatch thunks for the caller to settle, and MODULE_SURFACE.access names it with its importer so module-boundaries.spec.ts passes.",
+      "files_hint": [
+        "apps/web/src/modules/access/loaders/workspace-administration-datasets.loader.ts",
+        "apps/web/src/test/module-boundaries/module-surface.ts"
+      ]
+    },
+    {
+      "id": "T4",
+      "title": "Add loadWorkspaceAdministration and give workspaceRoute its loader",
+      "layer": "ui",
+      "deps": ["T1", "T3"],
+      "acs": ["CR-AC-02", "CR-AC-03", "CR-AC-15", "CR-RG-02"],
+      "source_refs": [
+        "change.md#3-override-map CH-03",
+        "change.md#3-override-map CH-15",
+        "sad.md#55-what-each-loader-awaits",
+        "sad.md#42-primary-reads-reject-secondary-reads-settle"
+      ],
+      "dod": "workspaceRoute declares loadWorkspaceAdministration; the loader awaits getWorkspaceContext as its primary read and fans the five secondary datasets out through one Promise.allSettled round under the sad.md §5.5 gates; and its colocated spec proves a rejected primary propagates, a rejected secondary is absorbed, and a WORKSPACE:RENAME-only actor causes no secondary dispatch.",
+      "files_hint": [
+        "apps/web/src/modules/workspace/loaders/workspace-administration.loader.ts",
+        "apps/web/src/modules/workspace/loaders/workspace-administration.loader.spec.ts",
+        "apps/web/src/modules/workspace/route.tsx",
+        "apps/web/src/test/module-boundaries/module-surface.ts"
+      ]
+    },
+    {
+      "id": "T5",
+      "title": "Add loadAccessSurface and give accessRoute its loader",
+      "layer": "ui",
+      "deps": ["T1", "T2"],
+      "acs": ["CR-AC-04", "CR-AC-13", "CR-AC-14", "CR-AC-15", "CR-RG-02"],
+      "source_refs": [
+        "change.md#3-override-map CH-04",
+        "change.md#3-override-map CH-15",
+        "change.md#3-override-map CH-16",
+        "sad.md#43-the-access-loader-is-two-rounds-deliberately",
+        "adr/0002-one-pending-boundary-per-route-branch.md"
+      ],
+      "dod": "accessRoute declares loadAccessSurface; the loader returns immediately without issuing any request unless the parent verdict is 'entered', otherwise awaits getCurrentAccess with the identical argument useEnteredWarehouse supplies before settling the three tab datasets under T2's sets; and its colocated spec proves zero requests on both refusal reasons, ordering of the two rounds, and that no third round occurs.",
+      "files_hint": [
+        "apps/web/src/modules/access/loaders/access-surface.loader.ts",
+        "apps/web/src/modules/access/loaders/access-surface.loader.spec.ts",
+        "apps/web/src/modules/access/route.tsx"
+      ]
+    },
+    {
+      "id": "T6",
+      "title": "Force-mount every admitted tab panel so loader-filled entries keep a subscriber",
+      "layer": "ui",
+      "deps": ["T4", "T5"],
+      "acs": ["CR-AC-03"],
+      "source_refs": [
+        "spec.md#cr-ac-03-cr-us-02-ch-03--behavioral",
+        "sad.md#44-subscribe-false-plus-force-mounted-panels"
+      ],
+      "dod": "Every admitted Tabs.Panel on /workspace and the access surface sets shouldForceMount, so each admitted tab's own query hook mounts and subscribes on first paint; a colocated spec asserts an unopened admitted tab's cache entry survives past keepUnusedDataFor and that unselected panels remain inert.",
+      "files_hint": [
+        "apps/web/src/modules/workspace/components/WorkspaceAdministration.tsx",
+        "apps/web/src/modules/workspace/components/WorkspaceAdministration.spec.tsx",
+        "apps/web/src/modules/access/components/access-workspace/AccessWorkspace.tsx",
+        "apps/web/src/modules/access/components/access-workspace/AccessWorkspace.spec.tsx"
+      ]
+    },
+    {
+      "id": "T7",
+      "title": "Pin route readiness across the four routes before any component readiness is removed",
+      "layer": "tests",
+      "deps": ["T4", "T5", "T6"],
+      "acs": [
+        "CR-AC-02",
+        "CR-AC-03",
+        "CR-AC-10",
+        "CR-AC-13",
+        "CR-AC-16",
+        "CR-RG-04",
+        "CR-RG-06",
+        "CR-RG-08"
+      ],
+      "source_refs": [
+        "test-plan.md#where-the-rows-land",
+        "sad.md#10-verification-strategy",
+        "change.md#6-rollout"
+      ],
+      "dod": "src/test/route-readiness/ asserts, against the installed React and router versions: RoutePendingState on screen before each of the three routes settles and the destination after; exactly one pending mount on a cold access navigation with WarehouseLayout never committing beside it; no pending paint on a cause==='stay' navigation; no loader re-run and no pending mount when a members tag is invalidated on a painted destination; refusal in place; and Sidebar.spec.tsx:227,404 still passing.",
+      "files_hint": [
+        "apps/web/src/test/route-readiness/route-readiness.spec.tsx"
+      ]
+    },
+    {
+      "id": "T8",
+      "title": "Pin loader and hook Permission parity in both directions",
+      "layer": "tests",
+      "deps": ["T2", "T4", "T5"],
+      "acs": ["CR-RG-02"],
+      "source_refs": [
+        "spec.md#cr-rg-02--the-loaders-fetch-exactly-what-the-actors-admitted-surfaces-fetch",
+        "sad.md#45-a-permission-set-is-declared-once-and-read-by-both-the-hook-and-the-loader"
+      ],
+      "dod": "src/test/loader-permission-parity/ compares every loader dispatch condition against the hook skip or tab descriptor it reproduces and fails on drift in either direction, covering all ten CR-RG-02 rows including the ungated listWorkspaceWarehouses whose real gate is the tab descriptor's WAREHOUSES:WATCH, and asserting a ROLES:ASSIGN-without-ROLES:WATCH actor still receives Roles and Members.",
+      "files_hint": [
+        "apps/web/src/test/loader-permission-parity/loader-permission-parity.spec.ts"
+      ]
+    },
+    {
+      "id": "T9",
+      "title": "Remove DatasetCard's loading contract and update its three callers",
+      "layer": "ui",
+      "deps": ["T7"],
+      "acs": ["CR-AC-07", "CR-RG-05"],
+      "source_refs": [
+        "change.md#3-override-map CH-07",
+        "change.md#3-override-map CH-14",
+        "sad.md#56-contracts-after-ch-09"
+      ],
+      "dod": "DatasetCardProps declares neither loading nor loadingLabel, the private DatasetSkeleton helper is deleted, error / errorLabel are retained, and MembersDatasetCard, RolesDatasetCard and PermissionsTab each pass only the surviving props with empty computed as items.length === 0; existing error and empty cases still render their own copy.",
+      "files_hint": [
+        "apps/web/src/shared/components/DatasetCard.tsx",
+        "apps/web/src/modules/access/components/access-workspace/components/members/MembersDatasetCard.tsx",
+        "apps/web/src/modules/access/components/access-workspace/components/roles/RolesDatasetCard.tsx",
+        "apps/web/src/modules/access/components/access-workspace/components/permissions/PermissionsTab.tsx"
+      ]
+    },
+    {
+      "id": "T10",
+      "title": "Delete the two skeleton components and the Warehouses-side readiness branches",
+      "layer": "ui",
+      "deps": ["T7"],
+      "acs": ["CR-AC-08", "CR-RG-08"],
+      "source_refs": [
+        "change.md#3-override-map CH-08",
+        "change.md#3-override-map CH-14",
+        "sad.md#53-deleted-files",
+        "sad.md#57-boundary-declarations-to-update"
+      ],
+      "dod": "WorkspaceListSkeleton.tsx and WarehouseListSkeleton.tsx no longer exist, WarehouseListProps declares no isLoading, WarehouseList.tsx:53 and WarehousesTab's derived isLoading (with its superseded query-ordering comment) are gone, and module-surface.ts, WORKSPACE_MODULE_MANIFEST, warehouse-administration-split.spec.ts, warehouses-tab-case-inventory.spec.ts and Sidebar.spec.tsx name no deleted file or case.",
+      "files_hint": [
+        "apps/web/src/modules/access/components/workspace-administration/WorkspaceListSkeleton.tsx",
+        "apps/web/src/modules/workspace/components/workspace-administration/warehouses/WarehouseListSkeleton.tsx",
+        "apps/web/src/modules/workspace/components/workspace-administration/warehouses/WarehouseList.tsx",
+        "apps/web/src/modules/workspace/components/workspace-administration/warehouses/WarehouseList.spec.tsx",
+        "apps/web/src/modules/workspace/components/workspace-administration/warehouses/WarehousesTab.tsx",
+        "apps/web/src/modules/workspace/components/workspace-administration/warehouses/WarehousesTab.spec.tsx",
+        "apps/web/src/test/module-boundaries/module-surface.ts",
+        "apps/web/src/test/warehouse-administration-split/warehouse-administration-split.spec.ts",
+        "apps/web/src/test/warehouses-tab-case-inventory/warehouses-tab-case-inventory.spec.ts",
+        "apps/web/src/shared/layouts/Sidebar.spec.tsx"
+      ]
+    },
+    {
+      "id": "T11",
+      "title": "Drop the four Workspace-administration tab readiness arms",
+      "layer": "ui",
+      "deps": ["T7"],
+      "acs": ["CR-AC-08", "CR-RG-05"],
+      "source_refs": [
+        "change.md#3-override-map CH-08",
+        "change.md#3-override-map CH-14",
+        "sad.md#48-what-replaces-each-collapsed-guard"
+      ],
+      "dod": "WorkspacePermissionsTab renders no Skeleton and none of WorkspaceRolesTab.tsx:31, WorkspaceMembersTab.tsx:27 or WorkspaceMemberList.tsx:27 retains a readiness term; no ?? [] default is introduced where a hook still returns undefined; and each tab's existing empty and permission cases still render exactly as at baseline_revision.",
+      "files_hint": [
+        "apps/web/src/modules/access/components/workspace-administration/permissions/WorkspacePermissionsTab.tsx",
+        "apps/web/src/modules/access/components/workspace-administration/permissions/WorkspacePermissionsTab.spec.tsx",
+        "apps/web/src/modules/access/components/workspace-administration/roles/WorkspaceRolesTab.tsx",
+        "apps/web/src/modules/access/components/workspace-administration/roles/WorkspaceRolesTab.spec.tsx",
+        "apps/web/src/modules/access/components/workspace-administration/members/WorkspaceMembersTab.tsx",
+        "apps/web/src/modules/access/components/workspace-administration/members/WorkspaceMembersTab.spec.tsx",
+        "apps/web/src/modules/access/components/workspace-administration/members/WorkspaceMemberList.tsx"
+      ]
+    },
+    {
+      "id": "T12",
+      "title": "Give WorkspaceAdministration a route-scoped context projection and remove both dead branches",
+      "layer": "ui",
+      "deps": ["T7"],
+      "acs": ["CR-AC-05"],
+      "source_refs": [
+        "change.md#3-override-map CH-05",
+        "change.md#3-override-map CH-13",
+        "sad.md#46-the-non-optional-workspace-context-is-route-scoped-not-contract-wide",
+        "sad.md#amendments-this-sad-proposes-to-specmd"
+      ],
+      "dod": "useWorkspaceAdministrationContext reads the Workspace match by route id and returns a non-optional WorkspaceContext with a spec proving it; WorkspaceAdministration.tsx contains no loading branch and no `if (!workspaceContext) return null`, imports no Spinner, destructures no readiness field, returns ReactElement rather than ReactElement | null, and WORKSPACE_MODULE_MANIFEST names both new files.",
+      "files_hint": [
+        "apps/web/src/modules/workspace/hooks/projections/useWorkspaceAdministrationContext.ts",
+        "apps/web/src/modules/workspace/hooks/projections/useWorkspaceAdministrationContext.spec.tsx",
+        "apps/web/src/modules/workspace/components/WorkspaceAdministration.tsx",
+        "apps/web/src/modules/workspace/components/WorkspaceAdministration.spec.tsx",
+        "apps/web/src/test/module-boundaries/module-surface.ts"
+      ]
+    },
+    {
+      "id": "T13",
+      "title": "Remove AccessPage's loading branch, keeping its denial branch",
+      "layer": "ui",
+      "deps": ["T7"],
+      "acs": ["CR-AC-06"],
+      "source_refs": [
+        "change.md#3-override-map CH-06",
+        "spec.md#cr-ac-06-cr-us-06-ch-06--structural"
+      ],
+      "dod": "modules/access/page.tsx contains no loading branch, imports no Spinner and destructures no readiness field from useCurrentPermissions, while its `!access || permissionIds.length === 0` denial branch renders unchanged — with a spec proving the denial case still reaches it on an entered verdict whose projection denies.",
+      "files_hint": ["apps/web/src/modules/access/page.tsx"]
+    },
+    {
+      "id": "T14",
+      "title": "Carry the unresolved actor in the type and stop replacing painted member rows",
+      "layer": "ui",
+      "deps": ["T7"],
+      "acs": ["CR-AC-08", "CR-AC-10", "CR-AC-11", "CR-RG-01"],
+      "source_refs": [
+        "change.md#3-override-map CH-10",
+        "change.md#3-override-map CH-11",
+        "spec.md#cr-rg-01--self-row-gating-never-evaluates-against-an-unresolved-actor",
+        "sad.md#49-the-unresolved-actor-is-carried-by-a-type-not-a-branch"
+      ],
+      "dod": "MemberListProps declares no isLoading and widens actorUserId to `string | undefined`, MemberDirectoryProps declares no isRefreshing, the `?? ''` fallback is gone, MemberListStatus is `'empty' | 'ready' | 'searchEmpty'`, MemberRow suppresses every destructive control while actorUserId is undefined, and a merge-blocking spec dispatches authBecameAnonymous() with the list mounted and asserts no row renders as not-self and no destructive control is offered.",
+      "files_hint": [
+        "apps/web/src/modules/access/components/access-workspace/components/members/MemberDirectory.tsx",
+        "apps/web/src/modules/access/components/access-workspace/components/members/MemberList.tsx",
+        "apps/web/src/modules/access/components/access-workspace/components/members/MemberList.spec.tsx",
+        "apps/web/src/modules/access/components/access-workspace/components/members/MemberRow.tsx",
+        "apps/web/src/modules/auth/sign-out/components/SignOutButton.spec.tsx"
+      ]
+    },
+    {
+      "id": "T15",
+      "title": "Collapse the RolesTab and MembersTab guards keeping the permission and error arms",
+      "layer": "ui",
+      "deps": ["T2", "T7"],
+      "acs": ["CR-AC-15", "CR-RG-05"],
+      "source_refs": [
+        "change.md#3-override-map CH-14",
+        "change.md#3-override-map CH-15",
+        "spec.md#cr-ac-15-cr-us-05-ch-15--behavioral",
+        "sad.md#48-what-replaces-each-collapsed-guard"
+      ],
+      "dod": "RolesTab.tsx:46 and MembersTab.tsx:26 drop their readiness term while keeping an explicit error arm, so the surviving condition is not-permitted **or** errored and never the permission term alone; RolesTab keeps its genuine ROLES:WATCH-only read-only-card arm; and specs prove a permitted actor whose read failed reaches roles.error / the Members error rather than an empty directory.",
+      "files_hint": [
+        "apps/web/src/modules/access/components/access-workspace/components/roles/RolesTab.tsx",
+        "apps/web/src/modules/access/components/access-workspace/components/roles/RolesTab.spec.tsx",
+        "apps/web/src/modules/access/components/access-workspace/components/members/MembersTab.tsx",
+        "apps/web/src/modules/access/components/access-workspace/components/members/MembersTab.spec.tsx"
+      ]
+    },
+    {
+      "id": "T16",
+      "title": "Remove the seven readiness fields from the five hook contracts",
+      "layer": "ui",
+      "deps": ["T9", "T10", "T11", "T12", "T13", "T14", "T15"],
+      "acs": ["CR-AC-09", "CR-RG-03"],
+      "source_refs": [
+        "change.md#3-override-map CH-09",
+        "sad.md#56-contracts-after-ch-09",
+        "spec.md#cr-rg-03--the-cross-warehouse-authority-leak-stays-closed"
+      ],
+      "dod": "AccessDataset declares no isLoading, isFetching or isReady but retains isError; CurrentPermissions and CurrentWorkspaceContext declare no isLoading, with workspaceContext left optional per sad.md §4.6; WorkspaceRoleChoices and WorkspacePermissionCatalogue return no isReady; usePermissions still reads currentData and its spec retains the argument-change case that fails if currentData becomes data; and the web build type-checks with no call site left reading a removed field.",
+      "files_hint": [
+        "apps/web/src/modules/access/utils/access-dataset.ts",
+        "apps/web/src/shared/hooks/queries/usePermissions.ts",
+        "apps/web/src/shared/hooks/queries/usePermissions.spec.tsx",
+        "apps/web/src/shared/hooks/queries/useWorkspacePermissions.ts",
+        "apps/web/src/modules/access/hooks/queries/useWorkspaceRoles.ts",
+        "apps/web/src/modules/access/hooks/queries/useWorkspacePermissionCatalogue.ts"
+      ]
+    },
+    {
+      "id": "T17",
+      "title": "Remove the fourteen orphaned translation keys",
+      "layer": "ui",
+      "deps": ["T16"],
+      "acs": ["CR-AC-12"],
+      "source_refs": [
+        "change.md#3-override-map CH-12",
+        "spec.md#cr-ac-12-cr-us-01-ch-12--structural"
+      ],
+      "dod": "access.json's loading, members.loading, workspaceRoles.loading, workspaceMembers.loading and workspacePermissions.loading, warehouse.json's warehouses.loading and workspace.json's loading are absent from both en and uk; both languages carry the identical key set; test/locale-baseline.json is updated; and common.json's shell.landing.pendingLabel is the only waiting copy the application renders.",
+      "files_hint": [
+        "apps/web/public/locales/en/access.json",
+        "apps/web/public/locales/en/warehouse.json",
+        "apps/web/public/locales/en/workspace.json",
+        "apps/web/public/locales/uk/access.json",
+        "apps/web/public/locales/uk/warehouse.json",
+        "apps/web/public/locales/uk/workspace.json",
+        "apps/web/src/test/locale-baseline.json"
+      ]
+    },
+    {
+      "id": "T18",
+      "title": "Add the readiness-removal repository scan",
+      "layer": "tests",
+      "deps": ["T16", "T17"],
+      "acs": [
+        "CR-AC-05",
+        "CR-AC-06",
+        "CR-AC-07",
+        "CR-AC-08",
+        "CR-AC-09",
+        "CR-AC-11",
+        "CR-AC-13",
+        "CR-AC-15",
+        "CR-RG-07"
+      ],
+      "source_refs": [
+        "sad.md#structural-by-test",
+        "test-plan.md#where-the-rows-land"
+      ],
+      "dod": "src/test/readiness-removal/ asserts each file CR-AC-05–CR-AC-09 and CR-AC-11 name holds no readiness branch, no Spinner import and no removed prop; that the two skeleton files do not exist; that the four routes carry the sad.md §5.1 declarations; that AccessDataset.isError survives and the identifiers stay legal at their four allowed sites; that warehouseDashboardRoute gained no loader; and that no capability boolean was introduced — with a header comment stating why no single file owns it.",
+      "files_hint": [
+        "apps/web/src/test/readiness-removal/readiness-removal.spec.ts"
+      ]
+    },
+    {
+      "id": "T19",
+      "title": "Reconcile the nine docs/system rows and close CR-AC-01's documentation gate",
+      "layer": "docs",
+      "deps": ["T18"],
+      "acs": ["CR-AC-01"],
+      "source_refs": [
+        "change.md#3-override-map CH-01",
+        "change.md#8-canonical-reconciliation-after-pass",
+        "sad.md#additions-to-changemd-8s-reconciliation-table",
+        "adr/0001-module-owned-route-loaders.md"
+      ],
+      "dod": "All nine reconciliation rows are applied — change.md §8's seven plus sad.md §11's two — so frontend-architecture.md §Page assigns first-paint readiness to the route while the narrowest-owner rule keeps governing error, empty and success only; §Route and adding-a-web-module.md state when a route declares a loader and where it lives; §Source structure lists loaders/; the four writing-web-components.md passages name no removed symbol; web-index.md's descriptions still match; and src/test/readiness-documentation/ goes green on the document content.",
+      "files_hint": [
+        "docs/system/frontend-architecture.md",
+        "docs/system/guides/writing-web-components.md",
+        "docs/system/guides/adding-a-web-module.md",
+        "docs/system/web-index.md",
+        "apps/web/src/test/readiness-documentation/readiness-documentation.spec.ts"
+      ]
+    }
+  ]
+}

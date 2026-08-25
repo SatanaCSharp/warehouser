@@ -16,12 +16,9 @@
     "ukrainian": "Українська"
   },
   "workspaceSwitcher": {
-    "label": "Warehouse switcher",
-    "archivedReason": "Archived · not selectable",
     "empty": {
       "title": "Choose a warehouse to work in",
-      "description": "You belong to {{count}} warehouses. Nothing is chosen for you when there is more than one, so your next action always applies to the site you meant.",
-      "action": "Choose warehouse"
+      "description": "You belong to {{count}} warehouses. Nothing is chosen for you when there is more than one, so your next action always applies to the site you meant."
     },
     "selectionEnded": {
       "title": "{{name}} is no longer available to you",
@@ -32,6 +29,35 @@
     "unavailable": {
       "title": "No warehouse is available to you",
       "description": "You do not belong to any warehouse that can be worked in right now. Ask a workspace administrator for access."
+    }
+  },
+  "shell": {
+    "contextSwitcher": {
+      "triggerLabel": "Context switcher, {{context}}",
+      "triggerLabelNoContext": "Context switcher, choose a context",
+      "workspaceGroupLabel": "Workspace",
+      "warehousesGroupLabel": "Warehouses",
+      "archivedLabel": "Archived",
+      "noAccessLabel": "No access",
+      "workspaceNoAccessExplanation": "You do not have access to the workspace."
+    },
+    "noContext": {
+      "heading": "Nothing is entered yet",
+      "description": "The context switcher lists the workspace and any warehouses you can enter."
+    },
+    "entryRefusal": {
+      "heading": "This address isn't available to you",
+      "description": "Use the switcher to go somewhere you have access to."
+    },
+    "archivedEntryRefusal": {
+      "heading": "This warehouse is archived",
+      "description": "Archived warehouses can't be entered. Your access to other warehouses is unchanged."
+    },
+    "landing": {
+      "pendingLabel": "Preparing your workspace…",
+      "errorHeading": "Something went wrong",
+      "errorDescription": "We couldn't check your access. Try again.",
+      "retry": "Try again"
     }
   }
 }

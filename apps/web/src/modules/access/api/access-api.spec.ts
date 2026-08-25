@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { accessApi } from 'modules/access/api/access-api';
-import { accessPermissionsApi } from 'shared/api/access-permissions-api';
+import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
 import { makeStore } from 'store';
 import { accessIds, accessPath, usersPath } from 'test/access-fixtures';
 
@@ -212,6 +212,138 @@ describe('accessApi Warehouse-scoped paths (AC-05)', () => {
       'function',
     );
     expect(accessApiModule.useDeleteMemberMutation).toBeTypeOf('function');
+  });
+});
+
+/**
+ * The field-error tables the member endpoints declare as
+ * `transformErrorResponse` (web-error-handling.md §3). They are what lets a
+ * dialog trigger the generated hook directly and still show a rejection on the
+ * field it belongs to, with no wrapper hook in between
+ * (`docs/system/adr/19-08-2026-generated-mutation-hooks-in-components.md`).
+ */
+describe('accessApi member refusals explained on a field', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  /** Runs one endpoint against a refusal and reports the normalized failure. */
+  const refuse = async (
+    run: (store: ReturnType<typeof makeStore>) => Promise<unknown>,
+    code: string,
+  ): Promise<unknown> => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValue(
+          Response.json({ code, message: 'Refused.' }, { status: 409 }),
+        ),
+    );
+
+    const result = (await run(makeStore())) as { error?: unknown };
+
+    return result.error;
+  };
+
+  it.each([
+    ['auth.email_already_registered', { email: 'duplicate' }],
+    ['users.permission_exceeded', { roleId: 'exceeded' }],
+    ['users.reserved_role_selection', { roleId: 'exceeded' }],
+  ])(
+    'explains a rejected creation (%s) on its field',
+    async (code, fieldErrors) => {
+      const error = await refuse(
+        (store) =>
+          store.dispatch(
+            accessApi.endpoints.createMember.initiate({
+              warehouseId,
+              input: {
+                email: 'new@example.test',
+                password: 'a-strong-password',
+                roleId: member.roleId,
+              },
+            }),
+          ),
+        code,
+      );
+
+      expect(error).toEqual({ code, fieldErrors });
+    },
+  );
+
+  it.each([
+    ['auth.email_already_registered', { email: 'duplicate' }],
+    ['users.manager_role_protected', { email: 'protected' }],
+    ['users.permission_exceeded', { email: 'exceeded' }],
+  ])(
+    'explains a rejected email change (%s) on the email field',
+    async (code, fieldErrors) => {
+      const error = await refuse(
+        (store) =>
+          store.dispatch(
+            accessApi.endpoints.changeMemberEmail.initiate({
+              warehouseId,
+              userId: member.userId,
+              input: { email: 'new@example.test' },
+            }),
+          ),
+        code,
+      );
+
+      expect(error).toEqual({ code, fieldErrors });
+    },
+  );
+
+  it.each([
+    ['users.manager_role_protected', { password: 'protected' }],
+    ['users.permission_exceeded', { password: 'exceeded' }],
+  ])(
+    'explains a rejected password reset (%s) on the password field',
+    async (code, fieldErrors) => {
+      const error = await refuse(
+        (store) =>
+          store.dispatch(
+            accessApi.endpoints.changeMemberPassword.initiate({
+              warehouseId,
+              userId: member.userId,
+              input: { password: 'a-new-strong-password' },
+            }),
+          ),
+        code,
+      );
+
+      expect(error).toEqual({ code, fieldErrors });
+    },
+  );
+
+  it('keeps the field the server itself named, rather than the table’s answer', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        Response.json(
+          {
+            code: 'users.permission_exceeded',
+            message: 'Refused.',
+            details: { field: 'roleId', rule: 'grapheme_length' },
+          },
+          { status: 409 },
+        ),
+      ),
+    );
+
+    const result = (await makeStore().dispatch(
+      accessApi.endpoints.changeMemberEmail.initiate({
+        warehouseId,
+        userId: member.userId,
+        input: { email: 'new@example.test' },
+      }),
+    )) as { error?: unknown };
+
+    expect(result.error).toEqual({
+      code: 'users.permission_exceeded',
+      fieldErrors: { roleId: 'grapheme_length' },
+    });
   });
 });
 

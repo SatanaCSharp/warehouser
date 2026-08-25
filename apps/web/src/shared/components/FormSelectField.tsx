@@ -1,5 +1,7 @@
 import { Description, FieldError, Label, ListBox, Select } from '@heroui/react';
 
+import { Conditional } from 'shared/components/Conditional';
+
 import type { ComponentProps, ReactElement, ReactNode } from 'react';
 
 export type SelectOption = { id: string; label: string };
@@ -44,35 +46,48 @@ export const FormSelectField = ({
   placeholder,
   validationBehavior,
   value,
-}: FormSelectFieldProps): ReactElement => (
-  <Select
-    className={className}
-    isDisabled={isDisabled}
-    isInvalid={isInvalid}
-    isRequired={isRequired}
-    name={name}
-    placeholder={placeholder}
-    validationBehavior={validationBehavior}
-    value={value === '' ? null : value}
-    onBlur={onBlur}
-    onChange={(next) => onChange(typeof next === 'string' ? next : '')}
-  >
-    <Label>{label}</Label>
-    <Select.Trigger>
-      <Select.Value />
-      <Select.Indicator />
-    </Select.Trigger>
-    <Select.Popover>
-      <ListBox>
-        {options.map((option) => (
-          <ListBox.Item key={option.id} id={option.id} textValue={option.label}>
-            {option.label}
-            <ListBox.ItemIndicator />
-          </ListBox.Item>
-        ))}
-      </ListBox>
-    </Select.Popover>
-    {description ? <Description>{description}</Description> : null}
-    <FieldError>{errorMessage}</FieldError>
-  </Select>
-);
+}: FormSelectFieldProps): ReactElement => {
+  // HeroUI hands back the raw key, which is typed wider than the flat string
+  // field React Hook Form owns; an empty string is the field's "no selection".
+  const onSelect = (next: unknown): void =>
+    onChange(typeof next === 'string' ? next : '');
+
+  return (
+    <Select
+      className={className}
+      isDisabled={isDisabled}
+      isInvalid={isInvalid}
+      isRequired={isRequired}
+      name={name}
+      placeholder={placeholder}
+      validationBehavior={validationBehavior}
+      value={value === '' ? null : value}
+      onBlur={onBlur}
+      onChange={onSelect}
+    >
+      <Label>{label}</Label>
+      <Select.Trigger>
+        <Select.Value />
+        <Select.Indicator />
+      </Select.Trigger>
+      <Select.Popover>
+        <ListBox>
+          {options.map((option) => (
+            <ListBox.Item
+              key={option.id}
+              id={option.id}
+              textValue={option.label}
+            >
+              {option.label}
+              <ListBox.ItemIndicator />
+            </ListBox.Item>
+          ))}
+        </ListBox>
+      </Select.Popover>
+      <Conditional when={description}>
+        <Description>{description}</Description>
+      </Conditional>
+      <FieldError>{errorMessage}</FieldError>
+    </Select>
+  );
+};

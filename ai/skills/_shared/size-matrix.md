@@ -12,6 +12,11 @@ runs every applicable stage. Every route runs `design` before `tasks`; UI routes
 `design-ui` and require approval. ADRs are created only for decisions that pass the design
 blast-radius gate—an ADR is never required merely to unlock tasks.
 
+No route skips the post-implementation reviews. Whichever apps the diff touched run their
+conformance gate — `code-review-front-end` for `apps/web`, `code-review-back-end` for `apps/server`,
+both when the change crosses the boundary — before `review`. The route changes only their depth
+(reviewer effort scales with `.size`), never whether they run.
+
 For a change request, `change-request` replaces `specify` as the entry stage and every later stage
 receives `change-request:<slug>` per [`work-item.md`](work-item.md). Use the same routes, but
 escalate the size for breaking consumers, cross-domain behavior, existing-data reinterpretation,

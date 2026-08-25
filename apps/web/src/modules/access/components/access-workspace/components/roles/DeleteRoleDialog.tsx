@@ -1,32 +1,38 @@
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
+import { Conditional } from 'shared/components/Conditional';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormSelectField } from 'shared/components/FormSelectField';
 
 import type { AccessRole } from 'modules/access/types/access.types';
 import type { ReactElement } from 'react';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 type DeleteRoleDialogProps = {
   role: AccessRole;
   roles: AccessRole[];
-  onClose: () => void;
-  onDelete: (replacementRoleId: string | null) => Promise<void>;
+  onDelete: (replacementRoleId: string | null) => Promise<MutationResult>;
 };
 
 type DeleteRoleForm = { replacement: string };
 
+/**
+ * Deletes a Role. An assigned one asks which Role its members move to, so the
+ * choice is validated and this is a `FormModalDialog` rather than a plain
+ * confirmation (`docs/system/guides/web-dialogs.md`).
+ */
 export const DeleteRoleDialog = ({
   role,
   roles,
-  onClose,
   onDelete,
 }: DeleteRoleDialogProps): ReactElement => {
   const { t } = useTranslation('access');
   const assigned = role.assignedMemberCount > 0;
-  const { control, handleSubmit } = useForm<DeleteRoleForm>({
-    defaultValues: { replacement: '' },
-  });
+  const form = useForm<DeleteRoleForm>({ defaultValues: { replacement: '' } });
+
+  const onSubmit = ({ replacement }: DeleteRoleForm): Promise<MutationResult> =>
+    onDelete(assigned ? replacement : null);
 
   return (
     <FormModalDialog
@@ -38,14 +44,15 @@ export const DeleteRoleDialog = ({
           : t('administration.deletion.confirm')
       }
       submitVariant="danger"
-      onClose={onClose}
-      onSubmit={handleSubmit(({ replacement }) =>
-        onDelete(assigned ? replacement : null),
-      )}
+      form={form}
+      onSubmit={onSubmit}
     >
-      {assigned ? (
+      <Conditional
+        when={assigned}
+        otherwise={<p>{t('administration.deletion.unassigned')}</p>}
+      >
         <Controller
-          control={control}
+          control={form.control}
           name="replacement"
           rules={{ required: assigned }}
           render={({ field }) => (
@@ -67,9 +74,7 @@ export const DeleteRoleDialog = ({
             />
           )}
         />
-      ) : (
-        <p>{t('administration.deletion.unassigned')}</p>
-      )}
+      </Conditional>
     </FormModalDialog>
   );
 };

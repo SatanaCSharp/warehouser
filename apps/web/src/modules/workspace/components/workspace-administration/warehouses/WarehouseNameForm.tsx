@@ -1,35 +1,35 @@
 import { Button } from '@heroui/react';
+import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import { useFormFieldErrors } from 'modules/workspace/hooks/useFormFieldErrors';
-import { useRenameWarehouse } from 'modules/workspace/hooks/useRenameWarehouse';
+import { useRenameWarehouseMutation } from 'modules/workspace/api/warehouse-api';
 import { warehouseNameFormSchema } from 'modules/workspace/schemas/warehouse-name-form.schema';
+import { mutationOutcome } from 'shared/api/client/mutation-outcome';
 import { FormTextField } from 'shared/components/FormTextField';
+import { WorkspacePermissionGate } from 'shared/components/WorkspacePermissionGate';
+import { useFormFieldErrors } from 'shared/hooks/forms/useFormFieldErrors';
 
 import type { Warehouse } from '@warehouser/contracts/workspaces';
 import type { WarehouseNameFormValues } from 'modules/workspace/schemas/warehouse-name-form.schema';
 import type { ReactElement } from 'react';
 
-type WarehouseNameFormProps = {
-  canRenameWarehouse: boolean;
-  warehouse: Warehouse;
-};
+type WarehouseNameFormProps = { warehouse: Warehouse };
 
 /**
  * Renames a Warehouse of the Workspace (AC-09). Stays available even while
  * the Warehouse is archived, because its subject is the Warehouse record
- * itself (AC-11). An actor without the rename Permission is offered no
- * editable name at all (AC-30). `canRenameWarehouse` is read from the single
- * Workspace context read `WarehousesTab` owns (see `AddWarehouseAction`).
+ * itself (AC-11). An actor without `WAREHOUSES:RENAME` is offered no editable
+ * name at all (AC-30) — the gate reads that itself rather than taking a boolean
+ * from `WarehousesTab`
+ * (`docs/system/adr/19-08-2026-declarative-permission-gates.md`).
  */
 export const WarehouseNameForm = ({
-  canRenameWarehouse,
   warehouse,
-}: WarehouseNameFormProps): ReactElement | null => {
-  const { t } = useTranslation('workspace');
+}: WarehouseNameFormProps): ReactElement => {
+  const { t } = useTranslation('warehouse');
   const { t: translateValidation } = useTranslation('validation');
-  const renameWarehouse = useRenameWarehouse();
+  const [renameWarehouse] = useRenameWarehouseMutation();
   const {
     formState: { errors, isDirty, isSubmitting },
     handleSubmit,
@@ -40,10 +40,6 @@ export const WarehouseNameForm = ({
   });
   const { setFieldError } =
     useFormFieldErrors<WarehouseNameFormValues>(setError);
-
-  if (!canRenameWarehouse) {
-    return null;
-  }
 
   const submit = async ({ name }: WarehouseNameFormValues): Promise<void> => {
     const parsedName = warehouseNameFormSchema.safeParse({ name });
@@ -56,39 +52,50 @@ export const WarehouseNameForm = ({
       return;
     }
 
-    const result = await renameWarehouse(warehouse.id, parsedName.data);
-    if (!result.success) {
-      setFieldError('name', result.fieldErrors?.name, translateValidation);
+    // Not a `FormModalDialog`: this form stays on the page rather than
+    // closing, so it normalizes the settled request itself.
+    const outcome = mutationOutcome(
+      await renameWarehouse({
+        warehouseId: warehouse.id,
+        ...parsedName.data,
+      }),
+    );
+    if (!outcome.success) {
+      setFieldError('name', outcome.fieldErrors?.name, translateValidation);
     }
   };
 
   return (
-    <form
-      className="flex flex-col gap-3"
-      noValidate
-      onSubmit={handleSubmit(submit)}
+    <WorkspacePermissionGate
+      permission={WorkspacePermissionId.WAREHOUSES_RENAME}
     >
-      <FormTextField
-        isRequired
-        validationBehavior="aria"
-        isInvalid={Boolean(errors.name)}
-        errorMessage={errors.name?.message}
-        defaultValue={warehouse.name}
-        label={t('warehouses.detail.nameLabel')}
-        description={t('warehouses.detail.nameDescription')}
-        isDisabled={isSubmitting}
-        {...register('name')}
-      />
-      <div>
-        <Button
-          type="submit"
-          variant="primary"
-          isDisabled={!isDirty || isSubmitting}
-          isPending={isSubmitting}
-        >
-          {t('warehouses.detail.saveName')}
-        </Button>
-      </div>
-    </form>
+      <form
+        className="flex flex-col gap-3"
+        noValidate
+        onSubmit={handleSubmit(submit)}
+      >
+        <FormTextField
+          isRequired
+          validationBehavior="aria"
+          isInvalid={Boolean(errors.name)}
+          errorMessage={errors.name?.message}
+          defaultValue={warehouse.name}
+          label={t('warehouses.detail.nameLabel')}
+          description={t('warehouses.detail.nameDescription')}
+          isDisabled={isSubmitting}
+          {...register('name')}
+        />
+        <div>
+          <Button
+            type="submit"
+            variant="primary"
+            isDisabled={!isDirty || isSubmitting}
+            isPending={isSubmitting}
+          >
+            {t('warehouses.detail.saveName')}
+          </Button>
+        </div>
+      </form>
+    </WorkspacePermissionGate>
   );
 };

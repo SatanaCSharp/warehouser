@@ -25,9 +25,28 @@ For API errors, form errors, notifications, success feedback, and their translat
 When writing or refactoring a React component, follow
 `../../docs/system/guides/writing-web-components.md`: one exported component per file, small
 components with a single reason to change, no value drilled more than two hops (read data and
-capabilities through hooks at the component that uses them), flat branching instead of `if` chains
-and nested ternaries, and transient UI state owned by the control that triggers it. Use
+capabilities through hooks at the component that uses them), every event handler declared and named
+above the `return` (the JSX passes the reference, never an inline arrow), and transient UI state
+owned by the control that triggers it. Use
 `../../docs/system/guides/placing-web-components.md` to decide where the resulting file goes.
+
+Never write an `if` that has an `else` — no `else if` chain, no `if`/`else` pair, and no ternary
+ladder standing in for one. The only `if` a component keeps is the early-return guard, which needs
+no `else` because the return is the else. Three or more mutually exclusive states are resolved to a
+state **name** before the `return` and rendered through a lookup annotated
+`Record<State, ReactElement>`, so the compiler proves every state is answered. The precedence
+between those states is an ordered table of predicates, not the order of `else if` lines.
+`../../docs/system/guides/writing-web-components.md` §6 is the rule and works the case through.
+
+Gate conditional markup with `shared/components/Conditional`, never with a
+`condition ? <Thing /> : null` ternary or an `&&` (a ternary picking a _value_, such as a
+`className` or a label, is unaffected); follow
+`../../docs/system/guides/writing-web-conditional-components.md`, which also covers the branch whose
+props only exist under the condition.
+
+File hooks by what they do — `hooks/queries/`, `hooks/mutations/`, `hooks/forms/`,
+`hooks/projections/`, `hooks/effects/` — and keep pure helpers out of `hooks/` in a `utils/`
+directory. Follow `../../docs/system/guides/placing-web-hooks.md`.
 
 Before writing `@heroui/react` code, look the component up in
 `../../docs/system/guides/heroui-react-v3-docs-index.md` and read the matching file under

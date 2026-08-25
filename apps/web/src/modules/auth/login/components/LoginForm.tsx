@@ -10,7 +10,7 @@ import {
 import { FormTextField } from 'shared/components/FormTextField';
 import { PasswordInput } from 'shared/components/PasswordInput';
 
-import type { ReactElement } from 'react';
+import type { FormEvent, ReactElement } from 'react';
 
 type Props = {
   onSubmit: (values: LoginFormValues) => void | Promise<void>;
@@ -28,12 +28,13 @@ export const LoginForm = ({ onSubmit }: Props): ReactElement => {
     shouldFocusError: true,
   });
 
+  // `handleSubmit` returns a promise the DOM handler must not; discarding it
+  // here keeps the rejection with React Hook Form, which already owns it.
+  const onSubmitForm = (event: FormEvent<HTMLFormElement>): void =>
+    void handleSubmit(onSubmit)(event);
+
   return (
-    <form
-      onSubmit={(event) => void handleSubmit(onSubmit)(event)}
-      className="flex flex-col gap-4"
-      noValidate
-    >
+    <form onSubmit={onSubmitForm} className="flex flex-col gap-4" noValidate>
       <FormTextField
         label={t('form.email.label')}
         placeholder={t('form.email.placeholder')}

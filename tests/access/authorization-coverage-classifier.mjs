@@ -271,6 +271,14 @@ export const findDomainFrameworkImports = (domainFiles) =>
  * Returns every file among `files` that imports from the given forbidden module segment (e.g.
  * `access` importing `workspaces`), matching both bare-specifier imports (`from 'workspaces/...'`)
  * and relative imports that traverse into that module.
+ *
+ * A scoped package specifier (`@scope/name/subpath`) is NOT an intra-application module import and
+ * is never matched. The rule constrains how this application's own modules reach each other; a
+ * published package is a deliberate shared boundary, and its subpaths are named for the domain they
+ * describe, not for the source module that consumes them. Without this guard the segment pattern
+ * reads `@warehouser/contracts/workspaces` as if it were `workspaces/...` and forbids every module
+ * but one from using the contract it is required to implement — which is the opposite of the rule's
+ * intent and of the guidance in guides/adding-and-using-contracts.md.
  */
 export const findForbiddenImports = (files, forbiddenModuleSegment) => {
   const importPattern = new RegExp(
@@ -283,6 +291,9 @@ export const findForbiddenImports = (files, forbiddenModuleSegment) => {
     const source = readFileSync(file, 'utf8');
     for (const match of source.matchAll(importPattern)) {
       const specifier = match[1];
+      if (specifier.startsWith('@')) {
+        continue;
+      }
       if (segmentPattern.test(specifier)) {
         return true;
       }

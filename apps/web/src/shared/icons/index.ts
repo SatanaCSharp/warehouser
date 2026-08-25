@@ -10,6 +10,8 @@ export { GlobeIcon } from 'shared/icons/GlobeIcon';
 export { InfoIcon } from 'shared/icons/InfoIcon';
 export { KebabIcon } from 'shared/icons/KebabIcon';
 export { KeyIcon } from 'shared/icons/KeyIcon';
+export { LayoutGridIcon } from 'shared/icons/LayoutGridIcon';
+export { LogInIcon } from 'shared/icons/LogInIcon';
 export { LogOutIcon } from 'shared/icons/LogOutIcon';
 export { MailIcon } from 'shared/icons/MailIcon';
 export { MenuIcon } from 'shared/icons/MenuIcon';

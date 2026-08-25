@@ -1,7 +1,7 @@
 {
   "title": "Sign in to your account",
   "description": "Use the email and password registered to your account.",
-  "sessionEnded": "Your session ended. Sign in again to continue.",
+  "sessionEnded": "Sign in to continue.",
   "accessibility": "Labels stay visible · field errors are associated and announced · reduced motion uses no animated transitions",
   "intro": {
     "eyebrow": "Welcome back",

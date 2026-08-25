@@ -1,8 +1,9 @@
 import { combineReducers, configureStore } from '@reduxjs/toolkit';
 
 import { authReducer } from 'modules/auth/store/auth.slice';
-import { api } from 'shared/api/api-client';
+import { api } from 'shared/api/client/api-client';
 import { apiErrorMiddleware } from 'store/middleware/api-error.middleware';
+import { mutationFeedbackMiddleware } from 'store/middleware/mutation-feedback.middleware';
 
 const rootReducer = combineReducers({
   auth: authReducer,
@@ -16,7 +17,11 @@ export const makeStore = (): AppStore =>
   configureStore({
     reducer: rootReducer,
     middleware: (getDefaultMiddleware) =>
-      getDefaultMiddleware().concat(apiErrorMiddleware, api.middleware),
+      getDefaultMiddleware().concat(
+        apiErrorMiddleware,
+        mutationFeedbackMiddleware,
+        api.middleware,
+      ),
   });
 
 export const store = makeStore();

@@ -69,6 +69,8 @@ contracts, plans, delivery records, and changelog live together under `docs/feat
   → /tasks <slug>
   → /plan-tests <slug>
   → /implement <slug>
+  → /code-review-front-end <slug>           when the change touches apps/web
+  → /code-review-back-end <slug>            when the change touches apps/server
   → /review <slug>
   → /ship <slug>
 ```
@@ -80,7 +82,7 @@ Pencil design and explicit human approval before UI implementation.
 
 The downstream artifacts trace the feature's acceptance criteria through `sad.md`, runtime
 sequences, data and interface contracts, `tasks.json`, test planning, test-first implementation,
-independent review, and final real-world verification. `ship` writes the changelog/PR material and,
+system-conformance review, independent review, and final real-world verification. `ship` writes the changelog/PR material and,
 when a roadmap exists, moves the feature from Now to Shipped. The canonical protocol remains in
 [`ai/skills/specify/SKILL.md`](ai/skills/specify/SKILL.md).
 
@@ -113,6 +115,8 @@ affecting the existing bare-slug feature behavior:
   → /tasks change-request:<slug>
   → /plan-tests change-request:<slug>
   → /implement change-request:<slug>
+  → /code-review-front-end change-request:<slug>   when the change touches apps/web
+  → /code-review-back-end change-request:<slug>    when the change touches apps/server
   → /review change-request:<slug>
   → /ship change-request:<slug>
 ```
@@ -131,6 +135,38 @@ does not create or move a roadmap feature unless the user explicitly treats it a
 portfolio outcome. The canonical protocol is in
 [`ai/skills/change-request/SKILL.md`](ai/skills/change-request/SKILL.md), with work-item resolution
 defined by [`ai/skills/_shared/work-item.md`](ai/skills/_shared/work-item.md).
+
+### Post-implementation review gates
+
+Both workflows end implementation with two kinds of review that answer different questions and do
+not replace each other:
+
+| Gate                                              | Question it answers                                             | Measured against                                                |
+| ------------------------------------------------- | --------------------------------------------------------------- | --------------------------------------------------------------- |
+| `/code-review-front-end`, `/code-review-back-end` | Does the code follow the rules this repository already decided? | `docs/system` guides, architecture documents, and Accepted ADRs |
+| `/review`                                         | Does the change do what the specification says?                 | `spec.md` acceptance criteria and the artifact chain            |
+
+The conformance gates are app-scoped. Run `/code-review-front-end` when the diff touches `apps/web`,
+`/code-review-back-end` when it touches `apps/server`, and both when the change crosses the
+boundary; each hard-refuses when its app is absent from the diff. Each one reads the applicable
+index — [`docs/system/web-index.md`](docs/system/web-index.md) or
+[`docs/system/server-index.md`](docs/system/server-index.md) — selects every document that governs
+the changed paths, reads those documents in full, and reports findings that cite both a
+`file:line` and the rule's document path and heading. A finding that cannot cite a rule is dropped,
+and sibling code is never treated as a rule.
+
+Both gates accept either work-item identifier, so a change request passes `change-request:<slug>`
+exactly like every other downstream stage. For a change request they judge only lines the change
+wrote or moved; a violation already present at `baseline_revision` in an untouched file is recorded
+as an observation rather than a blocker.
+
+No route skips these gates. The `quick`, `standard`, and `full` routes change only the reviewer's
+depth, never whether the gates run. Each writes a record under the work item's `_review/` directory
+with a `PASS` or `CHANGES REQUESTED` verdict; an unresolved blocking finding returns the work to
+`/implement` rather than passing to `/review`. The canonical protocols are in
+[`ai/skills/code-review-front-end/SKILL.md`](ai/skills/code-review-front-end/SKILL.md),
+[`ai/skills/code-review-back-end/SKILL.md`](ai/skills/code-review-back-end/SKILL.md), and the shared
+[`ai/skills/_shared/system-conformance.md`](ai/skills/_shared/system-conformance.md).
 
 ### Configure your coding agent
 
@@ -182,13 +218,15 @@ Use `target_surfaces` in the resolved work item's `sad.md` as the routing decisi
 For features with UI changes, the workflow deliberately separates design approval from production implementation:
 
 ```text
-specification → Pencil design → human approval → task planning → implementation → visual review
+specification → Pencil design → human approval → task planning → implementation
+→ front-end conformance review → visual review
 ```
 
 For features without UI changes, the Pencil stages are omitted:
 
 ```text
-specification → architecture/contracts/data model as applicable → task planning → implementation → review
+specification → architecture/contracts/data model as applicable → task planning → implementation
+→ back-end conformance review → review
 ```
 
 The `.pen` file and approved frame ID are the visual source of truth. Generated standalone HTML is not used as an intermediate implementation artifact.
@@ -297,6 +335,11 @@ Review fidelity across:
 - focus, keyboard, labeling, contrast, and reduced-motion behavior.
 
 Visible differences must either be fixed or recorded under `Approved deviations` in the handoff.
+
+This visual comparison judges fidelity to the approved design. It is separate from
+`/code-review-front-end`, which judges the same code against the frontend rules in
+`docs/system` — component placement, hook placement, the RTK Query and mutation boundaries,
+dialog selection, permission gating, HeroUI usage, and localization. Run both.
 
 ### MCP troubleshooting
 

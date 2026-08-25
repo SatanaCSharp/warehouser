@@ -1,52 +1,35 @@
-import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import { FormModalDialog } from 'shared/components/FormModalDialog';
+import { ConfirmAlertDialog } from 'shared/components/ConfirmAlertDialog';
 
-import type {
-  AccessMember,
-  MutationOutcome,
-} from 'modules/access/types/access.types';
+import type { AccessMember } from 'modules/access/types/access.types';
 import type { ReactElement } from 'react';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 type DeleteMemberDialogProps = {
   member: Pick<AccessMember, 'email' | 'userId'>;
-  onClose: () => void;
-  onDelete: () => Promise<MutationOutcome>;
+  onDelete: () => Promise<MutationResult>;
 };
 
+/**
+ * Confirms deleting a member (AC-08). There is nothing to fill in and nothing
+ * to validate, so it is a `ConfirmAlertDialog` rather than a form
+ * (`docs/system/guides/web-dialogs.md`).
+ */
 export const DeleteMemberDialog = ({
   member,
-  onClose,
   onDelete,
 }: DeleteMemberDialogProps): ReactElement => {
   const { t } = useTranslation('access');
-  // The confirmation carries no fields, but it submits like every sibling
-  // dialog — so the pending state comes from the form, not from a flag this
-  // component would have to keep in sync with the mutation itself.
-  const {
-    formState: { isSubmitting },
-    handleSubmit,
-  } = useForm();
-
-  const confirm = async (): Promise<void> => {
-    const result = await onDelete();
-    if (result.success) {
-      onClose();
-    }
-  };
 
   return (
-    <FormModalDialog
+    <ConfirmAlertDialog
       title={t('administration.deleteMember.title', { email: member.email })}
       cancelLabel={t('administration.cancel')}
-      submitLabel={t('administration.deleteMember.confirm')}
-      submitVariant="danger"
-      isSubmitting={isSubmitting}
-      onClose={onClose}
-      onSubmit={handleSubmit(confirm)}
+      confirmLabel={t('administration.deleteMember.confirm')}
+      onConfirm={onDelete}
     >
       <p>{t('administration.deleteMember.body', { email: member.email })}</p>
-    </FormModalDialog>
+    </ConfirmAlertDialog>
   );
 };

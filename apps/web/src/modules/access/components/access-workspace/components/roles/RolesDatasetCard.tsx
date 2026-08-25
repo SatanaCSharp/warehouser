@@ -1,9 +1,10 @@
 import { useTranslation } from 'react-i18next';
 
+import { Conditional } from 'shared/components/Conditional';
 import { DatasetCard } from 'shared/components/DatasetCard';
 
-import type { AccessDataset } from 'modules/access/hooks/access-dataset';
 import type { AccessRole } from 'modules/access/types/access.types';
+import type { AccessDataset } from 'modules/access/utils/access-dataset';
 import type { ReactElement } from 'react';
 
 /** Read-only Roles, for an actor who may see them but not administer them. */
@@ -16,23 +17,21 @@ export const RolesDatasetCard = ({
 
   return (
     <DatasetCard
-      empty={dataset.isReady && dataset.items.length === 0}
+      empty={dataset.items.length === 0}
       emptyLabel={t('roles.empty')}
       error={dataset.isError}
       errorLabel={t('roles.error')}
-      loading={dataset.isLoading}
-      loadingLabel={`${t('roles.heading')}…`}
       title={t('roles.heading')}
     >
       <ul className="divide-y divide-border" aria-label={t('roles.listLabel')}>
         {dataset.items.map((role) => (
           <li className="py-4" key={role.id}>
             <span className="font-medium">{role.name}</span>
-            {role.kind === 'warehouse_manager' ? (
+            <Conditional when={role.kind === 'warehouse_manager'}>
               <span className="ml-2 text-sm text-muted">
                 {t('roles.protected')}
               </span>
-            ) : null}
+            </Conditional>
           </li>
         ))}
       </ul>

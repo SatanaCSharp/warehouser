@@ -44,15 +44,29 @@ describe('workspaces/domain module boundaries', () => {
     expect(domainSources.length).toBeGreaterThan(0);
   });
 
-  it.each(frameworkFreeDomainSources)(
-    '$filePath imports no NestJS, HTTP, or TypeORM',
-    ({ source }) => {
-      expect(source).not.toMatch(/from\s+['"]@nestjs\//u);
-      expect(source).not.toMatch(/from\s+['"]typeorm['"]/u);
-      expect(source).not.toMatch(/from\s+['"]http['"]/u);
-      expect(source).not.toMatch(/from\s+['"]node:http['"]/u);
-    },
-  );
+  // The rule is unchanged; only its shape is. The error factories and
+  // predicates this scanned moved to `access` with the Access capability they
+  // serve (CH-S2), leaving `workspaces/domain/` with services alone — and
+  // Jest's `it.each` fails outright on an empty table. Reporting the offending
+  // files as a list keeps the rule intact, keeps the failure message naming the
+  // file (CR-AC-12), and matches how
+  // `tests/access/authorization-coverage.spec.mjs` states the same constraint.
+  const frameworkImportPatterns = [
+    /from\s+['"]@nestjs\//u,
+    /from\s+['"]typeorm['"]/u,
+    /from\s+['"]http['"]/u,
+    /from\s+['"]node:http['"]/u,
+  ];
+
+  it('imports no NestJS, HTTP, or TypeORM outside domain/services', () => {
+    const offenders = frameworkFreeDomainSources
+      .filter(({ source }) =>
+        frameworkImportPatterns.some((pattern) => pattern.test(source)),
+      )
+      .map(({ filePath }) => filePath);
+
+    expect(offenders).toEqual([]);
+  });
 
   it.each(domainSources)(
     '$filePath imports no access/domain internals',

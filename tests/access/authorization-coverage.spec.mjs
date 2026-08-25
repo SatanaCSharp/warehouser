@@ -166,3 +166,19 @@ test('fails an access file that imports from workspaces', () => {
 
   assert.deepEqual(findForbiddenImports([fixture], 'workspaces'), [fixture]);
 });
+
+test('fails an access file that reaches into workspaces relatively', () => {
+  const fixture = `${FIXTURES_DIR}/access-importing-workspaces-relatively.fixture.ts`;
+
+  assert.deepEqual(findForbiddenImports([fixture], 'workspaces'), [fixture]);
+});
+
+// The module-segment rule governs how this application's own modules reach each other. A published
+// package is a deliberate shared boundary whose subpaths are named for the domain they describe, so
+// `@warehouser/contracts/workspaces` is not a `workspaces` module import. Without this case the
+// segment pattern forbids every module but one from implementing the contract it must serve.
+test('allows an access file that imports the published workspaces contract', () => {
+  const fixture = `${FIXTURES_DIR}/access-importing-workspaces-contract.fixture.ts`;
+
+  assert.deepEqual(findForbiddenImports([fixture], 'workspaces'), []);
+});

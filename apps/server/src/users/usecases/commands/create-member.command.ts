@@ -18,6 +18,8 @@ import { Password } from 'shared/domain/security/password';
 import { hashPassword } from 'shared/domain/security/password-hashing';
 import { withOperationTiming } from 'shared/logger/with-operation-timing';
 import {
+  emailAlreadyRegisteredError,
+  invalidInputError,
   permissionExceededError,
   reservedRoleSelectionError,
 } from 'users/domain/errors/users.errors';
@@ -57,20 +59,6 @@ const targetUnavailableError = (): ApplicationError =>
 // `targetUnavailableError` reuses `ACCESS_TARGET_UNAVAILABLE`.
 const roleUnavailableError = (): ApplicationError =>
   new ApplicationError(ErrorCode.ACCESS_ROLE_UNAVAILABLE);
-
-// AC-02/AC-05 reuse `auth`'s registration-time credential rules and stable
-// error codes verbatim (spec.md §5 note; ADR-0001) — constructed directly
-// here rather than importing `auth/domain/errors/*`, which is `auth`-owned.
-const invalidInputError = (
-  fields?: Readonly<Record<string, string>>,
-): ApplicationError =>
-  new ApplicationError(
-    ErrorCode.AUTH_INVALID_INPUT,
-    fields ? { fields } : undefined,
-  );
-
-const emailAlreadyRegisteredError = (): ApplicationError =>
-  new ApplicationError(ErrorCode.AUTH_EMAIL_ALREADY_REGISTERED);
 
 const defaultRuntime: CreateMemberRuntime = {
   identityId: () => randomUUID(),
