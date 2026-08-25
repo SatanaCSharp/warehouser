@@ -314,7 +314,14 @@ describe('readiness documentation — the four writing-web-components.md passage
   });
 
   it('§6 branches on permission and the error arm, not on readiness', () => {
-    const branching = sectionOf(guide(), '6. Keep branching flat');
+    // The heading gained its second clause when §6 turned "keep branching
+    // flat" into an outright ban on the `if`/`else if` chain. What this case
+    // protects is unchanged: §6's surviving guard branches on a Permission and
+    // a failed read, and readiness is still not one of the states it exits on.
+    const branching = sectionOf(
+      guide(),
+      '6. Keep branching flat — never write an `if`/`else if` chain',
+    );
 
     expect(branching).toContain('if (!canReadMembers || members.isError) {');
     expect(flowed(branching)).toContain(

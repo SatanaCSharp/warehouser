@@ -83,8 +83,10 @@ of the tree and becomes one named declaration beside the handlers.
 
 ## 3. Several mutually exclusive branches are a lookup, not a chain
 
-When one piece of state decides _which_ of several elements renders, resolve them with a lookup
-keyed by that state rather than stacking guards:
+[Writing web components](writing-web-components.md) §6 forbids the `if`/`else if` chain outright,
+and this is the JSX-side half of that rule: stacking `Conditional`s that re-test the same state is
+the same chain written as elements. When one piece of state decides _which_ of several elements
+renders, resolve them with a lookup keyed by that state rather than stacking guards:
 
 ```tsx
 const openDialog =
@@ -103,6 +105,10 @@ const openDialog =
 
 Building three elements to render one is cheap — element creation runs no hooks and has no effects.
 Reading three stacked `Conditional`s that each re-test the same `dialog.kind` is not.
+
+Where the states are named by a union rather than by a discriminated record, annotate the lookup
+`Record<State, ReactElement>` so it is **total** and the compiler refuses a state nobody gave an
+element to. [Writing web components](writing-web-components.md) §6 works that case through.
 
 ## 4. A component that gates itself needs no `Conditional` at all
 
@@ -134,6 +140,8 @@ last.
 - no `{condition ? <Thing /> : null}` (or its inverted `{condition ? null : <Thing />}`) and no
   `{condition && <Thing />}` anywhere in the tree;
 - every branch whose props depend on the condition is resolved to a named element before the return;
-- no stack of `Conditional`s testing the same value — that is a lookup;
+- no stack of `Conditional`s testing the same value — that is a lookup, and a total one;
+- no `if` with an `else` anywhere in the file, in JSX or above it
+  ([Writing web components](writing-web-components.md) §6);
 - a workflow that may not be offered at all gates itself, and gates on a Permission with
   `WarehousePermissionGate` / `WorkspacePermissionGate` rather than a `canDoThing` boolean.

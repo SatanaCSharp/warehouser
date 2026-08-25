@@ -32,9 +32,12 @@ first, then read only the entries that cover the change you are making. Paths ar
   gains a second component.
 - [Writing web components](guides/writing-web-components.md) — decides **what goes inside** a
   component file: one exported component per file, single reason to change, the two-hop prop budget,
-  flat branching over `if` chains and element ternaries, event handlers declared and named above the
-  `return`, and transient UI state owned by its trigger. Use when writing or refactoring any React
-  component.
+  event handlers declared and named above the `return`, and transient UI state owned by its trigger.
+  Its §6 carries the repository's **unconditional ban on the `if`/`else if` chain** — any `if` with
+  an `else`, and the ternary ladder it becomes — together with the five techniques that replace one:
+  the early-return guard, the value lookup, the descriptor list, the total
+  `Record<State, ReactElement>` render lookup, and the rule against element ternaries. Use when
+  writing or refactoring any React component, and read §6 before writing any conditional at all.
 - [Writing web conditional components](guides/writing-web-conditional-components.md) — how a
   condition that decides which element renders is expressed inside JSX:
   `shared/components/Conditional` instead of a

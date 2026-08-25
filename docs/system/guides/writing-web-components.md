@@ -160,10 +160,39 @@ store or a stubbed network. A dialog shows the server's field errors and decides
 whether to close — which it does itself (§8), so `onSave` hands over the request and returns its
 `MutationResult` rather than the caller closing on the dialog's behalf.
 
-## 6. Keep branching flat
+## 6. Keep branching flat — never write an `if`/`else if` chain
 
-Long `if` chains and stacked ternaries are where cognitive load accumulates fastest. Four techniques
-cover nearly every case.
+**A component never decides what it renders, or what a value is, with a chain of conditionals.**
+This rule is unconditional. It is not a budget to stay under, not a smell to weigh against other
+concerns, and not waived by a chain being short, flat, well-commented, or an improvement on what it
+replaced.
+
+**A chain is any `if` that has an `else`.** That is the whole test, and it is mechanical:
+
+```ts
+if (a) { … } else if (b) { … } else { … }   // a chain — forbidden
+if (a) { … } else { … }                     // a chain — forbidden
+if (a) return x;                            // a guard — required, see below
+```
+
+The single `if` this guide keeps is the early-return guard, and it keeps no `else` because the
+return _is_ the else. Everything else that looks like a chain is data wearing control flow, and the
+five techniques below say which shape that data takes.
+
+Why the rule is absolute rather than a preference:
+
+- **A chain has no exhaustiveness.** Nothing tells you a case is missing; the final `else` silently
+  absorbs it and renders the wrong thing. A total lookup does not compile until every case is
+  answered.
+- **Its precedence is invisible.** Which condition wins is encoded in line order, so reordering two
+  arms during an unrelated edit changes behaviour with nothing to review against.
+- **It grows.** Every chain was two arms once. There is no principled place to stop, so the rule
+  stops it at zero.
+- **It hides the shape of the problem.** Reading a chain means simulating it. Reading a table means
+  reading a table.
+
+The same prohibition applies to the ternary ladder that a chain becomes when someone converts it to
+satisfy the letter of this rule — `a ? x : b ? y : c ? z : w` is a chain, and is covered below.
 
 **Return early for mutually exclusive whole-component states.** Put the exits at the top so the
 happy path is unindented and reads last:
@@ -238,6 +267,67 @@ const actions = usePermittedItems<RowAction>([
 
 For a branch that is _not_ a Permission — record state, identity, a feature the row does not carry —
 build the list with Lodash `compact` and a predicate per entry.
+
+**Name the state, then look up the element.** This is the technique for the case an `if`/`else if`
+chain is reached for most often: several mutually exclusive states, each rendering something
+different, none of which can be an early return because the component still renders a shell around
+them. Resolve the state to a **name** before the return, then index a lookup with that name.
+
+Take it in two steps. First, the precedence — which state wins when more than one holds — becomes an
+ordered table instead of the order of `else if` lines:
+
+```ts
+type WarehouseListState = 'failed' | 'empty' | 'noMatches' | 'ready';
+
+/** The states that displace the rows, most significant first. */
+const displacingStates: readonly {
+  state: WarehouseListState;
+  holds: (reading: WarehouseListReading) => boolean;
+}[] = [
+  { state: 'failed', holds: ({ isError }) => isError },
+  { state: 'empty', holds: ({ warehouseCount }) => warehouseCount === 0 },
+  { state: 'noMatches', holds: ({ matchCount }) => matchCount === 0 },
+];
+
+const resolveListState = (reading: WarehouseListReading): WarehouseListState =>
+  displacingStates.find(({ holds }) => holds(reading))?.state ?? 'ready';
+```
+
+The table is a value, so the precedence can be commented, reordered deliberately, and asserted in a
+test. The resolver is pure and takes the narrowest reading of the world that decides the answer —
+two counts and an outcome flag, not the collection itself.
+
+Second, the name selects the element:
+
+```tsx
+const content: Record<WarehouseListState, ReactElement> = {
+  failed: <p role="alert">{t('warehouses.error')}</p>,
+  empty: <p role="status">{t('warehouses.empty')}</p>,
+  noMatches: <p role="status">{t('warehouses.noMatches', { query })}</p>,
+  ready: <ul aria-label={label}>{rows}</ul>,
+};
+
+return (
+  <div className={className}>
+    <WarehouseSearchField value={query} onChange={setQuery} />
+    {content[listState]}
+  </div>
+);
+```
+
+Annotating the lookup `Record<WarehouseListState, ReactElement>` is the point of the whole shape, not
+a formality: it is **total**, so adding a state to the union fails to compile until it is given
+something to render. That is the guarantee the chain's trailing `else` can never give.
+
+Both halves are cheap. Naming the state runs a handful of predicates over already-computed values,
+and building every element to render one runs no hook and has no effect —
+[Writing web conditional components](writing-web-conditional-components.md) §3 states that in full.
+An arm whose props only exist under its own condition is the exception, and §2 there says how to
+resolve it.
+
+Use the lookup when there are three or more states, or when a state may be added later. With exactly
+two, and no shell to render around them, an early return is still simpler — and a single
+`condition ? value : other` picking a _value_ was never a chain to begin with.
 
 **Never branch between elements with a ternary.** A ladder of `a ? x : b ? y : c ? z : w` is a set
 of early returns wearing a disguise — extract it into a small component or helper that returns early
@@ -358,7 +448,11 @@ Check the component you wrote against this list:
 - no data or capability read that could be read one level lower, and no capability accepted as a
   prop at all;
 - each dependency is the narrowest one that does the job;
-- no ternary choosing between elements, and no `if` chain that is really a lookup;
+- **no `if` that has an `else`** — no `else if` chain, no `if`/`else` pair, and no ternary ladder
+  standing in for one; the only surviving `if` is an early-return guard (§6);
+- every set of three or more mutually exclusive states is resolved to a name and rendered through a
+  lookup annotated `Record<State, ReactElement>`, so the compiler proves it total (§6);
+- no ternary choosing between elements;
 - every branch gated by `Conditional`, or resolved to a named element above the return;
 - every event handler declared and named above the return, and the JSX passes the reference;
 - transient UI state lives with the control that owns it, and no component keeps a dialog's open

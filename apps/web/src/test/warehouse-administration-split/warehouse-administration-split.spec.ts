@@ -8,8 +8,12 @@ import { describe, expect, it } from 'vitest';
 // the Warehouses-tab components is fixed by that request's design artifact
 // (`docs/change-requests/refactor-warehouse-components/sad.md` §5.3), and the
 // file set is its review-time criterion. This spec makes the criterion
-// mechanical — the file set, one exported component per file, and the flat
-// three-way branch the criterion protects in `WarehouseList`.
+// mechanical — the file set, one exported component per file, and the way
+// `WarehouseList` resolves what it renders. That last one no longer pins the
+// criterion's own `if`/`else if` wording: `writing-web-components.md` §6 now
+// forbids the chain outright, so the case pins the obligations the wording
+// carried (four distinct states, the failed read first, the status arms inline)
+// against the lookup that replaced it.
 //
 // It scans sources rather than rendering, so it does not belong inside
 // `modules/workspace`: its subject is the arrangement of the tree, not the
@@ -100,6 +104,34 @@ const nestedTernaryLines = (file: string): string[] => {
   });
 };
 
+/**
+ * Lines that open a conditional *statement* — `if (…)`, `} else if (…)` or a
+ * bare `else`. Prose naming one inside a comment or a docblock is not one, so
+ * the match is anchored to the start of the trimmed line, which a comment line
+ * begins with `//` or `*`.
+ *
+ * `writing-web-components.md` §6 forbids the chain outright, so what this
+ * reports is not "too many branches" but "a branch written as a statement at
+ * all" — the file is expected to hold none.
+ */
+const conditionalStatementLines = (file: string): string[] =>
+  sourceOf(file)
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => /^(?:\}\s*)?else\b|^if\s*\(/u.test(line));
+
+/** The state names of the precedence table, in the order it declares them. */
+const precedenceStates = (source: string): string[] =>
+  [...source.matchAll(/state: '(?<state>[a-zA-Z]+)'/gu)].map(
+    (match) => match.groups?.state ?? '',
+  );
+
+/** The keys of the `content` lookup, in the order it declares them. */
+const lookupStates = (source: string): string[] =>
+  [...source.matchAll(/^ {4}(?<state>[a-zA-Z]+): \($/gmu)].map(
+    (match) => match.groups?.state ?? '',
+  );
+
 describe('the Warehouse administration component split (CR-AC-04)', () => {
   describe('the WarehouseList split', () => {
     it('realizes exactly the four files the design artifact still fixes', () => {
@@ -121,29 +153,49 @@ describe('the Warehouse administration component split (CR-AC-04)', () => {
       });
     });
 
-    it('keeps the flat content branch in WarehouseList', () => {
-      // The flat failed / empty / no-matches / present assignment is the
-      // branching CR-AC-04 protects, not an `if` chain it forbids: only the
-      // branch *bodies* extract, and the one-element status states stay inline
-      // (`sad.md` §5.3, O3). The no-matches arm is a distinct outcome from the
-      // empty workspace — a filtered-out list is not an unpopulated one — so it
-      // is its own flat arm rather than a condition folded into the empty one.
+    it('resolves the four list states through a total lookup, not an `if` chain', () => {
+      // CR-AC-04 read the four-way failed / empty / no-matches / present
+      // assignment as the *flat* branching it protects. It is now the shape
+      // `writing-web-components.md` §6 forbids outright: an `if`/`else if`
+      // chain is never how a component decides what it renders, whatever it is
+      // an alternative to. The obligations that clause carried are unchanged
+      // and are re-pinned below against the shape that replaced it — a state
+      // name resolved before the return, then a `Record` keyed by it.
+      //
+      // Four states, still distinct: a filtered-out list is not an unpopulated
+      // one, so `noMatches` keeps its own entry rather than folding into
+      // `empty`. The one-element status states stay inline (`sad.md` §5.3, O3).
       //
       // The loading arm was deleted with the skeleton by global-loader CH-14
-      // and has not come back. The failed-read arm is a different state and is
-      // first: the route loader settles its secondary reads, so a rejected
-      // Warehouse read still commits the destination, and without this arm the
-      // empty branch would state the Workspace has no Warehouse (follow-up B3,
+      // and has not come back. The failed-read arm is a different state and
+      // outranks the rest — precedence the chain used to carry in its order and
+      // `displacingStates` now carries as data: the route loader settles its
+      // secondary reads, so a rejected Warehouse read still commits the
+      // destination, and without that arm the empty state would state the
+      // Workspace has no Warehouse (follow-up B3,
       // `_review/code-review-front-end-2026-08-21.md`;
       // `frontend-architecture.md` §Page). It is an `alert`, not a `status`,
       // because it reports a failure rather than an outcome.
       const source = sourceOf('WarehouseList.tsx');
 
-      expect(source).toContain('if (isError) {');
-      expect(source).toContain('} else if (warehouses.length === 0) {');
-      expect(source).toContain('} else if (visibleWarehouses.length === 0) {');
-      expect(source).toContain('} else {');
-      expect([...source.matchAll(/^\s*content = /gmu)]).toHaveLength(4);
+      expect(source).toContain(
+        "type WarehouseListState = 'failed' | 'empty' | 'noMatches' | 'ready';",
+      );
+      expect(precedenceStates(source)).toStrictEqual([
+        'failed',
+        'empty',
+        'noMatches',
+      ]);
+      expect(source).toContain(
+        'const content: Record<WarehouseListState, ReactElement> = {',
+      );
+      expect(lookupStates(source)).toStrictEqual([
+        'failed',
+        'empty',
+        'noMatches',
+        'ready',
+      ]);
+      expect(conditionalStatementLines('WarehouseList.tsx')).toStrictEqual([]);
       expect(source).toContain('<p role="status"');
       expect(source).toContain('<p role="alert"');
     });
