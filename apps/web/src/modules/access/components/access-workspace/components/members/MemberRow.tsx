@@ -35,19 +35,25 @@ type RowAction = {
  * mutually exclusive whole-component states, so they are early returns rather
  * than the ternary ladder they would otherwise be inside `MemberRow`'s JSX, and
  * each states one rule: record state, then identity, then authorization.
+ *
+ * It takes the two identities rather than two booleans derived from them, so
+ * "is this me?" and "has the actor resolved?" are answered in one place — the
+ * place that acts on the answer — instead of being computed by the caller and
+ * drilled in as a pair that can disagree
+ * (`writing-web-components.md` §5, §9).
  */
 const MemberRowTrailing = ({
   actions,
   actionsLabel,
-  isActorResolved,
+  actorUserId,
   isProtected,
-  isSelf,
+  memberUserId,
 }: {
   actions: RowAction[];
   actionsLabel: string;
-  isActorResolved: boolean;
+  actorUserId: string | undefined;
   isProtected: boolean;
-  isSelf: boolean;
+  memberUserId: string;
 }): ReactElement | null => {
   const { t } = useTranslation('access');
 
@@ -59,7 +65,7 @@ const MemberRowTrailing = ({
     );
   }
 
-  if (isSelf) {
+  if (memberUserId === actorUserId) {
     return (
       <Chip size="sm" variant="soft">
         {t('members.you')}
@@ -70,9 +76,10 @@ const MemberRowTrailing = ({
   // An unresolved actor cannot be compared against a member id, so no row may
   // present itself as somebody else's: every destructive control is withheld
   // until the actor resolves (CR-RG-01). This is identity, not a Permission,
-  // which is why it is an early return beside `isSelf` rather than a gate
+  // which is why it is an early return beside the self comparison above rather
+  // than a gate
   // (`docs/system/adr/19-08-2026-declarative-permission-gates.md`).
-  if (!isActorResolved) {
+  if (actorUserId === undefined) {
     return null;
   }
 
@@ -131,8 +138,6 @@ export const MemberRow = ({
 }: MemberRowProps): ReactElement => {
   const { t } = useTranslation('access');
   const isProtected = member.roleKind === 'warehouse_manager';
-  const isActorResolved = actorUserId !== undefined;
-  const isSelf = member.userId === actorUserId;
   const actionsLabel = t('members.actions', { email: member.email });
 
   const actions = usePermittedItems<RowAction>([
@@ -173,9 +178,9 @@ export const MemberRow = ({
       <MemberRowTrailing
         actions={actions}
         actionsLabel={actionsLabel}
-        isActorResolved={isActorResolved}
+        actorUserId={actorUserId}
         isProtected={isProtected}
-        isSelf={isSelf}
+        memberUserId={member.userId}
       />
     </li>
   );
