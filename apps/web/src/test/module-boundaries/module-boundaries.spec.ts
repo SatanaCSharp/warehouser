@@ -347,4 +347,45 @@ describe('web module boundaries', () => {
       expect(unqualified).toStrictEqual([]);
     });
   });
+
+  // Follow-up B4 from `_review/code-review-front-end-2026-08-21.md`. The scan
+  // scope above is production-only, and that left the composition layer's own
+  // specs unchecked — `adding-a-web-module.md` §2 names `test/` fixtures as
+  // bound by the surface rule, differing in *reach*, not in *exemption*. A
+  // spec under `src/test/` is composition-layer material: it may address any
+  // module's declared surface and may not reach past one.
+  //
+  // This case scans those specs alone. The colocated specs the scope note
+  // describes — a spec sitting inside the module it tests, or exercising two
+  // modules' validators in one `it.each` — are still out of scope and are
+  // unaffected.
+  describe('composition-layer specs', () => {
+    /**
+     * Test-only couplings that predate this rule, each with the reason it is
+     * not a production boundary crossing. The list is closed: a new entry is a
+     * deliberate, reviewable act, exactly as `MODULE_SURFACE` itself is.
+     */
+    const PERMITTED_TEST_ONLY_COUPLINGS = [
+      // The pre-move home of the Warehouse-name validation spec, named in this
+      // file's own SCAN SCOPE note: it exercises two modules' validators in one
+      // `it.each` rather than reaching into a module at runtime.
+      'modules/workspace/utils/warehouse-name-validation',
+    ];
+
+    const compositionSpecs = (): string[] =>
+      globSync('test/**/*.spec.{ts,tsx}', { cwd: SRC_DIRECTORY })
+        .map((entry) => entry.split('\\').join('/'))
+        .sort();
+
+    it('reaches modules only through their declared surface', () => {
+      const violations = findSurfaceViolations(compositionSpecs()).filter(
+        (violation) =>
+          !PERMITTED_TEST_ONLY_COUPLINGS.includes(violation.target),
+      );
+
+      expect(violations.map((violation) => violation.message)).toStrictEqual(
+        [],
+      );
+    });
+  });
 });

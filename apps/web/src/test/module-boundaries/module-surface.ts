@@ -44,6 +44,8 @@ export const MODULE_SURFACE = {
     'modules/access/components/workspace-administration/roles/WorkspaceRolesTab',
     // modules/workspace/loaders/workspace-administration.loader.ts
     'modules/access/loaders/workspace-administration-datasets.loader',
+    // test/loader-permission-parity/loader-permission-parity.spec.ts
+    'modules/access/utils/access-permission-sets',
   ],
   auth: [
     // router.ts
