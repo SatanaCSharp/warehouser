@@ -27,7 +27,15 @@ describe('useWorkspacePermissionCatalogue', () => {
   // CR-AC-09 / CH-09 — the catalogue returns the Permissions it has. `isReady`
   // is gone: the Workspace route's loader has already awaited this read, so no
   // Role form waits on it before showing what it grants from.
-  it('reports exactly the Permission catalogue (CR-AC-09)', async () => {
+  //
+  // `isError` is present and is **not** a readiness field. The loader settles
+  // its secondary reads, so the destination commits on a rejected one, and
+  // `groupWorkspacePermissions([])` drops every group — without the term the
+  // Permissions tab could not tell a failed catalogue from an empty one
+  // (follow-up B3, `_review/code-review-front-end-2026-08-21.md`). The
+  // assertion stays an exact key set, so a readiness field coming back still
+  // fails it.
+  it('reports exactly the Permission catalogue and the failed-read term (CR-AC-09)', async () => {
     stubWorkspaceServer({
       context: namedWorkspaceContext([
         WorkspacePermissionId.WORKSPACE_ROLES_WATCH,
@@ -39,7 +47,10 @@ describe('useWorkspacePermissionCatalogue', () => {
     });
 
     await waitFor(() => expect(result.current.permissions).not.toHaveLength(0));
-    expect(Object.keys(result.current)).toEqual(['permissions']);
+    expect(Object.keys(result.current).sort()).toEqual([
+      'isError',
+      'permissions',
+    ]);
   });
 
   // AC-32 — the gate belongs to the read, so no caller repeats the `skip`.

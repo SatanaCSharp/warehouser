@@ -55,6 +55,7 @@ const peopleCounts = {
 };
 
 type HarnessProps = {
+  isError?: boolean;
   warehouses?: Warehouse[];
 };
 
@@ -65,6 +66,7 @@ type HarnessProps = {
  * row has been chosen yet.
  */
 const WarehouseListHarness = ({
+  isError = false,
   warehouses = workspaceWarehouses(),
 }: HarnessProps): ReactElement => {
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<
@@ -73,6 +75,7 @@ const WarehouseListHarness = ({
 
   return (
     <WarehouseList
+      isError={isError}
       membershipWarehouseIds={[]}
       peopleCounts={peopleCounts}
       selectedWarehouseId={selectedWarehouseId}
@@ -107,6 +110,25 @@ const selectWarehouse = async (
 };
 
 describe('WarehouseList', () => {
+  describe('the failed read', () => {
+    it('states that the warehouses could not be loaded instead of an empty workspace', async () => {
+      // `/workspace`'s loader settles its secondary reads, so the tab is
+      // committed with a failed Warehouse read behind it and hands the list an
+      // empty array. Without an error arm the list renders
+      // `warehouses.empty` — "This workspace has no warehouse yet." — which
+      // tells a permitted actor a false fact about their Workspace rather than
+      // reporting that the read failed (`frontend-architecture.md` §Page).
+      renderList({ isError: true, warehouses: [] });
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'Warehouses could not be loaded safely. Try again.',
+      );
+      expect(
+        screen.queryByText('This workspace has no warehouse yet.'),
+      ).not.toBeInTheDocument();
+    });
+  });
+
   describe('the Warehouse list (AC-33, AC-12a)', () => {
     it('lists every Warehouse of the Workspace with the number of people who have access', async () => {
       renderList();

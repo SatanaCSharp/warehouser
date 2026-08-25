@@ -49,7 +49,12 @@ export const WarehousesTab = (): ReactElement => {
   // Query deduplicates the subscription this read has already opened. The
   // declaration order carries no ordering intent — the loader dispatches the
   // destination's reads together (global-loader CH-14).
-  const { data: warehouses = [] } = useListWorkspaceWarehousesQuery();
+  // `isError` travels one hop to the list that renders it. The route's loader
+  // settles this read, so the tab is committed on a rejected one and the list
+  // must say so rather than state the Workspace has no Warehouse
+  // (`frontend-architecture.md` §Page).
+  const { data: warehouses = [], isError: isWarehouseReadFailed } =
+    useListWorkspaceWarehousesQuery();
   const { workspaceContext, workspacePermissionIds } =
     useCurrentWorkspaceContext();
   // The one Permission this tab still reads itself, because it decides a
@@ -116,6 +121,7 @@ export const WarehousesTab = (): ReactElement => {
         </div>
         <WarehouseList
           className={isDetailActive ? 'hidden lg:block' : 'lg:block'}
+          isError={isWarehouseReadFailed}
           membershipWarehouseIds={membershipWarehouseIds}
           peopleCounts={peopleCounts}
           selectedWarehouseId={selectedWarehouse?.id}

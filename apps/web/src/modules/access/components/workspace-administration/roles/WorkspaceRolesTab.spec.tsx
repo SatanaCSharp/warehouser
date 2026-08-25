@@ -641,4 +641,29 @@ describe('WorkspaceRolesTab', () => {
       ).toBeInTheDocument();
     });
   });
+
+  describe('the failed read', () => {
+    it('states that the roles could not be loaded instead of an empty role list', async () => {
+      // `/workspace`'s loader settles its secondary reads, so it commits the
+      // destination on a rejected one and this tab is mounted with a failed
+      // read behind it. Without an error arm the directory renders
+      // `workspaceRoles.empty` — a false statement about the actor's
+      // Workspace rather than a report that the read failed. Readiness is the
+      // route's; error stays with the narrowest component that can coordinate
+      // it (`frontend-architecture.md` §Page).
+      stubWorkspaceServer({
+        context: namedWorkspaceContext(watchOnly),
+        roles: 'unavailable',
+      });
+
+      renderTab();
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'Workspace roles could not be loaded safely. Try again.',
+      );
+      expect(
+        screen.queryByText('This workspace has no custom workspace role yet.'),
+      ).not.toBeInTheDocument();
+    });
+  });
 });

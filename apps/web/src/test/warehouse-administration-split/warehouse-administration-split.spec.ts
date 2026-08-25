@@ -122,21 +122,30 @@ describe('the Warehouse administration component split (CR-AC-04)', () => {
     });
 
     it('keeps the flat content branch in WarehouseList', () => {
-      // The flat empty / no-matches / present assignment is the branching
-      // CR-AC-04 protects, not an `if` chain it forbids: only the branch
-      // *bodies* extract, and the one-element status states stay inline
+      // The flat failed / empty / no-matches / present assignment is the
+      // branching CR-AC-04 protects, not an `if` chain it forbids: only the
+      // branch *bodies* extract, and the one-element status states stay inline
       // (`sad.md` §5.3, O3). The no-matches arm is a distinct outcome from the
       // empty workspace — a filtered-out list is not an unpopulated one — so it
       // is its own flat arm rather than a condition folded into the empty one.
-      // The fourth arm was the loading one, deleted with the skeleton by
-      // global-loader CH-14; the three that carry a message survive unchanged.
+      //
+      // The loading arm was deleted with the skeleton by global-loader CH-14
+      // and has not come back. The failed-read arm is a different state and is
+      // first: the route loader settles its secondary reads, so a rejected
+      // Warehouse read still commits the destination, and without this arm the
+      // empty branch would state the Workspace has no Warehouse (follow-up B3,
+      // `_review/code-review-front-end-2026-08-21.md`;
+      // `frontend-architecture.md` §Page). It is an `alert`, not a `status`,
+      // because it reports a failure rather than an outcome.
       const source = sourceOf('WarehouseList.tsx');
 
-      expect(source).toContain('if (warehouses.length === 0) {');
+      expect(source).toContain('if (isError) {');
+      expect(source).toContain('} else if (warehouses.length === 0) {');
       expect(source).toContain('} else if (visibleWarehouses.length === 0) {');
       expect(source).toContain('} else {');
-      expect([...source.matchAll(/^\s*content = /gmu)]).toHaveLength(3);
+      expect([...source.matchAll(/^\s*content = /gmu)]).toHaveLength(4);
       expect(source).toContain('<p role="status"');
+      expect(source).toContain('<p role="alert"');
     });
 
     it('introduces no nested ternary anywhere in the split', () => {

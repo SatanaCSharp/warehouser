@@ -9,6 +9,8 @@ import type { ReactElement } from 'react';
 
 type WarehouseListProps = {
   className?: string;
+  /** True when the Warehouse read was refused or failed, not merely empty. */
+  isError: boolean;
   membershipWarehouseIds: readonly string[];
   peopleCounts: Record<string, number> | undefined;
   selectedWarehouseId: string | undefined;
@@ -27,12 +29,17 @@ type WarehouseListProps = {
  * the exception: one `<p role="status">` is below the threshold at which
  * indirection pays, so it stays inline rather than becoming a file of its own.
  *
- * There is no fourth, loading arm: `/workspace`'s route loader awaits the
- * Warehouse list before the destination is committed, so the list is never
- * mounted without it (global-loader CH-14).
+ * There is no loading arm: `/workspace`'s route loader awaits the Warehouse
+ * list before the destination is committed, so the list is never mounted
+ * without it (global-loader CH-14). There **is** a failed-read arm, and it is
+ * first: the loader settles its secondary datasets, so a rejected read still
+ * commits the destination, and without this arm the empty branch below would
+ * tell a permitted actor their Workspace has no Warehouse
+ * (`frontend-architecture.md` §Page).
  */
 export const WarehouseList = ({
   className,
+  isError,
   membershipWarehouseIds,
   peopleCounts,
   selectedWarehouseId,
@@ -51,7 +58,13 @@ export const WarehouseList = ({
   );
 
   let content: ReactElement;
-  if (warehouses.length === 0) {
+  if (isError) {
+    content = (
+      <p role="alert" className="mt-3 text-muted">
+        {t('warehouses.error')}
+      </p>
+    );
+  } else if (warehouses.length === 0) {
     content = (
       <p role="status" className="mt-3 text-muted">
         {t('warehouses.empty')}

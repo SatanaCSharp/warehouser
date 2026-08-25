@@ -4,6 +4,7 @@
     "enterNamed": "Увійти до {{name}}",
     "search": "Пошук складів",
     "empty": "У цьому робочому просторі ще немає складів.",
+    "error": "Не вдалося безпечно завантажити склади. Спробуйте ще раз.",
     "peopleWithAccess": "{{count}} особа має доступ",
     "peopleWithAccess_many": "{{count}} осіб мають доступ",
     "peopleWithAccess_few": "{{count}} особи мають доступ",

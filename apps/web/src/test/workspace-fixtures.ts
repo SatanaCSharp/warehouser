@@ -294,8 +294,8 @@ type WorkspaceServerOptions = {
   onSetWarehouseArchival?: StubbedHandler;
   onTransferWorkspaceOwner?: StubbedHandler;
   onUpdateWorkspaceRole?: StubbedHandler;
-  permissions?: WorkspacePermission[];
-  roles?: WorkspaceRole[];
+  permissions?: WorkspacePermission[] | 'unavailable';
+  roles?: WorkspaceRole[] | 'unavailable';
   users?: WorkspaceUser[];
   warehouses?: Warehouse[] | 'unavailable';
 };
@@ -345,6 +345,25 @@ const noContent = (): Response => new Response(null, { status: 204 });
  * the Workspace Roles, the system Permission catalogue, the Workspace Members
  * and the protected Owner transfer.
  */
+/**
+ * A read that either answers its dataset or refuses with the same safe error
+ * envelope the Warehouse list already refuses with (`warehouses: 'unavailable'`
+ * above). A permitted actor whose read fails must reach the surface's own error
+ * arm rather than a false "empty", so every dataset a route loader settles
+ * needs a way to fail in a spec.
+ */
+const answerRead = <TItem>(
+  dataset: TItem[] | 'unavailable',
+): Promise<Response> =>
+  Promise.resolve(
+    dataset === 'unavailable'
+      ? Response.json(
+          { code: 'api.unexpected', message: 'Unavailable' },
+          { status: 500 },
+        )
+      : Response.json(dataset),
+  );
+
 const answerWorkspaceAuthorityRoute = (
   { body, method, url }: StubbedRoute,
   options: ResolvedWorkspaceServerOptions,
@@ -358,7 +377,7 @@ const answerWorkspaceAuthorityRoute = (
   }
 
   if (url.endsWith('/api/v1/workspace/permissions')) {
-    return Promise.resolve(Response.json(options.permissions));
+    return answerRead(options.permissions);
   }
 
   if (url.endsWith('/api/v1/workspace/owner-transfer')) {
@@ -397,7 +416,7 @@ const answerWorkspaceAuthorityRoute = (
     if (method === 'DELETE') {
       return answerWrite(options.onDeleteWorkspaceRole, body, noContent);
     }
-    return Promise.resolve(Response.json(options.roles));
+    return answerRead(options.roles);
   }
 
   if (url.includes('/api/v1/workspace/members')) {

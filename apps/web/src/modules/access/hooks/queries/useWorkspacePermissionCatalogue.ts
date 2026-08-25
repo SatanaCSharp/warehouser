@@ -14,6 +14,8 @@ import type { WorkspacePermission } from '@warehouser/contracts/workspaces';
  * catalogue shows its Permission rows with the Role's name rather than after it.
  */
 export type WorkspacePermissionCatalogue = {
+  /** True when the read was refused or failed, as opposed to returning none. */
+  isError: boolean;
   /** Every system Workspace Permission, assignable and reserved alike. */
   permissions: WorkspacePermission[];
 };
@@ -34,11 +36,12 @@ export const useWorkspacePermissionCatalogue =
       workspacePermissionIds,
       WorkspacePermissionId.WORKSPACE_ROLES_WATCH,
     );
-    const { data } = useListWorkspacePermissionsQuery(undefined, {
+    const { data, isError } = useListWorkspacePermissionsQuery(undefined, {
       skip: !canWatchWorkspaceRoles,
     });
 
     return {
+      isError,
       permissions: data ?? [],
     };
   };

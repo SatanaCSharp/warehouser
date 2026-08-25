@@ -149,4 +149,27 @@ describe('WorkspacePermissionsTab', () => {
       ).toBeInTheDocument();
     });
   });
+
+  describe('the failed read', () => {
+    it('states that the catalogue could not be loaded instead of no groups at all', async () => {
+      // `/workspace`'s loader settles its secondary reads, so this tab is
+      // mounted with a failed catalogue behind it.
+      // `groupWorkspacePermissions([])` drops every group, so without an error
+      // arm the actor gets the description paragraph and nothing under it —
+      // indistinguishable from a catalogue that is genuinely empty
+      // (`frontend-architecture.md` §Page).
+      stubWorkspaceServer({
+        context: namedWorkspaceContext([
+          WorkspacePermissionId.WORKSPACE_ROLES_WATCH,
+        ]),
+        permissions: 'unavailable',
+      });
+
+      renderTab();
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'Workspace permissions could not be loaded safely. Try again.',
+      );
+    });
+  });
 });

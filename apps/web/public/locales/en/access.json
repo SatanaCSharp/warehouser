@@ -167,6 +167,7 @@
   "workspaceRoles": {
     "search": "Search workspace roles",
     "empty": "This workspace has no custom workspace role yet.",
+    "error": "Workspace roles could not be loaded safely. Try again.",
     "memberCount": "{{count}} member",
     "memberCount_other": "{{count}} members",
     "permissionCount": "{{count}} permission",
@@ -279,6 +280,7 @@
   "workspacePermissions": {
     "heading": "Workspace permissions",
     "description": "The workspace permission catalogue. None of these permissions grant anything inside a warehouse.",
+    "error": "Workspace permissions could not be loaded safely. Try again.",
     "ownerOnly": "Owner only",
     "reservedNote": "Transferring ownership is reserved for the protected Workspace owner role and cannot be added to a custom role.",
     "groups": {

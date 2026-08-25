@@ -144,6 +144,12 @@ const ADDED_CASES: Record<string, string[]> = {
     // before, so removing the deleted arm without adding this one would have
     // left the surviving arm unasserted.
     'names the search term that matched nothing instead of showing an empty list',
+    // Follow-up B3 from `_review/code-review-front-end-2026-08-21.md`: the
+    // loader settles its secondary reads, so a rejected Warehouse read still
+    // commits the destination. The list gained a failed-read arm ahead of the
+    // empty one, and this case is what stops it silently reverting to
+    // "This workspace has no warehouse yet."
+    'states that the warehouses could not be loaded instead of an empty workspace',
   ],
   'WarehousePeopleList.spec.tsx': [
     'offers no withdraw control at all to an actor without WAREHOUSE_MEMBERSHIPS:REVOKE',

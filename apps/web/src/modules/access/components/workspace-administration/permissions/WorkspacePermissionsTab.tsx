@@ -25,7 +25,25 @@ import type { ReactElement } from 'react';
 export const WorkspacePermissionsTab = (): ReactElement => {
   const { t } = useTranslation('access');
   const permissionLabel = useWorkspacePermissionLabel();
-  const { permissions } = useWorkspacePermissionCatalogue();
+  const { isError, permissions } = useWorkspacePermissionCatalogue();
+
+  // The route's loader settles its secondary datasets, so this tab is mounted
+  // on a rejected catalogue. `groupWorkspacePermissions([])` drops every group,
+  // which would leave the description paragraph over nothing at all —
+  // indistinguishable from a catalogue that is genuinely empty. Readiness is
+  // the route's; error is this tab's (`frontend-architecture.md` §Page).
+  if (isError) {
+    return (
+      <section
+        aria-label={t('workspacePermissions.heading')}
+        className="space-y-6"
+      >
+        <p role="alert" className="py-6 text-muted">
+          {t('workspacePermissions.error')}
+        </p>
+      </section>
+    );
+  }
 
   return (
     <section

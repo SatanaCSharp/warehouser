@@ -27,7 +27,14 @@ describe('useWorkspaceRoles', () => {
   // CR-AC-09 / CH-09 — the hook returns the Roles it has. `isReady` is gone:
   // the Workspace route's loader has already awaited this read, so no caller
   // waits on it and no member row defers naming the Role it shows.
-  it('reports exactly the Roles and the assignable ones (CR-AC-09)', async () => {
+  //
+  // `isError` is present and is **not** a readiness field. The loader settles
+  // its secondary reads, so the destination commits on a rejected one and the
+  // tab needs the term to tell a failed read from an empty Workspace — the
+  // same reason `AccessDataset` kept it (follow-up B3,
+  // `_review/code-review-front-end-2026-08-21.md`). The assertion stays an
+  // exact key set, so a readiness field coming back still fails it.
+  it('reports exactly the Roles, the assignable ones and the failed-read term (CR-AC-09)', async () => {
     stubWorkspaceServer({
       context: namedWorkspaceContext([
         WorkspacePermissionId.WORKSPACE_ROLES_WATCH,
@@ -41,6 +48,7 @@ describe('useWorkspaceRoles', () => {
     await waitFor(() => expect(result.current.roles).not.toHaveLength(0));
     expect(Object.keys(result.current).sort()).toEqual([
       'customRoles',
+      'isError',
       'roles',
     ]);
   });

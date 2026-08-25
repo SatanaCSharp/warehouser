@@ -22,10 +22,27 @@ import type { ReactElement } from 'react';
  * CH-14, `sad.md` §4.8). Each component that grants from the catalogue —
  * `CreateWorkspaceRoleAction`, `WorkspaceRoleEditor` — reads it where it uses
  * it, so nothing is threaded down on the way there.
+ *
+ * It does own the **failed** read. The route's loader settles its secondary
+ * datasets, so this tab is mounted on a rejected one and would otherwise render
+ * the directory's "no custom workspace role yet" — a false statement about the
+ * Workspace instead of a report that the read failed. Readiness is the route's;
+ * error stays with the narrowest component that can coordinate it
+ * (`frontend-architecture.md` §Page).
  */
 export const WorkspaceRolesTab = (): ReactElement => {
   const { t } = useTranslation('access');
-  const { roles } = useWorkspaceRoles();
+  const { isError, roles } = useWorkspaceRoles();
+
+  if (isError) {
+    return (
+      <section aria-label={t('workspaceRoles.heading')}>
+        <p role="alert" className="py-6 text-muted">
+          {t('workspaceRoles.error')}
+        </p>
+      </section>
+    );
+  }
 
   return (
     <section aria-label={t('workspaceRoles.heading')}>

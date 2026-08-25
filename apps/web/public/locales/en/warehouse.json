@@ -4,6 +4,7 @@
     "enterNamed": "Enter {{name}}",
     "search": "Search warehouses",
     "empty": "This workspace has no warehouse yet.",
+    "error": "Warehouses could not be loaded safely. Try again.",
     "peopleWithAccess": "{{count}} person with access",
     "peopleWithAccess_other": "{{count}} people with access",
     "created": "created {{date}}",
