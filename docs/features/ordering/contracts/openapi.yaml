@@ -1,0 +1,2448 @@
+openapi: 3.1.0
+
+info:
+  title: Ordering API
+  version: 0.1.0
+  description: |
+    Warehouser knows who a Warehouse's members are and what each of them may do, and nothing else.
+    No shipped relation holds a good, a customer or an order, so the two-level authorization model
+    finished in `workspaces` protects no business data. This API introduces the first of it: the
+    three durable concepts a Warehouse owns — the Item, the Customer Order and the Purchase Draft —
+    and the loop that joins them. Demand is recorded per customer, consolidated per Item, answered
+    by a draft a member assembles, frozen when the member phones the supplier, and closed when the
+    goods arrive and are attributed back to the named customers waiting for them.
+
+    Four shapes are load-bearing and readable from the paths below.
+
+    - **Every route names its Warehouse.** `WarehouseAccessGuard` resolves authority only from a
+      `warehouseId` in the path (`workspaces` ADR 0001), so no operation here is Workspace-scoped
+      and none resolves the actor's Active Warehouse as a default. Each of the sixteen Permissions
+      this feature adds is a Warehouse `PermissionId`; a Workspace Permission substitutes for none
+      of them.
+    - **Cross-Warehouse is indistinguishable from missing.** An Item, Customer Order, draft, line
+      or link of another Warehouse produces the same non-enumerating `*.target_unavailable` as one
+      that does not exist, and no denial names a customer, Item, quantity or date (AC-03, AC-05,
+      AC-11, spec.md §6.1).
+    - **Transitions are sub-resources, never a `state` field.** `readiness`, `arrival`, `closure`
+      and discard each address their own path so each declares its own Permission (AC-22) and the
+      frozen-record rule never sits behind a payload value. From Ready for Ordering the assembly
+      paths resolve nothing at all — a frozen draft is unwritable by construction, not by a check
+      (AC-15).
+    - **Demand Lines, Coverage and Drift Signals are derived on every read.** They are never stored
+      and no endpoint accepts one as input; they are comparisons over the Customer Orders and links
+      that exist at the instant of the read (AC-04, AC-16, AC-20).
+
+    **Lists are returned whole and deterministically ordered, not paged.** `spec.md` §1 fixes the
+    scale — roughly 2 000 Items, 5 000 Unfulfilled Customer Orders and 250 open Purchase Drafts per
+    Warehouse — and `sad.md` §3 puts paging out of scope; outgrowing that scale is the explicit
+    trigger to revisit it. See `api-sync-report.md` § "Recorded deviations".
+
+    This feature introduces no queue, event, scheduled job or third-party callback, so there is no
+    asynchronous contract and no `events.md`.
+
+servers:
+  - url: http://localhost:3000
+    description: Local development
+
+# Every operation requires the session cookie issued by `POST /api/v1/auth/sign-up` and
+# `POST /api/v1/auth/sign-in`. This feature introduces no public endpoint, so no operation
+# overrides with `security: []`. Authentication grants no authority: a valid session with no
+# membership in the named Warehouse is denied every capability here, reads included (sad.md §8).
+security:
+  - SessionCookie: []
+
+tags:
+  - name: items
+    description: The Warehouse's Item catalogue, SKU rules, activation and On-hand Quantity.
+  - name: customer-orders
+    description: Customer Order lifecycle and the consolidated demand read with its Coverage.
+  - name: purchase-drafts
+    description: Draft assembly, Pre-receipt Requirements, the freeze, Drift Signals, Arrival Confirmation and closure.
+
+paths:
+  ##########################################################################################
+  # Items — the catalogue demand and drafts both name
+  ##########################################################################################
+
+  /api/v1/warehouses/{warehouseId}/items:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+
+    get:
+      tags: [items]
+      summary: List the Warehouse's Items
+      description: |
+        Every Item of the named Warehouse with its current On-hand Quantity and the reason recorded
+        with the most recent adjustment to it, so the catalogue destination shows the figure and its
+        explanation together (sad.md §5 `items/usecases`, §6.2).
+
+        `active=true` narrows the response to Items that are not deactivated — the picker read
+        AC-06a describes, used while recording demand and while assembling a draft. Without it the
+        response carries active and Inactive Items alike, because a record already naming an
+        Inactive Item stays readable and keeps counting exactly as before (AC-06d).
+
+        Archived-tolerant: a member whose Role carries `ITEMS:WATCH` reads an archived Warehouse's
+        Items exactly as before archiving (AC-23).
+      operationId: listItems
+      parameters:
+        - in: query
+          name: active
+          required: false
+          description: |
+            `true` returns only Items that may still be selected — the AC-06a picker read. Omitted
+            returns every Item of the Warehouse, Inactive ones included.
+          schema: { type: boolean }
+      responses:
+        "200":
+          description: The Warehouse's Items ordered by SKU.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Item" }
+              example:
+                - id: "00000000-0000-4000-8000-000000000101"
+                  sku: "TEST-SKU-0001"
+                  description: "Test Item — 2 m cable"
+                  unitOfMeasure: "metres"
+                  onHandQuantity: 12
+                  deactivatedAt: null
+                  latestAdjustment:
+                    countedQuantity: 12
+                    reason: "Counted after the cancelled collection"
+                    adjustedAt: "2026-08-24T10:15:00.000Z"
+                  createdAt: "2026-08-01T08:00:00.000Z"
+                - id: "00000000-0000-4000-8000-000000000102"
+                  sku: "TEST-SKU-0002"
+                  description: "Test Item — labelled carton insert"
+                  unitOfMeasure: "pieces"
+                  onHandQuantity: 0
+                  deactivatedAt: "2026-08-20T14:00:00.000Z"
+                  latestAdjustment: null
+                  createdAt: "2026-08-02T08:00:00.000Z"
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+    post:
+      tags: [items]
+      summary: Create an Item
+      description: |
+        Records the Item in the named Warehouse as active with nothing on hand, after proving the
+        SKU is free **in this Warehouse** (AC-06). The same SKU in another Warehouse is never
+        consulted and stands as an unrelated Item (AC-07a).
+
+        Mutating: refused while the Warehouse is archived (AC-23).
+      operationId: createItem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ItemCreate" }
+            example:
+              sku: "TEST-SKU-0003"
+              description: "Test Item — pallet-wrapped fitting"
+              unitOfMeasure: "pieces"
+      responses:
+        "201":
+          description: The Item, active and with nothing on hand.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Item" }
+              example:
+                id: "00000000-0000-4000-8000-000000000103"
+                sku: "TEST-SKU-0003"
+                description: "Test Item — pallet-wrapped fitting"
+                unitOfMeasure: "pieces"
+                onHandQuantity: 0
+                deactivatedAt: null
+                latestAdjustment: null
+                createdAt: "2026-08-25T09:00:00.000Z"
+        "400": { $ref: "#/components/responses/InvalidItemInput" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "409": { $ref: "#/components/responses/ItemWriteConflict" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/warehouses/{warehouseId}/items/{itemId}:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+      - $ref: "#/components/parameters/ItemIdPath"
+
+    patch:
+      tags: [items]
+      summary: Correct an Item
+      description: |
+        Description and Unit of Measure are always correctable, and every Customer Order and
+        Purchase Draft Line naming the Item continues to name the same Item (AC-06b).
+
+        The SKU is correctable **only while nothing names the Item**. Once one Customer Order or one
+        Purchase Draft Line does, a submitted `sku` is refused with `items.sku_fixed` and nothing of
+        the request is applied (AC-06c). Deactivating an Item never releases its SKU (AC-06d), so a
+        corrected SKU must still be free in this Warehouse.
+
+        Mutating: refused while the Warehouse is archived (AC-23).
+      operationId: updateItem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ItemUpdate" }
+            examples:
+              correctDescription:
+                summary: Always permitted (AC-06b)
+                value:
+                  description: "Test Item — 2 m cable, translated sticker"
+              correctSku:
+                summary: Permitted only while nothing names the Item (AC-06c)
+                value:
+                  sku: "TEST-SKU-0001-A"
+      responses:
+        "200":
+          description: The corrected Item.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Item" }
+        "400": { $ref: "#/components/responses/InvalidItemInput" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/ItemUnavailable" }
+        "409": { $ref: "#/components/responses/ItemWriteConflict" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/warehouses/{warehouseId}/items/{itemId}/deactivation:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+      - $ref: "#/components/parameters/ItemIdPath"
+
+    post:
+      tags: [items]
+      summary: Deactivate an Item
+      description: |
+        Records the Item as Inactive. It stops being offered when demand is recorded and when a
+        draft is assembled, while every Customer Order and Purchase Draft Line already naming it
+        stays readable and keeps counting exactly as before, and its SKU stays taken so no new Item
+        may reuse it (AC-06d). Deactivating an already-Inactive Item is idempotent.
+
+        Mutating: refused while the Warehouse is archived (AC-23).
+      operationId: deactivateItem
+      responses:
+        "200":
+          description: The Item, now Inactive.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Item" }
+              example:
+                id: "00000000-0000-4000-8000-000000000101"
+                sku: "TEST-SKU-0001"
+                description: "Test Item — 2 m cable"
+                unitOfMeasure: "metres"
+                onHandQuantity: 12
+                deactivatedAt: "2026-08-25T09:30:00.000Z"
+                latestAdjustment: null
+                createdAt: "2026-08-01T08:00:00.000Z"
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/ItemUnavailable" }
+        "409": { $ref: "#/components/responses/WarehouseArchived" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+    delete:
+      tags: [items]
+      summary: Reactivate an Item
+      description: |
+        The same operation inverted: the Item becomes selectable again (AC-06d). Reactivating an
+        already-active Item is idempotent.
+
+        Mutating: refused while the Warehouse is archived (AC-23).
+      operationId: reactivateItem
+      responses:
+        "200":
+          description: The Item, active again.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Item" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/ItemUnavailable" }
+        "409": { $ref: "#/components/responses/WarehouseArchived" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/warehouses/{warehouseId}/items/{itemId}/on-hand-adjustments:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+      - $ref: "#/components/parameters/ItemIdPath"
+
+    post:
+      tags: [items]
+      summary: Set an Item's On-hand Quantity
+      description: |
+        On-hand Quantity is **set to a counted figure**, never expressed as an increase or decrease
+        (CONTEXT.md §Invariants). One transaction writes the Item's new figure and one immutable
+        adjustment row carrying the count, the reason, the acting member and the time; the pair is
+        atomic (sad.md §6.3). The next consolidated-demand read shows the new figure beside that
+        Item (AC-08).
+
+        Nothing else in this release writes the figure, Arrival Confirmation included (AC-18a).
+
+        Rate limited to 60 recorded changes per minute per member, counted after the access guards
+        so a refusal discloses nothing about existing records (spec.md §6.1, ADR 0003).
+
+        Mutating: refused while the Warehouse is archived (AC-23).
+      operationId: adjustItemOnHandQuantity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/OnHandAdjustmentCreate" }
+            example:
+              countedQuantity: 12
+              reason: "Counted after the cancelled collection"
+      responses:
+        "201":
+          description: The recorded adjustment and the Item's new figure.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OnHandAdjustment" }
+              example:
+                id: "00000000-0000-4000-8000-000000000110"
+                itemId: "00000000-0000-4000-8000-000000000101"
+                countedQuantity: 12
+                reason: "Counted after the cancelled collection"
+                adjustedByUserId: "00000000-0000-4000-8000-000000000001"
+                createdAt: "2026-08-25T09:45:00.000Z"
+        "400": { $ref: "#/components/responses/InvalidOnHandAdjustment" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/ItemUnavailable" }
+        "409": { $ref: "#/components/responses/WarehouseArchived" }
+        "429": { $ref: "#/components/responses/WriteRateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  ##########################################################################################
+  # Customer Orders — the demand, and the consolidated view derived from it
+  ##########################################################################################
+
+  /api/v1/warehouses/{warehouseId}/demand:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+
+    get:
+      tags: [customer-orders]
+      summary: Read the consolidated demand
+      description: |
+        One Demand Line per Item, derived on this read and never stored: the total Outstanding
+        Quantity across that Item's Unfulfilled Customer Orders, the earliest date any of them is
+        needed by, that Item's current On-hand Quantity, and its Coverage — which Purchase Drafts
+        link to that demand and for what stated quantity (AC-04, AC-20).
+
+        Fulfilled and cancelled Customer Orders are absent from every total (AC-04, AC-17a).
+        Coverage counts only drafts that are neither Closed nor Discarded, so a draft that closed —
+        whichever way it got there — presents as Coverage no longer (AC-21a, AC-24).
+
+        Coverage is informational and never blocks a member from drafting the same demand again
+        (AC-20). Returned whole; nothing is paged at the `spec.md` §1 scale.
+
+        Archived-tolerant (AC-23).
+      operationId: readConsolidatedDemand
+      responses:
+        "200":
+          description: The Warehouse's Demand Lines, ordered by earliest needed-by date then SKU.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/DemandLine" }
+              example:
+                - itemId: "00000000-0000-4000-8000-000000000101"
+                  sku: "TEST-SKU-0001"
+                  description: "Test Item — 2 m cable"
+                  unitOfMeasure: "metres"
+                  totalOutstandingQuantity: 140
+                  earliestNeededBy: "2026-09-04"
+                  onHandQuantity: 12
+                  unfulfilledCustomerOrderCount: 3
+                  coverage:
+                    - purchaseDraftId: "00000000-0000-4000-8000-000000000301"
+                      purchaseDraftLineId: "00000000-0000-4000-8000-000000000401"
+                      purchaseDraftState: "ready_for_ordering"
+                      statedQuantity: 100
+                    - purchaseDraftId: "00000000-0000-4000-8000-000000000302"
+                      purchaseDraftLineId: "00000000-0000-4000-8000-000000000402"
+                      purchaseDraftState: "draft"
+                      statedQuantity: 25
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/warehouses/{warehouseId}/customer-orders:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+
+    get:
+      tags: [customer-orders]
+      summary: List Customer Orders
+      description: |
+        The Warehouse's Customer Orders. `itemId` narrows to the orders behind one Demand Line — the
+        expandable sub-rows of the Demand destination — and `state` narrows to one lifecycle state.
+        `itemId` together with `state=unfulfilled` is the linkable-demand read a draft line's
+        Customer Order picker issues (sad.md §5 `customer-orders/usecases`).
+
+        Returned whole; nothing is paged at the `spec.md` §1 scale.
+
+        Archived-tolerant (AC-23).
+      operationId: listCustomerOrders
+      parameters:
+        - in: query
+          name: itemId
+          required: false
+          description: Narrow to the Customer Orders naming one Item of this Warehouse.
+          schema: { type: string, format: uuid }
+        - in: query
+          name: state
+          required: false
+          description: Narrow to one lifecycle state. Omitted returns every state.
+          schema: { $ref: "#/components/schemas/CustomerOrderState" }
+      responses:
+        "200":
+          description: The matching Customer Orders, ordered by needed-by date then creation time.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/CustomerOrder" }
+              example:
+                - id: "00000000-0000-4000-8000-000000000201"
+                  itemId: "00000000-0000-4000-8000-000000000101"
+                  customerName: "Test Customer North"
+                  quantity: 100
+                  outstandingQuantity: 100
+                  neededBy: "2026-09-04"
+                  state: "unfulfilled"
+                  cancellationReason: null
+                  recordedByUserId: "00000000-0000-4000-8000-000000000001"
+                  cancelledByUserId: null
+                  cancelledAt: null
+                  createdAt: "2026-08-10T08:00:00.000Z"
+                  updatedAt: "2026-08-10T08:00:00.000Z"
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+    post:
+      tags: [customer-orders]
+      summary: Record a Customer Order
+      description: |
+        Records that a named customer is waiting for a stated quantity of one Item by a stated date.
+        The order is written Unfulfilled with its Outstanding Quantity equal to the quantity
+        recorded, together with the member who recorded it and when (AC-01).
+
+        The named Item is resolved **within the acting Warehouse**. An Item that exists only in
+        another Warehouse resolves to nothing and produces the same refusal as a missing one,
+        disclosing nothing about where it exists (AC-03). An Inactive Item is not offered and is
+        refused on the same non-enumerating terms (CONTEXT.md §Invariants).
+
+        Rate limited to 60 recorded changes per minute per member (spec.md §6.1, ADR 0003).
+
+        Mutating: refused while the Warehouse is archived (AC-23).
+      operationId: recordCustomerOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CustomerOrderCreate" }
+            example:
+              itemId: "00000000-0000-4000-8000-000000000101"
+              customerName: "Test Customer North"
+              quantity: 100
+              neededBy: "2026-09-04"
+      responses:
+        "201":
+          description: The recorded Customer Order.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CustomerOrder" }
+              example:
+                id: "00000000-0000-4000-8000-000000000201"
+                itemId: "00000000-0000-4000-8000-000000000101"
+                customerName: "Test Customer North"
+                quantity: 100
+                outstandingQuantity: 100
+                neededBy: "2026-09-04"
+                state: "unfulfilled"
+                cancellationReason: null
+                recordedByUserId: "00000000-0000-4000-8000-000000000001"
+                cancelledByUserId: null
+                cancelledAt: null
+                createdAt: "2026-08-25T10:00:00.000Z"
+                updatedAt: "2026-08-25T10:00:00.000Z"
+        "400": { $ref: "#/components/responses/InvalidCustomerOrderInput" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/ItemUnavailable" }
+        "409": { $ref: "#/components/responses/WarehouseArchived" }
+        "429": { $ref: "#/components/responses/WriteRateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/warehouses/{warehouseId}/customer-orders/{customerOrderId}:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+      - $ref: "#/components/parameters/CustomerOrderIdPath"
+
+    patch:
+      tags: [customer-orders]
+      summary: Amend a Customer Order
+      description: |
+        Changes the quantity, the needed-by date, or both, recording the acting member and the time.
+        The Outstanding Quantity is recalculated, the consolidated demand reflects it on the next
+        read, and a Fulfilled order whose quantity was raised counts as Unfulfilled again so it
+        returns to the consolidated demand (AC-19).
+
+        Two bounds, both evaluated against rows locked in the same transaction rather than against
+        the values the member composed against (sad.md §8):
+
+        - the new quantity may not fall below what has already been assigned to this order from an
+          arrival, because those goods sit in the Transit Zone under that customer's name
+          (`customer_orders.quantity_below_allocated`, AC-19b);
+        - the needed-by date moved to must not have passed
+          (`customer_orders.needed_by_in_past`, AC-19).
+
+        Nothing is written to any linked frozen draft. Its next read compares its Demand Snapshot
+        against the new values and reports the Drift Signal (AC-16, AC-19).
+
+        Mutating: refused while the Warehouse is archived (AC-23).
+      operationId: amendCustomerOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CustomerOrderAmend" }
+            example:
+              quantity: 120
+              neededBy: "2026-09-11"
+      responses:
+        "200":
+          description: The amended Customer Order with its recalculated Outstanding Quantity and state.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CustomerOrder" }
+              example:
+                id: "00000000-0000-4000-8000-000000000201"
+                itemId: "00000000-0000-4000-8000-000000000101"
+                customerName: "Test Customer North"
+                quantity: 120
+                outstandingQuantity: 20
+                neededBy: "2026-09-11"
+                state: "unfulfilled"
+                cancellationReason: null
+                recordedByUserId: "00000000-0000-4000-8000-000000000001"
+                cancelledByUserId: null
+                cancelledAt: null
+                createdAt: "2026-08-10T08:00:00.000Z"
+                updatedAt: "2026-08-25T10:20:00.000Z"
+        "400": { $ref: "#/components/responses/InvalidCustomerOrderInput" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/CustomerOrderUnavailable" }
+        "409": { $ref: "#/components/responses/CustomerOrderWriteConflict" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/warehouses/{warehouseId}/customer-orders/{customerOrderId}/cancellation:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+      - $ref: "#/components/parameters/CustomerOrderIdPath"
+
+    post:
+      tags: [customer-orders]
+      summary: Cancel a Customer Order
+      description: |
+        Records the cancellation with its reason, the acting member and the time, and removes the
+        order from the consolidated demand (AC-19a). The reason, the member and the time arrive
+        together or not at all (`chk_customer_orders_cancellation_attribution`).
+
+        A frozen Purchase Draft linked to the order reports a Drift Signal afterwards without any
+        of its own values changing (AC-19a).
+
+        Mutating: refused while the Warehouse is archived (AC-23).
+      operationId: cancelCustomerOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CustomerOrderCancellation" }
+            example:
+              cancellationReason: "The customer no longer needs the goods"
+      responses:
+        "200":
+          description: The cancelled Customer Order.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CustomerOrder" }
+              example:
+                id: "00000000-0000-4000-8000-000000000201"
+                itemId: "00000000-0000-4000-8000-000000000101"
+                customerName: "Test Customer North"
+                quantity: 100
+                outstandingQuantity: 100
+                neededBy: "2026-09-04"
+                state: "cancelled"
+                cancellationReason: "The customer no longer needs the goods"
+                recordedByUserId: "00000000-0000-4000-8000-000000000001"
+                cancelledByUserId: "00000000-0000-4000-8000-000000000002"
+                cancelledAt: "2026-08-25T10:30:00.000Z"
+                createdAt: "2026-08-10T08:00:00.000Z"
+                updatedAt: "2026-08-25T10:30:00.000Z"
+        "400": { $ref: "#/components/responses/InvalidCustomerOrderInput" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/CustomerOrderUnavailable" }
+        "409": { $ref: "#/components/responses/CustomerOrderWriteConflict" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  ##########################################################################################
+  # Purchase Drafts — assembly, the freeze, drift, arrival and closure
+  ##########################################################################################
+
+  /api/v1/warehouses/{warehouseId}/packaging-types:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+
+    get:
+      tags: [purchase-drafts]
+      summary: Read the Packaging Type catalogue
+      description: |
+        The system-managed catalogue a Purchase Draft Line's Packaging Type is chosen from. It is
+        seeded and extended only through migrations, so members neither create nor rename an entry
+        (CONTEXT.md §Invariants) — the same shape the Permission catalogue already uses.
+
+        Served at `/packaging-types` rather than under `/purchase-drafts/` so no literal segment
+        competes with a `{purchaseDraftId}` parameter (sad.md §7).
+
+        Archived-tolerant (AC-23).
+      operationId: listPackagingTypes
+      responses:
+        "200":
+          description: The Packaging Type catalogue ordered by label.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/PackagingType" }
+              example:
+                - id: "cable_coil"
+                  label: "Cable Coil"
+                - id: "cartons"
+                  label: "Cartons"
+                - id: "loose_items"
+                  label: "Loose Items"
+                - id: "pallets"
+                  label: "Pallets"
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/warehouses/{warehouseId}/purchase-drafts:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+
+    get:
+      tags: [purchase-drafts]
+      summary: List Purchase Drafts
+      description: |
+        Each draft with its state and whether any of its Demand Snapshot rows differs in value from
+        the Customer Order it names now, so drafts carrying a Drift Signal are distinguishable from
+        those still matching their demand (AC-16a). `hasDriftSignal` is derived on this read; a
+        draft never frozen carries no snapshot and therefore never reports drift.
+
+        Returned whole; nothing is paged at the `spec.md` §1 scale.
+
+        Archived-tolerant (AC-23).
+      operationId: listPurchaseDrafts
+      parameters:
+        - in: query
+          name: state
+          required: false
+          description: Narrow to one draft state. Omitted returns every state.
+          schema: { $ref: "#/components/schemas/PurchaseDraftState" }
+      responses:
+        "200":
+          description: The Warehouse's Purchase Drafts, ordered by creation time descending.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/PurchaseDraftSummary" }
+              example:
+                - id: "00000000-0000-4000-8000-000000000301"
+                  state: "ready_for_ordering"
+                  expectedArrivalDate: "2026-09-02"
+                  lineCount: 2
+                  hasDriftSignal: true
+                  closureReason: null
+                  createdByUserId: "00000000-0000-4000-8000-000000000001"
+                  createdAt: "2026-08-12T08:00:00.000Z"
+                  readiedByUserId: "00000000-0000-4000-8000-000000000001"
+                  readiedAt: "2026-08-14T09:00:00.000Z"
+                  closedByUserId: null
+                  closedAt: null
+                  arrivalConfirmedByUserId: null
+                  arrivalConfirmedAt: null
+                  discardedByUserId: null
+                  discardedAt: null
+                - id: "00000000-0000-4000-8000-000000000302"
+                  state: "draft"
+                  expectedArrivalDate: null
+                  lineCount: 1
+                  hasDriftSignal: false
+                  closureReason: null
+                  createdByUserId: "00000000-0000-4000-8000-000000000002"
+                  createdAt: "2026-08-22T08:00:00.000Z"
+                  readiedByUserId: null
+                  readiedAt: null
+                  closedByUserId: null
+                  closedAt: null
+                  arrivalConfirmedByUserId: null
+                  arrivalConfirmedAt: null
+                  discardedByUserId: null
+                  discardedAt: null
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+    post:
+      tags: [purchase-drafts]
+      summary: Create a Purchase Draft
+      description: |
+        Records the draft in the `draft` state with its lines and their links, together with the
+        member who created it and when (AC-10). A draft may be created with no Expected Arrival
+        Date, because the member has not yet spoken to the supplier, and a line may link to no
+        Customer Orders or to several.
+
+        Every named Item and every linked Customer Order must belong to the acting Warehouse; a
+        target of another Warehouse is refused on the same non-enumerating terms as a missing one
+        (AC-11).
+
+        **A link claims nothing.** Two links from different lines to one Customer Order, and links
+        whose stated quantities do not add up to the line quantity, are both recorded unchanged and
+        neither quantity is adjusted — coverage is the member's decision (AC-11a). The one
+        restriction is at most one link per (line, Customer Order) pair, which is the schema's
+        `UNIQUE (purchase_draft_line_id, customer_order_id)`.
+
+        Rate limited to 60 recorded changes per minute per member (spec.md §6.1, ADR 0003).
+
+        Mutating: refused while the Warehouse is archived (AC-23).
+      operationId: createPurchaseDraft
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PurchaseDraftCreate" }
+            example:
+              expectedArrivalDate: "2026-09-02"
+              lines:
+                - itemId: "00000000-0000-4000-8000-000000000101"
+                  orderedQuantity: 150
+                  packagingTypeId: "cable_coil"
+                  valueAddingNote: "Translated sticker on each coil"
+                  links:
+                    - customerOrderId: "00000000-0000-4000-8000-000000000201"
+                      statedQuantity: 100
+                    - customerOrderId: "00000000-0000-4000-8000-000000000202"
+                      statedQuantity: 40
+      responses:
+        "201":
+          description: The draft in the Draft state with each line and each link.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PurchaseDraftDetail" }
+        "400": { $ref: "#/components/responses/InvalidPurchaseDraftInput" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/PurchaseDraftTargetUnavailable" }
+        "409": { $ref: "#/components/responses/WarehouseArchived" }
+        "429": { $ref: "#/components/responses/WriteRateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/warehouses/{warehouseId}/purchase-drafts/{purchaseDraftId}:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+      - $ref: "#/components/parameters/PurchaseDraftIdPath"
+
+    get:
+      tags: [purchase-drafts]
+      summary: Read one Purchase Draft
+      description: |
+        The draft's contents with, per line, its Pre-receipt Requirement, its received quantity once
+        an arrival was confirmed, and per link the Demand Snapshot beside the Customer Order as it
+        stands now, the derived Drift Signal, and the Allocation recorded against that link.
+
+        A Drift Signal is **always a comparison against the snapshot, never a touch log**, so a
+        value amended and then put back as it was reports nothing (AC-16). Before the freeze there
+        is no snapshot, so `snapshot`, `driftSignals` and `allocation` are all absent from every
+        link.
+
+        No step of this read writes anything.
+
+        Archived-tolerant (AC-23).
+      operationId: readPurchaseDraft
+      responses:
+        "200":
+          description: The draft with its lines, links, Drift Signals and Allocations.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PurchaseDraftDetail" }
+              example:
+                id: "00000000-0000-4000-8000-000000000301"
+                state: "ready_for_ordering"
+                expectedArrivalDate: "2026-09-02"
+                hasDriftSignal: true
+                closureReason: null
+                createdByUserId: "00000000-0000-4000-8000-000000000001"
+                createdAt: "2026-08-12T08:00:00.000Z"
+                readiedByUserId: "00000000-0000-4000-8000-000000000001"
+                readiedAt: "2026-08-14T09:00:00.000Z"
+                closedByUserId: null
+                closedAt: null
+                arrivalConfirmedByUserId: null
+                arrivalConfirmedAt: null
+                discardedByUserId: null
+                discardedAt: null
+                lines:
+                  - id: "00000000-0000-4000-8000-000000000401"
+                    itemId: "00000000-0000-4000-8000-000000000101"
+                    itemSku: "TEST-SKU-0001"
+                    itemDescription: "Test Item — 2 m cable"
+                    unitOfMeasure: "metres"
+                    orderedQuantity: 150
+                    packagingTypeId: "cable_coil"
+                    valueAddingNote: "Translated sticker on each coil"
+                    receivedQuantity: null
+                    links:
+                      - id: "00000000-0000-4000-8000-000000000501"
+                        customerOrderId: "00000000-0000-4000-8000-000000000201"
+                        customerName: "Test Customer North"
+                        statedQuantity: 100
+                        snapshot:
+                          capturedQuantity: 100
+                          capturedNeededBy: "2026-09-04"
+                          capturedState: "unfulfilled"
+                        current:
+                          quantity: 120
+                          neededBy: "2026-09-11"
+                          state: "unfulfilled"
+                          outstandingQuantity: 120
+                        driftSignals: ["quantity_changed", "needed_by_moved"]
+                        allocation: null
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/PurchaseDraftUnavailable" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+    patch:
+      tags: [purchase-drafts]
+      summary: Revise a Purchase Draft's Expected Arrival Date
+      description: |
+        Resolves the draft **only in the `draft` state** (`UPDATE … WHERE state = 'draft'`); a draft
+        that has reached Ready for Ordering resolves for writing no longer and the change is refused
+        with `purchase_drafts.draft_frozen` (AC-15). The draft stays in the Draft state (AC-10a).
+
+        Mutating: refused while the Warehouse is archived (AC-23).
+      operationId: revisePurchaseDraft
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PurchaseDraftRevise" }
+            example:
+              expectedArrivalDate: "2026-09-05"
+      responses:
+        "200":
+          description: The revised draft, still in the Draft state.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PurchaseDraftDetail" }
+        "400": { $ref: "#/components/responses/InvalidPurchaseDraftInput" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/PurchaseDraftUnavailable" }
+        "409": { $ref: "#/components/responses/PurchaseDraftWriteConflict" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+    delete:
+      tags: [purchase-drafts]
+      summary: Discard a Purchase Draft
+      description: |
+        Resolves the draft **only in the `draft` state** and records the discard with the acting
+        member and the time, leaving every linked Customer Order exactly as it was (AC-24). The
+        draft stops appearing among those being worked on and presents as Coverage no longer.
+
+        A draft that has been made ready is **closed with a reason rather than discarded**, and the
+        attempt is refused with `purchase_drafts.discard_unavailable` (AC-24a) — which
+        `chk_purchase_drafts_readiness_attribution` makes a schema fact rather than a command's
+        memory.
+
+        Mutating: refused while the Warehouse is archived (AC-23).
+      operationId: discardPurchaseDraft
+      responses:
+        "200":
+          description: The discarded draft.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PurchaseDraftSummary" }
+              example:
+                id: "00000000-0000-4000-8000-000000000302"
+                state: "discarded"
+                expectedArrivalDate: null
+                lineCount: 1
+                hasDriftSignal: false
+                closureReason: null
+                createdByUserId: "00000000-0000-4000-8000-000000000002"
+                createdAt: "2026-08-22T08:00:00.000Z"
+                readiedByUserId: null
+                readiedAt: null
+                closedByUserId: null
+                closedAt: null
+                arrivalConfirmedByUserId: null
+                arrivalConfirmedAt: null
+                discardedByUserId: "00000000-0000-4000-8000-000000000002"
+                discardedAt: "2026-08-25T11:00:00.000Z"
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/PurchaseDraftUnavailable" }
+        "409": { $ref: "#/components/responses/PurchaseDraftWriteConflict" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/warehouses/{warehouseId}/purchase-drafts/{purchaseDraftId}/lines:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+      - $ref: "#/components/parameters/PurchaseDraftIdPath"
+
+    post:
+      tags: [purchase-drafts]
+      summary: Add a line to a Purchase Draft
+      description: |
+        Adds one Item and quantity to a draft resolved **only in the `draft` state**, with its
+        Pre-receipt Requirement and its links stated at the same time or added later (AC-10a). Both
+        halves of the Pre-receipt Requirement are optional here because AC-10 creates a draft
+        without them and AC-12 states them afterwards.
+
+        The Item must belong to the acting Warehouse (AC-11); a Packaging Type outside the catalogue
+        is refused with the catalogue listed in `details` (AC-13).
+
+        Mutating: refused while the Warehouse is archived (AC-23).
+      operationId: addPurchaseDraftLine
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PurchaseDraftLineCreate" }
+            example:
+              itemId: "00000000-0000-4000-8000-000000000102"
+              orderedQuantity: 40
+              packagingTypeId: "cartons"
+              valueAddingNote: "Bundle in tens"
+              links:
+                - customerOrderId: "00000000-0000-4000-8000-000000000203"
+                  statedQuantity: 40
+      responses:
+        "201":
+          description: The draft with the added line.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PurchaseDraftDetail" }
+        "400": { $ref: "#/components/responses/InvalidPurchaseDraftInput" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/PurchaseDraftTargetUnavailable" }
+        "409": { $ref: "#/components/responses/PurchaseDraftWriteConflict" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/warehouses/{warehouseId}/purchase-drafts/{purchaseDraftId}/lines/{purchaseDraftLineId}:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+      - $ref: "#/components/parameters/PurchaseDraftIdPath"
+      - $ref: "#/components/parameters/PurchaseDraftLineIdPath"
+
+    patch:
+      tags: [purchase-drafts]
+      summary: Revise a Purchase Draft Line
+      description: |
+        Changes the line's Item, its ordered quantity, or its Pre-receipt Requirement — the
+        Packaging Type and the Value-adding Note — on a draft resolved **only in the `draft` state**
+        (AC-10a, AC-12). Each line's Pre-receipt Requirement is recorded separately from every other
+        line's.
+
+        A Packaging Type that is not one of the catalogue's entries is refused with
+        `purchase_drafts.unknown_packaging_type` and the catalogue listed in `details` (AC-13).
+        Passing `null` for `packagingTypeId` or `valueAddingNote` clears that half.
+
+        Mutating: refused while the Warehouse is archived (AC-23).
+      operationId: revisePurchaseDraftLine
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PurchaseDraftLineUpdate" }
+            example:
+              orderedQuantity: 160
+              packagingTypeId: "pallets"
+              valueAddingNote: "Shrink-wrap each pallet"
+      responses:
+        "200":
+          description: The draft with the revised line.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PurchaseDraftDetail" }
+        "400": { $ref: "#/components/responses/InvalidPurchaseDraftInput" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/PurchaseDraftTargetUnavailable" }
+        "409": { $ref: "#/components/responses/PurchaseDraftWriteConflict" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+    delete:
+      tags: [purchase-drafts]
+      summary: Remove a Purchase Draft Line
+      description: |
+        Removes the line and its links from a draft resolved **only in the `draft` state** (AC-10a).
+        The linked Customer Orders are not written; a link claims nothing and removing it changes no
+        demand (AC-11a).
+
+        Mutating: refused while the Warehouse is archived (AC-23).
+      operationId: removePurchaseDraftLine
+      responses:
+        "200":
+          description: The draft without that line.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PurchaseDraftDetail" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/PurchaseDraftTargetUnavailable" }
+        "409": { $ref: "#/components/responses/PurchaseDraftWriteConflict" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/warehouses/{warehouseId}/purchase-drafts/{purchaseDraftId}/lines/{purchaseDraftLineId}/links:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+      - $ref: "#/components/parameters/PurchaseDraftIdPath"
+      - $ref: "#/components/parameters/PurchaseDraftLineIdPath"
+
+    post:
+      tags: [purchase-drafts]
+      summary: Link a Purchase Draft Line to a Customer Order
+      description: |
+        Records that the member intends `statedQuantity` of this line for that customer, on a draft
+        resolved **only in the `draft` state** (AC-10a).
+
+        The Customer Order must belong to the acting Warehouse (AC-11). The stated quantity is
+        **never reconciled** with the line quantity, with the Customer Order quantity, or with any
+        other link (AC-11a) — the only refusal here is a second link between the same line and the
+        same Customer Order, which the schema's `UNIQUE (purchase_draft_line_id, customer_order_id)`
+        rejects.
+
+        Mutating: refused while the Warehouse is archived (AC-23).
+      operationId: linkPurchaseDraftLine
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PurchaseDraftLineLinkCreate" }
+            example:
+              customerOrderId: "00000000-0000-4000-8000-000000000204"
+              statedQuantity: 30
+      responses:
+        "201":
+          description: The draft with the added link.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PurchaseDraftDetail" }
+        "400": { $ref: "#/components/responses/InvalidPurchaseDraftInput" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/PurchaseDraftTargetUnavailable" }
+        "409": { $ref: "#/components/responses/PurchaseDraftWriteConflict" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/warehouses/{warehouseId}/purchase-drafts/{purchaseDraftId}/lines/{purchaseDraftLineId}/links/{purchaseDraftLineLinkId}:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+      - $ref: "#/components/parameters/PurchaseDraftIdPath"
+      - $ref: "#/components/parameters/PurchaseDraftLineIdPath"
+      - $ref: "#/components/parameters/PurchaseDraftLineLinkIdPath"
+
+    patch:
+      tags: [purchase-drafts]
+      summary: Re-quantify a link
+      description: |
+        Changes the quantity the member states for that customer on that line, on a draft resolved
+        **only in the `draft` state** (AC-10a). The new quantity is reconciled with nothing
+        (AC-11a).
+
+        Mutating: refused while the Warehouse is archived (AC-23).
+      operationId: requantifyPurchaseDraftLineLink
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PurchaseDraftLineLinkUpdate" }
+            example:
+              statedQuantity: 45
+      responses:
+        "200":
+          description: The draft with the re-quantified link.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PurchaseDraftDetail" }
+        "400": { $ref: "#/components/responses/InvalidPurchaseDraftInput" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/PurchaseDraftTargetUnavailable" }
+        "409": { $ref: "#/components/responses/PurchaseDraftWriteConflict" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+    delete:
+      tags: [purchase-drafts]
+      summary: Remove a link
+      description: |
+        Removes the link from a draft resolved **only in the `draft` state** (AC-10a). The Customer
+        Order it named is not written — a link claims nothing (AC-11a).
+
+        Mutating: refused while the Warehouse is archived (AC-23).
+      operationId: unlinkPurchaseDraftLine
+      responses:
+        "200":
+          description: The draft without that link.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PurchaseDraftDetail" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/PurchaseDraftTargetUnavailable" }
+        "409": { $ref: "#/components/responses/PurchaseDraftWriteConflict" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/warehouses/{warehouseId}/purchase-drafts/{purchaseDraftId}/readiness:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+      - $ref: "#/components/parameters/PurchaseDraftIdPath"
+
+    post:
+      tags: [purchase-drafts]
+      summary: Move a Purchase Draft to Ready for Ordering
+      description: |
+        One transaction resolves the draft **only in the `draft` state**, refuses when it holds no
+        line (`purchase_drafts.draft_empty`, AC-14a), captures one Demand Snapshot row per link
+        carrying that Customer Order's quantity, needed-by date and state as they stand at that
+        instant, and moves the draft to Ready for Ordering with the acting member and the time
+        (AC-14).
+
+        The transition is **conditional on the prior state**, so the second of two concurrent
+        attempts affects no row and is refused with `purchase_drafts.concurrent_change` rather than
+        merged (sad.md §8).
+
+        From this point the assembly write paths resolve nothing: lines, ordered quantities, links,
+        Expected Arrival Date and Pre-receipt Requirements are unwritable, and only Arrival
+        Confirmation and closure remain (AC-15).
+
+        A transition addressed as its own sub-resource rather than a `state` field on `PATCH`, so it
+        declares its own Permission (AC-22, sad.md §7).
+
+        Mutating: refused while the Warehouse is archived (AC-23).
+      operationId: readyPurchaseDraft
+      responses:
+        "200":
+          description: The frozen draft with its captured Demand Snapshot.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PurchaseDraftDetail" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/PurchaseDraftUnavailable" }
+        "409": { $ref: "#/components/responses/PurchaseDraftTransitionConflict" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/warehouses/{warehouseId}/purchase-drafts/{purchaseDraftId}/arrival:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+      - $ref: "#/components/parameters/PurchaseDraftIdPath"
+
+    post:
+      tags: [purchase-drafts]
+      summary: Confirm an arrival and allocate what arrived
+      description: |
+        One transaction locks the draft, then its lines, then the linked Customer Orders in
+        ascending identifier order — the one lock order shared with the amendment flow, which is
+        what keeps the two from deadlocking (sad.md §8).
+
+        It records the quantity that actually arrived for each line, **whether it falls short of or
+        exceeds the quantity ordered, and whether it is nothing at all** (AC-17, CONTEXT.md
+        §Invariants), then writes the Allocations, reduces each assigned Customer Order's
+        Outstanding Quantity, marks as Fulfilled any that reaches nothing, and moves the draft to
+        Closed. Every one of those writes lands together or none of them does (spec.md §6 "Arrival
+        atomicity").
+
+        **An Allocation is addressed through the link, not beside it.** `purchaseDraftLineLinkId`
+        names the link whose Customer Order receives the quantity, which is what makes "an
+        Allocation names a Customer Order its line is actually linked to" (AC-18) provable by the
+        reference rather than re-checked in application code (`arrival_allocations` composite FK).
+
+        Three bounds, all re-checked against the rows just locked rather than against the values the
+        member composed against (sad.md §8, AC-18). Any failure blocks the whole confirmation,
+        records nothing of it, and names each failing bound in `details`:
+
+        - no line's Allocations exceed its received quantity;
+        - no Customer Order is assigned more than it is still waiting for;
+        - no Allocation names a cancelled or already-Fulfilled Customer Order.
+
+        A line whose linked demand has all gone records its received quantity and no Allocation at
+        all (AC-17b). Confirming closes the draft once and for all, so a second confirmation cannot
+        occur (`purchase_drafts.arrival_already_confirmed`, AC-17b) and goods the supplier still
+        owes are ordered on a new draft.
+
+        **No Item's On-hand Quantity changes** — it moves only through an adjustment that states its
+        reason (AC-18a).
+
+        Mutating: refused while the Warehouse is archived (AC-23).
+      operationId: confirmPurchaseDraftArrival
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ArrivalConfirmation" }
+            example:
+              lines:
+                - purchaseDraftLineId: "00000000-0000-4000-8000-000000000401"
+                  receivedQuantity: 140
+                  allocations:
+                    - purchaseDraftLineLinkId: "00000000-0000-4000-8000-000000000501"
+                      allocatedQuantity: 100
+                    - purchaseDraftLineLinkId: "00000000-0000-4000-8000-000000000502"
+                      allocatedQuantity: 40
+                - purchaseDraftLineId: "00000000-0000-4000-8000-000000000402"
+                  receivedQuantity: 0
+                  allocations: []
+      responses:
+        "200":
+          description: |
+            The Closed draft with each line's received quantity and each Allocation, so the member
+            sees which named customers the arrived goods cover (AC-17, AC-17a).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PurchaseDraftDetail" }
+        "400": { $ref: "#/components/responses/InvalidPurchaseDraftInput" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/PurchaseDraftTargetUnavailable" }
+        "409": { $ref: "#/components/responses/ArrivalConfirmationConflict" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/warehouses/{warehouseId}/purchase-drafts/{purchaseDraftId}/closure:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+      - $ref: "#/components/parameters/PurchaseDraftIdPath"
+
+    post:
+      tags: [purchase-drafts]
+      summary: Close a frozen Purchase Draft with a reason
+      description: |
+        Resolves the draft **only in Ready for Ordering**, records the closure reason, the acting
+        member and the time, and moves it to Closed — the path for an order the supplier cannot
+        fulfil (AC-21).
+
+        The frozen contents stay readable and **no linked Customer Order is written**: every
+        Outstanding Quantity is untouched, so the demand the draft claimed returns to reading as
+        covered by no draft (AC-21, AC-21a).
+
+        A Closed draft was closed by exactly one of Arrival Confirmation or a member's reasoned
+        closure, never both and never neither (`chk_purchase_drafts_closure_path`), so this refuses
+        a draft already closed by an arrival.
+
+        Mutating: refused while the Warehouse is archived (AC-23).
+      operationId: closePurchaseDraft
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PurchaseDraftClosure" }
+            example:
+              closureReason: "The supplier cannot fulfil the order"
+      responses:
+        "200":
+          description: The Closed draft, its frozen contents still readable.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PurchaseDraftDetail" }
+        "400": { $ref: "#/components/responses/InvalidPurchaseDraftInput" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/PurchaseDraftUnavailable" }
+        "409": { $ref: "#/components/responses/PurchaseDraftTransitionConflict" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+components:
+  ##########################################################################################
+  # Security
+  ##########################################################################################
+
+  securitySchemes:
+    SessionCookie:
+      type: apiKey
+      in: cookie
+      name: warehouser_session
+      description: |
+        The opaque session cookie issued by `POST /api/v1/auth/sign-up` and
+        `POST /api/v1/auth/sign-in`, resolved to the acting User by `SessionAuthGuard`.
+
+        This is not a bearer token and carries no authority. Every authorization decision re-reads
+        the actor's membership, Role and Role-Permission membership for the named Warehouse from the
+        store on the request being authorized, never from the session (spec.md §6 "Authority
+        staleness", sad.md §6.1).
+
+  ##########################################################################################
+  # Parameters
+  ##########################################################################################
+
+  parameters:
+    WarehouseIdPath:
+      in: path
+      name: warehouseId
+      required: true
+      description: |
+        The Warehouse this request applies to, and the only thing `WarehouseAccessGuard` resolves
+        authority from (`workspaces` ADR 0001). A request that does not unambiguously name exactly
+        one Warehouse is refused before resolution rather than defaulted to the actor's Active
+        Warehouse (sad.md §6.1).
+      schema: { type: string, format: uuid }
+
+    ItemIdPath:
+      in: path
+      name: itemId
+      required: true
+      description: An Item of the named Warehouse. One of another Warehouse is indistinguishable from a missing one (AC-03).
+      schema: { type: string, format: uuid }
+
+    CustomerOrderIdPath:
+      in: path
+      name: customerOrderId
+      required: true
+      description: A Customer Order of the named Warehouse. One of another Warehouse is indistinguishable from a missing one (AC-11).
+      schema: { type: string, format: uuid }
+
+    PurchaseDraftIdPath:
+      in: path
+      name: purchaseDraftId
+      required: true
+      description: A Purchase Draft of the named Warehouse. One of another Warehouse is indistinguishable from a missing one (AC-11).
+      schema: { type: string, format: uuid }
+
+    PurchaseDraftLineIdPath:
+      in: path
+      name: purchaseDraftLineId
+      required: true
+      description: A line of the named draft. A line of another draft or another Warehouse is indistinguishable from a missing one.
+      schema: { type: string, format: uuid }
+
+    PurchaseDraftLineLinkIdPath:
+      in: path
+      name: purchaseDraftLineLinkId
+      required: true
+      description: A link of the named line. One of another line is indistinguishable from a missing one.
+      schema: { type: string, format: uuid }
+
+  ##########################################################################################
+  # Responses — one per error branch of the sad.md §6 sequences
+  ##########################################################################################
+
+  responses:
+    Unauthenticated:
+      description: |
+        No valid session; the request is denied before anything else is read (sad.md §6.1).
+        `SessionAuthGuard` raises the framework's unauthorized exception, which the global filter
+        maps to the generic `request.invalid` envelope at 401 — existing behaviour, not a code this
+        feature introduces.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            code: "request.invalid"
+            message: "The request is invalid."
+
+    WarehouseDenied:
+      description: |
+        The actor holds no membership in the named Warehouse, or the Role of that membership does
+        not carry the Permission this operation declares, or the Permission is held only through
+        another Warehouse's Role (sad.md §6.1, AC-05, AC-22).
+
+        The denial reveals nothing about what exists: it names no customer, Item, quantity or date,
+        so a member without `CUSTOMER_ORDERS:WATCH` cannot learn the customer list by probing
+        (spec.md §6.1 "Customer disclosure through denial"). A member denied one capability
+        continues to read what their Role does permit (AC-22).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          examples:
+            noMembership:
+              summary: No membership in the named Warehouse
+              value:
+                code: "access.membership_required"
+                message: "Warehouse access is unavailable."
+            permissionMissing:
+              summary: AC-05, AC-22
+              value:
+                code: "access.denied"
+                message: "Access is not permitted."
+
+    WarehouseArchived:
+      description: |
+        The Warehouse is archived and this handler is classified **mutating**, so the change is
+        refused. An archived Warehouse authorizes no operation that changes the resources it owns,
+        while its watch capabilities keep authorizing reads on exactly the Permission terms that
+        applied before archiving (AC-23). This feature adds no archived-tolerant mutation.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            code: "access.warehouse_archived"
+            message: "The Warehouse is archived."
+
+    WriteRateLimited:
+      description: |
+        The acting member exceeded 60 recorded changes per minute across recording demand, creating
+        drafts and adjusting On-hand Quantity (spec.md §6.1). `WriteRateLimitGuard` composes **after**
+        the access guards, so an unauthorized actor is denied before reaching the counter and this
+        refusal can never be used to distinguish a Warehouse that holds records from one that does
+        not (ADR 0003). The refusal names no record.
+
+        With one running instance this is exactly the stated limit; with N instances and
+        per-instance counters the effective limit is N × 60 — recorded in ADR 0003, not glossed.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            code: "request.rate_limited"
+            message: "Too many changes were recorded. Try again shortly."
+
+    InternalError:
+      description: An unexpected error occurred.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            code: "system.internal_error"
+            message: "An unexpected error occurred."
+
+    # ---- Items ----------------------------------------------------------------------------
+
+    InvalidItemInput:
+      description: |
+        The submitted SKU, description or Unit of Measure is empty after trimming, or the request
+        failed schema validation.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            code: "items.invalid_input"
+            message: "Correct the highlighted Item fields."
+            details:
+              field: "sku"
+              rule: "trimmed_non_empty"
+
+    InvalidOnHandAdjustment:
+      description: |
+        The counted figure is negative or not a whole number (AC-09), or the reason is missing or
+        empty after trimming (AC-09a). Nothing is changed in either case.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          examples:
+            negativeOrFractional:
+              summary: AC-09
+              value:
+                code: "items.invalid_on_hand_quantity"
+                message: "On-hand Quantity is a whole number that is never negative."
+                details:
+                  field: "countedQuantity"
+                  rule: "non_negative_integer"
+            reasonMissing:
+              summary: AC-09a
+              value:
+                code: "items.adjustment_reason_required"
+                message: "Every change to On-hand Quantity is recorded with its reason."
+                details:
+                  field: "reason"
+
+    ItemUnavailable:
+      description: |
+        The Item belongs to another Warehouse, does not exist, or — where the operation records a
+        new reference to it — is Inactive and therefore no longer offered. One non-enumerating
+        outcome for all three, so existence elsewhere is never disclosed (AC-03, AC-06d,
+        CONTEXT.md §Invariants).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            code: "items.target_unavailable"
+            message: "The selected Item is unavailable."
+
+    ItemWriteConflict:
+      description: |
+        The SKU is already taken in this Warehouse (AC-07) — the response names the Item that holds
+        it, which is a record of the actor's own Warehouse and discloses nothing across the boundary;
+        or the SKU stops being correctable because a Customer Order or a Purchase Draft Line already
+        names the Item (AC-06c); or the Warehouse is archived (AC-23).
+
+        A SKU taken in **another** Warehouse is never consulted and is never a conflict (AC-07a).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          examples:
+            skuTaken:
+              summary: AC-07
+              value:
+                code: "items.sku_taken"
+                message: "A SKU identifies at most one Item within a Warehouse."
+                details:
+                  itemId: "00000000-0000-4000-8000-000000000101"
+                  sku: "TEST-SKU-0001"
+            skuFixed:
+              summary: AC-06c
+              value:
+                code: "items.sku_fixed"
+                message: "A SKU stops being correctable once demand or a draft names the Item."
+            archived:
+              summary: AC-23
+              value:
+                code: "access.warehouse_archived"
+                message: "The Warehouse is archived."
+
+    # ---- Customer Orders ------------------------------------------------------------------
+
+    InvalidCustomerOrderInput:
+      description: |
+        The quantity is zero, negative or not a whole number, or the customer name is empty after
+        trimming (AC-02); the needed-by date has already passed (AC-02a, AC-19); or a cancellation
+        was submitted without a reason (AC-19a). Nothing is changed, and the response names the
+        value it will not accept without echoing any other record's data.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          examples:
+            invalidQuantityOrName:
+              summary: AC-02
+              value:
+                code: "customer_orders.invalid_input"
+                message: "Correct the highlighted Customer Order fields."
+                details:
+                  field: "quantity"
+                  rule: "positive_integer"
+            neededByInPast:
+              summary: AC-02a, AC-19
+              value:
+                code: "customer_orders.needed_by_in_past"
+                message: "A customer cannot be recorded as waiting for a date in the past."
+                details:
+                  field: "neededBy"
+            cancellationReasonMissing:
+              summary: AC-19a
+              value:
+                code: "customer_orders.invalid_input"
+                message: "Correct the highlighted Customer Order fields."
+                details:
+                  field: "cancellationReason"
+                  rule: "trimmed_non_empty"
+
+    CustomerOrderUnavailable:
+      description: |
+        The Customer Order belongs to another Warehouse or does not exist. One non-enumerating
+        outcome for both (AC-11, spec.md §6.1 "Cross-Warehouse demand reach").
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            code: "customer_orders.target_unavailable"
+            message: "The selected Customer Order is unavailable."
+
+    CustomerOrderWriteConflict:
+      description: |
+        The amended quantity falls below what has already been assigned to this order from an
+        arrival, so the order is left exactly as it was (AC-19b); the order is in a state the
+        operation is not legal from — a cancelled order is not amended or cancelled again; or the
+        Warehouse is archived (AC-23).
+
+        The AC-19b floor is evaluated against the locked Allocation total inside the transaction and
+        is **never silently clamped** (data-model.md §"Constraints the model deliberately does not
+        express").
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          examples:
+            belowAllocated:
+              summary: AC-19b
+              value:
+                code: "customer_orders.quantity_below_allocated"
+                message: "A customer's order cannot be reduced below the goods already attributed to them."
+                details:
+                  allocatedQuantity: 80
+                  submittedQuantity: 60
+            invalidState:
+              summary: A cancelled order is not amended or cancelled again
+              value:
+                code: "customer_orders.invalid_state"
+                message: "The Customer Order is not in a state this change is permitted from."
+            archived:
+              summary: AC-23
+              value:
+                code: "access.warehouse_archived"
+                message: "The Warehouse is archived."
+
+    # ---- Purchase Drafts ------------------------------------------------------------------
+
+    InvalidPurchaseDraftInput:
+      description: |
+        The request failed its rules: an ordered or stated quantity that is not a positive whole
+        number, a received quantity that is negative or not whole, a Value-adding Note or closure
+        reason empty after trimming, or a Packaging Type that is not one of the catalogue's entries
+        — refused with the catalogue listed so the member can choose (AC-13).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          examples:
+            unknownPackagingType:
+              summary: AC-13
+              value:
+                code: "purchase_drafts.unknown_packaging_type"
+                message: "Choose a Packaging Type from the catalogue."
+                details:
+                  field: "packagingTypeId"
+                  packagingTypeIds: ["loose_items", "cartons", "pallets", "cable_coil"]
+            invalidQuantity:
+              summary: A quantity that is not a positive whole number
+              value:
+                code: "purchase_drafts.invalid_input"
+                message: "Correct the highlighted Purchase Draft fields."
+                details:
+                  field: "orderedQuantity"
+                  rule: "positive_integer"
+
+    PurchaseDraftUnavailable:
+      description: |
+        The Purchase Draft belongs to another Warehouse or does not exist. One non-enumerating
+        outcome for both (AC-11).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            code: "purchase_drafts.target_unavailable"
+            message: "The selected Purchase Draft is unavailable."
+
+    PurchaseDraftTargetUnavailable:
+      description: |
+        The draft, one of its lines, one of its links, a named Item or a linked Customer Order
+        belongs to another Warehouse, is not part of the draft named in the path, or does not exist.
+
+        A draft, the Items it names and the demand it serves all belong to the same Warehouse
+        (AC-11), and a target of another Warehouse produces exactly this refusal — the same one a
+        missing target produces, disclosing nothing about where it exists.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          examples:
+            crossWarehouseTarget:
+              summary: AC-11
+              value:
+                code: "purchase_drafts.target_unavailable"
+                message: "A draft, the Items it names, and the demand it serves all belong to the same Warehouse."
+            unknownLine:
+              summary: A line or link that is not part of this draft
+              value:
+                code: "purchase_drafts.target_unavailable"
+                message: "The selected Purchase Draft Line is unavailable."
+
+    PurchaseDraftWriteConflict:
+      description: |
+        The draft no longer resolves in the `draft` state, so the assembly write path finds nothing
+        to write: a draft is frozen once it is ready, because it records what the supplier was told,
+        and the only writes it still accepts are those of Arrival Confirmation and closure (AC-15).
+        This is the refusal AC-24a produces for a discard after the freeze, and it is also returned
+        when the Warehouse is archived (AC-23).
+
+        A second link between the same line and the same Customer Order is rejected by
+        `UNIQUE (purchase_draft_line_id, customer_order_id)`; links from **different** lines to one
+        Customer Order are recorded unchanged and are never a conflict (AC-11a).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          examples:
+            frozen:
+              summary: AC-15
+              value:
+                code: "purchase_drafts.draft_frozen"
+                message: "A draft is frozen once it is ready."
+            discardAfterReady:
+              summary: AC-24a
+              value:
+                code: "purchase_drafts.discard_unavailable"
+                message: "A draft that has been made ready is closed with a reason rather than discarded."
+            duplicateLink:
+              summary: One link per line and Customer Order pair
+              value:
+                code: "purchase_drafts.link_exists"
+                message: "This line is already linked to that Customer Order."
+            archived:
+              summary: AC-23
+              value:
+                code: "access.warehouse_archived"
+                message: "The Warehouse is archived."
+
+    PurchaseDraftTransitionConflict:
+      description: |
+        A state-guarded transition resolved no row. The draft holds no line, so it cannot say what is
+        being ordered (AC-14a); it is not in the state the transition is legal from — Ready for
+        Ordering requires `draft`, closure requires `ready_for_ordering`; a concurrent attempt
+        already moved it, and the second is refused rather than merged (sad.md §8); or the Warehouse
+        is archived (AC-23).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          examples:
+            emptyDraft:
+              summary: AC-14a
+              value:
+                code: "purchase_drafts.draft_empty"
+                message: "A draft is only ready once it says what is being ordered."
+            invalidState:
+              summary: Not in the state the transition is legal from
+              value:
+                code: "purchase_drafts.invalid_state"
+                message: "The Purchase Draft is not in a state this transition is permitted from."
+            concurrentTransition:
+              summary: sad.md §8 — the conditional update affected no row
+              value:
+                code: "purchase_drafts.concurrent_change"
+                message: "Another member changed this Purchase Draft. Reload and try again."
+            archived:
+              summary: AC-23
+              value:
+                code: "access.warehouse_archived"
+                message: "The Warehouse is archived."
+
+    ArrivalConfirmationConflict:
+      description: |
+        The confirmation is blocked as a whole and **nothing of it is recorded** (spec.md §6
+        "Arrival atomicity"). Either the draft is not in Ready for Ordering — confirming closes a
+        draft once and for all, so a second confirmation cannot occur (AC-17b) — or one of the three
+        AC-18 bounds failed against the rows locked in this transaction, and `details` names each
+        failing assignment and why. A concurrent transition and an archived Warehouse resolve here
+        too.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          examples:
+            alreadyConfirmed:
+              summary: AC-17b
+              value:
+                code: "purchase_drafts.arrival_already_confirmed"
+                message: "Confirming an arrival closes a draft once and for all."
+            boundsFailed:
+              summary: AC-18 — each failing bound named
+              value:
+                code: "purchase_drafts.allocation_out_of_bounds"
+                message: "The confirmation was not recorded. Correct the assignments it will not accept."
+                details:
+                  violations:
+                    - purchaseDraftLineId: "00000000-0000-4000-8000-000000000401"
+                      rule: "allocations_exceed_received_quantity"
+                      receivedQuantity: 140
+                      allocatedQuantity: 160
+                    - purchaseDraftLineLinkId: "00000000-0000-4000-8000-000000000502"
+                      rule: "exceeds_outstanding_quantity"
+                      outstandingQuantity: 40
+                      allocatedQuantity: 60
+                    - purchaseDraftLineLinkId: "00000000-0000-4000-8000-000000000503"
+                      rule: "customer_order_not_unfulfilled"
+                      customerOrderState: "cancelled"
+            concurrentTransition:
+              summary: sad.md §8
+              value:
+                code: "purchase_drafts.concurrent_change"
+                message: "Another member changed this Purchase Draft. Reload and try again."
+            archived:
+              summary: AC-23
+              value:
+                code: "access.warehouse_archived"
+                message: "The Warehouse is archived."
+
+  ##########################################################################################
+  # Schemas
+  ##########################################################################################
+
+  schemas:
+    # ---- Shared envelope and vocabularies --------------------------------------------------
+
+    Error:
+      type: object
+      description: |
+        The unified error envelope produced once by the global exception filter. `code` follows the
+        `module.error_name` convention already established in the repository's error definitions;
+        `message` is the safe, non-enumerating explanation; `details` carries optional structured
+        context and never discloses a customer name, an Item, a quantity or a date belonging to a
+        record the actor may not see (spec.md §6.1).
+      required: [code, message]
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          pattern: "^[a-z_]+\\.[a-z_]+$"
+          examples: ["items.sku_taken", "purchase_drafts.draft_frozen", "customer_orders.needed_by_in_past"]
+        message: { type: string }
+        details:
+          type: object
+          additionalProperties: true
+
+    UnitOfMeasure:
+      type: string
+      minLength: 1
+      maxLength: 32
+      description: |
+        How an Item's quantities are counted — pieces, metres, kilograms, litres — so that every
+        quantity naming the Item is read the same way by everyone. Exactly one per Item. Not a
+        Packaging Type, which says how goods are physically presented on arrival (CONTEXT.md).
+
+        Free text bounded by `items.unit_of_measure varchar(32)`; deliberately not an enum, because
+        the model enumerates no set.
+      examples: ["pieces", "metres"]
+
+    PackagingTypeId:
+      type: string
+      maxLength: 32
+      pattern: "^[a-z][a-z0-9_]*$"
+      description: |
+        An entry of the system-managed Packaging Type catalogue. Pattern-checked rather than
+        enumerated, exactly as the column is (`packaging_types.id`), so a later migration adds an
+        entry with no schema change and no contract change — which is the extension path CONTEXT.md
+        §Invariants allows. The four seeded entries are `loose_items`, `cartons`, `pallets` and
+        `cable_coil` (AC-13).
+      examples: ["cable_coil", "pallets"]
+
+    CustomerOrderState:
+      type: string
+      enum: [unfulfilled, fulfilled, cancelled]
+      description: |
+        `unfulfilled` — has Outstanding Quantity left and was not cancelled; the single word this
+        feature uses for demand that still counts. `fulfilled` — its Outstanding Quantity fell to
+        nothing through Allocation; leaves the consolidated demand until a member raises its
+        quantity again. `cancelled` — ended because the customer no longer wants the goods
+        (CONTEXT.md).
+
+        `chk_customer_orders_state_outstanding` holds the pairing: an Unfulfilled order is waiting
+        for something, a Fulfilled one is waiting for nothing, a cancelled one is unconstrained.
+
+    PurchaseDraftState:
+      type: string
+      enum: [draft, ready_for_ordering, closed, discarded]
+      description: |
+        `draft` — being assembled; its lines, links and Pre-receipt Requirements are revised over
+        the course of deciding. `ready_for_ordering` — frozen; the record of what the member told
+        the supplier. `closed` — reached through Arrival Confirmation **or** a member's reasoned
+        closure, never both and never neither. `discarded` — abandoned before it was ever made
+        ready; a draft that has been made ready is never Discarded (CONTEXT.md, AC-24a).
+
+        Neither terminal state presents as Coverage (AC-21a, AC-24).
+
+    DriftSignalKind:
+      type: string
+      enum: [cancelled, quantity_changed, needed_by_moved, became_fulfilled]
+      description: |
+        What differs between a link's Demand Snapshot and the Customer Order it names now (AC-16).
+        Derived on every read as a value comparison, never a touch log — so a value amended and then
+        put back as it was reports nothing at all.
+
+        `became_fulfilled` means the linked order was Fulfilled through the arrival of a **different**
+        Purchase Draft.
+
+    # ---- Items ------------------------------------------------------------------------------
+
+    Item:
+      type: object
+      description: |
+        A distinct good the Warehouse can be asked for, identified by a SKU unique within that
+        Warehouse. It is what Customer Orders and Purchase Draft Lines both name, and therefore the
+        axis demand consolidates on (CONTEXT.md).
+      required: [id, sku, description, unitOfMeasure, onHandQuantity, deactivatedAt, latestAdjustment, createdAt]
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        sku:
+          type: string
+          minLength: 1
+          description: |
+            Unique within this Warehouse and never across Warehouses (AC-07, AC-07a). Compared
+            deterministically (`items.sku` collation `C`), so differently cased SKUs stay distinct.
+        description: { type: string, minLength: 1 }
+        unitOfMeasure: { $ref: "#/components/schemas/UnitOfMeasure" }
+        onHandQuantity:
+          type: integer
+          minimum: 0
+          description: |
+            A whole number that is never negative (AC-09). Changed only by a member setting it to a
+            counted figure with a reason; nothing else in this release writes it, Arrival
+            Confirmation included (AC-18a).
+        deactivatedAt:
+          type: [string, "null"]
+          format: date-time
+          description: |
+            When the Item was deactivated, or `null` while it is active. Modelled as a nullable
+            instant rather than a boolean, matching `warehouses.archived_at` — the repo's existing
+            way of saying "withdrawn, reversibly, at a known time" (data-model.md).
+        latestAdjustment:
+          oneOf:
+            - $ref: "#/components/schemas/ItemLatestAdjustment"
+            - type: "null"
+          description: The reason recorded with the most recent On-hand adjustment, or `null` when the Item has never been adjusted.
+        createdAt: { type: string, format: date-time }
+
+    ItemLatestAdjustment:
+      type: object
+      required: [countedQuantity, reason, adjustedAt]
+      additionalProperties: false
+      properties:
+        countedQuantity: { type: integer, minimum: 0 }
+        reason: { type: string, minLength: 1 }
+        adjustedAt: { type: string, format: date-time }
+
+    ItemCreate:
+      type: object
+      required: [sku, description, unitOfMeasure]
+      additionalProperties: false
+      properties:
+        sku: { type: string, minLength: 1 }
+        description: { type: string, minLength: 1 }
+        unitOfMeasure: { $ref: "#/components/schemas/UnitOfMeasure" }
+      description: |
+        The Item is recorded active with nothing on hand; neither is an input (AC-06).
+        `on_hand_quantity` defaults to `0` at the column.
+
+    ItemUpdate:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      description: |
+        Every property is optional; at least one must be present. `description` and `unitOfMeasure`
+        are always correctable (AC-06b). `sku` is accepted only while no Customer Order and no
+        Purchase Draft Line names the Item (AC-06c).
+      properties:
+        sku: { type: string, minLength: 1 }
+        description: { type: string, minLength: 1 }
+        unitOfMeasure: { $ref: "#/components/schemas/UnitOfMeasure" }
+
+    OnHandAdjustment:
+      type: object
+      description: |
+        One immutable row of the append-only adjustment history, written in the same transaction as
+        the Item's new figure (sad.md §6.3). It is never updated, so it carries no `updatedAt`.
+      required: [id, itemId, countedQuantity, reason, adjustedByUserId, createdAt]
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        itemId: { type: string, format: uuid }
+        countedQuantity: { type: integer, minimum: 0 }
+        reason: { type: string, minLength: 1 }
+        adjustedByUserId: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+
+    OnHandAdjustmentCreate:
+      type: object
+      required: [countedQuantity, reason]
+      additionalProperties: false
+      description: |
+        The figure is **the count itself**, never an increase or decrease applied to a previous one
+        (CONTEXT.md §Invariants). The reason is never optional (AC-09a) and is stored and rendered
+        as text, never as markup or a link (spec.md §6.1).
+      properties:
+        countedQuantity:
+          type: integer
+          minimum: 0
+          description: A whole number that is never negative (AC-09).
+        reason: { type: string, minLength: 1 }
+
+    # ---- Customer Orders ---------------------------------------------------------------------
+
+    CustomerOrder:
+      type: object
+      description: |
+        A record that a named end customer is waiting for a stated quantity of one Item in one
+        Warehouse by a stated date, carrying the Outstanding Quantity still owed to that customer
+        (CONTEXT.md). The customer name is the first personal data the product holds (spec.md §6.1)
+        and appears in no log line, no error detail and no denial payload.
+      required:
+        [id, itemId, customerName, quantity, outstandingQuantity, neededBy, state,
+         cancellationReason, recordedByUserId, cancelledByUserId, cancelledAt, createdAt, updatedAt]
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        itemId:
+          type: string
+          format: uuid
+          description: An Item of this Warehouse; the composite FK makes cross-Warehouse demand unwritable (AC-03).
+        customerName: { type: string, minLength: 1 }
+        quantity:
+          type: integer
+          minimum: 1
+          description: A positive whole number (AC-02). Never amended below what has already been assigned (AC-19b).
+        outstandingQuantity:
+          type: integer
+          minimum: 0
+          description: |
+            How much the customer is still waiting for: the quantity recorded, less every Allocation
+            made to it. Reduced only by Allocation, never below zero and never clamped
+            (`outstanding_quantity <= quantity`, AC-19b).
+        neededBy:
+          type: string
+          format: date
+          description: A calendar date, not an instant (`customer_orders.needed_by DATE`).
+        state: { $ref: "#/components/schemas/CustomerOrderState" }
+        cancellationReason:
+          type: [string, "null"]
+          description: Present exactly when the order is cancelled, together with the member and the time (AC-19a).
+        recordedByUserId: { type: string, format: uuid }
+        cancelledByUserId: { type: [string, "null"], format: uuid }
+        cancelledAt: { type: [string, "null"], format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    CustomerOrderCreate:
+      type: object
+      required: [itemId, customerName, quantity, neededBy]
+      additionalProperties: false
+      description: |
+        State and Outstanding Quantity are not inputs: the order is recorded Unfulfilled with its
+        Outstanding Quantity equal to the quantity recorded (AC-01).
+      properties:
+        itemId: { type: string, format: uuid }
+        customerName: { type: string, minLength: 1 }
+        quantity: { type: integer, minimum: 1 }
+        neededBy:
+          type: string
+          format: date
+          description: Must not have already passed (AC-02a).
+
+    CustomerOrderAmend:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      description: |
+        Both properties are optional; at least one must be present. Neither the state nor the
+        Outstanding Quantity is an input — the Outstanding Quantity is recalculated and a Fulfilled
+        order whose quantity was raised returns to Unfulfilled (AC-19).
+      properties:
+        quantity:
+          type: integer
+          minimum: 1
+          description: May not fall below what has already been assigned to this order from an arrival (AC-19b).
+        neededBy:
+          type: string
+          format: date
+          description: Must not have already passed (AC-19).
+
+    CustomerOrderCancellation:
+      type: object
+      required: [cancellationReason]
+      additionalProperties: false
+      properties:
+        cancellationReason:
+          type: string
+          minLength: 1
+          description: |
+            Stored and rendered as text, never as markup or a link, and treated as confidential data
+            of the same classification as the order carrying it (spec.md §6.1).
+
+    DemandLine:
+      type: object
+      description: |
+        One Item's consolidated Unfulfilled demand in this Warehouse — a **derived view**, never a
+        stored record and never an input to any endpoint (CONTEXT.md §Invariants, sad.md §7).
+      required:
+        [itemId, sku, description, unitOfMeasure, totalOutstandingQuantity, earliestNeededBy,
+         onHandQuantity, unfulfilledCustomerOrderCount, coverage]
+      additionalProperties: false
+      properties:
+        itemId: { type: string, format: uuid }
+        sku: { type: string, minLength: 1 }
+        description: { type: string, minLength: 1 }
+        unitOfMeasure: { $ref: "#/components/schemas/UnitOfMeasure" }
+        totalOutstandingQuantity:
+          type: integer
+          minimum: 1
+          description: |
+            Summed across this Item's **Unfulfilled** Customer Orders only; Fulfilled and cancelled
+            ones are absent from the total (AC-04, AC-17a). An Item with no Unfulfilled demand
+            produces no Demand Line at all, so the total is always positive.
+        earliestNeededBy:
+          type: string
+          format: date
+          description: The earliest date any of those Unfulfilled Customer Orders is needed by (AC-04).
+        onHandQuantity:
+          type: integer
+          minimum: 0
+          description: The Item's current figure, shown beside the demand so leftover goods are subtracted from what is ordered (AC-08).
+        unfulfilledCustomerOrderCount:
+          type: integer
+          minimum: 1
+          description: How many Unfulfilled Customer Orders the total derives from — the count behind the expandable sub-rows.
+        coverage:
+          type: array
+          description: |
+            Which Purchase Drafts link to this demand and for what stated quantity (AC-20). Counts
+            only drafts that are neither Closed nor Discarded, so a draft that closed presents as
+            Coverage no longer whichever way it got there (AC-21a, AC-24). Informational: it never
+            blocks a member from drafting the same demand again.
+          items: { $ref: "#/components/schemas/DemandCoverage" }
+
+    DemandCoverage:
+      type: object
+      required: [purchaseDraftId, purchaseDraftLineId, purchaseDraftState, statedQuantity]
+      additionalProperties: false
+      properties:
+        purchaseDraftId: { type: string, format: uuid }
+        purchaseDraftLineId: { type: string, format: uuid }
+        purchaseDraftState:
+          type: string
+          enum: [draft, ready_for_ordering]
+          description: Only open states appear; `closed` and `discarded` present as Coverage no longer (AC-21a).
+        statedQuantity:
+          type: integer
+          minimum: 1
+          description: |
+            The quantity the member stated on the link. Never reconciled with the line quantity, the
+            Customer Order quantity, or any other link — a link claims nothing (AC-11a).
+
+    # ---- Purchase Drafts ---------------------------------------------------------------------
+
+    PackagingType:
+      type: object
+      required: [id, label]
+      additionalProperties: false
+      properties:
+        id: { $ref: "#/components/schemas/PackagingTypeId" }
+        label: { type: string, minLength: 1, maxLength: 100 }
+
+    PurchaseDraftSummary:
+      type: object
+      description: The list projection — the draft's state, its size, and whether it carries a Drift Signal (AC-16a).
+      required:
+        [id, state, expectedArrivalDate, lineCount, hasDriftSignal, closureReason, createdByUserId,
+         createdAt, readiedByUserId, readiedAt, closedByUserId, closedAt, arrivalConfirmedByUserId,
+         arrivalConfirmedAt, discardedByUserId, discardedAt]
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        state: { $ref: "#/components/schemas/PurchaseDraftState" }
+        expectedArrivalDate:
+          type: [string, "null"]
+          format: date
+          description: |
+            The member's own estimate of when the goods reach the Transit Zone, `null` until they
+            have spoken to the supplier (AC-10). Neither derived nor verified by this release, and
+            frozen with the rest of the draft (CONTEXT.md).
+        lineCount: { type: integer, minimum: 0 }
+        hasDriftSignal:
+          type: boolean
+          description: |
+            Whether any of this draft's Demand Snapshot rows differs in value from the Customer Order
+            it names now — derived on this read (AC-16a). Always `false` for a draft that was never
+            frozen, which carries no snapshot to compare against.
+        closureReason:
+          type: [string, "null"]
+          description: Present only when a member closed the draft with a reason (AC-21), never when an arrival closed it.
+        createdByUserId: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+        readiedByUserId: { type: [string, "null"], format: uuid }
+        readiedAt: { type: [string, "null"], format: date-time }
+        closedByUserId: { type: [string, "null"], format: uuid }
+        closedAt: { type: [string, "null"], format: date-time }
+        arrivalConfirmedByUserId: { type: [string, "null"], format: uuid }
+        arrivalConfirmedAt: { type: [string, "null"], format: date-time }
+        discardedByUserId: { type: [string, "null"], format: uuid }
+        discardedAt: { type: [string, "null"], format: date-time }
+
+    PurchaseDraftDetail:
+      allOf:
+        - $ref: "#/components/schemas/PurchaseDraftSummary"
+        - type: object
+          required: [lines]
+          properties:
+            lines:
+              type: array
+              items: { $ref: "#/components/schemas/PurchaseDraftLine" }
+      description: |
+        The summary plus the draft's contents. `lineCount` equals `lines.length`. From Ready for
+        Ordering onward every one of these values is frozen; the only additions afterwards are the
+        received quantities, the Allocations, and the closure (AC-15).
+
+    PurchaseDraftLine:
+      type: object
+      description: |
+        One Item and quantity within the draft, carrying its own Pre-receipt Requirement and its own
+        links (CONTEXT.md). The Item's SKU, description and Unit of Measure are joined in so the
+        line reads without a second request.
+      required:
+        [id, itemId, itemSku, itemDescription, unitOfMeasure, orderedQuantity, packagingTypeId,
+         valueAddingNote, receivedQuantity, links]
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        itemId: { type: string, format: uuid }
+        itemSku: { type: string, minLength: 1 }
+        itemDescription: { type: string, minLength: 1 }
+        unitOfMeasure: { $ref: "#/components/schemas/UnitOfMeasure" }
+        orderedQuantity: { type: integer, minimum: 1 }
+        packagingTypeId:
+          oneOf:
+            - $ref: "#/components/schemas/PackagingTypeId"
+            - type: "null"
+          description: |
+            Half of the Pre-receipt Requirement. Nullable because AC-10 creates a draft without it
+            and AC-12 states it later.
+        valueAddingNote:
+          type: [string, "null"]
+          description: |
+            The other half — free text describing processing the goods need before or on arrival.
+            Rendered as text, never as markup or a link, and never a place for prices, supplier
+            contacts or payment terms (spec.md §6.1, CONTEXT.md).
+        receivedQuantity:
+          type: [integer, "null"]
+          minimum: 0
+          description: |
+            `null` until an arrival was confirmed; `0` when nothing came (AC-17b). Deliberately
+            unbounded above: what arrived is whatever physically arrived, bounded neither above nor
+            below by what was ordered (AC-17, CONTEXT.md §Invariants).
+        links:
+          type: array
+          items: { $ref: "#/components/schemas/PurchaseDraftLineLink" }
+
+    PurchaseDraftLineLink:
+      type: object
+      description: |
+        What the member intends of this line for one customer. It carries a stated quantity and
+        **claims nothing** (AC-11a); only an Allocation, recorded at Arrival Confirmation, reduces
+        demand.
+      required: [id, customerOrderId, customerName, statedQuantity, snapshot, current, driftSignals, allocation]
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        customerOrderId: { type: string, format: uuid }
+        customerName: { type: string, minLength: 1 }
+        statedQuantity:
+          type: integer
+          minimum: 1
+          description: Never reconciled with the line quantity, the Customer Order quantity, or any other link (AC-11a).
+        snapshot:
+          oneOf:
+            - $ref: "#/components/schemas/DemandSnapshotEntry"
+            - type: "null"
+          description: |
+            The demand exactly as it stood when the draft was frozen. `null` while the draft is
+            still in the Draft state, which carries no snapshot at all.
+        current:
+          $ref: "#/components/schemas/LinkedCustomerOrderState"
+        driftSignals:
+          type: array
+          description: |
+            What differs between `snapshot` and `current`, derived on this read as a value
+            comparison (AC-16). Empty when the draft was never frozen, and empty when a value was
+            amended and then put back as it was — the comparison is against captured values, never a
+            touch log.
+          items: { $ref: "#/components/schemas/DriftSignalKind" }
+        allocation:
+          oneOf:
+            - $ref: "#/components/schemas/ArrivalAllocation"
+            - type: "null"
+          description: |
+            What was assigned to this customer at Arrival Confirmation. `null` before the arrival,
+            and `null` afterwards for a link whose demand had all gone — that line records its
+            received quantity and no Allocation at all (AC-17b).
+
+    DemandSnapshotEntry:
+      type: object
+      description: |
+        Captured values, written once at the freeze and never updated; divergence is reported as a
+        Drift Signal instead (AC-16). One row per link at most, which the primary key itself
+        guarantees.
+      required: [capturedQuantity, capturedNeededBy, capturedState]
+      additionalProperties: false
+      properties:
+        capturedQuantity: { type: integer, minimum: 1 }
+        capturedNeededBy: { type: string, format: date }
+        capturedState: { $ref: "#/components/schemas/CustomerOrderState" }
+
+    LinkedCustomerOrderState:
+      type: object
+      description: The linked Customer Order as it stands at the instant of this read — the other half of the drift comparison.
+      required: [quantity, neededBy, state, outstandingQuantity]
+      additionalProperties: false
+      properties:
+        quantity: { type: integer, minimum: 1 }
+        neededBy: { type: string, format: date }
+        state: { $ref: "#/components/schemas/CustomerOrderState" }
+        outstandingQuantity: { type: integer, minimum: 0 }
+
+    ArrivalAllocation:
+      type: object
+      description: |
+        How much of an arrived quantity the member assigned to this link's Customer Order, decided by
+        that member rather than derived (CONTEXT.md). Recording it reduced that order's Outstanding
+        Quantity. Arrival happens once, so a link allocates at most once — which is the row's
+        primary key.
+      required: [allocatedQuantity, allocatedByUserId, createdAt]
+      additionalProperties: false
+      properties:
+        allocatedQuantity: { type: integer, minimum: 1 }
+        allocatedByUserId: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+
+    PurchaseDraftCreate:
+      type: object
+      required: [lines]
+      additionalProperties: false
+      description: |
+        State, attribution and time are not inputs: the draft is recorded in the `draft` state with
+        the member who created it and when (AC-10). `lines` may be empty — a draft is assembled over
+        the course of deciding, and only the freeze requires at least one line (AC-10a, AC-14a).
+      properties:
+        expectedArrivalDate:
+          type: [string, "null"]
+          format: date
+          description: Optional, and left unstated when the member has not yet spoken to the supplier (AC-10).
+        lines:
+          type: array
+          items: { $ref: "#/components/schemas/PurchaseDraftLineCreate" }
+
+    PurchaseDraftRevise:
+      type: object
+      required: [expectedArrivalDate]
+      additionalProperties: false
+      properties:
+        expectedArrivalDate:
+          type: [string, "null"]
+          format: date
+          description: "`null` clears it."
+
+    PurchaseDraftLineCreate:
+      type: object
+      required: [itemId, orderedQuantity]
+      additionalProperties: false
+      properties:
+        itemId:
+          type: string
+          format: uuid
+          description: An Item of this Warehouse (AC-11).
+        orderedQuantity: { type: integer, minimum: 1 }
+        packagingTypeId:
+          oneOf:
+            - $ref: "#/components/schemas/PackagingTypeId"
+            - type: "null"
+        valueAddingNote: { type: [string, "null"], minLength: 1 }
+        links:
+          type: array
+          description: May be omitted or empty — a line links to no Customer Orders or to several (AC-10).
+          items: { $ref: "#/components/schemas/PurchaseDraftLineLinkCreate" }
+
+    PurchaseDraftLineUpdate:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      description: |
+        Every property is optional; at least one must be present. `null` on either half of the
+        Pre-receipt Requirement clears it. Links are managed through their own sub-resource, not
+        here.
+      properties:
+        itemId: { type: string, format: uuid }
+        orderedQuantity: { type: integer, minimum: 1 }
+        packagingTypeId:
+          oneOf:
+            - $ref: "#/components/schemas/PackagingTypeId"
+            - type: "null"
+        valueAddingNote: { type: [string, "null"], minLength: 1 }
+
+    PurchaseDraftLineLinkCreate:
+      type: object
+      required: [customerOrderId, statedQuantity]
+      additionalProperties: false
+      properties:
+        customerOrderId:
+          type: string
+          format: uuid
+          description: A Customer Order of this Warehouse (AC-11).
+        statedQuantity: { type: integer, minimum: 1 }
+
+    PurchaseDraftLineLinkUpdate:
+      type: object
+      required: [statedQuantity]
+      additionalProperties: false
+      properties:
+        statedQuantity: { type: integer, minimum: 1 }
+
+    ArrivalConfirmation:
+      type: object
+      required: [lines]
+      additionalProperties: false
+      description: |
+        One confirmation covers **every** line of the draft; a line omitted here records no received
+        quantity, so the member states `0` for a line where nothing came (AC-17b). Attribution and
+        the move to Closed are not inputs.
+      properties:
+        lines:
+          type: array
+          minItems: 1
+          items: { $ref: "#/components/schemas/ArrivalConfirmationLine" }
+
+    ArrivalConfirmationLine:
+      type: object
+      required: [purchaseDraftLineId, receivedQuantity]
+      additionalProperties: false
+      properties:
+        purchaseDraftLineId: { type: string, format: uuid }
+        receivedQuantity:
+          type: integer
+          minimum: 0
+          description: |
+            Whatever physically arrived — short of, in excess of, or nothing at all (AC-17,
+            AC-17b). Bounded neither above nor below by `orderedQuantity`.
+        allocations:
+          type: array
+          description: |
+            May be omitted or empty for a line whose linked demand has all gone (AC-17b). Their sum
+            may not exceed `receivedQuantity` (AC-18).
+          items: { $ref: "#/components/schemas/ArrivalAllocationCreate" }
+
+    ArrivalAllocationCreate:
+      type: object
+      required: [purchaseDraftLineLinkId, allocatedQuantity]
+      additionalProperties: false
+      description: |
+        The Allocation is addressed **through the link**, not beside it. Naming the link rather than
+        the Customer Order is what makes "an Allocation names a Customer Order its line is actually
+        linked to" (AC-18) provable by the reference itself (`arrival_allocations` composite FK),
+        rather than re-checked in application code.
+      properties:
+        purchaseDraftLineLinkId: { type: string, format: uuid }
+        allocatedQuantity:
+          type: integer
+          minimum: 1
+          description: |
+            May not exceed what its Customer Order is still waiting for, and its order must still be
+            Unfulfilled (AC-18). A link receiving nothing is omitted rather than sent as `0` — the
+            row records a positive quantity or does not exist (AC-17b).
+
+    PurchaseDraftClosure:
+      type: object
+      required: [closureReason]
+      additionalProperties: false
+      properties:
+        closureReason:
+          type: string
+          minLength: 1
+          description: |
+            Why the supplier could not fulfil the order (AC-21). Stored and rendered as text, never
+            as markup or a link (spec.md §6.1).
