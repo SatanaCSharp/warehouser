@@ -510,6 +510,14 @@ blocks the next stage.
       `design`
 - [ ] Whether `WarehousesTab`'s deliberate query-ordering comment still has an owner. Default now:
       superseded by the loader; removed with CH-14. — owner: Tech Lead, due: `design`
+- [ ] Where the `docs/system` documentation gate belongs. Deferred from
+      `_review/code-review-front-end-2026-08-21.md` (advisory A2):
+      `apps/web/src/test/readiness-documentation/readiness-documentation.spec.ts` resolves
+      `REPOSITORY_ROOT` two levels above `apps/web` and reads only `docs/system`, so a `docs/system`
+      copy-edit fails `pnpm --filter @warehouser/web test`. `tests/refactor/placement-decision.spec.mjs`
+      is the repository-root precedent for this shape. Default now: leave it where it is; move it to
+      `tests/global-loader/` at ship, when CH-01 reconciles `docs/system` anyway. — owner: Tech Lead,
+      due: `ship`
 
 **Closed at `clarify`.** Both questions that were due at this stage are resolved in place and are no
 longer open:
