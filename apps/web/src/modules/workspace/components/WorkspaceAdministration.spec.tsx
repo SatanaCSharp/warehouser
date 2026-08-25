@@ -799,4 +799,30 @@ describe('WorkspaceAdministration force-mounted tab panels (CR-AC-03)', () => {
       expect(content.closest('[inert]')).not.toBeNull();
     });
   });
+
+  it('hides every unselected panel visually, not only from the accessibility tree', async () => {
+    // `inert` takes a panel off the accessibility tree and out of the keyboard
+    // order; it does **not** hide it. React Aria's own contract says so —
+    // an inactive force-mounted panel is inert and "must be styled
+    // appropriately so this is clear to the user visually"
+    // (`react-aria-components` `Tabs.d.ts`, `TabPanelProps.shouldForceMount`).
+    // Neither `@heroui/styles`' `.tabs__panel` nor `styles/global.css` carries
+    // a `[data-inert]` rule, so without a hiding class on the panel itself all
+    // four admitted tabs paint stacked under the tab bar.
+    //
+    // jsdom applies no stylesheet, so the class that carries the rule is what
+    // the guarantee is read from — the same reason the case above reads the
+    // attribute rather than the computed style.
+    stubWorkspaceServer({
+      context: namedWorkspaceContext(allWatchPermissions),
+    });
+
+    await renderAdministration();
+
+    const rolesPanel = (
+      await screen.findByRole('region', { name: 'Workspace roles' })
+    ).closest('[inert]');
+
+    expect(rolesPanel).toHaveClass('data-[inert]:hidden');
+  });
 });

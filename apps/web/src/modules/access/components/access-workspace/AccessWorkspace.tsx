@@ -96,9 +96,22 @@ export const AccessWorkspace = (): ReactElement => {
               and holds the entry `loadAccessSurface` filled with
               `subscribe: false` — which otherwise has no subscriber and is
               evicted after RTK Query's `keepUnusedDataFor` window (CR-AC-03,
-              `global-loader/sad.md` §4.4). */}
+              `global-loader/sad.md` §4.4).
+
+              `data-[inert]:hidden` is not decoration. React Aria marks an
+              unselected force-mounted panel `inert`, which removes it from the
+              accessibility tree and the keyboard order but leaves it **on
+              screen** — its own contract requires the caller to supply the
+              visibility rule, and neither `@heroui/styles`' `.tabs__panel` nor
+              `styles/global.css` has one. Without this class every admitted
+              tab paints stacked under the tab bar. */}
           {tabs.map(({ id, panel }) => (
-            <Tabs.Panel className="px-0 pt-5" id={id} key={id} shouldForceMount>
+            <Tabs.Panel
+              className="px-0 pt-5 data-[inert]:hidden"
+              id={id}
+              key={id}
+              shouldForceMount
+            >
               {panel}
             </Tabs.Panel>
           ))}
