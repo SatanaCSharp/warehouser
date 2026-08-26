@@ -7,6 +7,9 @@
     "label": "Primary navigation",
     "dashboard": "Dashboard",
     "access": "Access",
+    "demand": "Demand",
+    "purchaseDrafts": "Purchase drafts",
+    "items": "Items",
     "workspace": "Workspace",
     "toggle": "Open navigation"
   },

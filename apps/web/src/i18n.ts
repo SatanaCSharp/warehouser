@@ -7,9 +7,12 @@ export const supportedLanguages = ['en', 'uk'] as const;
 export const namespaces = [
   'access',
   'common',
+  'customer-order',
   'errors',
   'home',
+  'item',
   'pending',
+  'purchase-draft',
   'sign-in',
   'sign-up',
   'success',

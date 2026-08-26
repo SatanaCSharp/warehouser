@@ -62,9 +62,26 @@ export const MODULE_SURFACE = {
     // store/index.ts, test/access-fixtures.ts, test/workspace-fixtures.ts
     'modules/auth/store/auth.slice',
   ],
+  // T17 — the ordering web shell's three destinations (sad.md §5 Web,
+  // §8 Naming): each is a flat sibling module whose only surface entry today
+  // is the route `router.ts` composes, per the "future in-Warehouse entities
+  // become flat top-level sibling modules" consequence recorded in
+  // `docs/system/adr/18-08-2026-scope-of-exercise-placement-tiebreak.md`.
+  'customer-order': [
+    // router.ts
+    'modules/customer-order/route',
+  ],
   home: [
     // router.ts
     'modules/home/route',
+  ],
+  item: [
+    // router.ts
+    'modules/item/route',
+  ],
+  'purchase-draft': [
+    // router.ts
+    'modules/purchase-draft/route',
   ],
   warehouse: [
     // router.ts

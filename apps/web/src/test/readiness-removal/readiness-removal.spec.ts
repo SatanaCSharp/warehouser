@@ -697,7 +697,7 @@ describe('readiness removal — declarative permission gating is unchanged (CR-R
     'shared/components/WorkspacePermissionGate.tsx': 1,
     'shared/hooks/projections/usePermittedItems.ts': 1,
     'shared/hooks/projections/useWorkspacePermittedItems.ts': 1,
-    'shared/layouts/Sidebar.tsx': 8,
+    'shared/layouts/Sidebar.tsx': 14,
   };
 
   it('keeps every gate and descriptor call site', () => {

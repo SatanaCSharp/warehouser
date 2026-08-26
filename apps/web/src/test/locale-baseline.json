@@ -127,7 +127,10 @@
       "language.ukrainian": "Українська",
       "nav.access": "Access",
       "nav.dashboard": "Dashboard",
+      "nav.demand": "Demand",
+      "nav.items": "Items",
       "nav.label": "Primary navigation",
+      "nav.purchaseDrafts": "Purchase drafts",
       "nav.toggle": "Open navigation",
       "nav.workspace": "Workspace",
       "shell.archivedEntryRefusal.description": "Archived warehouses can't be entered. Your access to other warehouses is unchanged.",
@@ -156,6 +159,9 @@
       "workspaceSwitcher.unavailable.description": "You do not belong to any warehouse that can be worked in right now. Ask a workspace administrator for access.",
       "workspaceSwitcher.unavailable.title": "No warehouse is available to you"
     },
+    "customer-order": {
+      "head.title": "Demand"
+    },
     "errors": {
       "api.network": "Check your connection and try again.",
       "api.unexpected": "Something went wrong. Try again.",
@@ -175,6 +181,9 @@
       "preview.actions.signIn": "Log in",
       "preview.description": "Plain elements use the same semantic classes (bg-surface-secondary, text-muted, rounded-lg) so they stay correct across theme toggles without any custom CSS.",
       "preview.title": "Design System Preview"
+    },
+    "item": {
+      "head.title": "Items"
     },
     "pending": {
       "access.assignRole": "Updating the member role…",
@@ -202,6 +211,9 @@
       "workspace.transferWorkspaceOwner": "Transferring workspace ownership…",
       "workspace.updateWorkspaceRole": "Saving the workspace role…",
       "workspace.withdrawWarehouseAccess": "Withdrawing access to {{name}}…"
+    },
+    "purchase-draft": {
+      "head.title": "Purchase drafts"
     },
     "sign-in": {
       "accessibility": "Labels stay visible · field errors are associated and announced · reduced motion uses no animated transitions",
@@ -631,7 +643,10 @@
       "language.ukrainian": "Українська",
       "nav.access": "Доступ",
       "nav.dashboard": "Дашборд",
+      "nav.demand": "Попит",
+      "nav.items": "Товари",
       "nav.label": "Основна навігація",
+      "nav.purchaseDrafts": "Чернетки закупівель",
       "nav.toggle": "Відкрити навігацію",
       "nav.workspace": "Робочий простір",
       "shell.archivedEntryRefusal.description": "Архівовані склади не можна відкрити. Ваш доступ до інших складів не змінився.",
@@ -660,6 +675,9 @@
       "workspaceSwitcher.unavailable.description": "Ви не належите до жодного складу, у якому зараз можна працювати. Зверніться до адміністратора робочого простору по доступ.",
       "workspaceSwitcher.unavailable.title": "Жоден склад вам не доступний"
     },
+    "customer-order": {
+      "head.title": "Попит"
+    },
     "errors": {
       "api.network": "Перевірте з’єднання та спробуйте ще раз.",
       "api.unexpected": "Щось пішло не так. Спробуйте ще раз.",
@@ -679,6 +697,9 @@
       "preview.actions.signIn": "Увійти",
       "preview.description": "Звичайні елементи використовують ті самі семантичні класи (bg-surface-secondary, text-muted, rounded-lg), тому правильно виглядають у різних темах без власних стилів CSS.",
       "preview.title": "Попередній перегляд дизайн-системи"
+    },
+    "item": {
+      "head.title": "Товари"
     },
     "pending": {
       "access.assignRole": "Оновлюємо роль учасника…",
@@ -706,6 +727,9 @@
       "workspace.transferWorkspaceOwner": "Передаємо власність над робочим простором…",
       "workspace.updateWorkspaceRole": "Збереження ролі робочого простору…",
       "workspace.withdrawWarehouseAccess": "Відкликаємо доступ до {{name}}…"
+    },
+    "purchase-draft": {
+      "head.title": "Чернетки закупівель"
     },
     "sign-in": {
       "accessibility": "Мітки залишаються видимими · помилки полів пов’язані й озвучуються · без зайвої анімації",

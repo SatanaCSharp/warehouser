@@ -37,6 +37,17 @@ const REQUIRED_ICONS: Record<string, keyof typeof Icons> = {
   'trash-2': 'TrashIcon',
   'log-in': 'LogInIcon',
   'layout-grid': 'LayoutGridIcon',
+  // T17 — the ordering web shell's eight missing icons
+  // (design-handoff.md §Icons: `apps/web/src/shared/icons/` already exports
+  // the equivalents of every Lucide glyph the design uses but these eight).
+  'clipboard-list': 'ClipboardListIcon',
+  'file-text': 'FileTextIcon',
+  package: 'PackageIcon',
+  'chevron-up': 'ChevronUpIcon',
+  calendar: 'CalendarIcon',
+  lock: 'LockIcon',
+  truck: 'TruckIcon',
+  'corner-down-right': 'CornerDownRightIcon',
 };
 
 describe('shared/icons', () => {

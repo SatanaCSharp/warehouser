@@ -282,6 +282,115 @@ describe('Sidebar in a Warehouse view (CR-AC-11)', () => {
 // falsy/loading predicate verbatim: absent while W2's projection is
 // unresolved, present once it arrives. Showing W1's answer for W2 would be
 // exactly the cross-Warehouse leak CH-04 exists to remove.
+// T17 — the ordering web shell's three nav entries (design-handoff.md
+// §Information architecture, sad.md §5 Web): `Demand`, `Purchase drafts` and
+// `Items` join `Dashboard` and `Access` in `warehouseNavList`, each wrapped in
+// its own `WarehousePermissionGate` so a missing watch Permission makes the
+// entry absent — the same rule already proven above for `Access` (AC-05,
+// AC-22). None of the three exist in `Sidebar.tsx` yet, so every entry query
+// below fails to find them regardless of the permission granted.
+describe('Sidebar ordering entries (T17, AC-05, AC-22, AC-23)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const orderingNavEntries: [label: string, permission: PermissionId][] = [
+    ['Demand', PermissionId.CUSTOMER_ORDERS_WATCH],
+    ['Purchase drafts', PermissionId.PURCHASE_DRAFTS_WATCH],
+    ['Items', PermissionId.ITEMS_WATCH],
+  ];
+
+  it.each(orderingNavEntries)(
+    'offers the %s entry when the actor holds its watch Permission',
+    async (label, permission) => {
+      stubAccess({ ...baseAccess, permissionIds: [permission] });
+      renderSidebar();
+
+      expect(
+        await screen.findByRole('link', { name: label }),
+      ).toBeInTheDocument();
+    },
+  );
+
+  // AC-05, AC-22 — absent, not disabled and not an empty state, matching the
+  // rule already proven for Access above.
+  it.each(orderingNavEntries)(
+    'omits the %s entry — not disabled, not empty — when the actor holds none of the three watch Permissions',
+    async (label) => {
+      stubAccess({ ...baseAccess, permissionIds: [] });
+      renderSidebar();
+
+      await screen.findByRole('link', { name: 'Dashboard' });
+      expect(
+        screen.queryByRole('link', { name: label }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: label }),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByText(label)).not.toBeInTheDocument();
+    },
+  );
+
+  it('offers only the entries whose watch Permission the actor holds, omitting the other two', async () => {
+    stubAccess({
+      ...baseAccess,
+      permissionIds: [PermissionId.PURCHASE_DRAFTS_WATCH],
+    });
+    renderSidebar();
+
+    expect(
+      await screen.findByRole('link', { name: 'Purchase drafts' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: 'Demand' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: 'Items' }),
+    ).not.toBeInTheDocument();
+  });
+
+  // AC-23 — an archived Warehouse renders its watch destinations exactly as
+  // before archiving: the entry is a function of the held watch Permission
+  // alone, never of `archivedAt`.
+  it.each(orderingNavEntries)(
+    'still offers the %s entry in an archived Warehouse when the actor holds its watch Permission (AC-23)',
+    async (label, permission) => {
+      stubAccess({
+        ...baseAccess,
+        permissionIds: [permission],
+        archivedAt: '2026-08-13T00:00:00.000Z',
+      });
+      renderSidebar();
+
+      expect(
+        await screen.findByRole('link', { name: label }),
+      ).toBeInTheDocument();
+    },
+  );
+
+  // AC-23's other half — a member without the watch Permission stays refused
+  // exactly as before archiving.
+  it('still omits an ordering entry in an archived Warehouse when the actor holds no matching watch Permission (AC-23)', async () => {
+    stubAccess({
+      ...baseAccess,
+      permissionIds: [],
+      archivedAt: '2026-08-13T00:00:00.000Z',
+    });
+    renderSidebar();
+
+    await screen.findByRole('link', { name: 'Dashboard' });
+    expect(
+      screen.queryByRole('link', { name: 'Demand' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: 'Purchase drafts' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: 'Items' }),
+    ).not.toBeInTheDocument();
+  });
+});
+
 describe('Sidebar during a context switch (CR-AC-19)', () => {
   afterEach(() => {
     vi.unstubAllGlobals();

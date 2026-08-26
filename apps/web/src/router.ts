@@ -7,7 +7,10 @@ import {
 import { accessRoute } from 'modules/access/route';
 import { loginRoute } from 'modules/auth/login/route';
 import { signUpRoute } from 'modules/auth/sign-up/route';
+import { customerOrderRoute } from 'modules/customer-order/route';
 import { homeRoute } from 'modules/home/route';
+import { itemRoute } from 'modules/item/route';
+import { purchaseDraftRoute } from 'modules/purchase-draft/route';
 import { warehouseDashboardRoute } from 'modules/warehouse/route';
 import { workspaceRoute } from 'modules/workspace/route';
 import { rootRoute } from 'routes/__root.route';
@@ -32,6 +35,11 @@ const routeTree = rootRoute.addChildren([
   warehouseRoute.addChildren([
     warehouseDashboardRoute,
     accessRoute,
+    // T17 — the ordering web shell's three destinations, declared before the
+    // splat so it keeps ranking last (sad.md §5 Web).
+    customerOrderRoute,
+    purchaseDraftRoute,
+    itemRoute,
     warehouseCatchAllRoute,
   ]),
   // T7 — last root child: the splat ranks below every explicit route, so it

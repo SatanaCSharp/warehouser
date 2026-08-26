@@ -8,7 +8,14 @@ import { WorkspacePermissionGate } from 'shared/components/WorkspacePermissionGa
 import { ROUTES } from 'shared/constants/routes';
 import { useEnteredContext } from 'shared/hooks/projections/useEnteredContext';
 import { workspaceAdministrationPermissionIds } from 'shared/hooks/queries/useWorkspacePermissions';
-import { Building2Icon, DashboardIcon, ShieldCheckIcon } from 'shared/icons';
+import {
+  Building2Icon,
+  ClipboardListIcon,
+  DashboardIcon,
+  FileTextIcon,
+  PackageIcon,
+  ShieldCheckIcon,
+} from 'shared/icons';
 
 import type { ReactElement } from 'react';
 
@@ -91,6 +98,58 @@ export const Sidebar = ({
           >
             <ShieldCheckIcon />
             {t('nav.access')}
+          </RouterLink>
+        </li>
+      </WarehousePermissionGate>
+      {/* T17 — the ordering web shell's three destinations join Dashboard and
+          Access, each absent — not disabled, not empty — when the actor
+          lacks its own watch Permission, matching the rule Access already
+          applies (AC-05, AC-22, AC-23). */}
+      <WarehousePermissionGate permission={PermissionId.CUSTOMER_ORDERS_WATCH}>
+        <li>
+          <RouterLink
+            to={ROUTES.WAREHOUSE_DEMAND}
+            params={{ warehouseId: enteredWarehouseId }}
+            className={itemClassName(
+              pathname ===
+                addressIn(ROUTES.WAREHOUSE_DEMAND, enteredWarehouseId),
+            )}
+            onClick={onNavigate}
+          >
+            <ClipboardListIcon />
+            {t('nav.demand')}
+          </RouterLink>
+        </li>
+      </WarehousePermissionGate>
+      <WarehousePermissionGate permission={PermissionId.PURCHASE_DRAFTS_WATCH}>
+        <li>
+          <RouterLink
+            to={ROUTES.WAREHOUSE_PURCHASE_DRAFTS}
+            params={{ warehouseId: enteredWarehouseId }}
+            className={itemClassName(
+              pathname ===
+                addressIn(ROUTES.WAREHOUSE_PURCHASE_DRAFTS, enteredWarehouseId),
+            )}
+            onClick={onNavigate}
+          >
+            <FileTextIcon />
+            {t('nav.purchaseDrafts')}
+          </RouterLink>
+        </li>
+      </WarehousePermissionGate>
+      <WarehousePermissionGate permission={PermissionId.ITEMS_WATCH}>
+        <li>
+          <RouterLink
+            to={ROUTES.WAREHOUSE_ITEMS}
+            params={{ warehouseId: enteredWarehouseId }}
+            className={itemClassName(
+              pathname ===
+                addressIn(ROUTES.WAREHOUSE_ITEMS, enteredWarehouseId),
+            )}
+            onClick={onNavigate}
+          >
+            <PackageIcon />
+            {t('nav.items')}
           </RouterLink>
         </li>
       </WarehousePermissionGate>
