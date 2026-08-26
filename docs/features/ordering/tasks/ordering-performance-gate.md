@@ -7,7 +7,7 @@ acs: []
 files_hint: ['apps/server/src/test/ordering-load-smoke.integration.spec.ts']
 owner: 'Tech Lead'
 estimate: 'S'
-status: 'todo'
+status: 'done'
 ---
 
 # T22 — Add the ordering load smoke and the structured timing assertions for the section 6 latency targets
