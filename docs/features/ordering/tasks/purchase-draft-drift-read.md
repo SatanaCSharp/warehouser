@@ -11,7 +11,7 @@ files_hint:
   ]
 owner: 'Backend Lead'
 estimate: 'M'
-status: 'todo'
+status: 'done'
 ---
 
 # T14 — Build PurchaseDraftReadRepository and the drift queries comparing the snapshot against current demand
