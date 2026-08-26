@@ -2,15 +2,21 @@ import { ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
+import { WriteRateLimitCounter } from 'shared/guards/write-rate-limit.counter';
 import { WriteRateLimitGuard } from 'shared/guards/write-rate-limit.guard';
 import { WRITE_RATE_LIMITED_KEY } from 'shared/guards/write-rate-limited.decorator';
 
 // ADR 0003 / spec.md §6.1 "Draft and demand spam": recording demand, creating drafts and adjusting
 // On-hand Quantity are capped at 60 recorded changes per minute per member. The guard is a
-// hand-rolled, per-instance, fixed-window counter keyed on the acting member, declared per handler
+// hand-rolled fixed-window counter keyed on the acting member, declared per handler
 // with `@WriteRateLimited()`, and composed AFTER `SessionAuthGuard` and `WarehouseAccessGuard` so a
 // refusal can never be used to distinguish "this Warehouse has records" from "this Warehouse does
 // not" (the non-disclosure property is structural, not a property of the error message).
+//
+// The window state lives in `WriteRateLimitCounter`, which the guard is given, because Nest builds
+// a separate guard instance for every module that names the guard in `@UseGuards(...)`. Each test
+// below constructs its own counter, so the per-test isolation these cases rely on is unchanged;
+// `write-rate-limit-http-contract.integration.spec.ts` covers the sharing across modules.
 
 const userId = '00000000-0000-4000-8000-000000000001';
 const otherUserId = '00000000-0000-4000-8000-000000000002';
@@ -52,7 +58,10 @@ const resolvedRequest = (overrides: Record<string, unknown> = {}) => ({
 describe('WriteRateLimitGuard', () => {
   it('lets an undeclared handler through without counting anything', async () => {
     const clock = jest.fn().mockReturnValue(0);
-    const guard = new WriteRateLimitGuard(reflectorReturning(undefined), clock);
+    const guard = new WriteRateLimitGuard(
+      reflectorReturning(undefined),
+      new WriteRateLimitCounter(clock),
+    );
     const request = resolvedRequest();
 
     await expect(guard.canActivate(contextFor(request))).resolves.toBe(true);
@@ -63,7 +72,10 @@ describe('WriteRateLimitGuard', () => {
     it('accepts exactly 60 recorded changes for one member within one window and refuses the 61st', async () => {
       const now = 0;
       const clock = () => now;
-      const guard = new WriteRateLimitGuard(reflectorReturning(true), clock);
+      const guard = new WriteRateLimitGuard(
+        reflectorReturning(true),
+        new WriteRateLimitCounter(clock),
+      );
       const request = resolvedRequest();
 
       for (let i = 0; i < 60; i += 1) {
@@ -82,7 +94,10 @@ describe('WriteRateLimitGuard', () => {
     it('counts each member independently, so one member reaching the limit never affects another', async () => {
       const now = 0;
       const clock = () => now;
-      const guard = new WriteRateLimitGuard(reflectorReturning(true), clock);
+      const guard = new WriteRateLimitGuard(
+        reflectorReturning(true),
+        new WriteRateLimitCounter(clock),
+      );
       const requestForFirstMember = resolvedRequest();
       const requestForSecondMember = resolvedRequest({
         access: { ...resolvedRequest().access, userId: otherUserId },
@@ -107,7 +122,10 @@ describe('WriteRateLimitGuard', () => {
     it('resets the count for a member once a new one-minute window begins', async () => {
       let now = 0;
       const clock = () => now;
-      const guard = new WriteRateLimitGuard(reflectorReturning(true), clock);
+      const guard = new WriteRateLimitGuard(
+        reflectorReturning(true),
+        new WriteRateLimitCounter(clock),
+      );
       const request = resolvedRequest();
 
       for (let i = 0; i < 60; i += 1) {
@@ -133,7 +151,10 @@ describe('WriteRateLimitGuard', () => {
       // refuse via the same non-enumerating access denial rather than ever incrementing a counter
       // for an actor authorization never approved.
       const clock = jest.fn().mockReturnValue(0);
-      const guard = new WriteRateLimitGuard(reflectorReturning(true), clock);
+      const guard = new WriteRateLimitGuard(
+        reflectorReturning(true),
+        new WriteRateLimitCounter(clock),
+      );
       const request = { params: { warehouseId } };
 
       await expect(guard.canActivate(contextFor(request))).rejects.toEqual(
@@ -148,7 +169,10 @@ describe('WriteRateLimitGuard', () => {
     it('discloses nothing about existing records: the refusal carries only the stable rate-limit code, no member, warehouse, or count', async () => {
       const now = 0;
       const clock = () => now;
-      const guard = new WriteRateLimitGuard(reflectorReturning(true), clock);
+      const guard = new WriteRateLimitGuard(
+        reflectorReturning(true),
+        new WriteRateLimitCounter(clock),
+      );
       const request = resolvedRequest();
 
       for (let i = 0; i < 60; i += 1) {

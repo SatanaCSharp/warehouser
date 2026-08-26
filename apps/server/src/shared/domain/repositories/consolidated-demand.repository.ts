@@ -126,24 +126,32 @@ export class ConsolidatedDemandRepository {
       .andWhere("draft.state IN ('draft', 'ready_for_ordering')")
       .getQuery();
 
-    return manager
-      .getRepository(ItemEntity)
-      .createQueryBuilder('item')
-      .select('item.id', 'itemId')
-      .addSelect('item.sku', 'sku')
-      .addSelect('item.description', 'description')
-      .addSelect('item.unitOfMeasure', 'unitOfMeasure')
-      .addSelect('item.onHandQuantity', 'onHandQuantity')
-      .addSelect(`(${totalOutstandingQuantity})`, 'totalOutstandingQuantity')
-      .addSelect(`(${earliestNeededBy})`, 'earliestNeededBy')
-      .addSelect(
-        `(${unfulfilledCustomerOrderCount})`,
-        'unfulfilledCustomerOrderCount',
-      )
-      .addSelect(`(${coverage})`, 'coverage')
-      .where('item.warehouseId = :warehouseId', { warehouseId })
-      .andWhere(`EXISTS (${hasUnfulfilledDemand})`)
-      .orderBy('item.sku', 'ASC')
-      .getRawMany<ConsolidatedDemandRawRow>();
+    return (
+      manager
+        .getRepository(ItemEntity)
+        .createQueryBuilder('item')
+        .select('item.id', 'itemId')
+        .addSelect('item.sku', 'sku')
+        .addSelect('item.description', 'description')
+        .addSelect('item.unitOfMeasure', 'unitOfMeasure')
+        .addSelect('item.onHandQuantity', 'onHandQuantity')
+        .addSelect(`(${totalOutstandingQuantity})`, 'totalOutstandingQuantity')
+        .addSelect(`(${earliestNeededBy})`, 'earliestNeededBy')
+        .addSelect(
+          `(${unfulfilledCustomerOrderCount})`,
+          'unfulfilledCustomerOrderCount',
+        )
+        .addSelect(`(${coverage})`, 'coverage')
+        .where('item.warehouseId = :warehouseId', { warehouseId })
+        .andWhere(`EXISTS (${hasUnfulfilledDemand})`)
+        // openapi.yaml `readConsolidatedDemand` 200 — "ordered by earliest needed-by date then SKU",
+        // so the Item needed soonest leads regardless of its SKU and the SKU only breaks a tie.
+        // `earliestNeededBy` is a correlated-subquery select alias rather than a column of `item`, so
+        // it is ordered by its quoted alias; a bare `earliestNeededBy` would be resolved by TypeORM's
+        // `alias.property` handling and not by PostgreSQL's output-column name.
+        .orderBy('"earliestNeededBy"', 'ASC')
+        .addOrderBy('item.sku', 'ASC')
+        .getRawMany<ConsolidatedDemandRawRow>()
+    );
   }
 }

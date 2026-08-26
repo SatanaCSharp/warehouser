@@ -50,11 +50,17 @@ const collectProductionSources = (
 // - `items.controller.ts` (T7) is the REST handler that serializes the figure into the `Item` HTTP
 //   response body and passes a submitted `countedQuantity` straight through to
 //   `AdjustItemOnHandCommand`, without deriving or writing it itself.
+// - `demand.controller.ts` (T11) is the REST handler that serializes the figure into each
+//   `DemandLine` of the consolidated demand response (AC-04, "that Item's current On-hand
+//   Quantity"). It names the field only to forward what `consolidated-demand.repository.ts` already
+//   read: it is a read, there is no on-hand input to this endpoint, and no write path passes
+//   through it.
 //
 // This list is the tripwire, not the rule: a new entry is a deliberate decision about AC-18a, and a
 // reader adding one has to say whether the new file reads the figure or moves it. Only the second
 // kind is forbidden, and the two assertions below are what forbid it.
 const ALLOWED_TO_NAME_THE_FIGURE = [
+  'customer-orders/rest/controllers/demand.controller.ts',
   'items/domain/mappers/item-catalogue-entry.mapper.ts',
   'items/domain/predicates/on-hand-adjustment.predicates.ts',
   'items/rest/controllers/items.controller.ts',

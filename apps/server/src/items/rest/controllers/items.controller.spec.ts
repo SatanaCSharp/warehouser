@@ -14,6 +14,7 @@ import { READ_TOLERANT_KEY } from 'shared/access/archived-tolerant-read.decorato
 import { REQUIRED_PERMISSION_KEY } from 'shared/decorators/required-permission.decorator';
 import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
 import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
+import { WriteRateLimitGuard } from 'shared/guards/write-rate-limit.guard';
 import { WRITE_RATE_LIMITED_KEY } from 'shared/guards/write-rate-limited.decorator';
 
 // T7 — the guard/metadata proof `items-http-contract.integration.spec.ts` does not itself exercise
@@ -65,21 +66,50 @@ describe('ItemsController', () => {
     );
   });
 
+  // ADR 0003 — a mutating handler also names `WriteRateLimitGuard`, and names it **last**: the
+  // counter composes after the access guards so an unauthorized actor is refused by those and never
+  // reaches it, which is what makes a rate-limit refusal non-enumerating. The guard is declared per
+  // route rather than with `APP_GUARD` because Nest runs global guards *before* route-scoped ones,
+  // which would invert that required order.
   it.each([
-    ['listItems', PermissionId.ITEMS_WATCH],
-    ['createItem', PermissionId.ITEMS_CREATE],
-    ['correctItem', PermissionId.ITEMS_UPDATE],
-    ['deactivateItem', PermissionId.ITEMS_DEACTIVATE],
-    ['reactivateItem', PermissionId.ITEMS_DEACTIVATE],
-    ['adjustOnHand', PermissionId.ITEM_STOCK_ADJUST],
+    [
+      'listItems',
+      PermissionId.ITEMS_WATCH,
+      [SessionAuthGuard, WarehouseAccessGuard],
+    ],
+    [
+      'createItem',
+      PermissionId.ITEMS_CREATE,
+      [SessionAuthGuard, WarehouseAccessGuard, WriteRateLimitGuard],
+    ],
+    [
+      'correctItem',
+      PermissionId.ITEMS_UPDATE,
+      [SessionAuthGuard, WarehouseAccessGuard, WriteRateLimitGuard],
+    ],
+    [
+      'deactivateItem',
+      PermissionId.ITEMS_DEACTIVATE,
+      [SessionAuthGuard, WarehouseAccessGuard, WriteRateLimitGuard],
+    ],
+    [
+      'reactivateItem',
+      PermissionId.ITEMS_DEACTIVATE,
+      [SessionAuthGuard, WarehouseAccessGuard, WriteRateLimitGuard],
+    ],
+    [
+      'adjustOnHand',
+      PermissionId.ITEM_STOCK_ADJUST,
+      [SessionAuthGuard, WarehouseAccessGuard, WriteRateLimitGuard],
+    ],
   ] as const)(
-    '%s declares exactly one Permission and both access guards',
-    (handlerName, permission) => {
+    '%s declares exactly one Permission and its guard chain in order',
+    (handlerName, permission, guards) => {
       expect(
         Reflect.getMetadata(REQUIRED_PERMISSION_KEY, method(handlerName)),
       ).toEqual([permission]);
       expect(Reflect.getMetadata(GUARDS_METADATA, method(handlerName))).toEqual(
-        [SessionAuthGuard, WarehouseAccessGuard],
+        guards,
       );
     },
   );

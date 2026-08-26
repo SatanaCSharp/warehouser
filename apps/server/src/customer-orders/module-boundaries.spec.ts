@@ -82,10 +82,13 @@ describe('customer-orders module boundaries', () => {
     ).toBe(true);
   });
 
-  // ADR 0002 / server-architecture.md "NestJS modules and exports" — `purchase-drafts` reaches
-  // `DemandAllocationService` only through `customer-orders/usecases/usecase.module.ts`'s
-  // `exports`, never by importing `customer-orders/domain/services/demand-allocation.service`
-  // directly. This is the module's declared public surface for that provider.
+  // ADR 0002 / server-architecture.md "NestJS modules and exports" — `purchase-drafts` obtains the
+  // `DemandAllocationService` *instance* only through `customer-orders/usecases/usecase.module.ts`'s
+  // `exports`: it imports `CustomerOrdersUsecaseModule` rather than re-declaring the provider, so
+  // there is one instance and one dependency edge. It still imports the class symbol from its
+  // defining file, because `emitDecoratorMetadata` needs a real constructor reference as the DI
+  // token; that import is the token, not a second path to the behaviour. This assertion is what
+  // keeps the provider on the module's declared public surface.
   it('exports DemandAllocationService from the use-case module', () => {
     const source = readFileSync(usecaseModulePath, 'utf8');
     const exportsBlock = /exports:\s*\[(?<providers>[^\]]*)\]/u.exec(source);

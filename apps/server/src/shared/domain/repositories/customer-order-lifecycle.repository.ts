@@ -42,6 +42,13 @@ export interface ListCustomerOrdersFilter {
   readonly state?: CustomerOrderState;
 }
 
+/** Which of the two orderings `listCustomerOrders` returns. `creation` is the default the picker
+ * and the Demand sub-rows have always read (`idx_customer_orders_warehouse_created`); `needed_by`
+ * is the order `GET /customer-orders` promises — "ordered by needed-by date then creation time"
+ * (contracts/openapi.yaml `listCustomerOrders`). Both break ties on `id`, so neither can return two
+ * equal rows in a different order between reads. */
+export type CustomerOrderListOrder = 'creation' | 'needed_by';
+
 // AC-01/AC-19/AC-19a/AC-19b — the Customer Order write path. Its reason for existing as one
 // repository rather than a table-shaped one is `lockOrderWithAllocatedTotal`: `sad.md` §6.10
 // requires the row to be locked and the total already allocated to it to be read **in the same
@@ -180,18 +187,28 @@ export class CustomerOrderLifecycleRepository {
 
   // `GET /customer-orders?itemId=…&state=…` (openapi.yaml) — the acting Warehouse's Customer
   // Orders, optionally narrowed to one Item and/or one state. `idx_customer_orders_warehouse_created`
-  // returns them deterministically ordered (data-model.md "Indexes").
+  // returns them deterministically ordered (data-model.md "Indexes"). `order` defaults to the
+  // creation ordering the Demand sub-rows and the draft picker already read, so the endpoint that
+  // needs openapi.yaml's needed-by ordering asks for it explicitly rather than changing what those
+  // two callers see.
   listCustomerOrders(
     warehouseId: string,
     filter: ListCustomerOrdersFilter = {},
+    order: CustomerOrderListOrder = 'creation',
   ): Promise<CustomerOrderEntity[]> {
     const manager = getEntityManager(this.dataSource);
 
     const queryBuilder = manager
       .getRepository(CustomerOrderEntity)
       .createQueryBuilder('order')
-      .where('order.warehouseId = :warehouseId', { warehouseId })
-      .orderBy('order.createdAt', 'ASC')
+      .where('order.warehouseId = :warehouseId', { warehouseId });
+
+    if (order === 'needed_by') {
+      queryBuilder.orderBy('order.neededBy', 'ASC');
+    }
+
+    queryBuilder
+      .addOrderBy('order.createdAt', 'ASC')
       .addOrderBy('order.id', 'ASC');
 
     if (filter.itemId !== undefined) {

@@ -34,6 +34,7 @@ import { ArchivedTolerantRead } from 'shared/access/archived-tolerant-read.decor
 import { RequiredPermission } from 'shared/decorators/required-permission.decorator';
 import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
 import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
+import { WriteRateLimitGuard } from 'shared/guards/write-rate-limit.guard';
 import { WriteRateLimited } from 'shared/guards/write-rate-limited.decorator';
 
 const toItemResponse = (entry: ItemCatalogueEntryRead): Item => ({
@@ -94,7 +95,7 @@ export class ItemsController {
   @HttpCode(HttpStatus.CREATED)
   @RequiredPermission(PermissionId.ITEMS_CREATE)
   @WriteRateLimited()
-  @UseGuards(SessionAuthGuard, WarehouseAccessGuard)
+  @UseGuards(SessionAuthGuard, WarehouseAccessGuard, WriteRateLimitGuard)
   async createItem(
     @Req() request: WarehouseAccessRequest,
     @Body() input: ItemCreateDto,
@@ -114,7 +115,7 @@ export class ItemsController {
   @Patch(':itemId')
   @RequiredPermission(PermissionId.ITEMS_UPDATE)
   @WriteRateLimited()
-  @UseGuards(SessionAuthGuard, WarehouseAccessGuard)
+  @UseGuards(SessionAuthGuard, WarehouseAccessGuard, WriteRateLimitGuard)
   async correctItem(
     @Param('itemId', new ParseUUIDPipe()) itemId: string,
     @Req() request: WarehouseAccessRequest,
@@ -133,7 +134,7 @@ export class ItemsController {
   @HttpCode(HttpStatus.OK)
   @RequiredPermission(PermissionId.ITEMS_DEACTIVATE)
   @WriteRateLimited()
-  @UseGuards(SessionAuthGuard, WarehouseAccessGuard)
+  @UseGuards(SessionAuthGuard, WarehouseAccessGuard, WriteRateLimitGuard)
   async deactivateItem(
     @Param('itemId', new ParseUUIDPipe()) itemId: string,
     @Req() request: WarehouseAccessRequest,
@@ -151,7 +152,7 @@ export class ItemsController {
   @HttpCode(HttpStatus.OK)
   @RequiredPermission(PermissionId.ITEMS_DEACTIVATE)
   @WriteRateLimited()
-  @UseGuards(SessionAuthGuard, WarehouseAccessGuard)
+  @UseGuards(SessionAuthGuard, WarehouseAccessGuard, WriteRateLimitGuard)
   async reactivateItem(
     @Param('itemId', new ParseUUIDPipe()) itemId: string,
     @Req() request: WarehouseAccessRequest,
@@ -169,7 +170,7 @@ export class ItemsController {
   @HttpCode(HttpStatus.CREATED)
   @RequiredPermission(PermissionId.ITEM_STOCK_ADJUST)
   @WriteRateLimited()
-  @UseGuards(SessionAuthGuard, WarehouseAccessGuard)
+  @UseGuards(SessionAuthGuard, WarehouseAccessGuard, WriteRateLimitGuard)
   async adjustOnHand(
     @Param('itemId', new ParseUUIDPipe()) itemId: string,
     @Req() request: WarehouseAccessRequest,

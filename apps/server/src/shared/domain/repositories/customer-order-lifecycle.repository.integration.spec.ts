@@ -76,6 +76,11 @@ interface CustomerOrderLifecycleRepositoryContract {
       cancelledAt: Date;
     },
   ): Promise<CustomerOrderEntity>;
+  listCustomerOrders(
+    warehouseId: string,
+    filter?: { itemId?: string; state?: string },
+    order?: 'creation' | 'needed_by',
+  ): Promise<CustomerOrderEntity[]>;
 }
 
 const repository = new CustomerOrderLifecycleRepository(
@@ -231,6 +236,7 @@ const seedAllocation = async (
 const readOrder = (id: string): Promise<CustomerOrderEntity | null> =>
   dataSource.manager.getRepository(CustomerOrderEntity).findOneBy({ id });
 
+// eslint-disable-next-line max-lines-per-function -- one suite covering one repository's whole persistence surface is inherently long, matching the other repository integration specs in this directory
 describeIntegration('CustomerOrderLifecycleRepository', () => {
   beforeAll(async () => {
     await dataSource.initialize();
@@ -456,6 +462,130 @@ describeIntegration('CustomerOrderLifecycleRepository', () => {
     expect(cancelled).toMatchObject({
       quantity: 100,
       outstandingQuantity: 100,
+    });
+  });
+
+  // T11 — `listCustomerOrders` serves two callers that need two different orders, so both branches
+  // are pinned here against real SQL. The fixture makes the two orders **disagree**: the row needed
+  // soonest is the one created last. A single ordering therefore cannot satisfy both assertions,
+  // and dropping the `order` argument at either call site fails one of them.
+  describe('listCustomerOrders', () => {
+    interface OrderingFixture {
+      readonly seeded: Seeded;
+      readonly earliestNeededLatestCreated: string;
+      readonly latestNeededEarliestCreated: string;
+      readonly middle: string;
+    }
+
+    const seedDisagreeingOrders = async (): Promise<OrderingFixture> => {
+      const seeded = await seed();
+      // created first, needed last
+      const latestNeededEarliestCreated = await seedCustomerOrder(seeded, {
+        neededBy: '2099-03-01',
+        createdAt: new Date('2026-08-26T09:00:00.000Z'),
+      });
+      const middle = await seedCustomerOrder(seeded, {
+        neededBy: '2099-02-01',
+        createdAt: new Date('2026-08-26T10:00:00.000Z'),
+      });
+      // created last, needed first
+      const earliestNeededLatestCreated = await seedCustomerOrder(seeded, {
+        neededBy: '2099-01-01',
+        createdAt: new Date('2026-08-26T11:00:00.000Z'),
+      });
+      return {
+        seeded,
+        earliestNeededLatestCreated,
+        latestNeededEarliestCreated,
+        middle,
+      };
+    };
+
+    // The default the Demand sub-rows and the draft-line Customer Order picker read; unchanged by
+    // T11 so those two callers see exactly what they always did.
+    it('orders by creation time by default', async () => {
+      const fixture = await seedDisagreeingOrders();
+
+      const orders = await repository.listCustomerOrders(
+        fixture.seeded.warehouseId,
+      );
+
+      expect(orders.map((order) => order.id)).toEqual([
+        fixture.latestNeededEarliestCreated,
+        fixture.middle,
+        fixture.earliestNeededLatestCreated,
+      ]);
+    });
+
+    // openapi.yaml `listCustomerOrders` 200 — "ordered by needed-by date then creation time".
+    it('orders by needed-by date when the needed-by ordering is requested', async () => {
+      const fixture = await seedDisagreeingOrders();
+
+      const orders = await repository.listCustomerOrders(
+        fixture.seeded.warehouseId,
+        {},
+        'needed_by',
+      );
+
+      expect(orders.map((order) => order.id)).toEqual([
+        fixture.earliestNeededLatestCreated,
+        fixture.middle,
+        fixture.latestNeededEarliestCreated,
+      ]);
+    });
+
+    // Rows sharing a needed-by date fall back to creation time, so the response is never
+    // non-deterministic between two reads.
+    it('breaks a needed-by tie on creation time', async () => {
+      const seeded = await seed();
+      const createdFirst = await seedCustomerOrder(seeded, {
+        neededBy: '2099-01-01',
+        createdAt: new Date('2026-08-26T09:00:00.000Z'),
+      });
+      const createdSecond = await seedCustomerOrder(seeded, {
+        neededBy: '2099-01-01',
+        createdAt: new Date('2026-08-26T10:00:00.000Z'),
+      });
+
+      const orders = await repository.listCustomerOrders(
+        seeded.warehouseId,
+        {},
+        'needed_by',
+      );
+
+      expect(orders.map((order) => order.id)).toEqual([
+        createdFirst,
+        createdSecond,
+      ]);
+    });
+
+    // The narrowings openapi.yaml documents, and the Warehouse scope every read of this repository
+    // carries.
+    it('narrows by Item and by state, and never leaves the acting Warehouse', async () => {
+      const seeded = await seed();
+      const unfulfilled = await seedCustomerOrder(seeded);
+      // `chk_customer_orders_cancellation_attribution` — the reason, the member and the time
+      // arrive together or not at all (AC-19a), so a seeded cancelled row carries all three.
+      await seedCustomerOrder(seeded, {
+        state: 'cancelled',
+        cancellationReason: 'Seeded cancellation',
+        cancelledByUserId: seeded.userId,
+        cancelledAt: later,
+      });
+
+      const everyState = await repository.listCustomerOrders(
+        seeded.warehouseId,
+      );
+      const narrowed = await repository.listCustomerOrders(
+        seeded.warehouseId,
+        { itemId: seeded.itemId, state: 'unfulfilled' },
+        'needed_by',
+      );
+      const otherWarehouse = await repository.listCustomerOrders(randomUUID());
+
+      expect(everyState).toHaveLength(2);
+      expect(narrowed.map((order) => order.id)).toEqual([unfulfilled]);
+      expect(otherWarehouse).toEqual([]);
     });
   });
 });
