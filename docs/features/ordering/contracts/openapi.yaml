@@ -630,11 +630,11 @@ paths:
                 items: { $ref: "#/components/schemas/PackagingType" }
               example:
                 - id: "cable_coil"
-                  label: "Cable Coil"
+                  label: "Cable coil"
                 - id: "cartons"
                   label: "Cartons"
                 - id: "loose_items"
-                  label: "Loose Items"
+                  label: "Loose items"
                 - id: "pallets"
                   label: "Pallets"
         "401": { $ref: "#/components/responses/Unauthenticated" }
