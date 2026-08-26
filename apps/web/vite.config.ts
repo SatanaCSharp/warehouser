@@ -15,6 +15,10 @@ export default defineConfig({
         __dirname,
         '../../packages/contracts/src/auth/index.ts',
       ),
+      '@warehouser/contracts/items': path.resolve(
+        __dirname,
+        '../../packages/contracts/src/items/index.ts',
+      ),
       '@warehouser/contracts/users': path.resolve(
         __dirname,
         '../../packages/contracts/src/users/index.ts',
@@ -28,6 +32,7 @@ export default defineConfig({
         '../../packages/shared-types/src/enums/index.ts',
       ),
       access: path.resolve(__dirname, '../../packages/contracts/src/access'),
+      items: path.resolve(__dirname, '../../packages/contracts/src/items'),
       workspaces: path.resolve(
         __dirname,
         '../../packages/contracts/src/workspaces',

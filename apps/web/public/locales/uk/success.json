@@ -14,6 +14,13 @@
     "transferManager": "Керування складом передано.",
     "updateRole": "Роль оновлено."
   },
+  "item": {
+    "createItem": "Товар додано.",
+    "updateItem": "Товар виправлено.",
+    "deactivateItem": "Товар деактивовано.",
+    "reactivateItem": "Товар реактивовано.",
+    "adjustOnHandQuantity": "Кількість в наявності записано."
+  },
   "workspace": {
     "renameWorkspace": "Робочий простір названо.",
     "createWarehouse": "Склад додано.",

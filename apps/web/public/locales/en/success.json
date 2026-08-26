@@ -14,6 +14,13 @@
     "transferManager": "Warehouse management transferred.",
     "updateRole": "Role updated."
   },
+  "item": {
+    "createItem": "Item added.",
+    "updateItem": "Item corrected.",
+    "deactivateItem": "Item deactivated.",
+    "reactivateItem": "Item reactivated.",
+    "adjustOnHandQuantity": "On-hand quantity recorded."
+  },
   "workspace": {
     "renameWorkspace": "Workspace named.",
     "createWarehouse": "Warehouse added.",

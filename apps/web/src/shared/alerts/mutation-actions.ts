@@ -13,7 +13,7 @@
  */
 export type MutationFeedback = {
   /** The `pending`/`success` namespace prefix the descriptions live under. */
-  scope: 'access' | 'auth' | 'workspace';
+  scope: 'access' | 'auth' | 'item' | 'workspace';
   /**
    * The action key, when it is not the endpoint name — including the case of
    * one endpoint reporting two different outcomes, which reads its argument.
@@ -83,4 +83,15 @@ export const MUTATION_FEEDBACK: Record<string, MutationFeedback> = {
   changeMemberEmail: feedback({ scope: 'access' }),
   changeMemberPassword: feedback({ scope: 'access' }),
   deleteMember: feedback({ scope: 'access' }),
+
+  // Item catalogue (T18).
+  createItem: feedback({ scope: 'item' }),
+  updateItem: feedback({ scope: 'item' }),
+  // AC-06d — one endpoint, two outcomes.
+  deactivateItem: feedback({ scope: 'item', action: 'deactivateItem' }),
+  reactivateItem: feedback({ scope: 'item', action: 'reactivateItem' }),
+  adjustItemOnHandQuantity: feedback({
+    scope: 'item',
+    action: 'adjustOnHandQuantity',
+  }),
 };

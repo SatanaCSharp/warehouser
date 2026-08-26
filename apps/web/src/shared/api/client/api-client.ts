@@ -125,6 +125,7 @@ export const api = createApi({
     'CurrentAccess',
     'CurrentSession',
     'AccessMembers',
+    'Items',
     'Permissions',
     'Roles',
     'WorkspaceContext',

@@ -1,5 +1,69 @@
 {
   "head": {
     "title": "Items"
+  },
+  "directory": {
+    "heading": "Items",
+    "createAction": "Add item",
+    "table": {
+      "sku": "SKU",
+      "description": "Description",
+      "unitOfMeasure": "Unit",
+      "onHand": "On hand",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "empty": "No items yet.",
+    "error": "Items could not be loaded.",
+    "menu": {
+      "actions": "Actions for {{sku}}",
+      "correct": "Correct item",
+      "deactivate": "Deactivate",
+      "reactivate": "Reactivate",
+      "adjustOnHand": "Adjust on-hand quantity"
+    }
+  },
+  "chips": {
+    "active": "Active",
+    "inactive": "Inactive"
+  },
+  "picker": {
+    "label": "Item",
+    "inactiveNotOffered": "Inactive items are not offered."
+  },
+  "dialogs": {
+    "create": {
+      "title": "Add item",
+      "cancel": "Cancel",
+      "submit": "Add item",
+      "skuLabel": "SKU",
+      "descriptionLabel": "Description",
+      "unitOfMeasureLabel": "Unit of measure",
+      "refusal": "Nothing has changed."
+    },
+    "correct": {
+      "title": "Correct item",
+      "cancel": "Cancel",
+      "submit": "Save changes",
+      "descriptionLabel": "Description",
+      "unitOfMeasureLabel": "Unit of measure",
+      "refusal": "Nothing has changed."
+    },
+    "deactivate": {
+      "title": "Deactivate item {{sku}}",
+      "cancel": "Cancel",
+      "submit": "Deactivate",
+      "body": "Existing Customer Orders and Purchase Draft Lines keep naming this item.",
+      "refusal": "Nothing has changed."
+    },
+    "adjustOnHand": {
+      "title": "Adjust on-hand quantity",
+      "cancel": "Cancel",
+      "submit": "Save quantity",
+      "quantityLabel": "Counted quantity",
+      "reasonLabel": "Reason",
+      "reasonRequired": "State a reason for every change to on-hand quantity.",
+      "refusal": "Nothing has changed."
+    }
   }
 }

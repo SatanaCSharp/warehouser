@@ -686,6 +686,8 @@ describe('readiness removal — declarative permission gating is unchanged (CR-R
     'modules/access/components/workspace-administration/members/WorkspaceMemberRow.tsx': 4,
     'modules/access/components/workspace-administration/roles/CreateWorkspaceRoleAction.tsx': 4,
     'modules/access/components/workspace-administration/roles/DeleteWorkspaceRoleAction.tsx': 4,
+    'modules/item/components/item-directory/components/CreateItemAction.tsx': 4,
+    'modules/item/hooks/projections/useItemActions.ts': 3,
     'modules/workspace/components/WorkspaceAdministration.tsx': 3,
     'modules/workspace/components/workspace-administration/NameWorkspaceAction.tsx': 4,
     'modules/workspace/components/workspace-administration/warehouses/AddWarehouseAction.tsx': 4,
