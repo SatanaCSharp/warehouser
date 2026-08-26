@@ -250,6 +250,49 @@ describeIntegration('DemandAllocationRepository', () => {
     ).toBe(idC);
   });
 
+  // T15 review regression — two links of one confirmation may reach the **same** Customer Order:
+  // one draft may hold two lines for one Item, each linked to that order. The join then yields one
+  // raw row per link while `getRawAndEntities()` returns TypeORM's *deduplicated* entity list, so
+  // the two collections differ in length and correlating them by position drops the surplus link.
+  // A dropped link resolves to no order, which the caller can only read as a cancelled one — so a
+  // perfectly healthy order gets refused with the wrong reason, defeating AC-18's requirement that
+  // the member be told which assignment is refused *and why*. Every requested link must come back.
+  it('resolves every link when two of them reach the same Customer Order', async () => {
+    const seeded = await seed();
+    const sharedOrderId = await seedCustomerOrder(seeded, {
+      quantity: 100,
+      outstandingQuantity: 100,
+    });
+    const lineOneId = randomUUID();
+    const lineTwoId = randomUUID();
+    await seedPurchaseDraftLine(seeded, lineOneId);
+    await seedPurchaseDraftLine(seeded, lineTwoId);
+    const linkOne = randomUUID();
+    const linkTwo = randomUUID();
+    await seedLink(seeded, lineOneId, sharedOrderId, linkOne);
+    await seedLink(seeded, lineTwoId, sharedOrderId, linkTwo);
+
+    const locked = await transactions.executeInTransaction({}, () =>
+      repository.lockCustomerOrdersForLinks(
+        [linkOne, linkTwo],
+        seeded.warehouseId,
+      ),
+    );
+
+    expect(
+      locked
+        .map(({ purchaseDraftLineLinkId }) => purchaseDraftLineLinkId)
+        .sort(),
+    ).toEqual([linkOne, linkTwo].sort());
+    // Both resolve to the one order, each carrying its real Outstanding Quantity rather than a
+    // default standing in for a row that was never returned.
+    for (const entry of locked) {
+      expect(entry.order.id).toBe(sharedOrderId);
+      expect(entry.order.outstandingQuantity).toBe(100);
+      expect(entry.order.state).toBe('unfulfilled');
+    }
+  });
+
   // A link of another Warehouse resolves to nothing, on the same non-enumerating terms every other
   // locking read in this feature already follows (AC-03, sad.md §6.9/§6.10).
   it('resolves nothing for a link of another Warehouse', async () => {

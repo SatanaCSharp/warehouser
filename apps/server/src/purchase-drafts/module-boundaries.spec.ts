@@ -58,3 +58,22 @@ describe('purchase-drafts usecase module surface', () => {
     },
   );
 });
+
+// T15 — the arrival-confirmation command is this feature's fourth application-boundary member;
+// kept as its own `it.each` block, following T14's precedent, so a second concurrent addition to
+// this file never collides on the same array literal.
+describe('purchase-drafts usecase module surface (T15)', () => {
+  it.each(['ConfirmPurchaseDraftArrivalCommand'])(
+    'provides and exports %s from the use-case module',
+    (commandName) => {
+      const source = readUsecaseModuleSource();
+
+      expect(providersBlockOf(source)).toMatch(
+        new RegExp(`\\b${commandName}\\b`, 'u'),
+      );
+      expect(exportsBlockOf(source)).toMatch(
+        new RegExp(`\\b${commandName}\\b`, 'u'),
+      );
+    },
+  );
+});

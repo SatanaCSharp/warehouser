@@ -74,12 +74,26 @@ export class DemandAllocationRepository {
       .setLock('pessimistic_write')
       .getRawAndEntities();
 
-    const rawRows = raw as Array<{ link_id: string }>;
+    // One raw row per matched link, but `entities` is TypeORM's **deduplicated** entity list: two
+    // links of one confirmation may reach the same Customer Order (one draft may hold two lines for
+    // one Item, both linked to that order), and then the two lists have different lengths and
+    // different meanings. Pairing them by position would silently drop the surplus links, and a
+    // dropped link resolves to no order at all — which the caller can only read as "cancelled",
+    // refusing a healthy order with the wrong reason (AC-18 requires the member be told which
+    // assignment is refused *and why*). Correlating through the order identifier carried on each
+    // raw row is what keeps every requested link represented.
+    // `demand_id` is the alias TypeORM already gives the root entity's own key; do not re-select
+    // it under a custom alias, which replaces rather than supplements that alias and leaves the
+    // hydrated entities without their identifiers.
+    const rawRows = raw as Array<{ link_id: string; demand_id: string }>;
+    const orderById = new Map(entities.map((order) => [order.id, order]));
 
-    return entities.map((order, index) => ({
-      purchaseDraftLineLinkId: rawRows[index].link_id,
-      order,
-    }));
+    return rawRows.flatMap((row) => {
+      const order = orderById.get(row.demand_id);
+      return order === undefined
+        ? []
+        : [{ purchaseDraftLineLinkId: row.link_id, order }];
+    });
   }
 
   // sad.md §6.9 step 6 — "the Allocation rows and the Customer Order recompute land together or not

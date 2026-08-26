@@ -153,11 +153,26 @@ export class DemandAllocationService {
   // assignment exceeds what it is still waiting for. A cancelled or already-Fulfilled order's
   // Outstanding Quantity is not a meaningful floor, so that bound is reported instead of a
   // possibly-stale outstanding-quantity one.
+  //
+  // "assigns to one Customer Order more than it is still waiting for" is a bound on the **order
+  // across the whole confirmation**, not on one assignment. One draft may hold two lines for one
+  // Item both linked to the same order (`purchase_draft_lines` carries no unique on
+  // `(purchase_draft_id, item_id)`), so each assignment can sit inside the order's Outstanding
+  // Quantity while their sum does not. Each assignment is therefore judged against the balance its
+  // predecessors left, not against the locked snapshot: it is the assignment that actually breaches
+  // the remainder that gets named, and the caller sees the balance it breached. Left unaggregated
+  // the surplus reaches `applyAllocations`, drives `outstanding_quantity` negative and turns
+  // `chk_customer_orders_outstanding_bounds` into an untyped failure instead of this refusal.
+  // A breaching assignment does not consume the remainder, so one overshoot cannot cascade into
+  // false violations against the assignments that follow it.
   private collectViolations(
     lines: readonly DemandAllocationLineInput[],
     orderByLinkId: ReadonlyMap<string, CustomerOrderEntity>,
   ): AllocationBoundViolation[] {
     const violations: AllocationBoundViolation[] = [];
+    // What each Customer Order is still waiting for as the confirmation is walked, seeded from the
+    // rows this transaction locked and drawn down by each assignment accepted against it.
+    const remainingByOrderId = new Map<string, number>();
 
     for (const line of lines) {
       const allocatedQuantity = line.allocations.reduce(
@@ -189,7 +204,11 @@ export class DemandAllocationService {
           continue;
         }
 
-        const outstandingQuantity = order?.outstandingQuantity ?? 0;
+        const customerOrderId = order!.id;
+        const outstandingQuantity =
+          remainingByOrderId.get(customerOrderId) ??
+          order?.outstandingQuantity ??
+          0;
         if (
           exceedsOutstandingQuantity(
             allocation.allocatedQuantity,
@@ -202,7 +221,13 @@ export class DemandAllocationService {
             outstandingQuantity,
             allocatedQuantity: allocation.allocatedQuantity,
           });
+          continue;
         }
+
+        remainingByOrderId.set(
+          customerOrderId,
+          outstandingQuantity - allocation.allocatedQuantity,
+        );
       }
     }
 

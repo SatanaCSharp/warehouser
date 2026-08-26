@@ -1,6 +1,7 @@
 import { Global, Module } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { ClosePurchaseDraftCommand } from 'purchase-drafts/usecases/commands/close-purchase-draft.command';
+import { ConfirmPurchaseDraftArrivalCommand } from 'purchase-drafts/usecases/commands/confirm-purchase-draft-arrival.command';
 import { DiscardPurchaseDraftCommand } from 'purchase-drafts/usecases/commands/discard-purchase-draft.command';
 import { ReadyPurchaseDraftCommand } from 'purchase-drafts/usecases/commands/ready-purchase-draft.command';
 import { ListPurchaseDraftsQuery } from 'purchase-drafts/usecases/queries/list-purchase-drafts.query';
@@ -42,6 +43,15 @@ describe('PurchaseDraftsUsecaseModule Nest DI graph', () => {
     );
     expect(moduleRef.get(DiscardPurchaseDraftCommand)).toBeInstanceOf(
       DiscardPurchaseDraftCommand,
+    );
+    // T15 — the arrival confirmation is the first use case in this module whose graph leaves it:
+    // `ArrivalConfirmationService` takes `DemandAllocationService`, which resolves only because
+    // `PurchaseDraftsUsecaseModule` imports `CustomerOrdersUsecaseModule` and that module exports
+    // it (ADR 0002). Compiling it here is what proves the cross-module edge is wired, and that
+    // neither service's `@Optional()` runtime parameter — an interface, so `Object` under
+    // `emitDecoratorMetadata` — stops the injector resolving the rest.
+    expect(moduleRef.get(ConfirmPurchaseDraftArrivalCommand)).toBeInstanceOf(
+      ConfirmPurchaseDraftArrivalCommand,
     );
     expect(moduleRef.get(ReadPurchaseDraftQuery)).toBeInstanceOf(
       ReadPurchaseDraftQuery,

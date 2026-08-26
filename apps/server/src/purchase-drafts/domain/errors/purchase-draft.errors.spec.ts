@@ -7,6 +7,10 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
 import {
+  purchaseDraftArrivalAlreadyConfirmedError,
+  purchaseDraftArrivalNoLinesError,
+  purchaseDraftArrivalRepeatedLineError,
+  purchaseDraftArrivalUnknownLineError,
   purchaseDraftConcurrentChangeError,
   purchaseDraftDiscardUnavailableError,
   purchaseDraftEmptyError,
@@ -112,5 +116,95 @@ describe('purchase-draft domain error factories', () => {
       code: ErrorCode.PURCHASE_DRAFTS_INVALID_STATE,
     });
     expect(error.details).toBeUndefined();
+  });
+
+  // T15/AC-17b (sad.md §8) — a pre-read that already finds the draft outside Ready for Ordering
+  // never reaches the guarded write. openapi.yaml `ArrivalConfirmationConflict` `alreadyConfirmed`
+  // example carries no `details`.
+  it('builds a non-enumerating ApplicationError for a second confirmation', () => {
+    const error = purchaseDraftArrivalAlreadyConfirmedError();
+
+    expect(error).toBeInstanceOf(ApplicationError);
+    expect(error).toMatchObject({
+      code: ErrorCode.PURCHASE_DRAFTS_ARRIVAL_ALREADY_CONFIRMED,
+    });
+    expect(error.details).toBeUndefined();
+  });
+
+  // T15/AC-15 — the confirmation named a line that is not a line of the draft being confirmed.
+  // openapi.yaml `InvalidPurchaseDraftInput` fixes the `details: { field, rule }` shape.
+  it('builds an ApplicationError naming the lines a confirmation may not reach', () => {
+    const offending = ['00000000-0000-4000-8000-0000000004ab'];
+    const error = purchaseDraftArrivalUnknownLineError(offending);
+
+    expect(error).toBeInstanceOf(ApplicationError);
+    expect(error).toMatchObject({
+      code: ErrorCode.PURCHASE_DRAFTS_INVALID_INPUT,
+    });
+    expect(error.details).toEqual({
+      field: 'lines[].purchaseDraftLineId',
+      rule: 'line_of_this_draft',
+      purchaseDraftLineIds: offending,
+    });
+  });
+
+  // spec.md §6.1 "Cross-Warehouse demand reach" / "Customer disclosure through denial" — the whole
+  // non-enumeration claim of this write path, asserted directly rather than inferred from two
+  // integration cases. The factory has no way to distinguish the three situations because it is
+  // never told which one occurred: the caller decides membership of *this* draft's lines, so a
+  // line of another Warehouse, a line of another draft, and a line that does not exist at all
+  // produce a byte-identical refusal. A member cannot probe for what exists elsewhere.
+  it('refuses identically whether the line is foreign, another draft, or nonexistent', () => {
+    const foreignWarehouseLine = '00000000-0000-4000-8000-0000000004ab';
+    const anotherDraftLine = '00000000-0000-4000-8000-0000000004cd';
+    const nonexistentLine = '00000000-0000-4000-8000-0000000004ef';
+
+    const refusals = [
+      foreignWarehouseLine,
+      anotherDraftLine,
+      nonexistentLine,
+    ].map((id) => {
+      const error = purchaseDraftArrivalUnknownLineError([id]);
+      return JSON.stringify({ code: error.code, details: error.details });
+    });
+
+    // Identical but for the caller's own submitted identifier, which discloses nothing it did not
+    // already supply.
+    const normalised = refusals.map((refusal) =>
+      refusal
+        .replace(foreignWarehouseLine, '<id>')
+        .replace(anotherDraftLine, '<id>')
+        .replace(nonexistentLine, '<id>'),
+    );
+    expect(new Set(normalised).size).toBe(1);
+  });
+
+  // T15/AC-18 — one line named twice would split the per-line bound across two entries.
+  it('builds an ApplicationError for a repeated line', () => {
+    const error = purchaseDraftArrivalRepeatedLineError();
+
+    expect(error).toBeInstanceOf(ApplicationError);
+    expect(error).toMatchObject({
+      code: ErrorCode.PURCHASE_DRAFTS_INVALID_INPUT,
+    });
+    expect(error.details).toEqual({
+      field: 'lines[].purchaseDraftLineId',
+      rule: 'one_entry_per_line',
+    });
+  });
+
+  // T15/AC-17 — openapi.yaml `ArrivalConfirmation.lines` carries `minItems: 1`; this is the domain
+  // invariant behind that transport-tier guard.
+  it('builds an ApplicationError for a confirmation stating no lines', () => {
+    const error = purchaseDraftArrivalNoLinesError();
+
+    expect(error).toBeInstanceOf(ApplicationError);
+    expect(error).toMatchObject({
+      code: ErrorCode.PURCHASE_DRAFTS_INVALID_INPUT,
+    });
+    expect(error.details).toEqual({
+      field: 'lines',
+      rule: 'at_least_one_line',
+    });
   });
 });
