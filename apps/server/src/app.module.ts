@@ -4,6 +4,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AccessRestModule } from 'access';
 import { AuthModule } from 'auth/auth.module';
+import { ItemsModule } from 'items';
 import { createTypeOrmOptions } from 'shared/database/typeorm.options';
 import { DomainModule } from 'shared/domain/domain.module';
 import { AppLoggerModule } from 'shared/logger/app-logger.module';
@@ -24,6 +25,7 @@ import { WorkspacesRestModule } from 'workspaces';
     DomainModule,
     AuthModule,
     AccessRestModule,
+    ItemsModule,
     WarehousesRestModule,
     WorkspacesRestModule,
     BullModule.forRootAsync({

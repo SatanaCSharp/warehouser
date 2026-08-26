@@ -17,6 +17,10 @@
       "types": "./dist/auth/index.d.ts",
       "default": "./dist/auth/index.js"
     },
+    "./items": {
+      "types": "./dist/items/index.d.ts",
+      "default": "./dist/items/index.js"
+    },
     "./users": {
       "types": "./dist/users/index.d.ts",
       "default": "./dist/users/index.js"

@@ -44,12 +44,20 @@ const collectProductionSources = (
 // - `consolidated-demand.repository.ts` reads the figure back beside each Demand Line (AC-04, "the
 //   Item's current On-hand Quantity"), in the same one-query read as the demand totals themselves
 //   (data-model.md "The non-fan-out requirement").
+// - `item-catalogue-entry.mapper.ts` (T7) assembles the persistence row `item-catalogue.repository.ts`
+//   already reads into the `Item` projection openapi.yaml documents; it forwards the figure, it
+//   never computes or writes it.
+// - `items.controller.ts` (T7) is the REST handler that serializes the figure into the `Item` HTTP
+//   response body and passes a submitted `countedQuantity` straight through to
+//   `AdjustItemOnHandCommand`, without deriving or writing it itself.
 //
 // This list is the tripwire, not the rule: a new entry is a deliberate decision about AC-18a, and a
 // reader adding one has to say whether the new file reads the figure or moves it. Only the second
 // kind is forbidden, and the two assertions below are what forbid it.
 const ALLOWED_TO_NAME_THE_FIGURE = [
+  'items/domain/mappers/item-catalogue-entry.mapper.ts',
   'items/domain/predicates/on-hand-adjustment.predicates.ts',
+  'items/rest/controllers/items.controller.ts',
   'items/usecases/commands/create-item.command.ts',
   'items/usecases/queries/list-warehouse-items.query.ts',
   'shared/domain/entities/item.entity.ts',

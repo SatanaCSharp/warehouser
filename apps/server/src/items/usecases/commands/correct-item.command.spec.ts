@@ -21,7 +21,14 @@ const currentUser: AccessCurrentUser = {
   archived: false,
 };
 
-const itemCatalogueRepositoryDouble = (isNamed: boolean) => ({
+const itemCatalogueRepositoryDouble = (
+  isNamed: boolean,
+  item: { id: string; warehouseId: string } = {
+    id: namedItemId,
+    warehouseId,
+  },
+) => ({
+  findById: jest.fn().mockResolvedValue(item),
   isNamedByDemandOrDraft: jest.fn().mockResolvedValue(isNamed),
   findBySku: jest.fn().mockResolvedValue(null),
   updateSku: jest.fn().mockResolvedValue(undefined),
@@ -29,6 +36,43 @@ const itemCatalogueRepositoryDouble = (isNamed: boolean) => ({
 });
 
 describe('CorrectItemCommand', () => {
+  // AC-03/openapi.yaml `ItemUnavailable` — an Item of another Warehouse is refused exactly as a
+  // missing one, disclosing nothing about where it exists. T7 (items HTTP contract) needs this at
+  // the use-case level so the REST handler's 404 never depends on a look-aside check of its own.
+  it('refuses an Item of another Warehouse the same non-enumerating way as a missing one', async () => {
+    const itemCatalogueRepository = itemCatalogueRepositoryDouble(false, {
+      id: namedItemId,
+      warehouseId: 'some-other-warehouse',
+    });
+    const command = new CorrectItemCommand(itemCatalogueRepository as never);
+
+    const rejection = command.execute(currentUser, namedItemId, {
+      description: 'New description',
+    });
+
+    await expect(rejection).rejects.toBeInstanceOf(ApplicationError);
+    await expect(rejection).rejects.toMatchObject({
+      code: ErrorCode.ITEMS_TARGET_UNAVAILABLE,
+    });
+    expect(itemCatalogueRepository.updateItemDetails).not.toHaveBeenCalled();
+  });
+
+  it('refuses a missing Item the same way', async () => {
+    const itemCatalogueRepository = {
+      ...itemCatalogueRepositoryDouble(false),
+      findById: jest.fn().mockResolvedValue(null),
+    };
+    const command = new CorrectItemCommand(itemCatalogueRepository as never);
+
+    const rejection = command.execute(currentUser, namedItemId, {
+      description: 'New description',
+    });
+
+    await expect(rejection).rejects.toMatchObject({
+      code: ErrorCode.ITEMS_TARGET_UNAVAILABLE,
+    });
+  });
+
   // AC-06c — a SKU stops being correctable once demand or a draft names the Item.
   it('refuses a SKU change on an Item that a Customer Order or a Purchase Draft Line already names', async () => {
     const itemCatalogueRepository = itemCatalogueRepositoryDouble(true);

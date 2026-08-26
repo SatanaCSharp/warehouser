@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { assert } from '@warehouser/utils/asserts';
+import { assert, assertDefined } from '@warehouser/utils/asserts';
 import {
   itemSkuFixedError,
   itemSkuTakenError,
+  itemTargetUnavailableError,
 } from 'items/domain/errors/item.errors';
 import { isSkuCorrectable } from 'items/domain/predicates/item-catalogue.predicates';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
@@ -31,6 +32,15 @@ export class CorrectItemCommand {
     itemId: string,
     input: CorrectItemInput,
   ): Promise<void> {
+    // AC-03/openapi.yaml `ItemUnavailable` — an Item of another Warehouse is refused exactly as a
+    // missing one, disclosing nothing about where it exists.
+    const item = await this.itemCatalogueRepository.findById(itemId);
+    assertDefined(item, itemTargetUnavailableError());
+    assert(
+      item.warehouseId === currentUser.warehouseId,
+      itemTargetUnavailableError(),
+    );
+
     if (input.sku !== undefined) {
       const isNamed =
         await this.itemCatalogueRepository.isNamedByDemandOrDraft(itemId);
@@ -48,10 +58,14 @@ export class CorrectItemCommand {
       await this.itemCatalogueRepository.updateSku(itemId, sku);
     }
 
-    if (input.description !== undefined && input.unitOfMeasure !== undefined) {
+    // AC-06b — description and Unit of Measure are always correctable independently of one
+    // another; `ItemUpdate` requires only one to be present (openapi.yaml). The repository's
+    // `updateItemDetails` writes both columns together, so a field the request left out is carried
+    // forward from the row `findById` already confirmed, never silently dropped.
+    if (input.description !== undefined || input.unitOfMeasure !== undefined) {
       await this.itemCatalogueRepository.updateItemDetails(itemId, {
-        description: input.description,
-        unitOfMeasure: input.unitOfMeasure,
+        description: input.description ?? item.description,
+        unitOfMeasure: input.unitOfMeasure ?? item.unitOfMeasure,
       });
     }
   }

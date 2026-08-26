@@ -29,6 +29,17 @@ export interface ItemWithOnHandAndLatestReasonRead {
   readonly onHandQuantity: number;
   readonly deactivatedAt: Date | null;
   readonly latestAdjustmentReason: string | null;
+  readonly latestAdjustmentQuantity: number | null;
+  readonly latestAdjustedAt: Date | null;
+  readonly createdAt: Date;
+}
+
+export interface FindItemsWithOnHandOptions {
+  /** Narrows the result to one Item — the full-projection read a mutating REST handler confirms
+   * from after a write (T7). Optional so the existing whole-Warehouse read is unaffected. */
+  readonly itemId?: string;
+  /** AC-06a — the picker read: only Items that are not deactivated. */
+  readonly activeOnly?: boolean;
 }
 
 // AC-06/AC-06b/AC-06c/AC-06d/AC-07/AC-07a — the Item catalogue: SKU uniqueness within a Warehouse,
@@ -155,23 +166,36 @@ export class ItemCatalogueRepository {
 
   // The Warehouse's Items with their on-hand figure and their LATEST adjustment reason (AC-08's
   // consolidated-figure read), in exactly one round trip regardless of Item or adjustment count:
-  // the latest reason is a correlated subquery embedded in the outer `SELECT`, never a per-Item
-  // follow-up query.
+  // the latest reason, quantity and instant are each a correlated subquery embedded in the outer
+  // `SELECT`, never a per-Item follow-up query. `options.itemId` narrows to one Item — reused by
+  // T7's REST handlers to confirm the full `Item` projection a mutation just wrote — and
+  // `options.activeOnly` is the AC-06a picker filter; both stay additive so the unfiltered call
+  // this method already served is unaffected.
   findItemsWithOnHandAndLatestReason(
     warehouseId: string,
+    options: FindItemsWithOnHandOptions = {},
   ): Promise<ItemWithOnHandAndLatestReasonRead[]> {
     const manager = getEntityManager(this.dataSource);
 
-    const latestAdjustmentReason = manager
-      .createQueryBuilder()
+    const latestAdjustmentBase = () =>
+      manager
+        .createQueryBuilder()
+        .from(ItemStockAdjustmentEntity, 'adjustment')
+        .where('adjustment.itemId = item.id')
+        .orderBy('adjustment.createdAt', 'DESC')
+        .limit(1);
+
+    const latestAdjustmentReason = latestAdjustmentBase()
       .select('adjustment.reason')
-      .from(ItemStockAdjustmentEntity, 'adjustment')
-      .where('adjustment.itemId = item.id')
-      .orderBy('adjustment.createdAt', 'DESC')
-      .limit(1)
+      .getQuery();
+    const latestAdjustmentQuantity = latestAdjustmentBase()
+      .select('adjustment.countedQuantity')
+      .getQuery();
+    const latestAdjustedAt = latestAdjustmentBase()
+      .select('adjustment.createdAt')
       .getQuery();
 
-    return manager
+    let query = manager
       .getRepository(ItemEntity)
       .createQueryBuilder('item')
       .select('item.id', 'id')
@@ -180,8 +204,20 @@ export class ItemCatalogueRepository {
       .addSelect('item.unitOfMeasure', 'unitOfMeasure')
       .addSelect('item.onHandQuantity', 'onHandQuantity')
       .addSelect('item.deactivatedAt', 'deactivatedAt')
+      .addSelect('item.createdAt', 'createdAt')
       .addSelect(`(${latestAdjustmentReason})`, 'latestAdjustmentReason')
-      .where('item.warehouseId = :warehouseId', { warehouseId })
+      .addSelect(`(${latestAdjustmentQuantity})`, 'latestAdjustmentQuantity')
+      .addSelect(`(${latestAdjustedAt})`, 'latestAdjustedAt')
+      .where('item.warehouseId = :warehouseId', { warehouseId });
+
+    if (options.itemId !== undefined) {
+      query = query.andWhere('item.id = :itemId', { itemId: options.itemId });
+    }
+    if (options.activeOnly) {
+      query = query.andWhere('item.deactivatedAt IS NULL');
+    }
+
+    return query
       .orderBy('item.sku', 'ASC')
       .getRawMany<ItemWithOnHandAndLatestReasonRead>();
   }
