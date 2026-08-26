@@ -45,6 +45,7 @@ export const ErrorCode = {
   WORKSPACE_LAST_UNARCHIVED_WAREHOUSE: 'workspace.last_unarchived_warehouse',
   WORKSPACE_CONCURRENT_CHANGE: 'workspace.concurrent_change',
   ACCESS_WAREHOUSE_ARCHIVED: 'access.warehouse_archived',
+  ACCESS_WRITE_RATE_LIMITED: 'access.write_rate_limited',
   WORKSPACE_WAREHOUSE_CREATION_UNAVAILABLE:
     'workspace.warehouse_creation_unavailable',
   WORKSPACE_ARCHIVAL_UNAVAILABLE: 'workspace.archival_unavailable',

@@ -285,6 +285,13 @@ export const applicationErrors: Readonly<
       message: 'The Warehouse is archived.',
     },
   },
+  [ErrorCode.ACCESS_WRITE_RATE_LIMITED]: {
+    status: 429,
+    envelope: {
+      code: ErrorCode.ACCESS_WRITE_RATE_LIMITED,
+      message: 'Too many changes recorded. Try again shortly.',
+    },
+  },
 };
 
 export const systemErrors: Readonly<
