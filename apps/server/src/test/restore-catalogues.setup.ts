@@ -1,8 +1,9 @@
 import { DataSource } from 'typeorm';
 
 import { initialPermissions } from '../../migrations/1785859200000-CreateAccessSchema';
-import { newPermissions } from '../../migrations/1786025100000-GrantUsersManagementPermissions';
+import { newPermissions as newUsersManagementPermissions } from '../../migrations/1786025100000-GrantUsersManagementPermissions';
 import { initialWorkspacePermissions } from '../../migrations/1786524800000-CreateWorkspaceAuthoritySchema';
+import { newPermissions as newOrderingPermissions } from '../../migrations/1786600100000-GrantOrderingPermissions';
 
 /**
  * `permissions` and `workspace_permissions` are catalogue tables: the migrations
@@ -23,7 +24,11 @@ import { initialWorkspacePermissions } from '../../migrations/1786524800000-Crea
 const catalogues = [
   {
     table: 'permissions',
-    rows: [...initialPermissions, ...newPermissions],
+    rows: [
+      ...initialPermissions,
+      ...newUsersManagementPermissions,
+      ...newOrderingPermissions,
+    ],
   },
   {
     table: 'workspace_permissions',

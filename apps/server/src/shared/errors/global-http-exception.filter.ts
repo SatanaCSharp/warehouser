@@ -292,6 +292,168 @@ export const applicationErrors: Readonly<
       message: 'Too many changes recorded. Try again shortly.',
     },
   },
+  [ErrorCode.ITEMS_INVALID_INPUT]: {
+    status: 400,
+    envelope: {
+      code: ErrorCode.ITEMS_INVALID_INPUT,
+      message: 'Correct the highlighted Item fields.',
+    },
+  },
+  [ErrorCode.ITEMS_INVALID_ON_HAND_QUANTITY]: {
+    status: 400,
+    envelope: {
+      code: ErrorCode.ITEMS_INVALID_ON_HAND_QUANTITY,
+      message: 'On-hand Quantity is a whole number that is never negative.',
+    },
+  },
+  [ErrorCode.ITEMS_ADJUSTMENT_REASON_REQUIRED]: {
+    status: 400,
+    envelope: {
+      code: ErrorCode.ITEMS_ADJUSTMENT_REASON_REQUIRED,
+      message: 'Every change to On-hand Quantity is recorded with its reason.',
+    },
+  },
+  [ErrorCode.ITEMS_TARGET_UNAVAILABLE]: {
+    status: 404,
+    envelope: {
+      code: ErrorCode.ITEMS_TARGET_UNAVAILABLE,
+      message: 'The selected Item is unavailable.',
+    },
+  },
+  [ErrorCode.ITEMS_SKU_TAKEN]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.ITEMS_SKU_TAKEN,
+      message: 'A SKU identifies at most one Item within a Warehouse.',
+    },
+  },
+  [ErrorCode.ITEMS_SKU_FIXED]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.ITEMS_SKU_FIXED,
+      message:
+        'A SKU stops being correctable once demand or a draft names the Item.',
+    },
+  },
+  [ErrorCode.CUSTOMER_ORDERS_INVALID_INPUT]: {
+    status: 400,
+    envelope: {
+      code: ErrorCode.CUSTOMER_ORDERS_INVALID_INPUT,
+      message: 'Correct the highlighted Customer Order fields.',
+    },
+  },
+  [ErrorCode.CUSTOMER_ORDERS_NEEDED_BY_IN_PAST]: {
+    status: 400,
+    envelope: {
+      code: ErrorCode.CUSTOMER_ORDERS_NEEDED_BY_IN_PAST,
+      message:
+        'A customer cannot be recorded as waiting for a date in the past.',
+    },
+  },
+  [ErrorCode.CUSTOMER_ORDERS_TARGET_UNAVAILABLE]: {
+    status: 404,
+    envelope: {
+      code: ErrorCode.CUSTOMER_ORDERS_TARGET_UNAVAILABLE,
+      message: 'The selected Customer Order is unavailable.',
+    },
+  },
+  [ErrorCode.CUSTOMER_ORDERS_QUANTITY_BELOW_ALLOCATED]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.CUSTOMER_ORDERS_QUANTITY_BELOW_ALLOCATED,
+      message:
+        "A customer's order cannot be reduced below the goods already attributed to them.",
+    },
+  },
+  [ErrorCode.CUSTOMER_ORDERS_INVALID_STATE]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.CUSTOMER_ORDERS_INVALID_STATE,
+      message:
+        'The Customer Order is not in a state this change is permitted from.',
+    },
+  },
+  [ErrorCode.PURCHASE_DRAFTS_UNKNOWN_PACKAGING_TYPE]: {
+    status: 400,
+    envelope: {
+      code: ErrorCode.PURCHASE_DRAFTS_UNKNOWN_PACKAGING_TYPE,
+      message: 'Choose a Packaging Type from the catalogue.',
+    },
+  },
+  [ErrorCode.PURCHASE_DRAFTS_INVALID_INPUT]: {
+    status: 400,
+    envelope: {
+      code: ErrorCode.PURCHASE_DRAFTS_INVALID_INPUT,
+      message: 'Correct the highlighted Purchase Draft fields.',
+    },
+  },
+  [ErrorCode.PURCHASE_DRAFTS_TARGET_UNAVAILABLE]: {
+    status: 404,
+    envelope: {
+      code: ErrorCode.PURCHASE_DRAFTS_TARGET_UNAVAILABLE,
+      message: 'The selected Purchase Draft is unavailable.',
+    },
+  },
+  [ErrorCode.PURCHASE_DRAFTS_DRAFT_FROZEN]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.PURCHASE_DRAFTS_DRAFT_FROZEN,
+      message: 'A draft is frozen once it is ready.',
+    },
+  },
+  [ErrorCode.PURCHASE_DRAFTS_DISCARD_UNAVAILABLE]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.PURCHASE_DRAFTS_DISCARD_UNAVAILABLE,
+      message:
+        'A draft that has been made ready is closed with a reason rather than discarded.',
+    },
+  },
+  [ErrorCode.PURCHASE_DRAFTS_LINK_EXISTS]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.PURCHASE_DRAFTS_LINK_EXISTS,
+      message: 'This line is already linked to that Customer Order.',
+    },
+  },
+  [ErrorCode.PURCHASE_DRAFTS_DRAFT_EMPTY]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.PURCHASE_DRAFTS_DRAFT_EMPTY,
+      message: 'A draft is only ready once it says what is being ordered.',
+    },
+  },
+  [ErrorCode.PURCHASE_DRAFTS_INVALID_STATE]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.PURCHASE_DRAFTS_INVALID_STATE,
+      message:
+        'The Purchase Draft is not in a state this transition is permitted from.',
+    },
+  },
+  [ErrorCode.PURCHASE_DRAFTS_CONCURRENT_CHANGE]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.PURCHASE_DRAFTS_CONCURRENT_CHANGE,
+      message:
+        'Another member changed this Purchase Draft. Reload and try again.',
+    },
+  },
+  [ErrorCode.PURCHASE_DRAFTS_ARRIVAL_ALREADY_CONFIRMED]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.PURCHASE_DRAFTS_ARRIVAL_ALREADY_CONFIRMED,
+      message: 'Confirming an arrival closes a draft once and for all.',
+    },
+  },
+  [ErrorCode.PURCHASE_DRAFTS_ALLOCATION_OUT_OF_BOUNDS]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.PURCHASE_DRAFTS_ALLOCATION_OUT_OF_BOUNDS,
+      message:
+        'The confirmation was not recorded. Correct the assignments it will not accept.',
+    },
+  },
 };
 
 export const systemErrors: Readonly<
