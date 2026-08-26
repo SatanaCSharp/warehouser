@@ -12,7 +12,7 @@ files_hint:
   ]
 owner: 'Backend Lead'
 estimate: 'M'
-status: 'todo'
+status: 'done'
 ---
 
 # T8 — Build the customer-orders domain and lifecycle: record, amend and cancel under the locked allocated-total read

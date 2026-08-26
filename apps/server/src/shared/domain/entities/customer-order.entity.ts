@@ -1,5 +1,11 @@
 import { Column, Entity, PrimaryColumn } from 'typeorm';
 
+// `chk_customer_orders_state` — the three states the column admits. Declared beside the column
+// because it is a persistence-oriented value, not a feature concept: both `shared/domain/
+// repositories/` and the `customer-orders` module read it without either depending on the other
+// (server-architecture.md §Dependency direction).
+export type CustomerOrderState = 'unfulfilled' | 'fulfilled' | 'cancelled';
+
 @Entity({ name: 'customer_orders' })
 export class CustomerOrderEntity {
   @PrimaryColumn('uuid')
@@ -24,7 +30,7 @@ export class CustomerOrderEntity {
   neededBy!: string;
 
   @Column('varchar', { length: 16 })
-  state!: string;
+  state!: CustomerOrderState;
 
   @Column('text', { name: 'cancellation_reason', nullable: true })
   cancellationReason!: string | null;

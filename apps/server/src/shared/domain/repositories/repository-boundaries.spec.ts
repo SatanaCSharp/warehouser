@@ -40,6 +40,7 @@ describe('shared repository boundaries', () => {
   const FEATURE_MODULES = [
     'access',
     'auth',
+    'customer-orders',
     'items',
     'users',
     'warehouses',
