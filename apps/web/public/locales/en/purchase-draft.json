@@ -59,5 +59,60 @@
     "unlink": "Unlink {{customer}}",
     "drift_one": "Drift detected",
     "drift_other": "Drift detected"
+  },
+  "transitions": {
+    "ready": {
+      "trigger": "Move to ready for ordering",
+      "title": "Move to ready for ordering",
+      "body": "This freezes the draft as the record of what the supplier was told. Its lines, quantities, links, expected arrival date and pre-receipt requirements can no longer be changed — only arrival confirmation and closure still write to it.",
+      "snapshot": "The quantity, needed-by date and state of every linked customer order are captured as they stand now, and changes are reported against that picture.",
+      "cancel": "Cancel",
+      "confirm": "Move to ready",
+      "noLines": "A draft is only ready once it says what is being ordered. Add a line first.",
+      "refusal": "A draft is only ready once it says what is being ordered. Nothing has changed."
+    },
+    "discard": {
+      "trigger": "Discard",
+      "title": "Discard this purchase draft",
+      "body": "The draft stops being worked on and stops covering any demand. Every customer order its lines linked to is left exactly as it was.",
+      "cancel": "Cancel",
+      "confirm": "Discard draft",
+      "refusal": "A draft that has been made ready is closed with a reason rather than discarded, because it records what the supplier was told. Nothing has changed."
+    },
+    "close": {
+      "trigger": "Close draft",
+      "title": "Close this purchase draft",
+      "body": "The frozen contents stay readable as the record of what was ordered, the outstanding quantity of every linked customer order is untouched, and the draft stops covering that demand.",
+      "reasonLabel": "Closure reason",
+      "reasonRequired": "State why the supplier cannot fulfil the order.",
+      "cancel": "Cancel",
+      "submit": "Close draft",
+      "refusal": "This draft can no longer be closed. Nothing has changed."
+    },
+    "arrival": {
+      "trigger": "Confirm arrival",
+      "title": "Confirm arrival",
+      "closesOnce": "Confirming an arrival closes a draft once and for all. Goods the supplier still owes are ordered on a new draft rather than awaited on this one.",
+      "lineHeading": "{{sku}} · {{description}}",
+      "ordered": "{{count}} ordered",
+      "receivedLabel": "Arrived — {{sku}}",
+      "assignLabel": "For {{customer}}",
+      "outstanding": "{{count}} still outstanding",
+      "noLinks": "No customer order is linked to this line, so nothing is assigned from it.",
+      "summaryLabel": "Assignment total for {{sku}}",
+      "summary": "{{received}} arrived · {{assigned}} assigned · {{unassigned}} left unassigned",
+      "cancel": "Cancel",
+      "submit": "Confirm arrival",
+      "nothingSaved": "Nothing of this confirmation has been saved.",
+      "refusal": {
+        "allocationOutOfBounds": "An assignment is more than what arrived on its line, more than that customer is still waiting for, or against an order since cancelled or fulfilled.",
+        "alreadyConfirmed": "This draft has already had its arrival confirmed.",
+        "invalidState": "This draft is no longer waiting for an arrival.",
+        "unknown": "The arrival was not recorded."
+      },
+      "validation": {
+        "invalidQuantity": "Enter the whole number of units that arrived."
+      }
+    }
   }
 }

@@ -8,7 +8,9 @@ import { z } from 'zod';
 import { api } from 'shared/api/client/api-client';
 
 import type {
+  ArrivalConfirmation,
   PackagingType,
+  PurchaseDraftClosure,
   PurchaseDraftDetail,
   PurchaseDraftLineCreate,
   PurchaseDraftLineLinkCreate,
@@ -52,6 +54,21 @@ const purchaseDraftLineLinkPath = (
 ): string =>
   `${purchaseDraftLineLinksPath(warehouseId, purchaseDraftId, purchaseDraftLineId)}/${purchaseDraftLineLinkId}`;
 
+const purchaseDraftReadinessPath = (
+  warehouseId: string,
+  purchaseDraftId: string,
+): string => `${purchaseDraftPath(warehouseId, purchaseDraftId)}/readiness`;
+
+const purchaseDraftArrivalPath = (
+  warehouseId: string,
+  purchaseDraftId: string,
+): string => `${purchaseDraftPath(warehouseId, purchaseDraftId)}/arrival`;
+
+const purchaseDraftClosurePath = (
+  warehouseId: string,
+  purchaseDraftId: string,
+): string => `${purchaseDraftPath(warehouseId, purchaseDraftId)}/closure`;
+
 const packagingTypesPath = (warehouseId: string): string =>
   `/api/v1/warehouses/${warehouseId}/packaging-types`;
 
@@ -81,6 +98,12 @@ type ReviseLinkArgs = PurchaseDraftIdArgs & {
 type LinkIdArgs = PurchaseDraftIdArgs & {
   purchaseDraftLineId: string;
   purchaseDraftLineLinkId: string;
+};
+type ClosePurchaseDraftArgs = PurchaseDraftIdArgs & {
+  input: PurchaseDraftClosure;
+};
+type ConfirmPurchaseDraftArrivalArgs = PurchaseDraftIdArgs & {
+  input: ArrivalConfirmation;
 };
 
 /**
@@ -241,6 +264,57 @@ export const purchaseDraftApi = api.injectEndpoints({
       extraOptions: { schema: purchaseDraftDetailSchema },
       invalidatesTags: ['PurchaseDrafts'],
     }),
+    // AC-14/AC-14a — freezes the draft; T21's dialogs are the only callers.
+    readyPurchaseDraft: build.mutation<
+      PurchaseDraftDetail,
+      PurchaseDraftIdArgs
+    >({
+      query: ({ warehouseId, purchaseDraftId }) => ({
+        url: purchaseDraftReadinessPath(warehouseId, purchaseDraftId),
+        method: 'POST',
+      }),
+      extraOptions: { schema: purchaseDraftDetailSchema },
+      invalidatesTags: ['PurchaseDrafts'],
+    }),
+    // AC-17/AC-17b/AC-18 — records the arrival and its Allocations, closing the draft.
+    confirmPurchaseDraftArrival: build.mutation<
+      PurchaseDraftDetail,
+      ConfirmPurchaseDraftArrivalArgs
+    >({
+      query: ({ warehouseId, purchaseDraftId, input }) => ({
+        url: purchaseDraftArrivalPath(warehouseId, purchaseDraftId),
+        method: 'POST',
+        body: input,
+      }),
+      extraOptions: { schema: purchaseDraftDetailSchema },
+      invalidatesTags: ['PurchaseDrafts'],
+    }),
+    // AC-21 — closes a frozen draft the supplier cannot fulfil, with a reason.
+    closePurchaseDraft: build.mutation<
+      PurchaseDraftDetail,
+      ClosePurchaseDraftArgs
+    >({
+      query: ({ warehouseId, purchaseDraftId, input }) => ({
+        url: purchaseDraftClosurePath(warehouseId, purchaseDraftId),
+        method: 'POST',
+        body: input,
+      }),
+      extraOptions: { schema: purchaseDraftDetailSchema },
+      invalidatesTags: ['PurchaseDrafts'],
+    }),
+    // AC-24/AC-24a — discards a draft never made ready; the response is the
+    // draft's own `PurchaseDraftSummary`, not its full detail (contracts/openapi.yaml).
+    discardPurchaseDraft: build.mutation<
+      PurchaseDraftSummary,
+      PurchaseDraftIdArgs
+    >({
+      query: ({ warehouseId, purchaseDraftId }) => ({
+        url: purchaseDraftPath(warehouseId, purchaseDraftId),
+        method: 'DELETE',
+      }),
+      extraOptions: { schema: purchaseDraftSummarySchema },
+      invalidatesTags: ['PurchaseDrafts'],
+    }),
   }),
   overrideExisting: false,
 });
@@ -257,4 +331,8 @@ export const {
   useAddPurchaseDraftLineLinkMutation,
   useRevisePurchaseDraftLineLinkMutation,
   useRemovePurchaseDraftLineLinkMutation,
+  useReadyPurchaseDraftMutation,
+  useConfirmPurchaseDraftArrivalMutation,
+  useClosePurchaseDraftMutation,
+  useDiscardPurchaseDraftMutation,
 } = purchaseDraftApi;

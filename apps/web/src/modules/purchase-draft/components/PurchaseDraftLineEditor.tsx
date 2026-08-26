@@ -6,7 +6,7 @@ import { PurchaseDraftLinkRow } from 'modules/purchase-draft/components/Purchase
 import { Conditional } from 'shared/components/Conditional';
 import { FormSelectField } from 'shared/components/FormSelectField';
 import { FormTextField } from 'shared/components/FormTextField';
-import { LockIcon, TrashIcon } from 'shared/icons';
+import { LockIcon, TrashIcon, XIcon } from 'shared/icons';
 
 import type {
   PackagingType,
@@ -168,10 +168,28 @@ export const PurchaseDraftLineEditor = ({
             {line.links.map((link) => (
               <PurchaseDraftLinkRow
                 key={link.id}
-                isFrozen={isFrozen}
                 link={link}
-                onRemove={onRemoveLink_(link.id)}
-                onRevise={onReviseLink_(link.id)}
+                field={{
+                  commitOn: 'blur',
+                  description: t('linkRow.claimsNothing'),
+                  isDisabled: isFrozen,
+                  label: t('linkRow.statedQuantity'),
+                  value: String(link.statedQuantity),
+                  onCommit: onReviseLink_(link.id),
+                }}
+                trailing={
+                  <Button
+                    aria-label={t('linkRow.unlink', {
+                      customer: link.customerName,
+                    })}
+                    isDisabled={isFrozen}
+                    size="sm"
+                    variant="outline"
+                    onPress={onRemoveLink_(link.id)}
+                  >
+                    <XIcon />
+                  </Button>
+                }
               />
             ))}
           </ul>

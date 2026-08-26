@@ -12,7 +12,7 @@ files_hint:
   ]
 owner: 'Frontend Lead'
 estimate: 'M'
-status: 'todo'
+status: 'done'
 ---
 
 # T21 — Build the Purchase draft transition dialogs: ready, close, discard and the 720px arrival modal

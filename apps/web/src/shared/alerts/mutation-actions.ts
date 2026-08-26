@@ -108,8 +108,7 @@ export const MUTATION_FEEDBACK: Record<string, MutationFeedback> = {
 
   // Purchase drafts (T20/T16). Every endpoint below is a member's own decision
   // to change while a draft is still in the Draft state (AC-10a, AC-12), so
-  // every one reports; the transition endpoints (ready/arrival/closure/discard)
-  // are T21's to register alongside their dialogs.
+  // every one reports.
   createPurchaseDraft: feedback({ scope: 'purchase-draft' }),
   revisePurchaseDraft: feedback({ scope: 'purchase-draft' }),
   addPurchaseDraftLine: feedback({ scope: 'purchase-draft' }),
@@ -118,4 +117,15 @@ export const MUTATION_FEEDBACK: Record<string, MutationFeedback> = {
   addPurchaseDraftLineLink: feedback({ scope: 'purchase-draft' }),
   revisePurchaseDraftLineLink: feedback({ scope: 'purchase-draft' }),
   removePurchaseDraftLineLink: feedback({ scope: 'purchase-draft' }),
+
+  // Purchase draft transitions (T21) — the four irreversible acts: freezing,
+  // confirming arrival, closing with a reason, and discarding.
+  readyPurchaseDraft: feedback({ scope: 'purchase-draft' }),
+  confirmPurchaseDraftArrival: feedback({ scope: 'purchase-draft' }),
+  // AC-21 — the success copy states the reason that committed.
+  closePurchaseDraft: feedback<{ input: { closureReason: string } }>({
+    scope: 'purchase-draft',
+    describe: ({ input }) => ({ reason: input.closureReason }),
+  }),
+  discardPurchaseDraft: feedback({ scope: 'purchase-draft' }),
 };

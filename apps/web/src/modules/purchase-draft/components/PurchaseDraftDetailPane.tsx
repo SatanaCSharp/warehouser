@@ -8,6 +8,7 @@ import {
   useRevisePurchaseDraftLineMutation,
 } from 'modules/purchase-draft/api/purchase-draft-api';
 import { DriftSignal } from 'modules/purchase-draft/components/DriftSignal';
+import { PurchaseDraftTransitions } from 'modules/purchase-draft/components/purchase-draft-transitions/PurchaseDraftTransitions';
 import { PurchaseDraftLineEditor } from 'modules/purchase-draft/components/PurchaseDraftLineEditor';
 import { usePackagingTypes } from 'modules/purchase-draft/hooks/queries/usePackagingTypes';
 import { Conditional } from 'shared/components/Conditional';
@@ -212,8 +213,9 @@ export const PurchaseDraftDetailPane = ({
       aria-label={draft.id}
       className="flex flex-col gap-3 md:rounded-xl md:border md:border-border md:bg-surface md:p-6"
     >
-      <header className="flex items-center justify-between gap-3">
+      <header className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-xl font-semibold">{t(`state.${draft.state}`)}</h2>
+        <PurchaseDraftTransitions draft={draft} />
       </header>
       {content[draft.state]}
     </section>

@@ -1,0 +1,51 @@
+import { AlertDialog, Button } from '@heroui/react';
+import { PermissionId } from '@warehouser/shared-types/enums';
+import { useTranslation } from 'react-i18next';
+
+import { useReadyPurchaseDraftMutation } from 'modules/purchase-draft/api/purchase-draft-api';
+import { ReadyPurchaseDraftDialog } from 'modules/purchase-draft/components/purchase-draft-transitions/components/ReadyPurchaseDraftDialog';
+import { TriggeredDialog } from 'shared/components/TriggeredDialog';
+import { WarehousePermissionGate } from 'shared/components/WarehousePermissionGate';
+import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
+
+import type { PurchaseDraftDetail } from '@warehouser/contracts/purchase-drafts';
+import type { ReactElement } from 'react';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
+
+export type ReadyPurchaseDraftActionProps = {
+  draft: PurchaseDraftDetail;
+};
+
+/**
+ * Moving a draft to Ready for Ordering, end to end: the Permission that offers
+ * it, the trigger, the dialog it opens and the request it runs (AC-14, AC-22).
+ * The `AlertDialog` root owns whether the dialog is open and returns focus to
+ * the trigger when it closes, so nothing here tracks that
+ * (`writing-web-components.md` §3, §8).
+ */
+export const ReadyPurchaseDraftAction = ({
+  draft,
+}: ReadyPurchaseDraftActionProps): ReactElement => {
+  const { t } = useTranslation('purchase-draft');
+  const warehouseId = useEnteredWarehouse() ?? '';
+  const [readyPurchaseDraft] = useReadyPurchaseDraftMutation();
+
+  const onConfirm = (): Promise<MutationResult> =>
+    readyPurchaseDraft({ warehouseId, purchaseDraftId: draft.id });
+
+  return (
+    <WarehousePermissionGate permission={PermissionId.PURCHASE_DRAFTS_READY}>
+      <AlertDialog>
+        <Button size="sm" variant="primary">
+          {t('transitions.ready.trigger')}
+        </Button>
+        <TriggeredDialog>
+          <ReadyPurchaseDraftDialog
+            hasLines={draft.lines.length > 0}
+            onConfirm={onConfirm}
+          />
+        </TriggeredDialog>
+      </AlertDialog>
+    </WarehousePermissionGate>
+  );
+};

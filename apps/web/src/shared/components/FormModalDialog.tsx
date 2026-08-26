@@ -12,8 +12,16 @@ import type { FormParse } from 'shared/utils/form-parse';
 
 type FormModalDialogProps<TForm extends FieldValues, TInput> = Pick<
   ComponentProps<typeof Modal.Container>,
-  'scroll' | 'size'
+  'scroll'
 > & {
+  /**
+   * The dialog's maximum width: HeroUI's own scale, plus `wide` — the 720px
+   * dialog the ordering design's Arrival Confirmation is drawn at, which that
+   * scale stops short of. It belongs here rather than in the feature, because
+   * a feature that reached past this component for a width would be
+   * reassembling the modal (`docs/system/guides/web-dialogs.md`).
+   */
+  size?: ComponentProps<typeof Modal.Container>['size'] | 'wide';
   cancelLabel: string;
   children: ReactNode;
   /** The `useForm` session whose fields `children` render. */
@@ -112,10 +120,16 @@ export const FormModalDialog = <TForm extends FieldValues, TInput = TForm>({
     onRefusal?.(outcome.code);
   });
 
+  const isWide = size === 'wide';
+
   return (
     <Modal.Backdrop>
-      <Modal.Container scroll={scroll} size={size}>
-        <Modal.Dialog>
+      <Modal.Container scroll={scroll} size={isWide ? 'lg' : size}>
+        {/*
+          HeroUI's size scale is applied in `@layer components`, so a utility
+          class overrides it wherever it stops short of a drawn width.
+        */}
+        <Modal.Dialog className={isWide ? 'md:max-w-[45rem]' : undefined}>
           {/*
             The form has to carry the dialog's flex column itself: `scroll="inside"`
             bounds the dialog and expects `Modal.Body` to be the `flex-1 min-h-0`
@@ -134,13 +148,25 @@ export const FormModalDialog = <TForm extends FieldValues, TInput = TForm>({
               <Modal.Heading>{title}</Modal.Heading>
             </Modal.Header>
             <Modal.Body className="flex flex-col gap-4">{children}</Modal.Body>
-            <Modal.Footer>
-              <Button slot="close" variant="ghost" isDisabled={isSubmitting}>
+            {/*
+              Cancel precedes the primary in DOM — and therefore keyboard —
+              order at every width. Below the split breakpoint the column is
+              *reversed*, so the full-width primary is what sits on top
+              without either control moving in the tab sequence.
+            */}
+            <Modal.Footer className="flex-col-reverse items-stretch md:flex-row md:items-center">
+              <Button
+                slot="close"
+                variant="ghost"
+                className="w-full md:w-auto"
+                isDisabled={isSubmitting}
+              >
                 {cancelLabel}
               </Button>
               <Button
                 type="submit"
                 variant={submitVariant}
+                className="w-full md:w-auto"
                 isDisabled={isSubmitting || isSubmitDisabled}
                 isPending={isSubmitting}
               >

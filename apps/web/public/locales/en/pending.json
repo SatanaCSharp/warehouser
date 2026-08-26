@@ -50,6 +50,10 @@
     "removePurchaseDraftLine": "Removing the line…",
     "addPurchaseDraftLineLink": "Linking the customer order…",
     "revisePurchaseDraftLineLink": "Saving the stated quantity…",
-    "removePurchaseDraftLineLink": "Removing the link…"
+    "removePurchaseDraftLineLink": "Removing the link…",
+    "readyPurchaseDraft": "Moving the draft to ready for ordering…",
+    "confirmPurchaseDraftArrival": "Recording the arrival…",
+    "closePurchaseDraft": "Closing the purchase draft…",
+    "discardPurchaseDraft": "Discarding the purchase draft…"
   }
 }

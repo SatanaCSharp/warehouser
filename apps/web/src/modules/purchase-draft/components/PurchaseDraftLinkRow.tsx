@@ -1,59 +1,81 @@
-import { Button } from '@heroui/react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { DriftSignal } from 'modules/purchase-draft/components/DriftSignal';
+import { Conditional } from 'shared/components/Conditional';
 import { FormTextField } from 'shared/components/FormTextField';
-import { XIcon } from 'shared/icons';
 
 import type { PurchaseDraftLineLink } from '@warehouser/contracts/purchase-drafts';
-import type { ChangeEvent, ReactElement } from 'react';
+import type { ChangeEvent, ReactElement, ReactNode } from 'react';
+
+/**
+ * The one part of the row that differs between the jobs below: what the
+ * quantity field is called, what it starts at, and when what was typed is
+ * reported. `commitOn` is the whole of that last difference — a link's
+ * quantity is a write and reports once the member has finished typing it, an
+ * assignment is a form value the running total reads as it changes.
+ */
+export type PurchaseDraftLinkRowField = {
+  commitOn: 'blur' | 'change';
+  description?: string;
+  isDisabled: boolean;
+  label: string;
+  value: string;
+  onCommit: (quantity: number) => void;
+};
 
 export type PurchaseDraftLinkRowProps = {
-  isFrozen: boolean;
+  field: PurchaseDraftLinkRowField;
   link: PurchaseDraftLineLink;
-  onRemove: () => void;
-  onRevise: (statedQuantity: number) => void;
+  /** The control the row ends with — unlinking a link, or an assignment's outstanding figure. */
+  trailing: ReactNode;
 };
 
 /**
- * `Ordering/Link Row` (`BSmrU`) — a draft line's link to one Customer Order.
- * One component serves the editable and the frozen presentation, matching
- * `Ordering/Draft Line` (`ehtEw`).
+ * `Ordering/Link Row` (`BSmrU`) — one Purchase Draft Line link, serving all
+ * three jobs the approved design gives it: an editable draft-line link, a
+ * frozen link with its drift chip, and an arrival assignment row (T20, T21).
+ * Only the field descriptor and the trailing control differ between them,
+ * which is exactly what this component takes.
  *
- * **Coverage claims nothing (AC-11a).** The stated quantity is recorded
- * exactly as typed: this row never compares it against the line's ordered
- * quantity, another link's stated quantity, or the Customer Order's own
- * outstanding quantity, and it renders no warning when two links overlap —
- * that arithmetic belongs to the member, not to client validation. Blurring
- * the field commits the raw parsed value through `onRevise`, unmodified.
+ * **Coverage claims nothing (AC-11a), and neither does an assignment
+ * (AC-18).** The quantity is reported exactly as typed: this row never
+ * compares it against the line's ordered quantity, another row's quantity, or
+ * the Customer Order's own outstanding quantity, and it renders no warning
+ * when two overlap. For a link that arithmetic belongs to the member; for an
+ * assignment the bounds are the server's, re-checked at the moment the
+ * confirmation is recorded rather than when the member composed it.
  */
 export const PurchaseDraftLinkRow = ({
-  isFrozen,
+  field,
   link,
-  onRemove,
-  onRevise,
+  trailing,
 }: PurchaseDraftLinkRowProps): ReactElement => {
   const { t } = useTranslation('purchase-draft');
-  const [statedQuantity, setStatedQuantity] = useState(
-    String(link.statedQuantity),
-  );
+  const [quantity, setQuantity] = useState(field.value);
 
-  const onChangeStatedQuantity = (event: ChangeEvent<HTMLInputElement>): void =>
-    setStatedQuantity(event.target.value);
-
-  const onBlurStatedQuantity = (): void => {
-    const parsed = Number.parseInt(statedQuantity, 10);
+  const commit = (raw: string): void => {
+    const parsed = Number.parseInt(raw, 10);
     if (Number.isNaN(parsed)) {
       return;
     }
-    onRevise(parsed);
+    field.onCommit(parsed);
   };
 
-  const driftLabel =
-    link.driftSignals.length > 0
-      ? t('linkRow.drift', { count: link.driftSignals.length })
-      : null;
+  const onChangeQuantity = (event: ChangeEvent<HTMLInputElement>): void => {
+    setQuantity(event.target.value);
+    if (field.commitOn === 'change') {
+      commit(event.target.value);
+    }
+  };
+
+  const onBlurQuantity = (): void => {
+    if (field.commitOn === 'blur') {
+      commit(quantity);
+    }
+  };
+
+  const driftLabel = t('linkRow.drift', { count: link.driftSignals.length });
 
   // design-handoff.md's third documented mobile difference (`BSmrU`, 390
   // `O42LHI` vs 1440 `yGhkK`/`F0SpRx`): the row keeps its horizontal shape at
@@ -64,27 +86,21 @@ export const PurchaseDraftLinkRow = ({
     <li className="flex flex-wrap items-center gap-3 rounded-lg bg-surface-secondary p-3">
       <div className="min-w-0 flex-1">
         <p className="break-words font-medium">{link.customerName}</p>
-        {driftLabel !== null ? <DriftSignal label={driftLabel} /> : null}
+        <Conditional when={link.driftSignals.length > 0}>
+          <DriftSignal label={driftLabel} />
+        </Conditional>
       </div>
       <FormTextField
         className="w-24 shrink-0 md:w-32"
-        defaultValue={statedQuantity}
-        description={t('linkRow.claimsNothing')}
-        isDisabled={isFrozen}
-        label={t('linkRow.statedQuantity')}
+        defaultValue={field.value}
+        description={field.description}
+        isDisabled={field.isDisabled}
+        label={field.label}
         type="number"
-        onBlur={onBlurStatedQuantity}
-        onChange={onChangeStatedQuantity}
+        onBlur={onBlurQuantity}
+        onChange={onChangeQuantity}
       />
-      <Button
-        aria-label={t('linkRow.unlink', { customer: link.customerName })}
-        isDisabled={isFrozen}
-        size="sm"
-        variant="outline"
-        onPress={onRemove}
-      >
-        <XIcon />
-      </Button>
+      {trailing}
     </li>
   );
 };

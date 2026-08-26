@@ -27,7 +27,7 @@
 | T18 | [Build the Items destination: table with on-hand and its reason, the create/correct/deactivate dialogs and the Item picker](./item-destination-ui.md)                           | `ui`        | Frontend Lead | M        | T17, T7        | done   |
 | T19 | [Build the Demand destination: consolidated table, expandable Customer Order sub-rows, record/amend/cancel and the Customer Order picker](./demand-destination-ui.md)           | `ui`        | Frontend Lead | L        | T17, T11       | done   |
 | T20 | [Build the Purchase drafts destination: list and detail, the three tabs, line and link editing, the frozen treatment and the Drift Signal](./purchase-drafts-destination-ui.md) | `ui`        | Frontend Lead | L        | T17, T16       | done   |
-| T21 | [Build the Purchase draft transition dialogs: ready, close, discard and the 720px arrival modal](./purchase-draft-transitions-ui.md)                                            | `ui`        | Frontend Lead | M        | T20            | todo   |
+| T21 | [Build the Purchase draft transition dialogs: ready, close, discard and the 720px arrival modal](./purchase-draft-transitions-ui.md)                                            | `ui`        | Frontend Lead | M        | T20            | done   |
 | T22 | [Add the ordering load smoke and the structured timing assertions for the section 6 latency targets](./ordering-performance-gate.md)                                            | `tests`     | Tech Lead     | S        | T7, T11, T16   | done   |
 
 **Total:** 22 tasks, ~17 person-days.

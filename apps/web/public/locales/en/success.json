@@ -50,6 +50,10 @@
     "removePurchaseDraftLine": "Line removed.",
     "addPurchaseDraftLineLink": "Customer order linked.",
     "revisePurchaseDraftLineLink": "Stated quantity saved.",
-    "removePurchaseDraftLineLink": "Link removed."
+    "removePurchaseDraftLineLink": "Link removed.",
+    "readyPurchaseDraft": "Purchase draft is ready for ordering.",
+    "confirmPurchaseDraftArrival": "Arrival confirmed and the draft is closed.",
+    "closePurchaseDraft": "Purchase draft closed: {{reason}}",
+    "discardPurchaseDraft": "Purchase draft discarded."
   }
 }

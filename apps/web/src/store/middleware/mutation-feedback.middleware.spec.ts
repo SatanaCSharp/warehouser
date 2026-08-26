@@ -14,11 +14,17 @@ const toast = vi.hoisted(() => {
 vi.mock('shared/alerts/toast', () => ({ toast }));
 // Renders `<namespace>:<key>` plus any interpolated subject, so a case can
 // assert which description was chosen without depending on the copy itself.
+// Every interpolation the registry passes is rendered, not a fixed `name`, so
+// a registry entry describing its outcome by any other key is still observable.
 vi.mock('i18n', () => ({
   default: {
     t: (key: string, options: { ns: string } & Record<string, unknown>) => {
-      const subject =
-        typeof options.name === 'string' ? ` (${options.name})` : '';
+      const subjects = Object.entries(options)
+        .filter(
+          ([option, value]) => option !== 'ns' && typeof value === 'string',
+        )
+        .map(([, value]) => value as string);
+      const subject = subjects.length > 0 ? ` (${subjects.join(', ')})` : '';
 
       return `${options.ns}:${key}${subject}`;
     },
@@ -104,6 +110,21 @@ describe('mutationFeedbackMiddleware', () => {
 
     expect(toast.success).toHaveBeenCalledWith(
       'success:workspace.giveWarehouseAccess (Central DC)',
+    );
+  });
+
+  // AC-21 — "the success copy states the outcome that committed": closing a
+  // purchase draft commits a reason, so the reason is what the toast reports
+  // back, rather than a generic "Purchase draft closed."
+  it('names the reason a purchase draft was closed with (AC-21)', () => {
+    run(
+      lifecycleAction('fulfilled', 'closePurchaseDraft', {
+        input: { closureReason: 'The supplier cannot fulfil the order' },
+      }),
+    );
+
+    expect(toast.success).toHaveBeenCalledWith(
+      'success:purchase-draft.closePurchaseDraft (The supplier cannot fulfil the order)',
     );
   });
 

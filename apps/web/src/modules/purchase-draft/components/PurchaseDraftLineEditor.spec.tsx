@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { PurchaseDraftLineEditor } from 'modules/purchase-draft/components/PurchaseDraftLineEditor';
@@ -34,6 +35,31 @@ const line = (
   receivedQuantity: null,
   links: [],
   ...overrides,
+});
+
+/**
+ * T21 moved the unlink control out of `PurchaseDraftLinkRow` and into this
+ * component, which now supplies it as the row's trailing control — so its
+ * frozen treatment (AC-15) is asserted here, where it is rendered.
+ */
+const linkedLine = line({
+  links: [
+    {
+      id: '00000000-0000-4000-8000-000000000301',
+      customerOrderId: '00000000-0000-4000-8000-000000000401',
+      customerName: 'Nordwind Logistik GmbH',
+      statedQuantity: 400,
+      snapshot: null,
+      current: {
+        quantity: 400,
+        neededBy: '2026-09-01',
+        state: 'unfulfilled',
+        outstandingQuantity: 400,
+      },
+      driftSignals: [],
+      allocation: null,
+    },
+  ],
 });
 
 describe('PurchaseDraftLineEditor', () => {
@@ -105,6 +131,53 @@ describe('PurchaseDraftLineEditor', () => {
     expect(screen.getByLabelText('Ordered quantity')).toBeEnabled();
     expect(screen.getByLabelText('Packaging type')).toBeEnabled();
     expect(screen.getByLabelText('Value-adding note')).toBeEnabled();
+  });
+
+  it('disables the unlink control it supplies to each link row on a frozen line (AC-15)', () => {
+    render(
+      <ul>
+        <PurchaseDraftLineEditor
+          isFrozen
+          line={linkedLine}
+          packagingTypes={packagingTypes}
+          onRemoveLine={vi.fn()}
+          onRemoveLink={vi.fn()}
+          onReviseLine={vi.fn()}
+          onReviseLink={vi.fn()}
+        />
+      </ul>,
+    );
+
+    expect(
+      screen.getByRole('button', { name: 'Unlink Nordwind Logistik GmbH' }),
+    ).toBeDisabled();
+    expect(screen.getByLabelText('Stated quantity')).toBeDisabled();
+  });
+
+  it('keeps the unlink control usable while the line is still editable', async () => {
+    const user = userEvent.setup();
+    const onRemoveLink = vi.fn();
+    render(
+      <ul>
+        <PurchaseDraftLineEditor
+          isFrozen={false}
+          line={linkedLine}
+          packagingTypes={packagingTypes}
+          onRemoveLine={vi.fn()}
+          onRemoveLink={onRemoveLink}
+          onReviseLine={vi.fn()}
+          onReviseLink={vi.fn()}
+        />
+      </ul>,
+    );
+
+    await user.click(
+      screen.getByRole('button', { name: 'Unlink Nordwind Logistik GmbH' }),
+    );
+
+    expect(onRemoveLink).toHaveBeenCalledExactlyOnceWith(
+      '00000000-0000-4000-8000-000000000301',
+    );
   });
 
   // jsdom applies no stylesheet, so the breakpoint behaviour is asserted

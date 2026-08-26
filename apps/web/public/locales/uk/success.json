@@ -50,6 +50,10 @@
     "removePurchaseDraftLine": "Рядок видалено.",
     "addPurchaseDraftLineLink": "Замовлення клієнта пов'язано.",
     "revisePurchaseDraftLineLink": "Заявлену кількість збережено.",
-    "removePurchaseDraftLineLink": "Зв'язок видалено."
+    "removePurchaseDraftLineLink": "Зв'язок видалено.",
+    "readyPurchaseDraft": "Чернетка закупівлі готова до замовлення.",
+    "confirmPurchaseDraftArrival": "Прибуття підтверджено, чернетку закрито.",
+    "closePurchaseDraft": "Чернетку закупівлі закрито: {{reason}}",
+    "discardPurchaseDraft": "Чернетку закупівлі відхилено."
   }
 }
