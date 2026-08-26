@@ -12,7 +12,7 @@ files_hint:
   ]
 owner: 'Backend Lead'
 estimate: 'S'
-status: 'todo'
+status: 'done'
 ---
 
 # T6 — Build the On-hand Quantity adjustment: mandatory reason, current figure and append-only history in one transaction

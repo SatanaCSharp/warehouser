@@ -23,3 +23,20 @@ export const itemSkuFixedError = (): ApplicationError =>
 // further.
 export const itemTargetUnavailableError = (): ApplicationError =>
   new ApplicationError(ErrorCode.ITEMS_TARGET_UNAVAILABLE);
+
+// AC-09 — a negative or fractional count is refused in plain language, changing nothing.
+// openapi.yaml `InvalidOnHandAdjustment` `negativeOrFractional` example:
+// `details: { field: "countedQuantity", rule: "non_negative_integer" }`.
+export const itemInvalidOnHandQuantityError = (): ApplicationError =>
+  new ApplicationError(ErrorCode.ITEMS_INVALID_ON_HAND_QUANTITY, {
+    field: 'countedQuantity',
+    rule: 'non_negative_integer',
+  });
+
+// AC-09a — every change to On-hand Quantity is recorded with its reason, so an adjustment without
+// one is refused. openapi.yaml `InvalidOnHandAdjustment` `reasonMissing` example:
+// `details: { field: "reason" }`.
+export const itemAdjustmentReasonRequiredError = (): ApplicationError =>
+  new ApplicationError(ErrorCode.ITEMS_ADJUSTMENT_REASON_REQUIRED, {
+    field: 'reason',
+  });

@@ -5,6 +5,8 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
 import {
+  itemAdjustmentReasonRequiredError,
+  itemInvalidOnHandQuantityError,
   itemSkuFixedError,
   itemSkuTakenError,
   itemTargetUnavailableError,
@@ -44,5 +46,35 @@ describe('item domain error factories', () => {
     expect(error).toBeInstanceOf(ApplicationError);
     expect(error).toMatchObject({ code: ErrorCode.ITEMS_TARGET_UNAVAILABLE });
     expect(error.details).toBeUndefined();
+  });
+});
+
+// T6 — `itemInvalidOnHandQuantityError` and `itemAdjustmentReasonRequiredError` do not exist yet.
+// This is the legitimate RED for AC-09/AC-09a's error half: the two codes and their `details`
+// shapes are copied from `openapi.yaml`'s `InvalidOnHandAdjustment` response examples, which the
+// REST surface (T7) will answer with verbatim.
+describe('on-hand adjustment error factories', () => {
+  // AC-09 — openapi.yaml `InvalidOnHandAdjustment` `negativeOrFractional` example:
+  // `details: { field: "countedQuantity", rule: "non_negative_integer" }`.
+  it('builds an ApplicationError naming the counted figure it will not accept', () => {
+    const error = itemInvalidOnHandQuantityError();
+
+    expect(error).toBeInstanceOf(ApplicationError);
+    expect(error).toMatchObject({
+      code: ErrorCode.ITEMS_INVALID_ON_HAND_QUANTITY,
+      details: { field: 'countedQuantity', rule: 'non_negative_integer' },
+    });
+  });
+
+  // AC-09a — openapi.yaml `InvalidOnHandAdjustment` `reasonMissing` example:
+  // `details: { field: "reason" }`.
+  it('builds an ApplicationError naming the missing reason', () => {
+    const error = itemAdjustmentReasonRequiredError();
+
+    expect(error).toBeInstanceOf(ApplicationError);
+    expect(error).toMatchObject({
+      code: ErrorCode.ITEMS_ADJUSTMENT_REASON_REQUIRED,
+      details: { field: 'reason' },
+    });
   });
 });
