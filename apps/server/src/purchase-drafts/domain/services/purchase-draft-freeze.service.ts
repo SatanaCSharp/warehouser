@@ -1,0 +1,87 @@
+import { Injectable, Optional } from '@nestjs/common';
+import { assert } from '@warehouser/utils/asserts';
+import {
+  purchaseDraftConcurrentChangeError,
+  purchaseDraftEmptyError,
+  purchaseDraftInvalidStateError,
+  purchaseDraftTargetUnavailableError,
+} from 'purchase-drafts/domain/errors/purchase-draft.errors';
+import {
+  isDiscardableDraft,
+  isEmptyDraft,
+} from 'purchase-drafts/domain/predicates/purchase-draft-freeze.predicates';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { Transactional } from 'shared/decorators/transactional.decorator';
+import type { PurchaseDraftAssemblyRepository } from 'shared/domain/repositories/purchase-draft-assembly.repository';
+import type { PurchaseDraftFreezeRepository } from 'shared/domain/repositories/purchase-draft-freeze.repository';
+
+export interface PurchaseDraftFreezeRuntime {
+  readonly now: () => Date;
+}
+
+const defaultPurchaseDraftFreezeRuntime: PurchaseDraftFreezeRuntime = {
+  now: () => new Date(),
+};
+
+export interface FrozenPurchaseDraft {
+  readonly id: string;
+  readonly state: 'ready_for_ordering';
+  readonly readiedByUserId: string;
+  readonly readiedAt: Date;
+}
+
+// Only the single capability each collaborator actually provides, so this service depends on the
+// narrowest shape it uses (the same shape its unit spec's repository doubles provide).
+type FreezeWrite = Pick<
+  PurchaseDraftFreezeRepository,
+  'findDraftHeader' | 'freeze'
+>;
+type LineLookup = Pick<PurchaseDraftAssemblyRepository, 'findLines'>;
+
+// AC-14/AC-14a — moving a draft to Ready for Ordering. The coordinator's disambiguation rule: a
+// pre-read `null`/cross-Warehouse header is the non-enumerating unavailable outcome; a pre-read
+// state other than `draft` is `invalid_state` (the guarded write is never attempted); a pre-read
+// state of `draft` whose guarded write still affects zero rows is `concurrent_change` — the loser
+// of a genuine race, never merged (sad.md §8/§6.7).
+@Injectable()
+export class PurchaseDraftFreezeService {
+  constructor(
+    private readonly freezeRepository: FreezeWrite,
+    private readonly assemblyRepository: LineLookup,
+    @Optional()
+    private readonly runtime: PurchaseDraftFreezeRuntime = defaultPurchaseDraftFreezeRuntime,
+  ) {}
+
+  @Transactional()
+  async ready(
+    currentUser: AccessCurrentUser,
+    purchaseDraftId: string,
+  ): Promise<FrozenPurchaseDraft> {
+    const header = await this.freezeRepository.findDraftHeader(purchaseDraftId);
+    assert(
+      header !== null && header.warehouseId === currentUser.warehouseId,
+      purchaseDraftTargetUnavailableError(),
+    );
+
+    assert(isDiscardableDraft(header.state), purchaseDraftInvalidStateError());
+
+    // AC-14a — readiness requires the draft to hold at least one line; checked before any write.
+    const lines = await this.assemblyRepository.findLines(purchaseDraftId);
+    assert(!isEmptyDraft(lines.length), purchaseDraftEmptyError());
+
+    const readiedAt = this.runtime.now();
+    const frozen = await this.freezeRepository.freeze({
+      purchaseDraftId,
+      readiedByUserId: currentUser.userId,
+      readiedAt,
+    });
+    assert(frozen, purchaseDraftConcurrentChangeError());
+
+    return {
+      id: purchaseDraftId,
+      state: 'ready_for_ordering',
+      readiedByUserId: currentUser.userId,
+      readiedAt,
+    };
+  }
+}

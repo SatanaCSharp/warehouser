@@ -23,3 +23,25 @@ export const purchaseDraftUnknownPackagingTypeError = (
 // example carries no `details`.
 export const purchaseDraftFrozenError = (): ApplicationError =>
   new ApplicationError(ErrorCode.PURCHASE_DRAFTS_DRAFT_FROZEN);
+
+// AC-14a (T13) — a draft holding no lines cannot be moved to Ready for Ordering. openapi.yaml
+// `PurchaseDraftTransitionConflict` `emptyDraft` example carries no `details`.
+export const purchaseDraftEmptyError = (): ApplicationError =>
+  new ApplicationError(ErrorCode.PURCHASE_DRAFTS_DRAFT_EMPTY);
+
+// AC-24a (T13) — a draft that has been made ready is closed with a reason rather than discarded.
+// openapi.yaml `PurchaseDraftWriteConflict` `discardAfterReady` example carries no `details`.
+export const purchaseDraftDiscardUnavailableError = (): ApplicationError =>
+  new ApplicationError(ErrorCode.PURCHASE_DRAFTS_DISCARD_UNAVAILABLE);
+
+// sad.md §8/§6.7 (T13) — the second of two concurrent freezes affects no row and is refused rather
+// than merged. openapi.yaml `PurchaseDraftTransitionConflict` `concurrentTransition` example
+// carries no `details`.
+export const purchaseDraftConcurrentChangeError = (): ApplicationError =>
+  new ApplicationError(ErrorCode.PURCHASE_DRAFTS_CONCURRENT_CHANGE);
+
+// sad.md §6.11 (T13) — closure resolves the draft only in Ready for Ordering; a draft not in that
+// state refuses with the generic transition-state code. openapi.yaml
+// `PurchaseDraftTransitionConflict` `invalidState` example carries no `details`.
+export const purchaseDraftInvalidStateError = (): ApplicationError =>
+  new ApplicationError(ErrorCode.PURCHASE_DRAFTS_INVALID_STATE);

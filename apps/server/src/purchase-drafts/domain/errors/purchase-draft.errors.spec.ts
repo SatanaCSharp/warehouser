@@ -7,7 +7,11 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
 import {
+  purchaseDraftConcurrentChangeError,
+  purchaseDraftDiscardUnavailableError,
+  purchaseDraftEmptyError,
   purchaseDraftFrozenError,
+  purchaseDraftInvalidStateError,
   purchaseDraftTargetUnavailableError,
   purchaseDraftUnknownPackagingTypeError,
 } from 'purchase-drafts/domain/errors/purchase-draft.errors';
@@ -55,6 +59,57 @@ describe('purchase-draft domain error factories', () => {
     expect(error).toBeInstanceOf(ApplicationError);
     expect(error).toMatchObject({
       code: ErrorCode.PURCHASE_DRAFTS_DRAFT_FROZEN,
+    });
+    expect(error.details).toBeUndefined();
+  });
+
+  // AC-14a (T13) — a draft holding no lines cannot be moved to Ready for Ordering. openapi.yaml
+  // `PurchaseDraftTransitionConflict` `emptyDraft` example carries no `details`.
+  it('builds an ApplicationError for a draft that holds no lines', () => {
+    const error = purchaseDraftEmptyError();
+
+    expect(error).toBeInstanceOf(ApplicationError);
+    expect(error).toMatchObject({
+      code: ErrorCode.PURCHASE_DRAFTS_DRAFT_EMPTY,
+    });
+    expect(error.details).toBeUndefined();
+  });
+
+  // AC-24a (T13) — a draft that has been made ready is closed with a reason rather than
+  // discarded. openapi.yaml `PurchaseDraftWriteConflict` `discardAfterReady` example carries no
+  // `details`.
+  it('builds an ApplicationError for a discard attempt against a draft that has been made ready', () => {
+    const error = purchaseDraftDiscardUnavailableError();
+
+    expect(error).toBeInstanceOf(ApplicationError);
+    expect(error).toMatchObject({
+      code: ErrorCode.PURCHASE_DRAFTS_DISCARD_UNAVAILABLE,
+    });
+    expect(error.details).toBeUndefined();
+  });
+
+  // sad.md §8/§6.7 (T13) — the second of two concurrent freezes affects no row and is refused
+  // rather than merged. openapi.yaml `PurchaseDraftTransitionConflict` `concurrentTransition`
+  // example carries no `details`.
+  it('builds an ApplicationError for the loser of two concurrent transitions', () => {
+    const error = purchaseDraftConcurrentChangeError();
+
+    expect(error).toBeInstanceOf(ApplicationError);
+    expect(error).toMatchObject({
+      code: ErrorCode.PURCHASE_DRAFTS_CONCURRENT_CHANGE,
+    });
+    expect(error.details).toBeUndefined();
+  });
+
+  // sad.md §6.11 (T13) — closure resolves the draft only in Ready for Ordering; a draft not in
+  // that state refuses with the generic transition-state code. openapi.yaml
+  // `PurchaseDraftTransitionConflict` `invalidState` example carries no `details`.
+  it('builds an ApplicationError for a transition attempted from the wrong state', () => {
+    const error = purchaseDraftInvalidStateError();
+
+    expect(error).toBeInstanceOf(ApplicationError);
+    expect(error).toMatchObject({
+      code: ErrorCode.PURCHASE_DRAFTS_INVALID_STATE,
     });
     expect(error.details).toBeUndefined();
   });
