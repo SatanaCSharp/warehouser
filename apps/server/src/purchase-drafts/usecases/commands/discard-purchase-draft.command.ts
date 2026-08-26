@@ -8,12 +8,7 @@ import type { AccessCurrentUser } from 'shared/access/access-current-user';
 // and lets a refusal propagate unwrapped to the global exception filter.
 @Injectable()
 export class DiscardPurchaseDraftCommand {
-  constructor(
-    private readonly closureService: Pick<
-      PurchaseDraftClosureService,
-      'discard'
-    >,
-  ) {}
+  constructor(private readonly closureService: PurchaseDraftClosureService) {}
 
   execute(
     currentUser: AccessCurrentUser,

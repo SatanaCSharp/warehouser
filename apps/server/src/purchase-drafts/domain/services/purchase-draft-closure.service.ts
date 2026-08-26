@@ -9,7 +9,7 @@ import {
 import { isReadyForOrderingDraft } from 'purchase-drafts/domain/predicates/purchase-draft-freeze.predicates';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
-import type { PurchaseDraftFreezeRepository } from 'shared/domain/repositories/purchase-draft-freeze.repository';
+import { PurchaseDraftFreezeRepository } from 'shared/domain/repositories/purchase-draft-freeze.repository';
 
 export interface PurchaseDraftClosureRuntime {
   readonly now: () => Date;
@@ -38,21 +38,20 @@ export interface DiscardedPurchaseDraft {
   readonly discardedAt: Date;
 }
 
-// Only the single capability each collaborator actually provides.
-type ClosureWrite = Pick<
-  PurchaseDraftFreezeRepository,
-  'findDraftHeader' | 'close' | 'discard'
->;
-
 // AC-21/AC-24/AC-24a — closing a frozen draft with a reason, or discarding one never made ready.
 // `close` shares the freeze service's pre-read disambiguation between `invalid_state` and
 // `concurrent_change` (sad.md §6.11/§8). `discard` resolves through the different
 // `PurchaseDraftWriteConflict` schema, which carries no `concurrent_change` example, so a lost
 // guarded write there is always `discard_unavailable`, deliberately without a pre-read.
+//
+// The constructor parameter is typed as the concrete repository, not a `Pick<Repository,
+// 'method'>` structural subset: `emitDecoratorMetadata` erases a mapped/utility type to `Object`,
+// which Nest's DI container cannot resolve (`usecase.module.di.spec.ts` proves the module boots
+// through real injection, not just `new`).
 @Injectable()
 export class PurchaseDraftClosureService {
   constructor(
-    private readonly closureRepository: ClosureWrite,
+    private readonly closureRepository: PurchaseDraftFreezeRepository,
     @Optional()
     private readonly runtime: PurchaseDraftClosureRuntime = defaultPurchaseDraftClosureRuntime,
   ) {}

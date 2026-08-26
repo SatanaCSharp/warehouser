@@ -11,9 +11,7 @@ import type { AccessCurrentUser } from 'shared/access/access-current-user';
 // unwrapped to the global exception filter.
 @Injectable()
 export class ClosePurchaseDraftCommand {
-  constructor(
-    private readonly closureService: Pick<PurchaseDraftClosureService, 'close'>,
-  ) {}
+  constructor(private readonly closureService: PurchaseDraftClosureService) {}
 
   execute(
     currentUser: AccessCurrentUser,

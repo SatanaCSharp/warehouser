@@ -11,9 +11,9 @@ import { isKnownPackagingType } from 'purchase-drafts/domain/predicates/purchase
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import type { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
-import type { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository';
-import type { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
-import type { PackagingTypeCatalogueRepository } from 'shared/domain/repositories/packaging-type-catalogue.repository';
+import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository';
+import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
+import { PackagingTypeCatalogueRepository } from 'shared/domain/repositories/packaging-type-catalogue.repository';
 import type {
   CreateDraftLineLinkPersistenceInput,
   CreateDraftLinePersistenceInput,
@@ -52,19 +52,12 @@ const defaultPurchaseDraftAssemblyRuntime: PurchaseDraftAssemblyRuntime = {
   now: () => new Date(),
 };
 
-// Only the single method each collaborator actually calls, so this service depends on the
-// narrowest capability it uses rather than the whole shared repository (the same shape its unit
-// spec's repository doubles provide).
-type ItemLookup = Pick<ItemCatalogueRepository, 'findById'>;
-type CustomerOrderLock = Pick<
-  CustomerOrderLifecycleRepository,
-  'lockOrderWithAllocatedTotal'
->;
-type PackagingTypeCatalogue = Pick<
-  PackagingTypeCatalogueRepository,
-  'listPackagingTypes'
->;
-type AssemblyWrite = Pick<PurchaseDraftAssemblyRepository, 'createDraft'>;
+// Each collaborator is injected as its concrete repository, not a `Pick<Repository, 'method'>`
+// structural subset. `emitDecoratorMetadata` erases a mapped/utility type to `Object`, which Nest's
+// DI container cannot resolve, so narrowing the injection-site type here would abort module boot
+// the moment this service is registered as a provider — see `usecase.module.di.spec.ts`. The unit
+// spec still passes narrow doubles; it casts them, rather than the production type being widened to
+// admit them (`creating-a-server-repository.md` — inject the specialized concrete repository).
 
 // AC-10/AC-11/AC-11a/AC-12/AC-13 — assembling a draft. A line naming an Item, and a link naming a
 // Customer Order, of another Warehouse are both refused on the same non-enumerating terms (AC-11),
@@ -76,10 +69,10 @@ type AssemblyWrite = Pick<PurchaseDraftAssemblyRepository, 'createDraft'>;
 @Injectable()
 export class PurchaseDraftAssemblyService {
   constructor(
-    private readonly assemblyRepository: AssemblyWrite,
-    private readonly itemCatalogueRepository: ItemLookup,
-    private readonly customerOrderLifecycleRepository: CustomerOrderLock,
-    private readonly packagingTypeCatalogueRepository: PackagingTypeCatalogue,
+    private readonly assemblyRepository: PurchaseDraftAssemblyRepository,
+    private readonly itemCatalogueRepository: ItemCatalogueRepository,
+    private readonly customerOrderLifecycleRepository: CustomerOrderLifecycleRepository,
+    private readonly packagingTypeCatalogueRepository: PackagingTypeCatalogueRepository,
     @Optional()
     private readonly runtime: PurchaseDraftAssemblyRuntime = defaultPurchaseDraftAssemblyRuntime,
   ) {}

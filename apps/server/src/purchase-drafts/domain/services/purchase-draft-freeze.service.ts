@@ -12,8 +12,8 @@ import {
 } from 'purchase-drafts/domain/predicates/purchase-draft-freeze.predicates';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
-import type { PurchaseDraftAssemblyRepository } from 'shared/domain/repositories/purchase-draft-assembly.repository';
-import type { PurchaseDraftFreezeRepository } from 'shared/domain/repositories/purchase-draft-freeze.repository';
+import { PurchaseDraftAssemblyRepository } from 'shared/domain/repositories/purchase-draft-assembly.repository';
+import { PurchaseDraftFreezeRepository } from 'shared/domain/repositories/purchase-draft-freeze.repository';
 
 export interface PurchaseDraftFreezeRuntime {
   readonly now: () => Date;
@@ -30,24 +30,21 @@ export interface FrozenPurchaseDraft {
   readonly readiedAt: Date;
 }
 
-// Only the single capability each collaborator actually provides, so this service depends on the
-// narrowest shape it uses (the same shape its unit spec's repository doubles provide).
-type FreezeWrite = Pick<
-  PurchaseDraftFreezeRepository,
-  'findDraftHeader' | 'freeze'
->;
-type LineLookup = Pick<PurchaseDraftAssemblyRepository, 'findLines'>;
-
 // AC-14/AC-14a — moving a draft to Ready for Ordering. The coordinator's disambiguation rule: a
 // pre-read `null`/cross-Warehouse header is the non-enumerating unavailable outcome; a pre-read
 // state other than `draft` is `invalid_state` (the guarded write is never attempted); a pre-read
 // state of `draft` whose guarded write still affects zero rows is `concurrent_change` — the loser
 // of a genuine race, never merged (sad.md §8/§6.7).
+//
+// The constructor parameters are typed as the concrete repositories, not a `Pick<Repository,
+// 'method'>` structural subset: `emitDecoratorMetadata` erases a mapped/utility type to `Object`,
+// which Nest's DI container cannot resolve (`usecase.module.di.spec.ts` proves the module boots
+// through real injection, not just `new`).
 @Injectable()
 export class PurchaseDraftFreezeService {
   constructor(
-    private readonly freezeRepository: FreezeWrite,
-    private readonly assemblyRepository: LineLookup,
+    private readonly freezeRepository: PurchaseDraftFreezeRepository,
+    private readonly assemblyRepository: PurchaseDraftAssemblyRepository,
     @Optional()
     private readonly runtime: PurchaseDraftFreezeRuntime = defaultPurchaseDraftFreezeRuntime,
   ) {}

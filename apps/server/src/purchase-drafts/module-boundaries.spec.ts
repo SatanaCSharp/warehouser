@@ -40,4 +40,21 @@ describe('purchase-drafts usecase module surface', () => {
       new RegExp(`\\b${commandName}\\b`, 'u'),
     );
   });
+
+  // T14 — `ReadPurchaseDraftQuery`/`ListPurchaseDraftsQuery` are the application boundary the
+  // Drift Signal REST surface calls through; a separate `it.each` from the transition commands
+  // above so this task's RED does not collide with another task's edits to the same array.
+  it.each(['ReadPurchaseDraftQuery', 'ListPurchaseDraftsQuery'])(
+    'provides and exports %s from the use-case module',
+    (queryName) => {
+      const source = readUsecaseModuleSource();
+
+      expect(providersBlockOf(source)).toMatch(
+        new RegExp(`\\b${queryName}\\b`, 'u'),
+      );
+      expect(exportsBlockOf(source)).toMatch(
+        new RegExp(`\\b${queryName}\\b`, 'u'),
+      );
+    },
+  );
 });
