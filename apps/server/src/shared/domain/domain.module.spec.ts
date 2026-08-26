@@ -5,7 +5,16 @@ import {
 import { getRepositoryToken, TypeOrmModule } from '@nestjs/typeorm';
 import { DomainModule } from 'shared/domain/domain.module';
 import { AccountEntity } from 'shared/domain/entities/account.entity';
+import { ArrivalAllocationEntity } from 'shared/domain/entities/arrival-allocation.entity';
+import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
+import { DemandSnapshotEntryEntity } from 'shared/domain/entities/demand-snapshot-entry.entity';
+import { ItemEntity } from 'shared/domain/entities/item.entity';
+import { ItemStockAdjustmentEntity } from 'shared/domain/entities/item-stock-adjustment.entity';
+import { PackagingTypeEntity } from 'shared/domain/entities/packaging-type.entity';
 import { PermissionEntity } from 'shared/domain/entities/permission.entity';
+import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
+import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity';
+import { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity';
 import { RoleEntity } from 'shared/domain/entities/role.entity';
 import { RolePermissionEntity } from 'shared/domain/entities/role-permission.entity';
 import { SessionEntity } from 'shared/domain/entities/session.entity';
@@ -42,6 +51,38 @@ describe('DomainModule', () => {
     expect(typeOrmFeatureModule?.providers).toEqual(
       expect.arrayContaining(
         entities.map(
+          (entity): unknown =>
+            expect.objectContaining({
+              provide: String(getRepositoryToken(entity)),
+            }) as unknown,
+        ),
+      ),
+    );
+  });
+
+  it('registers every ordering shared entity with TypeORM (T3 AC-03, AC-11)', () => {
+    const orderingEntities = [
+      ItemEntity,
+      ItemStockAdjustmentEntity,
+      CustomerOrderEntity,
+      PackagingTypeEntity,
+      PurchaseDraftEntity,
+      PurchaseDraftLineEntity,
+      PurchaseDraftLineLinkEntity,
+      DemandSnapshotEntryEntity,
+      ArrivalAllocationEntity,
+    ];
+    const imports = Reflect.getMetadata(
+      MODULE_METADATA.IMPORTS,
+      DomainModule,
+    ) as Array<{ module?: unknown; providers?: unknown[] }>;
+    const typeOrmFeatureModule = imports.find(
+      (importedModule) => importedModule.module === TypeOrmModule,
+    );
+
+    expect(typeOrmFeatureModule?.providers).toEqual(
+      expect.arrayContaining(
+        orderingEntities.map(
           (entity): unknown =>
             expect.objectContaining({
               provide: String(getRepositoryToken(entity)),

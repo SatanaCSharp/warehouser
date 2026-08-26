@@ -2,7 +2,16 @@ import { Global, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TransactionModule } from 'shared/database/transaction.module';
 import { AccountEntity } from 'shared/domain/entities/account.entity';
+import { ArrivalAllocationEntity } from 'shared/domain/entities/arrival-allocation.entity';
+import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
+import { DemandSnapshotEntryEntity } from 'shared/domain/entities/demand-snapshot-entry.entity';
+import { ItemEntity } from 'shared/domain/entities/item.entity';
+import { ItemStockAdjustmentEntity } from 'shared/domain/entities/item-stock-adjustment.entity';
+import { PackagingTypeEntity } from 'shared/domain/entities/packaging-type.entity';
 import { PermissionEntity } from 'shared/domain/entities/permission.entity';
+import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
+import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity';
+import { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity';
 import { RoleEntity } from 'shared/domain/entities/role.entity';
 import { RolePermissionEntity } from 'shared/domain/entities/role-permission.entity';
 import { SessionEntity } from 'shared/domain/entities/session.entity';
@@ -34,7 +43,16 @@ import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/wor
 
 const domainEntities = [
   AccountEntity,
+  ArrivalAllocationEntity,
+  CustomerOrderEntity,
+  DemandSnapshotEntryEntity,
+  ItemEntity,
+  ItemStockAdjustmentEntity,
+  PackagingTypeEntity,
   PermissionEntity,
+  PurchaseDraftEntity,
+  PurchaseDraftLineEntity,
+  PurchaseDraftLineLinkEntity,
   RolePermissionEntity,
   RoleEntity,
   SessionEntity,
