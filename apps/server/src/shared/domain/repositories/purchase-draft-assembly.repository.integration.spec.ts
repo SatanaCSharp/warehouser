@@ -20,6 +20,7 @@ import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 // than a half-applied change (`ManagerTransferRepository.assignRole`,
 // `RoleLifecycleRepository.updateMemberRole` are the established boolean-return precedent for this
 // exact shape). AC-10, AC-10a, AC-11a and AC-12 are proven here at the persistence boundary.
+import type { AssemblyWriteOutcome } from 'shared/domain/repositories/purchase-draft-assembly.repository';
 import { PurchaseDraftAssemblyRepository } from 'shared/domain/repositories/purchase-draft-assembly.repository';
 import {
   buildWarehouse,
@@ -82,25 +83,33 @@ interface AddLinkInput {
 }
 
 // The shape this RED step expects the implementer to expose (tasks/purchase-draft-assembly.md
-// "What"; data-model.md "Repository boundaries"). Every guarded write returns whether it actually
-// applied, mirroring the established `updated.affected === 1` pattern rather than throwing from the
-// repository itself — the typed refusal is the service's job (server-error-handling.md §3).
+// "What"; data-model.md "Repository boundaries"). Every guarded write reports **which** of the two
+// preconditions failed rather than a bare boolean — the draft is no longer in the `draft` state, or
+// the line/link named is not one of that draft's — because openapi.yaml gives these routes both a
+// 409 and a 404 and the service cannot pick between them from a `false`. The repository still never
+// throws; the typed refusal is the service's job (server-error-handling.md §3).
 interface PurchaseDraftAssemblyRepositoryContract {
   createDraft(input: CreateDraftPersistenceInput): Promise<PurchaseDraftEntity>;
-  addLine(input: AddLineInput): Promise<boolean>;
+  addLine(input: AddLineInput): Promise<AssemblyWriteOutcome>;
   updateLine(
     purchaseDraftId: string,
     lineId: string,
     changes: UpdateLineInput,
-  ): Promise<boolean>;
-  removeLine(purchaseDraftId: string, lineId: string): Promise<boolean>;
-  addLink(input: AddLinkInput): Promise<boolean>;
+  ): Promise<AssemblyWriteOutcome>;
+  removeLine(
+    purchaseDraftId: string,
+    lineId: string,
+  ): Promise<AssemblyWriteOutcome>;
+  addLink(input: AddLinkInput): Promise<AssemblyWriteOutcome>;
   updateLink(
     purchaseDraftId: string,
     linkId: string,
     statedQuantity: number,
-  ): Promise<boolean>;
-  removeLink(purchaseDraftId: string, linkId: string): Promise<boolean>;
+  ): Promise<AssemblyWriteOutcome>;
+  removeLink(
+    purchaseDraftId: string,
+    linkId: string,
+  ): Promise<AssemblyWriteOutcome>;
   findLines(purchaseDraftId: string): Promise<PurchaseDraftLineEntity[]>;
   findLinks(
     purchaseDraftLineId: string,
@@ -295,6 +304,41 @@ describeIntegration('PurchaseDraftAssemblyRepository', () => {
     expect(links[0]).toMatchObject({ customerOrderId, statedQuantity: 100 });
   });
 
+  // The distinction the outcome type exists for: on a draft that IS mutable, naming a line or link
+  // that is not one of that draft's is `target-missing`, not `draft-frozen`. openapi.yaml maps the
+  // first to 404 `PurchaseDraftTargetUnavailable` and the second to 409 `PurchaseDraftWriteConflict`,
+  // so collapsing them would answer "this draft is frozen" for a draft the member can still edit.
+  it('separates an unknown line or link from a frozen draft on a mutable draft', async () => {
+    const seeded = await seedWarehouse();
+    const draftId = await seedDraft(seeded, 'draft');
+    const strangerLineId = randomUUID();
+    const strangerLinkId = randomUUID();
+
+    const updatedLine = await transactions.executeInTransaction({}, () =>
+      repository.updateLine(draftId, strangerLineId, { orderedQuantity: 60 }),
+    );
+    expect(updatedLine).toBe('target-missing');
+
+    const removedLine = await transactions.executeInTransaction({}, () =>
+      repository.removeLine(draftId, strangerLineId),
+    );
+    expect(removedLine).toBe('target-missing');
+
+    const updatedLink = await transactions.executeInTransaction({}, () =>
+      repository.updateLink(draftId, strangerLinkId, 45),
+    );
+    expect(updatedLink).toBe('target-missing');
+
+    const removedLink = await transactions.executeInTransaction({}, () =>
+      repository.removeLink(draftId, strangerLinkId),
+    );
+    expect(removedLink).toBe('target-missing');
+
+    // The draft stayed mutable throughout — which is exactly what makes 'target-missing' the
+    // truthful answer rather than 'draft-frozen'.
+    expect(await readDraft(draftId)).toMatchObject({ state: 'draft' });
+  });
+
   // AC-10a — the draft is assembled over the course of deciding: every one of add/change/remove a
   // line and add/change/remove a link succeeds against a Draft-state draft and leaves it in Draft.
   it('accepts every kind of revision against a Draft-state draft and stays in Draft', async () => {
@@ -313,12 +357,12 @@ describeIntegration('PurchaseDraftAssemblyRepository', () => {
         orderedQuantity: 40,
       }),
     );
-    expect(added).toBe(true);
+    expect(added).toBe('applied');
 
     const updated = await transactions.executeInTransaction({}, () =>
       repository.updateLine(draftId, lineId, { orderedQuantity: 60 }),
     );
-    expect(updated).toBe(true);
+    expect(updated).toBe('applied');
 
     const linked = await transactions.executeInTransaction({}, () =>
       repository.addLink({
@@ -330,22 +374,22 @@ describeIntegration('PurchaseDraftAssemblyRepository', () => {
         statedQuantity: 30,
       }),
     );
-    expect(linked).toBe(true);
+    expect(linked).toBe('applied');
 
     const relinked = await transactions.executeInTransaction({}, () =>
       repository.updateLink(draftId, linkId, 45),
     );
-    expect(relinked).toBe(true);
+    expect(relinked).toBe('applied');
 
     const unlinked = await transactions.executeInTransaction({}, () =>
       repository.removeLink(draftId, linkId),
     );
-    expect(unlinked).toBe(true);
+    expect(unlinked).toBe('applied');
 
     const removed = await transactions.executeInTransaction({}, () =>
       repository.removeLine(draftId, lineId),
     );
-    expect(removed).toBe(true);
+    expect(removed).toBe('applied');
 
     // Every write above resolved and applied; the draft itself was never touched by any of them.
     expect(await readDraft(draftId)).toMatchObject({ state: 'draft' });
@@ -374,7 +418,7 @@ describeIntegration('PurchaseDraftAssemblyRepository', () => {
         }),
       );
 
-      expect(applied).toBe(false);
+      expect(applied).toBe('draft-frozen');
       expect(await repository.findLines(draftId)).toHaveLength(0);
       expect(await readDraft(draftId)).toEqual(before);
     });
@@ -427,11 +471,11 @@ describeIntegration('PurchaseDraftAssemblyRepository', () => {
         () => repository.removeLine(draftId, lineId),
       );
 
-      expect(updateLineApplied).toBe(false);
-      expect(addLinkApplied).toBe(false);
-      expect(updateLinkApplied).toBe(false);
-      expect(removeLinkApplied).toBe(false);
-      expect(removeLineApplied).toBe(false);
+      expect(updateLineApplied).toBe('draft-frozen');
+      expect(addLinkApplied).toBe('draft-frozen');
+      expect(updateLinkApplied).toBe('draft-frozen');
+      expect(removeLinkApplied).toBe('draft-frozen');
+      expect(removeLineApplied).toBe('draft-frozen');
 
       // Nothing about the line or the link moved: not the quantity a rejected `updateLine` or
       // `updateLink` would have set, not a second link a rejected `addLink` would have added, and
@@ -501,8 +545,8 @@ describeIntegration('PurchaseDraftAssemblyRepository', () => {
       }),
     );
 
-    expect(firstLinked).toBe(true);
-    expect(secondLinked).toBe(true);
+    expect(firstLinked).toBe('applied');
+    expect(secondLinked).toBe('applied');
 
     const firstLinks = await repository.findLinks(firstLineId);
     expect(firstLinks).toHaveLength(1);

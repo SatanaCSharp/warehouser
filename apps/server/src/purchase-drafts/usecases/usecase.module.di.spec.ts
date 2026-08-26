@@ -1,9 +1,17 @@
 import { Global, Module } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { AddPurchaseDraftLineCommand } from 'purchase-drafts/usecases/commands/add-purchase-draft-line.command';
+import { AddPurchaseDraftLineLinkCommand } from 'purchase-drafts/usecases/commands/add-purchase-draft-line-link.command';
 import { ClosePurchaseDraftCommand } from 'purchase-drafts/usecases/commands/close-purchase-draft.command';
 import { ConfirmPurchaseDraftArrivalCommand } from 'purchase-drafts/usecases/commands/confirm-purchase-draft-arrival.command';
+import { CreatePurchaseDraftCommand } from 'purchase-drafts/usecases/commands/create-purchase-draft.command';
 import { DiscardPurchaseDraftCommand } from 'purchase-drafts/usecases/commands/discard-purchase-draft.command';
 import { ReadyPurchaseDraftCommand } from 'purchase-drafts/usecases/commands/ready-purchase-draft.command';
+import { RemovePurchaseDraftLineCommand } from 'purchase-drafts/usecases/commands/remove-purchase-draft-line.command';
+import { RemovePurchaseDraftLineLinkCommand } from 'purchase-drafts/usecases/commands/remove-purchase-draft-line-link.command';
+import { RevisePurchaseDraftLineCommand } from 'purchase-drafts/usecases/commands/revise-purchase-draft-line.command';
+import { RevisePurchaseDraftLineLinkCommand } from 'purchase-drafts/usecases/commands/revise-purchase-draft-line-link.command';
+import { ListPackagingTypesQuery } from 'purchase-drafts/usecases/queries/list-packaging-types.query';
 import { ListPurchaseDraftsQuery } from 'purchase-drafts/usecases/queries/list-purchase-drafts.query';
 import { ReadPurchaseDraftQuery } from 'purchase-drafts/usecases/queries/read-purchase-draft.query';
 import { PurchaseDraftsUsecaseModule } from 'purchase-drafts/usecases/usecase.module';
@@ -58,6 +66,45 @@ describe('PurchaseDraftsUsecaseModule Nest DI graph', () => {
     );
     expect(moduleRef.get(ListPurchaseDraftsQuery)).toBeInstanceOf(
       ListPurchaseDraftsQuery,
+    );
+  });
+
+  // T12 (completing the assembly half) — the create and revise use cases. `PurchaseDraftAssembly-
+  // Service` reaches four repositories (assembly, item catalogue, customer-order lifecycle,
+  // packaging-type catalogue), none of which `DomainModule` provides, so every one has to be a
+  // local provider of this module exactly as `PurchaseDraftAssemblyRepository` already is.
+  // Compiling the graph is what proves that, and that the service is registered at all — until now
+  // it existed but was reachable from nothing, so no wiring mistake could be observed.
+  it('constructs every Purchase Draft assembly use case through Nest injection', async () => {
+    const moduleRef = await Test.createTestingModule({
+      imports: [TestDataSourceDoubleModule, PurchaseDraftsUsecaseModule],
+    }).compile();
+
+    expect(moduleRef.get(CreatePurchaseDraftCommand)).toBeInstanceOf(
+      CreatePurchaseDraftCommand,
+    );
+    expect(moduleRef.get(AddPurchaseDraftLineCommand)).toBeInstanceOf(
+      AddPurchaseDraftLineCommand,
+    );
+    expect(moduleRef.get(RevisePurchaseDraftLineCommand)).toBeInstanceOf(
+      RevisePurchaseDraftLineCommand,
+    );
+    expect(moduleRef.get(RemovePurchaseDraftLineCommand)).toBeInstanceOf(
+      RemovePurchaseDraftLineCommand,
+    );
+    expect(moduleRef.get(AddPurchaseDraftLineLinkCommand)).toBeInstanceOf(
+      AddPurchaseDraftLineLinkCommand,
+    );
+    expect(moduleRef.get(RevisePurchaseDraftLineLinkCommand)).toBeInstanceOf(
+      RevisePurchaseDraftLineLinkCommand,
+    );
+    expect(moduleRef.get(RemovePurchaseDraftLineLinkCommand)).toBeInstanceOf(
+      RemovePurchaseDraftLineLinkCommand,
+    );
+    // AC-13 — the catalogue the Packaging Type rule refuses against is also the catalogue the
+    // member picks from, served at `/packaging-types` (openapi.yaml).
+    expect(moduleRef.get(ListPackagingTypesQuery)).toBeInstanceOf(
+      ListPackagingTypesQuery,
     );
   });
 });

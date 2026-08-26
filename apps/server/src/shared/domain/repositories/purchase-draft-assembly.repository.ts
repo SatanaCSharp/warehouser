@@ -46,6 +46,14 @@ export interface UpdateLinePersistenceInput {
   readonly valueAddingNote?: string | null;
 }
 
+/** What a guarded assembly write did. `openapi.yaml` gives every line and link route both a 404
+ * (`PurchaseDraftTargetUnavailable`) and a 409 (`PurchaseDraftWriteConflict`), so the two reasons a
+ * write can affect no row have to stay distinguishable here: the draft no longer resolves in the
+ * `draft` state, or the line/link named is not one of that draft's. A bare boolean collapses them
+ * and forces the service to guess which refusal the member is owed. */
+export type AssemblyWriteOutcome =
+  'applied' | 'draft-frozen' | 'target-missing';
+
 export interface AddLinkPersistenceInput {
   readonly id: string;
   readonly purchaseDraftLineId: string;
@@ -149,7 +157,7 @@ export class PurchaseDraftAssemblyRepository {
     return draft;
   }
 
-  async addLine(input: AddLinePersistenceInput): Promise<boolean> {
+  async addLine(input: AddLinePersistenceInput): Promise<AssemblyWriteOutcome> {
     const manager = getEntityManager(this.dataSource);
     const now = new Date();
 
@@ -159,7 +167,7 @@ export class PurchaseDraftAssemblyRepository {
       now,
     );
     if (!guarded) {
-      return false;
+      return 'draft-frozen';
     }
 
     await manager.getRepository(PurchaseDraftLineEntity).insert({
@@ -175,46 +183,49 @@ export class PurchaseDraftAssemblyRepository {
       updatedAt: now,
     });
 
-    return true;
+    return 'applied';
   }
 
   async updateLine(
     purchaseDraftId: string,
     lineId: string,
     changes: UpdateLinePersistenceInput,
-  ): Promise<boolean> {
+  ): Promise<AssemblyWriteOutcome> {
     const manager = getEntityManager(this.dataSource);
     const now = new Date();
 
     const guarded = await guardDraftMutable(manager, purchaseDraftId, now);
     if (!guarded) {
-      return false;
+      return 'draft-frozen';
     }
 
     const updated = await manager
       .getRepository(PurchaseDraftLineEntity)
       .update({ id: lineId, purchaseDraftId }, { ...changes, updatedAt: now });
 
-    return updated.affected === 1;
+    return updated.affected === 1 ? 'applied' : 'target-missing';
   }
 
-  async removeLine(purchaseDraftId: string, lineId: string): Promise<boolean> {
+  async removeLine(
+    purchaseDraftId: string,
+    lineId: string,
+  ): Promise<AssemblyWriteOutcome> {
     const manager = getEntityManager(this.dataSource);
     const now = new Date();
 
     const guarded = await guardDraftMutable(manager, purchaseDraftId, now);
     if (!guarded) {
-      return false;
+      return 'draft-frozen';
     }
 
     const deleted = await manager
       .getRepository(PurchaseDraftLineEntity)
       .delete({ id: lineId, purchaseDraftId });
 
-    return deleted.affected === 1;
+    return deleted.affected === 1 ? 'applied' : 'target-missing';
   }
 
-  async addLink(input: AddLinkPersistenceInput): Promise<boolean> {
+  async addLink(input: AddLinkPersistenceInput): Promise<AssemblyWriteOutcome> {
     const manager = getEntityManager(this.dataSource);
     const now = new Date();
 
@@ -224,7 +235,7 @@ export class PurchaseDraftAssemblyRepository {
       now,
     );
     if (!guarded) {
-      return false;
+      return 'draft-frozen';
     }
 
     await manager.getRepository(PurchaseDraftLineLinkEntity).insert({
@@ -238,20 +249,20 @@ export class PurchaseDraftAssemblyRepository {
       updatedAt: now,
     });
 
-    return true;
+    return 'applied';
   }
 
   async updateLink(
     purchaseDraftId: string,
     linkId: string,
     statedQuantity: number,
-  ): Promise<boolean> {
+  ): Promise<AssemblyWriteOutcome> {
     const manager = getEntityManager(this.dataSource);
     const now = new Date();
 
     const guarded = await guardDraftMutable(manager, purchaseDraftId, now);
     if (!guarded) {
-      return false;
+      return 'draft-frozen';
     }
 
     const updated = await manager
@@ -261,23 +272,26 @@ export class PurchaseDraftAssemblyRepository {
         { statedQuantity, updatedAt: now },
       );
 
-    return updated.affected === 1;
+    return updated.affected === 1 ? 'applied' : 'target-missing';
   }
 
-  async removeLink(purchaseDraftId: string, linkId: string): Promise<boolean> {
+  async removeLink(
+    purchaseDraftId: string,
+    linkId: string,
+  ): Promise<AssemblyWriteOutcome> {
     const manager = getEntityManager(this.dataSource);
     const now = new Date();
 
     const guarded = await guardDraftMutable(manager, purchaseDraftId, now);
     if (!guarded) {
-      return false;
+      return 'draft-frozen';
     }
 
     const deleted = await manager
       .getRepository(PurchaseDraftLineLinkEntity)
       .delete({ id: linkId, purchaseDraftId });
 
-    return deleted.affected === 1;
+    return deleted.affected === 1 ? 'applied' : 'target-missing';
   }
 
   findLines(purchaseDraftId: string): Promise<PurchaseDraftLineEntity[]> {
