@@ -13,6 +13,7 @@ import { DiscardPurchaseDraftCommand } from 'purchase-drafts/usecases/commands/d
 import { ReadyPurchaseDraftCommand } from 'purchase-drafts/usecases/commands/ready-purchase-draft.command';
 import { RemovePurchaseDraftLineCommand } from 'purchase-drafts/usecases/commands/remove-purchase-draft-line.command';
 import { RemovePurchaseDraftLineLinkCommand } from 'purchase-drafts/usecases/commands/remove-purchase-draft-line-link.command';
+import { RevisePurchaseDraftCommand } from 'purchase-drafts/usecases/commands/revise-purchase-draft.command';
 import { RevisePurchaseDraftLineCommand } from 'purchase-drafts/usecases/commands/revise-purchase-draft-line.command';
 import { RevisePurchaseDraftLineLinkCommand } from 'purchase-drafts/usecases/commands/revise-purchase-draft-line-link.command';
 import { ListPackagingTypesQuery } from 'purchase-drafts/usecases/queries/list-packaging-types.query';
@@ -50,6 +51,7 @@ import { PurchaseDraftReadRepository } from 'shared/domain/repositories/purchase
     CustomerOrderLifecycleRepository,
     PackagingTypeCatalogueRepository,
     CreatePurchaseDraftCommand,
+    RevisePurchaseDraftCommand,
     AddPurchaseDraftLineCommand,
     RevisePurchaseDraftLineCommand,
     RemovePurchaseDraftLineCommand,
@@ -66,6 +68,7 @@ import { PurchaseDraftReadRepository } from 'shared/domain/repositories/purchase
   ],
   exports: [
     CreatePurchaseDraftCommand,
+    RevisePurchaseDraftCommand,
     AddPurchaseDraftLineCommand,
     RevisePurchaseDraftLineCommand,
     RemovePurchaseDraftLineCommand,

@@ -62,6 +62,12 @@ export interface AddLinkInput {
   readonly statedQuantity: number;
 }
 
+/** The one draft-level field a member may still change while the draft is in the Draft state
+ * (openapi.yaml `PurchaseDraftRevise`). An explicit `null` clears it. */
+export interface ReviseDraftInput {
+  readonly expectedArrivalDate?: string | null;
+}
+
 export interface PurchaseDraftAssemblyRuntime {
   readonly purchaseDraftId: () => string;
   readonly purchaseDraftLineId: () => string;
@@ -206,6 +212,22 @@ export class PurchaseDraftAssemblyService {
   // turn the outcome it reports into the refusal openapi.yaml specifies for that route. The state
   // guard itself is never re-checked here — it lives in the write's own `WHERE` clause, so a draft
   // frozen between the check and the write still affects zero rows (AC-15, sad.md §6.6).
+
+  // AC-10a/AC-15 — revising the draft's own Expected Arrival Date while it is still in the Draft
+  // state; a draft that no longer resolves there refuses with `purchase_drafts.draft_frozen`.
+  @Transactional()
+  async reviseDraft(
+    _currentUser: AccessCurrentUser,
+    purchaseDraftId: string,
+    changes: ReviseDraftInput,
+  ): Promise<void> {
+    const outcome = await this.assemblyRepository.updateDraft(
+      purchaseDraftId,
+      pickStated(changes),
+    );
+
+    assertApplied(outcome);
+  }
 
   @Transactional()
   async addLine(

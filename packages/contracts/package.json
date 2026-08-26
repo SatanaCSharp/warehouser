@@ -25,6 +25,10 @@
       "types": "./dist/items/index.d.ts",
       "default": "./dist/items/index.js"
     },
+    "./purchase-drafts": {
+      "types": "./dist/purchase-drafts/index.d.ts",
+      "default": "./dist/purchase-drafts/index.js"
+    },
     "./users": {
       "types": "./dist/users/index.d.ts",
       "default": "./dist/users/index.js"

@@ -46,6 +46,10 @@ export interface UpdateLinePersistenceInput {
   readonly valueAddingNote?: string | null;
 }
 
+export interface UpdateDraftPersistenceInput {
+  readonly expectedArrivalDate?: string | null;
+}
+
 /** What a guarded assembly write did. `openapi.yaml` gives every line and link route both a 404
  * (`PurchaseDraftTargetUnavailable`) and a 409 (`PurchaseDraftWriteConflict`), so the two reasons a
  * write can affect no row have to stay distinguishable here: the draft no longer resolves in the
@@ -155,6 +159,26 @@ export class PurchaseDraftAssemblyRepository {
     }
 
     return draft;
+  }
+
+  // AC-10a — the one draft-level field a member may still change while the draft is in the Draft
+  // state (`expectedArrivalDate`); guarded exactly as every other assembly write is, in this
+  // `UPDATE`'s own `WHERE` clause (AC-15).
+  async updateDraft(
+    purchaseDraftId: string,
+    changes: UpdateDraftPersistenceInput,
+  ): Promise<AssemblyWriteOutcome> {
+    const manager = getEntityManager(this.dataSource);
+    const now = new Date();
+
+    const updated = await manager
+      .getRepository(PurchaseDraftEntity)
+      .update(
+        { id: purchaseDraftId, state: 'draft' },
+        { ...changes, updatedAt: now },
+      );
+
+    return updated.affected === 1 ? 'applied' : 'draft-frozen';
   }
 
   async addLine(input: AddLinePersistenceInput): Promise<AssemblyWriteOutcome> {

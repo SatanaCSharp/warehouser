@@ -6,6 +6,7 @@ import { AccessRestModule } from 'access';
 import { AuthModule } from 'auth/auth.module';
 import { CustomerOrdersModule } from 'customer-orders';
 import { ItemsModule } from 'items';
+import { PurchaseDraftsModule } from 'purchase-drafts';
 import { createTypeOrmOptions } from 'shared/database/typeorm.options';
 import { DomainModule } from 'shared/domain/domain.module';
 import { WriteRateLimitModule } from 'shared/guards/write-rate-limit.module';
@@ -30,6 +31,7 @@ import { WorkspacesRestModule } from 'workspaces';
     AccessRestModule,
     ItemsModule,
     CustomerOrdersModule,
+    PurchaseDraftsModule,
     WarehousesRestModule,
     WorkspacesRestModule,
     BullModule.forRootAsync({
