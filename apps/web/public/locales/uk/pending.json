@@ -21,6 +21,11 @@
     "reactivateItem": "Реактивуємо товар…",
     "adjustOnHandQuantity": "Записуємо кількість в наявності…"
   },
+  "customer-order": {
+    "recordCustomerOrder": "Записуємо попит…",
+    "amendCustomerOrder": "Змінюємо замовлення…",
+    "cancelCustomerOrder": "Скасовуємо замовлення…"
+  },
   "workspace": {
     "renameWorkspace": "Називаємо робочий простір…",
     "createWarehouse": "Додаємо склад…",
@@ -36,5 +41,15 @@
     "removeWorkspaceMember": "Вилучаємо учасника робочого простору…",
     "assignWorkspaceRole": "Змінюємо роль робочого простору…",
     "transferWorkspaceOwner": "Передаємо власність над робочим простором…"
+  },
+  "purchase-draft": {
+    "createPurchaseDraft": "Створюємо чернетку закупівлі…",
+    "revisePurchaseDraft": "Зберігаємо очікувану дату прибуття…",
+    "addPurchaseDraftLine": "Додаємо рядок…",
+    "revisePurchaseDraftLine": "Зберігаємо рядок…",
+    "removePurchaseDraftLine": "Видаляємо рядок…",
+    "addPurchaseDraftLineLink": "Пов'язуємо замовлення клієнта…",
+    "revisePurchaseDraftLineLink": "Зберігаємо заявлену кількість…",
+    "removePurchaseDraftLineLink": "Видаляємо зв'язок…"
   }
 }

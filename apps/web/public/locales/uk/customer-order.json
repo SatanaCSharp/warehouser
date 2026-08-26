@@ -1,5 +1,73 @@
 {
   "head": {
     "title": "Попит"
+  },
+  "demand": {
+    "heading": "Попит",
+    "recordAction": "Записати попит",
+    "table": {
+      "item": "Товар",
+      "outstanding": "Залишок",
+      "neededBy": "Потрібно до",
+      "onHand": "В наявності",
+      "coveredBy": "Покрито",
+      "actions": "Дії"
+    },
+    "empty": "Поки що немає попиту.",
+    "error": "Не вдалося завантажити попит.",
+    "disclosure": {
+      "show": "Показати {{count}} замовлення клієнта для {{item}}",
+      "show_other": "Показати {{count}} замовлень клієнтів для {{item}}",
+      "hide": "Сховати {{count}} замовлення клієнта для {{item}}",
+      "hide_other": "Сховати {{count}} замовлень клієнтів для {{item}}"
+    },
+    "coverage": {
+      "chip": "{{quantity}} у чернетці",
+      "none": "Не покрито жодною чернеткою"
+    },
+    "customerOrder": {
+      "actions": "Дії для {{customerName}}"
+    },
+    "menu": {
+      "amend": "Змінити",
+      "cancel": "Скасувати замовлення"
+    }
+  },
+  "chips": {
+    "unfulfilled": "Не виконано",
+    "fulfilled": "Виконано",
+    "cancelled": "Скасовано"
+  },
+  "picker": {
+    "label": "Замовлення клієнта",
+    "optionLabel": "{{customerName}} · {{quantity}} · до {{neededBy}}"
+  },
+  "dialogs": {
+    "record": {
+      "title": "Записати попит",
+      "cancel": "Скасувати",
+      "submit": "Записати попит",
+      "customerNameLabel": "Ім'я клієнта",
+      "quantityLabel": "Кількість",
+      "neededByLabel": "Потрібно до",
+      "refusal": "Нічого не змінилося."
+    },
+    "amend": {
+      "title": "Змінити замовлення для {{customerName}}",
+      "cancel": "Скасувати",
+      "submit": "Зберегти зміни",
+      "quantityLabel": "Кількість",
+      "neededByLabel": "Потрібно до",
+      "refusal": "Нічого не змінилося."
+    },
+    "cancel": {
+      "title": "Скасувати замовлення для {{customerName}}",
+      "cancel": "Залишити замовлення",
+      "submit": "Скасувати замовлення",
+      "reasonLabel": "Причина",
+      "reasonRequired": "Вкажіть причину скасування цього замовлення.",
+      "body": "Це вилучає замовлення з консолідованого попиту. Наявне покриття від замороженої чернетки не змінюється.",
+      "refusal": "Нічого не змінилося."
+    }
   }
 }

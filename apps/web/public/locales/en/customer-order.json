@@ -1,5 +1,73 @@
 {
   "head": {
     "title": "Demand"
+  },
+  "demand": {
+    "heading": "Demand",
+    "recordAction": "Record demand",
+    "table": {
+      "item": "Item",
+      "outstanding": "Outstanding",
+      "neededBy": "Needed by",
+      "onHand": "On hand",
+      "coveredBy": "Covered by",
+      "actions": "Actions"
+    },
+    "empty": "No demand yet.",
+    "error": "Demand could not be loaded.",
+    "disclosure": {
+      "show": "Show the {{count}} customer order for {{item}}",
+      "show_other": "Show the {{count}} customer orders for {{item}}",
+      "hide": "Hide the {{count}} customer order for {{item}}",
+      "hide_other": "Hide the {{count}} customer orders for {{item}}"
+    },
+    "coverage": {
+      "chip": "{{quantity}} on draft",
+      "none": "Covered by no draft"
+    },
+    "customerOrder": {
+      "actions": "Actions for {{customerName}}"
+    },
+    "menu": {
+      "amend": "Amend",
+      "cancel": "Cancel order"
+    }
+  },
+  "chips": {
+    "unfulfilled": "Unfulfilled",
+    "fulfilled": "Fulfilled",
+    "cancelled": "Cancelled"
+  },
+  "picker": {
+    "label": "Customer order",
+    "optionLabel": "{{customerName}} · {{quantity}} · by {{neededBy}}"
+  },
+  "dialogs": {
+    "record": {
+      "title": "Record demand",
+      "cancel": "Cancel",
+      "submit": "Record demand",
+      "customerNameLabel": "Customer name",
+      "quantityLabel": "Quantity",
+      "neededByLabel": "Needed by",
+      "refusal": "Nothing has changed."
+    },
+    "amend": {
+      "title": "Amend order for {{customerName}}",
+      "cancel": "Cancel",
+      "submit": "Save changes",
+      "quantityLabel": "Quantity",
+      "neededByLabel": "Needed by",
+      "refusal": "Nothing has changed."
+    },
+    "cancel": {
+      "title": "Cancel order for {{customerName}}",
+      "cancel": "Keep order",
+      "submit": "Cancel order",
+      "reasonLabel": "Reason",
+      "reasonRequired": "State a reason for cancelling this order.",
+      "body": "This removes the order from the consolidated demand. Existing coverage from a frozen draft is unaffected.",
+      "refusal": "Nothing has changed."
+    }
   }
 }

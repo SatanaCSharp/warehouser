@@ -13,7 +13,7 @@ files_hint:
   ]
 owner: 'Backend Lead'
 estimate: 'L'
-status: 'todo'
+status: 'done'
 ---
 
 # T16 — Expose the purchase-drafts REST surface: contracts subpath, transition sub-resources, controllers and module wiring

@@ -21,6 +21,11 @@
     "reactivateItem": "Товар реактивовано.",
     "adjustOnHandQuantity": "Кількість в наявності записано."
   },
+  "customer-order": {
+    "recordCustomerOrder": "Попит записано.",
+    "amendCustomerOrder": "Замовлення змінено.",
+    "cancelCustomerOrder": "Замовлення скасовано."
+  },
   "workspace": {
     "renameWorkspace": "Робочий простір названо.",
     "createWarehouse": "Склад додано.",
@@ -36,5 +41,15 @@
     "removeWorkspaceMember": "Учасника робочого простору вилучено.",
     "assignWorkspaceRole": "Роль робочого простору змінено.",
     "transferWorkspaceOwner": "Власність над робочим простором передано."
+  },
+  "purchase-draft": {
+    "createPurchaseDraft": "Чернетку закупівлі створено.",
+    "revisePurchaseDraft": "Очікувану дату прибуття збережено.",
+    "addPurchaseDraftLine": "Рядок додано.",
+    "revisePurchaseDraftLine": "Рядок збережено.",
+    "removePurchaseDraftLine": "Рядок видалено.",
+    "addPurchaseDraftLineLink": "Замовлення клієнта пов'язано.",
+    "revisePurchaseDraftLineLink": "Заявлену кількість збережено.",
+    "removePurchaseDraftLineLink": "Зв'язок видалено."
   }
 }

@@ -1,17 +1,22 @@
 import { createRoute, lazyRouteComponent } from '@tanstack/react-router';
 
+import { loadDemand } from 'modules/customer-order/loaders/demand.loader';
 import { warehouseRoute } from 'routes/warehouse.route';
+import { RouteErrorState } from 'shared/components/RouteErrorState';
+import { RoutePendingState } from 'shared/components/RoutePendingState';
 import { ROUTE_SEGMENTS } from 'shared/constants/routes';
 
-// T17 — the Demand destination (sad.md §5 Web: `modules/customer-order` owns
+// T19 — the Demand destination (sad.md §5 Web: `modules/customer-order` owns
 // it, not `modules/demand` — sad.md §8 Naming). A child of the Warehouse
 // layout, which already authenticates and resolves entry, so this route
-// declares no `beforeLoad` of its own (`adding-a-web-module.md` §5). It
-// renders no server data yet — that is T18's own loader — so it declares no
-// `loader` either (`adding-a-web-module.md` §"When the route declares a
-// loader").
+// declares no `beforeLoad` of its own. It awaits the consolidated demand its
+// destination paints (`frontend-architecture.md` §Route); the dispatch itself
+// lives in `loaders/demand.loader.ts`, wired here only.
 export const customerOrderRoute = createRoute({
   getParentRoute: () => warehouseRoute,
   path: ROUTE_SEGMENTS.DEMAND,
   component: lazyRouteComponent(() => import('./page'), 'CustomerOrderPage'),
+  errorComponent: RouteErrorState,
+  loader: loadDemand,
+  pendingComponent: RoutePendingState,
 });

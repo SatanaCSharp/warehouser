@@ -13,7 +13,13 @@
  */
 export type MutationFeedback = {
   /** The `pending`/`success` namespace prefix the descriptions live under. */
-  scope: 'access' | 'auth' | 'item' | 'workspace';
+  scope:
+    | 'access'
+    | 'auth'
+    | 'customer-order'
+    | 'item'
+    | 'purchase-draft'
+    | 'workspace';
   /**
    * The action key, when it is not the endpoint name — including the case of
    * one endpoint reporting two different outcomes, which reads its argument.
@@ -94,4 +100,22 @@ export const MUTATION_FEEDBACK: Record<string, MutationFeedback> = {
     scope: 'item',
     action: 'adjustOnHandQuantity',
   }),
+
+  // Demand / Customer Orders (T19).
+  recordCustomerOrder: feedback({ scope: 'customer-order' }),
+  amendCustomerOrder: feedback({ scope: 'customer-order' }),
+  cancelCustomerOrder: feedback({ scope: 'customer-order' }),
+
+  // Purchase drafts (T20/T16). Every endpoint below is a member's own decision
+  // to change while a draft is still in the Draft state (AC-10a, AC-12), so
+  // every one reports; the transition endpoints (ready/arrival/closure/discard)
+  // are T21's to register alongside their dialogs.
+  createPurchaseDraft: feedback({ scope: 'purchase-draft' }),
+  revisePurchaseDraft: feedback({ scope: 'purchase-draft' }),
+  addPurchaseDraftLine: feedback({ scope: 'purchase-draft' }),
+  revisePurchaseDraftLine: feedback({ scope: 'purchase-draft' }),
+  removePurchaseDraftLine: feedback({ scope: 'purchase-draft' }),
+  addPurchaseDraftLineLink: feedback({ scope: 'purchase-draft' }),
+  revisePurchaseDraftLineLink: feedback({ scope: 'purchase-draft' }),
+  removePurchaseDraftLineLink: feedback({ scope: 'purchase-draft' }),
 };

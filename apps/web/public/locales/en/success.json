@@ -21,6 +21,11 @@
     "reactivateItem": "Item reactivated.",
     "adjustOnHandQuantity": "On-hand quantity recorded."
   },
+  "customer-order": {
+    "recordCustomerOrder": "Demand recorded.",
+    "amendCustomerOrder": "Order amended.",
+    "cancelCustomerOrder": "Order cancelled."
+  },
   "workspace": {
     "renameWorkspace": "Workspace named.",
     "createWarehouse": "Warehouse added.",
@@ -36,5 +41,15 @@
     "removeWorkspaceMember": "Workspace member removed.",
     "assignWorkspaceRole": "Workspace role changed.",
     "transferWorkspaceOwner": "Workspace ownership transferred."
+  },
+  "purchase-draft": {
+    "createPurchaseDraft": "Purchase draft started.",
+    "revisePurchaseDraft": "Expected arrival date saved.",
+    "addPurchaseDraftLine": "Line added.",
+    "revisePurchaseDraftLine": "Line saved.",
+    "removePurchaseDraftLine": "Line removed.",
+    "addPurchaseDraftLineLink": "Customer order linked.",
+    "revisePurchaseDraftLineLink": "Stated quantity saved.",
+    "removePurchaseDraftLineLink": "Link removed."
   }
 }

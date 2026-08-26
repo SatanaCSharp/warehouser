@@ -13,7 +13,7 @@ files_hint:
   ]
 owner: 'Frontend Lead'
 estimate: 'L'
-status: 'todo'
+status: 'done'
 ---
 
 # T20 — Build the Purchase drafts destination: list and detail, the three tabs, line and link editing, the frozen treatment and the Drift Signal

@@ -5,10 +5,12 @@ import { afterEach, vi } from 'vitest';
 
 import enAccess from '../../public/locales/en/access.json';
 import enCommon from '../../public/locales/en/common.json';
+import enCustomerOrder from '../../public/locales/en/customer-order.json';
 import enErrors from '../../public/locales/en/errors.json';
 import enHome from '../../public/locales/en/home.json';
 import enItem from '../../public/locales/en/item.json';
 import enPending from '../../public/locales/en/pending.json';
+import enPurchaseDraft from '../../public/locales/en/purchase-draft.json';
 import enSignIn from '../../public/locales/en/sign-in.json';
 import enSignUp from '../../public/locales/en/sign-up.json';
 import enSuccess from '../../public/locales/en/success.json';
@@ -17,10 +19,12 @@ import enWarehouse from '../../public/locales/en/warehouse.json';
 import enWorkspace from '../../public/locales/en/workspace.json';
 import ukAccess from '../../public/locales/uk/access.json';
 import ukCommon from '../../public/locales/uk/common.json';
+import ukCustomerOrder from '../../public/locales/uk/customer-order.json';
 import ukErrors from '../../public/locales/uk/errors.json';
 import ukHome from '../../public/locales/uk/home.json';
 import ukItem from '../../public/locales/uk/item.json';
 import ukPending from '../../public/locales/uk/pending.json';
+import ukPurchaseDraft from '../../public/locales/uk/purchase-draft.json';
 import ukSignIn from '../../public/locales/uk/sign-in.json';
 import ukSignUp from '../../public/locales/uk/sign-up.json';
 import ukSuccess from '../../public/locales/uk/success.json';
@@ -41,10 +45,12 @@ configure({ asyncUtilTimeout: 4000 });
 const localeResponses: Record<string, object> = {
   '/locales/en/access.json': enAccess,
   '/locales/en/common.json': enCommon,
+  '/locales/en/customer-order.json': enCustomerOrder,
   '/locales/en/errors.json': enErrors,
   '/locales/en/home.json': enHome,
   '/locales/en/item.json': enItem,
   '/locales/en/pending.json': enPending,
+  '/locales/en/purchase-draft.json': enPurchaseDraft,
   '/locales/en/sign-in.json': enSignIn,
   '/locales/en/sign-up.json': enSignUp,
   '/locales/en/success.json': enSuccess,
@@ -53,10 +59,12 @@ const localeResponses: Record<string, object> = {
   '/locales/en/workspace.json': enWorkspace,
   '/locales/uk/access.json': ukAccess,
   '/locales/uk/common.json': ukCommon,
+  '/locales/uk/customer-order.json': ukCustomerOrder,
   '/locales/uk/errors.json': ukErrors,
   '/locales/uk/home.json': ukHome,
   '/locales/uk/item.json': ukItem,
   '/locales/uk/pending.json': ukPending,
+  '/locales/uk/purchase-draft.json': ukPurchaseDraft,
   '/locales/uk/sign-in.json': ukSignIn,
   '/locales/uk/sign-up.json': ukSignUp,
   '/locales/uk/success.json': ukSuccess,

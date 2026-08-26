@@ -13,7 +13,7 @@ files_hint:
   ]
 owner: 'Frontend Lead'
 estimate: 'L'
-status: 'todo'
+status: 'done'
 ---
 
 # T19 — Build the Demand destination: consolidated table, expandable Customer Order sub-rows, record/amend/cancel and the Customer Order picker

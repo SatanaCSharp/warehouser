@@ -1,5 +1,63 @@
 {
   "head": {
     "title": "Purchase drafts"
+  },
+  "workspace": {
+    "heading": "Purchase drafts",
+    "newDraft": "New draft",
+    "backToList": "All purchase drafts",
+    "empty": "No purchase drafts yet.",
+    "error": "You do not have permission to watch purchase drafts in this warehouse.",
+    "tabs": {
+      "label": "Purchase draft filters",
+      "draft": "Being worked on",
+      "readyForOrdering": "Ready for ordering",
+      "closed": "Closed"
+    }
+  },
+  "card": {
+    "lineCount_one": "{{count}} line",
+    "lineCount_other": "{{count}} lines",
+    "expectedArrival": "Expected {{date}}",
+    "expectedArrivalUnstated": "No expected arrival date yet",
+    "drift": "Drift detected"
+  },
+  "state": {
+    "draft": "Draft",
+    "ready_for_ordering": "Ready for ordering",
+    "closed": "Closed",
+    "discarded": "Discarded"
+  },
+  "detail": {
+    "empty": "Select a purchase draft to see its lines.",
+    "addLine": "Add line",
+    "frozenNotice": "This draft is frozen once it is ready — it records what the supplier was told.",
+    "closureReason": "Closure reason: {{reason}}",
+    "discardedNotice": "This draft was discarded before it was ordered.",
+    "driftAlert": {
+      "heading": "Something linked to this draft has changed",
+      "nothingChanged": "Nothing on the draft has changed and nothing will.",
+      "cancelled": "{{customer}}'s order was cancelled",
+      "quantity_changed": "{{customer}}'s order quantity changed",
+      "needed_by_moved": "{{customer}}'s needed-by date moved",
+      "became_fulfilled": "{{customer}}'s order was fulfilled by a different draft"
+    }
+  },
+  "lineEditor": {
+    "quantity": "Ordered quantity",
+    "packagingType": "Packaging type",
+    "packagingTypeNone": "None",
+    "valueAddingNote": "Value-adding note",
+    "frozenReason": "Frozen — the draft records what the supplier was told and only Arrival Confirmation and closure can still write to it.",
+    "removeLine": "Remove line",
+    "links": "Linked customer orders",
+    "noLinks": "Not linked to a customer order yet."
+  },
+  "linkRow": {
+    "statedQuantity": "Stated quantity",
+    "claimsNothing": "Coverage is a note, not a claim — it is never adjusted for you.",
+    "unlink": "Unlink {{customer}}",
+    "drift_one": "Drift detected",
+    "drift_other": "Drift detected"
   }
 }
