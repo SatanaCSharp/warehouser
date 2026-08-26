@@ -37,6 +37,11 @@ export interface LockedCustomerOrderRead {
   readonly allocatedQuantity: number;
 }
 
+export interface ListCustomerOrdersFilter {
+  readonly itemId?: string;
+  readonly state?: CustomerOrderState;
+}
+
 // AC-01/AC-19/AC-19a/AC-19b — the Customer Order write path. Its reason for existing as one
 // repository rather than a table-shaped one is `lockOrderWithAllocatedTotal`: `sad.md` §6.10
 // requires the row to be locked and the total already allocated to it to be read **in the same
@@ -171,5 +176,34 @@ export class CustomerOrderLifecycleRepository {
     return manager
       .getRepository(CustomerOrderEntity)
       .findOneByOrFail({ id: customerOrderId });
+  }
+
+  // `GET /customer-orders?itemId=…&state=…` (openapi.yaml) — the acting Warehouse's Customer
+  // Orders, optionally narrowed to one Item and/or one state. `idx_customer_orders_warehouse_created`
+  // returns them deterministically ordered (data-model.md "Indexes").
+  listCustomerOrders(
+    warehouseId: string,
+    filter: ListCustomerOrdersFilter = {},
+  ): Promise<CustomerOrderEntity[]> {
+    const manager = getEntityManager(this.dataSource);
+
+    const queryBuilder = manager
+      .getRepository(CustomerOrderEntity)
+      .createQueryBuilder('order')
+      .where('order.warehouseId = :warehouseId', { warehouseId })
+      .orderBy('order.createdAt', 'ASC')
+      .addOrderBy('order.id', 'ASC');
+
+    if (filter.itemId !== undefined) {
+      queryBuilder.andWhere('order.itemId = :itemId', {
+        itemId: filter.itemId,
+      });
+    }
+
+    if (filter.state !== undefined) {
+      queryBuilder.andWhere('order.state = :state', { state: filter.state });
+    }
+
+    return queryBuilder.getMany();
   }
 }

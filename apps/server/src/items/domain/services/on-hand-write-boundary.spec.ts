@@ -38,9 +38,12 @@ const collectProductionSources = (
 // - `list-warehouse-items.query.ts` reads the figure back for the Item list (AC-08).
 // - `item.entity.ts` is the column itself.
 // - `item-catalogue.repository.ts` writes the AC-06 starting figure and reads it back for the Item
-//   list and the consolidated demand.
+//   list.
 // - `item-stock-adjustment.repository.ts` is the single path by which an *existing* figure moves:
 //   the member's counted figure and its immutable adjustment row, as one atomic pair (sad.md §6.3).
+// - `consolidated-demand.repository.ts` reads the figure back beside each Demand Line (AC-04, "the
+//   Item's current On-hand Quantity"), in the same one-query read as the demand totals themselves
+//   (data-model.md "The non-fan-out requirement").
 //
 // This list is the tripwire, not the rule: a new entry is a deliberate decision about AC-18a, and a
 // reader adding one has to say whether the new file reads the figure or moves it. Only the second
@@ -50,6 +53,7 @@ const ALLOWED_TO_NAME_THE_FIGURE = [
   'items/usecases/commands/create-item.command.ts',
   'items/usecases/queries/list-warehouse-items.query.ts',
   'shared/domain/entities/item.entity.ts',
+  'shared/domain/repositories/consolidated-demand.repository.ts',
   'shared/domain/repositories/item-catalogue.repository.ts',
   'shared/domain/repositories/item-stock-adjustment.repository.ts',
 ];
