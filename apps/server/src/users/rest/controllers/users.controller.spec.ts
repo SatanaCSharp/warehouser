@@ -31,6 +31,7 @@ const request = (permissionId: PermissionId): WarehouseAccessRequest => ({
     roleId: id(3),
     roleKind: 'custom',
     permissionId,
+    archived: false,
   },
 });
 
@@ -176,17 +177,23 @@ describe('UsersController', () => {
   });
 
   it.each([
-    ['changeMemberEmail', changeMemberEmail, 'changeMemberEmail'],
-    ['changeMemberPassword', changeMemberPassword, 'changeMemberPassword'],
-    ['deleteMember', deleteMember, 'deleteMember'],
+    ['changeMemberEmail'],
+    ['changeMemberPassword'],
+    ['deleteMember'],
   ] as const)(
     '%s propagates a cross-Warehouse/missing-target denial without disclosing existence (AC-09)',
-    async (_label, command) => {
-      jest
-        .mocked(command.execute)
-        .mockRejectedValue(
-          new ApplicationError(ErrorCode.ACCESS_TARGET_UNAVAILABLE),
-        );
+    async (_label) => {
+      // Looked up by label rather than carried in the table: the three commands
+      // are distinct classes, so a column holding them types `execute` as a
+      // union of unrelated signatures that `jest.mocked` cannot resolve.
+      const execute = {
+        changeMemberEmail: changeMemberEmail.execute,
+        changeMemberPassword: changeMemberPassword.execute,
+        deleteMember: deleteMember.execute,
+      }[_label] as unknown as jest.Mock;
+      execute.mockRejectedValue(
+        new ApplicationError(ErrorCode.ACCESS_TARGET_UNAVAILABLE),
+      );
 
       const args: [string, WarehouseAccessRequest, ...unknown[]] =
         _label === 'changeMemberEmail'

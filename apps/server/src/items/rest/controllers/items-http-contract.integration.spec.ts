@@ -19,9 +19,6 @@ import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-memb
 import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 import { GlobalHttpExceptionFilter } from 'shared/errors/global-http-exception.filter';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 // Fixed clock, mirroring `access-http-contract.integration.spec.ts`: `chk_warehouses_archival_order`
 // rejects `archivedAt < createdAt`, so every seeded row and every archival timestamp is pinned to
 // this one instant.
@@ -55,7 +52,7 @@ const ITEM_STOCK_ADJUST = 'ITEM_STOCK:ADJUST';
 //   - no denial discloses whether the target exists (a cross-Warehouse Item and a missing one are
 //     reported identically).
 // eslint-disable-next-line max-lines-per-function -- one HTTP contract suite covering one surface is inherently long, matching the access precedent
-describeIntegration('items HTTP contract', () => {
+describe('items HTTP contract', () => {
   let app: INestApplication;
   let baseUrl: string;
 

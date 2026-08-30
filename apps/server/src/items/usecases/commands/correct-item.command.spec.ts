@@ -6,6 +6,8 @@ import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
 import { CorrectItemCommand } from 'items/usecases/commands/correct-item.command';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
+import { repositoryDouble } from 'test/doubles/repository-double';
 
 const warehouseId = '00000000-0000-4000-8000-000000000001';
 const actorId = '00000000-0000-4000-8000-000000000002';
@@ -27,13 +29,14 @@ const itemCatalogueRepositoryDouble = (
     id: namedItemId,
     warehouseId,
   },
-) => ({
-  findById: jest.fn().mockResolvedValue(item),
-  isNamedByDemandOrDraft: jest.fn().mockResolvedValue(isNamed),
-  findBySku: jest.fn().mockResolvedValue(null),
-  updateSku: jest.fn().mockResolvedValue(undefined),
-  updateItemDetails: jest.fn().mockResolvedValue(undefined),
-});
+) =>
+  repositoryDouble<ItemCatalogueRepository>()({
+    findById: jest.fn().mockResolvedValue(item),
+    isNamedByDemandOrDraft: jest.fn().mockResolvedValue(isNamed),
+    findBySku: jest.fn().mockResolvedValue(null),
+    updateSku: jest.fn().mockResolvedValue(undefined),
+    updateItemDetails: jest.fn().mockResolvedValue(undefined),
+  });
 
 describe('CorrectItemCommand', () => {
   // AC-03/openapi.yaml `ItemUnavailable` — an Item of another Warehouse is refused exactly as a
@@ -44,7 +47,7 @@ describe('CorrectItemCommand', () => {
       id: namedItemId,
       warehouseId: 'some-other-warehouse',
     });
-    const command = new CorrectItemCommand(itemCatalogueRepository as never);
+    const command = new CorrectItemCommand(itemCatalogueRepository);
 
     const rejection = command.execute(currentUser, namedItemId, {
       description: 'New description',

@@ -21,9 +21,6 @@ import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-memb
 import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 import { GlobalHttpExceptionFilter } from 'shared/errors/global-http-exception.filter';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 // Fixed clock for every seeded row, mirroring `items-http-contract.integration.spec.ts`:
 // `chk_warehouses_archival_order` rejects `archivedAt < createdAt`, so seeding and archival share
 // one instant.
@@ -64,7 +61,7 @@ const CUSTOMER_ORDERS_CANCEL = 'CUSTOMER_ORDERS:CANCEL';
 // is validated; the stable `customer_orders.*` codes are mapped; reads survive archival and
 // mutations do not (AC-23); and no denial or refusal discloses a customer, a quantity or an Item.
 // eslint-disable-next-line max-lines-per-function -- one HTTP contract suite covering one surface is inherently long, matching the items and access precedents
-describeIntegration('customer-orders HTTP contract', () => {
+describe('customer-orders HTTP contract', () => {
   let app: INestApplication;
   let baseUrl: string;
 

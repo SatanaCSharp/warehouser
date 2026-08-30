@@ -26,15 +26,12 @@ import {
   persistWorkspaceGraph,
 } from 'test/factories/entity-factories';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 // Same grapheme composed (U+00E9) vs. decomposed (e + U+0301) — storing must
 // not fold one into the other (AC-14a), matching `AccessName`/
 // `workspace-name.spec.ts`'s own proof of the same rule.
 const COMPOSED_E_ACUTE = `Caf${String.fromCodePoint(0x00e9)}`;
 
-describeIntegration('CreateWorkspaceRoleCommand', () => {
+describe('CreateWorkspaceRoleCommand', () => {
   // Registers the transaction storage `getEntityManager` reads, so the
   // repository joins whatever ambient transaction a caller opens.
 

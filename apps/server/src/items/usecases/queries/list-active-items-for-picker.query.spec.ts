@@ -9,6 +9,8 @@
 // selects from — never `onHandQuantity` or any other detail a picker has no use for.
 import { ListActiveItemsForPickerQuery } from 'items/usecases/queries/list-active-items-for-picker.query';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
+import { repositoryDouble } from 'test/doubles/repository-double';
 
 const warehouseId = '00000000-0000-4000-8000-000000000001';
 const actorId = '00000000-0000-4000-8000-000000000002';
@@ -22,19 +24,20 @@ const currentUser: AccessCurrentUser = {
   archived: false,
 };
 
-const itemCatalogueRepositoryDouble = () => ({
-  findActiveItemsForPicker: jest.fn().mockResolvedValue([
-    {
-      id: 'item-1',
-      warehouseId,
-      sku: 'TEST-SKU-0001',
-      description: 'Cable reel, 50m',
-      unitOfMeasure: 'each',
-      onHandQuantity: 0,
-      deactivatedAt: null,
-    },
-  ]),
-});
+const itemCatalogueRepositoryDouble = () =>
+  repositoryDouble<ItemCatalogueRepository>()({
+    findActiveItemsForPicker: jest.fn().mockResolvedValue([
+      {
+        id: 'item-1',
+        warehouseId,
+        sku: 'TEST-SKU-0001',
+        description: 'Cable reel, 50m',
+        unitOfMeasure: 'each',
+        onHandQuantity: 0,
+        deactivatedAt: null,
+      },
+    ]),
+  });
 
 describe('ListActiveItemsForPickerQuery', () => {
   // AC-06a — the Items of that Warehouse with their SKUs, scoped to the acting Warehouse.

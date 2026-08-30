@@ -38,9 +38,6 @@ import {
   buildWorkspaceRole,
 } from 'test/factories/entity-factories';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 const now = new Date('2026-08-12T12:00:00.000Z');
 
 // The shape this RED step expects the implementer to expose. Typed
@@ -62,7 +59,7 @@ interface DeleteWorkspaceRoleCommandContract {
 }
 
 // eslint-disable-next-line max-lines-per-function -- integration suite setup is inherently long
-describeIntegration('DeleteWorkspaceRoleCommand', () => {
+describe('DeleteWorkspaceRoleCommand', () => {
   const context = new DbTransactionContext(dataSource);
   const transactions = new DbTransactionService(dataSource, context);
   const workspaceRoleLifecycleRepository = new WorkspaceRoleLifecycleRepository(

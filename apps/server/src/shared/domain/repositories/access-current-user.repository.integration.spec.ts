@@ -15,9 +15,6 @@ import {
 } from 'test/factories/entity-factories';
 import type { Logger } from 'typeorm';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 const now = new Date('2026-08-12T12:00:00.000Z');
 
 /**
@@ -171,7 +168,7 @@ const buildMemberWithMemberships = async (
   return { userId, targetWarehouseId, targetPermissionId };
 };
 
-describeIntegration('AccessCurrentUserRepository', () => {
+describe('AccessCurrentUserRepository', () => {
   const repository = new AccessCurrentUserRepository(dataSource);
 
   beforeAll(async () => {

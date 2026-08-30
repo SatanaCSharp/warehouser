@@ -21,9 +21,6 @@ import { GlobalHttpExceptionFilter } from 'shared/errors/global-http-exception.f
 import { WriteRateLimitCounter } from 'shared/guards/write-rate-limit.counter';
 import { expectPinnedCounterOnEveryRouteGuard } from 'test/expects/write-rate-limit-wiring';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 // ADR 0003 — "60 recorded changes per minute **per member**", not per member per REST module.
 //
 // This is the regression test for a defect the per-route guard wiring introduced and no single-
@@ -48,7 +45,7 @@ const maxRecordedChangesPerWindow = 60;
 const calendarDaysFromToday = (days: number): string =>
   new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
-describeIntegration('write rate limit across modules', () => {
+describe('write rate limit across modules', () => {
   let app: INestApplication;
   let baseUrl: string;
 

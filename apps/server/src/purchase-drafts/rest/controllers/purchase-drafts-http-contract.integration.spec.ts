@@ -25,9 +25,6 @@ import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-memb
 import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 import { GlobalHttpExceptionFilter } from 'shared/errors/global-http-exception.filter';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 // Fixed clock for every seeded row, mirroring `customer-orders-http-contract.integration.spec.ts`:
 // `chk_warehouses_archival_order` and `chk_purchase_drafts_readiness_attribution` both compare
 // against `created_at`, so seeding and archival/freeze share one instant.
@@ -61,7 +58,7 @@ const PURCHASE_DRAFTS_DISCARD = 'PURCHASE_DRAFTS:DISCARD';
 // Driven over real HTTP against the real Nest module graph, exactly as the items and
 // customer-orders surfaces are.
 // eslint-disable-next-line max-lines-per-function -- one HTTP contract suite covering one large surface is inherently long, matching the items and customer-orders precedents
-describeIntegration('purchase-drafts HTTP contract', () => {
+describe('purchase-drafts HTTP contract', () => {
   let app: INestApplication;
   let baseUrl: string;
 

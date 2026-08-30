@@ -7,6 +7,8 @@
 // is the thin use-case adapter scoping the read to the acting Warehouse.
 import { ListWarehouseItemsQuery } from 'items/usecases/queries/list-warehouse-items.query';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
+import { repositoryDouble } from 'test/doubles/repository-double';
 
 const warehouseId = '00000000-0000-4000-8000-000000000001';
 const actorId = '00000000-0000-4000-8000-000000000002';
@@ -20,30 +22,31 @@ const currentUser: AccessCurrentUser = {
   archived: false,
 };
 
-const itemCatalogueRepositoryDouble = () => ({
-  findItemsWithOnHandAndLatestReason: jest.fn().mockResolvedValue([
-    {
-      id: 'item-1',
-      warehouseId,
-      sku: 'TEST-SKU-0001',
-      description: 'Cable reel, 50m',
-      unitOfMeasure: 'each',
-      onHandQuantity: 12,
-      deactivatedAt: null,
-      latestAdjustmentReason: 'Cycle count',
-    },
-    {
-      id: 'item-2',
-      warehouseId,
-      sku: 'TEST-SKU-0002',
-      description: 'Cable reel, 100m',
-      unitOfMeasure: 'each',
-      onHandQuantity: 0,
-      deactivatedAt: null,
-      latestAdjustmentReason: null,
-    },
-  ]),
-});
+const itemCatalogueRepositoryDouble = () =>
+  repositoryDouble<ItemCatalogueRepository>()({
+    findItemsWithOnHandAndLatestReason: jest.fn().mockResolvedValue([
+      {
+        id: 'item-1',
+        warehouseId,
+        sku: 'TEST-SKU-0001',
+        description: 'Cable reel, 50m',
+        unitOfMeasure: 'each',
+        onHandQuantity: 12,
+        deactivatedAt: null,
+        latestAdjustmentReason: 'Cycle count',
+      },
+      {
+        id: 'item-2',
+        warehouseId,
+        sku: 'TEST-SKU-0002',
+        description: 'Cable reel, 100m',
+        unitOfMeasure: 'each',
+        onHandQuantity: 0,
+        deactivatedAt: null,
+        latestAdjustmentReason: null,
+      },
+    ]),
+  });
 
 describe('ListWarehouseItemsQuery', () => {
   it("reads the acting Warehouse's Items with their on-hand figure and latest adjustment reason", async () => {

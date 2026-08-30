@@ -302,23 +302,40 @@ describe('WarehouseController', () => {
   // (`@HttpCode(HttpStatus.NO_CONTENT)`, `Promise<void>`), which fails that
   // client-side validation at runtime because an empty body cannot satisfy a
   // schema requiring `id`, `name` and `archivedAt`.
+  // Each row arranges its own command rather than sharing one mock call: the
+  // two results differ in type (`archivedAt: Date` when archiving, the `null`
+  // literal when restoring), which a single mock over the union cannot express.
   it.each([
     [
       'archiving',
       true,
-      archiveWarehouse,
+      (): void => {
+        jest.mocked(archiveWarehouse.execute).mockResolvedValue({
+          id: warehouseId,
+          name: 'Test Warehouse North',
+          archivedAt: new Date('2026-08-01T09:00:00.000Z'),
+        });
+      },
       restoreWarehouse,
-      new Date('2026-08-01T09:00:00.000Z'),
+      '2026-08-01T09:00:00.000Z',
     ],
-    ['restoring', false, restoreWarehouse, archiveWarehouse, null],
+    [
+      'restoring',
+      false,
+      (): void => {
+        jest.mocked(restoreWarehouse.execute).mockResolvedValue({
+          id: warehouseId,
+          name: 'Test Warehouse North',
+          archivedAt: null,
+        });
+      },
+      archiveWarehouse,
+      null,
+    ],
   ] as const)(
     'AC-11: answers 200 with the full Warehouse body when %s, satisfying the same warehouseSchema the web client validates against',
-    async (_case, archived, usecase, otherUsecase, archivedAt) => {
-      jest.mocked(usecase.execute).mockResolvedValue({
-        id: warehouseId,
-        name: 'Test Warehouse North',
-        archivedAt,
-      });
+    async (_case, archived, arrange, otherUsecase, expectedArchivedAt) => {
+      arrange();
 
       const body = await controller.setWarehouseArchival(
         warehouseId,
@@ -329,7 +346,7 @@ describe('WarehouseController', () => {
       expect(body).toEqual({
         id: warehouseId,
         name: 'Test Warehouse North',
-        archivedAt: archivedAt?.toISOString() ?? null,
+        archivedAt: expectedArchivedAt,
       });
       expect(warehouseSchema.parse(body)).toEqual(body);
       expect(otherUsecase.execute).not.toHaveBeenCalled();

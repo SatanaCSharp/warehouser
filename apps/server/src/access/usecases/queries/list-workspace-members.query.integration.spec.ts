@@ -8,10 +8,7 @@ import dataSource from 'shared/database/data-source';
 import { WorkspaceReadRepository } from 'shared/domain/repositories/workspace-read.repository';
 import { persistWorkspaceGraph } from 'test/factories/entity-factories';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
-describeIntegration('ListWorkspaceMembersQuery', () => {
+describe('ListWorkspaceMembersQuery', () => {
   const workspaceReadRepository = new WorkspaceReadRepository(dataSource);
   const createQuery = (): ListWorkspaceMembersQuery =>
     new ListWorkspaceMembersQuery(workspaceReadRepository);

@@ -19,9 +19,6 @@ import { MemberLifecycleRepository } from 'shared/domain/repositories/member-lif
 // must be implemented by the implementer at this path.
 import { ChangeMemberEmailCommand } from 'users/usecases/commands/change-member-email.command';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 const now = new Date('2026-08-06T12:00:00.000Z');
 
 const workspaceId = '00000000-0000-4000-8000-000000000100';
@@ -43,7 +40,7 @@ const emailUpdatePermissionId = 'USERS:EMAIL_UPDATE';
 const superpowerPermissionId = 'ACCESS:SUPERPOWER';
 
 // eslint-disable-next-line max-lines-per-function -- integration suite setup is inherently long
-describeIntegration('ChangeMemberEmailCommand', () => {
+describe('ChangeMemberEmailCommand', () => {
   const context = new DbTransactionContext(dataSource);
   const transactions = new DbTransactionService(dataSource, context);
   const memberLifecycleRepository = new MemberLifecycleRepository(dataSource);
@@ -239,6 +236,7 @@ describeIntegration('ChangeMemberEmailCommand', () => {
     roleId: actorRoleId,
     roleKind: 'custom',
     permissionId: emailUpdatePermissionId,
+    archived: false,
   });
 
   const findAccountEmail = (userId: string): Promise<string | null> =>

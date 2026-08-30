@@ -8,6 +8,9 @@ import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
 import { CreateItemCommand } from 'items/usecases/commands/create-item.command';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { ItemEntity } from 'shared/domain/entities/item.entity';
+import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
+import { repositoryDouble } from 'test/doubles/repository-double';
 
 const warehouseOneId = '00000000-0000-4000-8000-000000000001';
 const warehouseTwoId = '00000000-0000-4000-8000-000000000002';
@@ -26,20 +29,23 @@ const currentUserOf = (warehouseId: string): AccessCurrentUser => ({
 // Simulates real per-Warehouse SKU scoping: `findBySku` only reports the existing Item when the
 // queried `warehouseId` matches the Warehouse it actually belongs to (AC-07a — a SKU taken in
 // another Warehouse is never consulted and stands as an unrelated Item).
-const itemCatalogueRepositoryDouble = () => ({
-  createItem: jest.fn().mockResolvedValue(undefined),
-  findBySku: jest.fn((warehouseId: string, sku: string) =>
-    Promise.resolve(
-      warehouseId === warehouseOneId && sku === 'TEST-SKU-0001'
-        ? {
-            id: existingItemId,
-            warehouseId: warehouseOneId,
-            sku: 'TEST-SKU-0001',
-          }
-        : null,
+const itemCatalogueRepositoryDouble = () =>
+  repositoryDouble<ItemCatalogueRepository>()({
+    createItem: jest.fn().mockResolvedValue(undefined),
+    findBySku: jest.fn((warehouseId: string, sku: string) =>
+      Promise.resolve(
+        warehouseId === warehouseOneId && sku === 'TEST-SKU-0001'
+          ? // Projected to the three fields the command reads off the hit; the
+            // rest of `ItemEntity` is irrelevant to the SKU-taken rejection.
+            ({
+              id: existingItemId,
+              warehouseId: warehouseOneId,
+              sku: 'TEST-SKU-0001',
+            } as ItemEntity)
+          : null,
+      ),
     ),
-  ),
-});
+  });
 
 describe('CreateItemCommand', () => {
   // AC-07 — creation is blocked and the member is told which Item already holds the SKU.

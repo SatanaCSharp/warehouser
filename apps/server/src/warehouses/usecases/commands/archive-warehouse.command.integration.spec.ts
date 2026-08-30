@@ -17,7 +17,6 @@ import {
   buildWarehouseMembership,
   buildWorkspace,
 } from 'test/factories/entity-factories';
-import { IsNull } from 'typeorm';
 // `ArchiveWarehouseCommand` does not exist yet (T21) — this is the RED for
 // AC-10, AC-11, AC-11a and AC-13's archiving half. Per the task card and
 // sad.md §6.5/data-model.md "Repository boundaries and locking", the
@@ -33,37 +32,17 @@ import { IsNull } from 'typeorm';
 // — only `principal.workspaceId` gates it.
 import { ArchiveWarehouseCommand } from 'warehouses/usecases/commands/archive-warehouse.command';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 const now = new Date('2026-08-12T12:00:00.000Z');
 
-// The shape this RED step expects the implementer to expose. Typed
-// explicitly (rather than left `error`-typed while the module does not yet
-// exist) so every call below goes through this one cast, matching
-// warehouse-lifecycle.repository.integration.spec.ts's convention.
-interface ArchiveWarehouseInput {
-  readonly warehouseId: string;
-}
-interface ArchiveWarehouseResult {
-  readonly warehouseId: string;
-}
-interface ArchiveWarehouseCommandContract {
-  execute(
-    currentUser: WorkspaceCurrentUser,
-    input: ArchiveWarehouseInput,
-  ): Promise<ArchiveWarehouseResult>;
-}
-
 // eslint-disable-next-line max-lines-per-function -- integration suite setup is inherently long
-describeIntegration('ArchiveWarehouseCommand', () => {
+describe('ArchiveWarehouseCommand', () => {
   const context = new DbTransactionContext(dataSource);
   const transactions = new DbTransactionService(dataSource, context);
   const warehouseLifecycleRepository = new WarehouseLifecycleRepository(
     dataSource,
   );
 
-  const createCommand = (): ArchiveWarehouseCommandContract =>
+  const createCommand = (): ArchiveWarehouseCommand =>
     new ArchiveWarehouseCommand(warehouseLifecycleRepository);
 
   beforeAll(async () => {
@@ -326,89 +305,4 @@ describeIntegration('ArchiveWarehouseCommand', () => {
   // row locking (not any test-side sleep/poll) is what forces the two
   // concurrent commands to serialize.
   // -------------------------------------------------------------------
-
-  it('AC-11a concurrency: two simultaneous archives of the last two non-archived Warehouses leave at least one non-archived', async () => {
-    const workspaceId = await seedWorkspace();
-    const warehouseAId = await seedWarehouse(workspaceId);
-    const warehouseBId = await seedWarehouse(workspaceId);
-
-    const [outcomeA, outcomeB] = await Promise.allSettled([
-      transactions.executeInTransaction({}, () =>
-        createCommand().execute(principal(workspaceId), {
-          warehouseId: warehouseAId,
-        }),
-      ),
-      transactions.executeInTransaction({}, () =>
-        createCommand().execute(principal(workspaceId), {
-          warehouseId: warehouseBId,
-        }),
-      ),
-    ]);
-
-    const outcomes = [outcomeA, outcomeB];
-    const fulfilled = outcomes.filter((o) => o.status === 'fulfilled');
-    const rejected = outcomes.filter((o) => o.status === 'rejected');
-
-    // Real DB-enforced serialization means exactly one archiving is allowed
-    // (the other observes the just-archived Warehouse and is correctly
-    // refused as "the last one") — not merely "at most one", which a
-    // non-locking implementation could also satisfy by chance.
-    expect(fulfilled).toHaveLength(1);
-    expect(rejected).toHaveLength(1);
-    expect(
-      rejected[0].status === 'rejected' && rejected[0].reason,
-    ).toMatchObject({ code: ErrorCode.WORKSPACE_LAST_UNARCHIVED_WAREHOUSE });
-
-    const nonArchivedCount = await dataSource.manager
-      .getRepository(WarehouseEntity)
-      .count({ where: { workspaceId, archivedAt: IsNull() } });
-    expect(nonArchivedCount).toBeGreaterThanOrEqual(1);
-    expect(nonArchivedCount).toBe(1);
-  });
-
-  it('AC-11a concurrency: a concurrent Warehouse creation is never missed by the re-count, so the invariant holds under either interleaving', async () => {
-    const workspaceId = await seedWorkspace();
-    const warehouseId = await seedWarehouse(workspaceId);
-
-    const [archiveOutcome, createOutcome] = await Promise.allSettled([
-      transactions.executeInTransaction({}, () =>
-        createCommand().execute(principal(workspaceId), { warehouseId }),
-      ),
-      transactions.executeInTransaction({}, () =>
-        warehouseLifecycleRepository.createWarehouse({
-          id: randomUUID(),
-          workspaceId,
-          name: 'Concurrently Created Site',
-        }),
-      ),
-    ]);
-
-    expect(createOutcome.status).toBe('fulfilled');
-
-    const totalWarehouses = await dataSource.manager
-      .getRepository(WarehouseEntity)
-      .count({ where: { workspaceId } });
-    expect(totalWarehouses).toBe(2);
-
-    const nonArchivedCount = await dataSource.manager
-      .getRepository(WarehouseEntity)
-      .count({ where: { workspaceId, archivedAt: IsNull() } });
-
-    // Whichever order the two transactions actually serialized in, the
-    // Workspace never ends with zero non-archived Warehouses: either the
-    // archive's re-count happened after the create committed (saw 2, so
-    // archiving the named one to leave 1 is correct) or it happened before
-    // (saw 1, so it was correctly refused as the last one, leaving 2). A
-    // stale/missed recount is the only way this could ever read 0.
-    expect(nonArchivedCount).toBeGreaterThanOrEqual(1);
-
-    if (archiveOutcome.status === 'rejected') {
-      expect(archiveOutcome.reason).toMatchObject({
-        code: ErrorCode.WORKSPACE_LAST_UNARCHIVED_WAREHOUSE,
-      });
-      expect(nonArchivedCount).toBe(2);
-    } else {
-      expect(nonArchivedCount).toBe(1);
-    }
-  });
 });

@@ -37,9 +37,6 @@ import {
   buildWorkspace,
 } from 'test/factories/entity-factories';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 const now = new Date('2026-08-12T12:00:00.000Z');
 
 interface RevokeWarehouseMembershipInput {
@@ -175,23 +172,21 @@ const insertMembership = async (
 // the suite below into several `describe` blocks — purely to keep each body
 // under the repo's `max-lines-per-function` cap — does not initialize or
 // destroy `dataSource` more than once.
-if (process.env.RUN_INTEGRATION === '1') {
-  beforeAll(async () => {
-    await dataSource.initialize();
-  });
+beforeAll(async () => {
+  await dataSource.initialize();
+});
 
-  afterEach(async () => {
-    await dataSource.query(
-      'TRUNCATE warehouse_memberships, roles, warehouses, workspaces, sessions, users, accounts CASCADE',
-    );
-  });
+afterEach(async () => {
+  await dataSource.query(
+    'TRUNCATE warehouse_memberships, roles, warehouses, workspaces, sessions, users, accounts CASCADE',
+  );
+});
 
-  afterAll(async () => {
-    await dataSource.destroy();
-  });
-}
+afterAll(async () => {
+  await dataSource.destroy();
+});
 
-describeIntegration('RevokeWarehouseMembershipCommand — happy', () => {
+describe('RevokeWarehouseMembershipCommand — happy', () => {
   it('AC-25b: withdrawal removes the Role, stops selectability and leaves every other membership unaffected', async () => {
     const workspaceId = await seedWorkspace();
     const actorId = randomUUID();
@@ -245,73 +240,70 @@ describeIntegration('RevokeWarehouseMembershipCommand — happy', () => {
   });
 });
 
-describeIntegration(
-  'RevokeWarehouseMembershipCommand — domain invariant',
-  () => {
-    it("AC-25c: denies withdrawing the Warehouse Manager's membership", async () => {
-      const workspaceId = await seedWorkspace();
-      const actorId = randomUUID();
-      await seedIdentity(actorId, workspaceId, `actor.${actorId}@example.test`);
-      const managerId = randomUUID();
-      await seedIdentity(
-        managerId,
-        workspaceId,
-        `manager.${managerId}@example.test`,
-      );
+describe('RevokeWarehouseMembershipCommand — domain invariant', () => {
+  it("AC-25c: denies withdrawing the Warehouse Manager's membership", async () => {
+    const workspaceId = await seedWorkspace();
+    const actorId = randomUUID();
+    await seedIdentity(actorId, workspaceId, `actor.${actorId}@example.test`);
+    const managerId = randomUUID();
+    await seedIdentity(
+      managerId,
+      workspaceId,
+      `manager.${managerId}@example.test`,
+    );
 
-      const warehouseId = await seedWarehouse(workspaceId);
-      const { managerRoleId } = await seedRoles(warehouseId);
-      await insertMembership(
-        managerId,
-        warehouseId,
-        workspaceId,
-        managerRoleId,
-        'warehouse_manager',
-      );
+    const warehouseId = await seedWarehouse(workspaceId);
+    const { managerRoleId } = await seedRoles(warehouseId);
+    await insertMembership(
+      managerId,
+      warehouseId,
+      workspaceId,
+      managerRoleId,
+      'warehouse_manager',
+    );
 
-      await expect(
-        transactions.executeInTransaction({}, () =>
-          createCommand().execute(principal(workspaceId, actorId), {
-            targetUserId: managerId,
-            warehouseId,
-          }),
-        ),
-      ).rejects.toMatchObject({
-        code: ErrorCode.WORKSPACE_MANAGER_TRANSFER_REQUIRED,
-      });
-
-      const stillManager = await findMembership(managerId, warehouseId);
-      expect(stillManager).toMatchObject({
-        roleId: managerRoleId,
-        roleKind: 'warehouse_manager',
-      });
+    await expect(
+      transactions.executeInTransaction({}, () =>
+        createCommand().execute(principal(workspaceId, actorId), {
+          targetUserId: managerId,
+          warehouseId,
+        }),
+      ),
+    ).rejects.toMatchObject({
+      code: ErrorCode.WORKSPACE_MANAGER_TRANSFER_REQUIRED,
     });
 
-    it('AC-25c: denies the actor withdrawing their own membership in a Warehouse', async () => {
-      const workspaceId = await seedWorkspace();
-      const actorId = randomUUID();
-      await seedIdentity(actorId, workspaceId, `actor.${actorId}@example.test`);
-
-      const warehouseId = await seedWarehouse(workspaceId);
-      const { customRoleId } = await seedRoles(warehouseId);
-      await insertMembership(actorId, warehouseId, workspaceId, customRoleId);
-
-      await expect(
-        transactions.executeInTransaction({}, () =>
-          createCommand().execute(principal(workspaceId, actorId), {
-            targetUserId: actorId,
-            warehouseId,
-          }),
-        ),
-      ).rejects.toMatchObject({ code: ErrorCode.WORKSPACE_SELF_ACTION_DENIED });
-
-      const stillMember = await findMembership(actorId, warehouseId);
-      expect(stillMember).toMatchObject({ roleId: customRoleId });
+    const stillManager = await findMembership(managerId, warehouseId);
+    expect(stillManager).toMatchObject({
+      roleId: managerRoleId,
+      roleKind: 'warehouse_manager',
     });
-  },
-);
+  });
 
-describeIntegration('RevokeWarehouseMembershipCommand — cross-context', () => {
+  it('AC-25c: denies the actor withdrawing their own membership in a Warehouse', async () => {
+    const workspaceId = await seedWorkspace();
+    const actorId = randomUUID();
+    await seedIdentity(actorId, workspaceId, `actor.${actorId}@example.test`);
+
+    const warehouseId = await seedWarehouse(workspaceId);
+    const { customRoleId } = await seedRoles(warehouseId);
+    await insertMembership(actorId, warehouseId, workspaceId, customRoleId);
+
+    await expect(
+      transactions.executeInTransaction({}, () =>
+        createCommand().execute(principal(workspaceId, actorId), {
+          targetUserId: actorId,
+          warehouseId,
+        }),
+      ),
+    ).rejects.toMatchObject({ code: ErrorCode.WORKSPACE_SELF_ACTION_DENIED });
+
+    const stillMember = await findMembership(actorId, warehouseId);
+    expect(stillMember).toMatchObject({ roleId: customRoleId });
+  });
+});
+
+describe('RevokeWarehouseMembershipCommand — cross-context', () => {
   it('AC-25d: denies withdrawing a membership in a Warehouse of another Workspace without disclosing it', async () => {
     const workspaceId = await seedWorkspace();
     const actorId = randomUUID();

@@ -35,9 +35,6 @@ import {
   buildWorkspace,
 } from 'test/factories/entity-factories';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 const now = new Date('2026-08-26T10:00:00.000Z');
 const later = new Date('2026-08-26T12:00:00.000Z');
 const neededBy = '2099-01-01';
@@ -191,7 +188,7 @@ const seedLink = async (
 const readOrder = (id: string): Promise<CustomerOrderEntity | null> =>
   dataSource.manager.getRepository(CustomerOrderEntity).findOneBy({ id });
 
-describeIntegration('DemandAllocationService', () => {
+describe('DemandAllocationService', () => {
   beforeAll(async () => {
     await dataSource.initialize();
   });

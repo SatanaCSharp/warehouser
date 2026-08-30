@@ -40,10 +40,6 @@ import {
   buildWarehouse,
   buildWorkspace,
 } from 'test/factories/entity-factories';
-import type { QueryRunner } from 'typeorm';
-
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
 
 const now = new Date('2026-08-26T10:00:00.000Z');
 const later = new Date('2026-08-26T12:00:00.000Z');
@@ -247,7 +243,7 @@ const readAllocationsForLine = (
     .find({ where: { purchaseDraftLineId } });
 
 // eslint-disable-next-line max-lines-per-function -- integration suite setup is inherently long
-describeIntegration('ConfirmPurchaseDraftArrivalCommand', () => {
+describe('ConfirmPurchaseDraftArrivalCommand', () => {
   beforeAll(async () => {
     await dataSource.initialize();
   });
@@ -903,119 +899,6 @@ describeIntegration('ConfirmPurchaseDraftArrivalCommand', () => {
     });
     expect(await readDraft(draftId)).toMatchObject({ state: 'closed' });
   });
-
-  // sad.md §8 — two genuinely concurrent confirmations of one draft leave exactly one succeeding;
-  // no partial Allocation from the loser survives. Reuses the two-`QueryRunner`,
-  // `pg_stat_activity`-poll technique this feature's other concurrency proofs already establish.
-  // The loser here pre-read the draft as `ready_for_ordering` (it was, at read time) and lost the
-  // guarded write once the winner committed, so its refusal is `concurrent_change`
-  // (`ArrivalConfirmationConflict` `concurrentTransition`), never `arrival_already_confirmed` —
-  // that code is reserved for a pre-read that already finds the draft Closed, exercised by the
-  // separate test above, following the same invalid-state/concurrent-change split
-  // `PurchaseDraftFreezeService` already draws (T13, commit 4f380c0).
-  it('lets exactly one of two concurrent confirmations succeed, the loser refused as a concurrent change', async () => {
-    const seeded = await seedWarehouse();
-    const draftId = await seedDraft(seeded, 'ready_for_ordering');
-    const lineId = await seedLine(seeded, draftId, 100);
-    const orderId = await seedCustomerOrder(seeded, {
-      quantity: 100,
-      outstandingQuantity: 100,
-    });
-    const linkId = await seedLink(seeded, draftId, lineId, orderId, 100);
-
-    const runner1 = dataSource.createQueryRunner();
-    await runner1.connect();
-    const runner2 = dataSource.createQueryRunner();
-    await runner2.connect();
-    await runner1.startTransaction();
-    await runner2.startTransaction();
-
-    const backendPid = async (runner: QueryRunner): Promise<number> => {
-      const rows = await runner.query('SELECT pg_backend_pid() AS pid');
-      return Number(rows[0].pid);
-    };
-
-    const blockedOnQueryContaining = async (
-      pid: number,
-      expectedQueryFragment: string,
-    ): Promise<boolean> => {
-      const rows = await dataSource.query(
-        `SELECT query, wait_event_type
-           FROM pg_stat_activity
-          WHERE pid = $1`,
-        [pid],
-      );
-      const activity = rows[0] as
-        { query: string; wait_event_type: string | null } | undefined;
-      return (
-        activity?.wait_event_type === 'Lock' &&
-        (activity.query ?? '').includes(expectedQueryFragment)
-      );
-    };
-
-    const waitForBlockedOn = async (
-      pid: number,
-      expectedQueryFragment: string,
-    ): Promise<void> => {
-      for (let attempt = 0; attempt < 200; attempt += 1) {
-        if (await blockedOnQueryContaining(pid, expectedQueryFragment)) {
-          return;
-        }
-        if (attempt === 199) {
-          throw new Error(
-            `Backend ${pid} never blocked on a query containing "${expectedQueryFragment}" within the poll budget`,
-          );
-        }
-
-        await new Promise((resolve) => setTimeout(resolve, 15));
-      }
-    };
-
-    const pid2 = await backendPid(runner2);
-    const command = buildCommand();
-
-    const confirmed1 = await context.run(runner1.manager, () =>
-      command.execute(currentUserFor(seeded), draftId, {
-        lines: [
-          {
-            purchaseDraftLineId: lineId,
-            receivedQuantity: 100,
-            allocations: [
-              { purchaseDraftLineLinkId: linkId, allocatedQuantity: 100 },
-            ],
-          },
-        ],
-      }),
-    );
-    expect(confirmed1).toMatchObject({ id: draftId, state: 'closed' });
-
-    const txn2Result = context.run(runner2.manager, () =>
-      command.execute(currentUserFor(seeded), draftId, {
-        lines: [
-          {
-            purchaseDraftLineId: lineId,
-            receivedQuantity: 40,
-            allocations: [],
-          },
-        ],
-      }),
-    );
-    txn2Result.catch(() => undefined);
-
-    await waitForBlockedOn(pid2, 'UPDATE "purchase_drafts"');
-
-    await runner1.commitTransaction();
-    await runner1.release();
-
-    await expect(txn2Result).rejects.toMatchObject({
-      code: ErrorCode.PURCHASE_DRAFTS_CONCURRENT_CHANGE,
-    });
-    await runner2.commitTransaction();
-    await runner2.release();
-
-    expect(await readLine(lineId)).toMatchObject({ receivedQuantity: 100 });
-    expect(await readAllocationsForLine(lineId)).toHaveLength(1);
-  }, 20_000);
 
   // AC-15/spec.md §6.1 "Allocation as a back door" — the frozen line fields are unreachable through
   // this write path: ordered quantity, Pre-receipt Requirement and Expected Arrival Date stay

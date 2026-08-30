@@ -41,9 +41,6 @@ import {
 // selection").
 import { SetActiveWarehouseCommand } from 'workspaces/usecases/commands/set-active-warehouse.command';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 const now = new Date('2026-08-12T12:00:00.000Z');
 
 interface SetActiveWarehouseInput {
@@ -59,7 +56,7 @@ interface SetActiveWarehouseCommandContract {
   ): Promise<SetActiveWarehouseResult>;
 }
 
-describeIntegration('SetActiveWarehouseCommand', () => {
+describe('SetActiveWarehouseCommand', () => {
   const context = new DbTransactionContext(dataSource);
   const transactions = new DbTransactionService(dataSource, context);
   const activeWarehouseSelectionRepository =

@@ -5,6 +5,8 @@ import {
   TRANSACTIONAL_KEY,
   type TransactionalMetadata,
 } from 'shared/decorators/transactional.decorator';
+import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
+import { repositoryDouble } from 'test/doubles/repository-double';
 // RED for T20 — neither command exists yet. This unit spec covers AC-08 only
 // (spec.md §5): name validation must reject before any persistence is
 // attempted, matching the established `AccessName`-first idiom already used
@@ -29,12 +31,13 @@ const currentUser = (): WorkspaceCurrentUser => ({
   permissionId: WorkspacePermissionId.WAREHOUSES_CREATE,
 });
 
-const warehouseLifecycleRepositoryDouble = () => ({
-  createWarehouse: jest.fn().mockResolvedValue(undefined),
-  renameWarehouse: jest.fn().mockResolvedValue(undefined),
-  setArchivedAt: jest.fn().mockResolvedValue(undefined),
-  lockWorkspaceAndCountNonArchivedWarehouses: jest.fn().mockResolvedValue(1),
-});
+const warehouseLifecycleRepositoryDouble = () =>
+  repositoryDouble<WarehouseLifecycleRepository>()({
+    createWarehouse: jest.fn().mockResolvedValue(undefined),
+    renameWarehouse: jest.fn().mockResolvedValue(undefined),
+    setArchivedAt: jest.fn().mockResolvedValue(undefined),
+    lockWorkspaceAndCountNonArchivedWarehouses: jest.fn().mockResolvedValue(1),
+  });
 
 // The provisioning delegate is `access`'s exported command (T12); this
 // double never runs because name validation must fail first.

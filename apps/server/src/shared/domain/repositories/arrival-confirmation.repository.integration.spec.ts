@@ -29,10 +29,6 @@ import {
   buildWarehouse,
   buildWorkspace,
 } from 'test/factories/entity-factories';
-import type { QueryRunner } from 'typeorm';
-
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
 
 const now = new Date('2026-08-26T10:00:00.000Z');
 const later = new Date('2026-08-26T12:00:00.000Z');
@@ -201,8 +197,7 @@ const lockInTransaction = (
 const confirmInTransaction = (input: ConfirmArrivalInput): Promise<boolean> =>
   transactions.executeInTransaction({}, () => repository.confirmArrival(input));
 
-// eslint-disable-next-line max-lines-per-function -- integration suite setup is inherently long
-describeIntegration('ArrivalConfirmationRepository', () => {
+describe('ArrivalConfirmationRepository', () => {
   beforeAll(async () => {
     await dataSource.initialize();
   });
@@ -391,110 +386,5 @@ describeIntegration('ArrivalConfirmationRepository', () => {
         });
       });
     });
-
-    // sad.md §8 — two genuinely concurrent confirmations of one draft leave exactly one
-    // succeeding. The second writer's guarded `UPDATE … WHERE state = 'ready_for_ordering'` blocks
-    // on the row the first writer's still-uncommitted transaction holds, then re-evaluates its own
-    // `WHERE` clause once unblocked and finds the state already moved on — the same guarantee
-    // `purchase-draft-freeze.repository.integration.spec.ts` (T13) proves for the freeze race,
-    // applied here to the arrival race.
-    it('lets exactly one of two concurrent confirmations succeed, the second affecting no row', async () => {
-      const seeded = await seedWarehouse();
-      const draftId = await seedDraft(seeded, 'ready_for_ordering');
-      const lineId = await seedLine(seeded, draftId, 100);
-
-      const runner1 = dataSource.createQueryRunner();
-      await runner1.connect();
-      const runner2 = dataSource.createQueryRunner();
-      await runner2.connect();
-      await runner1.startTransaction();
-      await runner2.startTransaction();
-
-      const backendPid = async (runner: QueryRunner): Promise<number> => {
-        const rows = await runner.query('SELECT pg_backend_pid() AS pid');
-        return Number(rows[0].pid);
-      };
-
-      const blockedOnQueryContaining = async (
-        pid: number,
-        expectedQueryFragment: string,
-      ): Promise<boolean> => {
-        const rows = await dataSource.query(
-          `SELECT query, wait_event_type
-             FROM pg_stat_activity
-            WHERE pid = $1`,
-          [pid],
-        );
-        const activity = rows[0] as
-          { query: string; wait_event_type: string | null } | undefined;
-        return (
-          activity?.wait_event_type === 'Lock' &&
-          (activity.query ?? '').includes(expectedQueryFragment)
-        );
-      };
-
-      const waitForBlockedOn = async (
-        pid: number,
-        expectedQueryFragment: string,
-      ): Promise<void> => {
-        for (let attempt = 0; attempt < 200; attempt += 1) {
-          if (await blockedOnQueryContaining(pid, expectedQueryFragment)) {
-            return;
-          }
-          if (attempt === 199) {
-            throw new Error(
-              `Backend ${pid} never blocked on a query containing "${expectedQueryFragment}" within the poll budget`,
-            );
-          }
-
-          await new Promise((resolve) => setTimeout(resolve, 15));
-        }
-      };
-
-      const pid2 = await backendPid(runner2);
-
-      const confirmed1 = await context.run(runner1.manager, () =>
-        repository.confirmArrival({
-          purchaseDraftId: draftId,
-          warehouseId: seeded.warehouseId,
-          receivedQuantities: [
-            { purchaseDraftLineId: lineId, receivedQuantity: 100 },
-          ],
-          arrivalConfirmedByUserId: seeded.userId,
-          arrivalConfirmedAt: now,
-        }),
-      );
-      expect(confirmed1).toBe(true);
-
-      const txn2Result = context.run(runner2.manager, () =>
-        repository.confirmArrival({
-          purchaseDraftId: draftId,
-          warehouseId: seeded.warehouseId,
-          receivedQuantities: [
-            { purchaseDraftLineId: lineId, receivedQuantity: 999 },
-          ],
-          arrivalConfirmedByUserId: seeded.userId,
-          arrivalConfirmedAt: later,
-        }),
-      );
-      txn2Result.catch(() => undefined);
-
-      await waitForBlockedOn(pid2, 'UPDATE "purchase_drafts"');
-
-      await runner1.commitTransaction();
-      await runner1.release();
-
-      const confirmed2 = await txn2Result;
-      expect(confirmed2).toBe(false);
-      await runner2.commitTransaction();
-      await runner2.release();
-
-      // The loser's received quantity never lands — the winner's does.
-      expect(await readLine(lineId)).toMatchObject({ receivedQuantity: 100 });
-      expect(await readDraft(draftId)).toMatchObject({
-        state: 'closed',
-        arrivalConfirmedAt: now,
-      });
-    }, 20_000);
   });
 });

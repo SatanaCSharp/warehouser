@@ -26,9 +26,6 @@ import { hashPassword } from 'shared/domain/security/password-hashing';
 // idiom as `TransferWarehouseManagerCommand`/`DeleteRoleCommand`.
 import { CreateMemberCommand } from 'users/usecases/commands/create-member.command';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 const now = new Date('2026-08-06T12:00:00.000Z');
 
 const uuid = (suffix: string): string =>
@@ -60,7 +57,7 @@ const validEmail = 'new.member@example.test';
 const validPassword = 'a-valid-password-1';
 
 // eslint-disable-next-line max-lines-per-function, max-statements -- integration suite setup is inherently long
-describeIntegration('CreateMemberCommand', () => {
+describe('CreateMemberCommand', () => {
   const context = new DbTransactionContext(dataSource);
   const transactions = new DbTransactionService(dataSource, context);
   const accessCurrentUserRepository = new AccessCurrentUserRepository(
@@ -304,6 +301,7 @@ describeIntegration('CreateMemberCommand', () => {
       roleId: actorRoleId,
       roleKind: 'custom',
       permissionId: USERS_CREATE,
+      archived: false,
     });
 
   const persistedCounts = async (): Promise<{
@@ -658,8 +656,10 @@ describeIntegration('CreateMemberCommand', () => {
 
     expect(signedIn.userId).toBe(newMemberId);
 
-    const access =
-      await accessCurrentUserRepository.resolveCurrentAccess(newMemberId);
+    const access = await accessCurrentUserRepository.resolveCurrentAccess(
+      newMemberId,
+      warehouseAId,
+    );
     expect(access).toMatchObject({
       warehouseId: warehouseAId,
       roleId: permissiveCustomRoleId,

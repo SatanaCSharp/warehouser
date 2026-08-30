@@ -5,6 +5,8 @@ import {
   TRANSACTIONAL_KEY,
   type TransactionalMetadata,
 } from 'shared/decorators/transactional.decorator';
+import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
+import { repositoryDouble } from 'test/doubles/repository-double';
 import { RestoreWarehouseCommand } from 'warehouses/usecases/commands/restore-warehouse.command';
 
 const workspaceId = '00000000-0000-4000-8000-000000000001';
@@ -19,15 +21,16 @@ const currentUser = (): WorkspaceCurrentUser => ({
   permissionId: 'WAREHOUSES:ARCHIVE',
 });
 
-const warehouseLifecycleRepositoryDouble = () => ({
-  lockWarehouse: jest.fn().mockResolvedValue({
-    id: warehouseId,
-    workspaceId,
-    name: 'Test Warehouse North',
-    archivedAt: new Date('2026-08-01T09:00:00.000Z'),
-  }),
-  setArchivedAt: jest.fn().mockResolvedValue(undefined),
-});
+const warehouseLifecycleRepositoryDouble = () =>
+  repositoryDouble<WarehouseLifecycleRepository>()({
+    lockWarehouse: jest.fn().mockResolvedValue({
+      id: warehouseId,
+      workspaceId,
+      name: 'Test Warehouse North',
+      archivedAt: new Date('2026-08-01T09:00:00.000Z'),
+    }),
+    setArchivedAt: jest.fn().mockResolvedValue(undefined),
+  });
 
 describe('RestoreWarehouseCommand', () => {
   it('runs inside its own transaction boundary (server-architecture.md: the command owning the complete atomic operation)', () => {
@@ -43,14 +46,12 @@ describe('RestoreWarehouseCommand', () => {
   // fail for an infrastructure reason. The failure propagates untouched; the
   // global exception filter is the single place it is classified
   // (server-use-case-boundaries.md §3).
-  it.each([['lockWarehouse'], ['setArchivedAt']])(
+  it.each([['lockWarehouse'], ['setArchivedAt']] as const)(
     'AC-13: propagates an infrastructure failure in %s unchanged',
     async (failing) => {
       const warehouseLifecycleRepository = warehouseLifecycleRepositoryDouble();
       const failure = new Error('connection terminated');
-      warehouseLifecycleRepository[
-        failing as keyof typeof warehouseLifecycleRepository
-      ].mockRejectedValueOnce(failure);
+      warehouseLifecycleRepository[failing].mockRejectedValueOnce(failure);
       const command = new RestoreWarehouseCommand(warehouseLifecycleRepository);
 
       await expect(

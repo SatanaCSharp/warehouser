@@ -154,7 +154,7 @@ const describeSessionCompositionAndOwnMetadataKey = (): void => {
       });
 
       await expect(guard.canActivate(contextFor(request))).rejects.toEqual(
-        expect.objectContaining<ApplicationError>({
+        expect.objectContaining<Partial<ApplicationError>>({
           code: ErrorCode.ACCESS_DENIED,
         }),
       );
@@ -177,7 +177,7 @@ const describeAc03aUnnamedWarehouse = (): void => {
       const request = requestWithGuardedSelection({ params: {} });
 
       await expect(guard.canActivate(contextFor(request))).rejects.toEqual(
-        expect.objectContaining<ApplicationError>({
+        expect.objectContaining<Partial<ApplicationError>>({
           code: ErrorCode.ACCESS_DENIED,
         }),
       );
@@ -199,7 +199,7 @@ const describeAc03aUnnamedWarehouse = (): void => {
       });
 
       await expect(guard.canActivate(contextFor(request))).rejects.toEqual(
-        expect.objectContaining<ApplicationError>({
+        expect.objectContaining<Partial<ApplicationError>>({
           code: ErrorCode.ACCESS_DENIED,
         }),
       );
@@ -221,7 +221,7 @@ const describeAc04NoMembership = (): void => {
       });
 
       await expect(guard.canActivate(contextFor(request))).rejects.toEqual(
-        expect.objectContaining<ApplicationError>({
+        expect.objectContaining<Partial<ApplicationError>>({
           code: ErrorCode.ACCESS_DENIED,
         }),
       );
@@ -246,7 +246,7 @@ const describeAc05AuthorityPerWarehouse = (): void => {
       });
 
       await expect(guard.canActivate(contextFor(request))).rejects.toEqual(
-        expect.objectContaining<ApplicationError>({
+        expect.objectContaining<Partial<ApplicationError>>({
           code: ErrorCode.ACCESS_DENIED,
         }),
       );
@@ -271,7 +271,7 @@ const describeAc12AndAc12aArchivedWarehouse = (): void => {
       });
 
       await expect(guard.canActivate(contextFor(request))).rejects.toEqual(
-        expect.objectContaining<ApplicationError>({
+        expect.objectContaining<Partial<ApplicationError>>({
           code: ErrorCode.ACCESS_WAREHOUSE_ARCHIVED,
         }),
       );
@@ -312,7 +312,7 @@ const describeAc31RuntimeHalf = (): void => {
       });
 
       await expect(guard.canActivate(contextFor(request))).rejects.toEqual(
-        expect.objectContaining<ApplicationError>({
+        expect.objectContaining<Partial<ApplicationError>>({
           code: ErrorCode.ACCESS_DENIED,
         }),
       );

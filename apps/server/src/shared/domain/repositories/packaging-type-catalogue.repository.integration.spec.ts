@@ -10,9 +10,6 @@ import { PackagingTypeCatalogueRepository } from 'shared/domain/repositories/pac
 
 import { initialPackagingTypes } from '../../../../migrations/1786600000000-CreateOrderingSchema';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 interface PackagingTypeCatalogueRepositoryContract {
   listPackagingTypes(): Promise<PackagingTypeEntity[]>;
 }
@@ -21,7 +18,7 @@ const repository = new PackagingTypeCatalogueRepository(
   dataSource,
 ) as unknown as PackagingTypeCatalogueRepositoryContract;
 
-describeIntegration('PackagingTypeCatalogueRepository', () => {
+describe('PackagingTypeCatalogueRepository', () => {
   beforeAll(async () => {
     await dataSource.initialize();
   });

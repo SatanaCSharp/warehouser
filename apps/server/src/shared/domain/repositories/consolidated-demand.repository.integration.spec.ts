@@ -31,9 +31,6 @@ import {
 // repository method call" — the idiom `item-catalogue.repository.integration.spec.ts` establishes.
 import { PostgresQueryRunner } from 'typeorm/driver/postgres/PostgresQueryRunner';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 const now = new Date('2026-08-26T10:00:00.000Z');
 
 // openapi.yaml `DemandCoverage` — required: [purchaseDraftId, purchaseDraftLineId,
@@ -309,7 +306,7 @@ const sortCoverage = (coverage: readonly DemandLineCoverage[]) =>
   );
 
 // The suites below are extracted to named top-level functions, each registering its own
-// `describe`/`it`, so the outer `describeIntegration` callback stays a short table of contents
+// `describe`/`it`, so the outer `describe` callback stays a short table of contents
 // (max-lines-per-function) — the pattern `item-catalogue.repository.integration.spec.ts` uses.
 
 const registerNonFanOutTests = (): void => {
@@ -641,7 +638,7 @@ const registerWarehouseScopingTests = (): void => {
   });
 };
 
-describeIntegration('ConsolidatedDemandRepository', () => {
+describe('ConsolidatedDemandRepository', () => {
   beforeAll(async () => {
     await dataSource.initialize();
   });

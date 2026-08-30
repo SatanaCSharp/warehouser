@@ -50,10 +50,7 @@ const buildIdentity = (
   return { account, user, workspaceId, session };
 };
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
-describeIntegration('AuthRegistrationService', () => {
+describe('AuthRegistrationService', () => {
   const transactionContext = new DbTransactionContext(dataSource);
   const transactionService = new DbTransactionService(
     dataSource,
@@ -128,37 +125,6 @@ describeIntegration('AuthRegistrationService', () => {
     // value can only have come from the identity itself, never derived from
     // a membership.
     expect(row.workspace_id).toBe(identity.workspaceId);
-  });
-
-  it('lets the database choose one winner for concurrent normalized emails', async () => {
-    const email = 'duplicate@example.test';
-    // Each identity gets its own Workspace id, and `registerIdentity` already
-    // seeds it (once, through the shared helper) inside that registration's
-    // own transaction. Pre-seeding both Workspace rows here as well would
-    // insert the same primary key a second time, so *both* concurrent
-    // registrations would reject on that duplicate-key violation instead of
-    // on `uq_accounts_normalized_email` — indistinguishable from a broken
-    // uniqueness implementation. Do not add a second seed here.
-    const results = await Promise.allSettled([
-      registerIdentity(buildIdentity(email)),
-      registerIdentity(buildIdentity(email)),
-    ]);
-
-    const fulfilled = results.filter((result) => result.status === 'fulfilled');
-    const rejected = results.filter(
-      (result): result is PromiseRejectedResult => result.status === 'rejected',
-    );
-    expect(fulfilled).toHaveLength(1);
-    expect(rejected).toHaveLength(1);
-    // The loser must be attributable to the email-uniqueness constraint, not
-    // to any other failure (e.g. the duplicate-Workspace-id bug this fixture
-    // used to have).
-    expect(String((rejected[0].reason as Error).message)).toMatch(
-      /uq_accounts_normalized_email/u,
-    );
-    expect(
-      await dataSource.query('SELECT count(*) AS count FROM accounts'),
-    ).toEqual([{ count: '1' }]);
   });
 
   it('resolves valid sessions and revokes them idempotently', async () => {

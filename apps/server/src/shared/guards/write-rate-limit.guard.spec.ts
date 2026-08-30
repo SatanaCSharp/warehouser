@@ -85,7 +85,7 @@ describe('WriteRateLimitGuard', () => {
       }
 
       await expect(guard.canActivate(contextFor(request))).rejects.toEqual(
-        expect.objectContaining<ApplicationError>({
+        expect.objectContaining<Partial<ApplicationError>>({
           code: ErrorCode.ACCESS_WRITE_RATE_LIMITED,
         }),
       );
@@ -158,7 +158,7 @@ describe('WriteRateLimitGuard', () => {
       const request = { params: { warehouseId } };
 
       await expect(guard.canActivate(contextFor(request))).rejects.toEqual(
-        expect.objectContaining<ApplicationError>({
+        expect.objectContaining<Partial<ApplicationError>>({
           code: ErrorCode.ACCESS_DENIED,
         }),
       );

@@ -26,9 +26,6 @@ import {
   persistWorkspaceGraph,
 } from 'test/factories/entity-factories';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 interface RemoveWorkspaceMemberInput {
   readonly targetUserId: string;
 }
@@ -39,7 +36,7 @@ interface RemoveWorkspaceMemberCommandContract {
   ): Promise<unknown>;
 }
 
-describeIntegration('RemoveWorkspaceMemberCommand', () => {
+describe('RemoveWorkspaceMemberCommand', () => {
   // A hand-constructed command has no `@Transactional()` interceptor, so a
   // pessimistic lock inside it throws `PessimisticLockTransactionRequiredError`
   // unless the call runs inside an already-open transaction. `transactions`

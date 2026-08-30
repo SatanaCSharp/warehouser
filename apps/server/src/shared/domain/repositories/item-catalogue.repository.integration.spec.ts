@@ -28,9 +28,6 @@ import {
 // "one query" rather than merely "one repository method call".
 import { PostgresQueryRunner } from 'typeorm/driver/postgres/PostgresQueryRunner';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 const now = new Date('2026-08-25T12:00:00.000Z');
 
 interface CreateItemInput {
@@ -192,7 +189,7 @@ const insertAdjustment = async (
 };
 
 // The four suites below are extracted to named top-level functions, each registering its own
-// `describe`, so the outer `describeIntegration` callback stays a short table of contents
+// `describe`, so the outer `describe` callback stays a short table of contents
 // (max-lines-per-function).
 
 const registerIsNamedByDemandOrDraftTests = (): void => {
@@ -614,7 +611,7 @@ const registerItemsWithOnHandAndLatestReasonTests = (): void => {
   });
 };
 
-describeIntegration('ItemCatalogueRepository', () => {
+describe('ItemCatalogueRepository', () => {
   beforeAll(async () => {
     await dataSource.initialize();
   });

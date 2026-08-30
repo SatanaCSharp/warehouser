@@ -389,23 +389,70 @@ pnpm --filter @warehouser/server build
 
 ### Running the integration tier
 
-Integration specs are named `*.integration.spec.ts` (and a few colocated service specs) and are
-skipped unless `RUN_INTEGRATION=1` is set, so the command above runs the unit tier only.
-
-They execute against a real PostgreSQL database and `TRUNCATE ... CASCADE` between tests. Two
-consequences are easy to get wrong:
-
-- **Point them at a disposable database.** They will erase whatever database they connect to.
-  Never run them against the database you develop against. Create one once and reuse it:
-
-  ```sh
-  psql -h localhost -U warehouser -d postgres -c 'CREATE DATABASE warehouser_test;'
-  DATABASE_NAME=warehouser_test pnpm --filter @warehouser/server migration:run
-  ```
-
-- **Run them serially.** They share one database, so Jest's parallel workers truncate each other's
-  fixtures and the suite fails in ways that disappear when a spec is run alone.
+Integration specs are named `*.integration.spec.ts`. The suffix is what separates the two
+commands: `jest.config.cjs` excludes it by path, so the unit tier above never touches a database,
+and `jest.pglite.config.cjs` opts it back in. Naming a spec that way is the whole opt-in — there
+is no environment flag to remember, and an integration spec cannot be run against a developer's
+own database by accident. To run them:
 
 ```sh
-DATABASE_NAME=warehouser_test RUN_INTEGRATION=1 pnpm --filter @warehouser/server exec jest --runInBand
+pnpm --filter @warehouser/server test:integration
 ```
+
+No Docker, no database to create, nothing to point at. `src/test/pglite/global-setup.ts` applies
+the migrations once, dumps the result, and every test file restores its own database from that
+dump — the PGlite equivalent of `CREATE DATABASE ... TEMPLATE`. Restoring costs roughly 170 ms,
+which is what makes a database _per test file_ affordable.
+
+That per-file isolation is why nothing has to coordinate cleanup across suites: a suite cannot
+corrupt a database no other suite shares.
+
+Specs are not aware of any of it. `jest.pglite.config.cjs` uses `moduleNameMapper` to swap two
+production modules for PGlite-backed equivalents:
+
+| Production module                 | Replaced by                             |
+| --------------------------------- | --------------------------------------- |
+| `shared/database/data-source`     | `test/pglite/pglite-data-source.ts`     |
+| `shared/database/typeorm.options` | `test/pglite/pglite-typeorm.options.ts` |
+
+Both build on the single driver in `test/pglite/pglite-driver.ts`. Mapping _both_ matters: the
+second is what `AppModule` uses, so without it an HTTP contract spec would seed its fixtures into
+PGlite while the application under test read from a real PostgreSQL server, and every
+authenticated request would come back 401.
+
+The driver is deliberately in-process rather than reached over `pglite-socket`. Routing statements
+through the socket's query queue hits open upstream defects around transactions and error
+recovery (electric-sql/pglite #958, #985, #1046), which show up as rolled-back rows reappearing,
+aggregates returning no rows at all, and suites hanging — non-deterministically.
+
+Two consequences of the in-process driver are worth knowing:
+
+- The tier runs under `NODE_OPTIONS=--experimental-vm-modules` (already in the `test:integration`
+  script). PGlite loads its WebAssembly through a dynamic `import()`, which Jest's VM context
+  refuses without that flag.
+- `pglite-driver.ts` re-registers a `bigint` parser so `count(*)` yields a string, as
+  `node-postgres` does. Without it a spec asserting `{ count: '1' }` sees `{ count: 1 }` and fails
+  for a reason unrelated to what it tests.
+
+### What this tier cannot test
+
+PGlite is PostgreSQL compiled to WebAssembly, running in the single-user mode Postgres normally
+reserves for recovery. It is real Postgres — isolation levels, `TRUNCATE ... CASCADE` across
+several tables, deferred foreign keys and injected-failure rollbacks all behave correctly — but it
+has exactly **one backend**, so only one query executes at a time no matter how many connections
+are open. Note it is currently PostgreSQL 18, one major version ahead of the `postgres:17-alpine`
+production uses.
+
+**Concurrency is therefore out of scope for the automated suite, by decision.** A spec that needs
+two backends racing each other cannot be expressed here:
+
+- Opening a second `QueryRunner` and polling `pg_stat_activity` until the first backend is blocked
+  on a lock self-deadlocks — the second runner _is_ the first backend.
+- A race asserting "two simultaneous writes, exactly one winner" silently passes for the wrong
+  reason: PGlite serializes the two calls, so both succeed and the proof evaporates.
+
+The repository previously carried such specs against a real PostgreSQL server. They were removed
+along with the load smokes, which asserted p95 latency and throughput that only mean something
+against the server the application actually runs on. Do not add specs of either kind back without
+reintroducing a real-PostgreSQL tier to run them in — in this suite they would pass without
+proving anything, which is worse than not having them.

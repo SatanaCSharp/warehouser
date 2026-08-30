@@ -19,9 +19,6 @@ import {
   buildWorkspaceRole,
 } from 'test/factories/entity-factories';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 const now = new Date('2026-08-12T12:00:00.000Z');
 
 // `WorkspaceMembershipRepository` is `error`-typed while its module does not
@@ -101,7 +98,7 @@ const seedIdentity = async (
   });
 };
 
-describeIntegration('WorkspaceMembershipRepository', () => {
+describe('WorkspaceMembershipRepository', () => {
   beforeAll(async () => {
     await dataSource.initialize();
   });

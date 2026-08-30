@@ -7,6 +7,8 @@
 import { ApplicationError } from '@warehouser/shared-types/errors';
 import { ReactivateItemCommand } from 'items/usecases/commands/reactivate-item.command';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
+import { repositoryDouble } from 'test/doubles/repository-double';
 
 const warehouseId = '00000000-0000-4000-8000-000000000001';
 const actorId = '00000000-0000-4000-8000-000000000002';
@@ -24,10 +26,11 @@ const currentUser: AccessCurrentUser = {
 
 const itemCatalogueRepositoryDouble = (
   item: { id: string; warehouseId: string; deactivatedAt: Date | null } | null,
-) => ({
-  findById: jest.fn().mockResolvedValue(item),
-  setDeactivatedAt: jest.fn().mockResolvedValue(undefined),
-});
+) =>
+  repositoryDouble<ItemCatalogueRepository>()({
+    findById: jest.fn().mockResolvedValue(item),
+    setDeactivatedAt: jest.fn().mockResolvedValue(undefined),
+  });
 
 describe('ReactivateItemCommand', () => {
   // AC-06d — reactivation is the same operation inverted: it clears deactivatedAt, which is the

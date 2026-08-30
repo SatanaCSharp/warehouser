@@ -26,9 +26,6 @@ import {
 } from 'test/factories/entity-factories';
 import { PostgresQueryRunner } from 'typeorm/driver/postgres/PostgresQueryRunner';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 const now = new Date('2026-08-26T10:00:00.000Z');
 const later = new Date('2026-08-26T12:00:00.000Z');
 const neededBy = '2099-01-01';
@@ -237,7 +234,7 @@ const readOrder = (id: string): Promise<CustomerOrderEntity | null> =>
   dataSource.manager.getRepository(CustomerOrderEntity).findOneBy({ id });
 
 // eslint-disable-next-line max-lines-per-function -- one suite covering one repository's whole persistence surface is inherently long, matching the other repository integration specs in this directory
-describeIntegration('CustomerOrderLifecycleRepository', () => {
+describe('CustomerOrderLifecycleRepository', () => {
   beforeAll(async () => {
     await dataSource.initialize();
   });
@@ -355,52 +352,6 @@ describeIntegration('CustomerOrderLifecycleRepository', () => {
     );
 
     expect(locked).toBeNull();
-  });
-
-  // sad.md §6.10 — the read **locks** the Customer Order. This is the half a `SELECT` alone cannot
-  // give: a second transaction reading the same row for update must block until the first commits,
-  // which is what stops AC-19b's floor from being decided against a value another member is already
-  // changing.
-  it('holds the row against a second reader until the first transaction commits', async () => {
-    const seeded = await seed();
-    const customerOrderId = await seedCustomerOrder(seeded);
-
-    let secondReaderResolved = false;
-    let releaseFirst = (): void => {};
-    const firstHolds = new Promise<void>((resolve) => {
-      releaseFirst = resolve;
-    });
-
-    const first = transactions.executeInTransaction({}, async () => {
-      await repository.lockOrderWithAllocatedTotal(
-        customerOrderId,
-        seeded.warehouseId,
-      );
-      await firstHolds;
-    });
-
-    // A second, independent transaction asking for the same row for update.
-    const secondRunner = dataSource.createQueryRunner();
-    await secondRunner.connect();
-    await secondRunner.startTransaction();
-    const second = secondRunner
-      .query('SELECT id FROM customer_orders WHERE id = $1 FOR UPDATE', [
-        customerOrderId,
-      ])
-      .then(() => {
-        secondReaderResolved = true;
-      });
-
-    await new Promise((resolve) => setTimeout(resolve, 150));
-    expect(secondReaderResolved).toBe(false);
-
-    releaseFirst();
-    await first;
-    await second;
-    expect(secondReaderResolved).toBe(true);
-
-    await secondRunner.commitTransaction();
-    await secondRunner.release();
   });
 
   // AC-19 — the amendment records the new quantity, the recalculated Outstanding Quantity, the

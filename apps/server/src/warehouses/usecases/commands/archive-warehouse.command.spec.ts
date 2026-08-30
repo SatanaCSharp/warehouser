@@ -5,6 +5,8 @@ import {
   TRANSACTIONAL_KEY,
   type TransactionalMetadata,
 } from 'shared/decorators/transactional.decorator';
+import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
+import { repositoryDouble } from 'test/doubles/repository-double';
 import { ArchiveWarehouseCommand } from 'warehouses/usecases/commands/archive-warehouse.command';
 
 const workspaceId = '00000000-0000-4000-8000-000000000001';
@@ -19,16 +21,17 @@ const currentUser = (): WorkspaceCurrentUser => ({
   permissionId: 'WAREHOUSES:ARCHIVE',
 });
 
-const warehouseLifecycleRepositoryDouble = () => ({
-  lockWorkspaceAndCountNonArchivedWarehouses: jest.fn().mockResolvedValue(2),
-  lockWarehouse: jest.fn().mockResolvedValue({
-    id: warehouseId,
-    workspaceId,
-    name: 'Test Warehouse North',
-    archivedAt: null,
-  }),
-  setArchivedAt: jest.fn().mockResolvedValue(undefined),
-});
+const warehouseLifecycleRepositoryDouble = () =>
+  repositoryDouble<WarehouseLifecycleRepository>()({
+    lockWorkspaceAndCountNonArchivedWarehouses: jest.fn().mockResolvedValue(2),
+    lockWarehouse: jest.fn().mockResolvedValue({
+      id: warehouseId,
+      workspaceId,
+      name: 'Test Warehouse North',
+      archivedAt: null,
+    }),
+    setArchivedAt: jest.fn().mockResolvedValue(undefined),
+  });
 
 describe('ArchiveWarehouseCommand', () => {
   it('runs inside its own transaction boundary (server-architecture.md: the command owning the complete atomic operation)', () => {
@@ -49,14 +52,12 @@ describe('ArchiveWarehouseCommand', () => {
     ['lockWorkspaceAndCountNonArchivedWarehouses'],
     ['lockWarehouse'],
     ['setArchivedAt'],
-  ])(
+  ] as const)(
     'AC-13: propagates an infrastructure failure in %s unchanged',
     async (failing) => {
       const warehouseLifecycleRepository = warehouseLifecycleRepositoryDouble();
       const failure = new Error('connection terminated');
-      warehouseLifecycleRepository[
-        failing as keyof typeof warehouseLifecycleRepository
-      ].mockRejectedValueOnce(failure);
+      warehouseLifecycleRepository[failing].mockRejectedValueOnce(failure);
       const command = new ArchiveWarehouseCommand(warehouseLifecycleRepository);
 
       await expect(

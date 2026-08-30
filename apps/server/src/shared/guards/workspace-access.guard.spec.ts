@@ -3,7 +3,9 @@ import { Reflector } from '@nestjs/core';
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
 import { REQUIRED_WORKSPACE_PERMISSION_KEY } from 'shared/decorators/required-workspace-permission.decorator';
+import { WorkspaceCurrentUserRepository } from 'shared/domain/repositories/workspace-current-user.repository';
 import { WorkspaceAccessGuard } from 'shared/guards/workspace-access.guard';
+import { repositoryDouble } from 'test/doubles/repository-double';
 
 // ADR 0001 / sad §6.2: a User belongs to exactly one Workspace and never selects it, so a
 // Workspace-scoped route carries no Workspace identifier and this guard derives it entirely from the
@@ -56,6 +58,17 @@ const requestWithGuardedSelection = (
   ...overrides,
 });
 
+const guardWith = (
+  reflector: Reflector,
+  resolveRequiredWorkspacePermission: jest.Mock,
+): WorkspaceAccessGuard =>
+  new WorkspaceAccessGuard(
+    reflector,
+    repositoryDouble<WorkspaceCurrentUserRepository>()({
+      resolveRequiredWorkspacePermission,
+    }),
+  );
+
 describe('WorkspaceAccessGuard', () => {
   const grantedResult = {
     userId,
@@ -74,9 +87,7 @@ describe('WorkspaceAccessGuard', () => {
       const reflector = reflectorReturning(REQUIRED_WORKSPACE_PERMISSION_KEY, [
         permissionId,
       ]);
-      const guard = new WorkspaceAccessGuard(reflector, {
-        resolveRequiredWorkspacePermission,
-      });
+      const guard = guardWith(reflector, resolveRequiredWorkspacePermission);
       // No Workspace identifier anywhere on the request — the guard must derive it from the session.
       const request = requestWithGuardedSelection({});
 
@@ -112,13 +123,11 @@ describe('WorkspaceAccessGuard', () => {
       const reflector = reflectorReturning(REQUIRED_PERMISSION_KEY, [
         'ROLES:WATCH',
       ]);
-      const guard = new WorkspaceAccessGuard(reflector, {
-        resolveRequiredWorkspacePermission,
-      });
+      const guard = guardWith(reflector, resolveRequiredWorkspacePermission);
       const request = requestWithGuardedSelection({});
 
       await expect(guard.canActivate(contextFor(request))).rejects.toEqual(
-        expect.objectContaining<ApplicationError>({
+        expect.objectContaining<Partial<ApplicationError>>({
           code: ErrorCode.WORKSPACE_DENIED,
         }),
       );
@@ -135,13 +144,11 @@ describe('WorkspaceAccessGuard', () => {
       const reflector = reflectorReturning(REQUIRED_WORKSPACE_PERMISSION_KEY, [
         permissionId,
       ]);
-      const guard = new WorkspaceAccessGuard(reflector, {
-        resolveRequiredWorkspacePermission,
-      });
+      const guard = guardWith(reflector, resolveRequiredWorkspacePermission);
       const request = requestWithGuardedSelection({});
 
       await expect(guard.canActivate(contextFor(request))).rejects.toEqual(
-        expect.objectContaining<ApplicationError>({
+        expect.objectContaining<Partial<ApplicationError>>({
           code: ErrorCode.WORKSPACE_DENIED,
         }),
       );
@@ -155,13 +162,11 @@ describe('WorkspaceAccessGuard', () => {
       const reflector = reflectorReturning(REQUIRED_WORKSPACE_PERMISSION_KEY, [
         permissionId,
       ]);
-      const guard = new WorkspaceAccessGuard(reflector, {
-        resolveRequiredWorkspacePermission,
-      });
+      const guard = guardWith(reflector, resolveRequiredWorkspacePermission);
       const request = requestWithGuardedSelection({});
 
       await expect(guard.canActivate(contextFor(request))).rejects.toEqual(
-        expect.objectContaining<ApplicationError>({
+        expect.objectContaining<Partial<ApplicationError>>({
           code: ErrorCode.WORKSPACE_DENIED,
         }),
       );
@@ -178,13 +183,11 @@ describe('WorkspaceAccessGuard', () => {
         REQUIRED_WORKSPACE_PERMISSION_KEY,
         undefined,
       );
-      const guard = new WorkspaceAccessGuard(reflector, {
-        resolveRequiredWorkspacePermission,
-      });
+      const guard = guardWith(reflector, resolveRequiredWorkspacePermission);
       const request = requestWithGuardedSelection({});
 
       await expect(guard.canActivate(contextFor(request))).rejects.toEqual(
-        expect.objectContaining<ApplicationError>({
+        expect.objectContaining<Partial<ApplicationError>>({
           code: ErrorCode.WORKSPACE_DENIED,
         }),
       );
@@ -198,9 +201,10 @@ describe('WorkspaceAccessGuard', () => {
         permissionId,
       ]);
 
-      const guardForNoMembership = new WorkspaceAccessGuard(reflector, {
-        resolveRequiredWorkspacePermission: jest.fn().mockResolvedValue(null),
-      });
+      const guardForNoMembership = guardWith(
+        reflector,
+        jest.fn().mockResolvedValue(null),
+      );
       let noMembershipError: ApplicationError | undefined;
       try {
         await guardForNoMembership.canActivate(
@@ -210,13 +214,9 @@ describe('WorkspaceAccessGuard', () => {
         noMembershipError = error as ApplicationError;
       }
 
-      const guardForInsufficientPermission = new WorkspaceAccessGuard(
+      const guardForInsufficientPermission = guardWith(
         reflector,
-        {
-          resolveRequiredWorkspacePermission: jest
-            .fn()
-            .mockResolvedValue({ ...grantedResult, granted: false }),
-        },
+        jest.fn().mockResolvedValue({ ...grantedResult, granted: false }),
       );
       let insufficientPermissionError: ApplicationError | undefined;
       try {
@@ -244,9 +244,7 @@ describe('WorkspaceAccessGuard', () => {
       const reflector = reflectorReturning(REQUIRED_WORKSPACE_PERMISSION_KEY, [
         permissionId,
       ]);
-      const guard = new WorkspaceAccessGuard(reflector, {
-        resolveRequiredWorkspacePermission,
-      });
+      const guard = guardWith(reflector, resolveRequiredWorkspacePermission);
       // params/body carry an unrelated foreign identifier the guard must ignore entirely: it
       // authorizes from the session, and ownership of any target is proven by the use case, not here.
       const request = requestWithGuardedSelection({

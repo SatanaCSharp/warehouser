@@ -41,9 +41,6 @@ import {
   buildWorkspace,
 } from 'test/factories/entity-factories';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 const now = new Date('2026-08-12T12:00:00.000Z');
 
 interface AssignWarehouseMembershipInput {
@@ -172,23 +169,21 @@ const findMembership = (
 // the suite below into several `describe` blocks — purely to keep each body
 // under the repo's `max-lines-per-function` cap — does not initialize or
 // destroy `dataSource` more than once.
-if (process.env.RUN_INTEGRATION === '1') {
-  beforeAll(async () => {
-    await dataSource.initialize();
-  });
+beforeAll(async () => {
+  await dataSource.initialize();
+});
 
-  afterEach(async () => {
-    await dataSource.query(
-      'TRUNCATE warehouse_memberships, roles, warehouses, workspaces, sessions, users, accounts CASCADE',
-    );
-  });
+afterEach(async () => {
+  await dataSource.query(
+    'TRUNCATE warehouse_memberships, roles, warehouses, workspaces, sessions, users, accounts CASCADE',
+  );
+});
 
-  afterAll(async () => {
-    await dataSource.destroy();
-  });
-}
+afterAll(async () => {
+  await dataSource.destroy();
+});
 
-describeIntegration('AssignWarehouseMembershipCommand — happy', () => {
+describe('AssignWarehouseMembershipCommand — happy', () => {
   it('AC-23: the target holds exactly the chosen custom Role in that Warehouse and keeps every membership already held', async () => {
     const workspaceId = await seedWorkspace();
     const actorId = randomUUID();
@@ -243,7 +238,7 @@ describeIntegration('AssignWarehouseMembershipCommand — happy', () => {
   });
 });
 
-describeIntegration('AssignWarehouseMembershipCommand — cross-context', () => {
+describe('AssignWarehouseMembershipCommand — cross-context', () => {
   it("AC-24: denies placing a User of another Workspace into one of the actor's Warehouses", async () => {
     const workspaceId = await seedWorkspace();
     const actorId = randomUUID();
@@ -305,101 +300,98 @@ describeIntegration('AssignWarehouseMembershipCommand — cross-context', () => 
   });
 });
 
-describeIntegration(
-  'AssignWarehouseMembershipCommand — domain invariant',
-  () => {
-    it('AC-25: denies granting the protected Warehouse Manager Role through ordinary assignment', async () => {
-      const workspaceId = await seedWorkspace();
-      const actorId = randomUUID();
-      await seedIdentity(actorId, workspaceId, `actor.${actorId}@example.test`);
-      const targetId = randomUUID();
-      await seedIdentity(
-        targetId,
-        workspaceId,
-        `target.${targetId}@example.test`,
-      );
-      const warehouseId = await seedWarehouse(workspaceId);
-      const { managerRoleId } = await seedRoles(warehouseId);
+describe('AssignWarehouseMembershipCommand — domain invariant', () => {
+  it('AC-25: denies granting the protected Warehouse Manager Role through ordinary assignment', async () => {
+    const workspaceId = await seedWorkspace();
+    const actorId = randomUUID();
+    await seedIdentity(actorId, workspaceId, `actor.${actorId}@example.test`);
+    const targetId = randomUUID();
+    await seedIdentity(
+      targetId,
+      workspaceId,
+      `target.${targetId}@example.test`,
+    );
+    const warehouseId = await seedWarehouse(workspaceId);
+    const { managerRoleId } = await seedRoles(warehouseId);
 
-      await expect(
-        transactions.executeInTransaction({}, () =>
-          createCommand().execute(principal(workspaceId, actorId), {
-            targetUserId: targetId,
-            warehouseId,
-            roleId: managerRoleId,
-          }),
-        ),
-      ).rejects.toMatchObject({
-        code: ErrorCode.WORKSPACE_MANAGER_TRANSFER_REQUIRED,
-      });
-
-      await expect(findMembership(targetId, warehouseId)).resolves.toBeNull();
+    await expect(
+      transactions.executeInTransaction({}, () =>
+        createCommand().execute(principal(workspaceId, actorId), {
+          targetUserId: targetId,
+          warehouseId,
+          roleId: managerRoleId,
+        }),
+      ),
+    ).rejects.toMatchObject({
+      code: ErrorCode.WORKSPACE_MANAGER_TRANSFER_REQUIRED,
     });
 
-    it('AC-25: denies granting a second membership in a Warehouse the target already belongs to', async () => {
-      const workspaceId = await seedWorkspace();
-      const actorId = randomUUID();
-      await seedIdentity(actorId, workspaceId, `actor.${actorId}@example.test`);
-      const targetId = randomUUID();
-      await seedIdentity(
-        targetId,
-        workspaceId,
-        `target.${targetId}@example.test`,
-      );
-      const warehouseId = await seedWarehouse(workspaceId);
-      const { customRoleId } = await seedRoles(warehouseId);
-      await dataSource.manager.getRepository(WarehouseMembershipEntity).insert({
-        userId: targetId,
-        warehouseId,
-        workspaceId,
-        roleId: customRoleId,
-        roleKind: 'custom',
-        createdAt: now,
-        updatedAt: now,
-      });
+    await expect(findMembership(targetId, warehouseId)).resolves.toBeNull();
+  });
 
-      const secondRoleId = randomUUID();
-      await dataSource.manager.getRepository(RoleEntity).insert({
-        id: secondRoleId,
-        warehouseId,
-        name: 'Receiver',
-        kind: 'custom',
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      await expect(
-        transactions.executeInTransaction({}, () =>
-          createCommand().execute(principal(workspaceId, actorId), {
-            targetUserId: targetId,
-            warehouseId,
-            roleId: secondRoleId,
-          }),
-        ),
-      ).rejects.toMatchObject({ code: ErrorCode.WORKSPACE_MEMBERSHIP_EXISTS });
-
-      const membership = await findMembership(targetId, warehouseId);
-      expect(membership).toMatchObject({ roleId: customRoleId });
+  it('AC-25: denies granting a second membership in a Warehouse the target already belongs to', async () => {
+    const workspaceId = await seedWorkspace();
+    const actorId = randomUUID();
+    await seedIdentity(actorId, workspaceId, `actor.${actorId}@example.test`);
+    const targetId = randomUUID();
+    await seedIdentity(
+      targetId,
+      workspaceId,
+      `target.${targetId}@example.test`,
+    );
+    const warehouseId = await seedWarehouse(workspaceId);
+    const { customRoleId } = await seedRoles(warehouseId);
+    await dataSource.manager.getRepository(WarehouseMembershipEntity).insert({
+      userId: targetId,
+      warehouseId,
+      workspaceId,
+      roleId: customRoleId,
+      roleKind: 'custom',
+      createdAt: now,
+      updatedAt: now,
     });
 
-    it('AC-25a: denies the actor granting themself a membership in an existing Warehouse', async () => {
-      const workspaceId = await seedWorkspace();
-      const actorId = randomUUID();
-      await seedIdentity(actorId, workspaceId, `actor.${actorId}@example.test`);
-      const warehouseId = await seedWarehouse(workspaceId);
-      const { customRoleId } = await seedRoles(warehouseId);
-
-      await expect(
-        transactions.executeInTransaction({}, () =>
-          createCommand().execute(principal(workspaceId, actorId), {
-            targetUserId: actorId,
-            warehouseId,
-            roleId: customRoleId,
-          }),
-        ),
-      ).rejects.toMatchObject({ code: ErrorCode.WORKSPACE_SELF_ACTION_DENIED });
-
-      await expect(findMembership(actorId, warehouseId)).resolves.toBeNull();
+    const secondRoleId = randomUUID();
+    await dataSource.manager.getRepository(RoleEntity).insert({
+      id: secondRoleId,
+      warehouseId,
+      name: 'Receiver',
+      kind: 'custom',
+      createdAt: now,
+      updatedAt: now,
     });
-  },
-);
+
+    await expect(
+      transactions.executeInTransaction({}, () =>
+        createCommand().execute(principal(workspaceId, actorId), {
+          targetUserId: targetId,
+          warehouseId,
+          roleId: secondRoleId,
+        }),
+      ),
+    ).rejects.toMatchObject({ code: ErrorCode.WORKSPACE_MEMBERSHIP_EXISTS });
+
+    const membership = await findMembership(targetId, warehouseId);
+    expect(membership).toMatchObject({ roleId: customRoleId });
+  });
+
+  it('AC-25a: denies the actor granting themself a membership in an existing Warehouse', async () => {
+    const workspaceId = await seedWorkspace();
+    const actorId = randomUUID();
+    await seedIdentity(actorId, workspaceId, `actor.${actorId}@example.test`);
+    const warehouseId = await seedWarehouse(workspaceId);
+    const { customRoleId } = await seedRoles(warehouseId);
+
+    await expect(
+      transactions.executeInTransaction({}, () =>
+        createCommand().execute(principal(workspaceId, actorId), {
+          targetUserId: actorId,
+          warehouseId,
+          roleId: customRoleId,
+        }),
+      ),
+    ).rejects.toMatchObject({ code: ErrorCode.WORKSPACE_SELF_ACTION_DENIED });
+
+    await expect(findMembership(actorId, warehouseId)).resolves.toBeNull();
+  });
+});

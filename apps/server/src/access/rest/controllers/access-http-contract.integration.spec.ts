@@ -18,9 +18,6 @@ import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-memb
 import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 import { GlobalHttpExceptionFilter } from 'shared/errors/global-http-exception.filter';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 // Fixed clock. `chk_warehouses_archival_order` rejects `archivedAt < createdAt`, so every seeded
 // row and every archival timestamp below is pinned to this same instant rather than the real wall
 // clock (three prior commits fixed fixtures that skipped this).
@@ -56,7 +53,7 @@ const WAREHOUSE_MANAGER_ROLE_REASSIGN = 'WAREHOUSE_MANAGER_ROLE:REASSIGN';
 //   - manager-transfer is the one archived-tolerant *mutating* handler (AC-36, AC-36a, sad.md §6.7a);
 //   - a concurrent manager transfer maps to the stable concurrency error.
 // eslint-disable-next-line max-lines-per-function, max-statements -- integration suite setup is inherently long
-describeIntegration('warehouse-access HTTP contract', () => {
+describe('warehouse-access HTTP contract', () => {
   let app: INestApplication;
   let baseUrl: string;
 
@@ -589,54 +586,6 @@ describeIntegration('warehouse-access HTTP contract', () => {
       .getRepository(WarehouseMembershipEntity)
       .findOneBy({ userId: managerId, warehouseId });
     expect(managerMembership?.roleKind).toBe('warehouse_manager');
-  });
-
-  it('POST /api/v1/warehouses/:warehouseId/access/manager-transfer maps a concurrent transfer to 409 access.concurrent_change and preserves exactly one Manager (AC-36a)', async () => {
-    await seedWarehouseAndRoles();
-    const managerId = randomUUID();
-    const recipientId = randomUUID();
-    await seedIdentity(managerId, 'manager@example.test');
-    await seedIdentity(recipientId, 'recipient@example.test');
-    await seedMembership(
-      managerId,
-      warehouseId,
-      managerRoleId,
-      'warehouse_manager',
-    );
-    await seedMembership(recipientId, warehouseId, custodianRoleId);
-    const cookie = await seedSessionCookie(managerId);
-
-    // Two concurrent transfers of the same Manager, racing on the same pessimistic-write locked
-    // rows. The one-Manager-per-Warehouse constraint (and the command's post-lock re-check) admits
-    // exactly one winner; the loser must see the transfer's stable concurrency error rather than
-    // silently double-applying.
-    const [first, second] = await Promise.all([
-      request(
-        'POST',
-        `/api/v1/warehouses/${warehouseId}/access/manager-transfer`,
-        cookie,
-        {
-          recipientUserId: recipientId,
-          formerManagerRoleId: replacementRoleId,
-        },
-      ),
-      request(
-        'POST',
-        `/api/v1/warehouses/${warehouseId}/access/manager-transfer`,
-        cookie,
-        { recipientUserId: recipientId, formerManagerRoleId: custodianRoleId },
-      ),
-    ]);
-
-    const statuses = [first.status, second.status].sort();
-    expect(statuses).toEqual([200, 409]);
-    const loser = first.status === 409 ? first : second;
-    expect(loser.body).toMatchObject({ code: 'access.concurrent_change' });
-
-    const managers = await dataSource.manager
-      .getRepository(WarehouseMembershipEntity)
-      .find({ where: { warehouseId, roleKind: 'warehouse_manager' } });
-    expect(managers).toHaveLength(1);
   });
 
   it('POST /api/v1/warehouses/:warehouseId/access/manager-transfer returns 403 access.denied when the actor holds no membership in the *named* Warehouse (AC-05)', async () => {

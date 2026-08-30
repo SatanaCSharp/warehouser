@@ -27,9 +27,6 @@ import {
   buildWorkspace,
 } from 'test/factories/entity-factories';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 const now = new Date('2026-08-26T10:00:00.000Z');
 
 interface CreateDraftLineLinkInput {
@@ -238,7 +235,7 @@ const readDraft = (id: string): Promise<PurchaseDraftEntity | null> =>
   dataSource.manager.getRepository(PurchaseDraftEntityClass).findOneBy({ id });
 
 // eslint-disable-next-line max-lines-per-function -- integration suite setup is inherently long
-describeIntegration('PurchaseDraftAssemblyRepository', () => {
+describe('PurchaseDraftAssemblyRepository', () => {
   beforeAll(async () => {
     await dataSource.initialize();
   });

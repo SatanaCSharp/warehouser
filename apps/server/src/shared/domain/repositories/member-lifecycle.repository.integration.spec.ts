@@ -11,9 +11,6 @@ import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-memb
 import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 import { MemberLifecycleRepository } from 'shared/domain/repositories/member-lifecycle.repository';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 const now = new Date('2026-08-06T12:00:00.000Z');
 
 const workspaceId = '00000000-0000-4000-8000-000000000100';
@@ -119,7 +116,7 @@ const seedMembership = async (
   });
 };
 
-describeIntegration('MemberLifecycleRepository', () => {
+describe('MemberLifecycleRepository', () => {
   const repository = new MemberLifecycleRepository(dataSource);
   const context = new DbTransactionContext(dataSource);
   const transactions = new DbTransactionService(dataSource, context);

@@ -29,9 +29,6 @@ import { QueryFailedError } from 'typeorm';
  * relocated here from T1 (AC-07, AC-07a, AC-09, AC-13) because T1 is a
  * migration and `apps/server/AGENTS.md` forbids tests for migrations.
  */
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 const now = new Date('2026-08-26T09:00:00.000Z');
 const futureNeededBy = '2099-01-01';
 
@@ -614,7 +611,7 @@ const describeRelocatedConstraintProofs = (): void => {
   });
 };
 
-describeIntegration('Ordering shared persistence entities', () => {
+describe('Ordering shared persistence entities', () => {
   beforeAll(async () => {
     await dataSource.initialize();
   });

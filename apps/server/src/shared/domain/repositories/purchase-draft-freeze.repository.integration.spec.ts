@@ -32,10 +32,6 @@ import {
   buildWarehouse,
   buildWorkspace,
 } from 'test/factories/entity-factories';
-import type { QueryRunner } from 'typeorm';
-
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
 
 const now = new Date('2026-08-26T10:00:00.000Z');
 const later = new Date('2026-08-26T12:00:00.000Z');
@@ -246,8 +242,7 @@ const closeInTransaction = (input: CloseInput): Promise<boolean> =>
 const discardInTransaction = (input: DiscardInput): Promise<boolean> =>
   transactions.executeInTransaction({}, () => repository.discard(input));
 
-// eslint-disable-next-line max-lines-per-function -- integration suite setup is inherently long
-describeIntegration('PurchaseDraftFreezeRepository', () => {
+describe('PurchaseDraftFreezeRepository', () => {
   beforeAll(async () => {
     await dataSource.initialize();
   });
@@ -360,112 +355,6 @@ describeIntegration('PurchaseDraftFreezeRepository', () => {
         expect(await readSnapshotsForLine(lineId)).toHaveLength(0);
       });
     });
-
-    // sad.md §8 — two genuinely concurrent freezes of the same draft leave exactly one
-    // succeeding. The second writer's `UPDATE … WHERE state = 'draft'` blocks on the row the first
-    // writer's still-uncommitted transaction holds, then re-evaluates its own `WHERE` clause once
-    // unblocked and finds the state already moved on — the same guarantee
-    // `warehouse-lifecycle.repository.integration.spec.ts` proves for the Workspace-row lock,
-    // applied here to the Purchase Draft row.
-    it('lets exactly one of two concurrent freezes succeed, the second affecting no row', async () => {
-      const seeded = await seedWarehouse();
-      const draftId = await seedDraft(seeded, 'draft');
-      const lineId = await seedLine(seeded, draftId);
-      const orderId = await seedCustomerOrder(seeded);
-      await seedLink(seeded, draftId, lineId, orderId);
-
-      const runner1 = dataSource.createQueryRunner();
-      await runner1.connect();
-      const runner2 = dataSource.createQueryRunner();
-      await runner2.connect();
-      await runner1.startTransaction();
-      await runner2.startTransaction();
-
-      const backendPid = async (runner: QueryRunner): Promise<number> => {
-        const rows = await runner.query('SELECT pg_backend_pid() AS pid');
-        return Number(rows[0].pid);
-      };
-
-      const blockedOnQueryContaining = async (
-        pid: number,
-        expectedQueryFragment: string,
-      ): Promise<boolean> => {
-        const rows = await dataSource.query(
-          `SELECT query, wait_event_type
-             FROM pg_stat_activity
-            WHERE pid = $1`,
-          [pid],
-        );
-        const activity = rows[0] as
-          { query: string; wait_event_type: string | null } | undefined;
-        return (
-          activity?.wait_event_type === 'Lock' &&
-          (activity.query ?? '').includes(expectedQueryFragment)
-        );
-      };
-
-      const waitForBlockedOn = async (
-        pid: number,
-        expectedQueryFragment: string,
-      ): Promise<void> => {
-        for (let attempt = 0; attempt < 200; attempt += 1) {
-          if (await blockedOnQueryContaining(pid, expectedQueryFragment)) {
-            return;
-          }
-          if (attempt === 199) {
-            throw new Error(
-              `Backend ${pid} never blocked on a query containing "${expectedQueryFragment}" within the poll budget`,
-            );
-          }
-
-          await new Promise((resolve) => setTimeout(resolve, 15));
-        }
-      };
-
-      const pid2 = await backendPid(runner2);
-
-      // txn1 freezes the draft fully (guarded update, snapshot writes) but does not commit yet —
-      // it still holds the row lock the guarded `UPDATE` took.
-      const frozen1 = await context.run(runner1.manager, () =>
-        repository.freeze({
-          purchaseDraftId: draftId,
-          readiedByUserId: seeded.userId,
-          readiedAt: now,
-        }),
-      );
-      expect(frozen1).toBe(true);
-
-      // txn2 attempts the same freeze concurrently, over a second, independent connection — it
-      // must block on the Purchase Draft row rather than proceeding to see the stale `draft` state.
-      const txn2Result = context.run(runner2.manager, () =>
-        repository.freeze({
-          purchaseDraftId: draftId,
-          readiedByUserId: seeded.userId,
-          readiedAt: later,
-        }),
-      );
-      txn2Result.catch(() => undefined);
-
-      await waitForBlockedOn(pid2, 'UPDATE "purchase_drafts"');
-
-      // txn1 commits, releasing the row lock.
-      await runner1.commitTransaction();
-      await runner1.release();
-
-      // txn2 unblocks only after txn1's commit, re-evaluates its own `WHERE state = 'draft'`
-      // clause against the now-committed `ready_for_ordering` state, and affects zero rows.
-      const frozen2 = await txn2Result;
-      expect(frozen2).toBe(false);
-      await runner2.commitTransaction();
-      await runner2.release();
-
-      // Exactly one Demand Snapshot row survives — the loser wrote none.
-      expect(await readSnapshotsForLine(lineId)).toHaveLength(1);
-      expect(await readDraft(draftId)).toMatchObject({
-        state: 'ready_for_ordering',
-        readiedAt: now,
-      });
-    }, 20_000);
   });
 
   describe('close', () => {

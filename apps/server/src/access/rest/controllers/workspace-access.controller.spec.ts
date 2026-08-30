@@ -186,6 +186,7 @@ describe('WorkspaceAccessController', () => {
         name: 'Site Administrator',
         kind: 'custom',
         permissionIds: [WorkspacePermissionId.WAREHOUSES_WATCH],
+        assignedMemberCount: 4,
       },
     ]);
 
@@ -199,6 +200,7 @@ describe('WorkspaceAccessController', () => {
         name: 'Site Administrator',
         kind: 'custom',
         workspacePermissionIds: [WorkspacePermissionId.WAREHOUSES_WATCH],
+        assignedMemberCount: 4,
       },
     ]);
   });
@@ -424,6 +426,7 @@ describe('WorkspaceAccessController', () => {
       id: roleId,
       name: 'Site Administrator',
       permissionIds: [WorkspacePermissionId.WAREHOUSES_WATCH],
+      assignedMemberCount: 0,
     });
 
     await expect(
@@ -455,6 +458,7 @@ describe('WorkspaceAccessController', () => {
       id: roleId,
       name: 'Site Administrator',
       permissionIds: [],
+      assignedMemberCount: 3,
     });
 
     await expect(
@@ -468,6 +472,7 @@ describe('WorkspaceAccessController', () => {
       name: 'Site Administrator',
       kind: 'custom',
       workspacePermissionIds: [],
+      assignedMemberCount: 3,
     });
     expect(updateRole.execute).toHaveBeenCalledWith(
       expect.objectContaining({ workspaceId }),

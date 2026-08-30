@@ -28,9 +28,6 @@ import {
   persistWorkspaceGraph,
 } from 'test/factories/entity-factories';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 interface AssignWorkspaceRoleInput {
   readonly targetUserId: string;
   readonly workspaceRoleId: string;
@@ -42,7 +39,7 @@ interface AssignWorkspaceRoleCommandContract {
   ): Promise<unknown>;
 }
 
-describeIntegration('AssignWorkspaceRoleCommand', () => {
+describe('AssignWorkspaceRoleCommand', () => {
   // A hand-constructed command has no `@Transactional()` interceptor, so a
   // pessimistic lock inside it throws `PessimisticLockTransactionRequiredError`
   // unless the call runs inside an already-open transaction. `transactions`
@@ -226,7 +223,9 @@ describeIntegration('AssignWorkspaceRoleCommand', () => {
         graph.memberUserId,
       );
 
-      let workspaceRoleId = randomUUID();
+      // Annotated: `randomUUID()` infers the narrower uuid template-literal
+      // type, which the foreign Role's plain-`string` id would not satisfy.
+      let workspaceRoleId: string = randomUUID();
       if (origin === 'other') {
         const otherGraph = await persistWorkspaceGraph();
         const foreignRole = buildWorkspaceRole({

@@ -7,5 +7,9 @@ module.exports = {
   moduleDirectories: ['<rootDir>/src', 'node_modules'],
   testMatch: ['<rootDir>/{src,migrations}/**/*.spec.ts'],
   testRegex: undefined,
-  setupFilesAfterEnv: ['<rootDir>/src/test/restore-catalogues.setup.ts'],
+  // The unit tier. Integration specs are excluded by path rather than by an
+  // environment flag, so they cannot be run against a developer's own database
+  // by accident — only `jest.pglite.config.cjs`, which provisions a database
+  // per test file, opts them back in.
+  testPathIgnorePatterns: ['/node_modules/', '\\.integration\\.spec\\.ts$'],
 };

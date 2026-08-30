@@ -30,36 +30,16 @@ import {
 // authorization input.
 import { RestoreWarehouseCommand } from 'warehouses/usecases/commands/restore-warehouse.command';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 const now = new Date('2026-08-12T12:00:00.000Z');
 
-// The shape this RED step expects the implementer to expose. Typed
-// explicitly (rather than left `error`-typed while the module does not yet
-// exist) so every call below goes through this one cast, matching
-// warehouse-lifecycle.repository.integration.spec.ts's convention.
-interface RestoreWarehouseInput {
-  readonly warehouseId: string;
-}
-interface RestoreWarehouseResult {
-  readonly warehouseId: string;
-}
-interface RestoreWarehouseCommandContract {
-  execute(
-    currentUser: WorkspaceCurrentUser,
-    input: RestoreWarehouseInput,
-  ): Promise<RestoreWarehouseResult>;
-}
-
-describeIntegration('RestoreWarehouseCommand', () => {
+describe('RestoreWarehouseCommand', () => {
   const context = new DbTransactionContext(dataSource);
   const transactions = new DbTransactionService(dataSource, context);
   const warehouseLifecycleRepository = new WarehouseLifecycleRepository(
     dataSource,
   );
 
-  const createCommand = (): RestoreWarehouseCommandContract =>
+  const createCommand = (): RestoreWarehouseCommand =>
     new RestoreWarehouseCommand(warehouseLifecycleRepository);
 
   beforeAll(async () => {

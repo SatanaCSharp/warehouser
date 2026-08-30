@@ -35,9 +35,6 @@ import {
   persistWorkspaceGraph,
 } from 'test/factories/entity-factories';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 const now = new Date('2026-08-12T12:00:00.000Z');
 
 interface AddWorkspaceMemberInput {
@@ -55,7 +52,7 @@ interface AddWorkspaceMemberCommandContract {
   ): Promise<AddWorkspaceMemberResult>;
 }
 
-describeIntegration('AddWorkspaceMemberCommand', () => {
+describe('AddWorkspaceMemberCommand', () => {
   // A hand-constructed command has no `@Transactional()` interceptor, so a
   // pessimistic lock inside it throws `PessimisticLockTransactionRequiredError`
   // unless the call runs inside an already-open transaction. `transactions`

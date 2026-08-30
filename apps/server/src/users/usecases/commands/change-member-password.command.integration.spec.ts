@@ -23,9 +23,6 @@ import {
 } from 'test/factories/entity-factories';
 import { ChangeMemberPasswordCommand } from 'users/usecases/commands/change-member-password.command';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 const now = new Date('2026-08-06T12:00:00.000Z');
 
 const uuid = (suffix: string): string =>
@@ -55,7 +52,7 @@ const fakeHash = (password: string): Promise<PasswordCredential> =>
   });
 
 // eslint-disable-next-line max-lines-per-function -- integration suite setup is inherently long
-describeIntegration('ChangeMemberPasswordCommand', () => {
+describe('ChangeMemberPasswordCommand', () => {
   const memberLifecycleRepository = new MemberLifecycleRepository(dataSource);
   const accessCurrentUserRepository = new AccessCurrentUserRepository(
     dataSource,
@@ -247,6 +244,7 @@ describeIntegration('ChangeMemberPasswordCommand', () => {
     roleId,
     roleKind,
     permissionId: 'USERS:PASSWORD_CHANGE' as const,
+    archived: false,
   });
 
   const readAccount = (userId: string) =>

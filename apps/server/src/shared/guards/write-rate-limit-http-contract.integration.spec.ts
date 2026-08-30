@@ -20,9 +20,6 @@ import { GlobalHttpExceptionFilter } from 'shared/errors/global-http-exception.f
 import { WriteRateLimitCounter } from 'shared/guards/write-rate-limit.counter';
 import { expectPinnedCounterOnEveryRouteGuard } from 'test/expects/write-rate-limit-wiring';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 // ADR 0003 / spec.md §6.1 "Draft and demand spam" — the per-member write rate limit as it behaves
 // over real HTTP, driven against the `items` write surface this guard shipped alongside.
 // `write-rate-limit.guard.spec.ts` proves the counter in isolation; what it cannot prove is that
@@ -42,7 +39,7 @@ const roleId = '00000000-0000-4000-8000-000000000902';
 
 const maxRecordedChangesPerWindow = 60;
 
-describeIntegration('write rate limit over HTTP', () => {
+describe('write rate limit over HTTP', () => {
   let app: INestApplication;
   let baseUrl: string;
 

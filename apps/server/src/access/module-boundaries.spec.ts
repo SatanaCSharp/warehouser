@@ -302,6 +302,20 @@ describe('access module boundaries', () => {
     expect(productionSources.length).toBeGreaterThan(0);
   });
 
+  // Registration provisions a Workspace through `access`, so the reverse
+  // direction needs asserting too: nothing under `access/` may reach back into
+  // `workspaces`. This lived in
+  // `auth/usecases/commands/register-access.integration.spec.ts` until that
+  // file left the unit tier — a filesystem scan needs no database, and it
+  // belongs beside the module's other boundary rules.
+  it.each(productionSources)(
+    '$filePath imports nothing from workspaces',
+    ({ source }: ScannedSource) => {
+      expect(source).not.toMatch(/from\s+['"]workspaces\//u);
+      expect(source).not.toMatch(/from\s+['"]workspaces['"]/u);
+    },
+  );
+
   it('contains layer directories only, never a second module keyed by scope', () => {
     const directories = readdirSync(moduleDirectory).filter((entry) =>
       statSync(join(moduleDirectory, entry)).isDirectory(),

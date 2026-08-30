@@ -20,7 +20,6 @@ import { WorkspaceRolePermissionEntity } from 'shared/domain/entities/workspace-
 import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
 import { GlobalHttpExceptionFilter } from 'shared/errors/global-http-exception.filter';
 import {
-  describeIntegration,
   now,
   setupWarehouseHttpContractHarness,
 } from 'test/harnesses/warehouse-http-contract.harness';
@@ -36,7 +35,7 @@ import {
 // `warehouse-record-http-contract.integration.spec.ts` for the
 // Warehouse-record half.
 // eslint-disable-next-line max-lines-per-function -- one suite covering a membership-edge surface plus its own unavailable-outcome branches is inherently long
-describeIntegration('warehouse HTTP contract — membership edges', () => {
+describe('warehouse HTTP contract — membership edges', () => {
   const {
     request,
     seedWorkspace,
@@ -516,207 +515,204 @@ describeIntegration('warehouse HTTP contract — membership edges', () => {
 // `@Transactional()` boundary, not by the response code. This is a contract
 // branch this suite must still encode so CI
 // catches it once it is closed.
-describeIntegration(
-  'warehouse HTTP contract — infrastructure-failure branches',
-  () => {
-    let app: INestApplication;
-    let baseUrl: string;
+describe('warehouse HTTP contract — infrastructure-failure branches', () => {
+  let app: INestApplication;
+  let baseUrl: string;
 
-    const request = async (
-      method: string,
-      path: string,
-      cookie?: string,
-      body?: unknown,
-    ): Promise<{ status: number; body: unknown }> => {
-      const response = await fetch(`${baseUrl}${path}`, {
-        method,
-        headers: {
-          'content-type': 'application/json',
-          ...(cookie ? { cookie } : {}),
-        },
-        body: body === undefined ? undefined : JSON.stringify(body),
-      });
-      const text = await response.text();
-      return {
-        status: response.status,
-        body: text ? JSON.parse(text) : undefined,
-      };
-    };
-
-    const bootAppWithFailingRepository = async (): Promise<void> => {
-      const moduleRef = await Test.createTestingModule({
-        imports: [AppModule],
-      })
-        .overrideProvider(WarehouseLifecycleRepository)
-        .useValue({
-          createWarehouse: (): Promise<never> =>
-            Promise.reject(new Error('synthetic infrastructure failure')),
-          lockWarehouse: (): Promise<never> =>
-            Promise.reject(new Error('synthetic infrastructure failure')),
-          renameWarehouse: (): Promise<never> =>
-            Promise.reject(new Error('synthetic infrastructure failure')),
-          setArchivedAt: (): Promise<never> =>
-            Promise.reject(new Error('synthetic infrastructure failure')),
-          lockWorkspaceAndCountNonArchivedWarehouses: (): Promise<never> =>
-            Promise.reject(new Error('synthetic infrastructure failure')),
-        })
-        .compile();
-
-      app = moduleRef.createNestApplication();
-      app.useGlobalPipes(new ZodValidationPipe());
-      app.useGlobalFilters(new GlobalHttpExceptionFilter());
-      await app.init();
-      await app.listen(0);
-
-      const address = app.getHttpServer().address();
-      baseUrl = `http://127.0.0.1:${address.port}`;
-
-      await dataSource.initialize();
-    };
-
-    afterEach(async () => {
-      await dataSource.query(
-        'TRUNCATE workspace_role_permissions, workspace_memberships, workspace_roles, workspace_permissions, warehouse_memberships, roles, warehouses, sessions, users, accounts, workspaces CASCADE',
-      );
-      await dataSource.destroy();
-      await app.close();
+  const request = async (
+    method: string,
+    path: string,
+    cookie?: string,
+    body?: unknown,
+  ): Promise<{ status: number; body: unknown }> => {
+    const response = await fetch(`${baseUrl}${path}`, {
+      method,
+      headers: {
+        'content-type': 'application/json',
+        ...(cookie ? { cookie } : {}),
+      },
+      body: body === undefined ? undefined : JSON.stringify(body),
     });
+    const text = await response.text();
+    return {
+      status: response.status,
+      body: text ? JSON.parse(text) : undefined,
+    };
+  };
 
-    const seedActor = async (): Promise<{
-      readonly userId: string;
-      readonly cookie: string;
-      readonly workspaceId: string;
-      readonly warehouseId: string;
-    }> => {
-      const workspaceId = randomUUID();
-      const customWorkspaceRoleId = randomUUID();
-      const warehouseId = randomUUID();
-      const userId = randomUUID();
+  const bootAppWithFailingRepository = async (): Promise<void> => {
+    const moduleRef = await Test.createTestingModule({
+      imports: [AppModule],
+    })
+      .overrideProvider(WarehouseLifecycleRepository)
+      .useValue({
+        createWarehouse: (): Promise<never> =>
+          Promise.reject(new Error('synthetic infrastructure failure')),
+        lockWarehouse: (): Promise<never> =>
+          Promise.reject(new Error('synthetic infrastructure failure')),
+        renameWarehouse: (): Promise<never> =>
+          Promise.reject(new Error('synthetic infrastructure failure')),
+        setArchivedAt: (): Promise<never> =>
+          Promise.reject(new Error('synthetic infrastructure failure')),
+        lockWorkspaceAndCountNonArchivedWarehouses: (): Promise<never> =>
+          Promise.reject(new Error('synthetic infrastructure failure')),
+      })
+      .compile();
 
-      await dataSource.manager.getRepository(WorkspaceEntity).insert({
-        id: workspaceId,
-        name: 'Test Workspace',
+    app = moduleRef.createNestApplication();
+    app.useGlobalPipes(new ZodValidationPipe());
+    app.useGlobalFilters(new GlobalHttpExceptionFilter());
+    await app.init();
+    await app.listen(0);
+
+    const address = app.getHttpServer().address();
+    baseUrl = `http://127.0.0.1:${address.port}`;
+
+    await dataSource.initialize();
+  };
+
+  afterEach(async () => {
+    await dataSource.query(
+      'TRUNCATE workspace_role_permissions, workspace_memberships, workspace_roles, workspace_permissions, warehouse_memberships, roles, warehouses, sessions, users, accounts, workspaces CASCADE',
+    );
+    await dataSource.destroy();
+    await app.close();
+  });
+
+  const seedActor = async (): Promise<{
+    readonly userId: string;
+    readonly cookie: string;
+    readonly workspaceId: string;
+    readonly warehouseId: string;
+  }> => {
+    const workspaceId = randomUUID();
+    const customWorkspaceRoleId = randomUUID();
+    const warehouseId = randomUUID();
+    const userId = randomUUID();
+
+    await dataSource.manager.getRepository(WorkspaceEntity).insert({
+      id: workspaceId,
+      name: 'Test Workspace',
+      createdAt: now,
+      updatedAt: now,
+    });
+    await dataSource.manager.getRepository(WorkspaceRoleEntity).insert({
+      id: customWorkspaceRoleId,
+      workspaceId,
+      name: 'Site Administrator',
+      kind: 'custom',
+      createdAt: now,
+      updatedAt: now,
+    });
+    await dataSource.manager.getRepository(WarehouseEntity).insert({
+      id: warehouseId,
+      workspaceId,
+      name: 'Test Warehouse North',
+      archivedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    });
+    await dataSource.manager.getRepository(WorkspacePermissionEntity).upsert(
+      [
+        WorkspacePermissionId.WAREHOUSES_CREATE,
+        WorkspacePermissionId.WAREHOUSES_ARCHIVE,
+      ].map((id) => ({
+        id,
+        label: id,
+        kind: 'assignable' as const,
         createdAt: now,
         updatedAt: now,
-      });
-      await dataSource.manager.getRepository(WorkspaceRoleEntity).insert({
-        id: customWorkspaceRoleId,
-        workspaceId,
-        name: 'Site Administrator',
-        kind: 'custom',
-        createdAt: now,
-        updatedAt: now,
-      });
-      await dataSource.manager.getRepository(WarehouseEntity).insert({
-        id: warehouseId,
-        workspaceId,
-        name: 'Test Warehouse North',
-        archivedAt: null,
-        createdAt: now,
-        updatedAt: now,
-      });
-      await dataSource.manager.getRepository(WorkspacePermissionEntity).upsert(
+      })),
+      ['id'],
+    );
+    await dataSource.manager
+      .getRepository(WorkspaceRolePermissionEntity)
+      .insert(
         [
           WorkspacePermissionId.WAREHOUSES_CREATE,
           WorkspacePermissionId.WAREHOUSES_ARCHIVE,
-        ].map((id) => ({
-          id,
-          label: id,
-          kind: 'assignable' as const,
-          createdAt: now,
-          updatedAt: now,
+        ].map((workspacePermissionId) => ({
+          workspaceRoleId: customWorkspaceRoleId,
+          workspacePermissionId,
+          workspaceRoleKind: 'custom' as const,
+          workspacePermissionKind: 'assignable' as const,
         })),
-        ['id'],
       );
-      await dataSource.manager
-        .getRepository(WorkspaceRolePermissionEntity)
-        .insert(
-          [
-            WorkspacePermissionId.WAREHOUSES_CREATE,
-            WorkspacePermissionId.WAREHOUSES_ARCHIVE,
-          ].map((workspacePermissionId) => ({
-            workspaceRoleId: customWorkspaceRoleId,
-            workspacePermissionId,
-            workspaceRoleKind: 'custom' as const,
-            workspacePermissionKind: 'assignable' as const,
-          })),
-        );
-      await dataSource.transaction(async (manager) => {
-        await manager.getRepository(AccountEntity).insert({
-          id: userId,
-          userId,
-          normalizedEmail: `member.${userId}@example.test`,
-          passwordHash: 'synthetic-hash',
-          passwordHashAlgorithm: 'scrypt',
-          passwordHashParameters: { cost: 1_024 },
-          createdAt: now,
-          updatedAt: now,
-        });
-        await manager.getRepository(UserEntity).insert({
-          id: userId,
-          accountId: userId,
-          workspaceId,
-          createdAt: now,
-          updatedAt: now,
-        });
-      });
-      await dataSource.manager.getRepository(WorkspaceMembershipEntity).insert({
+    await dataSource.transaction(async (manager) => {
+      await manager.getRepository(AccountEntity).insert({
+        id: userId,
         userId,
-        workspaceId,
-        workspaceRoleId: customWorkspaceRoleId,
-        workspaceRoleKind: 'custom',
+        normalizedEmail: `member.${userId}@example.test`,
+        passwordHash: 'synthetic-hash',
+        passwordHashAlgorithm: 'scrypt',
+        passwordHashParameters: { cost: 1_024 },
         createdAt: now,
         updatedAt: now,
       });
-      const secret = randomUUID();
-      const establishedAt = new Date();
-      await dataSource.manager.getRepository(SessionEntity).insert({
-        id: randomUUID(),
+      await manager.getRepository(UserEntity).insert({
+        id: userId,
         accountId: userId,
-        secretDigest: digestSessionSecret(secret),
-        establishedAt,
-        expiresAt: new Date(establishedAt.getTime() + 60 * 60 * 1000),
-        revokedAt: null,
-      });
-
-      return {
-        userId,
         workspaceId,
-        warehouseId,
-        cookie: `${AUTH_SESSION_COOKIE}=${secret}`,
-      };
+        createdAt: now,
+        updatedAt: now,
+      });
+    });
+    await dataSource.manager.getRepository(WorkspaceMembershipEntity).insert({
+      userId,
+      workspaceId,
+      workspaceRoleId: customWorkspaceRoleId,
+      workspaceRoleKind: 'custom',
+      createdAt: now,
+      updatedAt: now,
+    });
+    const secret = randomUUID();
+    const establishedAt = new Date();
+    await dataSource.manager.getRepository(SessionEntity).insert({
+      id: randomUUID(),
+      accountId: userId,
+      secretDigest: digestSessionSecret(secret),
+      establishedAt,
+      expiresAt: new Date(establishedAt.getTime() + 60 * 60 * 1000),
+      revokedAt: null,
+    });
+
+    return {
+      userId,
+      workspaceId,
+      warehouseId,
+      cookie: `${AUTH_SESSION_COOKIE}=${secret}`,
     };
+  };
 
-    it('answers a safe generic 500 when the creation write cannot complete, disclosing nothing (AC-07)', async () => {
-      await bootAppWithFailingRepository();
-      const actor = await seedActor();
+  it('answers a safe generic 500 when the creation write cannot complete, disclosing nothing (AC-07)', async () => {
+    await bootAppWithFailingRepository();
+    const actor = await seedActor();
 
-      const { status, body } = await request(
-        'POST',
-        '/api/v1/workspace/warehouses',
-        actor.cookie,
-        { name: 'Test Warehouse East' },
-      );
+    const { status, body } = await request(
+      'POST',
+      '/api/v1/workspace/warehouses',
+      actor.cookie,
+      { name: 'Test Warehouse East' },
+    );
 
-      expect(status).toBe(500);
-      expect(body).toMatchObject({ code: 'system.internal_error' });
-      expect(JSON.stringify(body)).not.toMatch(/synthetic|stack|repository/iu);
-    });
+    expect(status).toBe(500);
+    expect(body).toMatchObject({ code: 'system.internal_error' });
+    expect(JSON.stringify(body)).not.toMatch(/synthetic|stack|repository/iu);
+  });
 
-    it('answers a safe generic 500 when the archival change cannot complete, disclosing nothing (AC-13)', async () => {
-      await bootAppWithFailingRepository();
-      const actor = await seedActor();
+  it('answers a safe generic 500 when the archival change cannot complete, disclosing nothing (AC-13)', async () => {
+    await bootAppWithFailingRepository();
+    const actor = await seedActor();
 
-      const { status, body } = await request(
-        'PUT',
-        `/api/v1/workspace/warehouses/${actor.warehouseId}/archival`,
-        actor.cookie,
-        { archived: true },
-      );
+    const { status, body } = await request(
+      'PUT',
+      `/api/v1/workspace/warehouses/${actor.warehouseId}/archival`,
+      actor.cookie,
+      { archived: true },
+    );
 
-      expect(status).toBe(500);
-      expect(body).toMatchObject({ code: 'system.internal_error' });
-      expect(JSON.stringify(body)).not.toMatch(/synthetic|stack|repository/iu);
-    });
-  },
-);
+    expect(status).toBe(500);
+    expect(body).toMatchObject({ code: 'system.internal_error' });
+    expect(JSON.stringify(body)).not.toMatch(/synthetic|stack|repository/iu);
+  });
+});

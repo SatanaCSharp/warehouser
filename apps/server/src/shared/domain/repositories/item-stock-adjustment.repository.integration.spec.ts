@@ -20,9 +20,6 @@ import {
   buildWorkspace,
 } from 'test/factories/entity-factories';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 const now = new Date('2026-08-26T09:45:00.000Z');
 const later = new Date('2026-08-26T11:15:00.000Z');
 
@@ -116,7 +113,7 @@ const readAdjustments = (
     .getRepository(ItemStockAdjustmentEntity)
     .find({ where: { itemId }, order: { createdAt: 'ASC' } });
 
-describeIntegration('ItemStockAdjustmentRepository', () => {
+describe('ItemStockAdjustmentRepository', () => {
   beforeAll(async () => {
     await dataSource.initialize();
   });

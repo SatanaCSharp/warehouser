@@ -26,9 +26,6 @@ import {
   buildWorkspace,
 } from 'test/factories/entity-factories';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 const now = new Date('2026-08-12T12:00:00.000Z');
 
 interface ListAssignableWarehouseRolesInput {
@@ -45,7 +42,7 @@ interface ListAssignableWarehouseRolesQueryContract {
   ): Promise<AssignableRoleProjection[]>;
 }
 
-describeIntegration('ListAssignableWarehouseRolesQuery', () => {
+describe('ListAssignableWarehouseRolesQuery', () => {
   const warehouseMembershipAssignmentRepository =
     new WarehouseMembershipAssignmentRepository(dataSource);
 

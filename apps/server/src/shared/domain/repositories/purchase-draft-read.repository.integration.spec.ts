@@ -40,9 +40,6 @@ import {
 // `consolidated-demand.repository.integration.spec.ts` (T10) establishes.
 import { PostgresQueryRunner } from 'typeorm/driver/postgres/PostgresQueryRunner';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 const now = new Date('2026-08-26T10:00:00.000Z');
 
 // openapi.yaml `DemandSnapshotEntry`.
@@ -1001,7 +998,7 @@ const registerHasDriftSignalInvariantTests = (): void => {
   });
 };
 
-describeIntegration('PurchaseDraftReadRepository', () => {
+describe('PurchaseDraftReadRepository', () => {
   beforeAll(async () => {
     await dataSource.initialize();
   });
