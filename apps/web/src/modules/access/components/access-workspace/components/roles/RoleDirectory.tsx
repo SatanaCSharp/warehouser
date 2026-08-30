@@ -8,7 +8,8 @@ import { DeleteRoleDialog } from 'modules/access/components/access-workspace/com
 import { RoleEditor } from 'modules/access/components/access-workspace/components/roles/RoleEditor';
 import { RoleList } from 'modules/access/components/access-workspace/components/roles/RoleList';
 import { useAccessScope } from 'modules/access/hooks/projections/useAccessScope';
-import { DialogHost } from 'shared/components/DialogHost';
+import { ActionDialogHost } from 'shared/components/ActionDialogHost';
+import { useActionDialog } from 'shared/hooks/state/useActionDialog';
 
 import type { RoleWrite } from '@warehouser/contracts/access';
 import type { AccessRole } from 'modules/access/types/access.types';
@@ -18,6 +19,9 @@ import type { MutationResult } from 'shared/api/client/mutation-outcome';
 type RoleDirectoryProps = {
   roles: AccessRole[];
 };
+
+/** The one dialog a Role row opens. */
+type RoleDialogKind = 'deleteRole';
 
 const defaultRoleId = (roles: AccessRole[]): string | undefined =>
   roles.find((role) => role.kind === 'custom')?.id ?? roles[0]?.id;
@@ -37,15 +41,12 @@ export const RoleDirectory = ({ roles }: RoleDirectoryProps): ReactElement => {
   const [selectedRoleId, setSelectedRoleId] = useState(() =>
     isArchived ? undefined : defaultRoleId(roles),
   );
-  const [rolePendingDeletion, setRolePendingDeletion] =
-    useState<AccessRole | null>(null);
+  const dialog = useActionDialog<RoleDialogKind, AccessRole>();
   const selectedRole =
     roles.find((role) => role.id === selectedRoleId) ?? roles[0];
 
   const onDeleteRole = (role: AccessRole) => (): void =>
-    setRolePendingDeletion(role);
-
-  const onCloseDeletion = (): void => setRolePendingDeletion(null);
+    dialog.open('deleteRole', role);
 
   const onSaveRole =
     (roleId: string) =>
@@ -77,17 +78,6 @@ export const RoleDirectory = ({ roles }: RoleDirectoryProps): ReactElement => {
     />
   );
 
-  const deleteRoleDialog =
-    rolePendingDeletion === null ? null : (
-      <DialogHost onClose={onCloseDeletion}>
-        <DeleteRoleDialog
-          role={rolePendingDeletion}
-          roles={roles.filter((role) => role.kind === 'custom')}
-          onDelete={onConfirmDeletion(rolePendingDeletion)}
-        />
-      </DialogHost>
-    );
-
   return (
     <div className="grid items-start gap-5 lg:grid-cols-[370px_minmax(0,1fr)]">
       <RoleList
@@ -98,7 +88,18 @@ export const RoleDirectory = ({ roles }: RoleDirectoryProps): ReactElement => {
 
       {roleEditor}
 
-      {deleteRoleDialog}
+      <ActionDialogHost
+        controller={dialog}
+        renderDialogs={{
+          deleteRole: (role) => (
+            <DeleteRoleDialog
+              role={role}
+              roles={roles.filter((candidate) => candidate.kind === 'custom')}
+              onDelete={onConfirmDeletion(role)}
+            />
+          ),
+        }}
+      />
     </div>
   );
 };

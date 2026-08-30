@@ -32,6 +32,11 @@ index first, then read only the entries that cover the change you are making. Pa
   errors and assertion factories, propagation without routine `try/catch`, the global NestJS
   exception filter, logging, and safe REST error responses. Use whenever code can fail, reject a
   business rule, or must return an error to a client.
+- [Server use case boundaries](guides/server-use-case-boundaries.md) — what may surround a command
+  or query: nothing. No wrapper around `execute`, no timing or other measurement in production code,
+  and no error mapped to another type before the global filter. Use whenever writing or changing a
+  use case, and always before adding a `with*` helper, an interceptor, a logger parameter, or a
+  `try/catch` that re-raises.
 
 ## Shared with the web
 

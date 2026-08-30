@@ -1,9 +1,6 @@
 import { Module } from '@nestjs/common';
 import { CustomerOrdersUsecaseModule } from 'customer-orders/usecases/usecase.module';
-import { ArrivalConfirmationService } from 'purchase-drafts/domain/services/arrival-confirmation.service';
 import { PurchaseDraftAssemblyService } from 'purchase-drafts/domain/services/purchase-draft-assembly.service';
-import { PurchaseDraftClosureService } from 'purchase-drafts/domain/services/purchase-draft-closure.service';
-import { PurchaseDraftFreezeService } from 'purchase-drafts/domain/services/purchase-draft-freeze.service';
 import { AddPurchaseDraftLineCommand } from 'purchase-drafts/usecases/commands/add-purchase-draft-line.command';
 import { AddPurchaseDraftLineLinkCommand } from 'purchase-drafts/usecases/commands/add-purchase-draft-line-link.command';
 import { ClosePurchaseDraftCommand } from 'purchase-drafts/usecases/commands/close-purchase-draft.command';
@@ -27,25 +24,25 @@ import { PurchaseDraftAssemblyRepository } from 'shared/domain/repositories/purc
 import { PurchaseDraftFreezeRepository } from 'shared/domain/repositories/purchase-draft-freeze.repository';
 import { PurchaseDraftReadRepository } from 'shared/domain/repositories/purchase-draft-read.repository';
 
-// T13/T14/T15 — the freeze, closure, discard and arrival-confirmation transitions, and the
-// drift-aware reads, are the application boundary T16's REST surface calls through
-// (server-architecture.md "NestJS modules and exports").
-// T15 imports `CustomerOrdersUsecaseModule` to reach its exported `DemandAllocationService`
+// The assembly, freeze, closure, discard and arrival-confirmation transitions, and the drift-aware
+// reads, are the application boundary the REST surface calls through (server-architecture.md
+// "NestJS modules and exports"). Each command owns the rules of its own transition and its own
+// transaction boundary; the checks several of them share — and only those — live in
+// `PurchaseDraftAssemblyService`, which is a local provider here and stays unexported: a transport
+// adapter reaches the module only through the use cases below.
+// This module imports `CustomerOrdersUsecaseModule` to reach its exported `DemandAllocationService`
 // (ADR 0002) rather than importing `customer-orders/domain/services/demand-allocation.service`
 // directly.
 @Module({
   imports: [CustomerOrdersUsecaseModule],
   providers: [
     PurchaseDraftAssemblyService,
-    PurchaseDraftFreezeService,
-    PurchaseDraftClosureService,
-    ArrivalConfirmationService,
     PurchaseDraftFreezeRepository,
     PurchaseDraftAssemblyRepository,
     PurchaseDraftReadRepository,
     ArrivalConfirmationRepository,
-    // T12's assembly service reaches three further repositories, none of them provided by the
-    // `@Global()` `DomainModule`, so each is a local provider here exactly as
+    // `PurchaseDraftAssemblyService` reaches three further repositories, none of them provided by
+    // the `@Global()` `DomainModule`, so each is a local provider here exactly as
     // `PurchaseDraftAssemblyRepository` already is.
     ItemCatalogueRepository,
     CustomerOrderLifecycleRepository,

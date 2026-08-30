@@ -1,22 +1,28 @@
 import { Injectable } from '@nestjs/common';
-import { PurchaseDraftAssemblyService } from 'purchase-drafts/domain/services/purchase-draft-assembly.service';
+import { assertApplied } from 'purchase-drafts/domain/services/purchase-draft-assembly.service';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { Transactional } from 'shared/decorators/transactional.decorator';
+import { PurchaseDraftAssemblyRepository } from 'shared/domain/repositories/purchase-draft-assembly.repository';
 
-// AC-10a/AC-11a — the application boundary of removing a line and the links it carries. No linked
-// Customer Order is written: a link claims no demand.
+// AC-10a/AC-11a — removing a line and the links it carries. No linked Customer Order is written:
+// a link claims no demand, so removing one changes nothing the customer is waiting for.
 @Injectable()
 export class RemovePurchaseDraftLineCommand {
-  constructor(private readonly assemblyService: PurchaseDraftAssemblyService) {}
+  constructor(
+    private readonly assemblyRepository: PurchaseDraftAssemblyRepository,
+  ) {}
 
-  execute(
-    currentUser: AccessCurrentUser,
+  @Transactional()
+  async execute(
+    _currentUser: AccessCurrentUser,
     purchaseDraftId: string,
     purchaseDraftLineId: string,
   ): Promise<void> {
-    return this.assemblyService.removeLine(
-      currentUser,
+    const outcome = await this.assemblyRepository.removeLine(
       purchaseDraftId,
       purchaseDraftLineId,
     );
+
+    assertApplied(outcome);
   }
 }

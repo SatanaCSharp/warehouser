@@ -1,6 +1,5 @@
 import { Button } from '@heroui/react';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useAssignAccessMemberRoleMutation } from 'modules/access/api/access-api';
@@ -8,11 +7,16 @@ import { AssignRoleDialog } from 'modules/access/components/access-workspace/com
 import { useAccessScope } from 'modules/access/hooks/projections/useAccessScope';
 import { useAccessMembers } from 'modules/access/hooks/queries/useAccessMembers';
 import { useAccessRoles } from 'modules/access/hooks/queries/useAccessRoles';
-import { DialogHost } from 'shared/components/DialogHost';
+import { ActionDialogHost } from 'shared/components/ActionDialogHost';
 import { WarehousePermissionGate } from 'shared/components/WarehousePermissionGate';
+import { useActionDialog } from 'shared/hooks/state/useActionDialog';
 
+import type { AccessMember } from 'modules/access/types/access.types';
 import type { ReactElement } from 'react';
 import type { MutationResult } from 'shared/api/client/mutation-outcome';
+
+/** The one dialog a member row opens. */
+type AssignmentDialogKind = 'assignRole';
 
 /**
  * Members are named by the address people recognize. `email` is optional in the
@@ -33,12 +37,10 @@ export const MemberAssignmentList = (): ReactElement => {
   const members = useAccessMembers();
   const roles = useAccessRoles();
   const [assignMemberRole] = useAssignAccessMemberRoleMutation();
-  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
+  const dialog = useActionDialog<AssignmentDialogKind, AccessMember>();
 
-  const onOpenAssignment = (userId: string) => (): void =>
-    setSelectedMemberId(userId);
-
-  const onCloseAssignment = (): void => setSelectedMemberId(null);
+  const onOpenAssignment = (member: AccessMember) => (): void =>
+    dialog.open('assignRole', member);
 
   const onSaveAssignment =
     (userId: string) =>
@@ -48,25 +50,6 @@ export const MemberAssignmentList = (): ReactElement => {
         userId,
         input: { roleId },
       });
-
-  // The dialog reads the member it was opened for, so it is resolved here
-  // rather than gated inline: `Conditional` evaluates both arms, and a member
-  // only exists once one is selected. The row that opens it is not a trigger
-  // the dialog can sit beside, so `DialogHost` holds its open state.
-  const assignRoleDialog =
-    selectedMemberId === null ? null : (
-      <DialogHost onClose={onCloseAssignment}>
-        <AssignRoleDialog
-          memberEmail={nameOf(
-            members.items.find(
-              (member) => member.userId === selectedMemberId,
-            ) ?? { userId: selectedMemberId },
-          )}
-          roles={roles.items.filter((role) => role.kind === 'custom')}
-          onSave={onSaveAssignment(selectedMemberId)}
-        />
-      </DialogHost>
-    );
 
   return (
     <WarehousePermissionGate permission={PermissionId.ROLES_ASSIGN}>
@@ -85,7 +68,7 @@ export const MemberAssignmentList = (): ReactElement => {
                 <Button
                   size="sm"
                   variant="outline"
-                  onPress={onOpenAssignment(member.userId)}
+                  onPress={onOpenAssignment(member)}
                 >
                   {t('administration.assignment.open', {
                     email: nameOf(member),
@@ -95,7 +78,18 @@ export const MemberAssignmentList = (): ReactElement => {
             ))}
         </div>
 
-        {assignRoleDialog}
+        <ActionDialogHost
+          controller={dialog}
+          renderDialogs={{
+            assignRole: (member) => (
+              <AssignRoleDialog
+                memberEmail={nameOf(member)}
+                roles={roles.items.filter((role) => role.kind === 'custom')}
+                onSave={onSaveAssignment(member.userId)}
+              />
+            ),
+          }}
+        />
       </>
     </WarehousePermissionGate>
   );

@@ -7,6 +7,10 @@ error presentation or client-side state management.
 Decision record:
 [Server Error Handling with Typed Errors and a Global NestJS Filter](../adr/24-07-2026-server-error-handling.md).
 
+Companion guide: [Server use case boundaries](server-use-case-boundaries.md) states the rules this
+guide's propagation model depends on — a use case is never wrapped, nothing is measured, and an error
+is never mapped to another type on its way to the boundary.
+
 ## 1. Define conditions as predicates
 
 Write predicates in functional style:
@@ -85,8 +89,11 @@ assert(
 );
 ```
 
-Apply the same convention to named `SystemError` factories. Preserve an originating technical
-failure as `cause` when wrapping it adds useful classification or context.
+Apply the same convention to named `SystemError` factories, and raise one only where the code itself
+recognizes the technical condition it names — a repository classifying a known vendor condition, a
+configuration or startup check. Preserve the originating failure as `cause`. Never introduce a
+`SystemError` factory to relabel an arbitrary failure caught around an operation; see
+[Server use case boundaries](server-use-case-boundaries.md) §3.
 
 ## 4. Define stable server boundary codes
 
@@ -140,7 +147,7 @@ Apply these responsibilities:
   vendor condition, add useful context, or preserve a cause. Otherwise they let the failure
   propagate.
 
-## 6. Normalize failures once
+## 6. Normalize failures once, and only there
 
 Register one global exception filter through NestJS dependency injection with `APP_FILTER`. It is
 the single HTTP error-normalization and request-failure logging boundary.
@@ -162,6 +169,14 @@ continue through subsequent filters.
 Log the complete internal failure once in the global filter. Include its category, code, cause,
 stack, request or correlation ID, HTTP method, and route. Do not log credentials, authorization
 headers, secrets, or unrestricted request bodies.
+
+The filter is the _only_ place a failure changes shape. Nothing upstream of it may map an error to
+another type or another code: no use case, service, or controller catches a failure in order to
+re-raise it as a different one, and no helper wraps an operation to classify what it throws. An
+unknown infrastructure failure propagates untouched and is classified here; an `ApplicationError`
+keeps its own code; an `AssertionError` stays a defect. The one narrow exception is §5's repository
+and infrastructure adapters classifying a _known vendor condition_ they alone can recognize. See
+[Server use case boundaries](server-use-case-boundaries.md) §3.
 
 ## 7. End-to-end flow
 

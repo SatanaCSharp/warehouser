@@ -1,21 +1,10 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
-import { ApplicationError, SystemError } from '@warehouser/shared-types/errors';
+import { ApplicationError } from '@warehouser/shared-types/errors';
 import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
 import {
   TRANSACTIONAL_KEY,
   type TransactionalMetadata,
 } from 'shared/decorators/transactional.decorator';
-// RED for T43/AC-13 — `RestoreWarehouseCommand` exists (T21) but does not yet
-// translate an infrastructure write failure into openapi.yaml's documented
-// 503 `workspace.archival_unavailable` (the same route/code covers both
-// archiving and restoring — sad.md §6.5). This unit spec proves that
-// translation with a repository double, complementary to
-// `restore-warehouse.command.integration.spec.ts`, which is Docker-gated and
-// cannot run locally. server-error-handling.md §2 classifies this as a
-// `SystemError` (a known infrastructure/technical failure), not an
-// `ApplicationError`: `WORKSPACE_ARCHIVAL_UNAVAILABLE` is registered only in
-// `global-http-exception.filter.ts`'s `systemErrors` map (503) — an
-// `ApplicationError` with that code would fall through to the generic 500.
 import { RestoreWarehouseCommand } from 'warehouses/usecases/commands/restore-warehouse.command';
 
 const workspaceId = '00000000-0000-4000-8000-000000000001';
@@ -50,45 +39,29 @@ describe('RestoreWarehouseCommand', () => {
     ).toBeDefined();
   });
 
-  it('AC-13: translates a write failure clearing archived state into the documented 503 SystemError, preserving the cause', async () => {
-    const warehouseLifecycleRepository = warehouseLifecycleRepositoryDouble();
-    const writeFailure = new Error('connection terminated');
-    warehouseLifecycleRepository.setArchivedAt.mockRejectedValueOnce(
-      writeFailure,
-    );
-    const command = new RestoreWarehouseCommand(warehouseLifecycleRepository);
+  // AC-13 — resolving the Warehouse and clearing its archived state can both
+  // fail for an infrastructure reason. The failure propagates untouched; the
+  // global exception filter is the single place it is classified
+  // (server-use-case-boundaries.md §3).
+  it.each([['lockWarehouse'], ['setArchivedAt']])(
+    'AC-13: propagates an infrastructure failure in %s unchanged',
+    async (failing) => {
+      const warehouseLifecycleRepository = warehouseLifecycleRepositoryDouble();
+      const failure = new Error('connection terminated');
+      warehouseLifecycleRepository[
+        failing as keyof typeof warehouseLifecycleRepository
+      ].mockRejectedValueOnce(failure);
+      const command = new RestoreWarehouseCommand(warehouseLifecycleRepository);
 
-    const rejection = command.execute(currentUser(), { warehouseId });
+      await expect(
+        command.execute(currentUser(), { warehouseId }),
+      ).rejects.toBe(failure);
+    },
+  );
 
-    await expect(rejection).rejects.toBeInstanceOf(SystemError);
-    await expect(rejection).rejects.toMatchObject({
-      code: ErrorCode.WORKSPACE_ARCHIVAL_UNAVAILABLE,
-      cause: writeFailure,
-    });
-  });
-
-  // RED for T52/AC-13 (review S1-03) — the failure boundary covered only
-  // `setArchivedAt`, so an infrastructure failure resolving the Warehouse
-  // propagated raw to a generic 500 where openapi.yaml documents 503
-  // `workspace.archival_unavailable`.
-  it('AC-13: translates an infrastructure failure resolving the Warehouse into the documented 503 SystemError, preserving the cause', async () => {
-    const warehouseLifecycleRepository = warehouseLifecycleRepositoryDouble();
-    const failure = new Error('connection terminated');
-    warehouseLifecycleRepository.lockWarehouse.mockRejectedValueOnce(failure);
-    const command = new RestoreWarehouseCommand(warehouseLifecycleRepository);
-
-    const rejection = command.execute(currentUser(), { warehouseId });
-
-    await expect(rejection).rejects.toBeInstanceOf(SystemError);
-    await expect(rejection).rejects.toMatchObject({
-      code: ErrorCode.WORKSPACE_ARCHIVAL_UNAVAILABLE,
-      cause: failure,
-    });
-  });
-
-  // The widened boundary must not swallow what it encloses: a business
-  // rejection keeps its own 4xx code (server-error-handling.md §2, §6).
-  it('AC-13: does not mask a cross-Workspace target rejection as an unavailable outcome', async () => {
+  // The business rejection this command owns keeps its own 4xx code
+  // (server-error-handling.md §2, §6).
+  it('AC-13: answers a cross-Workspace target with its own rejection code', async () => {
     const warehouseLifecycleRepository = warehouseLifecycleRepositoryDouble();
     warehouseLifecycleRepository.lockWarehouse.mockResolvedValueOnce({
       id: warehouseId,

@@ -1,15 +1,12 @@
 import { randomUUID } from 'node:crypto';
 
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { CustomerOrderLifecycleService } from 'customer-orders/domain/services/customer-order-lifecycle.service';
 import { RecordCustomerOrderCommand } from 'customer-orders/usecases/commands/record-customer-order.command';
 import { ReadConsolidatedDemandQuery } from 'customer-orders/usecases/queries/read-consolidated-demand.query';
-import { OnHandAdjustmentService } from 'items/domain/services/on-hand-adjustment.service';
 import { AdjustItemOnHandCommand } from 'items/usecases/commands/adjust-item-on-hand.command';
 import { ListItemCatalogueQuery } from 'items/usecases/queries/list-item-catalogue.query';
 import { chunk } from 'lodash';
 import { PurchaseDraftAssemblyService } from 'purchase-drafts/domain/services/purchase-draft-assembly.service';
-import { PurchaseDraftClosureService } from 'purchase-drafts/domain/services/purchase-draft-closure.service';
 import { ClosePurchaseDraftCommand } from 'purchase-drafts/usecases/commands/close-purchase-draft.command';
 import { CreatePurchaseDraftCommand } from 'purchase-drafts/usecases/commands/create-purchase-draft.command';
 import { ReadPurchaseDraftQuery } from 'purchase-drafts/usecases/queries/read-purchase-draft.query';
@@ -655,27 +652,23 @@ describeIntegration('Ordering load smoke (spec.md §6)', () => {
     purchaseDraftReadRepository,
   );
   const recordCustomerOrder = new RecordCustomerOrderCommand(
-    new CustomerOrderLifecycleService(
-      customerOrderLifecycleRepository,
-      itemCatalogueRepository,
-    ),
+    customerOrderLifecycleRepository,
+    itemCatalogueRepository,
   );
   const adjustItemOnHand = new AdjustItemOnHandCommand(
-    new OnHandAdjustmentService(
-      itemCatalogueRepository,
-      itemStockAdjustmentRepository,
-    ),
+    itemCatalogueRepository,
+    itemStockAdjustmentRepository,
   );
   const createPurchaseDraft = new CreatePurchaseDraftCommand(
+    purchaseDraftAssemblyRepository,
     new PurchaseDraftAssemblyService(
-      purchaseDraftAssemblyRepository,
       itemCatalogueRepository,
       customerOrderLifecycleRepository,
       packagingTypeCatalogueRepository,
     ),
   );
   const closePurchaseDraft = new ClosePurchaseDraftCommand(
-    new PurchaseDraftClosureService(purchaseDraftFreezeRepository),
+    purchaseDraftFreezeRepository,
   );
 
   beforeAll(async () => {

@@ -1,12 +1,5 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
-import { ApplicationError, SystemError } from '@warehouser/shared-types/errors';
-// RED for T56/AC-17b (review S1-07) — `WORKSPACE_ROLE_DELETION_UNAVAILABLE`
-// is registered in `global-http-exception.filter.ts`'s `systemErrors` map
-// (503) and documented by contracts/openapi.yaml, but no factory ever raised
-// it: an infrastructure failure reassigning members or removing the Role
-// propagated raw and the filter answered a generic 500. AC-17b promises the
-// member that the Role and its assignments are unchanged when the deletion
-// does not complete, which a generic 500 cannot say.
+import { ApplicationError } from '@warehouser/shared-types/errors';
 import { DeleteWorkspaceRoleCommand } from 'access/usecases/commands/delete-workspace-role.command';
 import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
 
@@ -53,6 +46,12 @@ const build = (
   );
 
 describe('DeleteWorkspaceRoleCommand', () => {
+  // An infrastructure failure reassigning members or removing the Role
+  // propagates untouched — the command never reclassifies it — and the global
+  // exception filter is the single boundary that maps it
+  // (server-error-handling.md §2 and §6). The one transaction this command
+  // runs in is what keeps AC-17b's promise true: the Role and its assignments
+  // are unchanged.
   it.each([
     [
       'reassigning the affected members',
@@ -83,27 +82,19 @@ describe('DeleteWorkspaceRoleCommand', () => {
       },
     ],
   ])(
-    'AC-17b: translates an infrastructure failure %s into the documented 503 SystemError, preserving the cause',
+    'AC-17b: propagates an infrastructure failure %s unchanged',
     async (_case, arrange) => {
       const { roleLifecycle, deletionService, failure } = arrange();
       const command = build(roleLifecycle, deletionService);
 
-      const rejection = command.execute(currentUser(), {
-        roleId,
-        replacementRoleId,
-      });
-
-      await expect(rejection).rejects.toBeInstanceOf(SystemError);
-      await expect(rejection).rejects.toMatchObject({
-        code: ErrorCode.WORKSPACE_ROLE_DELETION_UNAVAILABLE,
-        cause: failure,
-      });
+      await expect(
+        command.execute(currentUser(), { roleId, replacementRoleId }),
+      ).rejects.toBe(failure);
     },
   );
 
-  // The unavailable outcome must not absorb the refusals this command owns:
   // AC-16's protected Owner Role and AC-17c's missing replacement are
-  // permanent, and telling the member to try again later would be wrong
+  // permanent refusals this command owns, each answered with its own code
   // (server-error-handling.md §2).
   it.each([
     [
@@ -125,7 +116,7 @@ describe('DeleteWorkspaceRoleCommand', () => {
       ErrorCode.WORKSPACE_REPLACEMENT_ROLE_REQUIRED,
     ],
   ])(
-    'AC-17b: does not mask the business rejection for %s as an unavailable outcome',
+    'AC-17b: answers the business rejection for %s with its own code',
     async (_case, arrange, code) => {
       const roleLifecycle = roleLifecycleDouble();
       arrange(roleLifecycle);

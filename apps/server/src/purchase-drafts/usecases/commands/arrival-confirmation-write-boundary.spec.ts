@@ -5,7 +5,7 @@
 //
 // `spec.md` §6 "Frozen-record integrity" measures that target with "Integration checks **and**
 // automated architecture checks", and the two prove different things.
-// `arrival-confirmation.service.integration.spec.ts` proves the frozen values of one seeded draft
+// `confirm-purchase-draft-arrival.integration.spec.ts` proves the frozen values of one seeded draft
 // come back unchanged — a statement about the code as it stands today. This spec is the source-level
 // half: it fails the moment the write path *gains* the ability to touch a frozen field, whether or
 // not any test happens to exercise it. ADR 0002 "Consequences" is what makes that testable at all —
@@ -15,9 +15,10 @@
 // **What this spec cannot do**, and why the integration suite carries the other half: it reasons
 // about source text, so a statement that is textually clean but unscoped at row level — an UPDATE
 // predicated on a caller-supplied identifier alone — passes here. The cross-Warehouse and
-// cross-draft cases in `arrival-confirmation.service.integration.spec.ts` are what close that gap.
+// cross-draft cases in `confirm-purchase-draft-arrival.integration.spec.ts` are what close that
+// gap.
 //
-// It follows the source-scanning idiom `items/domain/services/on-hand-write-boundary.spec.ts` (T6)
+// It follows the source-scanning idiom `items/domain/on-hand-write-boundary.spec.ts`
 // already uses for AC-18a, and `shared/domain/repositories/repository-boundaries.spec.ts` before it.
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -60,7 +61,6 @@ const FROZEN_TABLES =
 // Both are held to the same strong rule — neither has any business naming a frozen field, and in
 // fact neither does.
 const THE_CONFIRMATION_WRITE_PATH = [
-  'purchase-drafts/domain/services/arrival-confirmation.service.ts',
   'purchase-drafts/usecases/commands/confirm-purchase-draft-arrival.command.ts',
   'shared/domain/repositories/arrival-confirmation.repository.ts',
   'customer-orders/domain/services/demand-allocation.service.ts',

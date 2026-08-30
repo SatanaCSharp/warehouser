@@ -13,11 +13,10 @@ import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/cus
 import { DemandAllocationRepository } from 'shared/domain/repositories/demand-allocation.repository';
 import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
 
-// AC-01/AC-19/AC-19a — the demand lifecycle owns its rules in `CustomerOrderLifecycleService`, kept
-// unexported: a transport adapter reaches it only through the commands below
-// (server-architecture.md, "NestJS modules and exports").
-const customerOrderServices = [CustomerOrderLifecycleService];
-
+// AC-01/AC-19/AC-19a — each command owns the rules of its own transition and its own transaction
+// boundary; the one locking read the amendment and the cancellation share lives in
+// `CustomerOrderLifecycleService`, which stays unexported: a transport adapter reaches it only
+// through the commands below (server-architecture.md, "Services", "NestJS modules and exports").
 const customerOrderCommands = [
   RecordCustomerOrderCommand,
   AmendCustomerOrderCommand,
@@ -36,8 +35,8 @@ const customerOrderQueries = [
 ];
 
 // ADR 0002 — `DemandAllocationService` is `customer-orders`' one deliberate export beyond its own
-// commands: `purchase-drafts/domain/services/arrival-confirmation.service.ts` calls it inside the
-// `@Transactional()` boundary *it* opens.
+// commands: `purchase-drafts/usecases/commands/confirm-purchase-draft-arrival.command.ts` calls it
+// inside the `@Transactional()` boundary *it* opens.
 //
 // The *provider* is reached only through this export — `PurchaseDraftsUsecaseModule` imports this
 // module and resolves the instance from it, rather than re-declaring it as a local provider, which
@@ -46,7 +45,7 @@ const customerOrderQueries = [
 // DI token; that import is the token, not a second path to the behaviour.
 @Module({
   providers: [
-    ...customerOrderServices,
+    CustomerOrderLifecycleService,
     DemandAllocationService,
     ...customerOrderCommands,
     ...customerOrderQueries,

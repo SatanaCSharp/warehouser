@@ -28,6 +28,13 @@ import type { AppStore } from 'store';
 // this directory is rendered as a descendant of an entered Warehouse match —
 // `renderInEnteredWarehouse`, exactly as `MembersTab.spec.tsx` renders the
 // access surfaces that read the same projection.
+//
+// The desktop surface is a HeroUI `Table`
+// (`docs/system/adr/27-08-2026-heroui-table-for-web-data-tables.md`), so React
+// Aria owns the `<table>` element and exposes it as a keyboard-navigable
+// `grid`; the responsive class belongs to the `.table-root` wrapper this
+// destination renders around it. What each row presents is
+// `components/ItemTable.spec.tsx`; this file covers the destination.
 
 const items: Item[] = [
   {
@@ -102,8 +109,10 @@ describe('ItemDirectory', () => {
     it('renders the table from the split-view breakpoint up (XIvAZ, 1440)', async () => {
       renderDirectory();
 
-      const table = await screen.findByRole('table', { name: /items/iu });
-      expect(table.className).toContain('lg:table');
+      const table = await screen.findByRole('grid', { name: /items/iu });
+      // `.table-root` is HeroUI's documented root class for `Table`, and it is
+      // the element this destination puts its breakpoint class on.
+      expect(table.closest('.table-root')?.className).toContain('lg:block');
     });
 
     it('renders one card per Item below the breakpoint, carrying the same on-hand-and-reason fact (VHU6r, 390)', async () => {

@@ -3,20 +3,18 @@ import { randomUUID } from 'node:crypto';
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
 import { DemandAllocationService } from 'customer-orders/domain/services/demand-allocation.service';
-// The application boundary this RED step expects the implementer to expose
-// (tasks/arrival-confirmation.md "What"; ADR 0002 "Decision outcome").
-import { ArrivalConfirmationService } from 'purchase-drafts/domain/services/arrival-confirmation.service';
+// The application boundary (ADR 0002 "Decision outcome").
+import { ConfirmPurchaseDraftArrivalCommand } from 'purchase-drafts/usecases/commands/confirm-purchase-draft-arrival.command';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
-// T15 — `ArrivalConfirmationService` does not exist yet, and neither does
-// `ArrivalConfirmationRepository` (whose own RED lives in
-// `shared/domain/repositories/arrival-confirmation.repository.integration.spec.ts`). ADR 0002
+// ADR 0002
 // places the whole operation on one `@Transactional()` boundary in `purchase-drafts`, which reads
 // the draft row and then its lines, then locks the linked Customer Orders in ascending identifier
 // order (sad.md §6.9/§8 — the draft and its lines are read without an explicit row lock; the
-// conditional UPDATE is what makes the transition safe, and `arrival-confirmation.service.spec.ts`
-// is what proves the boundary itself exists, since every test here supplies its own transaction),
+// conditional UPDATE is what makes the transition safe, and
+// `confirm-purchase-draft-arrival.command.spec.ts` is what proves the boundary itself exists, since
+// every test here supplies its own transaction),
 // records every line's received quantity, delegates the demand effect to the real
-// (already-built, T9) `DemandAllocationService`, and moves the draft to Closed — all four landing
+// real `DemandAllocationService`, and moves the draft to Closed — all four landing
 // together or not at all (spec.md §6 "Arrival atomicity").
 //
 // This suite exercises the real repositories and the real `DemandAllocationService` against a real
@@ -63,12 +61,14 @@ const demandAllocationService = new DemandAllocationService(
   { now: () => later },
 );
 
-const buildService = (
+const buildCommand = (
   demand: Pick<DemandAllocationService, 'allocate'> = demandAllocationService,
-): ArrivalConfirmationService =>
-  new ArrivalConfirmationService(arrivalConfirmationRepository, demand, {
-    now: () => later,
-  });
+): ConfirmPurchaseDraftArrivalCommand =>
+  new ConfirmPurchaseDraftArrivalCommand(
+    arrivalConfirmationRepository,
+    demand as DemandAllocationService,
+    { now: () => later },
+  );
 
 const seedUser = async (workspaceId: string): Promise<string> => {
   const userId = randomUUID();
@@ -247,7 +247,7 @@ const readAllocationsForLine = (
     .find({ where: { purchaseDraftLineId } });
 
 // eslint-disable-next-line max-lines-per-function -- integration suite setup is inherently long
-describeIntegration('ArrivalConfirmationService', () => {
+describeIntegration('ConfirmPurchaseDraftArrivalCommand', () => {
   beforeAll(async () => {
     await dataSource.initialize();
   });
@@ -302,24 +302,26 @@ describeIntegration('ArrivalConfirmationService', () => {
     });
     await seedLink(seeded, draftId, overLineId, deadOrderId, 10);
 
-    const service = buildService();
+    const command = buildCommand();
 
     const confirmed = await transactions.executeInTransaction({}, () =>
-      service.confirm(currentUserFor(seeded), draftId, [
-        {
-          purchaseDraftLineId: shortLineId,
-          receivedQuantity: 100,
-          allocations: [
-            { purchaseDraftLineLinkId: linkToFull, allocatedQuantity: 60 },
-            { purchaseDraftLineLinkId: linkToPartly, allocatedQuantity: 30 },
-          ],
-        },
-        {
-          purchaseDraftLineId: overLineId,
-          receivedQuantity: 25,
-          allocations: [],
-        },
-      ]),
+      command.execute(currentUserFor(seeded), draftId, {
+        lines: [
+          {
+            purchaseDraftLineId: shortLineId,
+            receivedQuantity: 100,
+            allocations: [
+              { purchaseDraftLineLinkId: linkToFull, allocatedQuantity: 60 },
+              { purchaseDraftLineLinkId: linkToPartly, allocatedQuantity: 30 },
+            ],
+          },
+          {
+            purchaseDraftLineId: overLineId,
+            receivedQuantity: 25,
+            allocations: [],
+          },
+        ],
+      }),
     );
 
     expect(confirmed).toMatchObject({ id: draftId, state: 'closed' });
@@ -463,21 +465,23 @@ describeIntegration('ArrivalConfirmationService', () => {
       const linkId = await seedLink(seeded, draftId, lineId, orderId, 50);
 
       const orderBefore = await readOrder(orderId);
-      const service = buildService();
+      const command = buildCommand();
 
       const rejection = transactions.executeInTransaction({}, () =>
-        service.confirm(currentUserFor(seeded), draftId, [
-          {
-            purchaseDraftLineId: lineId,
-            receivedQuantity: testCase.receivedQuantity,
-            allocations: [
-              {
-                purchaseDraftLineLinkId: linkId,
-                allocatedQuantity: testCase.allocatedQuantity,
-              },
-            ],
-          },
-        ]),
+        command.execute(currentUserFor(seeded), draftId, {
+          lines: [
+            {
+              purchaseDraftLineId: lineId,
+              receivedQuantity: testCase.receivedQuantity,
+              allocations: [
+                {
+                  purchaseDraftLineLinkId: linkId,
+                  allocatedQuantity: testCase.allocatedQuantity,
+                },
+              ],
+            },
+          ],
+        }),
       );
 
       await expect(rejection).rejects.toBeInstanceOf(ApplicationError);
@@ -516,12 +520,14 @@ describeIntegration('ArrivalConfirmationService', () => {
     const draftId = await seedDraft(seeded, 'closed');
     const lineId = await seedLine(seeded, draftId, 100);
 
-    const service = buildService();
+    const command = buildCommand();
 
     const rejection = transactions.executeInTransaction({}, () =>
-      service.confirm(currentUserFor(seeded), draftId, [
-        { purchaseDraftLineId: lineId, receivedQuantity: 5, allocations: [] },
-      ]),
+      command.execute(currentUserFor(seeded), draftId, {
+        lines: [
+          { purchaseDraftLineId: lineId, receivedQuantity: 5, allocations: [] },
+        ],
+      }),
     );
 
     await expect(rejection).rejects.toMatchObject({
@@ -539,15 +545,17 @@ describeIntegration('ArrivalConfirmationService', () => {
 
     const before = await readItem(seeded.itemId);
 
-    const service = buildService();
+    const command = buildCommand();
     await transactions.executeInTransaction({}, () =>
-      service.confirm(currentUserFor(seeded), draftId, [
-        {
-          purchaseDraftLineId: lineId,
-          receivedQuantity: 100,
-          allocations: [],
-        },
-      ]),
+      command.execute(currentUserFor(seeded), draftId, {
+        lines: [
+          {
+            purchaseDraftLineId: lineId,
+            receivedQuantity: 100,
+            allocations: [],
+          },
+        ],
+      }),
     );
 
     expect(await readItem(seeded.itemId)).toMatchObject({
@@ -574,18 +582,20 @@ describeIntegration('ArrivalConfirmationService', () => {
       allocate: jest.fn().mockRejectedValue(injectedFailure),
     };
 
-    const service = buildService(failingDemandService);
+    const command = buildCommand(failingDemandService);
 
     const rejection = transactions.executeInTransaction({}, () =>
-      service.confirm(currentUserFor(seeded), draftId, [
-        {
-          purchaseDraftLineId: lineId,
-          receivedQuantity: 100,
-          allocations: [
-            { purchaseDraftLineLinkId: linkId, allocatedQuantity: 100 },
-          ],
-        },
-      ]),
+      command.execute(currentUserFor(seeded), draftId, {
+        lines: [
+          {
+            purchaseDraftLineId: lineId,
+            receivedQuantity: 100,
+            allocations: [
+              { purchaseDraftLineLinkId: linkId, allocatedQuantity: 100 },
+            ],
+          },
+        ],
+      }),
     );
 
     await expect(rejection).rejects.toBe(injectedFailure);
@@ -619,21 +629,23 @@ describeIntegration('ArrivalConfirmationService', () => {
     const foreignDraftId = await seedDraft(elsewhere, 'ready_for_ordering');
     const foreignLineId = await seedLine(elsewhere, foreignDraftId, 100);
 
-    const service = buildService();
+    const command = buildCommand();
 
     const rejection = transactions.executeInTransaction({}, () =>
-      service.confirm(currentUserFor(seeded), draftId, [
-        {
-          purchaseDraftLineId: ownLineId,
-          receivedQuantity: 100,
-          allocations: [],
-        },
-        {
-          purchaseDraftLineId: foreignLineId,
-          receivedQuantity: 999,
-          allocations: [],
-        },
-      ]),
+      command.execute(currentUserFor(seeded), draftId, {
+        lines: [
+          {
+            purchaseDraftLineId: ownLineId,
+            receivedQuantity: 100,
+            allocations: [],
+          },
+          {
+            purchaseDraftLineId: foreignLineId,
+            receivedQuantity: 999,
+            allocations: [],
+          },
+        ],
+      }),
     );
 
     await expect(rejection).rejects.toMatchObject({
@@ -668,21 +680,23 @@ describeIntegration('ArrivalConfirmationService', () => {
     const openDraftId = await seedDraft(seeded, 'ready_for_ordering');
     const openLineId = await seedLine(seeded, openDraftId, 100);
 
-    const service = buildService();
+    const command = buildCommand();
 
     const rejection = transactions.executeInTransaction({}, () =>
-      service.confirm(currentUserFor(seeded), openDraftId, [
-        {
-          purchaseDraftLineId: openLineId,
-          receivedQuantity: 100,
-          allocations: [],
-        },
-        {
-          purchaseDraftLineId: closedLineId,
-          receivedQuantity: 999,
-          allocations: [],
-        },
-      ]),
+      command.execute(currentUserFor(seeded), openDraftId, {
+        lines: [
+          {
+            purchaseDraftLineId: openLineId,
+            receivedQuantity: 100,
+            allocations: [],
+          },
+          {
+            purchaseDraftLineId: closedLineId,
+            receivedQuantity: 999,
+            allocations: [],
+          },
+        ],
+      }),
     );
 
     await expect(rejection).rejects.toMatchObject({
@@ -716,25 +730,27 @@ describeIntegration('ArrivalConfirmationService', () => {
     const linkA = await seedLink(seeded, draftId, lineId, orderA, 60);
     const linkB = await seedLink(seeded, draftId, lineId, orderB, 60);
 
-    const service = buildService();
+    const command = buildCommand();
 
     const rejection = transactions.executeInTransaction({}, () =>
-      service.confirm(currentUserFor(seeded), draftId, [
-        {
-          purchaseDraftLineId: lineId,
-          receivedQuantity: 60,
-          allocations: [
-            { purchaseDraftLineLinkId: linkA, allocatedQuantity: 60 },
-          ],
-        },
-        {
-          purchaseDraftLineId: lineId,
-          receivedQuantity: 60,
-          allocations: [
-            { purchaseDraftLineLinkId: linkB, allocatedQuantity: 60 },
-          ],
-        },
-      ]),
+      command.execute(currentUserFor(seeded), draftId, {
+        lines: [
+          {
+            purchaseDraftLineId: lineId,
+            receivedQuantity: 60,
+            allocations: [
+              { purchaseDraftLineLinkId: linkA, allocatedQuantity: 60 },
+            ],
+          },
+          {
+            purchaseDraftLineId: lineId,
+            receivedQuantity: 60,
+            allocations: [
+              { purchaseDraftLineLinkId: linkB, allocatedQuantity: 60 },
+            ],
+          },
+        ],
+      }),
     );
 
     await expect(rejection).rejects.toMatchObject({
@@ -766,25 +782,27 @@ describeIntegration('ArrivalConfirmationService', () => {
     const linkOne = await seedLink(seeded, draftId, lineOne, orderId, 60);
     const linkTwo = await seedLink(seeded, draftId, lineTwo, orderId, 60);
 
-    const service = buildService();
+    const command = buildCommand();
 
     const rejection = transactions.executeInTransaction({}, () =>
-      service.confirm(currentUserFor(seeded), draftId, [
-        {
-          purchaseDraftLineId: lineOne,
-          receivedQuantity: 60,
-          allocations: [
-            { purchaseDraftLineLinkId: linkOne, allocatedQuantity: 60 },
-          ],
-        },
-        {
-          purchaseDraftLineId: lineTwo,
-          receivedQuantity: 60,
-          allocations: [
-            { purchaseDraftLineLinkId: linkTwo, allocatedQuantity: 60 },
-          ],
-        },
-      ]),
+      command.execute(currentUserFor(seeded), draftId, {
+        lines: [
+          {
+            purchaseDraftLineId: lineOne,
+            receivedQuantity: 60,
+            allocations: [
+              { purchaseDraftLineLinkId: linkOne, allocatedQuantity: 60 },
+            ],
+          },
+          {
+            purchaseDraftLineId: lineTwo,
+            receivedQuantity: 60,
+            allocations: [
+              { purchaseDraftLineLinkId: linkTwo, allocatedQuantity: 60 },
+            ],
+          },
+        ],
+      }),
     );
 
     // A typed, named refusal — not a QueryFailedError surfacing as a generic internal error.
@@ -828,10 +846,12 @@ describeIntegration('ArrivalConfirmationService', () => {
     const draftId = await seedDraft(seeded, 'ready_for_ordering');
     const lineId = await seedLine(seeded, draftId, 100);
 
-    const service = buildService();
+    const command = buildCommand();
 
     const rejection = transactions.executeInTransaction({}, () =>
-      service.confirm(currentUserFor(seeded), draftId, []),
+      command.execute(currentUserFor(seeded), draftId, {
+        lines: [],
+      }),
     );
 
     await expect(rejection).rejects.toMatchObject({
@@ -857,20 +877,22 @@ describeIntegration('ArrivalConfirmationService', () => {
     const arrivedLineId = await seedLine(seeded, draftId, 100);
     const nothingLineId = await seedLine(seeded, draftId, 40);
 
-    const service = buildService();
+    const command = buildCommand();
     await transactions.executeInTransaction({}, () =>
-      service.confirm(currentUserFor(seeded), draftId, [
-        {
-          purchaseDraftLineId: arrivedLineId,
-          receivedQuantity: 100,
-          allocations: [],
-        },
-        {
-          purchaseDraftLineId: nothingLineId,
-          receivedQuantity: 0,
-          allocations: [],
-        },
-      ]),
+      command.execute(currentUserFor(seeded), draftId, {
+        lines: [
+          {
+            purchaseDraftLineId: arrivedLineId,
+            receivedQuantity: 100,
+            allocations: [],
+          },
+          {
+            purchaseDraftLineId: nothingLineId,
+            receivedQuantity: 0,
+            allocations: [],
+          },
+        ],
+      }),
     );
 
     expect(await readLine(nothingLineId)).toMatchObject({
@@ -950,29 +972,33 @@ describeIntegration('ArrivalConfirmationService', () => {
     };
 
     const pid2 = await backendPid(runner2);
-    const service = buildService();
+    const command = buildCommand();
 
     const confirmed1 = await context.run(runner1.manager, () =>
-      service.confirm(currentUserFor(seeded), draftId, [
-        {
-          purchaseDraftLineId: lineId,
-          receivedQuantity: 100,
-          allocations: [
-            { purchaseDraftLineLinkId: linkId, allocatedQuantity: 100 },
-          ],
-        },
-      ]),
+      command.execute(currentUserFor(seeded), draftId, {
+        lines: [
+          {
+            purchaseDraftLineId: lineId,
+            receivedQuantity: 100,
+            allocations: [
+              { purchaseDraftLineLinkId: linkId, allocatedQuantity: 100 },
+            ],
+          },
+        ],
+      }),
     );
     expect(confirmed1).toMatchObject({ id: draftId, state: 'closed' });
 
     const txn2Result = context.run(runner2.manager, () =>
-      service.confirm(currentUserFor(seeded), draftId, [
-        {
-          purchaseDraftLineId: lineId,
-          receivedQuantity: 40,
-          allocations: [],
-        },
-      ]),
+      command.execute(currentUserFor(seeded), draftId, {
+        lines: [
+          {
+            purchaseDraftLineId: lineId,
+            receivedQuantity: 40,
+            allocations: [],
+          },
+        ],
+      }),
     );
     txn2Result.catch(() => undefined);
 
@@ -1008,11 +1034,17 @@ describeIntegration('ArrivalConfirmationService', () => {
     const beforeLine = await readLine(lineId);
     const beforeDraft = await readDraft(draftId);
 
-    const service = buildService();
+    const command = buildCommand();
     await transactions.executeInTransaction({}, () =>
-      service.confirm(currentUserFor(seeded), draftId, [
-        { purchaseDraftLineId: lineId, receivedQuantity: 100, allocations: [] },
-      ]),
+      command.execute(currentUserFor(seeded), draftId, {
+        lines: [
+          {
+            purchaseDraftLineId: lineId,
+            receivedQuantity: 100,
+            allocations: [],
+          },
+        ],
+      }),
     );
 
     const afterLine = await readLine(lineId);

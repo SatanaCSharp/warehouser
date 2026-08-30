@@ -17,17 +17,18 @@ are for.
 
 ## 2. File the hook by what it does
 
-Every `hooks/` directory — a module's or `shared/`'s — uses the same five names.
+Every `hooks/` directory — a module's or `shared/`'s — uses the same six names.
 
-| Directory      | What lives there                                                                                                        | Examples                                                                         |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `queries/`     | Reads server state. An RTK Query binding plus the gating it owns.                                                       | `useAccessRoles`, `useWorkspaceMembers`, `usePermissions`                        |
-| `mutations/`   | Writes server state by **composing** more than one request. A single endpoint gets no hook — trigger its generated one. | `useSaveDraftThenPublish`                                                        |
-| `forms/`       | Owns a form session: registration, client validation, error mapping.                                                    | `useRoleForm`, `useFormFieldErrors`                                              |
-| `projections/` | Derives a value from state already loaded. Reads and writes nothing.                                                    | `useAccessScope`, `usePermittedItems`, `usePermissionLabel`, `useEnteredContext` |
-| `effects/`     | Its product is a browser side effect, not a value.                                                                      | `useCloseDialog`, `useRecordWarehouseEntry`                                      |
+| Directory      | What lives there                                                                                                                 | Examples                                                                         |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `queries/`     | Reads server state. An RTK Query binding plus the gating it owns.                                                                | `useAccessRoles`, `useWorkspaceMembers`, `usePermissions`                        |
+| `mutations/`   | Writes server state by **composing** more than one request. A single endpoint gets no hook — trigger its generated one.          | `useSaveDraftThenPublish`                                                        |
+| `forms/`       | Owns a form session: registration, client validation, error mapping.                                                             | `useRoleForm`, `useFormFieldErrors`                                              |
+| `projections/` | Derives a value from state already loaded. Reads and writes nothing.                                                             | `useAccessScope`, `usePermittedItems`, `usePermissionLabel`, `useEnteredContext` |
+| `effects/`     | Its product is a browser side effect, not a value.                                                                               | `useCloseDialog`, `useRecordWarehouseEntry`                                      |
+| `state/`       | Owns a piece of local UI state and the named transitions over it. Its product is a state value plus the commands that change it. | `useActionDialog`                                                                |
 
-Three rules settle the cases that look ambiguous:
+Four rules settle the cases that look ambiguous:
 
 - **A hook that calls a query hook is not automatically a query.** `usePermittedItems` reads the
   cached current-access projection through `useCurrentPermissions`, but its own job is deciding which
@@ -36,6 +37,14 @@ Three rules settle the cases that look ambiguous:
 - **A gate belongs to the read it gates.** `useWorkspaceRoles` decides from a Permission whether the
   query fires at all. That gate is part of the read, so it stays in `queries/` rather than being
   split into a projection its caller has to combine.
+- **`state/` is for state a component owns, not state it derives.** A projection computes an answer
+  from what is already loaded and holds nothing; a `state/` hook holds something and names how it
+  changes. `useActionDialog` keeps which dialog a surface has open, so it belongs here — filing it
+  under `projections/` would say it derives an answer it in fact owns. Do not reach for `state/` for
+  anything Redux or RTK Query already owns
+  ([Frontend architecture](../frontend-architecture.md) forbids the parallel source of truth), and
+  do not create a hook here for a single `useState` a component can keep itself: the category earns
+  its place when the transitions are worth naming and reusing.
 - **A hook that both reads and writes is two hooks.** Split it. A dialog depends on the narrowest
   contract that does its job ([Writing web components](writing-web-components.md) §5), and a caller
   that only creates should not also be handed the delete.

@@ -49,10 +49,10 @@ const isUnfulfilled = (state: CustomerOrderState): boolean =>
   state === 'unfulfilled';
 
 // ADR 0002 — the Customer Order side of Arrival Confirmation. Exported from `customer-orders`' own
-// use-case module so `purchase-drafts/domain/services/arrival-confirmation.service.ts` can call it
-// inside the `@Transactional()` boundary *it* opens (server-architecture.md §Dependency direction —
-// "services never call use cases", and here neither module opens a transaction the other does not
-// already hold). This service therefore carries no `@Transactional()` of its own: it joins the
+// use-case module so `purchase-drafts/usecases/commands/confirm-purchase-draft-arrival.command.ts`
+// can call it inside the `@Transactional()` boundary *it* opens (server-architecture.md §Dependency
+// direction — "services never call use cases", and here neither module opens a transaction the
+// other does not already hold). This service therefore carries no `@Transactional()` of its own: it joins the
 // caller's transaction through the shared context the repository reads from.
 @Injectable()
 export class DemandAllocationService {

@@ -20,11 +20,17 @@ export type ItemActionHandlers = {
 };
 
 /**
- * The Item row's per-Item actions, kept to the ones the actor's Role
- * actually admits (AC-06b, AC-06d, AC-08). Both `ItemRow`'s `Dropdown.Menu`
- * and the mobile card read this one projection rather than each declaring
- * its own Permission mapping, so the two surfaces cannot drift
+ * One Item's actions, kept to the ones the actor's Role admits (AC-06b,
+ * AC-06d, AC-08). The table's menu and the mobile card both read this one
+ * projection rather than each declaring its own Permission mapping
  * (`docs/system/adr/19-08-2026-declarative-permission-gates.md`).
+ *
+ * It is called by the component that renders the actions, never by whatever
+ * renders the collection above it. A React Aria collection caches a row's
+ * element tree per record, so a value read above it and closed over would
+ * still be the one that existed when the row was first built — an actor whose
+ * Permissions resolved a moment later would be offered nothing, for good
+ * (`docs/system/adr/27-08-2026-heroui-table-for-web-data-tables.md`).
  */
 export const useItemActions = (
   item: Item,

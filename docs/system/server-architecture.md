@@ -102,15 +102,120 @@ feature/domain mapping.
 
 ### Services
 
-Services live under the owning feature's `<feature-name>/domain/services/`. They contain reusable
-business operations and may use domain objects, feature mappers, and concrete repositories.
-Services must not invoke commands, queries, event use cases, controllers, or handlers. A use case
-may access a repository directly for a simple operation, especially a query, but it must use an
-existing service when that service owns the relevant business rule. Use an injectable feature
-domain service for business rules or orchestration across independent persistence operations. A
-service may delegate an optimized multi-entity read or write to one specialized repository method
-instead of coordinating table-shaped repositories. The complete operation owns one transaction
-boundary.
+A service is an extraction, never a default layer. A use case owns its own business rules and
+reaches concrete repositories directly; extract a service only when one of these is true:
+
+- **more than one use case needs the same operation** — the rule would otherwise be duplicated, or
+  another module must invoke it through the owning module's exported provider;
+- **the use case has grown too large to read** — a single `execute` that no longer fits in one
+  screen may delegate a cohesive part of itself to a named service.
+
+Never introduce a service that exactly one use case calls with the arguments it was handed. That
+service adds an indirection without a rule of its own and turns the use case into a pass-through;
+see "Use cases" below for the rule this violates.
+
+A shared operation that reaches a repository belongs in an injectable service, so the repository is
+injected once rather than threaded through every caller as an argument. Keep a shared helper as a
+plain exported function only when it needs no collaborator at all — a pure predicate, an assertion
+over a value, or a mapping.
+
+Services live under the owning feature's `<feature-name>/domain/services/`. They may use domain
+objects, feature mappers, and concrete repositories, and must not invoke commands, queries, event
+use cases, controllers, or handlers. A service may delegate an optimized multi-entity read or write
+to one specialized repository method instead of coordinating table-shaped repositories. A service
+that joins a caller's transaction carries no transaction boundary of its own; the complete
+operation owns exactly one.
+
+#### Worked example: a shared-check service
+
+`purchase-drafts` has eight commands that assemble a Purchase Draft — create the draft, add, revise
+and remove a line, add, revise and remove a link, revise the draft. Three checks recur across them:
+an Item must belong to the acting Warehouse, a linked Customer Order must too, and a Packaging Type
+must be one the catalogue offers. Each check reads a repository, and each is needed by more than one
+command. That is the first extraction trigger, so it becomes a service:
+
+```ts
+// purchase-drafts/domain/services/purchase-draft-assembly.service.ts
+
+// Stateless: no repository, nothing injected. It stays a module-level function so the four commands
+// that only map a write outcome are not coupled to repositories they never touch.
+export const assertApplied = (outcome: AssemblyWriteOutcome): void => {
+  assert(outcome !== 'draft-frozen', purchaseDraftFrozenError());
+  assert(outcome !== 'target-missing', purchaseDraftTargetUnavailableError());
+};
+
+@Injectable()
+export class PurchaseDraftAssemblyService {
+  constructor(
+    private readonly itemCatalogueRepository: ItemCatalogueRepository,
+    private readonly customerOrderLifecycleRepository: CustomerOrderLifecycleRepository,
+    private readonly packagingTypeCatalogueRepository: PackagingTypeCatalogueRepository,
+  ) {}
+
+  async assertItemAvailable(
+    currentUser: AccessCurrentUser,
+    itemId: string,
+  ): Promise<void> {
+    const item = await this.itemCatalogueRepository.findById(itemId);
+    assert(
+      item !== null && item.warehouseId === currentUser.warehouseId,
+      purchaseDraftTargetUnavailableError(),
+    );
+  }
+
+  // …assertCustomerOrderAvailable, assertPackagingTypesKnown
+}
+```
+
+The command keeps everything that is its own — the input type, the write, the transaction boundary
+— and calls the service only for what it shares:
+
+```ts
+// purchase-drafts/usecases/commands/add-purchase-draft-line.command.ts
+@Injectable()
+export class AddPurchaseDraftLineCommand {
+  constructor(
+    private readonly assemblyRepository: PurchaseDraftAssemblyRepository,
+    private readonly assemblyService: PurchaseDraftAssemblyService,
+  ) {}
+
+  @Transactional()
+  async execute(
+    currentUser: AccessCurrentUser,
+    purchaseDraftId: string,
+    input: AddLineInput,
+  ): Promise<void> {
+    await this.assemblyService.assertItemAvailable(currentUser, input.itemId);
+    await this.assemblyService.assertPackagingTypesKnown([
+      input.packagingTypeId,
+    ]);
+
+    const outcome = await this.assemblyRepository.addLine({/* … */});
+
+    assertApplied(outcome);
+  }
+}
+```
+
+Register the service as a provider of the feature's `UsecaseModule` and leave it out of `exports`,
+so a transport adapter still reaches the feature only through its use cases. Export it only when
+another module must call it — `customer-orders` exports `DemandAllocationService` for exactly that
+reason, and nothing else.
+
+Four properties make this an extraction rather than a pass-through, and each is worth checking
+before adding a service:
+
+- **every method has more than one caller.** A method called by one command belongs in that command.
+- **the commands still own their operations.** The service holds no `addLine`, no write, and no
+  input type; it answers questions, and the command decides what to do with the answers.
+- **the service opens no transaction.** `@Transactional()` stays on the command; the service runs
+  inside that boundary, which is what makes the locking reads it performs the command's own locks.
+- **stateless helpers stay module-level.** `assertApplied` and `pickStated` inject nothing, so
+  putting them on the class would force commands that need only them to take the whole service.
+
+Unit-test the commands over the _real_ service with repository doubles beneath it, not over a double
+of the service: the cases are about the rule being enforced, not about the call being made. See
+`purchase-drafts/usecases/commands/purchase-draft-assembly.spec.ts`.
 
 ### Use cases
 
@@ -120,9 +225,18 @@ Use cases are the application boundary and have three categories:
 - `queries/` return data without changing business state;
 - `events/` coordinate application behavior caused by a consumed event.
 
-Use cases may coordinate services, domain objects, concrete repositories, shared abstractions, and
-other infrastructure ports. They must not depend on REST DTO classes, controllers, BullMQ handler
-classes, TypeORM entities, QueryBuilder, or other TypeORM APIs.
+A use case owns the rules of the operation it names, holds its own `@Transactional()` boundary, and
+declares the input and result types of that operation in its own file. It may coordinate services,
+domain objects, concrete repositories, shared abstractions, and other infrastructure ports. It must
+not depend on REST DTO classes, controllers, BullMQ handler classes, TypeORM entities,
+QueryBuilder, or other TypeORM APIs.
+
+**A use case must not be a pass-through.** A command whose `execute` only forwards its arguments to
+one collaborator's method holds no rule, so it is a layer without a responsibility: the rules belong
+in the command itself, next to the boundary that decides them. Two shapes are the tell — a command
+whose body is a single `return this.<something>.<method>(...)` with the arguments unchanged, and a
+service method that exactly one command calls. Correct both by moving the rules into the command and
+deleting the collaborator, keeping only what "Services" above justifies extracting.
 
 ### REST
 

@@ -187,8 +187,13 @@ This is unchanged by the split and holds for both. A dialog never owns its own o
 
 - a control that sits beside its dialog wraps both in a `Modal` root (form) or an `AlertDialog`
   root (confirmation), with `TriggeredDialog` around the dialog so it mounts only while open;
-- a list row, which is not a control the dialog can sit beside, mounts `DialogHost` for the record
-  it was opened for.
+- a list row, which is not a control the dialog can sit beside, does not mount `DialogHost` by hand:
+  it holds which dialog is open in `useActionDialog` and mounts the open one with
+  `ActionDialogHost`, which wraps `DialogHost` for it. That is the whole of
+  [Writing web action dialogs](web-action-dialogs.md), and it is required rather than optional — a
+  surface writing its own `useState` + `DialogHost` + inline kind lookup is the duplication
+  [Open a row's dialogs through one reducer](../adr/27-08-2026-reducer-driven-action-dialogs.md)
+  removed.
 
 Both publish the same React Aria overlay state, so cancel closes through `<Button slot="close">`
 and the success path closes through `useCloseDialog` inside the shared component. No dialog is ever

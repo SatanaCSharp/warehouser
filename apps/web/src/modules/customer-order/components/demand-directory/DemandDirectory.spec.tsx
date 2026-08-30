@@ -27,6 +27,13 @@ import type { AppStore } from 'store';
 // rendered as a sub-row", "remaining demand under a Closed draft renders as
 // covered by no draft". Colocated with the component it covers
 // (`placing-web-tests.md` §1).
+//
+// The desktop surface is a HeroUI `Table` whose rows expand
+// (`docs/system/adr/27-08-2026-heroui-table-for-web-data-tables.md`), so it is
+// found by its ARIA role `treegrid` rather than `table`, its first cell is a
+// `rowheader`, and the remaining five are `gridcell`s. That is what React Aria
+// exposes for an expandable table, and asserting it is what proves the
+// hierarchy is announced rather than merely drawn.
 
 const demandLines = (): DemandLine[] => [
   {
@@ -61,6 +68,12 @@ const demandLines = (): DemandLine[] => [
     // array is the honest fixture for a line a Closed draft used to cover.
     coverage: [],
   },
+];
+
+/** The six cells a Demand row presents, in column order. */
+const cellsOf = (row: HTMLElement): HTMLElement[] => [
+  ...within(row).getAllByRole('rowheader'),
+  ...within(row).getAllByRole('gridcell'),
 ];
 
 const customerOrdersFor = (itemId: string): CustomerOrder[] => [
@@ -149,18 +162,15 @@ const renderDirectory = (
       },
     ),
   );
-  for (const line of lines) {
-    void store.dispatch(
-      customerOrderApi.util.upsertQueryData(
-        'listCustomerOrders',
-        {
-          warehouseId: accessIds.warehouse,
-          query: { itemId: line.itemId, state: 'unfulfilled' },
-        },
-        customerOrdersFor(line.itemId),
-      ),
-    );
-  }
+  // One warehouse-wide read backs every expandable row, so the fixture is
+  // seeded under that one cache key rather than one per Item.
+  void store.dispatch(
+    customerOrderApi.util.upsertQueryData(
+      'listCustomerOrders',
+      { warehouseId: accessIds.warehouse, query: { state: 'unfulfilled' } },
+      lines.flatMap((line) => customerOrdersFor(line.itemId)),
+    ),
+  );
   renderInEnteredWarehouse(
     <DemandDirectory demandLines={lines} />,
     store,
@@ -182,12 +192,11 @@ describe('DemandDirectory', () => {
   it('renders all six demand cells and the coverage chips for a two-draft Demand Line (AC-04, AC-20)', async () => {
     renderDirectory();
 
-    const table = await screen.findByRole('table', { name: /demand/iu });
+    const table = await screen.findByRole('treegrid', { name: /demand/iu });
     const row = within(table).getByText('SKU-100').closest('tr');
     expect(row).not.toBeNull();
-    const cells = within(row as HTMLElement).getAllByRole('cell');
     // item, outstanding, needed by, on hand, covered by, actions.
-    expect(cells).toHaveLength(6);
+    expect(cellsOf(row as HTMLElement)).toHaveLength(6);
     expect(row).toHaveTextContent('1500');
     expect(row).toHaveTextContent('2026-09-01');
     expect(row).toHaveTextContent('42');
@@ -199,7 +208,7 @@ describe('DemandDirectory', () => {
   it('renders remaining demand under a Closed draft as covered by no draft (AC-21a)', async () => {
     renderDirectory();
 
-    const table = await screen.findByRole('table', { name: /demand/iu });
+    const table = await screen.findByRole('treegrid', { name: /demand/iu });
     const row = within(table).getByText('SKU-200').closest('tr');
     expect(row).toHaveTextContent('Covered by no draft');
   });
@@ -208,7 +217,7 @@ describe('DemandDirectory', () => {
     const user = userEvent.setup();
     renderDirectory();
 
-    const table = await screen.findByRole('table', { name: /demand/iu });
+    const table = await screen.findByRole('treegrid', { name: /demand/iu });
     const disclosure = within(table).getByRole('button', {
       name: /show the 2 customer orders for sku-100/iu,
     });

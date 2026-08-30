@@ -72,12 +72,12 @@ describe('customer-orders module boundaries', () => {
   it('rejects a fixture that does import from purchase-drafts, proving the pattern has teeth', () => {
     expect(
       forbiddenSiblingImportPattern.test(
-        "import { ArrivalConfirmationService } from 'purchase-drafts/domain/services/arrival-confirmation.service';",
+        "import { ConfirmPurchaseDraftArrivalCommand } from 'purchase-drafts/usecases/commands/confirm-purchase-draft-arrival.command';",
       ),
     ).toBe(true);
     expect(
       forbiddenSiblingImportPattern.test(
-        "import { ArrivalConfirmationService } from '../../../purchase-drafts/domain/services/arrival-confirmation.service';",
+        "import { ConfirmPurchaseDraftArrivalCommand } from '../../../purchase-drafts/usecases/commands/confirm-purchase-draft-arrival.command';",
       ),
     ).toBe(true);
   });

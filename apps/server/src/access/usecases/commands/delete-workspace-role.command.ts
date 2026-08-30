@@ -6,7 +6,6 @@ import {
   workspaceProtectedRoleError,
   workspaceReplacementRoleRequiredError,
   workspaceRoleAssignmentRequiredError,
-  workspaceRoleDeletionUnavailableError,
 } from 'access/domain/errors/workspace-access.errors';
 import { isProtectedWorkspaceOwnerRoleKind } from 'access/domain/predicates/workspace-authority.predicates';
 import { WorkspaceRoleDeletionService } from 'access/domain/services/workspace-role-deletion.service';
@@ -15,7 +14,6 @@ import { Transactional } from 'shared/decorators/transactional.decorator';
 import { WorkspaceCurrentUserRepository } from 'shared/domain/repositories/workspace-current-user.repository';
 import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository';
 import { workspaceTargetUnavailableError } from 'shared/errors/cross-module.errors';
-import { withUnavailableOutcome } from 'shared/errors/unavailable-outcome';
 
 export interface DeleteWorkspaceRoleInput {
   readonly roleId: string;
@@ -43,23 +41,7 @@ export class DeleteWorkspaceRoleCommand {
   ) {}
 
   @Transactional()
-  execute(
-    currentUser: WorkspaceCurrentUser,
-    input: DeleteWorkspaceRoleInput,
-  ): Promise<DeleteWorkspaceRoleResult> {
-    // AC-17b — openapi.yaml documents 503 `workspace.role_deletion_unavailable`
-    // for a deletion that did not complete, and the one transaction this
-    // command runs in is what makes its promise true: the Role and its
-    // assignments are unchanged. `withUnavailableOutcome` re-raises the AC-16
-    // and AC-17c/AC-17d rejections asserted below untouched, so a permanent
-    // refusal is never reported as "try again later".
-    return withUnavailableOutcome(
-      () => this.deleteRole(currentUser, input),
-      workspaceRoleDeletionUnavailableError,
-    );
-  }
-
-  private async deleteRole(
+  async execute(
     currentUser: WorkspaceCurrentUser,
     input: DeleteWorkspaceRoleInput,
   ): Promise<DeleteWorkspaceRoleResult> {

@@ -33,6 +33,10 @@ it for any non-trivial change and follow the modular-monolith boundaries it defi
 - Follow `server-error-handling.md` for predicate placement, named error factories, typed errors,
   propagation, NestJS exception filtering, logging, and safe REST error responses. Do not add
   routine `try/catch` blocks to controllers or endpoint handlers.
+- Follow `server-use-case-boundaries.md`: a use case's `execute` contains the use case and nothing
+  wraps it. Do not add a `with*` helper, interceptor, or base-class template method around it, do
+  not measure anything (timings, durations, counters) in production code, and never map an error to
+  another type or code before the global exception filter.
 - Use the shared `AppLoggerModule` and `PinoLogger` for operational diagnostics. Do not add
   telemetry SDKs, tracing, metrics exporters, collectors, or feature-specific telemetry
   abstractions; use ordinary structured log events with useful context instead.

@@ -411,16 +411,18 @@ turns every unrelated workflow into a shared type, a shared reducer, and a share
 several dialogs genuinely share one trigger surface — the rows of a list — the state to keep is the
 record a row opened one for, never a boolean:
 
-```tsx
-type MemberDialog = {
-  kind: 'deleteMember' | 'editEmail' | 'resetPassword';
-  member: AccessMember;
-};
+```ts
+type MemberDialogKind = 'deleteMember' | 'editEmail' | 'resetPassword';
 ```
 
-A row is not a control the dialog can sit beside, so wrap the resolved dialog in
-`shared/components/DialogHost`: it publishes the open state a `Modal` would have owned, and reports
-the close once — where the record it was opened for is dropped.
+A row is not a control the dialog can sit beside, so that pair — which kind, for which record — is
+held by `shared/hooks/state/useActionDialog` and mounted by `shared/components/ActionDialogHost`,
+which wraps `shared/components/DialogHost` to publish the open state a `Modal` would have owned and
+report the close once. Do not write that state, its null check or its lookup by hand; the procedure
+is [Writing web action dialogs](web-action-dialogs.md) and the decision is
+[Open a row's dialogs through one reducer](../adr/27-08-2026-reducer-driven-action-dialogs.md).
+The union above stays the surface's own — sharing the mechanism is not a licence to share the
+vocabulary, which is what the paragraph above forbids.
 
 ## 9. Prefer the simplest thing that works
 

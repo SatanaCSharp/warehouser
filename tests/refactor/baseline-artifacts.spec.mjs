@@ -52,9 +52,9 @@ test('the Warehouses-tab case inventory totals 39 across sad.md §5.4s ten group
   );
 });
 
-// The union is what T13 compares against, so it has to be a faithful flattening of the groups. A
-// duplicated title across two groups would make the union shorter than the count — which is exactly
-// the hole `tests/refactor/split-cases.spec.mjs` documents, and why T13 asserts both.
+// The union is what T13 compared against, so it has to be a faithful flattening of the groups. A
+// duplicated title across two groups would make the union shorter than the count — the hole the
+// retired T13 split-case gate documented, which is why both are asserted here.
 test('the inventorys union is the sorted flattening of its ten groups', () => {
   const inventory = readArtifact(WAREHOUSES_TAB_CASES_PATH);
   const flattened = inventory.groups.flatMap((group) => group.cases);

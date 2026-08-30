@@ -15,9 +15,17 @@ export default defineConfig({
         __dirname,
         '../../packages/contracts/src/auth/index.ts',
       ),
+      '@warehouser/contracts/customer-orders': path.resolve(
+        __dirname,
+        '../../packages/contracts/src/customer-orders/index.ts',
+      ),
       '@warehouser/contracts/items': path.resolve(
         __dirname,
         '../../packages/contracts/src/items/index.ts',
+      ),
+      '@warehouser/contracts/purchase-drafts': path.resolve(
+        __dirname,
+        '../../packages/contracts/src/purchase-drafts/index.ts',
       ),
       '@warehouser/contracts/users': path.resolve(
         __dirname,
@@ -32,7 +40,15 @@ export default defineConfig({
         '../../packages/shared-types/src/enums/index.ts',
       ),
       access: path.resolve(__dirname, '../../packages/contracts/src/access'),
+      'customer-orders': path.resolve(
+        __dirname,
+        '../../packages/contracts/src/customer-orders',
+      ),
       items: path.resolve(__dirname, '../../packages/contracts/src/items'),
+      'purchase-drafts': path.resolve(
+        __dirname,
+        '../../packages/contracts/src/purchase-drafts',
+      ),
       workspaces: path.resolve(
         __dirname,
         '../../packages/contracts/src/workspaces',

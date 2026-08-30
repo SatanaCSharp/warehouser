@@ -47,7 +47,8 @@ apps/web/src/
 │       │   ├── mutations/   # writes of server state
 │       │   ├── forms/       # form sessions
 │       │   ├── projections/ # derivations over state already loaded
-│       │   └── effects/     # hooks whose product is a browser side effect
+│       │   ├── effects/     # hooks whose product is a browser side effect
+│       │   └── state/       # local UI state and the named transitions over it
 │       ├── loaders/         # plain route data functions; only when a route awaits data
 │       ├── utils/           # module-owned pure helpers; never hooks
 │       ├── schemas/         # browser-only validation
@@ -62,7 +63,7 @@ apps/web/src/
 │   ├── api/                 # shared query client, outcome normalizer, cross-module endpoints
 │   ├── components/          # reused by at least two modules
 │   ├── constants/
-│   ├── hooks/               # same five subdirectories as a module's hooks/
+│   ├── hooks/               # same six subdirectories as a module's hooks/
 │   ├── layouts/
 │   └── utils/               # generic pure helpers owned by no single entity
 ├── store/
@@ -89,7 +90,7 @@ For example, sign-up and sign-out success alerts belong to `modules/auth/alerts/
 generic normalized API-failure alert. Colocate each alert adapter's test with the adapter.
 
 Hooks and pure helpers are filed by what they do, not by which screen calls them: every `hooks/`
-directory uses the five names above, and a file that declares no hook belongs in a `utils/`
+directory uses the six names above, and a file that declares no hook belongs in a `utils/`
 directory instead. Follow [Placing web hooks](guides/placing-web-hooks.md) for the full rule and for
 the module-versus-shared promotion test it applies.
 

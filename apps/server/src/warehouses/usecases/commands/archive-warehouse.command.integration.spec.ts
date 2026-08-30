@@ -292,13 +292,15 @@ describeIntegration('ArchiveWarehouseCommand', () => {
     `);
 
     try {
+      // The injected persistence failure propagates untouched — the command
+      // never reclassifies it (server-use-case-boundaries.md §3) — and
+      // `@Transactional()` is what keeps AC-13's promise that nothing
+      // changed.
       await expect(
         transactions.executeInTransaction({}, () =>
           createCommand().execute(principal(workspaceId), { warehouseId }),
         ),
-      ).rejects.toMatchObject({
-        code: ErrorCode.WORKSPACE_ARCHIVAL_UNAVAILABLE,
-      });
+      ).rejects.toThrow(/injected archive failure/u);
     } finally {
       await dataSource.query(
         'DROP TRIGGER IF EXISTS fail_warehouse_archive ON warehouses',

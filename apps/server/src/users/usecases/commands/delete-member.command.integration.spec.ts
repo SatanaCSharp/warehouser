@@ -2,7 +2,6 @@ import { randomBytes, randomUUID } from 'node:crypto';
 
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { TransferWarehouseManagerCommand } from 'access/usecases/commands/transfer-warehouse-manager.command';
-import type { PinoLogger } from 'nestjs-pino';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import dataSource from 'shared/database/data-source';
 import { DbTransactionService } from 'shared/database/db-transaction.service';
@@ -62,21 +61,14 @@ describeIntegration('DeleteMemberCommand', () => {
   const authenticationRepository = new AuthenticationRepository(dataSource);
   const managerTransferRepository = new ManagerTransferRepository(dataSource);
 
-  const logInfo = jest.fn();
-
   const createCommand = (): DeleteMemberCommand =>
     new DeleteMemberCommand(
       memberLifecycleRepository,
       authenticationRepository,
-      { info: logInfo } as unknown as PinoLogger,
     );
 
   beforeAll(async () => {
     await dataSource.initialize();
-  });
-
-  beforeEach(() => {
-    logInfo.mockClear();
   });
 
   afterEach(async () => {
@@ -364,18 +356,6 @@ describeIntegration('DeleteMemberCommand', () => {
     await expect(
       seedIdentity(randomUUID(), 'target@example.test'),
     ).resolves.toBeUndefined();
-
-    // sad.md §8: a structured, per-action Pino timing log — no credential
-    // fields.
-    expect(logInfo).toHaveBeenCalledWith(
-      expect.objectContaining({
-        operation: 'users.delete_member',
-        outcomeCode: 'success',
-        durationMs: expect.any(Number),
-        userId: deleterUserId,
-        warehouseId: warehouseAId,
-      }),
-    );
   });
 
   it('AC-09: denies deletion of a missing target without disclosing existence', async () => {

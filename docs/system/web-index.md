@@ -51,10 +51,18 @@ first, then read only the entries that cover the change you are making. Paths ar
   and its `translateValidation`, where a refusal code is explained, and who owns the open state.
   Use whenever adding or changing a dialog, and before assembling `Modal.*` or `AlertDialog.*`
   parts in a feature file.
+- [Writing web action dialogs](guides/web-action-dialogs.md) — the procedure for a dialog opened
+  **from a row** rather than from a control beside it: when a `Modal` root is still the right answer,
+  and when it is `useActionDialog` + `ActionDialogHost` instead. Covers the four things a surface
+  writes (its own `Kind` union, the controller, the one-line opener, the total `renderDialogs`
+  lookup), the three opener shapes, and what a surface must never do — hand a dialog an `onClose`,
+  keep an `isOpen`, or collect several surfaces' workflows into one union. Use whenever a list row,
+  a table row, or a row's menu opens a dialog.
 - [Placing web hooks](guides/placing-web-hooks.md) — decides **which directory a hook file goes in**:
-  the five names every `hooks/` directory uses (`queries`, `mutations`, `forms`, `projections`,
-  `effects`), why a file that declares no hook belongs in `utils/` instead, and when a helper is
-  promoted to `shared/utils`. Use when adding a hook, splitting one, or adding a pure helper.
+  the six names every `hooks/` directory uses (`queries`, `mutations`, `forms`, `projections`,
+  `effects`, `state`), why a file that declares no hook belongs in `utils/` instead, and when a
+  helper is promoted to `shared/utils`. Use when adding a hook, splitting one, or adding a pure
+  helper.
 - [Placing web tests](guides/placing-web-tests.md) — decides **where a spec file goes**: beside its
   subject by default, never one level above it, and — when no single file owns the behaviour — in its
   own dedicated directory under `src/test/`. Covers structural gates, specs spanning several owners,
@@ -86,6 +94,27 @@ first, then read only the entries that cover the change you are making. Paths ar
 
 ## Decisions
 
+- [Present tabular data with HeroUI's Table](adr/27-08-2026-heroui-table-for-web-data-tables.md)
+  — **Accepted; this is the decision that governs how a collection of records is presented.** A data
+  table is a HeroUI `Table`; a feature file assembles no `<table>`/`<tr>`/`<td>` markup and
+  hand-rolls no disclosure over rows. Nesting is `Table.Collection` with `treeColumn` and
+  `expandedKeys`, so React Aria owns `aria-expanded`, `aria-level` and roving focus — and the table
+  exposes `role="treegrid"`, which tests must query for. Two rules follow from the collection model,
+  and the first has already caused one real defect: a row renderer may call **no hook and close over
+  no live state**, because React Aria caches a row's element tree per record — so **a cell renders a
+  component, not an expression**, and that component reads its own translations, Permissions and
+  queries. The second: per-row lazy loading is not expressible, because a row carries no chevron
+  until its children exist. Read before building or changing any table, and before deciding where a
+  cell's data comes from.
+- [Open a row's dialogs through one reducer](adr/27-08-2026-reducer-driven-action-dialogs.md)
+  — **Accepted; this is the decision that governs how a row opens a dialog.** A surface holds that
+  state in `useActionDialog` (a reducer whose `closed` is a state, not `null`) and mounts the open
+  one with `ActionDialogHost`, handing it a total `Record<Kind, (subject) => ReactElement>`. No
+  surface writes the null check, the `DialogHost`, or the inline record again. `Kind` and `Subject`
+  stay the surface's own types — the mechanism is shared, the vocabulary is not, which is what keeps
+  it inside `writing-web-components.md` §8's ban on a module-wide workflow switch. Read before
+  adding a dialog to a list, a table, or a row's menu; the procedure is
+  [Writing web action dialogs](guides/web-action-dialogs.md).
 - [Gate web controls declaratively, never with capability booleans](adr/19-08-2026-declarative-permission-gates.md)
   — **Accepted; this is the decision that governs authorization in the UI.** Every decision about what
   the acting user may be offered is a gate component at the control it protects

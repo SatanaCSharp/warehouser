@@ -4,7 +4,6 @@ import { Injectable } from '@nestjs/common';
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
 import { assert, assertDefined } from '@warehouser/utils/asserts';
-import { PinoLogger } from 'nestjs-pino';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { AccessCurrentUserRepository } from 'shared/domain/repositories/access-current-user.repository';
@@ -16,7 +15,6 @@ import { isSupportedEmail } from 'shared/domain/security/is-supported-email';
 import { isSupportedPassword } from 'shared/domain/security/is-supported-password';
 import { Password } from 'shared/domain/security/password';
 import { hashPassword } from 'shared/domain/security/password-hashing';
-import { withOperationTiming } from 'shared/logger/with-operation-timing';
 import {
   emailAlreadyRegisteredError,
   invalidInputError,
@@ -74,23 +72,10 @@ export class CreateMemberCommand {
     private readonly authenticationRepository: AuthenticationRepository,
     private readonly hash: typeof hashPassword = hashPassword,
     private readonly runtime: CreateMemberRuntime = defaultRuntime,
-    private readonly logger: PinoLogger = new PinoLogger({}),
   ) {}
 
   @Transactional()
-  execute(
-    currentUser: AccessCurrentUser,
-    input: CreateMemberInput,
-  ): Promise<CreatedMember> {
-    return withOperationTiming(
-      this.logger,
-      'users.create_member',
-      currentUser,
-      () => this.createMember(currentUser, input),
-    );
-  }
-
-  private async createMember(
+  async execute(
     currentUser: AccessCurrentUser,
     input: CreateMemberInput,
   ): Promise<CreatedMember> {

@@ -1,6 +1,6 @@
 // Pure predicates for the On-hand Quantity adjustment (server-error-handling.md §1). No NestJS,
 // HTTP or TypeORM import here — see `items/domain/errors/item.errors.ts` for the named error
-// factories that pair with these conditions and `domain/services/on-hand-adjustment.service.ts`
+// factories that pair with these conditions and `usecases/commands/adjust-item-on-hand.command.ts`
 // for their enforcement via `assert`.
 
 // AC-09 / data-model.md `items.on_hand_quantity` INTEGER NOT NULL `>= 0` — the counted figure is a

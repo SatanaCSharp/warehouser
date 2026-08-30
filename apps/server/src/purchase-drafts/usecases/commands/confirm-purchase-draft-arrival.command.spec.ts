@@ -1,62 +1,29 @@
-// T15 — `purchase-drafts/usecases/commands/confirm-purchase-draft-arrival.command.ts` does not
-// exist yet. The legitimate RED for the application boundary of AC-17 (server-architecture.md
-// §Dependency direction, §Services): the command holds no rule of its own, delegates to
-// `ArrivalConfirmationService`, and lets a refusal propagate unwrapped to the global exception
-// filter, mirroring `close-purchase-draft.command.spec.ts` (T13) and
-// `cancel-customer-order.command.spec.ts` (T8).
 import { ConfirmPurchaseDraftArrivalCommand } from 'purchase-drafts/usecases/commands/confirm-purchase-draft-arrival.command';
-import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import {
+  TRANSACTIONAL_KEY,
+  type TransactionalMetadata,
+} from 'shared/decorators/transactional.decorator';
 
-const uuid = (suffix: string): string =>
-  `00000000-0000-4000-8000-${suffix.padStart(12, '0')}`;
-
-const draftId = uuid('301');
-const lineId = uuid('401');
-const linkId = uuid('501');
-
-const currentUser: AccessCurrentUser = {
-  userId: uuid('3'),
-  warehouseId: uuid('1'),
-  roleId: uuid('4'),
-  roleKind: 'custom',
-  permissionId: 'PURCHASE_DRAFTS:RECEIVE',
-  archived: false,
-};
-
-const lines = [
-  {
-    purchaseDraftLineId: lineId,
-    receivedQuantity: 100,
-    allocations: [{ purchaseDraftLineLinkId: linkId, allocatedQuantity: 100 }],
-  },
-];
-
-describe('ConfirmPurchaseDraftArrivalCommand', () => {
-  it('delegates to the service that owns the rule and returns the closed draft', async () => {
-    const closed = { id: draftId, state: 'closed' };
-    const confirmationService = {
-      confirm: jest.fn().mockResolvedValue(closed),
-    };
-    const command = new ConfirmPurchaseDraftArrivalCommand(confirmationService);
-
-    await expect(
-      command.execute(currentUser, draftId, { lines }),
-    ).resolves.toEqual(closed);
-    expect(confirmationService.confirm).toHaveBeenCalledWith(
-      currentUser,
-      draftId,
-      lines,
-    );
-  });
-
-  it('lets the service refusal propagate untouched', async () => {
-    const refusal = new Error('refused by the rule owner');
-    const command = new ConfirmPurchaseDraftArrivalCommand({
-      confirm: jest.fn().mockRejectedValue(refusal),
-    });
-
-    await expect(command.execute(currentUser, draftId, { lines })).rejects.toBe(
-      refusal,
-    );
+// `confirm-purchase-draft-arrival.integration.spec.ts` proves the *outcome* of spec.md §6 "Arrival
+// atomicity" by rolling back an injected mid-way failure, but it cannot prove the boundary that
+// delivers it in production. Every test there constructs the command with `new` and wraps the call
+// in the suite's own `executeInTransaction(...)`, so the rollback it observes belongs to the test's
+// outer transaction. `@Transactional()` is `SetMetadata` — inert until `TransactionExecutorService`
+// reads it through Nest — so deleting the decorator leaves every one of those tests green while, in
+// production, the draft and line UPDATEs would autocommit and a failed allocation would strand a
+// Closed draft carrying received quantities and no Allocation: precisely the outcome the atomicity
+// target forbids.
+//
+// This is the assertion that fails when the decorator goes, following the idiom
+// `warehouses/usecases/commands/archive-warehouse.command.spec.ts` and
+// `access/usecases/role-lifecycle.spec.ts` already use.
+describe('ConfirmPurchaseDraftArrivalCommand transaction boundary', () => {
+  it('owns the complete atomic operation under one @Transactional() boundary (spec.md §6, ADR 0002)', () => {
+    expect(
+      Reflect.getMetadata(
+        TRANSACTIONAL_KEY,
+        ConfirmPurchaseDraftArrivalCommand.prototype.execute,
+      ) as TransactionalMetadata | undefined,
+    ).toBeDefined();
   });
 });

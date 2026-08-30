@@ -9,6 +9,7 @@ import { DiscardPurchaseDraftCommand } from 'purchase-drafts/usecases/commands/d
 import { ReadyPurchaseDraftCommand } from 'purchase-drafts/usecases/commands/ready-purchase-draft.command';
 import { RemovePurchaseDraftLineCommand } from 'purchase-drafts/usecases/commands/remove-purchase-draft-line.command';
 import { RemovePurchaseDraftLineLinkCommand } from 'purchase-drafts/usecases/commands/remove-purchase-draft-line-link.command';
+import { RevisePurchaseDraftCommand } from 'purchase-drafts/usecases/commands/revise-purchase-draft.command';
 import { RevisePurchaseDraftLineCommand } from 'purchase-drafts/usecases/commands/revise-purchase-draft-line.command';
 import { RevisePurchaseDraftLineLinkCommand } from 'purchase-drafts/usecases/commands/revise-purchase-draft-line-link.command';
 import { ListPackagingTypesQuery } from 'purchase-drafts/usecases/queries/list-packaging-types.query';
@@ -52,12 +53,12 @@ describe('PurchaseDraftsUsecaseModule Nest DI graph', () => {
     expect(moduleRef.get(DiscardPurchaseDraftCommand)).toBeInstanceOf(
       DiscardPurchaseDraftCommand,
     );
-    // T15 — the arrival confirmation is the first use case in this module whose graph leaves it:
-    // `ArrivalConfirmationService` takes `DemandAllocationService`, which resolves only because
-    // `PurchaseDraftsUsecaseModule` imports `CustomerOrdersUsecaseModule` and that module exports
-    // it (ADR 0002). Compiling it here is what proves the cross-module edge is wired, and that
-    // neither service's `@Optional()` runtime parameter — an interface, so `Object` under
-    // `emitDecoratorMetadata` — stops the injector resolving the rest.
+    // The arrival confirmation is the one use case in this module whose graph leaves it:
+    // `ConfirmPurchaseDraftArrivalCommand` takes `DemandAllocationService`, which resolves only
+    // because `PurchaseDraftsUsecaseModule` imports `CustomerOrdersUsecaseModule` and that module
+    // exports it (ADR 0002). Compiling it here is what proves the cross-module edge is wired, and
+    // that the command's `@Optional()` runtime parameter — an interface, so `Object` under
+    // `emitDecoratorMetadata` — does not stop the injector resolving the rest.
     expect(moduleRef.get(ConfirmPurchaseDraftArrivalCommand)).toBeInstanceOf(
       ConfirmPurchaseDraftArrivalCommand,
     );
@@ -69,12 +70,11 @@ describe('PurchaseDraftsUsecaseModule Nest DI graph', () => {
     );
   });
 
-  // T12 (completing the assembly half) — the create and revise use cases. `PurchaseDraftAssembly-
-  // Service` reaches four repositories (assembly, item catalogue, customer-order lifecycle,
-  // packaging-type catalogue), none of which `DomainModule` provides, so every one has to be a
-  // local provider of this module exactly as `PurchaseDraftAssemblyRepository` already is.
-  // Compiling the graph is what proves that, and that the service is registered at all — until now
-  // it existed but was reachable from nothing, so no wiring mistake could be observed.
+  // The create and revise use cases. Between them they reach four repositories (assembly, item
+  // catalogue, customer-order lifecycle, packaging-type catalogue), none of which `DomainModule`
+  // provides, so every one has to be a local provider of this module exactly as
+  // `PurchaseDraftAssemblyRepository` already is. Compiling the graph is what proves that, and that
+  // every one of the eight assembly commands is registered at all.
   it('constructs every Purchase Draft assembly use case through Nest injection', async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [TestDataSourceDoubleModule, PurchaseDraftsUsecaseModule],
@@ -82,6 +82,9 @@ describe('PurchaseDraftsUsecaseModule Nest DI graph', () => {
 
     expect(moduleRef.get(CreatePurchaseDraftCommand)).toBeInstanceOf(
       CreatePurchaseDraftCommand,
+    );
+    expect(moduleRef.get(RevisePurchaseDraftCommand)).toBeInstanceOf(
+      RevisePurchaseDraftCommand,
     );
     expect(moduleRef.get(AddPurchaseDraftLineCommand)).toBeInstanceOf(
       AddPurchaseDraftLineCommand,

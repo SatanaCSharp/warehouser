@@ -499,28 +499,25 @@ describeIntegration('warehouse HTTP contract — membership edges', () => {
   });
 });
 
-// openapi.yaml documents a 503 `workspace.warehouse_creation_unavailable` /
-// `workspace.archival_unavailable` branch on `POST /warehouses` and
-// `PUT /warehouses/{warehouseId}/archival` (both Warehouse-record routes):
-// "the change could not complete" (AC-07, AC-13). Neither failure is
-// reachable through ordinary seeded state — it names an *infrastructure*
-// failure of the write itself, not a business precondition — so this suite
-// forces it by overriding the concrete repository the command calls, in its
-// own app instance kept separate from the harness above (it is not part of
-// either route's Warehouse-record or membership-edge behavioural coverage,
-// so it stays colocated with this file rather than duplicating the harness
-// setup for one repository override). This is expected to surface a real gap
-// once Docker is available: neither `CreateWarehouseCommand` nor
-// `ArchiveWarehouseCommand` currently catches and translates a
-// repository-layer failure into the documented `ApplicationError`
-// (`access/domain/errors/workspace-access.errors.ts` defines no such factory
-// yet), so today this failure would propagate as the generic unknown-error
-// 500 the global filter falls back to, not the documented 503 + stable code.
-// That gap belongs to the command layer (T20/T21), not this REST surface,
-// but it is a documented contract branch this suite must still encode so CI
+// An infrastructure failure of the write itself on `POST /warehouses` and
+// `PUT /warehouses/{warehouseId}/archival` (both Warehouse-record routes) is
+// not reachable through ordinary seeded state — it is not a business
+// precondition — so this suite forces it by overriding the concrete
+// repository the command calls, in its own app instance kept separate from
+// the harness above (it is not part of either route's Warehouse-record or
+// membership-edge behavioural coverage, so it stays colocated with this file
+// rather than duplicating the harness setup for one repository override).
+//
+// Neither command reclassifies the failure: a use case never maps an error to
+// another type (server-use-case-boundaries.md §3), so the raw repository
+// failure reaches the global exception filter, which answers the generic 500
+// `system.internal_error` and discloses nothing about the cause. AC-07 and
+// AC-13's promise that nothing was left behind is kept by each command's
+// `@Transactional()` boundary, not by the response code. This is a contract
+// branch this suite must still encode so CI
 // catches it once it is closed.
 describeIntegration(
-  'warehouse HTTP contract — unavailable-outcome branches',
+  'warehouse HTTP contract — infrastructure-failure branches',
   () => {
     let app: INestApplication;
     let baseUrl: string;
@@ -690,7 +687,7 @@ describeIntegration(
       };
     };
 
-    it('answers 503 workspace.warehouse_creation_unavailable when the write cannot complete (AC-07)', async () => {
+    it('answers a safe generic 500 when the creation write cannot complete, disclosing nothing (AC-07)', async () => {
       await bootAppWithFailingRepository();
       const actor = await seedActor();
 
@@ -701,13 +698,12 @@ describeIntegration(
         { name: 'Test Warehouse East' },
       );
 
-      expect(status).toBe(503);
-      expect(body).toMatchObject({
-        code: 'workspace.warehouse_creation_unavailable',
-      });
+      expect(status).toBe(500);
+      expect(body).toMatchObject({ code: 'system.internal_error' });
+      expect(JSON.stringify(body)).not.toMatch(/synthetic|stack|repository/iu);
     });
 
-    it('answers 503 workspace.archival_unavailable when the change cannot complete (AC-13)', async () => {
+    it('answers a safe generic 500 when the archival change cannot complete, disclosing nothing (AC-13)', async () => {
       await bootAppWithFailingRepository();
       const actor = await seedActor();
 
@@ -718,8 +714,9 @@ describeIntegration(
         { archived: true },
       );
 
-      expect(status).toBe(503);
-      expect(body).toMatchObject({ code: 'workspace.archival_unavailable' });
+      expect(status).toBe(500);
+      expect(body).toMatchObject({ code: 'system.internal_error' });
+      expect(JSON.stringify(body)).not.toMatch(/synthetic|stack|repository/iu);
     });
   },
 );

@@ -2,13 +2,15 @@ import { randomUUID } from 'node:crypto';
 
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
-// `CustomerOrderLifecycleService` does not exist yet (T8) — this is the RED for the half of AC-19b
-// that a unit test with a repository double cannot reach: `sad.md` §8 requires the floor to be
-// re-checked "against locked rows at the moment the change is recorded, never against the values
-// the member composed against". Here the service, its real repository and a real transaction run
-// together, so what is proven is that the refused amendment leaves the stored row **exactly** as it
-// was — not merely that a double was not called.
+// The half of AC-19b that a unit test with a repository double cannot reach: `sad.md` §8 requires
+// the floor to be re-checked "against locked rows at the moment the change is recorded, never
+// against the values the member composed against". Here the three lifecycle commands, their real
+// repositories and a real transaction run together, so what is proven is that the refused amendment
+// leaves the stored row **exactly** as it was — not merely that a double was not called.
 import { CustomerOrderLifecycleService } from 'customer-orders/domain/services/customer-order-lifecycle.service';
+import { AmendCustomerOrderCommand } from 'customer-orders/usecases/commands/amend-customer-order.command';
+import { CancelCustomerOrderCommand } from 'customer-orders/usecases/commands/cancel-customer-order.command';
+import { RecordCustomerOrderCommand } from 'customer-orders/usecases/commands/record-customer-order.command';
 import dataSource from 'shared/database/data-source';
 import { DbTransactionService } from 'shared/database/db-transaction.service';
 import { DbTransactionContext } from 'shared/database/db-transaction-context.service';
@@ -41,10 +43,23 @@ const transactions = new DbTransactionService(dataSource, context);
 
 let newCustomerOrderId = randomUUID();
 
-const service = new CustomerOrderLifecycleService(
-  new CustomerOrderLifecycleRepository(dataSource),
+const lifecycleRepository = new CustomerOrderLifecycleRepository(dataSource);
+
+const recordCommand = new RecordCustomerOrderCommand(
+  lifecycleRepository,
   new ItemCatalogueRepository(dataSource),
   { customerOrderId: () => newCustomerOrderId, now: () => later },
+);
+const lifecycleService = new CustomerOrderLifecycleService(lifecycleRepository);
+const amendCommand = new AmendCustomerOrderCommand(
+  lifecycleRepository,
+  lifecycleService,
+  { now: () => later },
+);
+const cancelCommand = new CancelCustomerOrderCommand(
+  lifecycleRepository,
+  lifecycleService,
+  { now: () => later },
 );
 
 // `accounts.user_id` / `users.account_id` form a deferred circular FK pair, so both inserts must
@@ -201,7 +216,7 @@ const seedAllocation = async (
 const readOrder = (id: string): Promise<CustomerOrderEntity | null> =>
   dataSource.manager.getRepository(CustomerOrderEntity).findOneBy({ id });
 
-describeIntegration('CustomerOrderLifecycleService', () => {
+describeIntegration('the Customer Order lifecycle commands', () => {
   beforeAll(async () => {
     await dataSource.initialize();
   });
@@ -226,7 +241,7 @@ describeIntegration('CustomerOrderLifecycleService', () => {
     const seeded = await seed();
 
     const recorded = await transactions.executeInTransaction({}, () =>
-      service.record(actorIn(seeded, 'CUSTOMER_ORDERS:CREATE'), {
+      recordCommand.execute(actorIn(seeded, 'CUSTOMER_ORDERS:CREATE'), {
         itemId: seeded.itemId,
         customerName: 'Test Customer North',
         quantity: 100,
@@ -257,7 +272,7 @@ describeIntegration('CustomerOrderLifecycleService', () => {
     const elsewhere = await seed();
 
     const foreign = transactions.executeInTransaction({}, () =>
-      service.record(actorIn(acting, 'CUSTOMER_ORDERS:CREATE'), {
+      recordCommand.execute(actorIn(acting, 'CUSTOMER_ORDERS:CREATE'), {
         itemId: elsewhere.itemId,
         customerName: 'Test Customer North',
         quantity: 100,
@@ -270,7 +285,7 @@ describeIntegration('CustomerOrderLifecycleService', () => {
     });
 
     const missing = transactions.executeInTransaction({}, () =>
-      service.record(actorIn(acting, 'CUSTOMER_ORDERS:CREATE'), {
+      recordCommand.execute(actorIn(acting, 'CUSTOMER_ORDERS:CREATE'), {
         itemId: randomUUID(),
         customerName: 'Test Customer North',
         quantity: 100,
@@ -298,7 +313,7 @@ describeIntegration('CustomerOrderLifecycleService', () => {
     const before = await readOrder(customerOrderId);
 
     const rejection = transactions.executeInTransaction({}, () =>
-      service.amend(
+      amendCommand.execute(
         actorIn(seeded, 'CUSTOMER_ORDERS:UPDATE'),
         customerOrderId,
         { quantity: 60 },
@@ -325,7 +340,7 @@ describeIntegration('CustomerOrderLifecycleService', () => {
     await seedAllocation(seeded, customerOrderId, 80);
 
     const amended = await transactions.executeInTransaction({}, () =>
-      service.amend(
+      amendCommand.execute(
         actorIn(seeded, 'CUSTOMER_ORDERS:UPDATE'),
         customerOrderId,
         { quantity: 100 },
@@ -356,7 +371,7 @@ describeIntegration('CustomerOrderLifecycleService', () => {
     await seedAllocation(seeded, customerOrderId, 80);
 
     await transactions.executeInTransaction({}, () =>
-      service.amend(
+      amendCommand.execute(
         actorIn(seeded, 'CUSTOMER_ORDERS:UPDATE'),
         customerOrderId,
         { quantity: 80 },
@@ -382,7 +397,7 @@ describeIntegration('CustomerOrderLifecycleService', () => {
       .findOneBy({ customerOrderId });
 
     const cancelled = await transactions.executeInTransaction({}, () =>
-      service.cancel(
+      cancelCommand.execute(
         actorIn(seeded, 'CUSTOMER_ORDERS:CANCEL'),
         customerOrderId,
         { cancellationReason: 'The customer no longer needs the goods' },
@@ -414,7 +429,7 @@ describeIntegration('CustomerOrderLifecycleService', () => {
 
     await expect(
       transactions.executeInTransaction({}, () =>
-        service.amend(
+        amendCommand.execute(
           actorIn(seeded, 'CUSTOMER_ORDERS:UPDATE'),
           customerOrderId,
           { quantity: 120 },
@@ -424,7 +439,7 @@ describeIntegration('CustomerOrderLifecycleService', () => {
 
     await expect(
       transactions.executeInTransaction({}, () =>
-        service.cancel(
+        cancelCommand.execute(
           actorIn(seeded, 'CUSTOMER_ORDERS:CANCEL'),
           customerOrderId,
           { cancellationReason: 'Again' },

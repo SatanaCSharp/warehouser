@@ -2,7 +2,6 @@ import { randomUUID } from 'node:crypto';
 
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { SignInCommand } from 'auth/usecases/commands/sign-in.command';
-import type { PinoLogger } from 'nestjs-pino';
 import { accessCurrentUser } from 'shared/access/access-current-user';
 import dataSource from 'shared/database/data-source';
 import { DbTransactionService } from 'shared/database/db-transaction.service';
@@ -72,7 +71,6 @@ describeIntegration('CreateMemberCommand', () => {
   const authenticationRepository = new AuthenticationRepository(dataSource);
 
   let newMemberId = uuid('400000000001');
-  const logInfo = jest.fn();
 
   const createCommand = (): CreateMemberCommand =>
     new CreateMemberCommand(
@@ -90,7 +88,6 @@ describeIntegration('CreateMemberCommand', () => {
         identityId: () => newMemberId,
         now: () => now,
       },
-      { info: logInfo } as unknown as PinoLogger,
     );
 
   // Fast-but-real scrypt parameters, matching the pattern already used by
@@ -118,7 +115,6 @@ describeIntegration('CreateMemberCommand', () => {
         identityId: () => newMemberId,
         now: () => now,
       },
-      { info: logInfo } as unknown as PinoLogger,
     );
 
   beforeAll(async () => {
@@ -137,7 +133,6 @@ describeIntegration('CreateMemberCommand', () => {
 
   beforeEach(() => {
     newMemberId = randomUUID();
-    logInfo.mockClear();
   });
 
   afterEach(async () => {
@@ -359,18 +354,6 @@ describeIntegration('CreateMemberCommand', () => {
       [newMemberId],
     );
     expect(sessions).toEqual([{ count: '0' }]);
-
-    // sad.md §8: a structured, per-action Pino timing log — no credential
-    // fields.
-    expect(logInfo).toHaveBeenCalledWith(
-      expect.objectContaining({
-        operation: 'users.create_member',
-        outcomeCode: 'success',
-        durationMs: expect.any(Number),
-        userId: actorId,
-        warehouseId: warehouseAId,
-      }),
-    );
   });
 
   it('AC-24 (T27 DoD): the created member belongs to the Workspace that owns the Warehouse they were created in, and to no other', async () => {
