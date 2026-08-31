@@ -6,6 +6,15 @@ packages:
 # for every supported database; auto-installing them would pull MongoDB back into this PostgreSQL-only repo.
 autoInstallPeers: false
 
+# `@heroui/react@3.2.4` imports `@internationalized/date` from its own `utils/calendar.js` (every
+# Calendar / DateField / DatePicker path) without declaring it, so pnpm's strict layout cannot
+# resolve it. Declaring the missing peer rather than a dependency keeps one instance of the package:
+# it resolves from `apps/web`, which is the same copy `react-aria-components` gets.
+packageExtensions:
+  "@heroui/react":
+    peerDependencies:
+      "@internationalized/date": "^3.12.3"
+
 overrides:
   "@types/node": "catalog:"
   "brace-expansion@1.1.15": "1.1.16"

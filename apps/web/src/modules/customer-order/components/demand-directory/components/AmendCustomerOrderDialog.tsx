@@ -1,9 +1,10 @@
 import { Alert } from '@heroui/react';
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import { Conditional } from 'shared/components/Conditional';
+import { FormDateField } from 'shared/components/FormDateField';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormTextField } from 'shared/components/FormTextField';
 
@@ -39,6 +40,7 @@ export const AmendCustomerOrderDialog = ({
     defaultValues: { quantity: order.quantity, neededBy: order.neededBy },
   });
   const {
+    control,
     formState: { errors, isSubmitting },
     register,
   } = form;
@@ -78,16 +80,23 @@ export const AmendCustomerOrderDialog = ({
         isDisabled={isSubmitting}
         {...register('quantity', { required: true, valueAsNumber: true })}
       />
-      <FormTextField
-        isRequired
-        validationBehavior="aria"
-        type="date"
-        isInvalid={Boolean(errors.neededBy)}
-        errorMessage={errors.neededBy?.message}
-        defaultValue={order.neededBy}
-        label={t('dialogs.amend.neededByLabel')}
-        isDisabled={isSubmitting}
-        {...register('neededBy', { required: true })}
+      <Controller
+        control={control}
+        name="neededBy"
+        rules={{ required: true }}
+        render={({ field }) => (
+          <FormDateField
+            isRequired
+            validationBehavior="aria"
+            isInvalid={Boolean(errors.neededBy)}
+            errorMessage={errors.neededBy?.message}
+            label={t('dialogs.amend.neededByLabel')}
+            isDisabled={isSubmitting}
+            value={field.value}
+            onBlur={field.onBlur}
+            onChange={field.onChange}
+          />
+        )}
       />
       <Conditional when={refusalCode !== undefined}>
         <Alert role="alert" status="danger">

@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { ItemPicker } from 'modules/item/components/ItemPicker';
 import { useItems } from 'modules/item/hooks/queries/useItems';
 import { Conditional } from 'shared/components/Conditional';
+import { FormDateField } from 'shared/components/FormDateField';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormTextField } from 'shared/components/FormTextField';
 
@@ -107,15 +108,23 @@ export const RecordCustomerOrderDialog = ({
         isDisabled={isSubmitting}
         {...register('quantity', { required: true, valueAsNumber: true })}
       />
-      <FormTextField
-        isRequired
-        validationBehavior="aria"
-        type="date"
-        isInvalid={Boolean(errors.neededBy)}
-        errorMessage={errors.neededBy?.message}
-        label={t('dialogs.record.neededByLabel')}
-        isDisabled={isSubmitting}
-        {...register('neededBy', { required: true })}
+      <Controller
+        control={control}
+        name="neededBy"
+        rules={{ required: true }}
+        render={({ field }) => (
+          <FormDateField
+            isRequired
+            validationBehavior="aria"
+            isInvalid={Boolean(errors.neededBy)}
+            errorMessage={errors.neededBy?.message}
+            label={t('dialogs.record.neededByLabel')}
+            isDisabled={isSubmitting}
+            value={field.value}
+            onBlur={field.onBlur}
+            onChange={field.onChange}
+          />
+        )}
       />
       <Conditional when={refusalCode !== undefined}>
         <Alert role="alert" status="danger">

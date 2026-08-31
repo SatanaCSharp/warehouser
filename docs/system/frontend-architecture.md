@@ -11,17 +11,22 @@ The bootstrap chain is:
 main.tsx
   StrictMode
     Redux Provider
-      App
-        TanStack RouterProvider
-          root route
-            RootLayout
-              matched module page
+      LocaleProvider
+        App
+          TanStack RouterProvider
+            root route
+              RootLayout
+                matched module page
 ```
 
-Provider order is intentional. Components rendered by the router must have access to Redux. HeroUI
-v3 needs no provider — its components read theme state from CSS variables (`styles/global.css`)
-rather than React context. Router guards do not use React hooks; the router receives the same RTK
-store in its context and reads it through selectors.
+Provider order is intentional. Components rendered by the router must have access to Redux.
+`LocaleProvider` (`shared/components/LocaleProvider.tsx`) publishes i18next's resolved language to
+React Aria's `I18nProvider`, which every HeroUI v3 component that formats or parses a value reads
+through `useLocale` — a date field's segment order and a calendar's weekday names among them.
+Without it React Aria would fall back to `navigator.language` and disagree with the language the
+rest of the page is rendered in. HeroUI v3 needs no provider of its own — its components read theme
+state from CSS variables (`styles/global.css`) rather than React context. Router guards do not use
+React hooks; the router receives the same RTK store in its context and reads it through selectors.
 
 Routes are registered manually in `src/router.ts`. Do not introduce file-route generation without
 an accepted system decision and migration plan.

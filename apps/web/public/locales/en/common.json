@@ -7,6 +7,13 @@
     "signIn": "Sign in",
     "createAccount": "Create account"
   },
+  "dateField": {
+    "calendarLabel": "Choose a date",
+    "openCalendar": "Open calendar",
+    "chooseYearAndMonth": "Choose year and month",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month"
+  },
   "nav": {
     "label": "Primary navigation",
     "dashboard": "Dashboard",

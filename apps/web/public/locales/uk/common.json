@@ -7,6 +7,13 @@
     "signIn": "Увійти",
     "createAccount": "Створити обліковий запис"
   },
+  "dateField": {
+    "calendarLabel": "Оберіть дату",
+    "openCalendar": "Відкрити календар",
+    "chooseYearAndMonth": "Оберіть рік і місяць",
+    "previousMonth": "Попередній місяць",
+    "nextMonth": "Наступний місяць"
+  },
   "nav": {
     "label": "Основна навігація",
     "dashboard": "Дашборд",
