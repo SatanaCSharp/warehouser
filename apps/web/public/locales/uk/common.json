@@ -1,7 +1,11 @@
 {
   "auth": {
     "signOut": "Вийти",
-    "signingOut": "Виходимо…"
+    "signingOut": "Виходимо…",
+    "signInPrompt": "Вже маєте обліковий запис?",
+    "signUpPrompt": "Уперше у Warehouser?",
+    "signIn": "Увійти",
+    "createAccount": "Створити обліковий запис"
   },
   "nav": {
     "label": "Основна навігація",

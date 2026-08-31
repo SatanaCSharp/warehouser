@@ -7,6 +7,7 @@ import {
   useRevisePurchaseDraftLineLinkMutation,
   useRevisePurchaseDraftLineMutation,
 } from 'modules/purchase-draft/api/purchase-draft-api';
+import { AddPurchaseDraftLineAction } from 'modules/purchase-draft/components/AddPurchaseDraftLineAction';
 import { DriftSignal } from 'modules/purchase-draft/components/DriftSignal';
 import { PurchaseDraftTransitions } from 'modules/purchase-draft/components/purchase-draft-transitions/PurchaseDraftTransitions';
 import { PurchaseDraftLineEditor } from 'modules/purchase-draft/components/PurchaseDraftLineEditor';
@@ -131,28 +132,37 @@ const PurchaseDraftLineList = ({
         purchaseDraftLineLinkId,
       });
     };
-  // Adding a line and adding a new link are left as seams here: there is no
-  // Item picker wiring for a brand-new line yet, and no Customer Order
-  // picker exists on `modules/customer-order`'s declared surface to reach
-  // through for linking to a further order (see the handover). Editing an
-  // existing line's fields and every existing link's quantity/removal is
-  // wired below.
+  // Adding a *link* to a further Customer Order is still a seam: no Customer
+  // Order picker exists on `modules/customer-order`'s declared surface to reach
+  // through for it. Adding a line is no longer one — `AddPurchaseDraftLineAction`
+  // below reaches `modules/item`'s already-declared `ItemPicker` the way
+  // `RecordCustomerOrderDialog` does. Editing an existing line's fields and
+  // every existing link's quantity/removal is wired above.
 
   return (
-    <ul className="mt-4 flex flex-col gap-4">
-      {draft.lines.map((line) => (
-        <PurchaseDraftLineEditor
-          key={line.id}
-          isFrozen={isFrozen}
-          line={line}
-          packagingTypes={packagingTypes}
-          onRemoveLine={onRemoveLine(line.id)}
-          onRemoveLink={onRemoveLink(line.id)}
-          onReviseLine={onReviseLine(line.id)}
-          onReviseLink={onReviseLink(line.id)}
-        />
-      ))}
-    </ul>
+    <>
+      <ul className="mt-4 flex flex-col gap-4">
+        {draft.lines.map((line) => (
+          <PurchaseDraftLineEditor
+            key={line.id}
+            isFrozen={isFrozen}
+            line={line}
+            packagingTypes={packagingTypes}
+            onRemoveLine={onRemoveLine(line.id)}
+            onRemoveLink={onRemoveLink(line.id)}
+            onReviseLine={onReviseLine(line.id)}
+            onReviseLink={onReviseLink(line.id)}
+          />
+        ))}
+      </ul>
+      {/* A frozen draft records what the supplier was told, so it is never
+          given a line after the fact (AC-15). */}
+      <Conditional when={!isFrozen}>
+        <div className="mt-4">
+          <AddPurchaseDraftLineAction purchaseDraftId={draft.id} />
+        </div>
+      </Conditional>
+    </>
   );
 };
 

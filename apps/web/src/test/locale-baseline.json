@@ -120,7 +120,11 @@
       "roles.search": "Search roles"
     },
     "common": {
+      "auth.createAccount": "Create account",
+      "auth.signIn": "Sign in",
+      "auth.signInPrompt": "Already have an account?",
       "auth.signOut": "Sign out",
+      "auth.signUpPrompt": "New to Warehouser?",
       "auth.signingOut": "Signing out…",
       "language.english": "English",
       "language.label": "Change language",
@@ -404,7 +408,11 @@
       "transitions.arrival.refusal.alreadyConfirmed": "This draft has already had its arrival confirmed.",
       "transitions.arrival.refusal.invalidState": "This draft is no longer waiting for an arrival.",
       "transitions.arrival.refusal.unknown": "The arrival was not recorded.",
-      "transitions.arrival.validation.invalidQuantity": "Enter the whole number of units that arrived."
+      "transitions.arrival.validation.invalidQuantity": "Enter the whole number of units that arrived.",
+      "dialogs.addLine.title": "Add line",
+      "dialogs.addLine.cancel": "Cancel",
+      "dialogs.addLine.submit": "Add line",
+      "dialogs.addLine.quantityLabel": "Ordered quantity"
     },
     "sign-in": {
       "accessibility": "Labels stay visible · field errors are associated and announced · reduced motion uses no animated transitions",
@@ -847,7 +855,11 @@
       "roles.search": "Пошук ролей"
     },
     "common": {
+      "auth.createAccount": "Створити обліковий запис",
+      "auth.signIn": "Увійти",
+      "auth.signInPrompt": "Вже маєте обліковий запис?",
       "auth.signOut": "Вийти",
+      "auth.signUpPrompt": "Уперше у Warehouser?",
       "auth.signingOut": "Виходимо…",
       "language.english": "English",
       "language.label": "Змінити мову",
@@ -1135,7 +1147,11 @@
       "transitions.arrival.refusal.alreadyConfirmed": "Для цієї чернетки прибуття вже підтверджено.",
       "transitions.arrival.refusal.invalidState": "Ця чернетка більше не очікує на прибуття.",
       "transitions.arrival.refusal.unknown": "Прибуття не записано.",
-      "transitions.arrival.validation.invalidQuantity": "Введіть цілу кількість одиниць, що прибули."
+      "transitions.arrival.validation.invalidQuantity": "Введіть цілу кількість одиниць, що прибули.",
+      "dialogs.addLine.title": "Додати рядок",
+      "dialogs.addLine.cancel": "Скасувати",
+      "dialogs.addLine.submit": "Додати рядок",
+      "dialogs.addLine.quantityLabel": "Замовлена кількість"
     },
     "sign-in": {
       "accessibility": "Мітки залишаються видимими · помилки полів пов’язані й озвучуються · без зайвої анімації",

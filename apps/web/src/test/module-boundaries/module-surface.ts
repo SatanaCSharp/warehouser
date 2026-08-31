@@ -78,9 +78,11 @@ export const MODULE_SURFACE = {
   item: [
     // router.ts
     'modules/item/route',
-    // modules/customer-order/components/demand-directory/components/RecordCustomerOrderDialog.tsx
+    // modules/customer-order/components/demand-directory/components/RecordCustomerOrderDialog.tsx,
+    // modules/purchase-draft/components/AddPurchaseDraftLineDialog.tsx
     'modules/item/components/ItemPicker',
-    // modules/customer-order/components/demand-directory/components/RecordCustomerOrderDialog.tsx
+    // modules/customer-order/components/demand-directory/components/RecordCustomerOrderDialog.tsx,
+    // modules/purchase-draft/components/AddPurchaseDraftLineDialog.tsx
     'modules/item/hooks/queries/useItems',
   ],
   'purchase-draft': [

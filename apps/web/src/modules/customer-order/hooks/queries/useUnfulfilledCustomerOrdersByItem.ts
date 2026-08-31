@@ -1,4 +1,5 @@
 import groupBy from 'lodash/groupBy';
+import { useMemo } from 'react';
 
 import { useListCustomerOrdersQuery } from 'modules/customer-order/api/customer-order-api';
 import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
@@ -32,8 +33,17 @@ export const useUnfulfilledCustomerOrdersByItem =
       { skip: warehouseId === undefined },
     );
 
-    return groupBy(
-      (currentData ?? []).filter((order) => order.state === 'unfulfilled'),
-      (order) => order.itemId,
+    // Memoized on the response, not recomputed per render: `DemandTable` keys a
+    // React Aria row's cached element tree on the record it was built from, so a
+    // grouping that changed identity every render would rebuild every row every
+    // render. Stable here means the collection rebuilds exactly when the orders
+    // themselves change — which is the moment a Demand Line gains its chevron.
+    return useMemo(
+      () =>
+        groupBy(
+          (currentData ?? []).filter((order) => order.state === 'unfulfilled'),
+          (order) => order.itemId,
+        ),
+      [currentData],
     );
   };

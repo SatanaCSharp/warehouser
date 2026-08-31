@@ -1,5 +1,5 @@
 import { Table } from '@heroui/react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { CoverageChips } from 'modules/customer-order/components/demand-directory/components/CoverageChips';
@@ -16,6 +16,9 @@ import type {
 } from '@warehouser/contracts/customer-orders';
 import type { CustomerOrderActionHandlers } from 'modules/customer-order/hooks/projections/useCustomerOrderActions';
 import type { ReactElement } from 'react';
+
+/** A Demand Line paired with the Customer Orders it expands into. */
+type DemandRow = DemandLine & { customerOrders: CustomerOrder[] };
 
 export type DemandTableProps = CustomerOrderActionHandlers & {
   demandLines: DemandLine[];
@@ -45,6 +48,15 @@ export type DemandTableProps = CustomerOrderActionHandlers & {
  * had when the row was first built. So every cell that reads translations, the
  * actor's Permissions, or a query is its own component, and this file resolves
  * only what a row is keyed by: the orders each line expands into.
+ *
+ * Those orders are carried **on the record** rather than read from a map the
+ * row renderer closes over, and that is the whole reason the chevron appears.
+ * The Demand Lines arrive from the route loader while the Customer Orders are
+ * still in flight, so a renderer closing over the map built its rows against an
+ * empty one — no children, therefore no chevron — and the collection, keyed on
+ * records that never changed, had no reason to rebuild when the orders landed.
+ * Pairing each line with its orders makes the record change when they arrive,
+ * which is what rebuilds the row and reveals its expansion.
  */
 export const DemandTable = ({
   demandLines,
@@ -55,6 +67,15 @@ export const DemandTable = ({
   const { t } = useTranslation('customer-order');
   const [expandedKeys, setExpandedKeys] = useState<Selection>(() => new Set());
   const customerOrdersByItem = useUnfulfilledCustomerOrdersByItem();
+
+  const demandRows: DemandRow[] = useMemo(
+    () =>
+      demandLines.map((line) => ({
+        ...line,
+        customerOrders: customerOrdersByItem[line.itemId] ?? [],
+      })),
+    [customerOrdersByItem, demandLines],
+  );
 
   const onExpandedChange = (keys: Selection): void => setExpandedKeys(keys);
 
@@ -80,7 +101,7 @@ export const DemandTable = ({
     </Table.Row>
   );
 
-  const renderDemandRow = (line: DemandLine): ReactElement => (
+  const renderDemandRow = (line: DemandRow): ReactElement => (
     <Table.Row id={line.itemId} key={line.itemId} textValue={line.sku}>
       <Table.Cell textValue={line.sku}>
         {({ hasChildItems, isExpanded, isTreeColumn }) => (
@@ -106,7 +127,7 @@ export const DemandTable = ({
           than duplicating that trigger per row; the sub-rows below carry the
           per-order menu. */}
       <Table.Cell />
-      <Table.Collection items={customerOrdersByItem[line.itemId] ?? []}>
+      <Table.Collection items={line.customerOrders}>
         {renderCustomerOrderRow}
       </Table.Collection>
     </Table.Row>
@@ -139,7 +160,7 @@ export const DemandTable = ({
               <span className="sr-only">{t('demand.table.actions')}</span>
             </Table.Column>
           </Table.Header>
-          <Table.Body items={demandLines}>{renderDemandRow}</Table.Body>
+          <Table.Body items={demandRows}>{renderDemandRow}</Table.Body>
         </Table.Content>
       </Table.ScrollContainer>
     </Table>

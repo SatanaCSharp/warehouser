@@ -1,7 +1,11 @@
 {
   "auth": {
     "signOut": "Sign out",
-    "signingOut": "Signing out…"
+    "signingOut": "Signing out…",
+    "signInPrompt": "Already have an account?",
+    "signUpPrompt": "New to Warehouser?",
+    "signIn": "Sign in",
+    "createAccount": "Create account"
   },
   "nav": {
     "label": "Primary navigation",

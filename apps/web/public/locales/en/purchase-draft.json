@@ -114,5 +114,13 @@
         "invalidQuantity": "Enter the whole number of units that arrived."
       }
     }
+  },
+  "dialogs": {
+    "addLine": {
+      "title": "Add line",
+      "cancel": "Cancel",
+      "submit": "Add line",
+      "quantityLabel": "Ordered quantity"
+    }
   }
 }

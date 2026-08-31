@@ -35,8 +35,18 @@ export const RootLayout = (): ReactElement => {
   // renders exactly when there is a list to open. Both components read the same
   // predicate, so no context can offer a control that opens an empty drawer.
   const hasNavigationList = useEnteredContext().kind !== 'none';
-  const oppositeRoute =
-    pathname === ROUTES.SIGN_UP ? ROUTES.LOGIN : ROUTES.SIGN_UP;
+  const isSignUpRoute = pathname === ROUTES.SIGN_UP;
+  const oppositeRoute = isSignUpRoute ? ROUTES.LOGIN : ROUTES.SIGN_UP;
+  // Both halves of the cross-link are translated copy, so they read from the
+  // `common` namespace like every other string this header renders. Picking
+  // which key applies is a ternary over a *value*, which
+  // `writing-web-components.md` §6 leaves untouched.
+  const oppositePrompt = isSignUpRoute
+    ? t('auth.signInPrompt')
+    : t('auth.signUpPrompt');
+  const oppositeLabel = isSignUpRoute
+    ? t('auth.signIn')
+    : t('auth.createAccount');
 
   const onOpenDrawer = (): void => setIsDrawerOpen(true);
 
@@ -52,16 +62,18 @@ export const RootLayout = (): ReactElement => {
               Warehouser
             </RouterLink>
             <div className="flex items-center gap-3 text-sm text-muted">
-              <span className="hidden sm:inline">
-                {pathname === ROUTES.SIGN_UP
-                  ? 'Already have an account?'
-                  : 'New to Warehouser?'}
-              </span>
+              {/* The language is chosen before signing in, not only after: the
+                  sign-in and sign-up copy is translated, so an actor who cannot
+                  read the default language must be able to switch while they are
+                  still on these two routes. It leads the cross-link because the
+                  actor picks the language they read the prompt in first. */}
+              <LanguageSelector />
+              <span className="hidden sm:inline">{oppositePrompt}</span>
               <RouterLink
                 to={oppositeRoute}
                 className={buttonVariants({ variant: 'outline' })}
               >
-                {pathname === ROUTES.SIGN_UP ? 'Sign in' : 'Create account'}
+                {oppositeLabel}
               </RouterLink>
             </div>
           </header>

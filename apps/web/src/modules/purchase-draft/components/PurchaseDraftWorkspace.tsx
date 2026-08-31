@@ -2,6 +2,7 @@ import { Tabs } from '@heroui/react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { CreatePurchaseDraftAction } from 'modules/purchase-draft/components/CreatePurchaseDraftAction';
 import { PurchaseDraftDetailPane } from 'modules/purchase-draft/components/PurchaseDraftDetailPane';
 import { PurchaseDraftList } from 'modules/purchase-draft/components/PurchaseDraftList';
 import { usePurchaseDraft } from 'modules/purchase-draft/hooks/queries/usePurchaseDraft';
@@ -62,9 +63,12 @@ export const PurchaseDraftWorkspace = (): ReactElement => {
 
   return (
     <main className="mx-auto max-w-[1440px] px-6 py-8">
-      <h1 className="text-3xl font-semibold text-foreground">
-        {t('workspace.heading')}
-      </h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-3xl font-semibold text-foreground">
+          {t('workspace.heading')}
+        </h1>
+        <CreatePurchaseDraftAction />
+      </div>
 
       <Tabs className="mt-6" selectedKey={tab} onSelectionChange={onSelectTab}>
         <Tabs.ListContainer>
