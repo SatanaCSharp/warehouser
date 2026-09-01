@@ -18,9 +18,6 @@ import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-memb
 import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 import { GlobalHttpExceptionFilter } from 'shared/errors/global-http-exception.filter';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 const now = new Date('2026-08-06T12:00:00.000Z');
 
 const workspaceId = '00000000-0000-4000-8000-000000000100';
@@ -51,7 +48,7 @@ const USERS_DELETE = 'USERS:DELETE';
 // documented HTTP status + code envelope on the real wire (finding #1's
 // dead-mapping bug shipped invisibly for exactly this reason).
 // eslint-disable-next-line max-lines-per-function, max-statements -- integration suite setup is inherently long
-describeIntegration('warehouse-users HTTP contract', () => {
+describe('warehouse-users HTTP contract', () => {
   let app: INestApplication;
   let baseUrl: string;
 

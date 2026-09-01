@@ -14,6 +14,21 @@
     "transferManager": "Керування складом передано.",
     "updateRole": "Роль оновлено."
   },
+  "item": {
+    "createItem": "Товар додано · {{sku}} · {{description}}",
+    "updateItem": "Товар виправлено · {{sku}} · {{description}}",
+    "deactivateItem": "Деактивовано · {{sku}} · {{description}}",
+    "reactivateItem": "Реактивовано · {{sku}} · {{description}}",
+    "adjustOnHandQuantity": "В наявності встановлено {{quantity}} · {{description}}"
+  },
+  "customer-order": {
+    "recordCustomerOrder": "Попит записано · {{quantity}} для {{customer}}, потрібно до {{date}}",
+    "amendCustomerOrder": "Замовлення змінено · {{customer}}",
+    "amendCustomerOrderQuantity": "Замовлення змінено · {{customer}} тепер чекає на {{quantity}}",
+    "amendCustomerOrderNeededBy": "Замовлення змінено · {{customer}} тепер потребує до {{date}}",
+    "amendCustomerOrderBoth": "Замовлення змінено · {{customer}} тепер чекає на {{quantity}} до {{date}}",
+    "cancelCustomerOrder": "Замовлення скасовано · {{customer}} · {{reason}}"
+  },
   "workspace": {
     "renameWorkspace": "Робочий простір названо.",
     "createWarehouse": "Склад додано.",
@@ -29,5 +44,19 @@
     "removeWorkspaceMember": "Учасника робочого простору вилучено.",
     "assignWorkspaceRole": "Роль робочого простору змінено.",
     "transferWorkspaceOwner": "Власність над робочим простором передано."
+  },
+  "purchase-draft": {
+    "createPurchaseDraft": "Чернетку закупівлі створено.",
+    "revisePurchaseDraft": "Очікувану дату прибуття збережено.",
+    "addPurchaseDraftLine": "Рядок додано.",
+    "revisePurchaseDraftLine": "Рядок збережено.",
+    "removePurchaseDraftLine": "Рядок видалено.",
+    "addPurchaseDraftLineLink": "Замовлення клієнта пов'язано.",
+    "revisePurchaseDraftLineLink": "Заявлену кількість збережено.",
+    "removePurchaseDraftLineLink": "Зв'язок видалено.",
+    "readyPurchaseDraft": "Чернетка закупівлі готова до замовлення.",
+    "confirmPurchaseDraftArrival": "Прибуття підтверджено, чернетку закрито.",
+    "closePurchaseDraft": "Чернетку закупівлі закрито: {{reason}}",
+    "discardPurchaseDraft": "Чернетку закупівлі відхилено."
   }
 }

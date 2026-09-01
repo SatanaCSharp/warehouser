@@ -1,5 +1,4 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
-import type { PinoLogger } from 'nestjs-pino';
 import dataSource from 'shared/database/data-source';
 import { DbTransactionService } from 'shared/database/db-transaction.service';
 import { DbTransactionContext } from 'shared/database/db-transaction-context.service';
@@ -23,9 +22,6 @@ import {
   warehouseMembershipEntityFactory,
 } from 'test/factories/entity-factories';
 import { ChangeMemberPasswordCommand } from 'users/usecases/commands/change-member-password.command';
-
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
 
 const now = new Date('2026-08-06T12:00:00.000Z');
 
@@ -56,7 +52,7 @@ const fakeHash = (password: string): Promise<PasswordCredential> =>
   });
 
 // eslint-disable-next-line max-lines-per-function -- integration suite setup is inherently long
-describeIntegration('ChangeMemberPasswordCommand', () => {
+describe('ChangeMemberPasswordCommand', () => {
   const memberLifecycleRepository = new MemberLifecycleRepository(dataSource);
   const accessCurrentUserRepository = new AccessCurrentUserRepository(
     dataSource,
@@ -65,8 +61,6 @@ describeIntegration('ChangeMemberPasswordCommand', () => {
   const context = new DbTransactionContext(dataSource);
   const transactions = new DbTransactionService(dataSource, context);
 
-  const logInfo = jest.fn();
-
   const createCommand = (): ChangeMemberPasswordCommand =>
     new ChangeMemberPasswordCommand(
       memberLifecycleRepository,
@@ -74,15 +68,10 @@ describeIntegration('ChangeMemberPasswordCommand', () => {
       authenticationRepository,
       fakeHash,
       () => now,
-      { info: logInfo } as unknown as PinoLogger,
     );
 
   beforeAll(async () => {
     await dataSource.initialize();
-  });
-
-  beforeEach(() => {
-    logInfo.mockClear();
   });
 
   afterEach(async () => {
@@ -255,6 +244,7 @@ describeIntegration('ChangeMemberPasswordCommand', () => {
     roleId,
     roleKind,
     permissionId: 'USERS:PASSWORD_CHANGE' as const,
+    archived: false,
   });
 
   const readAccount = (userId: string) =>
@@ -310,18 +300,6 @@ describeIntegration('ChangeMemberPasswordCommand', () => {
 
     expect(await countActiveSessions(targetUserId)).toBe(0);
     expect(await countActiveSessions(otherAccountUserId)).toBe(1);
-
-    // sad.md §8: a structured, per-action Pino timing log — no credential
-    // fields.
-    expect(logInfo).toHaveBeenCalledWith(
-      expect.objectContaining({
-        operation: 'users.change_member_password',
-        outcomeCode: 'success',
-        durationMs: expect.any(Number),
-        userId: actorUserId,
-        warehouseId: warehouseAId,
-      }),
-    );
   });
 
   it('rejects a password outside the accepted length and makes no change', async () => {

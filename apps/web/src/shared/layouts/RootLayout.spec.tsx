@@ -167,7 +167,7 @@ describe('RootLayout', () => {
     vi.unstubAllGlobals();
   });
 
-  it('renders the header-only auth-route shell on /login with no sidebar, footer, or language selector', async () => {
+  it('renders the header-only auth-route shell on /login with no sidebar or footer', async () => {
     renderAt(ROUTES.LOGIN, makeStore());
 
     expect(
@@ -178,9 +178,29 @@ describe('RootLayout', () => {
     ).toBeInTheDocument();
     expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
     expect(screen.queryByRole('contentinfo')).not.toBeInTheDocument();
+  });
+
+  // The auth-route shell used to withhold the language selector deliberately.
+  // That left the one place the choice cannot be reached any other way — the
+  // sign-in and sign-up copy is translated, but the selector that changes it
+  // only appeared once the actor was already signed in.
+  it('offers the language selector on the auth routes, where the choice cannot be reached any other way', async () => {
+    renderAt(ROUTES.LOGIN, makeStore());
+
     expect(
-      screen.queryByRole('button', { name: /change language/iu }),
-    ).not.toBeInTheDocument();
+      await screen.findByRole('button', { name: /change language/iu }),
+    ).toBeInTheDocument();
+  });
+
+  it('translates both halves of the auth-route cross-link rather than hard-coding English', async () => {
+    renderAt(ROUTES.SIGN_UP, makeStore());
+
+    // `common.auth.signInPrompt` / `common.auth.signIn`, not the literals the
+    // header used to render regardless of the active language.
+    expect(
+      await screen.findByText('Already have an account?'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Sign in' })).toBeInTheDocument();
   });
 
   it('renders no chrome for the chrome-less, not-authenticated branch', async () => {

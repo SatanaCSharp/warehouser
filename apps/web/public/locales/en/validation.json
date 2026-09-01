@@ -1,4 +1,48 @@
 {
+  "itemAdjustmentReason": {
+    "required": "State a reason. Every change to on-hand quantity is recorded with its reason.",
+    "tooSmall": "State a reason. Every change to on-hand quantity is recorded with its reason.",
+    "tooBig": "This reason is longer than this warehouse accepts.",
+    "notMultipleOf": "State a reason this warehouse accepts.",
+    "invalid": "State a reason this warehouse accepts."
+  },
+  "itemDescription": {
+    "required": "Enter a description.",
+    "tooSmall": "Enter a description.",
+    "tooBig": "This description is longer than this warehouse accepts.",
+    "notMultipleOf": "Enter a description this warehouse accepts.",
+    "invalid": "Enter a description this warehouse accepts."
+  },
+  "itemOnHandCount": {
+    "required": "Enter the count you have just made.",
+    "tooSmall": "On-hand quantity is a whole number that is never negative.",
+    "tooBig": "This count is larger than this warehouse accepts.",
+    "notMultipleOf": "On-hand quantity is a whole number that is never negative.",
+    "invalid": "On-hand quantity is a whole number that is never negative.",
+    "nonNegativeInteger": "On-hand quantity is a whole number that is never negative."
+  },
+  "itemSku": {
+    "required": "Enter a SKU.",
+    "tooSmall": "Enter a SKU.",
+    "tooBig": "This SKU is longer than this warehouse accepts.",
+    "notMultipleOf": "Enter a SKU this warehouse accepts.",
+    "invalid": "Enter a SKU this warehouse accepts.",
+    "skuTaken": "{{sku}} already names “{{description}}” in this warehouse. A SKU identifies at most one item here.",
+    "skuTakenUnnamed": "{{sku}} already names another item in this warehouse. A SKU identifies at most one item here.",
+    "skuFixed": {
+      "both": "{{sku}} is named by {{orders}} and {{lines}}, so its SKU is fixed for the life of this item.",
+      "orders": "{{sku}} is named by {{orders}}, so its SKU is fixed for the life of this item.",
+      "lines": "{{sku}} is named by {{lines}}, so its SKU is fixed for the life of this item.",
+      "none": "The SKU of {{sku}} is fixed for the life of this item."
+    }
+  },
+  "itemUnitOfMeasure": {
+    "required": "State the unit its quantities are counted in.",
+    "tooSmall": "State the unit its quantities are counted in.",
+    "tooBig": "A unit of measure may not exceed 32 characters.",
+    "notMultipleOf": "State a unit this warehouse accepts.",
+    "invalid": "State a unit this warehouse accepts."
+  },
   "email": {
     "invalid": "Enter a valid email address",
     "required": "Enter your email address."
@@ -25,5 +69,114 @@
     "required": "Enter a workspace role name.",
     "server": "Check the workspace role name and try again.",
     "unsupportedCharacter": "Workspace role name contains an unsupported character."
+  },
+  "purchaseDraftLineItem": {
+    "required": "Choose the item this line orders.",
+    "invalid": "Choose the item this line orders.",
+    "tooSmall": "Choose the item this line orders.",
+    "tooBig": "Choose the item this line orders.",
+    "notMultipleOf": "Choose the item this line orders.",
+    "unavailable": "Only active items of this warehouse can be ordered on its drafts."
+  },
+  "purchaseDraftLineQuantity": {
+    "required": "Enter the quantity to order.",
+    "invalid": "A whole number greater than zero.",
+    "tooSmall": "A whole number greater than zero.",
+    "tooBig": "That quantity is larger than this warehouse records.",
+    "notMultipleOf": "A whole number greater than zero.",
+    "frozen": "This draft is frozen and its quantities can no longer be changed."
+  },
+  "purchaseDraftLinePackaging": {
+    "required": "Choose how the goods must arrive.",
+    "invalid": "Choose a packaging type the catalogue offers.",
+    "tooSmall": "Choose a packaging type the catalogue offers.",
+    "tooBig": "Choose a packaging type the catalogue offers.",
+    "notMultipleOf": "Choose a packaging type the catalogue offers.",
+    "unknown": "That packaging type is not one the catalogue offers."
+  },
+  "purchaseDraftLinkOrder": {
+    "required": "Choose the customer order this line is for.",
+    "invalid": "Choose the customer order this line is for.",
+    "tooSmall": "Choose the customer order this line is for.",
+    "tooBig": "Choose the customer order this line is for.",
+    "notMultipleOf": "Choose the customer order this line is for.",
+    "unavailable": "A draft, the items it names and the demand it serves all belong to one warehouse. That customer order is not this warehouse's.",
+    "exists": "This line is already linked to that customer order. Change the quantity on the existing link instead.",
+    "frozen": "This draft is frozen, so no further customer order can be linked to it."
+  },
+  "purchaseDraftLinkQuantity": {
+    "required": "Enter how much of this line is intended for them.",
+    "invalid": "A whole number greater than zero.",
+    "tooSmall": "A whole number greater than zero.",
+    "tooBig": "That quantity is larger than this warehouse records.",
+    "notMultipleOf": "A whole number greater than zero."
+  },
+  "purchaseDraftExpectedArrival": {
+    "required": "Enter the date you expect the goods, or leave it blank.",
+    "invalid": "Enter a date as a day, a month and a year.",
+    "tooSmall": "Enter a date as a day, a month and a year.",
+    "tooBig": "Enter a date as a day, a month and a year.",
+    "notMultipleOf": "Enter a date as a day, a month and a year.",
+    "frozen": "This draft is frozen, so its expected arrival date can no longer be changed."
+  },
+  "purchaseDraftClosureReason": {
+    "required": "State why the supplier cannot fulfil the order.",
+    "invalid": "State why the supplier cannot fulfil the order.",
+    "tooSmall": "State why the supplier cannot fulfil the order.",
+    "tooBig": "That reason is longer than this warehouse records.",
+    "notMultipleOf": "State why the supplier cannot fulfil the order.",
+    "invalidState": "This draft is no longer one that can be closed."
+  },
+  "purchaseDraftArrivalQuantity": {
+    "required": "Enter the whole number of units that arrived.",
+    "invalidQuantity": "Enter the whole number of units that arrived.",
+    "invalid": "Enter the whole number of units that arrived.",
+    "tooSmall": "A quantity cannot be negative.",
+    "tooBig": "That quantity is larger than this warehouse records.",
+    "notMultipleOf": "Enter the whole number of units that arrived."
+  },
+  "customerOrderCustomerName": {
+    "required": "Enter the name of the customer waiting for the goods.",
+    "invalid": "Enter the name of the customer waiting for the goods.",
+    "tooSmall": "A customer name cannot be empty once trimmed.",
+    "tooBig": "That customer name is longer than this warehouse records.",
+    "notMultipleOf": "Enter the name of the customer waiting for the goods.",
+    "trimmed_non_empty": "A customer name cannot be empty once trimmed."
+  },
+  "customerOrderItem": {
+    "required": "Choose the item this customer is waiting for.",
+    "invalid": "Choose the item this customer is waiting for.",
+    "tooSmall": "Choose the item this customer is waiting for.",
+    "tooBig": "Choose the item this customer is waiting for.",
+    "notMultipleOf": "Choose the item this customer is waiting for.",
+    "unavailable": "No item with that SKU exists in this warehouse. Only active items of this warehouse are offered."
+  },
+  "customerOrderQuantity": {
+    "required": "Enter how much the customer is waiting for.",
+    "invalid": "A whole number greater than zero.",
+    "tooSmall": "A whole number greater than zero.",
+    "tooBig": "That quantity is larger than this warehouse records.",
+    "notMultipleOf": "A whole number greater than zero.",
+    "positive_integer": "A whole number greater than zero.",
+    "belowAllocated": "This order cannot go below what has already been assigned to this customer from an arrival. Those goods are in the transit zone under their name.",
+    "belowAllocatedKnown": "This order cannot go below {{allocated}}. That much has already been assigned to this customer from an arrival, and those goods are in the transit zone under their name."
+  },
+  "customerOrderNeededBy": {
+    "required": "Enter the date the customer needs the goods by.",
+    "invalid": "Enter a date as a day, a month and a year.",
+    "tooSmall": "Enter a date as a day, a month and a year.",
+    "tooBig": "Enter a date as a day, a month and a year.",
+    "notMultipleOf": "Enter a date as a day, a month and a year.",
+    "calendar_date": "Enter a date as a day, a month and a year.",
+    "inPast": "A date that has not already passed. That date is behind this warehouse's own clock."
+  },
+  "customerOrderCancellationReason": {
+    "required": "State why this order is being cancelled.",
+    "invalid": "State why this order is being cancelled.",
+    "tooSmall": "A reason cannot be empty once trimmed.",
+    "tooBig": "That reason is longer than this warehouse records.",
+    "notMultipleOf": "State why this order is being cancelled.",
+    "trimmed_non_empty": "A reason cannot be empty once trimmed.",
+    "invalidState": "This order has already been fulfilled or cancelled, so it cannot be cancelled again."
   }
 }

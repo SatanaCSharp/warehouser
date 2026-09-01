@@ -14,6 +14,21 @@
     "transferManager": "Warehouse management transferred.",
     "updateRole": "Role updated."
   },
+  "item": {
+    "createItem": "Item added · {{sku}} · {{description}}",
+    "updateItem": "Item corrected · {{sku}} · {{description}}",
+    "deactivateItem": "Deactivated · {{sku}} · {{description}}",
+    "reactivateItem": "Reactivated · {{sku}} · {{description}}",
+    "adjustOnHandQuantity": "On-hand set to {{quantity}} · {{description}}"
+  },
+  "customer-order": {
+    "recordCustomerOrder": "Demand recorded · {{quantity}} for {{customer}}, needed by {{date}}",
+    "amendCustomerOrder": "Order amended · {{customer}}",
+    "amendCustomerOrderQuantity": "Order amended · {{customer}} is now waiting for {{quantity}}",
+    "amendCustomerOrderNeededBy": "Order amended · {{customer}} now needs it by {{date}}",
+    "amendCustomerOrderBoth": "Order amended · {{customer}} is now waiting for {{quantity}} by {{date}}",
+    "cancelCustomerOrder": "Order cancelled · {{customer}} · {{reason}}"
+  },
   "workspace": {
     "renameWorkspace": "Workspace named.",
     "createWarehouse": "Warehouse added.",
@@ -29,5 +44,19 @@
     "removeWorkspaceMember": "Workspace member removed.",
     "assignWorkspaceRole": "Workspace role changed.",
     "transferWorkspaceOwner": "Workspace ownership transferred."
+  },
+  "purchase-draft": {
+    "createPurchaseDraft": "Purchase draft started.",
+    "revisePurchaseDraft": "Expected arrival date saved.",
+    "addPurchaseDraftLine": "Line added.",
+    "revisePurchaseDraftLine": "Line saved.",
+    "removePurchaseDraftLine": "Line removed.",
+    "addPurchaseDraftLineLink": "Customer order linked.",
+    "revisePurchaseDraftLineLink": "Stated quantity saved.",
+    "removePurchaseDraftLineLink": "Link removed.",
+    "readyPurchaseDraft": "Purchase draft is ready for ordering.",
+    "confirmPurchaseDraftArrival": "Arrival confirmed and the draft is closed.",
+    "closePurchaseDraft": "Purchase draft closed: {{reason}}",
+    "discardPurchaseDraft": "Purchase draft discarded."
   }
 }

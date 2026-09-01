@@ -17,9 +17,6 @@ import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehou
 // inside its own `@Transactional()` boundary (sad.md §6.4a).
 import { RenameWarehouseCommand } from 'warehouses/usecases/commands/rename-warehouse.command';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 const now = new Date('2026-08-12T12:00:00.000Z');
 
 const uuid = (suffix: string): string =>
@@ -41,7 +38,7 @@ const missingWarehouseId = uuid('900000000001');
 // `AccessName`/`workspace-name.spec.ts`'s own proof of the same rule.
 const COMPOSED_E_ACUTE = `Caf${String.fromCodePoint(0x00e9)}`;
 
-describeIntegration('RenameWarehouseCommand', () => {
+describe('RenameWarehouseCommand', () => {
   const context = new DbTransactionContext(dataSource);
   const transactions = new DbTransactionService(dataSource, context);
   const warehouseLifecycleRepository = new WarehouseLifecycleRepository(

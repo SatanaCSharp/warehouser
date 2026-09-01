@@ -15,6 +15,8 @@ import { ErrorCode } from '@warehouser/shared-types/enums';
 //   - otherwise move every affected Workspace Member to the replacement in
 //     one repository call (AC-17).
 import { WorkspaceRoleDeletionService } from 'access/domain/services/workspace-role-deletion.service';
+import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository';
+import { repositoryDouble } from 'test/doubles/repository-double';
 
 const workspaceId = '00000000-0000-4000-8000-000000000001';
 const sourceRoleId = '00000000-0000-4000-8000-000000000002';
@@ -24,16 +26,19 @@ const replacementRoleId = '00000000-0000-4000-8000-000000000003';
 // `findCustomRole` and `replaceRoleAssignments` already exist on
 // `WorkspaceRoleLifecycleRepository` (T10), so no repository change is
 // required to satisfy this contract.
-const repositoryDouble = () => ({
-  findCustomRole: jest
-    .fn()
-    .mockResolvedValue({ id: replacementRoleId, workspaceId, kind: 'custom' }),
-  replaceRoleAssignments: jest.fn().mockResolvedValue(undefined),
-});
+const workspaceRoleLifecycleRepositoryDouble = () =>
+  repositoryDouble<WorkspaceRoleLifecycleRepository>()({
+    findCustomRole: jest.fn().mockResolvedValue({
+      id: replacementRoleId,
+      workspaceId,
+      kind: 'custom',
+    }),
+    replaceRoleAssignments: jest.fn().mockResolvedValue(undefined),
+  });
 
 describe('WorkspaceRoleDeletionService', () => {
   it('replaces source Workspace Role assignments with a valid custom Workspace Role (AC-17)', async () => {
-    const repository = repositoryDouble();
+    const repository = workspaceRoleLifecycleRepositoryDouble();
     const service = new WorkspaceRoleDeletionService(repository);
 
     await service.replaceAssignments(
@@ -54,7 +59,7 @@ describe('WorkspaceRoleDeletionService', () => {
   });
 
   it('does nothing when no replacement Workspace Role is requested (AC-17a)', async () => {
-    const repository = repositoryDouble();
+    const repository = workspaceRoleLifecycleRepositoryDouble();
     const service = new WorkspaceRoleDeletionService(repository);
 
     await service.replaceAssignments(workspaceId, sourceRoleId);
@@ -64,7 +69,7 @@ describe('WorkspaceRoleDeletionService', () => {
   });
 
   it('rejects the source Workspace Role as its own replacement', async () => {
-    const repository = repositoryDouble();
+    const repository = workspaceRoleLifecycleRepositoryDouble();
     const service = new WorkspaceRoleDeletionService(repository);
 
     await expect(
@@ -76,7 +81,7 @@ describe('WorkspaceRoleDeletionService', () => {
   });
 
   it('rejects an unavailable replacement Workspace Role, which also covers the "only custom Role" case (AC-17c)', async () => {
-    const repository = repositoryDouble();
+    const repository = workspaceRoleLifecycleRepositoryDouble();
     repository.findCustomRole.mockResolvedValue(null);
     const service = new WorkspaceRoleDeletionService(repository);
 

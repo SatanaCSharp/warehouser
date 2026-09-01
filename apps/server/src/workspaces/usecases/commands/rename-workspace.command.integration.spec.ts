@@ -18,10 +18,7 @@ import {
 // boundaries") to record the trimmed, non-normalized name.
 import { RenameWorkspaceCommand } from 'workspaces/usecases/commands/rename-workspace.command';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
-describeIntegration('RenameWorkspaceCommand', () => {
+describe('RenameWorkspaceCommand', () => {
   // Registers the transaction storage `getEntityManager` reads, so the
   // repository joins whatever ambient transaction a caller opens; none of
   // the tests below open one, so every repository call reaches

@@ -1,0 +1,139 @@
+{
+  "head": {
+    "title": "Demand"
+  },
+  "demand": {
+    "heading": "Demand",
+    "lede": "One row per item: the total your customers are still waiting for, the earliest date any of them needs it, and what the transit zone already holds. Derived from customer orders on every read — never a stored list.",
+    "search": "Search items or SKUs",
+    "loading": "Loading demand",
+    "recordAction": "Record demand",
+    "noMatches": "No item matches “{{query}}”.",
+    "table": {
+      "item": "Item",
+      "outstanding": "Outstanding",
+      "neededBy": "Earliest needed by",
+      "onHand": "On hand",
+      "coveredBy": "Covered by",
+      "actions": "Actions"
+    },
+    "item": {
+      "meta": "{{sku}} · counted in {{unit}}"
+    },
+    "outstanding": {
+      "caption": "{{unit}} outstanding"
+    },
+    "onHand": {
+      "caption": "on hand"
+    },
+    "urgency": {
+      "today": "needed today",
+      "upcoming_one": "in {{count}} day",
+      "upcoming_other": "in {{count}} days",
+      "overdue_one": "overdue by {{count}} day",
+      "overdue_other": "overdue by {{count}} days"
+    },
+    "empty": {
+      "heading": "No customer is waiting for anything yet",
+      "description": "Record what a customer has asked for and it appears here, consolidated with everyone else waiting for the same item. The same is shown once every customer order is fulfilled or cancelled — those never count towards a demand line."
+    },
+    "error": "Demand could not be loaded.",
+    "disclosure": {
+      "show_one": "{{count}} customer order",
+      "show_other": "{{count}} customer orders",
+      "hide_one": "hide the {{count}} customer order",
+      "hide_other": "hide the {{count}} customer orders"
+    },
+    "coverage": {
+      "chip": "{{reference}} · {{quantity}}",
+      "none": "No draft claims this demand"
+    },
+    "footer": {
+      "summary": "{{items}} · {{orders}}",
+      "itemCount_one": "{{count}} item",
+      "itemCount_other": "{{count}} items",
+      "orderCount_one": "{{count}} unfulfilled customer order",
+      "orderCount_other": "{{count}} unfulfilled customer orders",
+      "note": "Fulfilled and cancelled customer orders are not counted here."
+    },
+    "coverageNote": {
+      "heading": "Covered by is what someone already ordered — not a reservation",
+      "body": "A purchase draft linked to this demand is shown so you can see what a colleague has already ordered and for how much. It claims nothing: you may still draft the same demand again, and only goods that actually arrive reduce what a customer is waiting for."
+    },
+    "customerOrder": {
+      "actions": "Actions for {{customerName}}",
+      "outstanding": "{{outstanding}} of {{quantity}} outstanding",
+      "neededBy": "by {{date}}"
+    },
+    "card": {
+      "onHandCaption": "{{unit}} in the transit zone",
+      "customerOrder": "{{outstanding}} of {{quantity}} outstanding · by {{date}} · {{state}}"
+    },
+    "menu": {
+      "amend": "Amend",
+      "cancel": "Cancel order"
+    }
+  },
+  "chips": {
+    "unfulfilled": "Unfulfilled",
+    "fulfilled": "Fulfilled",
+    "cancelled": "Cancelled"
+  },
+  "picker": {
+    "label": "Customer order",
+    "optionLabel": "{{customerName}} · {{quantity}} · by {{neededBy}}"
+  },
+  "dialogs": {
+    "record": {
+      "title": "Record what a customer is waiting for",
+      "description": "The order is recorded against this warehouse and joins the consolidated demand immediately.",
+      "cancel": "Cancel",
+      "submit": "Record demand",
+      "customerNameLabel": "Customer",
+      "customerNameHelp": "The end customer waiting for the goods. A name is all this release records.",
+      "itemHelp": "Only active items of this warehouse are offered.",
+      "quantityLabel": "Quantity",
+      "quantityHelp": "A whole number greater than zero, counted in the unit the item is counted in.",
+      "neededByLabel": "Needed by",
+      "neededByHelp": "A date that has not already passed.",
+      "refusal": {
+        "invalid": "Nothing was recorded. Correct the values this warehouse will not accept and try again.",
+        "unavailable": "Nothing was recorded. That item is not one this warehouse offers.",
+        "invalidState": "Nothing was recorded."
+      }
+    },
+    "amend": {
+      "title": "Amend {{customerName}}'s order",
+      "description": "Consolidated demand reflects the change on the next read.",
+      "cancel": "Cancel",
+      "submit": "Save changes",
+      "quantityLabel": "Quantity",
+      "quantityHelp": "A whole number greater than zero, counted in the unit the item is counted in.",
+      "neededByLabel": "Needed by",
+      "neededByHelp": "A date that has not already passed.",
+      "frozenDrafts": {
+        "heading": "A frozen draft linked to this order will report a drift signal",
+        "body": "No frozen draft changes — each one records what the supplier was told. What moves is the comparison against the demand captured when it was made ready. A value amended and then put back as it was stops being reported."
+      },
+      "refusal": {
+        "invalid": "Nothing was changed. Change the quantity or the needed-by date before saving.",
+        "unavailable": "Nothing was changed. That customer order is no longer available.",
+        "invalidState": "Nothing was changed. This order has already been fulfilled or cancelled."
+      }
+    },
+    "cancel": {
+      "title": "Cancel {{customerName}}'s order?",
+      "description": "It leaves the consolidated demand and stops counting anywhere.",
+      "cancel": "Keep the order",
+      "submit": "Cancel the order",
+      "reasonLabel": "Reason",
+      "reasonHelp": "Recorded with your name and the time.",
+      "frozenDrafts": "A frozen draft that links to this order keeps every value it was frozen with and reports a drift signal instead.",
+      "refusal": {
+        "invalid": "Nothing was cancelled. State a reason and try again.",
+        "unavailable": "Nothing was cancelled. That customer order is no longer available.",
+        "invalidState": "Nothing was cancelled. This order has already been fulfilled or cancelled."
+      }
+    }
+  }
+}

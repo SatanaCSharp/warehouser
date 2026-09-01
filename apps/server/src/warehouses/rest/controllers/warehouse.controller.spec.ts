@@ -11,11 +11,7 @@ import {
   PATH_METADATA,
 } from '@nestjs/common/constants';
 import { warehouseSchema } from '@warehouser/contracts/workspaces';
-import {
-  ErrorCode,
-  WorkspacePermissionId,
-} from '@warehouser/shared-types/enums';
-import { ApplicationError } from '@warehouser/shared-types/errors';
+import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
 import type { WorkspaceAccessRequest } from 'shared/access/access-request';
 import { REQUIRED_PERMISSION_KEY } from 'shared/decorators/required-permission.decorator';
 import { REQUIRED_WORKSPACE_PERMISSION_KEY } from 'shared/decorators/required-workspace-permission.decorator';
@@ -306,23 +302,40 @@ describe('WarehouseController', () => {
   // (`@HttpCode(HttpStatus.NO_CONTENT)`, `Promise<void>`), which fails that
   // client-side validation at runtime because an empty body cannot satisfy a
   // schema requiring `id`, `name` and `archivedAt`.
+  // Each row arranges its own command rather than sharing one mock call: the
+  // two results differ in type (`archivedAt: Date` when archiving, the `null`
+  // literal when restoring), which a single mock over the union cannot express.
   it.each([
     [
       'archiving',
       true,
-      archiveWarehouse,
+      (): void => {
+        jest.mocked(archiveWarehouse.execute).mockResolvedValue({
+          id: warehouseId,
+          name: 'Test Warehouse North',
+          archivedAt: new Date('2026-08-01T09:00:00.000Z'),
+        });
+      },
       restoreWarehouse,
-      new Date('2026-08-01T09:00:00.000Z'),
+      '2026-08-01T09:00:00.000Z',
     ],
-    ['restoring', false, restoreWarehouse, archiveWarehouse, null],
+    [
+      'restoring',
+      false,
+      (): void => {
+        jest.mocked(restoreWarehouse.execute).mockResolvedValue({
+          id: warehouseId,
+          name: 'Test Warehouse North',
+          archivedAt: null,
+        });
+      },
+      archiveWarehouse,
+      null,
+    ],
   ] as const)(
     'AC-11: answers 200 with the full Warehouse body when %s, satisfying the same warehouseSchema the web client validates against',
-    async (_case, archived, usecase, otherUsecase, archivedAt) => {
-      jest.mocked(usecase.execute).mockResolvedValue({
-        id: warehouseId,
-        name: 'Test Warehouse North',
-        archivedAt,
-      });
+    async (_case, archived, arrange, otherUsecase, expectedArchivedAt) => {
+      arrange();
 
       const body = await controller.setWarehouseArchival(
         warehouseId,
@@ -333,7 +346,7 @@ describe('WarehouseController', () => {
       expect(body).toEqual({
         id: warehouseId,
         name: 'Test Warehouse North',
-        archivedAt: archivedAt?.toISOString() ?? null,
+        archivedAt: expectedArchivedAt,
       });
       expect(warehouseSchema.parse(body)).toEqual(body);
       expect(otherUsecase.execute).not.toHaveBeenCalled();
@@ -343,14 +356,10 @@ describe('WarehouseController', () => {
     },
   );
 
-  // openapi.yaml documents these as the two 503 failure branches of this
-  // surface (POST /warehouses, PUT /warehouses/{warehouseId}/archival): the
-  // Manager Role/its assignment could not be established (AC-07) or the
-  // archival/restoration could not complete (AC-13). The controller's job at
-  // this boundary is unchanged from the 404 case above — let the typed error
-  // propagate untouched so the global filter's already-registered mapping for
-  // `workspace.warehouse_creation_unavailable` / `workspace.archival_unavailable`
-  // (both 503) is what answers the request.
+  // The controller's job at this boundary is the same as the 404 case above:
+  // let whatever the use case raises propagate untouched, so the global
+  // filter is the single place it is classified. It never inspects, wraps or
+  // reclassifies a failure (server-use-case-boundaries.md §3).
   it.each([
     [
       'createWarehouse',
@@ -360,7 +369,6 @@ describe('WarehouseController', () => {
           { name: 'Test Warehouse North' },
         ),
       createWarehouse,
-      ErrorCode.WORKSPACE_WAREHOUSE_CREATION_UNAVAILABLE,
     ],
     [
       'setWarehouseArchival',
@@ -371,12 +379,11 @@ describe('WarehouseController', () => {
           { archived: true },
         ),
       archiveWarehouse,
-      ErrorCode.WORKSPACE_ARCHIVAL_UNAVAILABLE,
     ],
   ] as const)(
-    '%s propagates the documented unavailable-outcome failure unchanged',
-    async (_name, invoke, usecase, errorCode) => {
-      const failure = new ApplicationError(errorCode);
+    '%s propagates an infrastructure failure unchanged',
+    async (_name, invoke, usecase) => {
+      const failure = new Error('connection terminated');
       jest.mocked(usecase.execute).mockRejectedValue(failure);
 
       await expect(invoke()).rejects.toBe(failure);

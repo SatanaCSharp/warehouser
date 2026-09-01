@@ -12,6 +12,10 @@ import {
   SystemError,
 } from '@warehouser/shared-types/errors';
 import { redactSensitiveValues } from 'shared/errors/sensitive-value-redactor';
+import {
+  type ValidatedRequestPayloads,
+  validationFieldCodes,
+} from 'shared/errors/validation-field-codes';
 
 interface SafeErrorEnvelope {
   readonly code: string;
@@ -285,6 +289,175 @@ export const applicationErrors: Readonly<
       message: 'The Warehouse is archived.',
     },
   },
+  [ErrorCode.ACCESS_WRITE_RATE_LIMITED]: {
+    status: 429,
+    envelope: {
+      code: ErrorCode.ACCESS_WRITE_RATE_LIMITED,
+      message: 'Too many changes recorded. Try again shortly.',
+    },
+  },
+  [ErrorCode.ITEMS_INVALID_INPUT]: {
+    status: 400,
+    envelope: {
+      code: ErrorCode.ITEMS_INVALID_INPUT,
+      message: 'Correct the highlighted Item fields.',
+    },
+  },
+  [ErrorCode.ITEMS_INVALID_ON_HAND_QUANTITY]: {
+    status: 400,
+    envelope: {
+      code: ErrorCode.ITEMS_INVALID_ON_HAND_QUANTITY,
+      message: 'On-hand Quantity is a whole number that is never negative.',
+    },
+  },
+  [ErrorCode.ITEMS_ADJUSTMENT_REASON_REQUIRED]: {
+    status: 400,
+    envelope: {
+      code: ErrorCode.ITEMS_ADJUSTMENT_REASON_REQUIRED,
+      message: 'Every change to On-hand Quantity is recorded with its reason.',
+    },
+  },
+  [ErrorCode.ITEMS_TARGET_UNAVAILABLE]: {
+    status: 404,
+    envelope: {
+      code: ErrorCode.ITEMS_TARGET_UNAVAILABLE,
+      message: 'The selected Item is unavailable.',
+    },
+  },
+  [ErrorCode.ITEMS_SKU_TAKEN]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.ITEMS_SKU_TAKEN,
+      message: 'A SKU identifies at most one Item within a Warehouse.',
+    },
+  },
+  [ErrorCode.ITEMS_SKU_FIXED]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.ITEMS_SKU_FIXED,
+      message:
+        'A SKU stops being correctable once demand or a draft names the Item.',
+    },
+  },
+  [ErrorCode.CUSTOMER_ORDERS_INVALID_INPUT]: {
+    status: 400,
+    envelope: {
+      code: ErrorCode.CUSTOMER_ORDERS_INVALID_INPUT,
+      message: 'Correct the highlighted Customer Order fields.',
+    },
+  },
+  [ErrorCode.CUSTOMER_ORDERS_NEEDED_BY_IN_PAST]: {
+    status: 400,
+    envelope: {
+      code: ErrorCode.CUSTOMER_ORDERS_NEEDED_BY_IN_PAST,
+      message:
+        'A customer cannot be recorded as waiting for a date in the past.',
+    },
+  },
+  [ErrorCode.CUSTOMER_ORDERS_TARGET_UNAVAILABLE]: {
+    status: 404,
+    envelope: {
+      code: ErrorCode.CUSTOMER_ORDERS_TARGET_UNAVAILABLE,
+      message: 'The selected Customer Order is unavailable.',
+    },
+  },
+  [ErrorCode.CUSTOMER_ORDERS_QUANTITY_BELOW_ALLOCATED]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.CUSTOMER_ORDERS_QUANTITY_BELOW_ALLOCATED,
+      message:
+        "A customer's order cannot be reduced below the goods already attributed to them.",
+    },
+  },
+  [ErrorCode.CUSTOMER_ORDERS_INVALID_STATE]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.CUSTOMER_ORDERS_INVALID_STATE,
+      message:
+        'The Customer Order is not in a state this change is permitted from.',
+    },
+  },
+  [ErrorCode.PURCHASE_DRAFTS_UNKNOWN_PACKAGING_TYPE]: {
+    status: 400,
+    envelope: {
+      code: ErrorCode.PURCHASE_DRAFTS_UNKNOWN_PACKAGING_TYPE,
+      message: 'Choose a Packaging Type from the catalogue.',
+    },
+  },
+  [ErrorCode.PURCHASE_DRAFTS_INVALID_INPUT]: {
+    status: 400,
+    envelope: {
+      code: ErrorCode.PURCHASE_DRAFTS_INVALID_INPUT,
+      message: 'Correct the highlighted Purchase Draft fields.',
+    },
+  },
+  [ErrorCode.PURCHASE_DRAFTS_TARGET_UNAVAILABLE]: {
+    status: 404,
+    envelope: {
+      code: ErrorCode.PURCHASE_DRAFTS_TARGET_UNAVAILABLE,
+      message: 'The selected Purchase Draft is unavailable.',
+    },
+  },
+  [ErrorCode.PURCHASE_DRAFTS_DRAFT_FROZEN]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.PURCHASE_DRAFTS_DRAFT_FROZEN,
+      message: 'A draft is frozen once it is ready.',
+    },
+  },
+  [ErrorCode.PURCHASE_DRAFTS_DISCARD_UNAVAILABLE]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.PURCHASE_DRAFTS_DISCARD_UNAVAILABLE,
+      message:
+        'A draft that has been made ready is closed with a reason rather than discarded.',
+    },
+  },
+  [ErrorCode.PURCHASE_DRAFTS_LINK_EXISTS]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.PURCHASE_DRAFTS_LINK_EXISTS,
+      message: 'This line is already linked to that Customer Order.',
+    },
+  },
+  [ErrorCode.PURCHASE_DRAFTS_DRAFT_EMPTY]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.PURCHASE_DRAFTS_DRAFT_EMPTY,
+      message: 'A draft is only ready once it says what is being ordered.',
+    },
+  },
+  [ErrorCode.PURCHASE_DRAFTS_INVALID_STATE]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.PURCHASE_DRAFTS_INVALID_STATE,
+      message:
+        'The Purchase Draft is not in a state this transition is permitted from.',
+    },
+  },
+  [ErrorCode.PURCHASE_DRAFTS_CONCURRENT_CHANGE]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.PURCHASE_DRAFTS_CONCURRENT_CHANGE,
+      message:
+        'Another member changed this Purchase Draft. Reload and try again.',
+    },
+  },
+  [ErrorCode.PURCHASE_DRAFTS_ARRIVAL_ALREADY_CONFIRMED]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.PURCHASE_DRAFTS_ARRIVAL_ALREADY_CONFIRMED,
+      message: 'Confirming an arrival closes a draft once and for all.',
+    },
+  },
+  [ErrorCode.PURCHASE_DRAFTS_ALLOCATION_OUT_OF_BOUNDS]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.PURCHASE_DRAFTS_ALLOCATION_OUT_OF_BOUNDS,
+      message:
+        'The confirmation was not recorded. Correct the assignments it will not accept.',
+    },
+  },
 };
 
 export const systemErrors: Readonly<
@@ -385,7 +558,10 @@ const internalError: ErrorMapping = {
   },
 };
 
-const mapException = (exception: unknown): ErrorMapping => {
+const mapException = (
+  exception: unknown,
+  request: ValidatedRequestPayloads,
+): ErrorMapping => {
   if (exception instanceof ApplicationError) {
     const mapping = applicationErrors[exception.code];
 
@@ -412,12 +588,20 @@ const mapException = (exception: unknown): ErrorMapping => {
   }
 
   if (exception instanceof HttpException) {
+    // A Zod refusal additionally names the fields it will not accept, so a
+    // dialog can mark them instead of repeating one generic sentence for every
+    // distinct refusal (AC-02, AC-02a, AC-09, AC-09a, AC-19b). Only the dotted
+    // path and a normalized code travel: never the value, the schema's message,
+    // or the type that was expected.
+    const fields = validationFieldCodes(exception, request);
+
     return {
       status: exception.getStatus(),
       severity: 'warn',
       envelope: {
         code: 'request.invalid',
         message: 'The request is invalid.',
+        ...(fields === undefined ? {} : { details: { fields } }),
       },
     };
   }
@@ -456,15 +640,17 @@ export class GlobalHttpExceptionFilter implements ExceptionFilter {
 
   catch(exception: unknown, host: ArgumentsHost): void {
     const http = host.switchToHttp();
-    const request = http.getRequest<{
-      headers?: Readonly<Record<string, string | undefined>>;
-      method?: string;
-      originalUrl?: string;
-    }>();
+    const request = http.getRequest<
+      ValidatedRequestPayloads & {
+        headers?: Readonly<Record<string, string | undefined>>;
+        method?: string;
+        originalUrl?: string;
+      }
+    >();
     const response = http.getResponse<{
       status(code: number): { json(body: SafeErrorEnvelope): void };
     }>();
-    const mapping = mapException(exception);
+    const mapping = mapException(exception, request);
     const logEntry = {
       error: describeException(exception),
       method: request.method,

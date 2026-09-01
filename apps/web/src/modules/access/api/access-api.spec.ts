@@ -343,6 +343,7 @@ describe('accessApi member refusals explained on a field', () => {
     expect(result.error).toEqual({
       code: 'users.permission_exceeded',
       fieldErrors: { roleId: 'grapheme_length' },
+      details: { field: 'roleId', rule: 'grapheme_length' },
     });
   });
 });

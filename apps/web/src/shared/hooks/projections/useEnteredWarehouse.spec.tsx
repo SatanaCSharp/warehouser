@@ -147,6 +147,23 @@ describe('useEnteredWarehouse', () => {
     expect(await screen.findByTestId('probe')).toHaveTextContent('none');
   });
 
+  // AC-23 — a read-only entry into an archived Warehouse still yields the id.
+  // Every Warehouse-scoped read is keyed on it, so withholding it here would
+  // take the watch reads down with the writes, which is exactly what AC-23
+  // forbids. What an archived Warehouse withholds is answered at the control by
+  // `useArchivedWarehouse`, not by withdrawing the address.
+  it('returns the id for a read-only verdict in an archived Warehouse', async () => {
+    renderProbe(`/warehouses/${MEMBER_WAREHOUSE_ID}`, {
+      status: 'entered-read-only',
+      reason: 'archived',
+      warehouseId: MEMBER_WAREHOUSE_ID,
+    });
+
+    expect(await screen.findByTestId('probe')).toHaveTextContent(
+      MEMBER_WAREHOUSE_ID,
+    );
+  });
+
   // T6 / CR-AC-11 — the shell chrome that must follow the entered context
   // (`Sidebar`) is rendered by the ROOT route, an *ancestor* of the Warehouse
   // match. A nearest-match read can only ever see the caller's own match and

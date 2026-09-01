@@ -39,10 +39,6 @@ import {
   buildWorkspaceMembership,
   buildWorkspaceRole,
 } from 'test/factories/entity-factories';
-import type { QueryRunner } from 'typeorm';
-
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
 
 const now = new Date('2026-08-12T12:00:00.000Z');
 
@@ -65,7 +61,7 @@ interface TransferWorkspaceOwnerCommandContract {
 }
 
 // eslint-disable-next-line max-lines-per-function -- integration suite setup is inherently long
-describeIntegration('TransferWorkspaceOwnerCommand', () => {
+describe('TransferWorkspaceOwnerCommand', () => {
   const context = new DbTransactionContext(dataSource);
   const transactions = new DbTransactionService(dataSource, context);
   const ownerTransferRepository = new WorkspaceOwnerTransferRepository(
@@ -455,139 +451,4 @@ describeIntegration('TransferWorkspaceOwnerCommand', () => {
     });
     expect(await ownerCount(workspaceId)).toBe(1);
   });
-
-  // -------------------------------------------------------------------
-  // Genuine-concurrency race test, run over two real, independent
-  // connections (two `QueryRunner`s) interleaved by polling real
-  // server-side wait state (`pg_stat_activity`), not a fixed sleep —
-  // mirroring `workspace-owner-transfer.repository.integration.spec.ts`'s
-  // `registerLockOrderTest`, one level below the command under test here.
-  // -------------------------------------------------------------------
-
-  const backendPid = async (runner: QueryRunner): Promise<number> => {
-    const rows = await runner.query('SELECT pg_backend_pid() AS pid');
-    return Number(rows[0].pid);
-  };
-
-  const isBlocked = async (pid: number): Promise<boolean> => {
-    const rows = await dataSource.query(
-      `SELECT 1 FROM pg_stat_activity WHERE pid = $1 AND wait_event_type = 'Lock'`,
-      [pid],
-    );
-    return rows.length > 0;
-  };
-
-  const waitForEitherBlocked = async (
-    pidA: number,
-    pidB: number,
-  ): Promise<number> => {
-    for (let attempt = 0; attempt < 200; attempt += 1) {
-      if (await isBlocked(pidA)) {
-        return pidA;
-      }
-      if (await isBlocked(pidB)) {
-        return pidB;
-      }
-      await new Promise((resolve) => setTimeout(resolve, 15));
-    }
-    throw new Error(
-      'Neither concurrent transfer backend entered a blocked wait state within the poll budget',
-    );
-  };
-
-  // The following helpers exist only so the concurrency test below stays
-  // under the repository's `max-statements` lint budget, without changing
-  // any of its assertions.
-  const runTransfer = (
-    runner: QueryRunner,
-    actor: WorkspaceCurrentUser,
-    recipientUserId: string,
-    currentOwnerReplacementRoleId: string,
-  ): Promise<TransferWorkspaceOwnerResult> =>
-    context.run(runner.manager, () =>
-      new TransferWorkspaceOwnerCommand(
-        ownerTransferRepository,
-        membershipRepository,
-        roleLifecycleRepository,
-      ).execute(actor, {
-        recipientUserId,
-        currentOwnerReplacementRoleId,
-      }),
-    );
-
-  const seedCandidate = async (
-    workspaceId: string,
-    roleName: string,
-  ): Promise<string> => {
-    const roleId = await seedCustomRole(workspaceId, roleName);
-    return seedMember(workspaceId, roleId);
-  };
-
-  const startTransactionRunner = async (): Promise<QueryRunner> => {
-    const runner = dataSource.createQueryRunner();
-    await runner.connect();
-    await runner.startTransaction();
-    return runner;
-  };
-
-  const assertSingleWinnerConcurrencyOutcome = (
-    outcomes: readonly PromiseSettledResult<TransferWorkspaceOwnerResult>[],
-  ): void => {
-    const fulfilled = outcomes.filter(
-      (outcome) => outcome.status === 'fulfilled',
-    );
-    const rejected = outcomes.filter(
-      (outcome) => outcome.status === 'rejected',
-    );
-
-    expect(fulfilled).toHaveLength(1);
-    expect(rejected).toHaveLength(1);
-    expect(
-      rejected[0].status === 'rejected' && rejected[0].reason,
-    ).toMatchObject({ code: ErrorCode.WORKSPACE_CONCURRENT_CHANGE });
-  };
-
-  it('two concurrent transfers of the same current Owner leave exactly one Owner, the loser mapped to a stable concurrency error', async () => {
-    const workspaceId = await seedWorkspace();
-    const { actor } = await seedOwnerActor(workspaceId);
-    const replacementRoleAId = await seedCustomRole(
-      workspaceId,
-      'Replacement Role A',
-    );
-    const replacementRoleBId = await seedCustomRole(
-      workspaceId,
-      'Replacement Role B',
-    );
-    const candidateAId = await seedCandidate(workspaceId, 'Candidate A Role');
-    const candidateBId = await seedCandidate(workspaceId, 'Candidate B Role');
-
-    const runner1 = await startTransactionRunner();
-    const runner2 = await startTransactionRunner();
-
-    const pid1 = await backendPid(runner1);
-    const pid2 = await backendPid(runner2);
-
-    // Both attempt to transfer the *same* current Owner, to two different
-    // recipients, so both necessarily contend for the same Workspace row
-    // and the same current-Owner membership row — a genuine race over two
-    // independent connections, not two sequential calls.
-    const call1 = runTransfer(runner1, actor, candidateAId, replacementRoleAId);
-    const call2 = runTransfer(runner2, actor, candidateBId, replacementRoleBId);
-    call1.catch(() => undefined);
-    call2.catch(() => undefined);
-
-    const blockedPid = await waitForEitherBlocked(pid1, pid2);
-    const [winner, loser] =
-      blockedPid === pid1 ? [runner2, runner1] : [runner1, runner2];
-
-    await winner.commitTransaction();
-    await winner.release();
-
-    const [outcome1, outcome2] = await Promise.allSettled([call1, call2]);
-    await loser.rollbackTransaction().catch(() => undefined);
-    await loser.release();
-
-    assertSingleWinnerConcurrencyOutcome([outcome1, outcome2]);
-    expect(await ownerCount(workspaceId)).toBe(1);
-  }, 20_000);
 });

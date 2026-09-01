@@ -20,9 +20,6 @@ import {
 } from 'test/factories/entity-factories';
 import { QueryFailedError } from 'typeorm';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 const now = new Date('2026-08-12T12:00:00.000Z');
 
 /**
@@ -377,7 +374,7 @@ const describePersistWorkspaceGraph = (): void => {
   });
 };
 
-describeIntegration('Workspace persistence entities and factories', () => {
+describe('Workspace persistence entities and factories', () => {
   beforeAll(async () => {
     await dataSource.initialize();
   });

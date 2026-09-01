@@ -39,6 +39,20 @@ monolithic component through a large prop surface. Import named parts or use dot
 consistently within a file. Omit parts a feature does not need instead of passing props to hide
 them.
 
+### Tabular data is `Table`, not markup
+
+A collection of records is presented with HeroUI's `Table` and its parts — `Table.Content`,
+`Table.Header`/`Table.Column`, `Table.Body`/`Table.Row`/`Table.Cell` — never with a `<table>` a
+feature file assembles itself. A row that expands nests its children in `Table.Collection` and names
+its disclosure column with `treeColumn`, so React Aria owns `aria-expanded`, `aria-level` and the
+roving focus rather than a hand-written chevron and a sibling `<tr>`. Two constraints come with the
+collection model and are easy to trip over. A row renderer runs before the DOM, so it may call no
+hook — and React Aria caches the row it builds, so it may not close over live state either: **a cell
+renders a component, not an expression**, and that component reads its own translations,
+Permissions and queries. And an expandable table exposes `role="treegrid"` rather than `table`.
+Both, and what they cost, are
+[Present tabular data with HeroUI's Table](../adr/27-08-2026-heroui-table-for-web-data-tables.md).
+
 ### Dialogs let the Modal own the open state
 
 Wrap a trigger and the dialog it opens in a HeroUI `Modal` and let it do the work React Aria already
@@ -49,7 +63,9 @@ boolean, calls `.focus()` on a trigger ref, or threads an `onClose` down to a di
 re-implementing that. The dialog closes itself — declaratively with `<Button slot="close">` (what
 `shared/components/FormModalDialog` renders for cancel), or with `useCloseDialog()` when a mutation
 succeeding is what closes it. Where no control sits beside the dialog — a list row that opens one
-per record — `shared/components/DialogHost` supplies the same open state.
+per record — `shared/components/DialogHost` supplies the same open state, reached through
+`shared/components/ActionDialogHost`, which also decides _which_ dialog that row opened
+([Writing web action dialogs](web-action-dialogs.md)).
 
 ## 4. Progressive disclosure
 

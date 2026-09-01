@@ -25,9 +25,6 @@ import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehou
 // `@Transactional()` boundary (sad.md §6.4).
 import { CreateWarehouseCommand } from 'warehouses/usecases/commands/create-warehouse.command';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 const now = new Date('2026-08-12T12:00:00.000Z');
 
 const uuid = (suffix: string): string =>
@@ -37,7 +34,7 @@ const workspaceId = uuid('000000000001');
 const existingWarehouseId = uuid('100000000001');
 const actorId = uuid('300000000001');
 
-describeIntegration('CreateWarehouseCommand', () => {
+describe('CreateWarehouseCommand', () => {
   const context = new DbTransactionContext(dataSource);
   const transactions = new DbTransactionService(dataSource, context);
   const warehouseLifecycleRepository = new WarehouseLifecycleRepository(

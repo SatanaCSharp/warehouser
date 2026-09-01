@@ -41,6 +41,25 @@ A task brief in your prompt: `id`, `title`, the `acs` (acceptance-criteria text)
    - **NON-red** — skipped because a dependency is unavailable (e.g. Docker absent for an integration test). Report NON-red; still write the unit-level RED so the task is TDD-drivable locally.
 4. **Quote the failing line** — the assertion with expected-vs-actual, or the "undefined: X" line. This is your deliverable: proof the test exercises the right thing.
 
+## Complexity budget
+
+The test code you write is held to the same limits as production code, in `apps/server`,
+`apps/web`, and shared packages alike — including the helpers, factories, and fixtures you add.
+
+- **Complexity Limits (Per Function/Method)**:
+  - **Cognitive Complexity ≤ 15** (Readability/mental load). Maximize readability by avoiding deep
+    nesting, multi-condition logic, and complex recursion.
+  - **Cyclomatic Complexity ≤ 20** (Testability/line coverage). Keep execution paths and
+    conditional branches minimal.
+- **Complexity Reduction Strategies**:
+  - Use early returns / guard clauses instead of nested `if/else` blocks.
+  - Replace complex `switch` or `if/else` chains with lookup maps or Strategy/Factory patterns.
+  - Decompose multi-step algorithms into small, single-responsibility pure functions.
+
+Meet the budget by splitting a case, extracting a named setup helper, or table-driving the
+variations — never by weakening what the test asserts. A test that needs branching to decide what
+to expect is a test that should be two cases.
+
 ## Rules
 
 - Test first, production code never. If you're tempted to add a stub to make it compile, add it to the **test scaffold** only, not the production package.

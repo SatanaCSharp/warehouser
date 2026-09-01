@@ -1,22 +1,25 @@
 import { randomUUID } from 'node:crypto';
 
 import { Injectable } from '@nestjs/common';
+import { PermissionId } from '@warehouser/shared-types/enums';
 import { AccessProvisioningRepository } from 'shared/domain/repositories/access-provisioning.repository';
 
-const MANAGER_PERMISSION_IDS = [
-  'ROLES:ASSIGN',
-  'ROLES:CREATE',
-  'ROLES:DELETE',
-  'ROLES:UPDATE',
-  'ROLES:WATCH',
-  'USERS:CREATE',
-  'USERS:DELETE',
-  'USERS:EMAIL_UPDATE',
-  'USERS:PASSWORD_CHANGE',
-  'USERS:UPDATE',
-  'USERS:WATCH',
-  'WAREHOUSE_MANAGER_ROLE:REASSIGN',
-] as const;
+// The protected Warehouse Manager Role is granted the whole Permission catalogue, so this list is
+// derived from `PermissionId` rather than restated. A hand-maintained copy silently kept the set a
+// release lagged behind: `ordering` added sixteen Permissions and backfilled the Roles that already
+// existed (`migrations/1786600100000-GrantOrderingPermissions.ts`), but every Warehouse provisioned
+// afterwards was still given the twelve pre-`ordering` ones, so its Manager was refused every items,
+// demand and Purchase Draft operation. Deriving keeps the two halves of that pairing in step.
+//
+// A Permission the Manager must NOT hold goes here, and only here; nothing else about this file
+// changes when the catalogue grows.
+const MANAGER_EXCLUDED_PERMISSION_IDS: readonly PermissionId[] = [];
+
+const MANAGER_PERMISSION_IDS: readonly PermissionId[] = Object.values(
+  PermissionId,
+).filter(
+  (permissionId) => !MANAGER_EXCLUDED_PERMISSION_IDS.includes(permissionId),
+);
 
 export interface ProvisionInitialAccessInput {
   readonly warehouseId: string;

@@ -32,6 +32,11 @@ index first, then read only the entries that cover the change you are making. Pa
   errors and assertion factories, propagation without routine `try/catch`, the global NestJS
   exception filter, logging, and safe REST error responses. Use whenever code can fail, reject a
   business rule, or must return an error to a client.
+- [Server use case boundaries](guides/server-use-case-boundaries.md) — what may surround a command
+  or query: nothing. No wrapper around `execute`, no timing or other measurement in production code,
+  and no error mapped to another type before the global filter. Use whenever writing or changing a
+  use case, and always before adding a `with*` helper, an interceptor, a logger parameter, or a
+  `try/catch` that re-raises.
 
 ## Shared with the web
 
@@ -41,11 +46,17 @@ index first, then read only the entries that cover the change you are making. Pa
 
 ## Decisions
 
-- [Domain-owned flat modules](adr/14-08-2026-domain-owned-flat-modules.md) — why a module is named
-  for the domain entity that owns its behavior, why one entity owns one top-level module and modules
-  do not nest, why a module's URL prefix and its owning module may disagree, and why guards,
-  TypeORM entities and repositories stay in `shared/`. Read before adding a module, deciding which
-  module a use case or controller belongs to, or adding a cross-module dependency.
+- [Scope-of-exercise tiebreak for sole-consumer slices](adr/18-08-2026-scope-of-exercise-placement-tiebreak.md)
+  — **Accepted; this is the decision that governs placement.** Keeps the owning-entity rule below as
+  the default and adds one tiebreak: where a slice's sole consumer exercises its capabilities at
+  another scope, placement follows the scope of exercise. Read before creating a module, placing a
+  file in one, or importing across module boundaries. Cite this ADR rather than its predecessor.
+- [Domain-owned flat modules](adr/14-08-2026-domain-owned-flat-modules.md) — **Superseded** by the
+  decision above, and preserved as the record of why a module is named for the domain entity that
+  owns its behavior, why one entity owns one top-level module and modules do not nest, why a
+  module's URL prefix and its owning module may disagree, and why guards, TypeORM entities and
+  repositories stay in `shared/`. Everything it decides still holds except the owning-entity
+  tiebreak the successor narrows; read it for the reasoning, and the successor for the rule.
 - [PostgreSQL persistence with TypeORM](adr/21-07-2026-postgresql-with-typeorm.md) — why PostgreSQL
   and TypeORM are the persistence baseline and why runtime schema synchronization stays disabled.
   Read before any schema or migration work.

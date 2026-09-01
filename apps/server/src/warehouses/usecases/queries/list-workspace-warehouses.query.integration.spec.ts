@@ -8,10 +8,7 @@ import { persistWorkspaceGraph } from 'test/factories/entity-factories';
 // `WAREHOUSES:WATCH` (AC-33).
 import { ListWorkspaceWarehousesQuery } from 'warehouses/usecases/queries/list-workspace-warehouses.query';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
-describeIntegration('ListWorkspaceWarehousesQuery', () => {
+describe('ListWorkspaceWarehousesQuery', () => {
   const workspaceReadRepository = new WorkspaceReadRepository(dataSource);
   const createQuery = (): ListWorkspaceWarehousesQuery =>
     new ListWorkspaceWarehousesQuery(workspaceReadRepository);

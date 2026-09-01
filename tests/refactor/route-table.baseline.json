@@ -91,6 +91,268 @@
     "dto": "RoleWriteDto"
   },
   {
+    "method": "GET",
+    "path": "/api/v1/warehouses/:warehouseId/customer-orders",
+    "guards": ["SessionAuthGuard", "WarehouseAccessGuard"],
+    "permission": "RequiredPermission(PermissionId.CUSTOMER_ORDERS_WATCH)",
+    "dto": null
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/warehouses/:warehouseId/customer-orders",
+    "guards": [
+      "SessionAuthGuard",
+      "WarehouseAccessGuard",
+      "WriteRateLimitGuard"
+    ],
+    "permission": "RequiredPermission(PermissionId.CUSTOMER_ORDERS_CREATE)",
+    "dto": "CustomerOrderCreateDto"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/warehouses/:warehouseId/customer-orders/:customerOrderId",
+    "guards": [
+      "SessionAuthGuard",
+      "WarehouseAccessGuard",
+      "WriteRateLimitGuard"
+    ],
+    "permission": "RequiredPermission(PermissionId.CUSTOMER_ORDERS_UPDATE)",
+    "dto": "CustomerOrderAmendDto"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/warehouses/:warehouseId/customer-orders/:customerOrderId/cancellation",
+    "guards": [
+      "SessionAuthGuard",
+      "WarehouseAccessGuard",
+      "WriteRateLimitGuard"
+    ],
+    "permission": "RequiredPermission(PermissionId.CUSTOMER_ORDERS_CANCEL)",
+    "dto": "CustomerOrderCancellationDto"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/warehouses/:warehouseId/demand",
+    "guards": ["SessionAuthGuard", "WarehouseAccessGuard"],
+    "permission": "RequiredPermission(PermissionId.CUSTOMER_ORDERS_WATCH)",
+    "dto": null
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/warehouses/:warehouseId/items",
+    "guards": ["SessionAuthGuard", "WarehouseAccessGuard"],
+    "permission": "RequiredPermission(PermissionId.ITEMS_WATCH)",
+    "dto": null
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/warehouses/:warehouseId/items",
+    "guards": [
+      "SessionAuthGuard",
+      "WarehouseAccessGuard",
+      "WriteRateLimitGuard"
+    ],
+    "permission": "RequiredPermission(PermissionId.ITEMS_CREATE)",
+    "dto": "ItemCreateDto"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/warehouses/:warehouseId/items/:itemId",
+    "guards": [
+      "SessionAuthGuard",
+      "WarehouseAccessGuard",
+      "WriteRateLimitGuard"
+    ],
+    "permission": "RequiredPermission(PermissionId.ITEMS_UPDATE)",
+    "dto": "ItemUpdateDto"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/warehouses/:warehouseId/items/:itemId/deactivation",
+    "guards": [
+      "SessionAuthGuard",
+      "WarehouseAccessGuard",
+      "WriteRateLimitGuard"
+    ],
+    "permission": "RequiredPermission(PermissionId.ITEMS_DEACTIVATE)",
+    "dto": null
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/warehouses/:warehouseId/items/:itemId/deactivation",
+    "guards": [
+      "SessionAuthGuard",
+      "WarehouseAccessGuard",
+      "WriteRateLimitGuard"
+    ],
+    "permission": "RequiredPermission(PermissionId.ITEMS_DEACTIVATE)",
+    "dto": null
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/warehouses/:warehouseId/items/:itemId/on-hand-adjustments",
+    "guards": [
+      "SessionAuthGuard",
+      "WarehouseAccessGuard",
+      "WriteRateLimitGuard"
+    ],
+    "permission": "RequiredPermission(PermissionId.ITEM_STOCK_ADJUST)",
+    "dto": "OnHandAdjustmentCreateDto"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/warehouses/:warehouseId/packaging-types",
+    "guards": ["SessionAuthGuard", "WarehouseAccessGuard"],
+    "permission": "RequiredPermission(PermissionId.PURCHASE_DRAFTS_WATCH)",
+    "dto": null
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/warehouses/:warehouseId/purchase-drafts",
+    "guards": ["SessionAuthGuard", "WarehouseAccessGuard"],
+    "permission": "RequiredPermission(PermissionId.PURCHASE_DRAFTS_WATCH)",
+    "dto": null
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/warehouses/:warehouseId/purchase-drafts",
+    "guards": [
+      "SessionAuthGuard",
+      "WarehouseAccessGuard",
+      "WriteRateLimitGuard"
+    ],
+    "permission": "RequiredPermission(PermissionId.PURCHASE_DRAFTS_CREATE)",
+    "dto": "PurchaseDraftCreateDto"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/warehouses/:warehouseId/purchase-drafts/:purchaseDraftId",
+    "guards": [
+      "SessionAuthGuard",
+      "WarehouseAccessGuard",
+      "WriteRateLimitGuard"
+    ],
+    "permission": "RequiredPermission(PermissionId.PURCHASE_DRAFTS_DISCARD)",
+    "dto": null
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/warehouses/:warehouseId/purchase-drafts/:purchaseDraftId",
+    "guards": ["SessionAuthGuard", "WarehouseAccessGuard"],
+    "permission": "RequiredPermission(PermissionId.PURCHASE_DRAFTS_WATCH)",
+    "dto": null
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/warehouses/:warehouseId/purchase-drafts/:purchaseDraftId",
+    "guards": [
+      "SessionAuthGuard",
+      "WarehouseAccessGuard",
+      "WriteRateLimitGuard"
+    ],
+    "permission": "RequiredPermission(PermissionId.PURCHASE_DRAFTS_UPDATE)",
+    "dto": "PurchaseDraftReviseDto"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/warehouses/:warehouseId/purchase-drafts/:purchaseDraftId/arrival",
+    "guards": [
+      "SessionAuthGuard",
+      "WarehouseAccessGuard",
+      "WriteRateLimitGuard"
+    ],
+    "permission": "RequiredPermission(PermissionId.PURCHASE_DRAFTS_RECEIVE)",
+    "dto": "ArrivalConfirmationDto"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/warehouses/:warehouseId/purchase-drafts/:purchaseDraftId/closure",
+    "guards": [
+      "SessionAuthGuard",
+      "WarehouseAccessGuard",
+      "WriteRateLimitGuard"
+    ],
+    "permission": "RequiredPermission(PermissionId.PURCHASE_DRAFTS_CLOSE)",
+    "dto": "PurchaseDraftClosureDto"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/warehouses/:warehouseId/purchase-drafts/:purchaseDraftId/lines",
+    "guards": [
+      "SessionAuthGuard",
+      "WarehouseAccessGuard",
+      "WriteRateLimitGuard"
+    ],
+    "permission": "RequiredPermission(PermissionId.PURCHASE_DRAFTS_UPDATE)",
+    "dto": "PurchaseDraftLineCreateDto"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/warehouses/:warehouseId/purchase-drafts/:purchaseDraftId/lines/:purchaseDraftLineId",
+    "guards": [
+      "SessionAuthGuard",
+      "WarehouseAccessGuard",
+      "WriteRateLimitGuard"
+    ],
+    "permission": "RequiredPermission(PermissionId.PURCHASE_DRAFTS_UPDATE)",
+    "dto": null
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/warehouses/:warehouseId/purchase-drafts/:purchaseDraftId/lines/:purchaseDraftLineId",
+    "guards": [
+      "SessionAuthGuard",
+      "WarehouseAccessGuard",
+      "WriteRateLimitGuard"
+    ],
+    "permission": "RequiredPermission(PermissionId.PURCHASE_DRAFTS_UPDATE)",
+    "dto": "PurchaseDraftLineUpdateDto"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/warehouses/:warehouseId/purchase-drafts/:purchaseDraftId/lines/:purchaseDraftLineId/links",
+    "guards": [
+      "SessionAuthGuard",
+      "WarehouseAccessGuard",
+      "WriteRateLimitGuard"
+    ],
+    "permission": "RequiredPermission(PermissionId.PURCHASE_DRAFTS_UPDATE)",
+    "dto": "PurchaseDraftLineLinkCreateDto"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/warehouses/:warehouseId/purchase-drafts/:purchaseDraftId/lines/:purchaseDraftLineId/links/:purchaseDraftLineLinkId",
+    "guards": [
+      "SessionAuthGuard",
+      "WarehouseAccessGuard",
+      "WriteRateLimitGuard"
+    ],
+    "permission": "RequiredPermission(PermissionId.PURCHASE_DRAFTS_UPDATE)",
+    "dto": null
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/warehouses/:warehouseId/purchase-drafts/:purchaseDraftId/lines/:purchaseDraftLineId/links/:purchaseDraftLineLinkId",
+    "guards": [
+      "SessionAuthGuard",
+      "WarehouseAccessGuard",
+      "WriteRateLimitGuard"
+    ],
+    "permission": "RequiredPermission(PermissionId.PURCHASE_DRAFTS_UPDATE)",
+    "dto": "PurchaseDraftLineLinkUpdateDto"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/warehouses/:warehouseId/purchase-drafts/:purchaseDraftId/readiness",
+    "guards": [
+      "SessionAuthGuard",
+      "WarehouseAccessGuard",
+      "WriteRateLimitGuard"
+    ],
+    "permission": "RequiredPermission(PermissionId.PURCHASE_DRAFTS_READY)",
+    "dto": null
+  },
+  {
     "method": "POST",
     "path": "/api/v1/warehouses/:warehouseId/users",
     "guards": ["SessionAuthGuard", "WarehouseAccessGuard"],

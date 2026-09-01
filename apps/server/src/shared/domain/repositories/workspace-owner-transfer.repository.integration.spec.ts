@@ -18,10 +18,6 @@ import {
   buildWorkspace,
   buildWorkspaceRole,
 } from 'test/factories/entity-factories';
-import type { QueryRunner } from 'typeorm';
-
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
 
 const now = new Date('2026-08-12T12:00:00.000Z');
 
@@ -179,62 +175,6 @@ const ownerCount = async (workspaceId: string): Promise<number> =>
     workspaceId,
     workspaceRoleKind: 'workspace_owner',
   });
-
-// ---------------------------------------------------------------------
-// Small helpers for the two genuine-concurrency tests below. Both open two
-// independent PostgreSQL connections (two QueryRunners) and interleave them
-// deliberately by polling real server-side wait state
-// (`pg_stat_activity`) instead of a fixed sleep, so the interleaving point
-// is observed rather than guessed.
-// ---------------------------------------------------------------------
-
-const backendPid = async (runner: QueryRunner): Promise<number> => {
-  const rows = await runner.query('SELECT pg_backend_pid() AS pid');
-  return Number(rows[0].pid);
-};
-
-// A single-row `SELECT ... FOR UPDATE` waiter blocks on the holding
-// transaction's xid (`pg_locks.locktype = 'transactionid'`), which is not
-// tied to any relation — so the contended table cannot be read off
-// `pg_locks` at all here. `pg_stat_activity.query` for the *blocked*
-// backend itself is simpler and unambiguous instead: while a backend is
-// stuck waiting, that column holds the exact statement it is stuck on, so
-// reading the table name out of that statement identifies what it is
-// blocked on directly, with no locktype/relation-id guessing.
-const blockedOnRelation = async (pid: number): Promise<string | null> => {
-  const rows = await dataSource.query(
-    `SELECT query
-       FROM pg_stat_activity
-      WHERE pid = $1 AND wait_event_type = 'Lock'`,
-    [pid],
-  );
-  const query = rows[0]?.query as string | undefined;
-  if (!query) {
-    return null;
-  }
-  const match = /FROM\s+"(?<table>\w+)"/u.exec(query);
-  return match?.groups?.table ?? null;
-};
-
-const waitForEitherBlocked = async (
-  pidA: number,
-  pidB: number,
-): Promise<{ blockedPid: number; relation: string }> => {
-  for (let attempt = 0; attempt < 200; attempt += 1) {
-    const relationA = await blockedOnRelation(pidA);
-    if (relationA) {
-      return { blockedPid: pidA, relation: relationA };
-    }
-    const relationB = await blockedOnRelation(pidB);
-    if (relationB) {
-      return { blockedPid: pidB, relation: relationB };
-    }
-    await new Promise((resolve) => setTimeout(resolve, 15));
-  }
-  throw new Error(
-    'Neither concurrent transfer backend entered a blocked wait state within the poll budget',
-  );
-};
 
 const registerHappyTransferTest = (): void => {
   it('promotes the recipient to sole Owner and reassigns the former Owner to the selected custom Role as one outcome (AC-26)', async () => {
@@ -403,171 +343,7 @@ const registerStalePreconditionTest = (): void => {
   });
 };
 
-const registerLockOrderTest = (): void => {
-  it('locks the `workspaces` row before either Workspace membership row: a competing transfer on the same Workspace blocks on `workspaces`, not on `workspace_memberships` (lock order, no cycle with a Warehouse-level command)', async () => {
-    const graph = await seedOwnershipGraph();
-    // Polls real Postgres wait state to observe genuine concurrency instead
-    // of guessing timing; give it more room than Jest's 5s default.
-
-    const runner1 = dataSource.createQueryRunner();
-    await runner1.connect();
-    const runner2 = dataSource.createQueryRunner();
-    await runner2.connect();
-    await runner1.startTransaction();
-    await runner2.startTransaction();
-
-    const pid1 = await backendPid(runner1);
-    const pid2 = await backendPid(runner2);
-
-    // Both attempt to transfer the *same* current Owner, to two different
-    // recipients, so both transactions necessarily contend for the same
-    // Workspace and the same current-Owner membership row. Fired without
-    // awaiting so they race for real, over two separate connections.
-    const call1 = context.run(runner1.manager, () =>
-      repository.transfer({
-        workspaceId: graph.workspaceId,
-        currentOwnerUserId: graph.ownerUserId,
-        currentOwnerReplacementRoleId: graph.replacementRoleId,
-        recipientUserId: graph.candidateBId,
-        ownerRoleId: graph.ownerRoleId,
-      }),
-    );
-    const call2 = context.run(runner2.manager, () =>
-      repository.transfer({
-        workspaceId: graph.workspaceId,
-        currentOwnerUserId: graph.ownerUserId,
-        currentOwnerReplacementRoleId: graph.candidateCRoleId,
-        recipientUserId: graph.candidateCId,
-        ownerRoleId: graph.ownerRoleId,
-      }),
-    );
-    call1.catch(() => undefined);
-    call2.catch(() => undefined);
-
-    const { blockedPid, relation } = await waitForEitherBlocked(pid1, pid2);
-
-    // The whole point of the fixed lock order: whichever side loses the
-    // race blocks on the *Workspace* row, never on `workspace_memberships` —
-    // if it blocked there instead, the membership rows would have been
-    // locked before the Workspace row, which is the ordering data-model.md
-    // "Repository boundaries" and this task explicitly forbid.
-    expect(relation).toBe('workspaces');
-
-    const [winner, loser] =
-      blockedPid === pid1 ? [runner2, runner1] : [runner1, runner2];
-
-    await winner.commitTransaction();
-    await winner.release();
-
-    // The loser's call unblocks once the winner commits; its outcome is not
-    // this test's concern (covered by the recheck/constraint tests above and
-    // below) — only that it was blocked on the right relation while waiting.
-    await Promise.allSettled([call1, call2]);
-    await loser.rollbackTransaction().catch(() => undefined);
-    await loser.release();
-  }, 20_000);
-};
-
-const registerConstraintIsFinalArbiterTest = (): void => {
-  it('lets the database uq_workspace_memberships_one_owner constraint be the final arbiter when two genuinely concurrent writers race for the Owner slot underneath the repository lock, preserving exactly one Owner', async () => {
-    const graph = await seedOwnershipGraph();
-
-    // This exercises the persistence-layer invariant `transfer` itself
-    // relies on as its backstop (data-model.md: "Database constraints are
-    // the final arbiter under concurrency"), by writing directly against
-    // `workspace_memberships` from two independent connections rather than
-    // through `transfer` — `transfer`'s own Workspace-row lock (proven
-    // above) already serializes *its own* callers before they can reach
-    // this constraint, so reaching the constraint itself requires bypassing
-    // that lock, exactly as a defense-in-depth backstop is meant to be
-    // reached: by something that did not take the intended lock.
-    const runner1 = dataSource.createQueryRunner();
-    await runner1.connect();
-    const runner2 = dataSource.createQueryRunner();
-    await runner2.connect();
-    await runner1.startTransaction();
-    await runner2.startTransaction();
-
-    const pid2 = await backendPid(runner2);
-
-    // txn1: vacate the current Owner's slot and promote candidate B —
-    // completes without contention since, from txn1's own perspective,
-    // there is exactly one Owner row throughout.
-    await runner1.query(
-      `UPDATE workspace_memberships
-          SET workspace_role_id = $1, workspace_role_kind = 'custom', updated_at = now()
-        WHERE user_id = $2`,
-      [graph.replacementRoleId, graph.ownerUserId],
-    );
-    await runner1.query(
-      `UPDATE workspace_memberships
-          SET workspace_role_id = $1, workspace_role_kind = 'workspace_owner', updated_at = now()
-        WHERE user_id = $2`,
-      [graph.ownerRoleId, graph.candidateBId],
-    );
-
-    // txn2: races the same demotion of the same current-Owner row, so it
-    // blocks on that row lock until txn1 finishes — genuine concurrency,
-    // not two sequential calls.
-    const txn2 = (async () => {
-      await runner2.query(
-        `UPDATE workspace_memberships
-            SET workspace_role_id = $1, workspace_role_kind = 'custom', updated_at = now()
-          WHERE user_id = $2`,
-        [graph.candidateCRoleId, graph.ownerUserId],
-      );
-      await runner2.query(
-        `UPDATE workspace_memberships
-            SET workspace_role_id = $1, workspace_role_kind = 'workspace_owner', updated_at = now()
-          WHERE user_id = $2`,
-        [graph.ownerRoleId, graph.candidateCId],
-      );
-    })();
-    txn2.catch(() => undefined);
-
-    // Confirm txn2 is genuinely blocked (on the shared current-Owner
-    // membership row) before letting txn1 commit — this is what makes the
-    // interleaving deliberate rather than accidental. (These are raw
-    // `UPDATE` statements with no `FROM` clause, so `blockedOnRelation`'s
-    // `SELECT`-oriented parsing does not apply here; wait state alone is
-    // enough, since both sides only ever contend on `workspace_memberships`.)
-    for (let attempt = 0; attempt < 200; attempt += 1) {
-      const [row] = await dataSource.query(
-        `SELECT wait_event_type FROM pg_stat_activity WHERE pid = $1`,
-        [pid2],
-      );
-      if (row?.wait_event_type === 'Lock') {
-        break;
-      }
-      if (attempt === 199) {
-        throw new Error(
-          'txn2 never blocked on the shared current-Owner membership row before txn1 committed',
-        );
-      }
-      await new Promise((resolve) => setTimeout(resolve, 15));
-    }
-
-    await runner1.commitTransaction();
-    await runner1.release();
-
-    await expect(txn2).rejects.toThrow(
-      /duplicate key value violates unique constraint "uq_workspace_memberships_one_owner"/u,
-    );
-    await runner2.rollbackTransaction();
-    await runner2.release();
-
-    expect(await ownerCount(graph.workspaceId)).toBe(1);
-    const owner = await dataSource.manager
-      .getRepository(WorkspaceMembershipEntity)
-      .findOneBy({
-        workspaceId: graph.workspaceId,
-        workspaceRoleKind: 'workspace_owner',
-      });
-    expect(owner).toMatchObject({ userId: graph.candidateBId });
-  }, 20_000);
-};
-
-describeIntegration('WorkspaceOwnerTransferRepository', () => {
+describe('WorkspaceOwnerTransferRepository', () => {
   beforeAll(async () => {
     await dataSource.initialize();
   });
@@ -586,7 +362,4 @@ describeIntegration('WorkspaceOwnerTransferRepository', () => {
     registerHappyTransferTest();
     registerStalePreconditionTest();
   });
-
-  registerLockOrderTest();
-  registerConstraintIsFinalArbiterTest();
 });

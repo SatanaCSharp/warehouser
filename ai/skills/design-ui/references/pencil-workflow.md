@@ -23,11 +23,11 @@ If the server is missing:
 3. Inspect its MCP server list for `pencil`.
 4. Confirm the configured executable exists.
 
-If the desktop bridge remains unavailable, report the blocker. The optional `@pen.dev/cli` headless workflow may produce `.pen` files and previews, but use it only when the user accepts losing live desktop review.
+If the desktop bridge remains unavailable, report the blocker. The optional `@pen.dev/cli` headless workflow may produce `.pen` files, but use it only when the user accepts losing live desktop review — and it still publishes review evidence as HTML previews, never as an image or PDF export.
 
 ## Design operations
 
-Start with editor state and variables. Read the closest relevant components before writing. Prefer batched changes, then inspect the resulting structure and computed bounds. Capture a screenshot after every meaningful screen or revision.
+Start with editor state and variables. Read the closest relevant components before writing. Prefer batched changes, then inspect the resulting structure and computed bounds. Capture a canvas screenshot after every meaningful screen or revision to verify your own work — these screenshots are ephemeral conversation evidence and must never be written into the repository. Reviewable evidence is published as HTML per [`html-previews.md`](html-previews.md).
 
 Name frames so approval is unambiguous:
 

@@ -11,17 +11,22 @@ The bootstrap chain is:
 main.tsx
   StrictMode
     Redux Provider
-      App
-        TanStack RouterProvider
-          root route
-            RootLayout
-              matched module page
+      LocaleProvider
+        App
+          TanStack RouterProvider
+            root route
+              RootLayout
+                matched module page
 ```
 
-Provider order is intentional. Components rendered by the router must have access to Redux. HeroUI
-v3 needs no provider — its components read theme state from CSS variables (`styles/global.css`)
-rather than React context. Router guards do not use React hooks; the router receives the same RTK
-store in its context and reads it through selectors.
+Provider order is intentional. Components rendered by the router must have access to Redux.
+`LocaleProvider` (`shared/components/LocaleProvider.tsx`) publishes i18next's resolved language to
+React Aria's `I18nProvider`, which every HeroUI v3 component that formats or parses a value reads
+through `useLocale` — a date field's segment order and a calendar's weekday names among them.
+Without it React Aria would fall back to `navigator.language` and disagree with the language the
+rest of the page is rendered in. HeroUI v3 needs no provider of its own — its components read theme
+state from CSS variables (`styles/global.css`) rather than React context. Router guards do not use
+React hooks; the router receives the same RTK store in its context and reads it through selectors.
 
 Routes are registered manually in `src/router.ts`. Do not introduce file-route generation without
 an accepted system decision and migration plan.
@@ -47,7 +52,8 @@ apps/web/src/
 │       │   ├── mutations/   # writes of server state
 │       │   ├── forms/       # form sessions
 │       │   ├── projections/ # derivations over state already loaded
-│       │   └── effects/     # hooks whose product is a browser side effect
+│       │   ├── effects/     # hooks whose product is a browser side effect
+│       │   └── state/       # local UI state and the named transitions over it
 │       ├── loaders/         # plain route data functions; only when a route awaits data
 │       ├── utils/           # module-owned pure helpers; never hooks
 │       ├── schemas/         # browser-only validation
@@ -62,7 +68,7 @@ apps/web/src/
 │   ├── api/                 # shared query client, outcome normalizer, cross-module endpoints
 │   ├── components/          # reused by at least two modules
 │   ├── constants/
-│   ├── hooks/               # same five subdirectories as a module's hooks/
+│   ├── hooks/               # same six subdirectories as a module's hooks/
 │   ├── layouts/
 │   └── utils/               # generic pure helpers owned by no single entity
 ├── store/
@@ -89,7 +95,7 @@ For example, sign-up and sign-out success alerts belong to `modules/auth/alerts/
 generic normalized API-failure alert. Colocate each alert adapter's test with the adapter.
 
 Hooks and pure helpers are filed by what they do, not by which screen calls them: every `hooks/`
-directory uses the five names above, and a file that declares no hook belongs in a `utils/`
+directory uses the six names above, and a file that declares no hook belongs in a `utils/`
 directory instead. Follow [Placing web hooks](guides/placing-web-hooks.md) for the full rule and for
 the module-versus-shared promotion test it applies.
 

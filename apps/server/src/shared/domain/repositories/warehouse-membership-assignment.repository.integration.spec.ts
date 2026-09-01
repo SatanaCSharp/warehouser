@@ -22,9 +22,6 @@ import {
   buildWorkspace,
 } from 'test/factories/entity-factories';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 const now = new Date('2026-08-12T12:00:00.000Z');
 
 // The shape this RED step expects the implementer to expose (data-model.md
@@ -475,7 +472,7 @@ const verifyLockMembershipReturnsNullWhenNoRowExists =
     expect(membership).toBeNull();
   };
 
-describeIntegration('WarehouseMembershipAssignmentRepository', () => {
+describe('WarehouseMembershipAssignmentRepository', () => {
   beforeAll(async () => {
     await dataSource.initialize();
   });

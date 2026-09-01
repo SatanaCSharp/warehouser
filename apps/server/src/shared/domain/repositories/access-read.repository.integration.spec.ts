@@ -8,9 +8,6 @@ import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-memb
 import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 import { AccessReadRepository } from 'shared/domain/repositories/access-read.repository';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 const now = new Date('2026-08-06T12:00:00.000Z');
 
 const workspaceId = '00000000-0000-4000-8000-000000000400';
@@ -19,7 +16,7 @@ const roleId = '00000000-0000-4000-8000-000000000402';
 const memberUserId = '00000000-0000-4000-8000-000000000403';
 const memberEmail = 'member@example.test';
 
-describeIntegration('AccessReadRepository.listMembersAndAssignments', () => {
+describe('AccessReadRepository.listMembersAndAssignments', () => {
   const repository = new AccessReadRepository(dataSource);
 
   beforeAll(async () => {
@@ -112,7 +109,7 @@ const secondMemberEmail = 'second@example.test';
  * that stays invisible while a Role has at most one Member, which is why the
  * fixtures below give one Role two of them.
  */
-describeIntegration('AccessReadRepository.listRolesAndPermissions', () => {
+describe('AccessReadRepository.listRolesAndPermissions', () => {
   const repository = new AccessReadRepository(dataSource);
 
   const insertUser = async (id: string, email: string): Promise<void> => {

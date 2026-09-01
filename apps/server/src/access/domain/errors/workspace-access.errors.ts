@@ -1,5 +1,5 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
-import { ApplicationError, SystemError } from '@warehouser/shared-types/errors';
+import { ApplicationError } from '@warehouser/shared-types/errors';
 
 // AC-16 — the protected Workspace Owner Role is never renamed, deleted, or
 // re-permissioned.
@@ -64,27 +64,3 @@ export const workspaceWarehouseMembershipRequiredError = (): ApplicationError =>
 // this stable, retriable code rather than an opaque persistence failure.
 export const workspaceConcurrentChangeError = (): ApplicationError =>
   new ApplicationError(ErrorCode.WORKSPACE_CONCURRENT_CHANGE);
-
-// AC-17b — the Role deletion (reassigning every affected Member, then
-// removing the Role) fails for a known infrastructure/technical reason
-// (server-error-handling.md §2), so this is a `SystemError`, matching
-// openapi.yaml's documented 503 `workspace.role_deletion_unavailable`. AC-17b
-// promises that the Role and its assignments are then unchanged — one
-// transaction guarantees it, and the generic 500 this replaces could not say
-// so.
-export const workspaceRoleDeletionUnavailableError = (
-  cause: unknown,
-): SystemError =>
-  new SystemError(ErrorCode.WORKSPACE_ROLE_DELETION_UNAVAILABLE, cause);
-
-// AC-26 — the Owner swap fails for a known infrastructure/technical reason
-// (server-error-handling.md §2), so this is a `SystemError`, matching
-// openapi.yaml's documented 503 `workspace.owner_transfer_unavailable`.
-// Distinct from `workspaceConcurrentChangeError()`: a lost race is a
-// retriable *business* outcome with its own 409, while this names a
-// technical failure of the attempt itself. Exactly one current Workspace
-// Owner survives either way.
-export const workspaceOwnerTransferUnavailableError = (
-  cause: unknown,
-): SystemError =>
-  new SystemError(ErrorCode.WORKSPACE_OWNER_TRANSFER_UNAVAILABLE, cause);

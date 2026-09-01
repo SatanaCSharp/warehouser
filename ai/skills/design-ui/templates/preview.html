@@ -1,0 +1,184 @@
+<!doctype html>
+<!--
+  Preview evidence — design-ui skill. Review artifact only; never an implementation source.
+
+  Frame:        <Feature> / <Flow or Screen> / <Viewport> / v<N>
+  Design source: docs/features/<slug>/design.pen
+  Node ID:      <node id>
+  Viewport:     <width>×<height>
+  States:       <default | loading | empty | error | disabled | unauthorized>
+-->
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>&lt;Feature&gt; · &lt;Screen&gt; · &lt;Viewport&gt;</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style type="text/tailwindcss">
+      /*
+       * HeroUI v3 semantic tokens, copied from
+       * apps/web/node_modules/@heroui/styles/dist/themes/{default/variables.css,shared/theme.css}.
+       * Copy values; never hand-pick a colour. If a token is missing here, copy the missing
+       * declaration from that file rather than inventing one.
+       */
+      @theme inline {
+        --color-background: var(--background);
+        --color-background-secondary: var(--background-secondary);
+        --color-foreground: var(--foreground);
+        --color-muted: var(--muted);
+
+        --color-surface: var(--surface);
+        --color-surface-foreground: var(--surface-foreground);
+        --color-surface-secondary: var(--surface-secondary);
+        --color-surface-tertiary: var(--surface-tertiary);
+        --color-overlay: var(--overlay);
+        --color-overlay-foreground: var(--overlay-foreground);
+
+        --color-accent: var(--accent);
+        --color-accent-foreground: var(--accent-foreground);
+        --color-accent-soft: var(--accent-soft);
+        --color-accent-soft-foreground: var(--accent-soft-foreground);
+
+        --color-default: var(--default);
+        --color-default-foreground: var(--default-foreground);
+        --color-success: var(--success);
+        --color-success-foreground: var(--success-foreground);
+        --color-success-soft: var(--success-soft);
+        --color-warning: var(--warning);
+        --color-warning-foreground: var(--warning-foreground);
+        --color-warning-soft: var(--warning-soft);
+        --color-danger: var(--danger);
+        --color-danger-foreground: var(--danger-foreground);
+        --color-danger-soft: var(--danger-soft);
+
+        --color-border: var(--border);
+        --color-separator: var(--separator);
+        --color-focus: var(--focus);
+        --color-link: var(--link);
+
+        --color-field: var(--field-background);
+        --color-field-foreground: var(--field-foreground);
+        --color-field-placeholder: var(--field-placeholder);
+        --color-field-border: var(--field-border);
+
+        --radius-field: var(--field-radius);
+        --shadow-surface: var(--surface-shadow);
+        --shadow-overlay: var(--overlay-shadow);
+      }
+
+      :root,
+      [data-theme='light'] {
+        color-scheme: light;
+
+        --white: oklch(100% 0 0);
+        --snow: oklch(0.9911 0 0);
+        --eclipse: oklch(0.2103 0.0059 285.89);
+
+        --radius: 0.5rem;
+        --field-radius: calc(var(--radius) * 1.5);
+
+        --background: oklch(0.9702 0 0);
+        --foreground: var(--eclipse);
+        --muted: oklch(0.5517 0.0138 285.94);
+
+        --surface: var(--white);
+        --surface-foreground: var(--foreground);
+        --surface-secondary: oklch(0.9524 0.0013 286.37);
+        --surface-tertiary: oklch(0.9373 0.0013 286.37);
+        --overlay: var(--white);
+        --overlay-foreground: var(--foreground);
+
+        --accent: oklch(0.6204 0.195 253.83);
+        --accent-foreground: var(--snow);
+        --default: oklch(94% 0.001 286.375);
+        --default-foreground: var(--eclipse);
+
+        --success: oklch(0.7329 0.1935 150.81);
+        --success-foreground: var(--eclipse);
+        --warning: oklch(0.7819 0.1585 72.33);
+        --warning-foreground: var(--eclipse);
+        --danger: oklch(0.6532 0.2328 25.74);
+        --danger-foreground: var(--snow);
+
+        --field-background: var(--white);
+        --field-foreground: var(--eclipse);
+        --field-placeholder: var(--muted);
+        --field-border: transparent;
+
+        --border: oklch(90% 0.004 286.32);
+        --separator: oklch(92% 0.004 286.32);
+        --focus: var(--accent);
+        --link: var(--foreground);
+
+        --background-secondary: color-mix(
+          in oklab,
+          var(--background) 96%,
+          var(--foreground) 4%
+        );
+        --accent-soft: color-mix(in oklab, var(--accent) 15%, transparent);
+        --accent-soft-foreground: color-mix(
+          in oklab,
+          var(--accent) 70%,
+          var(--foreground) 30%
+        );
+        --success-soft: color-mix(in oklab, var(--success) 15%, transparent);
+        --warning-soft: color-mix(in oklab, var(--warning) 15%, transparent);
+        --danger-soft: color-mix(in oklab, var(--danger) 15%, transparent);
+
+        --surface-shadow:
+          0 2px 4px 0 rgba(0, 0, 0, 0.04), 0 1px 2px 0 rgba(0, 0, 0, 0.06),
+          0 0 1px 0 rgba(0, 0, 0, 0.06);
+        --overlay-shadow:
+          0 2px 8px 0 rgba(0, 0, 0, 0.06), 0 -6px 12px 0 rgba(0, 0, 0, 0.03),
+          0 14px 28px 0 rgba(0, 0, 0, 0.08);
+      }
+
+      [data-theme='dark'] {
+        color-scheme: dark;
+
+        --background: oklch(12% 0.005 285.823);
+        --foreground: var(--snow);
+        --muted: oklch(70.5% 0.015 286.067);
+
+        --surface: oklch(0.2103 0.0059 285.89);
+        --surface-foreground: var(--foreground);
+        --surface-secondary: oklch(0.257 0.0037 286.14);
+        --surface-tertiary: oklch(0.2721 0.0024 247.91);
+        --overlay: oklch(0.2103 0.0059 285.89);
+        --overlay-foreground: var(--foreground);
+
+        --default: oklch(27.4% 0.006 286.033);
+        --default-foreground: var(--snow);
+        --warning: oklch(0.8203 0.1388 76.34);
+        --danger: oklch(0.594 0.1967 24.63);
+
+        --field-background: oklch(0.2103 0.0059 285.89);
+        --field-foreground: var(--foreground);
+
+        --border: oklch(28% 0.006 286.033);
+        --separator: oklch(25% 0.006 286.033);
+
+        --accent-soft: color-mix(in oklab, var(--accent) 12%, transparent);
+        --accent-soft-foreground: color-mix(
+          in oklab,
+          var(--accent) 80%,
+          var(--foreground) 30%
+        );
+
+        --surface-shadow: 0 0 0 0 transparent inset;
+        --overlay-shadow: 0 0 1px 0 rgba(255, 255, 255, 0.3) inset;
+      }
+    </style>
+  </head>
+
+  <!-- The frame width below must match the viewport recorded in the header comment. -->
+  <body class="bg-background text-foreground min-h-screen antialiased">
+    <main class="mx-auto w-[1440px] max-w-full">
+      <!--
+        Compose the screen from HeroUI v3 primitives, expressed as Tailwind utilities on the
+        semantic tokens above (bg-surface, text-muted, border-border, bg-accent, rounded-field…).
+        Do not introduce raw hex/rgb colours, a second styling system, or an <img> screenshot.
+      -->
+    </main>
+  </body>
+</html>

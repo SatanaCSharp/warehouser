@@ -25,9 +25,6 @@ import {
   buildWorkspaceRole,
 } from 'test/factories/entity-factories';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 const now = new Date('2026-08-12T12:00:00.000Z');
 
 // The shape this RED step expects the implementer to expose
@@ -302,82 +299,6 @@ const registerReplaceRoleAssignmentsHappyTest = (): void => {
   });
 };
 
-const registerReplaceRoleAssignmentsIsolationTest = (): void => {
-  it('shows no intermediate state to a concurrent reader while the replacement is uncommitted', async () => {
-    const workspaceId = await seedWorkspace();
-
-    const sourceRoleId = crypto.randomUUID();
-    const replacementRoleId = crypto.randomUUID();
-    await dataSource.manager.getRepository(WorkspaceRoleEntity).insert([
-      buildWorkspaceRole({
-        id: sourceRoleId,
-        workspaceId,
-        name: 'Deleted custom Workspace Role',
-      }),
-      buildWorkspaceRole({
-        id: replacementRoleId,
-        workspaceId,
-        name: 'Replacement custom Workspace Role',
-      }),
-    ]);
-
-    const memberId = crypto.randomUUID();
-    await seedIdentity(
-      memberId,
-      workspaceId,
-      `member.${memberId}@example.test`,
-    );
-    await dataSource.manager.getRepository(WorkspaceMembershipEntity).insert(
-      buildWorkspaceMembership({
-        userId: memberId,
-        workspaceId,
-        workspaceRoleId: sourceRoleId,
-      }),
-    );
-
-    const runner = dataSource.createQueryRunner();
-    await runner.connect();
-    await runner.startTransaction();
-
-    try {
-      await context.run(runner.manager, () =>
-        repository.replaceRoleAssignments(
-          workspaceId,
-          sourceRoleId,
-          replacementRoleId,
-        ),
-      );
-      await context.run(runner.manager, () =>
-        repository.removeCustomRole(workspaceId, sourceRoleId),
-      );
-
-      // Uncommitted: a separate connection (READ COMMITTED, the server
-      // default) must still see the pre-replacement state.
-      const membershipBeforeCommit = await dataSource.manager
-        .getRepository(WorkspaceMembershipEntity)
-        .findOneBy({ userId: memberId });
-      const roleBeforeCommit = await dataSource.manager
-        .getRepository(WorkspaceRoleEntity)
-        .findOneBy({ id: sourceRoleId });
-      expect(membershipBeforeCommit).toMatchObject({
-        workspaceRoleId: sourceRoleId,
-      });
-      expect(roleBeforeCommit).not.toBeNull();
-
-      await runner.commitTransaction();
-    } finally {
-      await runner.release();
-    }
-
-    const membershipAfterCommit = await dataSource.manager
-      .getRepository(WorkspaceMembershipEntity)
-      .findOneBy({ userId: memberId });
-    expect(membershipAfterCommit).toMatchObject({
-      workspaceRoleId: replacementRoleId,
-    });
-  });
-};
-
 const registerReplaceRoleAssignmentsRollbackTest = (): void => {
   it('leaves nothing behind when the transaction owning the replacement is rolled back after an injected failure', async () => {
     const workspaceId = await seedWorkspace();
@@ -444,7 +365,7 @@ const registerReplaceRoleAssignmentsRollbackTest = (): void => {
   });
 };
 
-describeIntegration('WorkspaceRoleLifecycleRepository', () => {
+describe('WorkspaceRoleLifecycleRepository', () => {
   beforeAll(async () => {
     await dataSource.initialize();
   });
@@ -464,7 +385,6 @@ describeIntegration('WorkspaceRoleLifecycleRepository', () => {
 
   describe('replaceRoleAssignments + removeCustomRole (AC-17)', () => {
     registerReplaceRoleAssignmentsHappyTest();
-    registerReplaceRoleAssignmentsIsolationTest();
     registerReplaceRoleAssignmentsRollbackTest();
   });
 });

@@ -23,9 +23,6 @@ import { WorkspaceRoleEntity } from 'shared/domain/entities/workspace-role.entit
 import { WorkspaceRolePermissionEntity } from 'shared/domain/entities/workspace-role-permission.entity';
 import { GlobalHttpExceptionFilter } from 'shared/errors/global-http-exception.filter';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 const now = new Date('2026-08-12T12:00:00.000Z');
 
 interface Actor {
@@ -55,7 +52,7 @@ interface WorkspaceFixture {
 // `access/rest/controllers/workspace-access-http-contract.integration.spec.ts`
 // (CH-S2); every case below is unchanged (CR-RG-01).
 // eslint-disable-next-line max-lines-per-function -- an HTTP contract suite covering one surface is inherently long
-describeIntegration('workspace HTTP contract', () => {
+describe('workspace HTTP contract', () => {
   let app: INestApplication;
   let baseUrl: string;
 

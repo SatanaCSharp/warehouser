@@ -6,8 +6,6 @@ import { Transactional } from 'shared/decorators/transactional.decorator';
 import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
 import { AccessName } from 'shared/domain/value-objects/access-name';
 import { validatedName } from 'shared/errors/invalid-name.error';
-import { withUnavailableOutcome } from 'shared/errors/unavailable-outcome';
-import { workspaceWarehouseCreationUnavailableError } from 'warehouses/domain/errors/warehouse.errors';
 
 // Trims, validates and returns a storable Warehouse name via the shared
 // `AccessName` value object (AC-08). Preserves submitted Unicode without
@@ -70,25 +68,21 @@ export class CreateWarehouseCommand {
     const id = this.createWarehouseRuntime.warehouseId();
 
     // The Warehouse row write and the delegated Manager Role/assignment
-    // provisioning are one failure boundary (AC-07): either failing for a
-    // known infrastructure/technical reason (server-error-handling.md §2)
-    // must translate into the documented 503, preserving the originating
-    // failure as `cause`, rather than propagate an opaque generic 500.
-    // `withUnavailableOutcome` keeps that boundary from swallowing what the
-    // delegated use case raises on its own account — a business rejection
-    // keeps its 4xx code and a defect stays a defect.
-    await withUnavailableOutcome(async () => {
-      await this.warehouseLifecycleRepository.createWarehouse({
-        id,
-        workspaceId: currentUser.workspaceId,
-        name,
-      });
+    // provisioning share this method's `@Transactional()` boundary, which is
+    // what AC-07 needs: either failing rolls the other back, so no Warehouse
+    // is left behind. The failure itself propagates untouched to the global
+    // exception filter, the single place it is classified
+    // (server-use-case-boundaries.md §3).
+    await this.warehouseLifecycleRepository.createWarehouse({
+      id,
+      workspaceId: currentUser.workspaceId,
+      name,
+    });
 
-      await this.provisionInitialAccess.execute({
-        warehouseId: id,
-        userId: currentUser.userId,
-      });
-    }, workspaceWarehouseCreationUnavailableError);
+    await this.provisionInitialAccess.execute({
+      warehouseId: id,
+      userId: currentUser.userId,
+    });
 
     return { id, name, archivedAt: null };
   }

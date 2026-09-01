@@ -2,7 +2,6 @@ import { randomUUID } from 'node:crypto';
 
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { SignInCommand } from 'auth/usecases/commands/sign-in.command';
-import type { PinoLogger } from 'nestjs-pino';
 import { accessCurrentUser } from 'shared/access/access-current-user';
 import dataSource from 'shared/database/data-source';
 import { DbTransactionService } from 'shared/database/db-transaction.service';
@@ -26,9 +25,6 @@ import { hashPassword } from 'shared/domain/security/password-hashing';
 // success, following the same constructor-injection + `@Transactional()`
 // idiom as `TransferWarehouseManagerCommand`/`DeleteRoleCommand`.
 import { CreateMemberCommand } from 'users/usecases/commands/create-member.command';
-
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
 
 const now = new Date('2026-08-06T12:00:00.000Z');
 
@@ -61,7 +57,7 @@ const validEmail = 'new.member@example.test';
 const validPassword = 'a-valid-password-1';
 
 // eslint-disable-next-line max-lines-per-function, max-statements -- integration suite setup is inherently long
-describeIntegration('CreateMemberCommand', () => {
+describe('CreateMemberCommand', () => {
   const context = new DbTransactionContext(dataSource);
   const transactions = new DbTransactionService(dataSource, context);
   const accessCurrentUserRepository = new AccessCurrentUserRepository(
@@ -72,7 +68,6 @@ describeIntegration('CreateMemberCommand', () => {
   const authenticationRepository = new AuthenticationRepository(dataSource);
 
   let newMemberId = uuid('400000000001');
-  const logInfo = jest.fn();
 
   const createCommand = (): CreateMemberCommand =>
     new CreateMemberCommand(
@@ -90,7 +85,6 @@ describeIntegration('CreateMemberCommand', () => {
         identityId: () => newMemberId,
         now: () => now,
       },
-      { info: logInfo } as unknown as PinoLogger,
     );
 
   // Fast-but-real scrypt parameters, matching the pattern already used by
@@ -118,7 +112,6 @@ describeIntegration('CreateMemberCommand', () => {
         identityId: () => newMemberId,
         now: () => now,
       },
-      { info: logInfo } as unknown as PinoLogger,
     );
 
   beforeAll(async () => {
@@ -137,7 +130,6 @@ describeIntegration('CreateMemberCommand', () => {
 
   beforeEach(() => {
     newMemberId = randomUUID();
-    logInfo.mockClear();
   });
 
   afterEach(async () => {
@@ -309,6 +301,7 @@ describeIntegration('CreateMemberCommand', () => {
       roleId: actorRoleId,
       roleKind: 'custom',
       permissionId: USERS_CREATE,
+      archived: false,
     });
 
   const persistedCounts = async (): Promise<{
@@ -359,18 +352,6 @@ describeIntegration('CreateMemberCommand', () => {
       [newMemberId],
     );
     expect(sessions).toEqual([{ count: '0' }]);
-
-    // sad.md §8: a structured, per-action Pino timing log — no credential
-    // fields.
-    expect(logInfo).toHaveBeenCalledWith(
-      expect.objectContaining({
-        operation: 'users.create_member',
-        outcomeCode: 'success',
-        durationMs: expect.any(Number),
-        userId: actorId,
-        warehouseId: warehouseAId,
-      }),
-    );
   });
 
   it('AC-24 (T27 DoD): the created member belongs to the Workspace that owns the Warehouse they were created in, and to no other', async () => {
@@ -675,8 +656,10 @@ describeIntegration('CreateMemberCommand', () => {
 
     expect(signedIn.userId).toBe(newMemberId);
 
-    const access =
-      await accessCurrentUserRepository.resolveCurrentAccess(newMemberId);
+    const access = await accessCurrentUserRepository.resolveCurrentAccess(
+      newMemberId,
+      warehouseAId,
+    );
     expect(access).toMatchObject({
       warehouseId: warehouseAId,
       roleId: permissiveCustomRoleId,

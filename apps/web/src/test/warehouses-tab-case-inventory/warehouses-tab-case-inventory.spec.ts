@@ -127,11 +127,10 @@ const MOVED_CASES = [
  * nothing that could fail. CR-RG-01 forbids deleting or rewriting an
  * expectation; it explicitly permits adding one.
  *
- * This list is the same device `tests/refactor/moved-modules.mjs` uses to admit
- * the CH-W5 leaves into the CR-RG-05 chunk manifest: the baseline stays
- * *compared, never regenerated*, and everything not in the baseline must be
- * named here to pass. An addition nobody enumerated still fails as
- * `unexpected`.
+ * This list is the same device the retired CR-RG-05 chunk-manifest gate used
+ * to admit the CH-W5 leaves: the baseline stays *compared, never
+ * regenerated*, and everything not in the baseline must be named here to
+ * pass. An addition nobody enumerated still fails as `unexpected`.
  */
 const ADDED_CASES: Record<string, string[]> = {
   'WarehousesTab.spec.tsx': [

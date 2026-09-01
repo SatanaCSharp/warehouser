@@ -6,9 +6,12 @@ import localeBaseline from 'test/locale-baseline.json';
 
 import enAccess from '../public/locales/en/access.json';
 import enCommon from '../public/locales/en/common.json';
+import enCustomerOrder from '../public/locales/en/customer-order.json';
 import enErrors from '../public/locales/en/errors.json';
 import enHome from '../public/locales/en/home.json';
+import enItem from '../public/locales/en/item.json';
 import enPending from '../public/locales/en/pending.json';
+import enPurchaseDraft from '../public/locales/en/purchase-draft.json';
 import enSignIn from '../public/locales/en/sign-in.json';
 import enSignUp from '../public/locales/en/sign-up.json';
 import enSuccess from '../public/locales/en/success.json';
@@ -17,9 +20,12 @@ import enWarehouse from '../public/locales/en/warehouse.json';
 import enWorkspace from '../public/locales/en/workspace.json';
 import ukAccess from '../public/locales/uk/access.json';
 import ukCommon from '../public/locales/uk/common.json';
+import ukCustomerOrder from '../public/locales/uk/customer-order.json';
 import ukErrors from '../public/locales/uk/errors.json';
 import ukHome from '../public/locales/uk/home.json';
+import ukItem from '../public/locales/uk/item.json';
 import ukPending from '../public/locales/uk/pending.json';
+import ukPurchaseDraft from '../public/locales/uk/purchase-draft.json';
 import ukSignIn from '../public/locales/uk/sign-in.json';
 import ukSignUp from '../public/locales/uk/sign-up.json';
 import ukSuccess from '../public/locales/uk/success.json';
@@ -31,9 +37,12 @@ const resources = {
   en: {
     access: enAccess,
     common: enCommon,
+    'customer-order': enCustomerOrder,
     errors: enErrors,
     home: enHome,
+    item: enItem,
     pending: enPending,
+    'purchase-draft': enPurchaseDraft,
     'sign-in': enSignIn,
     'sign-up': enSignUp,
     success: enSuccess,
@@ -44,9 +53,12 @@ const resources = {
   uk: {
     access: ukAccess,
     common: ukCommon,
+    'customer-order': ukCustomerOrder,
     errors: ukErrors,
     home: ukHome,
+    item: ukItem,
     pending: ukPending,
+    'purchase-draft': ukPurchaseDraft,
     'sign-in': ukSignIn,
     'sign-up': ukSignUp,
     success: ukSuccess,
@@ -416,11 +428,21 @@ describe('workspace-warehouse T1 shell/enter-action keys', () => {
     expect(
       instance.t('shell.archivedEntryRefusal.heading', { ns: 'common' }),
     ).toBe('This warehouse is archived');
+    // AC-23 — an archived Warehouse IS entered now, read-only, so the sentence
+    // that said it could not be entered was no longer true. The refusal it
+    // accompanies is the Access address alone (CR-AC-17), which is what the
+    // replacement copy names.
     expect(
       instance.t('shell.archivedEntryRefusal.description', { ns: 'common' }),
     ).toBe(
-      "Archived warehouses can't be entered. Your access to other warehouses is unchanged.",
+      "Archived warehouses aren't administered here. What one already holds stays readable to everyone permitted to read it.",
     );
+    expect(instance.t('shell.archivedWarehouse.chip', { ns: 'common' })).toBe(
+      'Archived warehouse',
+    );
+    expect(
+      instance.t('shell.archivedWarehouse.heading', { ns: 'common' }),
+    ).toBe('This warehouse has been archived');
     expect(instance.t('shell.landing.pendingLabel', { ns: 'common' })).toBe(
       'Preparing your workspace…',
     );
@@ -537,6 +559,58 @@ const ORPHANED_WAITING_KEYS: [namespace: LocaleNamespace, key: string][] = [
   ['warehouse', 'warehouses.loading'],
   ['workspace', 'loading'],
 ];
+
+// T17 — the ordering web shell registers three module-named namespaces
+// (sad.md §8 Naming: `customer-order`, `purchase-draft`, `item`) with full
+// en/uk key parity (adding-and-maintaining-web-localization.md §"Add a
+// namespace"). None of the three is registered in `i18n.ts` yet, and none of
+// the six locale files exists on disk, so every assertion below fails against
+// the current tree rather than against a missing static import — the real
+// resource assembly is read through `currentSnapshot()`'s `import.meta.glob`,
+// which simply omits files that are not there yet.
+describe('ordering web shell localization (T17)', () => {
+  const orderingNamespaces = ['customer-order', 'purchase-draft', 'item'];
+
+  it('registers the customer-order, purchase-draft and item namespaces', () => {
+    for (const namespace of orderingNamespaces) {
+      expect(namespaces).toContain(namespace);
+    }
+  });
+
+  it('serves a locale file for each ordering namespace in every supported language', () => {
+    const current = currentSnapshot();
+
+    for (const language of supportedLanguages) {
+      for (const namespace of orderingNamespaces) {
+        expect(
+          Object.keys(current[language] ?? {}),
+          `${language}/${namespace}.json`,
+        ).toContain(namespace);
+      }
+    }
+  });
+
+  it('gives the ordering namespaces full en/uk key parity', () => {
+    const current = currentSnapshot();
+    const normalize = (entries: Record<string, string> | undefined): string[] =>
+      [
+        ...new Set(
+          Object.keys(entries ?? {}).map((key) =>
+            key.replace(pluralSuffix, ''),
+          ),
+        ),
+      ].sort();
+
+    for (const namespace of orderingNamespaces) {
+      expect(normalize(current.uk?.[namespace])).toEqual(
+        normalize(current.en?.[namespace]),
+      );
+      // Fails loudly rather than passing on two empty arrays when the
+      // namespace file does not exist in either language yet.
+      expect(normalize(current.en?.[namespace]).length).toBeGreaterThan(0);
+    }
+  });
+});
 
 describe('global-loader waiting copy (CR-AC-12)', () => {
   it.each(supportedLanguages)(

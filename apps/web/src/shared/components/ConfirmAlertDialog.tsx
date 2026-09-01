@@ -86,12 +86,24 @@ export const ConfirmAlertDialog = ({
           <AlertDialog.Body className="flex flex-col gap-4">
             {children}
           </AlertDialog.Body>
-          <AlertDialog.Footer>
-            <Button slot="close" variant="ghost" isDisabled={isConfirming}>
+          {/*
+            Cancel precedes the confirm in DOM — and therefore keyboard —
+            order at every width. Below the split breakpoint the column is
+            *reversed*, so the full-width confirm is what sits on top without
+            either control moving in the tab sequence.
+          */}
+          <AlertDialog.Footer className="flex-col-reverse items-stretch md:flex-row md:items-center">
+            <Button
+              slot="close"
+              variant="ghost"
+              className="w-full md:w-auto"
+              isDisabled={isConfirming}
+            >
               {cancelLabel}
             </Button>
             <Button
               variant={confirmVariant}
+              className="w-full md:w-auto"
               isDisabled={isConfirming || isConfirmDisabled}
               isPending={isConfirming}
               onPress={onPressConfirm}

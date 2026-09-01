@@ -1,14 +1,14 @@
 import { Button, Chip, Dropdown, Label } from '@heroui/react';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ChangeWorkspaceRoleDialog } from 'modules/access/components/workspace-administration/members/ChangeWorkspaceRoleDialog';
 import { RemoveWorkspaceMemberDialog } from 'modules/access/components/workspace-administration/members/RemoveWorkspaceMemberDialog';
 import { TransferWorkspaceOwnershipDialog } from 'modules/access/components/workspace-administration/members/TransferWorkspaceOwnershipDialog';
+import { ActionDialogHost } from 'shared/components/ActionDialogHost';
 import { Conditional } from 'shared/components/Conditional';
-import { DialogHost } from 'shared/components/DialogHost';
 import { useWorkspacePermittedItems } from 'shared/hooks/projections/useWorkspacePermittedItems';
+import { useActionDialog } from 'shared/hooks/state/useActionDialog';
 import {
   ArrowRightLeftIcon,
   KebabIcon,
@@ -24,13 +24,13 @@ type WorkspaceMemberRowProps = {
   roleName?: string;
 };
 
-/** Which per-Member dialog the row has opened. */
-type WorkspaceMemberDialog =
+/** Which per-Member dialog this row's menu opens. */
+type WorkspaceMemberDialogKind =
   'changeRole' | 'removeMember' | 'transferOwnership';
 
 type RowAction = {
   icon: ReactNode;
-  id: WorkspaceMemberDialog;
+  id: WorkspaceMemberDialogKind;
   label: string;
   /** The Workspace Permission that offers this action (AC-30). */
   permission: WorkspacePermissionId;
@@ -125,15 +125,13 @@ export const WorkspaceMemberRow = ({
   roleName,
 }: WorkspaceMemberRowProps): ReactElement => {
   const { t } = useTranslation('access');
-  const [dialog, setDialog] = useState<WorkspaceMemberDialog | null>(null);
+  const dialog = useActionDialog<WorkspaceMemberDialogKind, WorkspaceMember>();
   const identity = member.email ?? member.userId;
   const isProtected = member.workspaceRoleKind === 'workspace_owner';
   const actionsLabel = t('members.actions', { email: identity });
 
-  const onCloseDialog = (): void => setDialog(null);
-
-  const onOpenDialog = (kind: WorkspaceMemberDialog) => (): void =>
-    setDialog(kind);
+  const onOpenDialog = (kind: WorkspaceMemberDialogKind) => (): void =>
+    dialog.open(kind, member);
 
   const ownerActions = useWorkspacePermittedItems<RowAction>([
     {
@@ -163,23 +161,6 @@ export const WorkspaceMemberRow = ({
     },
   ]);
 
-  // Every dialog reads the Member its row was opened for, so the open one is
-  // resolved by a lookup here rather than gated inline: `Conditional` evaluates
-  // both arms. A menu item is not a trigger the dialog can sit beside, so
-  // `DialogHost` holds the open state the dialog closes itself through.
-  const openDialog =
-    dialog === null ? null : (
-      <DialogHost onClose={onCloseDialog}>
-        {
-          {
-            changeRole: <ChangeWorkspaceRoleDialog member={member} />,
-            removeMember: <RemoveWorkspaceMemberDialog member={member} />,
-            transferOwnership: <TransferWorkspaceOwnershipDialog />,
-          }[dialog]
-        }
-      </DialogHost>
-    );
-
   return (
     <li
       aria-label={identity}
@@ -196,7 +177,18 @@ export const WorkspaceMemberRow = ({
         isProtected={isProtected}
       />
 
-      {openDialog}
+      <ActionDialogHost
+        controller={dialog}
+        renderDialogs={{
+          changeRole: (subject) => (
+            <ChangeWorkspaceRoleDialog member={subject} />
+          ),
+          removeMember: (subject) => (
+            <RemoveWorkspaceMemberDialog member={subject} />
+          ),
+          transferOwnership: () => <TransferWorkspaceOwnershipDialog />,
+        }}
+      />
     </li>
   );
 };

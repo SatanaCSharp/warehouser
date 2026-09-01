@@ -11,7 +11,10 @@
     "start": "node dist/main",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "jest --passWithNoTests",
+    "test:integration": "NODE_OPTIONS=--experimental-vm-modules jest --config jest.pglite.config.cjs",
+    "test:all": "pnpm test && pnpm test:integration",
     "migration:generate": "typeorm-ts-node-commonjs migration:generate -d src/shared/database/data-source.ts",
     "migration:run": "typeorm-ts-node-commonjs migration:run -d src/shared/database/data-source.ts",
     "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/shared/database/data-source.ts",
@@ -46,6 +49,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "@nestjs/cli": "catalog:",
     "@nestjs/testing": "catalog:",
     "@types/jest": "catalog:",
@@ -57,6 +61,7 @@
     "eslint": "catalog:",
     "jest": "catalog:",
     "ts-jest": "catalog:",
-    "ts-node": "catalog:"
+    "ts-node": "catalog:",
+    "typeorm-pglite": "^0.3.4"
   }
 }

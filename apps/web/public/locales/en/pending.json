@@ -14,6 +14,18 @@
     "transferManager": "Transferring warehouse management…",
     "updateRole": "Updating the role…"
   },
+  "item": {
+    "createItem": "Adding the item…",
+    "updateItem": "Correcting the item…",
+    "deactivateItem": "Deactivating the item…",
+    "reactivateItem": "Reactivating the item…",
+    "adjustOnHandQuantity": "Recording the on-hand quantity…"
+  },
+  "customer-order": {
+    "recordCustomerOrder": "Recording demand…",
+    "amendCustomerOrder": "Amending the order…",
+    "cancelCustomerOrder": "Cancelling the order…"
+  },
   "workspace": {
     "renameWorkspace": "Naming the workspace…",
     "createWarehouse": "Adding the warehouse…",
@@ -29,5 +41,19 @@
     "removeWorkspaceMember": "Removing the workspace member…",
     "assignWorkspaceRole": "Changing the workspace role…",
     "transferWorkspaceOwner": "Transferring workspace ownership…"
+  },
+  "purchase-draft": {
+    "createPurchaseDraft": "Starting the purchase draft…",
+    "revisePurchaseDraft": "Saving the expected arrival date…",
+    "addPurchaseDraftLine": "Adding the line…",
+    "revisePurchaseDraftLine": "Saving the line…",
+    "removePurchaseDraftLine": "Removing the line…",
+    "addPurchaseDraftLineLink": "Linking the customer order…",
+    "revisePurchaseDraftLineLink": "Saving the stated quantity…",
+    "removePurchaseDraftLineLink": "Removing the link…",
+    "readyPurchaseDraft": "Moving the draft to ready for ordering…",
+    "confirmPurchaseDraftArrival": "Recording the arrival…",
+    "closePurchaseDraft": "Closing the purchase draft…",
+    "discardPurchaseDraft": "Discarding the purchase draft…"
   }
 }

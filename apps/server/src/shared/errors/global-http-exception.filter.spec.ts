@@ -5,13 +5,20 @@ import {
   AssertionError,
   SystemError,
 } from '@warehouser/shared-types/errors';
+import { ZodValidationPipe } from 'nestjs-zod';
 import {
   applicationErrors,
   GlobalHttpExceptionFilter,
   systemErrors,
 } from 'shared/errors/global-http-exception.filter';
+import { z } from 'zod';
 
-const createHost = () => {
+const createHost = (
+  body: unknown = {
+    email: 'person@example.test',
+    password: 'secret-password',
+  },
+) => {
   const status = jest.fn().mockReturnThis();
   const json = jest.fn();
   const request = {
@@ -19,10 +26,7 @@ const createHost = () => {
       cookie: 'warehouser_session=opaque-secret',
       authorization: 'Bearer secret',
     },
-    body: {
-      email: 'person@example.test',
-      password: 'secret-password',
-    },
+    body,
     method: 'POST',
     originalUrl: '/api/v1/auth/sign-in',
   };
@@ -187,6 +191,17 @@ describe('GlobalHttpExceptionFilter', () => {
     );
   });
 
+  it('leaves a non-Zod HttpException carrying no details', () => {
+    const { host, json } = createHost();
+
+    filter.catch(new BadRequestException({ message: 'unsafe text' }), host);
+
+    expect(json).toHaveBeenCalledWith({
+      code: 'request.invalid',
+      message: 'The request is invalid.',
+    });
+  });
+
   it('maps every declared ErrorCode to an HTTP status, except the internal fallback', () => {
     const unmapped = Object.values(ErrorCode).filter(
       (code) =>
@@ -196,5 +211,77 @@ describe('GlobalHttpExceptionFilter', () => {
     );
 
     expect(unmapped).toEqual([]);
+  });
+});
+
+describe('GlobalHttpExceptionFilter on a Zod request-validation refusal', () => {
+  const filter = new GlobalHttpExceptionFilter({
+    error: jest.fn(),
+    warn: jest.fn(),
+  });
+
+  // The shape a recorded demand arrives in — an identifier, a customer name, a
+  // whole-number quantity with a floor, and a calendar date — so the envelope
+  // asserted here is the one `POST .../customer-orders` returns (AC-02).
+  const customerOrderCreate = z.strictObject({
+    itemId: z.string().uuid(),
+    customerName: z.string().min(1),
+    quantity: z.number().int().min(1),
+    neededBy: z.string().date(),
+  });
+
+  const refuse = (body: unknown): unknown => {
+    try {
+      new ZodValidationPipe(customerOrderCreate).transform(body, {
+        type: 'body',
+      });
+    } catch (exception) {
+      return exception;
+    }
+
+    throw new Error('The schema accepted a body the test expected refused');
+  };
+
+  it('names each refused field beside the unchanged envelope', () => {
+    const body = {
+      itemId: '9c1f0a3e-0000-4000-8000-000000000000',
+      customerName: '',
+      quantity: 0,
+      neededBy: '31-08-2026',
+    };
+    const { host, json, status } = createHost(body);
+
+    filter.catch(refuse(body), host);
+
+    expect(status).toHaveBeenCalledWith(400);
+    expect(json).toHaveBeenCalledWith({
+      code: 'request.invalid',
+      message: 'The request is invalid.',
+      details: {
+        fields: {
+          customerName: 'tooSmall',
+          quantity: 'tooSmall',
+          neededBy: 'invalid',
+        },
+      },
+    });
+  });
+
+  it('discloses no supplied value, expectation, or schema message', () => {
+    const body = {
+      itemId: 'person@example.test',
+      customerName: 'secret-password',
+      quantity: 7.5,
+    };
+    const { host, json } = createHost(body);
+
+    filter.catch(refuse(body), host);
+
+    const responded = JSON.stringify(json.mock.calls);
+    expect(responded).not.toMatch(
+      /person@example\.test|secret-password|7\.5|expected|received|uuid|Invalid input/u,
+    );
+    expect(responded).toContain('"itemId":"invalid"');
+    expect(responded).toContain('"neededBy":"required"');
   });
 });

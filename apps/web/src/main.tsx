@@ -5,6 +5,7 @@ import { Provider } from 'react-redux';
 
 import App from 'App';
 import { i18nReady } from 'i18n';
+import { LocaleProvider } from 'shared/components/LocaleProvider';
 import { store } from 'store';
 
 import 'src/styles/global.css';
@@ -20,8 +21,10 @@ async function bootstrap(): Promise<void> {
   createRoot(root).render(
     <StrictMode>
       <Provider store={store}>
-        <App />
-        <Toast.Provider placement="top end" />
+        <LocaleProvider>
+          <App />
+          <Toast.Provider placement="bottom start" />
+        </LocaleProvider>
       </Provider>
     </StrictMode>,
   );

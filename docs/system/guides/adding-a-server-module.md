@@ -91,11 +91,22 @@ synchronization must remain disabled. Do not write tests for migrations.
 Put writes in `usecases/commands/` and reads in `usecases/queries/`. Put behavior triggered by
 consumed events in `usecases/events/`.
 
-A use case may coordinate domain services and concrete repositories. Put services in
-`<feature-name>/domain/services/`. Use a service when an operation requires several calls to one
-repository, calls to multiple repositories, or business logic that depends on multiple
-repositories. Reuse a service when it owns a business rule; do not repeat that rule in a controller,
-handler, or use case. A service must not call a command, query, or event use case.
+A use case owns the rules of its own operation, injects the concrete repositories it writes through,
+and holds its own `@Transactional()` boundary. Do not put those rules in a service the use case
+merely forwards to: a command whose `execute` only passes its arguments on to one collaborator holds
+no rule and is a layer without a responsibility (server-architecture.md, "Use cases").
+
+Extract into `<feature-name>/domain/services/` only when more than one use case needs the same
+operation, when another module must invoke it through this module's exported provider, or when a
+single use case has grown too large to read. A shared operation that reaches a repository is a
+service, so the repository is injected once instead of being threaded through every caller; a shared
+helper that needs no collaborator at all stays a plain exported function. Register the service as a
+provider of `usecase.module.ts` and leave it out of `exports` unless another module calls it.
+server-architecture.md, "Worked example: a shared-check service", shows the whole shape.
+
+Reuse a service when it owns a business rule; do not repeat that rule in a controller, handler, or
+use case. A service must not call a command, query, or event use case, and carries no
+`@Transactional()` of its own when it runs inside a use case's boundary.
 
 Register the use cases and their dependencies in `usecases/usecase.module.ts`. Export only the
 providers that a transport adapter or another deliberately coupled module needs.
@@ -208,6 +219,8 @@ When contracts or shared utilities change, build and test their packages as well
 - Putting business logic in a REST controller or BullMQ handler.
 - Calling repositories directly from transport adapters.
 - Letting services call commands or queries.
+- Writing a pass-through use case — a command whose `execute` only forwards its arguments to one
+  service method, or a service method exactly one command calls.
 - Exposing TypeORM entities outside persistence adapters.
 - Defining REST request or response fields again in a server-local DTO.
 - Creating empty handler or REST modules for symmetry.

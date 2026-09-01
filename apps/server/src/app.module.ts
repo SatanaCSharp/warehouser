@@ -4,8 +4,12 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AccessRestModule } from 'access';
 import { AuthModule } from 'auth/auth.module';
+import { CustomerOrdersModule } from 'customer-orders';
+import { ItemsModule } from 'items';
+import { PurchaseDraftsModule } from 'purchase-drafts';
 import { createTypeOrmOptions } from 'shared/database/typeorm.options';
 import { DomainModule } from 'shared/domain/domain.module';
+import { WriteRateLimitModule } from 'shared/guards/write-rate-limit.module';
 import { AppLoggerModule } from 'shared/logger/app-logger.module';
 import { createBullMqOptions } from 'shared/queue/bullmq.options';
 import { UsersModule } from 'users/users.module';
@@ -22,8 +26,12 @@ import { WorkspacesRestModule } from 'workspaces';
       useFactory: (config: ConfigService) => createTypeOrmOptions(config),
     }),
     DomainModule,
+    WriteRateLimitModule,
     AuthModule,
     AccessRestModule,
+    ItemsModule,
+    CustomerOrdersModule,
+    PurchaseDraftsModule,
     WarehousesRestModule,
     WorkspacesRestModule,
     BullModule.forRootAsync({

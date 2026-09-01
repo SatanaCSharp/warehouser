@@ -35,9 +35,6 @@ import {
 } from 'test/factories/entity-factories';
 import { ReadWorkspaceContextQuery } from 'workspaces/usecases/queries/read-workspace-context.query';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 const now = new Date('2026-08-12T12:00:00.000Z');
 
 interface ContextWarehouse {
@@ -60,7 +57,7 @@ interface ReadWorkspaceContextQueryContract {
   execute(userId: string): Promise<WorkspaceContextResult>;
 }
 
-describeIntegration('ReadWorkspaceContextQuery', () => {
+describe('ReadWorkspaceContextQuery', () => {
   const workspaceReadRepository = new WorkspaceReadRepository(dataSource);
   const createQuery = (): ReadWorkspaceContextQueryContract =>
     new ReadWorkspaceContextQuery(workspaceReadRepository);
@@ -122,12 +119,17 @@ describeIntegration('ReadWorkspaceContextQuery', () => {
   const seedBareIdentity = async (
     workspaceId?: string,
   ): Promise<{ userId: string; workspaceId: string }> => {
-    const ownWorkspaceId =
-      workspaceId ??
-      (await dataSource.manager
+    // Written as a branch rather than `workspaceId ?? (await …)`: TypeScript
+    // drops the narrowing of `workspaceId` across an `await` in the right
+    // operand, so the coalesced form infers `string | undefined`. The Workspace
+    // is still only inserted when the caller named none.
+    let ownWorkspaceId = workspaceId;
+    if (ownWorkspaceId === undefined) {
+      const inserted = await dataSource.manager
         .getRepository(WorkspaceEntity)
-        .insert(buildWorkspace())
-        .then((result) => result.identifiers[0].id as string));
+        .insert(buildWorkspace());
+      ownWorkspaceId = inserted.identifiers[0].id as string;
+    }
 
     const userId = randomUUID();
     await dataSource.transaction(async (manager) => {

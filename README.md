@@ -271,9 +271,10 @@ Include the relevant desktop and mobile viewports and the loading, empty,
 error, disabled, authorization, and keyboard-focus states required by the
 specification. Reuse existing UI primitives, tokens, and icon conventions.
 
-Modify only design artifacts. Verify the layouts, capture preview screenshots,
-explain the alternatives and their trade-offs, and stop for my approval. Do
-not modify production code.
+Modify only design artifacts. Verify the layouts, publish the previews as
+Tailwind HTML pages under the feature's previews/ directory, explain the
+alternatives and their trade-offs, and stop for my approval. Do not modify
+production code.
 ```
 
 Changes made by the agent should appear live in the open Pencil canvas.
@@ -324,7 +325,7 @@ UI task planning and implementation must stop when the handoff is missing, unapp
 
 ### Review the UI implementation
 
-Review the implemented UI at the viewports and states recorded in `design-handoff.md`. Compare browser screenshots with the approved Pencil frame and preview evidence.
+Review the implemented UI at the viewports and states recorded in `design-handoff.md`. Compare the running UI with the approved Pencil frame and the HTML previews it is pinned to.
 
 Review fidelity across:
 
@@ -355,6 +356,6 @@ Do not commit Pencil authentication data, API keys, or session tokens.
 
 ### Headless fallback
 
-For an MCP-capable agent, the desktop workflow is preferred because it provides live human review. When the desktop bridge is unavailable and the loss of live review is acceptable, use the official `@pen.dev/cli` to create or edit `.pen` files and export PNG, JPEG, WEBP, or PDF previews.
+For an MCP-capable agent, the desktop workflow is preferred because it provides live human review. When the desktop bridge is unavailable and the loss of live review is acceptable, use the official `@pen.dev/cli` to create or edit `.pen` files. Review evidence is published the same way either route: static Tailwind HTML pages in the work item's `previews/` directory, one per approved frame. Image and PDF exports are never valid preview evidence.
 
 The headless fallback must preserve the same approval boundary: generate and verify design artifacts first, obtain explicit human approval, and only then begin production implementation.

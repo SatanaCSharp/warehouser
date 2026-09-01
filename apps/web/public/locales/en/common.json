@@ -1,12 +1,26 @@
 {
   "auth": {
     "signOut": "Sign out",
-    "signingOut": "Signing out…"
+    "signingOut": "Signing out…",
+    "signInPrompt": "Already have an account?",
+    "signUpPrompt": "New to Warehouser?",
+    "signIn": "Sign in",
+    "createAccount": "Create account"
+  },
+  "dateField": {
+    "calendarLabel": "Choose a date",
+    "openCalendar": "Open calendar",
+    "chooseYearAndMonth": "Choose year and month",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month"
   },
   "nav": {
     "label": "Primary navigation",
     "dashboard": "Dashboard",
     "access": "Access",
+    "demand": "Demand",
+    "purchaseDrafts": "Purchase drafts",
+    "items": "Items",
     "workspace": "Workspace",
     "toggle": "Open navigation"
   },
@@ -51,7 +65,12 @@
     },
     "archivedEntryRefusal": {
       "heading": "This warehouse is archived",
-      "description": "Archived warehouses can't be entered. Your access to other warehouses is unchanged."
+      "description": "Archived warehouses aren't administered here. What one already holds stays readable to everyone permitted to read it."
+    },
+    "archivedWarehouse": {
+      "chip": "Archived warehouse",
+      "heading": "This warehouse has been archived",
+      "description": "Its demand, drafts and items stay readable to everyone whose role carried the watch permission before archiving, on exactly the same terms. Nothing that changes what it holds is authorized any more."
     },
     "landing": {
       "pendingLabel": "Preparing your workspace…",

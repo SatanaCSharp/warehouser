@@ -15,10 +15,7 @@ import {
   persistWorkspaceGraph,
 } from 'test/factories/entity-factories';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
-describeIntegration('ListWorkspaceRolesQuery', () => {
+describe('ListWorkspaceRolesQuery', () => {
   const workspaceReadRepository = new WorkspaceReadRepository(dataSource);
   const createQuery = (): ListWorkspaceRolesQuery =>
     new ListWorkspaceRolesQuery(workspaceReadRepository);

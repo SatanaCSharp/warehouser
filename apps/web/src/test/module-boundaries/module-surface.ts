@@ -62,9 +62,38 @@ export const MODULE_SURFACE = {
     // store/index.ts, test/access-fixtures.ts, test/workspace-fixtures.ts
     'modules/auth/store/auth.slice',
   ],
+  // T17 — the ordering web shell's three destinations (sad.md §5 Web,
+  // §8 Naming): each is a flat sibling module whose only surface entry today
+  // is the route `router.ts` composes, per the "future in-Warehouse entities
+  // become flat top-level sibling modules" consequence recorded in
+  // `docs/system/adr/18-08-2026-scope-of-exercise-placement-tiebreak.md`.
+  'customer-order': [
+    // router.ts
+    'modules/customer-order/route',
+    // modules/purchase-draft/components/purchase-draft-line-links/components/LinkCustomerOrderDialog.tsx
+    'modules/customer-order/components/CustomerOrderPicker',
+    // modules/purchase-draft/components/purchase-draft-line-links/components/LinkCustomerOrderAction.tsx
+    'modules/customer-order/hooks/queries/useUnfulfilledCustomerOrdersByItem',
+  ],
   home: [
     // router.ts
     'modules/home/route',
+  ],
+  item: [
+    // router.ts
+    'modules/item/route',
+    // modules/customer-order/components/demand-directory/components/RecordCustomerOrderDialog.tsx,
+    // modules/purchase-draft/components/AddPurchaseDraftLineDialog.tsx
+    'modules/item/components/ItemPicker',
+    // modules/customer-order/components/demand-directory/components/RecordCustomerOrderDialog.tsx,
+    // modules/purchase-draft/components/AddPurchaseDraftLineDialog.tsx
+    'modules/item/hooks/queries/useItems',
+  ],
+  'purchase-draft': [
+    // router.ts
+    'modules/purchase-draft/route',
+    // shared/layouts/Sidebar.tsx
+    'modules/purchase-draft/components/PurchaseDraftDriftBadge',
   ],
   warehouse: [
     // router.ts

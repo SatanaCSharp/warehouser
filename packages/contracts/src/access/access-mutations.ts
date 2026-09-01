@@ -30,8 +30,14 @@ const domainNameSchema = z
       })
       .regex(/^[^\p{Cc}\p{Cf}]+$/u),
   );
+// `.max(100)` is a payload guard rather than a business rule: the Permission catalogue holds well
+// under a hundred entries and the uniqueness refinement below already forbids repeating one, so no
+// legal request approaches it. It exists because an unbounded request array lets the caller price
+// the work — every rejected element produces a validation issue the server normalizes
+// synchronously, ahead of any guard (`apps/server/src/shared/errors/validation-field-codes.ts`).
 const uniquePermissionIdsSchema = z
   .array(permissionIdSchema)
+  .max(100)
   .refine((ids) => new Set(ids).size === ids.length, {
     message: 'Permission identifiers must be unique',
   });

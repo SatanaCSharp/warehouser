@@ -3,7 +3,6 @@ import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
 import { assert } from '@warehouser/utils/asserts';
 import {
   workspaceConcurrentChangeError,
-  workspaceOwnerTransferUnavailableError,
   workspaceReplacementRoleRequiredError,
 } from 'access/domain/errors/workspace-access.errors';
 import {
@@ -17,7 +16,6 @@ import { WorkspaceMembershipRepository } from 'shared/domain/repositories/worksp
 import { WorkspaceOwnerTransferRepository } from 'shared/domain/repositories/workspace-owner-transfer.repository';
 import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository';
 import { workspaceTargetUnavailableError } from 'shared/errors/cross-module.errors';
-import { withUnavailableOutcome } from 'shared/errors/unavailable-outcome';
 
 export interface TransferWorkspaceOwnerInput {
   readonly recipientUserId: string;
@@ -44,23 +42,7 @@ export class TransferWorkspaceOwnerCommand {
   ) {}
 
   @Transactional()
-  execute(
-    currentUser: WorkspaceCurrentUser,
-    input: TransferWorkspaceOwnerInput,
-  ): Promise<TransferWorkspaceOwnerResult> {
-    // AC-26 — openapi.yaml documents 503
-    // `workspace.owner_transfer_unavailable` for a transfer that did not
-    // complete, distinct from the 409 a *lost race* answers.
-    // `withUnavailableOutcome` re-raises every rejection asserted below
-    // untouched, so AC-27's denial and AC-28's unavailable recipient keep
-    // their own outcomes.
-    return withUnavailableOutcome(
-      () => this.transfer(currentUser, input),
-      workspaceOwnerTransferUnavailableError,
-    );
-  }
-
-  private async transfer(
+  async execute(
     currentUser: WorkspaceCurrentUser,
     input: TransferWorkspaceOwnerInput,
   ): Promise<TransferWorkspaceOwnerResult> {

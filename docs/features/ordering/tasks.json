@@ -1,0 +1,322 @@
+{
+  "slug": "ordering",
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "Stage the ordering schema migration: nine relations, their constraints and indexes, and the Packaging Type seed",
+      "layer": "migration",
+      "deps": [],
+      "acs": ["AC-07", "AC-07a", "AC-09", "AC-13"],
+      "dod": "The staged migration is promoted to apps/server/migrations, applies and reverts cleanly against the development database, and its per-Warehouse SKU uniqueness, non-negative whole-quantity checks and four-row Packaging Type seed are asserted by repository integration tests.",
+      "files_hint": [
+        "docs/features/ordering/migrations/01-create-ordering-schema.ts"
+      ]
+    },
+    {
+      "id": "T2",
+      "title": "Stage the Permission catalogue migration and add the feature's PermissionId and ErrorCode members",
+      "layer": "migration",
+      "deps": ["T1"],
+      "acs": ["AC-05", "AC-22", "AC-23"],
+      "dod": "The staged migration is promoted, applies and reverts cleanly, inserts the sixteen Permissions and idempotently grants them to every existing warehouse_manager Role, and packages/shared-types exports all sixteen PermissionId members plus the items.*, customer_orders.* and purchase_drafts.* ErrorCode members with the workspace suite still green.",
+      "files_hint": [
+        "docs/features/ordering/migrations/02-grant-ordering-permissions.ts",
+        "packages/shared-types/src/enums/permission-id.ts",
+        "packages/shared-types/src/enums/error-code.ts"
+      ]
+    },
+    {
+      "id": "T3",
+      "title": "Add the nine shared persistence entities and register them on DomainModule",
+      "layer": "infra",
+      "deps": ["T1"],
+      "acs": ["AC-03", "AC-11"],
+      "dod": "All nine entities map to the migrated relations, each carries the warehouse_id its ownership rule needs and the composite Warehouse reference the line/link relations depend on, DomainModule resolves every one of them, and an integration test round-trips a row of each.",
+      "files_hint": [
+        "apps/server/src/shared/domain/entities/",
+        "apps/server/src/shared/domain/domain.module.ts"
+      ]
+    },
+    {
+      "id": "T4",
+      "title": "Add WriteRateLimitGuard and the @WriteRateLimited() decorator to shared/guards",
+      "layer": "infra",
+      "deps": [],
+      "acs": [],
+      "dod": "Guard unit tests prove per-member per-minute counting, window reset, composition after SessionAuthGuard and WarehouseAccessGuard, and a refusal that discloses nothing about existing records.",
+      "files_hint": [
+        "apps/server/src/shared/guards/write-rate-limit.guard.ts",
+        "apps/server/src/shared/guards/write-rate-limited.decorator.ts"
+      ]
+    },
+    {
+      "id": "T5",
+      "title": "Build the items domain and the Item catalogue: value objects, SKU rules, activation, repository and use cases",
+      "layer": "app",
+      "deps": ["T2", "T3"],
+      "acs": ["AC-06", "AC-06b", "AC-06c", "AC-06d", "AC-07", "AC-07a"],
+      "dod": "Domain unit tests cover SKU format and correctability and the activation predicates; use-case unit tests against repository doubles prove a taken SKU is refused naming the holder, the same SKU is accepted in a second Warehouse, a named Item's SKU is fixed while an unnamed Item's is still correctable, and a deactivated Item keeps its SKU taken and its existing references counting.",
+      "files_hint": [
+        "apps/server/src/items/domain/",
+        "apps/server/src/items/usecases/",
+        "apps/server/src/shared/domain/repositories/item-catalogue.repository.ts"
+      ]
+    },
+    {
+      "id": "T6",
+      "title": "Build the On-hand Quantity adjustment: mandatory reason, current figure and append-only history in one transaction",
+      "layer": "app",
+      "deps": ["T5"],
+      "acs": ["AC-08", "AC-09", "AC-09a", "AC-18a"],
+      "dod": "An integration test proves the Item figure and its adjustment row are written together or not at all; unit tests prove a negative or fractional count and a missing reason are refused with nothing changed, and that no code path outside this service writes on-hand.",
+      "files_hint": [
+        "apps/server/src/items/domain/services/on-hand-adjustment.service.ts",
+        "apps/server/src/items/usecases/commands/",
+        "apps/server/src/shared/domain/repositories/item-stock-adjustment.repository.ts"
+      ]
+    },
+    {
+      "id": "T7",
+      "title": "Expose the items REST surface: contracts subpath, controllers, DTOs and module wiring",
+      "layer": "ports",
+      "deps": ["T5", "T6", "T4"],
+      "acs": ["AC-06", "AC-06a", "AC-06d", "AC-08", "AC-23"],
+      "dod": "Every items endpoint in contracts/openapi.yaml validates its shared schema and maps stable errors; contract tests prove each is denied without its Permission and permitted with it, that reads succeed and mutations are denied on an archived Warehouse, that no denial discloses existence, and the route-table baseline is regenerated deliberately.",
+      "files_hint": [
+        "packages/contracts/items/",
+        "apps/server/src/items/rest/",
+        "apps/server/src/items/items.module.ts",
+        "tests/refactor/route-table.baseline.json"
+      ]
+    },
+    {
+      "id": "T8",
+      "title": "Build the customer-orders domain and lifecycle: record, amend and cancel under the locked allocated-total read",
+      "layer": "app",
+      "deps": ["T2", "T3", "T5"],
+      "acs": ["AC-01", "AC-02", "AC-02a", "AC-03", "AC-19", "AC-19a", "AC-19b"],
+      "dod": "Unit tests prove a zero, negative, fractional quantity, an empty customer name and a past needed-by date are each refused in plain language; an integration test proves an amendment below the already-allocated total is refused against the locked row, that raising a Fulfilled order's quantity returns it to Unfulfilled, and that an Item of another Warehouse is refused identically to a missing one.",
+      "files_hint": [
+        "apps/server/src/customer-orders/domain/",
+        "apps/server/src/customer-orders/usecases/",
+        "apps/server/src/shared/domain/repositories/customer-order-lifecycle.repository.ts"
+      ]
+    },
+    {
+      "id": "T9",
+      "title": "Build DemandAllocationService and its repository, exported for Arrival Confirmation",
+      "layer": "app",
+      "deps": ["T8"],
+      "acs": ["AC-17a", "AC-18", "AC-19b"],
+      "dod": "Unit tests prove each AC-18 bound refuses the whole confirmation; an integration test proves the bounds are evaluated against Customer Order rows locked in ascending identifier order inside the caller's transaction, that Outstanding Quantity and the Fulfilled transition are recomputed, and that the service is reachable only through the module's declared public surface.",
+      "files_hint": [
+        "apps/server/src/customer-orders/domain/services/demand-allocation.service.ts",
+        "apps/server/src/shared/domain/repositories/demand-allocation.repository.ts",
+        "apps/server/src/customer-orders/usecases/"
+      ]
+    },
+    {
+      "id": "T10",
+      "title": "Build ConsolidatedDemandRepository as one non-fan-out query and the demand queries over it",
+      "layer": "app",
+      "deps": ["T3", "T8"],
+      "acs": ["AC-04", "AC-17a", "AC-20", "AC-21a"],
+      "dod": "A repository integration test with many Customer Orders per Item and many links per Customer Order proves no double counting; further tests prove Fulfilled and cancelled orders are omitted, that Closed and Discarded drafts never present as Coverage, and that each Demand Line carries the total Outstanding Quantity, the earliest needed-by date, On-hand Quantity and its Coverage references and quantities.",
+      "files_hint": [
+        "apps/server/src/shared/domain/repositories/consolidated-demand.repository.ts",
+        "apps/server/src/customer-orders/usecases/queries/"
+      ]
+    },
+    {
+      "id": "T11",
+      "title": "Expose the customer-orders and demand REST surface: contracts subpath, controllers, DTOs and module wiring",
+      "layer": "ports",
+      "deps": ["T10", "T9", "T4"],
+      "acs": ["AC-01", "AC-03", "AC-04", "AC-05", "AC-19", "AC-19a", "AC-23"],
+      "dod": "Every customer-orders and demand endpoint validates its shared schema and maps stable errors; contract tests prove the demand read is denied without CUSTOMER_ORDERS:WATCH and the denial names no customer, Item, quantity or date, that reads succeed and mutations are denied on an archived Warehouse, and the route-table baseline is regenerated deliberately.",
+      "files_hint": [
+        "packages/contracts/customer-orders/",
+        "apps/server/src/customer-orders/rest/",
+        "apps/server/src/customer-orders/customer-orders.module.ts",
+        "tests/refactor/route-table.baseline.json"
+      ]
+    },
+    {
+      "id": "T12",
+      "title": "Build the purchase-drafts domain and draft assembly: lines, links, Pre-receipt Requirements and the state-guarded write path",
+      "layer": "app",
+      "deps": ["T2", "T3", "T5", "T8"],
+      "acs": ["AC-10", "AC-10a", "AC-11", "AC-11a", "AC-12", "AC-13"],
+      "dod": "Integration tests prove every assembly write resolves the draft only in the draft state and affects zero rows otherwise; unit tests prove an Item or Customer Order of another Warehouse is refused, a Packaging Type outside the catalogue is refused naming the four it offers, per-line Pre-receipt Requirements are recorded separately, and overlapping or non-summing link quantities are recorded unadjusted.",
+      "files_hint": [
+        "apps/server/src/purchase-drafts/domain/",
+        "apps/server/src/purchase-drafts/usecases/",
+        "apps/server/src/shared/domain/repositories/purchase-draft-assembly.repository.ts",
+        "apps/server/src/shared/domain/repositories/packaging-type-catalogue.repository.ts"
+      ]
+    },
+    {
+      "id": "T13",
+      "title": "Build the freeze with its Demand Snapshot capture, and closure and discard as guarded transitions",
+      "layer": "app",
+      "deps": ["T12"],
+      "acs": ["AC-14", "AC-14a", "AC-15", "AC-21", "AC-24", "AC-24a"],
+      "dod": "An integration test proves freezing captures one snapshot row per link with the quantity, needed-by date and state as they stood, that two concurrent freezes leave exactly one succeeding and the second typed as a concurrency refusal, that a draft with no lines cannot be made ready, that every assembly path against a frozen draft is refused, that closure keeps the frozen contents readable and every linked Outstanding Quantity untouched, and that a ready draft cannot be discarded.",
+      "files_hint": [
+        "apps/server/src/purchase-drafts/domain/services/",
+        "apps/server/src/purchase-drafts/usecases/commands/",
+        "apps/server/src/shared/domain/repositories/purchase-draft-freeze.repository.ts"
+      ]
+    },
+    {
+      "id": "T14",
+      "title": "Build PurchaseDraftReadRepository and the drift queries comparing the snapshot against current demand",
+      "layer": "app",
+      "deps": ["T13", "T10"],
+      "acs": ["AC-16", "AC-16a", "AC-21a"],
+      "dod": "Integration tests prove a Drift Signal is reported for an amended, cancelled or newly Fulfilled linked Customer Order naming the order and what changed, that a value amended and put back as it was reports no drift, that no frozen value is altered by the read, and that the drafts list distinguishes drafts carrying drift from those that do not.",
+      "files_hint": [
+        "apps/server/src/shared/domain/repositories/purchase-draft-read.repository.ts",
+        "apps/server/src/purchase-drafts/usecases/queries/"
+      ]
+    },
+    {
+      "id": "T15",
+      "title": "Build Arrival Confirmation: received quantities, delegated Allocations and the move to Closed in one transaction",
+      "layer": "app",
+      "deps": ["T13", "T9"],
+      "acs": ["AC-17", "AC-17a", "AC-17b", "AC-18", "AC-18a"],
+      "dod": "An integration test with an injected mid-way failure proves received quantities, Allocations, Outstanding Quantities and the Closed state are written together or not at all; further tests prove two concurrent confirmations leave exactly one succeeding, a short line and a line allocating nothing both close the draft, every AC-18 bound refuses the whole confirmation, and no Item's On-hand Quantity changes.",
+      "files_hint": [
+        "apps/server/src/purchase-drafts/domain/services/arrival-confirmation.service.ts",
+        "apps/server/src/shared/domain/repositories/arrival-confirmation.repository.ts",
+        "apps/server/src/purchase-drafts/usecases/commands/"
+      ]
+    },
+    {
+      "id": "T16",
+      "title": "Expose the purchase-drafts REST surface: contracts subpath, transition sub-resources, controllers and module wiring",
+      "layer": "ports",
+      "deps": ["T14", "T15", "T4"],
+      "acs": [
+        "AC-10",
+        "AC-14",
+        "AC-15",
+        "AC-17",
+        "AC-21",
+        "AC-22",
+        "AC-23",
+        "AC-24"
+      ],
+      "dod": "Every purchase-drafts endpoint validates its shared schema and maps stable errors; contract tests prove each transition declares its own Permission so PURCHASE_DRAFTS:WATCH alone still reads while create, ready and receive are each denied, that no frozen field is reachable through the arrival or closure payload, that reads succeed and mutations are denied on an archived Warehouse, and the route-table baseline is regenerated deliberately.",
+      "files_hint": [
+        "packages/contracts/purchase-drafts/",
+        "apps/server/src/purchase-drafts/rest/",
+        "apps/server/src/purchase-drafts/purchase-drafts.module.ts",
+        "tests/refactor/route-table.baseline.json"
+      ]
+    },
+    {
+      "id": "T17",
+      "title": "Add the ordering web shell: three routes, router children, permission-gated sidebar entries, eight icons and three i18n namespaces",
+      "layer": "ui",
+      "deps": ["T2"],
+      "acs": ["AC-05", "AC-22", "AC-23"],
+      "dod": "Router tests prove the three children resolve before warehouseCatchAllRoute; sidebar tests prove each entry is absent rather than disabled without its watch Permission; the eight hand-rolled icons render; the i18n suite passes with three registered namespaces at full en/uk key parity and a deliberately regenerated locale baseline.",
+      "files_hint": [
+        "apps/web/src/shared/constants/routes.ts",
+        "apps/web/src/router.ts",
+        "apps/web/src/shared/layouts/Sidebar.tsx",
+        "apps/web/src/shared/icons/",
+        "apps/web/src/i18n.ts",
+        "apps/web/public/locales/en/",
+        "apps/web/public/locales/uk/",
+        "apps/web/src/test/locale-baseline.json"
+      ]
+    },
+    {
+      "id": "T18",
+      "title": "Build the Items destination: table with on-hand and its reason, the create/correct/deactivate dialogs and the Item picker",
+      "layer": "ui",
+      "deps": ["T17", "T7"],
+      "acs": ["AC-06", "AC-06a", "AC-06b", "AC-06d", "AC-08", "AC-09a"],
+      "dod": "Component tests prove the on-hand cell renders the figure and its reason line, that a refused loader issues zero requests, that an inactive Item is chipped and not offered by the picker, that each dialog handles server denial independently and states that nothing changed, and that frames XIvAZ and VHU6r render at 1440 and 390 with focus restoration and en/uk copy.",
+      "files_hint": [
+        "apps/web/src/modules/item/",
+        "apps/web/public/locales/en/item.json",
+        "apps/web/public/locales/uk/item.json",
+        "apps/web/src/test/baselines/module-chunk-manifest.json"
+      ]
+    },
+    {
+      "id": "T19",
+      "title": "Build the Demand destination: consolidated table, expandable Customer Order sub-rows, record/amend/cancel and the Customer Order picker",
+      "layer": "ui",
+      "deps": ["T17", "T11"],
+      "acs": [
+        "AC-01",
+        "AC-02",
+        "AC-04",
+        "AC-05",
+        "AC-19",
+        "AC-19a",
+        "AC-20",
+        "AC-21a"
+      ],
+      "dod": "Component tests prove the six demand cells and the coverage chips render, that a Fulfilled or cancelled order never renders as a sub-row, that a refused loader issues zero requests and the destination is unreachable without CUSTOMER_ORDERS:WATCH, that a mutation invalidates the demand, drafts and Items tags, and that frames G6jhw and SjdPo render at 1440 and 390 with en/uk copy.",
+      "files_hint": [
+        "apps/web/src/modules/customer-order/",
+        "apps/web/public/locales/en/customer-order.json",
+        "apps/web/public/locales/uk/customer-order.json",
+        "apps/web/src/test/baselines/module-chunk-manifest.json"
+      ]
+    },
+    {
+      "id": "T20",
+      "title": "Build the Purchase drafts destination: list and detail, the three tabs, line and link editing, the frozen treatment and the Drift Signal",
+      "layer": "ui",
+      "deps": ["T17", "T16"],
+      "acs": ["AC-10", "AC-10a", "AC-11a", "AC-12", "AC-15", "AC-16", "AC-16a"],
+      "dod": "Component tests prove draft state renders through a total Record<State, ReactElement> lookup rather than a conditional chain, that a frozen line uses the disabled field treatment and exposes its reason, that the Drift Signal is icon plus text and never colour alone, that link quantities are never client-adjusted, and that frames yGhkK, F0SpRx and O42LHI render at 1440 and 390 with the three documented mobile differences.",
+      "files_hint": [
+        "apps/web/src/modules/purchase-draft/",
+        "apps/web/public/locales/en/purchase-draft.json",
+        "apps/web/public/locales/uk/purchase-draft.json",
+        "apps/web/src/test/baselines/module-chunk-manifest.json"
+      ]
+    },
+    {
+      "id": "T21",
+      "title": "Build the Purchase draft transition dialogs: ready, close, discard and the 720px arrival modal",
+      "layer": "ui",
+      "deps": ["T20"],
+      "acs": [
+        "AC-14",
+        "AC-14a",
+        "AC-17",
+        "AC-17b",
+        "AC-18",
+        "AC-21",
+        "AC-24",
+        "AC-24a"
+      ],
+      "dod": "Component tests prove the arrival modal's running assignment total is a live region, that a refused assignment surfaces the server's reason with nothing changed, that the three confirm-only dialogs use ConfirmAlertDialog while the arrival modal uses the form dialog, that Cancel precedes the primary in DOM and keyboard order at 1440 while the primary sits above it at 390, and that frames s5EPi and blZtz are matched.",
+      "files_hint": [
+        "apps/web/src/modules/purchase-draft/",
+        "apps/web/public/locales/en/purchase-draft.json",
+        "apps/web/public/locales/uk/purchase-draft.json"
+      ]
+    },
+    {
+      "id": "T22",
+      "title": "Add the ordering load smoke and the structured timing assertions for the section 6 latency targets",
+      "layer": "tests",
+      "deps": ["T7", "T11", "T16"],
+      "acs": [],
+      "dod": "The smoke test sustains at least 50 protected operations per second per instance for ten minutes and asserts the p95 targets for authorization, the consolidated demand read measured at the spec section 1 scale with accumulated Closed drafts, the Item and draft reads, and every mutation, with the structured timing fields present on each.",
+      "files_hint": [
+        "apps/server/src/test/ordering-load-smoke.integration.spec.ts"
+      ]
+    }
+  ]
+}

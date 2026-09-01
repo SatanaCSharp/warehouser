@@ -17,6 +17,18 @@
       "types": "./dist/auth/index.d.ts",
       "default": "./dist/auth/index.js"
     },
+    "./customer-orders": {
+      "types": "./dist/customer-orders/index.d.ts",
+      "default": "./dist/customer-orders/index.js"
+    },
+    "./items": {
+      "types": "./dist/items/index.d.ts",
+      "default": "./dist/items/index.js"
+    },
+    "./purchase-drafts": {
+      "types": "./dist/purchase-drafts/index.d.ts",
+      "default": "./dist/purchase-drafts/index.js"
+    },
     "./users": {
       "types": "./dist/users/index.d.ts",
       "default": "./dist/users/index.js"

@@ -31,9 +31,28 @@ A task or feature scope (which `acs`, which files) and access to the repo + arti
 
 **Stage 1 — spec/AC compliance.** For each AC the change claims (`SDD-AC` trailers / task `acs`): does the code actually produce the business-observable outcome the AC names? Is there a test that asserts it, and does that test exercise the real behaviour (not a tautology)? Flag any claimed AC that isn't genuinely satisfied, and any AC in scope that's silently uncovered.
 
-**Stage 2 — quality.** Conventions (does it match the repo's patterns for this layer?), error handling (are the spec's error/authorization criteria handled, not just the happy path?), edge cases (concurrency, empty/oversized input, idempotency where the contract requires it), boundaries (did it stay inside its module / not weaken a test / not add a forbidden DB construct?), and the anti-patterns the relevant skills warn about.
+**Stage 2 — quality.** Conventions (does it match the repo's patterns for this layer?), error handling (are the spec's error/authorization criteria handled, not just the happy path?), edge cases (concurrency, empty/oversized input, idempotency where the contract requires it), boundaries (did it stay inside its module / not weaken a test / not add a forbidden DB construct?), the complexity budget below, and the anti-patterns the relevant skills warn about.
 
 **Stage 3 — system architecture conformance.** Check every changed file against every applicable manifest rule. `docs/system` is authoritative over conflicting sibling patterns and generated feature guidance. Cite the exact system document path + heading and changed `file:line` for each violation. A clean AC/test result cannot make an architecture violation acceptable.
+
+## Complexity budget
+
+Hold every function or method in the diff to these limits, in `apps/server`, `apps/web`, and shared
+packages alike. A breach is a stage-2 finding: cite the `file:line`, the limit it exceeds, and name
+the reduction strategy that fits.
+
+- **Complexity Limits (Per Function/Method)**:
+  - **Cognitive Complexity ≤ 15** (Readability/mental load). Maximize readability by avoiding deep
+    nesting, multi-condition logic, and complex recursion.
+  - **Cyclomatic Complexity ≤ 20** (Testability/line coverage). Keep execution paths and
+    conditional branches minimal.
+- **Complexity Reduction Strategies**:
+  - Use early returns / guard clauses instead of nested `if/else` blocks.
+  - Replace complex `switch` or `if/else` chains with lookup maps or Strategy/Factory patterns.
+  - Decompose multi-step algorithms into small, single-responsibility pure functions.
+
+Judge the functions the change writes or touches, not untouched neighbours. Green tests and a
+satisfied AC do not waive the budget.
 
 ## Output
 

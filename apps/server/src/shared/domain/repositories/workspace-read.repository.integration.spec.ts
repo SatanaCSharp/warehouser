@@ -31,9 +31,6 @@ import {
 } from 'test/factories/entity-factories';
 import type { Logger } from 'typeorm';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 const now = new Date('2026-08-12T12:00:00.000Z');
 
 // The shape this RED step expects the implementer to expose (data-model.md
@@ -219,7 +216,11 @@ const insertWorkspaceMembership = (
 
 const insertWarehouse = async (
   workspaceId: string,
-  overrides: Partial<{ name: string; archivedAt: Date | null }> = {},
+  overrides: Partial<{
+    name: string;
+    archivedAt: Date | null;
+    createdAt: Date;
+  }> = {},
 ): Promise<string> => {
   const warehouse = buildWarehouse({ workspaceId, ...overrides });
   await dataSource.manager.getRepository(WarehouseEntity).insert(warehouse);
@@ -654,7 +655,7 @@ function registerQueryPlanTests(): void {
   });
 }
 
-describeIntegration('WorkspaceReadRepository', () => {
+describe('WorkspaceReadRepository', () => {
   beforeAll(async () => {
     await dataSource.initialize();
   });

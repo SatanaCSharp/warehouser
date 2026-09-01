@@ -1,3 +1,7 @@
+/* eslint-disable max-lines -- Placing web tests §1/§5 files a spec beside the single file
+   that owns its behaviour, and router.ts owns every route this file proves. Moving the
+   ordering-shell cases to src/test/ would breach §2 (a spec never sits above its subject)
+   and §3 (which is for specs with no single owner). The file therefore grows instead. */
 import { RouterProvider } from '@tanstack/react-router';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -8,9 +12,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createAppRouter } from 'router';
 import { workspaceContextApi } from 'shared/api/workspace/workspace-context-api';
-import { ROUTES } from 'shared/constants/routes';
+import { ROUTE_SEGMENTS, ROUTES } from 'shared/constants/routes';
 import { makeStore } from 'store';
 
+import type { WarehouseEntryVerdict } from 'guards/warehouse-entry.guard';
 import type { AppRouter } from 'router';
 import type { AppStore } from 'store';
 
@@ -197,6 +202,19 @@ const renderRoute = (initialEntry: string): RenderedRoute => {
 
   return { router, store };
 };
+
+/**
+ * The entry verdict `warehouseRoute.beforeLoad` published into the Warehouse
+ * layout match — the one place that says whether the actor entered, entered
+ * read-only, or was refused (AC-23, CR-AC-17). Read from the match tree rather
+ * than inferred from what painted, because a read-only entry and a full one
+ * paint the same destination.
+ */
+const warehouseVerdict = (
+  router: AppRouter,
+): WarehouseEntryVerdict | undefined =>
+  router.state.matches.find((match) => match.routeId === ROUTES.WAREHOUSE)
+    ?.context;
 
 // The route suite deliberately keeps complete authenticated and anonymous
 // journeys together so each assertion uses the same production router harness.
@@ -1099,9 +1117,12 @@ describe('Warehouse layout route (T4)', () => {
     );
   });
 
-  // CR-AC-17 — an archived membership is refused with the explicit archived
-  // explanation, distinct from the non-disclosing refusal above.
-  it('refuses an archived membership with the explicit archived explanation', async () => {
+  // AC-23 / CR-AC-17 — an archived membership enters the Warehouse READ-ONLY
+  // and stays at the address, so its watch destinations read exactly as before
+  // archiving. The archived reason is still published on the verdict, which is
+  // what keeps it distinct from the non-disclosing refusal above; it is named
+  // to the actor by `ArchivedWarehouseNotice` rather than by a refusal page.
+  it('enters an archived membership read-only, naming the archived reason on the verdict', async () => {
     vi.stubGlobal(
       'fetch',
       stubWarehouseFetch([
@@ -1116,11 +1137,21 @@ describe('Warehouse layout route (T4)', () => {
     const { router } = renderRoute(`/warehouses/${ARCHIVED_WAREHOUSE_ID}`);
 
     expect(
-      await screen.findByText('This warehouse is archived'),
+      await screen.findByText('Design System Preview'),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByText('This warehouse is archived'),
+    ).not.toBeInTheDocument();
     expect(router.state.location.pathname).toBe(
       `/warehouses/${ARCHIVED_WAREHOUSE_ID}`,
     );
+    // The layout match's context also carries the root context it extends, so
+    // this asserts the verdict fields rather than the whole object.
+    expect(warehouseVerdict(router)).toMatchObject({
+      status: 'entered-read-only',
+      reason: 'archived',
+      warehouseId: ARCHIVED_WAREHOUSE_ID,
+    });
   });
 
   // Same address the splat matched for a non-member above, but the splat
@@ -1198,10 +1229,17 @@ describe('Warehouse layout route (T4)', () => {
       });
     });
 
-    expect(
-      await screen.findByText('This warehouse is archived'),
-    ).toBeInTheDocument();
-    expect(screen.queryByText('Design System Preview')).not.toBeInTheDocument();
+    // AC-23 — the re-resolved verdict is the read-only one, not the `entered`
+    // one this match held before the actor left. Preserving that earlier
+    // verdict would admit writes into a Warehouse archived while they were
+    // away, which is the failure CR-AC-17 and CR-RG-02 exist to prevent.
+    await waitFor(() =>
+      expect(warehouseVerdict(router)).toMatchObject({
+        status: 'entered-read-only',
+        reason: 'archived',
+        warehouseId: MEMBER_WAREHOUSE_ID,
+      }),
+    );
   });
 
   it('does not re-run the layout beforeLoad while navigating between its own children (CR-AC-20)', async () => {
@@ -1249,5 +1287,128 @@ describe('Warehouse layout route (T4)', () => {
     expect(
       screen.queryByText("This address isn't available to you"),
     ).not.toBeInTheDocument();
+  });
+});
+
+// T17 — the ordering web shell's three destinations: `ROUTE_SEGMENTS.DEMAND`,
+// `PURCHASE_DRAFTS` and `ITEMS` resolve as children of `warehouseRoute`,
+// declared before `warehouseCatchAllRoute` so the splat keeps ranking last
+// (sad.md §5 Web, design-handoff.md §Information architecture, AC-05, AC-22,
+// AC-23). Today none of the three segments exist, so every address below
+// falls through to the splat's own `beforeLoad`, which redirects an entered
+// member to `ROUTES.HOME` (ADR 0001) — the opposite of what T17 requires.
+describe('ordering web shell routes (T17)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+  });
+
+  const ORDERING_WAREHOUSE_ID = '00000000-0000-4000-8000-000000000050';
+
+  const stubEnteredMember = (): ReturnType<typeof vi.fn> =>
+    vi.fn((input: RequestInfo | URL) => {
+      const url =
+        input instanceof Request
+          ? input.url
+          : input instanceof URL
+            ? input.href
+            : input;
+      if (url.endsWith('/api/v1/auth/session')) {
+        return Promise.resolve(
+          Response.json({
+            user: { id: '00000000-0000-4000-8000-000000000001' },
+          }),
+        );
+      }
+      if (url.includes('/api/v1/workspace/context')) {
+        return Promise.resolve(
+          Response.json({
+            workspace: {
+              id: '00000000-0000-4000-8000-000000000020',
+              name: 'Acme Logistics',
+            },
+            workspacePermissionIds: [],
+            warehouses: [
+              {
+                warehouseId: ORDERING_WAREHOUSE_ID,
+                name: 'Ordering Warehouse',
+                archivedAt: null,
+                roleId: '00000000-0000-4000-8000-000000000030',
+                roleKind: 'custom',
+              },
+            ],
+            effectiveWarehouseId: null,
+          }),
+        );
+      }
+      if (
+        url.includes('/api/v1/warehouses/') &&
+        url.endsWith('/access/current')
+      ) {
+        return Promise.resolve(
+          Response.json({
+            warehouseId: ORDERING_WAREHOUSE_ID,
+            roleId: '00000000-0000-4000-8000-000000000030',
+            roleKind: 'custom',
+            permissionIds: [
+              'CUSTOMER_ORDERS:WATCH',
+              'PURCHASE_DRAFTS:WATCH',
+              'ITEMS:WATCH',
+            ],
+            archivedAt: null,
+          }),
+        );
+      }
+      // Any destination-owned read (demand, drafts, items) is out of this
+      // shell task's scope — fail loudly rather than silently answering `{}`,
+      // so an unexpected request is visible instead of masked.
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+  it.each([
+    ['DEMAND', () => ROUTE_SEGMENTS.DEMAND],
+    ['PURCHASE_DRAFTS', () => ROUTE_SEGMENTS.PURCHASE_DRAFTS],
+    ['ITEMS', () => ROUTE_SEGMENTS.ITEMS],
+  ])(
+    'resolves the %s child of the Warehouse layout instead of falling through to the catch-all splat',
+    async (_label, segment) => {
+      vi.stubGlobal('fetch', stubEnteredMember());
+      const address = `/warehouses/${ORDERING_WAREHOUSE_ID}/${segment()}`;
+      const store = makeStore();
+      const router = createAppRouter({
+        appStore: store,
+        initialEntries: [address],
+      });
+
+      render(
+        <Provider store={store}>
+          <RouterProvider router={router} />
+        </Provider>,
+      );
+
+      // The initial history entry already equals `address`, so a bare
+      // `pathname === address` check would pass trivially before the async
+      // `beforeLoad` chain — and any redirect it throws — has even run.
+      // Waiting for the router to settle first is what makes "still at
+      // `address`" mean the splat's redirect did NOT fire, rather than
+      // meaning nothing has happened yet.
+      await waitFor(() => expect(router.state.status).toBe('idle'));
+      // The splat's `beforeLoad` unconditionally redirects an entered member
+      // to `ROUTES.HOME` (ADR 0001), so staying at the requested address once
+      // settled is proof a dedicated child route — not the splat — matched
+      // it.
+      expect(router.state.location.pathname).toBe(address);
+    },
+  );
+
+  it('still redirects an entered member off a genuinely unmatched address once the three destinations exist', async () => {
+    vi.stubGlobal('fetch', stubEnteredMember());
+    const { router } = renderRoute(
+      `/warehouses/${ORDERING_WAREHOUSE_ID}/not-a-real-destination`,
+    );
+
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe(ROUTES.HOME),
+    );
   });
 });

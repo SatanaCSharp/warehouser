@@ -11,7 +11,7 @@ import { Provider } from 'react-redux';
 import { describe, expect, it, vi } from 'vitest';
 
 import { useRecordWarehouseEntry } from 'modules/warehouse/hooks/effects/useRecordWarehouseEntry';
-import { ROUTES } from 'shared/constants/routes';
+import { ROUTES, ROUTE_SEGMENTS } from 'shared/constants/routes';
 import { WarehouseLayout } from 'shared/layouts/WarehouseLayout';
 import { makeStore } from 'store';
 
@@ -136,7 +136,7 @@ describe('WarehouseLayout', () => {
     },
   );
 
-  it('renders the explicit archived refusal instead of the Outlet for an archived verdict', async () => {
+  it('renders the explicit archived refusal instead of the Outlet for an archived refusal verdict', async () => {
     renderLayout({
       status: 'refused',
       reason: 'archived',
@@ -147,5 +147,96 @@ describe('WarehouseLayout', () => {
       await screen.findByText('This warehouse is archived'),
     ).toBeInTheDocument();
     expect(screen.queryByText('Dashboard content')).not.toBeInTheDocument();
+  });
+
+  // AC-23 — an archived Warehouse is entered read-only rather than refused, so
+  // its destinations paint and their watch reads run exactly as before
+  // archiving. This replaces the old behaviour, under which the same membership
+  // produced a refusal and made Demand, Purchase Drafts and Items unreachable.
+  it('renders the Outlet for a read-only verdict', async () => {
+    renderLayout({
+      status: 'entered-read-only',
+      reason: 'archived',
+      warehouseId: WAREHOUSE_ID,
+    });
+
+    expect(await screen.findByText('Dashboard content')).toBeInTheDocument();
+    expect(
+      screen.queryByText('This warehouse is archived'),
+    ).not.toBeInTheDocument();
+  });
+
+  // CR-AC-17 — the actor's stored selection is unchanged by addressing an
+  // archived Warehouse, so the CR-AC-09 entry record must not run under a
+  // read-only verdict either.
+  it('mounts no entry record under a read-only verdict', async () => {
+    vi.mocked(useRecordWarehouseEntry).mockClear();
+
+    renderLayout({
+      status: 'entered-read-only',
+      reason: 'archived',
+      warehouseId: WAREHOUSE_ID,
+    });
+
+    await screen.findByText('Dashboard content');
+    expect(useRecordWarehouseEntry).not.toHaveBeenCalled();
+  });
+});
+
+// AC-23 vs CR-AC-17 — AC-23 reopens an archived Warehouse for reading its
+// demand, drafts and Items and says nothing about Access, so the Access address
+// alone keeps CR-AC-17's explicit archived refusal under a read-only verdict.
+describe('WarehouseLayout at the Access destination (CR-AC-17)', () => {
+  const renderAccessDestination = (verdict: WarehouseEntryVerdict): void => {
+    const store = makeStore();
+    const testRootRoute = createRootRouteWithContext<{ store: AppStore }>()({
+      component: () => <Outlet />,
+    });
+    const warehouseTestRoute = createRoute({
+      getParentRoute: () => testRootRoute,
+      path: ROUTES.WAREHOUSE,
+      beforeLoad: (): WarehouseEntryVerdict => verdict,
+      component: WarehouseLayout,
+    });
+    const accessTestRoute = createRoute({
+      getParentRoute: () => warehouseTestRoute,
+      path: ROUTE_SEGMENTS.ACCESS,
+      component: () => <div>Access content</div>,
+    });
+
+    const router = createRouter({
+      routeTree: testRootRoute.addChildren([
+        warehouseTestRoute.addChildren([accessTestRoute]),
+      ]),
+      context: { store },
+      history: createMemoryHistory({
+        initialEntries: [`/warehouses/${WAREHOUSE_ID}/access`],
+      }),
+    });
+
+    render(
+      <Provider store={store}>
+        <RouterProvider router={router} />
+      </Provider>,
+    );
+  };
+
+  it('refuses the Access address under a read-only verdict, naming the archived reason', async () => {
+    renderAccessDestination({
+      status: 'entered-read-only',
+      reason: 'archived',
+      warehouseId: WAREHOUSE_ID,
+    });
+
+    expect(
+      await screen.findByText('This warehouse is archived'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Access content')).not.toBeInTheDocument();
+  });
+
+  it('admits the Access address for a full entry', async () => {
+    renderAccessDestination({ status: 'entered', warehouseId: WAREHOUSE_ID });
+
+    expect(await screen.findByText('Access content')).toBeInTheDocument();
   });
 });

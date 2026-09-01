@@ -7,6 +7,18 @@ import type { ZodType } from 'zod';
 export type ApiFailure = {
   code: string;
   fieldErrors?: Record<string, string>;
+  /**
+   * The refusal's own safe envelope, exactly as the server sent it. A rule the
+   * member broke is often only explicable with the figure it was measured
+   * against — AC-19b's "this order cannot go below 160" is the allocated
+   * quantity, which the server already publishes as
+   * `details: { allocatedQuantity, submittedQuantity }`. Dropping it here left
+   * every such message able to state the rule but never the number.
+   *
+   * It is the server's envelope, not arbitrary data: `errorResponseSchema`
+   * bounds it, and the filter decides what is safe to disclose.
+   */
+  details?: Record<string, unknown>;
 };
 
 export const isApiFailure = (error: unknown): error is ApiFailure =>
@@ -52,6 +64,7 @@ const normalizeError = (payload: unknown): ApiFailure => {
   return {
     code: parsedError.data.code,
     ...(fieldErrors ? { fieldErrors } : {}),
+    ...(parsedError.data.details ? { details: parsedError.data.details } : {}),
   };
 };
 
@@ -125,7 +138,11 @@ export const api = createApi({
     'CurrentAccess',
     'CurrentSession',
     'AccessMembers',
+    'Demand',
+    'Items',
+    'PackagingTypes',
     'Permissions',
+    'PurchaseDrafts',
     'Roles',
     'WorkspaceContext',
     'WorkspaceMembers',

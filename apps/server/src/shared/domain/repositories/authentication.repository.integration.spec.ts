@@ -9,9 +9,6 @@ import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
 import type { DeepPartial } from 'typeorm';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 const now = new Date('2026-08-06T12:00:00.000Z');
 
 const uuid = (suffix: string): string =>
@@ -68,7 +65,7 @@ const insertIdentity = (
     await manager.insert(UserEntity, user);
   });
 
-describeIntegration('AuthenticationRepository — identity lifecycle', () => {
+describe('AuthenticationRepository — identity lifecycle', () => {
   const repository = new AuthenticationRepository(dataSource);
 
   beforeAll(async () => {

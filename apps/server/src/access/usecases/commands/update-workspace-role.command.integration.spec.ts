@@ -29,9 +29,6 @@ import {
   persistWorkspaceGraph,
 } from 'test/factories/entity-factories';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 // Same grapheme composed (U+00E9) vs. decomposed (e + U+0301) — storing must
 // not fold one into the other (AC-14a).
 const COMPOSED_E_ACUTE = `Caf${String.fromCodePoint(0x00e9)}`;
@@ -60,7 +57,7 @@ const actor = (workspaceId: string) =>
 
 const insertCustomRole = async (
   workspaceId: string,
-  overrides: Parameters<typeof buildWorkspaceRole>[0] = { workspaceId },
+  overrides: Partial<Parameters<typeof buildWorkspaceRole>[0]> = {},
 ): Promise<string> => {
   const role = buildWorkspaceRole({ workspaceId, ...overrides });
   await dataSource.manager.getRepository(WorkspaceRoleEntity).insert(role);
@@ -101,161 +98,151 @@ const TRUNCATE_STATEMENT =
 // registration), so splitting the suite below into two `describe` blocks
 // — purely to keep each body under the repo's `max-lines-per-function` cap —
 // does not initialize/destroy `dataSource` twice.
-if (process.env.RUN_INTEGRATION === '1') {
-  beforeAll(async () => {
-    await dataSource.initialize();
-  });
+beforeAll(async () => {
+  await dataSource.initialize();
+});
 
-  afterEach(async () => {
-    await dataSource.query(TRUNCATE_STATEMENT);
-  });
+afterEach(async () => {
+  await dataSource.query(TRUNCATE_STATEMENT);
+});
 
-  afterAll(async () => {
-    await dataSource.destroy();
-  });
-}
+afterAll(async () => {
+  await dataSource.destroy();
+});
 
-describeIntegration(
-  'UpdateWorkspaceRoleCommand — naming and membership',
-  () => {
-    it('changes the Permission membership to a different set, used for subsequent authorization decisions (AC-14a)', async () => {
-      const { workspaceId } = await persistWorkspaceGraph();
-      const roleId = await insertCustomRole(workspaceId, {
-        workspaceId,
+describe('UpdateWorkspaceRoleCommand — naming and membership', () => {
+  it('changes the Permission membership to a different set, used for subsequent authorization decisions (AC-14a)', async () => {
+    const { workspaceId } = await persistWorkspaceGraph();
+    const roleId = await insertCustomRole(workspaceId, {
+      name: 'Site Administrator',
+    });
+    await grantPermission(roleId, 'WAREHOUSES:WATCH');
+
+    const result = await transactions.executeInTransaction({}, () =>
+      createCommand().execute(actor(workspaceId), {
+        roleId,
         name: 'Site Administrator',
-      });
-      await grantPermission(roleId, 'WAREHOUSES:WATCH');
+        permissionIds: ['WAREHOUSES:CREATE', 'WORKSPACE_ROLES:WATCH'],
+      }),
+    );
 
-      const result = await transactions.executeInTransaction({}, () =>
-        createCommand().execute(actor(workspaceId), {
-          roleId,
-          name: 'Site Administrator',
-          permissionIds: ['WAREHOUSES:CREATE', 'WORKSPACE_ROLES:WATCH'],
-        }),
-      );
+    expect(result.permissionIds.slice().sort()).toEqual([
+      'WAREHOUSES:CREATE',
+      'WORKSPACE_ROLES:WATCH',
+    ]);
+    await expect(storedPermissionIds(roleId)).resolves.toEqual([
+      'WAREHOUSES:CREATE',
+      'WORKSPACE_ROLES:WATCH',
+    ]);
+  });
 
-      expect(result.permissionIds.slice().sort()).toEqual([
-        'WAREHOUSES:CREATE',
-        'WORKSPACE_ROLES:WATCH',
-      ]);
-      await expect(storedPermissionIds(roleId)).resolves.toEqual([
-        'WAREHOUSES:CREATE',
-        'WORKSPACE_ROLES:WATCH',
-      ]);
+  it('changes the Permission membership to the empty set (AC-14a)', async () => {
+    const { workspaceId } = await persistWorkspaceGraph();
+    const roleId = await insertCustomRole(workspaceId, {
+      name: 'Site Administrator',
+    });
+    await grantPermission(roleId, 'WAREHOUSES:WATCH');
+
+    const result = await transactions.executeInTransaction({}, () =>
+      createCommand().execute(actor(workspaceId), {
+        roleId,
+        name: 'Site Administrator',
+        permissionIds: [],
+      }),
+    );
+
+    expect(result.permissionIds).toEqual([]);
+    await expect(storedPermissionIds(roleId)).resolves.toEqual([]);
+  });
+
+  it('renames the Role, preserving a submitted name’s Unicode without normalization (AC-14a)', async () => {
+    const { workspaceId } = await persistWorkspaceGraph();
+    const roleId = await insertCustomRole(workspaceId, {
+      name: 'Original Role Name',
     });
 
-    it('changes the Permission membership to the empty set (AC-14a)', async () => {
-      const { workspaceId } = await persistWorkspaceGraph();
-      const roleId = await insertCustomRole(workspaceId, {
-        workspaceId,
-        name: 'Site Administrator',
-      });
-      await grantPermission(roleId, 'WAREHOUSES:WATCH');
+    const result = await transactions.executeInTransaction({}, () =>
+      createCommand().execute(actor(workspaceId), {
+        roleId,
+        name: `  ${COMPOSED_E_ACUTE}  `,
+        permissionIds: [],
+      }),
+    );
 
-      const result = await transactions.executeInTransaction({}, () =>
+    expect(result.name).toBe(COMPOSED_E_ACUTE);
+    const stored = await storedRole(roleId);
+    expect(stored?.name).toBe(COMPOSED_E_ACUTE);
+  });
+
+  it('rejects an exact name conflict within the Workspace but accepts a differently cased name (AC-15)', async () => {
+    const { workspaceId } = await persistWorkspaceGraph();
+    const takenName = 'Site Administrator';
+    await insertCustomRole(workspaceId, { name: takenName });
+    const roleId = await insertCustomRole(workspaceId, {
+      name: 'Warehouse Coordinator',
+    });
+
+    await expect(
+      transactions.executeInTransaction({}, () =>
         createCommand().execute(actor(workspaceId), {
           roleId,
-          name: 'Site Administrator',
+          name: takenName,
           permissionIds: [],
         }),
-      );
+      ),
+    ).rejects.toMatchObject({ code: ErrorCode.WORKSPACE_ROLE_NAME_CONFLICT });
 
-      expect(result.permissionIds).toEqual([]);
-      await expect(storedPermissionIds(roleId)).resolves.toEqual([]);
-    });
+    // Differently cased is a distinct name (AC-15), so it is accepted.
+    const differentlyCased = await transactions.executeInTransaction({}, () =>
+      createCommand().execute(actor(workspaceId), {
+        roleId,
+        name: 'site administrator',
+        permissionIds: [],
+      }),
+    );
+    expect(differentlyCased.name).toBe('site administrator');
+  });
 
-    it('renames the Role, preserving a submitted name’s Unicode without normalization (AC-14a)', async () => {
+  it.each([
+    ['empty after trimming', '   ', 'empty'],
+    [
+      'over 100 user-perceived characters',
+      `${'a'.repeat(100)}\u{1F4BC}`,
+      'grapheme_length',
+    ],
+    [
+      'carrying a control or format character',
+      'Valid​Name',
+      'control_or_format_character',
+    ],
+  ] as const)(
+    'rejects a Workspace Role name %s, naming the broken rule, and leaves the Role untouched (AC-15a)',
+    async (_case, invalidName, rule) => {
       const { workspaceId } = await persistWorkspaceGraph();
       const roleId = await insertCustomRole(workspaceId, {
-        workspaceId,
-        name: 'Original Role Name',
-      });
-
-      const result = await transactions.executeInTransaction({}, () =>
-        createCommand().execute(actor(workspaceId), {
-          roleId,
-          name: `  ${COMPOSED_E_ACUTE}  `,
-          permissionIds: [],
-        }),
-      );
-
-      expect(result.name).toBe(COMPOSED_E_ACUTE);
-      const stored = await storedRole(roleId);
-      expect(stored?.name).toBe(COMPOSED_E_ACUTE);
-    });
-
-    it('rejects an exact name conflict within the Workspace but accepts a differently cased name (AC-15)', async () => {
-      const { workspaceId } = await persistWorkspaceGraph();
-      const takenName = 'Site Administrator';
-      await insertCustomRole(workspaceId, { workspaceId, name: takenName });
-      const roleId = await insertCustomRole(workspaceId, {
-        workspaceId,
-        name: 'Warehouse Coordinator',
+        name: 'Existing Name',
       });
 
       await expect(
         transactions.executeInTransaction({}, () =>
           createCommand().execute(actor(workspaceId), {
             roleId,
-            name: takenName,
+            name: invalidName,
             permissionIds: [],
           }),
         ),
-      ).rejects.toMatchObject({ code: ErrorCode.WORKSPACE_ROLE_NAME_CONFLICT });
+      ).rejects.toMatchObject({
+        code: ErrorCode.WORKSPACE_INVALID_INPUT,
+        details: { field: 'name', rule },
+      });
 
-      // Differently cased is a distinct name (AC-15), so it is accepted.
-      const differentlyCased = await transactions.executeInTransaction({}, () =>
-        createCommand().execute(actor(workspaceId), {
-          roleId,
-          name: 'site administrator',
-          permissionIds: [],
-        }),
-      );
-      expect(differentlyCased.name).toBe('site administrator');
-    });
+      const untouched = await storedRole(roleId);
+      expect(untouched?.name).toBe('Existing Name');
+    },
+  );
+});
 
-    it.each([
-      ['empty after trimming', '   ', 'empty'],
-      [
-        'over 100 user-perceived characters',
-        `${'a'.repeat(100)}\u{1F4BC}`,
-        'grapheme_length',
-      ],
-      [
-        'carrying a control or format character',
-        'Valid​Name',
-        'control_or_format_character',
-      ],
-    ] as const)(
-      'rejects a Workspace Role name %s, naming the broken rule, and leaves the Role untouched (AC-15a)',
-      async (_case, invalidName, rule) => {
-        const { workspaceId } = await persistWorkspaceGraph();
-        const roleId = await insertCustomRole(workspaceId, {
-          workspaceId,
-          name: 'Existing Name',
-        });
-
-        await expect(
-          transactions.executeInTransaction({}, () =>
-            createCommand().execute(actor(workspaceId), {
-              roleId,
-              name: invalidName,
-              permissionIds: [],
-            }),
-          ),
-        ).rejects.toMatchObject({
-          code: ErrorCode.WORKSPACE_INVALID_INPUT,
-          details: { field: 'name', rule },
-        });
-
-        const untouched = await storedRole(roleId);
-        expect(untouched?.name).toBe('Existing Name');
-      },
-    );
-  },
-);
-
-describeIntegration('UpdateWorkspaceRoleCommand — protections', () => {
+describe('UpdateWorkspaceRoleCommand — protections', () => {
   it('rejects renaming the protected Workspace Owner Role, explaining it is system-managed (AC-16)', async () => {
     const { workspaceId, ownerRoleId } = await persistWorkspaceGraph();
 
@@ -293,7 +280,6 @@ describeIntegration('UpdateWorkspaceRoleCommand — protections', () => {
   it('rejects a Workspace Permission absent from the system catalogue and leaves the Role untouched (AC-18)', async () => {
     const { workspaceId } = await persistWorkspaceGraph();
     const roleId = await insertCustomRole(workspaceId, {
-      workspaceId,
       name: 'Site Administrator',
     });
 
@@ -315,7 +301,6 @@ describeIntegration('UpdateWorkspaceRoleCommand — protections', () => {
   it('rejects the reserved WORKSPACE_OWNER_ROLE:REASSIGN Permission and leaves the Role untouched (AC-18)', async () => {
     const { workspaceId } = await persistWorkspaceGraph();
     const roleId = await insertCustomRole(workspaceId, {
-      workspaceId,
       name: 'Site Administrator',
     });
 
@@ -338,7 +323,6 @@ describeIntegration('UpdateWorkspaceRoleCommand — protections', () => {
     const own = await persistWorkspaceGraph();
     const other = await persistWorkspaceGraph();
     const otherRoleId = await insertCustomRole(other.workspaceId, {
-      workspaceId: other.workspaceId,
       name: 'Other Workspace’s Role',
     });
     const missingRoleId = randomUUID();

@@ -45,11 +45,38 @@ export const ErrorCode = {
   WORKSPACE_LAST_UNARCHIVED_WAREHOUSE: 'workspace.last_unarchived_warehouse',
   WORKSPACE_CONCURRENT_CHANGE: 'workspace.concurrent_change',
   ACCESS_WAREHOUSE_ARCHIVED: 'access.warehouse_archived',
+  ACCESS_WRITE_RATE_LIMITED: 'access.write_rate_limited',
   WORKSPACE_WAREHOUSE_CREATION_UNAVAILABLE:
     'workspace.warehouse_creation_unavailable',
   WORKSPACE_ARCHIVAL_UNAVAILABLE: 'workspace.archival_unavailable',
   WORKSPACE_ROLE_DELETION_UNAVAILABLE: 'workspace.role_deletion_unavailable',
   WORKSPACE_OWNER_TRANSFER_UNAVAILABLE: 'workspace.owner_transfer_unavailable',
+  ITEMS_INVALID_INPUT: 'items.invalid_input',
+  ITEMS_INVALID_ON_HAND_QUANTITY: 'items.invalid_on_hand_quantity',
+  ITEMS_ADJUSTMENT_REASON_REQUIRED: 'items.adjustment_reason_required',
+  ITEMS_TARGET_UNAVAILABLE: 'items.target_unavailable',
+  ITEMS_SKU_TAKEN: 'items.sku_taken',
+  ITEMS_SKU_FIXED: 'items.sku_fixed',
+  CUSTOMER_ORDERS_INVALID_INPUT: 'customer_orders.invalid_input',
+  CUSTOMER_ORDERS_NEEDED_BY_IN_PAST: 'customer_orders.needed_by_in_past',
+  CUSTOMER_ORDERS_TARGET_UNAVAILABLE: 'customer_orders.target_unavailable',
+  CUSTOMER_ORDERS_QUANTITY_BELOW_ALLOCATED:
+    'customer_orders.quantity_below_allocated',
+  CUSTOMER_ORDERS_INVALID_STATE: 'customer_orders.invalid_state',
+  PURCHASE_DRAFTS_UNKNOWN_PACKAGING_TYPE:
+    'purchase_drafts.unknown_packaging_type',
+  PURCHASE_DRAFTS_INVALID_INPUT: 'purchase_drafts.invalid_input',
+  PURCHASE_DRAFTS_TARGET_UNAVAILABLE: 'purchase_drafts.target_unavailable',
+  PURCHASE_DRAFTS_DRAFT_FROZEN: 'purchase_drafts.draft_frozen',
+  PURCHASE_DRAFTS_DISCARD_UNAVAILABLE: 'purchase_drafts.discard_unavailable',
+  PURCHASE_DRAFTS_LINK_EXISTS: 'purchase_drafts.link_exists',
+  PURCHASE_DRAFTS_DRAFT_EMPTY: 'purchase_drafts.draft_empty',
+  PURCHASE_DRAFTS_INVALID_STATE: 'purchase_drafts.invalid_state',
+  PURCHASE_DRAFTS_CONCURRENT_CHANGE: 'purchase_drafts.concurrent_change',
+  PURCHASE_DRAFTS_ARRIVAL_ALREADY_CONFIRMED:
+    'purchase_drafts.arrival_already_confirmed',
+  PURCHASE_DRAFTS_ALLOCATION_OUT_OF_BOUNDS:
+    'purchase_drafts.allocation_out_of_bounds',
 } as const;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

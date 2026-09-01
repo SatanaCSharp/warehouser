@@ -17,6 +17,7 @@ const currentUser = (
   roleId: managerRoleId,
   roleKind: 'warehouse_manager',
   permissionId: PermissionId.WAREHOUSE_MANAGER_ROLE_REASSIGN,
+  archived: false,
   ...overrides,
 });
 

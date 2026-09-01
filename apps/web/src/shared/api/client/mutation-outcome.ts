@@ -13,6 +13,8 @@ export type MutationOutcome = {
   success: boolean;
   code?: string;
   fieldErrors?: Record<string, string>;
+  /** The refusal's safe envelope, for a message that must name a figure. */
+  details?: Record<string, unknown>;
 };
 
 /** What an RTK Query mutation trigger resolves to, before it is normalized. */
@@ -41,5 +43,6 @@ export const mutationOutcome = (result: MutationResult): MutationOutcome => {
     success: false,
     code: result.error.code,
     fieldErrors: result.error.fieldErrors,
+    details: result.error.details,
   };
 };

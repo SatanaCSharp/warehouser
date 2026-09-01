@@ -12,8 +12,16 @@ import type { FormParse } from 'shared/utils/form-parse';
 
 type FormModalDialogProps<TForm extends FieldValues, TInput> = Pick<
   ComponentProps<typeof Modal.Container>,
-  'scroll' | 'size'
+  'scroll'
 > & {
+  /**
+   * The dialog's maximum width: HeroUI's own scale, plus `wide` — the 720px
+   * dialog the ordering design's Arrival Confirmation is drawn at, which that
+   * scale stops short of. It belongs here rather than in the feature, because
+   * a feature that reached past this component for a width would be
+   * reassembling the modal (`docs/system/guides/web-dialogs.md`).
+   */
+  size?: ComponentProps<typeof Modal.Container>['size'] | 'wide';
   cancelLabel: string;
   children: ReactNode;
   /** The `useForm` session whose fields `children` render. */
@@ -33,10 +41,26 @@ type FormModalDialogProps<TForm extends FieldValues, TInput> = Pick<
    * dialog that passes `parse` or expects `fieldErrors` back: without it, a
    * code has no translation, and a raw code is never shown to an actor
    * (web-error-handling.md §5) — the failure's toast reports it instead.
+   *
+   * `details` is the refusal's own safe envelope, present only when the server
+   * refused and sent one. It is what lets a message name the figure the rule
+   * was measured against — AC-19b's "cannot go below 160" is the allocated
+   * quantity — rather than stating the rule and withholding the number. A
+   * dialog whose messages need no figure simply ignores the argument.
    */
-  translateValidation?: (code: string, field: Path<TForm>) => string;
-  /** The stable code of a refusal no field explains, for a dialog that says so itself. */
-  onRefusal?: (code?: string) => void;
+  translateValidation?: (
+    code: string,
+    field: Path<TForm>,
+    details?: Record<string, unknown>,
+  ) => string;
+  /**
+   * The stable code of a refusal no field explains, for a dialog that says so
+   * itself — with the refusal's own `details` envelope beside it, so a message
+   * that must name the figure the rule was measured against (AC-19b's
+   * allocated quantity) can reach it. A dialog that needs only the code takes
+   * only the code.
+   */
+  onRefusal?: (code?: string, details?: Record<string, unknown>) => void;
   /**
    * The request itself — a generated RTK Query mutation trigger, handed over
    * directly. Normalizing what it settles to is this component's step of the
@@ -82,11 +106,16 @@ export const FormModalDialog = <TForm extends FieldValues, TInput = TForm>({
   const { setFieldErrors } = useFormFieldErrors<TForm>(form.setError);
   const { isSubmitting } = form.formState;
 
-  const showFieldErrors = (errors?: FieldErrorCodes<TForm>): void => {
+  const showFieldErrors = (
+    errors?: FieldErrorCodes<TForm>,
+    details?: Record<string, unknown>,
+  ): void => {
     if (!errors || !translateValidation) {
       return;
     }
-    setFieldErrors(errors, (field, code) => translateValidation(code, field));
+    setFieldErrors(errors, (field, code) =>
+      translateValidation(code, field, details),
+    );
   };
 
   const submit = form.handleSubmit(async (values) => {
@@ -98,6 +127,8 @@ export const FormModalDialog = <TForm extends FieldValues, TInput = TForm>({
     };
 
     if (!parsed.success) {
+      // A locally rejected value has no server envelope behind it, so the
+      // field's message is the one the rule alone can state.
       showFieldErrors(parsed.error);
       return;
     }
@@ -108,14 +139,20 @@ export const FormModalDialog = <TForm extends FieldValues, TInput = TForm>({
       return;
     }
 
-    showFieldErrors(outcome.fieldErrors);
-    onRefusal?.(outcome.code);
+    showFieldErrors(outcome.fieldErrors, outcome.details);
+    onRefusal?.(outcome.code, outcome.details);
   });
+
+  const isWide = size === 'wide';
 
   return (
     <Modal.Backdrop>
-      <Modal.Container scroll={scroll} size={size}>
-        <Modal.Dialog>
+      <Modal.Container scroll={scroll} size={isWide ? 'lg' : size}>
+        {/*
+          HeroUI's size scale is applied in `@layer components`, so a utility
+          class overrides it wherever it stops short of a drawn width.
+        */}
+        <Modal.Dialog className={isWide ? 'md:max-w-[45rem]' : undefined}>
           {/*
             The form has to carry the dialog's flex column itself: `scroll="inside"`
             bounds the dialog and expects `Modal.Body` to be the `flex-1 min-h-0`
@@ -134,13 +171,25 @@ export const FormModalDialog = <TForm extends FieldValues, TInput = TForm>({
               <Modal.Heading>{title}</Modal.Heading>
             </Modal.Header>
             <Modal.Body className="flex flex-col gap-4">{children}</Modal.Body>
-            <Modal.Footer>
-              <Button slot="close" variant="ghost" isDisabled={isSubmitting}>
+            {/*
+              Cancel precedes the primary in DOM — and therefore keyboard —
+              order at every width. Below the split breakpoint the column is
+              *reversed*, so the full-width primary is what sits on top
+              without either control moving in the tab sequence.
+            */}
+            <Modal.Footer className="flex-col-reverse items-stretch md:flex-row md:items-center">
+              <Button
+                slot="close"
+                variant="ghost"
+                className="w-full md:w-auto"
+                isDisabled={isSubmitting}
+              >
                 {cancelLabel}
               </Button>
               <Button
                 type="submit"
                 variant={submitVariant}
+                className="w-full md:w-auto"
                 isDisabled={isSubmitting || isSubmitDisabled}
                 isPending={isSubmitting}
               >

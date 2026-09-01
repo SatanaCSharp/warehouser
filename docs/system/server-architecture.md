@@ -102,15 +102,120 @@ feature/domain mapping.
 
 ### Services
 
-Services live under the owning feature's `<feature-name>/domain/services/`. They contain reusable
-business operations and may use domain objects, feature mappers, and concrete repositories.
-Services must not invoke commands, queries, event use cases, controllers, or handlers. A use case
-may access a repository directly for a simple operation, especially a query, but it must use an
-existing service when that service owns the relevant business rule. Use an injectable feature
-domain service for business rules or orchestration across independent persistence operations. A
-service may delegate an optimized multi-entity read or write to one specialized repository method
-instead of coordinating table-shaped repositories. The complete operation owns one transaction
-boundary.
+A service is an extraction, never a default layer. A use case owns its own business rules and
+reaches concrete repositories directly; extract a service only when one of these is true:
+
+- **more than one use case needs the same operation** — the rule would otherwise be duplicated, or
+  another module must invoke it through the owning module's exported provider;
+- **the use case has grown too large to read** — a single `execute` that no longer fits in one
+  screen may delegate a cohesive part of itself to a named service.
+
+Never introduce a service that exactly one use case calls with the arguments it was handed. That
+service adds an indirection without a rule of its own and turns the use case into a pass-through;
+see "Use cases" below for the rule this violates.
+
+A shared operation that reaches a repository belongs in an injectable service, so the repository is
+injected once rather than threaded through every caller as an argument. Keep a shared helper as a
+plain exported function only when it needs no collaborator at all — a pure predicate, an assertion
+over a value, or a mapping.
+
+Services live under the owning feature's `<feature-name>/domain/services/`. They may use domain
+objects, feature mappers, and concrete repositories, and must not invoke commands, queries, event
+use cases, controllers, or handlers. A service may delegate an optimized multi-entity read or write
+to one specialized repository method instead of coordinating table-shaped repositories. A service
+that joins a caller's transaction carries no transaction boundary of its own; the complete
+operation owns exactly one.
+
+#### Worked example: a shared-check service
+
+`purchase-drafts` has eight commands that assemble a Purchase Draft — create the draft, add, revise
+and remove a line, add, revise and remove a link, revise the draft. Three checks recur across them:
+an Item must belong to the acting Warehouse, a linked Customer Order must too, and a Packaging Type
+must be one the catalogue offers. Each check reads a repository, and each is needed by more than one
+command. That is the first extraction trigger, so it becomes a service:
+
+```ts
+// purchase-drafts/domain/services/purchase-draft-assembly.service.ts
+
+// Stateless: no repository, nothing injected. It stays a module-level function so the four commands
+// that only map a write outcome are not coupled to repositories they never touch.
+export const assertApplied = (outcome: AssemblyWriteOutcome): void => {
+  assert(outcome !== 'draft-frozen', purchaseDraftFrozenError());
+  assert(outcome !== 'target-missing', purchaseDraftTargetUnavailableError());
+};
+
+@Injectable()
+export class PurchaseDraftAssemblyService {
+  constructor(
+    private readonly itemCatalogueRepository: ItemCatalogueRepository,
+    private readonly customerOrderLifecycleRepository: CustomerOrderLifecycleRepository,
+    private readonly packagingTypeCatalogueRepository: PackagingTypeCatalogueRepository,
+  ) {}
+
+  async assertItemAvailable(
+    currentUser: AccessCurrentUser,
+    itemId: string,
+  ): Promise<void> {
+    const item = await this.itemCatalogueRepository.findById(itemId);
+    assert(
+      item !== null && item.warehouseId === currentUser.warehouseId,
+      purchaseDraftTargetUnavailableError(),
+    );
+  }
+
+  // …assertCustomerOrderAvailable, assertPackagingTypesKnown
+}
+```
+
+The command keeps everything that is its own — the input type, the write, the transaction boundary
+— and calls the service only for what it shares:
+
+```ts
+// purchase-drafts/usecases/commands/add-purchase-draft-line.command.ts
+@Injectable()
+export class AddPurchaseDraftLineCommand {
+  constructor(
+    private readonly assemblyRepository: PurchaseDraftAssemblyRepository,
+    private readonly assemblyService: PurchaseDraftAssemblyService,
+  ) {}
+
+  @Transactional()
+  async execute(
+    currentUser: AccessCurrentUser,
+    purchaseDraftId: string,
+    input: AddLineInput,
+  ): Promise<void> {
+    await this.assemblyService.assertItemAvailable(currentUser, input.itemId);
+    await this.assemblyService.assertPackagingTypesKnown([
+      input.packagingTypeId,
+    ]);
+
+    const outcome = await this.assemblyRepository.addLine({/* … */});
+
+    assertApplied(outcome);
+  }
+}
+```
+
+Register the service as a provider of the feature's `UsecaseModule` and leave it out of `exports`,
+so a transport adapter still reaches the feature only through its use cases. Export it only when
+another module must call it — `customer-orders` exports `DemandAllocationService` for exactly that
+reason, and nothing else.
+
+Four properties make this an extraction rather than a pass-through, and each is worth checking
+before adding a service:
+
+- **every method has more than one caller.** A method called by one command belongs in that command.
+- **the commands still own their operations.** The service holds no `addLine`, no write, and no
+  input type; it answers questions, and the command decides what to do with the answers.
+- **the service opens no transaction.** `@Transactional()` stays on the command; the service runs
+  inside that boundary, which is what makes the locking reads it performs the command's own locks.
+- **stateless helpers stay module-level.** `assertApplied` and `pickStated` inject nothing, so
+  putting them on the class would force commands that need only them to take the whole service.
+
+Unit-test the commands over the _real_ service with repository doubles beneath it, not over a double
+of the service: the cases are about the rule being enforced, not about the call being made. See
+`purchase-drafts/usecases/commands/purchase-draft-assembly.spec.ts`.
 
 ### Use cases
 
@@ -120,9 +225,18 @@ Use cases are the application boundary and have three categories:
 - `queries/` return data without changing business state;
 - `events/` coordinate application behavior caused by a consumed event.
 
-Use cases may coordinate services, domain objects, concrete repositories, shared abstractions, and
-other infrastructure ports. They must not depend on REST DTO classes, controllers, BullMQ handler
-classes, TypeORM entities, QueryBuilder, or other TypeORM APIs.
+A use case owns the rules of the operation it names, holds its own `@Transactional()` boundary, and
+declares the input and result types of that operation in its own file. It may coordinate services,
+domain objects, concrete repositories, shared abstractions, and other infrastructure ports. It must
+not depend on REST DTO classes, controllers, BullMQ handler classes, TypeORM entities,
+QueryBuilder, or other TypeORM APIs.
+
+**A use case must not be a pass-through.** A command whose `execute` only forwards its arguments to
+one collaborator's method holds no rule, so it is a layer without a responsibility: the rules belong
+in the command itself, next to the boundary that decides them. Two shapes are the tell — a command
+whose body is a single `return this.<something>.<method>(...)` with the arguments unchanged, and a
+service method that exactly one command calls. Correct both by moving the rules into the command and
+deleting the collaborator, keeping only what "Services" above justifies extracting.
 
 ### REST
 
@@ -275,23 +389,70 @@ pnpm --filter @warehouser/server build
 
 ### Running the integration tier
 
-Integration specs are named `*.integration.spec.ts` (and a few colocated service specs) and are
-skipped unless `RUN_INTEGRATION=1` is set, so the command above runs the unit tier only.
-
-They execute against a real PostgreSQL database and `TRUNCATE ... CASCADE` between tests. Two
-consequences are easy to get wrong:
-
-- **Point them at a disposable database.** They will erase whatever database they connect to.
-  Never run them against the database you develop against. Create one once and reuse it:
-
-  ```sh
-  psql -h localhost -U warehouser -d postgres -c 'CREATE DATABASE warehouser_test;'
-  DATABASE_NAME=warehouser_test pnpm --filter @warehouser/server migration:run
-  ```
-
-- **Run them serially.** They share one database, so Jest's parallel workers truncate each other's
-  fixtures and the suite fails in ways that disappear when a spec is run alone.
+Integration specs are named `*.integration.spec.ts`. The suffix is what separates the two
+commands: `jest.config.cjs` excludes it by path, so the unit tier above never touches a database,
+and `jest.pglite.config.cjs` opts it back in. Naming a spec that way is the whole opt-in — there
+is no environment flag to remember, and an integration spec cannot be run against a developer's
+own database by accident. To run them:
 
 ```sh
-DATABASE_NAME=warehouser_test RUN_INTEGRATION=1 pnpm --filter @warehouser/server exec jest --runInBand
+pnpm --filter @warehouser/server test:integration
 ```
+
+No Docker, no database to create, nothing to point at. `src/test/pglite/global-setup.ts` applies
+the migrations once, dumps the result, and every test file restores its own database from that
+dump — the PGlite equivalent of `CREATE DATABASE ... TEMPLATE`. Restoring costs roughly 170 ms,
+which is what makes a database _per test file_ affordable.
+
+That per-file isolation is why nothing has to coordinate cleanup across suites: a suite cannot
+corrupt a database no other suite shares.
+
+Specs are not aware of any of it. `jest.pglite.config.cjs` uses `moduleNameMapper` to swap two
+production modules for PGlite-backed equivalents:
+
+| Production module                 | Replaced by                             |
+| --------------------------------- | --------------------------------------- |
+| `shared/database/data-source`     | `test/pglite/pglite-data-source.ts`     |
+| `shared/database/typeorm.options` | `test/pglite/pglite-typeorm.options.ts` |
+
+Both build on the single driver in `test/pglite/pglite-driver.ts`. Mapping _both_ matters: the
+second is what `AppModule` uses, so without it an HTTP contract spec would seed its fixtures into
+PGlite while the application under test read from a real PostgreSQL server, and every
+authenticated request would come back 401.
+
+The driver is deliberately in-process rather than reached over `pglite-socket`. Routing statements
+through the socket's query queue hits open upstream defects around transactions and error
+recovery (electric-sql/pglite #958, #985, #1046), which show up as rolled-back rows reappearing,
+aggregates returning no rows at all, and suites hanging — non-deterministically.
+
+Two consequences of the in-process driver are worth knowing:
+
+- The tier runs under `NODE_OPTIONS=--experimental-vm-modules` (already in the `test:integration`
+  script). PGlite loads its WebAssembly through a dynamic `import()`, which Jest's VM context
+  refuses without that flag.
+- `pglite-driver.ts` re-registers a `bigint` parser so `count(*)` yields a string, as
+  `node-postgres` does. Without it a spec asserting `{ count: '1' }` sees `{ count: 1 }` and fails
+  for a reason unrelated to what it tests.
+
+### What this tier cannot test
+
+PGlite is PostgreSQL compiled to WebAssembly, running in the single-user mode Postgres normally
+reserves for recovery. It is real Postgres — isolation levels, `TRUNCATE ... CASCADE` across
+several tables, deferred foreign keys and injected-failure rollbacks all behave correctly — but it
+has exactly **one backend**, so only one query executes at a time no matter how many connections
+are open. Note it is currently PostgreSQL 18, one major version ahead of the `postgres:17-alpine`
+production uses.
+
+**Concurrency is therefore out of scope for the automated suite, by decision.** A spec that needs
+two backends racing each other cannot be expressed here:
+
+- Opening a second `QueryRunner` and polling `pg_stat_activity` until the first backend is blocked
+  on a lock self-deadlocks — the second runner _is_ the first backend.
+- A race asserting "two simultaneous writes, exactly one winner" silently passes for the wrong
+  reason: PGlite serializes the two calls, so both succeed and the proof evaporates.
+
+The repository previously carried such specs against a real PostgreSQL server. They were removed
+along with the load smokes, which asserted p95 latency and throughput that only mean something
+against the server the application actually runs on. Do not add specs of either kind back without
+reintroducing a real-PostgreSQL tier to run them in — in this suite they would pass without
+proving anything, which is worse than not having them.

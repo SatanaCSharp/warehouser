@@ -1,5 +1,3 @@
-import { useState } from 'react';
-
 import {
   useChangeMemberEmailMutation,
   useChangeMemberPasswordMutation,
@@ -12,7 +10,8 @@ import { ResetPasswordDialog } from 'modules/access/components/access-workspace/
 import { useAccessScope } from 'modules/access/hooks/projections/useAccessScope';
 import { useAccessRoles } from 'modules/access/hooks/queries/useAccessRoles';
 import { selectCurrentUser } from 'modules/auth/store/auth.selectors';
-import { DialogHost } from 'shared/components/DialogHost';
+import { ActionDialogHost } from 'shared/components/ActionDialogHost';
+import { useActionDialog } from 'shared/hooks/state/useActionDialog';
 import { useAppSelector } from 'store/hooks';
 
 import type {
@@ -27,11 +26,8 @@ type MemberDirectoryProps = {
   members: AccessMember[];
 };
 
-/** Which per-member dialog the list has opened, and for whom. */
-type MemberDialog = {
-  kind: 'deleteMember' | 'editEmail' | 'resetPassword';
-  member: AccessMember;
-};
+/** Which per-member dialog a row opens. */
+type MemberDialogKind = 'deleteMember' | 'editEmail' | 'resetPassword';
 
 /**
  * The member list and the dialogs its rows open. It resolves the acting user
@@ -41,6 +37,9 @@ type MemberDialog = {
  * row as somebody else's. `MemberRow` withholds every destructive control for
  * as long as that lasts (CR-RG-01). The rows themselves stay painted — a
  * background refetch never replaces what the actor is reading (CR-AC-10).
+ *
+ * The three dialogs are opened per member through `useActionDialog` and mounted
+ * by `ActionDialogHost` (`docs/system/guides/web-action-dialogs.md`).
  */
 export const MemberDirectory = ({
   members,
@@ -51,14 +50,12 @@ export const MemberDirectory = ({
   const [changeMemberEmail] = useChangeMemberEmailMutation();
   const [changeMemberPassword] = useChangeMemberPasswordMutation();
   const [deleteMember] = useDeleteMemberMutation();
-  const [dialog, setDialog] = useState<MemberDialog | null>(null);
-
-  const onCloseDialog = (): void => setDialog(null);
+  const dialog = useActionDialog<MemberDialogKind, AccessMember>();
 
   const onOpenDialog =
-    (kind: MemberDialog['kind']) =>
+    (kind: MemberDialogKind) =>
     (member: AccessMember): void =>
-      setDialog({ kind, member });
+      dialog.open(kind, member);
 
   const onSaveEmail =
     (member: AccessMember) =>
@@ -82,39 +79,6 @@ export const MemberDirectory = ({
     (member: AccessMember) => (): Promise<MutationResult> =>
       deleteMember({ warehouseId: warehouseId ?? '', userId: member.userId });
 
-  // Every dialog reads the member its row was opened for, so the open one is
-  // resolved by a lookup here rather than gated inline: `Conditional` evaluates
-  // both arms, and no member exists until a row opens one. A row is not a
-  // trigger the dialog can sit beside, so `DialogHost` holds the open state the
-  // dialog closes itself through.
-  const openDialog =
-    dialog === null ? null : (
-      <DialogHost onClose={onCloseDialog}>
-        {
-          {
-            editEmail: (
-              <EditEmailDialog
-                member={dialog.member}
-                onSave={onSaveEmail(dialog.member)}
-              />
-            ),
-            resetPassword: (
-              <ResetPasswordDialog
-                member={dialog.member}
-                onSave={onSavePassword(dialog.member)}
-              />
-            ),
-            deleteMember: (
-              <DeleteMemberDialog
-                member={dialog.member}
-                onDelete={onConfirmDelete(dialog.member)}
-              />
-            ),
-          }[dialog.kind]
-        }
-      </DialogHost>
-    );
-
   return (
     <>
       <MemberList
@@ -126,7 +90,26 @@ export const MemberDirectory = ({
         onResetPassword={onOpenDialog('resetPassword')}
       />
 
-      {openDialog}
+      <ActionDialogHost
+        controller={dialog}
+        renderDialogs={{
+          editEmail: (member) => (
+            <EditEmailDialog member={member} onSave={onSaveEmail(member)} />
+          ),
+          resetPassword: (member) => (
+            <ResetPasswordDialog
+              member={member}
+              onSave={onSavePassword(member)}
+            />
+          ),
+          deleteMember: (member) => (
+            <DeleteMemberDialog
+              member={member}
+              onDelete={onConfirmDelete(member)}
+            />
+          ),
+        }}
+      />
     </>
   );
 };

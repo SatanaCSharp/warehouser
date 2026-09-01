@@ -22,9 +22,6 @@ import { WorkspaceRoleEntity } from 'shared/domain/entities/workspace-role.entit
 import { WorkspaceRolePermissionEntity } from 'shared/domain/entities/workspace-role-permission.entity';
 import { GlobalHttpExceptionFilter } from 'shared/errors/global-http-exception.filter';
 
-export const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 export const now = new Date('2026-08-12T12:00:00.000Z');
 
 export interface Actor {
@@ -85,7 +82,7 @@ export interface WarehouseHttpContractHarness {
 // exceeds the repository's line-count limit; both files share this one
 // seeding and request vocabulary instead of maintaining two copies of it.
 /** Boots one Nest application per calling spec file and truncates fixture tables between tests.
- * Call this synchronously inside a `describeIntegration(...)` block; it registers that block's
+ * Call this synchronously inside a `describe(...)` block; it registers that block's
  * `beforeAll`/`afterEach`/`afterAll` hooks itself and returns the shared seeding/request
  * vocabulary the `it` blocks use. */
 export const setupWarehouseHttpContractHarness =

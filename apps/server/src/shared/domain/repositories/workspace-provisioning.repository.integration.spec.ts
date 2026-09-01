@@ -22,9 +22,6 @@ import {
 } from 'test/factories/entity-factories';
 import type { EntityManager } from 'typeorm';
 
-const describeIntegration =
-  process.env.RUN_INTEGRATION === '1' ? describe : describe.skip;
-
 const now = new Date('2026-08-12T12:00:00.000Z');
 
 // A synthetic, catalogue-shaped id that never collides with a real seeded
@@ -96,7 +93,7 @@ const buildProvisioningInput = (
   };
 };
 
-describeIntegration('WorkspaceProvisioningRepository', () => {
+describe('WorkspaceProvisioningRepository', () => {
   const repository = new WorkspaceProvisioningRepository(dataSource);
   const context = new DbTransactionContext(dataSource);
   const transactions = new DbTransactionService(dataSource, context);

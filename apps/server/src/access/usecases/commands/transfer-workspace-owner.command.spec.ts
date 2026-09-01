@@ -2,14 +2,7 @@ import {
   ErrorCode,
   WorkspacePermissionId,
 } from '@warehouser/shared-types/enums';
-import { ApplicationError, SystemError } from '@warehouser/shared-types/errors';
-// RED for T56/AC-26 (review S1-07) —
-// `WORKSPACE_OWNER_TRANSFER_UNAVAILABLE` is registered in
-// `global-http-exception.filter.ts`'s `systemErrors` map (503) and documented
-// by contracts/openapi.yaml, but no factory ever raised it: an infrastructure
-// failure during the swap propagated raw and the filter answered a generic
-// 500. The documented 503 carries what the member needs to know — exactly one
-// current Workspace Owner is preserved.
+import { ApplicationError } from '@warehouser/shared-types/errors';
 import { TransferWorkspaceOwnerCommand } from 'access/usecases/commands/transfer-workspace-owner.command';
 import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
 
@@ -128,24 +121,21 @@ describe('TransferWorkspaceOwnerCommand', () => {
     );
   });
 
-  it('AC-26: translates an infrastructure failure performing the swap into the documented 503 SystemError, preserving the cause', async () => {
+  // An infrastructure failure performing the swap propagates untouched — the
+  // command never reclassifies it — and the global exception filter is the
+  // single boundary that maps it (server-error-handling.md §2 and §6).
+  it('AC-26: propagates an infrastructure failure performing the swap unchanged', async () => {
     const ownerTransfer = ownerTransferDouble();
     const failure = new Error('connection terminated');
     ownerTransfer.transfer.mockRejectedValueOnce(failure);
     const command = build(ownerTransfer);
 
-    const rejection = command.execute(currentUser(), input);
-
-    await expect(rejection).rejects.toBeInstanceOf(SystemError);
-    await expect(rejection).rejects.toMatchObject({
-      code: ErrorCode.WORKSPACE_OWNER_TRANSFER_UNAVAILABLE,
-      cause: failure,
-    });
+    await expect(command.execute(currentUser(), input)).rejects.toBe(failure);
   });
 
   // A lost race is a retriable business outcome with its own documented 409,
-  // and a missing replacement Role is a permanent 400. Neither may be
-  // reported as the 503 (server-error-handling.md §2).
+  // and a missing replacement Role is a permanent 400. Each keeps its own
+  // code (server-error-handling.md §2).
   it.each([
     [
       'a losing concurrent transfer (AC-26)',
@@ -166,7 +156,7 @@ describe('TransferWorkspaceOwnerCommand', () => {
       ErrorCode.WORKSPACE_REPLACEMENT_ROLE_REQUIRED,
     ],
   ])(
-    'AC-26: does not mask the business rejection for %s as an unavailable outcome',
+    'AC-26: answers the business rejection for %s with its own code',
     async (_case, arrange, code) => {
       const rejection = arrange().execute(currentUser(), input);
 
