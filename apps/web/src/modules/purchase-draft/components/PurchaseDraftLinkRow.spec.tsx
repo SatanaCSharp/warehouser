@@ -29,6 +29,7 @@ const link = (
     neededBy: '2026-09-01',
     state: 'unfulfilled',
     outstandingQuantity: 500,
+    lastChangedAt: null,
   },
   driftSignals: [],
   allocation: null,
@@ -55,6 +56,7 @@ describe('PurchaseDraftLinkRow', () => {
     const onCommit = vi.fn();
     render(
       <PurchaseDraftLinkRow
+        isFrozen={false}
         link={link({ statedQuantity: 500 })}
         field={statedQuantityField({ onCommit })}
         trailing={null}
@@ -76,6 +78,7 @@ describe('PurchaseDraftLinkRow', () => {
     const onCommit = vi.fn();
     render(
       <PurchaseDraftLinkRow
+        isFrozen={false}
         link={link({ current: { ...link().current, outstandingQuantity: 10 } })}
         field={statedQuantityField({
           commitOn: 'change',
@@ -100,6 +103,7 @@ describe('PurchaseDraftLinkRow', () => {
     render(
       <ul>
         <PurchaseDraftLinkRow
+          isFrozen={false}
           link={link({
             id: '1',
             customerName: 'Nordwind Logistik GmbH',
@@ -109,6 +113,7 @@ describe('PurchaseDraftLinkRow', () => {
           trailing={null}
         />
         <PurchaseDraftLinkRow
+          isFrozen={false}
           link={link({
             id: '2',
             customerName: 'Baltic Freight OÜ',
@@ -130,6 +135,7 @@ describe('PurchaseDraftLinkRow', () => {
     const onCommit = vi.fn();
     render(
       <PurchaseDraftLinkRow
+        isFrozen={false}
         link={link()}
         field={statedQuantityField({ isDisabled: true, onCommit })}
         trailing={null}
@@ -144,6 +150,93 @@ describe('PurchaseDraftLinkRow', () => {
     expect(onCommit).not.toHaveBeenCalled();
   });
 
+  it('states the customer\u2019s live demand on an unfrozen link', () => {
+    render(
+      <PurchaseDraftLinkRow
+        isFrozen={false}
+        link={link()}
+        field={statedQuantityField()}
+        trailing={null}
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        'Unfulfilled \u00b7 500 outstanding \u00b7 needed by 1 Sep 2026',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  // AC-16 \u2014 a frozen row reads the Demand Snapshot captured at the freeze, and
+  // its chip names the value that moved rather than reporting that one did.
+  it('reads the snapshot on a frozen link and names what moved', () => {
+    render(
+      <PurchaseDraftLinkRow
+        isFrozen
+        link={link({
+          snapshot: {
+            capturedQuantity: 800,
+            capturedNeededBy: '2026-09-02',
+            capturedState: 'unfulfilled',
+          },
+          current: {
+            quantity: 1000,
+            neededBy: '2026-09-02',
+            state: 'unfulfilled',
+            outstandingQuantity: 1000,
+            lastChangedAt: '2026-08-25T12:00:00.000Z',
+          },
+          driftSignals: ['quantity_changed'],
+        })}
+        field={statedQuantityField()}
+        trailing={null}
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        'Unfulfilled \u00b7 was 800 outstanding, needed by 2 Sep 2026',
+      ),
+    ).toBeInTheDocument();
+    // Testing Library's default normalizer collapses the no-break space the
+    // quantity formatter groups thousands with, so the query uses a plain one.
+    // The chip is dated as the frame draws it — the comparison AC-16 asks for
+    // is what moved *and when* (`F0SpRx`).
+    expect(screen.getByText('Raised to 1 000 on 25 Aug')).toBeInTheDocument();
+  });
+
+  it('says the state itself is what moved when the order was cancelled', () => {
+    render(
+      <PurchaseDraftLinkRow
+        isFrozen
+        link={link({
+          snapshot: {
+            capturedQuantity: 440,
+            capturedNeededBy: '2026-09-09',
+            capturedState: 'unfulfilled',
+          },
+          current: {
+            quantity: 440,
+            neededBy: '2026-09-09',
+            state: 'cancelled',
+            outstandingQuantity: 0,
+            lastChangedAt: '2026-08-24T12:00:00.000Z',
+          },
+          driftSignals: ['cancelled'],
+        })}
+        field={statedQuantityField()}
+        trailing={null}
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        'Was Unfulfilled \u00b7 440 outstanding, needed by 9 Sep 2026',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Cancelled on 24 Aug')).toBeInTheDocument();
+  });
+
   // jsdom applies no stylesheet, so the breakpoint behaviour is asserted
   // through the responsive utility classes the approved frames translate to,
   // exactly as `ItemDirectory.spec.tsx`'s responsive suite does.
@@ -151,6 +244,7 @@ describe('PurchaseDraftLinkRow', () => {
     it('narrows the quantity field to 96px below md: rather than moving the trailing action (BSmrU, O42LHI 390 vs yGhkK/F0SpRx 1440)', () => {
       render(
         <PurchaseDraftLinkRow
+          isFrozen={false}
           link={link()}
           field={statedQuantityField()}
           trailing={

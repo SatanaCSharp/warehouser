@@ -15,7 +15,7 @@ viewports: []
 
 - Selected design direction: <name>
 - Approval evidence: <conversation/reference>
-- Preview files: <paths>
+- Preview files: <one `previews/<frame>.html` per approved frame; images are not valid evidence>
 
 ## Component mapping
 

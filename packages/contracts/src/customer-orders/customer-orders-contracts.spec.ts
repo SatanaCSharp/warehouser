@@ -53,6 +53,7 @@ const validDemandLine = {
   coverage: [
     {
       purchaseDraftId: id(301),
+      purchaseDraftReference: 'PD-0142',
       purchaseDraftLineId: id(401),
       purchaseDraftState: 'ready_for_ordering',
       statedQuantity: 100,
@@ -153,6 +154,7 @@ describe('customer-orders contracts', () => {
       expect(
         demandCoverageSchema.safeParse({
           purchaseDraftId: id(301),
+          purchaseDraftReference: 'PD-0142',
           purchaseDraftLineId: id(401),
           purchaseDraftState: 'closed',
           statedQuantity: 100,
@@ -161,9 +163,32 @@ describe('customer-orders contracts', () => {
       expect(
         demandCoverageSchema.safeParse({
           purchaseDraftId: id(301),
+          purchaseDraftReference: 'PD-0142',
           purchaseDraftLineId: id(401),
           purchaseDraftState: 'discarded',
           statedQuantity: 100,
+        }).success,
+      ).toBe(false);
+    });
+
+    // AC-20 — "which Purchase Drafts link to it **and** for what quantity". The stated quantity
+    // alone answers half the criterion: the `COVERED BY` chip reads `PD-0142 · 800`, so the
+    // reference is required, never optional and never blank.
+    it('names each covering draft by its human reference beside the quantity (AC-20)', () => {
+      const [coverage] = validDemandLine.coverage;
+      const { purchaseDraftReference, ...withoutReference } = coverage;
+
+      expect(purchaseDraftReference).toBe('PD-0142');
+      expect(demandCoverageSchema.parse(coverage).purchaseDraftReference).toBe(
+        'PD-0142',
+      );
+      expect(demandCoverageSchema.safeParse(withoutReference).success).toBe(
+        false,
+      );
+      expect(
+        demandCoverageSchema.safeParse({
+          ...withoutReference,
+          purchaseDraftReference: '',
         }).success,
       ).toBe(false);
     });

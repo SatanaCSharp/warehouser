@@ -22,13 +22,14 @@ const openDialog = (
 ): void => {
   renderWithProviders(
     <DialogHost onClose={onClose}>
-      <DiscardPurchaseDraftDialog onConfirm={onConfirm} />
+      <DiscardPurchaseDraftDialog reference="PD-0144" onConfirm={onConfirm} />
     </DialogHost>,
   );
 };
 
+// The title names the draft it destroys (`s5EPi`).
 const discardDialog = (): HTMLElement =>
-  screen.getByRole('alertdialog', { name: /discard/iu });
+  screen.getByRole('alertdialog', { name: /discard pd-0144/iu });
 
 describe('DiscardPurchaseDraftDialog', () => {
   it('discards the draft and closes on success (AC-24)', async () => {
@@ -80,7 +81,7 @@ describe('DiscardPurchaseDraftDialog', () => {
       .getAllByRole('button')
       .map((button) => button.textContent);
 
-    expect(labels.indexOf('Cancel')).toBeLessThan(
+    expect(labels.indexOf('Keep it')).toBeLessThan(
       labels.findIndex((label) => /discard draft/iu.test(label ?? '')),
     );
   });

@@ -1,9 +1,11 @@
 import { useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import { PurchaseDraftLinkRow } from 'modules/purchase-draft/components/PurchaseDraftLinkRow';
+import { ArrivalAssignmentRow } from 'modules/purchase-draft/components/purchase-draft-transitions/components/confirm-arrival-dialog/components/ArrivalAssignmentRow';
+import { isAssignableLink } from 'modules/purchase-draft/utils/arrival-form';
 import { Conditional } from 'shared/components/Conditional';
 import { FormTextField } from 'shared/components/FormTextField';
+import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
 
 import type { PurchaseDraftLine } from '@warehouser/contracts/purchase-drafts';
 import type { ArrivalForm } from 'modules/purchase-draft/utils/arrival-form';
@@ -31,11 +33,14 @@ const quantityOf = (value: string | undefined): number => {
  * contract the approved design states for this modal. It reports what the
  * member has entered and nothing more: it never refuses a figure, because the
  * AC-18 bounds are re-checked by the server at the moment the confirmation is
- * recorded, not when the member composed it.
+ * recorded, not when the member composed it. Its second sentence names each
+ * customer an assignment would fulfil, which is the one consequence of the
+ * confirmation that is not visible on the draft itself (AC-17a).
  *
- * Each assignment reuses `Ordering/Link Row` (`BSmrU`) in its third job — the
- * same row the draft and frozen lines render, with the field label and the
- * trailing control this job needs.
+ * Every figure it renders is group-separated (`1 180`, not `1180`): i18next
+ * interpolates `{{count}}` as a raw numeral, so the pluralizing count and the
+ * `{{formatted}}` string that actually renders are passed side by side, exactly
+ * as `modules/item` does (design-handoff.md § Numbers).
  */
 export const ArrivalLineFieldset = ({
   form,
@@ -43,6 +48,7 @@ export const ArrivalLineFieldset = ({
   line,
 }: ArrivalLineFieldsetProps): ReactElement => {
   const { t } = useTranslation('purchase-draft');
+  const { quantity } = useLocaleFormat();
   const {
     formState: { errors, isSubmitting },
     register,
@@ -50,11 +56,39 @@ export const ArrivalLineFieldset = ({
   } = form;
   const values = useWatch({ control: form.control, name: `lines.${index}` });
 
+  const allocationOf = (allocationIndex: number): number =>
+    quantityOf(values?.allocations?.[allocationIndex]?.allocatedQuantity);
+
   const received = quantityOf(values?.receivedQuantity);
   const assigned = (values?.allocations ?? []).reduce(
     (total, allocation) => total + quantityOf(allocation?.allocatedQuantity),
     0,
   );
+
+  // AC-17a — a Customer Order assigned the whole of what it is still waiting
+  // for leaves the consolidated demand, which the frame's running total says in
+  // its own sentence. Stated only for a link that can still be assigned to, and
+  // only once something has actually been assigned.
+  const fulfilling = line.links.flatMap((link, allocationIndex) =>
+    isAssignableLink(link) &&
+    link.current.outstandingQuantity > 0 &&
+    allocationOf(allocationIndex) >= link.current.outstandingQuantity
+      ? [
+          t('transitions.arrival.summaryFulfilled', {
+            customer: link.customerName,
+          }),
+        ]
+      : [],
+  );
+
+  const summary = [
+    t('transitions.arrival.summary', {
+      assigned: quantity(assigned),
+      received: quantity(received),
+      unassigned: quantity(received - assigned),
+    }),
+    ...fulfilling,
+  ].join(' ');
 
   const onCommitAllocation =
     (allocationIndex: number) =>
@@ -73,7 +107,10 @@ export const ArrivalLineFieldset = ({
         })}
       </p>
       <p className="text-sm text-muted">
-        {t('transitions.arrival.ordered', { count: line.orderedQuantity })}
+        {t('transitions.arrival.ordered', {
+          count: line.orderedQuantity,
+          formatted: quantity(line.orderedQuantity),
+        })}
       </p>
 
       <FormTextField
@@ -83,10 +120,15 @@ export const ArrivalLineFieldset = ({
         type="number"
         isDisabled={isSubmitting}
         isInvalid={Boolean(errors.lines?.[index]?.receivedQuantity)}
+        description={t('transitions.arrival.receivedDescription')}
         errorMessage={errors.lines?.[index]?.receivedQuantity?.message}
         label={t('transitions.arrival.receivedLabel', { sku: line.itemSku })}
         {...register(`lines.${index}.receivedQuantity`)}
       />
+
+      <h4 className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted">
+        {t('transitions.arrival.assignHeading')}
+      </h4>
 
       <Conditional
         when={line.links.length > 0}
@@ -98,25 +140,11 @@ export const ArrivalLineFieldset = ({
       >
         <ul className="mt-3 flex flex-col gap-2">
           {line.links.map((link, allocationIndex) => (
-            <PurchaseDraftLinkRow
+            <ArrivalAssignmentRow
               key={link.id}
+              isSubmitting={isSubmitting}
               link={link}
-              field={{
-                commitOn: 'change',
-                isDisabled: isSubmitting,
-                label: t('transitions.arrival.assignLabel', {
-                  customer: link.customerName,
-                }),
-                value: '',
-                onCommit: onCommitAllocation(allocationIndex),
-              }}
-              trailing={
-                <span className="shrink-0 text-sm text-muted">
-                  {t('transitions.arrival.outstanding', {
-                    count: link.current.outstandingQuantity,
-                  })}
-                </span>
-              }
+              onCommit={onCommitAllocation(allocationIndex)}
             />
           ))}
         </ul>
@@ -130,11 +158,7 @@ export const ArrivalLineFieldset = ({
         className="mt-3 text-sm text-default"
         role="status"
       >
-        {t('transitions.arrival.summary', {
-          assigned,
-          received,
-          unassigned: received - assigned,
-        })}
+        {summary}
       </p>
     </li>
   );

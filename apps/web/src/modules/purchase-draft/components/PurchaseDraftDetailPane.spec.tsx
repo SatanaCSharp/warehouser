@@ -1,8 +1,10 @@
 import { screen } from '@testing-library/react';
+import { PermissionId } from '@warehouser/shared-types/enums';
 import { describe, expect, it } from 'vitest';
 
 import { purchaseDraftApi } from 'modules/purchase-draft/api/purchase-draft-api';
 import { PurchaseDraftDetailPane } from 'modules/purchase-draft/components/PurchaseDraftDetailPane';
+import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
 import { accessIds, authenticatedStore } from 'test/access-fixtures';
 import { renderInEnteredWarehouse } from 'test/render';
 
@@ -16,6 +18,27 @@ import type { AppStore } from 'store';
 //   alone, and that a card without drift is visibly distinguished from one
 //   with it" (AC-16, AC-16a) — covered here for the aggregate alert; the
 //   per-signal unit itself is `DriftSignal.spec.tsx`.
+
+/**
+ * AC-22 — the pane's fields are gated on `PURCHASE_DRAFTS:UPDATE`, so the
+ * actor under test here is one who holds it; what a `PURCHASE_DRAFTS:WATCH`
+ * actor is offered is `PurchaseDraftLineEditor.spec`'s subject.
+ */
+const seedPermissions = (store: AppStore): void => {
+  void store.dispatch(
+    accessPermissionsApi.util.upsertQueryData(
+      'getCurrentAccess',
+      accessIds.warehouse,
+      {
+        warehouseId: accessIds.warehouse,
+        roleId: accessIds.managerRole,
+        roleKind: 'warehouse_manager',
+        permissionIds: Object.values(PermissionId),
+        archivedAt: null,
+      },
+    ),
+  );
+};
 
 const seedPackagingTypes = (store: AppStore): void => {
   void store.dispatch(
@@ -31,6 +54,7 @@ const draft = (
   overrides: Partial<PurchaseDraftDetail> = {},
 ): PurchaseDraftDetail => ({
   id: '00000000-0000-4000-8000-000000000501',
+  reference: 'PD-0143',
   state: 'draft',
   expectedArrivalDate: null,
   lineCount: 1,
@@ -65,17 +89,33 @@ const draft = (
 
 const render = (detail: PurchaseDraftDetail): AppStore => {
   const store = authenticatedStore();
+  seedPermissions(store);
   seedPackagingTypes(store);
   renderInEnteredWarehouse(<PurchaseDraftDetailPane draft={detail} />, store);
   return store;
 };
 
 describe('PurchaseDraftDetailPane', () => {
+  it('names the draft by its reference and attributes it, in the header', async () => {
+    render(draft({ state: 'draft' }));
+
+    expect(
+      await screen.findByRole('heading', { name: 'PD-0143' }),
+    ).toBeInTheDocument();
+    // The acting user's own id resolves to "you"; no person name exists to
+    // render for anyone else (BRIEF §Attribution).
+    expect(
+      screen.getByText(
+        'Created by you · 1 Aug 2026 · every change is recorded as you make it',
+      ),
+    ).toBeInTheDocument();
+  });
+
   it('renders an editable line for a draft in the Draft state', async () => {
     render(draft({ state: 'draft' }));
 
     expect(await screen.findByText('Draft')).toBeInTheDocument();
-    expect(screen.getByLabelText('Ordered quantity')).toBeEnabled();
+    expect(screen.getByLabelText('Quantity')).toBeEnabled();
   });
 
   it('renders frozen lines and the aggregate Drift Signal for Ready for ordering', async () => {
@@ -110,6 +150,7 @@ describe('PurchaseDraftDetailPane', () => {
                   neededBy: '2026-09-01',
                   state: 'unfulfilled',
                   outstandingQuantity: 350,
+                  lastChangedAt: '2026-08-25T12:00:00.000Z',
                 },
                 driftSignals: ['quantity_changed'],
                 allocation: null,
@@ -121,12 +162,20 @@ describe('PurchaseDraftDetailPane', () => {
     );
 
     expect(await screen.findByText('Ready for ordering')).toBeInTheDocument();
-    expect(screen.getByLabelText('Ordered quantity')).toBeDisabled();
+    expect(screen.getByLabelText('Quantity')).toBeDisabled();
+    // AC-16 — the bullet states the comparison, naming both the captured value
+    // and the one it moved to, never that "something changed".
     expect(
-      screen.getByText("Nordwind Logistik GmbH's order quantity changed"),
+      screen.getByText(
+        'Nordwind Logistik GmbH — quantity lowered from 400 to 350 on 25 Aug, still needed by 1 Sep.',
+      ),
     ).toBeInTheDocument();
+    // …and the per-link chip says which value moved, not "Drift detected".
+    expect(screen.getByText('Lowered to 350 on 25 Aug')).toBeInTheDocument();
     expect(
-      screen.getByText('Nothing on the draft has changed and nothing will.'),
+      screen.getByText(
+        'Nothing on the draft has changed and nothing will. What to do about this is your decision — a value amended and then put back as it was stops being reported.',
+      ),
     ).toBeInTheDocument();
   });
 
@@ -180,9 +229,7 @@ describe('PurchaseDraftDetailPane', () => {
     it('carries the outer card frame from md: up, dropped by default (yGhkK/F0SpRx 1440 vs O42LHI 390)', async () => {
       render(draft({ state: 'draft' }));
 
-      const section = await screen.findByRole('region', {
-        name: '00000000-0000-4000-8000-000000000501',
-      });
+      const section = await screen.findByRole('region', { name: 'PD-0143' });
       const classes = section.className.split(/\s+/u);
       expect(classes).not.toContain('rounded-xl');
       expect(classes).not.toContain('border');

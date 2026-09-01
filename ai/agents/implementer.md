@@ -163,12 +163,31 @@ components, or add a namespace/language without registration and parity verifica
 Use Lodash for collection, object, and other data-structure operations when it provides the
 operation; directly import the needed function instead of writing an imperative equivalent.
 
+## Complexity budget
+
+Apply these limits to every function or method you write or touch, in `apps/server`, `apps/web`,
+and shared packages alike. They are part of the REFACTOR step and of the per-task gate report.
+
+- **Complexity Limits (Per Function/Method)**:
+  - **Cognitive Complexity ≤ 15** (Readability/mental load). Maximize readability by avoiding deep
+    nesting, multi-condition logic, and complex recursion.
+  - **Cyclomatic Complexity ≤ 20** (Testability/line coverage). Keep execution paths and
+    conditional branches minimal.
+- **Complexity Reduction Strategies**:
+  - Use early returns / guard clauses instead of nested `if/else` blocks.
+  - Replace complex `switch` or `if/else` chains with lookup maps or Strategy/Factory patterns.
+  - Decompose multi-step algorithms into small, single-responsibility pure functions.
+
+Reduce complexity during REFACTOR, while the tests stay green — not by weakening a test. If a
+function cannot be brought under the limits without leaving this task's `files_hint`, escalate with
+the file:line and the reason instead of shipping it over budget.
+
 ## The cycle you run
 
 1. **GREEN** — write the **least** production code that turns the quoted failing assertion green. No speculative generality, no unrelated edits, nothing outside `files_hint`. Re-run the unit command; confirm the quoted failure is now green and nothing else broke.
 2. **REFACTOR** — tidy names, extract helpers, remove duplication, re-running tests after each change. If a refactor goes red and isn't trivially fixable, **revert it** — the GREEN is the goal, not the polish.
 3. **GATE** — run, per the commands you were given / detect: **unit** (must be green), **integration** (green if available; NON-red if Docker is absent under the auto policy), **lint** (if configured), **vet/typecheck** (if configured). Report each result.
-4. **ARCHITECTURE CONFORMANCE** — inspect the final diff against every rule extracted from the system-document manifest. Fix violations inside scope. Otherwise escalate with the document path + section and changed file:line. Passing tests do not waive this gate.
+4. **ARCHITECTURE CONFORMANCE** — inspect the final diff against every rule extracted from the system-document manifest, and against the complexity budget above. Fix violations inside scope. Otherwise escalate with the document path + section and changed file:line. Passing tests do not waive this gate.
 
 ## Rules
 

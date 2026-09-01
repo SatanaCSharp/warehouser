@@ -587,39 +587,15 @@ describe('the routes paint their own await window (T7)', () => {
   // The context read is held on every row, so each refusal is reached *through*
   // the new pending window rather than instead of one.
   it.each([
-    [
-      'warehouse',
-      'not-a-member',
-      warehouseAddress,
-      false,
-      NON_DISCLOSING_REFUSAL,
-      UNKNOWN_WAREHOUSE,
-    ],
-    [
-      'warehouse',
-      'archived',
-      warehouseAddress,
-      true,
-      ARCHIVED_REFUSAL,
-      WAREHOUSE,
-    ],
-    [
-      'access',
-      'not-a-member',
-      accessAddress,
-      false,
-      NON_DISCLOSING_REFUSAL,
-      UNKNOWN_WAREHOUSE,
-    ],
-    ['access', 'archived', accessAddress, true, ARCHIVED_REFUSAL, WAREHOUSE],
+    ['warehouse', warehouseAddress],
+    ['access', accessAddress],
   ] as const)(
-    'refuses a %s address in place on a %s verdict, never pending and never a redirect (CR-RG-04)',
-    async (_surface, _reason, address, archived, refusal, warehouseId) => {
+    'refuses a %s address in place on a not-a-member verdict, never pending and never a redirect (CR-RG-04)',
+    async (_surface, address) => {
       const session = stubRouteSession({
-        archived,
         held: [[CONTEXT_PATTERN, HELD_READ_MS]],
       });
-      const requested = address(warehouseId);
+      const requested = address(UNKNOWN_WAREHOUSE);
 
       const { router } = renderRoute(requested);
 
@@ -627,9 +603,13 @@ describe('the routes paint their own await window (T7)', () => {
       // read: the refusal is what the window resolves *to*.
       expect(await screen.findByText(PENDING_LABEL)).toBeInTheDocument();
 
-      const heading = await screen.findByRole('heading', { name: refusal });
+      const heading = await screen.findByRole('heading', {
+        name: NON_DISCLOSING_REFUSAL,
+      });
       // Non-disclosing: the refusal names nothing about the address it refused.
-      expect(heading.closest('main')?.textContent).not.toContain(warehouseId);
+      expect(heading.closest('main')?.textContent).not.toContain(
+        UNKNOWN_WAREHOUSE,
+      );
       // Resolved, so the pending state is gone rather than left standing.
       expect(screen.queryByText(PENDING_LABEL)).not.toBeInTheDocument();
       // In place: the actor is at the address they asked for, and nothing
@@ -641,6 +621,52 @@ describe('the routes paint their own await window (T7)', () => {
       expect(session.urlsMatching(ACCESS_PATTERN)).toEqual([]);
     },
   );
+
+  // AC-23 — an archived membership is no longer a refusal. The Warehouse is
+  // entered read-only in place: it resolves through the same pending window,
+  // paints its own destination, and still navigates nobody anywhere. This
+  // replaces the row that expected the archived refusal at this address, which
+  // is what made Demand, Purchase Drafts and Items unreachable rather than
+  // read-only.
+  it('enters an archived Warehouse read-only in place, never pending and never a redirect (AC-23)', async () => {
+    stubRouteSession({
+      archived: true,
+      held: [[CONTEXT_PATTERN, HELD_READ_MS]],
+    });
+    const requested = warehouseAddress(WAREHOUSE);
+
+    const { router } = renderRoute(requested);
+
+    expect(await screen.findByText(PENDING_LABEL)).toBeInTheDocument();
+    expect(await screen.findByText(WAREHOUSE_CONTENT)).toBeInTheDocument();
+    expect(screen.queryByText(PENDING_LABEL)).not.toBeInTheDocument();
+    expect(screen.queryByText(ARCHIVED_REFUSAL)).not.toBeInTheDocument();
+    expect(router.state.location.pathname).toBe(requested);
+    expect(router.history.length).toBe(1);
+  });
+
+  // CR-AC-17 — AC-23 reopens the watch destinations and nothing else, so the
+  // Access address alone keeps the explicit archived refusal. Its own datasets
+  // stay unrequested; the projection the shell reads to build the nav list is a
+  // property of having entered, not of this destination.
+  it('still refuses the Access address of an archived Warehouse, requesting none of its datasets (CR-AC-17)', async () => {
+    const session = stubRouteSession({
+      archived: true,
+      held: [[CONTEXT_PATTERN, HELD_READ_MS]],
+    });
+    const requested = accessAddress(WAREHOUSE);
+
+    const { router } = renderRoute(requested);
+
+    expect(await screen.findByText(PENDING_LABEL)).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: ARCHIVED_REFUSAL }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(ACCESS_HEADING)).not.toBeInTheDocument();
+    expect(router.state.location.pathname).toBe(requested);
+    expect(router.history.length).toBe(1);
+    expect(session.urlsMatching(ACCESS_MEMBERS_PATTERN)).toEqual([]);
+  });
 });
 
 // `sad.md` §4.7 — "a mutation cannot reach a route loader". The route loader

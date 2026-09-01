@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useCreatePurchaseDraftMutation } from 'modules/purchase-draft/api/purchase-draft-api';
 import { WarehousePermissionGate } from 'shared/components/WarehousePermissionGate';
+import { useArchivedWarehouse } from 'shared/hooks/projections/useArchivedWarehouse';
 import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
 
 import type { ReactElement } from 'react';
@@ -19,10 +20,16 @@ import type { ReactElement } from 'react';
  * stated later through `revisePurchaseDraft` like every other draft property.
  * A dialog with no field would be a confirmation of a reversible, unsurprising
  * action, which `web-dialogs.md` §1 does not ask for.
+ *
+ * AC-23 — in an archived Warehouse the control stays **visible and disabled
+ * with its reason**, never withheld: the Warehouse authorizes no change to what
+ * it holds, and a member has to understand why rather than find the control
+ * gone.
  */
 export const CreatePurchaseDraftAction = (): ReactElement => {
   const { t } = useTranslation('purchase-draft');
   const warehouseId = useEnteredWarehouse();
+  const { isArchived, reasonId } = useArchivedWarehouse();
   const [createPurchaseDraft] = useCreatePurchaseDraftMutation();
   const label = t('workspace.newDraft');
 
@@ -35,7 +42,13 @@ export const CreatePurchaseDraftAction = (): ReactElement => {
   // control reads no readiness flag of its own (global-loader CR-AC-09).
   return (
     <WarehousePermissionGate permission={PermissionId.PURCHASE_DRAFTS_CREATE}>
-      <Button variant="primary" aria-label={label} onPress={onCreate}>
+      <Button
+        aria-describedby={reasonId}
+        aria-label={label}
+        isDisabled={isArchived}
+        variant="primary"
+        onPress={onCreate}
+      >
         {label}
       </Button>
     </WarehousePermissionGate>

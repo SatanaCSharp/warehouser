@@ -41,10 +41,26 @@ type FormModalDialogProps<TForm extends FieldValues, TInput> = Pick<
    * dialog that passes `parse` or expects `fieldErrors` back: without it, a
    * code has no translation, and a raw code is never shown to an actor
    * (web-error-handling.md §5) — the failure's toast reports it instead.
+   *
+   * `details` is the refusal's own safe envelope, present only when the server
+   * refused and sent one. It is what lets a message name the figure the rule
+   * was measured against — AC-19b's "cannot go below 160" is the allocated
+   * quantity — rather than stating the rule and withholding the number. A
+   * dialog whose messages need no figure simply ignores the argument.
    */
-  translateValidation?: (code: string, field: Path<TForm>) => string;
-  /** The stable code of a refusal no field explains, for a dialog that says so itself. */
-  onRefusal?: (code?: string) => void;
+  translateValidation?: (
+    code: string,
+    field: Path<TForm>,
+    details?: Record<string, unknown>,
+  ) => string;
+  /**
+   * The stable code of a refusal no field explains, for a dialog that says so
+   * itself — with the refusal's own `details` envelope beside it, so a message
+   * that must name the figure the rule was measured against (AC-19b's
+   * allocated quantity) can reach it. A dialog that needs only the code takes
+   * only the code.
+   */
+  onRefusal?: (code?: string, details?: Record<string, unknown>) => void;
   /**
    * The request itself — a generated RTK Query mutation trigger, handed over
    * directly. Normalizing what it settles to is this component's step of the
@@ -90,11 +106,16 @@ export const FormModalDialog = <TForm extends FieldValues, TInput = TForm>({
   const { setFieldErrors } = useFormFieldErrors<TForm>(form.setError);
   const { isSubmitting } = form.formState;
 
-  const showFieldErrors = (errors?: FieldErrorCodes<TForm>): void => {
+  const showFieldErrors = (
+    errors?: FieldErrorCodes<TForm>,
+    details?: Record<string, unknown>,
+  ): void => {
     if (!errors || !translateValidation) {
       return;
     }
-    setFieldErrors(errors, (field, code) => translateValidation(code, field));
+    setFieldErrors(errors, (field, code) =>
+      translateValidation(code, field, details),
+    );
   };
 
   const submit = form.handleSubmit(async (values) => {
@@ -106,6 +127,8 @@ export const FormModalDialog = <TForm extends FieldValues, TInput = TForm>({
     };
 
     if (!parsed.success) {
+      // A locally rejected value has no server envelope behind it, so the
+      // field's message is the one the rule alone can state.
       showFieldErrors(parsed.error);
       return;
     }
@@ -116,8 +139,8 @@ export const FormModalDialog = <TForm extends FieldValues, TInput = TForm>({
       return;
     }
 
-    showFieldErrors(outcome.fieldErrors);
-    onRefusal?.(outcome.code);
+    showFieldErrors(outcome.fieldErrors, outcome.details);
+    onRefusal?.(outcome.code, outcome.details);
   });
 
   const isWide = size === 'wide';

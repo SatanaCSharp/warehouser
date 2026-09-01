@@ -6,6 +6,7 @@ import { useConfirmPurchaseDraftArrivalMutation } from 'modules/purchase-draft/a
 import { ConfirmArrivalDialog } from 'modules/purchase-draft/components/purchase-draft-transitions/components/confirm-arrival-dialog/ConfirmArrivalDialog';
 import { TriggeredDialog } from 'shared/components/TriggeredDialog';
 import { WarehousePermissionGate } from 'shared/components/WarehousePermissionGate';
+import { useArchivedWarehouse } from 'shared/hooks/projections/useArchivedWarehouse';
 import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
 
 import type {
@@ -29,6 +30,7 @@ export const ConfirmArrivalAction = ({
 }: ConfirmArrivalActionProps): ReactElement => {
   const { t } = useTranslation('purchase-draft');
   const warehouseId = useEnteredWarehouse() ?? '';
+  const { isArchived, reasonId } = useArchivedWarehouse();
   const [confirmPurchaseDraftArrival] =
     useConfirmPurchaseDraftArrivalMutation();
 
@@ -42,7 +44,12 @@ export const ConfirmArrivalAction = ({
   return (
     <WarehousePermissionGate permission={PermissionId.PURCHASE_DRAFTS_RECEIVE}>
       <Modal>
-        <Button size="sm" variant="primary">
+        <Button
+          aria-describedby={reasonId}
+          isDisabled={isArchived}
+          size="sm"
+          variant="primary"
+        >
           {t('transitions.arrival.trigger')}
         </Button>
         <TriggeredDialog>

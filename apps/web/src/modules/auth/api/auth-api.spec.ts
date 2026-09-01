@@ -122,6 +122,11 @@ describe('authApi', () => {
     ).rejects.toEqual({
       code: 'auth.invalid_input',
       fieldErrors: { email: 'validation.email.invalid' },
+      // The refusal's own envelope travels beside the field errors it was read
+      // from, so a message that must name the figure a rule was measured
+      // against can reach it (AC-19b). The server's `message` never does — it
+      // is server copy, not display copy.
+      details: { fields: { email: 'validation.email.invalid' } },
     });
   });
 

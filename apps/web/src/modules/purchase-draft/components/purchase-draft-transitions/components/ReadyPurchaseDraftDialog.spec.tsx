@@ -16,19 +16,25 @@ import type { MutationResult } from 'shared/api/client/mutation-outcome';
 // Colocated with the dialog it covers (`placing-web-tests.md` §1).
 
 const openDialog = (
-  hasLines: boolean,
+  lineCount: number,
   onConfirm: () => Promise<MutationResult>,
   onClose = vi.fn(),
 ): void => {
   renderWithProviders(
     <DialogHost onClose={onClose}>
-      <ReadyPurchaseDraftDialog hasLines={hasLines} onConfirm={onConfirm} />
+      <ReadyPurchaseDraftDialog
+        lineCount={lineCount}
+        reference="PD-0143"
+        onConfirm={onConfirm}
+      />
     </DialogHost>,
   );
 };
 
+// The title names the draft it acts on (`s5EPi`), so the dialog is found by a
+// name that includes the reference rather than by the act alone.
 const readyDialog = (): HTMLElement =>
-  screen.getByRole('alertdialog', { name: /ready for ordering/iu });
+  screen.getByRole('alertdialog', { name: /move pd-0143 to ready/iu });
 
 describe('ReadyPurchaseDraftDialog', () => {
   it('freezes the draft and closes on success (AC-14)', async () => {
@@ -37,11 +43,11 @@ describe('ReadyPurchaseDraftDialog', () => {
     const onConfirm = vi
       .fn<() => Promise<MutationResult>>()
       .mockResolvedValue({ data: {} });
-    openDialog(true, onConfirm, onClose);
+    openDialog(2, onConfirm, onClose);
 
     const dialog = readyDialog();
     await user.click(
-      within(dialog).getByRole('button', { name: /move to ready/iu }),
+      within(dialog).getByRole('button', { name: /freeze and mark ready/iu }),
     );
 
     expect(onConfirm).toHaveBeenCalled();
@@ -52,11 +58,11 @@ describe('ReadyPurchaseDraftDialog', () => {
     const onConfirm = vi
       .fn<() => Promise<MutationResult>>()
       .mockResolvedValue({ data: {} });
-    openDialog(false, onConfirm);
+    openDialog(0, onConfirm);
 
     const dialog = readyDialog();
     expect(
-      within(dialog).getByRole('button', { name: /move to ready/iu }),
+      within(dialog).getByRole('button', { name: /freeze and mark ready/iu }),
     ).toBeDisabled();
     expect(
       within(dialog).getByText(
@@ -71,11 +77,11 @@ describe('ReadyPurchaseDraftDialog', () => {
     const onConfirm = vi.fn<() => Promise<MutationResult>>().mockResolvedValue({
       error: { code: ErrorCode.PURCHASE_DRAFTS_DRAFT_EMPTY, fieldErrors: {} },
     });
-    openDialog(true, onConfirm);
+    openDialog(2, onConfirm);
 
     const dialog = readyDialog();
     await user.click(
-      within(dialog).getByRole('button', { name: /move to ready/iu }),
+      within(dialog).getByRole('button', { name: /freeze and mark ready/iu }),
     );
 
     const refusal = await within(dialog).findByRole('alert');
@@ -86,9 +92,37 @@ describe('ReadyPurchaseDraftDialog', () => {
     expect(dialog).toBeInTheDocument();
   });
 
+  // `s5EPi` — the frame states four labelled things before an irreversible
+  // act, and what a member *loses* is half of them. Collapsing them into one
+  // sentence about lines and quantities left "no longer possible, by anyone"
+  // unsaid.
+  it('states what is frozen, what is captured, what is still possible and what is not (AC-14/AC-15)', () => {
+    openDialog(
+      2,
+      vi.fn<() => Promise<MutationResult>>().mockResolvedValue({ data: {} }),
+    );
+
+    const dialog = readyDialog();
+    expect(
+      within(dialog).getByText(
+        'Frozen now — its 2 lines, their quantities, their links, the packaging and notes, and the expected arrival date.',
+      ),
+    ).toBeVisible();
+    expect(
+      within(dialog).getByText(/^Captured now — what each linked customer/u),
+    ).toBeVisible();
+    expect(
+      within(dialog).getByText(/^Still possible — confirming what arrived/u),
+    ).toBeVisible();
+    expect(
+      within(dialog).getByText(/^No longer possible — changing a line/u),
+    ).toBeVisible();
+    expect(within(dialog).getByText(/By anyone\.$/u)).toBeVisible();
+  });
+
   it('places cancel before the destructive primary in DOM and keyboard order', () => {
     openDialog(
-      true,
+      2,
       vi.fn<() => Promise<MutationResult>>().mockResolvedValue({ data: {} }),
     );
 
@@ -96,7 +130,7 @@ describe('ReadyPurchaseDraftDialog', () => {
     const labels = buttons.map((button) => button.textContent);
 
     expect(labels.indexOf('Cancel')).toBeLessThan(
-      labels.findIndex((label) => /move to ready/iu.test(label ?? '')),
+      labels.findIndex((label) => /freeze and mark ready/iu.test(label ?? '')),
     );
   });
 });

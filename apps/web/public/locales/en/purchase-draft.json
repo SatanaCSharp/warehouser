@@ -6,21 +6,60 @@
     "heading": "Purchase drafts",
     "newDraft": "New draft",
     "backToList": "All purchase drafts",
-    "empty": "No purchase drafts yet.",
+    "loading": "Loading purchase drafts",
     "error": "You do not have permission to watch purchase drafts in this warehouse.",
+    "lede": {
+      "draft": "What you decided to order from your supplier, and who each line is for. Nothing leaves Warehouser — you contact the supplier yourself, and the draft is the record of what you told them.",
+      "ready_for_ordering": "A draft that has been made ready is the record of what you told the supplier. It is not a live projection of demand — when the demand behind it moves, you are told, and the draft is left alone.",
+      "closed": "A closed draft stays readable as the record of what was ordered and what arrived. It covers nobody's demand any more.",
+      "discarded": "A discarded draft was never ordered and covers nothing."
+    },
     "tabs": {
       "label": "Purchase draft filters",
-      "draft": "Being worked on",
-      "readyForOrdering": "Ready for ordering",
-      "closed": "Closed"
-    }
+      "draft": "Being worked on · {{count}}",
+      "readyForOrdering": "Ready for ordering · {{count}}",
+      "closed": "Closed · {{count}}"
+    },
+    "footnote": {
+      "draft": "Discarded drafts leave this list. Closed drafts move to the Closed tab and stop covering demand.",
+      "ready_for_ordering": "Only drafts that have been made ready appear here.",
+      "closed": "A closed draft stays readable, however it closed, and stops covering demand.",
+      "discarded": "Discarded drafts are not listed."
+    },
+    "driftFootnote_one": "One of them carries a drift signal.",
+    "driftFootnote_other": "{{count}} of them carry a drift signal.",
+    "empty": {
+      "draft": {
+        "heading": "Nothing is being worked on yet",
+        "description": "A purchase draft is what you decided to order from your supplier, and who each line is for. Start one and add the items and quantities as you decide them."
+      },
+      "ready_for_ordering": {
+        "heading": "No draft has been made ready yet",
+        "description": "A draft appears here once you have told the supplier and moved it to Ready for ordering, which freezes it as the record of what you told them."
+      },
+      "closed": {
+        "heading": "No draft has been closed yet",
+        "description": "A draft closes when you confirm what arrived on it, or when you close it with a reason because the supplier cannot fulfil it."
+      },
+      "discarded": {
+        "heading": "No draft has been discarded",
+        "description": "A draft that was never made ready can be discarded, and it then leaves the list it was being worked on in."
+      }
+    },
+    "driftBadge_one": "{{count}} draft whose demand moved",
+    "driftBadge_other": "{{count}} drafts whose demand moved"
   },
   "card": {
     "lineCount_one": "{{count}} line",
     "lineCount_other": "{{count}} lines",
-    "expectedArrival": "Expected {{date}}",
-    "expectedArrivalUnstated": "No expected arrival date yet",
-    "drift": "Drift detected"
+    "meta": {
+      "draft": "{{lines}} · created by {{actor}} · {{date}}",
+      "ready_for_ordering": "{{lines}} · frozen {{date}}",
+      "ready_for_orderingExpected": "{{lines}} · frozen {{date}} · expected {{expected}}",
+      "closed": "{{lines}} · closed {{date}}",
+      "discarded": "{{lines}} · discarded {{date}}"
+    },
+    "drift": "Demand moved since freezing"
   },
   "state": {
     "draft": "Draft",
@@ -28,62 +67,142 @@
     "closed": "Closed",
     "discarded": "Discarded"
   },
+  "attribution": {
+    "you": "you",
+    "anotherMember": "another member",
+    "draft": "Created by {{actor}} · {{date}} · every change is recorded as you make it",
+    "ready_for_ordering": "Made ready by {{actor}} · {{timestamp}}",
+    "ready_for_orderingExpected": "Made ready by {{actor}} · {{timestamp}} · expected arrival {{expected}}",
+    "closed": "Closed by {{actor}} · {{timestamp}}",
+    "discarded": "Discarded by {{actor}} · {{timestamp}}"
+  },
   "detail": {
     "empty": "Select a purchase draft to see its lines.",
-    "addLine": "Add line",
-    "frozenNotice": "This draft is frozen once it is ready — it records what the supplier was told.",
+    "addLine": "Add a line",
+    "linesHeading": "Lines",
+    "linesCaption": "Each line carries its own packaging and note",
     "closureReason": "Closure reason: {{reason}}",
     "discardedNotice": "This draft was discarded before it was ordered.",
+    "readyBanner": {
+      "heading": "Move to Ready for ordering once you have told the supplier",
+      "body": "That freezes these lines, quantities, links, pre-receipt requirements and the expected arrival date, and captures the demand as it stands so you are told later if it moves. Nothing is transmitted — the call or the email is still yours to make."
+    },
+    "frozenNote": "Frozen at {{timestamp}}. Lines, quantities, links, pre-receipt requirements and the expected arrival date can no longer be changed — by anyone, the warehouse manager included. Only what arrives and who it is for is still written here.",
+    "expectedArrival": {
+      "label": "Expected arrival date",
+      "description": "Your own estimate, not a supplier commitment. Leave it blank until you have spoken to them.",
+      "unstated": "Not stated yet",
+      "clear": "Clear the expected arrival date"
+    },
+    "footer": {
+      "readyHint": "At least one line is needed",
+      "arrivalHint": "Confirming an arrival closes this draft once and for all"
+    },
     "driftAlert": {
-      "heading": "Something linked to this draft has changed",
-      "nothingChanged": "Nothing on the draft has changed and nothing will.",
-      "cancelled": "{{customer}}'s order was cancelled",
-      "quantity_changed": "{{customer}}'s order quantity changed",
-      "needed_by_moved": "{{customer}}'s needed-by date moved",
-      "became_fulfilled": "{{customer}}'s order was fulfilled by a different draft"
-    }
+      "heading": "Demand moved since this draft was frozen",
+      "capturedAt": "Compared against the demand captured at {{timestamp}}.",
+      "nothingChanged": "Nothing on the draft has changed and nothing will. What to do about this is your decision — a value amended and then put back as it was stops being reported.",
+      "cancelled": "{{customer}} — cancelled. Line {{line}} was linked to it for {{quantity}}.",
+      "cancelled_dated": "{{customer}} — cancelled on {{on}}. Line {{line}} was linked to it for {{quantity}}.",
+      "became_fulfilled": "{{customer}} — fulfilled by another draft's arrival. Line {{line}} was linked to it for {{quantity}}.",
+      "became_fulfilled_dated": "{{customer}} — fulfilled by another draft's arrival on {{on}}. Line {{line}} was linked to it for {{quantity}}.",
+      "quantityRaised": "{{customer}} — quantity raised from {{from}} to {{to}}, still needed by {{neededBy}}.",
+      "quantityRaised_dated": "{{customer}} — quantity raised from {{from}} to {{to}} on {{on}}, still needed by {{neededBy}}.",
+      "quantityLowered": "{{customer}} — quantity lowered from {{from}} to {{to}}, still needed by {{neededBy}}.",
+      "quantityLowered_dated": "{{customer}} — quantity lowered from {{from}} to {{to}} on {{on}}, still needed by {{neededBy}}.",
+      "needed_by_moved": "{{customer}} — needed by moved from {{from}} to {{to}}.",
+      "needed_by_moved_dated": "{{customer}} — needed by moved from {{from}} to {{to}} on {{on}}."
+    },
+    "loading": "Loading the purchase draft",
+    "error": "This purchase draft could not be read. Nothing on it has changed — select it again to retry."
   },
   "lineEditor": {
-    "quantity": "Ordered quantity",
+    "heading": "Line {{index}}",
+    "item": "Item",
+    "quantity": "Quantity",
     "packagingType": "Packaging type",
     "packagingTypeNone": "None",
+    "packagingTypeCaption": "How the goods must arrive",
     "valueAddingNote": "Value-adding note",
+    "valueAddingNotePlaceholder": "Describe any labelling, bundling or inserts the goods need",
+    "valueAddingNoteCaption": "Processing the goods need before or on arrival. Not a place for prices, supplier contacts or payment terms.",
     "frozenReason": "Frozen — the draft records what the supplier was told and only Arrival Confirmation and closure can still write to it.",
-    "removeLine": "Remove line",
-    "links": "Linked customer orders",
-    "noLinks": "Not linked to a customer order yet."
+    "archivedReason": "This warehouse has been archived, so nothing on this draft can be changed any more.",
+    "removeLine": "Remove line {{index}}",
+    "unpermittedReason": "Your role does not allow purchase drafts to be changed in this warehouse, so this is shown as it stands.",
+    "itemOption": "{{sku}} · {{description}}",
+    "itemRetainedOption": "{{sku}} · {{description}} — no longer offered"
+  },
+  "lineLinks": {
+    "heading": "Serves",
+    "frozenHeading": "Served, as frozen",
+    "addLink": "Link a customer order",
+    "noLinks": "No customer order is linked. This line is still ordered — what arrives on it simply will not be attributed to anyone.",
+    "note": "{{ordered}} ordered · {{intended}} intended for customers. These never have to agree, and neither claims the demand.",
+    "noteNoLinks": "{{ordered}} ordered · nothing intended for a named customer.",
+    "frozenNote": "{{ordered}} ordered · what was intended for each customer is shown as it stood when the draft was made ready."
   },
   "linkRow": {
-    "statedQuantity": "Stated quantity",
+    "statedQuantity": "Intended for them",
+    "frozenStatedQuantity": "Was intended for",
     "claimsNothing": "Coverage is a note, not a claim — it is never adjusted for you.",
-    "unlink": "Unlink {{customer}}",
-    "drift_one": "Drift detected",
-    "drift_other": "Drift detected"
+    "unlink": "Remove {{customer}} from this line",
+    "orderState": {
+      "unfulfilled": "Unfulfilled",
+      "fulfilled": "Fulfilled",
+      "cancelled": "Cancelled"
+    },
+    "current": "{{state}} · {{outstanding}} outstanding · needed by {{neededBy}}",
+    "frozenUnchangedState": "{{state}} · was {{outstanding}} outstanding, needed by {{neededBy}}",
+    "frozenChangedState": "Was {{state}} · {{outstanding}} outstanding, needed by {{neededBy}}",
+    "drift": {
+      "cancelled": "Cancelled",
+      "cancelled_dated": "Cancelled on {{on}}",
+      "became_fulfilled": "Fulfilled elsewhere",
+      "became_fulfilled_dated": "Fulfilled elsewhere on {{on}}",
+      "quantityRaised": "Raised to {{to}}",
+      "quantityRaised_dated": "Raised to {{to}} on {{on}}",
+      "quantityLowered": "Lowered to {{to}}",
+      "quantityLowered_dated": "Lowered to {{to}} on {{on}}",
+      "needed_by_moved": "Needed by moved to {{to}}",
+      "needed_by_moved_dated": "Needed by moved to {{to}} on {{on}}"
+    }
   },
   "transitions": {
     "ready": {
-      "trigger": "Move to ready for ordering",
-      "title": "Move to ready for ordering",
-      "body": "This freezes the draft as the record of what the supplier was told. Its lines, quantities, links, expected arrival date and pre-receipt requirements can no longer be changed — only arrival confirmation and closure still write to it.",
-      "snapshot": "The quantity, needed-by date and state of every linked customer order are captured as they stand now, and changes are reported against that picture.",
+      "trigger": "Move to Ready for ordering",
+      "title": "Move {{reference}} to Ready for ordering?",
+      "body": "This is the moment the draft becomes the record of what you told the supplier.",
+      "nothingTransmitted": "Nothing is transmitted. Placing the order with the supplier is still yours to do.",
       "cancel": "Cancel",
-      "confirm": "Move to ready",
+      "confirm": "Freeze and mark ready",
       "noLines": "A draft is only ready once it says what is being ordered. Add a line first.",
-      "refusal": "A draft is only ready once it says what is being ordered. Nothing has changed."
+      "refusal": "A draft is only ready once it says what is being ordered. Nothing has changed.",
+      "frozenNow_one": "Frozen now — its {{count}} line, its quantity, its links, the packaging and note, and the expected arrival date.",
+      "frozenNow_other": "Frozen now — its {{count}} lines, their quantities, their links, the packaging and notes, and the expected arrival date.",
+      "capturedNow": "Captured now — what each linked customer order asks for, so you are told if it moves afterwards.",
+      "stillPossible": "Still possible — confirming what arrived and who it is for, or closing the draft with a reason.",
+      "noLongerPossible": "No longer possible — changing a line, a link, a packaging type, a note, or the expected date. By anyone."
     },
     "discard": {
-      "trigger": "Discard",
-      "title": "Discard this purchase draft",
+      "trigger": "Discard draft",
+      "title": "Discard {{reference}}?",
       "body": "The draft stops being worked on and stops covering any demand. Every customer order its lines linked to is left exactly as it was.",
-      "cancel": "Cancel",
+      "readyIsClosed": "A draft that has been made ready is closed, not discarded — it records what the supplier was told.",
+      "cancel": "Keep it",
       "confirm": "Discard draft",
-      "refusal": "A draft that has been made ready is closed with a reason rather than discarded, because it records what the supplier was told. Nothing has changed."
+      "refusal": {
+        "invalidState": "A draft that has been made ready is closed with a reason rather than discarded, because it records what the supplier was told. Nothing has changed.",
+        "unavailable": "This draft is no longer here. Nothing has changed.",
+        "unknown": "This draft could not be discarded. Nothing has changed."
+      }
     },
     "close": {
-      "trigger": "Close draft",
-      "title": "Close this purchase draft",
-      "body": "The frozen contents stay readable as the record of what was ordered, the outstanding quantity of every linked customer order is untouched, and the draft stops covering that demand.",
+      "trigger": "Close with a reason",
+      "title": "Close {{reference}} with a reason?",
+      "body": "The frozen contents stay readable. Every linked customer keeps waiting for exactly what they were, and the draft stops covering their demand.",
       "reasonLabel": "Closure reason",
+      "reasonDescription": "Required. Recorded with your name and the time, so a figure that drifts can be explained.",
       "reasonRequired": "State why the supplier cannot fulfil the order.",
       "cancel": "Cancel",
       "submit": "Close draft",
@@ -91,36 +210,69 @@
     },
     "arrival": {
       "trigger": "Confirm arrival",
-      "title": "Confirm arrival",
+      "title": "Confirm what arrived on {{reference}}",
       "closesOnce": "Confirming an arrival closes a draft once and for all. Goods the supplier still owes are ordered on a new draft rather than awaited on this one.",
       "lineHeading": "{{sku}} · {{description}}",
-      "ordered": "{{count}} ordered",
-      "receivedLabel": "Arrived — {{sku}}",
-      "assignLabel": "For {{customer}}",
-      "outstanding": "{{count}} still outstanding",
+      "ordered": "{{formatted}} ordered",
+      "receivedLabel": "Quantity that arrived — {{sku}}",
+      "receivedDescription": "Whatever physically arrived.",
+      "assignHeading": "Assign it across the customers this line was ordered for",
+      "assignLabel": "Assign to {{customer}}",
+      "outstanding": "{{formatted}} still outstanding",
       "noLinks": "No customer order is linked to this line, so nothing is assigned from it.",
       "summaryLabel": "Assignment total for {{sku}}",
-      "summary": "{{received}} arrived · {{assigned}} assigned · {{unassigned}} left unassigned",
+      "summary": "{{received}} arrived · {{assigned}} assigned · {{unassigned}} left unassigned in the transit zone.",
       "cancel": "Cancel",
-      "submit": "Confirm arrival",
-      "nothingSaved": "Nothing of this confirmation has been saved.",
+      "submit": "Confirm arrival and close the draft",
+      "nothingSaved": "Nothing of this confirmation has been saved and the draft is untouched.",
       "refusal": {
         "allocationOutOfBounds": "An assignment is more than what arrived on its line, more than that customer is still waiting for, or against an order since cancelled or fulfilled.",
         "alreadyConfirmed": "This draft has already had its arrival confirmed.",
         "invalidState": "This draft is no longer waiting for an arrival.",
-        "unknown": "The arrival was not recorded."
+        "unknown": "The arrival was not recorded.",
+        "bounds": {
+          "title": "That assignment cannot be recorded",
+          "exceedsReceived": "Line {{line}} — you assigned {{assigned}} across its customers, but recorded {{received}} as arrived.",
+          "exceedsOutstanding": "{{customer}} — you assigned {{assigned}}, but they are waiting for {{outstanding}}.",
+          "cancelled": "{{customer}} — cancelled, so nothing can be assigned to it.",
+          "cancelled_dated": "{{customer}} — cancelled on {{on}}, so nothing can be assigned to it.",
+          "fulfilled": "{{customer}} — already fulfilled, so nothing can be assigned to it.",
+          "fulfilled_dated": "{{customer}} — already fulfilled on {{on}}, so nothing can be assigned to it.",
+          "unavailable": "{{customer}} — no longer waiting for anything, so nothing can be assigned to it.",
+          "unavailable_dated": "{{customer}} — no longer waiting for anything since {{on}}, so nothing can be assigned to it.",
+          "checkedAgain": "Each bound is checked again at the moment the confirmation is recorded, not when you started filling it in.",
+          "back": "Back to the form"
+        }
       },
-      "validation": {
-        "invalidQuantity": "Enter the whole number of units that arrived."
-      }
+      "unassignable": "Was linked for {{formatted}} · nothing can be assigned to it now",
+      "summaryFulfilled": "{{customer}} becomes fulfilled and leaves the consolidated demand.",
+      "atomicity": "The received quantities, every assignment, and the resulting outstanding quantity of each customer are recorded together — or none of them is. On-hand quantities are not touched: those move only through an adjustment that states its reason."
     }
   },
   "dialogs": {
     "addLine": {
-      "title": "Add line",
+      "title": "Add a line to {{reference}}",
       "cancel": "Cancel",
       "submit": "Add line",
-      "quantityLabel": "Ordered quantity"
+      "quantityLabel": "Quantity",
+      "quantityDescription": "A whole number greater than zero."
+    },
+    "addLink": {
+      "trigger": "Link a customer order",
+      "title": "Link a customer order to line {{index}}",
+      "body": "Say who this line is for and how much of it is intended for them. A link claims nothing — it is a note about your own decision, and only goods that actually arrive reduce what a customer is waiting for.",
+      "quantityLabel": "Intended for them",
+      "quantityDescription": "A whole number greater than zero, counted in {{unit}}.",
+      "noCustomerOrders": "No unfulfilled customer order names this item yet. Record the demand first, and it can then be linked here.",
+      "cancel": "Cancel",
+      "submit": "Link the order"
+    },
+    "refusal": {
+      "invalid": "Some of what you entered was not accepted, and nothing has changed.",
+      "unknown": "This could not be saved, and nothing has changed."
     }
+  },
+  "archived": {
+    "controlReason": "This warehouse has been archived, so it authorizes no change to what it holds."
   }
 }

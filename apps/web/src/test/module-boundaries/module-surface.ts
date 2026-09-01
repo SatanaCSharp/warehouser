@@ -70,6 +70,10 @@ export const MODULE_SURFACE = {
   'customer-order': [
     // router.ts
     'modules/customer-order/route',
+    // modules/purchase-draft/components/purchase-draft-line-links/components/LinkCustomerOrderDialog.tsx
+    'modules/customer-order/components/CustomerOrderPicker',
+    // modules/purchase-draft/components/purchase-draft-line-links/components/LinkCustomerOrderAction.tsx
+    'modules/customer-order/hooks/queries/useUnfulfilledCustomerOrdersByItem',
   ],
   home: [
     // router.ts
@@ -88,6 +92,8 @@ export const MODULE_SURFACE = {
   'purchase-draft': [
     // router.ts
     'modules/purchase-draft/route',
+    // shared/layouts/Sidebar.tsx
+    'modules/purchase-draft/components/PurchaseDraftDriftBadge',
   ],
   warehouse: [
     // router.ts

@@ -22,6 +22,18 @@ export const purchaseDraftLineLinkUpdateSchema = z.strictObject({
   statedQuantity: z.number().int().min(1),
 });
 
+// Upper bounds on every request-body array of this subpath. They are payload guards, not business
+// rules: nothing in spec.md limits how many lines a draft may hold, and a member will never reach
+// these figures — a purchase order of two hundred distinct Items, each intended for fifty Customer
+// Orders, is already far past what anyone assembles by hand. What an unbounded array buys an
+// attacker is the reason they exist: every malformed element of a rejected array produces an issue
+// per property, and the server turns those issues into `details.fields` synchronously, before any
+// route code runs and before any rate limiter can see the request (NestJS runs guards ahead of
+// pipes). Bounding the array bounds the work one request can buy.
+const maxDraftLines = 200;
+const maxLinksPerLine = 50;
+const maxAllocationsPerArrivalLine = 50;
+
 // openapi.yaml `PurchaseDraftLineCreate` — one Item, quantity, optional Pre-receipt Requirement and
 // optional links (AC-10, AC-11, AC-12, AC-13).
 export const purchaseDraftLineCreateSchema = z.strictObject({
@@ -29,7 +41,10 @@ export const purchaseDraftLineCreateSchema = z.strictObject({
   orderedQuantity: z.number().int().min(1),
   packagingTypeId: packagingTypeIdSchema.nullable().optional(),
   valueAddingNote: z.string().min(1).nullable().optional(),
-  links: z.array(purchaseDraftLineLinkCreateSchema).optional(),
+  links: z
+    .array(purchaseDraftLineLinkCreateSchema)
+    .max(maxLinksPerLine)
+    .optional(),
 });
 
 // openapi.yaml `PurchaseDraftLineUpdate` — every property optional; at least one must be present
@@ -48,7 +63,7 @@ export const purchaseDraftLineUpdateSchema = z
 // openapi.yaml `PurchaseDraftCreate` — state, attribution and time are not inputs (AC-10, AC-10a).
 export const purchaseDraftCreateSchema = z.strictObject({
   expectedArrivalDate: z.string().date().nullable().optional(),
-  lines: z.array(purchaseDraftLineCreateSchema),
+  lines: z.array(purchaseDraftLineCreateSchema).max(maxDraftLines),
 });
 
 // openapi.yaml `PurchaseDraftRevise` — the one draft-level field a member may still change while the
@@ -75,13 +90,18 @@ export const arrivalAllocationCreateSchema = z.strictObject({
 export const arrivalConfirmationLineSchema = z.strictObject({
   purchaseDraftLineId: z.string().uuid(),
   receivedQuantity: z.number().int().nonnegative(),
-  allocations: z.array(arrivalAllocationCreateSchema).optional(),
+  allocations: z
+    .array(arrivalAllocationCreateSchema)
+    .max(maxAllocationsPerArrivalLine)
+    .optional(),
 });
 
 // openapi.yaml `ArrivalConfirmation` — one confirmation covers every line of the draft (AC-17,
 // AC-17b). Attribution and the move to Closed are not inputs.
 export const arrivalConfirmationSchema = z.strictObject({
-  lines: z.array(arrivalConfirmationLineSchema).min(1),
+  // The ceiling matches `maxDraftLines`: a confirmation covers every line of the draft, so it can
+  // never legitimately name more lines than a draft may hold.
+  lines: z.array(arrivalConfirmationLineSchema).min(1).max(maxDraftLines),
 });
 
 // openapi.yaml `PurchaseDraftClosure` — why the supplier could not fulfil the order (AC-21).

@@ -107,9 +107,12 @@ paths:
                   unitOfMeasure: "metres"
                   onHandQuantity: 12
                   deactivatedAt: null
+                  namingCustomerOrderCount: 3
+                  namingPurchaseDraftLineCount: 1
                   latestAdjustment:
                     countedQuantity: 12
                     reason: "Counted after the cancelled collection"
+                    adjustedByUserId: "00000000-0000-4000-8000-000000000001"
                     adjustedAt: "2026-08-24T10:15:00.000Z"
                   createdAt: "2026-08-01T08:00:00.000Z"
                 - id: "00000000-0000-4000-8000-000000000102"
@@ -118,6 +121,8 @@ paths:
                   unitOfMeasure: "pieces"
                   onHandQuantity: 0
                   deactivatedAt: "2026-08-20T14:00:00.000Z"
+                  namingCustomerOrderCount: 2
+                  namingPurchaseDraftLineCount: 0
                   latestAdjustment: null
                   createdAt: "2026-08-02T08:00:00.000Z"
         "401": { $ref: "#/components/responses/Unauthenticated" }
@@ -156,6 +161,9 @@ paths:
                 unitOfMeasure: "pieces"
                 onHandQuantity: 0
                 deactivatedAt: null
+                # AC-06/AC-06c — a new Item is named by nothing, so its SKU is still correctable.
+                namingCustomerOrderCount: 0
+                namingPurchaseDraftLineCount: 0
                 latestAdjustment: null
                 createdAt: "2026-08-25T09:00:00.000Z"
         "400": { $ref: "#/components/responses/InvalidItemInput" }
@@ -239,6 +247,11 @@ paths:
                 unitOfMeasure: "metres"
                 onHandQuantity: 12
                 deactivatedAt: "2026-08-25T09:30:00.000Z"
+                # AC-06d — deactivation changes nothing about what names the Item: every Customer
+                # Order and Purchase Draft Line that already named it keeps counting exactly as
+                # before, and its SKU stays fixed.
+                namingCustomerOrderCount: 3
+                namingPurchaseDraftLineCount: 1
                 latestAdjustment: null
                 createdAt: "2026-08-01T08:00:00.000Z"
         "401": { $ref: "#/components/responses/Unauthenticated" }
@@ -364,10 +377,12 @@ paths:
                   unfulfilledCustomerOrderCount: 3
                   coverage:
                     - purchaseDraftId: "00000000-0000-4000-8000-000000000301"
+                      purchaseDraftReference: "PD-0142"
                       purchaseDraftLineId: "00000000-0000-4000-8000-000000000401"
                       purchaseDraftState: "ready_for_ordering"
                       statedQuantity: 100
                     - purchaseDraftId: "00000000-0000-4000-8000-000000000302"
+                      purchaseDraftReference: "PD-0143"
                       purchaseDraftLineId: "00000000-0000-4000-8000-000000000402"
                       purchaseDraftState: "draft"
                       statedQuantity: 25
@@ -674,6 +689,7 @@ paths:
                 items: { $ref: "#/components/schemas/PurchaseDraftSummary" }
               example:
                 - id: "00000000-0000-4000-8000-000000000301"
+                  reference: "PD-0143"
                   state: "ready_for_ordering"
                   expectedArrivalDate: "2026-09-02"
                   lineCount: 2
@@ -690,6 +706,7 @@ paths:
                   discardedByUserId: null
                   discardedAt: null
                 - id: "00000000-0000-4000-8000-000000000302"
+                  reference: "PD-0144"
                   state: "draft"
                   expectedArrivalDate: null
                   lineCount: 1
@@ -793,6 +810,7 @@ paths:
               schema: { $ref: "#/components/schemas/PurchaseDraftDetail" }
               example:
                 id: "00000000-0000-4000-8000-000000000301"
+                reference: "PD-0143"
                 state: "ready_for_ordering"
                 expectedArrivalDate: "2026-09-02"
                 hasDriftSignal: true
@@ -831,6 +849,7 @@ paths:
                           neededBy: "2026-09-11"
                           state: "unfulfilled"
                           outstandingQuantity: 120
+                          lastChangedAt: "2026-08-25T10:20:00.000Z"
                         driftSignals: ["quantity_changed", "needed_by_moved"]
                         allocation: null
         "401": { $ref: "#/components/responses/Unauthenticated" }
@@ -891,6 +910,7 @@ paths:
               schema: { $ref: "#/components/schemas/PurchaseDraftSummary" }
               example:
                 id: "00000000-0000-4000-8000-000000000302"
+                reference: "PD-0144"
                 state: "discarded"
                 expectedArrivalDate: null
                 lineCount: 1
@@ -1762,6 +1782,7 @@ components:
                     - purchaseDraftLineLinkId: "00000000-0000-4000-8000-000000000503"
                       rule: "customer_order_not_unfulfilled"
                       customerOrderState: "cancelled"
+                      customerOrderLastChangedAt: "2026-08-24T09:15:00.000Z"
             concurrentTransition:
               summary: sad.md §8
               value:
@@ -1869,7 +1890,9 @@ components:
         A distinct good the Warehouse can be asked for, identified by a SKU unique within that
         Warehouse. It is what Customer Orders and Purchase Draft Lines both name, and therefore the
         axis demand consolidates on (CONTEXT.md).
-      required: [id, sku, description, unitOfMeasure, onHandQuantity, deactivatedAt, latestAdjustment, createdAt]
+      required:
+        [id, sku, description, unitOfMeasure, onHandQuantity, deactivatedAt,
+         namingCustomerOrderCount, namingPurchaseDraftLineCount, latestAdjustment, createdAt]
       additionalProperties: false
       properties:
         id: { type: string, format: uuid }
@@ -1895,20 +1918,48 @@ components:
             When the Item was deactivated, or `null` while it is active. Modelled as a nullable
             instant rather than a boolean, matching `warehouses.archived_at` — the repo's existing
             way of saying "withdrawn, reversibly, at a known time" (data-model.md).
+        namingCustomerOrderCount:
+          type: integer
+          minimum: 0
+          description: |
+            How many Customer Orders name this Item — **every** one carrying its id, whatever state
+            that order is in, because AC-06c fixes the SKU "for the life of that item" and a
+            cancelled order does not release it. Counted by the same condition the server enforces
+            the SKU rule with, so the figure a member reads and the answer a SKU correction gets
+            cannot disagree (AC-06c).
+        namingPurchaseDraftLineCount:
+          type: integer
+          minimum: 0
+          description: |
+            How many Purchase Draft Lines name this Item, on the same terms: every line carrying its
+            id, whatever state its draft is in. Together with `namingCustomerOrderCount` this is what
+            tells a member whether the SKU is still correctable — both zero, and it is (AC-06c).
         latestAdjustment:
           oneOf:
             - $ref: "#/components/schemas/ItemLatestAdjustment"
             - type: "null"
-          description: The reason recorded with the most recent On-hand adjustment, or `null` when the Item has never been adjusted.
+          description: The most recent On-hand adjustment — its figure, reason, acting member and time — or `null` when the Item has never been adjusted.
         createdAt: { type: string, format: date-time }
 
     ItemLatestAdjustment:
       type: object
-      required: [countedQuantity, reason, adjustedAt]
+      description: |
+        The most recent row of the Item's append-only adjustment history, projected onto the Item so
+        the on-hand figure is never read without the reason it holds (AC-08). It carries all three
+        of the facts AC-08 records with the count — the reason, the acting member and the time.
+      required: [countedQuantity, reason, adjustedByUserId, adjustedAt]
       additionalProperties: false
       properties:
         countedQuantity: { type: integer, minimum: 0 }
         reason: { type: string, minLength: 1 }
+        adjustedByUserId:
+          type: string
+          format: uuid
+          description: |
+            The member who recorded the count. The same id `OnHandAdjustment` already returns on the
+            write path, so this discloses nothing further; it is what lets the reader be told whether
+            the figure is one they recorded themselves. This release models no person name, so it is
+            an id and never a display name.
         adjustedAt: { type: string, format: date-time }
 
     ItemCreate:
@@ -2101,10 +2152,20 @@ components:
 
     DemandCoverage:
       type: object
-      required: [purchaseDraftId, purchaseDraftLineId, purchaseDraftState, statedQuantity]
+      required:
+        [purchaseDraftId, purchaseDraftReference, purchaseDraftLineId, purchaseDraftState,
+         statedQuantity]
       additionalProperties: false
       properties:
         purchaseDraftId: { type: string, format: uuid }
+        purchaseDraftReference:
+          type: string
+          minLength: 1
+          description: |
+            The draft's human reference (`PD-0142`) — what AC-20's "which Purchase Drafts link to
+            it" names to the member, beside the quantity it links for. The id answers the second
+            half of that criterion only; without the reference the member is told a quantity and no
+            draft.
         purchaseDraftLineId: { type: string, format: uuid }
         purchaseDraftState:
           type: string
@@ -2131,12 +2192,21 @@ components:
       type: object
       description: The list projection — the draft's state, its size, and whether it carries a Drift Signal (AC-16a).
       required:
-        [id, state, expectedArrivalDate, lineCount, hasDriftSignal, closureReason, createdByUserId,
-         createdAt, readiedByUserId, readiedAt, closedByUserId, closedAt, arrivalConfirmedByUserId,
-         arrivalConfirmedAt, discardedByUserId, discardedAt]
+        [id, reference, state, expectedArrivalDate, lineCount, hasDriftSignal, closureReason,
+         createdByUserId, createdAt, readiedByUserId, readiedAt, closedByUserId, closedAt,
+         arrivalConfirmedByUserId, arrivalConfirmedAt, discardedByUserId, discardedAt]
       additionalProperties: false
       properties:
         id: { type: string, format: uuid }
+        reference:
+          type: string
+          minLength: 1
+          example: "PD-0143"
+          description: |
+            The human name of the draft, minted by the database from a sequence when the draft is
+            created and never changed afterwards. Every list card, detail header, dialog title and
+            drift sentence names the draft by this rather than by `id`. The sequence is global
+            across Warehouses, so a Warehouse's own references are not consecutive.
         state: { $ref: "#/components/schemas/PurchaseDraftState" }
         expectedArrivalDate:
           type: [string, "null"]
@@ -2279,13 +2349,24 @@ components:
     LinkedCustomerOrderState:
       type: object
       description: The linked Customer Order as it stands at the instant of this read — the other half of the drift comparison.
-      required: [quantity, neededBy, state, outstandingQuantity]
+      required: [quantity, neededBy, state, outstandingQuantity, lastChangedAt]
       additionalProperties: false
       properties:
         quantity: { type: integer, minimum: 1 }
         neededBy: { type: string, format: date }
         state: { $ref: "#/components/schemas/CustomerOrderState" }
         outstandingQuantity: { type: integer, minimum: 0 }
+        lastChangedAt:
+          oneOf:
+            - { type: string, format: date-time }
+            - type: "null"
+          description: |
+            When this Customer Order last moved — amended, cancelled, or reduced by an Allocation.
+            It is what lets a Drift Signal be **dated** rather than merely stated, which is how
+            AC-16's comparison is drawn (`Raised to 1 000 on 25 Aug`, `Cancelled on 24 Aug`).
+            Deliberately generic rather than a cancellation timestamp: one field dates an amendment
+            and a cancellation alike. `null` for an order that has not been changed since it was
+            recorded — there is no such moment, and its creation time is not one.
 
     ArrivalAllocation:
       type: object
@@ -2316,6 +2397,11 @@ components:
           description: Optional, and left unstated when the member has not yet spoken to the supplier (AC-10).
         lines:
           type: array
+          maxItems: 200
+          description: |
+            A payload guard rather than a business rule — a draft a member assembles by hand never
+            approaches it. An unbounded request array lets a caller price the server's validation
+            work, which runs ahead of every guard.
           items: { $ref: "#/components/schemas/PurchaseDraftLineCreate" }
 
     PurchaseDraftRevise:
@@ -2345,7 +2431,10 @@ components:
         valueAddingNote: { type: [string, "null"], minLength: 1 }
         links:
           type: array
-          description: May be omitted or empty — a line links to no Customer Orders or to several (AC-10).
+          maxItems: 50
+          description: |
+            May be omitted or empty — a line links to no Customer Orders or to several (AC-10). The
+            ceiling is a payload guard, not a business rule.
           items: { $ref: "#/components/schemas/PurchaseDraftLineLinkCreate" }
 
     PurchaseDraftLineUpdate:
@@ -2395,6 +2484,10 @@ components:
         lines:
           type: array
           minItems: 1
+          maxItems: 200
+          description: |
+            The ceiling matches `PurchaseDraftCreate.lines`: a confirmation covers every line of the
+            draft, so it can never legitimately name more lines than a draft may hold.
           items: { $ref: "#/components/schemas/ArrivalConfirmationLine" }
 
     ArrivalConfirmationLine:
@@ -2411,9 +2504,11 @@ components:
             AC-17b). Bounded neither above nor below by `orderedQuantity`.
         allocations:
           type: array
+          maxItems: 50
           description: |
             May be omitted or empty for a line whose linked demand has all gone (AC-17b). Their sum
-            may not exceed `receivedQuantity` (AC-18).
+            may not exceed `receivedQuantity` (AC-18). The ceiling is a payload guard, not a
+            business rule.
           items: { $ref: "#/components/schemas/ArrivalAllocationCreate" }
 
     ArrivalAllocationCreate:

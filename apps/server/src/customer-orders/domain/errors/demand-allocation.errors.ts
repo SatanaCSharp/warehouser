@@ -23,6 +23,13 @@ export interface CustomerOrderNotUnfulfilledViolation {
   readonly purchaseDraftLineLinkId: string;
   readonly rule: 'customer_order_not_unfulfilled';
   readonly customerOrderState: CustomerOrderState;
+  // AC-18/AC-16 — when that order moved, so the refusal reads "Baltic Freight OÜ — cancelled on
+  // 24 Aug, so nothing can be assigned to it" rather than leaving the member to work out which
+  // cancellation is meant (design frame `s5EPi.png`). Named for the move rather than for the
+  // cancellation because the same bound refuses an order that became Fulfilled. `null` when the
+  // link resolved to no Customer Order this transaction could lock — the non-enumerating refusal
+  // reports a state of `cancelled` it read from nothing, and there is no moment to report with it.
+  readonly customerOrderLastChangedAt: string | null;
 }
 
 export type AllocationBoundViolation =

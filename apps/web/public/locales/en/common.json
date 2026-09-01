@@ -65,7 +65,12 @@
     },
     "archivedEntryRefusal": {
       "heading": "This warehouse is archived",
-      "description": "Archived warehouses can't be entered. Your access to other warehouses is unchanged."
+      "description": "Archived warehouses aren't administered here. What one already holds stays readable to everyone permitted to read it."
+    },
+    "archivedWarehouse": {
+      "chip": "Archived warehouse",
+      "heading": "This warehouse has been archived",
+      "description": "Its demand, drafts and items stay readable to everyone whose role carried the watch permission before archiving, on exactly the same terms. Nothing that changes what it holds is authorized any more."
     },
     "landing": {
       "pendingLabel": "Preparing your workspace…",

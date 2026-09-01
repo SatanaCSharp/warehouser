@@ -15,6 +15,11 @@ export const isStatedQuantity = (quantity: number): boolean =>
 // AC-10a/AC-15 — a draft accepts assembly writes only while it is in the `draft` state.
 export const isDraftMutable = (state: string): boolean => state === 'draft';
 
+// AC-06d/AC-11 — whether the Item a line names may be named at all is `isSelectableItem` in
+// `shared/predicates/item-availability.predicates.ts`, not here: `customer-orders` applies the same
+// rule when demand is recorded, and a predicate more than one feature exercises belongs in
+// `shared/predicates/` (server-error-handling.md §1).
+
 // AC-13 — a Packaging Type is legal only when it is one of the catalogue's entries.
 export const isKnownPackagingType = (
   packagingTypeId: string,

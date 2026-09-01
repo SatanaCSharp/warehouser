@@ -62,9 +62,12 @@ describe('ClosePurchaseDraftCommand', () => {
       closureReason: 'The supplier cannot fulfil the order',
     });
 
+    // `warehouseId` is part of the write's own `WHERE` clause, so the command has to hand it over
+    // — the pre-read above it decides which refusal is owed, never whether the write may happen.
     expect(closureRepository.close).toHaveBeenCalledWith(
       expect.objectContaining({
         purchaseDraftId: draftId,
+        warehouseId,
         closedByUserId: actorId,
         closedAt: now,
         closureReason: 'The supplier cannot fulfil the order',

@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { DriftSignal } from 'modules/purchase-draft/components/DriftSignal';
+import { useLinkDriftChips } from 'modules/purchase-draft/hooks/projections/useLinkDriftChips';
 import { Conditional } from 'shared/components/Conditional';
 import { FormTextField } from 'shared/components/FormTextField';
+import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
 
 import type { PurchaseDraftLineLink } from '@warehouser/contracts/purchase-drafts';
 import type { ChangeEvent, ReactElement, ReactNode } from 'react';
@@ -26,17 +28,49 @@ export type PurchaseDraftLinkRowField = {
 
 export type PurchaseDraftLinkRowProps = {
   field: PurchaseDraftLinkRowField;
+  /**
+   * Whether the draft this link belongs to has been frozen, which decides
+   * **which** demand the row states: a frozen row reads the Demand Snapshot
+   * captured at the freeze, an unfrozen one reads the Customer Order as it
+   * stands now.
+   */
+  isFrozen: boolean;
   link: PurchaseDraftLineLink;
   /** The control the row ends with — unlinking a link, or an assignment's outstanding figure. */
   trailing: ReactNode;
 };
 
+/** Which sentence states the customer's demand, most significant state first. */
+type DemandState = 'current' | 'frozenUnchangedState' | 'frozenChangedState';
+
+const DEMAND_STATES: readonly {
+  state: DemandState;
+  holds: (reading: {
+    hasSnapshot: boolean;
+    isFrozen: boolean;
+    keptItsState: boolean;
+  }) => boolean;
+}[] = [
+  // An unfrozen draft has no snapshot to compare against, and neither does a
+  // link added to a draft that was frozen before this field existed.
+  {
+    state: 'current',
+    holds: ({ hasSnapshot, isFrozen }) => !isFrozen || !hasSnapshot,
+  },
+  { state: 'frozenUnchangedState', holds: ({ keptItsState }) => keptItsState },
+];
+
 /**
  * `Ordering/Link Row` (`BSmrU`) — one Purchase Draft Line link, serving all
  * three jobs the approved design gives it: an editable draft-line link, a
- * frozen link with its drift chip, and an arrival assignment row (T20, T21).
+ * frozen link with its drift chips, and an arrival assignment row (T20, T21).
  * Only the field descriptor and the trailing control differ between them,
  * which is exactly what this component takes.
+ *
+ * **A drift chip names what moved, never that something did (AC-16).** Both
+ * halves of the comparison are on the wire, so the chip reads `Raised to
+ * 1 000` or `Cancelled` — a link that drifted in two ways carries two chips,
+ * because each names a different value the member may act on.
  *
  * **Coverage claims nothing (AC-11a), and neither does an assignment
  * (AC-18).** The quantity is reported exactly as typed: this row never
@@ -48,10 +82,13 @@ export type PurchaseDraftLinkRowProps = {
  */
 export const PurchaseDraftLinkRow = ({
   field,
+  isFrozen,
   link,
   trailing,
 }: PurchaseDraftLinkRowProps): ReactElement => {
   const { t } = useTranslation('purchase-draft');
+  const { calendarDate, quantity: formatQuantity } = useLocaleFormat();
+  const driftChips = useLinkDriftChips();
   const [quantity, setQuantity] = useState(field.value);
 
   const commit = (raw: string): void => {
@@ -75,7 +112,38 @@ export const PurchaseDraftLinkRow = ({
     }
   };
 
-  const driftLabel = t('linkRow.drift', { count: link.driftSignals.length });
+  const { current, snapshot } = link;
+  const captured = {
+    neededBy: snapshot?.capturedNeededBy ?? current.neededBy,
+    quantity: snapshot?.capturedQuantity ?? current.outstandingQuantity,
+    state: snapshot?.capturedState ?? current.state,
+  };
+  const demandState =
+    DEMAND_STATES.find(({ holds }) =>
+      holds({
+        hasSnapshot: snapshot !== null,
+        isFrozen,
+        keptItsState: captured.state === current.state,
+      }),
+    )?.state ?? 'frozenChangedState';
+
+  const demand: Record<DemandState, string> = {
+    current: t('linkRow.current', {
+      neededBy: calendarDate(current.neededBy),
+      outstanding: formatQuantity(current.outstandingQuantity),
+      state: t(`linkRow.orderState.${current.state}`),
+    }),
+    frozenUnchangedState: t('linkRow.frozenUnchangedState', {
+      neededBy: calendarDate(captured.neededBy),
+      outstanding: formatQuantity(captured.quantity),
+      state: t(`linkRow.orderState.${captured.state}`),
+    }),
+    frozenChangedState: t('linkRow.frozenChangedState', {
+      neededBy: calendarDate(captured.neededBy),
+      outstanding: formatQuantity(captured.quantity),
+      state: t(`linkRow.orderState.${captured.state}`),
+    }),
+  };
 
   // design-handoff.md's third documented mobile difference (`BSmrU`, 390
   // `O42LHI` vs 1440 `yGhkK`/`F0SpRx`): the row keeps its horizontal shape at
@@ -86,8 +154,13 @@ export const PurchaseDraftLinkRow = ({
     <li className="flex flex-wrap items-center gap-3 rounded-lg bg-surface-secondary p-3">
       <div className="min-w-0 flex-1">
         <p className="break-words font-medium">{link.customerName}</p>
+        <p className="text-sm text-muted">{demand[demandState]}</p>
         <Conditional when={link.driftSignals.length > 0}>
-          <DriftSignal label={driftLabel} />
+          <span className="mt-1 flex flex-wrap gap-2">
+            {driftChips(link).map((label) => (
+              <DriftSignal key={label} label={label} />
+            ))}
+          </span>
         </Conditional>
       </div>
       <FormTextField

@@ -1,5 +1,6 @@
 import { PermissionId } from '@warehouser/shared-types/enums';
 
+import { admitsReads } from 'guards/warehouse-entry.guard';
 import { customerOrderApi } from 'modules/customer-order/api/customer-order-api';
 import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
 import { hasPermission } from 'shared/hooks/queries/usePermissions';
@@ -29,10 +30,17 @@ const LOADER_QUERY_OPTIONS = { subscribe: false } as const;
  *
  * **The gate comes first, and it issues nothing.** `warehouseRoute.beforeLoad`
  * returns a refusal verdict rather than throwing, so this loader still runs on
- * an address the actor was just refused. Anything other than an `entered`
- * verdict returns immediately: neither the projection nor the demand read is
- * issued, so the request count around a refusal stays at zero and no customer
- * name, quantity or Item can leak through it (AC-05).
+ * an address the actor was just refused. A refused verdict returns
+ * immediately: neither the projection nor the demand read is issued, so the
+ * request count around a refusal stays at zero and no customer name, quantity
+ * or Item can leak through it (AC-05).
+ *
+ * AC-23 — a READ-ONLY verdict reads. An archived Warehouse authorizes no
+ * operation that changes what it holds, but a member whose Role carries
+ * `CUSTOMER_ORDERS:WATCH` reads its recorded demand exactly as before
+ * archiving, so `admitsReads` — not `status === 'entered'` — is the gate. The
+ * Permission check below is unchanged, so a member without the Permission is
+ * refused the read exactly as before archiving too.
  *
  * It imports no page and no component: `route.tsx` reaches it from the router
  * chunk, so pulling one in would defeat the lazy `import('./page')` boundary.
@@ -40,7 +48,7 @@ const LOADER_QUERY_OPTIONS = { subscribe: false } as const;
 export const loadDemand = async ({
   context,
 }: DemandLoaderInput): Promise<void> => {
-  if (context.status !== 'entered') {
+  if (!admitsReads(context)) {
     return;
   }
 

@@ -6,6 +6,7 @@ import { useClosePurchaseDraftMutation } from 'modules/purchase-draft/api/purcha
 import { ClosePurchaseDraftDialog } from 'modules/purchase-draft/components/purchase-draft-transitions/components/ClosePurchaseDraftDialog';
 import { TriggeredDialog } from 'shared/components/TriggeredDialog';
 import { WarehousePermissionGate } from 'shared/components/WarehousePermissionGate';
+import { useArchivedWarehouse } from 'shared/hooks/projections/useArchivedWarehouse';
 import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
 
 import type {
@@ -30,6 +31,7 @@ export const ClosePurchaseDraftAction = ({
 }: ClosePurchaseDraftActionProps): ReactElement => {
   const { t } = useTranslation('purchase-draft');
   const warehouseId = useEnteredWarehouse() ?? '';
+  const { isArchived, reasonId } = useArchivedWarehouse();
   const [closePurchaseDraft] = useClosePurchaseDraftMutation();
 
   const onSubmit = (input: PurchaseDraftClosure): Promise<MutationResult> =>
@@ -38,11 +40,19 @@ export const ClosePurchaseDraftAction = ({
   return (
     <WarehousePermissionGate permission={PermissionId.PURCHASE_DRAFTS_CLOSE}>
       <Modal>
-        <Button size="sm" variant="outline">
+        <Button
+          aria-describedby={reasonId}
+          isDisabled={isArchived}
+          size="sm"
+          variant="outline"
+        >
           {t('transitions.close.trigger')}
         </Button>
         <TriggeredDialog>
-          <ClosePurchaseDraftDialog onSubmit={onSubmit} />
+          <ClosePurchaseDraftDialog
+            reference={draft.reference}
+            onSubmit={onSubmit}
+          />
         </TriggeredDialog>
       </Modal>
     </WarehousePermissionGate>

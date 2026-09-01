@@ -36,21 +36,25 @@ import {
 const now = new Date('2026-08-26T10:00:00.000Z');
 const later = new Date('2026-08-26T12:00:00.000Z');
 
-interface FreezeInput {
+/** AC-11/spec.md §6.1 — the acting Warehouse is part of every transition's own `WHERE` clause: a
+ * draft id alone is not authority over the draft it names, on freeze, closure or discard. */
+interface TransitionScope {
   readonly purchaseDraftId: string;
+  readonly warehouseId: string;
+}
+
+interface FreezeInput extends TransitionScope {
   readonly readiedByUserId: string;
   readonly readiedAt: Date;
 }
 
-interface CloseInput {
-  readonly purchaseDraftId: string;
+interface CloseInput extends TransitionScope {
   readonly closedByUserId: string;
   readonly closedAt: Date;
   readonly closureReason: string;
 }
 
-interface DiscardInput {
-  readonly purchaseDraftId: string;
+interface DiscardInput extends TransitionScope {
   readonly discardedByUserId: string;
   readonly discardedAt: Date;
 }
@@ -242,6 +246,7 @@ const closeInTransaction = (input: CloseInput): Promise<boolean> =>
 const discardInTransaction = (input: DiscardInput): Promise<boolean> =>
   transactions.executeInTransaction({}, () => repository.discard(input));
 
+// eslint-disable-next-line max-lines-per-function -- integration suite setup is inherently long
 describe('PurchaseDraftFreezeRepository', () => {
   beforeAll(async () => {
     await dataSource.initialize();
@@ -295,6 +300,7 @@ describe('PurchaseDraftFreezeRepository', () => {
 
       const frozen = await freezeInTransaction({
         purchaseDraftId: draftId,
+        warehouseId: seeded.warehouseId,
         readiedByUserId: seeded.userId,
         readiedAt: now,
       });
@@ -346,6 +352,7 @@ describe('PurchaseDraftFreezeRepository', () => {
 
         const frozen = await freezeInTransaction({
           purchaseDraftId: draftId,
+          warehouseId: seeded.warehouseId,
           readiedByUserId: seeded.userId,
           readiedAt: later,
         });
@@ -354,6 +361,30 @@ describe('PurchaseDraftFreezeRepository', () => {
         expect(await readDraft(draftId)).toEqual(before);
         expect(await readSnapshotsForLine(lineId)).toHaveLength(0);
       });
+    });
+
+    // AC-11/spec.md §6.1 — the same guarantee `discard` carries, on the same terms: a Draft-state
+    // draft of another Warehouse affects zero rows even though its state makes it perfectly
+    // freezable. `warehouse_id` is in the guarded `UPDATE`'s own `WHERE` clause, so the refusal
+    // cannot be lost to a race the way a check standing above the write could be, and no Demand
+    // Snapshot row is captured from the victim's links.
+    it('affects zero rows against a Draft-state draft of another Warehouse', async () => {
+      const attacker = await seedWarehouse();
+      const victim = await seedWarehouse();
+      const draftId = await seedDraft(victim, 'draft');
+      const lineId = await seedLine(victim, draftId);
+      const before = await readDraft(draftId);
+
+      const frozen = await freezeInTransaction({
+        purchaseDraftId: draftId,
+        warehouseId: attacker.warehouseId,
+        readiedByUserId: attacker.userId,
+        readiedAt: later,
+      });
+
+      expect(frozen).toBe(false);
+      expect(await readDraft(draftId)).toEqual(before);
+      expect(await readSnapshotsForLine(lineId)).toHaveLength(0);
     });
   });
 
@@ -372,6 +403,7 @@ describe('PurchaseDraftFreezeRepository', () => {
 
       const closed = await closeInTransaction({
         purchaseDraftId: draftId,
+        warehouseId: seeded.warehouseId,
         closedByUserId: seeded.userId,
         closedAt: later,
         closureReason: 'The supplier cannot fulfil the order',
@@ -411,6 +443,7 @@ describe('PurchaseDraftFreezeRepository', () => {
 
         const closed = await closeInTransaction({
           purchaseDraftId: draftId,
+          warehouseId: seeded.warehouseId,
           closedByUserId: seeded.userId,
           closedAt: later,
           closureReason: 'The supplier cannot fulfil the order',
@@ -419,6 +452,27 @@ describe('PurchaseDraftFreezeRepository', () => {
         expect(closed).toBe(false);
         expect(await readDraft(draftId)).toEqual(before);
       });
+    });
+
+    // AC-11/spec.md §6.1 — as with `freeze` and `discard`: a draft of another Warehouse sitting in
+    // exactly the state closure is legal from still affects zero rows, because `warehouse_id` is a
+    // predicate of this write rather than a check standing above it.
+    it('affects zero rows against a Ready-for-Ordering draft of another Warehouse', async () => {
+      const attacker = await seedWarehouse();
+      const victim = await seedWarehouse();
+      const draftId = await seedDraft(victim, 'ready_for_ordering');
+      const before = await readDraft(draftId);
+
+      const closed = await closeInTransaction({
+        purchaseDraftId: draftId,
+        warehouseId: attacker.warehouseId,
+        closedByUserId: attacker.userId,
+        closedAt: later,
+        closureReason: 'The supplier cannot fulfil the order',
+      });
+
+      expect(closed).toBe(false);
+      expect(await readDraft(draftId)).toEqual(before);
     });
   });
 
@@ -437,6 +491,7 @@ describe('PurchaseDraftFreezeRepository', () => {
 
       const discarded = await discardInTransaction({
         purchaseDraftId: draftId,
+        warehouseId: seeded.warehouseId,
         discardedByUserId: seeded.userId,
         discardedAt: later,
       });
@@ -471,6 +526,7 @@ describe('PurchaseDraftFreezeRepository', () => {
 
         const discarded = await discardInTransaction({
           purchaseDraftId: draftId,
+          warehouseId: seeded.warehouseId,
           discardedByUserId: seeded.userId,
           discardedAt: later,
         });
@@ -478,6 +534,28 @@ describe('PurchaseDraftFreezeRepository', () => {
         expect(discarded).toBe(false);
         expect(await readDraft(draftId)).toEqual(before);
       });
+    });
+
+    // AC-11/spec.md §6.1 — a Draft-state draft of another Warehouse affects zero rows even though
+    // its state makes it perfectly discardable. `warehouse_id` is in the guarded `UPDATE`'s own
+    // `WHERE` clause, so the refusal cannot be lost to a race the way a check standing above the
+    // write could be; the command turns the same zero rows a missing draft produces into one
+    // non-enumerating `purchase_drafts.target_unavailable`.
+    it('affects zero rows against a Draft-state draft of another Warehouse', async () => {
+      const attacker = await seedWarehouse();
+      const victim = await seedWarehouse();
+      const draftId = await seedDraft(victim, 'draft');
+      const before = await readDraft(draftId);
+
+      const discarded = await discardInTransaction({
+        purchaseDraftId: draftId,
+        warehouseId: attacker.warehouseId,
+        discardedByUserId: attacker.userId,
+        discardedAt: later,
+      });
+
+      expect(discarded).toBe(false);
+      expect(await readDraft(draftId)).toEqual(before);
     });
   });
 });

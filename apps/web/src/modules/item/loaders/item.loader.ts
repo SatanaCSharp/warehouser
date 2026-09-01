@@ -1,5 +1,6 @@
 import { PermissionId } from '@warehouser/shared-types/enums';
 
+import { admitsReads } from 'guards/warehouse-entry.guard';
 import { itemApi } from 'modules/item/api/item-api';
 import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
 import { hasPermission } from 'shared/hooks/queries/usePermissions';
@@ -28,9 +29,16 @@ const LOADER_QUERY_OPTIONS = { subscribe: false } as const;
  *
  * **The gate comes first, and it issues nothing.** `warehouseRoute.beforeLoad`
  * returns a refusal verdict rather than throwing, so this loader still runs on
- * an address the actor was just refused. Anything other than an `entered`
- * verdict returns immediately: neither the projection nor the Items read is
- * issued, so the request count around a refusal stays at zero.
+ * an address the actor was just refused. A refused verdict returns
+ * immediately: neither the projection nor the Items read is issued, so the
+ * request count around a refusal stays at zero.
+ *
+ * AC-23 — a READ-ONLY verdict reads. An archived Warehouse authorizes no
+ * operation that changes what it holds, but a member whose Role carries
+ * `ITEMS:WATCH` reads its Items exactly as before archiving, so `admitsReads`
+ * — not `status === 'entered'` — is the gate. The Permission check below is
+ * unchanged, so a member without the Permission is refused the read exactly as
+ * before archiving too.
  *
  * It imports no page and no component: `route.tsx` reaches it from the router
  * chunk, so pulling one in would defeat the lazy `import('./page')` boundary.
@@ -38,7 +46,7 @@ const LOADER_QUERY_OPTIONS = { subscribe: false } as const;
 export const loadItems = async ({
   context,
 }: ItemLoaderInput): Promise<void> => {
-  if (context.status !== 'entered') {
+  if (!admitsReads(context)) {
     return;
   }
 

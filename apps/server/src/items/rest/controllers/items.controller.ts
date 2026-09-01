@@ -44,10 +44,13 @@ const toItemResponse = (entry: ItemCatalogueEntryRead): Item => ({
   unitOfMeasure: entry.unitOfMeasure,
   onHandQuantity: entry.onHandQuantity,
   deactivatedAt: entry.deactivatedAt?.toISOString() ?? null,
+  namingCustomerOrderCount: entry.namingCustomerOrderCount,
+  namingPurchaseDraftLineCount: entry.namingPurchaseDraftLineCount,
   latestAdjustment: entry.latestAdjustment
     ? {
         countedQuantity: entry.latestAdjustment.countedQuantity,
         reason: entry.latestAdjustment.reason,
+        adjustedByUserId: entry.latestAdjustment.adjustedByUserId,
         adjustedAt: entry.latestAdjustment.adjustedAt.toISOString(),
       }
     : null,

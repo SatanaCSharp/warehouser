@@ -85,28 +85,37 @@ interface AddLinkInput {
 // the line/link named is not one of that draft's — because openapi.yaml gives these routes both a
 // 409 and a 404 and the service cannot pick between them from a `false`. The repository still never
 // throws; the typed refusal is the service's job (server-error-handling.md §3).
+/** Every draft-scoped write names the acting Warehouse beside the draft, because that pair — not
+ * the id alone — is what the guard's `WHERE` clause resolves (AC-11, spec.md §6.1). */
+interface WriteScope {
+  readonly purchaseDraftId: string;
+  readonly warehouseId: string;
+}
+
+interface UpdateDraftInput {
+  readonly expectedArrivalDate?: string | null;
+}
+
 interface PurchaseDraftAssemblyRepositoryContract {
   createDraft(input: CreateDraftPersistenceInput): Promise<PurchaseDraftEntity>;
+  updateDraft(
+    scope: WriteScope,
+    changes: UpdateDraftInput,
+  ): Promise<AssemblyWriteOutcome>;
   addLine(input: AddLineInput): Promise<AssemblyWriteOutcome>;
   updateLine(
-    purchaseDraftId: string,
+    scope: WriteScope,
     lineId: string,
     changes: UpdateLineInput,
   ): Promise<AssemblyWriteOutcome>;
-  removeLine(
-    purchaseDraftId: string,
-    lineId: string,
-  ): Promise<AssemblyWriteOutcome>;
+  removeLine(scope: WriteScope, lineId: string): Promise<AssemblyWriteOutcome>;
   addLink(input: AddLinkInput): Promise<AssemblyWriteOutcome>;
   updateLink(
-    purchaseDraftId: string,
+    scope: WriteScope,
     linkId: string,
     statedQuantity: number,
   ): Promise<AssemblyWriteOutcome>;
-  removeLink(
-    purchaseDraftId: string,
-    linkId: string,
-  ): Promise<AssemblyWriteOutcome>;
+  removeLink(scope: WriteScope, linkId: string): Promise<AssemblyWriteOutcome>;
   findLines(purchaseDraftId: string): Promise<PurchaseDraftLineEntity[]>;
   findLinks(
     purchaseDraftLineId: string,
@@ -231,6 +240,12 @@ const seedDraft = async (
   return id;
 };
 
+// The pair every draft-scoped write resolves on: the draft, and the Warehouse allowed to write it.
+const scope = (seeded: Seeded, purchaseDraftId: string): WriteScope => ({
+  purchaseDraftId,
+  warehouseId: seeded.warehouseId,
+});
+
 const readDraft = (id: string): Promise<PurchaseDraftEntity | null> =>
   dataSource.manager.getRepository(PurchaseDraftEntityClass).findOneBy({ id });
 
@@ -312,27 +327,82 @@ describe('PurchaseDraftAssemblyRepository', () => {
     const strangerLinkId = randomUUID();
 
     const updatedLine = await transactions.executeInTransaction({}, () =>
-      repository.updateLine(draftId, strangerLineId, { orderedQuantity: 60 }),
+      repository.updateLine(scope(seeded, draftId), strangerLineId, {
+        orderedQuantity: 60,
+      }),
     );
     expect(updatedLine).toBe('target-missing');
 
     const removedLine = await transactions.executeInTransaction({}, () =>
-      repository.removeLine(draftId, strangerLineId),
+      repository.removeLine(scope(seeded, draftId), strangerLineId),
     );
     expect(removedLine).toBe('target-missing');
 
     const updatedLink = await transactions.executeInTransaction({}, () =>
-      repository.updateLink(draftId, strangerLinkId, 45),
+      repository.updateLink(scope(seeded, draftId), strangerLinkId, 45),
     );
     expect(updatedLink).toBe('target-missing');
 
     const removedLink = await transactions.executeInTransaction({}, () =>
-      repository.removeLink(draftId, strangerLinkId),
+      repository.removeLink(scope(seeded, draftId), strangerLinkId),
     );
     expect(removedLink).toBe('target-missing');
 
     // The draft stayed mutable throughout — which is exactly what makes 'target-missing' the
     // truthful answer rather than 'draft-frozen'.
+    expect(await readDraft(draftId)).toMatchObject({ state: 'draft' });
+  });
+
+  // `addLink` is the one write whose target line is named by the caller and reaches the INSERT as
+  // part of `fk_purchase_draft_line_links_line`'s composite reference. Without a predicate of its
+  // own, a line that is not this draft's raised a `QueryFailedError` the global filter could only
+  // map to 500 `system.internal_error` — where openapi.yaml declares 404
+  // `PurchaseDraftTargetUnavailable`, with an `unknownLine` example written for exactly this case.
+  it('reports a line of another draft as target-missing on addLink, never as a failed query', async () => {
+    const seeded = await seedWarehouse();
+    const customerOrderId = await seedCustomerOrder(seeded);
+    const draftId = await seedDraft(seeded, 'draft');
+    const otherDraftId = await seedDraft(seeded, 'draft');
+    const lineOfTheOtherDraft = randomUUID();
+
+    await transactions.executeInTransaction({}, () =>
+      repository.addLine({
+        id: lineOfTheOtherDraft,
+        purchaseDraftId: otherDraftId,
+        warehouseId: seeded.warehouseId,
+        itemId: seeded.itemId,
+        orderedQuantity: 40,
+      }),
+    );
+
+    // A line of a sibling draft in the very same Warehouse, and a line id that names nothing at
+    // all, are one outcome: the route must not disclose that the line exists elsewhere.
+    const ofAnotherDraft = await transactions.executeInTransaction({}, () =>
+      repository.addLink({
+        id: randomUUID(),
+        purchaseDraftLineId: lineOfTheOtherDraft,
+        purchaseDraftId: draftId,
+        warehouseId: seeded.warehouseId,
+        customerOrderId,
+        statedQuantity: 10,
+      }),
+    );
+    expect(ofAnotherDraft).toBe('target-missing');
+
+    const ofNoDraft = await transactions.executeInTransaction({}, () =>
+      repository.addLink({
+        id: randomUUID(),
+        purchaseDraftLineId: randomUUID(),
+        purchaseDraftId: draftId,
+        warehouseId: seeded.warehouseId,
+        customerOrderId,
+        statedQuantity: 10,
+      }),
+    );
+    expect(ofNoDraft).toBe('target-missing');
+
+    // Nothing was written to either draft, and the sibling's line is untouched.
+    expect(await repository.findLinks(lineOfTheOtherDraft)).toEqual([]);
     expect(await readDraft(draftId)).toMatchObject({ state: 'draft' });
   });
 
@@ -357,7 +427,9 @@ describe('PurchaseDraftAssemblyRepository', () => {
     expect(added).toBe('applied');
 
     const updated = await transactions.executeInTransaction({}, () =>
-      repository.updateLine(draftId, lineId, { orderedQuantity: 60 }),
+      repository.updateLine(scope(seeded, draftId), lineId, {
+        orderedQuantity: 60,
+      }),
     );
     expect(updated).toBe('applied');
 
@@ -374,17 +446,17 @@ describe('PurchaseDraftAssemblyRepository', () => {
     expect(linked).toBe('applied');
 
     const relinked = await transactions.executeInTransaction({}, () =>
-      repository.updateLink(draftId, linkId, 45),
+      repository.updateLink(scope(seeded, draftId), linkId, 45),
     );
     expect(relinked).toBe('applied');
 
     const unlinked = await transactions.executeInTransaction({}, () =>
-      repository.removeLink(draftId, linkId),
+      repository.removeLink(scope(seeded, draftId), linkId),
     );
     expect(unlinked).toBe('applied');
 
     const removed = await transactions.executeInTransaction({}, () =>
-      repository.removeLine(draftId, lineId),
+      repository.removeLine(scope(seeded, draftId), lineId),
     );
     expect(removed).toBe('applied');
 
@@ -443,7 +515,10 @@ describe('PurchaseDraftAssemblyRepository', () => {
 
       const updateLineApplied = await transactions.executeInTransaction(
         {},
-        () => repository.updateLine(draftId, lineId, { orderedQuantity: 99 }),
+        () =>
+          repository.updateLine(scope(seeded, draftId), lineId, {
+            orderedQuantity: 99,
+          }),
       );
       const addLinkApplied = await transactions.executeInTransaction({}, () =>
         repository.addLink({
@@ -457,15 +532,15 @@ describe('PurchaseDraftAssemblyRepository', () => {
       );
       const updateLinkApplied = await transactions.executeInTransaction(
         {},
-        () => repository.updateLink(draftId, linkId, 99),
+        () => repository.updateLink(scope(seeded, draftId), linkId, 99),
       );
       const removeLinkApplied = await transactions.executeInTransaction(
         {},
-        () => repository.removeLink(draftId, linkId),
+        () => repository.removeLink(scope(seeded, draftId), linkId),
       );
       const removeLineApplied = await transactions.executeInTransaction(
         {},
-        () => repository.removeLine(draftId, lineId),
+        () => repository.removeLine(scope(seeded, draftId), lineId),
       );
 
       expect(updateLineApplied).toBe('draft-frozen');
@@ -652,5 +727,92 @@ describe('PurchaseDraftAssemblyRepository', () => {
 
     await expect(attempt).rejects.toBeDefined();
     expect(await repository.findLinks(lineId)).toHaveLength(0);
+  });
+  // AC-11/spec.md §6.1 — the security half of the guard, at the boundary that enforces it. A member
+  // acting in one Warehouse who knows a draft id from another must not be able to write it, and the
+  // `warehouse_id` predicate that stops them lives in each write's own `WHERE` clause rather than in
+  // a check above it — so a draft that changes hands or state between a check and the write cannot
+  // slip through. Every one of these must read `target-missing`, never `draft-frozen`: a foreign
+  // draft has to be indistinguishable from one that does not exist, or the refusal itself
+  // enumerates what other Warehouses hold.
+  describe('against a Draft-state draft of another Warehouse', () => {
+    it('refuses every draft-scoped write as target-missing and changes nothing', async () => {
+      const attacker = await seedWarehouse();
+      const victim = await seedWarehouse();
+      const victimOrderId = await seedCustomerOrder(victim);
+      const draftId = await seedDraft(victim, 'draft');
+      const lineId = randomUUID();
+      const linkId = randomUUID();
+      await dataSource.manager.query(
+        `INSERT INTO purchase_draft_lines
+           (id, purchase_draft_id, warehouse_id, item_id, ordered_quantity, packaging_type_id, value_adding_note, received_quantity, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, NULL, NULL, NULL, $6, $6)`,
+        [lineId, draftId, victim.warehouseId, victim.itemId, 20, now],
+      );
+      await dataSource.manager.query(
+        `INSERT INTO purchase_draft_line_links
+           (id, purchase_draft_line_id, purchase_draft_id, warehouse_id, customer_order_id, stated_quantity, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $7)`,
+        [linkId, lineId, draftId, victim.warehouseId, victimOrderId, 20, now],
+      );
+      const before = await readDraft(draftId);
+
+      const revised = await transactions.executeInTransaction({}, () =>
+        repository.updateDraft(scope(attacker, draftId), {
+          expectedArrivalDate: '2026-09-30',
+        }),
+      );
+      const lineAdded = await transactions.executeInTransaction({}, () =>
+        repository.addLine({
+          id: randomUUID(),
+          purchaseDraftId: draftId,
+          warehouseId: attacker.warehouseId,
+          itemId: attacker.itemId,
+          orderedQuantity: 10,
+        }),
+      );
+      const lineUpdated = await transactions.executeInTransaction({}, () =>
+        repository.updateLine(scope(attacker, draftId), lineId, {
+          orderedQuantity: 99,
+        }),
+      );
+      const linkAdded = await transactions.executeInTransaction({}, () =>
+        repository.addLink({
+          id: randomUUID(),
+          purchaseDraftLineId: lineId,
+          purchaseDraftId: draftId,
+          warehouseId: attacker.warehouseId,
+          customerOrderId: victimOrderId,
+          statedQuantity: 5,
+        }),
+      );
+      const linkUpdated = await transactions.executeInTransaction({}, () =>
+        repository.updateLink(scope(attacker, draftId), linkId, 99),
+      );
+      const linkRemoved = await transactions.executeInTransaction({}, () =>
+        repository.removeLink(scope(attacker, draftId), linkId),
+      );
+      const lineRemoved = await transactions.executeInTransaction({}, () =>
+        repository.removeLine(scope(attacker, draftId), lineId),
+      );
+
+      expect(revised).toBe('target-missing');
+      expect(lineAdded).toBe('target-missing');
+      expect(lineUpdated).toBe('target-missing');
+      expect(linkAdded).toBe('target-missing');
+      expect(linkUpdated).toBe('target-missing');
+      expect(linkRemoved).toBe('target-missing');
+      expect(lineRemoved).toBe('target-missing');
+
+      // Not the Expected Arrival Date a rejected `updateDraft` would have moved, not `updated_at`,
+      // not the line or link quantities, and nothing added or deleted.
+      expect(await readDraft(draftId)).toEqual(before);
+      const lines = await repository.findLines(draftId);
+      expect(lines).toHaveLength(1);
+      expect(lines[0]).toMatchObject({ id: lineId, orderedQuantity: 20 });
+      const links = await repository.findLinks(lineId);
+      expect(links).toHaveLength(1);
+      expect(links[0]).toMatchObject({ id: linkId, statedQuantity: 20 });
+    });
   });
 });

@@ -42,10 +42,14 @@ const baseCurrent = {
   neededBy: '2026-09-30',
   state: 'unfulfilled',
   outstandingQuantity: 10,
+  // Carried by the repository read and passed through untouched: naming a Drift Signal is a value
+  // comparison between `snapshot` and `current`, never a question of when the order moved (AC-16).
+  lastChangedAt: null,
 };
 
 const draftDetailWith = (links: readonly unknown[]) => ({
   id: purchaseDraftId,
+  reference: 'PD-0143',
   state: 'ready_for_ordering',
   expectedArrivalDate: null,
   lineCount: 1,

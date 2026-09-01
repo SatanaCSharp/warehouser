@@ -36,6 +36,11 @@ export const customerOrderSchema = z.strictObject({
 // (AC-21a, AC-24).
 export const demandCoverageSchema = z.strictObject({
   purchaseDraftId: z.string().uuid(),
+  // AC-20 — "which Purchase Drafts link to it and for what quantity": the `COVERED BY` chip reads
+  // `PD-0142 · 800`, so the human reference the member knows the draft by travels with the stated
+  // quantity. An id alone answers "for what quantity" but not "which drafts" (design frame
+  // `G6jhw.png`).
+  purchaseDraftReference: z.string().min(1),
   purchaseDraftLineId: z.string().uuid(),
   purchaseDraftState: z.enum(['draft', 'ready_for_ordering']),
   statedQuantity: z.number().int().min(1),

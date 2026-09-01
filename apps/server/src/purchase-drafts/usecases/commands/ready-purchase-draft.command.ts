@@ -54,6 +54,9 @@ export class ReadyPurchaseDraftCommand {
     currentUser: AccessCurrentUser,
     purchaseDraftId: string,
   ): Promise<FrozenPurchaseDraft> {
+    // Authority itself is not decided here — `freeze`'s guarded `UPDATE` carries `warehouse_id` in
+    // its own `WHERE` clause. This read only chooses which refusal is owed and cannot become a
+    // check-then-write window.
     const header = await this.freezeRepository.findDraftHeader(purchaseDraftId);
     assert(
       header !== null && header.warehouseId === currentUser.warehouseId,
@@ -69,6 +72,7 @@ export class ReadyPurchaseDraftCommand {
     const readiedAt = this.runtime.now();
     const frozen = await this.freezeRepository.freeze({
       purchaseDraftId,
+      warehouseId: currentUser.warehouseId,
       readiedByUserId: currentUser.userId,
       readiedAt,
     });

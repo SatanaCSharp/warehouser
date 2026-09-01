@@ -17,9 +17,14 @@ export const workspaceRenameSchema = z.strictObject({
   name: z.string().max(100),
 });
 
+// The ceiling is a payload guard, not a business rule: the Workspace Permission catalogue holds
+// well under a hundred entries and a legal request never repeats one, so no caller reaches it. It
+// exists because an unbounded request array is priced by the caller — every rejected element
+// produces a validation issue the server has to normalize synchronously, ahead of any guard
+// (`apps/server/src/shared/errors/validation-field-codes.ts`).
 export const workspaceRoleWriteSchema = z.strictObject({
   name: z.string().max(100),
-  workspacePermissionIds: z.array(workspacePermissionIdSchema),
+  workspacePermissionIds: z.array(workspacePermissionIdSchema).max(100),
 });
 
 // The request body is optional: openapi.yaml marks it `required: false`

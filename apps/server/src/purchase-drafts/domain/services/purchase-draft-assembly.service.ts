@@ -12,6 +12,7 @@ import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/cus
 import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
 import { PackagingTypeCatalogueRepository } from 'shared/domain/repositories/packaging-type-catalogue.repository';
 import type { AssemblyWriteOutcome } from 'shared/domain/repositories/purchase-draft-assembly.repository';
+import { isSelectableItem } from 'shared/predicates/item-availability.predicates';
 
 // The two ways a guarded assembly write can affect no row, mapped to the two refusals openapi.yaml
 // documents for these routes: 409 `PurchaseDraftWriteConflict` when the draft is no longer in the
@@ -66,15 +67,23 @@ export class PurchaseDraftAssemblyService {
     private readonly packagingTypeCatalogueRepository: PackagingTypeCatalogueRepository,
   ) {}
 
-  // AC-11 — the named Item is resolved within the acting Warehouse; one belonging to another
-  // resolves to nothing and is refused exactly as a missing one is.
+  // AC-11/AC-06d — the named Item is resolved within the acting Warehouse **and only while it is
+  // still active**; one belonging to another Warehouse, one that has been deactivated and one that
+  // does not exist are all refused on the same non-enumerating terms, so the refusal never
+  // discloses which of the three it was (spec.md §6.1).
+  //
+  // Deactivation reaches this check because every caller states an `itemId` it is about to record
+  // as a new reference. A line that already names an Item deactivated afterwards is untouched —
+  // `RevisePurchaseDraftLineCommand` only calls this when the member restates `itemId`, so
+  // re-quantifying such a line, changing its Pre-receipt Requirement, linking it or removing it all
+  // keep working, exactly as AC-06d requires.
   async assertItemAvailable(
     currentUser: AccessCurrentUser,
     itemId: string,
   ): Promise<void> {
     const item = await this.itemCatalogueRepository.findById(itemId);
     assert(
-      item !== null && item.warehouseId === currentUser.warehouseId,
+      isSelectableItem(item, currentUser.warehouseId),
       purchaseDraftTargetUnavailableError(),
     );
   }

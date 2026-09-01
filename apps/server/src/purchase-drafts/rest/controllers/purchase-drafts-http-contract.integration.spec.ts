@@ -6,6 +6,10 @@ import { randomUUID } from 'node:crypto';
 
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import {
+  purchaseDraftDetailSchema,
+  purchaseDraftSummarySchema,
+} from '@warehouser/contracts/purchase-drafts';
 import { AppModule } from 'app.module';
 import { digestSessionSecret } from 'auth/domain/security/session-secret';
 import { AUTH_SESSION_COOKIE } from 'auth/rest/auth-cookie';
@@ -29,6 +33,9 @@ import { GlobalHttpExceptionFilter } from 'shared/errors/global-http-exception.f
 // `chk_warehouses_archival_order` and `chk_purchase_drafts_readiness_attribution` both compare
 // against `created_at`, so seeding and archival/freeze share one instant.
 const seededAt = new Date('2026-08-25T09:00:00.000Z');
+// When a seeded Customer Order moved, for the scenarios that move one. Later than `seededAt`, which
+// is what makes it a change rather than the row's own creation (AC-16 `lastChangedAt`).
+const movedAt = new Date('2026-08-27T14:20:00.000Z');
 
 const calendarDaysFromToday = (days: number): string =>
   new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
@@ -248,7 +255,8 @@ describe('purchase-drafts HTTP contract', () => {
   // across actors in a test — seeding a `:WATCH` actor after a `:CREATE` one would hand `:WATCH` to
   // the `:CREATE` actor too, and AC-22's whole point is that a Role carrying one Permission is
   // denied the others. A denial assertion against a shared Role can only ever pass by accident.
-  const seedActor = async (
+  const seedActorIn = async (
+    actorWarehouseId: string,
     permissionIds: readonly string[],
   ): Promise<{ userId: string; cookie: string }> => {
     const userId = randomUUID();
@@ -256,7 +264,7 @@ describe('purchase-drafts HTTP contract', () => {
     await seedIdentity(userId, `member.${userId}@example.test`);
     await dataSource.manager.getRepository(RoleEntity).insert({
       id: actorRoleId,
-      warehouseId,
+      warehouseId: actorWarehouseId,
       name: `Role ${actorRoleId}`,
       kind: 'custom',
       createdAt: seededAt,
@@ -265,9 +273,14 @@ describe('purchase-drafts HTTP contract', () => {
     if (permissionIds.length > 0) {
       await grantPermissions(actorRoleId, permissionIds);
     }
-    await seedMembership(userId, warehouseId, actorRoleId);
+    await seedMembership(userId, actorWarehouseId, actorRoleId);
     return { userId, cookie: await seedSessionCookie(userId) };
   };
+
+  const seedActor = (
+    permissionIds: readonly string[],
+  ): Promise<{ userId: string; cookie: string }> =>
+    seedActorIn(warehouseId, permissionIds);
 
   const seedItem = async (
     overrides: Partial<{
@@ -311,6 +324,7 @@ describe('purchase-drafts HTTP contract', () => {
       neededBy: string;
       state: 'unfulfilled' | 'fulfilled' | 'cancelled';
       recordedByUserId: string;
+      updatedAt: Date;
     }> = {},
   ): Promise<string> => {
     const id = overrides.id ?? randomUUID();
@@ -334,7 +348,9 @@ describe('purchase-drafts HTTP contract', () => {
       cancelledByUserId: cancelled ? recordedByUserId : null,
       cancelledAt: cancelled ? seededAt : null,
       createdAt: seededAt,
-      updatedAt: seededAt,
+      // Left equal to `created_at` unless the scenario says the order moved, which is what
+      // `LinkedCustomerOrderState.lastChangedAt` projects (AC-16).
+      updatedAt: overrides.updatedAt ?? seededAt,
     });
     return id;
   };
@@ -590,6 +606,88 @@ describe('purchase-drafts HTTP contract', () => {
       // The creator holds only `:CREATE`, not `:WATCH` — AC-22's "continues to read the drafts
       // their Role does permit" cuts both ways: no Permission, no read either.
       expect(deniedList.status).toBe(403);
+    });
+
+    // The web validates every response against these exact schemas and turns any parse failure
+    // into `api.unexpected`; the list is validated as a whole array, so a single malformed draft
+    // blanks the entire Purchase Drafts screen. Asserting the shared schemas here — rather than a
+    // hand-written `toMatchObject` — is what makes that class of failure impossible to ship: it
+    // covers `expectedArrivalDate` being a calendar day rather than a shifted date-time (AC-10)
+    // and `reference` being present on both projections.
+    it('answers the list and the detail in the exact shape the shared contract accepts (AC-10, AC-16a)', async () => {
+      await seedWarehouses();
+      const itemId = await seedItem();
+      const movedOrderId = await seedCustomerOrder(itemId, {
+        quantity: 100,
+        updatedAt: movedAt,
+      });
+      const untouchedOrderId = await seedCustomerOrder(itemId, {
+        quantity: 40,
+      });
+      const actor = await seedActor([
+        PURCHASE_DRAFTS_CREATE,
+        PURCHASE_DRAFTS_WATCH,
+      ]);
+      const created = await request(
+        'POST',
+        purchaseDraftsPath(warehouseId),
+        actor.cookie,
+        {
+          expectedArrivalDate: '2026-09-25',
+          lines: [
+            {
+              itemId,
+              orderedQuantity: 10,
+              links: [
+                { customerOrderId: movedOrderId, statedQuantity: 6 },
+                { customerOrderId: untouchedOrderId, statedQuantity: 4 },
+              ],
+            },
+          ],
+        },
+      );
+      const draftId = (created.body as { id: string }).id;
+
+      const list = await request(
+        'GET',
+        purchaseDraftsPath(warehouseId),
+        actor.cookie,
+      );
+      const single = await request(
+        'GET',
+        `${purchaseDraftsPath(warehouseId)}/${draftId}`,
+        actor.cookie,
+      );
+
+      const summaries = purchaseDraftSummarySchema.array().parse(list.body);
+      const detail = purchaseDraftDetailSchema.parse(single.body);
+
+      expect(summaries).toHaveLength(1);
+      expect(summaries[0]?.expectedArrivalDate).toBe('2026-09-25');
+      expect(detail.expectedArrivalDate).toBe('2026-09-25');
+      expect(detail.reference).toMatch(/^PD-\d{4,}$/u);
+      expect(summaries[0]?.reference).toBe(detail.reference);
+      // The draft the creation answered with names the same draft as the reads do.
+      expect(purchaseDraftDetailSchema.parse(created.body).reference).toBe(
+        detail.reference,
+      );
+
+      // AC-16 — `lastChangedAt` is what dates a drift statement (`Cancelled on 24 Aug`,
+      // design frame `F0SpRx.png`). Parsing it through `purchaseDraftDetailSchema` above is the
+      // assertion that matters: `z.string().datetime()` refuses a timestamp carrying the session's
+      // own UTC offset instead of a `Z`, which is what an uncast `timestamptz` inside
+      // `json_build_object` would produce. An order still standing as it was recorded reports no
+      // moment rather than its creation time.
+      const linkFor = (
+        customerOrderId: string,
+      ): (typeof detail.lines)[number]['links'][number] | undefined =>
+        detail.lines
+          .flatMap((line) => line.links)
+          .find((link) => link.customerOrderId === customerOrderId);
+      expect(linkFor(movedOrderId)?.current.lastChangedAt).toBe(
+        movedAt.toISOString(),
+      );
+      expect(linkFor(untouchedOrderId)?.current.lastChangedAt).toBeNull();
     });
 
     it('still reads Purchase Drafts of an archived Warehouse with a watch Permission (AC-23)', async () => {
@@ -1148,6 +1246,262 @@ describe('purchase-drafts HTTP contract', () => {
 
       expect(status).toBe(403);
       expect(body).toMatchObject({ code: 'access.denied' });
+    });
+  });
+
+  // -- openapi.yaml `PurchaseDraftTargetUnavailable`, the `unknownLine` example -------------------
+
+  describe('POST /api/v1/warehouses/:warehouseId/purchase-drafts/:purchaseDraftId/lines/:lineId/links', () => {
+    // `purchaseDraftLineId` is caller-supplied and reaches the INSERT as half of
+    // `fk_purchase_draft_line_links_line`'s composite reference. Unchecked, a line belonging to a
+    // sibling draft raised a `QueryFailedError` the global filter could only answer 500
+    // `system.internal_error` with — where openapi.yaml declares 404 and carries an `unknownLine`
+    // example written for exactly this case.
+    it('answers 404 target_unavailable for a line of another draft, never 500 (openapi.yaml unknownLine)', async () => {
+      await seedWarehouses();
+      const itemId = await seedItem();
+      const orderId = await seedCustomerOrder(itemId, { quantity: 100 });
+      const actor = await seedActor([
+        PURCHASE_DRAFTS_CREATE,
+        PURCHASE_DRAFTS_UPDATE,
+        PURCHASE_DRAFTS_WATCH,
+      ]);
+      const target = await request(
+        'POST',
+        purchaseDraftsPath(warehouseId),
+        actor.cookie,
+        { lines: [{ itemId, orderedQuantity: 10 }] },
+      );
+      const sibling = await request(
+        'POST',
+        purchaseDraftsPath(warehouseId),
+        actor.cookie,
+        { lines: [{ itemId, orderedQuantity: 20 }] },
+      );
+      const targetDraftId = (target.body as { id: string }).id;
+      const siblingLineId = (sibling.body as { lines: { id: string }[] })
+        .lines[0].id;
+
+      const ofASiblingDraft = await request(
+        'POST',
+        `${purchaseDraftsPath(warehouseId)}/${targetDraftId}/lines/${siblingLineId}/links`,
+        actor.cookie,
+        { customerOrderId: orderId, statedQuantity: 5 },
+      );
+      const ofNoDraft = await request(
+        'POST',
+        `${purchaseDraftsPath(warehouseId)}/${targetDraftId}/lines/${randomUUID()}/links`,
+        actor.cookie,
+        { customerOrderId: orderId, statedQuantity: 5 },
+      );
+
+      expect(ofASiblingDraft.status).toBe(404);
+      expect(ofASiblingDraft.body).toMatchObject({
+        code: 'purchase_drafts.target_unavailable',
+      });
+      // A line that exists on a sibling draft and a line id that names nothing answer identically,
+      // so the refusal does not disclose that the line exists elsewhere.
+      expect(ofASiblingDraft.status).toBe(ofNoDraft.status);
+      expect(ofASiblingDraft.body).toEqual(ofNoDraft.body);
+
+      // Neither draft gained a link.
+      const siblingAfter = await request(
+        'GET',
+        `${purchaseDraftsPath(warehouseId)}/${(sibling.body as { id: string }).id}`,
+        actor.cookie,
+      );
+      expect(
+        (siblingAfter.body as { lines: { links: unknown[] }[] }).lines[0].links,
+      ).toEqual([]);
+    });
+  });
+
+  // -- spec.md §6.1 "Cross-Warehouse demand reach" — the headline claim of the scoping work -------
+
+  describe('a Purchase Draft of another Warehouse (spec.md §6.1)', () => {
+    // The claim the whole scoping change rests on is not "a foreign draft is refused" — it is that
+    // the refusal is *indistinguishable* from the one a draft id naming nothing at all produces. A
+    // member holding `PURCHASE_DRAFTS:UPDATE` in Warehouse A who learns a Warehouse B draft id must
+    // not be able to tell, from any answer this API gives, that the draft exists. Status alone does
+    // not prove that: a differing `code` or `message` in the body enumerates just as effectively,
+    // so both halves are compared. Asserted per route rather than once, because each route reaches
+    // its guard by its own path — some through the guarded `UPDATE`'s own `WHERE`, some through a
+    // command's pre-read — and a regression would land on one of them, not all.
+    it('refuses every mutation exactly as it refuses a draft that does not exist', async () => {
+      await seedWarehouses();
+
+      // Warehouse B assembles a real draft, through its own member, with a line and a link.
+      const foreignActor = await seedActorIn(otherWarehouseId, [
+        PURCHASE_DRAFTS_CREATE,
+        PURCHASE_DRAFTS_WATCH,
+      ]);
+      const foreignItemId = await seedItem({ warehouseId: otherWarehouseId });
+      const foreignOrderId = await seedCustomerOrder(foreignItemId, {
+        warehouseId: otherWarehouseId,
+      });
+      const foreignDraft = await request(
+        'POST',
+        purchaseDraftsPath(otherWarehouseId),
+        foreignActor.cookie,
+        {
+          lines: [
+            {
+              itemId: foreignItemId,
+              orderedQuantity: 10,
+              links: [{ customerOrderId: foreignOrderId, statedQuantity: 4 }],
+            },
+          ],
+        },
+      );
+      expect(foreignDraft.status).toBe(201);
+      const foreignDetail = foreignDraft.body as {
+        id: string;
+        lines: { id: string; links: { id: string }[] }[];
+      };
+      const foreign = {
+        draftId: foreignDetail.id,
+        lineId: foreignDetail.lines[0].id,
+        linkId: foreignDetail.lines[0].links[0].id,
+      };
+      const missing = {
+        draftId: randomUUID(),
+        lineId: randomUUID(),
+        linkId: randomUUID(),
+      };
+
+      // Warehouse A's member holds every write Permission these routes require — the refusal under
+      // test has to be the scoping one, never an authorization one.
+      const actor = await seedActor([
+        PURCHASE_DRAFTS_UPDATE,
+        PURCHASE_DRAFTS_READY,
+        PURCHASE_DRAFTS_CLOSE,
+        PURCHASE_DRAFTS_DISCARD,
+      ]);
+      // Every Item and Customer Order named below belongs to Warehouse A, so each request passes
+      // its own availability checks and is refused for the draft alone.
+      const itemId = await seedItem();
+      const orderId = await seedCustomerOrder(itemId, { quantity: 100 });
+      const base = purchaseDraftsPath(warehouseId);
+
+      const routes = (target: {
+        draftId: string;
+        lineId: string;
+        linkId: string;
+      }): { name: string; method: string; path: string; body?: unknown }[] => [
+        {
+          name: 'PATCH /:draftId',
+          method: 'PATCH',
+          path: `${base}/${target.draftId}`,
+          body: { expectedArrivalDate: calendarDaysFromToday(10) },
+        },
+        {
+          name: 'POST /:draftId/lines',
+          method: 'POST',
+          path: `${base}/${target.draftId}/lines`,
+          body: { itemId, orderedQuantity: 5 },
+        },
+        {
+          name: 'PATCH /:draftId/lines/:lineId',
+          method: 'PATCH',
+          path: `${base}/${target.draftId}/lines/${target.lineId}`,
+          body: { orderedQuantity: 7 },
+        },
+        {
+          name: 'DELETE /:draftId/lines/:lineId',
+          method: 'DELETE',
+          path: `${base}/${target.draftId}/lines/${target.lineId}`,
+        },
+        {
+          name: 'POST /:draftId/lines/:lineId/links',
+          method: 'POST',
+          path: `${base}/${target.draftId}/lines/${target.lineId}/links`,
+          body: { customerOrderId: orderId, statedQuantity: 3 },
+        },
+        {
+          name: 'PATCH /:draftId/lines/:lineId/links/:linkId',
+          method: 'PATCH',
+          path: `${base}/${target.draftId}/lines/${target.lineId}/links/${target.linkId}`,
+          body: { statedQuantity: 2 },
+        },
+        {
+          name: 'DELETE /:draftId/lines/:lineId/links/:linkId',
+          method: 'DELETE',
+          path: `${base}/${target.draftId}/lines/${target.lineId}/links/${target.linkId}`,
+        },
+        {
+          name: 'POST /:draftId/readiness',
+          method: 'POST',
+          path: `${base}/${target.draftId}/readiness`,
+        },
+        {
+          name: 'POST /:draftId/closure',
+          method: 'POST',
+          path: `${base}/${target.draftId}/closure`,
+          body: { closureReason: 'The supplier cannot fulfil the order' },
+        },
+        {
+          name: 'DELETE /:draftId',
+          method: 'DELETE',
+          path: `${base}/${target.draftId}`,
+        },
+      ];
+
+      const foreignRoutes = routes(foreign);
+      const missingRoutes = routes(missing);
+      const answers: {
+        name: string;
+        onForeign: { status: number; body: unknown };
+        onMissing: { status: number; body: unknown };
+      }[] = [];
+
+      for (const [index, route] of foreignRoutes.entries()) {
+        const onForeign = await request(
+          route.method,
+          route.path,
+          actor.cookie,
+          route.body,
+        );
+        const absent = missingRoutes[index];
+        const onMissing = await request(
+          absent.method,
+          absent.path,
+          actor.cookie,
+          absent.body,
+        );
+        answers.push({ name: route.name, onForeign, onMissing });
+      }
+
+      for (const answer of answers) {
+        expect({
+          route: answer.name,
+          status: answer.onForeign.status,
+          body: answer.onForeign.body,
+        }).toEqual({
+          route: answer.name,
+          status: answer.onMissing.status,
+          body: answer.onMissing.body,
+        });
+        // And the shared answer is the non-enumerating one, not an incidental 500 or a refusal
+        // that names the draft's real state.
+        expect(answer.onForeign.status).toBe(404);
+        expect(answer.onForeign.body).toEqual({
+          code: 'purchase_drafts.target_unavailable',
+          message: expect.any(String),
+        });
+      }
+
+      // Nothing reached Warehouse B: its draft is still the Draft-state draft it assembled.
+      const untouched = await request(
+        'GET',
+        `${purchaseDraftsPath(otherWarehouseId)}/${foreign.draftId}`,
+        foreignActor.cookie,
+      );
+      expect(untouched.status).toBe(200);
+      expect(untouched.body).toMatchObject({
+        id: foreign.draftId,
+        state: 'draft',
+        lines: [expect.objectContaining({ orderedQuantity: 10 })],
+      });
     });
   });
 

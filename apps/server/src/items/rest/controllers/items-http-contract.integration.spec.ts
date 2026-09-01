@@ -2,14 +2,18 @@ import { randomUUID } from 'node:crypto';
 
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { itemSchema } from '@warehouser/contracts/items';
 import { AppModule } from 'app.module';
 import { digestSessionSecret } from 'auth/domain/security/session-secret';
 import { AUTH_SESSION_COOKIE } from 'auth/rest/auth-cookie';
 import { ZodValidationPipe } from 'nestjs-zod';
 import dataSource from 'shared/database/data-source';
 import { AccountEntity } from 'shared/domain/entities/account.entity';
+import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
 import { ItemEntity } from 'shared/domain/entities/item.entity';
 import { PermissionEntity } from 'shared/domain/entities/permission.entity';
+import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
+import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity';
 import { RoleEntity } from 'shared/domain/entities/role.entity';
 import { RolePermissionEntity } from 'shared/domain/entities/role-permission.entity';
 import { SessionEntity } from 'shared/domain/entities/session.entity';
@@ -258,6 +262,69 @@ describe('items HTTP contract', () => {
     return id;
   };
 
+  /** AC-06c — one Customer Order naming the Item, which is one of the two things that fix its
+   * SKU. `chk_customer_orders_state_outstanding` requires an Unfulfilled order to still be waiting
+   * for something. */
+  const seedNamingCustomerOrder = async (
+    itemId: string,
+    recordedByUserId: string,
+  ): Promise<void> => {
+    await dataSource.manager.getRepository(CustomerOrderEntity).insert({
+      id: randomUUID(),
+      warehouseId,
+      itemId,
+      customerName: 'Test Customer North',
+      quantity: 100,
+      outstandingQuantity: 100,
+      neededBy: '2026-09-30',
+      state: 'unfulfilled',
+      cancellationReason: null,
+      recordedByUserId,
+      cancelledByUserId: null,
+      cancelledAt: null,
+      createdAt: now,
+      updatedAt: now,
+    });
+  };
+
+  /** AC-06c — the other thing that fixes a SKU: a Purchase Draft Line naming the Item. */
+  const seedNamingPurchaseDraftLine = async (
+    itemId: string,
+    createdByUserId: string,
+  ): Promise<void> => {
+    const purchaseDraftId = randomUUID();
+    await dataSource.manager.getRepository(PurchaseDraftEntity).insert({
+      id: purchaseDraftId,
+      warehouseId,
+      state: 'draft',
+      expectedArrivalDate: null,
+      createdByUserId,
+      readiedByUserId: null,
+      readiedAt: null,
+      closedByUserId: null,
+      closedAt: null,
+      closureReason: null,
+      arrivalConfirmedByUserId: null,
+      arrivalConfirmedAt: null,
+      discardedByUserId: null,
+      discardedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    });
+    await dataSource.manager.getRepository(PurchaseDraftLineEntity).insert({
+      id: randomUUID(),
+      purchaseDraftId,
+      warehouseId,
+      itemId,
+      orderedQuantity: 10,
+      packagingTypeId: null,
+      valueAddingNote: null,
+      receivedQuantity: null,
+      createdAt: now,
+      updatedAt: now,
+    });
+  };
+
   const request = async (
     method: string,
     path: string,
@@ -297,6 +364,103 @@ describe('items HTTP contract', () => {
       expect(body).toEqual([
         expect.objectContaining({ sku: 'TEST-SKU-0001', description: 'Cable' }),
       ]);
+    });
+
+    // The web validates the whole Items array against this exact schema and turns any parse
+    // failure into `api.unexpected`, blanking the Items screen — so asserting the shared schema
+    // here, rather than a hand-written `toMatchObject`, is what makes that class of failure
+    // impossible to ship. It covers the two facts the Items table cannot be drawn without: what
+    // names the Item (AC-06c — `Named by 3 customer orders and 1 draft line`, and the
+    // still-correctable case) and who recorded the latest count (AC-08 — `24 Aug · cycle count ·
+    // by you`).
+    it('answers the list in the exact shape the shared contract accepts, stating what names each Item and who last counted it (AC-06c, AC-08)', async () => {
+      await seedWarehouses();
+      const actor = await seedActor([ITEMS_WATCH, ITEM_STOCK_ADJUST]);
+      const namedItemId = await seedItem({ sku: 'TEST-SKU-0001' });
+      const unnamedItemId = await seedItem({ sku: 'TEST-SKU-0002' });
+      await seedNamingCustomerOrder(namedItemId, actor.userId);
+      await seedNamingCustomerOrder(namedItemId, actor.userId);
+      await seedNamingCustomerOrder(namedItemId, actor.userId);
+      await seedNamingPurchaseDraftLine(namedItemId, actor.userId);
+      await request(
+        'POST',
+        `/api/v1/warehouses/${warehouseId}/items/${namedItemId}/on-hand-adjustments`,
+        actor.cookie,
+        { countedQuantity: 60, reason: 'Cycle count' },
+      );
+
+      const { status, body } = await request(
+        'GET',
+        `/api/v1/warehouses/${warehouseId}/items`,
+        actor.cookie,
+      );
+
+      expect(status).toBe(200);
+      const items = itemSchema.array().parse(body);
+      const named = items.find((item) => item.id === namedItemId);
+      const unnamed = items.find((item) => item.id === unnamedItemId);
+
+      expect(named).toMatchObject({
+        namingCustomerOrderCount: 3,
+        namingPurchaseDraftLineCount: 1,
+      });
+      expect(named?.latestAdjustment).toMatchObject({
+        countedQuantity: 60,
+        reason: 'Cycle count',
+        // AC-08 — the acting member travels with the reason and the time, so the reader can be
+        // told the count is one they made themselves.
+        adjustedByUserId: actor.userId,
+      });
+      // AC-06c — nothing names it, so the Items table may still offer the SKU correction.
+      expect(unnamed).toMatchObject({
+        namingCustomerOrderCount: 0,
+        namingPurchaseDraftLineCount: 0,
+        latestAdjustment: null,
+      });
+    });
+
+    // AC-06c — the counts the Items table renders and the rule the correction is refused with are
+    // one rule, so an Item the table reports as named cannot have its SKU corrected, and an Item
+    // it reports as unnamed can. Asserting both halves against one HTTP surface is what stops the
+    // display and the enforcement drifting apart.
+    it('permits the SKU correction exactly while the naming counts are zero (AC-06c)', async () => {
+      await seedWarehouses();
+      const actor = await seedActor([ITEMS_WATCH, ITEMS_UPDATE]);
+      const namedItemId = await seedItem({ sku: 'TEST-SKU-0001' });
+      const unnamedItemId = await seedItem({ sku: 'TEST-SKU-0002' });
+      await seedNamingCustomerOrder(namedItemId, actor.userId);
+
+      const listed = await request(
+        'GET',
+        `/api/v1/warehouses/${warehouseId}/items`,
+        actor.cookie,
+      );
+      const items = itemSchema.array().parse(listed.body);
+      const refused = await request(
+        'PATCH',
+        `/api/v1/warehouses/${warehouseId}/items/${namedItemId}`,
+        actor.cookie,
+        { sku: 'TEST-SKU-CORRECTED-1' },
+      );
+      const accepted = await request(
+        'PATCH',
+        `/api/v1/warehouses/${warehouseId}/items/${unnamedItemId}`,
+        actor.cookie,
+        { sku: 'TEST-SKU-CORRECTED-2' },
+      );
+
+      expect(
+        items.find((item) => item.id === namedItemId)?.namingCustomerOrderCount,
+      ).toBe(1);
+      expect(refused.status).toBe(409);
+      expect(refused.body).toMatchObject({ code: 'items.sku_fixed' });
+
+      expect(
+        items.find((item) => item.id === unnamedItemId)
+          ?.namingCustomerOrderCount,
+      ).toBe(0);
+      expect(accepted.status).toBe(200);
+      expect(itemSchema.parse(accepted.body).sku).toBe('TEST-SKU-CORRECTED-2');
     });
 
     it('denies a read to an actor without ITEMS:WATCH', async () => {

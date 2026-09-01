@@ -41,6 +41,9 @@ import {
 import { PostgresQueryRunner } from 'typeorm/driver/postgres/PostgresQueryRunner';
 
 const now = new Date('2026-08-26T10:00:00.000Z');
+// When a seeded Customer Order moved, for the scenarios that move one. Later than `now`, which is
+// what makes it a change rather than the row's own creation.
+const movedAt = new Date('2026-08-28T09:15:00.000Z');
 
 // openapi.yaml `DemandSnapshotEntry`.
 interface SnapshotRead {
@@ -55,6 +58,7 @@ interface CurrentDemandRead {
   readonly neededBy: string;
   readonly state: string;
   readonly outstandingQuantity: number;
+  readonly lastChangedAt: string | null;
 }
 
 // openapi.yaml `ArrivalAllocation`.
@@ -94,6 +98,7 @@ interface LineRead {
 // repository's business).
 interface DraftSummaryRead {
   readonly id: string;
+  readonly reference: string;
   readonly state: string;
   readonly expectedArrivalDate: string | null;
   readonly lineCount: number;
@@ -216,6 +221,7 @@ const seedCustomerOrder = async (
     cancellationReason?: string | null;
     cancelledByUserId?: string | null;
     cancelledAt?: Date | null;
+    updatedAt?: Date;
   } = {},
 ): Promise<string> => {
   const id = randomUUID();
@@ -234,7 +240,11 @@ const seedCustomerOrder = async (
     cancelledByUserId: overrides.cancelledByUserId ?? null,
     cancelledAt: overrides.cancelledAt ?? null,
     createdAt: now,
-    updatedAt: now,
+    // Every write path that moves a Customer Order sets `updated_at` to the moment of the move
+    // (`customer-order-lifecycle.repository.ts`, `demand-allocation.repository.ts`); the insert
+    // leaves it equal to `created_at`. A scenario that moved the order says so, so `lastChangedAt`
+    // is exercised against the value the production writers would have left.
+    updatedAt: overrides.updatedAt ?? now,
   });
   return id;
 };
@@ -247,6 +257,7 @@ const seedPurchaseDraft = async (
   createdByUserId: string,
   state: PurchaseDraftState,
   createdAt: Date = now,
+  expectedArrivalDate: string | null = null,
 ): Promise<string> => {
   const id = randomUUID();
   const isClosedByReason = state === 'closed';
@@ -255,7 +266,7 @@ const seedPurchaseDraft = async (
     id,
     warehouseId,
     state,
-    expectedArrivalDate: null,
+    expectedArrivalDate,
     createdByUserId,
     readiedByUserId: isReadied ? createdByUserId : null,
     readiedAt: isReadied ? createdAt : null,
@@ -452,12 +463,14 @@ const registerReadDraftDriftDataTests = (): void => {
       state: 'cancelled',
       cancellationReason: 'Customer changed their mind',
       cancelledByUserId: userId,
-      cancelledAt: now,
+      cancelledAt: movedAt,
+      updatedAt: movedAt,
     });
     const requantifiedLinkId = await seedScenario({
       quantity: 25, // captured at 10, now 25
       outstandingQuantity: 25,
       neededBy: '2026-09-30',
+      updatedAt: movedAt,
     });
     const rescheduledLinkId = await seedScenario({
       quantity: 10,
@@ -478,20 +491,30 @@ const registerReadDraftDriftDataTests = (): void => {
       capturedNeededBy: '2026-09-30',
       capturedState: 'unfulfilled',
     });
+    // AC-16 — `lastChangedAt` is what dates the drift statement the frame draws ("Cancelled on
+    // 24 Aug", `F0SpRx.png`). It travels as UTC ISO 8601 with a `Z`, not with the session's own
+    // offset, because `z.string().datetime()` admits nothing else.
     expect(cancelledLink?.current).toEqual({
       quantity: 10,
       neededBy: '2026-09-30',
       state: 'cancelled',
       outstandingQuantity: 10,
+      lastChangedAt: '2026-08-28T09:15:00.000Z',
     });
 
     const requantifiedLink = findLink(detail, requantifiedLinkId);
     expect(requantifiedLink?.current.quantity).toBe(25);
     expect(requantifiedLink?.snapshot?.capturedQuantity).toBe(10);
+    expect(requantifiedLink?.current.lastChangedAt).toBe(
+      '2026-08-28T09:15:00.000Z',
+    );
 
     const rescheduledLink = findLink(detail, rescheduledLinkId);
     expect(rescheduledLink?.current.neededBy).toBe('2026-10-20');
     expect(rescheduledLink?.snapshot?.capturedNeededBy).toBe('2026-09-30');
+    // The needed-by scenario seeds no `updatedAt`, so the row still stands as it was recorded and
+    // has no moment to report — the read must not offer the creation time as one.
+    expect(rescheduledLink?.current.lastChangedAt).toBeNull();
   });
 
   // AC-16 — became Fulfilled through the arrival of a different draft, and the amended-then-put-
@@ -945,6 +968,114 @@ const registerListStateFilterAndOrderingTests = (): void => {
   });
 };
 
+// Flips `process.env.TZ` around a read. Under node-postgres this is what reproduces the failure —
+// its `date` parser builds a JS `Date` at local midnight, so the offset decides which calendar day
+// comes back. These tests run on PGlite, whose JS-side parser does not do that, so the flip is
+// documentation of the production hazard rather than a reproduction of it here.
+const withTimeZone = async <T>(
+  timeZone: string,
+  run: () => Promise<T>,
+): Promise<T> => {
+  const previous = process.env.TZ;
+  process.env.TZ = timeZone;
+  try {
+    return await run();
+  } finally {
+    process.env.TZ = previous;
+  }
+};
+
+const registerExpectedArrivalDateTests = (): void => {
+  // AC-10 / openapi.yaml `expectedArrivalDate` — a calendar day, never an instant. Both reads here
+  // project the column through a raw query, which bypasses the entity's `@Column('date')` mapping,
+  // so without the SQL cast the driver decodes it into a JS `Date`: against node-postgres that is
+  // midnight in the server's own timezone, and at UTC+2 `2026-09-25` leaves the API as
+  // `"2026-09-24T22:00:00.000Z"` — the wrong calendar day *and* the wrong shape, which
+  // `purchaseDraftSummarySchema`'s `z.string().date()` refuses. Because the list endpoint validates
+  // the whole array, one such draft blanks the entire screen.
+  //
+  // What this test actually pins is the *shape*: `typeof === 'string'`, on both reads. It runs on
+  // PGlite, whose JS-side `date` parser does not construct a local-midnight `Date` the way
+  // node-postgres does, so it cannot demonstrate the timezone half of the failure and does not
+  // claim to. The `withTimeZone` wrapper is there so the assertion holds under a non-UTC offset
+  // too, not as evidence that the offset is what would have broken it.
+  it('reads the Expected Arrival Date as the stored calendar day on both reads, as a string', async () => {
+    const workspaceId = await seedWorkspace();
+    const warehouseId = await seedWarehouse(workspaceId);
+    const userId = await seedUser(workspaceId);
+
+    const datedDraftId = await seedPurchaseDraft(
+      warehouseId,
+      userId,
+      'draft',
+      now,
+      '2026-09-25',
+    );
+
+    const { rows, detail } = await withTimeZone('Europe/Kyiv', async () => ({
+      rows: await repository.listDrafts(warehouseId),
+      detail: await repository.readDraft(datedDraftId, warehouseId),
+    }));
+
+    const datedRow = rows.find((row) => row.id === datedDraftId);
+
+    expect(typeof datedRow?.expectedArrivalDate).toBe('string');
+    expect(datedRow?.expectedArrivalDate).toBe('2026-09-25');
+    expect(typeof detail?.expectedArrivalDate).toBe('string');
+    expect(detail?.expectedArrivalDate).toBe('2026-09-25');
+  });
+
+  // Left unstated while the member has not yet spoken to the supplier (AC-10): the cast must not
+  // turn a missing date into a string.
+  it('leaves an unstated Expected Arrival Date null on both reads', async () => {
+    const workspaceId = await seedWorkspace();
+    const warehouseId = await seedWarehouse(workspaceId);
+    const userId = await seedUser(workspaceId);
+    const undatedDraftId = await seedPurchaseDraft(
+      warehouseId,
+      userId,
+      'draft',
+    );
+
+    const rows = await repository.listDrafts(warehouseId);
+    const detail = await repository.readDraft(undatedDraftId, warehouseId);
+
+    expect(rows[0]?.expectedArrivalDate).toBeNull();
+    expect(detail?.expectedArrivalDate).toBeNull();
+  });
+};
+
+const registerReferenceTests = (): void => {
+  // The design frames name every draft `PD-0143` on its list card and in its detail header
+  // (`previews/yGhkK.png`), so both reads must carry the reference the database minted. Nothing
+  // supplies it on insert — `purchase_drafts.reference` has a column DEFAULT over
+  // `purchase_draft_reference_seq` (`1786600200000-AddPurchaseDraftReference.ts`) — so this also
+  // proves the default is what produces it.
+  it('reads the database-minted human reference on both reads, distinct per draft', async () => {
+    const workspaceId = await seedWorkspace();
+    const warehouseId = await seedWarehouse(workspaceId);
+    const userId = await seedUser(workspaceId);
+
+    const firstDraftId = await seedPurchaseDraft(warehouseId, userId, 'draft');
+    const secondDraftId = await seedPurchaseDraft(warehouseId, userId, 'draft');
+
+    const rows = await repository.listDrafts(warehouseId);
+    const detail = await repository.readDraft(firstDraftId, warehouseId);
+
+    const firstReference = rows.find(
+      (row) => row.id === firstDraftId,
+    )?.reference;
+    const secondReference = rows.find(
+      (row) => row.id === secondDraftId,
+    )?.reference;
+
+    expect(firstReference).toMatch(/^PD-\d{4,}$/u);
+    expect(secondReference).toMatch(/^PD-\d{4,}$/u);
+    expect(firstReference).not.toBe(secondReference);
+    expect(detail?.reference).toBe(firstReference);
+  });
+};
+
 const registerHasDriftSignalInvariantTests = (): void => {
   // The list's `hasDriftSignal` and the read's per-link `driftSignals` are two views of exactly
   // the same four named conditions (openapi.yaml `DriftSignalKind`); they must never disagree,
@@ -1020,5 +1151,7 @@ describe('PurchaseDraftReadRepository', () => {
   registerWarehouseScopingTests();
   registerNonFanOutTests();
   registerListStateFilterAndOrderingTests();
+  registerExpectedArrivalDateTests();
+  registerReferenceTests();
   registerHasDriftSignalInvariantTests();
 });

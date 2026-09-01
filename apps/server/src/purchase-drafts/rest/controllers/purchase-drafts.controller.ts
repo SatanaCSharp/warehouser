@@ -63,6 +63,7 @@ const toSummaryResponse = (
   summary: PurchaseDraftDetailWithDrift,
 ): PurchaseDraftSummary => ({
   id: summary.id,
+  reference: summary.reference,
   state: summary.state as PurchaseDraftSummary['state'],
   expectedArrivalDate: summary.expectedArrivalDate,
   lineCount: summary.lineCount,
@@ -169,6 +170,24 @@ export class PurchaseDraftsController {
     return toDetailResponse(detail);
   }
 
+  // The same read, answered as the summary half: openapi.yaml has `DELETE /purchase-drafts/{id}`
+  // return a `PurchaseDraftSummary` rather than a `PurchaseDraftDetail`.
+  private async readSummary(
+    access: WarehouseAccessRequest['access'],
+    purchaseDraftId: string,
+  ): Promise<PurchaseDraftSummary> {
+    const detail = await this.readPurchaseDraftQuery.execute(
+      access!,
+      purchaseDraftId,
+    );
+    assert(
+      detail !== null,
+      'A Purchase Draft must resolve immediately after a successful write into the same Warehouse',
+    );
+
+    return toSummaryResponse(detail);
+  }
+
   // AC-16a/AC-23 — every draft with its state and Drift Signal presence, archived-tolerant.
   @Get()
   @RequiredPermission(PermissionId.PURCHASE_DRAFTS_WATCH)
@@ -185,6 +204,7 @@ export class PurchaseDraftsController {
 
     return drafts.map((draft) => ({
       id: draft.id,
+      reference: draft.reference,
       state: draft.state as PurchaseDraftSummary['state'],
       expectedArrivalDate: draft.expectedArrivalDate,
       lineCount: draft.lineCount,
@@ -262,29 +282,16 @@ export class PurchaseDraftsController {
     @Param('purchaseDraftId', new ParseUUIDPipe()) purchaseDraftId: string,
     @Req() request: WarehouseAccessRequest,
   ): Promise<PurchaseDraftSummary> {
-    const discarded = await this.discardPurchaseDraftCommand.execute(
+    await this.discardPurchaseDraftCommand.execute(
       request.access!,
       purchaseDraftId,
     );
 
-    return {
-      id: discarded.id,
-      state: discarded.state,
-      expectedArrivalDate: null,
-      lineCount: 0,
-      hasDriftSignal: false,
-      closureReason: null,
-      createdByUserId: request.access!.userId,
-      createdAt: discarded.discardedAt.toISOString(),
-      readiedByUserId: null,
-      readiedAt: null,
-      closedByUserId: null,
-      closedAt: null,
-      arrivalConfirmedByUserId: null,
-      arrivalConfirmedAt: null,
-      discardedByUserId: discarded.discardedByUserId,
-      discardedAt: discarded.discardedAt.toISOString(),
-    };
+    // Re-read like every other transition on this controller, rather than composing the summary
+    // from what the command happens to return: a discarded draft is still a readable row, and only
+    // the read carries the draft's own `reference`, Expected Arrival Date, line count and creation
+    // attribution (openapi.yaml `PurchaseDraftSummary`).
+    return this.readSummary(request.access, purchaseDraftId);
   }
 
   // AC-10a/AC-12/AC-23 — adds a line to a draft resolved only in the Draft state; mutating.

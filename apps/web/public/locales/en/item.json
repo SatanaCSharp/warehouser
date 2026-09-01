@@ -4,24 +4,69 @@
   },
   "directory": {
     "heading": "Items",
+    "lede": "The goods this warehouse deals in. A SKU identifies one item inside this warehouse and nowhere else — the same SKU in another warehouse names an unrelated item.",
+    "search": "Search by SKU or description",
     "createAction": "Add item",
+    "loading": "Loading items",
     "table": {
       "sku": "SKU",
       "description": "Description",
-      "unitOfMeasure": "Unit",
+      "unitOfMeasure": "Counted in",
       "onHand": "On hand",
       "status": "Status",
       "actions": "Actions"
     },
-    "empty": "No items yet.",
+    "footer": {
+      "items_one": "{{formatted}} item",
+      "items_other": "{{formatted}} items",
+      "inactive_one": "{{formatted}} inactive",
+      "inactive_other": "{{formatted}} inactive",
+      "summary": "{{items}} · {{inactive}}",
+      "summaryAllActive": "{{items}}",
+      "note": "An inactive item keeps its SKU and keeps counting on every record that already names it."
+    },
+    "note": {
+      "heading": "A SKU is correctable only until something names its item",
+      "body": "Once a customer order or a purchase draft line names an item, its SKU is fixed for the life of that item — the description and the unit it is counted in stay correctable. Deactivating an item never releases its SKU for reuse."
+    },
+    "empty": {
+      "heading": "This warehouse deals in nothing yet",
+      "description": "An item is what demand and a draft line both name, so it is the first thing to add. Give it a SKU that is unused here and the unit its quantities are counted in.",
+      "noMatches": "No item here matches “{{query}}”."
+    },
     "error": "Items could not be loaded.",
     "menu": {
-      "actions": "Actions for {{sku}}",
+      "actions": "Actions for {{sku}} · {{description}}",
       "correct": "Correct item",
       "deactivate": "Deactivate",
       "reactivate": "Reactivate",
       "adjustOnHand": "Adjust on-hand quantity"
     }
+  },
+  "naming": {
+    "orders_one": "{{formatted}} customer order",
+    "orders_other": "{{formatted}} customer orders",
+    "lines_one": "{{formatted}} draft line",
+    "lines_other": "{{formatted}} draft lines",
+    "row": {
+      "both": "Named by {{orders}} and {{lines}}",
+      "orders": "Named by {{orders}}",
+      "lines": "Named by {{lines}}",
+      "none": "Nothing names it yet — its SKU is still correctable"
+    },
+    "card": {
+      "both": "Counted in {{unit}} · named by {{orders}} and {{lines}}",
+      "orders": "Counted in {{unit}} · named by {{orders}}",
+      "lines": "Counted in {{unit}} · named by {{lines}}",
+      "none": "Counted in {{unit}} · nothing names it yet, so its SKU is still correctable"
+    },
+    "inactive": "{{naming}} · no longer offered when demand or a draft is assembled"
+  },
+  "onHand": {
+    "recorded": "{{date}} · {{reason}} · {{actor}}",
+    "byYou": "by you",
+    "byAnother": "by another member",
+    "never": "nothing recorded yet"
   },
   "chips": {
     "active": "Active",
@@ -29,41 +74,65 @@
   },
   "picker": {
     "label": "Item",
-    "inactiveNotOffered": "Inactive items are not offered."
+    "inactiveNotOffered": "Inactive items are not offered.",
+    "option": "{{sku}} · {{description}}"
   },
   "dialogs": {
     "create": {
-      "title": "Add item",
+      "title": "Add an item",
+      "lede": "It belongs to this warehouse alone. The same SKU in another warehouse names an unrelated item.",
       "cancel": "Cancel",
       "submit": "Add item",
       "skuLabel": "SKU",
       "descriptionLabel": "Description",
-      "unitOfMeasureLabel": "Unit of measure",
-      "refusal": "Nothing has changed."
+      "descriptionHelp": "What the good is, in the words your team uses.",
+      "unitOfMeasureLabel": "Counted in",
+      "unitOfMeasureHelp": "Pieces, metres, kilograms or litres. Every quantity naming this item is read this way.",
+      "note": "A new item starts active with nothing on hand."
     },
     "correct": {
-      "title": "Correct item",
+      "title": "Correct {{sku}} · {{description}}",
       "cancel": "Cancel",
       "submit": "Save changes",
+      "skuLabel": "SKU",
+      "skuHelp": "Correctable only while nothing names this item.",
       "descriptionLabel": "Description",
-      "unitOfMeasureLabel": "Unit of measure",
-      "refusal": "Nothing has changed."
-    },
-    "deactivate": {
-      "title": "Deactivate item {{sku}}",
-      "cancel": "Cancel",
-      "submit": "Deactivate",
-      "body": "Existing Customer Orders and Purchase Draft Lines keep naming this item.",
-      "refusal": "Nothing has changed."
+      "descriptionHelp": "Still correctable — as is the unit it is counted in.",
+      "unitOfMeasureLabel": "Counted in",
+      "note": "An item that nothing yet names may still have its SKU corrected, to any SKU unused in this warehouse. Deactivating an item never releases its SKU either."
     },
     "adjustOnHand": {
-      "title": "Adjust on-hand quantity",
+      "title": "Set the on-hand quantity",
+      "lede": "State the count you have just made — never an increase or a decrease.",
       "cancel": "Cancel",
-      "submit": "Save quantity",
+      "submit": "Save the count",
+      "itemLabel": "Item",
+      "itemValue": "{{sku}} · {{description}}",
       "quantityLabel": "Counted quantity",
+      "quantityHelp": "A whole number that is never negative.",
       "reasonLabel": "Reason",
-      "reasonRequired": "State a reason for every change to on-hand quantity.",
-      "refusal": "Nothing has changed."
+      "reasonHelp": "Required. Recorded with your name and the time, so a figure that drifts can be explained.",
+      "note": "Nothing else in Warehouser changes this figure — confirming an arrival does not touch it."
+    },
+    "deactivate": {
+      "title": "Deactivate {{sku}} · {{description}}?",
+      "cancel": "Cancel",
+      "submit": "Deactivate",
+      "lede": "It stops being offered when demand is recorded and when a draft is assembled.",
+      "naming": {
+        "both": "The {{orders}} and {{lines}} that already name it stay readable and keep counting exactly as before.",
+        "orders": "The {{orders}} that already name it stay readable and keep counting exactly as before.",
+        "lines": "The {{lines}} that already name it stay readable and keep counting exactly as before.",
+        "none": "Nothing names it yet, so no record changes."
+      },
+      "skuStaysTaken": "Its SKU stays taken — no new item may reuse it.",
+      "reversible": "You can make it active again at any time."
+    },
+    "refusal": {
+      "unavailable": "This item is no longer available in this warehouse, so nothing has changed.",
+      "archived": "This warehouse has been archived, so nothing it holds can be changed.",
+      "invalid": "Some of what you entered was not accepted, and nothing has changed.",
+      "unknown": "Nothing has changed."
     }
   }
 }

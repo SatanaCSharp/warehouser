@@ -87,6 +87,7 @@ describe('customerOrderApi tag invalidation (AC-19, AC-19a)', () => {
       return store
         .dispatch(
           customerOrderApi.endpoints.amendCustomerOrder.initiate({
+            customerName: customerOrder.customerName,
             warehouseId,
             customerOrderId: customerOrder.id,
             input: { quantity: 600 },
@@ -97,6 +98,7 @@ describe('customerOrderApi tag invalidation (AC-19, AC-19a)', () => {
     return store
       .dispatch(
         customerOrderApi.endpoints.cancelCustomerOrder.initiate({
+          customerName: customerOrder.customerName,
           warehouseId,
           customerOrderId: customerOrder.id,
           input: { cancellationReason: 'Customer withdrew' },

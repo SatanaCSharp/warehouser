@@ -52,6 +52,9 @@ export class ClosePurchaseDraftCommand {
     purchaseDraftId: string,
     input: CloseDraftInput,
   ): Promise<ClosedPurchaseDraft> {
+    // Authority itself is not decided here — `close`'s guarded `UPDATE` carries `warehouse_id` in
+    // its own `WHERE` clause. This read only chooses which refusal is owed and cannot become a
+    // check-then-write window.
     const header =
       await this.closureRepository.findDraftHeader(purchaseDraftId);
     assert(
@@ -67,6 +70,7 @@ export class ClosePurchaseDraftCommand {
     const closedAt = this.runtime.now();
     const closed = await this.closureRepository.close({
       purchaseDraftId,
+      warehouseId: currentUser.warehouseId,
       closedByUserId: currentUser.userId,
       closedAt,
       closureReason: input.closureReason,

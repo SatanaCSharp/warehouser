@@ -31,12 +31,19 @@ const enteredContext = (store: AppStore): ItemLoaderContext => ({
   warehouseId: accessIds.warehouse,
 });
 
-const refusedContext = (
-  store: AppStore,
-  reason: 'archived' | 'not-a-member',
-): ItemLoaderContext => ({
-  reason,
+const refusedContext = (store: AppStore): ItemLoaderContext => ({
+  reason: 'not-a-member',
   status: 'refused',
+  store,
+  warehouseId: accessIds.warehouse,
+});
+
+// AC-23 — the verdict `warehouseRoute.beforeLoad` now publishes for a
+// membership in an ARCHIVED Warehouse. It is an entry, not a refusal: the
+// destination reads on exactly the terms that applied before archiving.
+const readOnlyContext = (store: AppStore): ItemLoaderContext => ({
+  reason: 'archived',
+  status: 'entered-read-only',
   store,
   warehouseId: accessIds.warehouse,
 });
@@ -77,18 +84,43 @@ describe('loadItems', () => {
     vi.restoreAllMocks();
   });
 
-  it.each([['not-a-member'], ['archived']] as const)(
-    'issues no request at all when the Warehouse entry verdict is refused for %s',
-    async (reason) => {
-      const requestedUrls = stubItemsServer(Object.values(PermissionId));
-      const store = authenticatedStore();
+  it('issues no request at all when the Warehouse entry verdict is refused', async () => {
+    const requestedUrls = stubItemsServer(Object.values(PermissionId));
+    const store = authenticatedStore();
 
-      await loadItems({ context: refusedContext(store, reason) });
+    await loadItems({ context: refusedContext(store) });
 
-      expect(requestedUrls).toStrictEqual([]);
-      expect(store.getState().api.queries).toStrictEqual({});
-    },
-  );
+    expect(requestedUrls).toStrictEqual([]);
+    expect(store.getState().api.queries).toStrictEqual({});
+  });
+
+  // AC-23 — an archived Warehouse authorizes no operation that changes what it
+  // holds, and its reads are unaffected: a member holding ITEMS:WATCH reads
+  // exactly as before archiving. The old behaviour treated `archived` as a
+  // refusal, which made the destination unreachable rather than read-only.
+  it('requests the Items under a read-only verdict for an archived Warehouse', async () => {
+    const requestedUrls = stubItemsServer([PermissionId.ITEMS_WATCH]);
+    const store = authenticatedStore();
+
+    await loadItems({ context: readOnlyContext(store) });
+
+    expect(requestedUrls).toContain(ITEMS_URL);
+  });
+
+  // AC-23's other half — the watch Permission still decides, so a member
+  // without it is refused the read exactly as before archiving.
+  it('issues no Items request under a read-only verdict when the actor holds no ITEMS:WATCH', async () => {
+    const requestedUrls = stubItemsServer(
+      Object.values(PermissionId).filter(
+        (permission) => permission !== PermissionId.ITEMS_WATCH,
+      ),
+    );
+    const store = authenticatedStore();
+
+    await loadItems({ context: readOnlyContext(store) });
+
+    expect(requestedUrls).not.toContain(ITEMS_URL);
+  });
 
   it('issues no items request when the actor holds no ITEMS:WATCH', async () => {
     const requestedUrls = stubItemsServer(

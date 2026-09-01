@@ -17,6 +17,7 @@ import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository';
 import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
+import { isSelectableItem } from 'shared/predicates/item-availability.predicates';
 
 export interface RecordCustomerOrderRuntime {
   readonly customerOrderId: () => string;
@@ -72,11 +73,12 @@ export class RecordCustomerOrderCommand {
     // Warehouse resolves to nothing and is refused exactly as a missing one is. An Inactive Item is
     // no longer offered and is refused on the same non-enumerating terms, because this operation
     // records a *new* reference to it (openapi.yaml `ItemUnavailable`, CONTEXT.md §Invariants).
+    // The condition itself is `isSelectableItem` in `shared/predicates/`, shared with the draft
+    // assembly path that applies the same rule (server-error-handling.md §1). The refusal is this
+    // feature's own — `customer_orders.item_unavailable`, not the draft's code.
     const item = await this.itemCatalogueRepository.findById(input.itemId);
     assert(
-      item !== null &&
-        item.warehouseId === currentUser.warehouseId &&
-        item.deactivatedAt === null,
+      isSelectableItem(item, currentUser.warehouseId),
       customerOrderItemUnavailableError(),
     );
 

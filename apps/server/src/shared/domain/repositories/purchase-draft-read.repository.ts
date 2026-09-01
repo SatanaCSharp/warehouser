@@ -24,6 +24,7 @@ export interface LinkedCustomerOrderStateRead {
   readonly neededBy: string;
   readonly state: string;
   readonly outstandingQuantity: number;
+  readonly lastChangedAt: string | null;
 }
 
 // openapi.yaml `ArrivalAllocation`.
@@ -66,6 +67,7 @@ export interface PurchaseDraftLineRead {
 // plain boolean projection of the same value comparison, not a named signal.
 export interface PurchaseDraftSummaryRead {
   readonly id: string;
+  readonly reference: string;
   readonly state: string;
   readonly expectedArrivalDate: string | null;
   readonly lineCount: number;
@@ -90,6 +92,7 @@ export interface PurchaseDraftDetailRead extends PurchaseDraftSummaryRead {
 
 interface DraftSummaryRawRow {
   readonly id: string;
+  readonly reference: string;
   readonly state: string;
   readonly expectedArrivalDate: string | null;
   readonly lineCount: number;
@@ -110,6 +113,32 @@ interface DraftSummaryRawRow {
 interface DraftDetailRawRow extends Omit<DraftSummaryRawRow, 'lineCount'> {
   readonly lines: readonly PurchaseDraftLineRead[];
 }
+
+// openapi.yaml `expectedArrivalDate` is a calendar `date`, and both reads below project it through
+// `getRawMany`/`getRawOne`, which bypass the entity's `@Column('date')` mapping: the pg driver
+// hands back a JS `Date` built at midnight in the *server's* timezone, which serializes as the
+// previous calendar day anywhere east of UTC (`2026-09-25` leaves as `2026-09-24T22:00:00.000Z` at
+// UTC+2) and is refused by the contract's `z.string().date()`. Casting in SQL keeps the
+// Warehouse-neutral calendar day the column actually holds, whatever the server's clock is set to
+// — the idiom `consolidated-demand.repository.ts` already uses for `MIN(demand.neededBy)::text`.
+// The parentheses are load-bearing: TypeORM only rewrites `alias.property` when it is terminated by
+// one of ` =),`, so `draft.expectedArrivalDate::text` would reach PostgreSQL untranslated.
+// Written once here and used by both methods, so neither can regress on its own.
+const EXPECTED_ARRIVAL_DATE_SELECT = '(draft.expectedArrivalDate)::text';
+
+// openapi.yaml `LinkedCustomerOrderState.lastChangedAt` — when the linked Customer Order last
+// moved, which is what dates a Drift Signal (`Cancelled on 24 Aug`, design frame `F0SpRx.png`,
+// AC-16). `updated_at` is written by every path that moves the row — the amendment, the
+// cancellation and the Allocation recompute all set it — and is left equal to `created_at` by the
+// insert, so "has not been changed since it was recorded" is exactly `updated_at = created_at` and
+// is reported as `null` rather than as a change that never happened.
+//
+// Unlike `expectedArrivalDate` above this needs no `::text` cast — it is a `timestamptz`, not a
+// `date`, so no calendar day can shift under the server's timezone. It does need `to_char` for the
+// same reason `allocation.createdAt` below does: embedded inside `json_build_object` it bypasses
+// the pg driver's Date decoding, and PostgreSQL would otherwise render it with the session's own
+// UTC offset, which `z.string().datetime()` refuses.
+const LAST_CHANGED_AT_SELECT = `CASE WHEN demand.updatedAt > demand.createdAt THEN to_char(demand.updatedAt AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') ELSE NULL END`;
 
 // AC-16/AC-16a — whether any of this draft's Demand Snapshot rows differs from the Customer Order
 // it names now, under **exactly** the four named Drift Signal conditions (openapi.yaml
@@ -180,8 +209,9 @@ export class PurchaseDraftReadRepository {
       .getRepository(PurchaseDraftEntity)
       .createQueryBuilder('draft')
       .select('draft.id', 'id')
+      .addSelect('draft.reference', 'reference')
       .addSelect('draft.state', 'state')
-      .addSelect('draft.expectedArrivalDate', 'expectedArrivalDate')
+      .addSelect(EXPECTED_ARRIVAL_DATE_SELECT, 'expectedArrivalDate')
       .addSelect('draft.closureReason', 'closureReason')
       .addSelect('draft.createdByUserId', 'createdByUserId')
       .addSelect('draft.createdAt', 'createdAt')
@@ -229,7 +259,7 @@ export class PurchaseDraftReadRepository {
     const links = manager
       .createQueryBuilder()
       .select(
-        `COALESCE(json_agg(json_build_object('id', link.id, 'customerOrderId', link.customerOrderId, 'customerName', demand.customerName, 'statedQuantity', link.statedQuantity, 'snapshot', CASE WHEN snapshot.purchaseDraftLineLinkId IS NULL THEN NULL ELSE json_build_object('capturedQuantity', snapshot.capturedQuantity, 'capturedNeededBy', snapshot.capturedNeededBy, 'capturedState', snapshot.capturedState) END, 'current', json_build_object('quantity', demand.quantity, 'neededBy', demand.neededBy, 'state', demand.state, 'outstandingQuantity', demand.outstandingQuantity), 'allocation', CASE WHEN allocation.purchaseDraftLineLinkId IS NULL THEN NULL ELSE json_build_object('allocatedQuantity', allocation.allocatedQuantity, 'allocatedByUserId', allocation.allocatedByUserId, 'createdAt', to_char(allocation.createdAt AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')) END) ORDER BY link.createdAt, link.id), '[]'::json)`,
+        `COALESCE(json_agg(json_build_object('id', link.id, 'customerOrderId', link.customerOrderId, 'customerName', demand.customerName, 'statedQuantity', link.statedQuantity, 'snapshot', CASE WHEN snapshot.purchaseDraftLineLinkId IS NULL THEN NULL ELSE json_build_object('capturedQuantity', snapshot.capturedQuantity, 'capturedNeededBy', snapshot.capturedNeededBy, 'capturedState', snapshot.capturedState) END, 'current', json_build_object('quantity', demand.quantity, 'neededBy', demand.neededBy, 'state', demand.state, 'outstandingQuantity', demand.outstandingQuantity, 'lastChangedAt', ${LAST_CHANGED_AT_SELECT}), 'allocation', CASE WHEN allocation.purchaseDraftLineLinkId IS NULL THEN NULL ELSE json_build_object('allocatedQuantity', allocation.allocatedQuantity, 'allocatedByUserId', allocation.allocatedByUserId, 'createdAt', to_char(allocation.createdAt AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')) END) ORDER BY link.createdAt, link.id), '[]'::json)`,
       )
       .from(PurchaseDraftLineLinkEntity, 'link')
       .innerJoin(
@@ -269,8 +299,9 @@ export class PurchaseDraftReadRepository {
       .getRepository(PurchaseDraftEntity)
       .createQueryBuilder('draft')
       .select('draft.id', 'id')
+      .addSelect('draft.reference', 'reference')
       .addSelect('draft.state', 'state')
-      .addSelect('draft.expectedArrivalDate', 'expectedArrivalDate')
+      .addSelect(EXPECTED_ARRIVAL_DATE_SELECT, 'expectedArrivalDate')
       .addSelect('draft.closureReason', 'closureReason')
       .addSelect('draft.createdByUserId', 'createdByUserId')
       .addSelect('draft.createdAt', 'createdAt')

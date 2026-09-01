@@ -54,6 +54,9 @@ export class DemandController {
       unfulfilledCustomerOrderCount: line.unfulfilledCustomerOrderCount,
       coverage: line.coverage.map((entry) => ({
         purchaseDraftId: entry.purchaseDraftId,
+        // AC-20 — "which Purchase Drafts link to it": the reference is what names the draft to the
+        // member (`PD-0142 · 800`), the id only what the link is followed by.
+        purchaseDraftReference: entry.purchaseDraftReference,
         purchaseDraftLineId: entry.purchaseDraftLineId,
         purchaseDraftState: entry.purchaseDraftState,
         statedQuantity: entry.statedQuantity,

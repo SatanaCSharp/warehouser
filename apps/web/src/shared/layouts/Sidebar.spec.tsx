@@ -144,17 +144,27 @@ const renderSidebar = ({
     path: ROUTES.WORKSPACE,
     component: () => null,
   });
+  const verdictsByStatus: Record<
+    WarehouseEntryVerdict['status'],
+    (warehouseId: string) => WarehouseEntryVerdict
+  > = {
+    entered: (warehouseId) => ({ status: 'entered', warehouseId }),
+    'entered-read-only': (warehouseId) => ({
+      status: 'entered-read-only',
+      reason: 'archived',
+      warehouseId,
+    }),
+    refused: (warehouseId) => ({
+      status: 'refused',
+      reason: 'not-a-member',
+      warehouseId,
+    }),
+  };
   const warehouseTestRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: ROUTES.WAREHOUSE,
     beforeLoad: ({ params }): WarehouseEntryVerdict =>
-      verdict === 'entered'
-        ? { status: 'entered', warehouseId: params.warehouseId }
-        : {
-            status: 'refused',
-            reason: 'not-a-member',
-            warehouseId: params.warehouseId,
-          },
+      verdictsByStatus[verdict](params.warehouseId),
   });
   const warehouseIndexRoute = createRoute({
     getParentRoute: () => warehouseTestRoute,
@@ -387,6 +397,64 @@ describe('Sidebar ordering entries (T17, AC-05, AC-22, AC-23)', () => {
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole('link', { name: 'Items' }),
+    ).not.toBeInTheDocument();
+  });
+});
+
+// The approved frame `yGhkK` draws the Warehouse list as Dashboard → Demand →
+// Purchase drafts → Items → Access, and design-handoff.md §Information
+// architecture states the same order. It is asserted as document order rather
+// than as five presence checks, because the ordering is the thing that was
+// wrong.
+describe('Sidebar entry order (frame yGhkK)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('lists the Warehouse destinations in the approved order', async () => {
+    stubAccess({
+      ...baseAccess,
+      permissionIds: [
+        PermissionId.CUSTOMER_ORDERS_WATCH,
+        PermissionId.PURCHASE_DRAFTS_WATCH,
+        PermissionId.ITEMS_WATCH,
+        PermissionId.ROLES_WATCH,
+      ],
+    });
+    renderSidebar();
+
+    await screen.findByRole('link', { name: 'Access' });
+    const list = screen.getAllByRole('list')[0];
+
+    expect(
+      within(list)
+        .getAllByRole('link')
+        .map((link) => link.textContent),
+    ).toEqual(['Dashboard', 'Demand', 'Purchase drafts', 'Items', 'Access']);
+  });
+});
+
+// AC-23 vs CR-AC-13 / CR-AC-17 — AC-23 reopens the three watch destinations in
+// an archived Warehouse; an archived Warehouse is still not administered, and
+// `WarehouseLayout` still refuses its Access address, so the Access entry is
+// hidden rather than offered as a link to a refusal.
+describe('Sidebar in an archived Warehouse (AC-23, CR-AC-17)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('keeps the watch destinations and drops the Access entry', async () => {
+    stubAccess({
+      ...baseAccess,
+      permissionIds: [PermissionId.ITEMS_WATCH, PermissionId.ROLES_WATCH],
+    });
+    renderSidebar({ verdict: 'entered-read-only' });
+
+    expect(
+      await screen.findByRole('link', { name: 'Items' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: 'Access' }),
     ).not.toBeInTheDocument();
   });
 });

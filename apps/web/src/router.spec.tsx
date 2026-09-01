@@ -15,6 +15,7 @@ import { workspaceContextApi } from 'shared/api/workspace/workspace-context-api'
 import { ROUTE_SEGMENTS, ROUTES } from 'shared/constants/routes';
 import { makeStore } from 'store';
 
+import type { WarehouseEntryVerdict } from 'guards/warehouse-entry.guard';
 import type { AppRouter } from 'router';
 import type { AppStore } from 'store';
 
@@ -201,6 +202,19 @@ const renderRoute = (initialEntry: string): RenderedRoute => {
 
   return { router, store };
 };
+
+/**
+ * The entry verdict `warehouseRoute.beforeLoad` published into the Warehouse
+ * layout match — the one place that says whether the actor entered, entered
+ * read-only, or was refused (AC-23, CR-AC-17). Read from the match tree rather
+ * than inferred from what painted, because a read-only entry and a full one
+ * paint the same destination.
+ */
+const warehouseVerdict = (
+  router: AppRouter,
+): WarehouseEntryVerdict | undefined =>
+  router.state.matches.find((match) => match.routeId === ROUTES.WAREHOUSE)
+    ?.context;
 
 // The route suite deliberately keeps complete authenticated and anonymous
 // journeys together so each assertion uses the same production router harness.
@@ -1103,9 +1117,12 @@ describe('Warehouse layout route (T4)', () => {
     );
   });
 
-  // CR-AC-17 — an archived membership is refused with the explicit archived
-  // explanation, distinct from the non-disclosing refusal above.
-  it('refuses an archived membership with the explicit archived explanation', async () => {
+  // AC-23 / CR-AC-17 — an archived membership enters the Warehouse READ-ONLY
+  // and stays at the address, so its watch destinations read exactly as before
+  // archiving. The archived reason is still published on the verdict, which is
+  // what keeps it distinct from the non-disclosing refusal above; it is named
+  // to the actor by `ArchivedWarehouseNotice` rather than by a refusal page.
+  it('enters an archived membership read-only, naming the archived reason on the verdict', async () => {
     vi.stubGlobal(
       'fetch',
       stubWarehouseFetch([
@@ -1120,11 +1137,21 @@ describe('Warehouse layout route (T4)', () => {
     const { router } = renderRoute(`/warehouses/${ARCHIVED_WAREHOUSE_ID}`);
 
     expect(
-      await screen.findByText('This warehouse is archived'),
+      await screen.findByText('Design System Preview'),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByText('This warehouse is archived'),
+    ).not.toBeInTheDocument();
     expect(router.state.location.pathname).toBe(
       `/warehouses/${ARCHIVED_WAREHOUSE_ID}`,
     );
+    // The layout match's context also carries the root context it extends, so
+    // this asserts the verdict fields rather than the whole object.
+    expect(warehouseVerdict(router)).toMatchObject({
+      status: 'entered-read-only',
+      reason: 'archived',
+      warehouseId: ARCHIVED_WAREHOUSE_ID,
+    });
   });
 
   // Same address the splat matched for a non-member above, but the splat
@@ -1202,10 +1229,17 @@ describe('Warehouse layout route (T4)', () => {
       });
     });
 
-    expect(
-      await screen.findByText('This warehouse is archived'),
-    ).toBeInTheDocument();
-    expect(screen.queryByText('Design System Preview')).not.toBeInTheDocument();
+    // AC-23 — the re-resolved verdict is the read-only one, not the `entered`
+    // one this match held before the actor left. Preserving that earlier
+    // verdict would admit writes into a Warehouse archived while they were
+    // away, which is the failure CR-AC-17 and CR-RG-02 exist to prevent.
+    await waitFor(() =>
+      expect(warehouseVerdict(router)).toMatchObject({
+        status: 'entered-read-only',
+        reason: 'archived',
+        warehouseId: MEMBER_WAREHOUSE_ID,
+      }),
+    );
   });
 
   it('does not re-run the layout beforeLoad while navigating between its own children (CR-AC-20)', async () => {

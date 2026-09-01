@@ -4,9 +4,15 @@ import { useTranslation } from 'react-i18next';
 
 import { CoverageChips } from 'modules/customer-order/components/demand-directory/components/CoverageChips';
 import { CustomerOrderActionsMenu } from 'modules/customer-order/components/demand-directory/components/CustomerOrderActionsMenu';
-import { DemandDisclosureButton } from 'modules/customer-order/components/demand-directory/components/DemandDisclosureButton';
+import { CustomerOrderNeededByCell } from 'modules/customer-order/components/demand-directory/components/CustomerOrderNeededByCell';
+import { CustomerOrderOutstandingCell } from 'modules/customer-order/components/demand-directory/components/CustomerOrderOutstandingCell';
+import { CustomerOrderStateChip } from 'modules/customer-order/components/demand-directory/components/CustomerOrderStateChip';
+import { DemandFooterSummary } from 'modules/customer-order/components/demand-directory/components/DemandFooterSummary';
+import { DemandItemCell } from 'modules/customer-order/components/demand-directory/components/DemandItemCell';
+import { DemandNeededByCell } from 'modules/customer-order/components/demand-directory/components/DemandNeededByCell';
+import { DemandOnHandCell } from 'modules/customer-order/components/demand-directory/components/DemandOnHandCell';
+import { DemandOutstandingCell } from 'modules/customer-order/components/demand-directory/components/DemandOutstandingCell';
 import { useUnfulfilledCustomerOrdersByItem } from 'modules/customer-order/hooks/queries/useUnfulfilledCustomerOrdersByItem';
-import { Conditional } from 'shared/components/Conditional';
 import { CornerDownRightIcon } from 'shared/icons';
 
 import type { Selection } from '@heroui/react';
@@ -31,7 +37,8 @@ export type DemandTableProps = CustomerOrderActionHandlers & {
  * (design-handoff.md `Ordering/Demand Row`, `prm7R`, desktop `G6jhw`): one row
  * per Item with its six cells — item, outstanding, earliest needed by, on hand,
  * covered by, actions — expanding into that Item's Unfulfilled Customer Orders
- * (AC-04, AC-20).
+ * (AC-04, AC-20), and the footer row stating what the table counts and what it
+ * leaves out.
  *
  * It is a HeroUI `Table`, not a hand-assembled `<table>`
  * (`docs/system/adr/27-08-2026-heroui-table-for-web-data-tables.md`), so the
@@ -45,9 +52,17 @@ export type DemandTableProps = CustomerOrderActionHandlers & {
  * collection builds its rows before they reach the DOM, so a renderer may call
  * no hook. Nor may it close over live state — the collection caches a row's
  * element tree per record, so anything resolved here would keep the value it
- * had when the row was first built. So every cell that reads translations, the
- * actor's Permissions, or a query is its own component, and this file resolves
- * only what a row is keyed by: the orders each line expands into.
+ * had when the row was first built. **That is why every cell below renders a
+ * component rather than an expression**: each one reads its own translations,
+ * its own date and quantity formatters, and its own Permissions.
+ *
+ * `onAmend` and `onCancel` are the exception the same decision names —
+ * callbacks that only report an event upward. Each one hands the chosen
+ * Customer Order to `DemandDirectory`'s dialog reducer and reads nothing else,
+ * so the copy a row caches behaves identically to a fresh one. A handler that
+ * additionally closed over something live — the entered Warehouse, a query
+ * result — would not qualify, and is written in the component the cell renders
+ * instead.
  *
  * Those orders are carried **on the record** rather than read from a map the
  * row renderer closes over, and that is the whole reason the chevron appears.
@@ -87,10 +102,16 @@ export const DemandTable = ({
           {order.customerName}
         </span>
       </Table.Cell>
-      <Table.Cell>{order.outstandingQuantity}</Table.Cell>
-      <Table.Cell>{order.neededBy}</Table.Cell>
+      <Table.Cell>
+        <CustomerOrderOutstandingCell order={order} />
+      </Table.Cell>
+      <Table.Cell>
+        <CustomerOrderNeededByCell order={order} />
+      </Table.Cell>
       <Table.Cell />
-      <Table.Cell />
+      <Table.Cell>
+        <CustomerOrderStateChip order={order} />
+      </Table.Cell>
       <Table.Cell>
         <CustomerOrderActionsMenu
           order={order}
@@ -105,20 +126,23 @@ export const DemandTable = ({
     <Table.Row id={line.itemId} key={line.itemId} textValue={line.sku}>
       <Table.Cell textValue={line.sku}>
         {({ hasChildItems, isExpanded, isTreeColumn }) => (
-          <div className="flex items-center gap-2">
-            <Conditional when={hasChildItems && isTreeColumn}>
-              <DemandDisclosureButton isExpanded={isExpanded} line={line} />
-            </Conditional>
-            <div>
-              <p className="font-semibold">{line.sku}</p>
-              <p className="text-sm text-muted">{line.description}</p>
-            </div>
-          </div>
+          <DemandItemCell
+            hasChildItems={hasChildItems}
+            isExpanded={isExpanded}
+            isTreeColumn={isTreeColumn}
+            line={line}
+          />
         )}
       </Table.Cell>
-      <Table.Cell>{line.totalOutstandingQuantity}</Table.Cell>
-      <Table.Cell>{line.earliestNeededBy}</Table.Cell>
-      <Table.Cell>{line.onHandQuantity}</Table.Cell>
+      <Table.Cell>
+        <DemandOutstandingCell line={line} />
+      </Table.Cell>
+      <Table.Cell>
+        <DemandNeededByCell line={line} />
+      </Table.Cell>
+      <Table.Cell>
+        <DemandOnHandCell line={line} />
+      </Table.Cell>
       <Table.Cell>
         <CoverageChips coverage={line.coverage} />
       </Table.Cell>
@@ -163,6 +187,9 @@ export const DemandTable = ({
           <Table.Body items={demandRows}>{renderDemandRow}</Table.Body>
         </Table.Content>
       </Table.ScrollContainer>
+      <Table.Footer>
+        <DemandFooterSummary demandLines={demandLines} />
+      </Table.Footer>
     </Table>
   );
 };

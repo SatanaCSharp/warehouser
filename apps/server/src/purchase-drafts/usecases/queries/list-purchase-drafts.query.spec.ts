@@ -23,6 +23,7 @@ const currentUser: AccessCurrentUser = {
 const draftSummaries = [
   {
     id: 'draft-1',
+    reference: 'PD-0143',
     state: 'ready_for_ordering',
     expectedArrivalDate: '2026-09-02',
     lineCount: 2,
@@ -41,6 +42,7 @@ const draftSummaries = [
   },
   {
     id: 'draft-2',
+    reference: 'PD-0144',
     state: 'draft',
     expectedArrivalDate: null,
     lineCount: 1,

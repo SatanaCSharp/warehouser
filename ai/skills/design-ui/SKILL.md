@@ -1,6 +1,6 @@
 ---
 name: design-ui
-description: Create or refine one cohesive feature UI design with the local pen.dev/Pencil MCP server, review it live in the desktop canvas, record explicit human approval, and hand the approved design to implementation. Use for "design UI", "mock up this feature", "preview this module", "design a feature", "/design-ui", or when planning a feature whose target surfaces include web, mobile, or desktop UI. Writes .pen sources, preview images, and design-handoff.md; never writes production UI code before approval.
+description: Create or refine one cohesive feature UI design with the local pen.dev/Pencil MCP server, review it live in the desktop canvas, record explicit human approval, and hand the approved design to implementation. Use for "design UI", "mock up this feature", "preview this module", "design a feature", "/design-ui", or when planning a feature whose target surfaces include web, mobile, or desktop UI. Writes .pen sources, Tailwind HTML previews, and design-handoff.md; never writes production UI code before approval.
 ---
 
 # Design UI
@@ -18,6 +18,7 @@ Turn an approved feature specification into an editable pen.dev design and a pre
 - `docs/system/architecture-map.md`, the closest existing UI modules, application UI instructions, token sources, and component-library configuration (read when present).
 - Existing `docs/features/<slug>/design.pen`, or `docs/mockups/app.pen` as the shared exploration/library file.
 - Read [`references/pencil-workflow.md`](references/pencil-workflow.md) before using Pencil tools.
+- Read [`references/html-previews.md`](references/html-previews.md) before writing anything into `previews/`.
 
 ## Design-system and UX standards
 
@@ -32,23 +33,27 @@ Turn an approved feature specification into an editable pen.dev design and a pre
 
 1. **Classify the work.** Confirm the feature has a UI surface. For backend-only work, return `N/A — no UI surface` and do not create artifacts.
 2. **Load reality.** Read the spec, frontend architecture, existing tokens/components, the HeroUI configuration/library, and the closest related UI flows. Record which HeroUI primitives, tokens, shell patterns, and responsive rules must be reused. Never invent a second component or styling system.
-3. **Connect to Pencil.** Prefer the `pencil` MCP server and an open Pencil desktop app. Inspect editor state before editing. If the desktop bridge is unavailable and the user accepts loss of live review, use the official `@pen.dev/cli` headless workflow described in the root README. If neither route is available, stop with setup instructions. Never substitute HTML generation.
+3. **Connect to Pencil.** Prefer the `pencil` MCP server and an open Pencil desktop app. Inspect editor state before editing. If the desktop bridge is unavailable and the user accepts loss of live review, use the official `@pen.dev/cli` headless workflow described in the root README. If neither route is available, stop with setup instructions. Never substitute HTML generation for the `.pen` source.
 4. **Choose the design file.** Prefer `docs/features/<slug>/design.pen` for feature-owned work. Use `docs/mockups/app.pen` only for shared explorations or design-system modules. Preserve previously approved frames; create a new named version instead of overwriting one.
 5. **Design one complete flow.** Create exactly one design direction. Cover all related screens in one consistent HeroUI style, include required states, and include at least the relevant desktop and mobile viewports. Reuse the same design variables, components, shell, density, and responsive logic across the flow. Do not generate optional variants or alternative visual concepts.
-6. **Verify the system and the flow.** Inspect layout structure, overlaps, clipping, hierarchy, variables, component reuse, HeroUI fidelity, cross-screen consistency, and responsive continuity. Compare related screens side by side so changes in task do not accidentally change the visual system. Capture screenshots into `docs/features/<slug>/previews/`. Follow [`references/design-review-checklist.md`](references/design-review-checklist.md).
-7. **Approval gate.** Present the single design flow, explain its key decisions and trade-offs, then stop. Do not write application code and do not mark a design approved without explicit user approval naming the reviewed frame/version.
-8. **Freeze the decision.** After approval, preserve the approved frame and create `docs/features/<slug>/design-handoff.md` from [`templates/design-handoff.md`](templates/design-handoff.md). Record the `.pen` path, exact frame name and node ID, viewports, states, component mapping, tokens, accessibility behavior, and unresolved questions.
-9. **Hand off.** Recommend `/tasks <slug>` when architecture artifacts already exist; otherwise recommend the repository's architecture-design stage first. Implementation must read the approved handoff and report any visible deviation.
+6. **Verify the system and the flow.** Inspect layout structure, overlaps, clipping, hierarchy, variables, component reuse, HeroUI fidelity, cross-screen consistency, and responsive continuity. Compare related screens side by side so changes in task do not accidentally change the visual system. Pencil canvas screenshots are ephemeral working verification only — read them in the conversation, never save them into the repository. Follow [`references/design-review-checklist.md`](references/design-review-checklist.md).
+7. **Publish HTML previews.** Write the review evidence into `docs/features/<slug>/previews/` as static Tailwind HTML pages — one `.html` file per frame, named after the frame it renders, per [`references/html-previews.md`](references/html-previews.md) and [`templates/preview.html`](templates/preview.html). The previews directory holds HTML and nothing else: no `.png`, `.jpg`, `.webp`, `.gif`, `.svg`, `.pdf`, or any other exported image. Open each preview and confirm it renders before presenting it.
+8. **Approval gate.** Present the single design flow with its preview files, explain its key decisions and trade-offs, then stop. Do not write application code and do not mark a design approved without explicit user approval naming the reviewed frame/version.
+9. **Freeze the decision.** After approval, preserve the approved frame and create `docs/features/<slug>/design-handoff.md` from [`templates/design-handoff.md`](templates/design-handoff.md). Record the `.pen` path, exact frame name and node ID, the matching `previews/*.html` file, viewports, states, component mapping, tokens, accessibility behavior, and unresolved questions.
+10. **Hand off.** Recommend `/tasks <slug>` when architecture artifacts already exist; otherwise recommend the repository's architecture-design stage first. Implementation must read the approved handoff and report any visible deviation.
 
 ## Hard rules
 
 - Keep design and implementation as separate approval phases.
-- Treat `.pen` + the approved node ID as canonical; previews are review evidence.
+- Treat `.pen` + the approved node ID as canonical; previews are review evidence, never an implementation source.
+- **`previews/` contains `.html` files only.** Writing, committing, or linking an image or document export — `.png`, `.jpg`, `.jpeg`, `.webp`, `.gif`, `.svg`, `.avif`, `.pdf`, or any other binary — inside a `previews/` directory is prohibited, in feature and change-request work items alike.
+- Every preview is a standalone HTML page styled with Tailwind utility classes and the design system's semantic tokens. Do not hand-roll a parallel CSS system, and do not embed a rendered screenshot in place of markup.
 - Do not export standalone HTML into `docs/mockups` as implementation input.
-- A headless run must still export image/PDF review evidence and preserve the same explicit approval gate.
+- Implementation reads `design-handoff.md` plus the approved `.pen` frame; preview markup is not a code source and must not be copied into `apps/`.
+- A headless run must still publish the same HTML previews and preserve the same explicit approval gate.
 - Do not edit production code during this skill.
 - Do not overwrite an approved frame; version it.
-- Do not claim visual verification without screenshots and a layout inspection.
+- Do not claim visual verification without a layout inspection and a rendered HTML preview.
 - Generate exactly one design direction; do not create alternative variants for comparison.
 - Use HeroUI as the visual and interaction foundation for every generated screen.
 - Do not mix visual styles, component treatments, layout systems, or responsive strategies within one feature flow.
@@ -61,6 +66,7 @@ Turn an approved feature specification into an editable pen.dev design and a pre
 - Desktop/mobile and required interaction states are present.
 - All related screens use one coherent HeroUI visual system and responsive strategy.
 - Component, token, shell, and interaction reuse is documented and visually verified across the complete flow.
-- Layout inspection and preview screenshots are complete.
+- Layout inspection is complete and every approved frame has a matching Tailwind HTML preview in `previews/`.
+- `previews/` contains no image, PDF, or other non-HTML file.
 - The user explicitly approved one named frame/version.
-- `design-handoff.md` identifies that frame by name and node ID and maps it to existing UI primitives.
+- `design-handoff.md` identifies that frame by name and node ID, links its preview file, and maps it to existing UI primitives.

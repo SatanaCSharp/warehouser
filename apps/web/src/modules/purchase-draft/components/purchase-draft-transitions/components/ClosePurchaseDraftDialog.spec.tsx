@@ -23,13 +23,14 @@ const openDialog = (
 ): void => {
   renderWithProviders(
     <DialogHost onClose={onClose}>
-      <ClosePurchaseDraftDialog onSubmit={onSubmit} />
+      <ClosePurchaseDraftDialog reference="PD-0142" onSubmit={onSubmit} />
     </DialogHost>,
   );
 };
 
+// The title names the draft it closes (`s5EPi`).
 const closeDialog = (): HTMLElement =>
-  screen.getByRole('dialog', { name: /close .*draft/iu });
+  screen.getByRole('dialog', { name: /close pd-0142 with a reason/iu });
 
 describe('ClosePurchaseDraftDialog', () => {
   it('records the closure reason and closes on success (AC-21)', async () => {

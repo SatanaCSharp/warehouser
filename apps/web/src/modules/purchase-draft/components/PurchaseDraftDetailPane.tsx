@@ -1,19 +1,14 @@
-import { Alert } from '@heroui/react';
+import { Alert, Chip } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 
-import {
-  useRemovePurchaseDraftLineLinkMutation,
-  useRemovePurchaseDraftLineMutation,
-  useRevisePurchaseDraftLineLinkMutation,
-  useRevisePurchaseDraftLineMutation,
-} from 'modules/purchase-draft/api/purchase-draft-api';
-import { AddPurchaseDraftLineAction } from 'modules/purchase-draft/components/AddPurchaseDraftLineAction';
-import { DriftSignal } from 'modules/purchase-draft/components/DriftSignal';
+import { ExpectedArrivalDateField } from 'modules/purchase-draft/components/ExpectedArrivalDateField';
 import { PurchaseDraftTransitions } from 'modules/purchase-draft/components/purchase-draft-transitions/PurchaseDraftTransitions';
-import { PurchaseDraftLineEditor } from 'modules/purchase-draft/components/PurchaseDraftLineEditor';
-import { usePackagingTypes } from 'modules/purchase-draft/hooks/queries/usePackagingTypes';
+import { PurchaseDraftDriftAlert } from 'modules/purchase-draft/components/PurchaseDraftDriftAlert';
+import { PurchaseDraftLineList } from 'modules/purchase-draft/components/PurchaseDraftLineList';
+import { useMinuteTimestamp } from 'modules/purchase-draft/hooks/projections/useMinuteTimestamp';
+import { usePurchaseDraftAttribution } from 'modules/purchase-draft/hooks/projections/usePurchaseDraftAttribution';
 import { Conditional } from 'shared/components/Conditional';
-import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
+import { LockIcon } from 'shared/icons';
 
 import type {
   PurchaseDraftDetail,
@@ -26,151 +21,16 @@ export type PurchaseDraftDetailPaneProps = {
 };
 
 /**
- * The aggregate Drift Signal (design-handoff.md `F0SpRx` node `G5PCcB`,
- * AC-16): every linked Customer Order that moved, compared against the
- * Demand Snapshot captured at the freeze, plus the line stating that
- * nothing else on the draft has changed or will.
- */
-const DriftAlert = ({
-  draft,
-}: {
-  draft: PurchaseDraftDetail;
-}): ReactElement => {
-  const { t } = useTranslation('purchase-draft');
-  const drifted = draft.lines.flatMap((line) =>
-    line.links.flatMap((link) =>
-      link.driftSignals.map((kind) => ({
-        customer: link.customerName,
-        kind,
-        linkId: link.id,
-      })),
-    ),
-  );
-
-  return (
-    <Alert role="alert" status="warning">
-      <Alert.Indicator />
-      <Alert.Content>
-        <Alert.Title>{t('detail.driftAlert.heading')}</Alert.Title>
-        <Alert.Description>
-          <ul>
-            {drifted.map(({ customer, kind, linkId }) => (
-              <li key={`${linkId}-${kind}`}>
-                <DriftSignal
-                  label={t(`detail.driftAlert.${kind}`, { customer })}
-                />
-              </li>
-            ))}
-          </ul>
-          <p>{t('detail.driftAlert.nothingChanged')}</p>
-        </Alert.Description>
-      </Alert.Content>
-    </Alert>
-  );
-};
-
-/**
- * `Ordering/Draft Line` composition for one Purchase Draft's lines, wired to
- * its own mutations. `isFrozen` decides the field treatment `PurchaseDraftLineEditor`
- * renders; it never decides whether a request is issued — the server is the
- * boundary that actually enforces AC-15, and a refused write surfaces
- * through the normal API-failure toast.
- */
-const PurchaseDraftLineList = ({
-  draft,
-  isFrozen,
-}: {
-  draft: PurchaseDraftDetail;
-  isFrozen: boolean;
-}): ReactElement => {
-  const warehouseId = useEnteredWarehouse() ?? '';
-  const packagingTypes = usePackagingTypes();
-  const [reviseLine] = useRevisePurchaseDraftLineMutation();
-  const [removeLine] = useRemovePurchaseDraftLineMutation();
-  const [reviseLink] = useRevisePurchaseDraftLineLinkMutation();
-  const [removeLink] = useRemovePurchaseDraftLineLinkMutation();
-
-  const onReviseLine =
-    (purchaseDraftLineId: string) =>
-    (input: {
-      orderedQuantity?: number;
-      packagingTypeId?: string | null;
-      valueAddingNote?: string | null;
-    }): void => {
-      void reviseLine({
-        warehouseId,
-        purchaseDraftId: draft.id,
-        purchaseDraftLineId,
-        input,
-      });
-    };
-  const onRemoveLine = (purchaseDraftLineId: string) => (): void => {
-    void removeLine({
-      warehouseId,
-      purchaseDraftId: draft.id,
-      purchaseDraftLineId,
-    });
-  };
-  const onReviseLink =
-    (purchaseDraftLineId: string) =>
-    (purchaseDraftLineLinkId: string, statedQuantity: number): void => {
-      void reviseLink({
-        warehouseId,
-        purchaseDraftId: draft.id,
-        purchaseDraftLineId,
-        purchaseDraftLineLinkId,
-        statedQuantity,
-      });
-    };
-  const onRemoveLink =
-    (purchaseDraftLineId: string) =>
-    (purchaseDraftLineLinkId: string): void => {
-      void removeLink({
-        warehouseId,
-        purchaseDraftId: draft.id,
-        purchaseDraftLineId,
-        purchaseDraftLineLinkId,
-      });
-    };
-  // Adding a *link* to a further Customer Order is still a seam: no Customer
-  // Order picker exists on `modules/customer-order`'s declared surface to reach
-  // through for it. Adding a line is no longer one — `AddPurchaseDraftLineAction`
-  // below reaches `modules/item`'s already-declared `ItemPicker` the way
-  // `RecordCustomerOrderDialog` does. Editing an existing line's fields and
-  // every existing link's quantity/removal is wired above.
-
-  return (
-    <>
-      <ul className="mt-4 flex flex-col gap-4">
-        {draft.lines.map((line) => (
-          <PurchaseDraftLineEditor
-            key={line.id}
-            isFrozen={isFrozen}
-            line={line}
-            packagingTypes={packagingTypes}
-            onRemoveLine={onRemoveLine(line.id)}
-            onRemoveLink={onRemoveLink(line.id)}
-            onReviseLine={onReviseLine(line.id)}
-            onReviseLink={onReviseLink(line.id)}
-          />
-        ))}
-      </ul>
-      {/* A frozen draft records what the supplier was told, so it is never
-          given a line after the fact (AC-15). */}
-      <Conditional when={!isFrozen}>
-        <div className="mt-4">
-          <AddPurchaseDraftLineAction purchaseDraftId={draft.id} />
-        </div>
-      </Conditional>
-    </>
-  );
-};
-
-/**
  * The Purchase Draft detail pane (design-handoff.md `yGhkK`/`F0SpRx`/`O42LHI`).
  *
- * Draft state decides what the pane renders — editable lines, frozen lines
- * plus the Drift Signal, or a closed/discarded summary — through a total
+ * It opens with what the draft **is** — its human reference `PD-0143`, its
+ * state, and the one line saying who did the act that state records and when
+ * (AC-10, AC-14). Naming the draft matters everywhere: it is what a member
+ * quotes to a colleague, what the demand table's coverage chips point at, and
+ * what every dialog title repeats back before an irreversible act.
+ *
+ * Draft state decides what the pane renders — the editable draft, the frozen
+ * record plus its Drift Signal, or a closed/discarded one — through a total
  * `Record<PurchaseDraftState, ReactElement>` lookup rather than an
  * `if`/`else if` chain (`writing-web-components.md` §6): adding a state to
  * `PurchaseDraftState` fails to compile here until this table is given
@@ -180,21 +40,56 @@ export const PurchaseDraftDetailPane = ({
   draft,
 }: PurchaseDraftDetailPaneProps): ReactElement => {
   const { t } = useTranslation('purchase-draft');
+  const attribution = usePurchaseDraftAttribution();
+  const minuteTimestamp = useMinuteTimestamp();
+
+  // Both are resolved before the return rather than gated inline, because
+  // `Conditional` evaluates both arms and formatting a moment that does not
+  // exist would throw (`writing-web-conditional-components.md` §2).
+  const attributionLine = attribution(draft);
+  const frozenNote =
+    draft.readiedAt === null
+      ? undefined
+      : t('detail.frozenNote', { timestamp: minuteTimestamp(draft.readiedAt) });
+
+  const expectedArrivalField = (isFrozen: boolean): ReactElement => (
+    <div className="mt-4">
+      <ExpectedArrivalDateField
+        isFrozen={isFrozen}
+        purchaseDraftId={draft.id}
+        value={draft.expectedArrivalDate}
+      />
+    </div>
+  );
 
   const content: Record<PurchaseDraftState, ReactElement> = {
     draft: (
       <div>
+        <Alert status="accent">
+          <Alert.Indicator />
+          <Alert.Content>
+            <Alert.Title>{t('detail.readyBanner.heading')}</Alert.Title>
+            <Alert.Description>
+              {t('detail.readyBanner.body')}
+            </Alert.Description>
+          </Alert.Content>
+        </Alert>
+        {expectedArrivalField(false)}
         <PurchaseDraftLineList draft={draft} isFrozen={false} />
       </div>
     ),
     ready_for_ordering: (
       <div>
-        <p className="text-sm text-muted">{t('detail.frozenNotice')}</p>
         <Conditional when={draft.hasDriftSignal}>
-          <div className="mt-3">
-            <DriftAlert draft={draft} />
-          </div>
+          <PurchaseDraftDriftAlert draft={draft} />
         </Conditional>
+        <Conditional when={frozenNote}>
+          <p className="mt-3 flex items-start gap-2 rounded-lg bg-surface-secondary p-3 text-sm text-default">
+            <LockIcon />
+            <span>{frozenNote}</span>
+          </p>
+        </Conditional>
+        {expectedArrivalField(true)}
         <PurchaseDraftLineList draft={draft} isFrozen />
       </div>
     ),
@@ -205,6 +100,7 @@ export const PurchaseDraftDetailPane = ({
             {t('detail.closureReason', { reason: draft.closureReason })}
           </p>
         </Conditional>
+        {expectedArrivalField(true)}
         <PurchaseDraftLineList draft={draft} isFrozen />
       </div>
     ),
@@ -220,14 +116,22 @@ export const PurchaseDraftDetailPane = ({
     // (border, background, padding) drops entirely rather than nesting a
     // card inside a card; from `md:` up the frame returns.
     <section
-      aria-label={draft.id}
+      aria-label={draft.reference}
       className="flex flex-col gap-3 md:rounded-xl md:border md:border-border md:bg-surface md:p-6"
     >
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-xl font-semibold">{t(`state.${draft.state}`)}</h2>
-        <PurchaseDraftTransitions draft={draft} />
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-xl font-semibold">{draft.reference}</h2>
+          <Conditional when={attributionLine}>
+            <p className="mt-1 text-sm text-muted">{attributionLine}</p>
+          </Conditional>
+        </div>
+        <Chip size="sm" variant="soft">
+          {t(`state.${draft.state}`)}
+        </Chip>
       </header>
       {content[draft.state]}
+      <PurchaseDraftTransitions draft={draft} />
     </section>
   );
 };

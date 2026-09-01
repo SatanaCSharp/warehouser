@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { resolveWarehouseEntry } from 'guards/warehouse-entry.guard';
+import {
+  admitsReads,
+  resolveWarehouseEntry,
+} from 'guards/warehouse-entry.guard';
 import { makeStore } from 'store';
 
 import type { WorkspaceContext } from '@warehouser/contracts/workspaces';
@@ -87,7 +90,12 @@ describe('resolveWarehouseEntry', () => {
     );
   });
 
-  it('refuses with reason archived for a membership in an archived Warehouse (CR-AC-17)', async () => {
+  // AC-23 supersedes CR-AC-17's outright refusal on this case: a member of an
+  // archived Warehouse enters it read-only so their watch Permissions keep
+  // reading exactly as before archiving. CR-AC-17's other half is unchanged and
+  // asserted below — the archived reason is still named explicitly, so the
+  // verdict stays distinguishable from CR-AC-07's non-disclosing refusal.
+  it('enters read-only, naming the archived reason, for a membership in an archived Warehouse (AC-23, CR-AC-17)', async () => {
     const { store } = makeContextForTest();
 
     const verdict = await resolveWarehouseEntry(
@@ -96,10 +104,22 @@ describe('resolveWarehouseEntry', () => {
     );
 
     expect(verdict).toEqual({
-      status: 'refused',
+      status: 'entered-read-only',
       reason: 'archived',
       warehouseId: OWN_ARCHIVED_WAREHOUSE_ID,
     });
+  });
+
+  it.each([
+    ['a live membership', OWN_MEMBER_WAREHOUSE_ID, true],
+    ['an archived membership', OWN_ARCHIVED_WAREHOUSE_ID, true],
+    ['no membership', OWN_NO_MEMBERSHIP_WAREHOUSE_ID, false],
+  ])('admits reads for %s: %s', async (_label, warehouseId, expected) => {
+    const { store } = makeContextForTest();
+
+    const verdict = await resolveWarehouseEntry({ store }, warehouseId);
+
+    expect(admitsReads(verdict)).toBe(expected);
   });
 
   it('enters for a live membership', async () => {

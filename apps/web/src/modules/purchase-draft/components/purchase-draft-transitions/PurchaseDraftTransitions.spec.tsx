@@ -31,6 +31,7 @@ const draft = (
   overrides: Partial<PurchaseDraftDetail> = {},
 ): PurchaseDraftDetail => ({
   id: '00000000-0000-4000-8000-000000000501',
+  reference: 'PD-0143',
   state: 'draft',
   expectedArrivalDate: null,
   lineCount: 1,
@@ -113,14 +114,14 @@ describe('PurchaseDraftTransitions', () => {
     expect(await trigger(/move to ready/iu)).toBeInTheDocument();
     expect(await trigger(/discard/iu)).toBeInTheDocument();
     noTrigger(/confirm arrival/iu);
-    noTrigger(/close draft/iu);
+    noTrigger(/close with a reason/iu);
   });
 
   it('never offers discard for a draft already made ready (AC-24a)', async () => {
     renderTransitions(draft({ state: 'ready_for_ordering' }));
 
     expect(await trigger(/confirm arrival/iu)).toBeInTheDocument();
-    expect(await trigger(/close draft/iu)).toBeInTheDocument();
+    expect(await trigger(/close with a reason/iu)).toBeInTheDocument();
     noTrigger(/discard/iu);
     noTrigger(/move to ready/iu);
   });
@@ -156,7 +157,7 @@ describe('PurchaseDraftTransitions', () => {
     const dialog = await screen.findByRole('alertdialog', {
       name: /discard/iu,
     });
-    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Keep it' }));
 
     await waitFor(() => expect(discard).toHaveFocus());
   });

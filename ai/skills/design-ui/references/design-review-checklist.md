@@ -14,6 +14,11 @@ Before requesting approval, verify:
 - Color, typography, spacing, radii, and elevation use existing variables/tokens where available.
 - Keyboard order, focus visibility, labels, error association, contrast intent, and reduced-motion behavior are described.
 - Icons map to the repository's icon library.
-- Screenshots exist for every candidate presented for approval.
+- Every frame presented for approval has exactly one Tailwind HTML preview in `previews/`, and
+  each one renders when opened.
+- `previews/` contains `.html` files only — no screenshot, image, or PDF export, and no `<img>`
+  standing in for markup. See [`html-previews.md`](html-previews.md).
+- Preview markup uses the HeroUI semantic tokens through Tailwind utilities; no hand-picked hex or
+  rgb colours and no parallel styling system appear in it.
 - Trade-offs describe behavior and information hierarchy, not just aesthetics.
 - The approval request names exact frame versions; approval is never inferred from general positive feedback.

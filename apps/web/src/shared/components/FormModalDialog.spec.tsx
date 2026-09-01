@@ -152,10 +152,37 @@ describe('FormModalDialog', () => {
     await save(user, 'Central DC');
 
     await waitFor(() =>
-      expect(onRefusal).toHaveBeenCalledWith('workspace.denied'),
+      expect(onRefusal).toHaveBeenCalledWith('workspace.denied', undefined),
     );
     expect(onClose).not.toHaveBeenCalled();
     expect(formDialog()).toBeInTheDocument();
+  });
+
+  // A rule the member broke is often only explicable with the figure it was
+  // measured against — AC-19b's "this order cannot go below 160" is the
+  // allocated quantity. The server publishes it as the refusal's `details`, so
+  // the dialog that must say it has to receive it (web-error-handling.md §5).
+  it('hands the refusal its own details, so a message can name the figure', async () => {
+    const user = userEvent.setup();
+    const onRefusal = vi.fn();
+    renderDialog(
+      {
+        error: {
+          code: 'customer_orders.quantity_below_allocated',
+          details: { allocatedQuantity: 160, submittedQuantity: 140 },
+        },
+      },
+      onRefusal,
+    );
+
+    await save(user, 'Central DC');
+
+    await waitFor(() =>
+      expect(onRefusal).toHaveBeenCalledWith(
+        'customer_orders.quantity_below_allocated',
+        { allocatedQuantity: 160, submittedQuantity: 140 },
+      ),
+    );
   });
 
   it('cancels without making the request', async () => {

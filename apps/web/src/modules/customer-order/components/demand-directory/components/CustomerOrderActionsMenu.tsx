@@ -47,15 +47,35 @@ export const CustomerOrderActionsMenu = ({
     return null;
   }
 
+  const disabledKeys = actions
+    .filter((action) => action.isDisabled)
+    .map((action) => action.id);
+
   return (
     <Dropdown>
       <Button isIconOnly size="sm" variant="ghost" aria-label={label}>
         <KebabIcon />
       </Button>
       <Dropdown.Popover>
-        <Dropdown.Menu aria-label={label} onAction={onAction}>
-          {actions.map(({ id, label: actionLabel }) => (
-            <Dropdown.Item id={id} key={id} textValue={actionLabel}>
+        <Dropdown.Menu
+          aria-label={label}
+          disabledKeys={disabledKeys}
+          onAction={onAction}
+        >
+          {/* AC-23 — an archived Warehouse leaves each action listed and
+              disabled rather than removing it, and each one names the sentence
+              that says why: `aria-describedby` belongs on the item that is
+              refused, not on the menu around it, because a screen reader
+              announces an item's description when that item takes focus.
+              `reasonId` is `undefined` while nothing disables the action, so
+              nothing points at an element the page has not rendered. */}
+          {actions.map(({ id, label: actionLabel, reasonId }) => (
+            <Dropdown.Item
+              aria-describedby={reasonId}
+              id={id}
+              key={id}
+              textValue={actionLabel}
+            >
               <Label>{actionLabel}</Label>
             </Dropdown.Item>
           ))}

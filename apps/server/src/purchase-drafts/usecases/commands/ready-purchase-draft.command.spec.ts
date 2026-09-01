@@ -99,9 +99,12 @@ describe('ReadyPurchaseDraftCommand', () => {
 
     await command.execute(currentUser, draftId);
 
+    // `warehouseId` is part of the write's own `WHERE` clause, so the command has to hand it over
+    // — the pre-read above it decides which refusal is owed, never whether the write may happen.
     expect(freezeRepository.freeze).toHaveBeenCalledWith(
       expect.objectContaining({
         purchaseDraftId: draftId,
+        warehouseId,
         readiedByUserId: actorId,
         readiedAt: now,
       }),

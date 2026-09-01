@@ -188,6 +188,97 @@ const seedLink = async (
 const readOrder = (id: string): Promise<CustomerOrderEntity | null> =>
   dataSource.manager.getRepository(CustomerOrderEntity).findOneBy({ id });
 
+// AC-18 — what the refusal *says* about a bound it broke, registered as a module-level function
+// so the suite's own arrow stays within its line budget, the shape
+// `purchase-draft-read.repository.integration.spec.ts` already uses.
+const registerRefusalDetailTests = (): void => {
+  // AC-18/AC-16 — a refused assignment names *when* the order it names moved, so the dialog reads
+  // "Test Customer North — cancelled on 26 Aug, so nothing can be assigned to it" (design frame
+  // `s5EPi.png`) rather than leaving the member to work out which move is meant. The moment is
+  // read from the locked row's `updated_at`, which every path that moves a Customer Order writes.
+  it('AC-18: dates the refusal of an order that is no longer Unfulfilled with the moment it moved', async () => {
+    const seeded = await seed();
+    const cancelledId = await seedCustomerOrder(seeded, {
+      state: 'cancelled',
+      cancellationReason: 'Customer withdrew the order',
+      cancelledByUserId: seeded.userId,
+      cancelledAt: later,
+      updatedAt: later,
+    });
+    const link = await seedLink(seeded, cancelledId);
+
+    const rejection = transactions.executeInTransaction({}, () =>
+      service.allocate(seeded.warehouseId, seeded.userId, [
+        {
+          purchaseDraftLineId: link.purchaseDraftLineId,
+          receivedQuantity: 100,
+          allocations: [
+            { purchaseDraftLineLinkId: link.linkId, allocatedQuantity: 10 },
+          ],
+        },
+      ]),
+    );
+
+    const refusal = (await rejection.catch(
+      (error: unknown) => error,
+    )) as ApplicationError;
+
+    expect(refusal.code).toBe(
+      ErrorCode.PURCHASE_DRAFTS_ALLOCATION_OUT_OF_BOUNDS,
+    );
+    expect(refusal.details).toEqual({
+      violations: [
+        {
+          purchaseDraftLineLinkId: link.linkId,
+          rule: 'customer_order_not_unfulfilled',
+          customerOrderState: 'cancelled',
+          customerOrderLastChangedAt: later.toISOString(),
+        },
+      ],
+    });
+  });
+
+  // AC-18 — the non-enumerating half of the same refusal. A link this transaction locked no
+  // Customer Order for — one of another Warehouse — is refused exactly as a cancelled one is, and
+  // there is no row to read a moment from, so none is reported rather than one being invented.
+  it('AC-18: reports no moment when the refused link resolved to no Customer Order of this Warehouse', async () => {
+    const acting = await seed();
+    const foreign = await seed();
+    const foreignOrderId = await seedCustomerOrder(foreign);
+    const foreignLink = await seedLink(foreign, foreignOrderId);
+
+    const rejection = transactions.executeInTransaction({}, () =>
+      service.allocate(acting.warehouseId, acting.userId, [
+        {
+          purchaseDraftLineId: foreignLink.purchaseDraftLineId,
+          receivedQuantity: 100,
+          allocations: [
+            {
+              purchaseDraftLineLinkId: foreignLink.linkId,
+              allocatedQuantity: 10,
+            },
+          ],
+        },
+      ]),
+    );
+
+    const refusal = (await rejection.catch(
+      (error: unknown) => error,
+    )) as ApplicationError;
+
+    expect(refusal.details).toEqual({
+      violations: [
+        {
+          purchaseDraftLineLinkId: foreignLink.linkId,
+          rule: 'customer_order_not_unfulfilled',
+          customerOrderState: 'cancelled',
+          customerOrderLastChangedAt: null,
+        },
+      ],
+    });
+  });
+};
+
 describe('DemandAllocationService', () => {
   beforeAll(async () => {
     await dataSource.initialize();
@@ -311,6 +402,8 @@ describe('DemandAllocationService', () => {
       await dataSource.manager.getRepository(ArrivalAllocationEntity).count(),
     ).toBe(0);
   });
+
+  registerRefusalDetailTests();
 
   // sad.md §8 — the bound is re-checked against a row **locked in this transaction**, not against
   // the Outstanding Quantity the caller read before opening it. A concurrent amendment that lowers

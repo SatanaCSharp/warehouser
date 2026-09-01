@@ -12,6 +12,10 @@ import {
   SystemError,
 } from '@warehouser/shared-types/errors';
 import { redactSensitiveValues } from 'shared/errors/sensitive-value-redactor';
+import {
+  type ValidatedRequestPayloads,
+  validationFieldCodes,
+} from 'shared/errors/validation-field-codes';
 
 interface SafeErrorEnvelope {
   readonly code: string;
@@ -554,7 +558,10 @@ const internalError: ErrorMapping = {
   },
 };
 
-const mapException = (exception: unknown): ErrorMapping => {
+const mapException = (
+  exception: unknown,
+  request: ValidatedRequestPayloads,
+): ErrorMapping => {
   if (exception instanceof ApplicationError) {
     const mapping = applicationErrors[exception.code];
 
@@ -581,12 +588,20 @@ const mapException = (exception: unknown): ErrorMapping => {
   }
 
   if (exception instanceof HttpException) {
+    // A Zod refusal additionally names the fields it will not accept, so a
+    // dialog can mark them instead of repeating one generic sentence for every
+    // distinct refusal (AC-02, AC-02a, AC-09, AC-09a, AC-19b). Only the dotted
+    // path and a normalized code travel: never the value, the schema's message,
+    // or the type that was expected.
+    const fields = validationFieldCodes(exception, request);
+
     return {
       status: exception.getStatus(),
       severity: 'warn',
       envelope: {
         code: 'request.invalid',
         message: 'The request is invalid.',
+        ...(fields === undefined ? {} : { details: { fields } }),
       },
     };
   }
@@ -625,15 +640,17 @@ export class GlobalHttpExceptionFilter implements ExceptionFilter {
 
   catch(exception: unknown, host: ArgumentsHost): void {
     const http = host.switchToHttp();
-    const request = http.getRequest<{
-      headers?: Readonly<Record<string, string | undefined>>;
-      method?: string;
-      originalUrl?: string;
-    }>();
+    const request = http.getRequest<
+      ValidatedRequestPayloads & {
+        headers?: Readonly<Record<string, string | undefined>>;
+        method?: string;
+        originalUrl?: string;
+      }
+    >();
     const response = http.getResponse<{
       status(code: number): { json(body: SafeErrorEnvelope): void };
     }>();
-    const mapping = mapException(exception);
+    const mapping = mapException(exception, request);
     const logEntry = {
       error: describeException(exception),
       method: request.method,

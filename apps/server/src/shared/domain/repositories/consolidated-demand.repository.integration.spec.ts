@@ -41,6 +41,9 @@ const now = new Date('2026-08-26T10:00:00.000Z');
 // with a closed/discarded state.
 interface DemandLineCoverage {
   readonly purchaseDraftId: string;
+  // AC-20 — "which Purchase Drafts link to it": the draft's human reference, joined through from
+  // `purchase_drafts.reference`, which the `COVERED BY` chip names the draft by (`PD-0142 · 800`).
+  readonly purchaseDraftReference: string;
   readonly purchaseDraftLineId: string;
   readonly purchaseDraftState: 'draft' | 'ready_for_ordering';
   readonly statedQuantity: number;
@@ -291,6 +294,15 @@ const seedLink = async (
   });
 };
 
+// `purchase_drafts.reference` is minted by the column DEFAULT over a sequence, so no seed helper
+// knows the value it produced — every expectation reads it back from the row the database wrote.
+const referenceOf = async (purchaseDraftId: string): Promise<string> => {
+  const draft = await dataSource.manager
+    .getRepository(PurchaseDraftEntity)
+    .findOneByOrFail({ id: purchaseDraftId });
+  return draft.reference!;
+};
+
 const findLine = (rows: readonly DemandLineRead[], itemId: string) =>
   rows.find((row) => row.itemId === itemId);
 
@@ -318,6 +330,7 @@ const registerNonFanOutTests = (): void => {
   // `purchaseDraftLineId`), several links legitimately produce several coverage entries — the
   // totals staying correct alongside that is what proves there is no fan-out, not a shorter
   // coverage array.
+  // eslint-disable-next-line max-statements -- the fan-out scenario is only a fan-out with three orders, three drafts, three lines and five links seeded together; splitting it would stop it exercising the defect it exists to catch
   it('does not double count Outstanding Quantity when many Customer Orders per Item each carry many links, reports every link as its own Coverage entry, and reads it in one query', async () => {
     const workspaceId = await seedWorkspace();
     const warehouseId = await seedWarehouse(workspaceId);
@@ -384,41 +397,58 @@ const registerNonFanOutTests = (): void => {
     expect(line?.unitOfMeasure).toBe(ITEM_UNIT_OF_MEASURE);
 
     // Five links were seeded; Coverage carries one entry per link, unaggregated, and none of the
-    // per-link `statedQuantity` figures are summed or multiplied by the other aggregation.
+    // per-link `statedQuantity` figures are summed or multiplied by the other aggregation. Each
+    // entry names its draft the way the `COVERED BY` chip does — reference and quantity together,
+    // which is the whole of AC-20 (`PD-0142 · 800`).
+    const [reference1, reference2, reference3] = await Promise.all([
+      referenceOf(draft1),
+      referenceOf(draft2),
+      referenceOf(draft3),
+    ]);
     expect(sortCoverage(line?.coverage ?? [])).toEqual(
       sortCoverage([
         {
           purchaseDraftId: draft1,
+          purchaseDraftReference: reference1,
           purchaseDraftLineId: line1,
           purchaseDraftState: 'draft',
           statedQuantity: 10,
         },
         {
           purchaseDraftId: draft1,
+          purchaseDraftReference: reference1,
           purchaseDraftLineId: line1,
           purchaseDraftState: 'draft',
           statedQuantity: 3,
         },
         {
           purchaseDraftId: draft2,
+          purchaseDraftReference: reference2,
           purchaseDraftLineId: line2,
           purchaseDraftState: 'ready_for_ordering',
           statedQuantity: 5,
         },
         {
           purchaseDraftId: draft2,
+          purchaseDraftReference: reference2,
           purchaseDraftLineId: line2,
           purchaseDraftState: 'ready_for_ordering',
           statedQuantity: 4,
         },
         {
           purchaseDraftId: draft3,
+          purchaseDraftReference: reference3,
           purchaseDraftLineId: line3,
           purchaseDraftState: 'draft',
           statedQuantity: 7,
         },
       ]),
     );
+    // Every reference is a real minted one, distinct per draft — a coverage array that joined the
+    // wrong column (or the same draft's reference onto every entry) fails here rather than
+    // reaching the chip as three identical labels.
+    expect(new Set([reference1, reference2, reference3]).size).toBe(3);
+    expect(reference1).toMatch(/^PD-\d{4,}$/u);
   });
 };
 
@@ -594,12 +624,14 @@ const registerMultiDraftCoverageTests = (): void => {
       sortCoverage([
         {
           purchaseDraftId: draft1,
+          purchaseDraftReference: await referenceOf(draft1),
           purchaseDraftLineId: draft1Line,
           purchaseDraftState: 'draft',
           statedQuantity: 20,
         },
         {
           purchaseDraftId: draft2,
+          purchaseDraftReference: await referenceOf(draft2),
           purchaseDraftLineId: draft2Line,
           purchaseDraftState: 'ready_for_ordering',
           statedQuantity: 15,

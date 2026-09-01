@@ -9,8 +9,14 @@ import type { ReactElement } from 'react';
 import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 export type ReadyPurchaseDraftDialogProps = {
-  /** Whether the draft says what is being ordered yet (AC-14a). */
-  hasLines: boolean;
+  /**
+   * How many lines the draft holds. It is the count, not a flag, because the
+   * frame's first paragraph names it — "Frozen now — its 2 lines, …" — and
+   * because zero is what AC-14a refuses.
+   */
+  lineCount: number;
+  /** The draft's human reference, which the title names it by (`s5EPi`). */
+  reference: string;
   onConfirm: () => Promise<MutationResult>;
 };
 
@@ -19,6 +25,17 @@ export type ReadyPurchaseDraftDialogProps = {
  * (AC-14). There is one decision and nothing to fill in, so it is a
  * `ConfirmAlertDialog` rather than a form
  * (`docs/system/guides/web-dialogs.md` §1).
+ *
+ * The title names the draft (`Move PD-0143 to Ready for ordering?`), because
+ * the dialogs board makes that non-negotiable: an irreversible act confirmed
+ * from a list of look-alike drafts has to say which one it acts on (`s5EPi`).
+ *
+ * The body is the frame's four labelled paragraphs, not a summary of them
+ * (`s5EPi`): what is **frozen now**, what is **captured now**, what is **still
+ * possible**, and what is **no longer possible — by anyone**. Freezing is
+ * irreversible, and the two lists a member needs before an irreversible act are
+ * what they keep and what they lose; collapsing them into one sentence about
+ * "lines, quantities, links" states the first and leaves the second implied.
  *
  * A draft holding no lines cannot be made ready (AC-14a). The confirmation is
  * offered and **disabled with its reason stated**, never hidden — the member
@@ -29,15 +46,17 @@ export type ReadyPurchaseDraftDialogProps = {
  * assumed impossible.
  */
 export const ReadyPurchaseDraftDialog = ({
-  hasLines,
+  lineCount,
+  reference,
   onConfirm,
 }: ReadyPurchaseDraftDialogProps): ReactElement => {
   const { t } = useTranslation('purchase-draft');
   const [refusalCode, setRefusalCode] = useState<string>();
+  const hasLines = lineCount > 0;
 
   return (
     <ConfirmAlertDialog
-      title={t('transitions.ready.title')}
+      title={t('transitions.ready.title', { reference })}
       cancelLabel={t('transitions.ready.cancel')}
       confirmLabel={t('transitions.ready.confirm')}
       confirmVariant="primary"
@@ -47,7 +66,11 @@ export const ReadyPurchaseDraftDialog = ({
       onRefusal={setRefusalCode}
     >
       <p>{t('transitions.ready.body')}</p>
-      <p>{t('transitions.ready.snapshot')}</p>
+      <p>{t('transitions.ready.frozenNow', { count: lineCount })}</p>
+      <p>{t('transitions.ready.capturedNow')}</p>
+      <p>{t('transitions.ready.stillPossible')}</p>
+      <p>{t('transitions.ready.noLongerPossible')}</p>
+      <p>{t('transitions.ready.nothingTransmitted')}</p>
       <Conditional when={!hasLines}>
         <p className="text-sm text-danger">{t('transitions.ready.noLines')}</p>
       </Conditional>

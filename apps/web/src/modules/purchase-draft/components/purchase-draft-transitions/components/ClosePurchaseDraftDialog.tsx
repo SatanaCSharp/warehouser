@@ -12,6 +12,8 @@ import type { ReactElement } from 'react';
 import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 export type ClosePurchaseDraftDialogProps = {
+  /** The draft's human reference, which the title names it by (`s5EPi`). */
+  reference: string;
   onSubmit: (input: PurchaseDraftClosure) => Promise<MutationResult>;
 };
 
@@ -27,9 +29,11 @@ export type ClosePurchaseDraftDialogProps = {
  * registry entry names, not by this dialog, which has closed by then.
  */
 export const ClosePurchaseDraftDialog = ({
+  reference,
   onSubmit,
 }: ClosePurchaseDraftDialogProps): ReactElement => {
   const { t } = useTranslation('purchase-draft');
+  const { t: translate } = useTranslation('validation');
   const [refusalCode, setRefusalCode] = useState<string>();
   const form = useForm<PurchaseDraftClosure>({
     defaultValues: { closureReason: '' },
@@ -39,13 +43,20 @@ export const ClosePurchaseDraftDialog = ({
     register,
   } = form;
 
+  // BRIEF §A — a refusal names the value it will not accept. The only field
+  // this dialog has is the reason, so every code it can be given is explained
+  // under one `validation` section (`web-dialogs.md` §3).
+  const translateValidation = (code: string): string =>
+    translate(`purchaseDraftClosureReason.${code}`);
+
   return (
     <FormModalDialog
-      title={t('transitions.close.title')}
+      title={t('transitions.close.title', { reference })}
       cancelLabel={t('transitions.close.cancel')}
       submitLabel={t('transitions.close.submit')}
       submitVariant="danger"
       form={form}
+      translateValidation={translateValidation}
       onRefusal={setRefusalCode}
       onSubmit={onSubmit}
     >
@@ -56,6 +67,7 @@ export const ClosePurchaseDraftDialog = ({
         validationBehavior="aria"
         isInvalid={Boolean(errors.closureReason)}
         errorMessage={errors.closureReason?.message}
+        description={t('transitions.close.reasonDescription')}
         label={t('transitions.close.reasonLabel')}
         isDisabled={isSubmitting}
         {...register('closureReason', {

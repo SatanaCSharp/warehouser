@@ -5,6 +5,7 @@ import {
   arrivalAllocationCreateSchema,
   arrivalConfirmationLineSchema,
   arrivalConfirmationSchema,
+  linkedCustomerOrderStateSchema,
   packagingTypeIdSchema,
   packagingTypeSchema,
   purchaseDraftClosureSchema,
@@ -36,6 +37,7 @@ const id = (suffix: number): string =>
 
 const validSummary = {
   id: id(301),
+  reference: 'PD-0143',
   state: 'ready_for_ordering',
   expectedArrivalDate: '2026-09-02',
   lineCount: 2,
@@ -79,6 +81,9 @@ const validLine = {
         neededBy: '2026-09-11',
         state: 'unfulfilled',
         outstandingQuantity: 120,
+        // AC-16 — when the linked order last moved, which is what dates the drift statement the
+        // design draws (`Raised to 1 000 on 25 Aug`). openapi.yaml `LinkedCustomerOrderState`.
+        lastChangedAt: '2026-08-25T10:20:00.000Z',
       },
       driftSignals: ['quantity_changed', 'needed_by_moved'],
       allocation: null,
@@ -131,6 +136,53 @@ describe('purchase-drafts contracts', () => {
       expect(purchaseDraftDetailSchema.parse(detail)).toEqual(detail);
     });
 
+    // AC-16 — the drift statement the frames draw is dated (`Cancelled on 24 Aug`,
+    // `previews/F0SpRx.png`), so the moment the linked Customer Order last moved travels with the
+    // link. It is required and nullable rather than optional: an order not changed since it was
+    // recorded has no such moment, and the field says so explicitly instead of going missing —
+    // which is what makes the undated wording a decision the renderer takes rather than a hole.
+    it('carries the moment the linked order last moved, or an explicit nothing', () => {
+      const [{ current }] = validLine.links;
+
+      expect(
+        linkedCustomerOrderStateSchema.parse({
+          ...current,
+          lastChangedAt: null,
+        }).lastChangedAt,
+      ).toBeNull();
+      expect(
+        linkedCustomerOrderStateSchema.safeParse({
+          ...current,
+          lastChangedAt: '2026-08-25',
+        }).success,
+      ).toBe(false);
+
+      const { lastChangedAt, ...withoutMoment } = current;
+      expect(lastChangedAt).toBe('2026-08-25T10:20:00.000Z');
+      expect(
+        linkedCustomerOrderStateSchema.safeParse(withoutMoment).success,
+      ).toBe(false);
+    });
+
+    // The Expected Arrival Date is a calendar day the design shows as `25 Aug 2026`, never an
+    // instant (AC-10). A server that projects the `date` column through a raw query and lets the
+    // driver decode it into a `Date` sends a shifted date-time instead, which this refuses rather
+    // than quietly accepts — one such draft would otherwise fail the whole list response.
+    it('accepts a plain calendar Expected Arrival Date and refuses a date-time', () => {
+      expect(
+        purchaseDraftSummarySchema.safeParse({
+          ...validSummary,
+          expectedArrivalDate: '2026-09-25',
+        }).success,
+      ).toBe(true);
+      expect(
+        purchaseDraftSummarySchema.safeParse({
+          ...validSummary,
+          expectedArrivalDate: '2026-09-24T22:00:00.000Z',
+        }).success,
+      ).toBe(false);
+    });
+
     it('admits exactly the four lifecycle states', () => {
       expect(purchaseDraftStateSchema.parse('draft')).toBe('draft');
       expect(purchaseDraftStateSchema.parse('ready_for_ordering')).toBe(
@@ -141,6 +193,34 @@ describe('purchase-drafts contracts', () => {
       expect(purchaseDraftStateSchema.safeParse('cancelled').success).toBe(
         false,
       );
+    });
+
+    // The design frames name every draft `PD-0143` on the list card, in the detail header and in
+    // each dialog title (`previews/yGhkK.png`, `previews/s5EPi.png`), so a projection without a
+    // reference cannot render any of them — it is required, not optional, on both projections.
+    it('requires the human reference on both projections', () => {
+      const { reference, ...withoutReference } = validSummary;
+
+      expect(reference).toBe('PD-0143');
+      expect(
+        purchaseDraftSummarySchema.safeParse(withoutReference).success,
+      ).toBe(false);
+      expect(
+        purchaseDraftDetailSchema.safeParse({
+          ...withoutReference,
+          lines: [validLine],
+        }).success,
+      ).toBe(false);
+      expect(
+        purchaseDraftSummarySchema.safeParse({ ...validSummary, reference: '' })
+          .success,
+      ).toBe(false);
+      expect(
+        purchaseDraftSummarySchema.safeParse({
+          ...validSummary,
+          reference: null,
+        }).success,
+      ).toBe(false);
     });
 
     it('refuses an unknown field on the detail projection', () => {
@@ -192,6 +272,69 @@ describe('purchase-drafts contracts', () => {
         purchaseDraftLineLinkCreateSchema.safeParse({
           customerOrderId: id(201),
           statedQuantity: 0,
+        }).success,
+      ).toBe(false);
+    });
+  });
+
+  // Every request-body array of this subpath is bounded. Unbounded, the caller prices the server's
+  // work: each rejected element produces a validation issue the server normalizes into
+  // `details.fields` synchronously, ahead of every guard (NestJS runs guards before pipes), so one
+  // request can buy an arbitrary amount of blocked event loop. The figures are payload guards, far
+  // above anything a member assembles by hand, not business rules.
+  describe('every request-body array carries an upper bound', () => {
+    const line = { itemId: id(101), orderedQuantity: 1 };
+    const link = { customerOrderId: id(201), statedQuantity: 1 };
+    const allocation = {
+      purchaseDraftLineLinkId: id(301),
+      allocatedQuantity: 1,
+    };
+    const arrivalLine = { purchaseDraftLineId: id(102), receivedQuantity: 1 };
+    const repeat = <T>(value: T, count: number): T[] =>
+      Array.from({ length: count }, () => value);
+
+    it('bounds a draft create at two hundred lines and fifty links per line', () => {
+      expect(
+        purchaseDraftCreateSchema.safeParse({ lines: repeat(line, 200) })
+          .success,
+      ).toBe(true);
+      expect(
+        purchaseDraftCreateSchema.safeParse({ lines: repeat(line, 201) })
+          .success,
+      ).toBe(false);
+      expect(
+        purchaseDraftLineCreateSchema.safeParse({
+          ...line,
+          links: repeat(link, 50),
+        }).success,
+      ).toBe(true);
+      expect(
+        purchaseDraftLineCreateSchema.safeParse({
+          ...line,
+          links: repeat(link, 51),
+        }).success,
+      ).toBe(false);
+    });
+
+    it('bounds an arrival confirmation at the same two hundred lines and fifty allocations each', () => {
+      expect(
+        arrivalConfirmationSchema.safeParse({ lines: repeat(arrivalLine, 200) })
+          .success,
+      ).toBe(true);
+      expect(
+        arrivalConfirmationSchema.safeParse({ lines: repeat(arrivalLine, 201) })
+          .success,
+      ).toBe(false);
+      expect(
+        arrivalConfirmationLineSchema.safeParse({
+          ...arrivalLine,
+          allocations: repeat(allocation, 50),
+        }).success,
+      ).toBe(true);
+      expect(
+        arrivalConfirmationLineSchema.safeParse({
+          ...arrivalLine,
+          allocations: repeat(allocation, 51),
         }).success,
       ).toBe(false);
     });

@@ -3,9 +3,12 @@ import { Link as RouterLink, useRouterState } from '@tanstack/react-router';
 import { PermissionId } from '@warehouser/shared-types/enums';
 import { useTranslation } from 'react-i18next';
 
+import { PurchaseDraftDriftBadge } from 'modules/purchase-draft/components/PurchaseDraftDriftBadge';
+import { Conditional } from 'shared/components/Conditional';
 import { WarehousePermissionGate } from 'shared/components/WarehousePermissionGate';
 import { WorkspacePermissionGate } from 'shared/components/WorkspacePermissionGate';
 import { ROUTES } from 'shared/constants/routes';
+import { useArchivedWarehouse } from 'shared/hooks/projections/useArchivedWarehouse';
 import { useEnteredContext } from 'shared/hooks/projections/useEnteredContext';
 import { workspaceAdministrationPermissionIds } from 'shared/hooks/queries/useWorkspacePermissions';
 import {
@@ -17,19 +20,71 @@ import {
   ShieldCheckIcon,
 } from 'shared/icons';
 
-import type { ReactElement } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 
 export type SidebarProps = {
   isOpen?: boolean;
   onOpenChange?: (isOpen: boolean) => void;
 };
 
+type SidebarNavItemProps = {
+  /** The address pattern from `ROUTES` this entry navigates to. */
+  to: string;
+  /** The path params that pattern names, when it names any. */
+  params?: Record<string, string>;
+  /** Whether this entry addresses the destination currently on screen. */
+  isActive: boolean;
+  icon: ReactNode;
+  label: string;
+  /**
+   * The entry's **trailing slot**, rendered flush to its right edge after the
+   * label (frame `yGhkK`). It exists for the `Purchase drafts` drift count that
+   * serves US-08 from outside the drafts page (design-handoff.md §Information
+   * architecture); it renders nothing until a caller passes something, and the
+   * badge itself is the Purchase Drafts module's to supply.
+   */
+  trailing?: ReactNode;
+  onNavigate?: () => void;
+};
+
+// One nav entry. Private to this file — the sidebar is its only renderer, and
+// its two lists differ in what they contain rather than in how an entry looks.
+const SidebarNavItem = ({
+  to,
+  params,
+  isActive,
+  icon,
+  label,
+  trailing,
+  onNavigate,
+}: SidebarNavItemProps): ReactElement => {
+  const className = isActive
+    ? 'flex items-center gap-2 rounded-lg bg-accent-soft px-3 py-2 text-accent-soft-foreground'
+    : 'flex items-center gap-2 rounded-lg px-3 py-2 text-foreground hover:bg-surface-hover';
+
+  return (
+    <li>
+      <RouterLink
+        to={to}
+        params={params}
+        className={className}
+        onClick={onNavigate}
+      >
+        {icon}
+        <span className="flex-1">{label}</span>
+        {trailing}
+      </RouterLink>
+    </li>
+  );
+};
+
 /**
  * T10 / CR-AC-11, CR-AC-12, CR-AC-18 — the shell's navigation, selected by the
  * entered context rather than by one flat list mixing both authority levels:
  *
- * - **Warehouse view** — Dashboard and Access, both addressed within that
- *   `:warehouseId`. No Workspace destination appears.
+ * - **Warehouse view** — Dashboard, Demand, Purchase drafts, Items and Access,
+ *   in that order (frame `yGhkK`, design-handoff.md §Information architecture),
+ *   all addressed within that `:warehouseId`. No Workspace destination appears.
  * - **Workspace view** — the Workspace administration entry only. No
  *   Warehouse-scoped destination appears.
  * - **No context** — at the root and around a refusal, no list and no `<nav>`
@@ -45,14 +100,10 @@ export const Sidebar = ({
 }: SidebarProps = {}): ReactElement | null => {
   const { t } = useTranslation('common');
   const enteredContext = useEnteredContext();
+  const { isArchived } = useArchivedWarehouse();
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
-
-  const itemClassName = (isActive: boolean): string =>
-    isActive
-      ? 'flex items-center gap-2 rounded-lg bg-accent-soft px-3 py-2 text-accent-soft-foreground'
-      : 'flex items-center gap-2 rounded-lg px-3 py-2 text-foreground hover:bg-surface-hover';
 
   // Resolving each pattern from `ROUTES` keeps `shared/constants/routes.ts` the
   // single owner of every path literal while still allowing the active-item
@@ -63,98 +114,87 @@ export const Sidebar = ({
   const warehouseNavList = (
     enteredWarehouseId: string,
     onNavigate?: () => void,
-  ): ReactElement => (
-    <ul className="space-y-1 p-4">
-      <li>
-        <RouterLink
+  ): ReactElement => {
+    const params = { warehouseId: enteredWarehouseId };
+    const isAt = (pattern: string): boolean =>
+      pathname === addressIn(pattern, enteredWarehouseId);
+
+    return (
+      <ul className="space-y-1 p-4">
+        <SidebarNavItem
           to={ROUTES.WAREHOUSE}
-          params={{ warehouseId: enteredWarehouseId }}
-          className={itemClassName(
-            pathname === addressIn(ROUTES.WAREHOUSE, enteredWarehouseId),
-          )}
-          onClick={onNavigate}
+          params={params}
+          isActive={isAt(ROUTES.WAREHOUSE)}
+          icon={<DashboardIcon />}
+          label={t('nav.dashboard')}
+          onNavigate={onNavigate}
+        />
+        {/* T17 — the ordering web shell's three destinations sit between
+            Dashboard and Access, each absent — not disabled, not empty — when
+            the actor lacks its own watch Permission, matching the rule Access
+            already applies (AC-05, AC-22, AC-23). */}
+        <WarehousePermissionGate
+          permission={PermissionId.CUSTOMER_ORDERS_WATCH}
         >
-          <DashboardIcon />
-          {t('nav.dashboard')}
-        </RouterLink>
-      </li>
-      {/* CR-AC-11 / CR-AC-19 — the gate is the shipped `ROLES:WATCH ∪
-          USERS:WATCH` predicate, unmodified, now evaluated against the ADDRESSED
-          Warehouse's own projection. Its falsy/loading behavior is inherited
-          verbatim: absent while unresolved, present once it arrives, never a
-          held-over value from the Warehouse just left. */}
-      <WarehousePermissionGate
-        permission={[PermissionId.ROLES_WATCH, PermissionId.USERS_WATCH]}
-      >
-        <li>
-          <RouterLink
-            to={ROUTES.WAREHOUSE_ACCESS}
-            params={{ warehouseId: enteredWarehouseId }}
-            className={itemClassName(
-              pathname ===
-                addressIn(ROUTES.WAREHOUSE_ACCESS, enteredWarehouseId),
-            )}
-            onClick={onNavigate}
-          >
-            <ShieldCheckIcon />
-            {t('nav.access')}
-          </RouterLink>
-        </li>
-      </WarehousePermissionGate>
-      {/* T17 — the ordering web shell's three destinations join Dashboard and
-          Access, each absent — not disabled, not empty — when the actor
-          lacks its own watch Permission, matching the rule Access already
-          applies (AC-05, AC-22, AC-23). */}
-      <WarehousePermissionGate permission={PermissionId.CUSTOMER_ORDERS_WATCH}>
-        <li>
-          <RouterLink
+          <SidebarNavItem
             to={ROUTES.WAREHOUSE_DEMAND}
-            params={{ warehouseId: enteredWarehouseId }}
-            className={itemClassName(
-              pathname ===
-                addressIn(ROUTES.WAREHOUSE_DEMAND, enteredWarehouseId),
-            )}
-            onClick={onNavigate}
-          >
-            <ClipboardListIcon />
-            {t('nav.demand')}
-          </RouterLink>
-        </li>
-      </WarehousePermissionGate>
-      <WarehousePermissionGate permission={PermissionId.PURCHASE_DRAFTS_WATCH}>
-        <li>
-          <RouterLink
+            params={params}
+            isActive={isAt(ROUTES.WAREHOUSE_DEMAND)}
+            icon={<ClipboardListIcon />}
+            label={t('nav.demand')}
+            onNavigate={onNavigate}
+          />
+        </WarehousePermissionGate>
+        <WarehousePermissionGate
+          permission={PermissionId.PURCHASE_DRAFTS_WATCH}
+        >
+          <SidebarNavItem
             to={ROUTES.WAREHOUSE_PURCHASE_DRAFTS}
-            params={{ warehouseId: enteredWarehouseId }}
-            className={itemClassName(
-              pathname ===
-                addressIn(ROUTES.WAREHOUSE_PURCHASE_DRAFTS, enteredWarehouseId),
-            )}
-            onClick={onNavigate}
-          >
-            <FileTextIcon />
-            {t('nav.purchaseDrafts')}
-          </RouterLink>
-        </li>
-      </WarehousePermissionGate>
-      <WarehousePermissionGate permission={PermissionId.ITEMS_WATCH}>
-        <li>
-          <RouterLink
+            params={params}
+            isActive={isAt(ROUTES.WAREHOUSE_PURCHASE_DRAFTS)}
+            icon={<FileTextIcon />}
+            label={t('nav.purchaseDrafts')}
+            trailing={<PurchaseDraftDriftBadge />}
+            onNavigate={onNavigate}
+          />
+        </WarehousePermissionGate>
+        <WarehousePermissionGate permission={PermissionId.ITEMS_WATCH}>
+          <SidebarNavItem
             to={ROUTES.WAREHOUSE_ITEMS}
-            params={{ warehouseId: enteredWarehouseId }}
-            className={itemClassName(
-              pathname ===
-                addressIn(ROUTES.WAREHOUSE_ITEMS, enteredWarehouseId),
-            )}
-            onClick={onNavigate}
+            params={params}
+            isActive={isAt(ROUTES.WAREHOUSE_ITEMS)}
+            icon={<PackageIcon />}
+            label={t('nav.items')}
+            onNavigate={onNavigate}
+          />
+        </WarehousePermissionGate>
+        {/* CR-AC-11 / CR-AC-19 — the gate is the shipped `ROLES:WATCH ∪
+            USERS:WATCH` predicate, unmodified, now evaluated against the
+            ADDRESSED Warehouse's own projection. Its falsy/loading behavior is
+            inherited verbatim: absent while unresolved, present once it
+            arrives, never a held-over value from the Warehouse just left.
+
+            CR-AC-13 / CR-AC-17 — an archived Warehouse is not administered, and
+            `WarehouseLayout` still refuses its Access address, so the entry is
+            hidden rather than offered as a link to a refusal. AC-23 reopens the
+            three watch destinations above and nothing else. */}
+        <Conditional when={!isArchived}>
+          <WarehousePermissionGate
+            permission={[PermissionId.ROLES_WATCH, PermissionId.USERS_WATCH]}
           >
-            <PackageIcon />
-            {t('nav.items')}
-          </RouterLink>
-        </li>
-      </WarehousePermissionGate>
-    </ul>
-  );
+            <SidebarNavItem
+              to={ROUTES.WAREHOUSE_ACCESS}
+              params={params}
+              isActive={isAt(ROUTES.WAREHOUSE_ACCESS)}
+              icon={<ShieldCheckIcon />}
+              label={t('nav.access')}
+              onNavigate={onNavigate}
+            />
+          </WarehousePermissionGate>
+        </Conditional>
+      </ul>
+    );
+  };
 
   const workspaceNavList = (onNavigate?: () => void): ReactElement => (
     <ul className="space-y-1 p-4">
@@ -165,16 +205,13 @@ export const Sidebar = ({
       <WorkspacePermissionGate
         permission={workspaceAdministrationPermissionIds}
       >
-        <li>
-          <RouterLink
-            to={ROUTES.WORKSPACE}
-            className={itemClassName(pathname === ROUTES.WORKSPACE)}
-            onClick={onNavigate}
-          >
-            <Building2Icon />
-            {t('nav.workspace')}
-          </RouterLink>
-        </li>
+        <SidebarNavItem
+          to={ROUTES.WORKSPACE}
+          isActive={pathname === ROUTES.WORKSPACE}
+          icon={<Building2Icon />}
+          label={t('nav.workspace')}
+          onNavigate={onNavigate}
+        />
       </WorkspacePermissionGate>
     </ul>
   );

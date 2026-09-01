@@ -61,7 +61,14 @@ interface ItemCatalogueRepositoryContract {
       unitOfMeasure: string;
       onHandQuantity: number;
       deactivatedAt: Date | null;
+      // AC-06c — what names the Item, counted by the same conditions `isNamedByDemandOrDraft`
+      // enforces the SKU rule with, so the Items table cannot state a figure the correction
+      // attempt disagrees with.
+      namingCustomerOrderCount: number;
+      namingPurchaseDraftLineCount: number;
       latestAdjustmentReason: string | null;
+      // AC-08 — "the reason, the acting member, and the time", all three.
+      latestAdjustedByUserId: string | null;
     }>
   >;
 }
@@ -109,11 +116,18 @@ const seedUser = async (workspaceId: string): Promise<string> => {
   return userId;
 };
 
+// AC-06c fixes a SKU "for the life of that item", so a cancelled Customer Order names the Item
+// exactly as an Unfulfilled one does — `cancelled` is offered here so the naming counts can be
+// exercised against the same rule the enforcement applies.
+// `chk_customer_orders_cancellation_attribution` — a cancelled order carries its reason, its member
+// and its time; a non-cancelled one carries none of the three.
 const insertCustomerOrder = async (
   warehouseId: string,
   itemId: string,
   recordedByUserId: string,
+  state: 'unfulfilled' | 'cancelled' = 'unfulfilled',
 ): Promise<void> => {
+  const isCancelled = state === 'cancelled';
   await dataSource.manager.getRepository(CustomerOrderEntity).insert({
     id: randomUUID(),
     warehouseId,
@@ -122,26 +136,31 @@ const insertCustomerOrder = async (
     quantity: 10,
     outstandingQuantity: 10,
     neededBy: '2026-09-30',
-    state: 'unfulfilled',
-    cancellationReason: null,
+    state,
+    cancellationReason: isCancelled ? 'The customer no longer needs it' : null,
     recordedByUserId,
-    cancelledByUserId: null,
-    cancelledAt: null,
+    cancelledByUserId: isCancelled ? recordedByUserId : null,
+    cancelledAt: isCancelled ? now : null,
     createdAt: now,
     updatedAt: now,
   });
 };
 
+// A discarded draft's line names the Item too — AC-06d's "keeps its SKU taken so no new Item may
+// reuse it" is the same permanence read from the other side.
+// `chk_purchase_drafts_discard_attribution` — a Discarded draft carries its member and its time.
 const insertPurchaseDraftWithLine = async (
   warehouseId: string,
   itemId: string,
   createdByUserId: string,
+  state: 'draft' | 'discarded' = 'draft',
 ): Promise<void> => {
   const purchaseDraftId = randomUUID();
+  const isDiscarded = state === 'discarded';
   await dataSource.manager.getRepository(PurchaseDraftEntity).insert({
     id: purchaseDraftId,
     warehouseId,
-    state: 'draft',
+    state,
     expectedArrivalDate: null,
     createdByUserId,
     readiedByUserId: null,
@@ -151,8 +170,8 @@ const insertPurchaseDraftWithLine = async (
     closureReason: null,
     arrivalConfirmedByUserId: null,
     arrivalConfirmedAt: null,
-    discardedByUserId: null,
-    discardedAt: null,
+    discardedByUserId: isDiscarded ? createdByUserId : null,
+    discardedAt: isDiscarded ? now : null,
     createdAt: now,
     updatedAt: now,
   });
@@ -293,6 +312,146 @@ const registerIsNamedByDemandOrDraftTests = (): void => {
 
       expect(result).toBe(true);
       expect(queryCount).toBe(1);
+    });
+  });
+};
+
+// AC-06c — the Items table's second description line (`Named by 3 customer orders and 1 draft
+// line` / `Nothing names it yet — its SKU is still correctable`, design frame `XIvAZ.png`) is the
+// affordance that tells a member whether a SKU correction is still open to them. It is therefore
+// only honest while it is counted by **the same** rule `isNamedByDemandOrDraft` enforces, which is
+// what every test here pins: each case asserts the two counts *and* the boolean together, so an
+// implementation that filtered one of them by order or draft state — showing "nothing names it"
+// on an Item whose correction the server would refuse — fails.
+const registerNamingCountTests = (): void => {
+  describe('what names an Item, counted by the rule the SKU is enforced with (AC-06c)', () => {
+    const seedItemNamedBy = async (
+      sku: string,
+      seed: (
+        warehouseId: string,
+        itemId: string,
+        userId: string,
+      ) => Promise<void>,
+    ): Promise<{
+      warehouseId: string;
+      itemId: string;
+      namingCustomerOrderCount: number;
+      namingPurchaseDraftLineCount: number;
+      isNamed: boolean;
+    }> => {
+      const workspaceId = await seedWorkspace();
+      const warehouseId = await seedWarehouse(workspaceId);
+      const userId = await seedUser(workspaceId);
+      const itemId = randomUUID();
+      await repository.createItem({
+        id: itemId,
+        warehouseId,
+        sku,
+        description: 'Cable reel, 50m',
+        unitOfMeasure: 'each',
+      });
+      await seed(warehouseId, itemId, userId);
+
+      const rows =
+        await repository.findItemsWithOnHandAndLatestReason(warehouseId);
+      const row = rows.find((entry) => entry.id === itemId);
+
+      return {
+        warehouseId,
+        itemId,
+        namingCustomerOrderCount: row!.namingCustomerOrderCount,
+        namingPurchaseDraftLineCount: row!.namingPurchaseDraftLineCount,
+        isNamed: await repository.isNamedByDemandOrDraft(itemId),
+      };
+    };
+
+    it('counts nothing, and permits the SKU correction, while nothing names the Item', async () => {
+      const read = await seedItemNamedBy(
+        'TEST-SKU-NAMED-BY-NOTHING',
+        async () => {},
+      );
+
+      expect(read.namingCustomerOrderCount).toBe(0);
+      expect(read.namingPurchaseDraftLineCount).toBe(0);
+      expect(read.isNamed).toBe(false);
+    });
+
+    it('counts each naming Customer Order and each naming Purchase Draft Line separately', async () => {
+      const read = await seedItemNamedBy(
+        'TEST-SKU-NAMED-BY-BOTH',
+        async (warehouseId, itemId, userId) => {
+          await insertCustomerOrder(warehouseId, itemId, userId);
+          await insertCustomerOrder(warehouseId, itemId, userId);
+          await insertCustomerOrder(warehouseId, itemId, userId);
+          await insertPurchaseDraftWithLine(warehouseId, itemId, userId);
+        },
+      );
+
+      // The frame's own sentence: "Named by 3 customer orders and 1 draft line".
+      expect(read.namingCustomerOrderCount).toBe(3);
+      expect(read.namingPurchaseDraftLineCount).toBe(1);
+      expect(read.isNamed).toBe(true);
+    });
+
+    // The half that would break silently: AC-06c fixes the SKU "for the life of that item", so a
+    // cancelled order and a discarded draft still name it. Were the counts filtered by state and
+    // the enforcement not, an Item would read `Nothing names it yet — its SKU is still correctable`
+    // and then have its correction refused.
+    it('counts a cancelled Customer Order and a discarded draft line exactly as the enforcement does', async () => {
+      const read = await seedItemNamedBy(
+        'TEST-SKU-NAMED-BY-ENDED',
+        async (warehouseId, itemId, userId) => {
+          await insertCustomerOrder(warehouseId, itemId, userId, 'cancelled');
+          await insertPurchaseDraftWithLine(
+            warehouseId,
+            itemId,
+            userId,
+            'discarded',
+          );
+        },
+      );
+
+      expect(read.namingCustomerOrderCount).toBe(1);
+      expect(read.namingPurchaseDraftLineCount).toBe(1);
+      expect(read.isNamed).toBe(true);
+    });
+
+    // Another Warehouse's Item is a different Item that happens to share a SKU (AC-07a); what
+    // names it is counted against it alone.
+    it("never counts another Item's Customer Orders or draft lines", async () => {
+      const workspaceId = await seedWorkspace();
+      const warehouseId = await seedWarehouse(workspaceId);
+      const userId = await seedUser(workspaceId);
+      const countedItemId = randomUUID();
+      const otherItemId = randomUUID();
+      await repository.createItem({
+        id: countedItemId,
+        warehouseId,
+        sku: 'TEST-SKU-NAMED-COUNTED',
+        description: 'Cable reel, 50m',
+        unitOfMeasure: 'each',
+      });
+      await repository.createItem({
+        id: otherItemId,
+        warehouseId,
+        sku: 'TEST-SKU-NAMED-OTHER',
+        description: 'Cable reel, 100m',
+        unitOfMeasure: 'each',
+      });
+      await insertCustomerOrder(warehouseId, otherItemId, userId);
+      await insertPurchaseDraftWithLine(warehouseId, otherItemId, userId);
+
+      const rows =
+        await repository.findItemsWithOnHandAndLatestReason(warehouseId);
+
+      expect(rows.find((row) => row.id === countedItemId)).toMatchObject({
+        namingCustomerOrderCount: 0,
+        namingPurchaseDraftLineCount: 0,
+      });
+      expect(rows.find((row) => row.id === otherItemId)).toMatchObject({
+        namingCustomerOrderCount: 1,
+        namingPurchaseDraftLineCount: 1,
+      });
     });
   });
 };
@@ -520,6 +679,52 @@ const registerItemsWithOnHandAndLatestReasonTests = (): void => {
       expect(row).toMatchObject({
         onHandQuantity: 0,
         latestAdjustmentReason: null,
+        // The Items table renders `nothing recorded yet` from this: no reason, no member, no time
+        // — never a member id left standing beside an absent count.
+        latestAdjustedByUserId: null,
+      });
+    });
+
+    // AC-08 — "records that count as the Item's On-hand Quantity, together with the reason, the
+    // acting member, and the time". The Items table states all three on one line
+    // (`24 Aug · cycle count · by you`), which it cannot do while the read path carries two of
+    // them; the member must come from the same latest row as the reason, not from an arbitrary
+    // earlier adjustment.
+    it('reports the acting member of the LATEST adjustment, from the same row as its reason (AC-08)', async () => {
+      const workspaceId = await seedWorkspace();
+      const warehouseId = await seedWarehouse(workspaceId);
+      const earlierMemberId = await seedUser(workspaceId);
+      const latestMemberId = await seedUser(workspaceId);
+      const itemId = randomUUID();
+      await repository.createItem({
+        id: itemId,
+        warehouseId,
+        sku: 'TEST-SKU-ADJUSTMENT-MEMBER',
+        description: 'Cable reel, 50m',
+        unitOfMeasure: 'each',
+      });
+      await insertAdjustment(
+        itemId,
+        warehouseId,
+        earlierMemberId,
+        'Initial count',
+        new Date(now.getTime() - 60_000),
+      );
+      await insertAdjustment(
+        itemId,
+        warehouseId,
+        latestMemberId,
+        'Cycle count correction',
+        now,
+      );
+
+      const rows =
+        await repository.findItemsWithOnHandAndLatestReason(warehouseId);
+
+      const row = rows.find((entry) => entry.id === itemId);
+      expect(row).toMatchObject({
+        latestAdjustmentReason: 'Cycle count correction',
+        latestAdjustedByUserId: latestMemberId,
       });
     });
 
@@ -576,7 +781,7 @@ const registerItemsWithOnHandAndLatestReasonTests = (): void => {
       expect(rows.map((row) => row.id)).not.toContain(itemInWarehouseTwoId);
     });
 
-    it('reads every Item of the Warehouse with its latest reason in exactly one query, regardless of how many Items or adjustments exist', async () => {
+    it('reads every Item of the Warehouse with its latest reason and what names it in exactly one query, regardless of how many Items, adjustments, orders or draft lines exist', async () => {
       const workspaceId = await seedWorkspace();
       const warehouseId = await seedWarehouse(workspaceId);
       const userId = await seedUser(workspaceId);
@@ -598,6 +803,10 @@ const registerItemsWithOnHandAndLatestReasonTests = (): void => {
       });
       await insertAdjustment(itemOneId, warehouseId, userId, 'First', now);
       await insertAdjustment(itemTwoId, warehouseId, userId, 'Second', now);
+      // AC-06c's naming counts are correlated subqueries of the same `SELECT`, so seeding what
+      // names an Item must not add a round trip either.
+      await insertCustomerOrder(warehouseId, itemOneId, userId);
+      await insertPurchaseDraftWithLine(warehouseId, itemTwoId, userId);
 
       const { result, queryCount } = await withQueryCount(() =>
         repository.findItemsWithOnHandAndLatestReason(warehouseId),
@@ -606,6 +815,13 @@ const registerItemsWithOnHandAndLatestReasonTests = (): void => {
       expect(result.map((row) => row.id).sort()).toEqual(
         [itemOneId, itemTwoId].sort(),
       );
+      expect(
+        result.find((row) => row.id === itemOneId)?.namingCustomerOrderCount,
+      ).toBe(1);
+      expect(
+        result.find((row) => row.id === itemTwoId)
+          ?.namingPurchaseDraftLineCount,
+      ).toBe(1);
       expect(queryCount).toBe(1);
     });
   });
@@ -627,6 +843,7 @@ describe('ItemCatalogueRepository', () => {
   });
 
   registerIsNamedByDemandOrDraftTests();
+  registerNamingCountTests();
   registerSkuUniquenessTests();
   registerDeactivationTests();
   registerCorrectionTests();

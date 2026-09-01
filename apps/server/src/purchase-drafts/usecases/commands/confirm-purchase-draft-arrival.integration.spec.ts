@@ -414,7 +414,10 @@ describe('ConfirmPurchaseDraftArrivalCommand', () => {
           outstandingQuantity: 100,
           state: 'cancelled',
           cancellationReason: 'Customer withdrew the order',
-          cancelledAt: now,
+          cancelledAt: later,
+          // The cancellation moved the row, exactly as `cancelCustomerOrder` writes it — which is
+          // what the refusal dates itself from (AC-18, design frame `s5EPi.png`).
+          updatedAt: later,
         },
         receivedQuantity: 100,
         allocatedQuantity: 10,
@@ -422,6 +425,7 @@ describe('ConfirmPurchaseDraftArrivalCommand', () => {
           purchaseDraftLineLinkId: linkId,
           rule: 'customer_order_not_unfulfilled',
           customerOrderState: 'cancelled',
+          customerOrderLastChangedAt: later.toISOString(),
         }),
       },
     ],
@@ -432,6 +436,9 @@ describe('ConfirmPurchaseDraftArrivalCommand', () => {
           quantity: 100,
           outstandingQuantity: 0,
           state: 'fulfilled',
+          // An Allocation is what fulfils an order, and it rewrites `updated_at` with the moment
+          // it landed (`demand-allocation.repository.ts` `applyAllocations`).
+          updatedAt: later,
         },
         receivedQuantity: 100,
         allocatedQuantity: 10,
@@ -439,6 +446,7 @@ describe('ConfirmPurchaseDraftArrivalCommand', () => {
           purchaseDraftLineLinkId: linkId,
           rule: 'customer_order_not_unfulfilled',
           customerOrderState: 'fulfilled',
+          customerOrderLastChangedAt: later.toISOString(),
         }),
       },
     ],

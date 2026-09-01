@@ -1,6 +1,9 @@
+import { z } from 'zod';
+
 import type {
   ArrivalConfirmation,
   PurchaseDraftDetail,
+  PurchaseDraftLineLink,
 } from '@warehouser/contracts/purchase-drafts';
 import type { FormParse, FormParseResult } from 'shared/utils/form-parse';
 
@@ -23,6 +26,81 @@ export type ArrivalForm = {
 
 /** Validation codes this form raises. Never display text (web-error-handling.md §5). */
 const INVALID_QUANTITY = 'invalidQuantity';
+
+/**
+ * Whether a link may be assigned any of what arrived (AC-18).
+ *
+ * The bound is the Customer Order's own lifecycle state, read fresh rather than
+ * from the Demand Snapshot: an order cancelled or fulfilled since the draft was
+ * frozen accepts nothing, and the server refuses the whole confirmation for it
+ * (`demand-allocation.service.ts` `customer_order_not_unfulfilled`). This is not
+ * the client pre-judging an arithmetic bound — it is the one fact that decides
+ * whether the field exists at all, which is why the approved frame draws that
+ * row disabled with an em dash rather than empty (`s5EPi`).
+ */
+export const isAssignableLink = ({ current }: PurchaseDraftLineLink): boolean =>
+  current.state === 'unfulfilled';
+
+/**
+ * The three bounds AC-18 refuses an Arrival Confirmation against, exactly as
+ * the server names them: `demand-allocation.errors.ts` publishes one entry per
+ * failing bound and the global filter carries the whole `details` envelope out
+ * unchanged, so the dialog can name each broken bound rather than restating one
+ * generic sentence for all three.
+ *
+ * Only the identifiers and figures travel — the customer's name and the line's
+ * number are resolved here, from the draft the dialog was opened for.
+ */
+const arrivalBoundViolationSchema = z.discriminatedUnion('rule', [
+  z.object({
+    rule: z.literal('allocations_exceed_received_quantity'),
+    purchaseDraftLineId: z.string(),
+    receivedQuantity: z.number(),
+    allocatedQuantity: z.number(),
+  }),
+  z.object({
+    rule: z.literal('exceeds_outstanding_quantity'),
+    purchaseDraftLineLinkId: z.string(),
+    outstandingQuantity: z.number(),
+    allocatedQuantity: z.number(),
+  }),
+  z.object({
+    rule: z.literal('customer_order_not_unfulfilled'),
+    purchaseDraftLineLinkId: z.string(),
+    customerOrderState: z.string(),
+    // AC-18/AC-16 — when the refused order moved, so the bullet reads "cancelled on 24 Aug"
+    // (`s5EPi`). `.catch(null)` rather than a plain `.nullable()`: the whole violation is dropped
+    // when its shape does not parse, and a refusal that cannot be dated is still a refusal the
+    // member is owed the name of.
+    customerOrderLastChangedAt: z.string().nullable().catch(null),
+  }),
+]);
+
+export type ArrivalBoundViolation = z.infer<typeof arrivalBoundViolationSchema>;
+
+// A bound this build does not know is dropped rather than failing the whole
+// list, so a server that grows a fourth rule still explains the three the member
+// can read. The alert falls back to its own sentence when nothing survives.
+const arrivalRefusalDetailsSchema = z.object({
+  violations: z.array(arrivalBoundViolationSchema.nullable().catch(null)),
+});
+
+/**
+ * The bounds one refusal reports, or nothing when the refusal carried none —
+ * a `purchase_drafts.allocation_out_of_bounds` raised by a path that publishes
+ * no breakdown, or an envelope this build cannot read.
+ */
+export const arrivalBoundViolations = (
+  details: Record<string, unknown> | undefined,
+): ArrivalBoundViolation[] => {
+  const parsed = arrivalRefusalDetailsSchema.safeParse(details);
+
+  return parsed.success
+    ? parsed.data.violations.flatMap((violation) =>
+        violation === null ? [] : [violation],
+      )
+    : [];
+};
 
 export const arrivalFormDefaults = (
   draft: PurchaseDraftDetail,

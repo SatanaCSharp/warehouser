@@ -1,8 +1,10 @@
-import { Button, Card } from '@heroui/react';
+import { Card } from '@heroui/react';
+import { useTranslation } from 'react-i18next';
 
+import { ItemActionsMenu } from 'modules/item/components/item-directory/components/ItemActionsMenu';
+import { ItemCardMeta } from 'modules/item/components/item-directory/components/ItemCardMeta';
 import { ItemOnHand } from 'modules/item/components/item-directory/components/ItemOnHand';
 import { ItemStatusChip } from 'modules/item/components/item-directory/components/ItemStatusChip';
-import { useItemActions } from 'modules/item/hooks/projections/useItemActions';
 
 import type { Item } from '@warehouser/contracts/items';
 import type { ItemActionHandlers } from 'modules/item/hooks/projections/useItemActions';
@@ -14,50 +16,57 @@ export type ItemCardProps = ItemActionHandlers & {
 
 /**
  * One Item, carried as a card below the split-view breakpoint (design-handoff
- * `Item Card Mobile`, `QSHsy`). `ItemOnHand` and `ItemStatusChip` are the
- * leaves it shares with the table row, so the card cannot drop the adjustment
- * reason (AC-08) or state a different status (AC-06d).
+ * `Item Card Mobile`, `QSHsy`, frame `VHU6r`): SKU and status chip, the
+ * description, the meta line naming the unit and what references the Item,
+ * then the labelled `ON HAND` block with its reason line and the kebab.
  *
- * Its actions are inline rather than behind a kebab, as the approved frame has
- * them — a phone reaches the workflows without opening a menu first. They are
- * `Button`s with a semantic `variant` rather than the bare `<button>`s this
- * card used to render (`docs/system/guides/heroui-design-principles.md` §1),
- * and they come from the same `useItemActions` projection the table's menu
- * reads, so the two surfaces offer the same actor the same set.
+ * **Every value on the card is labelled or self-describing**, which the frame
+ * requires and a bare figure does not satisfy: `60` alone says nothing, so the
+ * on-hand block states what the figure is before stating it.
+ *
+ * `ItemOnHand`, `ItemStatusChip` and `ItemActionsMenu` are the leaves it shares
+ * with the table row, so the card cannot drop the adjustment reason (AC-08),
+ * state a different status (AC-06d), or offer a different set of actions than
+ * the row's menu offers the same actor.
  */
 export const ItemCard = ({
   item,
   onAdjustOnHand,
   onCorrect,
-  onToggleActive,
+  onDeactivate,
 }: ItemCardProps): ReactElement => {
-  const actions = useItemActions(item, {
-    onAdjustOnHand,
-    onCorrect,
-    onToggleActive,
-  });
+  const { t } = useTranslation('item');
 
   return (
     <li>
-      <Card>
+      <Card className={item.deactivatedAt === null ? undefined : 'opacity-60'}>
         <Card.Header className="flex flex-row items-start justify-between gap-2">
           <div>
             <Card.Title>{item.sku}</Card.Title>
-            <Card.Description>{item.description}</Card.Description>
+            <Card.Description className="text-base font-medium text-foreground">
+              {item.description}
+            </Card.Description>
           </div>
           <ItemStatusChip item={item} />
         </Card.Header>
 
         <Card.Content>
-          <ItemOnHand withUnit item={item} />
+          <ItemCardMeta item={item} />
         </Card.Content>
 
-        <Card.Footer className="flex flex-wrap gap-2">
-          {actions.map(({ id, label, run }) => (
-            <Button key={id} size="sm" variant="tertiary" onPress={run}>
-              {label}
-            </Button>
-          ))}
+        <Card.Footer className="flex flex-row items-end justify-between gap-2 border-t border-border-secondary pt-3">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-muted">
+              {t('directory.table.onHand')}
+            </p>
+            <ItemOnHand withUnit item={item} />
+          </div>
+          <ItemActionsMenu
+            item={item}
+            onAdjustOnHand={onAdjustOnHand}
+            onCorrect={onCorrect}
+            onDeactivate={onDeactivate}
+          />
         </Card.Footer>
       </Card>
     </li>

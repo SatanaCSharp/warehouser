@@ -15,16 +15,19 @@
     "updateRole": "Role updated."
   },
   "item": {
-    "createItem": "Item added.",
-    "updateItem": "Item corrected.",
-    "deactivateItem": "Item deactivated.",
-    "reactivateItem": "Item reactivated.",
-    "adjustOnHandQuantity": "On-hand quantity recorded."
+    "createItem": "Item added · {{sku}} · {{description}}",
+    "updateItem": "Item corrected · {{sku}} · {{description}}",
+    "deactivateItem": "Deactivated · {{sku}} · {{description}}",
+    "reactivateItem": "Reactivated · {{sku}} · {{description}}",
+    "adjustOnHandQuantity": "On-hand set to {{quantity}} · {{description}}"
   },
   "customer-order": {
-    "recordCustomerOrder": "Demand recorded.",
-    "amendCustomerOrder": "Order amended.",
-    "cancelCustomerOrder": "Order cancelled."
+    "recordCustomerOrder": "Demand recorded · {{quantity}} for {{customer}}, needed by {{date}}",
+    "amendCustomerOrder": "Order amended · {{customer}}",
+    "amendCustomerOrderQuantity": "Order amended · {{customer}} is now waiting for {{quantity}}",
+    "amendCustomerOrderNeededBy": "Order amended · {{customer}} now needs it by {{date}}",
+    "amendCustomerOrderBoth": "Order amended · {{customer}} is now waiting for {{quantity}} by {{date}}",
+    "cancelCustomerOrder": "Order cancelled · {{customer}} · {{reason}}"
   },
   "workspace": {
     "renameWorkspace": "Workspace named.",

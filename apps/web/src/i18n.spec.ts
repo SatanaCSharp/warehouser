@@ -428,11 +428,21 @@ describe('workspace-warehouse T1 shell/enter-action keys', () => {
     expect(
       instance.t('shell.archivedEntryRefusal.heading', { ns: 'common' }),
     ).toBe('This warehouse is archived');
+    // AC-23 — an archived Warehouse IS entered now, read-only, so the sentence
+    // that said it could not be entered was no longer true. The refusal it
+    // accompanies is the Access address alone (CR-AC-17), which is what the
+    // replacement copy names.
     expect(
       instance.t('shell.archivedEntryRefusal.description', { ns: 'common' }),
     ).toBe(
-      "Archived warehouses can't be entered. Your access to other warehouses is unchanged.",
+      "Archived warehouses aren't administered here. What one already holds stays readable to everyone permitted to read it.",
     );
+    expect(instance.t('shell.archivedWarehouse.chip', { ns: 'common' })).toBe(
+      'Archived warehouse',
+    );
+    expect(
+      instance.t('shell.archivedWarehouse.heading', { ns: 'common' }),
+    ).toBe('This warehouse has been archived');
     expect(instance.t('shell.landing.pendingLabel', { ns: 'common' })).toBe(
       'Preparing your workspace…',
     );

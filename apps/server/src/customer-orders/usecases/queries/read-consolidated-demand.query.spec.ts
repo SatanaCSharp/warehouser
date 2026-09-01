@@ -38,6 +38,7 @@ const demandLines = [
     coverage: [
       {
         purchaseDraftId: 'draft-1',
+        purchaseDraftReference: 'PD-0142',
         purchaseDraftLineId: 'line-1',
         purchaseDraftState: 'ready_for_ordering',
         statedQuantity: 13,

@@ -72,9 +72,14 @@ const storedDraft = (
 });
 
 const itemCatalogueRepositoryDouble = (
-  item: { id: string; warehouseId: string } | null = {
+  item: {
+    id: string;
+    warehouseId: string;
+    deactivatedAt: Date | null;
+  } | null = {
     id: itemId,
     warehouseId,
+    deactivatedAt: null,
   },
 ) => ({ findById: jest.fn().mockResolvedValue(item) });
 
@@ -202,9 +207,15 @@ describe('CreatePurchaseDraftCommand (AC-11)', () => {
   it.each([
     [
       'an Item of another Warehouse',
-      { id: itemId, warehouseId: otherWarehouseId },
+      { id: itemId, warehouseId: otherWarehouseId, deactivatedAt: null },
     ],
     ['a missing Item', null],
+    [
+      // AC-06d — deactivation stops offering the Item when a draft is assembled, on exactly the
+      // same non-enumerating terms, so the refusal never says which of the three it was.
+      'a deactivated Item of this Warehouse',
+      { id: itemId, warehouseId, deactivatedAt: new Date('2026-08-20') },
+    ],
   ])('refuses %s on the same-Warehouse terms', async (_case, item) => {
     const assemblyRepository = assemblyRepositoryDouble();
 
@@ -416,6 +427,7 @@ describe('AddPurchaseDraftLineCommand (AC-11, AC-12, AC-13)', () => {
       itemCatalogueRepository: itemCatalogueRepositoryDouble({
         id: otherItemId,
         warehouseId: otherWarehouseId,
+        deactivatedAt: null,
       }),
     }).addLine.execute(currentUser, draftId, {
       itemId: otherItemId,
@@ -467,7 +479,7 @@ describe('RevisePurchaseDraftLineCommand (AC-12, AC-13)', () => {
     );
 
     expect(assemblyRepository.updateLine).toHaveBeenCalledWith(
-      draftId,
+      { purchaseDraftId: draftId, warehouseId },
       lineId,
       {
         orderedQuantity: 200,
@@ -500,6 +512,7 @@ describe('RevisePurchaseDraftLineCommand (AC-12, AC-13)', () => {
       itemCatalogueRepository: itemCatalogueRepositoryDouble({
         id: otherItemId,
         warehouseId: otherWarehouseId,
+        deactivatedAt: null,
       }),
     }).reviseLine.execute(currentUser, draftId, lineId, {
       itemId: otherItemId,
@@ -543,7 +556,10 @@ describe('RemovePurchaseDraftLineCommand (AC-10a, AC-11a)', () => {
       customerOrderLifecycleRepository,
     }).removeLine.execute(currentUser, draftId, lineId);
 
-    expect(assemblyRepository.removeLine).toHaveBeenCalledWith(draftId, lineId);
+    expect(assemblyRepository.removeLine).toHaveBeenCalledWith(
+      { purchaseDraftId: draftId, warehouseId },
+      lineId,
+    );
     // AC-11a — a link claims nothing, so removing one changes no demand.
     expect(
       customerOrderLifecycleRepository.lockOrderWithAllocatedTotal,
@@ -613,7 +629,7 @@ describe('the Purchase Draft line-link commands (AC-11, AC-11a)', () => {
     );
 
     expect(assemblyRepository.updateLink).toHaveBeenCalledWith(
-      draftId,
+      { purchaseDraftId: draftId, warehouseId },
       linkId,
       1,
     );
@@ -628,7 +644,10 @@ describe('the Purchase Draft line-link commands (AC-11, AC-11a)', () => {
       linkId,
     );
 
-    expect(assemblyRepository.removeLink).toHaveBeenCalledWith(draftId, linkId);
+    expect(assemblyRepository.removeLink).toHaveBeenCalledWith(
+      { purchaseDraftId: draftId, warehouseId },
+      linkId,
+    );
   });
 
   it('refuses every link write against a frozen draft (AC-10a, AC-15)', async () => {
@@ -680,7 +699,7 @@ describe('RevisePurchaseDraftCommand (AC-10a, AC-15)', () => {
     );
 
     expect(assemblyRepository.updateDraft).toHaveBeenCalledWith(
-      draftId,
+      { purchaseDraftId: draftId, warehouseId },
       changes,
     );
   });
@@ -695,5 +714,211 @@ describe('RevisePurchaseDraftCommand (AC-10a, AC-15)', () => {
     await expect(rejection).rejects.toMatchObject({
       code: ErrorCode.PURCHASE_DRAFTS_DRAFT_FROZEN,
     });
+  });
+});
+
+// The security half of AC-11, at the level a command can prove it: a draft id is not authority.
+// Every assembly write forwards the **acting Warehouse** alongside the draft id, because that pair
+// — not the id alone — is what the repository's guarded `WHERE` clause resolves. Without it a
+// member holding `PURCHASE_DRAFTS:UPDATE` in one Warehouse who learned a draft id from another
+// would write that draft (spec.md §6.1 "Cross-Warehouse demand reach"). The persistence half — that
+// the pair really is in the `WHERE` clause, and that a foreign draft therefore affects zero rows —
+// is proven in `shared/domain/repositories/purchase-draft-assembly.repository.integration.spec.ts`.
+describe('the assembly writes scope every draft to the acting Warehouse (AC-11)', () => {
+  it('names the acting Warehouse on every draft-scoped write', async () => {
+    const assemblyRepository = assemblyRepositoryDouble();
+    const commands = commandsWith({ assemblyRepository });
+    const scope = { purchaseDraftId: draftId, warehouseId };
+
+    await commands.revise.execute(currentUser, draftId, {
+      expectedArrivalDate: '2026-09-30',
+    });
+    await commands.addLine.execute(currentUser, draftId, {
+      itemId,
+      orderedQuantity: 10,
+    });
+    await commands.reviseLine.execute(currentUser, draftId, lineId, {
+      orderedQuantity: 11,
+    });
+    await commands.removeLine.execute(currentUser, draftId, lineId);
+    await commands.addLink.execute(currentUser, draftId, lineId, {
+      customerOrderId,
+      statedQuantity: 12,
+    });
+    await commands.reviseLink.execute(currentUser, draftId, linkId, 13);
+    await commands.removeLink.execute(currentUser, draftId, linkId);
+
+    expect(assemblyRepository.updateDraft).toHaveBeenCalledWith(
+      scope,
+      expect.anything(),
+    );
+    expect(assemblyRepository.addLine).toHaveBeenCalledWith(
+      expect.objectContaining({ purchaseDraftId: draftId, warehouseId }),
+    );
+    expect(assemblyRepository.updateLine).toHaveBeenCalledWith(
+      scope,
+      lineId,
+      expect.anything(),
+    );
+    expect(assemblyRepository.removeLine).toHaveBeenCalledWith(scope, lineId);
+    expect(assemblyRepository.addLink).toHaveBeenCalledWith(
+      expect.objectContaining({ purchaseDraftId: draftId, warehouseId }),
+    );
+    expect(assemblyRepository.updateLink).toHaveBeenCalledWith(
+      scope,
+      linkId,
+      13,
+    );
+    expect(assemblyRepository.removeLink).toHaveBeenCalledWith(scope, linkId);
+  });
+
+  // A draft the acting Warehouse does not hold resolves to nothing, so the repository reports
+  // `target-missing` and the member sees the 404 a draft id that names nothing produces — never the
+  // 409 that would confirm the draft exists somewhere (openapi.yaml `PurchaseDraftUnavailable` /
+  // `PurchaseDraftTargetUnavailable`).
+  it('refuses every draft-scoped write against a draft of another Warehouse, indistinguishably from a missing one', async () => {
+    const foreign = () => assemblyRepositoryDouble('target-missing');
+
+    await expect(
+      commandsWith({ assemblyRepository: foreign() }).revise.execute(
+        currentUser,
+        draftId,
+        { expectedArrivalDate: '2026-09-30' },
+      ),
+    ).rejects.toMatchObject({
+      code: ErrorCode.PURCHASE_DRAFTS_TARGET_UNAVAILABLE,
+    });
+
+    await expect(
+      commandsWith({ assemblyRepository: foreign() }).addLine.execute(
+        currentUser,
+        draftId,
+        { itemId, orderedQuantity: 10 },
+      ),
+    ).rejects.toMatchObject({
+      code: ErrorCode.PURCHASE_DRAFTS_TARGET_UNAVAILABLE,
+    });
+
+    await expect(
+      commandsWith({ assemblyRepository: foreign() }).reviseLine.execute(
+        currentUser,
+        draftId,
+        lineId,
+        { orderedQuantity: 1 },
+      ),
+    ).rejects.toMatchObject({
+      code: ErrorCode.PURCHASE_DRAFTS_TARGET_UNAVAILABLE,
+    });
+
+    await expect(
+      commandsWith({ assemblyRepository: foreign() }).removeLine.execute(
+        currentUser,
+        draftId,
+        lineId,
+      ),
+    ).rejects.toMatchObject({
+      code: ErrorCode.PURCHASE_DRAFTS_TARGET_UNAVAILABLE,
+    });
+
+    await expect(
+      commandsWith({ assemblyRepository: foreign() }).reviseLink.execute(
+        currentUser,
+        draftId,
+        linkId,
+        1,
+      ),
+    ).rejects.toMatchObject({
+      code: ErrorCode.PURCHASE_DRAFTS_TARGET_UNAVAILABLE,
+    });
+
+    await expect(
+      commandsWith({ assemblyRepository: foreign() }).removeLink.execute(
+        currentUser,
+        draftId,
+        linkId,
+      ),
+    ).rejects.toMatchObject({
+      code: ErrorCode.PURCHASE_DRAFTS_TARGET_UNAVAILABLE,
+    });
+  });
+});
+
+// AC-06d — "stops offering it when demand is recorded **and when a draft is assembled**". The
+// customer-order path already refuses a deactivated Item when demand is recorded; every draft path
+// that records a *new* reference to an Item now refuses it on the same terms and with the same
+// non-enumerating outcome.
+describe('a deactivated Item may not be put on a draft line (AC-06d)', () => {
+  const deactivated = () =>
+    itemCatalogueRepositoryDouble({
+      id: itemId,
+      warehouseId,
+      deactivatedAt: new Date('2026-08-20T09:00:00.000Z'),
+    });
+
+  it('refuses a deactivated Item on a draft composed in one submission, and never attempts the write', async () => {
+    const assemblyRepository = assemblyRepositoryDouble();
+
+    const rejection = commandsWith({
+      assemblyRepository,
+      itemCatalogueRepository: deactivated(),
+    }).create.execute(currentUser, { lines: [baseLine] });
+
+    await expect(rejection).rejects.toBeInstanceOf(ApplicationError);
+    await expect(rejection).rejects.toMatchObject({
+      code: ErrorCode.PURCHASE_DRAFTS_TARGET_UNAVAILABLE,
+    });
+    expect(assemblyRepository.createDraft).not.toHaveBeenCalled();
+  });
+
+  it('refuses a deactivated Item on a line added to an existing draft', async () => {
+    const assemblyRepository = assemblyRepositoryDouble();
+
+    const rejection = commandsWith({
+      assemblyRepository,
+      itemCatalogueRepository: deactivated(),
+    }).addLine.execute(currentUser, draftId, { itemId, orderedQuantity: 10 });
+
+    await expect(rejection).rejects.toMatchObject({
+      code: ErrorCode.PURCHASE_DRAFTS_TARGET_UNAVAILABLE,
+    });
+    expect(assemblyRepository.addLine).not.toHaveBeenCalled();
+  });
+
+  it('refuses a line revised to name a deactivated Item', async () => {
+    const assemblyRepository = assemblyRepositoryDouble();
+
+    const rejection = commandsWith({
+      assemblyRepository,
+      itemCatalogueRepository: deactivated(),
+    }).reviseLine.execute(currentUser, draftId, lineId, { itemId });
+
+    await expect(rejection).rejects.toMatchObject({
+      code: ErrorCode.PURCHASE_DRAFTS_TARGET_UNAVAILABLE,
+    });
+    expect(assemblyRepository.updateLine).not.toHaveBeenCalled();
+  });
+
+  // AC-06d — deactivation "keeps every Customer Order and Purchase Draft Line that already names it
+  // readable and counting exactly as before". A line whose Item was deactivated after it was
+  // composed is still fully editable, as long as the member is not naming that Item afresh: the
+  // catalogue is not even consulted when `itemId` is left unstated.
+  it('still revises a line that already names a deactivated Item when the Item is not restated', async () => {
+    const assemblyRepository = assemblyRepositoryDouble();
+    const itemCatalogueRepository = deactivated();
+
+    await commandsWith({
+      assemblyRepository,
+      itemCatalogueRepository,
+    }).reviseLine.execute(currentUser, draftId, lineId, {
+      orderedQuantity: 200,
+      valueAddingNote: 'Bundle in tens',
+    });
+
+    expect(itemCatalogueRepository.findById).not.toHaveBeenCalled();
+    expect(assemblyRepository.updateLine).toHaveBeenCalledWith(
+      { purchaseDraftId: draftId, warehouseId },
+      lineId,
+      { orderedQuantity: 200, valueAddingNote: 'Bundle in tens' },
+    );
   });
 });

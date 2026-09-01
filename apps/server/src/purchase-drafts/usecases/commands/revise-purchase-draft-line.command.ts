@@ -18,7 +18,9 @@ export interface ReviseLineInput {
   readonly valueAddingNote?: string | null;
 }
 
-// AC-10a/AC-12/AC-13 — revising a line's Item, ordered quantity or Pre-receipt Requirement.
+// AC-10a/AC-11/AC-12/AC-13 — revising a line's Item, ordered quantity or Pre-receipt Requirement.
+// The write names the acting Warehouse as well as the draft, so a line of another Warehouse's draft
+// resolves to nothing and is refused exactly as a missing one is (spec.md §6.1).
 @Injectable()
 export class RevisePurchaseDraftLineCommand {
   constructor(
@@ -46,7 +48,7 @@ export class RevisePurchaseDraftLineCommand {
     // Only the stated halves are forwarded, so an absent key cannot be written as `null` and clear
     // a Pre-receipt Requirement the member never touched (AC-12).
     const outcome = await this.assemblyRepository.updateLine(
-      purchaseDraftId,
+      { purchaseDraftId, warehouseId: currentUser.warehouseId },
       purchaseDraftLineId,
       pickStated(changes),
     );

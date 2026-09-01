@@ -1,15 +1,29 @@
 import { PermissionId } from '@warehouser/shared-types/enums';
 import { useTranslation } from 'react-i18next';
 
+import { useArchivedWarehouse } from 'shared/hooks/projections/useArchivedWarehouse';
 import { usePermittedItems } from 'shared/hooks/projections/usePermittedItems';
 
 import type { CustomerOrder } from '@warehouser/contracts/customer-orders';
 
 export type CustomerOrderAction = {
   id: 'amend' | 'cancel';
+  /**
+   * Whether the Warehouse still accepts the change (AC-23). The action stays
+   * offered and is disabled, rather than disappearing, so a member can see why
+   * the site they belong to no longer accepts work.
+   */
+  isDisabled: boolean;
   label: string;
   /** The Permission that offers this action. */
   permission: PermissionId;
+  /**
+   * The element stating why the action is disabled, for `aria-describedby`.
+   * `undefined` while nothing disables it, which is what that attribute takes
+   * to mean "no description" — so the menu item never points at an element the
+   * page has not rendered.
+   */
+  reasonId: string | undefined;
   run: () => void;
 };
 
@@ -36,18 +50,23 @@ export const useCustomerOrderActions = (
   { onAmend, onCancel }: CustomerOrderActionHandlers,
 ): CustomerOrderAction[] => {
   const { t } = useTranslation('customer-order');
+  const { isArchived, reasonId } = useArchivedWarehouse();
 
   return usePermittedItems<CustomerOrderAction>([
     {
       id: 'amend',
+      isDisabled: isArchived,
       label: t('demand.menu.amend'),
       permission: PermissionId.CUSTOMER_ORDERS_UPDATE,
+      reasonId,
       run: () => onAmend(order),
     },
     {
       id: 'cancel',
+      isDisabled: isArchived,
       label: t('demand.menu.cancel'),
       permission: PermissionId.CUSTOMER_ORDERS_CANCEL,
+      reasonId,
       run: () => onCancel(order),
     },
   ]);

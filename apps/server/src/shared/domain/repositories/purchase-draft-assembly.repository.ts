@@ -50,6 +50,16 @@ export interface UpdateDraftPersistenceInput {
   readonly expectedArrivalDate?: string | null;
 }
 
+/** The subject of every guarded assembly write: the draft **and** the Warehouse it has to belong
+ * to. A resource id alone is not an authority — a member holding `PURCHASE_DRAFTS:UPDATE` in one
+ * Warehouse who learns a draft id from another would otherwise write it, because the acting
+ * Warehouse never reached the `WHERE` clause (spec.md §6.1 "Cross-Warehouse demand reach"). Both
+ * halves are carried as one value so no call site can pass the draft and forget the Warehouse. */
+export interface PurchaseDraftWriteScope {
+  readonly purchaseDraftId: string;
+  readonly warehouseId: string;
+}
+
 /** What a guarded assembly write did. `openapi.yaml` gives every line and link route both a 404
  * (`PurchaseDraftTargetUnavailable`) and a 409 (`PurchaseDraftWriteConflict`), so the two reasons a
  * write can affect no row have to stay distinguishable here: the draft no longer resolves in the
@@ -67,30 +77,58 @@ export interface AddLinkPersistenceInput {
   readonly statedQuantity: number;
 }
 
-// The guard every assembly write shares: it resolves the draft **only in the `draft` state**, in
-// this `UPDATE`'s own `WHERE` clause, and reports whether it did — never a preceding read the
-// caller then decides from. A module-level function, not a repository method, per
-// creating-a-server-repository.md ("Repository classes must not contain private methods").
+// The guard every assembly write shares: it resolves the draft **only in the acting Warehouse and
+// only in the `draft` state**, in this `UPDATE`'s own `WHERE` clause, and reports whether it did —
+// never a preceding read the caller then decides from. A module-level function, not a repository
+// method, per creating-a-server-repository.md ("Repository classes must not contain private
+// methods").
+//
+// `warehouse_id` sits in the guard's predicate rather than in a pre-read assertion above it
+// deliberately: this pattern exists precisely so a precondition cannot be checked and then lost to
+// a concurrent change, and a Warehouse check placed above the write would reintroduce exactly the
+// read-then-write window the guard was built to close. The follow-up `countBy` below runs **only**
+// once the write has already been refused and nothing has been written, so it decides which refusal
+// the member is owed and never whether the write happens — the same disambiguating-read role the
+// pre-read plays in `ready-purchase-draft.command.ts` (sad.md §8).
 const guardDraftMutable = async (
   manager: EntityManager,
-  purchaseDraftId: string,
+  scope: PurchaseDraftWriteScope,
   touchedAt: Date,
-): Promise<boolean> => {
-  const guarded = await manager
-    .getRepository(PurchaseDraftEntity)
-    .update({ id: purchaseDraftId, state: 'draft' }, { updatedAt: touchedAt });
+): Promise<AssemblyWriteOutcome> => {
+  const guarded = await manager.getRepository(PurchaseDraftEntity).update(
+    {
+      id: scope.purchaseDraftId,
+      warehouseId: scope.warehouseId,
+      state: 'draft',
+    },
+    { updatedAt: touchedAt },
+  );
 
-  return guarded.affected === 1;
+  if (guarded.affected === 1) {
+    return 'applied';
+  }
+
+  // AC-11/spec.md §6.1 — a draft of another Warehouse is reported as `target-missing`, the very
+  // outcome a draft id that names nothing at all produces, so the 404 the member sees discloses
+  // nothing about drafts existing elsewhere. Only a draft that really is this Warehouse's, and
+  // really has left the `draft` state, earns the distinct 409.
+  const inWarehouse = await manager
+    .getRepository(PurchaseDraftEntity)
+    .countBy({ id: scope.purchaseDraftId, warehouseId: scope.warehouseId });
+
+  return inWarehouse === 1 ? 'draft-frozen' : 'target-missing';
 };
 
-// AC-10/AC-10a/AC-11a/AC-12/AC-15 — the assembly write path. Every guarded write's precondition —
-// "the draft still resolves in the `draft` state" — is embedded in a write's own `WHERE` clause
-// (`purchase_drafts` `UPDATE … WHERE id = … AND state = 'draft'`) rather than decided from a
-// preceding read, so a draft seeded directly at another state affects zero rows rather than being
-// half-applied (data-model.md "Concurrency, locks and transactions", sad.md §6.6). It returns
-// `boolean` rather than throwing, mirroring `ManagerTransferRepository.assignRole` and
-// `RoleLifecycleRepository.updateMemberRole` — the typed refusal is the service's job
-// (server-error-handling.md §3). Cross-Warehouse Items and Customer Orders are refused by
+// AC-10/AC-10a/AC-11/AC-11a/AC-12/AC-15 — the assembly write path. Every guarded write's
+// precondition — "the draft still resolves in the acting Warehouse, in the `draft` state" — is
+// embedded in a write's own `WHERE` clause (`purchase_drafts`
+// `UPDATE … WHERE id = … AND warehouse_id = … AND state = 'draft'`) rather than decided from a
+// preceding read, so a draft seeded directly at another state, or held by another Warehouse,
+// affects zero rows rather than being half-applied (data-model.md "Concurrency, locks and
+// transactions", sad.md §6.6). It reports an outcome rather than throwing, in the spirit of
+// `ManagerTransferRepository.assignRole` and `RoleLifecycleRepository.updateMemberRole` — the typed
+// refusal is the service's job (server-error-handling.md §3). Cross-Warehouse Items and Customer
+// Orders are additionally refused by
 // `fk_purchase_draft_lines_item`/`fk_purchase_draft_line_links_customer_order`'s composite
 // `(…, warehouse_id)` references, which this repository lets propagate rather than re-checking
 // (AC-11).
@@ -163,22 +201,33 @@ export class PurchaseDraftAssemblyRepository {
 
   // AC-10a — the one draft-level field a member may still change while the draft is in the Draft
   // state (`expectedArrivalDate`); guarded exactly as every other assembly write is, in this
-  // `UPDATE`'s own `WHERE` clause (AC-15).
+  // `UPDATE`'s own `WHERE` clause, on the acting Warehouse as well as the state (AC-11, AC-15).
   async updateDraft(
-    purchaseDraftId: string,
+    scope: PurchaseDraftWriteScope,
     changes: UpdateDraftPersistenceInput,
   ): Promise<AssemblyWriteOutcome> {
     const manager = getEntityManager(this.dataSource);
     const now = new Date();
 
-    const updated = await manager
-      .getRepository(PurchaseDraftEntity)
-      .update(
-        { id: purchaseDraftId, state: 'draft' },
-        { ...changes, updatedAt: now },
-      );
+    const updated = await manager.getRepository(PurchaseDraftEntity).update(
+      {
+        id: scope.purchaseDraftId,
+        warehouseId: scope.warehouseId,
+        state: 'draft',
+      },
+      { ...changes, updatedAt: now },
+    );
+    if (updated.affected === 1) {
+      return 'applied';
+    }
 
-    return updated.affected === 1 ? 'applied' : 'draft-frozen';
+    // Same disambiguation as `guardDraftMutable`, on the same terms: a draft this Warehouse does
+    // not hold is indistinguishable from one that does not exist.
+    const inWarehouse = await manager
+      .getRepository(PurchaseDraftEntity)
+      .countBy({ id: scope.purchaseDraftId, warehouseId: scope.warehouseId });
+
+    return inWarehouse === 1 ? 'draft-frozen' : 'target-missing';
   }
 
   async addLine(input: AddLinePersistenceInput): Promise<AssemblyWriteOutcome> {
@@ -187,11 +236,14 @@ export class PurchaseDraftAssemblyRepository {
 
     const guarded = await guardDraftMutable(
       manager,
-      input.purchaseDraftId,
+      {
+        purchaseDraftId: input.purchaseDraftId,
+        warehouseId: input.warehouseId,
+      },
       now,
     );
-    if (!guarded) {
-      return 'draft-frozen';
+    if (guarded !== 'applied') {
+      return guarded;
     }
 
     await manager.getRepository(PurchaseDraftLineEntity).insert({
@@ -211,40 +263,49 @@ export class PurchaseDraftAssemblyRepository {
   }
 
   async updateLine(
-    purchaseDraftId: string,
+    scope: PurchaseDraftWriteScope,
     lineId: string,
     changes: UpdateLinePersistenceInput,
   ): Promise<AssemblyWriteOutcome> {
     const manager = getEntityManager(this.dataSource);
     const now = new Date();
 
-    const guarded = await guardDraftMutable(manager, purchaseDraftId, now);
-    if (!guarded) {
-      return 'draft-frozen';
+    const guarded = await guardDraftMutable(manager, scope, now);
+    if (guarded !== 'applied') {
+      return guarded;
     }
 
-    const updated = await manager
-      .getRepository(PurchaseDraftLineEntity)
-      .update({ id: lineId, purchaseDraftId }, { ...changes, updatedAt: now });
+    const updated = await manager.getRepository(PurchaseDraftLineEntity).update(
+      {
+        id: lineId,
+        purchaseDraftId: scope.purchaseDraftId,
+        warehouseId: scope.warehouseId,
+      },
+      { ...changes, updatedAt: now },
+    );
 
     return updated.affected === 1 ? 'applied' : 'target-missing';
   }
 
   async removeLine(
-    purchaseDraftId: string,
+    scope: PurchaseDraftWriteScope,
     lineId: string,
   ): Promise<AssemblyWriteOutcome> {
     const manager = getEntityManager(this.dataSource);
     const now = new Date();
 
-    const guarded = await guardDraftMutable(manager, purchaseDraftId, now);
-    if (!guarded) {
-      return 'draft-frozen';
+    const guarded = await guardDraftMutable(manager, scope, now);
+    if (guarded !== 'applied') {
+      return guarded;
     }
 
     const deleted = await manager
       .getRepository(PurchaseDraftLineEntity)
-      .delete({ id: lineId, purchaseDraftId });
+      .delete({
+        id: lineId,
+        purchaseDraftId: scope.purchaseDraftId,
+        warehouseId: scope.warehouseId,
+      });
 
     return deleted.affected === 1 ? 'applied' : 'target-missing';
   }
@@ -255,11 +316,33 @@ export class PurchaseDraftAssemblyRepository {
 
     const guarded = await guardDraftMutable(
       manager,
-      input.purchaseDraftId,
+      {
+        purchaseDraftId: input.purchaseDraftId,
+        warehouseId: input.warehouseId,
+      },
       now,
     );
-    if (!guarded) {
-      return 'draft-frozen';
+    if (guarded !== 'applied') {
+      return guarded;
+    }
+
+    // The line named has to be one of *this* draft's, in *this* Warehouse — the one resource id on
+    // these routes that would otherwise reach the write with no predicate of its own. Without it
+    // `fk_purchase_draft_line_links_line`'s composite reference raises a `QueryFailedError` that
+    // the global filter can only map to 500 `system.internal_error`, where openapi.yaml declares a
+    // 404 `PurchaseDraftTargetUnavailable` with an `unknownLine` example for exactly this case.
+    // This read cannot become a check-then-write window: `guardDraftMutable` above has already
+    // taken the draft row's lock, and every write that could remove a line takes the same lock
+    // first, so no concurrent transaction can delete the line between this count and the insert.
+    const lineOfDraft = await manager
+      .getRepository(PurchaseDraftLineEntity)
+      .countBy({
+        id: input.purchaseDraftLineId,
+        purchaseDraftId: input.purchaseDraftId,
+        warehouseId: input.warehouseId,
+      });
+    if (lineOfDraft !== 1) {
+      return 'target-missing';
     }
 
     await manager.getRepository(PurchaseDraftLineLinkEntity).insert({
@@ -277,22 +360,26 @@ export class PurchaseDraftAssemblyRepository {
   }
 
   async updateLink(
-    purchaseDraftId: string,
+    scope: PurchaseDraftWriteScope,
     linkId: string,
     statedQuantity: number,
   ): Promise<AssemblyWriteOutcome> {
     const manager = getEntityManager(this.dataSource);
     const now = new Date();
 
-    const guarded = await guardDraftMutable(manager, purchaseDraftId, now);
-    if (!guarded) {
-      return 'draft-frozen';
+    const guarded = await guardDraftMutable(manager, scope, now);
+    if (guarded !== 'applied') {
+      return guarded;
     }
 
     const updated = await manager
       .getRepository(PurchaseDraftLineLinkEntity)
       .update(
-        { id: linkId, purchaseDraftId },
+        {
+          id: linkId,
+          purchaseDraftId: scope.purchaseDraftId,
+          warehouseId: scope.warehouseId,
+        },
         { statedQuantity, updatedAt: now },
       );
 
@@ -300,20 +387,24 @@ export class PurchaseDraftAssemblyRepository {
   }
 
   async removeLink(
-    purchaseDraftId: string,
+    scope: PurchaseDraftWriteScope,
     linkId: string,
   ): Promise<AssemblyWriteOutcome> {
     const manager = getEntityManager(this.dataSource);
     const now = new Date();
 
-    const guarded = await guardDraftMutable(manager, purchaseDraftId, now);
-    if (!guarded) {
-      return 'draft-frozen';
+    const guarded = await guardDraftMutable(manager, scope, now);
+    if (guarded !== 'applied') {
+      return guarded;
     }
 
     const deleted = await manager
       .getRepository(PurchaseDraftLineLinkEntity)
-      .delete({ id: linkId, purchaseDraftId });
+      .delete({
+        id: linkId,
+        purchaseDraftId: scope.purchaseDraftId,
+        warehouseId: scope.warehouseId,
+      });
 
     return deleted.affected === 1 ? 'applied' : 'target-missing';
   }

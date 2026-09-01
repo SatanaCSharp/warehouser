@@ -48,6 +48,18 @@ const exceedsOutstandingQuantity = (
 const isUnfulfilled = (state: CustomerOrderState): boolean =>
   state === 'unfulfilled';
 
+// AC-18 — when the refused Customer Order last moved, so the refusal can be dated ("cancelled on
+// 24 Aug", design frame `s5EPi.png`). `updated_at` is left equal to `created_at` by the insert and
+// rewritten by every path that moves the row, so an order that has not been changed since it was
+// recorded reports nothing rather than its own creation time. A link this transaction locked no
+// order for reports nothing either — there is no row to read a moment from.
+const lastChangedAtOf = (
+  order: CustomerOrderEntity | undefined,
+): string | null =>
+  order === undefined || order.updatedAt.getTime() <= order.createdAt.getTime()
+    ? null
+    : order.updatedAt.toISOString();
+
 // ADR 0002 — the Customer Order side of Arrival Confirmation. Exported from `customer-orders`' own
 // use-case module so `purchase-drafts/usecases/commands/confirm-purchase-draft-arrival.command.ts`
 // can call it inside the `@Transactional()` boundary *it* opens (server-architecture.md §Dependency
@@ -200,6 +212,7 @@ export class DemandAllocationService {
             purchaseDraftLineLinkId: allocation.purchaseDraftLineLinkId,
             rule: 'customer_order_not_unfulfilled',
             customerOrderState: state,
+            customerOrderLastChangedAt: lastChangedAtOf(order),
           });
           continue;
         }

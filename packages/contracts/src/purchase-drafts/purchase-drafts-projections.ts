@@ -53,6 +53,14 @@ export const linkedCustomerOrderStateSchema = z.strictObject({
   neededBy: z.string().date(),
   state: linkedCustomerOrderLifecycleStateSchema,
   outstandingQuantity: z.number().int().nonnegative(),
+  // openapi.yaml `lastChangedAt` — when this Customer Order last moved, which is the half of the
+  // comparison AC-16 asks for that the values alone cannot give: design frame `F0SpRx.png` dates
+  // every drift statement (`Cancelled on 24 Aug`, `Raised to 1 000 on 25 Aug`). Generic rather than
+  // cancellation-specific, because the frame dates an amendment the same way it dates a
+  // cancellation, and one field covers both. `null` for an order that has not been changed since it
+  // was recorded — it has no such moment, and a projection that reported its creation time instead
+  // would date a change that never happened.
+  lastChangedAt: z.string().datetime().nullable(),
 });
 
 // openapi.yaml `ArrivalAllocation` — what was assigned to this customer at Arrival Confirmation.
@@ -93,6 +101,12 @@ export const purchaseDraftLineSchema = z.strictObject({
 // openapi.yaml `PurchaseDraftSummary` — the list projection.
 export const purchaseDraftSummarySchema = z.strictObject({
   id: z.string().uuid(),
+  // openapi.yaml `reference` — the human name of the draft (`PD-0143`), minted by the database and
+  // never absent, because every card, detail header and dialog title names the draft by it rather
+  // than by its identifier (design frames `yGhkK.png`, `s5EPi.png`). Not pattern-checked: the
+  // shape belongs to the sequence that generates it, and a later change of prefix or width must
+  // not need a contract change.
+  reference: z.string().min(1),
   state: purchaseDraftStateSchema,
   expectedArrivalDate: z.string().date().nullable(),
   lineCount: z.number().int().nonnegative(),

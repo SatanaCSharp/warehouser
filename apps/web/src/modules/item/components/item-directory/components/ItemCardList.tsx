@@ -23,7 +23,7 @@ export const ItemCardList = ({
   label,
   onAdjustOnHand,
   onCorrect,
-  onToggleActive,
+  onDeactivate,
 }: ItemCardListProps): ReactElement => {
   return (
     <ul aria-label={label} className="mt-4 grid gap-3 lg:hidden">
@@ -33,7 +33,7 @@ export const ItemCardList = ({
           item={item}
           onAdjustOnHand={onAdjustOnHand}
           onCorrect={onCorrect}
-          onToggleActive={onToggleActive}
+          onDeactivate={onDeactivate}
         />
       ))}
     </ul>

@@ -2,7 +2,10 @@ import { randomUUID } from 'node:crypto';
 
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { customerOrderSchema } from '@warehouser/contracts/customer-orders';
+import {
+  customerOrderSchema,
+  demandLineSchema,
+} from '@warehouser/contracts/customer-orders';
 import { AppModule } from 'app.module';
 import { digestSessionSecret } from 'auth/domain/security/session-secret';
 import { AUTH_SESSION_COOKIE } from 'auth/rest/auth-cookie';
@@ -12,6 +15,9 @@ import { AccountEntity } from 'shared/domain/entities/account.entity';
 import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
 import { ItemEntity } from 'shared/domain/entities/item.entity';
 import { PermissionEntity } from 'shared/domain/entities/permission.entity';
+import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
+import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity';
+import { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity';
 import { RoleEntity } from 'shared/domain/entities/role.entity';
 import { RolePermissionEntity } from 'shared/domain/entities/role-permission.entity';
 import { SessionEntity } from 'shared/domain/entities/session.entity';
@@ -60,6 +66,11 @@ const CUSTOMER_ORDERS_CANCEL = 'CUSTOMER_ORDERS:CANCEL';
 // Per endpoint this proves: the declared Permission is required and sufficient; the shared schema
 // is validated; the stable `customer_orders.*` codes are mapped; reads survive archival and
 // mutations do not (AC-23); and no denial or refusal discloses a customer, a quantity or an Item.
+/* eslint-disable max-lines -- this file is one HTTP contract suite over two surfaces (`/demand`
+   and `/customer-orders*`) sharing one harness; splitting it would duplicate the seeding closure
+   rather than shorten anything, and the harness-extraction precedent
+   (`test/harnesses/warehouse-http-contract.harness.ts`) exists for surfaces split across several
+   spec files, which this is not */
 // eslint-disable-next-line max-lines-per-function -- one HTTP contract suite covering one surface is inherently long, matching the items and access precedents
 describe('customer-orders HTTP contract', () => {
   let app: INestApplication;
@@ -335,6 +346,62 @@ describe('customer-orders HTTP contract', () => {
     return id;
   };
 
+  /** AC-20 — a Purchase Draft with one line linking to `customerOrderId` for `statedQuantity`,
+   * i.e. one Coverage entry. `purchase_drafts.reference` is minted by the column DEFAULT, so the
+   * reference is read back from the row the database wrote rather than supplied here. */
+  const seedCoveringDraft = async (
+    itemId: string,
+    customerOrderId: string,
+    statedQuantity: number,
+  ): Promise<{ purchaseDraftId: string; reference: string }> => {
+    const purchaseDraftId = randomUUID();
+    const purchaseDraftLineId = randomUUID();
+    await dataSource.manager.getRepository(PurchaseDraftEntity).insert({
+      id: purchaseDraftId,
+      warehouseId,
+      state: 'draft',
+      expectedArrivalDate: null,
+      createdByUserId: await seedRecorder(),
+      readiedByUserId: null,
+      readiedAt: null,
+      closedByUserId: null,
+      closedAt: null,
+      closureReason: null,
+      arrivalConfirmedByUserId: null,
+      arrivalConfirmedAt: null,
+      discardedByUserId: null,
+      discardedAt: null,
+      createdAt: seededAt,
+      updatedAt: seededAt,
+    });
+    await dataSource.manager.getRepository(PurchaseDraftLineEntity).insert({
+      id: purchaseDraftLineId,
+      purchaseDraftId,
+      warehouseId,
+      itemId,
+      orderedQuantity: statedQuantity,
+      packagingTypeId: null,
+      valueAddingNote: null,
+      receivedQuantity: null,
+      createdAt: seededAt,
+      updatedAt: seededAt,
+    });
+    await dataSource.manager.getRepository(PurchaseDraftLineLinkEntity).insert({
+      id: randomUUID(),
+      purchaseDraftLineId,
+      purchaseDraftId,
+      warehouseId,
+      customerOrderId,
+      statedQuantity,
+      createdAt: seededAt,
+      updatedAt: seededAt,
+    });
+    const draft = await dataSource.manager
+      .getRepository(PurchaseDraftEntity)
+      .findOneByOrFail({ id: purchaseDraftId });
+    return { purchaseDraftId, reference: draft.reference! };
+  };
+
   const request = async (
     method: string,
     path: string,
@@ -449,6 +516,63 @@ describe('customer-orders HTTP contract', () => {
           coverage: [],
         },
       ]);
+    });
+
+    // The web validates the whole demand array against this exact schema and turns any parse
+    // failure into `api.unexpected`, blanking the Demand screen — so asserting the shared schema
+    // here, rather than a hand-written `toMatchObject`, is what makes that class of failure
+    // impossible to ship. It covers `earliestNeededBy` being a calendar day rather than a
+    // date-time shifted a day early (the `getRawMany()` date defect), and each Coverage entry
+    // carrying the draft reference the `COVERED BY` chip is drawn from (AC-20, `PD-0142 · 800`).
+    it('answers the consolidated demand in the exact shape the shared contract accepts, naming every covering draft (AC-04, AC-20)', async () => {
+      await seedWarehouses();
+      const itemId = await seedItem({
+        sku: 'TEST-SKU-0001',
+        description: 'Test Item — 2 m cable',
+        unitOfMeasure: 'metres',
+        onHandQuantity: 12,
+      });
+      const neededBy = calendarDaysFromToday(8);
+      const orderId = await seedCustomerOrder(itemId, {
+        quantity: 800,
+        neededBy,
+      });
+      const covering = await seedCoveringDraft(itemId, orderId, 800);
+      const other = await seedCoveringDraft(itemId, orderId, 120);
+      const actor = await seedActor([CUSTOMER_ORDERS_WATCH]);
+
+      const { status, body } = await request(
+        'GET',
+        `/api/v1/warehouses/${warehouseId}/demand`,
+        actor.cookie,
+      );
+
+      expect(status).toBe(200);
+      const lines = demandLineSchema.array().parse(body);
+      expect(lines).toHaveLength(1);
+      expect(lines[0]?.earliestNeededBy).toBe(neededBy);
+      expect(
+        [...(lines[0]?.coverage ?? [])].sort(
+          (a, b) => a.statedQuantity - b.statedQuantity,
+        ),
+      ).toEqual([
+        {
+          purchaseDraftId: other.purchaseDraftId,
+          purchaseDraftReference: other.reference,
+          purchaseDraftLineId: expect.any(String),
+          purchaseDraftState: 'draft',
+          statedQuantity: 120,
+        },
+        {
+          purchaseDraftId: covering.purchaseDraftId,
+          purchaseDraftReference: covering.reference,
+          purchaseDraftLineId: expect.any(String),
+          purchaseDraftState: 'draft',
+          statedQuantity: 800,
+        },
+      ]);
+      expect(covering.reference).toMatch(/^PD-\d{4,}$/u);
+      expect(covering.reference).not.toBe(other.reference);
     });
 
     // AC-05 — the denial names no customer, quantity or Item, and it is byte-for-byte the denial a

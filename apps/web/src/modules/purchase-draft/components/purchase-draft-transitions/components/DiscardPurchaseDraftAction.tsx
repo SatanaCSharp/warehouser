@@ -6,6 +6,7 @@ import { useDiscardPurchaseDraftMutation } from 'modules/purchase-draft/api/purc
 import { DiscardPurchaseDraftDialog } from 'modules/purchase-draft/components/purchase-draft-transitions/components/DiscardPurchaseDraftDialog';
 import { TriggeredDialog } from 'shared/components/TriggeredDialog';
 import { WarehousePermissionGate } from 'shared/components/WarehousePermissionGate';
+import { useArchivedWarehouse } from 'shared/hooks/projections/useArchivedWarehouse';
 import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
 
 import type { PurchaseDraftDetail } from '@warehouser/contracts/purchase-drafts';
@@ -26,6 +27,7 @@ export const DiscardPurchaseDraftAction = ({
 }: DiscardPurchaseDraftActionProps): ReactElement => {
   const { t } = useTranslation('purchase-draft');
   const warehouseId = useEnteredWarehouse() ?? '';
+  const { isArchived, reasonId } = useArchivedWarehouse();
   const [discardPurchaseDraft] = useDiscardPurchaseDraftMutation();
 
   const onConfirm = (): Promise<MutationResult> =>
@@ -34,11 +36,19 @@ export const DiscardPurchaseDraftAction = ({
   return (
     <WarehousePermissionGate permission={PermissionId.PURCHASE_DRAFTS_DISCARD}>
       <AlertDialog>
-        <Button size="sm" variant="outline">
+        <Button
+          aria-describedby={reasonId}
+          isDisabled={isArchived}
+          size="sm"
+          variant="outline"
+        >
           {t('transitions.discard.trigger')}
         </Button>
         <TriggeredDialog>
-          <DiscardPurchaseDraftDialog onConfirm={onConfirm} />
+          <DiscardPurchaseDraftDialog
+            reference={draft.reference}
+            onConfirm={onConfirm}
+          />
         </TriggeredDialog>
       </AlertDialog>
     </WarehousePermissionGate>

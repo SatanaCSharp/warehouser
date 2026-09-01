@@ -1,9 +1,9 @@
 import { createRoute, lazyRouteComponent } from '@tanstack/react-router';
 
+import { PurchaseDraftPendingState } from 'modules/purchase-draft/components/PurchaseDraftPendingState';
 import { loadPurchaseDrafts } from 'modules/purchase-draft/loaders/purchase-draft.loader';
 import { warehouseRoute } from 'routes/warehouse.route';
 import { RouteErrorState } from 'shared/components/RouteErrorState';
-import { RoutePendingState } from 'shared/components/RoutePendingState';
 import { ROUTE_SEGMENTS } from 'shared/constants/routes';
 
 // T20 — the Purchase drafts destination (sad.md §5 Web, design-handoff.md
@@ -18,5 +18,8 @@ export const purchaseDraftRoute = createRoute({
   component: lazyRouteComponent(() => import('./page'), 'PurchaseDraftPage'),
   errorComponent: RouteErrorState,
   loader: loadPurchaseDrafts,
-  pendingComponent: RoutePendingState,
+  // The destination's own waiting affordance rather than the application-level
+  // spinner: this list has a shape worth drawing, so the skeleton reads as the
+  // drafts arriving (design-handoff.md §States, frame `hWFRW`).
+  pendingComponent: PurchaseDraftPendingState,
 });

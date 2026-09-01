@@ -12,6 +12,9 @@ import { DataSource } from 'typeorm';
 // draft's links are excluded at the query's own WHERE, never mapped to a closed/discarded value.
 export interface ConsolidatedDemandCoverageRead {
   readonly purchaseDraftId: string;
+  // AC-20 — the human reference the `COVERED BY` chip names the draft by (`PD-0142 · 800`). Joined
+  // through from `purchase_drafts.reference`, which is NOT NULL and minted by the column DEFAULT.
+  readonly purchaseDraftReference: string;
   readonly purchaseDraftLineId: string;
   readonly purchaseDraftState: 'draft' | 'ready_for_ordering';
   readonly statedQuantity: number;
@@ -98,11 +101,12 @@ export class ConsolidatedDemandRepository {
     const coverage = manager
       .createQueryBuilder()
       .select(
-        // A trailing newline right before the closing `)` defeats TypeORM's
-        // `alias.property` replacement regex (it requires the match to be followed by a
-        // space/`=`/`)`/`,`, and a bare newline is none of those) — keep this expression on one
-        // line so every `alias.property` reference here is replaced with its real column.
-        "COALESCE(json_agg(json_build_object('purchaseDraftId', draft.id, 'purchaseDraftLineId', line.id, 'purchaseDraftState', draft.state, 'statedQuantity', link.statedQuantity)), '[]'::json)",
+        // One line, and long because of it: prettier would otherwise wrap this expression, and a
+        // wrapped `alias.property` is harder to read against the raw SQL TypeORM emits for it than
+        // a single over-long string is. (An earlier note here claimed a trailing newline defeats
+        // TypeORM's `alias.property` replacement — it does not: the pattern is compiled `gm`, so
+        // `^` and `$` match at every line boundary.)
+        "COALESCE(json_agg(json_build_object('purchaseDraftId', draft.id, 'purchaseDraftReference', draft.reference, 'purchaseDraftLineId', line.id, 'purchaseDraftState', draft.state, 'statedQuantity', link.statedQuantity)), '[]'::json)",
       )
       .from(PurchaseDraftLineLinkEntity, 'link')
       .innerJoin(

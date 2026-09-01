@@ -1,6 +1,8 @@
 import { Chip } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 
+import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
+
 import type { DemandLine } from '@warehouser/contracts/customer-orders';
 import type { ReactElement } from 'react';
 
@@ -15,6 +17,13 @@ export type CoverageChipsProps = {
  * because `readConsolidatedDemand` omits it server-side; this renders that
  * honestly rather than inferring a draft that no longer covers anything.
  *
+ * Each chip **names the draft**: `PD-0142 · 800` (design frame `G6jhw`).
+ * AC-20 requires the member be shown which drafts link to the demand, and a
+ * quantity alone answers "how much" without answering "whose" — a member cannot
+ * act on `800 on draft` because they cannot find the draft it refers to. The
+ * reference is `purchaseDraftReference` on `demandCoverageSchema`, and the
+ * quantity is group-separated like every other figure in the frames.
+ *
  * The desktop cell and the mobile card both render it, so the two cannot
  * disagree about what covers a line.
  */
@@ -22,6 +31,7 @@ export const CoverageChips = ({
   coverage,
 }: CoverageChipsProps): ReactElement => {
   const { t } = useTranslation('customer-order');
+  const format = useLocaleFormat();
 
   if (coverage.length === 0) {
     return (
@@ -38,7 +48,10 @@ export const CoverageChips = ({
           size="sm"
           variant="soft"
         >
-          {t('demand.coverage.chip', { quantity: entry.statedQuantity })}
+          {t('demand.coverage.chip', {
+            reference: entry.purchaseDraftReference,
+            quantity: format.quantity(entry.statedQuantity),
+          })}
         </Chip>
       ))}
     </div>

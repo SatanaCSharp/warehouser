@@ -13,9 +13,11 @@ export interface ReviseDraftInput {
   readonly expectedArrivalDate?: string | null;
 }
 
-// AC-10a/AC-15 — revising the draft's own Expected Arrival Date while it is still in the Draft
-// state; a draft that no longer resolves there refuses with `purchase_drafts.draft_frozen`. The
-// state guard is never re-checked here: it lives in the write's own `WHERE` clause (sad.md §6.6).
+// AC-10a/AC-11/AC-15 — revising the draft's own Expected Arrival Date while it is still in the
+// Draft state; a draft that no longer resolves there refuses with `purchase_drafts.draft_frozen`,
+// and a draft of another Warehouse refuses with the same `purchase_drafts.target_unavailable` a
+// draft that does not exist produces. Neither guard is re-checked here: both live in the write's
+// own `WHERE` clause (sad.md §6.6).
 @Injectable()
 export class RevisePurchaseDraftCommand {
   constructor(
@@ -24,12 +26,12 @@ export class RevisePurchaseDraftCommand {
 
   @Transactional()
   async execute(
-    _currentUser: AccessCurrentUser,
+    currentUser: AccessCurrentUser,
     purchaseDraftId: string,
     changes: ReviseDraftInput,
   ): Promise<void> {
     const outcome = await this.assemblyRepository.updateDraft(
-      purchaseDraftId,
+      { purchaseDraftId, warehouseId: currentUser.warehouseId },
       pickStated(changes),
     );
 
