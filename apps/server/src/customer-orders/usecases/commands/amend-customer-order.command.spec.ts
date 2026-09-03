@@ -266,4 +266,57 @@ describe('AmendCustomerOrderCommand (AC-19, AC-19b)', () => {
       lifecycleRepository.lockOrderWithAllocatedTotal,
     ).toHaveBeenCalledTimes(1);
   });
+
+  // AC-11c / openapi.yaml `amendCustomerOrder` — "**The Delivery Address is deliberately not
+  // amendable here.** Redirection is its own sub-resource with its own rules … and a shared payload
+  // would let the amendment's validation stand in for the redirection's". So an amendment of an
+  // order that names a Customer writes nothing about where it is going, and returns it going
+  // exactly where it was.
+  it('leaves the destination of an order that names a Customer exactly as it was', async () => {
+    const customerId = uuid('202');
+    const deliveryAddressId = uuid('301');
+    const naming = storedOrder({
+      customerId,
+      customerDeliveryAddressId: deliveryAddressId,
+      customerName: null,
+    });
+    const lifecycleRepository = lifecycleRepositoryDouble({
+      order: naming,
+      allocatedQuantity: 0,
+    });
+    lifecycleRepository.amendCustomerOrder.mockResolvedValue(
+      storedOrder({
+        customerId,
+        customerDeliveryAddressId: deliveryAddressId,
+        customerName: null,
+        quantity: 120,
+        outstandingQuantity: 120,
+      }),
+    );
+
+    const amended = await commandWith(lifecycleRepository).execute(
+      currentUser,
+      customerOrderId,
+      { quantity: 120 },
+    );
+
+    // The keys of the write, not their values: a `customerDeliveryAddressId: null` would be a
+    // redirection to nowhere, and asserting on values would let it through.
+    const [, changes] = lifecycleRepository.amendCustomerOrder.mock
+      .calls[0] as unknown as [string, Record<string, unknown>];
+
+    expect(Object.keys(changes).sort()).toEqual([
+      'amendedAt',
+      'neededBy',
+      'outstandingQuantity',
+      'quantity',
+      'state',
+    ]);
+    expect(amended).toMatchObject({
+      customerId,
+      customerDeliveryAddressId: deliveryAddressId,
+      customerName: null,
+      quantity: 120,
+    });
+  });
 });

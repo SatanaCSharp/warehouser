@@ -64,3 +64,47 @@ export const canAmendCustomerOrder = (state: CustomerOrderState): boolean =>
 
 export const canCancelCustomerOrder = (state: CustomerOrderState): boolean =>
   state !== 'cancelled';
+
+// The persistence-shaped facts a destination decision needs. Only what the rules below read: the
+// address text and the access notes are confidential and no condition consults them (sad.md §8).
+export interface DeactivatableRecord {
+  readonly deactivatedAt: Date | null;
+}
+
+export interface WarehouseOwnedRecord {
+  readonly warehouseId: string;
+}
+
+// AC-06a/AC-11 — "active" is the absence of a deactivation instant, the same way `warehouses.
+// archived_at` and `items.deactivated_at` say it. One condition for the Customer and for the
+// Delivery Address alike, and it answers `false` for a record that resolved to nothing, because a
+// destination that is not there is not one demand may be recorded against.
+export const isAvailableDestinationRecord = (
+  record: DeactivatableRecord | null | undefined,
+): boolean =>
+  record !== null && record !== undefined && record.deactivatedAt === null;
+
+// AC-12 — the record resolves in the acting Warehouse or it does not resolve at all, so one of
+// another Warehouse and one that does not exist are indistinguishable (spec.md §6.1).
+export const isRecordOfWarehouse = (
+  record: WarehouseOwnedRecord | null | undefined,
+  warehouseId: string,
+): boolean =>
+  record !== null && record !== undefined && record.warehouseId === warehouseId;
+
+// `chk_customer_orders_customer_identity` — an order names a Customer, or a typed customer name;
+// never both and never neither. Absence is `undefined` at the application boundary and `null` in
+// the row, and neither counts as naming anything.
+export const namesExactlyOneCustomerIdentity = (
+  customerId: string | null | undefined,
+  customerName: string | null | undefined,
+): boolean =>
+  (customerId === null || customerId === undefined) !==
+  (customerName === null || customerName === undefined);
+
+// AC-11c / openapi.yaml `CustomerOrderRedirectConflict` `orderNotOutstanding` — "Only an
+// outstanding Customer Order is redirected". Narrower than `canAmendCustomerOrder`: a Fulfilled
+// order may still be amended back into the demand, but it is not redirected.
+export const isRedirectableCustomerOrder = (
+  state: CustomerOrderState,
+): boolean => state === 'unfulfilled';

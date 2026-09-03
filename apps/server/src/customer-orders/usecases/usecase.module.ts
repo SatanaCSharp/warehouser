@@ -1,14 +1,18 @@
 import { Module } from '@nestjs/common';
+import { CustomerOrderDestinationService } from 'customer-orders/domain/services/customer-order-destination.service';
 import { CustomerOrderLifecycleService } from 'customer-orders/domain/services/customer-order-lifecycle.service';
 import { DemandAllocationService } from 'customer-orders/domain/services/demand-allocation.service';
 import { AmendCustomerOrderCommand } from 'customer-orders/usecases/commands/amend-customer-order.command';
 import { CancelCustomerOrderCommand } from 'customer-orders/usecases/commands/cancel-customer-order.command';
 import { RecordCustomerOrderCommand } from 'customer-orders/usecases/commands/record-customer-order.command';
+import { RedirectCustomerOrderCommand } from 'customer-orders/usecases/commands/redirect-customer-order.command';
 import { ListCustomerOrdersQuery } from 'customer-orders/usecases/queries/list-customer-orders.query';
 import { ListLinkableCustomerOrdersForItemQuery } from 'customer-orders/usecases/queries/list-linkable-customer-orders-for-item.query';
 import { ListUnfulfilledCustomerOrdersForItemQuery } from 'customer-orders/usecases/queries/list-unfulfilled-customer-orders-for-item.query';
 import { ReadConsolidatedDemandQuery } from 'customer-orders/usecases/queries/read-consolidated-demand.query';
 import { ConsolidatedDemandRepository } from 'shared/domain/repositories/consolidated-demand.repository';
+import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository';
+import { CustomerDirectoryRepository } from 'shared/domain/repositories/customer-directory.repository';
 import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository';
 import { DemandAllocationRepository } from 'shared/domain/repositories/demand-allocation.repository';
 import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
@@ -17,10 +21,14 @@ import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalog
 // boundary; the one locking read the amendment and the cancellation share lives in
 // `CustomerOrderLifecycleService`, which stays unexported: a transport adapter reaches it only
 // through the commands below (server-architecture.md, "Services", "NestJS modules and exports").
+//
+// AC-11b/AC-11c — `RedirectCustomerOrderCommand` is its own use case beside them, because the rules
+// of a redirection are its own (openapi.yaml `redirectCustomerOrder`, sad.md §7).
 const customerOrderCommands = [
   RecordCustomerOrderCommand,
   AmendCustomerOrderCommand,
   CancelCustomerOrderCommand,
+  RedirectCustomerOrderCommand,
 ];
 
 // AC-04/AC-20/AC-21a — the consolidated demand and the reads behind it. Exported for T11's REST
@@ -45,11 +53,14 @@ const customerOrderQueries = [
 // DI token; that import is the token, not a second path to the behaviour.
 @Module({
   providers: [
+    CustomerOrderDestinationService,
     CustomerOrderLifecycleService,
     DemandAllocationService,
     ...customerOrderCommands,
     ...customerOrderQueries,
     ConsolidatedDemandRepository,
+    CustomerAddressBookRepository,
+    CustomerDirectoryRepository,
     CustomerOrderLifecycleRepository,
     DemandAllocationRepository,
     ItemCatalogueRepository,

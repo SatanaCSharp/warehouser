@@ -14,6 +14,7 @@ import {
 } from '@nestjs/common';
 import type { CustomerOrder } from '@warehouser/contracts/customer-orders';
 import { PermissionId } from '@warehouser/shared-types/enums';
+import { assert } from '@warehouser/utils/asserts';
 import type { CustomerOrder as CustomerOrderRead } from 'customer-orders/domain/mappers/customer-order.mapper';
 import {
   CustomerOrderAmendDto,
@@ -35,21 +36,38 @@ import { WriteRateLimited } from 'shared/guards/write-rate-limited.decorator';
 
 // The application boundary returns instants as `Date`; openapi.yaml `CustomerOrder` carries them as
 // date-times. `neededBy` is already a calendar date and is passed through untouched.
-const toCustomerOrderResponse = (order: CustomerOrderRead): CustomerOrder => ({
-  id: order.id,
-  itemId: order.itemId,
-  customerName: order.customerName,
-  quantity: order.quantity,
-  outstandingQuantity: order.outstandingQuantity,
-  neededBy: order.neededBy,
-  state: order.state,
-  cancellationReason: order.cancellationReason,
-  recordedByUserId: order.recordedByUserId,
-  cancelledByUserId: order.cancelledByUserId,
-  cancelledAt: order.cancelledAt?.toISOString() ?? null,
-  createdAt: order.createdAt.toISOString(),
-  updatedAt: order.updatedAt.toISOString(),
-});
+const toCustomerOrderResponse = (order: CustomerOrderRead): CustomerOrder => {
+  // AC-11a — an order naming a Customer carries **no** typed name, and openapi.yaml already spells
+  // the response field `customerName: null` with `customer` and `destination` beside it. The
+  // `@warehouser/contracts` `customerOrderSchema` still promises a non-empty string, and this
+  // controller's create surface still accepts only a typed name — `customerOrderCreateSchema` has
+  // no `customerId` — so no request this controller serves can produce a row without one, and a
+  // `null` reaching here is a defect rather than a member-facing case. It stays an `AssertionError`
+  // the global filter reports as an internal error and never explains
+  // (server-error-handling.md §2, §6); it is deliberately not a cast, which would let a value the
+  // contract cannot represent travel on as though it could. T13 widens the contract field and adds
+  // `customer`/`destination`, and this assertion goes with it.
+  assert(
+    order.customerName !== null,
+    'A Customer Order reached the REST response without the typed customer name its contract requires',
+  );
+
+  return {
+    id: order.id,
+    itemId: order.itemId,
+    customerName: order.customerName,
+    quantity: order.quantity,
+    outstandingQuantity: order.outstandingQuantity,
+    neededBy: order.neededBy,
+    state: order.state,
+    cancellationReason: order.cancellationReason,
+    recordedByUserId: order.recordedByUserId,
+    cancelledByUserId: order.cancelledByUserId,
+    cancelledAt: order.cancelledAt?.toISOString() ?? null,
+    createdAt: order.createdAt.toISOString(),
+    updatedAt: order.updatedAt.toISOString(),
+  };
+};
 
 /** Every route whose subject is a Customer Order — the record of a named customer waiting for one
  * Item (contracts/openapi.yaml `/customer-orders*`, sad.md §7). Each handler declares exactly one

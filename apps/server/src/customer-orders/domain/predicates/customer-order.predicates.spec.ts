@@ -5,12 +5,16 @@
 import {
   canAmendCustomerOrder,
   canCancelCustomerOrder,
+  isAvailableDestinationRecord,
   isCalendarDate,
   isCancellationReason,
   isCustomerName,
   isDemandQuantity,
   isNeededByStillAhead,
   isQuantityAtOrAboveAllocated,
+  isRecordOfWarehouse,
+  isRedirectableCustomerOrder,
+  namesExactlyOneCustomerIdentity,
 } from 'customer-orders/domain/predicates/customer-order.predicates';
 
 describe('customer order predicates', () => {
@@ -129,5 +133,76 @@ describe('customer order predicates', () => {
       expect(canAmendCustomerOrder('cancelled')).toBe(false);
       expect(canCancelCustomerOrder('cancelled')).toBe(false);
     });
+  });
+
+  // AC-06a/AC-11 — "active" is the absence of a deactivation instant, and a record that resolved to
+  // nothing is not a destination demand may be recorded against.
+  describe('isAvailableDestinationRecord', () => {
+    it('accepts a record with no deactivation instant', () => {
+      expect(isAvailableDestinationRecord({ deactivatedAt: null })).toBe(true);
+    });
+
+    it.each([
+      ['a deactivated record', { deactivatedAt: new Date('2026-08-20') }],
+      ['a record that resolved to nothing', null],
+      ['a record that was not found in a set', undefined],
+    ])('refuses %s', (_case, record) => {
+      expect(isAvailableDestinationRecord(record)).toBe(false);
+    });
+  });
+
+  // AC-12 — the record resolves in the acting Warehouse or not at all, so one of another Warehouse
+  // and one that does not exist answer identically.
+  describe('isRecordOfWarehouse', () => {
+    it('accepts a record of the acting Warehouse', () => {
+      expect(isRecordOfWarehouse({ warehouseId: 'w1' }, 'w1')).toBe(true);
+    });
+
+    it.each([
+      ['a record of another Warehouse', { warehouseId: 'w2' }],
+      ['a record that does not exist', null],
+    ])('refuses %s', (_case, record) => {
+      expect(isRecordOfWarehouse(record, 'w1')).toBe(false);
+    });
+  });
+
+  // `chk_customer_orders_customer_identity` — a Customer or a typed name, never both and never
+  // neither. Absence is `undefined` at the application boundary and `null` in the row.
+  describe('namesExactlyOneCustomerIdentity', () => {
+    it.each([
+      ['a Customer alone', 'c1', undefined],
+      ['a Customer alone, the row spelling', 'c1', null],
+      ['a typed name alone', undefined, 'Test Customer North'],
+      ['a typed name alone, the row spelling', null, 'Test Customer North'],
+    ])('accepts %s', (_case, customerId, customerName) => {
+      expect(namesExactlyOneCustomerIdentity(customerId, customerName)).toBe(
+        true,
+      );
+    });
+
+    it.each([
+      ['both', 'c1', 'Test Customer North'],
+      ['neither', undefined, undefined],
+      ['neither, the row spelling', null, null],
+    ])('refuses %s', (_case, customerId, customerName) => {
+      expect(namesExactlyOneCustomerIdentity(customerId, customerName)).toBe(
+        false,
+      );
+    });
+  });
+
+  // AC-11c — only an outstanding order is redirected. Narrower than `canAmendCustomerOrder`, which
+  // still admits a Fulfilled order.
+  describe('isRedirectableCustomerOrder', () => {
+    it('redirects an Unfulfilled order', () => {
+      expect(isRedirectableCustomerOrder('unfulfilled')).toBe(true);
+    });
+
+    it.each(['fulfilled', 'cancelled'] as const)(
+      'refuses to redirect a %s order',
+      (state) => {
+        expect(isRedirectableCustomerOrder(state)).toBe(false);
+      },
+    );
   });
 });

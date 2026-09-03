@@ -52,3 +52,36 @@ export const customerOrderQuantityBelowAllocatedError = (
 // `details`.
 export const customerOrderInvalidStateError = (): ApplicationError =>
   new ApplicationError(ErrorCode.CUSTOMER_ORDERS_INVALID_STATE);
+
+// `chk_customer_orders_customer_identity` as a payload refusal — "an order names a Customer with
+// one of its Delivery Addresses, or a typed customer name with no address; never both and never
+// neither" (data-model.md §`customer_orders`). openapi.yaml `InvalidCustomerOrderInput` carries the
+// rule and **no field**, because the refusal is about the combination rather than about one value —
+// and because naming the value would echo the typed customer name, which appears in no error detail
+// (spec.md §6.1).
+export type CustomerOrderIdentityRule =
+  | 'customer_identity_exclusive'
+  | 'customer_identity_required'
+  | 'delivery_address_requires_customer';
+
+export const customerOrderCustomerIdentityError = (
+  rule: CustomerOrderIdentityRule,
+): ApplicationError =>
+  new ApplicationError(ErrorCode.CUSTOMER_ORDERS_INVALID_INPUT, { rule });
+
+// AC-12 — a Customer that does not exist and one that exists only in another Warehouse are **one**
+// non-enumerating outcome, so recording demand never discloses that a Customer exists elsewhere
+// (openapi.yaml `CustomerOrderTargetUnavailable`, `customerElsewhere`). It carries no details for
+// exactly that reason. The code lives in `@warehouser/shared-types`, so naming it here creates no
+// dependency on the `customers` module (server-architecture.md §Dependency direction).
+export const customerOrderCustomerUnavailableError = (): ApplicationError =>
+  new ApplicationError(ErrorCode.CUSTOMERS_TARGET_UNAVAILABLE);
+
+// AC-11/AC-11c — the destination a Customer Order may be given: an **active** Delivery Address of
+// the Customer it names. An Inactive address, an address of another Customer, one that does not
+// exist, an Inactive Customer, and an order recorded by typed name that names no Customer at all
+// are one outcome (openapi.yaml `CustomerOrderDestinationConflict`,
+// `CustomerOrderRedirectConflict`). It carries no details: the address text and its access notes
+// are confidential and appear in no denial payload (sad.md §8).
+export const customerOrderInvalidDeliveryAddressError = (): ApplicationError =>
+  new ApplicationError(ErrorCode.CUSTOMER_ORDERS_INVALID_DELIVERY_ADDRESS);

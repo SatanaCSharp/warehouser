@@ -5,6 +5,8 @@ import { DbTransactionService } from 'shared/database/db-transaction.service';
 import { DbTransactionContext } from 'shared/database/db-transaction-context.service';
 import { AccountEntity } from 'shared/domain/entities/account.entity';
 import { ArrivalAllocationEntity } from 'shared/domain/entities/arrival-allocation.entity';
+import { CustomerEntity } from 'shared/domain/entities/customer.entity';
+import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
 import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
 import { ItemEntity } from 'shared/domain/entities/item.entity';
 import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
@@ -43,7 +45,9 @@ interface CustomerOrderLifecycleRepositoryContract {
     id: string;
     warehouseId: string;
     itemId: string;
-    customerName: string;
+    customerId: string | null;
+    customerDeliveryAddressId: string | null;
+    customerName: string | null;
     quantity: number;
     outstandingQuantity: number;
     neededBy: string;
@@ -72,6 +76,12 @@ interface CustomerOrderLifecycleRepositoryContract {
       cancelledByUserId: string;
       cancelledAt: Date;
     },
+  ): Promise<CustomerOrderEntity>;
+  redirectCustomerOrder(
+    customerOrderId: string,
+    customerId: string,
+    customerDeliveryAddressId: string,
+    redirectedAt: Date,
   ): Promise<CustomerOrderEntity>;
   listCustomerOrders(
     warehouseId: string,
@@ -168,6 +178,88 @@ const seedCustomerOrder = async (
   return id;
 };
 
+interface SeededCustomer {
+  readonly customerId: string;
+  readonly mainAddressId: string;
+  readonly secondAddressId: string;
+  readonly otherCustomerAddressId: string;
+}
+
+// AC-11 — a Customer of the seeded Warehouse with a Main and a second active Delivery Address, plus
+// a second Customer holding one of its own: the row `fk_customer_orders_delivery_address` must
+// refuse.
+const seedCustomer = async (seeded: Seeded): Promise<SeededCustomer> => {
+  const customerId = randomUUID();
+  const otherCustomerId = randomUUID();
+  const mainAddressId = randomUUID();
+  const secondAddressId = randomUUID();
+  const otherCustomerAddressId = randomUUID();
+
+  await dataSource.manager.getRepository(CustomerEntity).insert([
+    {
+      id: customerId,
+      warehouseId: seeded.warehouseId,
+      name: 'Test Customer North',
+      deactivatedAt: null,
+      recordedByUserId: seeded.userId,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: otherCustomerId,
+      warehouseId: seeded.warehouseId,
+      name: 'Test Customer South',
+      deactivatedAt: null,
+      recordedByUserId: seeded.userId,
+      createdAt: now,
+      updatedAt: now,
+    },
+  ]);
+
+  await dataSource.manager.getRepository(CustomerDeliveryAddressEntity).insert([
+    {
+      id: mainAddressId,
+      customerId,
+      warehouseId: seeded.warehouseId,
+      addressText: 'Test Address 1, Test City',
+      accessNotes: null,
+      isMain: true,
+      deactivatedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: secondAddressId,
+      customerId,
+      warehouseId: seeded.warehouseId,
+      addressText: 'Test Address 2, Test City',
+      accessNotes: null,
+      isMain: false,
+      deactivatedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: otherCustomerAddressId,
+      customerId: otherCustomerId,
+      warehouseId: seeded.warehouseId,
+      addressText: 'Test Address 3, Test City',
+      accessNotes: null,
+      isMain: true,
+      deactivatedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    },
+  ]);
+
+  return {
+    customerId,
+    mainAddressId,
+    secondAddressId,
+    otherCustomerAddressId,
+  };
+};
+
 // An Allocation only exists because an arrival was confirmed, so the fixture builds the whole
 // chain it hangs from: a draft closed by Arrival Confirmation, its line, and the link naming this
 // Customer Order (`fk_arrival_allocations_link`).
@@ -260,6 +352,8 @@ describe('CustomerOrderLifecycleRepository', () => {
         id,
         warehouseId: seeded.warehouseId,
         itemId: seeded.itemId,
+        customerId: null,
+        customerDeliveryAddressId: null,
         customerName: 'Test Customer North',
         quantity: 100,
         outstandingQuantity: 100,
@@ -420,6 +514,116 @@ describe('CustomerOrderLifecycleRepository', () => {
   // are pinned here against real SQL. The fixture makes the two orders **disagree**: the row needed
   // soonest is the one created last. A single ordering therefore cannot satisfy both assertions,
   // and dropping the `order` argument at either call site fails one of them.
+  // AC-11 — the customer-naming shape: the Customer and the one of its Delivery Addresses this
+  // order is going to, and **no** typed name, which `chk_customer_orders_customer_identity` admits
+  // beside the typed-name shape above.
+  it('records an order against a Customer and one of its Delivery Addresses, with no typed name', async () => {
+    const seeded = await seed();
+    const customer = await seedCustomer(seeded);
+    const id = randomUUID();
+
+    await transactions.executeInTransaction({}, () =>
+      repository.createCustomerOrder({
+        id,
+        warehouseId: seeded.warehouseId,
+        itemId: seeded.itemId,
+        customerId: customer.customerId,
+        customerDeliveryAddressId: customer.mainAddressId,
+        customerName: null,
+        quantity: 100,
+        outstandingQuantity: 100,
+        neededBy,
+        state: 'unfulfilled',
+        recordedByUserId: seeded.userId,
+        recordedAt: now,
+      }),
+    );
+
+    expect(await readOrder(id)).toMatchObject({
+      id,
+      customerId: customer.customerId,
+      customerDeliveryAddressId: customer.mainAddressId,
+      customerName: null,
+    });
+  });
+
+  // AC-11b — the redirection writes the destination reference and leaves everything else standing,
+  // and AC-17/sad.md §8 — "no frozen column of any Purchase Draft appears in any statement it
+  // issues". The statement text is inspected for exactly that, because it is a property of the
+  // shape of the write rather than of its result.
+  it('moves the destination reference alone, naming no Purchase Draft table', async () => {
+    const seeded = await seed();
+    const customer = await seedCustomer(seeded);
+    const customerOrderId = await seedCustomerOrder(seeded, {
+      customerId: customer.customerId,
+      customerDeliveryAddressId: customer.mainAddressId,
+      customerName: null,
+    });
+
+    const spy = jest.spyOn(PostgresQueryRunner.prototype, 'query');
+    const before = spy.mock.calls.length;
+
+    const redirected = await transactions.executeInTransaction({}, () =>
+      repository.redirectCustomerOrder(
+        customerOrderId,
+        customer.customerId,
+        customer.secondAddressId,
+        later,
+      ),
+    );
+
+    const statements = spy.mock.calls
+      .slice(before)
+      .map(([sql]) => String(sql).toLowerCase());
+    spy.mockRestore();
+
+    expect(redirected).toMatchObject({
+      id: customerOrderId,
+      customerId: customer.customerId,
+      customerDeliveryAddressId: customer.secondAddressId,
+      customerName: null,
+      quantity: 100,
+      outstandingQuantity: 100,
+      state: 'unfulfilled',
+      updatedAt: later,
+    });
+    expect(await readOrder(customerOrderId)).toMatchObject({
+      customerDeliveryAddressId: customer.secondAddressId,
+      neededBy,
+    });
+    expect(
+      statements.filter((statement) => statement.includes('purchase_draft')),
+    ).toEqual([]);
+  });
+
+  // AC-11c — "a redirection to another Customer's address is refused by the reference itself"
+  // (data-model.md §`customer_orders`). The application refuses it before reaching here; this is
+  // the structural backstop, and it is asserted rather than assumed.
+  it('is refused by the composite reference for an address of another Customer', async () => {
+    const seeded = await seed();
+    const customer = await seedCustomer(seeded);
+    const customerOrderId = await seedCustomerOrder(seeded, {
+      customerId: customer.customerId,
+      customerDeliveryAddressId: customer.mainAddressId,
+      customerName: null,
+    });
+
+    await expect(
+      transactions.executeInTransaction({}, () =>
+        repository.redirectCustomerOrder(
+          customerOrderId,
+          customer.customerId,
+          customer.otherCustomerAddressId,
+          later,
+        ),
+      ),
+    ).rejects.toThrow();
+
+    expect(await readOrder(customerOrderId)).toMatchObject({
+      customerDeliveryAddressId: customer.mainAddressId,
+    });
+  });
+
   describe('listCustomerOrders', () => {
     interface OrderingFixture {
       readonly seeded: Seeded;

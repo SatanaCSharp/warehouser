@@ -9,7 +9,13 @@ export interface CreateCustomerOrderPersistenceInput {
   readonly id: string;
   readonly warehouseId: string;
   readonly itemId: string;
-  readonly customerName: string;
+  // The two destination shapes `chk_customer_orders_customer_identity` admits, carried as the
+  // persistence-oriented values they are: a Customer with one of its Delivery Addresses and no
+  // typed name, or a typed name with neither (AC-11, AC-11a). Which of them a caller supplies is a
+  // decision above this boundary.
+  readonly customerId: string | null;
+  readonly customerDeliveryAddressId: string | null;
+  readonly customerName: string | null;
   readonly quantity: number;
   readonly outstandingQuantity: number;
   readonly neededBy: string;
@@ -72,10 +78,8 @@ export class CustomerOrderLifecycleRepository {
       id: input.id,
       warehouseId: input.warehouseId,
       itemId: input.itemId,
-      // A Customer Order recorded by typed name names no Customer and no Delivery Address; the
-      // customer-naming shape arrives with T12 (`chk_customer_orders_customer_identity`).
-      customerId: null,
-      customerDeliveryAddressId: null,
+      customerId: input.customerId,
+      customerDeliveryAddressId: input.customerDeliveryAddressId,
       customerName: input.customerName,
       quantity: input.quantity,
       outstandingQuantity: input.outstandingQuantity,
@@ -183,6 +187,37 @@ export class CustomerOrderLifecycleRepository {
         updatedAt: cancellation.cancelledAt,
       },
     );
+
+    return manager
+      .getRepository(CustomerOrderEntity)
+      .findOneByOrFail({ id: customerOrderId });
+  }
+
+  // AC-11b — the redirection writes **one column on one Customer Order** and nothing else, so no
+  // frozen column of any Purchase Draft can appear in the statement it issues (AC-17, sad.md §8).
+  // The Address Drift it causes is derived on the next read of the affected drafts and is never
+  // written here.
+  //
+  // Only ever called on a row `lockOrderWithAllocatedTotal` locked in this same transaction, which
+  // is what makes the eligibility decision belong to the locked row rather than to the values the
+  // member composed against. The criteria carry the Customer the order names as well as its
+  // identifier, so the statement can never name a row whose Customer is not the one the destination
+  // was resolved against; `fk_customer_orders_delivery_address (id, customer_id)` is the structural
+  // backstop for the same rule (AC-11c).
+  async redirectCustomerOrder(
+    customerOrderId: string,
+    customerId: string,
+    customerDeliveryAddressId: string,
+    redirectedAt: Date,
+  ): Promise<CustomerOrderEntity> {
+    const manager = getEntityManager(this.dataSource);
+
+    await manager
+      .getRepository(CustomerOrderEntity)
+      .update(
+        { id: customerOrderId, customerId },
+        { customerDeliveryAddressId, updatedAt: redirectedAt },
+      );
 
     return manager
       .getRepository(CustomerOrderEntity)
