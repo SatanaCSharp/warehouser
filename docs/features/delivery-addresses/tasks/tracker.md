@@ -29,7 +29,7 @@
 | T22 | [Carry the destination onto the Demand surface and add the redirect dialog](./demand-destination-ui.md)                                                                                    | `ui`        | Frontend Lead | M        | T13, T21      | todo   |
 | T23 | [Add the per-line DELIVERY block, the drift presentation split by mode, and the By-line view](./purchase-draft-delivery-ui.md)                                                             | `ui`        | Frontend Lead | L        | T19, T21      | todo   |
 | T24 | [Replace the whole-draft arrival modal with the two 720px per-line ending dialogs](./line-ending-dialogs-ui.md)                                                                            | `ui`        | Frontend Lead | M        | T17, T23      | todo   |
-| T25 | [Raise the ordering change request and promote @ObservedPermission into docs/system](./ordering-change-request-and-system-docs.md)                                                         | `docs`      | Tech Lead     | M        | T5            | todo   |
+| T25 | [Raise the ordering change request and promote @ObservedPermission into docs/system](./ordering-change-request-and-system-docs.md)                                                         | `docs`      | Tech Lead     | M        | T5            | done   |
 
 **Total:** 25 tasks, ~24 person-days (S = ½ day, M/L = 1 day; every task is capped at one working day by design).
 

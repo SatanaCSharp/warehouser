@@ -253,7 +253,9 @@ Server predicates, typed errors, assertion factories, propagation, and global Ne
 mapping follow [Server error handling](guides/server-error-handling.md).
 
 Authentication and transport-level authorization use NestJS guards from `shared/guards/`. Guards
-must not be placed inside feature modules.
+must not be placed inside feature modules. A handler declares the Permission it requires, and any
+Permission its projection observes, as metadata the guard reads; follow
+[Server request authorization](guides/server-request-authorization.md).
 
 ### BullMQ handlers
 
