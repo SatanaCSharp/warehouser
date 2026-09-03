@@ -1,5 +1,6 @@
 import {
   warehouseArchivalSchema,
+  warehouseDeliveryAddressWriteSchema,
   warehouseWriteSchema,
 } from '@warehouser/contracts/workspaces';
 import { createZodDto } from 'nestjs-zod';
@@ -14,4 +15,8 @@ export class WarehouseWriteDto extends createZodDto(warehouseWriteSchema) {}
 
 export class WarehouseArchivalDto extends createZodDto(
   warehouseArchivalSchema,
+) {}
+
+export class WarehouseDeliveryAddressDto extends createZodDto(
+  warehouseDeliveryAddressWriteSchema,
 ) {}

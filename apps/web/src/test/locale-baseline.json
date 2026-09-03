@@ -315,7 +315,16 @@
       "nameWorkspace.cancel": "Cancel",
       "nameWorkspace.save": "Save name",
       "states.authorityLost.title": "Your workspace authority changed",
-      "states.authorityLost.description": "Your workspace role changed while this page was open. The controls you may still use have been refreshed."
+      "states.authorityLost.description": "Your workspace role changed while this page was open. The controls you may still use have been refreshed.",
+      "warehouses.deliveryAddress.title": "Delivery address",
+      "warehouses.deliveryAddress.description": "The address a supplier is told for every line coming to this warehouse. A warehouse has exactly one — you correct it in place and it is never deactivated.",
+      "warehouses.deliveryAddress.addressLabel": "Address",
+      "warehouses.deliveryAddress.addressDescription": "Text a human driver reads. Warehouser never validates, geocodes or interprets it.",
+      "warehouses.deliveryAddress.accessNotesLabel": "Access notes",
+      "warehouses.deliveryAddress.accessNotesDescription": "What a driver needs to get in. Treat a gate or door code recorded here as confidential — it is read by everyone who may read this warehouse.",
+      "warehouses.deliveryAddress.freezeNoteTitle": "A draft cannot be made ready before this is recorded",
+      "warehouses.deliveryAddress.freezeNoteDescription": "Any purchase draft holding a line that comes to this warehouse needs an address for the supplier to deliver to. Adding and revising lines keeps working; only the move to Ready for ordering is refused until this is filled in.",
+      "warehouses.deliveryAddress.save": "Save delivery address"
     },
     "common": {
       "auth.signOut": "Sign out",
@@ -621,7 +630,8 @@
       "purchase-draft.readyPurchaseDraft": "Moving the draft to ready for ordering…",
       "purchase-draft.confirmPurchaseDraftArrival": "Recording the arrival…",
       "purchase-draft.closePurchaseDraft": "Closing the purchase draft…",
-      "purchase-draft.discardPurchaseDraft": "Discarding the purchase draft…"
+      "purchase-draft.discardPurchaseDraft": "Discarding the purchase draft…",
+      "workspace.setWarehouseDeliveryAddress": "Saving the delivery address…"
     },
     "purchase-draft": {
       "head.title": "Purchase drafts",
@@ -929,7 +939,8 @@
       "purchase-draft.readyPurchaseDraft": "Purchase draft is ready for ordering.",
       "purchase-draft.confirmPurchaseDraftArrival": "Arrival confirmed and the draft is closed.",
       "purchase-draft.closePurchaseDraft": "Purchase draft closed: {{reason}}",
-      "purchase-draft.discardPurchaseDraft": "Purchase draft discarded."
+      "purchase-draft.discardPurchaseDraft": "Purchase draft discarded.",
+      "workspace.setWarehouseDeliveryAddress": "Delivery address saved."
     },
     "validation": {
       "itemAdjustmentReason.required": "State a reason. Every change to on-hand quantity is recorded with its reason.",
@@ -1063,7 +1074,9 @@
       "customerOrderCancellationReason.tooBig": "That reason is longer than this warehouse records.",
       "customerOrderCancellationReason.notMultipleOf": "State why this order is being cancelled.",
       "customerOrderCancellationReason.trimmed_non_empty": "A reason cannot be empty once trimmed.",
-      "customerOrderCancellationReason.invalidState": "This order has already been fulfilled or cancelled, so it cannot be cancelled again."
+      "customerOrderCancellationReason.invalidState": "This order has already been fulfilled or cancelled, so it cannot be cancelled again.",
+      "warehouseDeliveryAddress.required": "Enter the address a supplier delivers to.",
+      "warehouseDeliveryAddress.invalid": "Enter an address this warehouse accepts."
     }
   },
   "uk": {
@@ -1390,7 +1403,16 @@
       "nameWorkspace.cancel": "Скасувати",
       "nameWorkspace.save": "Зберегти назву",
       "states.authorityLost.title": "Ваші повноваження в робочому просторі змінилися",
-      "states.authorityLost.description": "Ваша роль робочого простору змінилася, поки ця сторінка була відкрита. Доступні вам елементи керування оновлено."
+      "states.authorityLost.description": "Ваша роль робочого простору змінилася, поки ця сторінка була відкрита. Доступні вам елементи керування оновлено.",
+      "warehouses.deliveryAddress.title": "Адреса доставки",
+      "warehouses.deliveryAddress.description": "Адреса, яку повідомляють постачальнику для кожної позиції, що прибуває на цей склад. Склад має рівно одну — ви виправляєте її на місці, і вона ніколи не деактивується.",
+      "warehouses.deliveryAddress.addressLabel": "Адреса",
+      "warehouses.deliveryAddress.addressDescription": "Текст, який читає водій. Warehouser ніколи не перевіряє, не геокодує і не тлумачить його.",
+      "warehouses.deliveryAddress.accessNotesLabel": "Примітки щодо доступу",
+      "warehouses.deliveryAddress.accessNotesDescription": "Те, що потрібно водієві, аби потрапити всередину. Вважайте код воріт чи дверей, записаний тут, конфіденційним — його бачить кожен, хто може читати цей склад.",
+      "warehouses.deliveryAddress.freezeNoteTitle": "Чернетку не можна підготувати, доки це не записано",
+      "warehouses.deliveryAddress.freezeNoteDescription": "Будь-яка чернетка закупівлі з позицією, що прибуває на цей склад, потребує адреси, куди постачальник доставить товар. Додавання та зміна позицій працюють далі; відмова стосується лише переходу до «Готово до замовлення».",
+      "warehouses.deliveryAddress.save": "Зберегти адресу доставки"
     },
     "common": {
       "auth.signOut": "Вийти",
@@ -1716,7 +1738,8 @@
       "purchase-draft.readyPurchaseDraft": "Переводимо чернетку в готово до замовлення…",
       "purchase-draft.confirmPurchaseDraftArrival": "Записуємо прибуття…",
       "purchase-draft.closePurchaseDraft": "Закриваємо чернетку закупівлі…",
-      "purchase-draft.discardPurchaseDraft": "Відхиляємо чернетку закупівлі…"
+      "purchase-draft.discardPurchaseDraft": "Відхиляємо чернетку закупівлі…",
+      "workspace.setWarehouseDeliveryAddress": "Збереження адреси доставки…"
     },
     "purchase-draft": {
       "head.title": "Чернетки закупівель",
@@ -2032,7 +2055,8 @@
       "purchase-draft.readyPurchaseDraft": "Чернетка закупівлі готова до замовлення.",
       "purchase-draft.confirmPurchaseDraftArrival": "Прибуття підтверджено, чернетку закрито.",
       "purchase-draft.closePurchaseDraft": "Чернетку закупівлі закрито: {{reason}}",
-      "purchase-draft.discardPurchaseDraft": "Чернетку закупівлі відхилено."
+      "purchase-draft.discardPurchaseDraft": "Чернетку закупівлі відхилено.",
+      "workspace.setWarehouseDeliveryAddress": "Адресу доставки збережено."
     },
     "validation": {
       "itemAdjustmentReason.required": "Вкажіть причину. Кожна зміна кількості в наявності записується разом зі своєю причиною.",
@@ -2166,7 +2190,9 @@
       "customerOrderCancellationReason.tooBig": "Ця причина довша, ніж записує цей склад.",
       "customerOrderCancellationReason.notMultipleOf": "Вкажіть, чому це замовлення скасовується.",
       "customerOrderCancellationReason.trimmed_non_empty": "Причина не може бути порожньою після видалення пробілів.",
-      "customerOrderCancellationReason.invalidState": "Це замовлення вже виконано або скасовано, тому скасувати його ще раз не можна."
+      "customerOrderCancellationReason.invalidState": "Це замовлення вже виконано або скасовано, тому скасувати його ще раз не можна.",
+      "warehouseDeliveryAddress.required": "Введіть адресу, за якою постачальник здійснює доставку.",
+      "warehouseDeliveryAddress.invalid": "Введіть адресу, яку приймає цей склад."
     }
   }
 }

@@ -32,6 +32,7 @@
     "renameWarehouse": "Renaming the warehouse…",
     "archiveWarehouse": "Archiving the warehouse…",
     "restoreWarehouse": "Restoring the warehouse…",
+    "setWarehouseDeliveryAddress": "Saving the delivery address…",
     "giveWarehouseAccess": "Giving access to {{name}}…",
     "withdrawWarehouseAccess": "Withdrawing access to {{name}}…",
     "createWorkspaceRole": "Creating the workspace role…",

@@ -15,8 +15,13 @@ const BASELINE_PATH = 'tests/refactor/route-table.baseline.json';
 // across the two `workspaces` controllers at `baseline_revision`; the count is asserted rather than
 // trusted, because a handler dropped during a controller split would otherwise leave the table
 // simply shorter on both sides of a regenerated baseline.
+//
+// `delivery-addresses` T11 adds two: `GET` and `PUT
+// /api/v1/workspace/warehouses/{warehouseId}/delivery-address`, whose subject is the Warehouse
+// record and which therefore join this Workspace-scoped prefix (AC-10, sad.md §7). Raising the
+// count is the deliberate act the paragraph above asks for — the 21 that moved are all still here.
 const MOVED_ROUTE_PREFIX = '/api/v1/workspace';
-const MOVED_ROUTE_COUNT = 21;
+const MOVED_ROUTE_COUNT = 23;
 
 const productionControllers = () =>
   globSync('apps/server/src/**/*.controller.ts')

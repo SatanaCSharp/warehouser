@@ -178,5 +178,9 @@
     "notMultipleOf": "State why this order is being cancelled.",
     "trimmed_non_empty": "A reason cannot be empty once trimmed.",
     "invalidState": "This order has already been fulfilled or cancelled, so it cannot be cancelled again."
+  },
+  "warehouseDeliveryAddress": {
+    "required": "Enter the address a supplier delivers to.",
+    "invalid": "Enter an address this warehouse accepts."
   }
 }

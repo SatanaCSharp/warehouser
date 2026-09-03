@@ -10,6 +10,11 @@ interface CreateWarehouseInput {
   readonly name: string;
 }
 
+interface WarehouseDeliveryAddressInput {
+  readonly addressText: string;
+  readonly accessNotes: string | null;
+}
+
 @Injectable()
 export class WarehouseLifecycleRepository {
   constructor(private readonly dataSource: DataSource) {}
@@ -25,6 +30,14 @@ export class WarehouseLifecycleRepository {
       archivedAt: null,
       createdAt: now,
       updatedAt: now,
+    });
+  }
+
+  findWarehouse(warehouseId: string): Promise<WarehouseEntity | null> {
+    const manager = getEntityManager(this.dataSource);
+
+    return manager.getRepository(WarehouseEntity).findOneBy({
+      id: warehouseId,
     });
   }
 
@@ -45,6 +58,26 @@ export class WarehouseLifecycleRepository {
     await manager
       .getRepository(WarehouseEntity)
       .update({ id: warehouseId }, { name, updatedAt: new Date() });
+  }
+
+  // AC-10 — one single-row update that both records and corrects the
+  // Warehouse's own Delivery Address. Notes and address move together, so a
+  // correction can never leave notes standing against an address that is no
+  // longer there (`chk_warehouses_delivery_notes_require_address`).
+  async setDeliveryAddress(
+    warehouseId: string,
+    input: WarehouseDeliveryAddressInput,
+  ): Promise<void> {
+    const manager = getEntityManager(this.dataSource);
+
+    await manager.getRepository(WarehouseEntity).update(
+      { id: warehouseId },
+      {
+        deliveryAddressText: input.addressText,
+        deliveryAccessNotes: input.accessNotes,
+        updatedAt: new Date(),
+      },
+    );
   }
 
   async setArchivedAt(

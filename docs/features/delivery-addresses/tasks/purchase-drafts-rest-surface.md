@@ -44,6 +44,20 @@ Serve the line-delivery `PATCH`, the readiness `POST`, `GET /purchase-draft-line
 - [ ] `tests/refactor/route-table.spec.mjs` passes and no method-and-path pair is served twice.
 - [ ] lint + vet clean.
 
+## Precondition inherited from T11
+
+T11's Definition of Done includes "the address is readable from the Warehouse-scoped draft and line
+projections by a member holding no Workspace Role at all". Only half of that was provable in T11:
+those projections are `warehouseDestination` on a Via Warehouse line, which this task owns, and at
+T11 a line had no Delivery Mode yet. T11 pinned the half it owns — that the recorded address and
+notes sit unredacted on the `warehouses` row, and that a member with a Warehouse membership and no
+`workspace_memberships` row is refused the Workspace-scoped read and write — and recorded the gap
+in a header comment.
+
+**T19 must assert the end-to-end read**: a member holding `PURCHASE_DRAFTS:WATCH` and **no Workspace
+Role at all** reads the Warehouse's Delivery Address through the draft and line projections. Note
+that this read does not carry `accessNotes`; those stay behind `WAREHOUSES:ADDRESS_UPDATE`.
+
 ## Notes
 
 The by-line read is `/purchase-draft-lines` at the top level, **not** `/purchase-drafts/lines`, so no literal segment competes with a `{draftId}` parameter ([sad.md §7](../sad.md)). Shares the purchase-drafts contract and route-table lanes with T17.

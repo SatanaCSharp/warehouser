@@ -632,6 +632,10 @@ describe('readiness removal — declarative permission gating is unchanged (CR-R
     'modules/access/hooks/queries/useWorkspaceUsers.ts': [
       'canWatchWorkspaceMembers',
     ],
+    // delivery-addresses T11/AC-10 — a query `skip`, the first category ADR
+    // §3 licenses: the address a member may not update is never requested.
+    'modules/workspace/components/workspace-administration/warehouses/WarehouseDeliveryAddressSection.tsx':
+      ['canUpdateAddress'],
     'modules/workspace/components/workspace-administration/warehouses/WarehouseRow.tsx':
       ['canEnter'],
     'modules/workspace/components/workspace-administration/warehouses/WarehousesTab.tsx':
@@ -704,6 +708,7 @@ describe('readiness removal — declarative permission gating is unchanged (CR-R
     'modules/workspace/components/workspace-administration/NameWorkspaceAction.tsx': 4,
     'modules/workspace/components/workspace-administration/warehouses/AddWarehouseAction.tsx': 4,
     'modules/workspace/components/workspace-administration/warehouses/GiveWarehouseAccessAction.tsx': 4,
+    'modules/workspace/components/workspace-administration/warehouses/WarehouseDeliveryAddressSection.tsx': 4,
     'modules/workspace/components/workspace-administration/warehouses/WarehouseLifecycleActions.tsx': 4,
     'modules/workspace/components/workspace-administration/warehouses/WarehouseNameForm.tsx': 4,
     'modules/workspace/components/workspace-administration/warehouses/WarehousePersonRow.tsx': 4,

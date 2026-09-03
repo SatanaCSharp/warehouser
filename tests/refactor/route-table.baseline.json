@@ -514,6 +514,20 @@
     "dto": null
   },
   {
+    "method": "GET",
+    "path": "/api/v1/workspace/warehouses/:warehouseId/delivery-address",
+    "guards": ["SessionAuthGuard", "WorkspaceAccessGuard"],
+    "permission": "RequiredWorkspacePermission(WorkspacePermissionId.WAREHOUSES_ADDRESS_UPDATE)",
+    "dto": null
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/workspace/warehouses/:warehouseId/delivery-address",
+    "guards": ["SessionAuthGuard", "WorkspaceAccessGuard"],
+    "permission": "RequiredWorkspacePermission(WorkspacePermissionId.WAREHOUSES_ADDRESS_UPDATE)",
+    "dto": "WarehouseDeliveryAddressDto"
+  },
+  {
     "method": "POST",
     "path": "/api/v1/workspace/warehouses/:warehouseId/memberships",
     "guards": ["SessionAuthGuard", "WorkspaceAccessGuard"],

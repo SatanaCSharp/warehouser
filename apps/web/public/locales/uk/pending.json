@@ -32,6 +32,7 @@
     "renameWarehouse": "Перейменовуємо склад…",
     "archiveWarehouse": "Архівуємо склад…",
     "restoreWarehouse": "Відновлюємо склад…",
+    "setWarehouseDeliveryAddress": "Збереження адреси доставки…",
     "giveWarehouseAccess": "Надаємо доступ до {{name}}…",
     "withdrawWarehouseAccess": "Відкликаємо доступ до {{name}}…",
     "createWorkspaceRole": "Створення ролі робочого простору…",

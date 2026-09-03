@@ -35,6 +35,7 @@
     "renameWarehouse": "Склад перейменовано.",
     "archiveWarehouse": "Склад заархівовано.",
     "restoreWarehouse": "Склад відновлено.",
+    "setWarehouseDeliveryAddress": "Адресу доставки збережено.",
     "giveWarehouseAccess": "Доступ до {{name}} надано.",
     "withdrawWarehouseAccess": "Доступ до {{name}} відкликано.",
     "createWorkspaceRole": "Роль робочого простору створено.",

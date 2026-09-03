@@ -128,6 +128,12 @@ export const WORKSPACE_MODULE_MANIFEST = [
   'components/workspace-administration/warehouses/ArchiveWarehouseDialog.tsx',
   'components/workspace-administration/warehouses/GiveWarehouseAccessAction.tsx',
   'components/workspace-administration/warehouses/GiveWarehouseAccessDialog.tsx',
+  // delivery-addresses T11/AC-10 — the Warehouse's own Delivery Address
+  // section of the detail pane, its form, and the endpoint-owned mapping from
+  // the server's refusal rule to the key that explains it.
+  'components/workspace-administration/warehouses/WarehouseDeliveryAddressForm.tsx',
+  'components/workspace-administration/warehouses/WarehouseDeliveryAddressSection.spec.tsx',
+  'components/workspace-administration/warehouses/WarehouseDeliveryAddressSection.tsx',
   'components/workspace-administration/warehouses/WarehouseDetailPane.tsx',
   'components/workspace-administration/warehouses/WarehouseEnterLink.tsx',
   'components/workspace-administration/warehouses/WarehouseLifecycleActions.tsx',
@@ -169,6 +175,7 @@ export const WORKSPACE_MODULE_MANIFEST = [
   'route.tsx',
   'schemas/name-workspace-form.schema.ts',
   'schemas/warehouse-name-form.schema.ts',
+  'utils/warehouse-delivery-address-validation.ts',
   'utils/warehouse-name-validation.spec.ts',
   'utils/warehouse-name-validation.ts',
 ] as const;

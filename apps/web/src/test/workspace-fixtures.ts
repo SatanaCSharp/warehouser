@@ -11,6 +11,7 @@ import { makeStore } from 'store';
 import type {
   AssignableWarehouseRole,
   Warehouse,
+  WarehouseDeliveryAddress,
   WorkspaceContext,
   WorkspaceMember,
   WorkspacePermission,
@@ -217,6 +218,17 @@ export const workspaceWarehouses = (): Warehouse[] => [
 ];
 
 /**
+ * Central DC's own Delivery Address (AC-10) — one address and its access
+ * notes, with no Main flag and no deactivation, because a Warehouse has
+ * exactly one and corrects it in place.
+ */
+export const warehouseDeliveryAddress = (): WarehouseDeliveryAddress => ({
+  warehouseId: warehouseIds.central,
+  addressText: 'Am Kai 7, 21079 Hamburg',
+  accessNotes: 'Yard entrance on Kaistrasse; deliveries 06:00-18:00',
+});
+
+/**
  * The Workspace's Users with the Warehouses each belongs to — the read AC-33
  * grants under `WORKSPACE_MEMBERS:WATCH`. It deliberately carries no
  * Warehouse Role: `workspaceUserWarehouseSchema` only names the Warehouse
@@ -292,11 +304,13 @@ type WorkspaceServerOptions = {
   onRenameWorkspace?: StubbedHandler;
   onRevokeWarehouseMembership?: StubbedHandler;
   onSetWarehouseArchival?: StubbedHandler;
+  onSetWarehouseDeliveryAddress?: StubbedHandler;
   onTransferWorkspaceOwner?: StubbedHandler;
   onUpdateWorkspaceRole?: StubbedHandler;
   permissions?: WorkspacePermission[] | 'unavailable';
   roles?: WorkspaceRole[] | 'unavailable';
   users?: WorkspaceUser[];
+  warehouseDeliveryAddress?: WarehouseDeliveryAddress;
   warehouses?: Warehouse[] | 'unavailable';
 };
 
@@ -320,6 +334,7 @@ type ResolvedWorkspaceServerOptions = WorkspaceServerOptions &
       | 'permissions'
       | 'roles'
       | 'users'
+      | 'warehouseDeliveryAddress'
       | 'warehouses'
     >
   >;
@@ -491,6 +506,21 @@ const answerWarehouseRecordRoute = (
     );
   }
 
+  // AC-10 — the Warehouse's own Delivery Address. Answered before the
+  // catch-all rename branch below, which would otherwise swallow this path.
+  if (url.includes('/delivery-address')) {
+    if (method === 'PUT') {
+      return answerWrite(options.onSetWarehouseDeliveryAddress, body, () =>
+        Response.json({
+          warehouseId: warehouseIds.central,
+          addressText: 'Am Kai 9, 21079 Hamburg',
+          accessNotes: 'Yard entrance on Kaistrasse; deliveries 06:00-18:00',
+        }),
+      );
+    }
+    return Promise.resolve(Response.json(options.warehouseDeliveryAddress));
+  }
+
   if (url.includes('/assignable-roles')) {
     return Promise.resolve(Response.json(options.assignableRoles));
   }
@@ -540,6 +570,7 @@ export const stubWorkspaceServer = (
     permissions: workspacePermissions(),
     roles: workspaceRoles(),
     users: workspaceUsers(),
+    warehouseDeliveryAddress: warehouseDeliveryAddress(),
     warehouses: workspaceWarehouses(),
     ...options,
   };

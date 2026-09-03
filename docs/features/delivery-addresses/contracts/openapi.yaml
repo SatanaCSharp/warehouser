@@ -685,6 +685,44 @@ paths:
     parameters:
       - $ref: "#/components/parameters/WarehouseIdPath"
 
+    get:
+      tags: [warehouse-delivery-address]
+      summary: Read the Warehouse's own Delivery Address
+      description: |
+        **Added during implementation (T11), not present in the contract as first derived.** The
+        Delivery address section corrects the address *in place*, so it must render what is already
+        recorded, and no shipped read carries it — the `workspaces` `Warehouse` projection is
+        `{id, name, archivedAt}`.
+
+        Requires the same **Workspace** Permission as the write, `WAREHOUSES:ADDRESS_UPDATE`, rather
+        than a broader read Permission. That is deliberate: `accessNotes` holds gate and door codes,
+        and the alternative — widening the shipped `Warehouse` projection — would place them behind
+        `WAREHOUSES:WATCH` and change four shipped endpoints. The section is absent, not disabled,
+        for a member without the Permission, so this read is never issued without it.
+
+        This is **not** the read a Via Warehouse line uses. That one reaches the same columns through
+        the Warehouse-scoped draft and line projections under `PURCHASE_DRAFTS:WATCH`, needs no
+        Workspace Role at all, and does not carry `accessNotes`.
+
+        **Archived-tolerant**, on the same grounds as the write: the subject is the Warehouse record.
+      operationId: readWarehouseDeliveryAddress
+      responses:
+        "200":
+          description: |
+            The Warehouse's Delivery Address. `addressText` is `null` until one has been recorded,
+            which is the state a newly created Warehouse is in.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WarehouseDeliveryAddress" }
+              example:
+                warehouseId: "00000000-0000-4000-8000-000000000010"
+                addressText: "Test Warehouse North, Test Industrial Estate"
+                accessNotes: "Dock 3; deliveries 07:00-15:00; report to the gatehouse"
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WorkspaceDenied" }
+        "404": { $ref: "#/components/responses/WorkspaceTargetUnavailable" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
     put:
       tags: [warehouse-delivery-address]
       summary: Record or correct the Warehouse's own Delivery Address
@@ -708,6 +746,13 @@ paths:
         `accessNotes` without `addressText` is refused — access notes describe how to get into a place,
         and there is no place until the address is recorded
         (`chk_warehouses_delivery_notes_require_address`).
+
+        **Unreachable through this route as specified (T11).** `WarehouseDeliveryAddressWrite` makes
+        `addressText` required, so notes cannot arrive without an address and the
+        `rule: requires_address_text` 400 below cannot be produced; the check constraint remains the
+        backstop. No dead branch was written for it. Making that 400 reachable means making
+        `addressText` optional in the request schema, which is a contract decision, not an
+        implementation one.
 
         This address is what a Via Warehouse line is shown as travelling to, and a draft holding one
         cannot be frozen until it is recorded (AC-16a). Being the operator's own premises data, it is

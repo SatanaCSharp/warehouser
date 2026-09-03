@@ -89,6 +89,9 @@ export const MUTATION_FEEDBACK: Record<string, MutationFeedback> = {
     action: ({ archived }) =>
       archived ? 'archiveWarehouse' : 'restoreWarehouse',
   }),
+  // AC-10 — one endpoint, one outcome: the address is recorded the first time
+  // and corrected in place afterwards, and the copy has to read for both.
+  setWarehouseDeliveryAddress: feedback({ scope: 'workspace' }),
   assignWarehouseMembership: feedback<{ warehouseName: string }>({
     scope: 'workspace',
     action: 'giveWarehouseAccess',

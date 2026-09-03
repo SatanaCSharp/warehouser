@@ -35,6 +35,7 @@
     "renameWarehouse": "Warehouse renamed.",
     "archiveWarehouse": "Warehouse archived.",
     "restoreWarehouse": "Warehouse restored.",
+    "setWarehouseDeliveryAddress": "Delivery address saved.",
     "giveWarehouseAccess": "Access to {{name}} granted.",
     "withdrawWarehouseAccess": "Access to {{name}} withdrawn.",
     "createWorkspaceRole": "Workspace role created.",

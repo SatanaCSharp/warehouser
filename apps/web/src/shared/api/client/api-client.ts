@@ -144,6 +144,7 @@ export const api = createApi({
     'Permissions',
     'PurchaseDrafts',
     'Roles',
+    'WarehouseDeliveryAddress',
     'WorkspaceContext',
     'WorkspaceMembers',
     'WorkspacePermissions',

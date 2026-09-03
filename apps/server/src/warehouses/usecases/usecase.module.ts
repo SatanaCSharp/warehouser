@@ -6,15 +6,21 @@ import { ArchiveWarehouseCommand } from 'warehouses/usecases/commands/archive-wa
 import { CreateWarehouseCommand } from 'warehouses/usecases/commands/create-warehouse.command';
 import { RenameWarehouseCommand } from 'warehouses/usecases/commands/rename-warehouse.command';
 import { RestoreWarehouseCommand } from 'warehouses/usecases/commands/restore-warehouse.command';
+import { SetWarehouseDeliveryAddressCommand } from 'warehouses/usecases/commands/set-warehouse-delivery-address.command';
 import { ListWorkspaceWarehousesQuery } from 'warehouses/usecases/queries/list-workspace-warehouses.query';
+import { ReadWarehouseDeliveryAddressQuery } from 'warehouses/usecases/queries/read-warehouse-delivery-address.query';
 
 const warehouseCommands = [
   RenameWarehouseCommand,
   ArchiveWarehouseCommand,
   RestoreWarehouseCommand,
+  SetWarehouseDeliveryAddressCommand,
 ];
 
-const warehouseQueries = [ListWorkspaceWarehousesQuery];
+const warehouseQueries = [
+  ListWorkspaceWarehousesQuery,
+  ReadWarehouseDeliveryAddressQuery,
+];
 
 // `CreateWarehouseCommand` depends on `access`'s exported
 // `ProvisionInitialAccessCommand` through the narrower

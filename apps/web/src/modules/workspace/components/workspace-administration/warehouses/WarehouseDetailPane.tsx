@@ -2,6 +2,7 @@ import { Alert, Button, Chip } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 
 import { GiveWarehouseAccessAction } from 'modules/workspace/components/workspace-administration/warehouses/GiveWarehouseAccessAction';
+import { WarehouseDeliveryAddressSection } from 'modules/workspace/components/workspace-administration/warehouses/WarehouseDeliveryAddressSection';
 import { WarehouseLifecycleActions } from 'modules/workspace/components/workspace-administration/warehouses/WarehouseLifecycleActions';
 import { WarehouseNameForm } from 'modules/workspace/components/workspace-administration/warehouses/WarehouseNameForm';
 import { WarehousePeopleList } from 'modules/workspace/components/workspace-administration/warehouses/WarehousePeopleList';
@@ -89,6 +90,8 @@ export const WarehouseDetailPane = ({
       </Conditional>
 
       <WarehouseNameForm warehouse={warehouse} />
+
+      <WarehouseDeliveryAddressSection warehouse={warehouse} />
 
       <WarehouseLifecycleActions
         isOnlyNonArchived={isOnlyNonArchived}

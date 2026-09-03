@@ -12,7 +12,10 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import type { Warehouse } from '@warehouser/contracts/workspaces';
+import type {
+  Warehouse,
+  WarehouseDeliveryAddress,
+} from '@warehouser/contracts/workspaces';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
 import type { WorkspaceAccessRequest } from 'shared/access/access-request';
 import { RequiredWorkspacePermission } from 'shared/decorators/required-workspace-permission.decorator';
@@ -20,13 +23,16 @@ import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
 import { WorkspaceAccessGuard } from 'shared/guards/workspace-access.guard';
 import {
   WarehouseArchivalDto,
+  WarehouseDeliveryAddressDto,
   WarehouseWriteDto,
 } from 'warehouses/rest/dtos/warehouse-mutation.dto';
 import { ArchiveWarehouseCommand } from 'warehouses/usecases/commands/archive-warehouse.command';
 import { CreateWarehouseCommand } from 'warehouses/usecases/commands/create-warehouse.command';
 import { RenameWarehouseCommand } from 'warehouses/usecases/commands/rename-warehouse.command';
 import { RestoreWarehouseCommand } from 'warehouses/usecases/commands/restore-warehouse.command';
+import { SetWarehouseDeliveryAddressCommand } from 'warehouses/usecases/commands/set-warehouse-delivery-address.command';
 import { ListWorkspaceWarehousesQuery } from 'warehouses/usecases/queries/list-workspace-warehouses.query';
+import { ReadWarehouseDeliveryAddressQuery } from 'warehouses/usecases/queries/read-warehouse-delivery-address.query';
 
 /** Every route whose subject is the Warehouse **record** itself — never a resource a Warehouse
  * owns, and never a membership edge into it, which is Access and lives on `access`'s
@@ -44,6 +50,8 @@ export class WarehouseController {
     private readonly renameWarehouseCommand: RenameWarehouseCommand,
     private readonly archiveWarehouseCommand: ArchiveWarehouseCommand,
     private readonly restoreWarehouseCommand: RestoreWarehouseCommand,
+    private readonly readWarehouseDeliveryAddressQuery: ReadWarehouseDeliveryAddressQuery,
+    private readonly setWarehouseDeliveryAddressCommand: SetWarehouseDeliveryAddressCommand,
   ) {}
 
   @Get()
@@ -132,5 +140,47 @@ export class WarehouseController {
       name: warehouse.name,
       archivedAt: warehouse.archivedAt?.toISOString() ?? null,
     };
+  }
+
+  // AC-10 — the Warehouse's own Delivery Address. Its subject is the
+  // Warehouse record, so both routes carry the **Workspace** Permission
+  // `WAREHOUSES:ADDRESS_UPDATE`: a Warehouse Permission never authorizes
+  // either, and neither consults archived state, deliberately, for the same
+  // reason renaming does not (openapi.yaml, workspaces ADR 0001).
+  //
+  // The read accompanies the write so the member correcting the address in
+  // place is shown what they are correcting. The read a member preparing the
+  // dock performs is `warehouseDestination` on a Via Warehouse Purchase Draft
+  // Line, under `PURCHASE_DRAFTS:WATCH` (sad.md §7) — not this route.
+  //
+  // There is no third route: an address is corrected in place and never
+  // withdrawn or made Inactive.
+  @Get(':warehouseId/delivery-address')
+  @RequiredWorkspacePermission(WorkspacePermissionId.WAREHOUSES_ADDRESS_UPDATE)
+  @UseGuards(SessionAuthGuard, WorkspaceAccessGuard)
+  readWarehouseDeliveryAddress(
+    @Param('warehouseId', new ParseUUIDPipe()) warehouseId: string,
+    @Req() request: WorkspaceAccessRequest,
+  ): Promise<WarehouseDeliveryAddress> {
+    return this.readWarehouseDeliveryAddressQuery.execute(
+      request.workspace!,
+      warehouseId,
+    );
+  }
+
+  @Put(':warehouseId/delivery-address')
+  @HttpCode(HttpStatus.OK)
+  @RequiredWorkspacePermission(WorkspacePermissionId.WAREHOUSES_ADDRESS_UPDATE)
+  @UseGuards(SessionAuthGuard, WorkspaceAccessGuard)
+  setWarehouseDeliveryAddress(
+    @Param('warehouseId', new ParseUUIDPipe()) warehouseId: string,
+    @Req() request: WorkspaceAccessRequest,
+    @Body() input: WarehouseDeliveryAddressDto,
+  ): Promise<WarehouseDeliveryAddress> {
+    return this.setWarehouseDeliveryAddressCommand.execute(request.workspace!, {
+      warehouseId,
+      addressText: input.addressText,
+      accessNotes: input.accessNotes,
+    });
   }
 }

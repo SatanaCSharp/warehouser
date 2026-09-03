@@ -48,7 +48,11 @@ const DECLARED_MANIFEST = [
   'usecases/commands/create-warehouse.command.ts',
   'usecases/commands/rename-warehouse.command.ts',
   'usecases/commands/restore-warehouse.command.ts',
+  // T11/AC-10 — the Warehouse's own Delivery Address: one command, one
+  // accompanying Workspace-scoped read.
+  'usecases/commands/set-warehouse-delivery-address.command.ts',
   'usecases/queries/list-workspace-warehouses.query.ts',
+  'usecases/queries/read-warehouse-delivery-address.query.ts',
   'usecases/usecase.module.ts',
 ];
 
