@@ -30,6 +30,9 @@ import { AccessProvisioningRepository } from 'shared/domain/repositories/access-
 import { AccessReadRepository } from 'shared/domain/repositories/access-read.repository';
 import { ActiveWarehouseSelectionRepository } from 'shared/domain/repositories/active-warehouse-selection.repository';
 import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
+import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository';
+import { CustomerAwaitingDemandRepository } from 'shared/domain/repositories/customer-awaiting-demand.repository';
+import { CustomerDirectoryRepository } from 'shared/domain/repositories/customer-directory.repository';
 import { ManagerTransferRepository } from 'shared/domain/repositories/manager-transfer.repository';
 import { MemberLifecycleRepository } from 'shared/domain/repositories/member-lifecycle.repository';
 import { RoleLifecycleRepository } from 'shared/domain/repositories/role-lifecycle.repository';
@@ -75,6 +78,9 @@ const domainRepositories = [
   AccessProvisioningRepository,
   AccessReadRepository,
   AuthenticationRepository,
+  CustomerAddressBookRepository,
+  CustomerAwaitingDemandRepository,
+  CustomerDirectoryRepository,
   ManagerTransferRepository,
   MemberLifecycleRepository,
   RoleLifecycleRepository,

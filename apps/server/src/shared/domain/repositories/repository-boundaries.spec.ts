@@ -41,11 +41,39 @@ describe('shared repository boundaries', () => {
     'access',
     'auth',
     'customer-orders',
+    'customers',
     'items',
     'users',
     'warehouses',
     'workspaces',
   ];
+
+  // `creating-a-server-repository.md` § "Keep repositories isolated and operation-oriented":
+  // "Repository classes must not contain private methods. If persistence logic is reusable, make it
+  // a meaningful public operation." `server-architecture.md` § Domain restates it. Like the
+  // feature-import rule above it had no executable form; T7's Definition of Done requires one, and
+  // it is a tightening that changes none of the rules beside it.
+  //
+  // The constructor's `private readonly` parameter properties are dependency injection, not
+  // methods, so the pattern requires the parenthesis of a method signature and not a property.
+  const privateMethodPattern =
+    /^\s*(?:private|protected)\s+(?!readonly\b)[\w$]+\s*(?:<[^>]*>)?\s*\(/mu;
+
+  it.each(repositorySources)(
+    '$fileName declares no private method',
+    ({ source }) => {
+      expect(source).not.toMatch(privateMethodPattern);
+    },
+  );
+
+  it('still rejects a repository that hides persistence logic behind a private method', () => {
+    expect('  private buildQuery(alias: string) {').toMatch(
+      privateMethodPattern,
+    );
+    expect('  private readonly dataSource: DataSource;').not.toMatch(
+      privateMethodPattern,
+    );
+  });
 
   const featureModuleImportPattern = (featureModule: string): RegExp =>
     new RegExp(`from\\s+['"](?:\\.\\.\\/)*${featureModule}\\/`, 'u');
