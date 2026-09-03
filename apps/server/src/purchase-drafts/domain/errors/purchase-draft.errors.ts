@@ -1,5 +1,12 @@
-import { ErrorCode } from '@warehouser/shared-types/enums';
+import {
+  ErrorCode,
+  WorkspacePermissionId,
+} from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
+import type {
+  DeliveryMode,
+  EndingKind,
+} from 'purchase-drafts/domain/value-objects/delivery-mode';
 
 // AC-11 — one non-enumerating outcome for an Item or a Customer Order of another Warehouse and for
 // one that does not exist, naming the same-Warehouse rule. openapi.yaml
@@ -86,4 +93,80 @@ export const purchaseDraftArrivalNoLinesError = (): ApplicationError =>
   new ApplicationError(ErrorCode.PURCHASE_DRAFTS_INVALID_INPUT, {
     field: 'lines',
     rule: 'at_least_one_line',
+  });
+
+// AC-14 — a Direct to Customer line names a customer's address; goods shipped to the member's own
+// site are travelling Via Warehouse. The refusal is bound to the destination field the design
+// handoff highlights (`IcUGb`) and names no address, because the Warehouse's own has no identifier
+// to name. openapi.yaml `PurchaseDraftLineWriteConflict` `warehouseAddressOnDirectLine` example:
+// `details: { field: "customerDeliveryAddressId" }`.
+export const purchaseDraftInvalidDeliveryDestinationError =
+  (): ApplicationError =>
+    new ApplicationError(
+      ErrorCode.PURCHASE_DRAFTS_INVALID_DELIVERY_DESTINATION,
+      {
+        field: 'customerDeliveryAddressId',
+      },
+    );
+
+// AC-15a — a Direct to Customer line serves only the demand going to the address it ships to, and
+// the agreement is required continuously rather than only when the link was made. **Every**
+// disagreeing link is named and none is withdrawn: which one to drop is the member's decision.
+// openapi.yaml `disagreeingLinks` example fixes the entry shape below. Every value in it is a
+// record of this Warehouse's own draft, which the actor is already reading.
+export type DisagreeingDeliveryLink = {
+  purchaseDraftLineLinkId: string;
+  customerOrderId: string;
+  lineDeliveryAddressId: string;
+  customerOrderDeliveryAddressId: string;
+};
+
+export const purchaseDraftDeliveryAddressDisagreementError = (
+  disagreeingLinks: readonly DisagreeingDeliveryLink[],
+): ApplicationError =>
+  new ApplicationError(
+    ErrorCode.PURCHASE_DRAFTS_DELIVERY_ADDRESS_DISAGREEMENT,
+    {
+      disagreeingLinks,
+    },
+  );
+
+// AC-16a — a line coming to the warehouse cannot be frozen before the warehouse has an address to
+// be delivered to. The refusal names the capability that records one, which is a Workspace
+// Permission because the subject of that write is the Warehouse record itself (sad.md §7).
+// openapi.yaml `PurchaseDraftReadinessConflict` `warehouseAddressRequired` example:
+// `details: { requiredPermissionId: "WAREHOUSES:ADDRESS_UPDATE" }`.
+export const purchaseDraftWarehouseDeliveryAddressRequiredError =
+  (): ApplicationError =>
+    new ApplicationError(
+      ErrorCode.PURCHASE_DRAFTS_WAREHOUSE_DELIVERY_ADDRESS_REQUIRED,
+      { requiredPermissionId: WorkspacePermissionId.WAREHOUSES_ADDRESS_UPDATE },
+    );
+
+// AC-20 — an Arrival Confirmation against a Direct to Customer line, or a Direct Delivery against a
+// Via Warehouse one, is refused naming which of the two ways that line's goods travelled. The mode
+// is what the member needs in order to know which act to perform instead. openapi.yaml
+// `PurchaseDraftLineEndingConflict` `modeMismatch` example: `details: { deliveryMode }`.
+export const purchaseDraftEndingModeMismatchError = (
+  deliveryMode: DeliveryMode,
+): ApplicationError =>
+  new ApplicationError(ErrorCode.PURCHASE_DRAFTS_ENDING_MODE_MISMATCH, {
+    deliveryMode,
+  });
+
+// AC-20a — a second ending on one line is refused, changing nothing and assigning nothing further
+// to any Customer Order, and the refusal names when and by whom the first was recorded. The three
+// attribution values are read from the line, whose ending columns arrive together or not at all
+// (`chk_purchase_draft_lines_ending_attribution`). The instant is carried as the ISO-8601 string the
+// error envelope transports. openapi.yaml `PurchaseDraftLineEndingConflict` `alreadyRecorded`
+// example: `details: { endingKind, endingRecordedByUserId, endingRecordedAt }`.
+export const purchaseDraftEndingAlreadyRecordedError = (ending: {
+  endingKind: EndingKind;
+  endingRecordedByUserId: string;
+  endingRecordedAt: Date;
+}): ApplicationError =>
+  new ApplicationError(ErrorCode.PURCHASE_DRAFTS_ENDING_ALREADY_RECORDED, {
+    endingKind: ending.endingKind,
+    endingRecordedByUserId: ending.endingRecordedByUserId,
+    endingRecordedAt: ending.endingRecordedAt.toISOString(),
   });

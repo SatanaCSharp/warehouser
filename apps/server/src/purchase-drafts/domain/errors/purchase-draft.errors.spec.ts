@@ -4,7 +4,10 @@
 // `details` shapes mirror `openapi.yaml`'s `PurchaseDraftTargetUnavailable`,
 // `InvalidPurchaseDraftInput` and `PurchaseDraftWriteConflict` response examples exactly (AC-11,
 // AC-13, AC-15).
-import { ErrorCode } from '@warehouser/shared-types/enums';
+import {
+  ErrorCode,
+  WorkspacePermissionId,
+} from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
 import {
   purchaseDraftArrivalAlreadyConfirmedError,
@@ -12,13 +15,22 @@ import {
   purchaseDraftArrivalRepeatedLineError,
   purchaseDraftArrivalUnknownLineError,
   purchaseDraftConcurrentChangeError,
+  purchaseDraftDeliveryAddressDisagreementError,
   purchaseDraftDiscardUnavailableError,
   purchaseDraftEmptyError,
+  purchaseDraftEndingAlreadyRecordedError,
+  purchaseDraftEndingModeMismatchError,
   purchaseDraftFrozenError,
+  purchaseDraftInvalidDeliveryDestinationError,
   purchaseDraftInvalidStateError,
   purchaseDraftTargetUnavailableError,
   purchaseDraftUnknownPackagingTypeError,
+  purchaseDraftWarehouseDeliveryAddressRequiredError,
 } from 'purchase-drafts/domain/errors/purchase-draft.errors';
+import {
+  DeliveryMode,
+  EndingKind,
+} from 'purchase-drafts/domain/value-objects/delivery-mode';
 
 describe('purchase-draft domain error factories', () => {
   // AC-11 — one non-enumerating outcome for an Item or a Customer Order of another Warehouse and
@@ -205,6 +217,120 @@ describe('purchase-draft domain error factories', () => {
     expect(error.details).toEqual({
       field: 'lines',
       rule: 'at_least_one_line',
+    });
+  });
+});
+
+// T14 — the delivery-addresses refusals. Codes and `details` shapes mirror `openapi.yaml`'s
+// `PurchaseDraftLineWriteConflict`, `PurchaseDraftReadinessConflict` and
+// `PurchaseDraftLineEndingConflict` response examples exactly (AC-14, AC-15a, AC-16a, AC-20,
+// AC-20a).
+describe('purchase-draft delivery error factories', () => {
+  // AC-14 — "goods shipped to their own site are travelling Via Warehouse, so a Direct to Customer
+  // line names a customer's address". openapi.yaml `PurchaseDraftLineWriteConflict`
+  // `warehouseAddressOnDirectLine` example: `details: { field: "customerDeliveryAddressId" }`, the
+  // destination field the design handoff binds the error to (`IcUGb`).
+  it('builds an ApplicationError bound to the destination field for the Warehouse’s own address on a direct line', () => {
+    const error = purchaseDraftInvalidDeliveryDestinationError();
+
+    expect(error).toBeInstanceOf(ApplicationError);
+    expect(error).toMatchObject({
+      code: ErrorCode.PURCHASE_DRAFTS_INVALID_DELIVERY_DESTINATION,
+    });
+    expect(error.details).toEqual({ field: 'customerDeliveryAddressId' });
+  });
+
+  // AC-15a — every disagreeing link is named and none is withdrawn, because which link to withdraw
+  // is the member's decision. openapi.yaml `disagreeingLinks` example:
+  // `details: { disagreeingLinks: [{ purchaseDraftLineLinkId, customerOrderId,
+  // lineDeliveryAddressId, customerOrderDeliveryAddressId }] }`.
+  it('builds an ApplicationError naming every disagreeing link', () => {
+    const disagreeingLinks = [
+      {
+        purchaseDraftLineLinkId: '00000000-0000-4000-8000-000000000501',
+        customerOrderId: '00000000-0000-4000-8000-000000000601',
+        lineDeliveryAddressId: '00000000-0000-4000-8000-000000000301',
+        customerOrderDeliveryAddressId: '00000000-0000-4000-8000-000000000302',
+      },
+      {
+        purchaseDraftLineLinkId: '00000000-0000-4000-8000-000000000502',
+        customerOrderId: '00000000-0000-4000-8000-000000000602',
+        lineDeliveryAddressId: '00000000-0000-4000-8000-000000000301',
+        customerOrderDeliveryAddressId: '00000000-0000-4000-8000-000000000303',
+      },
+    ];
+
+    const error =
+      purchaseDraftDeliveryAddressDisagreementError(disagreeingLinks);
+
+    expect(error).toBeInstanceOf(ApplicationError);
+    expect(error).toMatchObject({
+      code: ErrorCode.PURCHASE_DRAFTS_DELIVERY_ADDRESS_DISAGREEMENT,
+    });
+    expect(error.details).toEqual({ disagreeingLinks });
+  });
+
+  // AC-16a — a line coming to the warehouse cannot be frozen before the warehouse has an address to
+  // be delivered to, and the refusal names the capability that records one. openapi.yaml
+  // `PurchaseDraftReadinessConflict` `warehouseAddressRequired` example:
+  // `details: { requiredPermissionId: "WAREHOUSES:ADDRESS_UPDATE" }` — a Workspace Permission,
+  // because the subject of that write is the Warehouse record (sad.md §7).
+  it('builds an ApplicationError naming the capability that records the Warehouse’s address', () => {
+    const error = purchaseDraftWarehouseDeliveryAddressRequiredError();
+
+    expect(error).toBeInstanceOf(ApplicationError);
+    expect(error).toMatchObject({
+      code: ErrorCode.PURCHASE_DRAFTS_WAREHOUSE_DELIVERY_ADDRESS_REQUIRED,
+    });
+    expect(error.details).toEqual({
+      requiredPermissionId: WorkspacePermissionId.WAREHOUSES_ADDRESS_UPDATE,
+    });
+  });
+
+  // AC-20 — the refusal names which of the two ways that line's goods travelled. openapi.yaml
+  // `PurchaseDraftLineEndingConflict` `modeMismatch` example:
+  // `details: { deliveryMode: "direct_to_customer" }`.
+  it('builds an ApplicationError naming the way the line’s goods travelled', () => {
+    const error = purchaseDraftEndingModeMismatchError(
+      DeliveryMode.DirectToCustomer,
+    );
+
+    expect(error).toBeInstanceOf(ApplicationError);
+    expect(error).toMatchObject({
+      code: ErrorCode.PURCHASE_DRAFTS_ENDING_MODE_MISMATCH,
+    });
+    expect(error.details).toEqual({ deliveryMode: 'direct_to_customer' });
+  });
+
+  it('names a Via Warehouse line as the other of the two ways', () => {
+    const error = purchaseDraftEndingModeMismatchError(
+      DeliveryMode.ViaWarehouse,
+    );
+
+    expect(error.details).toEqual({ deliveryMode: 'via_warehouse' });
+  });
+
+  // AC-20a — "tells the member that this line's ending is already recorded, naming when and by
+  // whom". openapi.yaml `alreadyRecorded` example: `details: { endingKind,
+  // endingRecordedByUserId, endingRecordedAt }`, the instant as the ISO-8601 string the envelope
+  // carries.
+  it('builds an ApplicationError naming when and by whom the ending was recorded', () => {
+    const endingRecordedAt = new Date('2026-09-18T10:00:00.000Z');
+
+    const error = purchaseDraftEndingAlreadyRecordedError({
+      endingKind: EndingKind.Arrival,
+      endingRecordedByUserId: '00000000-0000-4000-8000-000000000001',
+      endingRecordedAt,
+    });
+
+    expect(error).toBeInstanceOf(ApplicationError);
+    expect(error).toMatchObject({
+      code: ErrorCode.PURCHASE_DRAFTS_ENDING_ALREADY_RECORDED,
+    });
+    expect(error.details).toEqual({
+      endingKind: 'arrival',
+      endingRecordedByUserId: '00000000-0000-4000-8000-000000000001',
+      endingRecordedAt: '2026-09-18T10:00:00.000Z',
     });
   });
 });
