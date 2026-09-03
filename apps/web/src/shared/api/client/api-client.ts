@@ -137,6 +137,9 @@ export const api = createApi({
   tagTypes: [
     'CurrentAccess',
     'CurrentSession',
+    // delivery-addresses T21 — the Customers destination's list and detail
+    // reads, and every address-book write that changes either.
+    'Customers',
     'AccessMembers',
     'Demand',
     'Items',

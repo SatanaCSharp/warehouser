@@ -403,7 +403,10 @@ describe('Sidebar ordering entries (T17, AC-05, AC-22, AC-23)', () => {
 
 // The approved frame `yGhkK` draws the Warehouse list as Dashboard → Demand →
 // Purchase drafts → Items → Access, and design-handoff.md §Information
-// architecture states the same order. It is asserted as document order rather
+// architecture states the same order. delivery-addresses T21 inserts
+// `Customers` at index 4, between `Items` and `Access`, so the two reference
+// registries sit together (that feature's design-handoff.md §Information
+// architecture). It is asserted as document order rather
 // than as five presence checks, because the ordering is the thing that was
 // wrong.
 describe('Sidebar entry order (frame yGhkK)', () => {
@@ -418,6 +421,7 @@ describe('Sidebar entry order (frame yGhkK)', () => {
         PermissionId.CUSTOMER_ORDERS_WATCH,
         PermissionId.PURCHASE_DRAFTS_WATCH,
         PermissionId.ITEMS_WATCH,
+        PermissionId.CUSTOMERS_WATCH,
         PermissionId.ROLES_WATCH,
       ],
     });
@@ -430,7 +434,85 @@ describe('Sidebar entry order (frame yGhkK)', () => {
       within(list)
         .getAllByRole('link')
         .map((link) => link.textContent),
-    ).toEqual(['Dashboard', 'Demand', 'Purchase drafts', 'Items', 'Access']);
+    ).toEqual([
+      'Dashboard',
+      'Demand',
+      'Purchase drafts',
+      'Items',
+      'Customers',
+      'Access',
+    ]);
+  });
+});
+
+// delivery-addresses T21 / AC-09 — `Customers` is a SINGLE new entry in the
+// shipped Warehouse nav list, placed between `Items` and `Access` so the two
+// reference registries sit together (design-handoff.md §Information
+// architecture, frames `KRDln`/`b7gaH9`, tile `xARSD`).
+//
+// The load-bearing half is the second case: without `CUSTOMERS:WATCH` the
+// entry is **absent** — not disabled, not an empty placeholder — and it never
+// carries a count, a badge or a total, because a count answers "does this
+// exist" as effectively as the record does.
+describe('Sidebar Customers entry (delivery-addresses T21, AC-09)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('offers the Customers entry when the actor holds CUSTOMERS:WATCH', async () => {
+    stubAccess({
+      ...baseAccess,
+      permissionIds: [PermissionId.CUSTOMERS_WATCH],
+    });
+    renderSidebar();
+
+    expect(
+      await screen.findByRole('link', { name: 'Customers' }),
+    ).toBeInTheDocument();
+  });
+
+  it('omits the Customers entry — absent, never disabled — without CUSTOMERS:WATCH', async () => {
+    stubAccess({
+      ...baseAccess,
+      permissionIds: Object.values(PermissionId).filter(
+        (permission) => permission !== PermissionId.CUSTOMERS_WATCH,
+      ),
+    });
+    renderSidebar();
+
+    await screen.findByRole('link', { name: 'Dashboard' });
+    expect(
+      screen.queryByRole('link', { name: 'Customers' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Customers' }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText('Customers')).not.toBeInTheDocument();
+  });
+
+  it('exposes no count, badge or total on the Customers entry', async () => {
+    stubAccess({
+      ...baseAccess,
+      permissionIds: [PermissionId.CUSTOMERS_WATCH],
+    });
+    renderSidebar();
+
+    const entry = await screen.findByRole('link', { name: 'Customers' });
+    expect(entry.textContent).toBe('Customers');
+  });
+
+  // AC-23 — archiving withdraws no watch destination.
+  it('still offers the Customers entry in an archived Warehouse', async () => {
+    stubAccess({
+      ...baseAccess,
+      permissionIds: [PermissionId.CUSTOMERS_WATCH],
+      archivedAt: '2026-08-13T00:00:00.000Z',
+    });
+    renderSidebar();
+
+    expect(
+      await screen.findByRole('link', { name: 'Customers' }),
+    ).toBeInTheDocument();
   });
 });
 

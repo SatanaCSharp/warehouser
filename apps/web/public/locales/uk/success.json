@@ -59,5 +59,17 @@
     "confirmPurchaseDraftArrival": "Прибуття підтверджено, чернетку закрито.",
     "closePurchaseDraft": "Чернетку закупівлі закрито: {{reason}}",
     "discardPurchaseDraft": "Чернетку закупівлі відхилено."
+  },
+  "customer": {
+    "recordCustomer": "Клієнта записано · {{customer}}",
+    "correctCustomerName": "Клієнта перейменовано · {{customer}}",
+    "deactivateCustomer": "Деактивовано · {{customer}} · уже розміщені замовлення й далі враховуються",
+    "reactivateCustomer": "Активовано · {{customer}}",
+    "addCustomerDeliveryAddress": "Адресу доставки додано · {{customer}}",
+    "addCustomerMainDeliveryAddress": "Адресу доставки додано й зроблено основною · {{customer}}",
+    "correctCustomerDeliveryAddress": "Адресу доставки виправлено · {{customer}}",
+    "setMainCustomerDeliveryAddress": "Основну адресу доставки змінено · {{customer}}",
+    "deactivateCustomerDeliveryAddress": "Адресу доставки деактивовано · {{customer}} · записи, що вже називають її, й далі враховуються",
+    "reactivateCustomerDeliveryAddress": "Адресу доставки знову пропонують · {{customer}}"
   }
 }

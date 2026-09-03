@@ -1,0 +1,160 @@
+{
+  "head": {
+    "title": "Customers"
+  },
+  "directory": {
+    "heading": "Customers",
+    "lede": "Every customer this warehouse delivers to, the addresses their goods are sent to, and what each one is still waiting for.",
+    "loading": "Loading customers",
+    "error": "You do not have access to the customers of this warehouse.",
+    "listLabel": "Customers",
+    "search": "Search customers",
+    "recordAction": "Record customer",
+    "filter": {
+      "label": "Customer status",
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "empty": {
+      "noMatches": "No customer matches “{{query}}”.",
+      "active": {
+        "heading": "No customer is recorded yet",
+        "description": "Record a customer together with the address their goods are sent to, and it becomes selectable whenever demand is recorded."
+      },
+      "inactive": {
+        "heading": "No customer is inactive",
+        "description": "A customer you stop dealing with appears here, still readable and still counting on every order that names it."
+      }
+    }
+  },
+  "card": {
+    "addresses_one": "{{count}} delivery address",
+    "addresses_other": "{{count}} delivery addresses",
+    "inactive": "Inactive"
+  },
+  "detail": {
+    "back": "All customers",
+    "empty": "Open a customer to see its delivery addresses and what it is waiting for.",
+    "loading": "Loading the customer",
+    "error": "This customer could not be loaded. Try again.",
+    "addresses": {
+      "heading": "Delivery addresses",
+      "listLabel": "Delivery addresses of {{name}}",
+      "addAction": "Add delivery address",
+      "main": "Main",
+      "inactive": "Inactive"
+    },
+    "awaiting": {
+      "heading": "Waiting for",
+      "tableLabel": "What {{name}} is waiting for",
+      "item": "Item",
+      "outstanding": "Outstanding",
+      "neededBy": "Needed by",
+      "goingTo": "Going to",
+      "empty": {
+        "heading": "{{name}} is waiting for nothing",
+        "description": "Orders this customer is still owed appear here, with the address each one is going to."
+      },
+      "reason": {
+        "main": "The customer's main delivery address",
+        "stated": "Stated on this order",
+        "inactive": "Now inactive — this order keeps going there"
+      }
+    }
+  },
+  "menu": {
+    "customer": {
+      "actions": "Actions for {{name}}",
+      "correct": "Correct name",
+      "deactivate": "Deactivate customer",
+      "reactivate": "Reactivate customer"
+    },
+    "address": {
+      "actions": "Actions for {{address}}",
+      "correct": "Correct address",
+      "setMain": "Make this the main address",
+      "deactivate": "Deactivate address",
+      "reactivate": "Reactivate address"
+    }
+  },
+  "picker": {
+    "customer": {
+      "label": "Customer"
+    },
+    "address": {
+      "label": "Delivery address",
+      "mainOption": "{{address}} · Main",
+      "inactiveNote": "Inactive addresses are not offered here."
+    }
+  },
+  "dialogs": {
+    "record": {
+      "title": "Record a customer",
+      "lede": "A customer is recorded together with the first address their goods are sent to.",
+      "nameLabel": "Customer name",
+      "addressLabel": "Delivery address",
+      "addressHelp": "Written the way you would write it on a label. It is never checked, corrected or looked up.",
+      "accessNotesLabel": "Access notes (optional)",
+      "accessNotesHelp": "What a driver needs to get in — a gate code, delivery hours, who to ask for.",
+      "note": "This address becomes the customer's main delivery address. You can add more afterwards.",
+      "cancel": "Cancel",
+      "submit": "Record customer"
+    },
+    "correct": {
+      "title": "Correct the name of {{name}}",
+      "lede": "A customer name identifies at most one customer in this warehouse.",
+      "nameLabel": "Customer name",
+      "note": "Every order and every frozen purchase draft line that names this customer keeps naming the same customer.",
+      "cancel": "Cancel",
+      "submit": "Save name"
+    },
+    "deactivate": {
+      "title": "Deactivate {{name}}?",
+      "lede": "This customer stops being offered when demand is recorded.",
+      "ordersKeepCounting": "Every order that already names it stays readable and keeps counting exactly as before.",
+      "addressesUnchanged": "Its delivery addresses are left exactly as they are.",
+      "nameStaysTaken": "The name stays taken, so no new customer can reuse it.",
+      "reversible": "You can make this customer active again at any time.",
+      "cancel": "Cancel",
+      "submit": "Deactivate customer"
+    },
+    "addAddress": {
+      "title": "Add a delivery address",
+      "lede": "Another place this customer's goods can be sent to.",
+      "addressLabel": "Delivery address",
+      "addressHelp": "Written the way you would write it on a label. It is never checked, corrected or looked up.",
+      "accessNotesLabel": "Access notes (optional)",
+      "accessNotesHelp": "What a driver needs to get in — a gate code, delivery hours, who to ask for.",
+      "mainLabel": "Make this the customer's main delivery address",
+      "cancel": "Cancel",
+      "submit": "Add address"
+    },
+    "correctAddress": {
+      "title": "Correct this delivery address",
+      "lede": "The correction applies wherever this address is used.",
+      "addressLabel": "Delivery address",
+      "accessNotesLabel": "Access notes (optional)",
+      "accessNotesHelp": "Clear this field to remove the access notes.",
+      "note": "Orders and unfrozen draft lines follow the correction. A frozen line keeps the address the supplier was told.",
+      "cancel": "Cancel",
+      "submit": "Save address"
+    },
+    "deactivateAddress": {
+      "title": "Deactivate this delivery address?",
+      "lede": "This address stops being offered wherever a delivery address is chosen.",
+      "recordsKeepCounting": "Every order and every frozen purchase draft line that already names it keeps reading and counting exactly as before.",
+      "mainMoves": "This is the main address, so one of the remaining active addresses becomes the main one instead. You will be told which.",
+      "reversible": "You can offer this address again at any time.",
+      "cancel": "Cancel",
+      "submit": "Deactivate address"
+    },
+    "refusal": {
+      "lastActiveAddress": "A customer always keeps at least one active delivery address. Add the replacement address first, then deactivate this one.",
+      "inactiveAddress": "An inactive address cannot be the main one. Make it active again first.",
+      "unavailable": "This customer is not available. Nothing has changed.",
+      "archived": "This warehouse is archived, so nothing here can be changed. Nothing has changed.",
+      "invalid": "This could not be saved as it stands. Nothing has changed.",
+      "unknown": "This could not be saved. Nothing has changed."
+    }
+  }
+}

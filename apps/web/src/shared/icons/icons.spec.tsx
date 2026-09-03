@@ -48,6 +48,13 @@ const REQUIRED_ICONS: Record<string, keyof typeof Icons> = {
   lock: 'LockIcon',
   truck: 'TruckIcon',
   'corner-down-right': 'CornerDownRightIcon',
+  // delivery-addresses T21 — the three glyphs the Customers destination adds
+  // (`docs/features/delivery-addresses/design-handoff.md` §Icons: `contact`,
+  // `map-pin` and `package-check` are the only Lucide names that feature uses
+  // which `shared/icons/` does not already export).
+  contact: 'ContactIcon',
+  'map-pin': 'MapPinIcon',
+  'package-check': 'PackageCheckIcon',
 };
 
 describe('shared/icons', () => {

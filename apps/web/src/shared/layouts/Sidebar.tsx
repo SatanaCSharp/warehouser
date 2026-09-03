@@ -14,6 +14,7 @@ import { workspaceAdministrationPermissionIds } from 'shared/hooks/queries/useWo
 import {
   Building2Icon,
   ClipboardListIcon,
+  ContactIcon,
   DashboardIcon,
   FileTextIcon,
   PackageIcon,
@@ -165,6 +166,22 @@ export const Sidebar = ({
             isActive={isAt(ROUTES.WAREHOUSE_ITEMS)}
             icon={<PackageIcon />}
             label={t('nav.items')}
+            onNavigate={onNavigate}
+          />
+        </WarehousePermissionGate>
+        {/* delivery-addresses T21 / AC-09 — one entry, at index 4, so the two
+            reference registries (Items and Customers) sit together (that
+            feature's design-handoff.md §Information architecture). Absent —
+            not disabled, not empty — without `CUSTOMERS:WATCH`, and carrying
+            no trailing slot: a count answers "does this exist" as effectively
+            as the record does, so the entry exposes none. */}
+        <WarehousePermissionGate permission={PermissionId.CUSTOMERS_WATCH}>
+          <SidebarNavItem
+            to={ROUTES.WAREHOUSE_CUSTOMERS}
+            params={params}
+            isActive={isAt(ROUTES.WAREHOUSE_CUSTOMERS)}
+            icon={<ContactIcon />}
+            label={t('nav.customers')}
             onNavigate={onNavigate}
           />
         </WarehousePermissionGate>

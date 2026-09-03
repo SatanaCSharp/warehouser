@@ -7,6 +7,7 @@ import localeBaseline from 'test/locale-baseline.json';
 import enAccess from '../public/locales/en/access.json';
 import enCommon from '../public/locales/en/common.json';
 import enCustomerOrder from '../public/locales/en/customer-order.json';
+import enCustomer from '../public/locales/en/customer.json';
 import enErrors from '../public/locales/en/errors.json';
 import enHome from '../public/locales/en/home.json';
 import enItem from '../public/locales/en/item.json';
@@ -21,6 +22,7 @@ import enWorkspace from '../public/locales/en/workspace.json';
 import ukAccess from '../public/locales/uk/access.json';
 import ukCommon from '../public/locales/uk/common.json';
 import ukCustomerOrder from '../public/locales/uk/customer-order.json';
+import ukCustomer from '../public/locales/uk/customer.json';
 import ukErrors from '../public/locales/uk/errors.json';
 import ukHome from '../public/locales/uk/home.json';
 import ukItem from '../public/locales/uk/item.json';
@@ -37,6 +39,7 @@ const resources = {
   en: {
     access: enAccess,
     common: enCommon,
+    customer: enCustomer,
     'customer-order': enCustomerOrder,
     errors: enErrors,
     home: enHome,
@@ -53,6 +56,7 @@ const resources = {
   uk: {
     access: ukAccess,
     common: ukCommon,
+    customer: ukCustomer,
     'customer-order': ukCustomerOrder,
     errors: ukErrors,
     home: ukHome,

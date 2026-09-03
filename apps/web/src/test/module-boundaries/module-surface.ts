@@ -67,6 +67,21 @@ export const MODULE_SURFACE = {
   // is the route `router.ts` composes, per the "future in-Warehouse entities
   // become flat top-level sibling modules" consequence recorded in
   // `docs/system/adr/18-08-2026-scope-of-exercise-placement-tiebreak.md`.
+  // delivery-addresses T21 — the Customers destination (sad.md §5 Web). A flat
+  // sibling module whose surface is the route `router.ts` composes plus the two
+  // pickers `modules/customer-order` and `modules/purchase-draft` fill a
+  // delivery destination from — the same shape `modules/item` already declares
+  // for `ItemPicker`
+  // (`docs/system/adr/18-08-2026-scope-of-exercise-placement-tiebreak.md`).
+  customer: [
+    // router.ts
+    'modules/customer/route',
+    // modules/customer-order and modules/purchase-draft, per that feature's
+    // design-handoff.md §Component mapping
+    'modules/customer/components/CustomerPicker',
+    'modules/customer/components/CustomerDeliveryAddressPicker',
+    'modules/customer/hooks/queries/useCustomers',
+  ],
   'customer-order': [
     // router.ts
     'modules/customer-order/route',

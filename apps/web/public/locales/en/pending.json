@@ -56,5 +56,17 @@
     "confirmPurchaseDraftArrival": "Recording the arrival…",
     "closePurchaseDraft": "Closing the purchase draft…",
     "discardPurchaseDraft": "Discarding the purchase draft…"
+  },
+  "customer": {
+    "recordCustomer": "Recording the customer…",
+    "correctCustomerName": "Saving the customer name…",
+    "deactivateCustomer": "Deactivating the customer…",
+    "reactivateCustomer": "Reactivating the customer…",
+    "addCustomerDeliveryAddress": "Adding the delivery address…",
+    "addCustomerMainDeliveryAddress": "Adding the delivery address…",
+    "correctCustomerDeliveryAddress": "Saving the delivery address…",
+    "setMainCustomerDeliveryAddress": "Changing the main delivery address…",
+    "deactivateCustomerDeliveryAddress": "Deactivating the delivery address…",
+    "reactivateCustomerDeliveryAddress": "Offering the delivery address again…"
   }
 }

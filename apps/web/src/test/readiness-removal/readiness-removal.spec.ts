@@ -692,6 +692,13 @@ describe('readiness removal — declarative permission gating is unchanged (CR-R
     'modules/access/components/workspace-administration/roles/DeleteWorkspaceRoleAction.tsx': 4,
     'modules/customer-order/components/demand-directory/components/RecordDemandAction.tsx': 4,
     'modules/customer-order/hooks/projections/useCustomerOrderActions.ts': 3,
+    // delivery-addresses T21 — the Customers destination's four gating sites:
+    // the two triggers an actor may not be offered at all, and the two
+    // collection descriptors a kebab is filtered by.
+    'modules/customer/components/customer-directory/components/addresses/AddDeliveryAddressAction.tsx': 4,
+    'modules/customer/components/customer-directory/components/customers/RecordCustomerAction.tsx': 4,
+    'modules/customer/hooks/projections/useCustomerActions.ts': 3,
+    'modules/customer/hooks/projections/useDeliveryAddressActions.ts': 3,
     'modules/item/components/item-directory/components/CreateItemAction.tsx': 4,
     'modules/item/hooks/projections/useItemActions.ts': 3,
     'modules/purchase-draft/components/AddPurchaseDraftLineAction.tsx': 4,
@@ -716,7 +723,8 @@ describe('readiness removal — declarative permission gating is unchanged (CR-R
     'shared/components/WorkspacePermissionGate.tsx': 1,
     'shared/hooks/projections/usePermittedItems.ts': 1,
     'shared/hooks/projections/useWorkspacePermittedItems.ts': 1,
-    'shared/layouts/Sidebar.tsx': 14,
+    // delivery-addresses T21 adds the `Customers` entry's own gate, at 16.
+    'shared/layouts/Sidebar.tsx': 16,
   };
 
   it('keeps every gate and descriptor call site', () => {

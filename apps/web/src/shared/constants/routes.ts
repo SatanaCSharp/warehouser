@@ -5,11 +5,16 @@
 // route is gone, and `ROUTES.WAREHOUSE_ACCESS` is the address it resolves to.
 // T17 — `DEMAND`, `PURCHASE_DRAFTS` and `ITEMS` are the ordering web shell's
 // three destination segments (sad.md §5 Web).
+// delivery-addresses T21 — `CUSTOMERS` is the Customers destination's segment.
+// Route visibility is advisory UI behavior, never the server authorization
+// boundary: the address exists for every actor and the server refuses the read
+// (that feature's design-handoff.md §Implementation constraints, AC-09).
 export const ROUTE_SEGMENTS = {
   ACCESS: 'access',
   DEMAND: 'demand',
   PURCHASE_DRAFTS: 'purchase-drafts',
   ITEMS: 'items',
+  CUSTOMERS: 'customers',
   SPLAT: '$',
 } as const;
 
@@ -27,5 +32,6 @@ export const ROUTES = {
   WAREHOUSE_DEMAND: `${WAREHOUSE_PATH}/${ROUTE_SEGMENTS.DEMAND}`,
   WAREHOUSE_PURCHASE_DRAFTS: `${WAREHOUSE_PATH}/${ROUTE_SEGMENTS.PURCHASE_DRAFTS}`,
   WAREHOUSE_ITEMS: `${WAREHOUSE_PATH}/${ROUTE_SEGMENTS.ITEMS}`,
+  WAREHOUSE_CUSTOMERS: `${WAREHOUSE_PATH}/${ROUTE_SEGMENTS.CUSTOMERS}`,
   WORKSPACE: '/workspace',
 } as const;

@@ -56,5 +56,17 @@
     "confirmPurchaseDraftArrival": "Записуємо прибуття…",
     "closePurchaseDraft": "Закриваємо чернетку закупівлі…",
     "discardPurchaseDraft": "Відхиляємо чернетку закупівлі…"
+  },
+  "customer": {
+    "recordCustomer": "Записуємо клієнта…",
+    "correctCustomerName": "Зберігаємо назву клієнта…",
+    "deactivateCustomer": "Деактивуємо клієнта…",
+    "reactivateCustomer": "Активуємо клієнта…",
+    "addCustomerDeliveryAddress": "Додаємо адресу доставки…",
+    "addCustomerMainDeliveryAddress": "Додаємо адресу доставки…",
+    "correctCustomerDeliveryAddress": "Зберігаємо адресу доставки…",
+    "setMainCustomerDeliveryAddress": "Змінюємо основну адресу доставки…",
+    "deactivateCustomerDeliveryAddress": "Деактивуємо адресу доставки…",
+    "reactivateCustomerDeliveryAddress": "Знову пропонуємо адресу доставки…"
   }
 }

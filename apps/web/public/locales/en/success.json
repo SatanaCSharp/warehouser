@@ -59,5 +59,17 @@
     "confirmPurchaseDraftArrival": "Arrival confirmed and the draft is closed.",
     "closePurchaseDraft": "Purchase draft closed: {{reason}}",
     "discardPurchaseDraft": "Purchase draft discarded."
+  },
+  "customer": {
+    "recordCustomer": "Customer recorded · {{customer}}",
+    "correctCustomerName": "Customer renamed · {{customer}}",
+    "deactivateCustomer": "Deactivated · {{customer}} · orders already placed keep counting",
+    "reactivateCustomer": "Reactivated · {{customer}}",
+    "addCustomerDeliveryAddress": "Delivery address added · {{customer}}",
+    "addCustomerMainDeliveryAddress": "Delivery address added and made the main one · {{customer}}",
+    "correctCustomerDeliveryAddress": "Delivery address corrected · {{customer}}",
+    "setMainCustomerDeliveryAddress": "Main delivery address changed · {{customer}}",
+    "deactivateCustomerDeliveryAddress": "Delivery address deactivated · {{customer}} · records already naming it keep counting",
+    "reactivateCustomerDeliveryAddress": "Delivery address offered again · {{customer}}"
   }
 }

@@ -20,6 +20,7 @@ export type MutationFeedback = {
   scope:
     | 'access'
     | 'auth'
+    | 'customer'
     | 'customer-order'
     | 'item'
     | 'purchase-draft'
@@ -213,6 +214,58 @@ export const MUTATION_FEEDBACK: Record<string, MutationFeedback> = {
       customer: customerName,
       reason: input.cancellationReason,
     }),
+  }),
+
+  // Customers and their address books (delivery-addresses T21). Every write is
+  // a member's own decision, so every one reports. Each toast names the
+  // CUSTOMER and never the address text: the address is confidential data of
+  // the same classification as the Customer holding it (spec.md §6.1), and a
+  // toast is the one surface that outlives the dialog that showed it.
+  recordCustomer: feedback<{ input: { name: string } }>({
+    scope: 'customer',
+    describe: ({ input }) => ({ customer: input.name }),
+  }),
+  correctCustomerName: feedback<{ customerName: string }>({
+    scope: 'customer',
+    describe: ({ customerName }) => ({ customer: customerName }),
+  }),
+  deactivateCustomer: feedback<{ customerName: string }>({
+    scope: 'customer',
+    describe: ({ customerName }) => ({ customer: customerName }),
+  }),
+  reactivateCustomer: feedback<{ customerName: string }>({
+    scope: 'customer',
+    describe: ({ customerName }) => ({ customer: customerName }),
+  }),
+  // AC-04 — one endpoint, two outcomes: adding an address and adding one that
+  // also becomes the Main one are different consequences, and the second is
+  // invisible unless the toast says so.
+  addCustomerDeliveryAddress: feedback<{
+    customerName: string;
+    input: { main: boolean };
+  }>({
+    scope: 'customer',
+    action: ({ input }) =>
+      input.main
+        ? 'addCustomerMainDeliveryAddress'
+        : 'addCustomerDeliveryAddress',
+    describe: ({ customerName }) => ({ customer: customerName }),
+  }),
+  correctCustomerDeliveryAddress: feedback<{ customerName: string }>({
+    scope: 'customer',
+    describe: ({ customerName }) => ({ customer: customerName }),
+  }),
+  setMainCustomerDeliveryAddress: feedback<{ customerName: string }>({
+    scope: 'customer',
+    describe: ({ customerName }) => ({ customer: customerName }),
+  }),
+  deactivateCustomerDeliveryAddress: feedback<{ customerName: string }>({
+    scope: 'customer',
+    describe: ({ customerName }) => ({ customer: customerName }),
+  }),
+  reactivateCustomerDeliveryAddress: feedback<{ customerName: string }>({
+    scope: 'customer',
+    describe: ({ customerName }) => ({ customer: customerName }),
   }),
 
   // Purchase drafts (T20/T16). Every endpoint below is a member's own decision
