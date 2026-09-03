@@ -77,6 +77,23 @@ export const ErrorCode = {
     'purchase_drafts.arrival_already_confirmed',
   PURCHASE_DRAFTS_ALLOCATION_OUT_OF_BOUNDS:
     'purchase_drafts.allocation_out_of_bounds',
+  CUSTOMERS_INVALID_INPUT: 'customers.invalid_input',
+  CUSTOMERS_NAME_TAKEN: 'customers.name_taken',
+  CUSTOMERS_TARGET_UNAVAILABLE: 'customers.target_unavailable',
+  CUSTOMERS_LAST_ACTIVE_DELIVERY_ADDRESS:
+    'customers.last_active_delivery_address',
+  CUSTOMERS_INVALID_DELIVERY_ADDRESS: 'customers.invalid_delivery_address',
+  CUSTOMER_ORDERS_INVALID_DELIVERY_ADDRESS:
+    'customer_orders.invalid_delivery_address',
+  PURCHASE_DRAFTS_INVALID_DELIVERY_DESTINATION:
+    'purchase_drafts.invalid_delivery_destination',
+  PURCHASE_DRAFTS_DELIVERY_ADDRESS_DISAGREEMENT:
+    'purchase_drafts.delivery_address_disagreement',
+  PURCHASE_DRAFTS_WAREHOUSE_DELIVERY_ADDRESS_REQUIRED:
+    'purchase_drafts.warehouse_delivery_address_required',
+  PURCHASE_DRAFTS_ENDING_ALREADY_RECORDED:
+    'purchase_drafts.ending_already_recorded',
+  PURCHASE_DRAFTS_ENDING_MODE_MISMATCH: 'purchase_drafts.ending_mode_mismatch',
 } as const;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
