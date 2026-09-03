@@ -140,12 +140,19 @@ describe('purchase-drafts HTTP contract', () => {
       createdAt: seededAt,
       updatedAt: seededAt,
     });
+    // Both Warehouses have their own Delivery Address recorded, which is the ordinary state of a
+    // Warehouse that freezes drafts: since T16 a draft holding a Via Warehouse line cannot be moved
+    // to Ready for Ordering before one exists (AC-16a), and that refusal has its own coverage in
+    // `usecases/commands/ready-purchase-draft.command.integration.spec.ts`. Every case here is
+    // about something else.
     await dataSource.manager.getRepository(WarehouseEntity).insert([
       {
         id: warehouseId,
         workspaceId,
         name: 'Warehouse A',
         archivedAt: null,
+        deliveryAddressText: 'Dock 4, Test Industrial Estate, Test City',
+        deliveryAccessNotes: 'Report to the gatehouse; deliveries 07:00-15:00',
         createdAt: seededAt,
         updatedAt: seededAt,
       },
@@ -154,6 +161,8 @@ describe('purchase-drafts HTTP contract', () => {
         workspaceId,
         name: 'Warehouse B',
         archivedAt: null,
+        deliveryAddressText: 'Unit 12, Other Estate, Other City',
+        deliveryAccessNotes: null,
         createdAt: seededAt,
         updatedAt: seededAt,
       },

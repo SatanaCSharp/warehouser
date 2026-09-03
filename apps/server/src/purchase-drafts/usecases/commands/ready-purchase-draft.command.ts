@@ -1,19 +1,44 @@
 import { Injectable, Optional } from '@nestjs/common';
-import { assert } from '@warehouser/utils/asserts';
+import { assert, assertFail } from '@warehouser/utils/asserts';
+import type { DisagreeingDeliveryLink } from 'purchase-drafts/domain/errors/purchase-draft.errors';
 import {
   purchaseDraftConcurrentChangeError,
+  purchaseDraftDeliveryAddressDisagreementError,
   purchaseDraftEmptyError,
   purchaseDraftInvalidStateError,
   purchaseDraftTargetUnavailableError,
+  purchaseDraftWarehouseDeliveryAddressRequiredError,
 } from 'purchase-drafts/domain/errors/purchase-draft.errors';
 import {
   isDiscardableDraft,
   isEmptyDraft,
 } from 'purchase-drafts/domain/predicates/purchase-draft-freeze.predicates';
+import { PurchaseDraftAssemblyService } from 'purchase-drafts/domain/services/purchase-draft-assembly.service';
+import { DeliveryMode } from 'purchase-drafts/domain/value-objects/delivery-mode';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { PurchaseDraftAssemblyRepository } from 'shared/domain/repositories/purchase-draft-assembly.repository';
 import { PurchaseDraftFreezeRepository } from 'shared/domain/repositories/purchase-draft-freeze.repository';
+
+/** Where one line's goods travel, as the freeze reads it off the line. */
+interface FreezableLine {
+  readonly id: string;
+  readonly deliveryMode: DeliveryMode;
+  readonly customerDeliveryAddressId: string | null;
+}
+
+// AC-16a — the freeze precondition, stated as a pure condition over the two things it is about: how
+// this draft's lines travel, and whether the Warehouse has an address at all. Kept beside its one
+// implementation rather than promoted to `domain/predicates/` (server-error-handling.md §1) — the
+// freeze is the only moment it applies, which is exactly what makes it a **freeze precondition and
+// not a line-level one**: a line coming to the dock is composed, revised and linked perfectly well
+// while the Warehouse has no address, and only the statement made to the supplier requires one.
+const warehouseAddressCoversEveryViaWarehouseLine = (
+  lines: readonly FreezableLine[],
+  warehouseDeliveryAddressText: string | null,
+): boolean =>
+  warehouseDeliveryAddressText !== null ||
+  !lines.some((line) => line.deliveryMode === DeliveryMode.ViaWarehouse);
 
 export interface ReadyPurchaseDraftRuntime {
   readonly now: () => Date;
@@ -45,6 +70,7 @@ export class ReadyPurchaseDraftCommand {
   constructor(
     private readonly freezeRepository: PurchaseDraftFreezeRepository,
     private readonly assemblyRepository: PurchaseDraftAssemblyRepository,
+    private readonly assemblyService: PurchaseDraftAssemblyService,
     @Optional()
     private readonly runtime: ReadyPurchaseDraftRuntime = defaultReadyPurchaseDraftRuntime,
   ) {}
@@ -68,6 +94,36 @@ export class ReadyPurchaseDraftCommand {
     // AC-14a — readiness requires the draft to hold at least one line; checked before any write.
     const lines = await this.assemblyRepository.findLines(purchaseDraftId);
     assert(!isEmptyDraft(lines.length), purchaseDraftEmptyError());
+
+    // AC-16a — a line coming to the warehouse cannot be frozen before the warehouse has an address
+    // to be delivered to; the refusal names the capability that records one.
+    assert(
+      warehouseAddressCoversEveryViaWarehouseLine(
+        lines,
+        header.warehouseDeliveryAddressText,
+      ),
+      purchaseDraftWarehouseDeliveryAddressRequiredError(),
+    );
+
+    // AC-15a — the third moment the direct-line agreement is required, asked through the same
+    // shared read the link and revision commands ask it through, with no prospective link: the
+    // freeze judges the links the line already has. Every disagreement across every line is named
+    // at once and none is withdrawn, because which link to withdraw is the member's decision.
+    const scope = { purchaseDraftId, warehouseId: currentUser.warehouseId };
+    const disagreeingLinks: DisagreeingDeliveryLink[] = [];
+    for (const line of lines) {
+      disagreeingLinks.push(
+        ...(await this.assemblyService.findDisagreeingLinks(scope, line.id, {
+          deliveryMode: line.deliveryMode,
+          customerDeliveryAddressId: line.customerDeliveryAddressId,
+        })),
+      );
+    }
+    if (disagreeingLinks.length > 0) {
+      assertFail(
+        purchaseDraftDeliveryAddressDisagreementError(disagreeingLinks),
+      );
+    }
 
     const readiedAt = this.runtime.now();
     const frozen = await this.freezeRepository.freeze({
