@@ -34,7 +34,7 @@ The Customers destination is the one surface where identity is the _subject_ rat
 
 ## What
 
-Add the three queries (list the Warehouse's Customers with their active-address counts and state; read one Customer with its addresses and the Unfulfilled orders it awaits; list the active Customers and addresses a picker offers) and serve them plus the T8/T9 commands across the eight endpoints under `api/v1/warehouses/{warehouseId}/customers`. Create the new `packages/contracts/src/customers/` subpath with strict request and response schemas. DTOs are `createZodDto` adapters that redefine nothing.
+Add the three queries (list the Warehouse's Customers with their active-address counts and state; read one Customer with its addresses and the Unfulfilled orders it awaits; list the active Customers and addresses a picker offers) and serve them plus the T8/T9 commands across the eleven operations across seven paths under `api/v1/warehouses/{warehouseId}/customers`. Create the new `packages/contracts/src/customers/` subpath with strict request and response schemas. DTOs are `createZodDto` adapters that redefine nothing.
 
 ## Definition of Done
 

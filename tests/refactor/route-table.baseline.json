@@ -132,6 +132,119 @@
   },
   {
     "method": "GET",
+    "path": "/api/v1/warehouses/:warehouseId/customers",
+    "guards": ["SessionAuthGuard", "WarehouseAccessGuard"],
+    "permission": "RequiredPermission(PermissionId.CUSTOMERS_WATCH)",
+    "dto": null
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/warehouses/:warehouseId/customers",
+    "guards": [
+      "SessionAuthGuard",
+      "WarehouseAccessGuard",
+      "WriteRateLimitGuard"
+    ],
+    "permission": "RequiredPermission(PermissionId.CUSTOMERS_CREATE)",
+    "dto": "CustomerCreateDto"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/warehouses/:warehouseId/customers/:customerId",
+    "guards": ["SessionAuthGuard", "WarehouseAccessGuard"],
+    "permission": "RequiredPermission(PermissionId.CUSTOMERS_WATCH)",
+    "dto": null
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/warehouses/:warehouseId/customers/:customerId",
+    "guards": [
+      "SessionAuthGuard",
+      "WarehouseAccessGuard",
+      "WriteRateLimitGuard"
+    ],
+    "permission": "RequiredPermission(PermissionId.CUSTOMERS_UPDATE)",
+    "dto": "CustomerUpdateDto"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/warehouses/:warehouseId/customers/:customerId/deactivation",
+    "guards": [
+      "SessionAuthGuard",
+      "WarehouseAccessGuard",
+      "WriteRateLimitGuard"
+    ],
+    "permission": "RequiredPermission(PermissionId.CUSTOMERS_DEACTIVATE)",
+    "dto": null
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/warehouses/:warehouseId/customers/:customerId/deactivation",
+    "guards": [
+      "SessionAuthGuard",
+      "WarehouseAccessGuard",
+      "WriteRateLimitGuard"
+    ],
+    "permission": "RequiredPermission(PermissionId.CUSTOMERS_DEACTIVATE)",
+    "dto": null
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/warehouses/:warehouseId/customers/:customerId/delivery-addresses",
+    "guards": [
+      "SessionAuthGuard",
+      "WarehouseAccessGuard",
+      "WriteRateLimitGuard"
+    ],
+    "permission": "RequiredPermission(PermissionId.CUSTOMERS_UPDATE)",
+    "dto": "CustomerDeliveryAddressCreateDto"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/warehouses/:warehouseId/customers/:customerId/delivery-addresses/:deliveryAddressId",
+    "guards": [
+      "SessionAuthGuard",
+      "WarehouseAccessGuard",
+      "WriteRateLimitGuard"
+    ],
+    "permission": "RequiredPermission(PermissionId.CUSTOMERS_UPDATE)",
+    "dto": "CustomerDeliveryAddressUpdateDto"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/warehouses/:warehouseId/customers/:customerId/delivery-addresses/:deliveryAddressId/deactivation",
+    "guards": [
+      "SessionAuthGuard",
+      "WarehouseAccessGuard",
+      "WriteRateLimitGuard"
+    ],
+    "permission": "RequiredPermission(PermissionId.CUSTOMERS_UPDATE)",
+    "dto": null
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/warehouses/:warehouseId/customers/:customerId/delivery-addresses/:deliveryAddressId/deactivation",
+    "guards": [
+      "SessionAuthGuard",
+      "WarehouseAccessGuard",
+      "WriteRateLimitGuard"
+    ],
+    "permission": "RequiredPermission(PermissionId.CUSTOMERS_UPDATE)",
+    "dto": null
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/warehouses/:warehouseId/customers/:customerId/delivery-addresses/:deliveryAddressId/main",
+    "guards": [
+      "SessionAuthGuard",
+      "WarehouseAccessGuard",
+      "WriteRateLimitGuard"
+    ],
+    "permission": "RequiredPermission(PermissionId.CUSTOMERS_UPDATE)",
+    "dto": null
+  },
+  {
+    "method": "GET",
     "path": "/api/v1/warehouses/:warehouseId/demand",
     "guards": ["SessionAuthGuard", "WarehouseAccessGuard"],
     "permission": "RequiredPermission(PermissionId.CUSTOMER_ORDERS_WATCH)",

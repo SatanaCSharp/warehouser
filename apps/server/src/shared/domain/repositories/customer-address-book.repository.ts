@@ -51,6 +51,27 @@ export class CustomerAddressBookRepository {
       });
   }
 
+  // openapi.yaml `listCustomers` 200 — the same address set for **every** Customer of one
+  // Warehouse, in one read. `CustomerDirectoryRepository.listCustomers` answers which Customers
+  // there are and in what order; this answers what each one's addresses are, so the list projection
+  // costs two reads whatever the number of Customers rather than one per Customer. Ordered by
+  // Customer and then by creation time, so the caller groups without re-sorting and each group
+  // arrives in exactly the order `listDeliveryAddresses` returns it in for one Customer.
+  //
+  // The Warehouse scope lives in the query — `customer_delivery_addresses.warehouse_id` is half of
+  // the composite reference `(customer_id, warehouse_id)` into `customers` — so an address of
+  // another Warehouse is not in the set at all (AC-12).
+  listWarehouseDeliveryAddresses(
+    warehouseId: string,
+  ): Promise<CustomerDeliveryAddressEntity[]> {
+    return getEntityManager(this.dataSource)
+      .getRepository(CustomerDeliveryAddressEntity)
+      .find({
+        where: { warehouseId },
+        order: { customerId: 'ASC', createdAt: 'ASC', id: 'ASC' },
+      });
+  }
+
   // `sad.md` §6.3 step 4 — "the read is `FOR UPDATE` over the Customer's address rows so two
   // concurrent deactivations cannot both see two remaining". The Inactive rows are locked too: the
   // condition is "at least one **active** address remains", and a caller counting only the rows it
