@@ -13,7 +13,7 @@ import type { MigrationInterface, QueryRunner } from 'typeorm';
 // mode every existing line was ordered under (`CONTEXT.md`: Via Warehouse "is the existing
 // behaviour of every Purchase Draft Line") — and only then made NOT NULL.
 export class AddDeliveryDestinations1786700100000 implements MigrationInterface {
-  // eslint-disable-next-line max-lines-per-function
+  // eslint-disable-next-line max-lines-per-function, max-statements
   async up(queryRunner: QueryRunner): Promise<void> {
     // ---------------------------------------------------------------------------------------
     // warehouses — the Warehouse's own Delivery Address (AC-10)
@@ -391,7 +391,7 @@ export class AddDeliveryDestinations1786700100000 implements MigrationInterface 
     `);
   }
 
-  // eslint-disable-next-line max-lines-per-function
+  // eslint-disable-next-line max-statements
   async down(queryRunner: QueryRunner): Promise<void> {
     // The revert restores a constraint that admits only two closure paths, and this release added a
     // third: a draft closed because the last of its lines had an ending carries neither a reason nor

@@ -504,19 +504,21 @@ Factories belong in `apps/server/test/factories/`, not in `migrations/`.
 | Staged file                                                                                         | Class                                          | What it does                                                                                                                              |
 | --------------------------------------------------------------------------------------------------- | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | [`01-create-customer-schema.ts`](./migrations/01-create-customer-schema.ts)                         | `CreateCustomerSchema1786700000000`            | `customers` and `customer_delivery_addresses`: 2 tables, 6 checks, 3 foreign keys, 4 unique constraints, 2 indexes (one a partial unique) |
-| [`02-add-delivery-destinations.ts`](./migrations/02-add-delivery-destinations.ts)                   | `AddDeliveryDestinations1786700100000`         | 14 added columns and 1 renamed across 5 shipped relations, 2 backfills, 13 checks added and 2 replaced, 5 foreign keys, 1 partial index   |
+| [`02-add-delivery-destinations.ts`](./migrations/02-add-delivery-destinations.ts)                   | `AddDeliveryDestinations1786700100000`         | 15 added columns across 5 shipped relations, 3 backfills, 14 checks added and 1 replaced, 5 foreign keys, 1 partial index                 |
 | [`03-grant-delivery-address-permissions.ts`](./migrations/03-grant-delivery-address-permissions.ts) | `GrantDeliveryAddressPermissions1786700200000` | 4 Warehouse Permissions + 1 Workspace Permission, each granted idempotently to its protected Role                                         |
+| [`04-drop-received-quantity.ts`](./migrations/04-drop-received-quantity.ts)                         | `DropReceivedQuantity1786700300000`            | The deferred contract half of `02`: reconciles `ending_quantity`, then drops `received_quantity` and its check                            |
 
 None is in the live tree. Promotion is a rename to
 `1786700000000-CreateCustomerSchema.ts` / `1786700100000-AddDeliveryDestinations.ts` /
 `1786700200000-GrantDeliveryAddressPermissions.ts`; the class names already carry those timestamps,
 which sort after the last shipped migration (`1786600200000-AddPurchaseDraftReference`). No shipped
-migration is edited.
+migration is edited. `04` is the exception to the promotion order: it is held back until T17
+withdraws the whole-draft arrival path, and its `1786700300000` is a placeholder T17 finalizes.
 
 ### Safe evolution against populated relations
 
-This is the part `ordering` never had to do. Two columns become mandatory against rows that already
-exist, and both use expand / backfill / contract:
+This is the part `ordering` never had to do. Three changes cannot be applied in one step against
+rows — and code — that already exist, and each uses expand / backfill / contract:
 
 1. **`purchase_draft_lines.delivery_mode`** — added nullable, backfilled to `via_warehouse` (the mode
    every existing line was ordered under), given that value as its `DEFAULT` so AC-13's "every new
@@ -528,6 +530,16 @@ exist, and both use expand / backfill / contract:
    has no arrival attribution would make that `ADD CONSTRAINT` fail — deliberately, and loudly,
    rather than being silently repaired, because such a row would mean the shipped arrival path wrote
    something this model cannot explain.
+3. **`received_quantity` becoming `ending_quantity`** — the one change here whose expand and contract
+   halves live in **different migrations**. A rename has no backward-compatible form: the old name
+   vanishes the instant it runs, and the code that reads `received_quantity` — the whole-draft
+   arrival path — is not withdrawn until T17, six phases after `02` lands. So `02` only expands:
+   `ending_quantity` is added nullable beside `received_quantity` and backfilled from it
+   (`WHERE received_quantity IS NOT NULL`, so a legitimately received `0` travels across), both
+   columns and both not-negative checks coexist, and nothing that reads the old name breaks. The
+   contract half is [`04-drop-received-quantity.ts`](./migrations/04-drop-received-quantity.ts),
+   promoted by T17: it re-runs the backfill for endings the old path wrote during the window, then
+   drops the column and its check.
 
 One relaxation runs the other way: `customer_orders.customer_name` **drops** `NOT NULL`, which is
 widening and needs no backfill — every existing row satisfies the new
