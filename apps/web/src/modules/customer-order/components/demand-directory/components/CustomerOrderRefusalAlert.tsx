@@ -4,8 +4,9 @@ import { useTranslation } from 'react-i18next';
 
 import type { ReactElement } from 'react';
 
-/** The three Customer Order workflows that can be refused without a field. */
-export type CustomerOrderRefusalForm = 'amend' | 'cancel' | 'record';
+/** The Customer Order workflows that can be refused without a field. */
+export type CustomerOrderRefusalForm =
+  'amend' | 'cancel' | 'record' | 'redirect';
 
 export type CustomerOrderRefusalAlertProps = {
   /**
@@ -34,6 +35,13 @@ const refusalCopyByCode: Record<string, string> = {
   [ErrorCode.CUSTOMER_ORDERS_INVALID_INPUT]: 'invalid',
   [ErrorCode.CUSTOMER_ORDERS_TARGET_UNAVAILABLE]: 'unavailable',
   [ErrorCode.CUSTOMER_ORDERS_INVALID_STATE]: 'invalidState',
+  // AC-11c — an address of another Customer, an Inactive one, and an order
+  // that names no Customer at all are one refusal each and one sentence
+  // between them: the rule itself, which no field of a single-field form can
+  // state more precisely than the form can.
+  [ErrorCode.CUSTOMER_ORDERS_INVALID_DELIVERY_ADDRESS]:
+    'invalidDeliveryAddress',
+  [ErrorCode.CUSTOMERS_TARGET_UNAVAILABLE]: 'invalidDeliveryAddress',
 };
 
 /**

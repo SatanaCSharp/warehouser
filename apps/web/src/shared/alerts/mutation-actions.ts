@@ -203,6 +203,14 @@ export const MUTATION_FEEDBACK: Record<string, MutationFeedback> = {
           : formatCalendarDate(input.neededBy, activeLocale()),
     }),
   }),
+  // AC-11b — the redirection's **invisible consequence** is the whole reason
+  // this entry exists: every frozen Purchase Draft Line linked to this order
+  // now reports Address Drift, and nothing on the screen the member is looking
+  // at would say so (design-handoff.md `oEWEj`, `LDc7S`).
+  redirectCustomerOrder: feedback<{ customerName: string }>({
+    scope: 'customer-order',
+    describe: ({ customerName }) => ({ customer: customerName }),
+  }),
   // AC-19a — the reason is recorded with the cancellation, so the toast states
   // it, exactly as closing a draft with a reason does.
   cancelCustomerOrder: feedback<{

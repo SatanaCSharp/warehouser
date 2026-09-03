@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import { CustomerOrderRefusalAlert } from 'modules/customer-order/components/demand-directory/components/CustomerOrderRefusalAlert';
+import { RecordCustomerOrderCustomerFields } from 'modules/customer-order/components/demand-directory/components/RecordCustomerOrderCustomerFields';
 import { ItemPicker } from 'modules/item/components/ItemPicker';
 import { useItems } from 'modules/item/hooks/queries/useItems';
 import { FormDateField } from 'shared/components/FormDateField';
@@ -10,6 +11,7 @@ import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormTextField } from 'shared/components/FormTextField';
 
 import type { CustomerOrderCreate } from '@warehouser/contracts/customer-orders';
+import type { RecordCustomerOrderForm } from 'modules/customer-order/components/demand-directory/components/RecordCustomerOrderCustomerFields';
 import type { ReactElement } from 'react';
 import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
@@ -17,13 +19,6 @@ type RecordCustomerOrderDialogProps = {
   /** Pre-selects the Item when opened from a Demand Line's own action. */
   presetItemId?: string;
   onSave: (input: CustomerOrderCreate) => Promise<MutationResult>;
-};
-
-type RecordCustomerOrderForm = {
-  itemId: string;
-  customerName: string;
-  quantity: number;
-  neededBy: string;
 };
 
 /**
@@ -43,6 +38,8 @@ const DEFAULT_QUANTITY = 1;
  */
 const VALIDATION_SECTION: Record<keyof RecordCustomerOrderForm, string> = {
   itemId: 'customerOrderItem',
+  customerId: 'customerOrderCustomer',
+  customerDeliveryAddressId: 'customerOrderDeliveryAddress',
   customerName: 'customerOrderCustomerName',
   quantity: 'customerOrderQuantity',
   neededBy: 'customerOrderNeededBy',
@@ -79,6 +76,8 @@ export const RecordCustomerOrderDialog = ({
   const form = useForm<RecordCustomerOrderForm>({
     defaultValues: {
       itemId: presetItemId ?? '',
+      customerId: '',
+      customerDeliveryAddressId: '',
       customerName: '',
       quantity: DEFAULT_QUANTITY,
       neededBy: '',
@@ -89,6 +88,12 @@ export const RecordCustomerOrderDialog = ({
     formState: { errors, isSubmitting },
     register,
   } = form;
+  // AC-11 / AC-11a — the two ways of naming a customer are mutually exclusive
+  // (`chk_customer_orders_customer_identity`), so choosing a Customer takes
+  // the typed name out of play rather than leaving both submittable and
+  // letting the server decide which the member meant.
+  const customerId = useWatch({ control, name: 'customerId' });
+  const namesACustomer = customerId !== '';
 
   const isFieldExplained = Object.keys(errors).length > 0;
 
@@ -97,10 +102,32 @@ export const RecordCustomerOrderDialog = ({
     field: keyof RecordCustomerOrderForm,
   ): string => translate(`${VALIDATION_SECTION[field]}.${code}`);
 
+  /**
+   * Which identity the submission carries. An order naming a Customer sends
+   * `customerId` and never a typed name; one recorded by typed name sends the
+   * name and neither identifier. An address is stated only for the first, and
+   * omitting it takes the Customer's current Main one (AC-11, AC-11a).
+   */
+  const identityOf = (
+    values: RecordCustomerOrderForm,
+  ): Pick<
+    CustomerOrderCreate,
+    'customerId' | 'customerDeliveryAddressId' | 'customerName'
+  > =>
+    values.customerId === ''
+      ? { customerName: values.customerName }
+      : {
+          customerId: values.customerId,
+          customerDeliveryAddressId:
+            values.customerDeliveryAddressId === ''
+              ? undefined
+              : values.customerDeliveryAddressId,
+        };
+
   const onSubmit = (values: RecordCustomerOrderForm): Promise<MutationResult> =>
     onSave({
       itemId: values.itemId,
-      customerName: values.customerName,
+      ...identityOf(values),
       quantity: values.quantity,
       neededBy: values.neededBy,
     });
@@ -116,17 +143,27 @@ export const RecordCustomerOrderDialog = ({
       onSubmit={onSubmit}
     >
       <p className="text-muted">{t('dialogs.record.description')}</p>
+      <RecordCustomerOrderCustomerFields
+        control={control}
+        isDisabled={isSubmitting}
+      />
       <FormTextField
         autoFocus
-        isRequired
         validationBehavior="aria"
-        description={t('dialogs.record.customerNameHelp')}
+        description={
+          namesACustomer
+            ? t('dialogs.record.customerNameSupersededHelp')
+            : t('dialogs.record.customerNameHelp')
+        }
         isInvalid={Boolean(errors.customerName)}
         errorMessage={errors.customerName?.message}
         label={t('dialogs.record.customerNameLabel')}
-        isDisabled={isSubmitting}
+        isDisabled={isSubmitting || namesACustomer}
         {...register('customerName', {
-          required: translateValidation('required', 'customerName'),
+          validate: (value, values) =>
+            values.customerId !== '' ||
+            value.trim() !== '' ||
+            translateValidation('required', 'customerName'),
         })}
       />
       <Controller

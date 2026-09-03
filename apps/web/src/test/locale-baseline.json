@@ -434,8 +434,8 @@
       "dialogs.record.description": "The order is recorded against this warehouse and joins the consolidated demand immediately.",
       "dialogs.record.cancel": "Cancel",
       "dialogs.record.submit": "Record demand",
-      "dialogs.record.customerNameLabel": "Customer",
-      "dialogs.record.customerNameHelp": "The end customer waiting for the goods. A name is all this release records.",
+      "dialogs.record.customerNameLabel": "Customer name",
+      "dialogs.record.customerNameHelp": "The end customer waiting for the goods, typed by hand. No customer is created or matched for it.",
       "dialogs.record.itemHelp": "Only active items of this warehouse are offered.",
       "dialogs.record.quantityLabel": "Quantity",
       "dialogs.record.quantityHelp": "A whole number greater than zero, counted in the unit the item is counted in.",
@@ -466,7 +466,27 @@
       "dialogs.cancel.frozenDrafts": "A frozen draft that links to this order keeps every value it was frozen with and reports a drift signal instead.",
       "dialogs.cancel.refusal.invalid": "Nothing was cancelled. State a reason and try again.",
       "dialogs.cancel.refusal.unavailable": "Nothing was cancelled. That customer order is no longer available.",
-      "dialogs.cancel.refusal.invalidState": "Nothing was cancelled. This order has already been fulfilled or cancelled."
+      "dialogs.cancel.refusal.invalidState": "Nothing was cancelled. This order has already been fulfilled or cancelled.",
+      "demand.customerOrder.goingTo": "Going to {{address}}",
+      "demand.customerOrder.typedName": "Recorded by typed name — no delivery address",
+      "demand.customerOrder.withheld": "Customer identity withheld",
+      "demand.customerOrder.withheldName": "a customer you may not see",
+      "demand.menu.redirect": "Redirect",
+      "dialogs.record.refusal.invalidDeliveryAddress": "Nothing was recorded. Choose one of that customer’s active delivery addresses and try again.",
+      "dialogs.record.customerHelp": "Choose a customer of this warehouse to record the order against them and their delivery address. Leave it empty to type a name instead.",
+      "dialogs.record.customerNameSupersededHelp": "Not used while a customer is chosen — the order is recorded against that customer.",
+      "dialogs.amend.refusal.invalidDeliveryAddress": "Nothing was changed. Choose one of that customer’s active delivery addresses and try again.",
+      "dialogs.cancel.refusal.invalidDeliveryAddress": "Nothing was cancelled. That customer order names a delivery address this warehouse will not accept.",
+      "dialogs.redirect.title": "Redirect {{customerName}}'s order",
+      "dialogs.redirect.description": "The order stays with the same customer and keeps counting in the consolidated demand exactly as before.",
+      "dialogs.redirect.cancel": "Cancel",
+      "dialogs.redirect.submit": "Redirect the order",
+      "dialogs.redirect.drift.heading": "A frozen draft linked to this order will report address drift",
+      "dialogs.redirect.drift.body": "No frozen draft changes — each one records the address the supplier was told. What moves is the comparison against where this order now goes. Redirecting it back to the frozen address stops the report.",
+      "dialogs.redirect.refusal.invalid": "Nothing was changed. Choose one of this customer’s active delivery addresses and try again.",
+      "dialogs.redirect.refusal.unavailable": "Nothing was changed. That customer order is no longer available.",
+      "dialogs.redirect.refusal.invalidState": "Nothing was changed. Only an outstanding customer order is redirected.",
+      "dialogs.redirect.refusal.invalidDeliveryAddress": "Nothing was changed. An outstanding customer order is redirected only to another active delivery address of the customer it already names — serving a different customer means recording a new customer order."
     },
     "errors": {
       "api.network": "Check your connection and try again.",
@@ -642,7 +662,8 @@
       "customer.correctCustomerDeliveryAddress": "Saving the delivery address…",
       "customer.setMainCustomerDeliveryAddress": "Changing the main delivery address…",
       "customer.deactivateCustomerDeliveryAddress": "Deactivating the delivery address…",
-      "customer.reactivateCustomerDeliveryAddress": "Offering the delivery address again…"
+      "customer.reactivateCustomerDeliveryAddress": "Offering the delivery address again…",
+      "customer-order.redirectCustomerOrder": "Redirecting the order…"
     },
     "purchase-draft": {
       "head.title": "Purchase drafts",
@@ -961,7 +982,8 @@
       "customer.correctCustomerDeliveryAddress": "Delivery address corrected · {{customer}}",
       "customer.setMainCustomerDeliveryAddress": "Main delivery address changed · {{customer}}",
       "customer.deactivateCustomerDeliveryAddress": "Delivery address deactivated · {{customer}} · records already naming it keep counting",
-      "customer.reactivateCustomerDeliveryAddress": "Delivery address offered again · {{customer}}"
+      "customer.reactivateCustomerDeliveryAddress": "Delivery address offered again · {{customer}}",
+      "customer-order.redirectCustomerOrder": "Order redirected · {{customer}} · every frozen draft line linked to it now reports address drift"
     },
     "validation": {
       "itemAdjustmentReason.required": "State a reason. Every change to on-hand quantity is recorded with its reason.",
@@ -1107,7 +1129,11 @@
       "customerAddressText.invalid": "Enter an address this warehouse accepts.",
       "customerAccessNotes.required": "Enter the access notes, or leave the field empty to record none.",
       "customerAccessNotes.trimmed_non_empty": "Enter the access notes, or leave the field empty to record none.",
-      "customerAccessNotes.invalid": "Enter access notes this warehouse accepts."
+      "customerAccessNotes.invalid": "Enter access notes this warehouse accepts.",
+      "customerOrderDeliveryAddress.required": "Choose a delivery address.",
+      "customerOrderDeliveryAddress.invalid": "That delivery address is not one this customer offers.",
+      "customerOrderCustomer.required": "Choose a customer.",
+      "customerOrderCustomer.invalid": "That customer is not one this warehouse holds."
     },
     "customer": {
       "head.title": "Customers",
@@ -1673,8 +1699,8 @@
       "dialogs.record.description": "Замовлення записується для цього складу й одразу входить до консолідованого попиту.",
       "dialogs.record.cancel": "Скасувати",
       "dialogs.record.submit": "Записати попит",
-      "dialogs.record.customerNameLabel": "Клієнт",
-      "dialogs.record.customerNameHelp": "Кінцевий клієнт, який чекає на товар. У цьому випуску записується лише ім’я.",
+      "dialogs.record.customerNameLabel": "Ім’я клієнта",
+      "dialogs.record.customerNameHelp": "Кінцевий клієнт, який чекає на товар, введений вручну. Клієнта за ним не створюють і не добирають.",
       "dialogs.record.itemHelp": "Пропонуються лише активні товари цього складу.",
       "dialogs.record.quantityLabel": "Кількість",
       "dialogs.record.quantityHelp": "Ціле число більше за нуль, в одиницях обліку цього товару.",
@@ -1705,7 +1731,27 @@
       "dialogs.cancel.frozenDrafts": "Заморожена чернетка, пов’язана з цим замовленням, зберігає кожне значення, з яким її заморозили, і замість цього повідомляє про розбіжність.",
       "dialogs.cancel.refusal.invalid": "Нічого не скасовано. Вкажіть причину і спробуйте ще раз.",
       "dialogs.cancel.refusal.unavailable": "Нічого не скасовано. Це замовлення клієнта більше недоступне.",
-      "dialogs.cancel.refusal.invalidState": "Нічого не скасовано. Це замовлення вже виконано або скасовано."
+      "dialogs.cancel.refusal.invalidState": "Нічого не скасовано. Це замовлення вже виконано або скасовано.",
+      "demand.customerOrder.goingTo": "Прямує на адресу {{address}}",
+      "demand.customerOrder.typedName": "Записано з введеним ім’ям — адреси доставки немає",
+      "demand.customerOrder.withheld": "Особу клієнта приховано",
+      "demand.customerOrder.withheldName": "клієнт, якого вам не показано",
+      "demand.menu.redirect": "Перенаправити",
+      "dialogs.record.refusal.invalidDeliveryAddress": "Нічого не записано. Оберіть одну з активних адрес доставки цього клієнта і спробуйте ще раз.",
+      "dialogs.record.customerHelp": "Оберіть клієнта цього складу, щоб записати замовлення на нього та його адресу доставки. Залиште порожнім, щоб натомість ввести ім’я.",
+      "dialogs.record.customerNameSupersededHelp": "Не використовується, поки обрано клієнта — замовлення записується на нього.",
+      "dialogs.amend.refusal.invalidDeliveryAddress": "Нічого не змінено. Оберіть одну з активних адрес доставки цього клієнта і спробуйте ще раз.",
+      "dialogs.cancel.refusal.invalidDeliveryAddress": "Нічого не скасовано. Це замовлення клієнта вказує адресу доставки, яку цей склад не приймає.",
+      "dialogs.redirect.title": "Перенаправити замовлення клієнта {{customerName}}",
+      "dialogs.redirect.description": "Замовлення залишається за тим самим клієнтом і надалі враховується в консолідованому попиті так само, як раніше.",
+      "dialogs.redirect.cancel": "Скасувати",
+      "dialogs.redirect.submit": "Перенаправити замовлення",
+      "dialogs.redirect.drift.heading": "Заморожений чернетковий запис, пов’язаний із цим замовленням, повідомить про розбіжність адрес",
+      "dialogs.redirect.drift.body": "Жодна заморожена чернетка не змінюється — кожна фіксує адресу, яку повідомили постачальнику. Змінюється лише порівняння з тим, куди прямує це замовлення тепер. Повернення на заморожену адресу припиняє повідомлення.",
+      "dialogs.redirect.refusal.invalid": "Нічого не змінено. Оберіть одну з активних адрес доставки цього клієнта і спробуйте ще раз.",
+      "dialogs.redirect.refusal.unavailable": "Нічого не змінено. Це замовлення клієнта більше недоступне.",
+      "dialogs.redirect.refusal.invalidState": "Нічого не змінено. Перенаправляють лише незакрите замовлення клієнта.",
+      "dialogs.redirect.refusal.invalidDeliveryAddress": "Нічого не змінено. Незакрите замовлення клієнта перенаправляють лише на іншу активну адресу доставки того самого клієнта — щоб обслужити іншого клієнта, запишіть нове замовлення."
     },
     "errors": {
       "api.network": "Перевірте з’єднання та спробуйте ще раз.",
@@ -1889,7 +1935,8 @@
       "customer.correctCustomerDeliveryAddress": "Зберігаємо адресу доставки…",
       "customer.setMainCustomerDeliveryAddress": "Змінюємо основну адресу доставки…",
       "customer.deactivateCustomerDeliveryAddress": "Деактивуємо адресу доставки…",
-      "customer.reactivateCustomerDeliveryAddress": "Знову пропонуємо адресу доставки…"
+      "customer.reactivateCustomerDeliveryAddress": "Знову пропонуємо адресу доставки…",
+      "customer-order.redirectCustomerOrder": "Перенаправляємо замовлення…"
     },
     "purchase-draft": {
       "head.title": "Чернетки закупівель",
@@ -2216,7 +2263,8 @@
       "customer.correctCustomerDeliveryAddress": "Адресу доставки виправлено · {{customer}}",
       "customer.setMainCustomerDeliveryAddress": "Основну адресу доставки змінено · {{customer}}",
       "customer.deactivateCustomerDeliveryAddress": "Адресу доставки деактивовано · {{customer}} · записи, що вже називають її, й далі враховуються",
-      "customer.reactivateCustomerDeliveryAddress": "Адресу доставки знову пропонують · {{customer}}"
+      "customer.reactivateCustomerDeliveryAddress": "Адресу доставки знову пропонують · {{customer}}",
+      "customer-order.redirectCustomerOrder": "Замовлення перенаправлено · {{customer}} · кожен заморожений рядок чернетки, пов’язаний із ним, тепер повідомляє про розбіжність адрес"
     },
     "validation": {
       "itemAdjustmentReason.required": "Вкажіть причину. Кожна зміна кількості в наявності записується разом зі своєю причиною.",
@@ -2362,7 +2410,11 @@
       "customerAddressText.invalid": "Введіть адресу, яку приймає цей склад.",
       "customerAccessNotes.required": "Введіть примітки щодо доступу або залиште поле порожнім, щоб не записувати їх.",
       "customerAccessNotes.trimmed_non_empty": "Введіть примітки щодо доступу або залиште поле порожнім, щоб не записувати їх.",
-      "customerAccessNotes.invalid": "Введіть примітки щодо доступу, які приймає цей склад."
+      "customerAccessNotes.invalid": "Введіть примітки щодо доступу, які приймає цей склад.",
+      "customerOrderDeliveryAddress.required": "Оберіть адресу доставки.",
+      "customerOrderDeliveryAddress.invalid": "Ця адреса доставки не належить цьому клієнту.",
+      "customerOrderCustomer.required": "Оберіть клієнта.",
+      "customerOrderCustomer.invalid": "Цей склад не має такого клієнта."
     },
     "customer": {
       "head.title": "Клієнти",

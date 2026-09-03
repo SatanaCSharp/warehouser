@@ -1,13 +1,15 @@
 import { PermissionId } from '@warehouser/shared-types/enums';
+import compact from 'lodash/compact';
 import { useTranslation } from 'react-i18next';
 
+import { customerOrderIdentity } from 'modules/customer-order/utils/customer-order-identity';
 import { useArchivedWarehouse } from 'shared/hooks/projections/useArchivedWarehouse';
 import { usePermittedItems } from 'shared/hooks/projections/usePermittedItems';
 
 import type { CustomerOrder } from '@warehouser/contracts/customer-orders';
 
 export type CustomerOrderAction = {
-  id: 'amend' | 'cancel';
+  id: 'amend' | 'redirect' | 'cancel';
   /**
    * Whether the Warehouse still accepts the change (AC-23). The action stays
    * offered and is disabled, rather than disappearing, so a member can see why
@@ -30,6 +32,7 @@ export type CustomerOrderAction = {
 export type CustomerOrderActionHandlers = {
   onAmend: (order: CustomerOrder) => void;
   onCancel: (order: CustomerOrder) => void;
+  onRedirect: (order: CustomerOrder) => void;
 };
 
 /**
@@ -47,27 +50,44 @@ export type CustomerOrderActionHandlers = {
  */
 export const useCustomerOrderActions = (
   order: CustomerOrder,
-  { onAmend, onCancel }: CustomerOrderActionHandlers,
+  { onAmend, onCancel, onRedirect }: CustomerOrderActionHandlers,
 ): CustomerOrderAction[] => {
   const { t } = useTranslation('customer-order');
   const { isArchived, reasonId } = useArchivedWarehouse();
+  // AC-11c — a redirection names another Delivery Address of the Customer the
+  // order **already names**, so an order recorded by typed name is not
+  // redirectable and one whose customer is withheld exposes no address to
+  // redirect to. Neither is a Permission, so the entry is dropped with a
+  // predicate rather than by the collection gate
+  // (`writing-web-components.md` §6).
+  const isRedirectable = customerOrderIdentity(order).kind === 'namedCustomer';
 
-  return usePermittedItems<CustomerOrderAction>([
-    {
-      id: 'amend',
-      isDisabled: isArchived,
-      label: t('demand.menu.amend'),
-      permission: PermissionId.CUSTOMER_ORDERS_UPDATE,
-      reasonId,
-      run: () => onAmend(order),
-    },
-    {
-      id: 'cancel',
-      isDisabled: isArchived,
-      label: t('demand.menu.cancel'),
-      permission: PermissionId.CUSTOMER_ORDERS_CANCEL,
-      reasonId,
-      run: () => onCancel(order),
-    },
-  ]);
+  return usePermittedItems<CustomerOrderAction>(
+    compact([
+      {
+        id: 'amend',
+        isDisabled: isArchived,
+        label: t('demand.menu.amend'),
+        permission: PermissionId.CUSTOMER_ORDERS_UPDATE,
+        reasonId,
+        run: () => onAmend(order),
+      },
+      isRedirectable && {
+        id: 'redirect' as const,
+        isDisabled: isArchived,
+        label: t('demand.menu.redirect'),
+        permission: PermissionId.CUSTOMER_ORDERS_UPDATE,
+        reasonId,
+        run: () => onRedirect(order),
+      },
+      {
+        id: 'cancel',
+        isDisabled: isArchived,
+        label: t('demand.menu.cancel'),
+        permission: PermissionId.CUSTOMER_ORDERS_CANCEL,
+        reasonId,
+        run: () => onCancel(order),
+      },
+    ]),
+  );
 };

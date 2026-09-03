@@ -26,6 +26,7 @@ export const DemandCardList = ({
   label,
   onAmend,
   onCancel,
+  onRedirect,
 }: DemandCardListProps): ReactElement => {
   const customerOrdersByItem = useUnfulfilledCustomerOrdersByItem();
   const disclosureLabel = useDemandDisclosureLabel();
@@ -40,6 +41,7 @@ export const DemandCardList = ({
           line={line}
           onAmend={onAmend}
           onCancel={onCancel}
+          onRedirect={onRedirect}
         />
       ))}
     </ul>

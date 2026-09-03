@@ -13,8 +13,14 @@ import {
   vi,
 } from 'vitest';
 
+import { customerApi } from 'modules/customer/api/customer-api';
 import { customerOrderApi } from 'modules/customer-order/api/customer-order-api';
 import { DemandDirectory } from 'modules/customer-order/components/demand-directory/DemandDirectory';
+// The Customers a redirection chooses from are seeded straight into the cache
+// the pickers read. A spec may reach past a module's declared public surface —
+// `module-boundaries.spec.ts` scans production files only — and seeding the
+// real endpoint is what keeps this arrangement honest about where the data
+// comes from.
 import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
 import {
   ARCHIVED_WAREHOUSE_REASON_ID,
@@ -32,6 +38,7 @@ import type {
   CustomerOrder,
   DemandLine,
 } from '@warehouser/contracts/customer-orders';
+import type { Customer } from '@warehouser/contracts/customers';
 import type { AppStore } from 'store';
 
 // T19 — the Demand destination's list owner, composing `Ordering/Demand Row`
@@ -202,6 +209,14 @@ const customerOrdersFor = (itemId: string): CustomerOrder[] => [
 const renderDirectory = (
   lines: DemandLine[] = demandLines(),
   permissionIds: readonly PermissionId[] = Object.values(PermissionId),
+  /**
+   * The Customer Orders the one warehouse-wide read returns. Defaulted to the
+   * typed-name fixture above so every case written before AC-24 keeps its
+   * arrangement; the identity and redirection suites below supply their own.
+   */
+  orders: CustomerOrder[] = lines.flatMap((line) =>
+    customerOrdersFor(line.itemId),
+  ),
 ): AppStore => {
   stubAccessServer({ permissionIds });
   const store = authenticatedStore();
@@ -224,7 +239,7 @@ const renderDirectory = (
     customerOrderApi.util.upsertQueryData(
       'listCustomerOrders',
       { warehouseId: accessIds.warehouse, query: { state: 'unfulfilled' } },
-      lines.flatMap((line) => customerOrdersFor(line.itemId)),
+      orders,
     ),
   );
   renderInEnteredWarehouse(
@@ -556,6 +571,375 @@ describe('DemandDirectory in an archived Warehouse (AC-23)', () => {
       expect(action).toBeVisible();
       expect(action).toHaveAttribute('aria-disabled', 'true');
       expect(action).toHaveAccessibleDescription(ARCHIVED_REASON);
+    });
+  });
+});
+
+// --- delivery-addresses T22 — the destination on the Demand surface ------------------------------
+//
+// AC-24 makes an **absence** load-bearing: an order naming a Customer shows
+// that Customer with the Delivery Address it is going to, an order recorded by
+// typed name shows the name and no address, and that absence is what tells the
+// member which kind of row they are looking at. AC-09a pulls the other way: a
+// member without `CUSTOMERS:WATCH` must not be able to tell the two apart at
+// all. The two are reconciled by a **third** presentation — the redacted arm
+// says "customer identity withheld" and says nothing else — so the absent
+// address is meaningful only where identity is readable in the first place.
+//
+// The pin's absence is asserted against its own Lucide geometry
+// (`shared/icons/MapPinIcon.tsx`), because an `aria-hidden` glyph has no role
+// and no name to query it by; the meaning it carries is asserted separately,
+// as text, which is the whole point of the accessibility rule
+// (design-handoff.md §Accessibility "A missing delivery address must be
+// announced, not merely absent").
+
+/** The `d` of `shared/icons/MapPinIcon.tsx` — the one glyph AC-24 forbids. */
+const MAP_PIN_PATH =
+  'M20 10c0 5.25-6.5 11-8 11s-8-5.75-8-11a8 8 0 1 1 16 0Zm-8 2.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z';
+
+const mapPinsWithin = (scope: HTMLElement): Element[] => [
+  ...scope.querySelectorAll(`path[d="${MAP_PIN_PATH}"]`),
+];
+
+const destinationIds = {
+  customer: '00000000-0000-4000-8000-000000000701',
+  hafen: '00000000-0000-4000-8000-000000000702',
+  dock: '00000000-0000-4000-8000-000000000703',
+  item: '00000000-0000-4000-8000-000000000240',
+} as const;
+
+const HAFEN_TEXT = 'Hafenstraße 14, 20457 Hamburg';
+const DOCK_TEXT = 'Dockweg 3, 20457 Hamburg';
+
+const northCustomer: Customer = {
+  id: destinationIds.customer,
+  name: 'Nordwind Logistik GmbH',
+  deactivatedAt: null,
+  mainDeliveryAddressId: destinationIds.hafen,
+  deliveryAddresses: [
+    {
+      id: destinationIds.hafen,
+      customerId: destinationIds.customer,
+      addressText: HAFEN_TEXT,
+      accessNotes: null,
+      isMain: true,
+      deactivatedAt: null,
+      createdAt: '2026-08-01T09:00:00.000Z',
+      updatedAt: '2026-08-01T09:00:00.000Z',
+    },
+    {
+      id: destinationIds.dock,
+      customerId: destinationIds.customer,
+      addressText: DOCK_TEXT,
+      accessNotes: null,
+      isMain: false,
+      deactivatedAt: null,
+      createdAt: '2026-08-01T09:00:00.000Z',
+      updatedAt: '2026-08-01T09:00:00.000Z',
+    },
+  ],
+  recordedByUserId: accessIds.actingUser,
+  createdAt: '2026-08-01T09:00:00.000Z',
+  updatedAt: '2026-08-01T09:00:00.000Z',
+};
+
+/** Everything a Customer Order carries whatever the actor may read. */
+const commonOrder = {
+  itemId: destinationIds.item,
+  quantity: 1000,
+  outstandingQuantity: 1000,
+  neededBy: '2026-09-01',
+  state: 'unfulfilled' as const,
+  cancellationReason: null,
+  recordedByUserId: accessIds.actingUser,
+  cancelledByUserId: null,
+  cancelledAt: null,
+  createdAt: '2026-08-01T09:00:00.000Z',
+  updatedAt: '2026-08-01T09:00:00.000Z',
+};
+
+/** AC-11 — an order naming a Customer, going to that Customer's Main address. */
+const namedOrder: CustomerOrder = {
+  ...commonOrder,
+  id: '00000000-0000-4000-8000-000000000801',
+  customer: { id: destinationIds.customer, name: northCustomer.name },
+  customerName: null,
+  destination: {
+    deliveryAddressId: destinationIds.hafen,
+    addressText: HAFEN_TEXT,
+    accessNotes: null,
+    isMain: true,
+    deactivatedAt: null,
+  },
+};
+
+/** AC-11a — a typed name, no Customer and therefore no Delivery Address. */
+const typedNameOrder: CustomerOrder = {
+  ...commonOrder,
+  id: '00000000-0000-4000-8000-000000000802',
+  customer: null,
+  customerName: 'Baltic Freight',
+  destination: null,
+  quantity: 500,
+  outstandingQuantity: 500,
+};
+
+/**
+ * AC-09a — the same two orders read by an actor without `CUSTOMERS:WATCH`.
+ * `customer`, `customerName` and `destination` are **absent as properties**
+ * rather than null, which is what makes the two indistinguishable.
+ */
+const redactedOrders: CustomerOrder[] = [
+  { ...commonOrder, id: namedOrder.id },
+  {
+    ...commonOrder,
+    id: typedNameOrder.id,
+    quantity: 500,
+    outstandingQuantity: 500,
+  },
+];
+
+const oneDemandLine = (): DemandLine[] => [demandLines()[0]];
+
+/** Expands the one Demand Line and returns the table it expanded inside. */
+const expandDemand = async (): Promise<HTMLElement> => {
+  const table = await screen.findByRole('treegrid', { name: /demand/iu });
+  await userEvent.click(
+    within(table).getByRole('button', { name: /2 customer orders/iu }),
+  );
+  return table;
+};
+
+const subRowFor = (table: HTMLElement, text: string | RegExp): HTMLElement =>
+  within(table).getByText(text).closest('tr') as HTMLElement;
+
+describe('DemandDirectory customer identity and destination (AC-24, AC-09a)', () => {
+  beforeEach(() => {
+    inArchivedWarehouse(false);
+  });
+
+  it('shows an order naming a Customer with the Delivery Address it is going to (AC-11, AC-24)', async () => {
+    renderDirectory(oneDemandLine(), Object.values(PermissionId), [namedOrder]);
+
+    const table = await expandDemand();
+    const row = subRowFor(table, 'Nordwind Logistik GmbH');
+    expect(row).toHaveTextContent(HAFEN_TEXT);
+    // The pin is drawn, and the sentence beside it says the same thing without
+    // it — an `aria-hidden` glyph carries nothing to a screen reader.
+    expect(mapPinsWithin(row)).toHaveLength(1);
+    expect(row).toHaveTextContent(`Going to ${HAFEN_TEXT}`);
+  });
+
+  it('never renders the map-pin for a typed-name order and announces the absence in text (AC-11a, AC-24)', async () => {
+    renderDirectory(oneDemandLine(), Object.values(PermissionId), [
+      typedNameOrder,
+    ]);
+
+    const table = await expandDemand();
+    const row = subRowFor(table, 'Baltic Freight');
+    expect(mapPinsWithin(row)).toHaveLength(0);
+    expect(row).toHaveTextContent(
+      'Recorded by typed name — no delivery address',
+    );
+    expect(row).not.toHaveTextContent('Going to');
+  });
+
+  it('carries the destination on the mobile card as well as the desktop row (AC-24)', async () => {
+    const user = userEvent.setup();
+    renderDirectory(oneDemandLine(), Object.values(PermissionId), [
+      namedOrder,
+      typedNameOrder,
+    ]);
+
+    const cards = await screen.findByRole('list', { name: /demand/iu });
+    await user.click(
+      within(cards).getByRole('button', { name: /2 customer orders/iu }),
+    );
+
+    const named = within(cards)
+      .getByText('Nordwind Logistik GmbH')
+      .closest('li') as HTMLElement;
+    expect(named).toHaveTextContent(`Going to ${HAFEN_TEXT}`);
+    expect(mapPinsWithin(named)).toHaveLength(1);
+
+    const typed = within(cards)
+      .getByText('Baltic Freight')
+      .closest('li') as HTMLElement;
+    expect(typed).toHaveTextContent(
+      'Recorded by typed name — no delivery address',
+    );
+    expect(mapPinsWithin(typed)).toHaveLength(0);
+  });
+
+  it('withholds identity across the whole surface for a member without CUSTOMERS:WATCH (AC-09a)', async () => {
+    const user = userEvent.setup();
+    renderDirectory(
+      oneDemandLine(),
+      [
+        PermissionId.CUSTOMER_ORDERS_WATCH,
+        PermissionId.CUSTOMER_ORDERS_UPDATE,
+        PermissionId.CUSTOMER_ORDERS_CANCEL,
+      ],
+      redactedOrders,
+    );
+
+    const table = await expandDemand();
+    const cards = screen.getByRole('list', { name: /demand/iu });
+    await user.click(
+      within(cards).getByRole('button', { name: /2 customer orders/iu }),
+    );
+
+    // Both orders read alike: neither is distinguishable as "a
+    // Customer-naming order with the name hidden", which is what would make
+    // the withholding leak the very fact it withholds.
+    expect(
+      within(table).getAllByText('Customer identity withheld'),
+    ).toHaveLength(2);
+    expect(
+      within(cards).getAllByText('Customer identity withheld'),
+    ).toHaveLength(2);
+    for (const scope of [table, cards]) {
+      expect(scope).not.toHaveTextContent('Nordwind');
+      expect(scope).not.toHaveTextContent('Baltic');
+      expect(scope).not.toHaveTextContent('Hafenstraße');
+      expect(scope).not.toHaveTextContent('Recorded by typed name');
+      expect(scope).not.toHaveTextContent('Going to');
+      expect(mapPinsWithin(scope)).toHaveLength(0);
+    }
+    // AC-09a — everything the member's own Permissions do admit stays.
+    expect(
+      within(table).getAllByText('1 000 of 1 000 outstanding'),
+    ).toHaveLength(1);
+    expect(within(table).getAllByText('by 1 Sep 2026')).toHaveLength(2);
+
+    // The menu is part of "the whole surface": a redirection names a Delivery
+    // Address, so it is not offered where no Customer may be read.
+    await user.click(
+      within(table).getAllByRole('button', { name: /actions for/iu })[0],
+    );
+    const menu = screen.getByRole('menu');
+    expect(
+      within(menu)
+        .getAllByRole('menuitem')
+        .map((item) => item.textContent),
+    ).toStrictEqual(['Amend', 'Cancel order']);
+  });
+});
+
+describe('DemandDirectory redirection (AC-11b, AC-11c)', () => {
+  beforeEach(() => {
+    inArchivedWarehouse(false);
+  });
+
+  const renderWithCustomers = (
+    orders: CustomerOrder[] = [namedOrder, typedNameOrder],
+  ): AppStore => {
+    const store = renderDirectory(
+      oneDemandLine(),
+      Object.values(PermissionId),
+      orders,
+    );
+    void store.dispatch(
+      customerApi.util.upsertQueryData('listCustomers', accessIds.warehouse, [
+        northCustomer,
+      ]),
+    );
+    return store;
+  };
+
+  it('offers a redirection only for an order that names a Customer (AC-11b, AC-11c)', async () => {
+    const user = userEvent.setup();
+    renderWithCustomers();
+
+    const table = await expandDemand();
+    await user.click(
+      within(table).getByRole('button', {
+        name: /actions for nordwind logistik gmbh/iu,
+      }),
+    );
+    expect(
+      within(screen.getByRole('menu'))
+        .getAllByRole('menuitem')
+        .map((item) => item.textContent),
+    ).toStrictEqual(['Amend', 'Redirect', 'Cancel order']);
+
+    await user.keyboard('{Escape}');
+    await user.click(
+      within(table).getByRole('button', {
+        name: /actions for baltic freight/iu,
+      }),
+    );
+    // AC-11c — an order recorded by typed name names no Customer and is not
+    // redirectable, so the action is absent rather than offered and refused.
+    expect(
+      within(screen.getByRole('menu'))
+        .getAllByRole('menuitem')
+        .map((item) => item.textContent),
+    ).toStrictEqual(['Amend', 'Cancel order']);
+  });
+
+  it('redirects an outstanding order to another active address of the Customer it already names (AC-11b)', async () => {
+    const user = userEvent.setup();
+    renderWithCustomers([namedOrder]);
+    // The access reads keep the stub `renderDirectory` installed; only the
+    // redirection itself is answered here, so the dialog closes on a real
+    // settled request rather than on a blanket mock.
+    const accessServer = globalThis.fetch;
+    const redirect = vi.fn(
+      (input: Request | string | URL, init?: RequestInit) => {
+        const url = String(input instanceof Request ? input.url : input);
+        return url.includes('/delivery-address')
+          ? Promise.resolve(
+              Response.json({
+                ...namedOrder,
+                destination: {
+                  deliveryAddressId: destinationIds.dock,
+                  addressText: DOCK_TEXT,
+                  accessNotes: null,
+                  isMain: false,
+                  deactivatedAt: null,
+                },
+              }),
+            )
+          : accessServer(input, init);
+      },
+    );
+    vi.stubGlobal('fetch', redirect);
+
+    const table = await expandDemand();
+    await user.click(
+      within(table).getByRole('button', {
+        name: /actions for nordwind logistik gmbh/iu,
+      }),
+    );
+    await user.click(screen.getByRole('menuitem', { name: 'Redirect' }));
+
+    const dialog = await screen.findByRole('dialog', {
+      name: /redirect nordwind logistik gmbh's order/iu,
+    });
+    await user.click(within(dialog).getByRole('button', { name: /address/iu }));
+    await user.click(await screen.findByRole('option', { name: DOCK_TEXT }));
+    await user.click(
+      within(dialog).getByRole('button', { name: /redirect/iu }),
+    );
+
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+    );
+
+    const [url, init] = redirect.mock.calls.find(([input]) =>
+      String(input instanceof Request ? input.url : input).includes(
+        '/delivery-address',
+      ),
+    ) as [string, RequestInit & { body: string }];
+    expect(url).toBe(
+      `/api/v1/warehouses/${accessIds.warehouse}/customer-orders/${namedOrder.id}/delivery-address`,
+    );
+    expect(init.method).toBe('PUT');
+    // The Customer is not an input and never changes: only the address is
+    // sent (AC-11c).
+    expect(JSON.parse(init.body)).toStrictEqual({
+      customerDeliveryAddressId: destinationIds.dock,
     });
   });
 });

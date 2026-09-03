@@ -27,7 +27,8 @@
     "amendCustomerOrderQuantity": "Order amended · {{customer}} is now waiting for {{quantity}}",
     "amendCustomerOrderNeededBy": "Order amended · {{customer}} now needs it by {{date}}",
     "amendCustomerOrderBoth": "Order amended · {{customer}} is now waiting for {{quantity}} by {{date}}",
-    "cancelCustomerOrder": "Order cancelled · {{customer}} · {{reason}}"
+    "cancelCustomerOrder": "Order cancelled · {{customer}} · {{reason}}",
+    "redirectCustomerOrder": "Order redirected · {{customer}} · every frozen draft line linked to it now reports address drift"
   },
   "workspace": {
     "renameWorkspace": "Workspace named.",

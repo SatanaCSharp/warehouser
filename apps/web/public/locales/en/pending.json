@@ -24,7 +24,8 @@
   "customer-order": {
     "recordCustomerOrder": "Recording demand…",
     "amendCustomerOrder": "Amending the order…",
-    "cancelCustomerOrder": "Cancelling the order…"
+    "cancelCustomerOrder": "Cancelling the order…",
+    "redirectCustomerOrder": "Redirecting the order…"
   },
   "workspace": {
     "renameWorkspace": "Naming the workspace…",

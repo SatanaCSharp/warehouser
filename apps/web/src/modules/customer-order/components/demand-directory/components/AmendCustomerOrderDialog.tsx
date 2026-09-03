@@ -4,7 +4,7 @@ import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import { CustomerOrderRefusalAlert } from 'modules/customer-order/components/demand-directory/components/CustomerOrderRefusalAlert';
-import { customerOrderDisplayName } from 'modules/customer-order/utils/customer-order-identity';
+import { useCustomerOrderNaming } from 'modules/customer-order/hooks/projections/useCustomerOrderNaming';
 import { FormDateField } from 'shared/components/FormDateField';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormTextField } from 'shared/components/FormTextField';
@@ -70,6 +70,7 @@ export const AmendCustomerOrderDialog = ({
   const { t } = useTranslation('customer-order');
   const { t: translate } = useTranslation('validation');
   const format = useLocaleFormat();
+  const naming = useCustomerOrderNaming();
   const [refusalCode, setRefusalCode] = useState<string>();
   const form = useForm<AmendCustomerOrderForm>({
     defaultValues: { quantity: order.quantity, neededBy: order.neededBy },
@@ -113,7 +114,7 @@ export const AmendCustomerOrderDialog = ({
   return (
     <FormModalDialog
       title={t('dialogs.amend.title', {
-        customerName: customerOrderDisplayName(order),
+        customerName: naming(order),
       })}
       cancelLabel={t('dialogs.amend.cancel')}
       submitLabel={t('dialogs.amend.submit')}

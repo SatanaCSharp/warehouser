@@ -24,7 +24,8 @@
   "customer-order": {
     "recordCustomerOrder": "Записуємо попит…",
     "amendCustomerOrder": "Змінюємо замовлення…",
-    "cancelCustomerOrder": "Скасовуємо замовлення…"
+    "cancelCustomerOrder": "Скасовуємо замовлення…",
+    "redirectCustomerOrder": "Перенаправляємо замовлення…"
   },
   "workspace": {
     "renameWorkspace": "Називаємо робочий простір…",

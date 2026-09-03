@@ -27,7 +27,8 @@
     "amendCustomerOrderQuantity": "Замовлення змінено · {{customer}} тепер чекає на {{quantity}}",
     "amendCustomerOrderNeededBy": "Замовлення змінено · {{customer}} тепер потребує до {{date}}",
     "amendCustomerOrderBoth": "Замовлення змінено · {{customer}} тепер чекає на {{quantity}} до {{date}}",
-    "cancelCustomerOrder": "Замовлення скасовано · {{customer}} · {{reason}}"
+    "cancelCustomerOrder": "Замовлення скасовано · {{customer}} · {{reason}}",
+    "redirectCustomerOrder": "Замовлення перенаправлено · {{customer}} · кожен заморожений рядок чернетки, пов’язаний із ним, тепер повідомляє про розбіжність адрес"
   },
   "workspace": {
     "renameWorkspace": "Робочий простір названо.",

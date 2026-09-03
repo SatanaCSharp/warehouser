@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next';
 
 import { CoverageChips } from 'modules/customer-order/components/demand-directory/components/CoverageChips';
 import { CustomerOrderActionsMenu } from 'modules/customer-order/components/demand-directory/components/CustomerOrderActionsMenu';
+import { CustomerOrderIdentityCell } from 'modules/customer-order/components/demand-directory/components/CustomerOrderIdentityCell';
 import { DemandUrgencyChip } from 'modules/customer-order/components/demand-directory/components/DemandUrgencyChip';
-import { customerOrderDisplayName } from 'modules/customer-order/utils/customer-order-identity';
 import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
 
 import type {
@@ -67,6 +67,7 @@ export const DemandCard = ({
   line,
   onAmend,
   onCancel,
+  onRedirect,
 }: DemandCardProps): ReactElement => {
   const { t } = useTranslation('customer-order');
   const format = useLocaleFormat();
@@ -149,11 +150,11 @@ export const DemandCard = ({
                           className="flex items-start justify-between gap-2 rounded-lg bg-surface-secondary p-3"
                           key={order.id}
                         >
-                          <div>
-                            <p className="font-semibold">
-                              {customerOrderDisplayName(order)}
-                            </p>
-                            <p className="text-sm text-muted">
+                          <div className="min-w-0">
+                            <div className="font-semibold">
+                              <CustomerOrderIdentityCell order={order} />
+                            </div>
+                            <p className="mt-1 text-sm text-muted">
                               {t('demand.card.customerOrder', {
                                 outstanding: format.quantity(
                                   order.outstandingQuantity,
@@ -168,6 +169,7 @@ export const DemandCard = ({
                             order={order}
                             onAmend={onAmend}
                             onCancel={onCancel}
+                            onRedirect={onRedirect}
                           />
                         </li>
                       ))}

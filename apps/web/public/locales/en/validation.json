@@ -198,5 +198,13 @@
     "required": "Enter the access notes, or leave the field empty to record none.",
     "trimmed_non_empty": "Enter the access notes, or leave the field empty to record none.",
     "invalid": "Enter access notes this warehouse accepts."
+  },
+  "customerOrderDeliveryAddress": {
+    "required": "Choose a delivery address.",
+    "invalid": "That delivery address is not one this customer offers."
+  },
+  "customerOrderCustomer": {
+    "required": "Choose a customer.",
+    "invalid": "That customer is not one this warehouse holds."
   }
 }

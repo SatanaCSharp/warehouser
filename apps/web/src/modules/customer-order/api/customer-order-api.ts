@@ -14,6 +14,7 @@ import type {
   CustomerOrderCancellation,
   CustomerOrderCreate,
   CustomerOrderListQuery,
+  CustomerOrderRedirect,
   DemandLine,
 } from '@warehouser/contracts/customer-orders';
 
@@ -61,6 +62,12 @@ type CancelCustomerOrderArgs = {
   warehouseId: string;
   customerOrderId: string;
   input: CustomerOrderCancellation;
+};
+type RedirectCustomerOrderArgs = {
+  customerName: string;
+  warehouseId: string;
+  customerOrderId: string;
+  input: CustomerOrderRedirect;
 };
 
 /**
@@ -136,6 +143,11 @@ const cancelCustomerOrderFieldErrors = fieldErrorsForCode({
  * cancelling a Customer Order changes what the consolidated demand and every
  * frozen draft's Drift Signal report, so both destinations refetch rather than
  * keep a stale reading (AC-19, AC-19a).
+ *
+ * `Customers` joins them for the same reason (delivery-addresses T22): since a
+ * Customer Order may name a Customer, every write here changes what that
+ * Customer's awaiting list reports it is still waiting for and where it is
+ * going (AC-08, AC-11b).
  */
 export const customerOrderApi = api.injectEndpoints({
   endpoints: (build) => ({
@@ -158,7 +170,7 @@ export const customerOrderApi = api.injectEndpoints({
           body: input,
         }),
         extraOptions: { schema: customerOrderSchema },
-        invalidatesTags: ['Demand', 'Items', 'PurchaseDrafts'],
+        invalidatesTags: ['Customers', 'Demand', 'Items', 'PurchaseDrafts'],
         transformErrorResponse: recordCustomerOrderFieldErrors,
       },
     ),
@@ -169,8 +181,39 @@ export const customerOrderApi = api.injectEndpoints({
         body: input,
       }),
       extraOptions: { schema: customerOrderSchema },
-      invalidatesTags: ['Demand', 'Items', 'PurchaseDrafts'],
+      invalidatesTags: ['Customers', 'Demand', 'Items', 'PurchaseDrafts'],
       transformErrorResponse: amendCustomerOrderFieldErrors,
+    }),
+    /**
+     * AC-11b — `PUT` and idempotent: the write names one column on one Customer
+     * Order and touches no frozen value of any Purchase Draft. The Address
+     * Drift it causes is **derived on the next read** of the affected drafts,
+     * which is exactly why the drafts tag is invalidated here rather than a
+     * drift record being written anywhere (openapi.yaml `redirectCustomerOrder`,
+     * AC-18).
+     *
+     * `Items` is deliberately absent: a redirection moves no quantity, so
+     * nothing an Item reports can have changed. `Customers` is present because
+     * the Customer's own awaiting list states where each of its Unfulfilled
+     * orders is going (AC-08).
+     *
+     * It binds no refusal to a field. All three of AC-11c's refusals state one
+     * **rule** about a redirection rather than rejecting the shape of the one
+     * value submitted, and the dialog has a single field, so marking it would
+     * say where without saying what; `CustomerOrderRefusalAlert` states the
+     * rule instead (web-error-handling.md §3).
+     */
+    redirectCustomerOrder: build.mutation<
+      CustomerOrder,
+      RedirectCustomerOrderArgs
+    >({
+      query: ({ warehouseId, customerOrderId, input }) => ({
+        url: `${customerOrderPath(warehouseId, customerOrderId)}/delivery-address`,
+        method: 'PUT',
+        body: input,
+      }),
+      extraOptions: { schema: customerOrderSchema },
+      invalidatesTags: ['Customers', 'Demand', 'PurchaseDrafts'],
     }),
     cancelCustomerOrder: build.mutation<CustomerOrder, CancelCustomerOrderArgs>(
       {
@@ -180,7 +223,7 @@ export const customerOrderApi = api.injectEndpoints({
           body: input,
         }),
         extraOptions: { schema: customerOrderSchema },
-        invalidatesTags: ['Demand', 'Items', 'PurchaseDrafts'],
+        invalidatesTags: ['Customers', 'Demand', 'Items', 'PurchaseDrafts'],
         transformErrorResponse: cancelCustomerOrderFieldErrors,
       },
     ),
@@ -193,5 +236,6 @@ export const {
   useCancelCustomerOrderMutation,
   useListCustomerOrdersQuery,
   useReadDemandQuery,
+  useRedirectCustomerOrderMutation,
   useRecordCustomerOrderMutation,
 } = customerOrderApi;
