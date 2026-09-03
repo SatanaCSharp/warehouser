@@ -32,10 +32,26 @@ const baseLink = {
   allocation: null,
 };
 
+const addressA = '00000000-0000-4000-8000-000000000501';
+const addressB = '00000000-0000-4000-8000-000000000502';
+
+const destination = (deliveryAddressId: string) => ({
+  deliveryAddressId,
+  addressText: 'Test Address, Test City',
+  accessNotes: null,
+  isMain: true,
+  deactivatedAt: null,
+});
+
 const baseSnapshot = {
   capturedQuantity: 10,
   capturedNeededBy: '2026-09-30',
   capturedState: 'unfulfilled',
+  // T18/AC-18 — the comparison key and the frozen statement. Drift is decided on the identifier
+  // alone; the text is only what the member is shown (data-model.md
+  // `purchase_draft_demand_snapshots`).
+  capturedDeliveryAddressId: addressA,
+  capturedDeliveryAddressText: 'Test Address, Test City',
 };
 
 const baseCurrent = {
@@ -46,6 +62,7 @@ const baseCurrent = {
   // Carried by the repository read and passed through untouched: naming a Drift Signal is a value
   // comparison between `snapshot` and `current`, never a question of when the order moved (AC-16).
   lastChangedAt: null,
+  deliveryAddress: destination(addressA),
 };
 
 const draftDetailWith = (links: readonly unknown[]) => ({
@@ -55,6 +72,7 @@ const draftDetailWith = (links: readonly unknown[]) => ({
   expectedArrivalDate: null,
   lineCount: 1,
   hasDriftSignal: true,
+  hasDirectToCustomerAddressDrift: true,
   closureReason: null,
   createdByUserId: actorId,
   createdAt: '2026-08-12T08:00:00.000Z',
@@ -77,6 +95,11 @@ const draftDetailWith = (links: readonly unknown[]) => ({
       packagingTypeId: null,
       valueAddingNote: null,
       receivedQuantity: null,
+      deliveryMode: 'direct_to_customer',
+      customerDeliveryAddressId: addressA,
+      frozenDeliveryAddressText: 'Test Address, Test City',
+      frozenAccessNotes: null,
+      frozenCustomerName: 'Test Customer North',
       links,
     },
   ],
@@ -240,6 +263,92 @@ describe('ReadPurchaseDraftQuery', () => {
         .driftSignals.slice()
         .sort(),
     ).toEqual(['cancelled', 'needed_by_moved', 'quantity_changed'].sort());
+  });
+
+  // T18/AC-18 — Address Drift: the linked Customer Order is going to a **different** Delivery
+  // Address than the one frozen for it. An identity comparison on the captured identifier.
+  it('names "delivery_address_changed" when the linked Customer Order was redirected after the freeze', async () => {
+    const detail = draftDetailWith([
+      {
+        ...baseLink,
+        snapshot: baseSnapshot,
+        current: { ...baseCurrent, deliveryAddress: destination(addressB) },
+      },
+    ]);
+    const repository = purchaseDraftReadRepositoryDouble(detail);
+    const query = new ReadPurchaseDraftQuery(repository as never);
+
+    const result = await query.execute(currentUser, purchaseDraftId);
+
+    expect(firstLinkOf(result as never).driftSignals).toEqual([
+      'delivery_address_changed',
+    ]);
+  });
+
+  // AC-18a — redirected back to the address frozen for it stops the report, because the
+  // comparison is between values rather than a record of having changed. Nothing about the signal
+  // was stored, so there is nothing left to keep reporting.
+  it('reports no Address Drift once the linked Customer Order is redirected back to the frozen address', async () => {
+    const detail = draftDetailWith([
+      {
+        ...baseLink,
+        snapshot: baseSnapshot,
+        current: { ...baseCurrent, deliveryAddress: destination(addressA) },
+      },
+    ]);
+    const repository = purchaseDraftReadRepositoryDouble(detail);
+    const query = new ReadPurchaseDraftQuery(repository as never);
+
+    const result = await query.execute(currentUser, purchaseDraftId);
+
+    expect(firstLinkOf(result as never).driftSignals).toEqual([]);
+  });
+
+  // data-model.md `purchase_draft_demand_snapshots` — correcting a typo in an address that was
+  // never redirected is not a redirection: the identifier still agrees, so nothing is reported
+  // even though the captured text and the current text differ.
+  it('reports no Address Drift when only the address text differs and the identifier still agrees', async () => {
+    const detail = draftDetailWith([
+      {
+        ...baseLink,
+        snapshot: baseSnapshot,
+        current: {
+          ...baseCurrent,
+          deliveryAddress: {
+            ...destination(addressA),
+            addressText: 'Test Address 1a, Test City',
+          },
+        },
+      },
+    ]);
+    const repository = purchaseDraftReadRepositoryDouble(detail);
+    const query = new ReadPurchaseDraftQuery(repository as never);
+
+    const result = await query.execute(currentUser, purchaseDraftId);
+
+    expect(firstLinkOf(result as never).driftSignals).toEqual([]);
+  });
+
+  // AC-11a/AC-15b — a link to a Customer Order recorded by typed name captured no address and
+  // names none now; `null` on both sides is agreement, not drift.
+  it('reports no Address Drift for a link that captured no Delivery Address and names none now', async () => {
+    const detail = draftDetailWith([
+      {
+        ...baseLink,
+        snapshot: {
+          ...baseSnapshot,
+          capturedDeliveryAddressId: null,
+          capturedDeliveryAddressText: null,
+        },
+        current: { ...baseCurrent, deliveryAddress: null },
+      },
+    ]);
+    const repository = purchaseDraftReadRepositoryDouble(detail);
+    const query = new ReadPurchaseDraftQuery(repository as never);
+
+    const result = await query.execute(currentUser, purchaseDraftId);
+
+    expect(firstLinkOf(result as never).driftSignals).toEqual([]);
   });
 
   // The read is a thin scoped pass-through: it never mutates the raw repository row it received

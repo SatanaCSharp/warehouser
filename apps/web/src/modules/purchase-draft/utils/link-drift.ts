@@ -14,7 +14,8 @@ export type LinkDriftKind =
   | 'became_fulfilled'
   | 'quantityRaised'
   | 'quantityLowered'
-  | 'needed_by_moved';
+  | 'needed_by_moved'
+  | 'delivery_address_changed';
 
 /**
  * What a link's Demand Snapshot and the Customer Order it names now actually
@@ -74,6 +75,18 @@ const DRIFT_RESOLVERS: Record<
           quantities: { from: snapshot.capturedQuantity, to: current.quantity },
           dates: { neededBy: current.neededBy },
         },
+  // Address Drift reports the comparison it made without naming the two
+  // addresses, because the contract does not yet carry them: the captured
+  // address on the Demand Snapshot and the live one on the linked order arrive
+  // with T19, and T23 owns how this drift reads beside the others. Until then
+  // this behaves as `cancelled` and `became_fulfilled` do — the kind is the
+  // whole signal. It is a resolver rather than an omission because
+  // `DRIFT_RESOLVERS` is exhaustive by design.
+  delivery_address_changed: () => ({
+    kind: 'delivery_address_changed',
+    quantities: {},
+    dates: {},
+  }),
   needed_by_moved: ({ current, snapshot }) =>
     snapshot === null
       ? null

@@ -42,10 +42,10 @@ import { RemovePurchaseDraftLineLinkCommand } from 'purchase-drafts/usecases/com
 import { RevisePurchaseDraftCommand } from 'purchase-drafts/usecases/commands/revise-purchase-draft.command';
 import { RevisePurchaseDraftLineCommand } from 'purchase-drafts/usecases/commands/revise-purchase-draft-line.command';
 import { RevisePurchaseDraftLineLinkCommand } from 'purchase-drafts/usecases/commands/revise-purchase-draft-line-link.command';
+import type { PurchaseDraftLineLinkWithDrift } from 'purchase-drafts/usecases/queries/drift-signals';
 import { ListPurchaseDraftsQuery } from 'purchase-drafts/usecases/queries/list-purchase-drafts.query';
 import type {
   PurchaseDraftDetailWithDrift,
-  PurchaseDraftLineLinkWithDrift,
   PurchaseDraftLineWithDrift,
 } from 'purchase-drafts/usecases/queries/read-purchase-draft.query';
 import { ReadPurchaseDraftQuery } from 'purchase-drafts/usecases/queries/read-purchase-draft.query';
@@ -81,19 +81,41 @@ const toSummaryResponse = (
   discardedAt: summary.discardedAt?.toISOString() ?? null,
 });
 
+type LinkResponse = PurchaseDraftDetail['lines'][number]['links'][number];
+
+// T18 — every property of `snapshot` and `current` is named explicitly rather than cast through.
+// The read now carries both halves of the Address Drift comparison (the captured Delivery Address
+// and the address the demand now expects), and those are customer identity, gated on
+// `CUSTOMERS:WATCH` and served by the identified/redacted response forms T19 introduces
+// (openapi.yaml `DemandSnapshotEntryIdentified`/`LinkedCustomerOrderStateIdentified`, AC-09a). A
+// cast satisfies the type without excess-property checking, so an identity field added to the read
+// would otherwise travel straight through this mapper into a response that has no Permission for
+// it. Naming the properties is what makes that impossible.
 const toLinkResponse = (
   link: PurchaseDraftLineLinkWithDrift,
-): PurchaseDraftDetail['lines'][number]['links'][number] => ({
+): LinkResponse => ({
   id: link.id,
   customerOrderId: link.customerOrderId,
   customerName: link.customerName,
   statedQuantity: link.statedQuantity,
   snapshot:
-    link.snapshot as PurchaseDraftDetail['lines'][number]['links'][number]['snapshot'],
-  current:
-    link.current as PurchaseDraftDetail['lines'][number]['links'][number]['current'],
-  driftSignals:
-    link.driftSignals as PurchaseDraftDetail['lines'][number]['links'][number]['driftSignals'],
+    link.snapshot === null
+      ? null
+      : {
+          capturedQuantity: link.snapshot.capturedQuantity,
+          capturedNeededBy: link.snapshot.capturedNeededBy,
+          capturedState: link.snapshot.capturedState as NonNullable<
+            LinkResponse['snapshot']
+          >['capturedState'],
+        },
+  current: {
+    quantity: link.current.quantity,
+    neededBy: link.current.neededBy,
+    state: link.current.state as LinkResponse['current']['state'],
+    outstandingQuantity: link.current.outstandingQuantity,
+    lastChangedAt: link.current.lastChangedAt,
+  },
+  driftSignals: link.driftSignals as LinkResponse['driftSignals'],
   allocation: link.allocation,
 });
 

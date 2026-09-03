@@ -50,6 +50,8 @@ interface SnapshotRead {
   readonly capturedQuantity: number;
   readonly capturedNeededBy: string;
   readonly capturedState: string;
+  readonly capturedDeliveryAddressId: string | null;
+  readonly capturedDeliveryAddressText: string | null;
 }
 
 // openapi.yaml `LinkedCustomerOrderState`.
@@ -59,6 +61,7 @@ interface CurrentDemandRead {
   readonly state: string;
   readonly outstandingQuantity: number;
   readonly lastChangedAt: string | null;
+  readonly deliveryAddress: { readonly deliveryAddressId: string } | null;
 }
 
 // openapi.yaml `ArrivalAllocation`.
@@ -103,6 +106,7 @@ interface DraftSummaryRead {
   readonly expectedArrivalDate: string | null;
   readonly lineCount: number;
   readonly hasDriftSignal: boolean;
+  readonly hasDirectToCustomerAddressDrift: boolean;
   readonly closureReason: string | null;
   readonly createdByUserId: string;
   readonly createdAt: Date | string;
@@ -490,6 +494,12 @@ const registerReadDraftDriftDataTests = (): void => {
       capturedQuantity: 10,
       capturedNeededBy: '2026-09-30',
       capturedState: 'unfulfilled',
+      // T18/AC-18 — the captured Delivery Address, both `null` here because these scenarios seed
+      // Customer Orders recorded by **typed name**, which name no address at all (AC-11a). The
+      // Address Drift scenarios live in
+      // `purchase-draft-address-drift-read.repository.integration.spec.ts`.
+      capturedDeliveryAddressId: null,
+      capturedDeliveryAddressText: null,
     });
     // AC-16 — `lastChangedAt` is what dates the drift statement the frame draws ("Cancelled on
     // 24 Aug", `F0SpRx.png`). It travels as UTC ISO 8601 with a `Z`, not with the session's own
@@ -500,6 +510,7 @@ const registerReadDraftDriftDataTests = (): void => {
       state: 'cancelled',
       outstandingQuantity: 10,
       lastChangedAt: '2026-08-28T09:15:00.000Z',
+      deliveryAddress: null,
     });
 
     const requantifiedLink = findLink(detail, requantifiedLinkId);

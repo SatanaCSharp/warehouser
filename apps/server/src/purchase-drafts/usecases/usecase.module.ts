@@ -14,6 +14,7 @@ import { RevisePurchaseDraftCommand } from 'purchase-drafts/usecases/commands/re
 import { RevisePurchaseDraftLineCommand } from 'purchase-drafts/usecases/commands/revise-purchase-draft-line.command';
 import { RevisePurchaseDraftLineLinkCommand } from 'purchase-drafts/usecases/commands/revise-purchase-draft-line-link.command';
 import { ListPackagingTypesQuery } from 'purchase-drafts/usecases/queries/list-packaging-types.query';
+import { ListPurchaseDraftLinesQuery } from 'purchase-drafts/usecases/queries/list-purchase-draft-lines.query';
 import { ListPurchaseDraftsQuery } from 'purchase-drafts/usecases/queries/list-purchase-drafts.query';
 import { ReadPurchaseDraftQuery } from 'purchase-drafts/usecases/queries/read-purchase-draft.query';
 import { ArrivalConfirmationRepository } from 'shared/domain/repositories/arrival-confirmation.repository';
@@ -63,6 +64,7 @@ import { PurchaseDraftReadRepository } from 'shared/domain/repositories/purchase
     ConfirmPurchaseDraftArrivalCommand,
     ReadPurchaseDraftQuery,
     ListPurchaseDraftsQuery,
+    ListPurchaseDraftLinesQuery,
   ],
   exports: [
     CreatePurchaseDraftCommand,
@@ -80,6 +82,7 @@ import { PurchaseDraftReadRepository } from 'shared/domain/repositories/purchase
     ConfirmPurchaseDraftArrivalCommand,
     ReadPurchaseDraftQuery,
     ListPurchaseDraftsQuery,
+    ListPurchaseDraftLinesQuery,
   ],
 })
 export class PurchaseDraftsUsecaseModule {}

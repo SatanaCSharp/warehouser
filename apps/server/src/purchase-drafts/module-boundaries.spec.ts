@@ -77,3 +77,22 @@ describe('purchase-drafts usecase module surface (T15)', () => {
     },
   );
 });
+
+// T18 — the by-line read (AC-22) is this module's fifth application-boundary member; its own
+// `it.each` block, following T14/T15's precedent, so a concurrent addition never collides on the
+// same array literal.
+describe('purchase-drafts usecase module surface (T18)', () => {
+  it.each(['ListPurchaseDraftLinesQuery'])(
+    'provides and exports %s from the use-case module',
+    (queryName) => {
+      const source = readUsecaseModuleSource();
+
+      expect(providersBlockOf(source)).toMatch(
+        new RegExp(`\\b${queryName}\\b`, 'u'),
+      );
+      expect(exportsBlockOf(source)).toMatch(
+        new RegExp(`\\b${queryName}\\b`, 'u'),
+      );
+    },
+  );
+});

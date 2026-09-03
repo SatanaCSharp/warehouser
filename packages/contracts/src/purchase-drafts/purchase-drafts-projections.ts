@@ -38,6 +38,11 @@ export const driftSignalKindSchema = z.enum([
   'quantity_changed',
   'needed_by_moved',
   'became_fulfilled',
+  // Address Drift (AC-18): the Customer Order this link names is going to a
+  // different Delivery Address than the one captured at the freeze. Derived on
+  // every read by comparing the two identifiers — never stored — so it stops
+  // reporting the moment the order is redirected back.
+  'delivery_address_changed',
 ]);
 
 // openapi.yaml `DemandSnapshotEntry` — captured once at the freeze, never updated (AC-16).
