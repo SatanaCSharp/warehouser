@@ -70,7 +70,7 @@
       "id": "T6",
       "title": "Build the customers domain: value objects, predicates, error factories, mappers and CustomerAddressBookService",
       "layer": "domain",
-      "deps": ["T4"],
+      "deps": ["T4", "T7"],
       "acs": ["AC-02", "AC-03", "AC-05", "AC-06b", "AC-07"],
       "dod": "Unit tests cover the blank-name and blank-address rules, name availability across active and Inactive alike, the last-active-address condition, Main-address membership and the reassignment CustomerAddressBookService performs when the current Main one is deactivated; the directory imports no NestJS, HTTP or TypeORM symbol, and CustomerAddressBookService is registered on the UsecaseModule and not exported.",
       "files_hint": [

@@ -2,7 +2,7 @@
 id: T6
 title: 'Build the customers domain: value objects, predicates, error factories, mappers and CustomerAddressBookService'
 layer: 'domain'
-deps: [T4]
+deps: [T4, T7]
 acs: ['AC-02', 'AC-03', 'AC-05', 'AC-06b', 'AC-07']
 files_hint:
   - 'apps/server/src/customers/domain/'
@@ -21,6 +21,18 @@ Customer and Delivery Address carry one cohesive invariant set — a name unique
 ## What
 
 Create `apps/server/src/customers/domain/`: value objects for the customer name, Delivery Address text and access notes; predicates for a blank name, a blank address, name availability, the last-active-address condition and Main-address membership; named error factories for a taken customer name, an unavailable Customer or address, a cross-Customer address, an Inactive address and the last-active-address refusal; mappers to the shared persistence entities; and `CustomerAddressBookService` for the operations more than one command needs, including the Main reassignment of AC-06b.
+
+## Dependency correction (found during implementation)
+
+This task's Definition of Done requires `CustomerAddressBookService` to be an `@Injectable()`
+registered on the usecase module, and its only collaborator is `CustomerAddressBookRepository` —
+which **T7** builds. `tasks.json` originally gave T6 and T7 the same single dependency (`T4`) and no
+edge between them, so the two were schedulable in parallel while one needed the other's output. The
+edge `T6 → T7` was added to `tasks.json`, to this frontmatter, and to the tracker.
+
+Everything not needing that collaborator (the value objects, predicates, error factories, mappers
+and all five address-book rules) is implemented as pure exported functions and fully tested; only
+the dependency-injection wrapper and its module registration wait on T7.
 
 ## Definition of Done
 
