@@ -173,7 +173,19 @@ export class PurchaseDraftAssemblyRepository {
         orderedQuantity: line.orderedQuantity,
         packagingTypeId: line.packagingTypeId ?? null,
         valueAddingNote: line.valueAddingNote ?? null,
+        // Every line is composed Via Warehouse — the column's own default and the behaviour every
+        // line had before this release (AC-13). Setting a line's Delivery Mode and its destination
+        // arrives with T15, and the freeze and the ending with T16 and T17.
+        deliveryMode: 'via_warehouse',
+        customerDeliveryAddressId: null,
+        frozenDeliveryAddressText: null,
+        frozenAccessNotes: null,
+        frozenCustomerName: null,
         receivedQuantity: null,
+        endingQuantity: null,
+        endingKind: null,
+        endingRecordedByUserId: null,
+        endingRecordedAt: null,
         createdAt: input.createdAt,
         updatedAt: input.createdAt,
       };

@@ -17,8 +17,23 @@ export class CustomerOrderEntity {
   @Column('uuid', { name: 'item_id' })
   itemId!: string;
 
-  @Column('text', { name: 'customer_name' })
-  customerName!: string;
+  // The Customer this demand names, and the one of that Customer's Delivery Addresses it is going to
+  // (AC-11, `data-model.md` §`customer_orders`). `chk_customer_orders_customer_identity` admits
+  // exactly two shapes: a Customer with one of its addresses and no typed name, or a typed name with
+  // neither — which is why all three columns are nullable and none of them is nullable
+  // independently.
+  @Column('uuid', { name: 'customer_id', nullable: true })
+  customerId!: string | null;
+
+  @Column('uuid', { name: 'customer_delivery_address_id', nullable: true })
+  customerDeliveryAddressId!: string | null;
+
+  // The typed-name column only, since this release (AC-11a, AC-24). An order naming a Customer reads
+  // that name live from `customers` and carries none here, which is what makes correcting a
+  // Customer's name change every order that names it without rewriting a row (AC-03b). Every order
+  // `ordering` shipped keeps its typed name untouched.
+  @Column('text', { name: 'customer_name', nullable: true })
+  customerName!: string | null;
 
   @Column('integer')
   quantity!: number;

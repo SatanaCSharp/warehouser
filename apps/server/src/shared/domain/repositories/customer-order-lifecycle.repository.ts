@@ -72,6 +72,10 @@ export class CustomerOrderLifecycleRepository {
       id: input.id,
       warehouseId: input.warehouseId,
       itemId: input.itemId,
+      // A Customer Order recorded by typed name names no Customer and no Delivery Address; the
+      // customer-naming shape arrives with T12 (`chk_customer_orders_customer_identity`).
+      customerId: null,
+      customerDeliveryAddressId: null,
       customerName: input.customerName,
       quantity: input.quantity,
       outstandingQuantity: input.outstandingQuantity,

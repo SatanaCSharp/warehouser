@@ -6,6 +6,8 @@ import { getRepositoryToken, TypeOrmModule } from '@nestjs/typeorm';
 import { DomainModule } from 'shared/domain/domain.module';
 import { AccountEntity } from 'shared/domain/entities/account.entity';
 import { ArrivalAllocationEntity } from 'shared/domain/entities/arrival-allocation.entity';
+import { CustomerEntity } from 'shared/domain/entities/customer.entity';
+import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
 import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
 import { DemandSnapshotEntryEntity } from 'shared/domain/entities/demand-snapshot-entry.entity';
 import { ItemEntity } from 'shared/domain/entities/item.entity';
@@ -83,6 +85,31 @@ describe('DomainModule', () => {
     expect(typeOrmFeatureModule?.providers).toEqual(
       expect.arrayContaining(
         orderingEntities.map(
+          (entity): unknown =>
+            expect.objectContaining({
+              provide: String(getRepositoryToken(entity)),
+            }) as unknown,
+        ),
+      ),
+    );
+  });
+
+  it('registers every delivery-addresses shared entity with TypeORM (T4 AC-01, AC-04)', () => {
+    const deliveryAddressEntities = [
+      CustomerEntity,
+      CustomerDeliveryAddressEntity,
+    ];
+    const imports = Reflect.getMetadata(
+      MODULE_METADATA.IMPORTS,
+      DomainModule,
+    ) as Array<{ module?: unknown; providers?: unknown[] }>;
+    const typeOrmFeatureModule = imports.find(
+      (importedModule) => importedModule.module === TypeOrmModule,
+    );
+
+    expect(typeOrmFeatureModule?.providers).toEqual(
+      expect.arrayContaining(
+        deliveryAddressEntities.map(
           (entity): unknown =>
             expect.objectContaining({
               provide: String(getRepositoryToken(entity)),

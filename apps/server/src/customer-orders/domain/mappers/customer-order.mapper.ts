@@ -29,7 +29,12 @@ export const toCustomerOrder = (
 ): CustomerOrder => ({
   id: entity.id,
   itemId: entity.itemId,
-  customerName: entity.customerName,
+  // `customer_name` is nullable since the delivery-addresses migration, because an order naming a
+  // Customer reads that name live from `customers` and carries none of its own (AC-11a). No write
+  // path produces that shape yet — T12 records it and widens this boundary field together with the
+  // `@warehouser/contracts` `CustomerOrder` schema behind it — so every row reachable here carries
+  // its typed name and the value travels through unchanged.
+  customerName: entity.customerName as string,
   quantity: entity.quantity,
   outstandingQuantity: entity.outstandingQuantity,
   neededBy: entity.neededBy,

@@ -35,6 +35,21 @@ Extend `record-customer-order` and `amend-customer-order` to accept an optional 
 - [ ] `DemandAllocationService` is unchanged.
 - [ ] lint + vet clean.
 
+## Precondition inherited from T4
+
+`apps/server/src/customer-orders/domain/mappers/customer-order.mapper.ts` currently narrows a
+nullable column with `entity.customerName as string`. Migration `02` dropped `NOT NULL` from
+`customer_orders.customer_name`, so `CustomerOrderEntity.customerName` is `string | null`, but the
+server's own boundary type `CustomerOrder` and the `@warehouser/contracts` schema behind it both
+still promise a non-empty string. No write path can produce a null yet, so the cast is unreachable
+today — T12 is the task that makes it reachable.
+
+**T12 must remove that cast** in the same change that records the customer-naming shape, widening
+`CustomerOrder.customerName` to `string | null` and resolving the one compile error this produces
+at `apps/server/src/customer-orders/rest/controllers/customer-orders.controller.ts:41`, together
+with the contract field it feeds. Verified 2026-09-03: widening the boundary type produces exactly
+that one error and no other, so the change is contained to the controller and the contract.
+
 ## Notes
 
 **Hard rule** ([spec.md §6.1](../spec.md) abuse cases): redirection reaches the order and never the frozen delivery mode or Delivery Address of any linked line. AC-11b's drift _reporting_ is T18; this task only makes the redirection that causes it.
