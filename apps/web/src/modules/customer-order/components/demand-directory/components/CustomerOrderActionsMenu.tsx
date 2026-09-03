@@ -2,6 +2,7 @@ import { Button, Dropdown, Label } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 
 import { useCustomerOrderActions } from 'modules/customer-order/hooks/projections/useCustomerOrderActions';
+import { customerOrderDisplayName } from 'modules/customer-order/utils/customer-order-identity';
 import { KebabIcon } from 'shared/icons';
 
 import type { CustomerOrder } from '@warehouser/contracts/customer-orders';
@@ -35,7 +36,7 @@ export const CustomerOrderActionsMenu = ({
 }: CustomerOrderActionsMenuProps): ReactNode => {
   const { t } = useTranslation('customer-order');
   const label = t('demand.customerOrder.actions', {
-    customerName: order.customerName,
+    customerName: customerOrderDisplayName(order),
   });
   const actions = useCustomerOrderActions(order, { onAmend, onCancel });
 

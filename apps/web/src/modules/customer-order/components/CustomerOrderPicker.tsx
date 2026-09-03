@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
+import { customerOrderDisplayName } from 'modules/customer-order/utils/customer-order-identity';
 import { FormSelectField } from 'shared/components/FormSelectField';
 import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
 
@@ -47,7 +48,7 @@ export const CustomerOrderPicker = ({
   const options = customerOrders.map((order) => ({
     id: order.id,
     label: t('picker.optionLabel', {
-      customerName: order.customerName,
+      customerName: customerOrderDisplayName(order),
       quantity: format.quantity(order.outstandingQuantity),
       neededBy: format.calendarDate(order.neededBy),
     }),

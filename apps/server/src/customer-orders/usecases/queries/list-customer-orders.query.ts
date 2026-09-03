@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import type { CustomerOrder } from 'customer-orders/domain/mappers/customer-order.mapper';
-import { toCustomerOrder } from 'customer-orders/domain/mappers/customer-order.mapper';
+import type { CustomerOrderProjection } from 'customer-orders/domain/mappers/customer-order-projection.mapper';
+import {
+  toIdentifiedCustomerOrder,
+  toRedactedCustomerOrder,
+} from 'customer-orders/domain/mappers/customer-order-projection.mapper';
+import { readsCustomerIdentity } from 'customer-orders/domain/predicates/customer-order.predicates';
+import { map } from 'lodash';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import type { ListCustomerOrdersFilter } from 'shared/domain/repositories/customer-order-lifecycle.repository';
 import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository';
@@ -11,6 +16,14 @@ import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/cus
 // read from `ListUnfulfilledCustomerOrdersForItemQuery` and
 // `ListLinkableCustomerOrdersForItemQuery`: those two answer a specific destination's question and
 // force `state: 'unfulfilled'` with a required Item, while this one answers the endpoint itself.
+//
+// AC-09a — **what the response carries is decided here**, from the observed Permissions the guard
+// resolved onto the principal. The handler declares `@ObservedPermission(CUSTOMERS:WATCH)`, which
+// can neither admit nor deny the request (ADR 0001); this query reads the granted subset and issues
+// the read whose statement selects only what that actor may see. The redacted form is built by
+// **not selecting** the withheld columns rather than by fetching them and dropping them afterwards
+// (server-request-authorization.md § "Consume the observed set"), so widening a mapping downstream
+// cannot put a customer name on the wire.
 //
 // Ordering is the contract's — "ordered by needed-by date then creation time" — asked for
 // explicitly at the repository so the two existing callers keep the creation ordering they read.
@@ -24,14 +37,25 @@ export class ListCustomerOrdersQuery {
   async execute(
     currentUser: AccessCurrentUser,
     filter: ListCustomerOrdersFilter = {},
-  ): Promise<CustomerOrder[]> {
-    const orders =
-      await this.customerOrderLifecycleRepository.listCustomerOrders(
+  ): Promise<CustomerOrderProjection[]> {
+    if (!readsCustomerIdentity(currentUser.observedPermissionIds)) {
+      const redacted =
+        await this.customerOrderLifecycleRepository.listRedactedCustomerOrders(
+          currentUser.warehouseId,
+          filter,
+          'needed_by',
+        );
+
+      return map(redacted, toRedactedCustomerOrder);
+    }
+
+    const identified =
+      await this.customerOrderLifecycleRepository.listIdentifiedCustomerOrders(
         currentUser.warehouseId,
         filter,
         'needed_by',
       );
 
-    return orders.map(toCustomerOrder);
+    return map(identified, toIdentifiedCustomerOrder);
   }
 }

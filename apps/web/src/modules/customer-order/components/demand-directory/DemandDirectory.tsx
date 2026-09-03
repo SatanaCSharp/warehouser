@@ -13,6 +13,7 @@ import { DemandEmptyState } from 'modules/customer-order/components/demand-direc
 import { DemandSearchField } from 'modules/customer-order/components/demand-directory/components/DemandSearchField';
 import { DemandTable } from 'modules/customer-order/components/demand-directory/components/DemandTable';
 import { RecordDemandAction } from 'modules/customer-order/components/demand-directory/components/RecordDemandAction';
+import { customerOrderDisplayName } from 'modules/customer-order/utils/customer-order-identity';
 import { matchesDemandQuery } from 'modules/customer-order/utils/demand-search';
 import { ActionDialogHost } from 'shared/components/ActionDialogHost';
 import { ArchivedWarehouseChip } from 'shared/components/ArchivedWarehouseChip';
@@ -105,7 +106,7 @@ export const DemandDirectory = ({
     (order: CustomerOrder) =>
     (input: CustomerOrderAmend): Promise<MutationResult> =>
       amendCustomerOrder({
-        customerName: order.customerName,
+        customerName: customerOrderDisplayName(order),
         warehouseId: warehouseId ?? '',
         customerOrderId: order.id,
         input,
@@ -115,7 +116,7 @@ export const DemandDirectory = ({
     (order: CustomerOrder) =>
     (input: CustomerOrderCancellation): Promise<MutationResult> =>
       cancelCustomerOrder({
-        customerName: order.customerName,
+        customerName: customerOrderDisplayName(order),
         warehouseId: warehouseId ?? '',
         customerOrderId: order.id,
         input,

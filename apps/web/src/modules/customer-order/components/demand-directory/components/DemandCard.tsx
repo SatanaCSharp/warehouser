@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { CoverageChips } from 'modules/customer-order/components/demand-directory/components/CoverageChips';
 import { CustomerOrderActionsMenu } from 'modules/customer-order/components/demand-directory/components/CustomerOrderActionsMenu';
 import { DemandUrgencyChip } from 'modules/customer-order/components/demand-directory/components/DemandUrgencyChip';
+import { customerOrderDisplayName } from 'modules/customer-order/utils/customer-order-identity';
 import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
 
 import type {
@@ -150,7 +151,7 @@ export const DemandCard = ({
                         >
                           <div>
                             <p className="font-semibold">
-                              {order.customerName}
+                              {customerOrderDisplayName(order)}
                             </p>
                             <p className="text-sm text-muted">
                               {t('demand.card.customerOrder', {

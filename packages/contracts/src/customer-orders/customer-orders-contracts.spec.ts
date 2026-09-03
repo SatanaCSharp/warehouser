@@ -6,6 +6,8 @@ import {
   customerOrderCancellationSchema,
   customerOrderCreateSchema,
   customerOrderListQuerySchema,
+  customerOrderRedactedSchema,
+  customerOrderRedirectSchema,
   customerOrderSchema,
   customerOrderStateSchema,
   demandCoverageSchema,
@@ -25,10 +27,21 @@ import {
 const id = (suffix: number): string =>
   `00000000-0000-4000-8000-${suffix.toString().padStart(12, '0')}`;
 
+// openapi.yaml `CustomerOrderIdentified` — an order **naming a Customer**: the name is read live
+// through `customer` and `customerName` is `null`, which is what makes correcting a Customer's name
+// change every order that names it without rewriting a row (AC-03b, AC-11a).
 const validCustomerOrder = {
   id: id(201),
   itemId: id(101),
-  customerName: 'Test Customer North',
+  customer: { id: id(501), name: 'Test Customer North' },
+  customerName: null,
+  destination: {
+    deliveryAddressId: id(601),
+    addressText: 'Test Address 1, Test City',
+    accessNotes: 'Gate code on the intercom; deliveries 09:00-17:00',
+    isMain: true,
+    deactivatedAt: null,
+  },
   quantity: 100,
   outstandingQuantity: 100,
   neededBy: '2026-09-04',
@@ -126,6 +139,115 @@ describe('customer-orders contracts', () => {
       expect(customerOrderStateSchema.parse('cancelled')).toBe('cancelled');
       expect(customerOrderStateSchema.safeParse('discarded').success).toBe(
         false,
+      );
+    });
+  });
+
+  // T13/AC-09a — the two forms openapi.yaml `CustomerOrder` models as `oneOf`, and the reason it
+  // models both: the redacted form **omits** `customer`, `customerName` and `destination` rather
+  // than nulling them, so a redaction failure fails contract validation on the way out instead of
+  // reaching a screen (sad.md §7, ADR 0001).
+  describe('CustomerOrder redaction (openapi.yaml `CustomerOrderRedacted`) — AC-09a, AC-24', () => {
+    const redactedCustomerOrder = {
+      id: id(201),
+      itemId: id(101),
+      quantity: 100,
+      outstandingQuantity: 100,
+      neededBy: '2026-09-04',
+      state: 'unfulfilled',
+      cancellationReason: null,
+      recordedByUserId: id(1),
+      cancelledByUserId: null,
+      cancelledAt: null,
+      createdAt: '2026-08-10T08:00:00.000Z',
+      updatedAt: '2026-08-10T08:00:00.000Z',
+    };
+
+    // AC-24 — an order recorded by typing a customer name reads and counts exactly as one naming a
+    // Customer; it carries that name and **no** destination, and that absence is what tells the
+    // member which kind of row they are looking at.
+    const typedNameCustomerOrder = {
+      ...redactedCustomerOrder,
+      customer: null,
+      customerName: 'Test Customer South',
+      destination: null,
+    };
+
+    it('validates the identified form, both kinds of row, and the redacted form', () => {
+      expect(customerOrderSchema.safeParse(validCustomerOrder).success).toBe(
+        true,
+      );
+      expect(
+        customerOrderSchema.safeParse(typedNameCustomerOrder).success,
+      ).toBe(true);
+      expect(customerOrderSchema.safeParse(redactedCustomerOrder).success).toBe(
+        true,
+      );
+    });
+
+    // The property the whole mechanism rests on. A projection that nulled the fields instead of
+    // omitting them would look redacted and be a contract violation, and — worse — would be one
+    // edit away from carrying the value instead of the `null`.
+    it('refuses a redacted order that nulls the identity instead of omitting it (AC-09a)', () => {
+      expect(
+        customerOrderSchema.safeParse({
+          ...redactedCustomerOrder,
+          customer: null,
+          customerName: null,
+          destination: null,
+        }).success,
+      ).toBe(false);
+    });
+
+    // Half-redaction is refused in both directions: the identified form requires all three
+    // properties, and the redacted form admits none of them. There is no shape in between.
+    it.each(['customer', 'customerName', 'destination'] as const)(
+      'refuses an order that keeps only %s (AC-09a)',
+      (property) => {
+        expect(
+          customerOrderSchema.safeParse({
+            ...redactedCustomerOrder,
+            [property]: typedNameCustomerOrder[property],
+          }).success,
+        ).toBe(false);
+        expect(
+          customerOrderSchema.safeParse(
+            Object.fromEntries(
+              Object.entries(validCustomerOrder).filter(
+                ([key]) => key !== property,
+              ),
+            ),
+          ).success,
+        ).toBe(false);
+      },
+    );
+
+    // spec.md §6.1 "Customer disclosure through a count" — a count answers "does this exist" as
+    // effectively as the record does, so the redacted form carries none and cannot be widened with
+    // one without failing here.
+    it('lets no count of Customers or addresses into the redacted form (AC-09a)', () => {
+      expect(
+        customerOrderSchema.safeParse({
+          ...redactedCustomerOrder,
+          customerCount: 3,
+        }).success,
+      ).toBe(false);
+      expect(
+        Object.keys(customerOrderRedactedSchema.parse(redactedCustomerOrder)),
+      ).toEqual(Object.keys(redactedCustomerOrder));
+    });
+
+    // AC-09a — the redacted form is exactly the identified one minus the three identity properties.
+    // Asserted rather than assumed: a field the member's own Permissions do admit that went missing
+    // from the redacted form would be a read they lost, which the criterion forbids as plainly as it
+    // forbids the disclosure.
+    it('returns everything the member’s own Permissions admit, and only that (AC-09a)', () => {
+      expect(Object.keys(customerOrderRedactedSchema.shape).sort()).toEqual(
+        Object.keys(validCustomerOrder)
+          .filter(
+            (key) => !['customer', 'customerName', 'destination'].includes(key),
+          )
+          .sort(),
       );
     });
   });
@@ -319,6 +441,92 @@ describe('customer-orders contracts', () => {
   // and read-only" (openapi.yaml info; `DemandLine` "never a stored record and never an input to
   // any endpoint"). Every request schema of this subpath is strict, so submitting a derived value
   // is refused rather than silently ignored.
+  // AC-11/AC-11a — `chk_customer_orders_customer_identity` as a payload rule.
+  describe('CustomerOrderCreate names one customer identity — AC-11, AC-11a, AC-11c', () => {
+    it('accepts a Customer with a stated address, a Customer with none, and a typed name', () => {
+      expect(
+        customerOrderCreateSchema.safeParse({
+          itemId: id(101),
+          customerId: id(501),
+          customerDeliveryAddressId: id(601),
+          quantity: 100,
+          neededBy: '2026-09-04',
+        }).success,
+      ).toBe(true);
+      expect(
+        customerOrderCreateSchema.safeParse({
+          itemId: id(101),
+          customerId: id(501),
+          quantity: 100,
+          neededBy: '2026-09-04',
+        }).success,
+      ).toBe(true);
+      expect(
+        customerOrderCreateSchema.safeParse({
+          itemId: id(101),
+          customerName: 'Test Customer South',
+          quantity: 100,
+          neededBy: '2026-09-04',
+        }).success,
+      ).toBe(true);
+    });
+
+    it('refuses naming both a Customer and a typed name, or neither', () => {
+      expect(
+        customerOrderCreateSchema.safeParse({
+          itemId: id(101),
+          customerId: id(501),
+          customerName: 'Test Customer South',
+          quantity: 100,
+          neededBy: '2026-09-04',
+        }).success,
+      ).toBe(false);
+      expect(
+        customerOrderCreateSchema.safeParse({
+          itemId: id(101),
+          quantity: 100,
+          neededBy: '2026-09-04',
+        }).success,
+      ).toBe(false);
+    });
+
+    // AC-11a — a typed-name order names no address at all, so an address without a Customer is not
+    // a shape the payload admits.
+    it('refuses a Delivery Address on an order that names no Customer (AC-11a)', () => {
+      expect(
+        customerOrderCreateSchema.safeParse({
+          itemId: id(101),
+          customerName: 'Test Customer South',
+          customerDeliveryAddressId: id(601),
+          quantity: 100,
+          neededBy: '2026-09-04',
+        }).success,
+      ).toBe(false);
+    });
+  });
+
+  // AC-11c — the redirection states one address and nothing else. The Customer is deliberately not
+  // an input: serving a different customer means recording a new Customer Order.
+  describe('CustomerOrderRedirect (openapi.yaml `CustomerOrderRedirect`) — AC-11b, AC-11c', () => {
+    it('requires exactly the address the order is now going to', () => {
+      expect(
+        customerOrderRedirectSchema.parse({
+          customerDeliveryAddressId: id(601),
+        }),
+      ).toEqual({ customerDeliveryAddressId: id(601) });
+      expect(customerOrderRedirectSchema.safeParse({}).success).toBe(false);
+    });
+
+    it('refuses a Customer, so a redirection can never move an order to another customer', () => {
+      expect(
+        customerOrderRedirectSchema.safeParse({
+          customerDeliveryAddressId: id(601),
+          customerId: id(502),
+        }).success,
+      ).toBe(false);
+    });
+  });
+
   describe('no request schema accepts a derived value', () => {
     it.each([
       ['outstandingQuantity', 100],

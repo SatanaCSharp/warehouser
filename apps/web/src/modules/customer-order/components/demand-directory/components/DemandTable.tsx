@@ -13,6 +13,7 @@ import { DemandNeededByCell } from 'modules/customer-order/components/demand-dir
 import { DemandOnHandCell } from 'modules/customer-order/components/demand-directory/components/DemandOnHandCell';
 import { DemandOutstandingCell } from 'modules/customer-order/components/demand-directory/components/DemandOutstandingCell';
 import { useUnfulfilledCustomerOrdersByItem } from 'modules/customer-order/hooks/queries/useUnfulfilledCustomerOrdersByItem';
+import { customerOrderDisplayName } from 'modules/customer-order/utils/customer-order-identity';
 import { CornerDownRightIcon } from 'shared/icons';
 
 import type { Selection } from '@heroui/react';
@@ -95,11 +96,15 @@ export const DemandTable = ({
   const onExpandedChange = (keys: Selection): void => setExpandedKeys(keys);
 
   const renderCustomerOrderRow = (order: CustomerOrder): ReactElement => (
-    <Table.Row id={order.id} key={order.id} textValue={order.customerName}>
-      <Table.Cell className="pl-12" textValue={order.customerName}>
+    <Table.Row
+      id={order.id}
+      key={order.id}
+      textValue={customerOrderDisplayName(order)}
+    >
+      <Table.Cell className="pl-12" textValue={customerOrderDisplayName(order)}>
         <span className="inline-flex items-center gap-2">
           <CornerDownRightIcon />
-          {order.customerName}
+          {customerOrderDisplayName(order)}
         </span>
       </Table.Cell>
       <Table.Cell>

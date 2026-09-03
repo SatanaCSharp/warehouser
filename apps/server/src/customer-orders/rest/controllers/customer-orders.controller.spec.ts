@@ -9,6 +9,7 @@ import {
 import { PermissionId } from '@warehouser/shared-types/enums';
 import { CustomerOrdersController } from 'customer-orders/rest/controllers/customer-orders.controller';
 import { READ_TOLERANT_KEY } from 'shared/access/archived-tolerant-read.decorator';
+import { OBSERVED_PERMISSION_KEY } from 'shared/decorators/observed-permission.decorator';
 import { REQUIRED_PERMISSION_KEY } from 'shared/decorators/required-permission.decorator';
 import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
 import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
@@ -45,6 +46,15 @@ describe('CustomerOrdersController', () => {
       RequestMethod.POST,
       ':customerOrderId/cancellation',
     ],
+    // AC-11b/AC-11c — redirection is its own sub-resource, not a field on the amendment: its rules
+    // are its own and a shared payload would let the amendment's validation stand in for them
+    // (openapi.yaml `redirectCustomerOrder`, sad.md §7). `PUT`, because redirecting to the address
+    // the order is already going to changes nothing.
+    [
+      'redirectCustomerOrder',
+      RequestMethod.PUT,
+      ':customerOrderId/delivery-address',
+    ],
   ] as const)('%s is served as %s %s', (handlerName, httpMethod, path) => {
     expect(Reflect.getMetadata(METHOD_METADATA, method(handlerName))).toBe(
       httpMethod,
@@ -80,6 +90,11 @@ describe('CustomerOrdersController', () => {
       PermissionId.CUSTOMER_ORDERS_CANCEL,
       [SessionAuthGuard, WarehouseAccessGuard, WriteRateLimitGuard],
     ],
+    [
+      'redirectCustomerOrder',
+      PermissionId.CUSTOMER_ORDERS_UPDATE,
+      [SessionAuthGuard, WarehouseAccessGuard, WriteRateLimitGuard],
+    ],
   ] as const)(
     '%s declares exactly one Permission and its guard chain in order',
     (handlerName, permission, guards) => {
@@ -92,12 +107,52 @@ describe('CustomerOrdersController', () => {
     },
   );
 
+  // T13/AC-09a — **every** handler declares `CUSTOMERS:WATCH` observed beside its one required
+  // Permission, because every one of them answers with openapi.yaml `CustomerOrder`, whose
+  // identified form carries a customer name, a Delivery Address and its access notes. A surface
+  // that can carry identity and does not declare the Permission governing it is exactly the silent
+  // failure sad.md §11 calls "the largest and least visible part of this feature".
+  //
+  // The cancellation is included although this feature otherwise leaves it untouched: what decides
+  // the declaration is the response schema, not whether the operation changed.
+  it.each([
+    'listCustomerOrders',
+    'recordCustomerOrder',
+    'amendCustomerOrder',
+    'cancelCustomerOrder',
+    'redirectCustomerOrder',
+  ] as const)(
+    '%s declares CUSTOMERS:WATCH observed (AC-09a, ADR 0001)',
+    (handlerName) => {
+      expect(
+        Reflect.getMetadata(OBSERVED_PERMISSION_KEY, method(handlerName)),
+      ).toEqual([PermissionId.CUSTOMERS_WATCH]);
+    },
+  );
+
+  // ADR 0001 — the two declarations are separate metadata keys precisely so one can never be
+  // mistaken for the other. `CUSTOMERS:WATCH` required on any of these handlers would **deny**
+  // AC-09a's member the read or the write their own Permissions admit, which is the failure this
+  // whole mechanism exists to avoid; it is asserted rather than left to naming.
+  it.each([
+    'listCustomerOrders',
+    'recordCustomerOrder',
+    'amendCustomerOrder',
+    'cancelCustomerOrder',
+    'redirectCustomerOrder',
+  ] as const)('%s never requires CUSTOMERS:WATCH (AC-09a)', (handlerName) => {
+    expect(
+      Reflect.getMetadata(REQUIRED_PERMISSION_KEY, method(handlerName)),
+    ).not.toContain(PermissionId.CUSTOMERS_WATCH);
+  });
+
   // AC-23 — reads tolerate an archived Warehouse; mutations do not.
   it.each([
     ['listCustomerOrders', true],
     ['recordCustomerOrder', undefined],
     ['amendCustomerOrder', undefined],
     ['cancelCustomerOrder', undefined],
+    ['redirectCustomerOrder', undefined],
   ] as const)(
     '%s declares archived tolerance %s (AC-23)',
     (handlerName, tolerant) => {
@@ -114,6 +169,7 @@ describe('CustomerOrdersController', () => {
     ['recordCustomerOrder', true],
     ['amendCustomerOrder', true],
     ['cancelCustomerOrder', true],
+    ['redirectCustomerOrder', true],
   ] as const)(
     '%s declares write-rate-limit metadata %s (T4)',
     (handlerName, rateLimited) => {

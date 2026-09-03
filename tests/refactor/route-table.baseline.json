@@ -131,6 +131,17 @@
     "dto": "CustomerOrderCancellationDto"
   },
   {
+    "method": "PUT",
+    "path": "/api/v1/warehouses/:warehouseId/customer-orders/:customerOrderId/delivery-address",
+    "guards": [
+      "SessionAuthGuard",
+      "WarehouseAccessGuard",
+      "WriteRateLimitGuard"
+    ],
+    "permission": "RequiredPermission(PermissionId.CUSTOMER_ORDERS_UPDATE)",
+    "dto": "CustomerOrderRedirectDto"
+  },
+  {
     "method": "GET",
     "path": "/api/v1/warehouses/:warehouseId/customers",
     "guards": ["SessionAuthGuard", "WarehouseAccessGuard"],

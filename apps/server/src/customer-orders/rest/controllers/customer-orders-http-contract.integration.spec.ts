@@ -12,6 +12,8 @@ import { AUTH_SESSION_COOKIE } from 'auth/rest/auth-cookie';
 import { ZodValidationPipe } from 'nestjs-zod';
 import dataSource from 'shared/database/data-source';
 import { AccountEntity } from 'shared/domain/entities/account.entity';
+import { CustomerEntity } from 'shared/domain/entities/customer.entity';
+import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
 import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
 import { ItemEntity } from 'shared/domain/entities/item.entity';
 import { PermissionEntity } from 'shared/domain/entities/permission.entity';
@@ -26,6 +28,7 @@ import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
 import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
 import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 import { GlobalHttpExceptionFilter } from 'shared/errors/global-http-exception.filter';
+import { z } from 'zod';
 
 // Fixed clock for every seeded row, mirroring `items-http-contract.integration.spec.ts`:
 // `chk_warehouses_archival_order` rejects `archivedAt < createdAt`, so seeding and archival share
@@ -52,6 +55,10 @@ const otherWarehouseRoleId = '00000000-0000-4000-8000-000000000802';
 const deniedRoleId = '00000000-0000-4000-8000-000000000803';
 
 const CUSTOMER_ORDERS_WATCH = 'CUSTOMER_ORDERS:WATCH';
+// T13/AC-09a — the Permission every Customer Order route declares **observed**. It is never
+// required by any of them: an actor holding only the `CUSTOMER_ORDERS:*` Permission of the
+// operation is admitted exactly as before and reads the redacted form.
+const CUSTOMERS_WATCH = 'CUSTOMERS:WATCH';
 const CUSTOMER_ORDERS_CREATE = 'CUSTOMER_ORDERS:CREATE';
 const CUSTOMER_ORDERS_UPDATE = 'CUSTOMER_ORDERS:UPDATE';
 const CUSTOMER_ORDERS_CANCEL = 'CUSTOMER_ORDERS:CANCEL';
@@ -95,7 +102,7 @@ describe('customer-orders HTTP contract', () => {
 
   afterEach(async () => {
     await dataSource.query(
-      'TRUNCATE arrival_allocations, purchase_draft_demand_snapshots, purchase_draft_line_links, purchase_draft_lines, purchase_drafts, item_stock_adjustments, customer_orders, items, warehouse_memberships, role_permissions, roles, warehouses, workspaces, sessions, users, accounts, permissions CASCADE',
+      'TRUNCATE arrival_allocations, purchase_draft_demand_snapshots, purchase_draft_line_links, purchase_draft_lines, purchase_drafts, item_stock_adjustments, customer_orders, customer_delivery_addresses, customers, items, warehouse_memberships, role_permissions, roles, warehouses, workspaces, sessions, users, accounts, permissions CASCADE',
     );
   });
 
@@ -303,6 +310,60 @@ describe('customer-orders HTTP contract', () => {
     const userId = randomUUID();
     await seedIdentity(userId, `recorder.${userId}@example.test`);
     return userId;
+  };
+
+  /** A Customer of the acting Warehouse with one active Main Delivery Address — the destination
+   * AC-11 records demand against, and the row the identified projection joins its live name from. */
+  const seedCustomerWithMainAddress = async (
+    name: string,
+  ): Promise<{
+    customerId: string;
+    deliveryAddressId: string;
+    secondDeliveryAddressId: string;
+  }> => {
+    const customerId = randomUUID();
+    const deliveryAddressId = randomUUID();
+    const secondDeliveryAddressId = randomUUID();
+    const recordedByUserId = await seedRecorder();
+
+    await dataSource.manager.getRepository(CustomerEntity).insert({
+      id: customerId,
+      warehouseId,
+      name,
+      deactivatedAt: null,
+      recordedByUserId,
+      createdAt: seededAt,
+      updatedAt: seededAt,
+    });
+    await dataSource.manager
+      .getRepository(CustomerDeliveryAddressEntity)
+      .insert([
+        {
+          id: deliveryAddressId,
+          customerId,
+          warehouseId,
+          addressText: 'Test Address 1, Test City',
+          accessNotes: 'Gate code on the intercom; deliveries 09:00-17:00',
+          isMain: true,
+          deactivatedAt: null,
+          createdAt: seededAt,
+          updatedAt: seededAt,
+        },
+        // AC-11b — the second active address a redirection moves an outstanding order to.
+        {
+          id: secondDeliveryAddressId,
+          customerId,
+          warehouseId,
+          addressText: 'Test Address 2, Test City',
+          accessNotes: null,
+          isMain: false,
+          deactivatedAt: null,
+          createdAt: seededAt,
+          updatedAt: seededAt,
+        },
+      ]);
+
+    return { customerId, deliveryAddressId, secondDeliveryAddressId };
   };
 
   const seedCustomerOrder = async (
@@ -773,7 +834,6 @@ describe('customer-orders HTTP contract', () => {
       expect(body).toMatchObject({
         id: expect.any(String),
         itemId,
-        customerName: 'Test Customer North',
         quantity: 100,
         outstandingQuantity: 100,
         neededBy,
@@ -784,11 +844,21 @@ describe('customer-orders HTTP contract', () => {
         cancelledAt: null,
         createdAt: expect.any(String),
       });
-      // `toMatchObject` above cannot see an *extra* field, and openapi.yaml `CustomerOrder` is
-      // `additionalProperties: false` and carries no `warehouseId` — "the Warehouse is the
-      // request's, never a field the caller reads back". Parsing the live body through the strict
-      // shared schema is what holds the wire response to the contract rather than to this test's
-      // expectations.
+      // T13/AC-09a — this actor holds `CUSTOMER_ORDERS:CREATE` and **not** `CUSTOMERS:WATCH`, so
+      // the order they just recorded comes back with the name they typed onto it withheld: the
+      // property is absent, not null, and nothing else they are entitled to has changed. The
+      // withholding is asserted over the serialized body rather than over one property, because a
+      // `null`, an empty string or a nested survivor would all pass a property check.
+      expect(JSON.stringify(body)).not.toContain('Test Customer North');
+      expect(body).not.toHaveProperty('customerName');
+      expect(body).not.toHaveProperty('customer');
+      expect(body).not.toHaveProperty('destination');
+      // `toMatchObject` above cannot see an *extra* field, and both forms of openapi.yaml
+      // `CustomerOrder` are `additionalProperties: false` and carry no `warehouseId` — "the
+      // Warehouse is the request's, never a field the caller reads back". Parsing the live body
+      // through the strict shared schema is what holds the wire response to the contract rather
+      // than to this test's expectations, and it is what makes a half-redacted response — one that
+      // nulled the identity instead of omitting it — a failure here.
       expect(() => customerOrderSchema.parse(body)).not.toThrow();
     });
 
@@ -957,6 +1027,224 @@ describe('customer-orders HTTP contract', () => {
   });
 
   // -- PATCH /customer-orders/:id -- amend (AC-19, AC-23) --------------------------------------
+
+  // -- POST /customer-orders -- the customer identity a recorded order carries (AC-09a, AC-11) --
+
+  describe('POST /api/v1/warehouses/:warehouseId/customer-orders — customer identity', () => {
+    // T13/AC-11a/AC-24 — the same request by an actor who **does** hold the observed Permission.
+    // Both bodies validate against the one `CustomerOrder` contract, which is what "both forms are
+    // modelled deliberately" means in practice (sad.md §7, ADR 0001).
+    it('returns the typed customer name to an actor holding CUSTOMERS:WATCH (AC-11a, AC-24)', async () => {
+      await seedWarehouses();
+      const itemId = await seedItem({ sku: 'TEST-SKU-0001' });
+      const actor = await seedActor([CUSTOMER_ORDERS_CREATE, CUSTOMERS_WATCH]);
+      const neededBy = calendarDaysFromToday(30);
+
+      const { status, body } = await request(
+        'POST',
+        `/api/v1/warehouses/${warehouseId}/customer-orders`,
+        actor.cookie,
+        {
+          itemId,
+          customerName: 'Test Customer North',
+          quantity: 100,
+          neededBy,
+        },
+      );
+
+      expect(status).toBe(201);
+      expect(body).toMatchObject({
+        itemId,
+        // AC-11a — a typed name names **no** Customer and no Delivery Address, and that absence is
+        // what tells the member which kind of row they are looking at.
+        customer: null,
+        customerName: 'Test Customer North',
+        destination: null,
+        quantity: 100,
+        outstandingQuantity: 100,
+        state: 'unfulfilled',
+      });
+      expect(() => customerOrderSchema.parse(body)).not.toThrow();
+    });
+
+    // T13/AC-11/AC-24 — demand recorded **against a Customer**, with no address stated, takes that
+    // Customer's current Main one. The response reads the Customer's name live and carries the
+    // address it is going to with its access notes, which is the identified form of the contract
+    // exercised over real SQL: the two joins of `listIdentifiedCustomerOrders` are what produce it.
+    it('records demand against a Customer and returns it with the Main address it is going to (AC-11)', async () => {
+      await seedWarehouses();
+      const itemId = await seedItem({ sku: 'TEST-SKU-0002' });
+      const { customerId, deliveryAddressId } =
+        await seedCustomerWithMainAddress('Test Customer North');
+      const actor = await seedActor([CUSTOMER_ORDERS_CREATE, CUSTOMERS_WATCH]);
+
+      const { status, body } = await request(
+        'POST',
+        `/api/v1/warehouses/${warehouseId}/customer-orders`,
+        actor.cookie,
+        {
+          itemId,
+          customerId,
+          quantity: 100,
+          neededBy: calendarDaysFromToday(30),
+        },
+      );
+
+      expect(status).toBe(201);
+      expect(body).toMatchObject({
+        itemId,
+        customer: { id: customerId, name: 'Test Customer North' },
+        // AC-03b — the name is read live from the Customer, so the order carries none of its own.
+        customerName: null,
+        destination: {
+          deliveryAddressId,
+          addressText: 'Test Address 1, Test City',
+          accessNotes: 'Gate code on the intercom; deliveries 09:00-17:00',
+          isMain: true,
+          deactivatedAt: null,
+        },
+        quantity: 100,
+        outstandingQuantity: 100,
+        state: 'unfulfilled',
+      });
+      expect(() => customerOrderSchema.parse(body)).not.toThrow();
+    });
+
+    // T13/AC-09a — the same order, read by a member of the same Warehouse who holds
+    // `CUSTOMER_ORDERS:WATCH` and **not** `CUSTOMERS:WATCH`. This is the criterion's member and the
+    // case sad.md §11 calls the one that "leaks silently and forever": the Customer's name, the
+    // address it is going to and the gate code beside it must not be in the response at all, while
+    // the quantity, the date, the Item and the state are returned unchanged.
+    it('withholds the Customer, the address and the access notes from a member without CUSTOMERS:WATCH (AC-09a)', async () => {
+      await seedWarehouses();
+      const itemId = await seedItem({ sku: 'TEST-SKU-0003' });
+      const { customerId } = await seedCustomerWithMainAddress(
+        'Test Customer North',
+      );
+      const recorder = await seedActor([
+        CUSTOMER_ORDERS_CREATE,
+        CUSTOMERS_WATCH,
+      ]);
+      const neededBy = calendarDaysFromToday(30);
+
+      const recorded = await request(
+        'POST',
+        `/api/v1/warehouses/${warehouseId}/customer-orders`,
+        recorder.cookie,
+        { itemId, customerId, quantity: 100, neededBy },
+      );
+      expect(recorded.status).toBe(201);
+
+      const watcher = await seedPermissionlessActor();
+      await grantPermissions(deniedRoleId, [CUSTOMER_ORDERS_WATCH]);
+
+      const { status, body } = await request(
+        'GET',
+        `/api/v1/warehouses/${warehouseId}/customer-orders`,
+        watcher.cookie,
+      );
+
+      expect(status).toBe(200);
+      expect(body).toHaveLength(1);
+
+      // Parsing the live body through the strict shared schema is what holds the wire response to
+      // the contract; the parsed value is what the assertions below read, so a half-redacted body
+      // fails before they run.
+      const [listed] = z.array(customerOrderSchema).parse(body);
+      const serialized = JSON.stringify(body);
+      expect(serialized).not.toContain('Test Customer North');
+      expect(serialized).not.toContain('Test Address 1, Test City');
+      expect(serialized).not.toContain('Gate code on the intercom');
+      expect(serialized).not.toContain(customerId);
+      expect(listed).not.toHaveProperty('customer');
+      expect(listed).not.toHaveProperty('customerName');
+      expect(listed).not.toHaveProperty('destination');
+      // AC-09a's closing clause — everything this member's own Permissions do admit is unchanged.
+      expect(listed).toMatchObject({
+        itemId,
+        quantity: 100,
+        outstandingQuantity: 100,
+        neededBy,
+        state: 'unfulfilled',
+      });
+    });
+  });
+
+  // -- PUT /customer-orders/{id}/delivery-address -- redirection (AC-11b, AC-11c) --------------
+
+  describe('PUT /api/v1/warehouses/:warehouseId/customer-orders/:customerOrderId/delivery-address', () => {
+    // AC-11b — the order goes to the stated address and keeps naming the same Customer. Redirection
+    // is its own sub-resource, so this is also the proof the route is served at all.
+    it('redirects an outstanding order to another active address of the same Customer (AC-11b)', async () => {
+      await seedWarehouses();
+      const itemId = await seedItem({ sku: 'TEST-SKU-0004' });
+      const { customerId, secondDeliveryAddressId } =
+        await seedCustomerWithMainAddress('Test Customer North');
+      const actor = await seedActor([
+        CUSTOMER_ORDERS_CREATE,
+        CUSTOMER_ORDERS_UPDATE,
+        CUSTOMERS_WATCH,
+      ]);
+
+      const recorded = await request(
+        'POST',
+        `/api/v1/warehouses/${warehouseId}/customer-orders`,
+        actor.cookie,
+        {
+          itemId,
+          customerId,
+          quantity: 100,
+          neededBy: calendarDaysFromToday(30),
+        },
+      );
+      expect(recorded.status).toBe(201);
+      const created = customerOrderSchema.parse(recorded.body);
+
+      const { status, body } = await request(
+        'PUT',
+        `/api/v1/warehouses/${warehouseId}/customer-orders/${created.id}/delivery-address`,
+        actor.cookie,
+        { customerDeliveryAddressId: secondDeliveryAddressId },
+      );
+
+      expect(status).toBe(200);
+      expect(body).toMatchObject({
+        id: created.id,
+        customer: { id: customerId, name: 'Test Customer North' },
+        destination: {
+          deliveryAddressId: secondDeliveryAddressId,
+          addressText: 'Test Address 2, Test City',
+          accessNotes: null,
+          isMain: false,
+          deactivatedAt: null,
+        },
+        state: 'unfulfilled',
+      });
+      expect(() => customerOrderSchema.parse(body)).not.toThrow();
+    });
+
+    it('denies a redirection to an actor without CUSTOMER_ORDERS:UPDATE', async () => {
+      await seedWarehouses();
+      const itemId = await seedItem({ sku: 'TEST-SKU-0005' });
+      const { secondDeliveryAddressId } = await seedCustomerWithMainAddress(
+        'Test Customer North',
+      );
+      const recorderId = await seedRecorder();
+      const customerOrderId = await seedCustomerOrder(itemId, {
+        recordedByUserId: recorderId,
+      });
+      const actor = await seedActor([CUSTOMER_ORDERS_WATCH]);
+
+      const { status } = await request(
+        'PUT',
+        `/api/v1/warehouses/${warehouseId}/customer-orders/${customerOrderId}/delivery-address`,
+        actor.cookie,
+        { customerDeliveryAddressId: secondDeliveryAddressId },
+      );
+
+      expect(status).toBe(403);
+    });
+  });
 
   describe('PATCH /api/v1/warehouses/:warehouseId/customer-orders/:customerOrderId', () => {
     it('records the change, recalculates the Outstanding Quantity and reflects it in the consolidated demand immediately (AC-19)', async () => {

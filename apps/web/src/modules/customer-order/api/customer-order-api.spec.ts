@@ -20,7 +20,13 @@ const itemsUrl = `/api/v1/warehouses/${warehouseId}/items`;
 const customerOrder = {
   id: '00000000-0000-4000-8000-000000000301',
   itemId: '00000000-0000-4000-8000-000000000240',
+  // A typed-name order names no Customer and therefore no Delivery Address:
+  // `customerOrderIdentifiedSchema` carries `chk_customer_orders_customer_identity`
+  // as a refinement, so a Customer and a typed name are mutually exclusive and
+  // one of them is required (AC-11a, AC-24).
+  customer: null,
   customerName: 'Nordwind Logistik',
+  destination: null,
   quantity: 500,
   outstandingQuantity: 500,
   neededBy: '2026-09-01',

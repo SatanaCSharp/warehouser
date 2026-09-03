@@ -10,6 +10,7 @@ import { ListCustomerOrdersQuery } from 'customer-orders/usecases/queries/list-c
 import { ListLinkableCustomerOrdersForItemQuery } from 'customer-orders/usecases/queries/list-linkable-customer-orders-for-item.query';
 import { ListUnfulfilledCustomerOrdersForItemQuery } from 'customer-orders/usecases/queries/list-unfulfilled-customer-orders-for-item.query';
 import { ReadConsolidatedDemandQuery } from 'customer-orders/usecases/queries/read-consolidated-demand.query';
+import { ReadCustomerOrderQuery } from 'customer-orders/usecases/queries/read-customer-order.query';
 import { ConsolidatedDemandRepository } from 'shared/domain/repositories/consolidated-demand.repository';
 import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository';
 import { CustomerDirectoryRepository } from 'shared/domain/repositories/customer-directory.repository';
@@ -38,6 +39,7 @@ const customerOrderCommands = [
 const customerOrderQueries = [
   ReadConsolidatedDemandQuery,
   ListCustomerOrdersQuery,
+  ReadCustomerOrderQuery,
   ListUnfulfilledCustomerOrdersForItemQuery,
   ListLinkableCustomerOrdersForItemQuery,
 ];
