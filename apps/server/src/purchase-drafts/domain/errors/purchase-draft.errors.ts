@@ -114,11 +114,16 @@ export const purchaseDraftInvalidDeliveryDestinationError =
 // disagreeing link is named and none is withdrawn: which one to drop is the member's decision.
 // openapi.yaml `disagreeingLinks` example fixes the entry shape below. Every value in it is a
 // record of this Warehouse's own draft, which the actor is already reading.
+//
+// `customerOrderDeliveryAddressId` is nullable because a Customer Order recorded by typed name goes
+// to no Delivery Address at all (`chk_customer_orders_customer_identity`), and such an order cannot
+// agree with a directly-shipped line: there is nowhere for the supplier to ship to. Naming it as
+// `null` says exactly that, where a non-nullable field could only misreport it.
 export type DisagreeingDeliveryLink = {
   purchaseDraftLineLinkId: string;
   customerOrderId: string;
   lineDeliveryAddressId: string;
-  customerOrderDeliveryAddressId: string;
+  customerOrderDeliveryAddressId: string | null;
 };
 
 export const purchaseDraftDeliveryAddressDisagreementError = (
@@ -128,6 +133,25 @@ export const purchaseDraftDeliveryAddressDisagreementError = (
     ErrorCode.PURCHASE_DRAFTS_DELIVERY_ADDRESS_DISAGREEMENT,
     {
       disagreeingLinks,
+    },
+  );
+
+// AC-15 — the same rule at the moment **one** link is made, which openapi.yaml gives its own
+// `details` shape: `PurchaseDraftLinkConflict` `addressDisagreement` carries
+// `{ lineDeliveryAddressId, customerOrderDeliveryAddressId }` and enumerates nothing, because a
+// single link is being refused rather than a set being named. It is a second named factory against
+// the same code rather than a bending of the one above: the code identifies the rule, and the two
+// moments the contract documents state it about different things — one prospective link here, every
+// link on the line there (AC-15a).
+export const purchaseDraftLinkDeliveryAddressDisagreementError = (
+  lineDeliveryAddressId: string,
+  customerOrderDeliveryAddressId: string | null,
+): ApplicationError =>
+  new ApplicationError(
+    ErrorCode.PURCHASE_DRAFTS_DELIVERY_ADDRESS_DISAGREEMENT,
+    {
+      lineDeliveryAddressId,
+      customerOrderDeliveryAddressId,
     },
   );
 

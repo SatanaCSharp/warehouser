@@ -4,11 +4,16 @@ import dataSource from 'shared/database/data-source';
 import { DbTransactionService } from 'shared/database/db-transaction.service';
 import { DbTransactionContext } from 'shared/database/db-transaction-context.service';
 import { AccountEntity } from 'shared/domain/entities/account.entity';
+import { CustomerEntity } from 'shared/domain/entities/customer.entity';
+import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
 import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
 import { ItemEntity } from 'shared/domain/entities/item.entity';
 import type { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
 import { PurchaseDraftEntity as PurchaseDraftEntityClass } from 'shared/domain/entities/purchase-draft.entity';
-import type { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity';
+import type {
+  PurchaseDraftLineDeliveryMode,
+  PurchaseDraftLineEntity,
+} from 'shared/domain/entities/purchase-draft-line.entity';
 import type { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity';
 import { UserEntity } from 'shared/domain/entities/user.entity';
 import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
@@ -20,7 +25,11 @@ import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 // than a half-applied change (`ManagerTransferRepository.assignRole`,
 // `RoleLifecycleRepository.updateMemberRole` are the established boolean-return precedent for this
 // exact shape). AC-10, AC-10a, AC-11a and AC-12 are proven here at the persistence boundary.
-import type { AssemblyWriteOutcome } from 'shared/domain/repositories/purchase-draft-assembly.repository';
+import type {
+  AssemblyWriteOutcome,
+  LineDestinationRead,
+  LinkedOrderDestination,
+} from 'shared/domain/repositories/purchase-draft-assembly.repository';
 import { PurchaseDraftAssemblyRepository } from 'shared/domain/repositories/purchase-draft-assembly.repository';
 import {
   buildWarehouse,
@@ -61,6 +70,8 @@ interface AddLineInput {
   readonly orderedQuantity: number;
   readonly packagingTypeId?: string | null;
   readonly valueAddingNote?: string | null;
+  readonly deliveryMode: PurchaseDraftLineDeliveryMode;
+  readonly customerDeliveryAddressId: string | null;
 }
 
 interface UpdateLineInput {
@@ -68,6 +79,8 @@ interface UpdateLineInput {
   readonly orderedQuantity?: number;
   readonly packagingTypeId?: string | null;
   readonly valueAddingNote?: string | null;
+  readonly deliveryMode?: PurchaseDraftLineDeliveryMode;
+  readonly customerDeliveryAddressId?: string | null;
 }
 
 interface AddLinkInput {
@@ -116,6 +129,14 @@ interface PurchaseDraftAssemblyRepositoryContract {
     statedQuantity: number,
   ): Promise<AssemblyWriteOutcome>;
   removeLink(scope: WriteScope, linkId: string): Promise<AssemblyWriteOutcome>;
+  findLineDestination(
+    scope: WriteScope,
+    purchaseDraftLineId: string,
+  ): Promise<LineDestinationRead | null>;
+  findLinkedOrderDestinations(
+    scope: WriteScope,
+    purchaseDraftLineId: string,
+  ): Promise<LinkedOrderDestination[]>;
   findLines(purchaseDraftId: string): Promise<PurchaseDraftLineEntity[]>;
   findLinks(
     purchaseDraftLineId: string,
@@ -210,6 +231,36 @@ const seedCustomerOrder = async (
   return id;
 };
 
+// One Customer of this Warehouse with one Delivery Address, which is what a Direct to Customer line
+// names and what a Customer Order is going to (AC-04, AC-11).
+const seedCustomerAddress = async (
+  seeded: Seeded,
+): Promise<{ customerId: string; customerDeliveryAddressId: string }> => {
+  const customerId = randomUUID();
+  const customerDeliveryAddressId = randomUUID();
+  await dataSource.manager.getRepository(CustomerEntity).insert({
+    id: customerId,
+    warehouseId: seeded.warehouseId,
+    name: `Test Customer ${customerId}`,
+    deactivatedAt: null,
+    recordedByUserId: seeded.userId,
+    createdAt: now,
+    updatedAt: now,
+  });
+  await dataSource.manager.getRepository(CustomerDeliveryAddressEntity).insert({
+    id: customerDeliveryAddressId,
+    customerId,
+    warehouseId: seeded.warehouseId,
+    addressText: 'Test Address 1, Test City',
+    accessNotes: null,
+    isMain: true,
+    deactivatedAt: null,
+    createdAt: now,
+    updatedAt: now,
+  });
+  return { customerId, customerDeliveryAddressId };
+};
+
 // Seeds a draft directly at a chosen state, bypassing the assembly write path entirely — this is
 // what proves the guard lives in the write's own `WHERE` clause rather than in a read-then-write
 // check the test could otherwise not distinguish from the real thing.
@@ -257,7 +308,7 @@ describe('PurchaseDraftAssemblyRepository', () => {
 
   afterEach(async () => {
     await dataSource.query(
-      'TRUNCATE arrival_allocations, purchase_draft_demand_snapshots, purchase_draft_line_links, purchase_draft_lines, purchase_drafts, item_stock_adjustments, customer_orders, items, warehouse_memberships, roles, warehouses, workspaces, sessions, users, accounts CASCADE',
+      'TRUNCATE arrival_allocations, purchase_draft_demand_snapshots, purchase_draft_line_links, purchase_draft_lines, purchase_drafts, item_stock_adjustments, customer_orders, customer_delivery_addresses, customers, items, warehouse_memberships, roles, warehouses, workspaces, sessions, users, accounts CASCADE',
     );
   });
 
@@ -372,6 +423,8 @@ describe('PurchaseDraftAssemblyRepository', () => {
         warehouseId: seeded.warehouseId,
         itemId: seeded.itemId,
         orderedQuantity: 40,
+        deliveryMode: 'via_warehouse',
+        customerDeliveryAddressId: null,
       }),
     );
 
@@ -422,6 +475,8 @@ describe('PurchaseDraftAssemblyRepository', () => {
         warehouseId: seeded.warehouseId,
         itemId: seeded.itemId,
         orderedQuantity: 40,
+        deliveryMode: 'via_warehouse',
+        customerDeliveryAddressId: null,
       }),
     );
     expect(added).toBe('applied');
@@ -484,6 +539,8 @@ describe('PurchaseDraftAssemblyRepository', () => {
           warehouseId: seeded.warehouseId,
           itemId: seeded.itemId,
           orderedQuantity: 10,
+          deliveryMode: 'via_warehouse',
+          customerDeliveryAddressId: null,
         }),
       );
 
@@ -581,6 +638,8 @@ describe('PurchaseDraftAssemblyRepository', () => {
         warehouseId: seeded.warehouseId,
         itemId: seeded.itemId,
         orderedQuantity: 50,
+        deliveryMode: 'via_warehouse',
+        customerDeliveryAddressId: null,
       }),
     );
     await transactions.executeInTransaction({}, () =>
@@ -590,6 +649,8 @@ describe('PurchaseDraftAssemblyRepository', () => {
         warehouseId: seeded.warehouseId,
         itemId: seeded.itemId,
         orderedQuantity: 50,
+        deliveryMode: 'via_warehouse',
+        customerDeliveryAddressId: null,
       }),
     );
 
@@ -646,6 +707,8 @@ describe('PurchaseDraftAssemblyRepository', () => {
         orderedQuantity: 40,
         packagingTypeId: 'cartons',
         valueAddingNote: 'Bundle in tens',
+        deliveryMode: 'via_warehouse',
+        customerDeliveryAddressId: null,
       }),
     );
     await transactions.executeInTransaction({}, () =>
@@ -657,6 +720,8 @@ describe('PurchaseDraftAssemblyRepository', () => {
         orderedQuantity: 150,
         packagingTypeId: 'cable_coil',
         valueAddingNote: 'Translated sticker on each coil',
+        deliveryMode: 'via_warehouse',
+        customerDeliveryAddressId: null,
       }),
     );
 
@@ -689,6 +754,8 @@ describe('PurchaseDraftAssemblyRepository', () => {
         warehouseId: seeded.warehouseId,
         itemId: otherWarehouse.itemId,
         orderedQuantity: 10,
+        deliveryMode: 'via_warehouse',
+        customerDeliveryAddressId: null,
       }),
     );
 
@@ -711,6 +778,8 @@ describe('PurchaseDraftAssemblyRepository', () => {
         warehouseId: seeded.warehouseId,
         itemId: seeded.itemId,
         orderedQuantity: 10,
+        deliveryMode: 'via_warehouse',
+        customerDeliveryAddressId: null,
       }),
     );
 
@@ -769,6 +838,8 @@ describe('PurchaseDraftAssemblyRepository', () => {
           warehouseId: attacker.warehouseId,
           itemId: attacker.itemId,
           orderedQuantity: 10,
+          deliveryMode: 'via_warehouse',
+          customerDeliveryAddressId: null,
         }),
       );
       const lineUpdated = await transactions.executeInTransaction({}, () =>
@@ -813,6 +884,151 @@ describe('PurchaseDraftAssemblyRepository', () => {
       const links = await repository.findLinks(lineId);
       expect(links).toHaveLength(1);
       expect(links[0]).toMatchObject({ id: linkId, statedQuantity: 20 });
+    });
+  });
+
+  // AC-13/AC-15/AC-15a — the two reads the direct-line agreement is decided from, at the boundary
+  // that unit doubles cannot stand in for: `findLinkedOrderDestinations` is a raw-aliased join, so
+  // a renamed column or a mistyped alias is invisible everywhere except here.
+  describe('the destination reads (AC-13, AC-15, AC-15a)', () => {
+    it('reports where a line travels once its destination is written', async () => {
+      const seeded = await seedWarehouse();
+      const { customerDeliveryAddressId } = await seedCustomerAddress(seeded);
+      const draftId = await seedDraft(seeded);
+      const lineId = randomUUID();
+
+      await transactions.executeInTransaction({}, () =>
+        repository.addLine({
+          id: lineId,
+          purchaseDraftId: draftId,
+          warehouseId: seeded.warehouseId,
+          itemId: seeded.itemId,
+          orderedQuantity: 10,
+          deliveryMode: 'via_warehouse',
+          customerDeliveryAddressId: null,
+        }),
+      );
+
+      // Every new line starts Via Warehouse with no address on it (AC-13).
+      expect(
+        await repository.findLineDestination(scope(seeded, draftId), lineId),
+      ).toEqual({
+        deliveryMode: 'via_warehouse',
+        customerDeliveryAddressId: null,
+      });
+
+      await transactions.executeInTransaction({}, () =>
+        repository.updateLine(scope(seeded, draftId), lineId, {
+          deliveryMode: 'direct_to_customer',
+          customerDeliveryAddressId,
+        }),
+      );
+
+      expect(
+        await repository.findLineDestination(scope(seeded, draftId), lineId),
+      ).toEqual({
+        deliveryMode: 'direct_to_customer',
+        customerDeliveryAddressId,
+      });
+      // A line of a draft this Warehouse does not hold resolves to nothing, disclosing nothing
+      // (spec.md §6.1).
+      expect(
+        await repository.findLineDestination(
+          { purchaseDraftId: draftId, warehouseId: randomUUID() },
+          lineId,
+        ),
+      ).toBeNull();
+    });
+
+    it('reports every link on the line with the address its Customer Order is going to, naming a typed-name order as none', async () => {
+      const seeded = await seedWarehouse();
+      const { customerId, customerDeliveryAddressId } =
+        await seedCustomerAddress(seeded);
+      const addressedOrderId = await seedCustomerOrder(seeded, {
+        customerId,
+        customerDeliveryAddressId,
+        customerName: null,
+      });
+      const typedNameOrderId = await seedCustomerOrder(seeded);
+      const draftId = await seedDraft(seeded);
+      const lineId = randomUUID();
+      const otherLineId = randomUUID();
+      const addressedLinkId = randomUUID();
+      const typedNameLinkId = randomUUID();
+
+      await transactions.executeInTransaction({}, async () => {
+        await repository.addLine({
+          id: lineId,
+          purchaseDraftId: draftId,
+          warehouseId: seeded.warehouseId,
+          itemId: seeded.itemId,
+          orderedQuantity: 10,
+          deliveryMode: 'via_warehouse',
+          customerDeliveryAddressId: null,
+        });
+        await repository.addLine({
+          id: otherLineId,
+          purchaseDraftId: draftId,
+          warehouseId: seeded.warehouseId,
+          itemId: seeded.itemId,
+          orderedQuantity: 10,
+          deliveryMode: 'via_warehouse',
+          customerDeliveryAddressId: null,
+        });
+        await repository.addLink({
+          id: addressedLinkId,
+          purchaseDraftLineId: lineId,
+          purchaseDraftId: draftId,
+          warehouseId: seeded.warehouseId,
+          customerOrderId: addressedOrderId,
+          statedQuantity: 4,
+        });
+        await repository.addLink({
+          id: typedNameLinkId,
+          purchaseDraftLineId: lineId,
+          purchaseDraftId: draftId,
+          warehouseId: seeded.warehouseId,
+          customerOrderId: typedNameOrderId,
+          statedQuantity: 6,
+        });
+        // Another line's link is not this line's question.
+        await repository.addLink({
+          id: randomUUID(),
+          purchaseDraftLineId: otherLineId,
+          purchaseDraftId: draftId,
+          warehouseId: seeded.warehouseId,
+          customerOrderId: addressedOrderId,
+          statedQuantity: 1,
+        });
+      });
+
+      expect(
+        await repository.findLinkedOrderDestinations(
+          scope(seeded, draftId),
+          lineId,
+        ),
+      ).toEqual([
+        {
+          purchaseDraftLineLinkId: addressedLinkId,
+          customerOrderId: addressedOrderId,
+          customerOrderDeliveryAddressId: customerDeliveryAddressId,
+        },
+        {
+          purchaseDraftLineLinkId: typedNameLinkId,
+          customerOrderId: typedNameOrderId,
+          // A Customer Order recorded by typed name is going to no Delivery Address at all, which
+          // is reported as such rather than dropped from the set (AC-15a).
+          customerOrderDeliveryAddressId: null,
+        },
+      ]);
+
+      // Scoped to the acting Warehouse exactly as every write is.
+      expect(
+        await repository.findLinkedOrderDestinations(
+          { purchaseDraftId: draftId, warehouseId: randomUUID() },
+          lineId,
+        ),
+      ).toEqual([]);
     });
   });
 });

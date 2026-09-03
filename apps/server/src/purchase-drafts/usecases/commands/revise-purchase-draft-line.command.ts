@@ -1,26 +1,69 @@
 import { Injectable } from '@nestjs/common';
+import { assert, assertFail } from '@warehouser/utils/asserts';
+import omit from 'lodash/omit';
+import {
+  purchaseDraftDeliveryAddressDisagreementError,
+  purchaseDraftInvalidDeliveryDestinationError,
+} from 'purchase-drafts/domain/errors/purchase-draft.errors';
+import { directLineNamesACustomerAddress } from 'purchase-drafts/domain/predicates/purchase-draft-delivery.predicates';
+import type { LineDeliveryDestination } from 'purchase-drafts/domain/services/purchase-draft-assembly.service';
 import {
   assertApplied,
   pickStated,
   PurchaseDraftAssemblyService,
 } from 'purchase-drafts/domain/services/purchase-draft-assembly.service';
+import { DeliveryMode } from 'purchase-drafts/domain/value-objects/delivery-mode';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { PurchaseDraftAssemblyRepository } from 'shared/domain/repositories/purchase-draft-assembly.repository';
 
 /** Only the halves the member actually stated. An absent key leaves that half as it was; an
  * explicit `null` clears it (openapi.yaml `PurchaseDraftLineUpdate`), which is why this cannot
- * collapse `undefined` and `null` into one "unset". */
+ * collapse `undefined` and `null` into one "unset".
+ *
+ * The destination is one property rather than two, because the mode and the address are one
+ * statement: `direct_to_customer` requires an address and `via_warehouse` requires none
+ * (`dependentRequired` in the contract, `chk_purchase_draft_lines_delivery_mode_address` in the
+ * schema). Carrying them as a pair makes "an address with no mode" unrepresentable at this
+ * boundary rather than a case to remember. */
 export interface ReviseLineInput {
   readonly itemId?: string;
   readonly orderedQuantity?: number;
   readonly packagingTypeId?: string | null;
   readonly valueAddingNote?: string | null;
+  readonly destination?: LineDeliveryDestination;
 }
 
-// AC-10a/AC-11/AC-12/AC-13 — revising a line's Item, ordered quantity or Pre-receipt Requirement.
-// The write names the acting Warehouse as well as the draft, so a line of another Warehouse's draft
-// resolves to nothing and is refused exactly as a missing one is (spec.md §6.1).
+// AC-13/AC-14 — what the member said about where the line's goods travel, as the two columns hold
+// it. Coming back to the dock clears the address with the mode, because a Via Warehouse line's
+// destination *is* the Warehouse's own and there is no identifier to keep (AC-13); going Direct to
+// Customer while naming no Customer address is the one way to say "straight to my own site", and it
+// is refused bound to the destination field (AC-14).
+const statedDestination = (
+  destination: LineDeliveryDestination,
+): LineDeliveryDestination => {
+  if (destination.deliveryMode === DeliveryMode.ViaWarehouse) {
+    return {
+      deliveryMode: DeliveryMode.ViaWarehouse,
+      customerDeliveryAddressId: null,
+    };
+  }
+
+  assert(
+    directLineNamesACustomerAddress(
+      destination.deliveryMode,
+      destination.customerDeliveryAddressId,
+    ),
+    purchaseDraftInvalidDeliveryDestinationError(),
+  );
+
+  return destination;
+};
+
+// AC-10a/AC-11/AC-12/AC-13/AC-14/AC-15a — revising a line's Item, ordered quantity, Pre-receipt
+// Requirement or destination. The write names the acting Warehouse as well as the draft, so a line
+// of another Warehouse's draft resolves to nothing and is refused exactly as a missing one is
+// (spec.md §6.1).
 @Injectable()
 export class RevisePurchaseDraftLineCommand {
   constructor(
@@ -35,6 +78,8 @@ export class RevisePurchaseDraftLineCommand {
     purchaseDraftLineId: string,
     changes: ReviseLineInput,
   ): Promise<void> {
+    const scope = { purchaseDraftId, warehouseId: currentUser.warehouseId };
+
     if (changes.itemId !== undefined) {
       await this.assemblyService.assertItemAvailable(
         currentUser,
@@ -45,12 +90,35 @@ export class RevisePurchaseDraftLineCommand {
       changes.packagingTypeId,
     ]);
 
+    const destination =
+      changes.destination === undefined
+        ? undefined
+        : statedDestination(changes.destination);
+
+    // AC-15a — the second of the three moments the agreement is required. The links are read
+    // against the destination the line **would** have, so a revision that would strand them is
+    // refused before anything is written: every disagreement is named and none is withdrawn,
+    // because which link to withdraw is the member's decision. A revision that says nothing about
+    // the destination, and one that brings the line back to the dock, ask nothing (AC-15b).
+    if (destination !== undefined) {
+      const disagreeingLinks = await this.assemblyService.findDisagreeingLinks(
+        scope,
+        purchaseDraftLineId,
+        destination,
+      );
+      if (disagreeingLinks.length > 0) {
+        assertFail(
+          purchaseDraftDeliveryAddressDisagreementError(disagreeingLinks),
+        );
+      }
+    }
+
     // Only the stated halves are forwarded, so an absent key cannot be written as `null` and clear
     // a Pre-receipt Requirement the member never touched (AC-12).
     const outcome = await this.assemblyRepository.updateLine(
-      { purchaseDraftId, warehouseId: currentUser.warehouseId },
+      scope,
       purchaseDraftLineId,
-      pickStated(changes),
+      pickStated({ ...omit(changes, 'destination'), ...destination }),
     );
 
     assertApplied(outcome);

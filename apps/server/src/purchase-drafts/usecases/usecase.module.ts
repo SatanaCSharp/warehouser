@@ -41,6 +41,7 @@ import { PurchaseDraftReadRepository } from 'shared/domain/repositories/purchase
     PurchaseDraftAssemblyRepository,
     PurchaseDraftReadRepository,
     ArrivalConfirmationRepository,
+    // Beside `PurchaseDraftAssemblyRepository`, which it reads the links of a line through (AC-15a),
     // `PurchaseDraftAssemblyService` reaches three further repositories, none of them provided by
     // the `@Global()` `DomainModule`, so each is a local provider here exactly as
     // `PurchaseDraftAssemblyRepository` already is.

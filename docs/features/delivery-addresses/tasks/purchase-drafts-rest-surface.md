@@ -44,6 +44,33 @@ Serve the line-delivery `PATCH`, the readiness `POST`, `GET /purchase-draft-line
 - [ ] `tests/refactor/route-table.spec.mjs` passes and no method-and-path pair is served twice.
 - [ ] lint + vet clean.
 
+## Defect inherited from T15 — a 500 where the contract promises 404/409
+
+`sad.md` §6.7 step 4 requires the line-delivery flow to "prove the address belongs to a Customer of
+the acting Warehouse and is active". **That proof is not implemented.** T15 left it deliberately: it
+enforces AC-12, which is in neither T15's nor T19's declared `acs`, and it needs a new read on
+`CustomerAddressBookRepository`, outside T15's `files_hint`.
+
+Consequence today: naming an unknown or cross-Warehouse Customer Delivery Address on a Direct to
+Customer line reaches `fk_purchase_draft_lines_delivery_address`, and the resulting
+`QueryFailedError` is surfaced by the global filter as a **500**. `revisePurchaseDraftLine` declares
+`404 PurchaseDraftTargetUnavailable` and `409 PurchaseDraftLineDestinationConflict` and no such
+internal failure, so the implementation contradicts its own contract on this path. An Inactive
+address is the same story with no constraint to catch it at all.
+
+**T19 owns closing this** (or an explicit follow-up task, if T19's scope is already full — but it must
+not be left silent). The fix is a Customer-scoped, Warehouse-scoped availability read before the
+write, refusing with the declared codes rather than letting the constraint fire.
+
+## Interface change T15 made that T19 must map
+
+`ReviseLineInput` carries the destination as **one optional property**,
+`destination: { deliveryMode, customerDeliveryAddressId }`, rather than two flat ones — so "an
+address with no mode" is unrepresentable at the use-case boundary, which is the contract's
+`dependentRequired` expressed as a type. The REST DTO must fold the two payload properties into it.
+Setting `via_warehouse` normalizes the address to `null`, per the contract's "setting
+`via_warehouse` clears it".
+
 ## Precondition inherited from T11
 
 T11's Definition of Done includes "the address is readable from the Warehouse-scoped draft and line
