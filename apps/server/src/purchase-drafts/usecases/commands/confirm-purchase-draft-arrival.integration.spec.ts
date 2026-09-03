@@ -220,6 +220,7 @@ const currentUserFor = (seeded: Seeded): AccessCurrentUser => ({
   roleId: randomUUID(),
   roleKind: 'custom',
   permissionId: 'PURCHASE_DRAFTS:RECEIVE',
+  observedPermissionIds: [],
   archived: false,
 });
 

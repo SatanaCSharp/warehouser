@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { uniq } from 'lodash';
 import { getEntityManager } from 'shared/database/db-transaction-context.service';
 import { RolePermissionEntity } from 'shared/domain/entities/role-permission.entity';
 import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
@@ -14,7 +15,13 @@ export interface AccessCurrentUserPersistenceResult {
   readonly permissionId: string;
 }
 
-export interface AccessCurrentUserWithWarehousePersistenceResult extends AccessCurrentUserPersistenceResult {
+export interface AccessGrantsPersistenceResult extends AccessCurrentUserPersistenceResult {
+  /** The subset of the requested observed Permission identifiers the membership's Role grants.
+   * Reported, never enforced: `granted` above stays the only admission signal. */
+  readonly observedPermissionIds: readonly string[];
+}
+
+export interface AccessCurrentUserWithWarehousePersistenceResult extends AccessGrantsPersistenceResult {
   readonly archivedAt: Date | null;
 }
 export interface CurrentAccessPersistenceResult {
@@ -29,10 +36,15 @@ export interface CurrentAccessPersistenceResult {
 export class AccessCurrentUserRepository {
   constructor(private readonly dataSource: DataSource) {}
 
+  /** Resolves the actor's membership in the named Warehouse together with the grants for the
+   * required Permission **and** every declared observed Permission, in the one bounded grant read
+   * this method already issued (AC-09a, ADR 0001). The observed identifiers only widen that read's
+   * identifier list, so the query count is unchanged and independent of how many are declared. */
   async resolveRequiredPermission(
     userId: string,
     warehouseId: string,
     permissionId: string,
+    observedPermissionIds: readonly string[] = [],
   ): Promise<AccessCurrentUserWithWarehousePersistenceResult | null> {
     const manager = getEntityManager(this.dataSource);
     const membership = await manager
@@ -41,16 +53,24 @@ export class AccessCurrentUserRepository {
     if (!membership) {
       return null;
     }
-    const granted = await manager
-      .getRepository(RolePermissionEntity)
-      .existsBy({ roleId: membership.roleId, permissionId });
+    const grants = await manager.getRepository(RolePermissionEntity).find({
+      select: { permissionId: true },
+      where: {
+        roleId: membership.roleId,
+        permissionId: In(uniq([permissionId, ...observedPermissionIds])),
+      },
+    });
+    const grantedIds = new Set(grants.map((grant) => grant.permissionId));
     const warehouse = await manager
       .getRepository(WarehouseEntity)
       .findOneBy({ id: warehouseId });
     return {
       ...membership,
       permissionId,
-      granted,
+      granted: grantedIds.has(permissionId),
+      observedPermissionIds: observedPermissionIds.filter((candidate) =>
+        grantedIds.has(candidate),
+      ),
       archivedAt: warehouse ? warehouse.archivedAt : null,
     };
   }

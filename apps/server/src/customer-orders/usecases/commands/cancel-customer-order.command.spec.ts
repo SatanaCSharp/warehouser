@@ -23,6 +23,7 @@ const currentUser: AccessCurrentUser = {
   roleId: uuid('4'),
   roleKind: 'custom',
   permissionId: 'CUSTOMER_ORDERS:CANCEL',
+  observedPermissionIds: [],
   archived: false,
 };
 

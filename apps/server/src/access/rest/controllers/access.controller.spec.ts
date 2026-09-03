@@ -33,6 +33,7 @@ const request = (permissionId: PermissionId): WarehouseAccessRequest => ({
     roleId: id(3),
     roleKind: 'warehouse_manager',
     permissionId,
+    observedPermissionIds: [],
     archived: false,
   },
 });

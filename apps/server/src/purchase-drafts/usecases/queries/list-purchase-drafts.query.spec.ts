@@ -16,6 +16,7 @@ const currentUser: AccessCurrentUser = {
   roleId: '00000000-0000-4000-8000-000000000004',
   roleKind: 'custom',
   permissionId: 'PURCHASE_DRAFTS:WATCH',
+  observedPermissionIds: [],
   archived: false,
 };
 

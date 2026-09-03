@@ -244,6 +244,7 @@ describe('ChangeMemberPasswordCommand', () => {
     roleId,
     roleKind,
     permissionId: 'USERS:PASSWORD_CHANGE' as const,
+    observedPermissionIds: [],
     archived: false,
   });
 

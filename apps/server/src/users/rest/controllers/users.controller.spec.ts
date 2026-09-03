@@ -31,6 +31,7 @@ const request = (permissionId: PermissionId): WarehouseAccessRequest => ({
     roleId: id(3),
     roleKind: 'custom',
     permissionId,
+    observedPermissionIds: [],
     archived: false,
   },
 });
