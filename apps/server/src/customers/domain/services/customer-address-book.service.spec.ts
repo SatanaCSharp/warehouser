@@ -10,6 +10,7 @@ import type {
 import {
   assertCustomerNameAvailable,
   assertCustomerOfWarehouse,
+  assertCustomerWriteApplied,
   assertDeliveryAddressDeactivatable,
   assertDeliveryAddressUsable,
   CustomerAddressBookService,
@@ -525,4 +526,33 @@ describe('CustomerAddressBookService — deactivateDeliveryAddress (AC-06b, AC-0
       ).deactivateDeliveryAddress(customerId, 'address-main', now),
     ).rejects.toBeInstanceOf(AssertionError);
   });
+});
+
+// data-model.md § "Concurrency, locks and transactions" — "zero affected rows is a typed
+// concurrency refusal, never a silent no-op". The seven conditional writes across `customers`
+// share this one assertion, so the rule is stated once here rather than at each of them.
+describe('assertCustomerWriteApplied', () => {
+  it('accepts a write that moved its row', () => {
+    expect(() => assertCustomerWriteApplied('applied')).not.toThrow();
+  });
+
+  // AC-12 / spec.md §6.1 — a Customer of another Warehouse, a missing Customer, an address of
+  // another Customer and one already in the target state are **one** non-enumerating refusal, so
+  // both outcome spellings produce the same error with no details at all.
+  it.each(['customer-unavailable', 'delivery-address-unavailable'] as const)(
+    'refuses %s as the one non-enumerating outcome',
+    (outcome) => {
+      let raised: ApplicationError | null = null;
+
+      try {
+        assertCustomerWriteApplied(outcome);
+      } catch (error: unknown) {
+        raised = error as ApplicationError;
+      }
+
+      expect(raised).toBeInstanceOf(ApplicationError);
+      expect(raised?.code).toBe(ErrorCode.CUSTOMERS_TARGET_UNAVAILABLE);
+      expect(raised?.details).toBeUndefined();
+    },
+  );
 });

@@ -23,6 +23,7 @@ import type { CustomerEntity } from 'shared/domain/entities/customer.entity';
 import type { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
 import type { DeliveryAddressWriteOutcome } from 'shared/domain/repositories/customer-address-book.repository';
 import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository';
+import type { CustomerWriteOutcome } from 'shared/domain/repositories/customer-directory.repository';
 import { CustomerDirectoryRepository } from 'shared/domain/repositories/customer-directory.repository';
 
 // The Customer identity and Delivery Address book rules that more than one command needs
@@ -150,10 +151,26 @@ export const nextMainDeliveryAddress = (
 };
 
 // data-model.md § "Concurrency, locks and transactions" — "zero affected rows is a typed
-// concurrency refusal, never a silent no-op". Every write below is issued against rows this
-// transaction already holds under `lockDeliveryAddresses`, so a write that affects none is not a
-// member-facing rejection at all: it is a broken invariant, and it stays an `AssertionError` the
-// global filter reports as an internal defect (server-error-handling.md §2, §6).
+// concurrency refusal, never a silent no-op". Every conditional write in `customers` carries the
+// state its transition starts from, so a write that affects no row means the Customer or the
+// Delivery Address is not there to be changed: a Customer of another Warehouse, one that does not
+// exist, an address of another Customer, or one already in the state the transition would move it
+// to. AC-12 / spec.md §6.1 make those **one** non-enumerating refusal, which is why one assertion
+// serves every one of them and no caller composes the error itself.
+//
+// A plain exported function rather than a method: it needs no collaborator at all, so the commands
+// that need only it are not coupled to repositories they never touch (server-architecture.md
+// §Services, "stateless helpers stay module-level").
+export const assertCustomerWriteApplied = (
+  outcome: CustomerWriteOutcome | DeliveryAddressWriteOutcome,
+): void => {
+  assert(outcome === 'applied', customerTargetUnavailableError());
+};
+
+// The same rule where the row is one this transaction **already holds** under
+// `lockDeliveryAddresses`: a write that affects none is then not a member-facing rejection at all,
+// it is a broken invariant, and it stays an `AssertionError` the global filter reports as an
+// internal defect (server-error-handling.md §2, §6).
 const assertWriteApplied = (outcome: DeliveryAddressWriteOutcome): void => {
   assert(
     outcome === 'applied',

@@ -47,6 +47,20 @@ Add the three queries (list the Warehouse's Customers with their active-address 
 - [ ] The route-table baseline is regenerated deliberately and `tests/refactor/route-table.spec.mjs` passes.
 - [ ] lint + vet clean.
 
+## Reading inherited from T9 — confirm before the DTO layer
+
+`CorrectCustomerDeliveryAddressCommand` **permits correcting an Inactive address**. That is read
+from the contract, not assumed: `correctCustomerDeliveryAddress` (PATCH) declares
+`400/401/403/404/409 WarehouseArchived/429/500` and **no** `CustomerDeliveryAddressConflict`, while
+`setMainCustomerDeliveryAddress` does declare it. Verified 2026-09-03 — the contrast is in
+`contracts/openapi.yaml` and reads as deliberate: fixing a typo on an address a Customer Order still
+names is worth doing whether or not that address is still active.
+
+So the command resolves the row from the customer-scoped list itself and refuses only "unavailable";
+it does not call `resolveDeliveryAddress`, which would refuse an Inactive one. **If T10's DTO layer
+expects an inactive-address 409 on PATCH, this is the decision to revisit** — and the contract, not
+the command, is what would need changing.
+
 ## Notes
 
 Shares `tests/refactor/route-table.baseline.json` with T11, T13, T17 and T19 — one lane, regenerated in sequence, **never silenced** ([sad.md §10](../sad.md) gate 1). Controllers call use cases only.

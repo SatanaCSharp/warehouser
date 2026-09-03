@@ -1,9 +1,10 @@
 import { Injectable, Optional } from '@nestjs/common';
-import { assert } from '@warehouser/utils/asserts';
-import { customerTargetUnavailableError } from 'customers/domain/errors/customer.errors';
 import type { Customer } from 'customers/domain/mappers/customer.mapper';
 import { toCustomer } from 'customers/domain/mappers/customer.mapper';
-import { CustomerAddressBookService } from 'customers/domain/services/customer-address-book.service';
+import {
+  assertCustomerWriteApplied,
+  CustomerAddressBookService,
+} from 'customers/domain/services/customer-address-book.service';
 import { CustomerName } from 'customers/domain/value-objects/customer-name';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
@@ -68,10 +69,7 @@ export class CorrectCustomerNameCommand {
       correctedAt,
     );
 
-    // data-model.md § "Concurrency, locks and transactions" — zero affected rows is a typed
-    // refusal, never a silent no-op, and it is the same non-enumerating one the resolution above
-    // raises (spec.md §6.1).
-    assert(outcome === 'applied', customerTargetUnavailableError());
+    assertCustomerWriteApplied(outcome);
 
     // The corrected row as it now stands. Its addresses are read rather than assumed, because the
     // response carries them and the correction leaves every one of them untouched.

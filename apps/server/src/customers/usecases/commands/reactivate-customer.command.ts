@@ -1,9 +1,10 @@
 import { Injectable, Optional } from '@nestjs/common';
-import { assert } from '@warehouser/utils/asserts';
-import { customerTargetUnavailableError } from 'customers/domain/errors/customer.errors';
 import type { Customer } from 'customers/domain/mappers/customer.mapper';
 import { toCustomer } from 'customers/domain/mappers/customer.mapper';
-import { CustomerAddressBookService } from 'customers/domain/services/customer-address-book.service';
+import {
+  assertCustomerWriteApplied,
+  CustomerAddressBookService,
+} from 'customers/domain/services/customer-address-book.service';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository';
@@ -53,7 +54,7 @@ export class ReactivateCustomerCommand {
 
     // Guarded on the Customer being Inactive, so reactivating an active one moves no row and is
     // refused rather than reported as a change that happened.
-    assert(outcome === 'applied', customerTargetUnavailableError());
+    assertCustomerWriteApplied(outcome);
 
     const deliveryAddresses =
       await this.customerAddressBookRepository.listDeliveryAddresses(

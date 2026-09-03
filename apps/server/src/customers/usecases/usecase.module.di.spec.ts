@@ -1,10 +1,15 @@
 import { Global, Injectable, Module } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { CustomerAddressBookService } from 'customers/domain/services/customer-address-book.service';
+import { AddCustomerDeliveryAddressCommand } from 'customers/usecases/commands/add-customer-delivery-address.command';
+import { CorrectCustomerDeliveryAddressCommand } from 'customers/usecases/commands/correct-customer-delivery-address.command';
 import { CorrectCustomerNameCommand } from 'customers/usecases/commands/correct-customer-name.command';
 import { DeactivateCustomerCommand } from 'customers/usecases/commands/deactivate-customer.command';
+import { DeactivateCustomerDeliveryAddressCommand } from 'customers/usecases/commands/deactivate-customer-delivery-address.command';
 import { ReactivateCustomerCommand } from 'customers/usecases/commands/reactivate-customer.command';
+import { ReactivateCustomerDeliveryAddressCommand } from 'customers/usecases/commands/reactivate-customer-delivery-address.command';
 import { RecordCustomerCommand } from 'customers/usecases/commands/record-customer.command';
+import { SetMainCustomerDeliveryAddressCommand } from 'customers/usecases/commands/set-main-customer-delivery-address.command';
 import { CustomersUsecaseModule } from 'customers/usecases/usecase.module';
 import { DataSource } from 'typeorm';
 
@@ -37,8 +42,9 @@ class OutsideConsumer {
 class OutsideModule {}
 
 // The other half of the surface: a consumer outside `customers` reaches the feature through its
-// exported use cases, which is what T10's REST module will do. Injecting all four at once is what
-// proves the *exports* declaration rather than any single command's registration.
+// exported use cases, which is what T10's REST module will do. Injecting all nine at once — the
+// four Customer lifecycle commands and the five address-book ones — is what proves the *exports*
+// declaration rather than any single command's registration.
 @Injectable()
 class OutsideCommandConsumer {
   constructor(
@@ -46,6 +52,11 @@ class OutsideCommandConsumer {
     readonly correctCustomerName: CorrectCustomerNameCommand,
     readonly deactivateCustomer: DeactivateCustomerCommand,
     readonly reactivateCustomer: ReactivateCustomerCommand,
+    readonly addDeliveryAddress: AddCustomerDeliveryAddressCommand,
+    readonly correctDeliveryAddress: CorrectCustomerDeliveryAddressCommand,
+    readonly setMainDeliveryAddress: SetMainCustomerDeliveryAddressCommand,
+    readonly deactivateDeliveryAddress: DeactivateCustomerDeliveryAddressCommand,
+    readonly reactivateDeliveryAddress: ReactivateCustomerDeliveryAddressCommand,
   ) {}
 }
 
@@ -69,11 +80,11 @@ describe('CustomersUsecaseModule Nest DI graph', () => {
     );
   });
 
-  // sad.md §5 — the Customer lifecycle commands **are** the module's public surface, and each one
-  // constructs from the providers this module declares. Compiling the graph is what catches a
-  // constructor parameter Nest cannot resolve — including the `@Optional()` runtime each command
-  // falls back to a default for.
-  it('resolves every Customer lifecycle command for a module outside customers', async () => {
+  // sad.md §5 — the Customer lifecycle and address-book commands **are** the module's public
+  // surface, and each one constructs from the providers this module declares. Compiling the graph
+  // is what catches a constructor parameter Nest cannot resolve — including the `@Optional()`
+  // runtime each command falls back to a default for.
+  it('resolves every Customer command for a module outside customers', async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [TestDataSourceDoubleModule, OutsideCommandModule],
     }).compile();
@@ -88,6 +99,21 @@ describe('CustomersUsecaseModule Nest DI graph', () => {
     );
     expect(consumer.reactivateCustomer).toBeInstanceOf(
       ReactivateCustomerCommand,
+    );
+    expect(consumer.addDeliveryAddress).toBeInstanceOf(
+      AddCustomerDeliveryAddressCommand,
+    );
+    expect(consumer.correctDeliveryAddress).toBeInstanceOf(
+      CorrectCustomerDeliveryAddressCommand,
+    );
+    expect(consumer.setMainDeliveryAddress).toBeInstanceOf(
+      SetMainCustomerDeliveryAddressCommand,
+    );
+    expect(consumer.deactivateDeliveryAddress).toBeInstanceOf(
+      DeactivateCustomerDeliveryAddressCommand,
+    );
+    expect(consumer.reactivateDeliveryAddress).toBeInstanceOf(
+      ReactivateCustomerDeliveryAddressCommand,
     );
   });
 
