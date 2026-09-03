@@ -1,0 +1,277 @@
+<!doctype html>
+<!--
+  Preview evidence - design-ui skill. Review artifact only; never an implementation source.
+
+  Frame:         Delivery Addresses / Demand / Mobile / v1
+  Design source: docs/mockups/app.pen
+  Node ID:       g505i3
+  Viewport:      mobile 390×1786
+  States:        default (one demand card expanded; an order naming a customer, and one recorded by typed name)
+-->
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Delivery addresses · Demand · Mobile</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style type="text/tailwindcss">
+      @theme inline {
+        --color-background: var(--background);
+        --color-background-secondary: var(--background-secondary);
+        --color-foreground: var(--foreground);
+        --color-muted: var(--muted);
+
+        --color-surface: var(--surface);
+        --color-surface-foreground: var(--surface-foreground);
+        --color-surface-secondary: var(--surface-secondary);
+        --color-surface-tertiary: var(--surface-tertiary);
+        --color-overlay: var(--overlay);
+        --color-overlay-foreground: var(--overlay-foreground);
+
+        --color-accent: var(--accent);
+        --color-accent-foreground: var(--accent-foreground);
+        --color-accent-soft: var(--accent-soft);
+        --color-accent-soft-foreground: var(--accent-soft-foreground);
+
+        --color-default: var(--default);
+        --color-default-foreground: var(--default-foreground);
+        --color-default-soft-foreground: var(--default-soft-foreground);
+        --color-success: var(--success);
+        --color-success-foreground: var(--success-foreground);
+        --color-success-soft: var(--success-soft);
+        --color-success-soft-foreground: var(--success-soft-foreground);
+        --color-warning: var(--warning);
+        --color-warning-foreground: var(--warning-foreground);
+        --color-warning-soft: var(--warning-soft);
+        --color-warning-soft-foreground: var(--warning-soft-foreground);
+        --color-danger: var(--danger);
+        --color-danger-foreground: var(--danger-foreground);
+        --color-danger-soft: var(--danger-soft);
+        --color-danger-soft-foreground: var(--danger-soft-foreground);
+
+        --color-border: var(--border);
+        --color-separator: var(--separator);
+        --color-focus: var(--focus);
+        --color-link: var(--link);
+
+        --color-field: var(--field-background);
+        --color-field-foreground: var(--field-foreground);
+        --color-field-placeholder: var(--field-placeholder);
+        --color-field-border: var(--field-border);
+
+        --radius-field: var(--field-radius);
+        --shadow-surface: var(--surface-shadow);
+        --shadow-overlay: var(--overlay-shadow);
+      }
+
+      :root,
+      [data-theme='light'] {
+        color-scheme: light;
+
+        --white: oklch(100% 0 0);
+        --snow: oklch(0.9911 0 0);
+        --eclipse: oklch(0.2103 0.0059 285.89);
+
+        --radius: 0.5rem;
+        --field-radius: calc(var(--radius) * 1.5);
+
+        --background: oklch(0.9702 0 0);
+        --foreground: var(--eclipse);
+        --muted: oklch(0.5517 0.0138 285.94);
+
+        --surface: var(--white);
+        --surface-foreground: var(--foreground);
+        --surface-secondary: oklch(0.9524 0.0013 286.37);
+        --surface-tertiary: oklch(0.9373 0.0013 286.37);
+        --overlay: var(--white);
+        --overlay-foreground: var(--foreground);
+
+        --accent: oklch(0.6204 0.195 253.83);
+        --accent-foreground: var(--snow);
+        --default: oklch(94% 0.001 286.375);
+        --default-foreground: var(--eclipse);
+
+        --success: oklch(0.7329 0.1935 150.81);
+        --success-foreground: var(--eclipse);
+        --warning: oklch(0.7819 0.1585 72.33);
+        --warning-foreground: var(--eclipse);
+        --danger: oklch(0.6532 0.2328 25.74);
+        --danger-foreground: var(--snow);
+
+        --field-background: var(--white);
+        --field-foreground: var(--eclipse);
+        --field-placeholder: var(--muted);
+        --field-border: transparent;
+
+        --border: oklch(90% 0.004 286.32);
+        --separator: oklch(92% 0.004 286.32);
+        --focus: var(--accent);
+        --link: var(--foreground);
+
+        --background-secondary: color-mix(
+          in oklab,
+          var(--background) 96%,
+          var(--foreground) 4%
+        );
+        --accent-soft: color-mix(in oklab, var(--accent) 15%, transparent);
+        --accent-soft-foreground: color-mix(
+          in oklab,
+          var(--accent) 70%,
+          var(--foreground) 30%
+        );
+        --default-soft-foreground: var(--default-foreground);
+        --success-soft: color-mix(in oklab, var(--success) 15%, transparent);
+        --success-soft-foreground: color-mix(
+          in oklab,
+          var(--success) 80%,
+          var(--foreground) 60%
+        );
+        --warning-soft: color-mix(in oklab, var(--warning) 15%, transparent);
+        --warning-soft-foreground: color-mix(
+          in oklab,
+          var(--warning) 80%,
+          var(--foreground) 70%
+        );
+        --danger-soft: color-mix(in oklab, var(--danger) 15%, transparent);
+        --danger-soft-foreground: color-mix(
+          in oklab,
+          var(--danger) 70%,
+          var(--foreground) 40%
+        );
+
+        --surface-shadow:
+          0 2px 4px 0 rgba(0, 0, 0, 0.04), 0 1px 2px 0 rgba(0, 0, 0, 0.06),
+          0 0 1px 0 rgba(0, 0, 0, 0.06);
+        --overlay-shadow:
+          0 2px 8px 0 rgba(0, 0, 0, 0.06), 0 -6px 12px 0 rgba(0, 0, 0, 0.03),
+          0 14px 28px 0 rgba(0, 0, 0, 0.08);
+      }
+
+      [data-theme='dark'] {
+        color-scheme: dark;
+
+        --background: oklch(12% 0.005 285.823);
+        --foreground: var(--snow);
+        --muted: oklch(70.5% 0.015 286.067);
+
+        --surface: oklch(0.2103 0.0059 285.89);
+        --surface-foreground: var(--foreground);
+        --surface-secondary: oklch(0.257 0.0037 286.14);
+        --surface-tertiary: oklch(0.2721 0.0024 247.91);
+        --overlay: oklch(0.2103 0.0059 285.89);
+        --overlay-foreground: var(--foreground);
+
+        --default: oklch(27.4% 0.006 286.033);
+        --default-foreground: var(--snow);
+        --warning: oklch(0.8203 0.1388 76.34);
+        --danger: oklch(0.594 0.1967 24.63);
+
+        --field-background: oklch(0.2103 0.0059 285.89);
+        --field-foreground: var(--foreground);
+
+        --border: oklch(28% 0.006 286.033);
+        --separator: oklch(25% 0.006 286.033);
+
+        --accent-soft: color-mix(in oklab, var(--accent) 12%, transparent);
+        --accent-soft-foreground: color-mix(
+          in oklab,
+          var(--accent) 80%,
+          var(--foreground) 30%
+        );
+        --default-soft-foreground: var(--default-foreground);
+        --danger-soft-foreground: color-mix(
+          in oklab,
+          var(--danger) 80%,
+          var(--foreground) 30%
+        );
+        --warning-soft-foreground: color-mix(
+          in oklab,
+          var(--warning) 80%,
+          var(--foreground) 30%
+        );
+        --success-soft-foreground: color-mix(
+          in oklab,
+          var(--success) 80%,
+          var(--foreground) 30%
+        );
+
+        --surface-shadow: 0 0 0 0 transparent inset;
+        --overlay-shadow: 0 0 1px 0 rgba(255, 255, 255, 0.3) inset;
+      }
+
+    </style>
+  </head>
+
+  <body class="bg-background text-foreground min-h-screen antialiased">
+    <main class="mx-auto w-[390px] max-w-full">
+<div class="flex min-h-full flex-col bg-background">
+  <header class="flex h-[68px] items-center border-b border-border bg-surface px-5">
+    <div class="flex items-center gap-3">
+      <span class="flex size-[34px] items-center justify-center rounded-lg bg-accent text-accent-foreground"><svg class="size-[19px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 8.35V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.35A2 2 0 0 1 3.26 6.5l8-3.2a2 2 0 0 1 1.48 0l8 3.2A2 2 0 0 1 22 8.35Z"/><path d="M6 18h12"/><path d="M6 14h12"/><rect x="6" y="10" width="12" height="12"/></svg></span>
+      <span class="text-lg font-bold tracking-tight text-foreground">Warehouser</span>
+    </div>
+  </header>
+  <div class="flex h-[60px] items-center border-b border-border bg-surface px-5">
+    <span class="flex h-10 w-full items-center gap-2 rounded-field border border-border bg-surface px-3 text-[13px] font-medium text-foreground"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 8.35V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.35A2 2 0 0 1 3.26 6.5l8-3.2a2 2 0 0 1 1.48 0l8 3.2A2 2 0 0 1 22 8.35Z"/><path d="M6 18h12"/><path d="M6 14h12"/><rect x="6" y="10" width="12" height="12"/></svg>Central DC<svg class="size-4 ml-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span>
+  </div>
+  <div class="flex flex-1 flex-col gap-3.5 px-5 py-8">
+<h1 class="text-3xl leading-tight font-bold tracking-tight text-foreground">Demand</h1>
+<p class="text-[13px] leading-relaxed text-muted">One row per item: the total your customers are still waiting for, and every order behind it with the address its goods are going to. An order recorded by typed name carries no address — that absence tells the two kinds apart.</p>
+<span class="flex h-11 w-full items-center gap-2 rounded-field border border-border bg-field px-3"><span class="text-muted"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span><span class="text-sm text-field-placeholder">Search items or SKUs</span></span>
+<button type="button" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-field font-semibold bg-accent text-accent-foreground h-11 px-5 text-[15px] w-full"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>Record demand</button>
+<div class="flex flex-col gap-2.5 rounded-2xl border border-border bg-surface p-3.5">
+  <div class="flex items-start gap-2"><div class="flex min-w-0 flex-1 flex-col gap-0.5"><span class="text-sm font-semibold text-foreground">Pallet wrap, 500mm</span><span class="text-[11px] text-muted">WH-100420 · counted in pieces</span></div><button type="button" aria-label="Actions" class="inline-flex size-7 shrink-0 items-center justify-center rounded-field text-muted"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button></div>
+  <div class="flex items-end gap-4"><div class="flex flex-col"><span class="text-lg font-bold text-foreground">1 240</span><span class="text-[11px] text-muted">pieces outstanding</span></div>
+  <div class="flex flex-col items-end"><span class="text-sm font-semibold text-foreground">60</span><span class="text-[11px] text-muted">on hand</span></div></div>
+  <div class="flex items-center gap-2"><span class="text-xs text-foreground">2 Sep 2026</span><span class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium bg-default text-default-foreground"><span class="size-1.5 rounded-full bg-current opacity-70"></span>in 8 days</span></div>
+  <div class="flex flex-wrap items-center gap-1.5"><span class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium bg-accent-soft text-accent-soft-foreground"><span class="size-1.5 rounded-full bg-current opacity-70"></span>PD-0142 · 800</span><span class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium bg-accent-soft text-accent-soft-foreground"><span class="size-1.5 rounded-full bg-current opacity-70"></span>PD-0141 · 120</span></div><div class="flex items-center gap-1.5 text-[11px] font-medium text-link"><svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>hide the 3 customer orders</div>
+</div>
+<div class="flex flex-col gap-1.5">
+<div class="flex items-center gap-2.5 rounded-field border border-border bg-surface-secondary p-3">
+  <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+    <span class="text-[13px] leading-snug font-semibold text-foreground">Nordwind Logistik GmbH</span>
+    <span class="flex items-center gap-1.5 text-[11px] leading-snug text-muted"><span class="shrink-0 text-muted"><svg class="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg></span>Hafenstraße 14, 20457 Hamburg</span>
+    <span class="text-[11px] leading-snug text-muted">800 of 800 outstanding · by 2 Sep 2026 · unfulfilled</span>
+  </div><button type="button" aria-label="Actions" class="inline-flex size-7 shrink-0 items-center justify-center rounded-field text-muted"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+</div>
+<div class="flex items-center gap-2.5 rounded-field border border-border bg-surface-secondary p-3">
+  <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+    <span class="text-[13px] leading-snug font-semibold text-foreground">Baltic Freight OÜ</span>
+    <span class="flex items-center gap-1.5 text-[11px] leading-snug text-muted"><span class="shrink-0 text-muted"><svg class="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg></span>Sadama 12, 10111 Tallinn, Estonia</span>
+    <span class="text-[11px] leading-snug text-muted">440 of 440 outstanding · by 5 Sep 2026 · unfulfilled</span>
+  </div><button type="button" aria-label="Actions" class="inline-flex size-7 shrink-0 items-center justify-center rounded-field text-muted"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+</div>
+<div class="flex items-center gap-2.5 rounded-field border border-border bg-surface-secondary p-3">
+  <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+    <span class="text-[13px] leading-snug font-semibold text-foreground">Hansa Papier (typed name)</span>
+    <span class="flex items-center gap-1.5 text-[11px] leading-snug text-muted">Recorded by typed name — no delivery address</span>
+    <span class="text-[11px] leading-snug text-muted">300 of 300 outstanding · by 6 Sep 2026 · unfulfilled</span>
+  </div><button type="button" aria-label="Actions" class="inline-flex size-7 shrink-0 items-center justify-center rounded-field text-muted"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+</div>
+</div>
+<div class="flex flex-col gap-2.5 rounded-2xl border border-border bg-surface p-3.5">
+  <div class="flex items-start gap-2"><div class="flex min-w-0 flex-1 flex-col gap-0.5"><span class="text-sm font-semibold text-foreground">Carton 600×400×300</span><span class="text-[11px] text-muted">WH-100733 · counted in pieces · 4 customer orders</span></div><button type="button" aria-label="Actions" class="inline-flex size-7 shrink-0 items-center justify-center rounded-field text-muted"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button></div>
+  <div class="flex items-end gap-4"><div class="flex flex-col"><span class="text-lg font-bold text-foreground">320</span><span class="text-[11px] text-muted">pieces outstanding</span></div>
+  <div class="flex flex-col items-end"><span class="text-sm font-semibold text-foreground">900</span><span class="text-[11px] text-muted">on hand</span></div></div>
+  <div class="flex items-center gap-2"><span class="text-xs text-foreground">21 Aug 2026</span><span class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium bg-danger-soft text-danger-soft-foreground"><span class="size-1.5 rounded-full bg-current opacity-70"></span>overdue</span></div>
+  <div class="flex flex-wrap items-center gap-1.5"><span class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium bg-accent-soft text-accent-soft-foreground"><span class="size-1.5 rounded-full bg-current opacity-70"></span>PD-0142 · 1 500</span></div>
+</div>
+<div class="flex flex-col gap-2.5 rounded-2xl border border-border bg-surface p-3.5">
+  <div class="flex items-start gap-2"><div class="flex min-w-0 flex-1 flex-col gap-0.5"><span class="text-sm font-semibold text-foreground">Thermal labels 4×6</span><span class="text-[11px] text-muted">WH-100511 · counted in rolls · 2 customer orders</span></div><button type="button" aria-label="Actions" class="inline-flex size-7 shrink-0 items-center justify-center rounded-field text-muted"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button></div>
+  <div class="flex items-end gap-4"><div class="flex flex-col"><span class="text-lg font-bold text-foreground">4 500</span><span class="text-[11px] text-muted">rolls outstanding</span></div>
+  <div class="flex flex-col items-end"><span class="text-sm font-semibold text-foreground">0</span><span class="text-[11px] text-muted">on hand</span></div></div>
+  <div class="flex items-center gap-2"><span class="text-xs text-foreground">11 Sep 2026</span><span class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium bg-default text-default-foreground"><span class="size-1.5 rounded-full bg-current opacity-70"></span>in 17 days</span></div>
+  <div class="flex flex-wrap items-center gap-1.5"><span class="text-[11px] text-muted">No draft claims this demand</span></div>
+</div>
+<div class="flex w-full gap-3 rounded-field bg-accent-soft p-4">
+  <span class="mt-px shrink-0 text-accent-soft-foreground"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></span>
+  <div class="flex min-w-0 flex-col gap-1">
+    <p class="text-sm font-semibold text-foreground">Covered by is what someone already ordered — not a reservation</p>
+    <p class="text-[13px] leading-relaxed text-muted">A purchase draft linked to this demand is shown so you can see what a colleague has already ordered and for how much. It claims nothing: only goods that actually arrive reduce what a customer is waiting for.</p>
+  </div>
+</div>
+  </div>
+</div>
+    </main>
+  </body>
+</html>

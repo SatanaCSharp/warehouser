@@ -1,0 +1,294 @@
+<!doctype html>
+<!--
+  Preview evidence - design-ui skill. Review artifact only; never an implementation source.
+
+  Frame:         Delivery Addresses / Warehouse Address / Desktop / v1
+  Design source: docs/mockups/app.pen
+  Node ID:       e12gwk
+  Viewport:      desktop 1440×1422
+  States:        default (workspace administration, Warehouses tab, the warehouse's own delivery address recorded)
+-->
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Delivery addresses · Warehouse address · Desktop</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style type="text/tailwindcss">
+      @theme inline {
+        --color-background: var(--background);
+        --color-background-secondary: var(--background-secondary);
+        --color-foreground: var(--foreground);
+        --color-muted: var(--muted);
+
+        --color-surface: var(--surface);
+        --color-surface-foreground: var(--surface-foreground);
+        --color-surface-secondary: var(--surface-secondary);
+        --color-surface-tertiary: var(--surface-tertiary);
+        --color-overlay: var(--overlay);
+        --color-overlay-foreground: var(--overlay-foreground);
+
+        --color-accent: var(--accent);
+        --color-accent-foreground: var(--accent-foreground);
+        --color-accent-soft: var(--accent-soft);
+        --color-accent-soft-foreground: var(--accent-soft-foreground);
+
+        --color-default: var(--default);
+        --color-default-foreground: var(--default-foreground);
+        --color-default-soft-foreground: var(--default-soft-foreground);
+        --color-success: var(--success);
+        --color-success-foreground: var(--success-foreground);
+        --color-success-soft: var(--success-soft);
+        --color-success-soft-foreground: var(--success-soft-foreground);
+        --color-warning: var(--warning);
+        --color-warning-foreground: var(--warning-foreground);
+        --color-warning-soft: var(--warning-soft);
+        --color-warning-soft-foreground: var(--warning-soft-foreground);
+        --color-danger: var(--danger);
+        --color-danger-foreground: var(--danger-foreground);
+        --color-danger-soft: var(--danger-soft);
+        --color-danger-soft-foreground: var(--danger-soft-foreground);
+
+        --color-border: var(--border);
+        --color-separator: var(--separator);
+        --color-focus: var(--focus);
+        --color-link: var(--link);
+
+        --color-field: var(--field-background);
+        --color-field-foreground: var(--field-foreground);
+        --color-field-placeholder: var(--field-placeholder);
+        --color-field-border: var(--field-border);
+
+        --radius-field: var(--field-radius);
+        --shadow-surface: var(--surface-shadow);
+        --shadow-overlay: var(--overlay-shadow);
+      }
+
+      :root,
+      [data-theme='light'] {
+        color-scheme: light;
+
+        --white: oklch(100% 0 0);
+        --snow: oklch(0.9911 0 0);
+        --eclipse: oklch(0.2103 0.0059 285.89);
+
+        --radius: 0.5rem;
+        --field-radius: calc(var(--radius) * 1.5);
+
+        --background: oklch(0.9702 0 0);
+        --foreground: var(--eclipse);
+        --muted: oklch(0.5517 0.0138 285.94);
+
+        --surface: var(--white);
+        --surface-foreground: var(--foreground);
+        --surface-secondary: oklch(0.9524 0.0013 286.37);
+        --surface-tertiary: oklch(0.9373 0.0013 286.37);
+        --overlay: var(--white);
+        --overlay-foreground: var(--foreground);
+
+        --accent: oklch(0.6204 0.195 253.83);
+        --accent-foreground: var(--snow);
+        --default: oklch(94% 0.001 286.375);
+        --default-foreground: var(--eclipse);
+
+        --success: oklch(0.7329 0.1935 150.81);
+        --success-foreground: var(--eclipse);
+        --warning: oklch(0.7819 0.1585 72.33);
+        --warning-foreground: var(--eclipse);
+        --danger: oklch(0.6532 0.2328 25.74);
+        --danger-foreground: var(--snow);
+
+        --field-background: var(--white);
+        --field-foreground: var(--eclipse);
+        --field-placeholder: var(--muted);
+        --field-border: transparent;
+
+        --border: oklch(90% 0.004 286.32);
+        --separator: oklch(92% 0.004 286.32);
+        --focus: var(--accent);
+        --link: var(--foreground);
+
+        --background-secondary: color-mix(
+          in oklab,
+          var(--background) 96%,
+          var(--foreground) 4%
+        );
+        --accent-soft: color-mix(in oklab, var(--accent) 15%, transparent);
+        --accent-soft-foreground: color-mix(
+          in oklab,
+          var(--accent) 70%,
+          var(--foreground) 30%
+        );
+        --default-soft-foreground: var(--default-foreground);
+        --success-soft: color-mix(in oklab, var(--success) 15%, transparent);
+        --success-soft-foreground: color-mix(
+          in oklab,
+          var(--success) 80%,
+          var(--foreground) 60%
+        );
+        --warning-soft: color-mix(in oklab, var(--warning) 15%, transparent);
+        --warning-soft-foreground: color-mix(
+          in oklab,
+          var(--warning) 80%,
+          var(--foreground) 70%
+        );
+        --danger-soft: color-mix(in oklab, var(--danger) 15%, transparent);
+        --danger-soft-foreground: color-mix(
+          in oklab,
+          var(--danger) 70%,
+          var(--foreground) 40%
+        );
+
+        --surface-shadow:
+          0 2px 4px 0 rgba(0, 0, 0, 0.04), 0 1px 2px 0 rgba(0, 0, 0, 0.06),
+          0 0 1px 0 rgba(0, 0, 0, 0.06);
+        --overlay-shadow:
+          0 2px 8px 0 rgba(0, 0, 0, 0.06), 0 -6px 12px 0 rgba(0, 0, 0, 0.03),
+          0 14px 28px 0 rgba(0, 0, 0, 0.08);
+      }
+
+      [data-theme='dark'] {
+        color-scheme: dark;
+
+        --background: oklch(12% 0.005 285.823);
+        --foreground: var(--snow);
+        --muted: oklch(70.5% 0.015 286.067);
+
+        --surface: oklch(0.2103 0.0059 285.89);
+        --surface-foreground: var(--foreground);
+        --surface-secondary: oklch(0.257 0.0037 286.14);
+        --surface-tertiary: oklch(0.2721 0.0024 247.91);
+        --overlay: oklch(0.2103 0.0059 285.89);
+        --overlay-foreground: var(--foreground);
+
+        --default: oklch(27.4% 0.006 286.033);
+        --default-foreground: var(--snow);
+        --warning: oklch(0.8203 0.1388 76.34);
+        --danger: oklch(0.594 0.1967 24.63);
+
+        --field-background: oklch(0.2103 0.0059 285.89);
+        --field-foreground: var(--foreground);
+
+        --border: oklch(28% 0.006 286.033);
+        --separator: oklch(25% 0.006 286.033);
+
+        --accent-soft: color-mix(in oklab, var(--accent) 12%, transparent);
+        --accent-soft-foreground: color-mix(
+          in oklab,
+          var(--accent) 80%,
+          var(--foreground) 30%
+        );
+        --default-soft-foreground: var(--default-foreground);
+        --danger-soft-foreground: color-mix(
+          in oklab,
+          var(--danger) 80%,
+          var(--foreground) 30%
+        );
+        --warning-soft-foreground: color-mix(
+          in oklab,
+          var(--warning) 80%,
+          var(--foreground) 30%
+        );
+        --success-soft-foreground: color-mix(
+          in oklab,
+          var(--success) 80%,
+          var(--foreground) 30%
+        );
+
+        --surface-shadow: 0 0 0 0 transparent inset;
+        --overlay-shadow: 0 0 1px 0 rgba(255, 255, 255, 0.3) inset;
+      }
+
+    </style>
+  </head>
+
+  <body class="bg-background text-foreground min-h-screen antialiased">
+    <main class="mx-auto w-[1440px] max-w-full">
+<div class="flex min-h-full flex-col bg-background">
+<header class="flex h-20 items-center justify-between border-b border-border bg-surface px-12">
+  <div class="flex items-center gap-3">
+    <span class="flex size-[34px] items-center justify-center rounded-lg bg-accent text-accent-foreground"><svg class="size-[19px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/></svg></span>
+    <span class="text-lg font-bold tracking-tight text-foreground">Warehouser</span>
+  </div>
+  <div class="flex items-center gap-3">
+    <span class="flex h-9 items-center gap-2 rounded-field border border-border bg-surface px-3 text-[13px] font-medium text-foreground"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/></svg>Untitled workspace<svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span>
+    <span class="flex h-9 items-center rounded-field border border-border bg-surface px-3 text-[13px] text-muted">EN</span>
+    <span class="flex h-9 items-center rounded-field border border-border bg-surface px-3 text-[13px] text-muted">Sign out</span>
+  </div>
+</header>
+  <div class="flex flex-1">
+<nav aria-label="Warehouse" class="w-60 shrink-0 border-r border-border bg-surface"><ul class="flex flex-col gap-1 p-4"><li><span class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm bg-accent-soft text-accent-soft-foreground font-semibold"><span class="text-accent-soft-foreground"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/></svg></span><span class="flex-1">Workspace administration</span></span></li></ul></nav>
+    <div class="flex flex-1 flex-col gap-5 p-12">
+<div class="flex items-center gap-4"><div class="flex flex-1 flex-col gap-1"><div class="flex items-center gap-3"><h1 class="text-[34px] leading-tight font-bold tracking-tight text-foreground">Untitled workspace</h1><span class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium bg-warning-soft text-warning-soft-foreground"><span class="size-1.5 rounded-full bg-current opacity-70"></span>Unnamed</span></div><p class="text-sm leading-relaxed text-muted">Your workspace owns every warehouse below it, who may enter each one, and the address a supplier delivers to.</p></div><button type="button" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-field font-semibold bg-surface text-foreground border border-border h-9 px-4 text-sm ">Name workspace</button></div>
+<div class="flex w-[1120px] gap-1 rounded-[10px] bg-default p-1"><span class="flex-1 rounded-[6px] bg-surface px-3 py-1.5 text-center text-[13px] font-medium text-foreground shadow-surface">Warehouses</span><span class="flex-1 px-3 py-1.5 text-center text-[13px] font-medium text-muted">Workspace roles</span><span class="flex-1 px-3 py-1.5 text-center text-[13px] font-medium text-muted">Members</span><span class="flex-1 px-3 py-1.5 text-center text-[13px] font-medium text-muted">Permissions</span></div>
+<div class="flex w-[1120px]"><button type="button" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-field font-semibold bg-accent text-accent-foreground h-11 px-5 text-[15px] "><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>Add warehouse</button></div>
+<div class="flex w-[1120px] items-start gap-6">
+  <div class="flex w-[340px] shrink-0 flex-col gap-3">
+    <span class="flex h-11 w-full items-center gap-2 rounded-field border border-border bg-field px-3"><span class="text-muted"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span><span class="text-sm text-field-placeholder">Search warehouses</span></span>
+    <div class="flex items-center gap-3 rounded-2xl bg-surface p-3.5 border-2 border-accent">
+  <div class="flex min-w-0 flex-1 flex-col gap-0.5"><span class="text-sm font-bold text-foreground">Central DC</span><span class="text-xs text-muted">8 people with access</span></div><span class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium bg-success-soft text-success-soft-foreground"><span class="size-1.5 rounded-full bg-current opacity-70"></span>Active</span>
+</div>
+    <div class="flex items-center gap-3 rounded-2xl bg-surface p-3.5 border border-border">
+  <div class="flex min-w-0 flex-1 flex-col gap-0.5"><span class="text-sm font-bold text-foreground">North Hub</span><span class="text-xs text-muted">3 people with access</span></div><span class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium bg-success-soft text-success-soft-foreground"><span class="size-1.5 rounded-full bg-current opacity-70"></span>Active</span>
+</div>
+    <div class="flex items-center gap-3 rounded-2xl bg-surface p-3.5 border border-border">
+  <div class="flex min-w-0 flex-1 flex-col gap-0.5"><span class="text-sm font-bold text-foreground">Overflow Yard</span><span class="text-xs text-muted">No people with access</span></div><span class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium bg-success-soft text-success-soft-foreground"><span class="size-1.5 rounded-full bg-current opacity-70"></span>Active</span>
+</div>
+    <div class="flex items-center gap-3 rounded-2xl bg-surface p-3.5 border border-border">
+  <div class="flex min-w-0 flex-1 flex-col gap-0.5"><span class="text-sm font-bold text-foreground">Old Depot</span><span class="text-xs text-muted">2 people with access</span></div><span class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium bg-default text-default-foreground"><span class="size-1.5 rounded-full bg-current opacity-70"></span>Archived</span>
+</div>
+  </div>
+  <div class="flex flex-1 flex-col gap-4 rounded-field border border-border bg-surface p-6">
+  <div class="flex items-center gap-4">
+    <div class="flex flex-1 flex-col gap-0.5"><div class="flex items-center gap-2"><h2 class="text-xl font-bold tracking-tight text-foreground">Central DC</h2><span class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium bg-success-soft text-success-soft-foreground"><span class="size-1.5 rounded-full bg-current opacity-70"></span>Active</span></div><p class="text-xs text-muted">8 people with access · created 14 Mar 2026</p></div>
+    <button type="button" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-field font-semibold bg-surface text-foreground border border-border h-9 px-4 text-sm "><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>Give access</button>
+  </div>
+  <label class="flex w-full flex-col gap-1.5"><span class="text-sm font-medium text-foreground">Warehouse name</span>
+  <span class="flex h-9 items-center gap-2 rounded-field border bg-field text-field-foreground border-border px-3"><span class="min-w-0 flex-1 text-sm leading-snug ">Central DC</span></span>
+  <span class="text-xs leading-snug text-muted">1–100 characters. Warehouse names need not be unique.</span></label>
+  <div class="h-px w-full bg-separator"></div>
+  <div class="flex flex-col gap-3">
+    <div class="flex flex-col gap-1"><h3 class="text-[15px] font-bold text-foreground">Delivery address</h3><p class="text-xs leading-relaxed text-muted ">The address a supplier is told for every line coming to this warehouse. A warehouse has exactly one — you correct it in place and it is never deactivated.</p></div>
+    <label class="flex w-full flex-col gap-1.5"><span class="text-sm font-medium text-foreground">Address</span>
+  <span class="flex min-h-14 items-start py-2.5 gap-2 rounded-field border bg-field text-field-foreground border-border px-3"><span class="shrink-0 text-muted"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg></span><span class="min-w-0 flex-1 text-sm leading-snug ">Am Kai 7, 21079 Hamburg, Germany</span></span>
+  <span class="text-xs leading-snug text-muted">Text a human driver reads. Warehouser never validates, geocodes or interprets it.</span></label>
+    <label class="flex w-full flex-col gap-1.5"><span class="text-sm font-medium text-foreground">Access notes</span>
+  <span class="flex min-h-14 items-start py-2.5 gap-2 rounded-field border bg-field text-field-foreground border-border px-3"><span class="min-w-0 flex-1 text-sm leading-snug ">Yard entrance on Kaistraße, not the office door. Deliveries 06:00–18:00 Mon–Fri. Ring at the barrier for the gate code.</span></span>
+  <span class="text-xs leading-snug text-muted">What a driver needs to get in. Treat a gate or door code recorded here as confidential — it is read by everyone who may read this warehouse.</span></label>
+    <div class="flex w-full gap-3 rounded-field bg-accent-soft p-4">
+  <span class="mt-px shrink-0 text-accent-soft-foreground"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></span>
+  <div class="flex min-w-0 flex-col gap-1">
+    <p class="text-sm font-semibold text-foreground">A draft cannot be made ready before this is recorded</p>
+    <p class="text-[13px] leading-relaxed text-muted">Any purchase draft holding a line that comes to this warehouse needs an address for the supplier to deliver to. Adding and revising lines keeps working; only the move to Ready for ordering is refused until this is filled in.</p>
+  </div>
+</div>
+  </div>
+  <div class="h-px w-full bg-separator"></div>
+  <div class="flex flex-col gap-1"><h3 class="text-[15px] font-bold text-foreground">People with access</h3><p class="text-xs leading-relaxed text-muted ">Giving access places a person in this warehouse with a role defined there. What they may do inside it is decided by that role, not by the workspace — manage those roles on the warehouse&#x27;s Access page.</p></div>
+  <div class="flex flex-col"><div class="flex items-center gap-3 border-b border-border py-3 last:border-b-0">
+  <span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-default text-[11px] font-semibold text-default-foreground">YU</span>
+  <div class="flex min-w-0 flex-1 flex-col"><span class="text-[13px] font-semibold text-foreground">Yurii Horchuk</span><span class="text-[11px] text-muted">yurii@warehouser.io</span></div>
+  <span class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium bg-accent-soft text-accent-soft-foreground"><span class="size-1.5 rounded-full bg-current opacity-70"></span>Warehouse manager</span><span class="text-xs font-medium text-danger">Withdraw access</span>
+</div><div class="flex items-center gap-3 border-b border-border py-3 last:border-b-0">
+  <span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-default text-[11px] font-semibold text-default-foreground">AN</span>
+  <div class="flex min-w-0 flex-1 flex-col"><span class="text-[13px] font-semibold text-foreground">Anna Kravets</span><span class="text-[11px] text-muted">anna@warehouser.io</span></div>
+  <span class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium bg-accent-soft text-accent-soft-foreground"><span class="size-1.5 rounded-full bg-current opacity-70"></span>Operator</span><span class="text-xs font-medium text-danger">Withdraw access</span>
+</div><div class="flex items-center gap-3 border-b border-border py-3 last:border-b-0">
+  <span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-default text-[11px] font-semibold text-default-foreground">MA</span>
+  <div class="flex min-w-0 flex-1 flex-col"><span class="text-[13px] font-semibold text-foreground">Marek Dudek</span><span class="text-[11px] text-muted">marek@warehouser.io</span></div>
+  <span class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium bg-accent-soft text-accent-soft-foreground"><span class="size-1.5 rounded-full bg-current opacity-70"></span>Operator</span><span class="text-xs font-medium text-danger">Withdraw access</span>
+</div><div class="flex items-center gap-3 border-b border-border py-3 last:border-b-0">
+  <span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-default text-[11px] font-semibold text-default-foreground">SO</span>
+  <div class="flex min-w-0 flex-1 flex-col"><span class="text-[13px] font-semibold text-foreground">Sofia Oliveira</span><span class="text-[11px] text-muted">sofia@warehouser.io</span></div>
+  <span class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium bg-accent-soft text-accent-soft-foreground"><span class="size-1.5 rounded-full bg-current opacity-70"></span>Viewer</span><span class="text-xs font-medium text-danger">Withdraw access</span>
+</div></div>
+  <div class="h-px w-full bg-separator"></div>
+  <div class="flex items-center gap-3"><button type="button" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-field font-semibold bg-danger-soft text-danger-soft-foreground h-9 px-4 text-sm ">Archive warehouse</button><span class="flex-1"></span><button type="button" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-field font-semibold bg-default text-default-foreground h-9 px-4 text-sm ">Cancel</button><button type="button" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-field font-semibold bg-accent text-accent-foreground h-9 px-4 text-sm ">Save changes</button></div>
+</div>
+</div>
+    </div>
+  </div>
+</div>
+    </main>
+  </body>
+</html>

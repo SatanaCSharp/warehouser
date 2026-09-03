@@ -1,0 +1,3802 @@
+openapi: 3.1.0
+
+info:
+  title: Delivery Addresses API
+  version: 0.1.0
+  description: |
+    `ordering` shipped the loop this API attaches to: demand recorded per customer, consolidated per
+    Item, answered by a Purchase Draft a member assembles, frozen when the supplier is phoned, and
+    closed when the goods arrive. Nothing in it says **where** anything goes. A Customer Order carries
+    a typed `customerName` and no address, a Purchase Draft Line carries an Item and a quantity and no
+    destination, a Warehouse carries a name, and one whole-draft arrival is the single act that ends a
+    draft.
+
+    This API adds the destination. It introduces two durable records a Warehouse owns — the Customer
+    and its Delivery Addresses — gives the Warehouse itself one Delivery Address, puts a Delivery Mode
+    and a Delivery Address on every Purchase Draft Line, freezes both with the rest of the line,
+    reports Address Drift when the demand behind a frozen line moves, and replaces the whole-draft
+    arrival with an ending recorded per line.
+
+    Five shapes are load-bearing and readable from the paths below.
+
+    - **Customer identity is a new confidentiality boundary, enforced by an observed Permission.**
+      A read that can carry a customer name, a Delivery Address, an access note or a count of them
+      declares `CUSTOMERS:WATCH` as an **observed** Permission beside the Permission it requires
+      ([ADR 0001](../adr/0001-observed-permission-redaction.md)). An observed Permission never denies:
+      the request succeeds either way, and the projection is built from the observed Permissions the
+      actor actually holds. Every such response is modelled as `oneOf` an **identified** and a
+      **redacted** form, and the redacted form **omits** the identity properties rather than nulling
+      them — so a redaction failure fails contract validation on the way out instead of reaching a
+      screen (AC-09a, sad.md §7).
+    - **The Warehouse's own Delivery Address is not customer identity.** It is the operator's own
+      premises data. It is *written* at the Workspace prefix under `WAREHOUSES:ADDRESS_UPDATE`,
+      because its subject is the Warehouse record and `WorkspaceAccessGuard` is what resolves a
+      Workspace Permission; it is *read* from the Warehouse-scoped draft and line projections under
+      `PURCHASE_DRAFTS:WATCH` and is **never** gated on `CUSTOMERS:WATCH` — which is why a line's
+      destination is two properties, `warehouseDestination` and `customerDestination`, rather than one
+      (AC-10, sad.md §7).
+    - **A line's ending is per line and its kind is a routing fact.** `POST …/lines/{id}/arrival` and
+      `POST …/lines/{id}/direct-delivery` replace the withdrawn whole-draft
+      `POST /purchase-drafts/{id}/arrival`. AC-20's refusal — which of the two ways that line's goods
+      travelled — is decided by the path rather than by a value the member submitted, and the draft
+      moves to Closed in the same transaction as the ending of its **last** line
+      ([ADR 0002](../adr/0002-per-line-purchase-draft-endings.md)).
+    - **Redirection is its own sub-resource**, `PUT /customer-orders/{id}/delivery-address`, not a
+      field on the amendment `PATCH`. AC-11c's rules — the same Customer, an active address, an
+      outstanding order — are the redirection's rules and not the amendment's, and a shared payload
+      would let one path's validation stand in for the other's.
+    - **Address Drift is derived on every read and never stored.** It is a value comparison between
+      each link's captured Delivery Address and the address that Customer Order is going to at the
+      instant of the read. No endpoint accepts it as input, and redirecting the order back to the
+      frozen address stops the report (AC-18, AC-18a).
+
+    **Lists are returned whole and deterministically ordered, not paged**, at the `spec.md` §1 scale —
+    roughly 500 Customers and 1 500 Delivery Addresses per Warehouse on top of what `ordering` already
+    assumes. See `api-sync-report.md` § "Recorded deviations".
+
+    **Scope of this document.** It restates every operation this feature adds, and every `ordering`
+    operation whose request, error set or declared Permissions this feature changes. `ordering`
+    operations it does not restate are unchanged and stay governed by
+    [`ordering/contracts/openapi.yaml`](../../ordering/contracts/openapi.yaml).
+
+    This feature introduces no queue, event, scheduled job or third-party callback (sad.md §6), so
+    there is no asynchronous contract and no `events.md`.
+
+servers:
+  - url: http://localhost:3000
+    description: Local development
+
+# Every operation requires the session cookie issued by `POST /api/v1/auth/sign-up` and
+# `POST /api/v1/auth/sign-in`. This feature introduces no public endpoint, so no operation
+# overrides with `security: []`. Authentication grants no authority: a valid session with no
+# membership in the named Warehouse is denied every capability here, reads included (sad.md §6.1).
+security:
+  - SessionCookie: []
+
+tags:
+  - name: customers
+    description: |
+      Customers of a Warehouse, their Delivery Addresses, and what each customer is still waiting for.
+      Every operation here requires a `CUSTOMERS:*` Permission, so no redaction applies: an actor who
+      reaches these paths at all already holds the Permission the identity is gated on.
+  - name: warehouse-delivery-address
+    description: |
+      The Warehouse's own Delivery Address and access notes — the operator's own premises data,
+      written at the **Workspace** prefix under `WAREHOUSES:ADDRESS_UPDATE`.
+  - name: customer-orders
+    description: |
+      Recording demand against a Customer and a Delivery Address, redirecting an outstanding order,
+      and the consolidated demand read. Identity-bearing; each declares `CUSTOMERS:WATCH` observed.
+  - name: purchase-drafts
+    description: |
+      Delivery Mode and Delivery Address on a line, the freeze that captures both, Address Drift, the
+      by-line split, and the per-line endings. Identity-bearing; each read declares `CUSTOMERS:WATCH`
+      observed.
+
+paths:
+  ##########################################################################################
+  # Customers — the record demand and directly-shipped lines both name
+  ##########################################################################################
+
+  /api/v1/warehouses/{warehouseId}/customers:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+
+    get:
+      tags: [customers]
+      summary: List the Warehouse's Customers
+      description: |
+        Every Customer of the named Warehouse ordered by name, each with its Delivery Addresses and
+        which of them is Main. Requires `CUSTOMERS:WATCH`; a member whose Role does not carry it is
+        denied without learning that any Customer exists, and no count of Customers or Delivery
+        Addresses reaches them through any other surface either (AC-09, spec.md §6.1 "Customer
+        disclosure through a count").
+
+        `active=true` narrows the response to Customers that are not Inactive — the picker read used
+        while recording demand (AC-06). Without it the response carries active and Inactive Customers
+        alike, because a Customer Order already naming an Inactive Customer stays readable and keeps
+        counting exactly as before.
+
+        Archived-tolerant: a member whose Role carries `CUSTOMERS:WATCH` reads an archived
+        Warehouse's Customers exactly as before archiving (AC-23).
+      operationId: listCustomers
+      parameters:
+        - in: query
+          name: active
+          required: false
+          description: "`true` returns only Customers that may still be selected when demand is recorded."
+          schema: { type: boolean }
+      responses:
+        "200":
+          description: The Warehouse's Customers, ordered by name.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Customer" }
+              example:
+                - id: "00000000-0000-4000-8000-000000000201"
+                  name: "Test Customer North"
+                  deactivatedAt: null
+                  mainDeliveryAddressId: "00000000-0000-4000-8000-000000000301"
+                  deliveryAddresses:
+                    - id: "00000000-0000-4000-8000-000000000301"
+                      customerId: "00000000-0000-4000-8000-000000000201"
+                      addressText: "Test Address 1, Test City"
+                      accessNotes: "Gate code on the intercom; deliveries 09:00-17:00"
+                      isMain: true
+                      deactivatedAt: null
+                      createdAt: "2026-09-01T08:00:00.000Z"
+                      updatedAt: "2026-09-01T08:00:00.000Z"
+                  recordedByUserId: "00000000-0000-4000-8000-000000000001"
+                  createdAt: "2026-09-01T08:00:00.000Z"
+                  updatedAt: "2026-09-01T08:00:00.000Z"
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+    post:
+      tags: [customers]
+      summary: Record a Customer with its first Delivery Address
+      description: |
+        Requires `CUSTOMERS:CREATE`. One transaction writes the Customer as active and its first
+        Delivery Address as active and Main, with the recording member and the time (AC-01). The
+        Customer becomes selectable when demand is recorded.
+
+        A name that is empty after trimming, or an address text that is, is refused and nothing is
+        changed (AC-02). A name already held in this Warehouse — by an active **or** an Inactive
+        Customer — is refused, naming the Customer that holds it (AC-03); the per-Warehouse uniqueness
+        constraint is the final arbiter under concurrency and maps to the same refusal. The same name
+        in another Warehouse is not a conflict, is never consulted, and is never disclosed (AC-03a).
+
+        Mutating: refused while the Warehouse is archived (AC-23), and rate limited on the same terms
+        as the `ordering` mutations.
+      operationId: recordCustomer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CustomerCreate" }
+            example:
+              name: "Test Customer North"
+              deliveryAddress:
+                addressText: "Test Address 1, Test City"
+                accessNotes: "Gate code on the intercom; deliveries 09:00-17:00"
+      responses:
+        "201":
+          description: The recorded Customer with its first Delivery Address as its Main one.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Customer" }
+              example:
+                id: "00000000-0000-4000-8000-000000000201"
+                name: "Test Customer North"
+                deactivatedAt: null
+                mainDeliveryAddressId: "00000000-0000-4000-8000-000000000301"
+                deliveryAddresses:
+                  - id: "00000000-0000-4000-8000-000000000301"
+                    customerId: "00000000-0000-4000-8000-000000000201"
+                    addressText: "Test Address 1, Test City"
+                    accessNotes: "Gate code on the intercom; deliveries 09:00-17:00"
+                    isMain: true
+                    deactivatedAt: null
+                    createdAt: "2026-09-01T08:00:00.000Z"
+                    updatedAt: "2026-09-01T08:00:00.000Z"
+                recordedByUserId: "00000000-0000-4000-8000-000000000001"
+                createdAt: "2026-09-01T08:00:00.000Z"
+                updatedAt: "2026-09-01T08:00:00.000Z"
+        "400": { $ref: "#/components/responses/InvalidCustomerInput" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "409": { $ref: "#/components/responses/CustomerWriteConflict" }
+        "429": { $ref: "#/components/responses/WriteRateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/warehouses/{warehouseId}/customers/{customerId}:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+      - $ref: "#/components/parameters/CustomerIdPath"
+
+    get:
+      tags: [customers]
+      summary: Read one Customer with everything it is waiting for
+      description: |
+        Requires `CUSTOMERS:WATCH`. Returns the Customer, its Delivery Addresses, and every
+        **Unfulfilled** Customer Order of that Customer with its Item, Outstanding Quantity,
+        needed-by date and the Delivery Address it is going to; Fulfilled and cancelled orders are
+        omitted (AC-08).
+
+        Each awaiting row's destination also reports *why* it is that address: `isMain` says it is the
+        Customer's current Main one, and `deactivatedAt` says the address the order names has since
+        been made Inactive — the order keeps naming it and keeps counting exactly as before (AC-06a).
+
+        Archived-tolerant (AC-23).
+      operationId: readCustomer
+      responses:
+        "200":
+          description: The Customer, its Delivery Addresses, and its Unfulfilled Customer Orders.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CustomerDetail" }
+              example:
+                id: "00000000-0000-4000-8000-000000000201"
+                name: "Test Customer North"
+                deactivatedAt: null
+                mainDeliveryAddressId: "00000000-0000-4000-8000-000000000301"
+                deliveryAddresses:
+                  - id: "00000000-0000-4000-8000-000000000301"
+                    customerId: "00000000-0000-4000-8000-000000000201"
+                    addressText: "Test Address 1, Test City"
+                    accessNotes: "Gate code on the intercom; deliveries 09:00-17:00"
+                    isMain: true
+                    deactivatedAt: null
+                    createdAt: "2026-09-01T08:00:00.000Z"
+                    updatedAt: "2026-09-01T08:00:00.000Z"
+                  - id: "00000000-0000-4000-8000-000000000302"
+                    customerId: "00000000-0000-4000-8000-000000000201"
+                    addressText: "Test Address 2, Test Town"
+                    accessNotes: null
+                    isMain: false
+                    deactivatedAt: null
+                    createdAt: "2026-09-01T09:00:00.000Z"
+                    updatedAt: "2026-09-01T09:00:00.000Z"
+                recordedByUserId: "00000000-0000-4000-8000-000000000001"
+                createdAt: "2026-09-01T08:00:00.000Z"
+                updatedAt: "2026-09-01T08:00:00.000Z"
+                awaitingCustomerOrders:
+                  - customerOrderId: "00000000-0000-4000-8000-000000000601"
+                    itemId: "00000000-0000-4000-8000-000000000101"
+                    itemSku: "TEST-SKU-0001"
+                    itemDescription: "Test Item - 2 m cable"
+                    unitOfMeasure: "metres"
+                    outstandingQuantity: 40
+                    neededBy: "2026-09-20"
+                    destination:
+                      deliveryAddressId: "00000000-0000-4000-8000-000000000301"
+                      addressText: "Test Address 1, Test City"
+                      accessNotes: "Gate code on the intercom; deliveries 09:00-17:00"
+                      isMain: true
+                      deactivatedAt: null
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/CustomerUnavailable" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+    patch:
+      tags: [customers]
+      summary: Correct a Customer's name
+      description: |
+        Requires `CUSTOMERS:UPDATE`. The correction is recorded and **nothing that names the Customer
+        is touched**: every Customer Order and every frozen Purchase Draft Line names the Customer's
+        identifier and never its name, so no cascade exists and none is needed (AC-03b).
+
+        A name already held by another Customer of this Warehouse — active or Inactive — is refused
+        and the Customer is left exactly as it was (AC-03c).
+
+        Mutating: refused while the Warehouse is archived (AC-23), and rate limited.
+      operationId: correctCustomerName
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CustomerUpdate" }
+            example:
+              name: "Test Customer North (Ltd)"
+      responses:
+        "200":
+          description: The corrected Customer.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Customer" }
+        "400": { $ref: "#/components/responses/InvalidCustomerInput" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/CustomerUnavailable" }
+        "409": { $ref: "#/components/responses/CustomerWriteConflict" }
+        "429": { $ref: "#/components/responses/WriteRateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/warehouses/{warehouseId}/customers/{customerId}/deactivation:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+      - $ref: "#/components/parameters/CustomerIdPath"
+
+    post:
+      tags: [customers]
+      summary: Deactivate a Customer
+      description: |
+        Requires `CUSTOMERS:DEACTIVATE`. Records the Customer Inactive **whether or not it is still
+        waiting for goods**, stops offering it when demand is recorded, keeps every Customer Order
+        that already names it readable and counting exactly as before, leaves every one of its
+        Delivery Addresses in the state it was already in, and keeps its name taken so no new Customer
+        may reuse it (AC-06).
+
+        A transition addressed as its own sub-resource rather than a field on `PATCH`, so it declares
+        its own Permission (sad.md §7).
+
+        Mutating: refused while the Warehouse is archived (AC-23), and rate limited.
+      operationId: deactivateCustomer
+      responses:
+        "200":
+          description: The Inactive Customer; its Delivery Addresses are untouched.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Customer" }
+              example:
+                id: "00000000-0000-4000-8000-000000000201"
+                name: "Test Customer North"
+                deactivatedAt: "2026-09-02T12:00:00.000Z"
+                mainDeliveryAddressId: "00000000-0000-4000-8000-000000000301"
+                deliveryAddresses:
+                  - id: "00000000-0000-4000-8000-000000000301"
+                    customerId: "00000000-0000-4000-8000-000000000201"
+                    addressText: "Test Address 1, Test City"
+                    accessNotes: "Gate code on the intercom; deliveries 09:00-17:00"
+                    isMain: true
+                    deactivatedAt: null
+                    createdAt: "2026-09-01T08:00:00.000Z"
+                    updatedAt: "2026-09-01T08:00:00.000Z"
+                recordedByUserId: "00000000-0000-4000-8000-000000000001"
+                createdAt: "2026-09-01T08:00:00.000Z"
+                updatedAt: "2026-09-02T12:00:00.000Z"
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/CustomerUnavailable" }
+        "409": { $ref: "#/components/responses/WarehouseArchived" }
+        "429": { $ref: "#/components/responses/WriteRateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+    delete:
+      tags: [customers]
+      summary: Make a Customer active again
+      description: |
+        Requires `CUSTOMERS:DEACTIVATE` — the same Permission governs both directions, because
+        reactivation is the same operation inverted (AC-06, sad.md §6.3). Clears `deactivatedAt`; the
+        Customer is offered again when demand is recorded and its Delivery Addresses are, once more,
+        in whatever state they were left in.
+
+        Mutating: refused while the Warehouse is archived (AC-23), and rate limited.
+      operationId: reactivateCustomer
+      responses:
+        "200":
+          description: The active Customer.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Customer" }
+              example:
+                id: "00000000-0000-4000-8000-000000000201"
+                name: "Test Customer North"
+                deactivatedAt: null
+                mainDeliveryAddressId: "00000000-0000-4000-8000-000000000301"
+                deliveryAddresses:
+                  - id: "00000000-0000-4000-8000-000000000301"
+                    customerId: "00000000-0000-4000-8000-000000000201"
+                    addressText: "Test Address 1, Test City"
+                    accessNotes: "Gate code on the intercom; deliveries 09:00-17:00"
+                    isMain: true
+                    deactivatedAt: null
+                    createdAt: "2026-09-01T08:00:00.000Z"
+                    updatedAt: "2026-09-01T08:00:00.000Z"
+                recordedByUserId: "00000000-0000-4000-8000-000000000001"
+                createdAt: "2026-09-01T08:00:00.000Z"
+                updatedAt: "2026-09-01T08:00:00.000Z"
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/CustomerUnavailable" }
+        "409": { $ref: "#/components/responses/WarehouseArchived" }
+        "429": { $ref: "#/components/responses/WriteRateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/warehouses/{warehouseId}/customers/{customerId}/delivery-addresses:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+      - $ref: "#/components/parameters/CustomerIdPath"
+
+    post:
+      tags: [customers]
+      summary: Add a Delivery Address to a Customer
+      description: |
+        Requires `CUSTOMERS:UPDATE`. Records the address as active against that Customer. With
+        `main: true` the same transaction clears the previous Main flag, so **exactly one active
+        address is Main at every instant** — the partial-unique index over `(customer_id) WHERE
+        is_main` is the arbiter under concurrency (AC-04, AC-05).
+
+        Both addresses are then offered wherever a Delivery Address is chosen. Address text and access
+        notes are stored as submitted and rendered as text, never as markup and never as a link; gate
+        and door codes recorded there are confidential data of the same classification as the Customer
+        carrying them and appear in no log line, no error detail and no denial payload
+        (spec.md §6.1, sad.md §8).
+
+        Mutating: refused while the Warehouse is archived (AC-23), and rate limited.
+      operationId: addCustomerDeliveryAddress
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CustomerDeliveryAddressCreate" }
+            example:
+              addressText: "Test Address 2, Test Town"
+              accessNotes: "Rear yard; call the site office on arrival"
+              main: true
+      responses:
+        "201":
+          description: The Customer with both addresses, the new one now Main and the previous one no longer.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Customer" }
+        "400": { $ref: "#/components/responses/InvalidCustomerInput" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/CustomerUnavailable" }
+        "409": { $ref: "#/components/responses/WarehouseArchived" }
+        "429": { $ref: "#/components/responses/WriteRateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/warehouses/{warehouseId}/customers/{customerId}/delivery-addresses/{deliveryAddressId}:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+      - $ref: "#/components/parameters/CustomerIdPath"
+      - $ref: "#/components/parameters/CustomerDeliveryAddressIdPath"
+
+    patch:
+      tags: [customers]
+      summary: Correct a Delivery Address in place
+      description: |
+        Requires `CUSTOMERS:UPDATE`. Corrects the address text or its access notes. Every Customer
+        Order and every **live** Purchase Draft Line naming this address follows the correction,
+        because they hold a reference to it.
+
+        A **frozen** Purchase Draft Line does not: its Delivery Address was captured as text at Ready
+        for Ordering, so no edit in place can travel into it and the record keeps saying what the
+        supplier was actually told (AC-16, AC-17, data-model.md `purchase_draft_lines`).
+
+        Correcting a typo is **not** Address Drift: drift is an identity comparison between the
+        address a link was frozen against and the address that Customer Order is going to now
+        (data-model.md `purchase_draft_demand_snapshots`), so this operation reports none.
+
+        Mutating: refused while the Warehouse is archived (AC-23), and rate limited.
+      operationId: correctCustomerDeliveryAddress
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CustomerDeliveryAddressUpdate" }
+            example:
+              addressText: "Test Address 2, Test Town, Unit 4"
+              accessNotes: null
+      responses:
+        "200":
+          description: The Customer with the corrected address.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Customer" }
+        "400": { $ref: "#/components/responses/InvalidCustomerInput" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/CustomerUnavailable" }
+        "409": { $ref: "#/components/responses/WarehouseArchived" }
+        "429": { $ref: "#/components/responses/WriteRateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/warehouses/{warehouseId}/customers/{customerId}/delivery-addresses/{deliveryAddressId}/main:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+      - $ref: "#/components/parameters/CustomerIdPath"
+      - $ref: "#/components/parameters/CustomerDeliveryAddressIdPath"
+
+    put:
+      tags: [customers]
+      summary: Mark a Delivery Address as the Customer's Main one
+      description: |
+        Requires `CUSTOMERS:UPDATE`. One transaction sets this address Main and clears the previous
+        Main flag (AC-04, AC-05). An Inactive address is refused: `chk_customer_delivery_addresses_
+        main_is_active` holds that an Inactive address is never the Main one, so a once-Main address
+        that is reactivated comes back as an ordinary address rather than as a second Main one.
+
+        Idempotent — marking the address that is already Main changes nothing and returns the same
+        Customer, which is why this is `PUT` and carries no body.
+
+        **Marking a different address Main moves no existing Customer Order.** An order names an
+        address, not "the Main one"; the Main address is resolved and stored as a reference at record
+        time (data-model.md `customer_orders`, CONTEXT.md §Invariants).
+
+        Mutating: refused while the Warehouse is archived (AC-23), and rate limited.
+      operationId: setMainCustomerDeliveryAddress
+      responses:
+        "200":
+          description: The Customer with its new Main Delivery Address.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Customer" }
+              example:
+                id: "00000000-0000-4000-8000-000000000201"
+                name: "Test Customer North"
+                deactivatedAt: null
+                mainDeliveryAddressId: "00000000-0000-4000-8000-000000000302"
+                deliveryAddresses:
+                  - id: "00000000-0000-4000-8000-000000000301"
+                    customerId: "00000000-0000-4000-8000-000000000201"
+                    addressText: "Test Address 1, Test City"
+                    accessNotes: "Gate code on the intercom; deliveries 09:00-17:00"
+                    isMain: false
+                    deactivatedAt: null
+                    createdAt: "2026-09-01T08:00:00.000Z"
+                    updatedAt: "2026-09-02T11:00:00.000Z"
+                  - id: "00000000-0000-4000-8000-000000000302"
+                    customerId: "00000000-0000-4000-8000-000000000201"
+                    addressText: "Test Address 2, Test Town"
+                    accessNotes: null
+                    isMain: true
+                    deactivatedAt: null
+                    createdAt: "2026-09-01T09:00:00.000Z"
+                    updatedAt: "2026-09-02T11:00:00.000Z"
+                recordedByUserId: "00000000-0000-4000-8000-000000000001"
+                createdAt: "2026-09-01T08:00:00.000Z"
+                updatedAt: "2026-09-01T08:00:00.000Z"
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/CustomerUnavailable" }
+        "409": { $ref: "#/components/responses/CustomerDeliveryAddressConflict" }
+        "429": { $ref: "#/components/responses/WriteRateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/warehouses/{warehouseId}/customers/{customerId}/delivery-addresses/{deliveryAddressId}/deactivation:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+      - $ref: "#/components/parameters/CustomerIdPath"
+      - $ref: "#/components/parameters/CustomerDeliveryAddressIdPath"
+
+    post:
+      tags: [customers]
+      summary: Deactivate one Delivery Address
+      description: |
+        Requires `CUSTOMERS:UPDATE` — maintaining a Customer's addresses is an aspect of updating the
+        Customer, not of deactivating it (spec.md §6.1).
+
+        The Customer's active addresses are read **under lock** and the condition re-evaluated at the
+        moment the change is recorded, so two concurrent deactivations cannot both see two remaining
+        (sad.md §6.3). Exactly one active address remaining → refused, naming the rule and the order to
+        follow: add the replacement first, deactivate the old one afterwards (AC-07). This holds
+        whether or not the Customer has Unfulfilled Customer Orders.
+
+        Deactivating the **Main** address makes one of the remaining active addresses Main in the same
+        transaction, and the response names which (AC-06b).
+
+        Every Customer Order and every frozen Purchase Draft Line already naming the address keeps
+        reading and counting exactly as before; it simply stops being offered wherever an address is
+        chosen (AC-06a).
+
+        Mutating: refused while the Warehouse is archived (AC-23), and rate limited.
+      operationId: deactivateCustomerDeliveryAddress
+      responses:
+        "200":
+          description: |
+            The Customer with the address now Inactive. `mainDeliveryAddressId` names the address that
+            is Main now — which is a different one when the deactivated address was the Main one
+            (AC-06b).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Customer" }
+              example:
+                id: "00000000-0000-4000-8000-000000000201"
+                name: "Test Customer North"
+                deactivatedAt: null
+                mainDeliveryAddressId: "00000000-0000-4000-8000-000000000302"
+                deliveryAddresses:
+                  - id: "00000000-0000-4000-8000-000000000301"
+                    customerId: "00000000-0000-4000-8000-000000000201"
+                    addressText: "Test Address 1, Test City"
+                    accessNotes: "Gate code on the intercom; deliveries 09:00-17:00"
+                    isMain: false
+                    deactivatedAt: "2026-09-02T12:30:00.000Z"
+                    createdAt: "2026-09-01T08:00:00.000Z"
+                    updatedAt: "2026-09-02T12:30:00.000Z"
+                  - id: "00000000-0000-4000-8000-000000000302"
+                    customerId: "00000000-0000-4000-8000-000000000201"
+                    addressText: "Test Address 2, Test Town"
+                    accessNotes: null
+                    isMain: true
+                    deactivatedAt: null
+                    createdAt: "2026-09-01T09:00:00.000Z"
+                    updatedAt: "2026-09-02T12:30:00.000Z"
+                recordedByUserId: "00000000-0000-4000-8000-000000000001"
+                createdAt: "2026-09-01T08:00:00.000Z"
+                updatedAt: "2026-09-01T08:00:00.000Z"
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/CustomerUnavailable" }
+        "409": { $ref: "#/components/responses/CustomerDeliveryAddressConflict" }
+        "429": { $ref: "#/components/responses/WriteRateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+    delete:
+      tags: [customers]
+      summary: Make a Delivery Address active again
+      description: |
+        Requires `CUSTOMERS:UPDATE`. Clears `deactivatedAt`; the address is offered again wherever one
+        is chosen. It comes back as an **ordinary** address, never as a second Main one — which is
+        `chk_customer_delivery_addresses_main_is_active` holding, not a rule the command remembers.
+
+        Mutating: refused while the Warehouse is archived (AC-23), and rate limited.
+      operationId: reactivateCustomerDeliveryAddress
+      responses:
+        "200":
+          description: The Customer with the address active again.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Customer" }
+              example:
+                id: "00000000-0000-4000-8000-000000000201"
+                name: "Test Customer North"
+                deactivatedAt: null
+                mainDeliveryAddressId: "00000000-0000-4000-8000-000000000302"
+                deliveryAddresses:
+                  - id: "00000000-0000-4000-8000-000000000301"
+                    customerId: "00000000-0000-4000-8000-000000000201"
+                    addressText: "Test Address 1, Test City"
+                    accessNotes: "Gate code on the intercom; deliveries 09:00-17:00"
+                    isMain: false
+                    deactivatedAt: null
+                    createdAt: "2026-09-01T08:00:00.000Z"
+                    updatedAt: "2026-09-02T11:00:00.000Z"
+                  - id: "00000000-0000-4000-8000-000000000302"
+                    customerId: "00000000-0000-4000-8000-000000000201"
+                    addressText: "Test Address 2, Test Town"
+                    accessNotes: null
+                    isMain: true
+                    deactivatedAt: null
+                    createdAt: "2026-09-01T09:00:00.000Z"
+                    updatedAt: "2026-09-02T11:00:00.000Z"
+                recordedByUserId: "00000000-0000-4000-8000-000000000001"
+                createdAt: "2026-09-01T08:00:00.000Z"
+                updatedAt: "2026-09-01T08:00:00.000Z"
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/CustomerUnavailable" }
+        "409": { $ref: "#/components/responses/WarehouseArchived" }
+        "429": { $ref: "#/components/responses/WriteRateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  ##########################################################################################
+  # The Warehouse's own Delivery Address — Workspace-scoped, and not customer identity
+  ##########################################################################################
+
+  /api/v1/workspace/warehouses/{warehouseId}/delivery-address:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+
+    put:
+      tags: [warehouse-delivery-address]
+      summary: Record or correct the Warehouse's own Delivery Address
+      description: |
+        Requires the **Workspace** Permission `WAREHOUSES:ADDRESS_UPDATE`, resolved by
+        `WorkspaceAccessGuard` over a Warehouse of the actor's Workspace. The subject of the operation
+        is the Warehouse record itself, which `workspaces` already settles as a Workspace Capability
+        alongside renaming and archiving.
+
+        **This is the one flow in the feature that does not resolve through the Warehouse-scoped
+        authorization spine.** A Warehouse Permission never authorizes it and a Workspace Permission
+        never authorizes anything under `/api/v1/warehouses/{warehouseId}/customers` — the two
+        vocabularies do not substitute for each other, and the fact that this path names a Warehouse
+        must not be read as the Warehouse guard applying (sad.md §6 "Flags raised while drawing these
+        flows", `workspaces` ADR 0001).
+
+        A single-row update on the Warehouse, correcting the address in place when one already exists.
+        There is no second address, no Main flag and no deactivation path: a Warehouse has exactly one
+        Delivery Address and never makes it Inactive (AC-10, CONTEXT.md "Warehouse Delivery Address").
+
+        `accessNotes` without `addressText` is refused — access notes describe how to get into a place,
+        and there is no place until the address is recorded
+        (`chk_warehouses_delivery_notes_require_address`).
+
+        This address is what a Via Warehouse line is shown as travelling to, and a draft holding one
+        cannot be frozen until it is recorded (AC-16a). Being the operator's own premises data, it is
+        **read** under `PURCHASE_DRAFTS:WATCH` and is not gated on `CUSTOMERS:WATCH`.
+
+        **Archived-tolerant**, and deliberately so: the subject of the operation is the Warehouse
+        record itself, which `workspaces` already keeps writable while that Warehouse is archived
+        alongside renaming it. AC-23 governs operations that change the resources a Warehouse *owns* —
+        its Customers, its demand, its drafts — and this changes the record, not its contents.
+      operationId: setWarehouseDeliveryAddress
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WarehouseDeliveryAddressWrite" }
+            example:
+              addressText: "Test Warehouse North, Test Industrial Estate"
+              accessNotes: "Dock 3; deliveries 07:00-15:00; report to the gatehouse"
+      responses:
+        "200":
+          description: The Warehouse's one Delivery Address, correctable in place afterwards.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WarehouseDeliveryAddress" }
+              example:
+                warehouseId: "00000000-0000-4000-8000-000000000010"
+                addressText: "Test Warehouse North, Test Industrial Estate"
+                accessNotes: "Dock 3; deliveries 07:00-15:00; report to the gatehouse"
+        "400": { $ref: "#/components/responses/InvalidWarehouseDeliveryAddressInput" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WorkspaceDenied" }
+        "404": { $ref: "#/components/responses/WorkspaceTargetUnavailable" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  ##########################################################################################
+  # Customer Orders — demand that knows where it is going
+  ##########################################################################################
+
+  /api/v1/warehouses/{warehouseId}/demand:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+
+    get:
+      tags: [customer-orders]
+      summary: Read the consolidated demand
+      description: |
+        **Changed by this feature: authorization only.** Requires `CUSTOMER_ORDERS:WATCH` and now
+        declares `CUSTOMERS:WATCH` **observed** (sad.md §7), because the demand surface as a whole
+        carries customer identity through the Customer Orders behind each Demand Line.
+
+        The aggregation shape `ordering` established is unchanged (sad.md §6.6 read note): a Demand
+        Line remains one Item's consolidated Unfulfilled demand and carries no customer name, no
+        Delivery Address and no count of either. The per-order customer and destination are read
+        through `listCustomerOrders`, which is where the redaction of AC-09a and AC-24 lands.
+
+        See `api-sync-report.md` § "Findings requiring your decision", Finding 1: under an unchanged
+        aggregation shape this operation's observed Permission has no field to redact.
+
+        Archived-tolerant (AC-23).
+      operationId: readConsolidatedDemand
+      responses:
+        "200":
+          description: One Demand Line per Item with Unfulfilled demand, ordered by earliest needed-by date.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/DemandLine" }
+              example:
+                - itemId: "00000000-0000-4000-8000-000000000101"
+                  sku: "TEST-SKU-0001"
+                  description: "Test Item - 2 m cable"
+                  unitOfMeasure: "metres"
+                  totalOutstandingQuantity: 65
+                  earliestNeededBy: "2026-09-20"
+                  onHandQuantity: 12
+                  unfulfilledCustomerOrderCount: 2
+                  coverage:
+                    - purchaseDraftId: "00000000-0000-4000-8000-000000000401"
+                      purchaseDraftReference: "PD-0143"
+                      purchaseDraftLineId: "00000000-0000-4000-8000-000000000411"
+                      purchaseDraftState: "ready_for_ordering"
+                      statedQuantity: 100
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/warehouses/{warehouseId}/customer-orders:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+
+    get:
+      tags: [customer-orders]
+      summary: List Customer Orders, with the customer and destination of each
+      description: |
+        Requires `CUSTOMER_ORDERS:WATCH`, declaring `CUSTOMERS:WATCH` **observed**.
+
+        Holding the observed Permission, each order reads with its Customer and the Delivery Address
+        it is going to — or, for an order recorded by typed name, the typed name and **no** Delivery
+        Address, that absence being what tells the member which kind of row they are looking at
+        (AC-11a, AC-24). Both kinds read and count alike.
+
+        Without it, the projection selects **no customer name of either kind, no address, no access
+        note and no count of them**, while quantities, dates, Items and states are returned unchanged
+        — the member keeps everything their own Permissions do admit (AC-09a). The redacted form omits
+        those properties rather than nulling them.
+
+        The `itemId` and `state` filters serve the sub-rows behind one Demand Line and the linkable
+        orders a draft line may name; `deliveryAddressId` narrows to one destination, which is what a
+        member assembling a Direct to Customer line needs (AC-15).
+
+        Archived-tolerant (AC-23).
+      operationId: listCustomerOrders
+      parameters:
+        - in: query
+          name: itemId
+          required: false
+          schema: { type: string, format: uuid }
+        - in: query
+          name: state
+          required: false
+          schema: { $ref: "#/components/schemas/CustomerOrderState" }
+        - in: query
+          name: customerId
+          required: false
+          description: |
+            Narrows to the demand of one Customer. Rejected for an actor without `CUSTOMERS:WATCH`:
+            filtering by a Customer identifier and reading the resulting count would answer "does this
+            Customer exist" as effectively as the record does (spec.md §6.1 "Customer disclosure
+            through a count").
+          schema: { type: string, format: uuid }
+        - in: query
+          name: deliveryAddressId
+          required: false
+          description: |
+            Narrows to the demand going to one Delivery Address. Rejected for an actor without
+            `CUSTOMERS:WATCH`, for the same reason as `customerId`.
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: The Warehouse's Customer Orders, identified or redacted according to the observed Permission.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/CustomerOrder" }
+              examples:
+                identified:
+                  summary: With `CUSTOMERS:WATCH` — a Customer-naming order and a typed-name order (AC-24)
+                  value:
+                    - id: "00000000-0000-4000-8000-000000000601"
+                      itemId: "00000000-0000-4000-8000-000000000101"
+                      customer:
+                        id: "00000000-0000-4000-8000-000000000201"
+                        name: "Test Customer North"
+                      customerName: null
+                      destination:
+                        deliveryAddressId: "00000000-0000-4000-8000-000000000301"
+                        addressText: "Test Address 1, Test City"
+                        accessNotes: "Gate code on the intercom; deliveries 09:00-17:00"
+                        isMain: true
+                        deactivatedAt: null
+                      quantity: 100
+                      outstandingQuantity: 40
+                      neededBy: "2026-09-20"
+                      state: "unfulfilled"
+                      cancellationReason: null
+                      recordedByUserId: "00000000-0000-4000-8000-000000000001"
+                      cancelledByUserId: null
+                      cancelledAt: null
+                      createdAt: "2026-09-01T10:00:00.000Z"
+                      updatedAt: "2026-09-01T10:00:00.000Z"
+                    - id: "00000000-0000-4000-8000-000000000602"
+                      itemId: "00000000-0000-4000-8000-000000000101"
+                      customer: null
+                      customerName: "Test Customer South"
+                      destination: null
+                      quantity: 25
+                      outstandingQuantity: 25
+                      neededBy: "2026-09-22"
+                      state: "unfulfilled"
+                      cancellationReason: null
+                      recordedByUserId: "00000000-0000-4000-8000-000000000001"
+                      cancelledByUserId: null
+                      cancelledAt: null
+                      createdAt: "2026-09-01T10:05:00.000Z"
+                      updatedAt: "2026-09-01T10:05:00.000Z"
+                redacted:
+                  summary: Without `CUSTOMERS:WATCH` — identity omitted, everything else unchanged (AC-09a)
+                  value:
+                    - id: "00000000-0000-4000-8000-000000000601"
+                      itemId: "00000000-0000-4000-8000-000000000101"
+                      quantity: 100
+                      outstandingQuantity: 40
+                      neededBy: "2026-09-20"
+                      state: "unfulfilled"
+                      cancellationReason: null
+                      recordedByUserId: "00000000-0000-4000-8000-000000000001"
+                      cancelledByUserId: null
+                      cancelledAt: null
+                      createdAt: "2026-09-01T10:00:00.000Z"
+                      updatedAt: "2026-09-01T10:00:00.000Z"
+        "400": { $ref: "#/components/responses/CustomerFilterDenied" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+    post:
+      tags: [customer-orders]
+      summary: Record a Customer Order, against a Customer or by typed name
+      description: |
+        Requires `CUSTOMER_ORDERS:CREATE`, declaring `CUSTOMERS:WATCH` **observed** because the
+        response carries the customer and the destination back.
+
+        Two mutually exclusive shapes, which is the `chk_customer_orders_customer_identity` check as a
+        payload: an order names **a Customer with one of its Delivery Addresses**, or **a typed
+        customer name with no address** — never both and never neither.
+
+        - Naming a Customer with no `customerDeliveryAddressId` records the Customer's **current Main**
+          address, resolved and stored as a reference at record time; marking a different address Main
+          afterwards does not move this order (AC-11).
+        - Naming a Customer with an address records the stated one (AC-11).
+        - Typing a name records that name, **no** Customer and **no** Delivery Address. No Customer is
+          created and none is matched, then or ever (AC-11a). It counts in the consolidated demand
+          exactly as an order naming a Customer is counted (AC-24).
+
+        A Customer or a Delivery Address that exists only in another Warehouse of the same Workspace is
+        refused **identically to one that does not exist**, and the refusal discloses nothing about
+        what exists elsewhere (AC-12). An Inactive Customer, or an Inactive address, is refused.
+
+        Mutating: refused while the Warehouse is archived (AC-23), and rate limited.
+      operationId: recordCustomerOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CustomerOrderCreate" }
+            examples:
+              namingACustomer:
+                summary: AC-11 — the Customer's Main address is taken when none is stated
+                value:
+                  itemId: "00000000-0000-4000-8000-000000000101"
+                  customerId: "00000000-0000-4000-8000-000000000201"
+                  quantity: 100
+                  neededBy: "2026-09-20"
+              namingACustomerAndAddress:
+                summary: AC-11 — a stated address other than the Main one
+                value:
+                  itemId: "00000000-0000-4000-8000-000000000101"
+                  customerId: "00000000-0000-4000-8000-000000000201"
+                  customerDeliveryAddressId: "00000000-0000-4000-8000-000000000302"
+                  quantity: 100
+                  neededBy: "2026-09-20"
+              typedName:
+                summary: AC-11a — a typed name, no Customer and no Delivery Address
+                value:
+                  itemId: "00000000-0000-4000-8000-000000000101"
+                  customerName: "Test Customer South"
+                  quantity: 25
+                  neededBy: "2026-09-22"
+      responses:
+        "201":
+          description: The recorded Customer Order with its destination.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CustomerOrder" }
+              examples:
+                namingACustomer:
+                  summary: AC-11 — recorded against the Customer's Main Delivery Address
+                  value:
+                    id: "00000000-0000-4000-8000-000000000601"
+                    itemId: "00000000-0000-4000-8000-000000000101"
+                    customer:
+                      id: "00000000-0000-4000-8000-000000000201"
+                      name: "Test Customer North"
+                    customerName: null
+                    destination:
+                      deliveryAddressId: "00000000-0000-4000-8000-000000000301"
+                      addressText: "Test Address 1, Test City"
+                      accessNotes: "Gate code on the intercom; deliveries 09:00-17:00"
+                      isMain: true
+                      deactivatedAt: null
+                    quantity: 100
+                    outstandingQuantity: 100
+                    neededBy: "2026-09-20"
+                    state: "unfulfilled"
+                    cancellationReason: null
+                    recordedByUserId: "00000000-0000-4000-8000-000000000001"
+                    cancelledByUserId: null
+                    cancelledAt: null
+                    createdAt: "2026-09-01T10:00:00.000Z"
+                    updatedAt: "2026-09-01T10:00:00.000Z"
+                typedName:
+                  summary: AC-11a — a typed name, no Customer and no Delivery Address
+                  value:
+                    id: "00000000-0000-4000-8000-000000000602"
+                    itemId: "00000000-0000-4000-8000-000000000101"
+                    customer: null
+                    customerName: "Test Customer South"
+                    destination: null
+                    quantity: 25
+                    outstandingQuantity: 25
+                    neededBy: "2026-09-22"
+                    state: "unfulfilled"
+                    cancellationReason: null
+                    recordedByUserId: "00000000-0000-4000-8000-000000000001"
+                    cancelledByUserId: null
+                    cancelledAt: null
+                    createdAt: "2026-09-01T10:05:00.000Z"
+                    updatedAt: "2026-09-01T10:05:00.000Z"
+        "400": { $ref: "#/components/responses/InvalidCustomerOrderInput" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/CustomerOrderTargetUnavailable" }
+        "409": { $ref: "#/components/responses/CustomerOrderDestinationConflict" }
+        "429": { $ref: "#/components/responses/WriteRateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/warehouses/{warehouseId}/customer-orders/{customerOrderId}:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+      - $ref: "#/components/parameters/CustomerOrderIdPath"
+
+    patch:
+      tags: [customer-orders]
+      summary: Amend a Customer Order's quantity or needed-by date
+      description: |
+        **Changed by this feature: authorization and response only.** The payload is exactly as
+        `ordering` shipped it — quantity and needed-by date, neither state nor Outstanding Quantity an
+        input. It now declares `CUSTOMERS:WATCH` **observed**, because the order it returns carries the
+        customer and the destination.
+
+        **The Delivery Address is deliberately not amendable here.** Redirection is its own
+        sub-resource with its own rules — the same Customer, an active address, an outstanding order —
+        and a shared payload would let the amendment's validation stand in for the redirection's
+        (AC-11c, sad.md §7).
+
+        Mutating: refused while the Warehouse is archived (AC-23), and rate limited.
+      operationId: amendCustomerOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CustomerOrderAmend" }
+            example:
+              quantity: 120
+      responses:
+        "200":
+          description: The amended Customer Order, identified or redacted according to the observed Permission.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CustomerOrder" }
+        "400": { $ref: "#/components/responses/InvalidCustomerOrderInput" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/CustomerOrderTargetUnavailable" }
+        "409": { $ref: "#/components/responses/CustomerOrderStateConflict" }
+        "429": { $ref: "#/components/responses/WriteRateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/warehouses/{warehouseId}/customer-orders/{customerOrderId}/delivery-address:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+      - $ref: "#/components/parameters/CustomerOrderIdPath"
+
+    put:
+      tags: [customer-orders]
+      summary: Redirect an outstanding Customer Order to another of its Customer's addresses
+      description: |
+        Requires `CUSTOMER_ORDERS:UPDATE`, declaring `CUSTOMERS:WATCH` **observed**.
+
+        The Customer Order row is **locked and its state re-read inside the transaction**; the
+        eligibility decision is never taken from the value the member composed against (sad.md §6.5).
+        Refused — changing nothing — when the named address belongs to another Customer, when it is
+        Inactive, or when the order is already Fulfilled or cancelled: an outstanding order is
+        redirected only to another **active** Delivery Address of the Customer it **already names**,
+        so serving a different customer means recording a new Customer Order (AC-11c). An order
+        recorded by typed name names no Customer and is not redirectable.
+
+        The write names **one column on one Customer Order**. No frozen column of any Purchase Draft
+        appears in any statement it issues: redirection is not a back door onto a frozen record
+        (AC-17, sad.md §8). The Address Drift it causes is **derived on the next read** of the affected
+        drafts and is never written by this flow (AC-11b, AC-18).
+
+        `PUT` and idempotent: redirecting to the address the order is already going to changes nothing.
+
+        Mutating: refused while the Warehouse is archived (AC-23), and rate limited.
+      operationId: redirectCustomerOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CustomerOrderRedirect" }
+            example:
+              customerDeliveryAddressId: "00000000-0000-4000-8000-000000000302"
+      responses:
+        "200":
+          description: |
+            The Customer Order going to the new address, against the same Customer. Every frozen
+            Purchase Draft Line linked to it that was frozen expecting the previous address reports
+            Address Drift on its next read (AC-11b).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CustomerOrder" }
+        "400": { $ref: "#/components/responses/InvalidCustomerOrderInput" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/CustomerOrderTargetUnavailable" }
+        "409": { $ref: "#/components/responses/CustomerOrderRedirectConflict" }
+        "429": { $ref: "#/components/responses/WriteRateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  ##########################################################################################
+  # Purchase Drafts — Delivery Mode, the freeze, Address Drift, and the per-line endings
+  ##########################################################################################
+
+  /api/v1/warehouses/{warehouseId}/purchase-drafts:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+
+    get:
+      tags: [purchase-drafts]
+      summary: List the Warehouse's Purchase Drafts, flagging Address Drift on directly-shipped lines
+      description: |
+        **Changed by this feature: authorization and one added field.** Requires
+        `PURCHASE_DRAFTS:WATCH` and now declares `CUSTOMERS:WATCH` **observed**.
+
+        For each frozen draft the read compares each link's captured Delivery Address against the
+        address that Customer Order is going to **now**. Nothing is stored and no job repairs anything,
+        so a redirection is reflected on this read and there is no superseded value to serve
+        (spec.md §6 "Address-drift freshness", sad.md §6.9).
+
+        `hasDirectToCustomerAddressDrift` is the new field: it is `true` when a **Direct to Customer**
+        line of this draft is linked to a Customer Order now going elsewhere. That case is reported on
+        the list itself, where the member sees it without opening anything, because goods are
+        travelling to an address nobody now expects them at. The same disagreement on a **Via
+        Warehouse** line is reported when the draft is opened — everything on such a line lands at one
+        dock either way (AC-18a).
+
+        Neither instructs the member and neither blocks anything. Both stop being reported once the
+        Customer Order is redirected back to the address frozen for it.
+
+        `hasDriftSignal` keeps its `ordering` meaning — any link of this draft differing in any
+        captured value — and is now also raised by an address disagreement of either mode.
+
+        The summary carries no customer name and no address, so nothing on it is redacted; the observed
+        Permission is declared because the operation is part of the identity-bearing draft surface and
+        the architecture check requires every such read to declare it (sad.md §8 "Authorization
+        coverage").
+
+        Archived-tolerant (AC-23).
+      operationId: listPurchaseDrafts
+      parameters:
+        - in: query
+          name: state
+          required: false
+          schema: { $ref: "#/components/schemas/PurchaseDraftState" }
+      responses:
+        "200":
+          description: The Warehouse's Purchase Drafts, most recently created first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/PurchaseDraftSummary" }
+              example:
+                - id: "00000000-0000-4000-8000-000000000401"
+                  reference: "PD-0143"
+                  state: "ready_for_ordering"
+                  expectedArrivalDate: "2026-09-18"
+                  lineCount: 2
+                  hasDriftSignal: true
+                  hasDirectToCustomerAddressDrift: true
+                  closureReason: null
+                  createdByUserId: "00000000-0000-4000-8000-000000000001"
+                  createdAt: "2026-09-01T11:00:00.000Z"
+                  readiedByUserId: "00000000-0000-4000-8000-000000000001"
+                  readiedAt: "2026-09-02T09:00:00.000Z"
+                  closedByUserId: null
+                  closedAt: null
+                  arrivalConfirmedByUserId: null
+                  arrivalConfirmedAt: null
+                  discardedByUserId: null
+                  discardedAt: null
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/warehouses/{warehouseId}/purchase-drafts/{purchaseDraftId}:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+      - $ref: "#/components/parameters/PurchaseDraftIdPath"
+
+    get:
+      tags: [purchase-drafts]
+      summary: Read one Purchase Draft with its lines, destinations and Address Drift
+      description: |
+        **Changed by this feature: authorization and the line/link projections.** Requires
+        `PURCHASE_DRAFTS:WATCH`, declaring `CUSTOMERS:WATCH` **observed**.
+
+        Each line carries its Delivery Mode and its destination, split into two properties for a
+        reason that is a security boundary rather than a convenience:
+
+        - `warehouseDestination` — present on a **Via Warehouse** line. The operator's own premises
+          data, readable under `PURCHASE_DRAFTS:WATCH` and **never** withheld (AC-10, sad.md §7).
+        - `customerDestination` — present on a **Direct to Customer** line, and **omitted entirely**
+          for an actor without `CUSTOMERS:WATCH` (AC-09a).
+
+        Per link, the response returns the Delivery Address **frozen** for it and the address the
+        demand **now expects**, with every other frozen value of the draft exactly as it was (AC-18).
+        A `delivery_address_changed` Drift Signal marks the disagreement. That signal is present in the
+        redacted form too — it is a fact about the draft, not customer identity — while the two
+        addresses it compares are not.
+
+        Redirecting the Customer Order back to the frozen address stops the report, because the
+        comparison is between values rather than a record of having changed (AC-18a).
+
+        Archived-tolerant (AC-23).
+      operationId: readPurchaseDraft
+      responses:
+        "200":
+          description: The draft with its lines, their destinations, their endings and their links.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PurchaseDraftDetail" }
+              examples:
+                identifiedWithAddressDrift:
+                  summary: |
+                    AC-18 / AC-18a with `CUSTOMERS:WATCH` — a frozen draft holding one Via Warehouse
+                    line and one Direct to Customer line, the direct line's linked order redirected
+                    since the freeze.
+                  value:
+                    id: "00000000-0000-4000-8000-000000000401"
+                    reference: "PD-0143"
+                    state: "ready_for_ordering"
+                    expectedArrivalDate: "2026-09-18"
+                    lineCount: 2
+                    hasDriftSignal: true
+                    hasDirectToCustomerAddressDrift: true
+                    closureReason: null
+                    createdByUserId: "00000000-0000-4000-8000-000000000001"
+                    createdAt: "2026-09-01T11:00:00.000Z"
+                    readiedByUserId: "00000000-0000-4000-8000-000000000001"
+                    readiedAt: "2026-09-02T09:00:00.000Z"
+                    closedByUserId: null
+                    closedAt: null
+                    arrivalConfirmedByUserId: null
+                    arrivalConfirmedAt: null
+                    discardedByUserId: null
+                    discardedAt: null
+                    lines:
+                      - id: "00000000-0000-4000-8000-000000000411"
+                        itemId: "00000000-0000-4000-8000-000000000101"
+                        itemSku: "TEST-SKU-0001"
+                        itemDescription: "Test Item - 2 m cable"
+                        unitOfMeasure: "metres"
+                        orderedQuantity: 140
+                        packagingTypeId: "cable_coil"
+                        valueAddingNote: null
+                        deliveryMode: "via_warehouse"
+                        warehouseDestination:
+                          addressText: "Test Warehouse North, Test Industrial Estate"
+                          accessNotes: "Dock 3; deliveries 07:00-15:00; report to the gatehouse"
+                          frozen: true
+                        customerDestination: null
+                        ending: null
+                        links:
+                          - id: "00000000-0000-4000-8000-000000000501"
+                            customerOrderId: "00000000-0000-4000-8000-000000000601"
+                            customer:
+                              id: "00000000-0000-4000-8000-000000000201"
+                              name: "Test Customer North"
+                            customerName: null
+                            statedQuantity: 100
+                            snapshot:
+                              capturedQuantity: 100
+                              capturedNeededBy: "2026-09-20"
+                              capturedState: "unfulfilled"
+                              capturedDeliveryAddressId: "00000000-0000-4000-8000-000000000301"
+                              capturedDeliveryAddressText: "Test Address 1, Test City"
+                            current:
+                              quantity: 100
+                              neededBy: "2026-09-20"
+                              state: "unfulfilled"
+                              outstandingQuantity: 100
+                              lastChangedAt: null
+                              deliveryAddress:
+                                deliveryAddressId: "00000000-0000-4000-8000-000000000301"
+                                addressText: "Test Address 1, Test City"
+                                accessNotes: "Gate code on the intercom; deliveries 09:00-17:00"
+                                isMain: true
+                                deactivatedAt: null
+                            driftSignals: []
+                            allocation: null
+                      - id: "00000000-0000-4000-8000-000000000412"
+                        itemId: "00000000-0000-4000-8000-000000000102"
+                        itemSku: "TEST-SKU-0002"
+                        itemDescription: "Test Item - labelled carton insert"
+                        unitOfMeasure: "pieces"
+                        orderedQuantity: 60
+                        packagingTypeId: "cartons"
+                        valueAddingNote: null
+                        deliveryMode: "direct_to_customer"
+                        warehouseDestination: null
+                        customerDestination:
+                          customerDeliveryAddressId: "00000000-0000-4000-8000-000000000301"
+                          customerId: "00000000-0000-4000-8000-000000000201"
+                          customerName: "Test Customer North"
+                          addressText: "Test Address 1, Test City"
+                          accessNotes: "Gate code on the intercom; deliveries 09:00-17:00"
+                          frozen: true
+                        ending: null
+                        links:
+                          - id: "00000000-0000-4000-8000-000000000503"
+                            customerOrderId: "00000000-0000-4000-8000-000000000603"
+                            customer:
+                              id: "00000000-0000-4000-8000-000000000201"
+                              name: "Test Customer North"
+                            customerName: null
+                            statedQuantity: 60
+                            snapshot:
+                              capturedQuantity: 60
+                              capturedNeededBy: "2026-09-21"
+                              capturedState: "unfulfilled"
+                              capturedDeliveryAddressId: "00000000-0000-4000-8000-000000000301"
+                              capturedDeliveryAddressText: "Test Address 1, Test City"
+                            current:
+                              quantity: 60
+                              neededBy: "2026-09-21"
+                              state: "unfulfilled"
+                              outstandingQuantity: 60
+                              lastChangedAt: "2026-09-02T14:00:00.000Z"
+                              deliveryAddress:
+                                deliveryAddressId: "00000000-0000-4000-8000-000000000302"
+                                addressText: "Test Address 2, Test Town"
+                                accessNotes: null
+                                isMain: false
+                                deactivatedAt: null
+                            driftSignals: ["delivery_address_changed"]
+                            allocation: null
+                redactedSameDraft:
+                  summary: |
+                    AC-09a without `CUSTOMERS:WATCH` — the identity properties are absent, the
+                    Warehouse's own destination is not, and the drift is still reported.
+                  value:
+                    id: "00000000-0000-4000-8000-000000000401"
+                    reference: "PD-0143"
+                    state: "ready_for_ordering"
+                    expectedArrivalDate: "2026-09-18"
+                    lineCount: 2
+                    hasDriftSignal: true
+                    hasDirectToCustomerAddressDrift: true
+                    closureReason: null
+                    createdByUserId: "00000000-0000-4000-8000-000000000001"
+                    createdAt: "2026-09-01T11:00:00.000Z"
+                    readiedByUserId: "00000000-0000-4000-8000-000000000001"
+                    readiedAt: "2026-09-02T09:00:00.000Z"
+                    closedByUserId: null
+                    closedAt: null
+                    arrivalConfirmedByUserId: null
+                    arrivalConfirmedAt: null
+                    discardedByUserId: null
+                    discardedAt: null
+                    lines:
+                      - id: "00000000-0000-4000-8000-000000000412"
+                        itemId: "00000000-0000-4000-8000-000000000102"
+                        itemSku: "TEST-SKU-0002"
+                        itemDescription: "Test Item - labelled carton insert"
+                        unitOfMeasure: "pieces"
+                        orderedQuantity: 60
+                        packagingTypeId: "cartons"
+                        valueAddingNote: null
+                        deliveryMode: "direct_to_customer"
+                        warehouseDestination: null
+                        ending: null
+                        links:
+                          - id: "00000000-0000-4000-8000-000000000503"
+                            customerOrderId: "00000000-0000-4000-8000-000000000603"
+                            statedQuantity: 60
+                            snapshot:
+                              capturedQuantity: 60
+                              capturedNeededBy: "2026-09-21"
+                              capturedState: "unfulfilled"
+                            current:
+                              quantity: 60
+                              neededBy: "2026-09-21"
+                              state: "unfulfilled"
+                              outstandingQuantity: 60
+                              lastChangedAt: "2026-09-02T14:00:00.000Z"
+                            driftSignals: ["delivery_address_changed"]
+                            allocation: null
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/PurchaseDraftUnavailable" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/warehouses/{warehouseId}/purchase-draft-lines:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+
+    get:
+      tags: [purchase-drafts]
+      summary: Read the Warehouse's frozen lines split by Delivery Mode
+      description: |
+        Requires `PURCHASE_DRAFTS:WATCH`, declaring `CUSTOMERS:WATCH` **observed**.
+
+        Returns the lines of this Warehouse's drafts with their Delivery Modes, so the lines landing at
+        the Warehouse's own Delivery Address are kept apart from those shipping Direct to Customer.
+        Each line of a draft holding both modes is listed in whichever half **its own** mode places it,
+        so a member preparing the dock sees only the goods they will physically handle (AC-22).
+
+        `deliveryMode` narrows the response to one half. `state` defaults to no filter; the by-line
+        view AC-22 describes is `?state=ready_for_ordering`.
+
+        **Served at the top level, not as `/purchase-drafts/lines`**, so no literal segment competes
+        with a `{purchaseDraftId}` parameter — the same reason `ordering` serves `/packaging-types` at
+        the top level. `tests/refactor/route-table.spec.mjs` asserts no method-and-path pair is served
+        twice (sad.md §7).
+
+        Archived-tolerant (AC-23).
+      operationId: listPurchaseDraftLines
+      parameters:
+        - in: query
+          name: deliveryMode
+          required: false
+          schema: { $ref: "#/components/schemas/DeliveryMode" }
+        - in: query
+          name: state
+          required: false
+          schema: { $ref: "#/components/schemas/PurchaseDraftState" }
+      responses:
+        "200":
+          description: |
+            The lines of the Warehouse's drafts, each carrying the draft it belongs to, ordered by
+            Delivery Mode then by draft reference then by line position.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/PurchaseDraftLineListEntry" }
+              example:
+                - purchaseDraftId: "00000000-0000-4000-8000-000000000401"
+                  purchaseDraftReference: "PD-0143"
+                  purchaseDraftState: "ready_for_ordering"
+                  expectedArrivalDate: "2026-09-18"
+                  line:
+                    id: "00000000-0000-4000-8000-000000000411"
+                    itemId: "00000000-0000-4000-8000-000000000101"
+                    itemSku: "TEST-SKU-0001"
+                    itemDescription: "Test Item - 2 m cable"
+                    unitOfMeasure: "metres"
+                    orderedQuantity: 140
+                    packagingTypeId: "cable_coil"
+                    valueAddingNote: null
+                    deliveryMode: "via_warehouse"
+                    warehouseDestination:
+                      addressText: "Test Warehouse North, Test Industrial Estate"
+                      accessNotes: "Dock 3; deliveries 07:00-15:00; report to the gatehouse"
+                      frozen: true
+                    customerDestination: null
+                    ending: null
+                    links: []
+                - purchaseDraftId: "00000000-0000-4000-8000-000000000401"
+                  purchaseDraftReference: "PD-0143"
+                  purchaseDraftState: "ready_for_ordering"
+                  expectedArrivalDate: "2026-09-18"
+                  line:
+                    id: "00000000-0000-4000-8000-000000000412"
+                    itemId: "00000000-0000-4000-8000-000000000102"
+                    itemSku: "TEST-SKU-0002"
+                    itemDescription: "Test Item - labelled carton insert"
+                    unitOfMeasure: "pieces"
+                    orderedQuantity: 60
+                    packagingTypeId: "cartons"
+                    valueAddingNote: null
+                    deliveryMode: "direct_to_customer"
+                    warehouseDestination: null
+                    customerDestination:
+                      customerDeliveryAddressId: "00000000-0000-4000-8000-000000000301"
+                      customerId: "00000000-0000-4000-8000-000000000201"
+                      customerName: "Test Customer North"
+                      addressText: "Test Address 1, Test City"
+                      accessNotes: "Gate code on the intercom; deliveries 09:00-17:00"
+                      frozen: true
+                    ending: null
+                    links: []
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/warehouses/{warehouseId}/purchase-drafts/{purchaseDraftId}/lines/{purchaseDraftLineId}:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+      - $ref: "#/components/parameters/PurchaseDraftIdPath"
+      - $ref: "#/components/parameters/PurchaseDraftLineIdPath"
+
+    patch:
+      tags: [purchase-drafts]
+      summary: Revise a line, including its Delivery Mode and Delivery Address
+      description: |
+        **Changed by this feature: two added payload properties and three added refusals.** Requires
+        `PURCHASE_DRAFTS:UPDATE`, declaring `CUSTOMERS:WATCH` **observed**.
+
+        Every new line is recorded as **Via Warehouse** travelling to the Warehouse's own Delivery
+        Address, with no address stored on the line, because a Via Warehouse line's destination *is*
+        the Warehouse's (AC-13). Setting `deliveryMode: direct_to_customer` requires
+        `customerDeliveryAddressId`; setting `deliveryMode: via_warehouse` clears it. That pairing is
+        `chk_purchase_draft_lines_delivery_mode_address`, not a rule the command remembers.
+
+        Three refusals, each changing nothing:
+
+        - **The Warehouse's own address on a Direct to Customer line** is refused, with the error bound
+          to the destination field: goods shipped to their own site are travelling Via Warehouse
+          (AC-14). The Warehouse's address is columns on `warehouses` and has no identifier this
+          property could hold, so this refusal is about the member's submitted intent rather than about
+          a row the database might otherwise accept.
+        - **A Customer Delivery Address of another Warehouse, or an Inactive one**, is refused. A
+          cross-Warehouse address fails identically to one that does not exist (AC-12).
+        - **Any link on this line whose Customer Order is going to a different address** blocks the
+          change, and **every** disagreeing link is named in `details.disagreeingLinks`. None is
+          withdrawn: which link to withdraw is the member's decision (AC-15a). This is the second of
+          the three moments at which a Direct to Customer line's agreement with its demand is checked.
+
+        The write resolves the draft **only in the `draft` state**; an update affecting zero rows is a
+        typed refusal (`purchase_drafts.draft_frozen`), so a revision cannot race a concurrent freeze
+        and no path writes these columns once the draft is frozen (AC-17).
+
+        Mutating: refused while the Warehouse is archived (AC-23), and rate limited.
+      operationId: revisePurchaseDraftLine
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PurchaseDraftLineUpdate" }
+            examples:
+              setDirectToCustomer:
+                summary: AC-13 — the line travels straight to a Customer's address
+                value:
+                  deliveryMode: "direct_to_customer"
+                  customerDeliveryAddressId: "00000000-0000-4000-8000-000000000301"
+              backToViaWarehouse:
+                summary: The line comes to the dock again; the address is cleared with the mode
+                value:
+                  deliveryMode: "via_warehouse"
+                  customerDeliveryAddressId: null
+      responses:
+        "200":
+          description: The revised line with its Delivery Mode and destination.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PurchaseDraftLine" }
+              example:
+                id: "00000000-0000-4000-8000-000000000412"
+                itemId: "00000000-0000-4000-8000-000000000102"
+                itemSku: "TEST-SKU-0002"
+                itemDescription: "Test Item - labelled carton insert"
+                unitOfMeasure: "pieces"
+                orderedQuantity: 60
+                packagingTypeId: "cartons"
+                valueAddingNote: null
+                deliveryMode: "direct_to_customer"
+                warehouseDestination: null
+                customerDestination:
+                  customerDeliveryAddressId: "00000000-0000-4000-8000-000000000301"
+                  customerId: "00000000-0000-4000-8000-000000000201"
+                  customerName: "Test Customer North"
+                  addressText: "Test Address 1, Test City"
+                  accessNotes: "Gate code on the intercom; deliveries 09:00-17:00"
+                  frozen: false
+                ending: null
+                links: []
+        "400": { $ref: "#/components/responses/InvalidPurchaseDraftInput" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/PurchaseDraftTargetUnavailable" }
+        "409": { $ref: "#/components/responses/PurchaseDraftLineDestinationConflict" }
+        "429": { $ref: "#/components/responses/WriteRateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/warehouses/{warehouseId}/purchase-drafts/{purchaseDraftId}/lines/{purchaseDraftLineId}/links:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+      - $ref: "#/components/parameters/PurchaseDraftIdPath"
+      - $ref: "#/components/parameters/PurchaseDraftLineIdPath"
+
+    post:
+      tags: [purchase-drafts]
+      summary: Link a line to a Customer Order
+      description: |
+        **Changed by this feature: one added refusal.** Requires `PURCHASE_DRAFTS:UPDATE`, declaring
+        `CUSTOMERS:WATCH` **observed**.
+
+        On a **Direct to Customer** line, a Customer Order going to any other Delivery Address —
+        whether of the same Customer or another — is refused, nothing of the link is recorded, and the
+        refusal names the address each of the two is bound for (AC-15). This is the first of the three
+        moments the agreement is checked.
+
+        On a **Via Warehouse** line the existing loose linking is unchanged: links to Customer Orders
+        bound for several different Delivery Addresses are all recorded and **no quantity is
+        adjusted**, because everything on that line lands at one dock and any customer can be served
+        from it — coverage stays the member's decision (AC-15b).
+
+        Mutating: refused while the Warehouse is archived (AC-23), and rate limited.
+      operationId: linkPurchaseDraftLine
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PurchaseDraftLineLinkCreate" }
+            example:
+              customerOrderId: "00000000-0000-4000-8000-000000000601"
+              statedQuantity: 100
+      responses:
+        "201":
+          description: The recorded link.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PurchaseDraftLineLink" }
+        "400": { $ref: "#/components/responses/InvalidPurchaseDraftInput" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/PurchaseDraftTargetUnavailable" }
+        "409": { $ref: "#/components/responses/PurchaseDraftLinkConflict" }
+        "429": { $ref: "#/components/responses/WriteRateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/warehouses/{warehouseId}/purchase-drafts/{purchaseDraftId}/readiness:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+      - $ref: "#/components/parameters/PurchaseDraftIdPath"
+
+    post:
+      tags: [purchase-drafts]
+      summary: Move a Purchase Draft to Ready for Ordering, freezing where each line goes
+      description: |
+        **Changed by this feature: two added refusals and what the freeze captures.** Requires
+        `PURCHASE_DRAFTS:READY`. It declares **no** observed Permission: the response is the frozen
+        draft, so it is served through the same redaction the detail read applies.
+
+        Two refusals precede the freeze, each changing nothing:
+
+        - The draft holds a **Via Warehouse** line and the Warehouse has **no Delivery Address**. The
+          transition is refused and the refusal names `WAREHOUSES:ADDRESS_UPDATE` as the capability
+          that records one — a line coming to the warehouse cannot be frozen before the warehouse has
+          an address to be delivered to. Adding and revising lines on that draft keeps working
+          (AC-16a).
+        - Any **Direct to Customer** line disagrees with any of its links. The transition is refused
+          and every disagreeing link is named in `details.disagreeingLinks`, withdrawing none
+          (AC-15a). This is the third and last moment the agreement is checked, which is what makes it
+          continuous rather than a check made once when the link was created.
+
+        Otherwise one transaction freezes, alongside the lines, quantities, links and Pre-receipt
+        Requirements `ordering` already froze:
+
+        - every line's **Delivery Mode**;
+        - the **Delivery Address text and access notes as they read at that instant** — the
+          Warehouse's own for a Via Warehouse line, the Customer's for a Direct to Customer one —
+          together with the **customer name** where there is one, which is the Direct to Customer case
+          only;
+        - on each link's Demand Snapshot entry, the **Delivery Address that Customer Order was going
+          to at that instant**, beside the quantity, needed-by date and state already captured
+          (AC-16).
+
+        The capture is a **write of values, not a reference**: there is no live reference left on a
+        frozen line for a later edit in place to travel along, which is how AC-17 becomes structural
+        rather than remembered.
+
+        The transition stays conditional on the prior state, so the second of two concurrent attempts
+        affects no row and is refused with `purchase_drafts.concurrent_change`.
+
+        Mutating: refused while the Warehouse is archived (AC-23), and rate limited.
+      operationId: readyPurchaseDraft
+      responses:
+        "200":
+          description: The frozen draft — the record of what the supplier was told.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PurchaseDraftDetail" }
+              example:
+                id: "00000000-0000-4000-8000-000000000401"
+                reference: "PD-0143"
+                state: "ready_for_ordering"
+                expectedArrivalDate: "2026-09-18"
+                lineCount: 1
+                hasDriftSignal: false
+                hasDirectToCustomerAddressDrift: false
+                closureReason: null
+                createdByUserId: "00000000-0000-4000-8000-000000000001"
+                createdAt: "2026-09-01T11:00:00.000Z"
+                readiedByUserId: "00000000-0000-4000-8000-000000000001"
+                readiedAt: "2026-09-02T09:00:00.000Z"
+                closedByUserId: null
+                closedAt: null
+                arrivalConfirmedByUserId: null
+                arrivalConfirmedAt: null
+                discardedByUserId: null
+                discardedAt: null
+                lines:
+                  - id: "00000000-0000-4000-8000-000000000412"
+                    itemId: "00000000-0000-4000-8000-000000000102"
+                    itemSku: "TEST-SKU-0002"
+                    itemDescription: "Test Item - labelled carton insert"
+                    unitOfMeasure: "pieces"
+                    orderedQuantity: 60
+                    packagingTypeId: "cartons"
+                    valueAddingNote: null
+                    deliveryMode: "direct_to_customer"
+                    warehouseDestination: null
+                    customerDestination:
+                      customerDeliveryAddressId: "00000000-0000-4000-8000-000000000301"
+                      customerId: "00000000-0000-4000-8000-000000000201"
+                      customerName: "Test Customer North"
+                      addressText: "Test Address 1, Test City"
+                      accessNotes: "Gate code on the intercom; deliveries 09:00-17:00"
+                      frozen: true
+                    ending: null
+                    links:
+                      - id: "00000000-0000-4000-8000-000000000503"
+                        customerOrderId: "00000000-0000-4000-8000-000000000603"
+                        customer:
+                          id: "00000000-0000-4000-8000-000000000201"
+                          name: "Test Customer North"
+                        customerName: null
+                        statedQuantity: 60
+                        snapshot:
+                          capturedQuantity: 60
+                          capturedNeededBy: "2026-09-21"
+                          capturedState: "unfulfilled"
+                          capturedDeliveryAddressId: "00000000-0000-4000-8000-000000000301"
+                          capturedDeliveryAddressText: "Test Address 1, Test City"
+                        current:
+                          quantity: 60
+                          neededBy: "2026-09-21"
+                          state: "unfulfilled"
+                          outstandingQuantity: 60
+                          lastChangedAt: null
+                          deliveryAddress:
+                            deliveryAddressId: "00000000-0000-4000-8000-000000000301"
+                            addressText: "Test Address 1, Test City"
+                            accessNotes: "Gate code on the intercom; deliveries 09:00-17:00"
+                            isMain: true
+                            deactivatedAt: null
+                        driftSignals: []
+                        allocation: null
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/PurchaseDraftUnavailable" }
+        "409": { $ref: "#/components/responses/PurchaseDraftReadinessConflict" }
+        "429": { $ref: "#/components/responses/WriteRateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/warehouses/{warehouseId}/purchase-drafts/{purchaseDraftId}/lines/{purchaseDraftLineId}/arrival:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+      - $ref: "#/components/parameters/PurchaseDraftIdPath"
+      - $ref: "#/components/parameters/PurchaseDraftLineIdPath"
+
+    post:
+      tags: [purchase-drafts]
+      summary: Record what arrived at the dock on one Via Warehouse line
+      description: |
+        Requires `PURCHASE_DRAFTS:RECEIVE`. Replaces, together with `direct-delivery`, the withdrawn
+        whole-draft `POST /purchase-drafts/{purchaseDraftId}/arrival`
+        ([ADR 0002](../adr/0002-per-line-purchase-draft-endings.md)).
+
+        **This route is the Via Warehouse half, and that is the point.** Recording an arrival at the
+        warehouse against a **Direct to Customer** line is refused, naming which of the two ways that
+        line's goods travelled (AC-20). Making the ending kind a payload field instead would put that
+        refusal behind a value the member submitted; a distinct route makes it a routing fact.
+
+        One transaction resolves the draft in `ready_for_ordering` **under lock**, then the named line,
+        then the linked Customer Orders in ascending identifier order — the same fixed lock order
+        `ordering` established, extended to a second write path (sad.md §8). It writes the line's
+        received quantity with the acting member and the time, then delegates the assignment bounds,
+        the reduction of Outstanding Quantity and the Fulfilled transition to the demand-allocation
+        capability `customer-orders` already exports. A failure anywhere rolls back everything
+        (spec.md §6 "Ending atomicity").
+
+        A line whose ending is **already recorded** is refused: nothing changes, nothing further is
+        assigned to any Customer Order, and the refusal names when and by whom it was recorded
+        (AC-20a).
+
+        A line where **nothing arrived** records `receivedQuantity: 0` and no Allocation at all.
+
+        The draft stays in Ready for Ordering for as long as any of its lines has no ending, and moves
+        to **Closed** in the same transaction as the ending of its **last** line. The closure is a
+        conditional update predicated on no line remaining without an ending, so two concurrent last
+        endings cannot both close it and the second is a typed concurrency refusal (AC-19).
+
+        **No Item's On-hand Quantity changes** — it moves only through an adjustment that states its
+        reason (AC-21).
+
+        Mutating: refused while the Warehouse is archived (AC-23), and rate limited.
+      operationId: recordPurchaseDraftLineArrival
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PurchaseDraftLineArrival" }
+            example:
+              receivedQuantity: 140
+              allocations:
+                - purchaseDraftLineLinkId: "00000000-0000-4000-8000-000000000501"
+                  allocatedQuantity: 100
+                - purchaseDraftLineLinkId: "00000000-0000-4000-8000-000000000502"
+                  allocatedQuantity: 40
+      responses:
+        "200":
+          description: |
+            The draft with this line's ending recorded and its Allocations, so the member sees which
+            named customers the arrived goods cover. The draft is `closed` when this was the last line
+            without an ending, and `ready_for_ordering` otherwise (AC-19).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PurchaseDraftDetail" }
+        "400": { $ref: "#/components/responses/InvalidPurchaseDraftInput" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/PurchaseDraftTargetUnavailable" }
+        "409": { $ref: "#/components/responses/PurchaseDraftLineEndingConflict" }
+        "429": { $ref: "#/components/responses/WriteRateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/warehouses/{warehouseId}/purchase-drafts/{purchaseDraftId}/lines/{purchaseDraftLineId}/direct-delivery:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+      - $ref: "#/components/parameters/PurchaseDraftIdPath"
+      - $ref: "#/components/parameters/PurchaseDraftLineIdPath"
+
+    post:
+      tags: [purchase-drafts]
+      summary: Record what the customer received on one Direct to Customer line
+      description: |
+        Requires `PURCHASE_DRAFTS:RECEIVE`. The Direct to Customer half of the per-line ending.
+        Recording a delivery to the customer against a **Via Warehouse** line is refused, naming which
+        of the two ways that line's goods travelled (AC-20).
+
+        Everything the arrival route states about the transaction, the lock order, the single-ending
+        rule, the closure of the draft on its last line and the untouched On-hand Quantity holds here
+        identically — the goods simply never entered the building, so they were never in the Transit
+        Zone to be counted in the first place (AC-19, AC-20a, AC-21).
+
+        The member records what the customer told them and the system does not inspect it: this release
+        provides no proof that a Direct Delivery happened (CONTEXT.md "Direct Delivery", spec.md §3).
+
+        Mutating: refused while the Warehouse is archived (AC-23), and rate limited.
+      operationId: recordPurchaseDraftLineDirectDelivery
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PurchaseDraftLineDirectDelivery" }
+            example:
+              deliveredQuantity: 60
+              allocations:
+                - purchaseDraftLineLinkId: "00000000-0000-4000-8000-000000000503"
+                  allocatedQuantity: 60
+      responses:
+        "200":
+          description: |
+            The draft with this line's ending recorded and its Allocations. The draft is `closed` when
+            this was the last line without an ending, and `ready_for_ordering` otherwise (AC-19).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PurchaseDraftDetail" }
+        "400": { $ref: "#/components/responses/InvalidPurchaseDraftInput" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/PurchaseDraftTargetUnavailable" }
+        "409": { $ref: "#/components/responses/PurchaseDraftLineEndingConflict" }
+        "429": { $ref: "#/components/responses/WriteRateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+components:
+  ##########################################################################################
+  # Security
+  ##########################################################################################
+
+  securitySchemes:
+    SessionCookie:
+      type: apiKey
+      in: cookie
+      name: warehouser_session
+      description: |
+        The opaque session cookie issued by `POST /api/v1/auth/sign-up` and
+        `POST /api/v1/auth/sign-in`, resolved to the acting User by `SessionAuthGuard`.
+
+        It is not a bearer token and carries no authority. Every authorization decision — the required
+        Permission **and** every observed Permission — is re-read from the store on the request being
+        authorized, never from the session and never from a cache or the actor's selection
+        (spec.md §6 "Authority staleness", sad.md §6.1 step 4, ADR 0001).
+
+  ##########################################################################################
+  # Parameters
+  ##########################################################################################
+
+  parameters:
+    WarehouseIdPath:
+      in: path
+      name: warehouseId
+      required: true
+      description: |
+        The Warehouse this request applies to. Under `/api/v1/warehouses/…` it is the only thing
+        `WarehouseAccessGuard` resolves authority from (`workspaces` ADR 0001); a request that does not
+        unambiguously name exactly one Warehouse, or that names one in the path disagreeing with one in
+        the body, is refused **before anything is resolved from the store** (sad.md §6.1 step 3).
+
+        Under `/api/v1/workspace/warehouses/…` it names a Warehouse of the actor's **Workspace** and
+        authority is resolved by `WorkspaceAccessGuard` instead. The two must not be conflated: the
+        fact that a path names a Warehouse does not make the Warehouse guard apply (sad.md §6 flags).
+      schema: { type: string, format: uuid }
+
+    CustomerIdPath:
+      in: path
+      name: customerId
+      required: true
+      description: |
+        A Customer of the named Warehouse. One belonging to another Warehouse is **indistinguishable
+        from a missing one** and discloses nothing about what exists elsewhere (AC-12, AC-23).
+      schema: { type: string, format: uuid }
+
+    CustomerDeliveryAddressIdPath:
+      in: path
+      name: deliveryAddressId
+      required: true
+      description: |
+        A Delivery Address of the named Customer. One belonging to another Customer, or to a Customer
+        of another Warehouse, is indistinguishable from a missing one — which the composite reference
+        `(id, customer_id)` proves rather than an application check (data-model.md
+        `customer_delivery_addresses`).
+      schema: { type: string, format: uuid }
+
+    CustomerOrderIdPath:
+      in: path
+      name: customerOrderId
+      required: true
+      description: A Customer Order of the named Warehouse. One of another Warehouse is indistinguishable from a missing one.
+      schema: { type: string, format: uuid }
+
+    PurchaseDraftIdPath:
+      in: path
+      name: purchaseDraftId
+      required: true
+      description: A Purchase Draft of the named Warehouse. One of another Warehouse is indistinguishable from a missing one.
+      schema: { type: string, format: uuid }
+
+    PurchaseDraftLineIdPath:
+      in: path
+      name: purchaseDraftLineId
+      required: true
+      description: A line of the named draft. A line of another draft or another Warehouse is indistinguishable from a missing one.
+      schema: { type: string, format: uuid }
+
+  ##########################################################################################
+  # Responses — one per error branch of the sad.md §6 sequences
+  ##########################################################################################
+
+  responses:
+    Unauthenticated:
+      description: |
+        No valid session; the request is denied before anything is resolved (sad.md §6.1 step 2).
+        Existing behaviour of `SessionAuthGuard` and the global filter, not a code this feature adds.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            code: "request.invalid"
+            message: "The request is invalid."
+
+    WarehouseDenied:
+      description: |
+        The actor holds no membership in the named Warehouse, or the Role of that membership does not
+        carry the Permission this operation **requires**, or the Permission is held only through
+        another Warehouse's Role (sad.md §6.1 step 5).
+
+        The denial is **non-enumerating**: it names no Customer, address, access note, quantity or
+        Item, and presents no count from which the existence of any of them could be inferred, so a
+        member without `CUSTOMERS:WATCH` cannot learn the customer list by probing (AC-09,
+        spec.md §6.1 "Customer disclosure through a count").
+
+        An **observed** Permission never produces this response. It is consulted only after the
+        required Permission has already admitted the request, `canActivate` does not read it, and a
+        Permission the actor does not hold is simply absent from the principal — so declaring one can
+        never make a denied request succeed and can never widen access (ADR 0001, sad.md §8).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          examples:
+            noMembership:
+              summary: No membership in the named Warehouse
+              value:
+                code: "access.membership_required"
+                message: "Warehouse access is unavailable."
+            permissionMissing:
+              summary: AC-09 — the required Permission is not granted
+              value:
+                code: "access.denied"
+                message: "Access is not permitted."
+
+    WarehouseArchived:
+      description: |
+        The Warehouse is archived and this handler is classified **mutating**, so the change is
+        refused. An archived Warehouse authorizes no operation that changes the resources it owns —
+        recording a Customer, redirecting a Customer Order and recording a line's ending alike — while
+        a member whose Role carries the matching watch Permission reads its Customers, addresses and
+        drafts exactly as before archiving (AC-23).
+
+        This feature adds no archived-tolerant **mutation**, so `workspaces`
+        [ADR 0003](../../workspaces/adr/0003-archived-tolerant-membership-edge-mutations.md)'s narrow
+        class gains no member (sad.md §8 "Authorization coverage").
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            code: "access.warehouse_archived"
+            message: "The Warehouse is archived."
+
+    WriteRateLimited:
+      description: |
+        The acting member exceeded the shipped per-member write limit, which the new mutations declare
+        through the existing `@WriteRateLimited()` — no second mechanism is added (sad.md §8). The
+        guard composes **after** the access guards, so an unauthorized actor is denied before reaching
+        the counter and this refusal can never be used to distinguish a Warehouse that holds Customers
+        from one that does not. The refusal names no record (spec.md §6.1 "Customer and address spam").
+
+        The limit and its per-instance behaviour are recorded in
+        [ordering ADR 0003](../../ordering/adr/0003-per-member-write-rate-limit.md).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            code: "access.write_rate_limited"
+            message: "Too many changes were recorded. Try again shortly."
+
+    WorkspaceDenied:
+      description: |
+        The actor is not a Workspace Member, or their Workspace Role does not carry
+        `WAREHOUSES:ADDRESS_UPDATE`. Also returned when the actor holds a Warehouse Permission
+        instead: a Warehouse Permission never authorizes the Warehouse Delivery Address write, and a
+        Workspace Permission never authorizes anything under
+        `/api/v1/warehouses/{warehouseId}/customers` (sad.md §6.4).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            code: "workspace.denied"
+            message: "Access is not permitted."
+
+    WorkspaceTargetUnavailable:
+      description: |
+        The named Warehouse is not a Warehouse of the actor's Workspace. Reported as unavailable
+        without disclosing that it exists elsewhere.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            code: "workspace.target_unavailable"
+            message: "The requested record is unavailable."
+
+    InternalError:
+      description: An unexpected error occurred.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            code: "system.internal_error"
+            message: "An unexpected error occurred."
+
+    # ---- Customers --------------------------------------------------------------------------
+
+    InvalidCustomerInput:
+      description: |
+        The customer name is empty or only spaces after trimming, the address text is, or an access
+        note was submitted as an empty string (AC-02). Nothing is changed and the response names the
+        value it will not accept.
+
+        `details` names the field and the rule and **never echoes the submitted address text or access
+        notes**: those are confidential data of the same classification as the Customer carrying them
+        and appear in no error detail (spec.md §6.1, sad.md §8).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          examples:
+            blankName:
+              summary: AC-02
+              value:
+                code: "customers.invalid_input"
+                message: "Correct the highlighted customer fields."
+                details:
+                  field: "name"
+                  rule: "trimmed_non_empty"
+            blankAddress:
+              summary: AC-02
+              value:
+                code: "customers.invalid_input"
+                message: "Correct the highlighted customer fields."
+                details:
+                  field: "deliveryAddress.addressText"
+                  rule: "trimmed_non_empty"
+
+    CustomerUnavailable:
+      description: |
+        The Customer, or the Delivery Address, does not exist — or belongs to another Warehouse, or to
+        another Customer, which fails **identically** and discloses nothing about what exists
+        elsewhere (AC-12, AC-23).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            code: "customers.target_unavailable"
+            message: "The requested record is unavailable."
+
+    CustomerWriteConflict:
+      description: |
+        The name is already held by a Customer of this Warehouse — **active or Inactive alike**, since
+        deactivation does not release a name — and the response names the Customer that holds it, which
+        is a record of the actor's own Warehouse and discloses nothing across the boundary (AC-03,
+        AC-03c, AC-06). The same name in another Warehouse is never consulted and is never a conflict
+        (AC-03a).
+
+        Also returned when the Warehouse is archived (AC-23).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          examples:
+            nameTaken:
+              summary: AC-03, AC-03c
+              value:
+                code: "customers.name_taken"
+                message: "A customer name identifies at most one Customer within a Warehouse."
+                details:
+                  customerId: "00000000-0000-4000-8000-000000000201"
+                  name: "Test Customer North"
+            archived:
+              summary: AC-23
+              value:
+                code: "access.warehouse_archived"
+                message: "The Warehouse is archived."
+
+    CustomerDeliveryAddressConflict:
+      description: |
+        The Customer's only remaining **active** Delivery Address is the one being deactivated. The
+        change is blocked and the response names the rule and the order to follow: add the replacement
+        address first, deactivate the old one afterwards. This holds whether or not the Customer has
+        Unfulfilled Customer Orders (AC-07).
+
+        The condition is evaluated against the Customer's address rows read **under lock** at the
+        moment of the change, so two concurrent deactivations cannot both see two remaining
+        (sad.md §6.3).
+
+        Also returned when an **Inactive** address is marked Main —
+        `chk_customer_delivery_addresses_main_is_active` holds that an Inactive address is never the
+        Main one (AC-06b) — and when the Warehouse is archived (AC-23).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          examples:
+            lastActiveAddress:
+              summary: AC-07
+              value:
+                code: "customers.last_active_delivery_address"
+                message: "A Customer always keeps at least one active Delivery Address."
+            inactiveAddressAsMain:
+              summary: AC-06b
+              value:
+                code: "customers.invalid_delivery_address"
+                message: "An Inactive Delivery Address is never the Main one."
+            archived:
+              summary: AC-23
+              value:
+                code: "access.warehouse_archived"
+                message: "The Warehouse is archived."
+
+    CustomerFilterDenied:
+      description: |
+        A `customerId` or `deliveryAddressId` filter was submitted by an actor who does not hold
+        `CUSTOMERS:WATCH`. Refused rather than silently ignored: answering "how many orders go to this
+        Customer" answers "does this Customer exist" as effectively as the record does
+        (spec.md §6.1 "Customer disclosure through a count").
+
+        This is **not** an authorization denial of the read itself — the unfiltered list is still
+        served to that actor in its redacted form (AC-09a).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            code: "customer_orders.invalid_input"
+            message: "That filter is unavailable."
+            details:
+              field: "customerId"
+
+    InvalidWarehouseDeliveryAddressInput:
+      description: |
+        The address text is empty or only spaces after trimming, or access notes were submitted without
+        an address — access notes describe how to get into a place, and there is no place until the
+        address is recorded (`chk_warehouses_delivery_notes_require_address`, sad.md §6.4).
+
+        `details` names the field and never echoes the submitted text: the Warehouse's own access notes
+        are premises data and must not reach a member of another Warehouse through an error payload
+        (sad.md §8).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          examples:
+            blankAddress:
+              summary: sad.md §6.4
+              value:
+                code: "workspace.invalid_input"
+                message: "Correct the highlighted fields."
+                details:
+                  field: "addressText"
+                  rule: "trimmed_non_empty"
+            notesWithoutAddress:
+              summary: chk_warehouses_delivery_notes_require_address
+              value:
+                code: "workspace.invalid_input"
+                message: "Record the delivery address before its access notes."
+                details:
+                  field: "accessNotes"
+                  rule: "requires_address_text"
+
+    # ---- Customer Orders ---------------------------------------------------------------------
+
+    InvalidCustomerOrderInput:
+      description: |
+        The payload names **both** a Customer and a typed customer name, or **neither** — the
+        `chk_customer_orders_customer_identity` check as a payload refusal (AC-11a, AC-24); or
+        `customerDeliveryAddressId` was submitted without `customerId`; or the quantity is zero,
+        negative or not a whole number, the typed name is empty after trimming, or the needed-by date
+        has already passed — the existing `ordering` refusals, unchanged.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          examples:
+            bothIdentities:
+              summary: chk_customer_orders_customer_identity
+              value:
+                code: "customer_orders.invalid_input"
+                message: "An order names a Customer with one of its Delivery Addresses, or a typed customer name with no address."
+                details:
+                  rule: "customer_identity_exclusive"
+            neitherIdentity:
+              summary: chk_customer_orders_customer_identity
+              value:
+                code: "customer_orders.invalid_input"
+                message: "An order names a Customer with one of its Delivery Addresses, or a typed customer name with no address."
+                details:
+                  rule: "customer_identity_required"
+
+    CustomerOrderTargetUnavailable:
+      description: |
+        The Customer Order, the Item, the Customer or the Delivery Address does not exist, or exists
+        only in **another Warehouse** of the same Workspace — which fails identically and does not
+        disclose that it exists elsewhere, because demand names a Customer of the Warehouse the request
+        applies to (AC-12).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          examples:
+            customerElsewhere:
+              summary: AC-12
+              value:
+                code: "customers.target_unavailable"
+                message: "The requested record is unavailable."
+            orderMissing:
+              summary: A Customer Order of another Warehouse or none
+              value:
+                code: "customer_orders.target_unavailable"
+                message: "The requested record is unavailable."
+
+    CustomerOrderDestinationConflict:
+      description: |
+        The named Customer is Inactive, or the named Delivery Address is Inactive or belongs to a
+        different Customer, so the order cannot be recorded against it (AC-11, AC-11c). Also returned
+        when the Warehouse is archived (AC-23).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          examples:
+            inactiveAddress:
+              summary: AC-11c
+              value:
+                code: "customer_orders.invalid_delivery_address"
+                message: "An order names an active Delivery Address of the Customer it names."
+            archived:
+              summary: AC-23
+              value:
+                code: "access.warehouse_archived"
+                message: "The Warehouse is archived."
+
+    CustomerOrderStateConflict:
+      description: |
+        The Customer Order is cancelled, or the amended quantity falls below what has already been
+        assigned to it — the existing `ordering` refusals, unchanged. Also returned when the Warehouse
+        is archived (AC-23).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          examples:
+            invalidState:
+              summary: ordering AC-19
+              value:
+                code: "customer_orders.invalid_state"
+                message: "This Customer Order can no longer be amended."
+            archived:
+              summary: AC-23
+              value:
+                code: "access.warehouse_archived"
+                message: "The Warehouse is archived."
+
+    CustomerOrderRedirectConflict:
+      description: |
+        The redirection is refused and **nothing is changed** (AC-11c). The eligibility is decided
+        against the Customer Order row read **under lock** inside the transaction, never against the
+        values the member composed against (sad.md §6.5).
+
+        Three cases, all of them this one response:
+
+        - the named address belongs to **another Customer** — refused by the composite reference
+          `(id, customer_id)` itself, so serving a different customer means recording a new Customer
+          Order;
+        - the named address is **Inactive**;
+        - the Customer Order is already **Fulfilled or cancelled**, so it is not outstanding.
+
+        An order recorded by typed name names no Customer and is not redirectable, which surfaces the
+        same way.
+
+        Also returned when the Warehouse is archived (AC-23).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          examples:
+            addressOfAnotherCustomer:
+              summary: AC-11c
+              value:
+                code: "customer_orders.invalid_delivery_address"
+                message: "An outstanding Customer Order is redirected only to another active Delivery Address of the Customer it already names."
+            orderNotOutstanding:
+              summary: AC-11c
+              value:
+                code: "customer_orders.invalid_state"
+                message: "Only an outstanding Customer Order is redirected."
+            archived:
+              summary: AC-23
+              value:
+                code: "access.warehouse_archived"
+                message: "The Warehouse is archived."
+
+    # ---- Purchase Drafts ----------------------------------------------------------------------
+
+    InvalidPurchaseDraftInput:
+      description: |
+        `deliveryMode: direct_to_customer` was submitted without `customerDeliveryAddressId`, or
+        `via_warehouse` with one — the `chk_purchase_draft_lines_delivery_mode_address` pairing as a
+        payload refusal; or a received or delivered quantity is negative or not a whole number, or an
+        allocated quantity is not positive; or the request failed schema validation.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          examples:
+            modeAddressPairing:
+              summary: chk_purchase_draft_lines_delivery_mode_address
+              value:
+                code: "purchase_drafts.invalid_input"
+                message: "A Direct to Customer line names a Customer's Delivery Address and a Via Warehouse line names none."
+                details:
+                  field: "customerDeliveryAddressId"
+                  rule: "required_for_direct_to_customer"
+            negativeQuantity:
+              summary: AC-19
+              value:
+                code: "purchase_drafts.invalid_input"
+                message: "Correct the highlighted fields."
+                details:
+                  field: "receivedQuantity"
+                  rule: "non_negative_integer"
+
+    PurchaseDraftUnavailable:
+      description: The Purchase Draft does not exist, or belongs to another Warehouse — which fails identically.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            code: "purchase_drafts.target_unavailable"
+            message: "The requested record is unavailable."
+
+    PurchaseDraftTargetUnavailable:
+      description: |
+        The draft, the line, the link or the named Customer Delivery Address does not exist, or belongs
+        to another draft, another line or another Warehouse — every one of which fails identically to a
+        missing one and discloses nothing (AC-12).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          examples:
+            lineElsewhere:
+              summary: A line of another draft or another Warehouse
+              value:
+                code: "purchase_drafts.target_unavailable"
+                message: "The requested record is unavailable."
+            addressElsewhere:
+              summary: AC-12 — a Customer Delivery Address of another Warehouse
+              value:
+                code: "customers.target_unavailable"
+                message: "The requested record is unavailable."
+
+    PurchaseDraftLineDestinationConflict:
+      description: |
+        The line's Delivery Mode or Delivery Address cannot be revised. Four cases, each changing
+        nothing:
+
+        - **the Warehouse's own address was named on a Direct to Customer line** — goods shipped to
+          their own site are travelling Via Warehouse, and the error is bound to the destination field
+          (AC-14);
+        - **the named Customer Delivery Address is Inactive**;
+        - **links on this line disagree with the change** — every disagreeing link is named in
+          `details.disagreeingLinks` and **none is withdrawn**, because which link to withdraw is the
+          member's decision (AC-15a);
+        - **the draft is no longer in the `draft` state** — the write resolves only `draft`-state
+          drafts, so an update affecting zero rows is this typed refusal rather than a silent no-op,
+          and a revision cannot race a concurrent freeze (AC-17).
+
+        Also returned when the Warehouse is archived (AC-23).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          examples:
+            warehouseAddressOnDirectLine:
+              summary: AC-14
+              value:
+                code: "purchase_drafts.invalid_delivery_destination"
+                message: "Goods shipped to your own site are travelling Via Warehouse."
+                details:
+                  field: "customerDeliveryAddressId"
+            disagreeingLinks:
+              summary: AC-15a — every disagreeing link is named, none withdrawn
+              value:
+                code: "purchase_drafts.delivery_address_disagreement"
+                message: "A directly-shipped line serves only the demand going to the address it ships to."
+                details:
+                  disagreeingLinks:
+                    - purchaseDraftLineLinkId: "00000000-0000-4000-8000-000000000501"
+                      customerOrderId: "00000000-0000-4000-8000-000000000601"
+                      lineDeliveryAddressId: "00000000-0000-4000-8000-000000000301"
+                      customerOrderDeliveryAddressId: "00000000-0000-4000-8000-000000000302"
+            frozen:
+              summary: AC-17
+              value:
+                code: "purchase_drafts.draft_frozen"
+                message: "A draft is frozen once it is ready."
+            archived:
+              summary: AC-23
+              value:
+                code: "access.warehouse_archived"
+                message: "The Warehouse is archived."
+
+    PurchaseDraftLinkConflict:
+      description: |
+        On a **Direct to Customer** line, the Customer Order being linked is going to a different
+        Delivery Address — of the same Customer or another. The link is refused, **nothing of it is
+        recorded**, and the response names the address each of the two is bound for (AC-15).
+
+        A **Via Warehouse** line never produces this refusal: links to orders bound for several
+        different addresses are all recorded and no quantity is adjusted (AC-15b).
+
+        Also returned for the existing `ordering` refusals — the draft is frozen, the link already
+        exists — and when the Warehouse is archived (AC-23).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          examples:
+            addressDisagreement:
+              summary: AC-15
+              value:
+                code: "purchase_drafts.delivery_address_disagreement"
+                message: "A directly-shipped line serves only the demand going to the address it ships to."
+                details:
+                  lineDeliveryAddressId: "00000000-0000-4000-8000-000000000301"
+                  customerOrderDeliveryAddressId: "00000000-0000-4000-8000-000000000302"
+            frozen:
+              summary: AC-17
+              value:
+                code: "purchase_drafts.draft_frozen"
+                message: "A draft is frozen once it is ready."
+            archived:
+              summary: AC-23
+              value:
+                code: "access.warehouse_archived"
+                message: "The Warehouse is archived."
+
+    PurchaseDraftReadinessConflict:
+      description: |
+        The transition to Ready for Ordering is refused and **nothing changes**. Five cases:
+
+        - **the draft holds a Via Warehouse line and the Warehouse has no Delivery Address** — the
+          refusal names `WAREHOUSES:ADDRESS_UPDATE` as the capability that records one, and adding and
+          revising lines on that draft keeps working (AC-16a);
+        - **a Direct to Customer line disagrees with any of its links** — every disagreeing link is
+          named, none withdrawn (AC-15a);
+        - the draft holds no line, or is not in the `draft` state — the existing `ordering` refusals;
+        - a concurrent transition already moved it, so this attempt affected no row;
+        - the Warehouse is archived (AC-23).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          examples:
+            warehouseAddressRequired:
+              summary: AC-16a
+              value:
+                code: "purchase_drafts.warehouse_delivery_address_required"
+                message: "A line coming to the warehouse cannot be frozen before the warehouse has an address to be delivered to."
+                details:
+                  requiredPermissionId: "WAREHOUSES:ADDRESS_UPDATE"
+            disagreeingLinks:
+              summary: AC-15a
+              value:
+                code: "purchase_drafts.delivery_address_disagreement"
+                message: "A directly-shipped line serves only the demand going to the address it ships to."
+                details:
+                  disagreeingLinks:
+                    - purchaseDraftLineLinkId: "00000000-0000-4000-8000-000000000501"
+                      customerOrderId: "00000000-0000-4000-8000-000000000601"
+                      lineDeliveryAddressId: "00000000-0000-4000-8000-000000000301"
+                      customerOrderDeliveryAddressId: "00000000-0000-4000-8000-000000000302"
+            concurrentChange:
+              summary: sad.md §8
+              value:
+                code: "purchase_drafts.concurrent_change"
+                message: "This draft was changed by someone else. Read it again."
+            archived:
+              summary: AC-23
+              value:
+                code: "access.warehouse_archived"
+                message: "The Warehouse is archived."
+
+    PurchaseDraftLineEndingConflict:
+      description: |
+        The line's ending is refused and **nothing is changed** — no quantity is written and nothing
+        further is assigned to any Customer Order. Five cases:
+
+        - **the ending is already recorded** on this line; the refusal names when and by whom
+          (AC-20a);
+        - **the ending does not match the way the line travelled** — a dock arrival against a Direct to
+          Customer line, or a direct delivery against a Via Warehouse line. The refusal names which of
+          the two ways the goods travelled (AC-20), and it is
+          `chk_purchase_draft_lines_ending_matches_mode` as a schema fact rather than a command's
+          memory;
+        - an **Allocation is out of bounds** — the sum exceeds the recorded quantity, a Customer Order
+          is assigned more than it is still waiting for, or an Allocation names a cancelled or already
+          Fulfilled order. Every bound is re-checked against the rows just locked;
+        - the draft is not in `ready_for_ordering`, or a concurrent last ending already closed it;
+        - the Warehouse is archived (AC-23).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          examples:
+            alreadyRecorded:
+              summary: AC-20a
+              value:
+                code: "purchase_drafts.ending_already_recorded"
+                message: "This line's ending is already recorded."
+                details:
+                  endingKind: "arrival"
+                  endingRecordedByUserId: "00000000-0000-4000-8000-000000000001"
+                  endingRecordedAt: "2026-09-18T10:00:00.000Z"
+            modeMismatch:
+              summary: AC-20
+              value:
+                code: "purchase_drafts.ending_mode_mismatch"
+                message: "This line's goods travelled Direct to Customer."
+                details:
+                  deliveryMode: "direct_to_customer"
+            allocationOutOfBounds:
+              summary: ordering AC-18, re-checked per line
+              value:
+                code: "purchase_drafts.allocation_out_of_bounds"
+                message: "An Allocation exceeds what its Customer Order is still waiting for."
+            concurrentChange:
+              summary: AC-19 — two concurrent last endings cannot both close the draft
+              value:
+                code: "purchase_drafts.concurrent_change"
+                message: "This draft was changed by someone else. Read it again."
+            archived:
+              summary: AC-23
+              value:
+                code: "access.warehouse_archived"
+                message: "The Warehouse is archived."
+
+  ##########################################################################################
+  # Schemas
+  ##########################################################################################
+
+  schemas:
+    # ---- Shared envelope and vocabularies -----------------------------------------------------
+
+    Error:
+      type: object
+      description: |
+        The unified error envelope produced once by the global exception filter. `code` follows the
+        `module.error_name` convention already established in
+        `packages/shared-types/src/enums/error-code.ts`; `message` is the safe, non-enumerating
+        explanation; `details` carries optional structured context.
+
+        `details` **never** carries a customer name, an address text, an access note, or a count of
+        Customers or Delivery Addresses — those are confidential data of the same classification as
+        the Customer that carries them and appear in no log line, no error detail, no denial payload
+        and no toast (spec.md §6.1, sad.md §8). Identifiers are carried instead, which are meaningless
+        to an actor who cannot already read the record.
+      required: [code, message]
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          pattern: "^[a-z_]+\\.[a-z_]+$"
+          examples: ["customers.name_taken", "purchase_drafts.ending_mode_mismatch", "customer_orders.invalid_delivery_address"]
+        message: { type: string }
+        details:
+          type: object
+          additionalProperties: true
+
+    AddressText:
+      type: string
+      minLength: 1
+      description: |
+        Where goods are sent, as **text a member types**. `customer_delivery_addresses.address_text`
+        and `warehouses.delivery_address_text` are both `TEXT NOT NULL` with a trimmed-non-empty
+        check and **no upper bound**, so this schema states none either.
+
+        Never validated, geocoded, normalized or interpreted; never rendered as markup and never as a
+        link (spec.md §3, §6.1, CONTEXT.md "Delivery Address").
+      examples: ["Test Address 1, Test City"]
+
+    AccessNotes:
+      type: [string, "null"]
+      minLength: 1
+      description: |
+        What a driver needs to get in — gate codes, opening hours, delivery windows. `null` when none
+        was recorded; never an empty string (`trimmed non-empty when present`).
+
+        Treated at the same classification as the Customer that carries them: never logged, never in
+        an error detail, never in a denial payload, never in a toast. Gate and door codes a member
+        records here exist outside every handling this specification assumes (spec.md §6.1, sad.md §8).
+      examples: ["Gate code on the intercom; deliveries 09:00-17:00"]
+
+    DeliveryMode:
+      type: string
+      enum: [via_warehouse, direct_to_customer]
+      description: |
+        Which of the two ways one Purchase Draft Line's goods travel — chosen **per line**, so one
+        draft may hold lines of both modes, and frozen with the rest of the line at Ready for Ordering
+        (CONTEXT.md "Delivery Mode").
+
+        `via_warehouse` — the supplier delivers to the Warehouse's own Delivery Address, where the
+        goods rest in the Transit Zone. The existing behaviour of every Purchase Draft Line, the
+        default for every new one, and the value backfilled onto every row that predates this release.
+
+        `direct_to_customer` — the supplier sends the goods straight to a Customer's Delivery Address.
+        They never enter the Warehouse, are never counted in its On-hand Quantity and are never held in
+        its Transit Zone.
+
+        Not a Packaging Type, which says how goods are physically presented rather than where they go;
+        not a shipping method or carrier selection, which this release does not model.
+
+    EndingKind:
+      type: string
+      enum: [arrival, direct_delivery]
+      description: |
+        How one Purchase Draft Line ended. `arrival` — an Arrival Confirmation, recording goods that
+        physically reached the Transit Zone of a Via Warehouse line. `direct_delivery` — a Direct
+        Delivery, recording that a Direct to Customer line's goods reached the customer.
+
+        The two are refused against each other's Delivery Mode
+        (`chk_purchase_draft_lines_ending_matches_mode`, AC-20), which is why they are two routes
+        rather than one field a member submits (ADR 0002).
+
+    CustomerOrderState:
+      type: string
+      enum: [unfulfilled, fulfilled, cancelled]
+      description: Unchanged from `ordering`. Only an `unfulfilled` order is redirectable (AC-11c).
+
+    PurchaseDraftState:
+      type: string
+      enum: [draft, ready_for_ordering, closed, discarded]
+      description: |
+        Unchanged from `ordering`, with one path added to `closed`: this release closes a draft when
+        the **last of its lines** has an ending recorded, which writes neither the whole-draft arrival
+        attribution nor a closure reason (AC-19, ADR 0002). `chk_purchase_drafts_closure_path` is
+        relaxed from "exactly one of the two" to "never both" accordingly.
+
+        A line's Delivery Mode and Delivery Address are writable only in `draft`; from
+        `ready_for_ordering` onward the assembly write paths resolve nothing at all, so a frozen draft
+        is unwritable by construction rather than by a check (AC-17).
+
+    UnitOfMeasure:
+      type: string
+      minLength: 1
+      maxLength: 32
+      description: Unchanged from `ordering` (`items.unit_of_measure varchar(32)`).
+
+    PackagingTypeId:
+      type: string
+      maxLength: 32
+      pattern: "^[a-z][a-z0-9_]*$"
+      description: Unchanged from `ordering` (`packaging_types.id`).
+
+    DriftSignalKind:
+      type: string
+      enum: [cancelled, quantity_changed, needed_by_moved, became_fulfilled, delivery_address_changed]
+      description: |
+        What differs between a link's Demand Snapshot and the Customer Order it names now. Derived on
+        every read as a **value comparison**, never a touch log — so a value amended and then put back
+        as it was reports nothing at all.
+
+        `delivery_address_changed` is **Address Drift**, added by this feature: the Customer Order this
+        link names is now going to a **different** Delivery Address than the one frozen for it
+        (AC-18). The comparison is on the captured **identifier**, not the captured text, so correcting
+        a typo in an address that was never redirected reports nothing, and redirecting the order back
+        to the frozen address stops the report (AC-18a, data-model.md
+        `purchase_draft_demand_snapshots`).
+
+        This value is present in the **redacted** projection too — that drift exists is a fact about
+        the draft, not customer identity — while the two addresses it compares are not (AC-09a).
+
+    # ---- Customers -----------------------------------------------------------------------------
+
+    Customer:
+      type: object
+      description: |
+        A record of one named end customer within one Warehouse, carrying the Delivery Addresses that
+        customer's goods may be sent to (CONTEXT.md "Customer). Not shared across the Warehouses of a
+        Workspace: each Warehouse keeps its own, and the same name in two Warehouses names two
+        unrelated Customers (AC-03a).
+
+        This schema has no redacted form: every operation returning it already requires a
+        `CUSTOMERS:*` Permission, so an actor who reaches it holds the Permission the identity is gated
+        on.
+      required:
+        [id, name, deactivatedAt, mainDeliveryAddressId, deliveryAddresses, recordedByUserId,
+         createdAt, updatedAt]
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        name:
+          type: string
+          minLength: 1
+          description: |
+            Unique within the Warehouse across **active and Inactive Customers alike** (`UNIQUE
+            (warehouse_id, name)`), never across Warehouses, and not released by deactivation (AC-03,
+            AC-03a, AC-06). Case-sensitive and non-normalising, following the `items.sku` precedent;
+            `TEXT` with a trimmed-non-empty check and no upper bound.
+
+            Correctable at any time to a name unused in the Warehouse. Nothing denormalizes it — a
+            Customer Order and a live Purchase Draft Line reach it through `customer_id` — which is
+            what makes AC-03b true by construction rather than by a cascade.
+        deactivatedAt:
+          type: [string, "null"]
+          format: date-time
+          description: |
+            `null` = active. A timestamp records the reversible withdrawal and when it happened; the
+            Customer stops being offered when demand is recorded while every Customer Order already
+            naming it stays readable and keeps counting exactly as before (AC-06).
+
+            A nullable instant rather than a boolean, matching `warehouses.archived_at` and
+            `items.deactivated_at` — the repository's existing way of saying "withdrawn, reversibly, at
+            a known time".
+        mainDeliveryAddressId:
+          type: [string, "null"]
+          format: uuid
+          description: |
+            The one **active** Delivery Address a Customer Order takes when the member states none
+            (AC-11). Exactly one at any moment, held by the partial unique index on `(customer_id)
+            WHERE is_main`; deactivating it moves the flag to a remaining active address in the same
+            transaction and this field names the new one (AC-06b).
+
+            `null` only for a Customer with no active address at all — a state no member action can
+            reach, because AC-07 refuses the deactivation that would produce it, but which the model
+            does not forbid as a row constraint (data-model.md § "Deliberately not constraints").
+        deliveryAddresses:
+          type: array
+          description: |
+            Every Delivery Address of this Customer, active and Inactive alike, ordered by creation
+            time. An Inactive one stops being offered wherever an address is chosen while every record
+            already naming it keeps reading and counting exactly as before (AC-06a).
+          items: { $ref: "#/components/schemas/CustomerDeliveryAddress" }
+        recordedByUserId:
+          type: string
+          format: uuid
+          description: The member who recorded the Customer (AC-01).
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    CustomerDeliveryAddress:
+      type: object
+      description: |
+        A place one Customer's goods can be sent to. It has no life apart from the Customer that owns
+        it, and belongs to exactly one Customer of exactly one Warehouse — which the composite
+        reference `(customer_id, warehouse_id)` proves rather than an application check.
+      required: [id, customerId, addressText, accessNotes, isMain, deactivatedAt, createdAt, updatedAt]
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        customerId: { type: string, format: uuid }
+        addressText: { $ref: "#/components/schemas/AddressText" }
+        accessNotes: { $ref: "#/components/schemas/AccessNotes" }
+        isMain:
+          type: boolean
+          description: |
+            Whether this is the Customer's Main Delivery Address. At most one address per Customer
+            carries `true`, and an Inactive address never does
+            (`chk_customer_delivery_addresses_main_is_active`).
+        deactivatedAt:
+          type: [string, "null"]
+          format: date-time
+          description: |
+            `null` = active. Set means the address is not offered where one is chosen (AC-06a). A
+            reactivated once-Main address comes back as an **ordinary** address, never as a second Main
+            one.
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    CustomerDetail:
+      type: object
+      description: |
+        The Customer plus everything they are still waiting for — the answer to their phone call
+        without scrolling the demand list (US-04).
+
+        Written flat rather than as `allOf` over `Customer`, because `Customer` closes itself with
+        `additionalProperties: false`: an `allOf` composition over a closed base rejects the very
+        property it adds under a strict validator. Every property below is the same column as its
+        `Customer` counterpart; see `api-sync-report.md` § "Findings requiring your decision",
+        Finding 3.
+      required:
+        [id, name, deactivatedAt, mainDeliveryAddressId, deliveryAddresses, recordedByUserId,
+         createdAt, updatedAt, awaitingCustomerOrders]
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, minLength: 1 }
+        deactivatedAt: { type: [string, "null"], format: date-time }
+        mainDeliveryAddressId: { type: [string, "null"], format: uuid }
+        deliveryAddresses:
+          type: array
+          items: { $ref: "#/components/schemas/CustomerDeliveryAddress" }
+        recordedByUserId: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        awaitingCustomerOrders:
+          type: array
+          description: |
+            Every **Unfulfilled** Customer Order of this Customer, earliest needed-by first; Fulfilled
+            and cancelled ones are omitted (AC-08). Bounded by one Customer's outstanding demand,
+            which is what keeps this read within the 250 ms p95 the spec sets.
+          items: { $ref: "#/components/schemas/CustomerAwaitingOrder" }
+
+    CustomerAwaitingOrder:
+      type: object
+      description: One Unfulfilled Customer Order of this Customer, with its Item, what is still owed, when it is needed and where it is going (AC-08).
+      required:
+        [customerOrderId, itemId, itemSku, itemDescription, unitOfMeasure, outstandingQuantity,
+         neededBy, destination]
+      additionalProperties: false
+      properties:
+        customerOrderId: { type: string, format: uuid }
+        itemId: { type: string, format: uuid }
+        itemSku: { type: string, minLength: 1 }
+        itemDescription: { type: string, minLength: 1 }
+        unitOfMeasure: { $ref: "#/components/schemas/UnitOfMeasure" }
+        outstandingQuantity: { type: integer, minimum: 1 }
+        neededBy: { type: string, format: date }
+        destination: { $ref: "#/components/schemas/CustomerOrderDestination" }
+
+    CustomerCreate:
+      type: object
+      description: |
+        A Customer is recorded **with its first Delivery Address in one transaction**, never bare: a
+        Customer always keeps at least one active Delivery Address, and creating it without one would
+        be the very state AC-07 refuses to produce. Activation and attribution are not inputs — the
+        Customer is recorded active, its address active and Main, with the recording member and the
+        time (AC-01).
+      required: [name, deliveryAddress]
+      additionalProperties: false
+      properties:
+        name: { type: string, minLength: 1 }
+        deliveryAddress: { $ref: "#/components/schemas/CustomerDeliveryAddressWrite" }
+
+    CustomerUpdate:
+      type: object
+      description: |
+        The name only. Activation is its own sub-resource and the Delivery Addresses are their own
+        collection, so neither is amendable here (AC-03b).
+      required: [name]
+      additionalProperties: false
+      properties:
+        name: { type: string, minLength: 1 }
+
+    CustomerDeliveryAddressWrite:
+      type: object
+      description: The address text and its access notes — the shape shared by a Customer's first address and every one added afterwards.
+      required: [addressText]
+      additionalProperties: false
+      properties:
+        addressText: { $ref: "#/components/schemas/AddressText" }
+        accessNotes: { $ref: "#/components/schemas/AccessNotes" }
+
+    CustomerDeliveryAddressCreate:
+      type: object
+      description: |
+        A new Delivery Address for an existing Customer. Recorded active; activation is not an input.
+        Written flat rather than as `allOf` over `CustomerDeliveryAddressWrite` for the reason given on
+        `CustomerDetail`.
+      required: [addressText]
+      additionalProperties: false
+      properties:
+        addressText: { $ref: "#/components/schemas/AddressText" }
+        accessNotes: { $ref: "#/components/schemas/AccessNotes" }
+        main:
+          type: boolean
+          default: false
+          description: |
+            `true` makes this the Customer's Main Delivery Address and clears the previous Main flag
+            **in the same transaction**, so exactly one active address is Main at every instant
+            (AC-04, AC-05).
+
+    CustomerDeliveryAddressUpdate:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      description: |
+        Both properties are optional; at least one must be present. `accessNotes: null` clears them.
+        `isMain` is not here — it is its own sub-resource, so marking an address Main declares the same
+        Permission through a path rather than through a payload value.
+      properties:
+        addressText: { $ref: "#/components/schemas/AddressText" }
+        accessNotes: { $ref: "#/components/schemas/AccessNotes" }
+
+    # ---- The Warehouse's own Delivery Address ---------------------------------------------------
+
+    WarehouseDeliveryAddress:
+      type: object
+      description: |
+        The Warehouse's one Delivery Address and its access notes — two columns on the Warehouse
+        record, not a row in the Customer address relation. There is no Main flag and no
+        `deactivatedAt`, because a Warehouse has exactly one address, corrects it in place, and never
+        makes it Inactive (CONTEXT.md "Warehouse Delivery Address", data-model.md `warehouses`).
+
+        The operator's own premises data, classified with the Warehouse record that carries it rather
+        than as customer identity — which is why it is never withheld from a member holding
+        `PURCHASE_DRAFTS:WATCH` (AC-10, sad.md §7).
+      required: [warehouseId, addressText, accessNotes]
+      additionalProperties: false
+      properties:
+        warehouseId: { type: string, format: uuid }
+        addressText:
+          oneOf:
+            - $ref: "#/components/schemas/AddressText"
+            - type: "null"
+          description: |
+            `null` until recorded — exactly the state from which AC-16a refuses to freeze a draft
+            holding a Via Warehouse line.
+        accessNotes: { $ref: "#/components/schemas/AccessNotes" }
+
+    WarehouseDeliveryAddressWrite:
+      type: object
+      required: [addressText]
+      additionalProperties: false
+      description: |
+        `accessNotes` without `addressText` is refused
+        (`chk_warehouses_delivery_notes_require_address`). There is no clearing operation: an address,
+        once recorded, is corrected in place and never withdrawn (AC-10).
+      properties:
+        addressText: { $ref: "#/components/schemas/AddressText" }
+        accessNotes: { $ref: "#/components/schemas/AccessNotes" }
+
+    # ---- Customer Orders -------------------------------------------------------------------------
+
+    CustomerOrderDestination:
+      type: object
+      description: |
+        Where one Customer Order's goods are going, joined in from the Delivery Address it names.
+        Present only on an order that names a Customer; an order recorded by typed name has none, and
+        **that absence is what distinguishes the two kinds of row** (AC-11a, AC-24).
+
+        `isMain` and `deactivatedAt` are what the read reports about *why* it is this address
+        (sad.md §6.6 step 6): the Customer's current Main one, one the member stated instead, or one
+        that has since been made Inactive while the order keeps naming it and keeps counting exactly as
+        before (AC-06a). Whether the member stated it or it was defaulted from Main is not recorded —
+        the model stores a reference, not the manner of its choosing — so `isMain: false` is what
+        "stated on this order" reads as afterwards.
+      required: [deliveryAddressId, addressText, accessNotes, isMain, deactivatedAt]
+      additionalProperties: false
+      properties:
+        deliveryAddressId: { type: string, format: uuid }
+        addressText: { $ref: "#/components/schemas/AddressText" }
+        accessNotes: { $ref: "#/components/schemas/AccessNotes" }
+        isMain:
+          type: boolean
+          description: Whether this is the Customer's Main Delivery Address **now** — not whether it was when the order was recorded.
+        deactivatedAt: { type: [string, "null"], format: date-time }
+
+    CustomerRef:
+      type: object
+      description: The Customer a Customer Order names, by identifier and current name. The name is read live, which is what makes AC-03b hold without a rewrite anywhere.
+      required: [id, name]
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, minLength: 1 }
+
+    CustomerOrder:
+      oneOf:
+        - $ref: "#/components/schemas/CustomerOrderIdentified"
+        - $ref: "#/components/schemas/CustomerOrderRedacted"
+      description: |
+        **Both forms are modelled deliberately.** With `CUSTOMERS:WATCH` observed on the operation, the
+        identified form is served; without it, the redacted form, which **omits** `customer`,
+        `customerName` and `destination` rather than nulling them — so a redaction failure fails
+        contract validation on the way out instead of reaching a screen (AC-09a, sad.md §7).
+
+        The redaction is decided by the observed Permissions on the resolved principal, never by the
+        surface (ADR 0001).
+
+    CustomerOrderIdentified:
+      type: object
+      description: |
+        A record that a named end customer is waiting for a stated quantity of one Item in one
+        Warehouse by a stated date. This feature adds the customer's identity as a **reference** and
+        the destination beside it.
+      required:
+        [id, itemId, customer, customerName, destination, quantity, outstandingQuantity, neededBy,
+         state, cancellationReason, recordedByUserId, cancelledByUserId, cancelledAt, createdAt,
+         updatedAt]
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        itemId: { type: string, format: uuid }
+        customer:
+          oneOf:
+            - $ref: "#/components/schemas/CustomerRef"
+            - type: "null"
+          description: |
+            The Customer this order names, or `null` for an order recorded by typed name. **Exactly one
+            of `customer` and `customerName` is non-null** — never both and never neither, which
+            `chk_customer_orders_customer_identity` holds as a schema fact rather than a convention
+            (AC-11a, AC-24).
+        customerName:
+          type: [string, "null"]
+          minLength: 1
+          description: |
+            The name typed onto the order when it names no Customer. **`null` on an order that names a
+            Customer**: the name is read live from the Customer record instead, which is what makes
+            correcting a Customer's name change nothing that names it (AC-03b).
+
+            Every Customer Order `ordering` shipped satisfies this side of the constraint untouched and
+            is **never rewritten into a Customer** by the system (AC-11a, CONTEXT.md §Invariants).
+        destination:
+          oneOf:
+            - $ref: "#/components/schemas/CustomerOrderDestination"
+            - type: "null"
+          description: |
+            Where the goods are going. `null` exactly when `customer` is `null` — a typed-name order
+            names no address at all, and that absence tells the member which kind of row they are
+            looking at (AC-11a, AC-24).
+        quantity: { type: integer, minimum: 1 }
+        outstandingQuantity:
+          type: integer
+          minimum: 0
+          description: |
+            Reduced only by Allocation — now recorded per Purchase Draft Line rather than per whole
+            draft (AC-19), which changes when it moves but not what it means.
+        neededBy: { type: string, format: date }
+        state: { $ref: "#/components/schemas/CustomerOrderState" }
+        cancellationReason: { type: [string, "null"] }
+        recordedByUserId: { type: string, format: uuid }
+        cancelledByUserId: { type: [string, "null"], format: uuid }
+        cancelledAt: { type: [string, "null"], format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    CustomerOrderRedacted:
+      type: object
+      description: |
+        The same order read by an actor **without** `CUSTOMERS:WATCH`. `customer`, `customerName` and
+        `destination` are absent as properties — `additionalProperties: false` makes their presence a
+        validation failure — while the quantity, the date, the Item and the state are returned
+        unchanged, so the member keeps everything their own Permissions do admit (AC-09a).
+      required:
+        [id, itemId, quantity, outstandingQuantity, neededBy, state, cancellationReason,
+         recordedByUserId, cancelledByUserId, cancelledAt, createdAt, updatedAt]
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        itemId: { type: string, format: uuid }
+        quantity: { type: integer, minimum: 1 }
+        outstandingQuantity: { type: integer, minimum: 0 }
+        neededBy: { type: string, format: date }
+        state: { $ref: "#/components/schemas/CustomerOrderState" }
+        cancellationReason: { type: [string, "null"] }
+        recordedByUserId: { type: string, format: uuid }
+        cancelledByUserId: { type: [string, "null"], format: uuid }
+        cancelledAt: { type: [string, "null"], format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    CustomerOrderCreate:
+      oneOf:
+        - $ref: "#/components/schemas/CustomerOrderCreateForCustomer"
+        - $ref: "#/components/schemas/CustomerOrderCreateByTypedName"
+      description: |
+        Two mutually exclusive shapes — `chk_customer_orders_customer_identity` expressed as a payload
+        rather than left to convention. State and Outstanding Quantity are not inputs in either.
+
+    CustomerOrderCreateForCustomer:
+      type: object
+      required: [itemId, customerId, quantity, neededBy]
+      additionalProperties: false
+      description: |
+        Demand recorded against a Customer of this Warehouse. Omitting `customerDeliveryAddressId`
+        records the Customer's **current Main** address, resolved and stored as a reference at record
+        time — marking a different address Main afterwards does not move this order (AC-11,
+        data-model.md `customer_orders`).
+      properties:
+        itemId: { type: string, format: uuid }
+        customerId:
+          type: string
+          format: uuid
+          description: |
+            An **active** Customer of this Warehouse. One of another Warehouse is refused identically to
+            one that does not exist (AC-12).
+        customerDeliveryAddressId:
+          type: [string, "null"]
+          format: uuid
+          description: |
+            An **active** Delivery Address **of the Customer named above** — which the composite
+            reference `(id, customer_id)` proves, so an address of a different Customer is refused by
+            the reference itself (AC-11c). Omitted or `null` takes the Customer's Main one (AC-11).
+        quantity: { type: integer, minimum: 1 }
+        neededBy: { type: string, format: date }
+
+    CustomerOrderCreateByTypedName:
+      type: object
+      required: [itemId, customerName, quantity, neededBy]
+      additionalProperties: false
+      description: |
+        Demand recorded by typing a customer name — the shape `ordering` shipped, kept working
+        unchanged. **No Customer is created and none is matched**, then or ever, and the order carries
+        no Delivery Address (AC-11a). It counts in the consolidated demand exactly as an order naming a
+        Customer is counted (AC-24).
+      properties:
+        itemId: { type: string, format: uuid }
+        customerName: { type: string, minLength: 1 }
+        quantity: { type: integer, minimum: 1 }
+        neededBy: { type: string, format: date }
+
+    CustomerOrderAmend:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      description: |
+        Unchanged from `ordering`. The Delivery Address is **deliberately absent**: redirection is its
+        own sub-resource with its own rules (AC-11c, sad.md §7).
+      properties:
+        quantity: { type: integer, minimum: 1 }
+        neededBy: { type: string, format: date }
+
+    CustomerOrderRedirect:
+      type: object
+      required: [customerDeliveryAddressId]
+      additionalProperties: false
+      description: |
+        Which of the **same Customer's active** Delivery Addresses this outstanding order is now going
+        to. The Customer is not an input and never changes: serving a different customer means
+        recording a new Customer Order (AC-11c, CONTEXT.md "Redirection").
+      properties:
+        customerDeliveryAddressId: { type: string, format: uuid }
+
+    DemandLine:
+      type: object
+      description: |
+        **Unchanged from `ordering`.** One Item's consolidated Unfulfilled demand in this Warehouse — a
+        derived view, never a stored record and never an input to any endpoint. The aggregation shape
+        is unchanged by this feature (sad.md §6.6 read note), so it carries no customer name, no
+        Delivery Address and no count of either; the per-order customer and destination are read
+        through `listCustomerOrders`.
+      required:
+        [itemId, sku, description, unitOfMeasure, totalOutstandingQuantity, earliestNeededBy,
+         onHandQuantity, unfulfilledCustomerOrderCount, coverage]
+      additionalProperties: false
+      properties:
+        itemId: { type: string, format: uuid }
+        sku: { type: string, minLength: 1 }
+        description: { type: string, minLength: 1 }
+        unitOfMeasure: { $ref: "#/components/schemas/UnitOfMeasure" }
+        totalOutstandingQuantity: { type: integer, minimum: 1 }
+        earliestNeededBy: { type: string, format: date }
+        onHandQuantity: { type: integer, minimum: 0 }
+        unfulfilledCustomerOrderCount:
+          type: integer
+          minimum: 1
+          description: |
+            How many Unfulfilled Customer Orders the total derives from. **Not a customer count** and
+            not redacted: it says how many orders exist for one Item, not how many Customers the
+            Warehouse holds, so it discloses nothing spec.md §6.1 "Customer disclosure through a count"
+            protects.
+        coverage:
+          type: array
+          items: { $ref: "#/components/schemas/DemandCoverage" }
+
+    DemandCoverage:
+      type: object
+      description: Unchanged from `ordering` — which Purchase Drafts link to this demand and for what stated quantity.
+      required:
+        [purchaseDraftId, purchaseDraftReference, purchaseDraftLineId, purchaseDraftState,
+         statedQuantity]
+      additionalProperties: false
+      properties:
+        purchaseDraftId: { type: string, format: uuid }
+        purchaseDraftReference: { type: string, minLength: 1 }
+        purchaseDraftLineId: { type: string, format: uuid }
+        purchaseDraftState:
+          type: string
+          enum: [draft, ready_for_ordering]
+        statedQuantity: { type: integer, minimum: 1 }
+
+    # ---- Purchase Drafts -------------------------------------------------------------------------
+
+    PurchaseDraftSummary:
+      type: object
+      description: |
+        The list projection. **Changed by this feature: `hasDirectToCustomerAddressDrift`.** It carries
+        no customer name and no address, so it has no redacted form.
+      required:
+        [id, reference, state, expectedArrivalDate, lineCount, hasDriftSignal,
+         hasDirectToCustomerAddressDrift, closureReason, createdByUserId, createdAt, readiedByUserId,
+         readiedAt, closedByUserId, closedAt, arrivalConfirmedByUserId, arrivalConfirmedAt,
+         discardedByUserId, discardedAt]
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        reference: { type: string, minLength: 1, example: "PD-0143" }
+        state: { $ref: "#/components/schemas/PurchaseDraftState" }
+        expectedArrivalDate: { type: [string, "null"], format: date }
+        lineCount: { type: integer, minimum: 0 }
+        hasDriftSignal:
+          type: boolean
+          description: |
+            Unchanged in meaning — whether any of this draft's Demand Snapshot rows differs in value
+            from the Customer Order it names now — and now also raised by an address disagreement of
+            **either** Delivery Mode. Always `false` for a draft that was never frozen.
+        hasDirectToCustomerAddressDrift:
+          type: boolean
+          description: |
+            **New.** Whether a **Direct to Customer** line of this draft is linked to a Customer Order
+            now going to a different Delivery Address than the one frozen for that link.
+
+            It is a separate flag from `hasDriftSignal` because AC-18a separates the two surfaces:
+            drift on a directly-shipped line is reported **on the list itself**, where the member sees
+            it without opening anything, because goods are travelling to an address nobody now expects
+            them at; the same disagreement on a Via Warehouse line is reported when the draft is
+            opened, because everything on such a line lands at one dock either way.
+
+            Neither instructs the member and neither blocks anything — including closing the draft.
+            Always `false` for a draft that was never frozen. Derived on this read, never stored
+            (spec.md §6 "Address-drift freshness").
+        closureReason: { type: [string, "null"] }
+        createdByUserId: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+        readiedByUserId: { type: [string, "null"], format: uuid }
+        readiedAt: { type: [string, "null"], format: date-time }
+        closedByUserId: { type: [string, "null"], format: uuid }
+        closedAt: { type: [string, "null"], format: date-time }
+        arrivalConfirmedByUserId:
+          type: [string, "null"]
+          format: uuid
+          description: |
+            **Retained, not dropped** — the record of which member confirmed the arrival of a draft
+            closed **before** this release. No new write path names it: a draft closed by its lines'
+            endings leaves both arrival columns `null` and records the attribution per line instead
+            (data-model.md `purchase_drafts`, ADR 0002).
+        arrivalConfirmedAt: { type: [string, "null"], format: date-time }
+        discardedByUserId: { type: [string, "null"], format: uuid }
+        discardedAt: { type: [string, "null"], format: date-time }
+
+    PurchaseDraftDetail:
+      type: object
+      description: |
+        The summary plus the draft's contents. `lineCount` equals `lines.length`. From Ready for
+        Ordering onward every value here is frozen; the only additions afterwards are each line's
+        ending, the Allocations made from it, and the closure — and **an addition is not a change**
+        (AC-17, spec.md §6 "Frozen-address integrity").
+
+        Written flat rather than as `allOf` over `PurchaseDraftSummary` for the reason given on
+        `CustomerDetail`. `ordering`'s `PurchaseDraftDetail` carries the `allOf`-over-closed-base
+        defect this corrects; see `api-sync-report.md` § "Findings requiring your decision",
+        Finding 3.
+      required:
+        [id, reference, state, expectedArrivalDate, lineCount, hasDriftSignal,
+         hasDirectToCustomerAddressDrift, closureReason, createdByUserId, createdAt, readiedByUserId,
+         readiedAt, closedByUserId, closedAt, arrivalConfirmedByUserId, arrivalConfirmedAt,
+         discardedByUserId, discardedAt, lines]
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        reference: { type: string, minLength: 1 }
+        state: { $ref: "#/components/schemas/PurchaseDraftState" }
+        expectedArrivalDate: { type: [string, "null"], format: date }
+        lineCount: { type: integer, minimum: 0 }
+        hasDriftSignal: { type: boolean }
+        hasDirectToCustomerAddressDrift: { type: boolean }
+        closureReason: { type: [string, "null"] }
+        createdByUserId: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+        readiedByUserId: { type: [string, "null"], format: uuid }
+        readiedAt: { type: [string, "null"], format: date-time }
+        closedByUserId: { type: [string, "null"], format: uuid }
+        closedAt: { type: [string, "null"], format: date-time }
+        arrivalConfirmedByUserId: { type: [string, "null"], format: uuid }
+        arrivalConfirmedAt: { type: [string, "null"], format: date-time }
+        discardedByUserId: { type: [string, "null"], format: uuid }
+        discardedAt: { type: [string, "null"], format: date-time }
+        lines:
+          type: array
+          items: { $ref: "#/components/schemas/PurchaseDraftLine" }
+
+    LineWarehouseDestination:
+      type: object
+      description: |
+        Where a **Via Warehouse** line's goods travel: the Warehouse's own Delivery Address. The
+        operator's own premises data, so it is readable by any member holding `PURCHASE_DRAFTS:WATCH`
+        in that Warehouse and is **never** gated on `CUSTOMERS:WATCH` — a member who prepares the dock
+        may hold no Workspace Role at all and no customer-read Permission either (AC-10, sad.md §7).
+      required: [addressText, accessNotes, frozen]
+      additionalProperties: false
+      properties:
+        addressText:
+          oneOf:
+            - $ref: "#/components/schemas/AddressText"
+            - type: "null"
+          description: |
+            Read live from the Warehouse record while the draft is in `draft`, and the text **captured
+            at Ready for Ordering** afterwards. `null` only while the draft is in `draft` and the
+            Warehouse has no address recorded yet — the state AC-16a refuses to freeze from.
+        accessNotes: { $ref: "#/components/schemas/AccessNotes" }
+        frozen:
+          type: boolean
+          description: |
+            `true` once these values were captured at Ready for Ordering. From that moment they are a
+            **statement made at one moment**, not a reference: a later correction of the Warehouse's
+            address in place cannot travel into them, which is how AC-16 and AC-17 hold structurally
+            (`purchase_draft_lines.frozen_delivery_address_text`).
+
+    LineCustomerDestination:
+      type: object
+      description: |
+        Where a **Direct to Customer** line's goods travel: a Customer's Delivery Address, with the
+        customer name captured beside it at the freeze. Customer identity — **omitted entirely** from
+        the redacted projection (AC-09a).
+      required: [customerDeliveryAddressId, customerId, customerName, addressText, accessNotes, frozen]
+      additionalProperties: false
+      properties:
+        customerDeliveryAddressId:
+          type: string
+          format: uuid
+          description: |
+            The live reference. It stays populated on a **frozen** line — it is what the by-line read
+            and the ownership check use — but nothing reads it as the frozen statement, and no write
+            path targets it once the draft leaves `draft` (data-model.md `purchase_draft_lines`).
+        customerId: { type: string, format: uuid }
+        customerName:
+          type: string
+          minLength: 1
+          description: |
+            Read live from the Customer record while the draft is in `draft`, and the name **captured
+            at Ready for Ordering** afterwards — captured together with the address text and the access
+            notes, so the whole frozen destination reads as one statement made at one moment
+            (`purchase_draft_lines.frozen_customer_name`, spec.md §8 second question).
+        addressText: { $ref: "#/components/schemas/AddressText" }
+        accessNotes: { $ref: "#/components/schemas/AccessNotes" }
+        frozen: { type: boolean }
+
+    PurchaseDraftLineEnding:
+      type: object
+      description: |
+        How one line ended, recorded **once** per line: the quantity, the kind, the acting member and
+        the time, which `chk_purchase_draft_lines_ending_attribution` holds arrive together or not at
+        all. A second attempt against the same line is refused, naming when and by whom (AC-20a).
+      required: [kind, quantity, recordedByUserId, recordedAt]
+      additionalProperties: false
+      properties:
+        kind: { $ref: "#/components/schemas/EndingKind" }
+        quantity:
+          type: integer
+          minimum: 0
+          description: |
+            What arrived at the dock, or what the customer received. `0` when nothing came or nothing
+            was delivered — which records no Allocation at all.
+
+            Deliberately **unbounded above**: what arrived, or what the customer said arrived, is
+            bounded neither above nor below by what was ordered (data-model.md
+            `purchase_draft_lines.ending_quantity`).
+        recordedByUserId: { type: string, format: uuid }
+        recordedAt: { type: string, format: date-time }
+
+    PurchaseDraftLine:
+      oneOf:
+        - $ref: "#/components/schemas/PurchaseDraftLineIdentified"
+        - $ref: "#/components/schemas/PurchaseDraftLineRedacted"
+      description: |
+        Both forms are modelled. The redacted form omits `customerDestination` and serves the redacted
+        links, while keeping `warehouseDestination` — the Warehouse's own premises data is not customer
+        identity and is never withheld (AC-09a, AC-10, sad.md §7).
+
+    PurchaseDraftLineIdentified:
+      type: object
+      description: |
+        One Item and quantity within the draft, carrying its own Pre-receipt Requirement, its own
+        destination, its own ending and its own links. **Changed by this feature:** `deliveryMode`,
+        `warehouseDestination`, `customerDestination` and `ending` are added, and `receivedQuantity` is
+        superseded by `ending.quantity` — the column is renamed `ending_quantity` because it now also
+        holds a figure the dock never saw.
+      required:
+        [id, itemId, itemSku, itemDescription, unitOfMeasure, orderedQuantity, packagingTypeId,
+         valueAddingNote, deliveryMode, warehouseDestination, customerDestination, ending, links]
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        itemId: { type: string, format: uuid }
+        itemSku: { type: string, minLength: 1 }
+        itemDescription: { type: string, minLength: 1 }
+        unitOfMeasure: { $ref: "#/components/schemas/UnitOfMeasure" }
+        orderedQuantity: { type: integer, minimum: 1 }
+        packagingTypeId:
+          oneOf:
+            - $ref: "#/components/schemas/PackagingTypeId"
+            - type: "null"
+        valueAddingNote: { type: [string, "null"] }
+        deliveryMode: { $ref: "#/components/schemas/DeliveryMode" }
+        warehouseDestination:
+          oneOf:
+            - $ref: "#/components/schemas/LineWarehouseDestination"
+            - type: "null"
+          description: Present when `deliveryMode` is `via_warehouse`; `null` otherwise.
+        customerDestination:
+          oneOf:
+            - $ref: "#/components/schemas/LineCustomerDestination"
+            - type: "null"
+          description: |
+            Present when `deliveryMode` is `direct_to_customer`; `null` otherwise. Exactly one of the
+            two destination properties is non-null, which is
+            `chk_purchase_draft_lines_delivery_mode_address` read back.
+        ending:
+          oneOf:
+            - $ref: "#/components/schemas/PurchaseDraftLineEnding"
+            - type: "null"
+          description: |
+            `null` until this line's ending is recorded. The draft moves to Closed exactly when the last
+            of its lines stops being `null` here (AC-19).
+        links:
+          type: array
+          items: { $ref: "#/components/schemas/PurchaseDraftLineLink" }
+
+    PurchaseDraftLineRedacted:
+      type: object
+      description: |
+        The same line read by an actor **without** `CUSTOMERS:WATCH`. `customerDestination` is absent as
+        a property; `warehouseDestination` is not, because the Warehouse's own address and access notes
+        are the operator's premises data and are read under `PURCHASE_DRAFTS:WATCH` (AC-10, sad.md §7).
+        `deliveryMode`, the quantities, the Pre-receipt Requirement and the ending are returned
+        unchanged (AC-09a).
+      required:
+        [id, itemId, itemSku, itemDescription, unitOfMeasure, orderedQuantity, packagingTypeId,
+         valueAddingNote, deliveryMode, warehouseDestination, ending, links]
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        itemId: { type: string, format: uuid }
+        itemSku: { type: string, minLength: 1 }
+        itemDescription: { type: string, minLength: 1 }
+        unitOfMeasure: { $ref: "#/components/schemas/UnitOfMeasure" }
+        orderedQuantity: { type: integer, minimum: 1 }
+        packagingTypeId:
+          oneOf:
+            - $ref: "#/components/schemas/PackagingTypeId"
+            - type: "null"
+        valueAddingNote: { type: [string, "null"] }
+        deliveryMode: { $ref: "#/components/schemas/DeliveryMode" }
+        warehouseDestination:
+          oneOf:
+            - $ref: "#/components/schemas/LineWarehouseDestination"
+            - type: "null"
+        ending:
+          oneOf:
+            - $ref: "#/components/schemas/PurchaseDraftLineEnding"
+            - type: "null"
+        links:
+          type: array
+          items: { $ref: "#/components/schemas/PurchaseDraftLineLink" }
+
+    PurchaseDraftLineListEntry:
+      type: object
+      description: |
+        One line of the by-line read, carrying the draft it belongs to so the view reads without a
+        second request. Each line of a draft holding both modes appears in whichever half **its own**
+        `deliveryMode` places it (AC-22).
+      required: [purchaseDraftId, purchaseDraftReference, purchaseDraftState, expectedArrivalDate, line]
+      additionalProperties: false
+      properties:
+        purchaseDraftId: { type: string, format: uuid }
+        purchaseDraftReference: { type: string, minLength: 1 }
+        purchaseDraftState: { $ref: "#/components/schemas/PurchaseDraftState" }
+        expectedArrivalDate: { type: [string, "null"], format: date }
+        line: { $ref: "#/components/schemas/PurchaseDraftLine" }
+
+    PurchaseDraftLineLink:
+      oneOf:
+        - $ref: "#/components/schemas/PurchaseDraftLineLinkIdentified"
+        - $ref: "#/components/schemas/PurchaseDraftLineLinkRedacted"
+      description: Both forms are modelled; the redacted one omits the customer and both sides of the address comparison, keeping the Drift Signal itself (AC-09a).
+
+    PurchaseDraftLineLinkIdentified:
+      type: object
+      description: |
+        What the member intends of this line for one customer. It carries a stated quantity and
+        **claims nothing**; only an Allocation, now recorded at the line's ending, reduces demand.
+      required:
+        [id, customerOrderId, customer, customerName, statedQuantity, snapshot, current, driftSignals,
+         allocation]
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        customerOrderId: { type: string, format: uuid }
+        customer:
+          oneOf:
+            - $ref: "#/components/schemas/CustomerRef"
+            - type: "null"
+          description: The Customer the linked order names, or `null` for an order recorded by typed name.
+        customerName:
+          type: [string, "null"]
+          minLength: 1
+          description: The typed name when the linked order names no Customer; `null` otherwise. Exactly one of the two is non-null.
+        statedQuantity: { type: integer, minimum: 1 }
+        snapshot:
+          oneOf:
+            - $ref: "#/components/schemas/DemandSnapshotEntryIdentified"
+            - type: "null"
+          description: The demand exactly as it stood at the freeze. `null` while the draft is still in `draft`, which carries no snapshot at all.
+        current: { $ref: "#/components/schemas/LinkedCustomerOrderStateIdentified" }
+        driftSignals:
+          type: array
+          items: { $ref: "#/components/schemas/DriftSignalKind" }
+        allocation:
+          oneOf:
+            - $ref: "#/components/schemas/EndingAllocation"
+            - type: "null"
+
+    PurchaseDraftLineLinkRedacted:
+      type: object
+      description: |
+        The same link without customer identity. `customer`, `customerName` and both captured and
+        current Delivery Addresses are absent; `driftSignals` still carries
+        `delivery_address_changed`, because that drift exists is a fact about the draft rather than
+        customer identity (AC-09a).
+      required: [id, customerOrderId, statedQuantity, snapshot, current, driftSignals, allocation]
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        customerOrderId: { type: string, format: uuid }
+        statedQuantity: { type: integer, minimum: 1 }
+        snapshot:
+          oneOf:
+            - $ref: "#/components/schemas/DemandSnapshotEntryRedacted"
+            - type: "null"
+        current: { $ref: "#/components/schemas/LinkedCustomerOrderStateRedacted" }
+        driftSignals:
+          type: array
+          items: { $ref: "#/components/schemas/DriftSignalKind" }
+        allocation:
+          oneOf:
+            - $ref: "#/components/schemas/EndingAllocation"
+            - type: "null"
+
+    DemandSnapshotEntryIdentified:
+      type: object
+      description: |
+        Captured values, written once at the freeze and never updated. **Changed by this feature:** the
+        Delivery Address that Customer Order was going to at that instant is captured beside the
+        quantity, needed-by date and state (AC-16).
+      required:
+        [capturedQuantity, capturedNeededBy, capturedState, capturedDeliveryAddressId,
+         capturedDeliveryAddressText]
+      additionalProperties: false
+      properties:
+        capturedQuantity: { type: integer, minimum: 1 }
+        capturedNeededBy: { type: string, format: date }
+        capturedState: { $ref: "#/components/schemas/CustomerOrderState" }
+        capturedDeliveryAddressId:
+          type: [string, "null"]
+          format: uuid
+          description: |
+            **The comparison key**, and the only thing Address Drift is decided on: drift is the
+            identity question "is this order going to a different Delivery Address than the one frozen
+            for it" (CONTEXT.md "Address Drift"). Comparing the text instead would report drift when a
+            member merely corrects a typo in an address that was never redirected.
+
+            `null` — legitimately, and paired with a `null` text by
+            `chk_purchase_draft_demand_snapshots_captured_address_pairing` — for a link to a Customer
+            Order recorded by **typed name**, which names no address and remains linkable to a Via
+            Warehouse line exactly as before (AC-11a, AC-15b).
+        capturedDeliveryAddressText:
+          oneOf:
+            - $ref: "#/components/schemas/AddressText"
+            - type: "null"
+          description: |
+            **The frozen statement** — the address text as it read at the freeze, which is what AC-18
+            shows the member. Captured together with the identifier or not at all. Neither column can
+            be dropped without losing one of the two: the text is what is shown, the identifier is what
+            decides whether there is anything to show.
+
+    DemandSnapshotEntryRedacted:
+      type: object
+      description: The captured demand without the captured Delivery Address (AC-09a).
+      required: [capturedQuantity, capturedNeededBy, capturedState]
+      additionalProperties: false
+      properties:
+        capturedQuantity: { type: integer, minimum: 1 }
+        capturedNeededBy: { type: string, format: date }
+        capturedState: { $ref: "#/components/schemas/CustomerOrderState" }
+
+    LinkedCustomerOrderStateIdentified:
+      type: object
+      description: |
+        The linked Customer Order as it stands at the instant of this read — the other half of the
+        drift comparison. **Changed by this feature:** the Delivery Address the demand **now** expects,
+        which AC-18 shows beside the one frozen for it.
+      required: [quantity, neededBy, state, outstandingQuantity, lastChangedAt, deliveryAddress]
+      additionalProperties: false
+      properties:
+        quantity: { type: integer, minimum: 1 }
+        neededBy: { type: string, format: date }
+        state: { $ref: "#/components/schemas/CustomerOrderState" }
+        outstandingQuantity: { type: integer, minimum: 0 }
+        lastChangedAt: { type: [string, "null"], format: date-time }
+        deliveryAddress:
+          oneOf:
+            - $ref: "#/components/schemas/CustomerOrderDestination"
+            - type: "null"
+          description: |
+            Where this Customer Order is going **now**. `null` for an order recorded by typed name.
+            Compared against `snapshot.capturedDeliveryAddressId`; a disagreement raises
+            `delivery_address_changed` and is reflected on the very next read after a redirection —
+            nothing is stored and no job repairs anything (AC-18, AC-18a).
+
+    LinkedCustomerOrderStateRedacted:
+      type: object
+      description: The linked order's current values without its destination (AC-09a).
+      required: [quantity, neededBy, state, outstandingQuantity, lastChangedAt]
+      additionalProperties: false
+      properties:
+        quantity: { type: integer, minimum: 1 }
+        neededBy: { type: string, format: date }
+        state: { $ref: "#/components/schemas/CustomerOrderState" }
+        outstandingQuantity: { type: integer, minimum: 0 }
+        lastChangedAt: { type: [string, "null"], format: date-time }
+
+    EndingAllocation:
+      type: object
+      description: |
+        How much of a line's recorded quantity the member assigned to this link's Customer Order,
+        decided by that member rather than derived. Recording it reduced that order's Outstanding
+        Quantity. A line's ending happens once, so a link allocates at most once.
+
+        `ordering`'s `ArrivalAllocation` renamed and widened: the quantity may now come from a Direct
+        Delivery as well as an arrival, and a name saying "arrival" would be the misnaming a later
+        reader trips over (ADR 0002).
+      required: [allocatedQuantity, allocatedByUserId, createdAt]
+      additionalProperties: false
+      properties:
+        allocatedQuantity: { type: integer, minimum: 1 }
+        allocatedByUserId: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+
+    PurchaseDraftLineUpdate:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      description: |
+        Every property is optional; at least one must be present. **Changed by this feature:**
+        `deliveryMode` and `customerDeliveryAddressId`. Links are managed through their own
+        sub-resource, not here.
+
+        The two travel together: `direct_to_customer` requires a `customerDeliveryAddressId`,
+        `via_warehouse` requires `null` — the `chk_purchase_draft_lines_delivery_mode_address` pairing
+        as a payload rule, refused at 400 rather than left to the database.
+
+        Accepted **only** while the draft is in `draft`. After Ready for Ordering these two properties
+        are unwritable by construction, not by a check: the write path resolves no frozen draft at all
+        (AC-17).
+      properties:
+        itemId: { type: string, format: uuid }
+        orderedQuantity: { type: integer, minimum: 1 }
+        packagingTypeId:
+          oneOf:
+            - $ref: "#/components/schemas/PackagingTypeId"
+            - type: "null"
+        valueAddingNote: { type: [string, "null"], minLength: 1 }
+        deliveryMode: { $ref: "#/components/schemas/DeliveryMode" }
+        customerDeliveryAddressId:
+          type: [string, "null"]
+          format: uuid
+          description: |
+            An **active** Delivery Address of a Customer of this Warehouse — proven by the composite
+            reference `(id, warehouse_id)` (AC-12). The Warehouse's own Delivery Address has no
+            identifier this property could hold, so naming it here is structurally impossible; AC-14's
+            refusal is about the member's submitted intent and is bound to this field.
+      dependentRequired:
+        customerDeliveryAddressId: [deliveryMode]
+
+    PurchaseDraftLineLinkCreate:
+      type: object
+      required: [customerOrderId, statedQuantity]
+      additionalProperties: false
+      description: |
+        Unchanged from `ordering`. On a Direct to Customer line the order must be going to the address
+        the line ships to (AC-15); on a Via Warehouse line no such agreement is required and no
+        quantity is reconciled (AC-15b).
+      properties:
+        customerOrderId: { type: string, format: uuid }
+        statedQuantity: { type: integer, minimum: 1 }
+
+    PurchaseDraftLineArrival:
+      type: object
+      required: [receivedQuantity]
+      additionalProperties: false
+      description: |
+        What arrived at the dock on **one Via Warehouse line**. The ending kind, the attribution, the
+        time and the draft's move to Closed are not inputs: the kind is the route, the attribution and
+        time are the acting member and now, and the closure is derived from whether any line is left
+        without an ending (ADR 0002).
+      properties:
+        receivedQuantity:
+          type: integer
+          minimum: 0
+          description: |
+            Whatever physically arrived — short of, in excess of, or nothing at all. Bounded neither
+            above nor below by `orderedQuantity`.
+        allocations:
+          type: array
+          maxItems: 50
+          description: |
+            May be omitted or empty for a line whose linked demand has all gone, and must be for a line
+            where nothing arrived. Their sum may not exceed `receivedQuantity`. The ceiling is a
+            payload guard, not a business rule.
+          items: { $ref: "#/components/schemas/EndingAllocationCreate" }
+
+    PurchaseDraftLineDirectDelivery:
+      type: object
+      required: [deliveredQuantity]
+      additionalProperties: false
+      description: |
+        What the customer received on **one Direct to Customer line**. Identical in every respect to the
+        arrival payload except the name of the quantity, which says what actually happened: these goods
+        never entered the building and were never in the Transit Zone to be counted (AC-21).
+      properties:
+        deliveredQuantity:
+          type: integer
+          minimum: 0
+          description: |
+            Whatever the customer received, as the member was told it — this release provides no proof
+            that a Direct Delivery happened and the system does not inspect what is recorded
+            (spec.md §3, CONTEXT.md "Direct Delivery"). Bounded neither above nor below by
+            `orderedQuantity`.
+        allocations:
+          type: array
+          maxItems: 50
+          items: { $ref: "#/components/schemas/EndingAllocationCreate" }
+
+    EndingAllocationCreate:
+      type: object
+      required: [purchaseDraftLineLinkId, allocatedQuantity]
+      additionalProperties: false
+      description: |
+        The Allocation is addressed **through the link**, not beside it. Naming the link rather than the
+        Customer Order is what makes "an Allocation names a Customer Order its line is actually linked
+        to" provable by the reference itself rather than re-checked in application code.
+      properties:
+        purchaseDraftLineLinkId: { type: string, format: uuid }
+        allocatedQuantity:
+          type: integer
+          minimum: 1
+          description: |
+            May not exceed what its Customer Order is still waiting for, and that order must still be
+            Unfulfilled — both re-checked against the rows locked inside this ending's transaction. A
+            link receiving nothing is omitted rather than sent as `0`.

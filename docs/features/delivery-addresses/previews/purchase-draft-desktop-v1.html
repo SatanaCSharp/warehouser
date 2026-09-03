@@ -1,0 +1,367 @@
+<!doctype html>
+<!--
+  Preview evidence - design-ui skill. Review artifact only; never an implementation source.
+
+  Frame:         Delivery Addresses / Purchase Draft / Desktop / v1
+  Design source: docs/mockups/app.pen
+  Node ID:       cvX6h
+  Viewport:      desktop 1440×2336
+  States:        default (editable draft; one via-warehouse line serving two addresses, one direct-to-customer line)
+-->
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Delivery addresses · Purchase draft · Desktop</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style type="text/tailwindcss">
+      @theme inline {
+        --color-background: var(--background);
+        --color-background-secondary: var(--background-secondary);
+        --color-foreground: var(--foreground);
+        --color-muted: var(--muted);
+
+        --color-surface: var(--surface);
+        --color-surface-foreground: var(--surface-foreground);
+        --color-surface-secondary: var(--surface-secondary);
+        --color-surface-tertiary: var(--surface-tertiary);
+        --color-overlay: var(--overlay);
+        --color-overlay-foreground: var(--overlay-foreground);
+
+        --color-accent: var(--accent);
+        --color-accent-foreground: var(--accent-foreground);
+        --color-accent-soft: var(--accent-soft);
+        --color-accent-soft-foreground: var(--accent-soft-foreground);
+
+        --color-default: var(--default);
+        --color-default-foreground: var(--default-foreground);
+        --color-default-soft-foreground: var(--default-soft-foreground);
+        --color-success: var(--success);
+        --color-success-foreground: var(--success-foreground);
+        --color-success-soft: var(--success-soft);
+        --color-success-soft-foreground: var(--success-soft-foreground);
+        --color-warning: var(--warning);
+        --color-warning-foreground: var(--warning-foreground);
+        --color-warning-soft: var(--warning-soft);
+        --color-warning-soft-foreground: var(--warning-soft-foreground);
+        --color-danger: var(--danger);
+        --color-danger-foreground: var(--danger-foreground);
+        --color-danger-soft: var(--danger-soft);
+        --color-danger-soft-foreground: var(--danger-soft-foreground);
+
+        --color-border: var(--border);
+        --color-separator: var(--separator);
+        --color-focus: var(--focus);
+        --color-link: var(--link);
+
+        --color-field: var(--field-background);
+        --color-field-foreground: var(--field-foreground);
+        --color-field-placeholder: var(--field-placeholder);
+        --color-field-border: var(--field-border);
+
+        --radius-field: var(--field-radius);
+        --shadow-surface: var(--surface-shadow);
+        --shadow-overlay: var(--overlay-shadow);
+      }
+
+      :root,
+      [data-theme='light'] {
+        color-scheme: light;
+
+        --white: oklch(100% 0 0);
+        --snow: oklch(0.9911 0 0);
+        --eclipse: oklch(0.2103 0.0059 285.89);
+
+        --radius: 0.5rem;
+        --field-radius: calc(var(--radius) * 1.5);
+
+        --background: oklch(0.9702 0 0);
+        --foreground: var(--eclipse);
+        --muted: oklch(0.5517 0.0138 285.94);
+
+        --surface: var(--white);
+        --surface-foreground: var(--foreground);
+        --surface-secondary: oklch(0.9524 0.0013 286.37);
+        --surface-tertiary: oklch(0.9373 0.0013 286.37);
+        --overlay: var(--white);
+        --overlay-foreground: var(--foreground);
+
+        --accent: oklch(0.6204 0.195 253.83);
+        --accent-foreground: var(--snow);
+        --default: oklch(94% 0.001 286.375);
+        --default-foreground: var(--eclipse);
+
+        --success: oklch(0.7329 0.1935 150.81);
+        --success-foreground: var(--eclipse);
+        --warning: oklch(0.7819 0.1585 72.33);
+        --warning-foreground: var(--eclipse);
+        --danger: oklch(0.6532 0.2328 25.74);
+        --danger-foreground: var(--snow);
+
+        --field-background: var(--white);
+        --field-foreground: var(--eclipse);
+        --field-placeholder: var(--muted);
+        --field-border: transparent;
+
+        --border: oklch(90% 0.004 286.32);
+        --separator: oklch(92% 0.004 286.32);
+        --focus: var(--accent);
+        --link: var(--foreground);
+
+        --background-secondary: color-mix(
+          in oklab,
+          var(--background) 96%,
+          var(--foreground) 4%
+        );
+        --accent-soft: color-mix(in oklab, var(--accent) 15%, transparent);
+        --accent-soft-foreground: color-mix(
+          in oklab,
+          var(--accent) 70%,
+          var(--foreground) 30%
+        );
+        --default-soft-foreground: var(--default-foreground);
+        --success-soft: color-mix(in oklab, var(--success) 15%, transparent);
+        --success-soft-foreground: color-mix(
+          in oklab,
+          var(--success) 80%,
+          var(--foreground) 60%
+        );
+        --warning-soft: color-mix(in oklab, var(--warning) 15%, transparent);
+        --warning-soft-foreground: color-mix(
+          in oklab,
+          var(--warning) 80%,
+          var(--foreground) 70%
+        );
+        --danger-soft: color-mix(in oklab, var(--danger) 15%, transparent);
+        --danger-soft-foreground: color-mix(
+          in oklab,
+          var(--danger) 70%,
+          var(--foreground) 40%
+        );
+
+        --surface-shadow:
+          0 2px 4px 0 rgba(0, 0, 0, 0.04), 0 1px 2px 0 rgba(0, 0, 0, 0.06),
+          0 0 1px 0 rgba(0, 0, 0, 0.06);
+        --overlay-shadow:
+          0 2px 8px 0 rgba(0, 0, 0, 0.06), 0 -6px 12px 0 rgba(0, 0, 0, 0.03),
+          0 14px 28px 0 rgba(0, 0, 0, 0.08);
+      }
+
+      [data-theme='dark'] {
+        color-scheme: dark;
+
+        --background: oklch(12% 0.005 285.823);
+        --foreground: var(--snow);
+        --muted: oklch(70.5% 0.015 286.067);
+
+        --surface: oklch(0.2103 0.0059 285.89);
+        --surface-foreground: var(--foreground);
+        --surface-secondary: oklch(0.257 0.0037 286.14);
+        --surface-tertiary: oklch(0.2721 0.0024 247.91);
+        --overlay: oklch(0.2103 0.0059 285.89);
+        --overlay-foreground: var(--foreground);
+
+        --default: oklch(27.4% 0.006 286.033);
+        --default-foreground: var(--snow);
+        --warning: oklch(0.8203 0.1388 76.34);
+        --danger: oklch(0.594 0.1967 24.63);
+
+        --field-background: oklch(0.2103 0.0059 285.89);
+        --field-foreground: var(--foreground);
+
+        --border: oklch(28% 0.006 286.033);
+        --separator: oklch(25% 0.006 286.033);
+
+        --accent-soft: color-mix(in oklab, var(--accent) 12%, transparent);
+        --accent-soft-foreground: color-mix(
+          in oklab,
+          var(--accent) 80%,
+          var(--foreground) 30%
+        );
+        --default-soft-foreground: var(--default-foreground);
+        --danger-soft-foreground: color-mix(
+          in oklab,
+          var(--danger) 80%,
+          var(--foreground) 30%
+        );
+        --warning-soft-foreground: color-mix(
+          in oklab,
+          var(--warning) 80%,
+          var(--foreground) 30%
+        );
+        --success-soft-foreground: color-mix(
+          in oklab,
+          var(--success) 80%,
+          var(--foreground) 30%
+        );
+
+        --surface-shadow: 0 0 0 0 transparent inset;
+        --overlay-shadow: 0 0 1px 0 rgba(255, 255, 255, 0.3) inset;
+      }
+
+    </style>
+  </head>
+
+  <body class="bg-background text-foreground min-h-screen antialiased">
+    <main class="mx-auto w-[1440px] max-w-full">
+<div class="flex min-h-full flex-col bg-background">
+<header class="flex h-20 items-center justify-between border-b border-border bg-surface px-12">
+  <div class="flex items-center gap-3">
+    <span class="flex size-[34px] items-center justify-center rounded-lg bg-accent text-accent-foreground"><svg class="size-[19px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 8.35V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.35A2 2 0 0 1 3.26 6.5l8-3.2a2 2 0 0 1 1.48 0l8 3.2A2 2 0 0 1 22 8.35Z"/><path d="M6 18h12"/><path d="M6 14h12"/><rect x="6" y="10" width="12" height="12"/></svg></span>
+    <span class="text-lg font-bold tracking-tight text-foreground">Warehouser</span>
+  </div>
+  <div class="flex items-center gap-3">
+    <span class="flex h-9 items-center gap-2 rounded-field border border-border bg-surface px-3 text-[13px] font-medium text-foreground"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 8.35V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.35A2 2 0 0 1 3.26 6.5l8-3.2a2 2 0 0 1 1.48 0l8 3.2A2 2 0 0 1 22 8.35Z"/><path d="M6 18h12"/><path d="M6 14h12"/><rect x="6" y="10" width="12" height="12"/></svg>Central DC<svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span>
+    <span class="flex h-9 items-center rounded-field border border-border bg-surface px-3 text-[13px] text-muted">EN</span>
+    <span class="flex h-9 items-center rounded-field border border-border bg-surface px-3 text-[13px] text-muted">Sign out</span>
+  </div>
+</header>
+  <div class="flex flex-1">
+<nav aria-label="Warehouse" class="w-60 shrink-0 border-r border-border bg-surface"><ul class="flex flex-col gap-1 p-4"><li><span class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground font-medium"><span class="text-muted"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg></span><span class="flex-1">Dashboard</span></span></li><li><span class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground font-medium"><span class="text-muted"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg></span><span class="flex-1">Demand</span></span></li><li><span class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm bg-accent-soft text-accent-soft-foreground font-semibold"><span class="text-accent-soft-foreground"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg></span><span class="flex-1">Purchase drafts</span><span class="text-xs font-bold text-warning">2</span></span></li><li><span class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground font-medium"><span class="text-muted"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></span><span class="flex-1">Items</span></span></li><li><span class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground font-medium"><span class="text-muted"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 2v2"/><path d="M8 2v2"/><rect x="2" y="4" width="20" height="18" rx="2"/><circle cx="12" cy="11" r="3"/><path d="M17 18a5 5 0 0 0-10 0"/></svg></span><span class="flex-1">Customers</span></span></li><li><span class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground font-medium"><span class="text-muted"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg></span><span class="flex-1">Access</span></span></li></ul></nav>
+    <div class="flex flex-1 flex-col gap-5 p-12">
+<h1 class="text-[38px] leading-tight font-bold tracking-tight text-foreground">Purchase drafts</h1>
+<p class="max-w-[1104px] text-[15px] leading-relaxed text-muted">What you decided to order from your supplier, who each line is for, and where its goods travel. A line either comes to your warehouse or ships straight to the customer — you choose that per line, not per draft.</p>
+<div class="flex w-[1104px] gap-1 rounded-[10px] bg-default p-1"><span class="flex-1 rounded-[6px] bg-surface px-3 py-1.5 text-center text-[13px] font-medium text-foreground shadow-surface">Being worked on · 3</span><span class="flex-1 px-3 py-1.5 text-center text-[13px] font-medium text-muted">Ready for ordering · 2</span><span class="flex-1 px-3 py-1.5 text-center text-[13px] font-medium text-muted">Closed · 4</span></div>
+<div class="flex w-[1104px]"><button type="button" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-field font-semibold bg-accent text-accent-foreground h-11 px-5 text-[15px] "><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>New draft</button></div>
+<div class="flex w-[1104px] items-start gap-6">
+  <div class="flex w-[340px] shrink-0 flex-col gap-3">
+    <div class="flex flex-col gap-2 rounded-2xl bg-surface p-3.5 border-2 border-accent">
+  <div class="flex items-center gap-2"><span class="text-sm font-bold text-foreground">PD-0143</span><span class="flex-1"></span><span class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium bg-default text-default-foreground"><span class="size-1.5 rounded-full bg-current opacity-70"></span>Draft</span></div>
+  <p class="text-xs leading-relaxed text-muted">3 lines · created by you · 25 Aug 2026</p>
+</div>
+    <div class="flex flex-col gap-2 rounded-2xl bg-surface p-3.5 border border-border">
+  <div class="flex items-center gap-2"><span class="text-sm font-bold text-foreground">PD-0144</span><span class="flex-1"></span><span class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium bg-default text-default-foreground"><span class="size-1.5 rounded-full bg-current opacity-70"></span>Draft</span></div>
+  <p class="text-xs leading-relaxed text-muted">1 line · created by Anna K. · 26 Aug 2026</p>
+</div>
+    <div class="flex flex-col gap-2 rounded-2xl bg-surface p-3.5 border border-border">
+  <div class="flex items-center gap-2"><span class="text-sm font-bold text-foreground">PD-0140</span><span class="flex-1"></span><span class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium bg-default text-default-foreground"><span class="size-1.5 rounded-full bg-current opacity-70"></span>Draft</span></div>
+  <p class="text-xs leading-relaxed text-muted">5 lines · created by you · 20 Aug 2026</p>
+</div>
+    <p class="text-xs leading-relaxed text-muted ">Discarded drafts leave this list. Closed drafts move to the Closed tab and stop covering demand.</p>
+  </div>
+  <div class="flex flex-1 flex-col gap-4 rounded-field border border-border bg-surface p-6">
+  <div class="flex items-center gap-3">
+    <div class="flex flex-1 flex-col gap-0.5"><h2 class="text-xl font-bold tracking-tight text-foreground">PD-0143</h2><p class="text-[13px] text-muted">Created by you · 25 Aug 2026</p></div>
+    <span class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium bg-default text-default-foreground"><span class="size-1.5 rounded-full bg-current opacity-70"></span>Draft</span><button type="button" aria-label="Actions" class="inline-flex size-8 shrink-0 items-center justify-center rounded-field text-muted"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+  </div>
+  <div class="flex w-full gap-3 rounded-field bg-accent-soft p-4">
+  <span class="mt-px shrink-0 text-accent-soft-foreground"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></span>
+  <div class="flex min-w-0 flex-col gap-1">
+    <p class="text-sm font-semibold text-foreground">Move to Ready for ordering once you have told the supplier</p>
+    <p class="text-[13px] leading-relaxed text-muted">That freezes these lines, quantities, links, pre-receipt requirements and the expected arrival date — and now each line&#x27;s delivery mode and the address it ships to, together with the address every linked order was going to at that moment. Nothing is transmitted; the call or the email is still yours to make.</p>
+  </div>
+</div>
+  <div class="w-[300px]"><label class="flex w-full flex-col gap-1.5"><span class="text-sm font-medium text-foreground">Expected arrival date</span>
+  <span class="flex h-9 items-center gap-2 rounded-field border bg-field text-field-foreground border-border px-3"><span class="shrink-0 text-muted"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v4"/><path d="M16 2v4"/><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18"/></svg></span><span class="min-w-0 flex-1 text-sm leading-snug ">Not stated yet</span></span>
+  <span class="text-xs leading-snug text-muted">Your own estimate, not a supplier commitment. Leave it blank until you have spoken to them.</span></label></div>
+  <div class="h-px w-full bg-separator"></div>
+  <div class="flex items-center gap-3"><p class="text-[11px] font-bold tracking-[0.06em] text-muted">LINES</p><span class="flex-1"></span><p class="text-xs leading-relaxed text-muted ">Each line carries its own packaging, note and delivery</p></div>
+  <div class="flex flex-col gap-3.5 rounded-2xl border border-border bg-surface p-4.5">
+  <div class="flex items-center gap-2.5">
+    <p class="text-[11px] font-bold tracking-[0.06em] text-muted">LINE 1</p><span class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium bg-default text-default-foreground"><span class="size-1.5 rounded-full bg-current opacity-70"></span>Via warehouse</span><span class="flex-1"></span><button type="button" aria-label="Actions" class="inline-flex size-7 shrink-0 items-center justify-center rounded-field text-muted"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+  </div>
+  <div class="flex gap-3">
+    <div class="flex-1"><label class="flex w-full flex-col gap-1.5"><span class="text-sm font-medium text-foreground">Item</span>
+  <span class="flex h-9 items-center gap-2 rounded-field border bg-field text-field-foreground border-border px-3"><span class="min-w-0 flex-1 text-sm leading-snug ">WH-100420 · Pallet wrap, 500mm</span><span class="shrink-0 text-muted"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span></span>
+  </label></div>
+    <div class="w-[150px]"><label class="flex w-full flex-col gap-1.5"><span class="text-sm font-medium text-foreground">Quantity</span>
+  <span class="flex h-9 items-center gap-2 rounded-field border bg-field text-field-foreground border-border px-3"><span class="min-w-0 flex-1 text-sm leading-snug ">1 200</span></span>
+  <span class="text-xs leading-snug text-muted">pieces</span></label></div>
+    <div class="w-[210px]"><label class="flex w-full flex-col gap-1.5"><span class="text-sm font-medium text-foreground">Packaging type</span>
+  <span class="flex h-9 items-center gap-2 rounded-field border bg-field text-field-foreground border-border px-3"><span class="min-w-0 flex-1 text-sm leading-snug ">Pallets</span><span class="shrink-0 text-muted"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span></span>
+  <span class="text-xs leading-snug text-muted">How the goods must arrive</span></label></div>
+  </div>
+  <div class="flex flex-col gap-2.5 rounded-field border border-border bg-surface-secondary p-3.5">
+    <p class="text-[11px] font-bold tracking-[0.06em] text-muted">DELIVERY</p>
+    <div class="flex gap-3">
+      <div class="flex w-[300px] shrink-0 flex-col gap-1.5">
+        <span class="text-sm font-medium text-foreground">How it travels</span><div class="flex w-full gap-1 rounded-[10px] bg-default p-1"><span class="flex-1 rounded-[6px] bg-surface px-3 py-1.5 text-center text-[13px] font-medium text-foreground shadow-surface">Via warehouse</span><span class="flex-1 px-3 py-1.5 text-center text-[13px] font-medium text-muted">Direct to customer</span></div>
+      </div>
+      <div class="flex-1"><label class="flex w-full flex-col gap-1.5"><span class="text-sm font-medium text-foreground">Goes to</span>
+  <span class="flex h-9 items-center gap-2 rounded-field border bg-field text-field-foreground border-border px-3"><span class="shrink-0 text-muted"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg></span><span class="min-w-0 flex-1 text-sm leading-snug ">Am Kai 7, 21079 Hamburg, Germany</span></span>
+  <span class="text-xs leading-snug text-muted">Your warehouse delivery address. Every via-warehouse line goes here and it is not chosen per line.</span></label></div>
+    </div>
+    <p class="text-xs leading-relaxed text-muted ">Goods land in your transit zone, then go out to the customer from there. A via-warehouse line may serve customers at several different addresses.</p>
+  </div>
+  <label class="flex w-full flex-col gap-1.5"><span class="text-sm font-medium text-foreground">Value-adding note</span>
+  <span class="flex min-h-14 items-start py-2.5 gap-2 rounded-field border bg-field text-field-foreground border-border px-3"><span class="min-w-0 flex-1 text-sm leading-snug ">Shrink-wrap each pallet and apply the customer barcode to the outer face.</span></span>
+  <span class="text-xs leading-snug text-muted">Processing the goods need before or on arrival. Not a place for prices, supplier contacts or payment terms.</span></label>
+  <div class="flex flex-col gap-2">
+    <p class="text-[11px] font-bold tracking-[0.06em] text-muted">SERVES</p>
+    <div class="flex flex-col gap-1.5"><div class="flex items-center gap-3 rounded-field border border-border bg-surface-secondary px-3 py-2.5">
+  <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+    <span class="text-[13px] leading-snug font-semibold text-foreground">Nordwind Logistik GmbH</span>
+    <span class="text-[11px] leading-snug text-muted">Unfulfilled · 800 outstanding · needed by 2 Sep 2026 · to Hafenstraße 14, Hamburg</span>
+  </div>
+  <label class="flex w-[150px] shrink-0 flex-col gap-1">
+    <span class="text-[11px] font-medium text-muted">Intended for them</span>
+    <span class="flex h-8 items-center rounded-field border px-3 text-sm font-semibold bg-field border-border text-field-foreground">800</span>
+  </label><button type="button" aria-label="Unlink" class="inline-flex size-7 shrink-0 items-center justify-center rounded-field text-muted"><svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+</div><div class="flex items-center gap-3 rounded-field border border-border bg-surface-secondary px-3 py-2.5">
+  <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+    <span class="text-[13px] leading-snug font-semibold text-foreground">Baltic Freight OÜ</span>
+    <span class="text-[11px] leading-snug text-muted">Unfulfilled · 440 outstanding · needed by 9 Sep 2026 · to Sadama 12, Tallinn</span>
+  </div>
+  <label class="flex w-[150px] shrink-0 flex-col gap-1">
+    <span class="text-[11px] font-medium text-muted">Intended for them</span>
+    <span class="flex h-8 items-center rounded-field border px-3 text-sm font-semibold bg-field border-border text-field-foreground">400</span>
+  </label><button type="button" aria-label="Unlink" class="inline-flex size-7 shrink-0 items-center justify-center rounded-field text-muted"><svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+</div></div>
+    <div class="flex items-center gap-3"><button type="button" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-field font-semibold bg-surface text-foreground border border-border h-8 px-3 text-xs "><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>Link a customer order</button><p class="text-xs leading-relaxed text-muted flex-1">1 200 ordered · 1 200 intended for customers. Everything on this line lands at one dock, so it may serve two different addresses and the figures never have to agree.</p></div>
+  </div>
+</div><div class="flex flex-col gap-3.5 rounded-2xl border border-border bg-surface p-4.5">
+  <div class="flex items-center gap-2.5">
+    <p class="text-[11px] font-bold tracking-[0.06em] text-muted">LINE 2</p><span class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium bg-accent-soft text-accent-soft-foreground"><span class="size-1.5 rounded-full bg-current opacity-70"></span>Direct to customer</span><span class="flex-1"></span><button type="button" aria-label="Actions" class="inline-flex size-7 shrink-0 items-center justify-center rounded-field text-muted"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+  </div>
+  <div class="flex gap-3">
+    <div class="flex-1"><label class="flex w-full flex-col gap-1.5"><span class="text-sm font-medium text-foreground">Item</span>
+  <span class="flex h-9 items-center gap-2 rounded-field border bg-field text-field-foreground border-border px-3"><span class="min-w-0 flex-1 text-sm leading-snug ">WH-100733 · Carton 600×400×300</span><span class="shrink-0 text-muted"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span></span>
+  </label></div>
+    <div class="w-[150px]"><label class="flex w-full flex-col gap-1.5"><span class="text-sm font-medium text-foreground">Quantity</span>
+  <span class="flex h-9 items-center gap-2 rounded-field border bg-field text-field-foreground border-border px-3"><span class="min-w-0 flex-1 text-sm leading-snug ">1 500</span></span>
+  <span class="text-xs leading-snug text-muted">pieces</span></label></div>
+    <div class="w-[210px]"><label class="flex w-full flex-col gap-1.5"><span class="text-sm font-medium text-foreground">Packaging type</span>
+  <span class="flex h-9 items-center gap-2 rounded-field border bg-field text-field-foreground border-border px-3"><span class="min-w-0 flex-1 text-sm leading-snug ">Cartons, loose</span><span class="shrink-0 text-muted"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span></span>
+  <span class="text-xs leading-snug text-muted">How the goods must arrive</span></label></div>
+  </div>
+  <div class="flex flex-col gap-2.5 rounded-field border border-border bg-surface-secondary p-3.5">
+    <p class="text-[11px] font-bold tracking-[0.06em] text-muted">DELIVERY</p>
+    <div class="flex gap-3">
+      <div class="flex w-[300px] shrink-0 flex-col gap-1.5">
+        <span class="text-sm font-medium text-foreground">How it travels</span><div class="flex w-full gap-1 rounded-[10px] bg-default p-1"><span class="flex-1 px-3 py-1.5 text-center text-[13px] font-medium text-muted">Via warehouse</span><span class="flex-1 rounded-[6px] bg-surface px-3 py-1.5 text-center text-[13px] font-medium text-foreground shadow-surface">Direct to customer</span></div>
+      </div>
+      <div class="flex-1"><label class="flex w-full flex-col gap-1.5"><span class="text-sm font-medium text-foreground">Goes to</span>
+  <span class="flex h-9 items-center gap-2 rounded-field border bg-field text-field-foreground border-border px-3"><span class="shrink-0 text-muted"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg></span><span class="min-w-0 flex-1 text-sm leading-snug ">Nordwind Logistik GmbH — Hafenstraße 14, 20457 Hamburg</span><span class="shrink-0 text-muted"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span></span>
+  <span class="text-xs leading-snug text-muted">An active delivery address of a customer. Your own warehouse address cannot be chosen here.</span></label></div>
+    </div>
+    <p class="text-xs leading-relaxed text-muted ">The supplier ships straight to the customer. These goods never enter your building, are never counted in on hand, and never rest in the transit zone.</p>
+  </div>
+  <label class="flex w-full flex-col gap-1.5"><span class="text-sm font-medium text-foreground">Value-adding note</span>
+  <span class="flex min-h-14 items-start py-2.5 gap-2 rounded-field border bg-field text-field-foreground border-border px-3"><span class="min-w-0 flex-1 text-sm leading-snug ">Cartons must be palletised and stretch-wrapped before they leave the supplier — the customer has no forklift on site.</span></span>
+  <span class="text-xs leading-snug text-muted">Processing the goods need before or on arrival. Not a place for prices, supplier contacts or payment terms.</span></label>
+  <div class="flex flex-col gap-2">
+    <p class="text-[11px] font-bold tracking-[0.06em] text-muted">SERVES</p>
+    <div class="flex flex-col gap-1.5"><div class="flex items-center gap-3 rounded-field border border-border bg-surface-secondary px-3 py-2.5">
+  <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+    <span class="text-[13px] leading-snug font-semibold text-foreground">Nordwind Logistik GmbH</span>
+    <span class="text-[11px] leading-snug text-muted">Unfulfilled · 1 500 outstanding · needed by 9 Sep 2026 · to Hafenstraße 14, Hamburg</span>
+  </div>
+  <label class="flex w-[150px] shrink-0 flex-col gap-1">
+    <span class="text-[11px] font-medium text-muted">Intended for them</span>
+    <span class="flex h-8 items-center rounded-field border px-3 text-sm font-semibold bg-field border-border text-field-foreground">1 500</span>
+  </label><button type="button" aria-label="Unlink" class="inline-flex size-7 shrink-0 items-center justify-center rounded-field text-muted"><svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+</div></div>
+    <div class="flex items-center gap-3"><button type="button" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-field font-semibold bg-surface text-foreground border border-border h-8 px-3 text-xs "><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>Link a customer order</button><p class="text-xs leading-relaxed text-muted flex-1">A directly-shipped line serves only the demand going to the address it ships to — orders bound elsewhere cannot be linked to it.</p></div>
+  </div>
+</div>
+  <button type="button" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-field font-semibold bg-surface text-foreground border border-border h-9 px-4 text-sm w-full"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>Add another line</button>
+  <div class="h-px w-full bg-separator"></div>
+  <div class="flex items-center gap-3"><button type="button" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-field font-semibold bg-danger-soft text-danger-soft-foreground h-9 px-4 text-sm ">Discard draft</button><span class="flex-1"></span><p class="text-xs leading-relaxed text-muted ">At least one line is needed</p><button type="button" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-field font-semibold bg-accent text-accent-foreground h-9 px-4 text-sm ">Move to Ready for ordering</button></div>
+</div>
+</div>
+    </div>
+  </div>
+</div>
+    </main>
+  </body>
+</html>

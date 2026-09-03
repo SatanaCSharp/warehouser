@@ -1,0 +1,294 @@
+<!doctype html>
+<!--
+  Preview evidence - design-ui skill. Review artifact only; never an implementation source.
+
+  Frame:         Delivery Addresses / Incoming Lines / Desktop / v1
+  Design source: docs/mockups/app.pen
+  Node ID:       zj46c
+  Viewport:      desktop 1440×1038
+  States:        default (frozen lines split by delivery mode; one line already ended, three awaiting an ending, one carrying address drift)
+-->
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Delivery addresses · Incoming lines · Desktop</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style type="text/tailwindcss">
+      @theme inline {
+        --color-background: var(--background);
+        --color-background-secondary: var(--background-secondary);
+        --color-foreground: var(--foreground);
+        --color-muted: var(--muted);
+
+        --color-surface: var(--surface);
+        --color-surface-foreground: var(--surface-foreground);
+        --color-surface-secondary: var(--surface-secondary);
+        --color-surface-tertiary: var(--surface-tertiary);
+        --color-overlay: var(--overlay);
+        --color-overlay-foreground: var(--overlay-foreground);
+
+        --color-accent: var(--accent);
+        --color-accent-foreground: var(--accent-foreground);
+        --color-accent-soft: var(--accent-soft);
+        --color-accent-soft-foreground: var(--accent-soft-foreground);
+
+        --color-default: var(--default);
+        --color-default-foreground: var(--default-foreground);
+        --color-default-soft-foreground: var(--default-soft-foreground);
+        --color-success: var(--success);
+        --color-success-foreground: var(--success-foreground);
+        --color-success-soft: var(--success-soft);
+        --color-success-soft-foreground: var(--success-soft-foreground);
+        --color-warning: var(--warning);
+        --color-warning-foreground: var(--warning-foreground);
+        --color-warning-soft: var(--warning-soft);
+        --color-warning-soft-foreground: var(--warning-soft-foreground);
+        --color-danger: var(--danger);
+        --color-danger-foreground: var(--danger-foreground);
+        --color-danger-soft: var(--danger-soft);
+        --color-danger-soft-foreground: var(--danger-soft-foreground);
+
+        --color-border: var(--border);
+        --color-separator: var(--separator);
+        --color-focus: var(--focus);
+        --color-link: var(--link);
+
+        --color-field: var(--field-background);
+        --color-field-foreground: var(--field-foreground);
+        --color-field-placeholder: var(--field-placeholder);
+        --color-field-border: var(--field-border);
+
+        --radius-field: var(--field-radius);
+        --shadow-surface: var(--surface-shadow);
+        --shadow-overlay: var(--overlay-shadow);
+      }
+
+      :root,
+      [data-theme='light'] {
+        color-scheme: light;
+
+        --white: oklch(100% 0 0);
+        --snow: oklch(0.9911 0 0);
+        --eclipse: oklch(0.2103 0.0059 285.89);
+
+        --radius: 0.5rem;
+        --field-radius: calc(var(--radius) * 1.5);
+
+        --background: oklch(0.9702 0 0);
+        --foreground: var(--eclipse);
+        --muted: oklch(0.5517 0.0138 285.94);
+
+        --surface: var(--white);
+        --surface-foreground: var(--foreground);
+        --surface-secondary: oklch(0.9524 0.0013 286.37);
+        --surface-tertiary: oklch(0.9373 0.0013 286.37);
+        --overlay: var(--white);
+        --overlay-foreground: var(--foreground);
+
+        --accent: oklch(0.6204 0.195 253.83);
+        --accent-foreground: var(--snow);
+        --default: oklch(94% 0.001 286.375);
+        --default-foreground: var(--eclipse);
+
+        --success: oklch(0.7329 0.1935 150.81);
+        --success-foreground: var(--eclipse);
+        --warning: oklch(0.7819 0.1585 72.33);
+        --warning-foreground: var(--eclipse);
+        --danger: oklch(0.6532 0.2328 25.74);
+        --danger-foreground: var(--snow);
+
+        --field-background: var(--white);
+        --field-foreground: var(--eclipse);
+        --field-placeholder: var(--muted);
+        --field-border: transparent;
+
+        --border: oklch(90% 0.004 286.32);
+        --separator: oklch(92% 0.004 286.32);
+        --focus: var(--accent);
+        --link: var(--foreground);
+
+        --background-secondary: color-mix(
+          in oklab,
+          var(--background) 96%,
+          var(--foreground) 4%
+        );
+        --accent-soft: color-mix(in oklab, var(--accent) 15%, transparent);
+        --accent-soft-foreground: color-mix(
+          in oklab,
+          var(--accent) 70%,
+          var(--foreground) 30%
+        );
+        --default-soft-foreground: var(--default-foreground);
+        --success-soft: color-mix(in oklab, var(--success) 15%, transparent);
+        --success-soft-foreground: color-mix(
+          in oklab,
+          var(--success) 80%,
+          var(--foreground) 60%
+        );
+        --warning-soft: color-mix(in oklab, var(--warning) 15%, transparent);
+        --warning-soft-foreground: color-mix(
+          in oklab,
+          var(--warning) 80%,
+          var(--foreground) 70%
+        );
+        --danger-soft: color-mix(in oklab, var(--danger) 15%, transparent);
+        --danger-soft-foreground: color-mix(
+          in oklab,
+          var(--danger) 70%,
+          var(--foreground) 40%
+        );
+
+        --surface-shadow:
+          0 2px 4px 0 rgba(0, 0, 0, 0.04), 0 1px 2px 0 rgba(0, 0, 0, 0.06),
+          0 0 1px 0 rgba(0, 0, 0, 0.06);
+        --overlay-shadow:
+          0 2px 8px 0 rgba(0, 0, 0, 0.06), 0 -6px 12px 0 rgba(0, 0, 0, 0.03),
+          0 14px 28px 0 rgba(0, 0, 0, 0.08);
+      }
+
+      [data-theme='dark'] {
+        color-scheme: dark;
+
+        --background: oklch(12% 0.005 285.823);
+        --foreground: var(--snow);
+        --muted: oklch(70.5% 0.015 286.067);
+
+        --surface: oklch(0.2103 0.0059 285.89);
+        --surface-foreground: var(--foreground);
+        --surface-secondary: oklch(0.257 0.0037 286.14);
+        --surface-tertiary: oklch(0.2721 0.0024 247.91);
+        --overlay: oklch(0.2103 0.0059 285.89);
+        --overlay-foreground: var(--foreground);
+
+        --default: oklch(27.4% 0.006 286.033);
+        --default-foreground: var(--snow);
+        --warning: oklch(0.8203 0.1388 76.34);
+        --danger: oklch(0.594 0.1967 24.63);
+
+        --field-background: oklch(0.2103 0.0059 285.89);
+        --field-foreground: var(--foreground);
+
+        --border: oklch(28% 0.006 286.033);
+        --separator: oklch(25% 0.006 286.033);
+
+        --accent-soft: color-mix(in oklab, var(--accent) 12%, transparent);
+        --accent-soft-foreground: color-mix(
+          in oklab,
+          var(--accent) 80%,
+          var(--foreground) 30%
+        );
+        --default-soft-foreground: var(--default-foreground);
+        --danger-soft-foreground: color-mix(
+          in oklab,
+          var(--danger) 80%,
+          var(--foreground) 30%
+        );
+        --warning-soft-foreground: color-mix(
+          in oklab,
+          var(--warning) 80%,
+          var(--foreground) 30%
+        );
+        --success-soft-foreground: color-mix(
+          in oklab,
+          var(--success) 80%,
+          var(--foreground) 30%
+        );
+
+        --surface-shadow: 0 0 0 0 transparent inset;
+        --overlay-shadow: 0 0 1px 0 rgba(255, 255, 255, 0.3) inset;
+      }
+
+    </style>
+  </head>
+
+  <body class="bg-background text-foreground min-h-screen antialiased">
+    <main class="mx-auto w-[1440px] max-w-full">
+<div class="flex min-h-full flex-col bg-background">
+<header class="flex h-20 items-center justify-between border-b border-border bg-surface px-12">
+  <div class="flex items-center gap-3">
+    <span class="flex size-[34px] items-center justify-center rounded-lg bg-accent text-accent-foreground"><svg class="size-[19px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 8.35V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.35A2 2 0 0 1 3.26 6.5l8-3.2a2 2 0 0 1 1.48 0l8 3.2A2 2 0 0 1 22 8.35Z"/><path d="M6 18h12"/><path d="M6 14h12"/><rect x="6" y="10" width="12" height="12"/></svg></span>
+    <span class="text-lg font-bold tracking-tight text-foreground">Warehouser</span>
+  </div>
+  <div class="flex items-center gap-3">
+    <span class="flex h-9 items-center gap-2 rounded-field border border-border bg-surface px-3 text-[13px] font-medium text-foreground"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 8.35V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.35A2 2 0 0 1 3.26 6.5l8-3.2a2 2 0 0 1 1.48 0l8 3.2A2 2 0 0 1 22 8.35Z"/><path d="M6 18h12"/><path d="M6 14h12"/><rect x="6" y="10" width="12" height="12"/></svg>Central DC<svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span>
+    <span class="flex h-9 items-center rounded-field border border-border bg-surface px-3 text-[13px] text-muted">EN</span>
+    <span class="flex h-9 items-center rounded-field border border-border bg-surface px-3 text-[13px] text-muted">Sign out</span>
+  </div>
+</header>
+  <div class="flex flex-1">
+<nav aria-label="Warehouse" class="w-60 shrink-0 border-r border-border bg-surface"><ul class="flex flex-col gap-1 p-4"><li><span class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground font-medium"><span class="text-muted"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg></span><span class="flex-1">Dashboard</span></span></li><li><span class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground font-medium"><span class="text-muted"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg></span><span class="flex-1">Demand</span></span></li><li><span class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm bg-accent-soft text-accent-soft-foreground font-semibold"><span class="text-accent-soft-foreground"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg></span><span class="flex-1">Purchase drafts</span><span class="text-xs font-bold text-warning">2</span></span></li><li><span class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground font-medium"><span class="text-muted"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></span><span class="flex-1">Items</span></span></li><li><span class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground font-medium"><span class="text-muted"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 2v2"/><path d="M8 2v2"/><rect x="2" y="4" width="20" height="18" rx="2"/><circle cx="12" cy="11" r="3"/><path d="M17 18a5 5 0 0 0-10 0"/></svg></span><span class="flex-1">Customers</span></span></li><li><span class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground font-medium"><span class="text-muted"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg></span><span class="flex-1">Access</span></span></li></ul></nav>
+    <div class="flex flex-1 flex-col gap-5 p-12">
+<h1 class="text-[38px] leading-tight font-bold tracking-tight text-foreground">Purchase drafts</h1>
+<p class="max-w-[1104px] text-[15px] leading-relaxed text-muted">Every frozen line, grouped by where its goods are actually going. What lands at your dock is what you have to handle; what ships direct never reaches the building. Each line&#x27;s ending is recorded on the line that travelled that way.</p>
+<div class="flex w-[1104px] gap-1 rounded-[10px] bg-default p-1"><span class="flex-1 px-3 py-1.5 text-center text-[13px] font-medium text-muted">Being worked on · 3</span><span class="flex-1 rounded-[6px] bg-surface px-3 py-1.5 text-center text-[13px] font-medium text-foreground shadow-surface">Ready for ordering · 2</span><span class="flex-1 px-3 py-1.5 text-center text-[13px] font-medium text-muted">Closed · 4</span></div>
+<div class="flex w-[1104px] items-center gap-3"><span class="flex h-11 w-80 items-center gap-2 rounded-field border border-border bg-field px-3"><span class="text-muted"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span><span class="text-sm text-field-placeholder">Search lines, items or customers</span></span><span class="flex-1"></span><div class="flex w-[300px] gap-1 rounded-[10px] bg-default p-1"><span class="flex-1 px-3 py-1.5 text-center text-[13px] font-medium text-muted">By draft</span><span class="flex-1 rounded-[6px] bg-surface px-3 py-1.5 text-center text-[13px] font-medium text-foreground shadow-surface">By line</span></div><button type="button" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-field font-semibold bg-accent text-accent-foreground h-11 px-5 text-[15px] "><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>New draft</button></div>
+<div class="flex w-[1104px] flex-col gap-2.5">
+  <div class="flex items-center gap-2.5"><span class="text-muted"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 8.35V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.35A2 2 0 0 1 3.26 6.5l8-3.2a2 2 0 0 1 1.48 0l8 3.2A2 2 0 0 1 22 8.35Z"/><path d="M6 18h12"/><path d="M6 14h12"/><rect x="6" y="10" width="12" height="12"/></svg></span><p class="text-[11px] font-bold tracking-[0.06em] text-muted">ARRIVING AT YOUR DOCK · 3 LINES</p></div>
+  <p class="text-xs leading-relaxed text-muted ">Am Kai 7, 21079 Hamburg, Germany — your warehouse delivery address. These goods rest in your transit zone before they go out to the customer, and they are the only ones you have to prepare for.</p>
+  <div class="overflow-hidden rounded-field border border-border bg-surface"><div class="flex h-10 items-center border-b border-border bg-surface-secondary"><div class="flex-1 px-4 "><p class="text-[11px] font-bold tracking-[0.06em] text-muted">LINE</p></div><div class="w-[120px] px-4 text-right"><p class="text-[11px] font-bold tracking-[0.06em] text-muted">QUANTITY</p></div><div class="w-[300px] px-4 "><p class="text-[11px] font-bold tracking-[0.06em] text-muted">DESTINATION</p></div><div class="w-[130px] px-4 "><p class="text-[11px] font-bold tracking-[0.06em] text-muted">EXPECTED</p></div><div class="w-[200px] px-4 text-right"><p class="text-[11px] font-bold tracking-[0.06em] text-muted">ENDING</p></div></div>
+  <div class="flex items-center border-b border-border last:border-b-0">
+  <div class="flex flex-1 flex-col gap-0.5 px-4 py-3.5">
+    <span class="text-[13px] font-semibold text-foreground">Pallet wrap, 500mm</span>
+    <span class="text-[11px] text-muted">PD-0142 · LINE 1 · WH-100420</span>
+  </div>
+  <div class="flex w-[120px] flex-col items-end gap-0.5 px-4 py-3.5"><span class="text-[15px] font-bold text-foreground">1 200</span><span class="text-[11px] text-muted">pieces</span></div>
+  <div class="flex w-[300px] flex-col gap-0.5 px-4 py-3.5"><span class="text-xs leading-snug font-medium text-foreground">Am Kai 7, 21079 Hamburg, Germany</span><span class="text-[11px] leading-snug text-muted">Your warehouse · frozen 22 Aug 2026</span></div>
+  <div class="w-[130px] px-4 py-3.5 text-xs text-muted">5 Sep 2026</div>
+  <div class="flex w-[200px] items-center justify-end gap-2 px-4 py-3.5"><span class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium bg-success-soft text-success-soft-foreground"><span class="size-1.5 rounded-full bg-current opacity-70"></span>Arrived 26 Aug</span></div>
+</div>
+  <div class="flex items-center border-b border-border last:border-b-0">
+  <div class="flex flex-1 flex-col gap-0.5 px-4 py-3.5">
+    <span class="text-[13px] font-semibold text-foreground">Thermal labels 4×6</span>
+    <span class="text-[11px] text-muted">PD-0141 · LINE 1 · WH-100511</span>
+  </div>
+  <div class="flex w-[120px] flex-col items-end gap-0.5 px-4 py-3.5"><span class="text-[15px] font-bold text-foreground">240</span><span class="text-[11px] text-muted">rolls</span></div>
+  <div class="flex w-[300px] flex-col gap-0.5 px-4 py-3.5"><span class="text-xs leading-snug font-medium text-foreground">Am Kai 7, 21079 Hamburg, Germany</span><span class="text-[11px] leading-snug text-muted">Your warehouse · frozen 24 Aug 2026</span></div>
+  <div class="w-[130px] px-4 py-3.5 text-xs text-muted">6 Sep 2026</div>
+  <div class="flex w-[200px] items-center justify-end gap-2 px-4 py-3.5"><button type="button" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-field font-semibold bg-surface text-foreground border border-border h-8 px-3 text-xs ">Record arrival</button></div>
+</div>
+  <div class="flex items-center border-b border-border last:border-b-0">
+  <div class="flex flex-1 flex-col gap-0.5 px-4 py-3.5">
+    <span class="text-[13px] font-semibold text-foreground">Cable, 3×2.5mm²</span>
+    <span class="text-[11px] text-muted">PD-0141 · LINE 2 · WH-100902</span>
+  </div>
+  <div class="flex w-[120px] flex-col items-end gap-0.5 px-4 py-3.5"><span class="text-[15px] font-bold text-foreground">4 800</span><span class="text-[11px] text-muted">metres</span></div>
+  <div class="flex w-[300px] flex-col gap-0.5 px-4 py-3.5"><span class="text-xs leading-snug font-medium text-foreground">Am Kai 7, 21079 Hamburg, Germany</span><span class="text-[11px] leading-snug text-muted">Your warehouse · frozen 24 Aug 2026</span></div>
+  <div class="w-[130px] px-4 py-3.5 text-xs text-muted">11 Sep 2026</div>
+  <div class="flex w-[200px] items-center justify-end gap-2 px-4 py-3.5"><button type="button" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-field font-semibold bg-surface text-foreground border border-border h-8 px-3 text-xs ">Record arrival</button></div>
+</div>
+  </div>
+</div>
+<div class="flex w-[1104px] flex-col gap-2.5">
+  <div class="flex items-center gap-2.5"><span class="text-muted"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.62l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg></span><p class="text-[11px] font-bold tracking-[0.06em] text-muted">SHIPPING DIRECT TO CUSTOMERS · 2 LINES</p></div>
+  <p class="text-xs leading-relaxed text-muted ">The supplier sends these straight to the customer. They never enter your building, are never counted in on hand, and never rest in your transit zone — you prepare nothing for them.</p>
+  <div class="overflow-hidden rounded-field border border-border bg-surface"><div class="flex h-10 items-center border-b border-border bg-surface-secondary"><div class="flex-1 px-4 "><p class="text-[11px] font-bold tracking-[0.06em] text-muted">LINE</p></div><div class="w-[120px] px-4 text-right"><p class="text-[11px] font-bold tracking-[0.06em] text-muted">QUANTITY</p></div><div class="w-[300px] px-4 "><p class="text-[11px] font-bold tracking-[0.06em] text-muted">DESTINATION</p></div><div class="w-[130px] px-4 "><p class="text-[11px] font-bold tracking-[0.06em] text-muted">EXPECTED</p></div><div class="w-[200px] px-4 text-right"><p class="text-[11px] font-bold tracking-[0.06em] text-muted">ENDING</p></div></div>
+  <div class="flex items-center border-b border-border last:border-b-0">
+  <div class="flex flex-1 flex-col gap-0.5 px-4 py-3.5">
+    <span class="text-[13px] font-semibold text-foreground">Carton 600×400×300</span>
+    <span class="text-[11px] text-muted">PD-0142 · LINE 2 · WH-100733</span>
+  </div>
+  <div class="flex w-[120px] flex-col items-end gap-0.5 px-4 py-3.5"><span class="text-[15px] font-bold text-foreground">1 500</span><span class="text-[11px] text-muted">pieces</span></div>
+  <div class="flex w-[300px] flex-col gap-0.5 px-4 py-3.5"><span class="text-xs leading-snug font-medium text-foreground">Nordwind Logistik GmbH — Hafenstraße 14, 20457 Hamburg</span><span class="text-[11px] leading-snug font-semibold text-warning">Frozen 22 Aug 2026 · that order now goes to Werftweg 2, Bremerhaven</span></div>
+  <div class="w-[130px] px-4 py-3.5 text-xs text-muted">9 Sep 2026</div>
+  <div class="flex w-[200px] items-center justify-end gap-2 px-4 py-3.5"><button type="button" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-field font-semibold bg-accent text-accent-foreground h-8 px-3 text-xs ">Record delivery</button></div>
+</div>
+  <div class="flex items-center border-b border-border last:border-b-0">
+  <div class="flex flex-1 flex-col gap-0.5 px-4 py-3.5">
+    <span class="text-[13px] font-semibold text-foreground">Stretch film core</span>
+    <span class="text-[11px] text-muted">PD-0140 · LINE 3 · WH-100488</span>
+  </div>
+  <div class="flex w-[120px] flex-col items-end gap-0.5 px-4 py-3.5"><span class="text-[15px] font-bold text-foreground">600</span><span class="text-[11px] text-muted">pieces</span></div>
+  <div class="flex w-[300px] flex-col gap-0.5 px-4 py-3.5"><span class="text-xs leading-snug font-medium text-foreground">Baltic Freight OÜ — Sadama 12, 10111 Tallinn</span><span class="text-[11px] leading-snug text-muted">Frozen 20 Aug 2026</span></div>
+  <div class="w-[130px] px-4 py-3.5 text-xs text-muted">3 Sep 2026</div>
+  <div class="flex w-[200px] items-center justify-end gap-2 px-4 py-3.5"><span class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium bg-success-soft text-success-soft-foreground"><span class="size-1.5 rounded-full bg-current opacity-70"></span>Delivered 28 Aug</span></div>
+</div>
+  </div>
+  <p class="text-xs leading-relaxed text-muted ">Recording a delivery says the customer received the goods and reduces what they are waiting for. It changes no on-hand quantity, and nothing here inspects whether it happened.</p>
+</div>
+    </div>
+  </div>
+</div>
+    </main>
+  </body>
+</html>
