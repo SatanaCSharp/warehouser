@@ -1081,6 +1081,40 @@ describe('purchase-drafts HTTP contract', () => {
       expect(status).toBe(403);
       expect(body).toMatchObject({ code: 'access.denied' });
     });
+
+    // AC-22 for the *other* half of the same act. ADR 0002 splits one ending into two routes under
+    // one Permission, so the guard has to be proven on both — the arrival case above cannot stand
+    // for the direct-delivery one (server-request-authorization.md §Verify).
+    it("denies the line's direct delivery to an actor without PURCHASE_DRAFTS:RECEIVE (AC-22)", async () => {
+      await seedWarehouses();
+      const itemId = await seedItem();
+      const actor = await seedActor([
+        PURCHASE_DRAFTS_CREATE,
+        PURCHASE_DRAFTS_READY,
+      ]);
+      const created = await request(
+        'POST',
+        purchaseDraftsPath(warehouseId),
+        actor.cookie,
+        { lines: [{ itemId, orderedQuantity: 10 }] },
+      );
+      const draftId = (created.body as { id: string }).id;
+      await request(
+        'POST',
+        `${purchaseDraftsPath(warehouseId)}/${draftId}/readiness`,
+        actor.cookie,
+      );
+
+      const { status, body } = await request(
+        'POST',
+        `${purchaseDraftsPath(warehouseId)}/${draftId}/lines/${randomUUID()}/direct-delivery`,
+        actor.cookie,
+        { deliveredQuantity: 0 },
+      );
+
+      expect(status).toBe(403);
+      expect(body).toMatchObject({ code: 'access.denied' });
+    });
   });
 
   // -- POST /purchase-drafts/:id/closure -- AC-21, AC-22, AC-23 -----------------------------------
@@ -1563,6 +1597,12 @@ describe('purchase-drafts HTTP contract', () => {
         actor.cookie,
         { receivedQuantity: 0 },
       );
+      const directDelivery = await request(
+        'POST',
+        `${purchaseDraftsPath(warehouseId)}/${draftId}/lines/${randomUUID()}/direct-delivery`,
+        actor.cookie,
+        { deliveredQuantity: 0 },
+      );
       const stillReads = await request(
         'GET',
         purchaseDraftsPath(warehouseId),
@@ -1575,6 +1615,11 @@ describe('purchase-drafts HTTP contract', () => {
       expect(ready.body).toMatchObject({ code: 'access.warehouse_archived' });
       expect(arrival.status).toBe(409);
       expect(arrival.body).toMatchObject({ code: 'access.warehouse_archived' });
+      // Both halves of the ending are refused over an archived Warehouse, not just the arrival.
+      expect(directDelivery.status).toBe(409);
+      expect(directDelivery.body).toMatchObject({
+        code: 'access.warehouse_archived',
+      });
       expect(stillReads.status).toBe(200);
     });
   });

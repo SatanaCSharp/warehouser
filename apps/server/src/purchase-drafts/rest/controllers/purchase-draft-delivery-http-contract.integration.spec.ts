@@ -52,6 +52,7 @@ const CUSTOMER_ACCESS_NOTES = 'Gate code 4417 on the intercom';
 const PURCHASE_DRAFTS_WATCH = 'PURCHASE_DRAFTS:WATCH';
 const PURCHASE_DRAFTS_UPDATE = 'PURCHASE_DRAFTS:UPDATE';
 const PURCHASE_DRAFTS_READY = 'PURCHASE_DRAFTS:READY';
+const PURCHASE_DRAFTS_RECEIVE = 'PURCHASE_DRAFTS:RECEIVE';
 const CUSTOMERS_WATCH = 'CUSTOMERS:WATCH';
 
 // eslint-disable-next-line max-lines-per-function -- one HTTP contract suite over one shared fixture
@@ -412,6 +413,65 @@ describe('purchase-drafts delivery HTTP contract', () => {
     '"capturedDeliveryAddressText"',
     '"deliveryAddress"',
   ];
+
+  // -- AC-09a on the direct-delivery route -------------------------------------------------------
+  //
+  // The route declares `@ObservedPermission(CUSTOMERS_WATCH)` and answers with a full
+  // `PurchaseDraftDetail`, so its response is a redaction surface like any read.
+  // server-request-authorization.md §Verify requires "the response on both sides of that
+  // Permission" for every handler declaring one; before the 2026-09-04 backend review (finding 5)
+  // this route had no HTTP coverage at all.
+  describe('POST /purchase-drafts/{id}/lines/{lineId}/direct-delivery serves both projection forms (AC-09a)', () => {
+    it('withholds the Customer destination from an actor without CUSTOMERS:WATCH', async () => {
+      await seedWorld();
+      const { addressId } = await seedCustomerAddress();
+      const { draftId, lineId } = await seedDraftWithLine({
+        deliveryMode: 'direct_to_customer',
+        customerDeliveryAddressId: addressId,
+        frozen: true,
+      });
+      const cookie = await seedActor([PURCHASE_DRAFTS_RECEIVE]);
+
+      const { status, text } = await request(
+        'POST',
+        `${draftsPath}/${draftId}/lines/${lineId}/direct-delivery`,
+        cookie,
+        { deliveredQuantity: 100 },
+      );
+
+      expect(status).toBe(200);
+      for (const property of withheldProperties) {
+        expect(text).not.toContain(property);
+      }
+      for (const value of withheldValues) {
+        expect(text).not.toContain(value);
+      }
+    });
+
+    it('serves the Customer destination to an actor holding CUSTOMERS:WATCH', async () => {
+      await seedWorld();
+      const { addressId } = await seedCustomerAddress();
+      const { draftId, lineId } = await seedDraftWithLine({
+        deliveryMode: 'direct_to_customer',
+        customerDeliveryAddressId: addressId,
+        frozen: true,
+      });
+      const cookie = await seedActor([
+        PURCHASE_DRAFTS_RECEIVE,
+        CUSTOMERS_WATCH,
+      ]);
+
+      const { status, text } = await request(
+        'POST',
+        `${draftsPath}/${draftId}/lines/${lineId}/direct-delivery`,
+        cookie,
+        { deliveredQuantity: 100 },
+      );
+
+      expect(status).toBe(200);
+      expect(text).toContain(CUSTOMER_NAME);
+    });
+  });
 
   // -- AC-09a: the two projection forms of one draft ---------------------------------------------
 
