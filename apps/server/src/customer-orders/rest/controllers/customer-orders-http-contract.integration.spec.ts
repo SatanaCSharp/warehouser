@@ -372,6 +372,11 @@ describe('customer-orders HTTP contract', () => {
       id: string;
       warehouseId: string;
       customerName: string;
+      // A Customer-naming order, as `customer_orders` holds one since this feature: the identifier
+      // and the address it is going to, with `customer_name` left null. Omit both and the order is
+      // the free-text form every case before AC-11b seeds.
+      customerId: string;
+      customerDeliveryAddressId: string;
       quantity: number;
       outstandingQuantity: number;
       neededBy: string;
@@ -391,7 +396,14 @@ describe('customer-orders HTTP contract', () => {
       id,
       warehouseId: overrides.warehouseId ?? warehouseId,
       itemId,
-      customerName: overrides.customerName ?? 'Test Customer North',
+      // `chk_customer_orders_customer_identity` — an order names a Customer or carries the free-text
+      // name, never both, so supplying `customerId` clears `customer_name`.
+      customerId: overrides.customerId ?? null,
+      customerDeliveryAddressId: overrides.customerDeliveryAddressId ?? null,
+      customerName:
+        overrides.customerId === undefined
+          ? (overrides.customerName ?? 'Test Customer North')
+          : null,
       quantity,
       outstandingQuantity:
         overrides.outstandingQuantity ?? (state === 'fulfilled' ? 0 : quantity),
@@ -1243,6 +1255,52 @@ describe('customer-orders HTTP contract', () => {
       );
 
       expect(status).toBe(403);
+    });
+
+    // AC-09a — the other side of the observed Permission this route declares. The success case above
+    // holds `CUSTOMERS:WATCH`, so without this one no test drives the redirection response as an
+    // actor who may move an order but may not read customers, which
+    // server-request-authorization.md §Verify requires of a handler declaring an observed Permission
+    // (2026-09-04 backend re-review, finding 4). Asserted over the serialized body, so a withheld
+    // field that came back `null` or empty-stringed would fail here rather than pass a shape check.
+    it('withholds the Customer and the destination from a redirection without CUSTOMERS:WATCH (AC-09a)', async () => {
+      await seedWarehouses();
+      const itemId = await seedItem({ sku: 'TEST-SKU-0010' });
+      const { customerId, deliveryAddressId, secondDeliveryAddressId } =
+        await seedCustomerWithMainAddress('Test Customer North');
+
+      // Seeded directly rather than recorded through the API, because `seedActor` grants onto one
+      // shared Role: a second actor created to record the order would hand this one its
+      // `CUSTOMERS:WATCH` too, and the withheld side would never be exercised. The order has to name
+      // the Customer — a redirection of an order naming none is refused before any projection.
+      const customerOrderId = await seedCustomerOrder(itemId, {
+        recordedByUserId: await seedRecorder(),
+        customerId,
+        customerDeliveryAddressId: deliveryAddressId,
+      });
+      const actor = await seedActor([CUSTOMER_ORDERS_UPDATE]);
+
+      const { status, body } = await request(
+        'PUT',
+        `/api/v1/warehouses/${warehouseId}/customer-orders/${customerOrderId}/delivery-address`,
+        actor.cookie,
+        { customerDeliveryAddressId: secondDeliveryAddressId },
+      );
+
+      expect(status).toBe(200);
+      const serialized = JSON.stringify(body);
+      // The redirection still happened — it is the identity in the response that is withheld, not
+      // the write that is refused.
+      for (const withheld of [
+        'Test Customer North',
+        'Test Address 2, Test City',
+        'Gate code on the intercom; deliveries 09:00-17:00',
+      ]) {
+        expect(serialized).not.toContain(withheld);
+      }
+      for (const property of ['"customer"', '"destination"']) {
+        expect(serialized).not.toContain(property);
+      }
     });
 
     // AC-23 — redirection is a mutation and declares no `@ArchivedTolerantRead()`, so it is refused
