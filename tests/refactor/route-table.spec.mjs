@@ -11,17 +11,43 @@ import { buildRouteTable, findShadowedRoutes } from './route-table.mjs';
 
 const BASELINE_PATH = 'tests/refactor/route-table.baseline.json';
 
-// The prefix every route that changes owning module lives under. spec.md §6 records 21 routes
-// across the two `workspaces` controllers at `baseline_revision`; the count is asserted rather than
-// trusted, because a handler dropped during a controller split would otherwise leave the table
-// simply shorter on both sides of a regenerated baseline.
+// spec.md §6 records 21 routes across the two `workspaces` controllers at `baseline_revision`, all
+// under the `/api/v1/workspace` prefix; those 21 `method path` pairs are frozen here rather than
+// merely counted, because a count survives a handler being dropped during a
+// controller split as long as something else is added at the same prefix in the same change — which
+// is exactly what happened once `delivery-addresses` raised the total to 23 by adding two new routes
+// alongside the 21. Freezing the pairs themselves, and asserting each is still present, is what
+// actually proves none of the 21 silently vanished; new routes at this prefix are left to the
+// baseline comparison above, which already tracks the table's current, growing contents.
 //
-// `delivery-addresses` T11 adds two: `GET` and `PUT
-// /api/v1/workspace/warehouses/{warehouseId}/delivery-address`, whose subject is the Warehouse
-// record and which therefore join this Workspace-scoped prefix (AC-10, sad.md §7). Raising the
-// count is the deliberate act the paragraph above asks for — the 21 that moved are all still here.
-const MOVED_ROUTE_PREFIX = '/api/v1/workspace';
-const MOVED_ROUTE_COUNT = 23;
+// `delivery-addresses` T11 added two new routes here — `GET` and `PUT
+// /api/v1/workspace/warehouses/{warehouseId}/delivery-address` — whose subject is the Warehouse
+// record and which therefore join this Workspace-scoped prefix (AC-10, sad.md §7). They are
+// deliberately absent from this list: they never moved, so this invariant has nothing to prove
+// about them.
+const MOVED_ROUTES = [
+  'PATCH /api/v1/workspace',
+  'PUT /api/v1/workspace/active-warehouse',
+  'GET /api/v1/workspace/context',
+  'GET /api/v1/workspace/members',
+  'POST /api/v1/workspace/members',
+  'DELETE /api/v1/workspace/members/:userId',
+  'PUT /api/v1/workspace/members/:userId/role',
+  'POST /api/v1/workspace/owner-transfer',
+  'GET /api/v1/workspace/permissions',
+  'GET /api/v1/workspace/roles',
+  'POST /api/v1/workspace/roles',
+  'DELETE /api/v1/workspace/roles/:workspaceRoleId',
+  'PATCH /api/v1/workspace/roles/:workspaceRoleId',
+  'GET /api/v1/workspace/users',
+  'GET /api/v1/workspace/warehouses',
+  'POST /api/v1/workspace/warehouses',
+  'PATCH /api/v1/workspace/warehouses/:warehouseId',
+  'PUT /api/v1/workspace/warehouses/:warehouseId/archival',
+  'GET /api/v1/workspace/warehouses/:warehouseId/assignable-roles',
+  'POST /api/v1/workspace/warehouses/:warehouseId/memberships',
+  'DELETE /api/v1/workspace/warehouses/:warehouseId/memberships/:userId',
+];
 
 const productionControllers = () =>
   globSync('apps/server/src/**/*.controller.ts')
@@ -38,11 +64,15 @@ test('the resolved HTTP route table is identical to the baseline capture', () =>
 });
 
 test('every route that changes owning module is still served', () => {
-  const moved = buildRouteTable(productionControllers()).filter((route) =>
-    route.path.startsWith(MOVED_ROUTE_PREFIX),
+  const served = new Set(
+    buildRouteTable(productionControllers()).map(
+      (route) => `${route.method} ${route.path}`,
+    ),
   );
 
-  assert.equal(moved.length, MOVED_ROUTE_COUNT);
+  for (const movedRoute of MOVED_ROUTES) {
+    assert.ok(served.has(movedRoute), `expected ${movedRoute} to still be served`);
+  }
 });
 
 test('no method and path pair is served twice', () => {
