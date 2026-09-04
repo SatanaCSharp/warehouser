@@ -133,6 +133,7 @@ export const MODULE_SURFACE = {
  * someone deliberately amends this list, which is the point.
  */
 export const WORKSPACE_MODULE_MANIFEST = [
+  'api/warehouse-api.spec.ts',
   'api/warehouse-api.ts',
   'components/WorkspaceAdministration.spec.tsx',
   'components/WorkspaceAdministration.tsx',

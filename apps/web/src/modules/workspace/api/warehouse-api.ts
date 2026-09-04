@@ -121,7 +121,12 @@ export const workspaceWarehousesApi = api.injectEndpoints({
       // Which field explains a refusal is the endpoint's declaration, not the
       // caller's (web-error-handling.md §3).
       transformErrorResponse: warehouseDeliveryAddressValidationKey,
-      invalidatesTags: ['WarehouseDeliveryAddress'],
+      // An **unfrozen** Via Warehouse line's `addressText` is the Warehouse's
+      // current address rather than a captured one
+      // (`lineWarehouseDestinationSchema.frozen`), and the by-line read serves
+      // it under the drafts tag, so correcting it here restates every such line
+      // (ADR 02-08-2026 §Decision).
+      invalidatesTags: ['WarehouseDeliveryAddress', 'PurchaseDrafts'],
     }),
     // The narrow read `WAREHOUSE_MEMBERSHIPS:ASSIGN` carries: identifiers and
     // names of a Warehouse's assignable custom Roles only, the protected

@@ -6,6 +6,7 @@ import { ErrorCode } from '@warehouser/shared-types/enums';
 import { z } from 'zod';
 
 import { api } from 'shared/api/client/api-client';
+import { fieldErrorsForCode } from 'shared/utils/field-errors';
 
 import type {
   Customer,
@@ -66,10 +67,9 @@ type DeliveryAddressActionArgs = DeliveryAddressId & CustomerNaming;
  * The server names no field for `customers.name_taken`, so the endpoint does
  * (web-error-handling.md §3).
  */
-const customerNameFieldErrors = (failure: ApiFailure): ApiFailure =>
-  failure.code === ErrorCode.CUSTOMERS_NAME_TAKEN
-    ? { ...failure, fieldErrors: { name: 'nameTaken' } }
-    : failure;
+const customerNameFieldErrors = fieldErrorsForCode({
+  [ErrorCode.CUSTOMERS_NAME_TAKEN]: { name: 'nameTaken' },
+});
 
 /**
  * `customers.invalid_input` carries `details: { field, rule }`, which
@@ -119,6 +119,15 @@ const customerWriteErrors = (failure: ApiFailure): ApiFailure =>
  * alters the Customer the list draws as much as the detail does, and the
  * collection is read whole at this feature's stated scale, so a targeted cache
  * patch buys nothing a refetch of one small list does not already give.
+ *
+ * A write that changes a **name or an address** invalidates `Demand` and
+ * `PurchaseDrafts` beside it, because neither is copied anywhere: an order
+ * dereferences its Customer and its Delivery Address on every read, and a
+ * draft link carries both live too. Recording a Customer and de/reactivating
+ * one deliberately do not — a new Customer is named by nothing yet, and
+ * `DeactivateCustomerCommand` writes the customer row alone, whose
+ * `deactivatedAt` no order or draft projection carries
+ * (ADR 02-08-2026 §Decision).
  */
 export const customerApi = api.injectEndpoints({
   endpoints: (build) => ({
@@ -150,7 +159,10 @@ export const customerApi = api.injectEndpoints({
         body: input,
       }),
       extraOptions: { schema: customerSchema },
-      invalidatesTags: ['Customers'],
+      // AC-03b — the name is read live rather than copied onto anything, so
+      // correcting it renames every order that names it (`customerRefSchema`)
+      // and every draft link that names it.
+      invalidatesTags: ['Customers', 'Demand', 'PurchaseDrafts'],
       transformErrorResponse: customerWriteErrors,
     }),
     deactivateCustomer: build.mutation<Customer, CustomerActivationArgs>({
@@ -192,7 +204,11 @@ export const customerApi = api.injectEndpoints({
         body: input,
       }),
       extraOptions: { schema: customerSchema },
-      invalidatesTags: ['Customers'],
+      // The address text and the access notes are dereferenced live by every
+      // Customer Order going there (`customerOrderDestinationSchema`), by every
+      // draft link's `current.deliveryAddress` and by an unfrozen Direct to
+      // Customer line's own destination.
+      invalidatesTags: ['Customers', 'Demand', 'PurchaseDrafts'],
       transformErrorResponse: formFieldNames,
     }),
     setMainCustomerDeliveryAddress: build.mutation<
@@ -204,7 +220,10 @@ export const customerApi = api.injectEndpoints({
         method: 'PUT',
       }),
       extraOptions: { schema: customerSchema },
-      invalidatesTags: ['Customers'],
+      // `isMain` is part of the destination both of those reads dereference
+      // live: it is what says *why* an order is going where it is going
+      // (AC-11).
+      invalidatesTags: ['Customers', 'Demand', 'PurchaseDrafts'],
     }),
     deactivateCustomerDeliveryAddress: build.mutation<
       Customer,
@@ -219,7 +238,9 @@ export const customerApi = api.injectEndpoints({
         method: 'POST',
       }),
       extraOptions: { schema: customerSchema },
-      invalidatesTags: ['Customers'],
+      // `deactivatedAt` is read live on the same destination, and AC-06b's
+      // promotion moves `isMain` to another address in the same transaction.
+      invalidatesTags: ['Customers', 'Demand', 'PurchaseDrafts'],
     }),
     reactivateCustomerDeliveryAddress: build.mutation<
       Customer,
@@ -234,7 +255,8 @@ export const customerApi = api.injectEndpoints({
         method: 'DELETE',
       }),
       extraOptions: { schema: customerSchema },
-      invalidatesTags: ['Customers'],
+      // The reverse of the same live `deactivatedAt`.
+      invalidatesTags: ['Customers', 'Demand', 'PurchaseDrafts'],
     }),
   }),
   overrideExisting: false,

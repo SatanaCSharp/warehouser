@@ -354,7 +354,10 @@ export const purchaseDraftApi = api.injectEndpoints({
       // altogether (`Sudhafen Handel KG becomes fulfilled and leaves the consolidated
       // demand`, frame `s5EPi`), and the draft may close out of the covering states. On-hand
       // quantities are deliberately not touched, so the Item catalogue is unchanged (AC-21).
-      invalidatesTags: ['Demand', 'PurchaseDrafts'],
+      // The same Allocations are what a Customer is still waiting for:
+      // `customerAwaitingOrderSchema` carries only Unfulfilled orders with a positive
+      // `outstandingQuantity`, so an ending both empties and shortens that list.
+      invalidatesTags: ['Customers', 'Demand', 'PurchaseDrafts'],
     }),
     // AC-19/AC-20/AC-21 — records what the customer received on one **Direct to Customer** line.
     // Identical in every respect except the route and the name of the quantity: these goods never
@@ -369,7 +372,7 @@ export const purchaseDraftApi = api.injectEndpoints({
         body: args.input,
       }),
       extraOptions: { schema: purchaseDraftDetailSchema },
-      invalidatesTags: ['Demand', 'PurchaseDrafts'],
+      invalidatesTags: ['Customers', 'Demand', 'PurchaseDrafts'],
     }),
     // AC-21 — closes a frozen draft the supplier cannot fulfil, with a reason.
     closePurchaseDraft: build.mutation<

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { customerApi } from 'modules/customer/api/customer-api';
 import { customerOrderApi } from 'modules/customer-order/api/customer-order-api';
 import { itemApi } from 'modules/item/api/item-api';
 import { purchaseDraftApi } from 'modules/purchase-draft/api/purchase-draft-api';
@@ -37,6 +38,12 @@ const customerOrderId = '00000000-0000-4000-8000-000000000901';
 const demandUrl = `/api/v1/warehouses/${warehouseId}/demand`;
 const itemsUrl = `/api/v1/warehouses/${warehouseId}/items`;
 const draftsUrl = `/api/v1/warehouses/${warehouseId}/purchase-drafts`;
+// delivery-addresses — the Customers destination's detail read carries
+// `awaitingCustomerOrders`, which `customerAwaitingOrderSchema` restricts to
+// **Unfulfilled** orders with a positive `outstandingQuantity`. A line ending
+// allocates against exactly those, so the two endings can make that read stale
+// (ADR 02-08-2026 §Decision).
+const customersUrl = `/api/v1/warehouses/${warehouseId}/customers`;
 
 const summary: PurchaseDraftSummary = {
   id: purchaseDraftId,
@@ -85,8 +92,8 @@ const detail: PurchaseDraftDetail = {
   ],
 };
 
-/** Which of the other two destinations each write actually moves. */
-type AffectedReads = { demand: boolean; items: boolean };
+/** Which of the other three destinations each write actually moves. */
+type AffectedReads = { customers: boolean; demand: boolean; items: boolean };
 
 type MutationName =
   | 'addPurchaseDraftLine'
@@ -222,38 +229,53 @@ const MUTATIONS: Record<MutationName, (store: AppStore) => Promise<unknown>> = {
 
 const AFFECTED_READS: Record<MutationName, AffectedReads> = {
   // An empty draft names no Item and holds no link.
-  createPurchaseDraft: { demand: false, items: false },
+  createPurchaseDraft: { customers: false, demand: false, items: false },
   // The expected arrival date is the draft's alone.
-  revisePurchaseDraft: { demand: false, items: false },
-  // A line names an Item, and its create body may carry links with it.
-  addPurchaseDraftLine: { demand: true, items: true },
+  revisePurchaseDraft: { customers: false, demand: false, items: false },
+  // A line names an Item, and its create body may carry links with it. A link
+  // claims nothing (AC-11a), so no order's Outstanding Quantity moves and the
+  // Customer's awaiting list is unchanged — which is true of every link write
+  // below for the same reason.
+  addPurchaseDraftLine: { customers: false, demand: true, items: true },
   // Restating `itemId` moves a naming count; no link moves with it.
-  revisePurchaseDraftLine: { demand: false, items: true },
+  revisePurchaseDraftLine: { customers: false, demand: false, items: true },
   // The line stops naming its Item and takes its links with it.
-  removePurchaseDraftLine: { demand: true, items: true },
+  removePurchaseDraftLine: { customers: false, demand: true, items: true },
   // A link, and the quantity on it, is what a `Covered by` chip reads.
-  addPurchaseDraftLineLink: { demand: true, items: false },
-  revisePurchaseDraftLineLink: { demand: true, items: false },
-  removePurchaseDraftLineLink: { demand: true, items: false },
+  addPurchaseDraftLineLink: { customers: false, demand: true, items: false },
+  revisePurchaseDraftLineLink: { customers: false, demand: true, items: false },
+  removePurchaseDraftLineLink: { customers: false, demand: true, items: false },
   // The chips carry the covering draft's state, so freezing changes them.
-  readyPurchaseDraft: { demand: true, items: false },
+  readyPurchaseDraft: { customers: false, demand: true, items: false },
   // The Allocations fulfil Customer Orders, which leave the demand entirely;
   // on-hand quantities are deliberately untouched, so Items is unchanged.
   // AC-21 — neither ending touches an Item's On-hand Quantity, so the Item catalogue is
   // never invalidated by one.
-  recordPurchaseDraftLineArrival: { demand: true, items: false },
-  recordPurchaseDraftLineDirectDelivery: { demand: true, items: false },
+  // The Allocations are also what a Customer is still waiting for: an order
+  // fulfilled by one leaves `awaitingCustomerOrders` altogether, and a partial
+  // Allocation lowers the `outstandingQuantity` reported there.
+  recordPurchaseDraftLineArrival: {
+    customers: true,
+    demand: true,
+    items: false,
+  },
+  recordPurchaseDraftLineDirectDelivery: {
+    customers: true,
+    demand: true,
+    items: false,
+  },
   // A closed or discarded draft leaves the two states coverage counts over;
-  // its lines survive and keep naming their Items.
-  closePurchaseDraft: { demand: true, items: false },
-  discardPurchaseDraft: { demand: true, items: false },
+  // its lines survive and keep naming their Items. Neither allocates, so no
+  // order's Outstanding Quantity moves.
+  closePurchaseDraft: { customers: false, demand: true, items: false },
+  discardPurchaseDraft: { customers: false, demand: true, items: false },
 };
 
 const stubServer = (): ((url: string) => number) => {
   const fetchMock = vi.fn(
     (input: Request | string | URL, init?: RequestInit) => {
       const url = String(input instanceof Request ? input.url : input);
-      if (url === demandUrl || url === itemsUrl) {
+      if (url === demandUrl || url === itemsUrl || url === customersUrl) {
         return Promise.resolve(Response.json([]));
       }
       if (url.startsWith(draftsUrl)) {
@@ -292,18 +314,22 @@ describe('purchaseDraftApi tag invalidation', () => {
       const countOf = stubServer();
       const store = makeStore();
 
-      // Live subscribers on both other destinations, exactly as the Demand and
-      // Items destinations keep one while mounted.
+      // Live subscribers on every other destination, exactly as the Demand,
+      // Items and Customers destinations keep one while mounted.
       const demand = store.dispatch(
         customerOrderApi.endpoints.readDemand.initiate(warehouseId),
       );
       const items = store.dispatch(
         itemApi.endpoints.listItems.initiate(warehouseId),
       );
-      await Promise.all([demand, items]);
+      const customers = store.dispatch(
+        customerApi.endpoints.listCustomers.initiate(warehouseId),
+      );
+      await Promise.all([demand, items, customers]);
 
       expect(countOf(demandUrl)).toBe(1);
       expect(countOf(itemsUrl)).toBe(1);
+      expect(countOf(customersUrl)).toBe(1);
 
       await MUTATIONS[name](store);
       // RTK Query's tag invalidation refetches on the next tick.
@@ -311,9 +337,11 @@ describe('purchaseDraftApi tag invalidation', () => {
 
       expect(countOf(demandUrl)).toBe(affected.demand ? 2 : 1);
       expect(countOf(itemsUrl)).toBe(affected.items ? 2 : 1);
+      expect(countOf(customersUrl)).toBe(affected.customers ? 2 : 1);
 
       demand.unsubscribe();
       items.unsubscribe();
+      customers.unsubscribe();
     },
   );
 });
