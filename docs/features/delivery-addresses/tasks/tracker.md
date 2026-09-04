@@ -41,3 +41,32 @@ mechanical defences [sad.md §11](../sad.md) puts in place of a review pass.
 T1 → T2 → T4 → T7 → T12 → T15 → T16 → T18 → T19 → T23 → T24.
 Running alongside it: the redaction chain T3 → T5 → T13 → T20, the customers chain
 T6/T8/T9 → T10 → T21/T22, and T25, which blocks nothing.
+
+## Review remediation — 2026-09-04
+
+The independent review returned `CHANGES REQUESTED` with 19 stage-1 findings. R1-R19 close the
+Fix-now items resolved with the user; R20 fixes a defect found while writing R8's specs rather than
+by the review itself. Deferred findings are recorded in [`spec.md`](../spec.md) §8 with owner and due.
+
+| #   | Task                                                                                                                       | Layer   | Blocked by | Raised by            | Status |
+| --- | -------------------------------------------------------------------------------------------------------------------------- | ------- | ---------- | -------------------- | ------ |
+| R1  | Complete the per-line ending contract: promote migration 04, drop receivedQuantity, delete the withdrawn-arrival dead code | `infra` | —          | review 2026-09-04    | done   |
+| R2  | Lock the draft row for a line ending so two concurrent last endings cannot both fail to close it                           | `infra` | R1         | review 2026-09-04    | done   |
+| R3  | Replace the self-comparing frozen-line assertions with real frozen-line coverage                                           | `tests` | —          | review 2026-09-04    | done   |
+| R4  | Seed an Unfulfilled Customer Order in AC-07's last-active-address refusal                                                  | `tests` | R3         | review 2026-09-04    | done   |
+| R5  | Prove AC-15's link refusal over HTTP for both address kinds                                                                | `tests` | —          | review 2026-09-04    | done   |
+| R6  | Prove AC-14's 409 over HTTP and remove the contradictory 400 clause                                                        | `tests` | R5         | review 2026-09-04    | done   |
+| R7  | Give the three purchase-draft refusals member-facing copy that names what the spec requires                                | `ui`    | —          | review 2026-09-04    | done   |
+| R8  | Cover the seven Customers write dialogs with component specs                                                               | `ui`    | —          | review 2026-09-04    | done   |
+| R9  | Name the promoted Main address in the deactivation toast                                                                   | `ui`    | R8         | review 2026-09-04    | done   |
+| R10 | Prove the Customers directory renders read-only in an archived Warehouse                                                   | `ui`    | R8         | review 2026-09-04    | done   |
+| R11 | Restore the By-line EXPECTED and ENDING columns with their per-line ending action                                          | `ui`    | —          | review 2026-09-04    | done   |
+| R12 | Give LineEndingAction's permission negatives a positive control                                                            | `tests` | —          | review 2026-09-04    | done   |
+| R13 | Delete the unbacked field-binding claim from DirectDestinationPickers                                                      | `ui`    | —          | review 2026-09-04    | done   |
+| R14 | Mark the e2e-through-UI tier Blocked and move AC-01/AC-04 into the component tier                                          | `docs`  | —          | review 2026-09-04    | done   |
+| R15 | Repair the task-layer manifests so layer stays a usable coverage index                                                     | `docs`  | —          | review 2026-09-04    | done   |
+| R16 | Give the one-component-per-file gate teeth and a non-empty-corpus guard                                                    | `tests` | —          | review 2026-09-04    | done   |
+| R17 | Report unresolved handler return types and assert the companion corpora are non-empty                                      | `tests` | —          | review 2026-09-04    | done   |
+| R18 | Match relative specifiers in the controller-persistence boundary rule                                                      | `tests` | —          | review 2026-09-04    | done   |
+| R19 | Restore MOVED_ROUTE_COUNT to a frozen moved-route set                                                                      | `tests` | —          | review 2026-09-04    | done   |
+| R20 | Pre-fill the two correction dialogs, which opened blank                                                                    | `ui`    | R8         | implement 2026-09-04 | done   |
