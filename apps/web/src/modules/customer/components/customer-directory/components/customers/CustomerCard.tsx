@@ -23,10 +23,18 @@ export type CustomerCardProps = CustomerActionHandlers & {
  * already shipped — and it is never the only signal, because the opened
  * Customer is also the one the detail pane names.
  *
- * The card body is a real `<button>` rather than a clickable `<div>`: opening
- * a Customer is an action, so it has to be reachable and announced as one. The
- * kebab sits **outside** that button, because a control inside a control is
- * unreachable by keyboard.
+ * The Customer's name is a real `<button>` rather than a clickable `<div>`:
+ * opening a Customer is an action, so it has to be reachable and announced as
+ * one. The kebab sits **outside** that button, because a control inside a
+ * control is unreachable by keyboard.
+ *
+ * The heading wraps the control rather than the control wrapping the heading.
+ * A `<button>` admits phrasing content only, so putting `Card.Title` (an
+ * `h3`) and `Card.Description` (a `p`) inside one is an invalid content model
+ * and sweeps the meta line into the button's accessible name; using the
+ * components as designed is what keeps the announcement right
+ * (`heroui-design-principles.md` §2). The control is therefore named by the
+ * Customer alone, which is also the only thing pressing it acts on.
  */
 export const CustomerCard = ({
   customer,
@@ -52,9 +60,11 @@ export const CustomerCard = ({
         }
       >
         <Card.Header className="flex flex-row items-start justify-between gap-2">
-          <button className="flex-1 text-left" type="button" onClick={onPress}>
+          <div className="min-w-0 flex-1">
             <Card.Title className="text-base font-semibold">
-              {customer.name}
+              <button className="text-left" type="button" onClick={onPress}>
+                {customer.name}
+              </button>
             </Card.Title>
             <Card.Description className="text-muted">
               {t('card.addresses', { count: addressCount })}
@@ -64,7 +74,7 @@ export const CustomerCard = ({
                 {t('card.inactive')}
               </Chip>
             </Conditional>
-          </button>
+          </div>
           <CustomerActionsMenu
             customer={customer}
             onCorrect={onCorrect}

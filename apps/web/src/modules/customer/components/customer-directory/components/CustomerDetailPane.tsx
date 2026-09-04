@@ -1,3 +1,4 @@
+import { Button } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 
 import { CustomerAddressBook } from 'modules/customer/components/customer-directory/components/addresses/CustomerAddressBook';
@@ -59,7 +60,11 @@ const DETAIL_BARS = ['30%', '60%', '45%'] as const;
  *
  * The `chevron-left` back affordance is the mobile screen's only way out of
  * the detail, so it is rendered whenever a Customer is open and hidden from
- * `lg:` up, where the list is on screen beside it.
+ * `lg:` up, where the list is on screen beside it. It is a dismissive
+ * navigation control, which is what `Button variant="tertiary"` means — HeroUI
+ * provides the control, so nothing here hand-rolls a native `<button>` and its
+ * layout classes (`frontend-architecture.md` §Components,
+ * `heroui-design-principles.md` §1).
  */
 export const CustomerDetailPane = ({
   customer,
@@ -114,14 +119,15 @@ export const CustomerDetailPane = ({
   return (
     <div>
       <Conditional when={customer !== undefined}>
-        <button
-          className="mb-3 inline-flex items-center gap-1 text-sm lg:hidden"
-          type="button"
-          onClick={onBack}
+        <Button
+          className="mb-3 lg:hidden"
+          size="sm"
+          variant="tertiary"
+          onPress={onBack}
         >
           <ChevronLeftIcon />
           {t('detail.back')}
-        </button>
+        </Button>
       </Conditional>
       {content[detailState]}
     </div>

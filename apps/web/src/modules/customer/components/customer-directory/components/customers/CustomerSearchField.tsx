@@ -20,6 +20,12 @@ export type CustomerSearchFieldProps = {
  * The term itself stays with the collection that filters on it, so this leaf
  * owns the field markup and reports every change upward
  * (`writing-web-components.md` §8), matching `ItemSearchField`.
+ *
+ * `variant="secondary"` is the low-emphasis treatment the design asks for:
+ * the search field sits beside the destination's one primary action, so it is
+ * named for what it means rather than hand-drawn with a border, a surface
+ * background and a suppressed shadow (`heroui-design-principles.md` §1). Only
+ * the 48px height the frames fix is left as a class.
  */
 export const CustomerSearchField = ({
   value,
@@ -32,9 +38,10 @@ export const CustomerSearchField = ({
       aria-label={t('directory.search')}
       className="w-full"
       value={value}
+      variant="secondary"
       onChange={onChange}
     >
-      <SearchField.Group className="h-12 border border-border bg-surface shadow-none">
+      <SearchField.Group className="h-12">
         <SearchField.SearchIcon />
         <SearchField.Input placeholder={t('directory.search')} />
         <SearchField.ClearButton />

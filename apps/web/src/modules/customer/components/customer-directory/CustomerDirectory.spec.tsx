@@ -293,6 +293,20 @@ describe('CustomerDirectory (frames KRDln, b7gaH9)', () => {
     expect(within(dialog).queryByRole('textbox')).not.toBeInTheDocument();
   });
 
+  // heroui-design-principles.md §2 — a `<button>` admits phrasing content
+  // only, so the card's heading wraps the control rather than the control
+  // wrapping the heading. The pressable region is therefore named by the
+  // Customer alone, and no heading is swept into its accessible name.
+  it('names a card control by its Customer alone and nests no heading inside it', async () => {
+    renderDirectory();
+
+    const control = await screen.findByRole('button', {
+      name: 'Nordwind Logistik GmbH',
+    });
+
+    expect(within(control).queryByRole('heading')).not.toBeInTheDocument();
+  });
+
   // AC-09 / declarative-permission-gates — a control the actor may not use is
   // absent, never disabled.
   it('offers no Record customer trigger without CUSTOMERS:CREATE', async () => {

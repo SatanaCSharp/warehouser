@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-import { destinationReason } from 'modules/customer/components/customer-directory/components/awaiting/awaiting-destination';
+import { destinationReason } from 'modules/customer/utils/awaiting-destination';
 import { MapPinIcon } from 'shared/icons';
 
 import type { CustomerOrderDestination } from '@warehouser/contracts/customers';

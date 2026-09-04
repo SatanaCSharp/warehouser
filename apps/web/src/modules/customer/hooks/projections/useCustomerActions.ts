@@ -24,7 +24,7 @@ export type CustomerAction = {
 };
 
 /**
- * What the directory hands down to its cards: two reports upward and nothing
+ * What the card list hands down to its cards: two reports upward and nothing
  * else. Each only tells the surface that owns the dialogs which Customer was
  * chosen.
  *

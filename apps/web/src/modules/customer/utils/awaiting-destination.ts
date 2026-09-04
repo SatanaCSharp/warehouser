@@ -26,9 +26,13 @@ const REASONS: readonly {
 ];
 
 /**
- * Reads a destination as the reason it is that destination. A pure helper
- * declaring no hook, so it lives beside its consumers rather than in `hooks/`
- * (`placing-web-hooks.md` §4).
+ * Reads a destination as the reason it is that destination.
+ *
+ * It declares no hook and renders nothing, so it is filed in the module's
+ * `utils/` — a pure function and the lookup table behind it belong there
+ * rather than anywhere under `components/` (`placing-web-hooks.md` §3,
+ * `frontend-architecture.md` §"Source structure"). The Customer owns the
+ * behaviour, so the module keeps it rather than `shared/utils/`.
  */
 export const destinationReason = (
   destination: CustomerOrderDestination,

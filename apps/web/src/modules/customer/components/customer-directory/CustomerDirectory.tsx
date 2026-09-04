@@ -2,30 +2,17 @@ import { Tabs } from '@heroui/react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import {
-  useCorrectCustomerNameMutation,
-  useDeactivateCustomerMutation,
-} from 'modules/customer/api/customer-api';
 import { CustomerDetailPane } from 'modules/customer/components/customer-directory/components/CustomerDetailPane';
-import { CorrectCustomerDialog } from 'modules/customer/components/customer-directory/components/customers/CorrectCustomerDialog';
 import { CustomerCatalogue } from 'modules/customer/components/customer-directory/components/customers/CustomerCatalogue';
-import { DeactivateCustomerDialog } from 'modules/customer/components/customer-directory/components/customers/DeactivateCustomerDialog';
 import { useCustomers } from 'modules/customer/hooks/queries/useCustomers';
-import { ActionDialogHost } from 'shared/components/ActionDialogHost';
-import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
-import { useActionDialog } from 'shared/hooks/state/useActionDialog';
 
-import type { Customer, CustomerUpdate } from '@warehouser/contracts/customers';
+import type { Customer } from '@warehouser/contracts/customers';
 import type { ReactElement } from 'react';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 /** The two tabs the customers filter offers (`Hh6Al`); order never changes. */
 const TAB_KEYS = ['active', 'inactive'] as const;
 
 type TabKey = (typeof TAB_KEYS)[number];
-
-/** Which per-Customer dialog a card's kebab opens. */
-type CustomerDialogKind = 'correct' | 'deactivate';
 
 /**
  * Whether a Customer belongs on each tab. AC-06 keeps an Inactive Customer
@@ -43,10 +30,12 @@ const TAB_PREDICATES: Record<TabKey, (customer: Customer) => boolean> = {
  * and the fill detail pane carrying identity → delivery addresses → what the
  * Customer awaits, in that order at both viewports.
  *
- * It owns the Warehouse its customer-level mutations are addressed to, which
- * dialog is open for which Customer, and the selection the two columns share.
+ * It owns the tab and the selection the two columns share, and nothing else.
  * Everything about how the collection is presented belongs to
- * `CustomerCatalogue`; everything about one Customer belongs to
+ * `CustomerCatalogue`; the dialogs a card's kebab opens belong to
+ * `CustomerCardList`, the narrowest ancestor of the cards that open them, so
+ * no callback travels further than card → menu
+ * (`writing-web-components.md` §4); everything about one Customer belongs to
  * `CustomerDetailPane`. What is left here is orchestration only
  * (`writing-web-components.md` §3).
  *
@@ -59,15 +48,11 @@ const TAB_PREDICATES: Record<TabKey, (customer: Customer) => boolean> = {
  */
 export const CustomerDirectory = (): ReactElement => {
   const { t } = useTranslation('customer');
-  const warehouseId = useEnteredWarehouse();
   const customers = useCustomers();
   const [tab, setTab] = useState<TabKey>('active');
   const [selectedCustomerId, setSelectedCustomerId] = useState<
     string | undefined
   >(undefined);
-  const dialog = useActionDialog<CustomerDialogKind, Customer>();
-  const [correctCustomerName] = useCorrectCustomerNameMutation();
-  const [deactivateCustomer] = useDeactivateCustomerMutation();
 
   const onSelectTab = (key: unknown): void => {
     if (
@@ -82,38 +67,6 @@ export const CustomerDirectory = (): ReactElement => {
   const onSelectCustomer = (customerId: string): void =>
     setSelectedCustomerId(customerId);
   const onBackToList = (): void => setSelectedCustomerId(undefined);
-
-  // The two reports a card's kebab sends upward. Each only names the Customer
-  // a dialog was chosen for, which is the single thing a cached row renderer
-  // may close over
-  // (`docs/system/adr/27-08-2026-heroui-table-for-web-data-tables.md`).
-  const onCorrect = (customer: Customer): void =>
-    dialog.open('correct', customer);
-  const onDeactivate = (customer: Customer): void =>
-    dialog.open('deactivate', customer);
-
-  // Each command carries what its success toast names the Customer by, beside
-  // the id that addresses it: a correction is reported by the name it leaves
-  // behind, which is what the member just committed. The address text never
-  // rides along — it is confidential and a toast outlives the dialog that
-  // showed it (spec.md §6.1).
-  const onSaveCorrection =
-    (customer: Customer) =>
-    (input: CustomerUpdate): Promise<MutationResult> =>
-      correctCustomerName({
-        customerName: input.name,
-        warehouseId: warehouseId ?? '',
-        customerId: customer.id,
-        input,
-      });
-
-  const onConfirmDeactivate =
-    (customer: Customer) => (): Promise<MutationResult> =>
-      deactivateCustomer({
-        customerName: customer.name,
-        warehouseId: warehouseId ?? '',
-        customerId: customer.id,
-      });
 
   const visibleCustomers = customers.filter(TAB_PREDICATES[tab]);
   const selectedCustomer = visibleCustomers.find(
@@ -145,8 +98,6 @@ export const CustomerDirectory = (): ReactElement => {
                 customers={visibleCustomers}
                 selectedCustomerId={selectedCustomerId}
                 tab={key}
-                onCorrect={onCorrect}
-                onDeactivate={onDeactivate}
                 onSelect={onSelectCustomer}
               />
             </div>
@@ -163,24 +114,6 @@ export const CustomerDirectory = (): ReactElement => {
           </div>
         </Tabs.Panel>
       ))}
-
-      <ActionDialogHost
-        controller={dialog}
-        renderDialogs={{
-          correct: (customer) => (
-            <CorrectCustomerDialog
-              customer={customer}
-              onSave={onSaveCorrection(customer)}
-            />
-          ),
-          deactivate: (customer) => (
-            <DeactivateCustomerDialog
-              customer={customer}
-              onConfirm={onConfirmDeactivate(customer)}
-            />
-          ),
-        }}
-      />
     </Tabs>
   );
 };

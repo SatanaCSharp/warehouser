@@ -9,10 +9,9 @@ import { DatasetEmptyState } from 'shared/components/DatasetEmptyState';
 import { ContactIcon } from 'shared/icons';
 
 import type { Customer } from '@warehouser/contracts/customers';
-import type { CustomerActionHandlers } from 'modules/customer/hooks/projections/useCustomerActions';
 import type { ReactElement } from 'react';
 
-export type CustomerCatalogueProps = CustomerActionHandlers & {
+export type CustomerCatalogueProps = {
   customers: Customer[];
   selectedCustomerId: string | undefined;
   /** Which filter tab this catalogue is the panel of. */
@@ -69,8 +68,6 @@ export const CustomerCatalogue = ({
   customers,
   selectedCustomerId,
   tab,
-  onCorrect,
-  onDeactivate,
   onSelect,
 }: CustomerCatalogueProps): ReactElement => {
   const { t } = useTranslation('customer');
@@ -104,8 +101,6 @@ export const CustomerCatalogue = ({
         customers={matches}
         label={t('directory.listLabel')}
         selectedCustomerId={selectedCustomerId}
-        onCorrect={onCorrect}
-        onDeactivate={onDeactivate}
         onSelect={onSelect}
       />
     ),
