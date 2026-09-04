@@ -11,7 +11,7 @@ import type {
   Warehouse,
   WarehouseDeliveryAddress,
 } from '@warehouser/contracts/workspaces';
-import type { ReactElement } from 'react';
+import type { FormEvent, ReactElement } from 'react';
 
 type WarehouseDeliveryAddressFormProps = {
   /** What is recorded now, which the section remounts this form to re-seed. */
@@ -85,7 +85,10 @@ export const WarehouseDeliveryAddressForm = ({
     }
   };
 
-  const onSubmitForm = handleSubmit(submit);
+  // `handleSubmit` returns a promise the DOM handler must not; discarding it
+  // here keeps the rejection with React Hook Form, which already owns it.
+  const onSubmitForm = (event: FormEvent<HTMLFormElement>): void =>
+    void handleSubmit(submit)(event);
 
   return (
     <form className="flex flex-col gap-3" noValidate onSubmit={onSubmitForm}>

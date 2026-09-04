@@ -48,7 +48,7 @@ export const WarehouseDeliveryAddressSection = ({
     >
       <section className="flex flex-col gap-3">
         <div className="flex flex-col gap-1">
-          <h3 className="text-[15px] font-bold">
+          <h3 className="text-sm font-semibold">
             {t('warehouses.deliveryAddress.title')}
           </h3>
           <p className="text-xs leading-relaxed text-muted">
