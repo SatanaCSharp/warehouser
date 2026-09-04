@@ -2,7 +2,7 @@ import { Injectable, Optional } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
 import { DemandAllocationService } from 'customer-orders/domain/services/demand-allocation.service';
 import { purchaseDraftConcurrentChangeError } from 'purchase-drafts/domain/errors/purchase-draft.errors';
-import { PurchaseDraftLineEndingService } from 'purchase-drafts/domain/services/purchase-draft-line-ending.service';
+import { assertAdmitsEnding } from 'purchase-drafts/domain/services/purchase-draft-line-ending.service';
 import { EndingKind } from 'purchase-drafts/domain/value-objects/delivery-mode';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
@@ -38,7 +38,7 @@ const defaultPurchaseDraftLineEndingRuntime: PurchaseDraftLineEndingRuntime = {
 // arrived at the dock on one line, assigned across that line's linked Customer Orders.
 //
 // The kind is the route, not the payload: this command records an `arrival` and nothing else, so a
-// member aiming it at a Direct to Customer line is refused by `PurchaseDraftLineEndingService`
+// member aiming it at a Direct to Customer line is refused by `assertAdmitsEnding`
 // before any write, rather than after submitting a value (openapi.yaml — "making the ending kind a
 // payload field instead would put that refusal behind a value the member submitted").
 //
@@ -59,7 +59,6 @@ const defaultPurchaseDraftLineEndingRuntime: PurchaseDraftLineEndingRuntime = {
 export class ConfirmPurchaseDraftLineArrivalCommand {
   constructor(
     private readonly arrivalConfirmationRepository: ArrivalConfirmationRepository,
-    private readonly endingService: PurchaseDraftLineEndingService,
     private readonly demandAllocationService: DemandAllocationService,
     @Optional()
     private readonly runtime: PurchaseDraftLineEndingRuntime = defaultPurchaseDraftLineEndingRuntime,
@@ -79,7 +78,7 @@ export class ConfirmPurchaseDraftLineArrivalCommand {
         currentUser.warehouseId,
       );
 
-    this.endingService.assertAdmitsEnding(locked, EndingKind.Arrival);
+    assertAdmitsEnding(locked, EndingKind.Arrival);
 
     const endingRecordedAt = this.runtime.now();
 

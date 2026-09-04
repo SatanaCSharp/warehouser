@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { CustomerOrdersUsecaseModule } from 'customer-orders/usecases/usecase.module';
 import { PurchaseDraftAssemblyService } from 'purchase-drafts/domain/services/purchase-draft-assembly.service';
-import { PurchaseDraftLineEndingService } from 'purchase-drafts/domain/services/purchase-draft-line-ending.service';
 import { AddPurchaseDraftLineCommand } from 'purchase-drafts/usecases/commands/add-purchase-draft-line.command';
 import { AddPurchaseDraftLineLinkCommand } from 'purchase-drafts/usecases/commands/add-purchase-draft-line-link.command';
 import { ClosePurchaseDraftCommand } from 'purchase-drafts/usecases/commands/close-purchase-draft.command';
@@ -45,7 +44,6 @@ import { PurchaseDraftReadRepository } from 'shared/domain/repositories/purchase
     PurchaseDraftAssemblyRepository,
     PurchaseDraftReadRepository,
     ArrivalConfirmationRepository,
-    PurchaseDraftLineEndingService,
     // Beside `PurchaseDraftAssemblyRepository`, which it reads the links of a line through (AC-15a),
     // `PurchaseDraftAssemblyService` reaches three further repositories, none of them provided by
     // the `@Global()` `DomainModule`, so each is a local provider here exactly as

@@ -4,7 +4,6 @@ import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
 import { DemandAllocationService } from 'customer-orders/domain/services/demand-allocation.service';
 // The application boundary (ADR 0002 "Decision outcome").
-import { PurchaseDraftLineEndingService } from 'purchase-drafts/domain/services/purchase-draft-line-ending.service';
 import { ConfirmPurchaseDraftLineArrivalCommand } from 'purchase-drafts/usecases/commands/confirm-purchase-draft-line-arrival.command';
 import { RecordPurchaseDraftLineDeliveryCommand } from 'purchase-drafts/usecases/commands/record-purchase-draft-line-delivery.command';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
@@ -62,14 +61,11 @@ const demandAllocationService = new DemandAllocationService(
   { now: () => later },
 );
 
-const endingService = new PurchaseDraftLineEndingService();
-
 const buildArrivalCommand = (
   demand: Pick<DemandAllocationService, 'allocate'> = demandAllocationService,
 ): ConfirmPurchaseDraftLineArrivalCommand =>
   new ConfirmPurchaseDraftLineArrivalCommand(
     arrivalConfirmationRepository,
-    endingService,
     demand as DemandAllocationService,
     { now: () => later },
   );
@@ -79,7 +75,6 @@ const buildDeliveryCommand = (
 ): RecordPurchaseDraftLineDeliveryCommand =>
   new RecordPurchaseDraftLineDeliveryCommand(
     arrivalConfirmationRepository,
-    endingService,
     demand as DemandAllocationService,
     { now: () => later },
   );

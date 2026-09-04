@@ -1,7 +1,6 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
 import type { DemandAllocationService } from 'customer-orders/domain/services/demand-allocation.service';
-import { PurchaseDraftLineEndingService } from 'purchase-drafts/domain/services/purchase-draft-line-ending.service';
 import { ConfirmPurchaseDraftLineArrivalCommand } from 'purchase-drafts/usecases/commands/confirm-purchase-draft-line-arrival.command';
 import { RecordPurchaseDraftLineDeliveryCommand } from 'purchase-drafts/usecases/commands/record-purchase-draft-line-delivery.command';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
@@ -101,7 +100,6 @@ describe('per-line endings replace the whole-draft arrival (T17)', () => {
       const demand = neverAllocates();
       const command = new ConfirmPurchaseDraftLineArrivalCommand(
         repository,
-        new PurchaseDraftLineEndingService(),
         demand,
       );
 
@@ -124,7 +122,6 @@ describe('per-line endings replace the whole-draft arrival (T17)', () => {
       const demand = neverAllocates();
       const command = new RecordPurchaseDraftLineDeliveryCommand(
         repository,
-        new PurchaseDraftLineEndingService(),
         demand,
       );
 
@@ -153,7 +150,6 @@ describe('per-line endings replace the whole-draft arrival (T17)', () => {
       const demand = neverAllocates();
       const command = new ConfirmPurchaseDraftLineArrivalCommand(
         repository,
-        new PurchaseDraftLineEndingService(),
         demand,
       );
 
@@ -192,7 +188,6 @@ describe('per-line endings replace the whole-draft arrival (T17)', () => {
       const demand = neverAllocates();
       const command = new ConfirmPurchaseDraftLineArrivalCommand(
         repository,
-        new PurchaseDraftLineEndingService(),
         demand,
       );
 
@@ -234,7 +229,6 @@ describe('per-line endings replace the whole-draft arrival (T17)', () => {
             closed: true,
           },
         ),
-        new PurchaseDraftLineEndingService(),
         neverAllocates(),
       );
 
@@ -251,7 +245,6 @@ describe('per-line endings replace the whole-draft arrival (T17)', () => {
     it('refuses when the draft is not in Ready for Ordering', async () => {
       const command = new ConfirmPurchaseDraftLineArrivalCommand(
         repositoryReturning(lockResult({}, 'closed')),
-        new PurchaseDraftLineEndingService(),
         neverAllocates(),
       );
 
@@ -268,7 +261,6 @@ describe('per-line endings replace the whole-draft arrival (T17)', () => {
     it('refuses a line that does not belong to the draft in the acting Warehouse', async () => {
       const command = new ConfirmPurchaseDraftLineArrivalCommand(
         repositoryReturning({ draft: null, line: null }),
-        new PurchaseDraftLineEndingService(),
         neverAllocates(),
       );
 

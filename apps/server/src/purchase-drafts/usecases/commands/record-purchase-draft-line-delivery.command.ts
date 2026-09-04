@@ -2,7 +2,7 @@ import { Injectable, Optional } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
 import { DemandAllocationService } from 'customer-orders/domain/services/demand-allocation.service';
 import { purchaseDraftConcurrentChangeError } from 'purchase-drafts/domain/errors/purchase-draft.errors';
-import { PurchaseDraftLineEndingService } from 'purchase-drafts/domain/services/purchase-draft-line-ending.service';
+import { assertAdmitsEnding } from 'purchase-drafts/domain/services/purchase-draft-line-ending.service';
 import { EndingKind } from 'purchase-drafts/domain/value-objects/delivery-mode';
 import type {
   EndingAllocationInput,
@@ -42,7 +42,6 @@ const defaultPurchaseDraftLineEndingRuntime: PurchaseDraftLineEndingRuntime = {
 export class RecordPurchaseDraftLineDeliveryCommand {
   constructor(
     private readonly arrivalConfirmationRepository: ArrivalConfirmationRepository,
-    private readonly endingService: PurchaseDraftLineEndingService,
     private readonly demandAllocationService: DemandAllocationService,
     @Optional()
     private readonly runtime: PurchaseDraftLineEndingRuntime = defaultPurchaseDraftLineEndingRuntime,
@@ -62,7 +61,7 @@ export class RecordPurchaseDraftLineDeliveryCommand {
         currentUser.warehouseId,
       );
 
-    this.endingService.assertAdmitsEnding(locked, EndingKind.DirectDelivery);
+    assertAdmitsEnding(locked, EndingKind.DirectDelivery);
 
     const endingRecordedAt = this.runtime.now();
 
