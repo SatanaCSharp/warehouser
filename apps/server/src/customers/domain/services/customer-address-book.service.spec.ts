@@ -1,8 +1,5 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
-import {
-  ApplicationError,
-  AssertionError,
-} from '@warehouser/shared-types/errors';
+import { ApplicationError } from '@warehouser/shared-types/errors';
 import type {
   CustomerNameHolder,
   DeliveryAddressState,
@@ -229,7 +226,6 @@ describe('customer address book', () => {
 // tier.
 const warehouseId = 'warehouse-1';
 const customerId = 'customer-1';
-const now = new Date('2026-09-04T10:00:00.000Z');
 
 const storedCustomer = (
   overrides: Partial<CustomerEntity> = {},
@@ -239,21 +235,6 @@ const storedCustomer = (
   name: 'Test Customer North',
   deactivatedAt: null,
   recordedByUserId: 'user-1',
-  createdAt: new Date('2026-09-01T00:00:00.000Z'),
-  updatedAt: new Date('2026-09-01T00:00:00.000Z'),
-  ...overrides,
-});
-
-const storedAddress = (
-  overrides: Partial<CustomerDeliveryAddressEntity> = {},
-): CustomerDeliveryAddressEntity => ({
-  id: 'address-1',
-  customerId,
-  warehouseId,
-  addressText: 'Test Address 1, Test City',
-  accessNotes: null,
-  isMain: false,
-  deactivatedAt: null,
   createdAt: new Date('2026-09-01T00:00:00.000Z'),
   updatedAt: new Date('2026-09-01T00:00:00.000Z'),
   ...overrides,
@@ -355,136 +336,6 @@ describe('CustomerAddressBookService — assertNameAvailable', () => {
         addressBookDouble([]),
       ).assertNameAvailable(warehouseId, 'Test Customer North', customerId),
     ).resolves.toBeUndefined();
-  });
-});
-
-describe('CustomerAddressBookService — deactivateDeliveryAddress (AC-06b, AC-07)', () => {
-  const main = storedAddress({ id: 'address-main', isMain: true });
-  const successor = storedAddress({
-    id: 'address-successor',
-    createdAt: new Date('2026-09-02T00:00:00.000Z'),
-  });
-  const later = storedAddress({
-    id: 'address-later',
-    createdAt: new Date('2026-09-03T00:00:00.000Z'),
-  });
-
-  // sad.md §6.3 step 4 — the condition is evaluated over the rows read **under lock**, never over
-  // an unlocked list, so two concurrent deactivations cannot both see two remaining.
-  it('decides the whole operation over the locked address rows', async () => {
-    const addressBook = addressBookDouble([main, successor]);
-
-    await serviceWith(
-      directoryDouble(storedCustomer()),
-      addressBook,
-    ).deactivateDeliveryAddress(customerId, 'address-main', now);
-
-    expect(addressBook.lockDeliveryAddresses).toHaveBeenCalledWith(customerId);
-    expect(addressBook.listDeliveryAddresses).not.toHaveBeenCalled();
-  });
-
-  // AC-06b — the Main one is recorded Inactive and one of the remaining active addresses becomes
-  // the Main one, in that order, so `uq_customer_delivery_addresses_customer_main` is never asked
-  // to hold two Main rows at once. The reassignment is what the response names.
-  it('promotes a remaining active address through the repository when the Main one is deactivated', async () => {
-    const addressBook = addressBookDouble([main, later, successor]);
-
-    const reassigned = await serviceWith(
-      directoryDouble(storedCustomer()),
-      addressBook,
-    ).deactivateDeliveryAddress(customerId, 'address-main', now);
-
-    expect(reassigned).toBe('address-successor');
-    expect(addressBook.deactivateDeliveryAddress).toHaveBeenCalledWith(
-      'address-main',
-      customerId,
-      now,
-    );
-    expect(addressBook.setMainDeliveryAddress).toHaveBeenCalledWith(
-      'address-successor',
-      customerId,
-      now,
-    );
-    expect(
-      addressBook.deactivateDeliveryAddress.mock.invocationCallOrder[0],
-    ).toBeLessThan(
-      addressBook.setMainDeliveryAddress.mock.invocationCallOrder[0],
-    );
-  });
-
-  // AC-06a — deactivating an ordinary address moves no flag and names no new Main one.
-  it('reassigns nothing when the deactivated address is not the Main one', async () => {
-    const addressBook = addressBookDouble([main, successor]);
-
-    const reassigned = await serviceWith(
-      directoryDouble(storedCustomer()),
-      addressBook,
-    ).deactivateDeliveryAddress(customerId, 'address-successor', now);
-
-    expect(reassigned).toBeNull();
-    expect(addressBook.setMainDeliveryAddress).not.toHaveBeenCalled();
-    expect(addressBook.deactivateDeliveryAddress).toHaveBeenCalledWith(
-      'address-successor',
-      customerId,
-      now,
-    );
-  });
-
-  // AC-07 — the last active address is refused **under lock**, and nothing is written: the member
-  // adds the replacement first and deactivates the old one afterwards.
-  it('refuses the last active address and writes nothing', async () => {
-    const addressBook = addressBookDouble([
-      main,
-      storedAddress({
-        id: 'address-retired',
-        deactivatedAt: new Date('2026-08-01T00:00:00.000Z'),
-      }),
-    ]);
-
-    await expect(
-      serviceWith(
-        directoryDouble(storedCustomer()),
-        addressBook,
-      ).deactivateDeliveryAddress(customerId, 'address-main', now),
-    ).rejects.toMatchObject({
-      code: ErrorCode.CUSTOMERS_LAST_ACTIVE_DELIVERY_ADDRESS,
-    });
-    expect(addressBook.deactivateDeliveryAddress).not.toHaveBeenCalled();
-    expect(addressBook.setMainDeliveryAddress).not.toHaveBeenCalled();
-  });
-
-  // AC-12 — an address of another Customer is refused identically to a missing one, before any
-  // write is attempted.
-  it('refuses an address the Customer does not hold and writes nothing', async () => {
-    const addressBook = addressBookDouble([main, successor]);
-
-    await expect(
-      serviceWith(
-        directoryDouble(storedCustomer()),
-        addressBook,
-      ).deactivateDeliveryAddress(customerId, 'address-absent', now),
-    ).rejects.toMatchObject({
-      code: ErrorCode.CUSTOMERS_TARGET_UNAVAILABLE,
-    });
-    expect(addressBook.deactivateDeliveryAddress).not.toHaveBeenCalled();
-  });
-
-  // data-model.md § "Concurrency, locks and transactions" — "zero affected rows is a typed
-  // concurrency refusal, never a silent no-op". The rows are held under this transaction's lock,
-  // so a write that affects none is a broken invariant and stays an `AssertionError` the global
-  // filter reports as an internal defect, never an `ApplicationError` a member could act on.
-  it('treats a write that affects no locked row as a defect', async () => {
-    const addressBook = addressBookDouble([main, successor]);
-    addressBook.deactivateDeliveryAddress.mockResolvedValue(
-      'delivery-address-unavailable',
-    );
-
-    await expect(
-      serviceWith(
-        directoryDouble(storedCustomer()),
-        addressBook,
-      ).deactivateDeliveryAddress(customerId, 'address-main', now),
-    ).rejects.toBeInstanceOf(AssertionError);
   });
 });
 

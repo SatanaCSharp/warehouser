@@ -18,7 +18,7 @@ import {
   isMainDeliveryAddressOf,
   remainingActiveDeliveryAddresses,
 } from 'customers/domain/predicates/customer.predicates';
-import { compact, find, orderBy } from 'lodash';
+import { compact, orderBy } from 'lodash';
 import type { CustomerEntity } from 'shared/domain/entities/customer.entity';
 import type { DeliveryAddressWriteOutcome } from 'shared/domain/repositories/customer-address-book.repository';
 import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository';
@@ -170,7 +170,9 @@ export const assertCustomerWriteApplied = (
 // `lockDeliveryAddresses`: a write that affects none is then not a member-facing rejection at all,
 // it is a broken invariant, and it stays an `AssertionError` the global filter reports as an
 // internal defect (server-error-handling.md §2, §6).
-const assertWriteApplied = (outcome: DeliveryAddressWriteOutcome): void => {
+export const assertLockedDeliveryAddressWriteApplied = (
+  outcome: DeliveryAddressWriteOutcome,
+): void => {
   assert(
     outcome === 'applied',
     'A Delivery Address write affected no row the address book had locked',
@@ -227,56 +229,5 @@ export class CustomerAddressBookService {
     );
 
     assertCustomerNameAvailable(name, compact([holder]), correctedCustomerId);
-  }
-
-  // AC-06a/AC-06b/AC-07, the whole of sad.md §6.3 step 4 onwards, as one atomic operation because
-  // its four steps are not separable: the condition is decided over rows read **under lock** so two
-  // concurrent deactivations cannot both see two remaining, and the promotion has to land in the
-  // same transaction or the Customer is momentarily left without a Main address.
-  //
-  // The order matters. The deactivation clears `is_main` first, which is what frees
-  // `uq_customer_delivery_addresses_customer_main` for the successor; promoting first would ask the
-  // partial unique index to hold two Main rows at once.
-  //
-  // Returns the address that is now the Main one, or `null` when the deactivated address was not the
-  // Main one and nothing moved — which is exactly what AC-06b's response names.
-  async deactivateDeliveryAddress(
-    customerId: string,
-    deliveryAddressId: string,
-    deactivatedAt: Date,
-  ): Promise<string | null> {
-    const locked =
-      await this.customerAddressBookRepository.lockDeliveryAddresses(
-        customerId,
-      );
-    const target =
-      find(locked, (candidate) => candidate.id === deliveryAddressId) ?? null;
-
-    assertDeliveryAddressUsable(target, customerId);
-    assertDeliveryAddressDeactivatable(deliveryAddressId, locked);
-
-    const successor = nextMainDeliveryAddress(deliveryAddressId, locked);
-
-    assertWriteApplied(
-      await this.customerAddressBookRepository.deactivateDeliveryAddress(
-        deliveryAddressId,
-        customerId,
-        deactivatedAt,
-      ),
-    );
-
-    if (successor === null) {
-      return null;
-    }
-
-    assertWriteApplied(
-      await this.customerAddressBookRepository.setMainDeliveryAddress(
-        successor.id,
-        customerId,
-        deactivatedAt,
-      ),
-    );
-
-    return successor.id;
   }
 }

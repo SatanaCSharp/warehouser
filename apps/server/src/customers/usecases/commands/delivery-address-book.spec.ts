@@ -16,7 +16,10 @@
 // the real conditional write carries, so "the previous Main one is no longer Main" and "the last
 // active address is refused" are read back off a mutated set rather than off a stub's return value.
 import { ErrorCode } from '@warehouser/shared-types/enums';
-import { ApplicationError } from '@warehouser/shared-types/errors';
+import {
+  ApplicationError,
+  AssertionError,
+} from '@warehouser/shared-types/errors';
 import { hasExactlyOneMainActiveDeliveryAddress } from 'customers/domain/predicates/customer.predicates';
 import { CustomerAddressBookService } from 'customers/domain/services/customer-address-book.service';
 import { AddCustomerDeliveryAddressCommand } from 'customers/usecases/commands/add-customer-delivery-address.command';
@@ -606,6 +609,39 @@ describe('DeactivateCustomerDeliveryAddressCommand (AC-06a, AC-06b, AC-07)', () 
       book.addressBookRepository.setMainDeliveryAddress.mock
         .invocationCallOrder[0];
     expect(deactivateOrder).toBeLessThan(promoteOrder);
+  });
+
+  // AC-06b's other half — deactivating an address that was not the Main one moves no flag, so
+  // `mainDeliveryAddressId` is unchanged and the promotion write is never issued. Relocated here
+  // from the service spec with `deactivateDeliveryAddress` (2026-09-04 backend review, finding 3).
+  it('reassigns nothing when the deactivated address is not the Main one', async () => {
+    const book = bookWith(threeActiveAddresses());
+
+    const customer = await book.deactivate.execute(
+      currentUser,
+      customerId,
+      secondAddressId,
+    );
+
+    expect(customer.mainDeliveryAddressId).toBe(mainAddressId);
+    expect(
+      book.addressBookRepository.setMainDeliveryAddress,
+    ).not.toHaveBeenCalled();
+  });
+
+  // data-model.md § "Concurrency, locks and transactions" — the rows are already held under
+  // `lockDeliveryAddresses`, so a write that moves none of them is not a member-facing rejection
+  // at all; it is a broken invariant and stays an AssertionError the global filter reports as an
+  // internal defect (server-error-handling.md §2, §6).
+  it('treats a write that affects no locked row as a defect', async () => {
+    const book = bookWith(threeActiveAddresses());
+    book.addressBookRepository.deactivateDeliveryAddress.mockResolvedValue(
+      'delivery-address-unavailable',
+    );
+
+    await expect(
+      book.deactivate.execute(currentUser, customerId, mainAddressId),
+    ).rejects.toBeInstanceOf(AssertionError);
   });
 
   // AC-07 — "a Customer always keeps at least one active Delivery Address … so the member adds the
