@@ -50,7 +50,6 @@ const line = (overrides: Partial<PurchaseDraftLine>): PurchaseDraftLine => ({
   orderedQuantity: 1000,
   packagingTypeId: 'cartons',
   valueAddingNote: null,
-  receivedQuantity: null,
   ending: null,
   deliveryMode: 'via_warehouse',
   warehouseDestination: {

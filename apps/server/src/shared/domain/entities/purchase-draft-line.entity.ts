@@ -57,11 +57,6 @@ export class PurchaseDraftLineEntity {
   @Column('text', { name: 'frozen_customer_name', nullable: true })
   frozenCustomerName!: string | null;
 
-  // Superseded by `endingQuantity` and retained until the whole-draft arrival path is withdrawn:
-  // the column still exists and live code still reads it (`data-model.md` §`purchase_draft_lines`).
-  @Column('integer', { name: 'received_quantity', nullable: true })
-  receivedQuantity!: number | null;
-
   // The line's own ending: what arrived at the dock, or what the customer received (AC-19). The
   // quantity, the kind, the member and the time arrive together or not at all
   // (`chk_purchase_draft_lines_ending_attribution`), and the kind must match the delivery mode

@@ -559,8 +559,8 @@ describe('PurchaseDraftAssemblyRepository', () => {
       const linkId = randomUUID();
       await dataSource.manager.query(
         `INSERT INTO purchase_draft_lines
-           (id, purchase_draft_id, warehouse_id, item_id, ordered_quantity, packaging_type_id, value_adding_note, received_quantity, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, NULL, NULL, NULL, $6, $6)`,
+           (id, purchase_draft_id, warehouse_id, item_id, ordered_quantity, packaging_type_id, value_adding_note, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, NULL, NULL, $6, $6)`,
         [lineId, draftId, seeded.warehouseId, seeded.itemId, 20, now],
       );
       await dataSource.manager.query(
@@ -814,8 +814,8 @@ describe('PurchaseDraftAssemblyRepository', () => {
       const linkId = randomUUID();
       await dataSource.manager.query(
         `INSERT INTO purchase_draft_lines
-           (id, purchase_draft_id, warehouse_id, item_id, ordered_quantity, packaging_type_id, value_adding_note, received_quantity, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, NULL, NULL, NULL, $6, $6)`,
+           (id, purchase_draft_id, warehouse_id, item_id, ordered_quantity, packaging_type_id, value_adding_note, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, NULL, NULL, $6, $6)`,
         [lineId, draftId, victim.warehouseId, victim.itemId, 20, now],
       );
       await dataSource.manager.query(

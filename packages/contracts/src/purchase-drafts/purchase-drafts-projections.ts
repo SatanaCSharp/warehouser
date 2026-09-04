@@ -268,10 +268,6 @@ const purchaseDraftLineCommonShape = {
   orderedQuantity: z.number().int().min(1),
   packagingTypeId: packagingTypeIdSchema.nullable(),
   valueAddingNote: z.string().nullable(),
-  // openapi.yaml `PurchaseDraftLineIdentified` — `receivedQuantity` is **superseded by
-  // `ending.quantity`** (T17/ADR 0002). It is served for as long as the column exists, so a client
-  // reading a draft that ended before the per-line endings landed still sees what arrived.
-  receivedQuantity: z.number().int().nonnegative().nullable(),
   // openapi.yaml `PurchaseDraftLineEnding` — how this line ended, or `null` while it has no ending.
   // AC-19: the draft stays Ready for Ordering until every line of it carries one.
   ending: purchaseDraftLineEndingSchema.nullable(),

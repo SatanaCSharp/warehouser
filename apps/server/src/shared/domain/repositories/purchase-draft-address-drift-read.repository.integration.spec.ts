@@ -236,7 +236,6 @@ const seedPurchaseDraftLine = async (
     orderedQuantity: 10,
     packagingTypeId: null,
     valueAddingNote: null,
-    receivedQuantity: null,
     deliveryMode: delivery.deliveryMode ?? 'via_warehouse',
     customerDeliveryAddressId: delivery.customerDeliveryAddressId ?? null,
     frozenDeliveryAddressText: delivery.frozenDeliveryAddressText ?? null,

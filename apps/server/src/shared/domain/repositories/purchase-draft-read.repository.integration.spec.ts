@@ -94,7 +94,6 @@ interface LineRead {
   readonly orderedQuantity: number;
   readonly packagingTypeId: string | null;
   readonly valueAddingNote: string | null;
-  readonly receivedQuantity: number | null;
   readonly links: readonly LinkDemandRead[];
 }
 
@@ -333,7 +332,6 @@ const seedPurchaseDraftLine = async (
   purchaseDraftId: string,
   warehouseId: string,
   itemId: string,
-  receivedQuantity: number | null = null,
 ): Promise<string> => {
   const id = randomUUID();
   await dataSource.manager.getRepository(PurchaseDraftLineEntity).insert({
@@ -344,7 +342,6 @@ const seedPurchaseDraftLine = async (
     orderedQuantity: 10,
     packagingTypeId: null,
     valueAddingNote: null,
-    receivedQuantity,
     createdAt: now,
     updatedAt: now,
   });
@@ -542,6 +539,18 @@ const registerReadDraftDriftDataTests = (): void => {
     expect(rescheduledLink?.current.lastChangedAt).toBeNull();
   });
 
+  // R1 (review-2026-09-04 finding 19) — `received_quantity` is dropped from the schema by
+  // `DropReceivedQuantity1786700300000`, and `ending.quantity` is the one figure the contract still
+  // serves for what arrived (openapi.yaml `PurchaseDraftLineIdentified`, `PurchaseDraftLineRedacted`,
+  // both `additionalProperties: false` and neither naming `receivedQuantity`).
+  it('does not carry receivedQuantity on the read line', async () => {
+    const { warehouseId, draftId } = await buildDriftScenarioFixture();
+
+    const detail = await repository.readIdentifiedDraft(draftId, warehouseId);
+
+    expect(detail?.lines[0]).not.toHaveProperty('receivedQuantity');
+  });
+
   // AC-16 — became Fulfilled through the arrival of a different draft, and the amended-then-put-
   // back-as-it-was case, which must report the exact same values as the snapshot rather than a
   // touch log of the intermediate amendment.
@@ -680,7 +689,6 @@ const registerClosedDraftReadableTests = (): void => {
       closedByReason,
       warehouseId,
       item.id,
-      10,
     );
     const closedByReasonLinkId = await seedLink(
       closedByReasonLine,
@@ -706,7 +714,6 @@ const registerClosedDraftReadableTests = (): void => {
       closedByArrival,
       warehouseId,
       item.id,
-      10,
     );
     const closedByArrivalLinkId = await seedLink(
       closedByArrivalLine,
@@ -738,7 +745,6 @@ const registerClosedDraftReadableTests = (): void => {
     expect(reasonDetail?.state).toBe('closed');
     expect(reasonDetail?.closureReason).toBe('Supplier discontinued the line');
     expect(reasonDetail?.lines).toHaveLength(1);
-    expect(reasonDetail?.lines[0]?.receivedQuantity).toBe(10);
     // The shared Customer Order became Fulfilled through the *other* draft's arrival, not this
     // one's own — this draft holds no Allocation for it, so this is genuine drift (AC-16).
     expect(reasonDetail?.hasDriftSignal).toBe(true);
@@ -751,7 +757,6 @@ const registerClosedDraftReadableTests = (): void => {
     expect(arrivalDetail?.closureReason).toBeNull();
     expect(arrivalDetail?.arrivalConfirmedByUserId).toBe(userId);
     expect(arrivalDetail?.lines).toHaveLength(1);
-    expect(arrivalDetail?.lines[0]?.receivedQuantity).toBe(10);
     const allocatedLink = findLink(arrivalDetail, closedByArrivalLinkId);
     expect(allocatedLink?.allocation).toEqual(
       expect.objectContaining({

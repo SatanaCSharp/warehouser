@@ -166,7 +166,6 @@ export interface PurchaseDraftLineRedactedRead {
   readonly orderedQuantity: number;
   readonly packagingTypeId: string | null;
   readonly valueAddingNote: string | null;
-  readonly receivedQuantity: number | null;
   // AC-19/openapi.yaml `PurchaseDraftLineEnding` — how this line ended, or `null` while it has none.
   // The four columns arrive together or not at all
   // (`chk_purchase_draft_lines_ending_attribution`), so the object is built from
@@ -509,7 +508,7 @@ const lineJsonObject = (
     ? `, 'customerDestination', ${CUSTOMER_DESTINATION_SELECT}`
     : '';
 
-  return `json_build_object('id', line.id, 'itemId', line.itemId, 'itemSku', item.sku, 'itemDescription', item.description, 'unitOfMeasure', item.unitOfMeasure, 'orderedQuantity', line.orderedQuantity, 'packagingTypeId', line.packagingTypeId, 'valueAddingNote', line.valueAddingNote, 'receivedQuantity', line.receivedQuantity, 'ending', CASE WHEN line.endingRecordedAt IS NULL THEN NULL ELSE json_build_object('kind', line.endingKind, 'quantity', line.endingQuantity, 'recordedByUserId', line.endingRecordedByUserId, 'recordedAt', line.endingRecordedAt) END, 'deliveryMode', line.deliveryMode, 'warehouseDestination', ${WAREHOUSE_DESTINATION_SELECT}${customerDestination}, 'links', (${linksSubquery(manager, identified)}))`;
+  return `json_build_object('id', line.id, 'itemId', line.itemId, 'itemSku', item.sku, 'itemDescription', item.description, 'unitOfMeasure', item.unitOfMeasure, 'orderedQuantity', line.orderedQuantity, 'packagingTypeId', line.packagingTypeId, 'valueAddingNote', line.valueAddingNote, 'ending', CASE WHEN line.endingRecordedAt IS NULL THEN NULL ELSE json_build_object('kind', line.endingKind, 'quantity', line.endingQuantity, 'recordedByUserId', line.endingRecordedByUserId, 'recordedAt', line.endingRecordedAt) END, 'deliveryMode', line.deliveryMode, 'warehouseDestination', ${WAREHOUSE_DESTINATION_SELECT}${customerDestination}, 'links', (${linksSubquery(manager, identified)}))`;
 };
 
 // The joins the two destination projections above dereference, added to whichever query builds a

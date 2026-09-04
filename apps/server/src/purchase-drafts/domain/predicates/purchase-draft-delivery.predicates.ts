@@ -46,17 +46,6 @@ export const endingMatchesDeliveryMode = (
 export const hasEndingRecorded = (endingRecordedAt: Date | null): boolean =>
   endingRecordedAt !== null;
 
-// AC-19/sad.md §6.10 step 5 — the draft stays in Ready for Ordering while any of its lines has no
-// ending, and moves to Closed with the ending of its last one. The length check is not defensive
-// padding: `every` is vacuously true on an empty array, and a draft holding no lines would then
-// close on the strength of nothing. Such a draft cannot be frozen at all (AC-14a), so "every line
-// has an ending" is false for it rather than true.
-export const everyLineHasAnEnding = (
-  lineEndingRecordedAts: readonly (Date | null)[],
-): boolean =>
-  lineEndingRecordedAts.length > 0 &&
-  lineEndingRecordedAts.every(hasEndingRecorded);
-
 // AC-12/sad.md §6.7 step 4 — "prove the address belongs to a Customer of the acting Warehouse and
 // is active". The Warehouse half is the read's own scope, which is what makes an address of another
 // Warehouse indistinguishable from a missing one; this states the half a read cannot state, over

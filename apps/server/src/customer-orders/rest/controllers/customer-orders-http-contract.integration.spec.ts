@@ -455,7 +455,6 @@ describe('customer-orders HTTP contract', () => {
       orderedQuantity: statedQuantity,
       packagingTypeId: null,
       valueAddingNote: null,
-      receivedQuantity: null,
       createdAt: seededAt,
       updatedAt: seededAt,
     });

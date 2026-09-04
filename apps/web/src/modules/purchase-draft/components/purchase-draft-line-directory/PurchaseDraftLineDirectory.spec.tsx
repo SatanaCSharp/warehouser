@@ -41,7 +41,6 @@ const dockLine: PurchaseDraftLineIdentified = {
   orderedQuantity: 140,
   packagingTypeId: null,
   valueAddingNote: null,
-  receivedQuantity: null,
   ending: null,
   deliveryMode: 'via_warehouse',
   warehouseDestination: {

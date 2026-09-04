@@ -45,7 +45,6 @@ const line = (
   orderedQuantity: 1200,
   packagingTypeId: null,
   valueAddingNote: null,
-  receivedQuantity: null,
   ending: null,
   deliveryMode: 'via_warehouse',
   warehouseDestination: {

@@ -167,7 +167,6 @@ const seedLink = async (
     orderedQuantity: 200,
     packagingTypeId: null,
     valueAddingNote: null,
-    receivedQuantity: 200,
     createdAt: now,
     updatedAt: now,
   });

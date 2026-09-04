@@ -125,7 +125,6 @@ const lineCommon = {
   orderedQuantity: 1000,
   packagingTypeId: 'pallets',
   valueAddingNote: null,
-  receivedQuantity: null,
   ending: null,
 };
 

@@ -149,7 +149,6 @@ const toLineCommonResponse = (
   orderedQuantity: line.orderedQuantity,
   packagingTypeId: line.packagingTypeId,
   valueAddingNote: line.valueAddingNote,
-  receivedQuantity: line.receivedQuantity,
   ending: line.ending as PurchaseDraftLineRedacted['ending'],
   deliveryMode: line.deliveryMode as PurchaseDraftLineRedacted['deliveryMode'],
   warehouseDestination: line.warehouseDestination,

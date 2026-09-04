@@ -66,7 +66,6 @@ const validLine = {
   orderedQuantity: 150,
   packagingTypeId: 'cable_coil',
   valueAddingNote: 'Translated sticker on each coil',
-  receivedQuantity: null,
   ending: null,
   // T19/AC-13 — how this line's own goods travel, and where. Read here in its redacted form: no
   // `customerDestination` property at all, which is the shape an actor without `CUSTOMERS:WATCH`

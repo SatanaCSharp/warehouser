@@ -47,7 +47,6 @@ const draft = {
       orderedQuantity: 1200,
       packagingTypeId: 'cartons',
       valueAddingNote: null,
-      receivedQuantity: null,
       ending: null,
       deliveryMode: 'via_warehouse',
       warehouseDestination: {

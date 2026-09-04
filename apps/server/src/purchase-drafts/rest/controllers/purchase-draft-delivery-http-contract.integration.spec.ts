@@ -357,7 +357,6 @@ describe('purchase-drafts delivery HTTP contract', () => {
           : CUSTOMER_ACCESS_NOTES
         : null,
       frozenCustomerName: frozen ? (delivery.frozenCustomerName ?? null) : null,
-      receivedQuantity: null,
       endingQuantity: null,
       endingKind: null,
       endingRecordedByUserId: null,

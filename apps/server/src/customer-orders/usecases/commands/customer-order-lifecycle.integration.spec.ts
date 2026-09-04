@@ -196,7 +196,6 @@ const seedAllocation = async (
     orderedQuantity: allocatedQuantity,
     packagingTypeId: null,
     valueAddingNote: null,
-    receivedQuantity: allocatedQuantity,
     createdAt: now,
     updatedAt: later,
   });

@@ -81,7 +81,6 @@ const draft = (
       orderedQuantity: 400,
       packagingTypeId: 'cartons',
       valueAddingNote: null,
-      receivedQuantity: null,
       ending: null,
       deliveryMode: 'via_warehouse',
       warehouseDestination: {
@@ -142,7 +141,6 @@ describe('PurchaseDraftDetailPane', () => {
             orderedQuantity: 400,
             packagingTypeId: 'cartons',
             valueAddingNote: null,
-            receivedQuantity: null,
             ending: null,
             deliveryMode: 'via_warehouse',
             warehouseDestination: {

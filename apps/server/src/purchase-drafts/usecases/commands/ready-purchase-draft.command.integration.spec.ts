@@ -256,7 +256,6 @@ const seedLine = async (
     frozenDeliveryAddressText: null,
     frozenAccessNotes: null,
     frozenCustomerName: null,
-    receivedQuantity: null,
     endingQuantity: null,
     endingKind: null,
     endingRecordedByUserId: null,

@@ -210,7 +210,6 @@ export class PurchaseDraftAssemblyRepository {
         frozenDeliveryAddressText: null,
         frozenAccessNotes: null,
         frozenCustomerName: null,
-        receivedQuantity: null,
         endingQuantity: null,
         endingKind: null,
         endingRecordedByUserId: null,
@@ -297,7 +296,6 @@ export class PurchaseDraftAssemblyRepository {
       valueAddingNote: input.valueAddingNote ?? null,
       deliveryMode: input.deliveryMode,
       customerDeliveryAddressId: input.customerDeliveryAddressId,
-      receivedQuantity: null,
       createdAt: now,
       updatedAt: now,
     });

@@ -151,7 +151,6 @@ const buildPurchaseDraftLine = (
   frozenDeliveryAddressText: null,
   frozenAccessNotes: null,
   frozenCustomerName: null,
-  receivedQuantity: null,
   endingQuantity: null,
   endingKind: null,
   endingRecordedByUserId: null,
@@ -392,7 +391,6 @@ const describeRoundTrips = (): void => {
         itemId: item.id,
         orderedQuantity: 25,
         packagingTypeId: null,
-        receivedQuantity: null,
       });
     });
 

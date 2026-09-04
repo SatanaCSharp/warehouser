@@ -194,7 +194,6 @@ const seedLine = async (
     orderedQuantity,
     packagingTypeId: null,
     valueAddingNote: null,
-    receivedQuantity: null,
     createdAt: now,
     updatedAt: now,
   });

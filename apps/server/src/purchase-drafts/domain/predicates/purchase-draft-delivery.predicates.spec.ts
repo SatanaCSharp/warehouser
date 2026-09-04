@@ -7,7 +7,6 @@ import { isDraftMutable } from 'purchase-drafts/domain/predicates/purchase-draft
 import {
   directLineNamesACustomerAddress,
   endingMatchesDeliveryMode,
-  everyLineHasAnEnding,
   hasEndingRecorded,
 } from 'purchase-drafts/domain/predicates/purchase-draft-delivery.predicates';
 import {
@@ -106,27 +105,6 @@ describe('purchase-draft delivery predicates', () => {
 
     it('is true once an ending has been recorded against the line', () => {
       expect(hasEndingRecorded(AN_ENDING_TIME)).toBe(true);
-    });
-  });
-
-  // AC-19 — the draft "stays in Ready for Ordering for as long as any of its lines still has no
-  // ending recorded, and moves to Closed once every one of them has" (sad.md §6.10 step 5).
-  describe('everyLineHasAnEnding', () => {
-    it('does not hold while any line is still without an ending', () => {
-      expect(everyLineHasAnEnding([AN_ENDING_TIME, null])).toBe(false);
-      expect(everyLineHasAnEnding([null, null])).toBe(false);
-    });
-
-    it('holds exactly once the last line has its ending', () => {
-      expect(everyLineHasAnEnding([AN_ENDING_TIME])).toBe(true);
-      expect(everyLineHasAnEnding([AN_ENDING_TIME, AN_ENDING_TIME])).toBe(true);
-    });
-
-    // AC-14a — a draft holding no lines is never frozen, so it never reaches closure by its lines.
-    // `Array.every` is vacuously true on an empty array, which would close such a draft on the
-    // strength of nothing.
-    it('does not hold for a draft with no lines at all', () => {
-      expect(everyLineHasAnEnding([])).toBe(false);
     });
   });
 

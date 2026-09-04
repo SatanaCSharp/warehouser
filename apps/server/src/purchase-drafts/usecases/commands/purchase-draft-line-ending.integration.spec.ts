@@ -207,7 +207,6 @@ const seedLine = async (
     orderedQuantity,
     packagingTypeId: null,
     valueAddingNote: null,
-    receivedQuantity: null,
     deliveryMode,
     customerDeliveryAddressId,
     endingQuantity: null,

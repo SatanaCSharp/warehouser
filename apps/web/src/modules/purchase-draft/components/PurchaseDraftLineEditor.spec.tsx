@@ -81,7 +81,6 @@ const line = (
   orderedQuantity: 400,
   packagingTypeId: 'cartons',
   valueAddingNote: 'Label each carton for Nordwind',
-  receivedQuantity: null,
   ending: null,
   deliveryMode: 'via_warehouse',
   warehouseDestination: {
