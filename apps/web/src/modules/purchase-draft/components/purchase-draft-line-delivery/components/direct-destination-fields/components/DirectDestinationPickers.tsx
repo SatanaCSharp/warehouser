@@ -26,9 +26,11 @@ export type DirectDestinationPickersProps = {
  * has said where it goes.
  *
  * AC-14's refusal — the Warehouse's own address on a direct line — is the
- * server's, bound to this field when it comes back. It is structurally
- * unreachable from here: the Warehouse's address is columns on `warehouses`
- * and has no identifier this picker could offer.
+ * server's, and is structurally unreachable from here: the Warehouse's address
+ * is columns on `warehouses` and has no identifier this picker could offer.
+ * Nothing binds that code to this field, and nothing needs to: no
+ * `fieldErrorsForCode` entry maps it, because the payload that would raise it
+ * cannot be composed here.
  *
  * Both pickers reach `modules/customer` through its declared public surface
  * rather than a third picker being built here.
