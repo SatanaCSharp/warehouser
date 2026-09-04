@@ -2405,10 +2405,13 @@ components:
 
     InvalidPurchaseDraftInput:
       description: |
-        `deliveryMode: direct_to_customer` was submitted without `customerDeliveryAddressId`, or
-        `via_warehouse` with one — the `chk_purchase_draft_lines_delivery_mode_address` pairing as a
-        payload refusal; or a received or delivered quantity is negative or not a whole number, or an
-        allocated quantity is not positive; or the request failed schema validation.
+        `deliveryMode: via_warehouse` was submitted with `customerDeliveryAddressId` — the
+        `chk_purchase_draft_lines_delivery_mode_address` pairing as a payload refusal (a Direct to
+        Customer line naming no address is not this: the schema deliberately lets it through so the
+        command can decide it, and it surfaces as the AC-14 409 documented on
+        `PurchaseDraftLineDestinationConflict`); or a received or delivered quantity is negative or
+        not a whole number, or an allocated quantity is not positive; or the request failed schema
+        validation.
       content:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
@@ -2417,10 +2420,10 @@ components:
               summary: chk_purchase_draft_lines_delivery_mode_address
               value:
                 code: "purchase_drafts.invalid_input"
-                message: "A Direct to Customer line names a Customer's Delivery Address and a Via Warehouse line names none."
+                message: "A Via Warehouse line names no Customer Delivery Address."
                 details:
                   field: "customerDeliveryAddressId"
-                  rule: "required_for_direct_to_customer"
+                  rule: "no_address_for_via_warehouse"
             negativeQuantity:
               summary: AC-19
               value:

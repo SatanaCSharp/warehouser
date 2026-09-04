@@ -809,6 +809,11 @@ describe('purchase-drafts delivery HTTP contract', () => {
   // -- AC-12: the address a Direct to Customer line ships to ---------------------------------------
 
   describe('PATCH a line’s destination proves the address (AC-12)', () => {
+    // The four cases below need only PURCHASE_DRAFTS_UPDATE beside the baseline watch Permission;
+    // `records the destination...` also needs CUSTOMERS_WATCH and seeds its own cookie.
+    const updatePermissions = [PURCHASE_DRAFTS_WATCH, PURCHASE_DRAFTS_UPDATE];
+    const seedUpdateCookie = () => seedActor(updatePermissions);
+
     // The defect T15 left open: before T19 this reached
     // `fk_purchase_draft_lines_delivery_address` and the resulting `QueryFailedError` surfaced as a
     // **500**, on an operation whose contract declares no internal failure at all.
@@ -824,10 +829,7 @@ describe('purchase-drafts delivery HTTP contract', () => {
         await seedWorld();
         const { draftId, lineId } = await seedDraftWithLine();
         const addressId = await addressOf();
-        const cookie = await seedActor([
-          PURCHASE_DRAFTS_WATCH,
-          PURCHASE_DRAFTS_UPDATE,
-        ]);
+        const cookie = await seedUpdateCookie();
 
         const { status, body } = await request(
           'PATCH',
@@ -847,46 +849,11 @@ describe('purchase-drafts delivery HTTP contract', () => {
       },
     );
 
-    it('refuses an Inactive address with the declared 409, and writes nothing', async () => {
-      await seedWorld();
-      const { addressId } = await seedCustomerAddress(warehouseId, seededAt);
-      const { draftId, lineId } = await seedDraftWithLine();
-      const cookie = await seedActor([
-        PURCHASE_DRAFTS_WATCH,
-        PURCHASE_DRAFTS_UPDATE,
-      ]);
-
-      const { status, body } = await request(
-        'PATCH',
-        `${draftsPath}/${draftId}/lines/${lineId}`,
-        cookie,
-        {
-          deliveryMode: 'direct_to_customer',
-          customerDeliveryAddressId: addressId,
-        },
-      );
-
-      expect(status).toBe(409);
-      expect(body).toMatchObject({
-        code: 'customers.invalid_delivery_address',
-      });
-
-      const line = await dataSource.manager
-        .getRepository(PurchaseDraftLineEntity)
-        .findOneByOrFail({ id: lineId });
-      expect(line.deliveryMode).toBe('via_warehouse');
-      expect(line.customerDeliveryAddressId).toBeNull();
-    });
-
     it('records the destination when the address is an active one of this Warehouse', async () => {
       await seedWorld();
       const { addressId } = await seedCustomerAddress();
       const { draftId, lineId } = await seedDraftWithLine();
-      const cookie = await seedActor([
-        PURCHASE_DRAFTS_WATCH,
-        PURCHASE_DRAFTS_UPDATE,
-        CUSTOMERS_WATCH,
-      ]);
+      const cookie = await seedActor([...updatePermissions, CUSTOMERS_WATCH]);
 
       const { status, body } = await request(
         'PATCH',
@@ -920,10 +887,7 @@ describe('purchase-drafts delivery HTTP contract', () => {
         deliveryMode: 'direct_to_customer',
         customerDeliveryAddressId: addressId,
       });
-      const cookie = await seedActor([
-        PURCHASE_DRAFTS_WATCH,
-        PURCHASE_DRAFTS_UPDATE,
-      ]);
+      const cookie = await seedUpdateCookie();
 
       const { status } = await request(
         'PATCH',
@@ -940,35 +904,76 @@ describe('purchase-drafts delivery HTTP contract', () => {
       expect(line.customerDeliveryAddressId).toBeNull();
     });
 
-    // openapi.yaml `dependentRequired: { customerDeliveryAddressId: [deliveryMode] }` — refused by
-    // the shared schema at 400, before any route code runs.
-    it.each([
-      ['an address with no Delivery Mode', { customerDeliveryAddressId: null }],
+    // openapi.yaml `dependentRequired: { customerDeliveryAddressId: [deliveryMode] }` — the shared
+    // schema refuses the mode/address pairing at 400, before any route code runs. AC-14's two
+    // destination conflicts are not that: naming no Customer Delivery Address at all is deliberately
+    // let through by the schema (purchase-drafts-mutations.ts), so it and an Inactive address are
+    // refused by the command at 409 instead — not the 400 `openapi.yaml` `InvalidPurchaseDraftInput`
+    // used to (mis)claim for the missing-address case.
+    const destinationRefusals: [string, () => unknown, number, string][] = [
       [
-        'a Via Warehouse line naming a Customer Delivery Address',
-        {
+        'no Delivery Mode',
+        () => ({ customerDeliveryAddressId: null }),
+        400,
+        'request.invalid',
+      ],
+      [
+        'a Via Warehouse line with an address',
+        () => ({
           deliveryMode: 'via_warehouse',
           customerDeliveryAddressId: '00000000-0000-4000-8000-000000000401',
-        },
+        }),
+        400,
+        'request.invalid',
       ],
-      ['an unknown Delivery Mode', { deliveryMode: 'courier' }],
-    ])('refuses %s at 400', async (_case, payload) => {
-      await seedWorld();
-      const { draftId, lineId } = await seedDraftWithLine();
-      const cookie = await seedActor([
-        PURCHASE_DRAFTS_WATCH,
-        PURCHASE_DRAFTS_UPDATE,
-      ]);
+      [
+        'an unknown Delivery Mode',
+        () => ({ deliveryMode: 'courier' }),
+        400,
+        'request.invalid',
+      ],
+      [
+        'an Inactive address',
+        async () => ({
+          deliveryMode: 'direct_to_customer',
+          customerDeliveryAddressId: (
+            await seedCustomerAddress(warehouseId, seededAt)
+          ).addressId,
+        }),
+        409,
+        'customers.invalid_delivery_address',
+      ],
+      [
+        'no address at all',
+        () => ({ deliveryMode: 'direct_to_customer' }),
+        409,
+        'purchase_drafts.invalid_delivery_destination',
+      ],
+    ];
 
-      const { status } = await request(
-        'PATCH',
-        `${draftsPath}/${draftId}/lines/${lineId}`,
-        cookie,
-        payload,
-      );
+    it.each(destinationRefusals)(
+      'refuses %s, and writes nothing',
+      async (_case, payloadOf, expectedStatus, expectedCode) => {
+        await seedWorld();
+        const { draftId, lineId } = await seedDraftWithLine();
+        const cookie = await seedUpdateCookie();
+        const { status, body } = await request(
+          'PATCH',
+          `${draftsPath}/${draftId}/lines/${lineId}`,
+          cookie,
+          await payloadOf(),
+        );
 
-      expect(status).toBe(400);
-    });
+        expect(status).toBe(expectedStatus);
+        expect(body).toMatchObject({ code: expectedCode });
+
+        const line = await dataSource.manager
+          .getRepository(PurchaseDraftLineEntity)
+          .findOneByOrFail({ id: lineId });
+        expect(line.deliveryMode).toBe('via_warehouse');
+        expect(line.customerDeliveryAddressId).toBeNull();
+      },
+    );
   });
 
   // -- AC-15: a Direct to Customer line refuses a link to demand going anywhere else ----------------
