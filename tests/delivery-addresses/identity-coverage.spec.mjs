@@ -388,6 +388,46 @@ test('rejects a controller reaching into persistence', () => {
   );
 });
 
+// R18 — the same reach, spelled relatively. The rule anchored on `^` alone, so a controller that
+// walked up to persistence instead of using the alias was reported by nothing. The sibling
+// module-domain rule already asserted both spellings; this one did not, which is why the hole was
+// invisible from the spec.
+test('rejects a controller reaching into persistence through a relative specifier', () => {
+  assert.equal(
+    findControllerLayerViolations(
+      fixture(
+        'apps/server/src/items/rest/controllers/a.controller.ts',
+        "import { ItemRepository } from '../../../shared/domain/repositories/item.repository';",
+      ),
+    ).length,
+    1,
+  );
+});
+
+test('rejects a controller reaching a persistence entity relatively', () => {
+  assert.equal(
+    findControllerLayerViolations(
+      fixture(
+        'apps/server/src/items/rest/controllers/a.controller.ts',
+        "import { ItemEntity } from '../../../shared/domain/entities/item.entity';",
+      ),
+    ).length,
+    1,
+  );
+});
+
+test('rejects a controller importing a TypeORM subpath', () => {
+  assert.equal(
+    findControllerLayerViolations(
+      fixture(
+        'apps/server/src/items/rest/controllers/a.controller.ts',
+        "import { Repository } from 'typeorm/repository/Repository';",
+      ),
+    ).length,
+    1,
+  );
+});
+
 test('rejects a controller calling into domain code', () => {
   assert.equal(
     findControllerLayerViolations(

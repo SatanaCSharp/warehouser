@@ -168,16 +168,21 @@ export const findModulePrivateImports = (injected) => {
 // restates it). Expressed as the imports a controller may not make: persistence, and any module's
 // domain internals. A controller reaches its own module through `usecases/`, and `shared/` for
 // guards, decorators and the access principal.
+// Each pattern matches both spellings a specifier can take: the bare alias
+// (`shared/domain/repositories/x`) and the relative walk (`../../shared/domain/repositories/x`).
+// Anchoring on `^` alone let the relative spelling through, so a controller reaching persistence
+// the long way round was reported by nothing — the sibling module-domain rule below already
+// handles both through `reachesModule`, and this one now matches it.
 const CONTROLLER_FORBIDDEN = [
   {
-    pattern: /^shared\/domain\/repositories\//u,
+    pattern: /(?:^|\.\.\/)shared\/domain\/repositories\//u,
     what: 'a repository (persistence reached directly)',
   },
   {
-    pattern: /^shared\/domain\/entities\//u,
+    pattern: /(?:^|\.\.\/)shared\/domain\/entities\//u,
     what: 'a persistence entity',
   },
-  { pattern: /^typeorm$/u, what: 'TypeORM' },
+  { pattern: /^typeorm(?:\/|$)/u, what: 'TypeORM' },
 ];
 
 /**
