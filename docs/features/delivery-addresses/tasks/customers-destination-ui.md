@@ -8,6 +8,8 @@ acs:
     'AC-01',
     'AC-02',
     'AC-03',
+    'AC-03b',
+    'AC-03c',
     'AC-04',
     'AC-05',
     'AC-06',
@@ -16,6 +18,7 @@ acs:
     'AC-07',
     'AC-08',
     'AC-09',
+    'AC-23',
   ]
 files_hint:
   - 'apps/web/src/modules/customer/'

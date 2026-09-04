@@ -153,7 +153,7 @@
     {
       "id": "T11",
       "title": "Record the Warehouse's own Delivery Address end to end: Workspace-guarded command, route, contract and detail-pane section",
-      "layer": "ports",
+      "layer": "ports+ui",
       "deps": ["T3", "T4"],
       "acs": ["AC-10"],
       "dod": "PUT /api/v1/workspace/warehouses/{warehouseId}/delivery-address records and corrects the address and its access notes under WAREHOUSES:ADDRESS_UPDATE through WorkspaceAccessGuard, never deactivates, and is denied without the Workspace Permission; the Delivery address section renders between the warehouse-name form and the people list behind WorkspacePermissionGate, absent rather than disabled without the Permission; and the address is readable from the Warehouse-scoped draft projections without any Workspace Role.",
@@ -164,7 +164,8 @@
         "apps/web/vite.config.ts",
         "apps/web/src/test/locale-baseline.json",
         "tests/refactor/route-table.baseline.json"
-      ]
+      ],
+      "note": "Spans two layers deliberately: the Workspace-guarded command, route and contract (ports) and the Warehouse Delivery Address section in WarehouseDetailPane (ui). AC-10 is a <user> -> <ui> flow (sad.md 6.4 step 1) and its component coverage lives at apps/web/src/modules/workspace/.../WarehouseDeliveryAddressSection.spec.tsx:73,92,109. Recorded 2026-09-04 from the independent review, which flagged AC-10 as the only user-facing AC whose sole task layer was `ports`."
     },
     {
       "id": "T12",
@@ -305,6 +306,8 @@
         "AC-01",
         "AC-02",
         "AC-03",
+        "AC-03b",
+        "AC-03c",
         "AC-04",
         "AC-05",
         "AC-06",
@@ -312,7 +315,8 @@
         "AC-06b",
         "AC-07",
         "AC-08",
-        "AC-09"
+        "AC-09",
+        "AC-23"
       ],
       "dod": "modules/customer renders the approved frames KRDln and b7gaH9 with the Customer Card, Address Row, Awaiting Row and Awaiting Card Mobile components, its loader dispatches nothing without CUSTOMERS:WATCH and the sidebar entry is absent rather than disabled, the address and access notes render as text and never as markup or a link, the customer and address picker is exposed on the module's declared public surface, en/uk keys reach full parity with the locale baseline regenerated in its existing key order, and pnpm --filter @warehouser/web build passes with both contracts aliases in place.",
       "files_hint": [
@@ -324,7 +328,8 @@
         "apps/web/vite.config.ts",
         "apps/web/public/locales/",
         "apps/web/src/test/locale-baseline.json"
-      ]
+      ],
+      "note": "AC-03b, AC-03c and AC-23 added 2026-09-04 from the independent review: CorrectCustomerDialog.tsx entered the codebase through this task while neither name-correction AC listed it, and the archived-Warehouse read-only rendering (AC-23) is this destination's responsibility as much as the drafts and demand ones."
     },
     {
       "id": "T22",
@@ -391,6 +396,256 @@
         "docs/system/",
         "docs/system/server-index.md"
       ]
+    },
+    {
+      "id": "R1",
+      "title": "Complete the per-line ending contract: promote migration 04, drop receivedQuantity, delete the withdrawn-arrival dead code",
+      "layer": "infra",
+      "deps": [],
+      "acs": ["AC-19", "AC-22"],
+      "dod": "Migration 04 is promoted as apps/server/migrations/1786700300000-DropReceivedQuantity.ts and applies and reverts cleanly; receivedQuantity is gone from the entity, the read repository, the response mapper and purchaseDraftLineIdentified/Redacted so every line response validates against the contract's additionalProperties:false schemas; lockDraftForArrival, confirmArrival, the three arrival-confirmation predicates, the withdrawn input types and everyLineHasAnEnding are deleted with no remaining reference; ArrivalConfirmationRepository's integration describes cover lockDraftLineForEnding and recordLineEnding instead of the withdrawn pair.",
+      "files_hint": [
+        "docs/features/delivery-addresses/migrations/04-drop-received-quantity.ts",
+        "apps/server/migrations/",
+        "packages/contracts/src/purchase-drafts/purchase-drafts-projections.ts",
+        "apps/server/src/purchase-drafts/rest/purchase-draft-response.ts",
+        "apps/server/src/shared/domain/repositories/purchase-draft-read.repository.ts",
+        "apps/server/src/shared/domain/entities/purchase-draft-line.entity.ts",
+        "apps/server/src/shared/domain/repositories/arrival-confirmation.repository.ts",
+        "apps/server/src/purchase-drafts/domain/predicates/arrival-confirmation.predicates.ts",
+        "apps/server/src/purchase-drafts/domain/predicates/purchase-draft-delivery.predicates.ts"
+      ],
+      "origin": "review-2026-09-04"
+    },
+    {
+      "id": "R2",
+      "title": "Lock the draft row for a line ending so two concurrent last endings cannot both fail to close it",
+      "layer": "infra",
+      "deps": ["R1"],
+      "acs": ["AC-19", "AC-20a"],
+      "dod": "lockDraftLineForEnding takes SELECT ... FOR UPDATE on the purchase_drafts row as sad.md 6.10 step 2 and data-model.md's lock order prescribe; a two-QueryRunner integration test proves two concurrent last endings close the draft exactly once, and a second proves two concurrent first endings on one line yield exactly one recorded ending and one typed concurrency refusal.",
+      "files_hint": [
+        "apps/server/src/shared/domain/repositories/arrival-confirmation.repository.ts",
+        "apps/server/src/purchase-drafts/usecases/commands/purchase-draft-line-ending.integration.spec.ts",
+        "apps/server/src/shared/domain/repositories/arrival-confirmation.repository.integration.spec.ts"
+      ],
+      "origin": "review-2026-09-04"
+    },
+    {
+      "id": "R3",
+      "title": "Replace the self-comparing frozen-line assertions with real frozen-line coverage",
+      "layer": "tests",
+      "deps": [],
+      "acs": ["AC-06a", "AC-03b"],
+      "dod": "The local frozenLine/namingOrder literals and every assertion over them are deleted from both specs; AC-06a is proved by deactivating an address a real frozen direct_to_customer line names and re-reading that line's frozenDeliveryAddressText, frozenAccessNotes and customerDestination unchanged; AC-03b is proved by correcting a customer name against a seeded frozen line and asserting frozen_customer_name survives while the line still resolves to the same customer_id. Each new assertion is proven to have teeth by a documented mutation check.",
+      "files_hint": [
+        "apps/server/src/customers/usecases/commands/delivery-address-book.spec.ts",
+        "apps/server/src/customers/usecases/commands/correct-customer-name.command.spec.ts",
+        "apps/server/src/customers/rest/controllers/customers-http-contract.integration.spec.ts"
+      ],
+      "origin": "review-2026-09-04"
+    },
+    {
+      "id": "R4",
+      "title": "Seed an Unfulfilled Customer Order in AC-07's last-active-address refusal",
+      "layer": "tests",
+      "deps": ["R3"],
+      "acs": ["AC-07"],
+      "dod": "The AC-07 refusal is asserted with and without an Unfulfilled Customer Order on the Customer, as test-plan.md requires, so the order-blindness of the rule is proved rather than claimed in a comment.",
+      "files_hint": [
+        "apps/server/src/customers/rest/controllers/customers-http-contract.integration.spec.ts",
+        "apps/server/src/customers/usecases/commands/delivery-address-book.spec.ts"
+      ],
+      "origin": "review-2026-09-04"
+    },
+    {
+      "id": "R5",
+      "title": "Prove AC-15's link refusal over HTTP for both address kinds",
+      "layer": "tests",
+      "deps": [],
+      "acs": ["AC-15"],
+      "dod": "purchase-draft-delivery-http-contract.integration.spec.ts drives POST .../links on a direct_to_customer line against (a) another address of the same Customer and (b) an address of another Customer, asserting 409 purchase_drafts.delivery_address_disagreement, that the details name both disagreeing addresses, and that no purchase_draft_line_links row was written.",
+      "files_hint": [
+        "apps/server/src/purchase-drafts/rest/controllers/purchase-draft-delivery-http-contract.integration.spec.ts"
+      ],
+      "origin": "review-2026-09-04"
+    },
+    {
+      "id": "R6",
+      "title": "Prove AC-14's 409 over HTTP and remove the contradictory 400 clause",
+      "layer": "tests",
+      "deps": ["R5"],
+      "acs": ["AC-14"],
+      "dod": "A direct_to_customer payload submitted without customerDeliveryAddressId is asserted at 409 purchase_drafts.invalid_delivery_destination in the HTTP describe, and the InvalidPurchaseDraftInput description in openapi.yaml no longer claims the same payload is a 400.",
+      "files_hint": [
+        "apps/server/src/purchase-drafts/rest/controllers/purchase-draft-delivery-http-contract.integration.spec.ts",
+        "docs/features/delivery-addresses/contracts/openapi.yaml"
+      ],
+      "origin": "review-2026-09-04"
+    },
+    {
+      "id": "R7",
+      "title": "Give the three purchase-draft refusals member-facing copy that names what the spec requires",
+      "layer": "ui",
+      "deps": [],
+      "acs": ["AC-15", "AC-15a", "AC-16a"],
+      "dod": "PURCHASE_DRAFTS_DELIVERY_ADDRESS_DISAGREEMENT is mapped in LinkCustomerOrderDialog with copy naming both bound addresses; PURCHASE_DRAFTS_WAREHOUSE_DELIVERY_ADDRESS_REQUIRED is mapped in ReadyPurchaseDraftDialog with copy naming WAREHOUSES:ADDRESS_UPDATE; PurchaseDraftLineDelivery renders a refusal alert enumerating the disagreeing links. Each has a component spec case asserting the rendered text, and every string is a t() key present in the en and uk locale files.",
+      "files_hint": [
+        "apps/web/src/modules/purchase-draft/components/purchase-draft-line-links/components/LinkCustomerOrderDialog.tsx",
+        "apps/web/src/modules/purchase-draft/components/purchase-draft-transitions/components/ReadyPurchaseDraftDialog.tsx",
+        "apps/web/src/modules/purchase-draft/components/purchase-draft-line-delivery/PurchaseDraftLineDelivery.tsx",
+        "apps/web/public/locales/en/purchase-draft.json",
+        "apps/web/public/locales/uk/purchase-draft.json"
+      ],
+      "origin": "review-2026-09-04"
+    },
+    {
+      "id": "R8",
+      "title": "Cover the seven Customers write dialogs with component specs",
+      "layer": "ui",
+      "deps": [],
+      "acs": ["AC-01", "AC-02", "AC-03b", "AC-03c", "AC-04", "AC-06", "AC-07"],
+      "dod": "RecordCustomerDialog, CorrectCustomerDialog, DeactivateCustomerDialog, AddDeliveryAddressDialog, CorrectDeliveryAddressDialog, DeactivateDeliveryAddressDialog and CustomerRefusalAlert each have a spec asserting the request issued and the outcome shown, including the customers.name_taken refusal path and the five codes CustomerRefusalAlert maps plus its unmapped fallback.",
+      "files_hint": [
+        "apps/web/src/modules/customer/components/customer-directory/components/"
+      ],
+      "origin": "review-2026-09-04"
+    },
+    {
+      "id": "R9",
+      "title": "Name the promoted Main address in the deactivation toast",
+      "layer": "ui",
+      "deps": ["R8"],
+      "acs": ["AC-06b"],
+      "dod": "The deactivate-address success copy names the address that became Main, honouring the dialog's 'You will be told which' promise, and a component spec pins it.",
+      "files_hint": [
+        "apps/web/src/modules/customer/api/mutation-actions.ts",
+        "apps/web/public/locales/en/success.json",
+        "apps/web/public/locales/uk/success.json"
+      ],
+      "origin": "review-2026-09-04"
+    },
+    {
+      "id": "R10",
+      "title": "Prove the Customers directory renders read-only in an archived Warehouse",
+      "layer": "ui",
+      "deps": ["R8"],
+      "acs": ["AC-23"],
+      "dod": "CustomerDirectory.spec.tsx renders in an archived Warehouse and asserts every write trigger is present-but-disabled with its explanation, matching the drafts and demand halves already covered.",
+      "files_hint": [
+        "apps/web/src/modules/customer/components/customer-directory/CustomerDirectory.spec.tsx"
+      ],
+      "origin": "review-2026-09-04"
+    },
+    {
+      "id": "R11",
+      "title": "Restore the By-line EXPECTED and ENDING columns with their per-line ending action",
+      "layer": "ui",
+      "deps": [],
+      "acs": ["AC-22", "AC-19"],
+      "dod": "DockLineTable renders the five columns approved frame zj46c draws, the ENDING column carries the per-line ending action and the recorded-ending chip, and PurchaseDraftLineDirectory.spec.tsx asserts both columns and the action's reachability from the by-line view.",
+      "files_hint": [
+        "apps/web/src/modules/purchase-draft/components/purchase-draft-line-directory/components/DockLineTable.tsx",
+        "apps/web/src/modules/purchase-draft/components/purchase-draft-line-directory/PurchaseDraftLineDirectory.spec.tsx",
+        "apps/web/public/locales/en/purchase-draft.json",
+        "apps/web/public/locales/uk/purchase-draft.json"
+      ],
+      "origin": "review-2026-09-04"
+    },
+    {
+      "id": "R12",
+      "title": "Give LineEndingAction's permission negatives a positive control",
+      "layer": "tests",
+      "deps": [],
+      "acs": ["AC-19"],
+      "dod": "The swallowed findByRole().catch() is replaced by awaiting a positive the component renders for an actor without PURCHASE_DRAFTS:RECEIVE, so the two absence assertions have a control; the case is retitled from AC-22 to AC-19.",
+      "files_hint": [
+        "apps/web/src/modules/purchase-draft/components/purchase-draft-transitions/components/LineEndingAction.spec.tsx"
+      ],
+      "origin": "review-2026-09-04"
+    },
+    {
+      "id": "R13",
+      "title": "Delete the unbacked field-binding claim from DirectDestinationPickers",
+      "layer": "ui",
+      "deps": [],
+      "acs": ["AC-14"],
+      "dod": "The docblock keeps its structural-unreachability argument and drops the 'bound to this field when it comes back' clause, which no fieldErrorsForCode entry backs.",
+      "files_hint": [
+        "apps/web/src/modules/purchase-draft/components/purchase-draft-line-delivery/components/direct-destination-fields/components/DirectDestinationPickers.tsx"
+      ],
+      "origin": "review-2026-09-04"
+    },
+    {
+      "id": "R14",
+      "title": "Mark the e2e-through-UI tier Blocked and move AC-01/AC-04 into the component tier",
+      "layer": "docs",
+      "deps": [],
+      "acs": ["AC-01", "AC-04"],
+      "dod": "Every e2e-through-UI row in test-plan.md is marked Blocked the way the Load rows are, with the reason; AC-01 and AC-04 gain component-tier rows naming the specs R8 delivers, so no AC's only UI row points at a tier that does not exist.",
+      "files_hint": ["docs/features/delivery-addresses/test-plan.md"],
+      "origin": "review-2026-09-04"
+    },
+    {
+      "id": "R15",
+      "title": "Repair the task-layer manifests so layer stays a usable coverage index",
+      "layer": "docs",
+      "deps": [],
+      "acs": ["AC-10", "AC-03b", "AC-03c", "AC-23"],
+      "dod": "T11's web half is split into a ui task for AC-10 or its deliberate merge is recorded in the task note; AC-03b, AC-03c and AC-23 are added to T21's acs; tasks/tracker.md and the task bodies agree with tasks.json.",
+      "files_hint": [
+        "docs/features/delivery-addresses/tasks.json",
+        "docs/features/delivery-addresses/tasks/"
+      ],
+      "origin": "review-2026-09-04"
+    },
+    {
+      "id": "R16",
+      "title": "Give the one-component-per-file gate teeth and a non-empty-corpus guard",
+      "layer": "tests",
+      "deps": [],
+      "acs": [],
+      "dod": "The matcher is extracted pure as architecture-boundaries.mjs does, one case proves a private component annotated with an exported props type is reported, and the corpus is asserted non-empty so a glob or regex regression fails instead of passing forever.",
+      "files_hint": [
+        "apps/web/src/test/one-component-per-file/one-component-per-file.spec.ts"
+      ],
+      "origin": "review-2026-09-04"
+    },
+    {
+      "id": "R17",
+      "title": "Report unresolved handler return types and assert the companion corpora are non-empty",
+      "layer": "tests",
+      "deps": [],
+      "acs": ["AC-09a"],
+      "dod": "identity-coverage.mjs pushes a handler whose return type it cannot parse into gaps with a distinct message instead of skipping it, matching its own documented behaviour; each of the five companion rules asserts its scanned corpus is non-empty.",
+      "files_hint": [
+        "tests/delivery-addresses/identity-coverage.mjs",
+        "tests/delivery-addresses/identity-coverage.spec.mjs"
+      ],
+      "origin": "review-2026-09-04"
+    },
+    {
+      "id": "R18",
+      "title": "Match relative specifiers in the controller-persistence boundary rule",
+      "layer": "tests",
+      "deps": [],
+      "acs": [],
+      "dod": "findControllerLayerViolations reports a repository or entity reached through a relative specifier and a bare typeorm import, and the teeth case asserts both spellings as the customers-to-purchase-drafts case already does.",
+      "files_hint": [
+        "tests/delivery-addresses/architecture-boundaries.mjs",
+        "tests/delivery-addresses/identity-coverage.spec.mjs"
+      ],
+      "origin": "review-2026-09-04"
+    },
+    {
+      "id": "R19",
+      "title": "Restore MOVED_ROUTE_COUNT to a frozen moved-route set",
+      "layer": "tests",
+      "deps": [],
+      "acs": ["AC-10"],
+      "dod": "The 21 moved method/path pairs are frozen as a list and asserted by set inclusion, so a dropped moved route fails even when new routes are added at the same prefix; new routes stay governed by the baseline alone.",
+      "files_hint": ["tests/refactor/route-table.spec.mjs"],
+      "origin": "review-2026-09-04"
     }
   ]
 }

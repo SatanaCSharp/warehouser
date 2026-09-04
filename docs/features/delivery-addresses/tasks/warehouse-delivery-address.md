@@ -1,7 +1,7 @@
 ---
 id: T11
 title: "Record the Warehouse's own Delivery Address end to end: Workspace-guarded command, route, contract and detail-pane section"
-layer: 'ports'
+layer: 'ports+ui'
 deps: [T3, T4]
 acs: ['AC-10']
 files_hint:
