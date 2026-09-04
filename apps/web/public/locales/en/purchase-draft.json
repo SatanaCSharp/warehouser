@@ -59,7 +59,8 @@
       "closed": "{{lines}} · closed {{date}}",
       "discarded": "{{lines}} · discarded {{date}}"
     },
-    "drift": "Demand moved since freezing"
+    "drift": "Demand moved since freezing",
+    "addressDrift": "A directly-shipped line is going somewhere else now"
   },
   "state": {
     "draft": "Draft",
@@ -111,7 +112,11 @@
       "quantityLowered": "{{customer}} — quantity lowered from {{from}} to {{to}}, still needed by {{neededBy}}.",
       "quantityLowered_dated": "{{customer}} — quantity lowered from {{from}} to {{to}} on {{on}}, still needed by {{neededBy}}.",
       "needed_by_moved": "{{customer}} — needed by moved from {{from}} to {{to}}.",
-      "needed_by_moved_dated": "{{customer}} — needed by moved from {{from}} to {{to}} on {{on}}."
+      "needed_by_moved_dated": "{{customer}} — needed by moved from {{from}} to {{to}} on {{on}}.",
+      "addressRedirected": "{{customer}} — line {{line}} was frozen for {{from}}, and that order now goes to {{to}}.",
+      "addressRedirected_dated": "{{customer}} — line {{line}} was frozen for {{from}}, and since {{on}} that order goes to {{to}}.",
+      "addressRedirectedWithheld": "{{customer}} — line {{line}} is linked to an order that has been redirected to another delivery address.",
+      "addressRedirectedWithheld_dated": "{{customer}} — line {{line}} is linked to an order redirected to another delivery address on {{on}}."
     },
     "loading": "Loading the purchase draft",
     "error": "This purchase draft could not be read. Nothing on it has changed — select it again to retry."
@@ -165,8 +170,14 @@
       "quantityLowered": "Lowered to {{to}}",
       "quantityLowered_dated": "Lowered to {{to}} on {{on}}",
       "needed_by_moved": "Needed by moved to {{to}}",
-      "needed_by_moved_dated": "Needed by moved to {{to}} on {{on}}"
-    }
+      "needed_by_moved_dated": "Needed by moved to {{to}} on {{on}}",
+      "addressRedirected": "Now going to {{to}} instead of {{from}}",
+      "addressRedirected_dated": "Going to {{to}} instead of {{from}} since {{on}}",
+      "addressRedirectedWithheld": "Redirected to another delivery address",
+      "addressRedirectedWithheld_dated": "Redirected to another delivery address on {{on}}"
+    },
+    "withheld": "Customer identity is withheld from you.",
+    "withheldName": "a customer whose identity is withheld from you"
   },
   "transitions": {
     "ready": {
@@ -274,5 +285,38 @@
   },
   "archived": {
     "controlReason": "This warehouse has been archived, so it authorizes no change to what it holds."
+  },
+  "lineDelivery": {
+    "heading": "Delivery",
+    "modeLabel": "How it travels",
+    "mode": {
+      "via_warehouse": "Via warehouse",
+      "direct_to_customer": "Direct to customer"
+    },
+    "customerCaption": "Only customers of this warehouse are offered.",
+    "destination": {
+      "warehouseSubject": "This warehouse",
+      "noWarehouseAddress": "No delivery address is recorded for this warehouse yet.",
+      "withheld": "Customer identity is withheld from you."
+    }
+  },
+  "byLine": {
+    "toggleLabel": "How to look at them",
+    "byDraft": "By draft",
+    "byLine": "By line",
+    "dockHeading": "Landing at this warehouse",
+    "dockTableLabel": "Lines landing at this warehouse",
+    "dockEmpty": "No lines are coming to this warehouse.",
+    "directHeading": "Shipping direct to customer",
+    "directTableLabel": "Lines shipping direct to customer",
+    "directEmpty": "No lines are shipping direct to a customer.",
+    "draftColumn": "Draft",
+    "itemColumn": "Item",
+    "orderedColumn": "Ordered",
+    "destinationColumn": "Goes to",
+    "expectedArrival": "expected {{date}}",
+    "noExpectedArrival": "No expected arrival date yet",
+    "loading": "Loading purchase draft lines",
+    "error": "We couldn't read the lines of this warehouse's purchase drafts."
   }
 }

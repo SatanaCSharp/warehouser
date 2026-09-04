@@ -1,4 +1,5 @@
 import {
+  deliveryModeSchema,
   packagingTypeIdSchema,
   purchaseDraftStateSchema,
 } from 'purchase-drafts/purchase-drafts-projections';
@@ -49,16 +50,58 @@ export const purchaseDraftLineCreateSchema = z.strictObject({
 
 // openapi.yaml `PurchaseDraftLineUpdate` — every property optional; at least one must be present
 // (AC-10a, AC-12, AC-13). `null` on either half of the Pre-receipt Requirement clears it.
+//
+// **Changed by this feature:** `deliveryMode` and `customerDeliveryAddressId`. Links are managed
+// through their own sub-resource, not here, and no frozen column is submittable at all — this
+// object is strict, so `frozenDeliveryAddressText`, `frozenAccessNotes`, `frozenCustomerName` and
+// both projected destinations are refused rather than ignored (AC-17).
+//
+// The two destination properties are accepted **only** while the draft is in `draft`. After Ready
+// for Ordering they are unwritable by construction rather than by a check: the write path resolves
+// no frozen draft at all.
 export const purchaseDraftLineUpdateSchema = z
   .strictObject({
     itemId: z.string().uuid().optional(),
     orderedQuantity: z.number().int().min(1).optional(),
     packagingTypeId: packagingTypeIdSchema.nullable().optional(),
     valueAddingNote: z.string().min(1).nullable().optional(),
+    deliveryMode: deliveryModeSchema.optional(),
+    // An **active** Delivery Address of a Customer of this Warehouse, proven by the composite
+    // reference `(id, warehouse_id)` (AC-12). The Warehouse's own Delivery Address has no
+    // identifier this property could hold, so naming it here is structurally impossible; AC-14's
+    // refusal is about the member's submitted intent and is bound to this field, and is decided by
+    // the command rather than here.
+    customerDeliveryAddressId: z.string().uuid().nullable().optional(),
   })
   .refine((value) => Object.keys(value).length > 0, {
     message: 'At least one Purchase Draft Line field must be present',
-  });
+  })
+  // openapi.yaml `dependentRequired: { customerDeliveryAddressId: [deliveryMode] }` — "an address
+  // with no mode" is not a payload this endpoint has a meaning for. Bound to the field so the
+  // refusal names it.
+  .refine(
+    (value) =>
+      value.customerDeliveryAddressId === undefined ||
+      value.deliveryMode !== undefined,
+    {
+      path: ['customerDeliveryAddressId'],
+      message: 'A Customer Delivery Address states the Delivery Mode with it',
+    },
+  )
+  // `chk_purchase_draft_lines_delivery_mode_address` as a payload rule, refused at 400 rather than
+  // left to the database: a Via Warehouse line's destination *is* the Warehouse's own address and
+  // there is no identifier to keep, so setting `via_warehouse` clears it (AC-13). Stating
+  // `via_warehouse` with an address is a contradiction, not a clearance, and is refused; stating it
+  // with `null` or with the key absent is the clearance.
+  .refine(
+    (value) =>
+      value.deliveryMode !== 'via_warehouse' ||
+      (value.customerDeliveryAddressId ?? null) === null,
+    {
+      path: ['customerDeliveryAddressId'],
+      message: 'A Via Warehouse line names no Customer Delivery Address',
+    },
+  );
 
 // openapi.yaml `PurchaseDraftCreate` — state, attribution and time are not inputs (AC-10, AC-10a).
 export const purchaseDraftCreateSchema = z.strictObject({
@@ -75,6 +118,14 @@ export const purchaseDraftReviseSchema = z.strictObject({
 // `GET .../purchase-drafts` query parameters (openapi.yaml `listPurchaseDrafts`) — `state` narrows
 // to one draft state; omitted returns every state.
 export const purchaseDraftListQuerySchema = z.strictObject({
+  state: purchaseDraftStateSchema.optional(),
+});
+
+// `GET .../purchase-draft-lines` query parameters (openapi.yaml `listPurchaseDraftLines`) — the
+// by-line read narrowed by the Delivery Mode that places a line in one half or the other, and by
+// draft state. Omitting both returns every line of the acting Warehouse (AC-22).
+export const purchaseDraftLineListQuerySchema = z.strictObject({
+  deliveryMode: deliveryModeSchema.optional(),
   state: purchaseDraftStateSchema.optional(),
 });
 
@@ -125,6 +176,9 @@ export type PurchaseDraftCreate = z.infer<typeof purchaseDraftCreateSchema>;
 export type PurchaseDraftRevise = z.infer<typeof purchaseDraftReviseSchema>;
 export type PurchaseDraftListQuery = z.infer<
   typeof purchaseDraftListQuerySchema
+>;
+export type PurchaseDraftLineListQuery = z.infer<
+  typeof purchaseDraftLineListQuerySchema
 >;
 export type ArrivalAllocationCreate = z.infer<
   typeof arrivalAllocationCreateSchema

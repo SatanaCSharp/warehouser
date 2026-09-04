@@ -56,3 +56,16 @@ export const everyLineHasAnEnding = (
 ): boolean =>
   lineEndingRecordedAts.length > 0 &&
   lineEndingRecordedAts.every(hasEndingRecorded);
+
+// AC-12/sad.md §6.7 step 4 — "prove the address belongs to a Customer of the acting Warehouse and
+// is active". The Warehouse half is the read's own scope, which is what makes an address of another
+// Warehouse indistinguishable from a missing one; this states the half a read cannot state, over
+// the row it returned.
+//
+// Two conditions rather than one, because openapi.yaml refuses them differently: an address that is
+// not this Warehouse's is `404 PurchaseDraftTargetUnavailable` and an Inactive one is
+// `409 PurchaseDraftLineDestinationConflict`. Collapsing them would either disclose that an address
+// of another Warehouse exists, or hide from a member that the address they picked has been
+// withdrawn.
+export const isLineDestinationActive = (deactivatedAt: Date | null): boolean =>
+  deactivatedAt === null;

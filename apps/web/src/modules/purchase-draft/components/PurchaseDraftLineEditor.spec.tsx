@@ -82,6 +82,13 @@ const line = (
   packagingTypeId: 'cartons',
   valueAddingNote: 'Label each carton for Nordwind',
   receivedQuantity: null,
+  deliveryMode: 'via_warehouse',
+  warehouseDestination: {
+    addressText: 'Test Warehouse North, Test Industrial Estate',
+    accessNotes: null,
+    frozen: false,
+  },
+  customerDestination: null,
   links: [],
   ...overrides,
 });
@@ -91,6 +98,7 @@ const linkedLine = line({
     {
       id: '00000000-0000-4000-8000-000000000301',
       customerOrderId: '00000000-0000-4000-8000-000000000401',
+      customer: null,
       customerName: 'Nordwind Logistik GmbH',
       statedQuantity: 400,
       snapshot: null,
@@ -100,6 +108,7 @@ const linkedLine = line({
         state: 'unfulfilled',
         outstandingQuantity: 400,
         lastChangedAt: null,
+        deliveryAddress: null,
       },
       driftSignals: [],
       allocation: null,

@@ -21,6 +21,7 @@ const customerOrders: CustomerOrder[] = [
   {
     id: '00000000-0000-4000-8000-000000000401',
     itemId: '00000000-0000-4000-8000-000000000101',
+    customer: null,
     customerName: 'Nordwind Logistik GmbH',
     quantity: 800,
     outstandingQuantity: 800,

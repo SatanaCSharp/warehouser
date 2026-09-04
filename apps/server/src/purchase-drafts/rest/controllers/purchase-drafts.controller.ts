@@ -15,6 +15,7 @@ import {
 } from '@nestjs/common';
 import type {
   PurchaseDraftDetail,
+  PurchaseDraftLineUpdate,
   PurchaseDraftSummary,
 } from '@warehouser/contracts/purchase-drafts';
 import { PermissionId } from '@warehouser/shared-types/enums';
@@ -30,6 +31,10 @@ import {
   PurchaseDraftListQueryDto,
   PurchaseDraftReviseDto,
 } from 'purchase-drafts/rest/dtos/purchase-draft-mutation.dto';
+import {
+  toDetailResponse,
+  toSummaryResponse,
+} from 'purchase-drafts/rest/purchase-draft-response';
 import { AddPurchaseDraftLineCommand } from 'purchase-drafts/usecases/commands/add-purchase-draft-line.command';
 import { AddPurchaseDraftLineLinkCommand } from 'purchase-drafts/usecases/commands/add-purchase-draft-line-link.command';
 import { ClosePurchaseDraftCommand } from 'purchase-drafts/usecases/commands/close-purchase-draft.command';
@@ -40,105 +45,47 @@ import { ReadyPurchaseDraftCommand } from 'purchase-drafts/usecases/commands/rea
 import { RemovePurchaseDraftLineCommand } from 'purchase-drafts/usecases/commands/remove-purchase-draft-line.command';
 import { RemovePurchaseDraftLineLinkCommand } from 'purchase-drafts/usecases/commands/remove-purchase-draft-line-link.command';
 import { RevisePurchaseDraftCommand } from 'purchase-drafts/usecases/commands/revise-purchase-draft.command';
+import type { ReviseLineInput } from 'purchase-drafts/usecases/commands/revise-purchase-draft-line.command';
 import { RevisePurchaseDraftLineCommand } from 'purchase-drafts/usecases/commands/revise-purchase-draft-line.command';
 import { RevisePurchaseDraftLineLinkCommand } from 'purchase-drafts/usecases/commands/revise-purchase-draft-line-link.command';
-import type { PurchaseDraftLineLinkWithDrift } from 'purchase-drafts/usecases/queries/drift-signals';
 import { ListPurchaseDraftsQuery } from 'purchase-drafts/usecases/queries/list-purchase-drafts.query';
-import type {
-  PurchaseDraftDetailWithDrift,
-  PurchaseDraftLineWithDrift,
-} from 'purchase-drafts/usecases/queries/read-purchase-draft.query';
 import { ReadPurchaseDraftQuery } from 'purchase-drafts/usecases/queries/read-purchase-draft.query';
 import type { WarehouseAccessRequest } from 'shared/access/access-request';
 import { ArchivedTolerantRead } from 'shared/access/archived-tolerant-read.decorator';
+import { ObservedPermission } from 'shared/decorators/observed-permission.decorator';
 import { RequiredPermission } from 'shared/decorators/required-permission.decorator';
 import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
 import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
 import { WriteRateLimitGuard } from 'shared/guards/write-rate-limit.guard';
 import { WriteRateLimited } from 'shared/guards/write-rate-limited.decorator';
 
-// The application boundary returns instants as `Date`; openapi.yaml carries every summary instant
-// as a date-time and `expectedArrivalDate` as a calendar date already stored/returned as a string.
-const toSummaryResponse = (
-  summary: PurchaseDraftDetailWithDrift,
-): PurchaseDraftSummary => ({
-  id: summary.id,
-  reference: summary.reference,
-  state: summary.state as PurchaseDraftSummary['state'],
-  expectedArrivalDate: summary.expectedArrivalDate,
-  lineCount: summary.lineCount,
-  hasDriftSignal: summary.hasDriftSignal,
-  closureReason: summary.closureReason,
-  createdByUserId: summary.createdByUserId,
-  createdAt: summary.createdAt.toISOString(),
-  readiedByUserId: summary.readiedByUserId,
-  readiedAt: summary.readiedAt?.toISOString() ?? null,
-  closedByUserId: summary.closedByUserId,
-  closedAt: summary.closedAt?.toISOString() ?? null,
-  arrivalConfirmedByUserId: summary.arrivalConfirmedByUserId,
-  arrivalConfirmedAt: summary.arrivalConfirmedAt?.toISOString() ?? null,
-  discardedByUserId: summary.discardedByUserId,
-  discardedAt: summary.discardedAt?.toISOString() ?? null,
-});
-
-type LinkResponse = PurchaseDraftDetail['lines'][number]['links'][number];
-
-// T18 — every property of `snapshot` and `current` is named explicitly rather than cast through.
-// The read now carries both halves of the Address Drift comparison (the captured Delivery Address
-// and the address the demand now expects), and those are customer identity, gated on
-// `CUSTOMERS:WATCH` and served by the identified/redacted response forms T19 introduces
-// (openapi.yaml `DemandSnapshotEntryIdentified`/`LinkedCustomerOrderStateIdentified`, AC-09a). A
-// cast satisfies the type without excess-property checking, so an identity field added to the read
-// would otherwise travel straight through this mapper into a response that has no Permission for
-// it. Naming the properties is what makes that impossible.
-const toLinkResponse = (
-  link: PurchaseDraftLineLinkWithDrift,
-): LinkResponse => ({
-  id: link.id,
-  customerOrderId: link.customerOrderId,
-  customerName: link.customerName,
-  statedQuantity: link.statedQuantity,
-  snapshot:
-    link.snapshot === null
-      ? null
+// openapi.yaml `PurchaseDraftLineUpdate` -> `ReviseLineInput` — the payload's two flat destination
+// properties folded into the **one** the use-case boundary takes (T15). The contract's
+// `dependentRequired` is expressed there as a type, so "an address with no mode" is unrepresentable
+// above this line rather than a case every caller has to remember; the payload schema has already
+// refused it at 400 in any event.
+//
+// Setting `via_warehouse` normalizes the address to `null`, because a Via Warehouse line's
+// destination *is* the Warehouse's own and there is no identifier to keep (AC-13, openapi.yaml
+// "setting `via_warehouse` clears it"). A payload that states no `deliveryMode` states no
+// destination at all, and the line's own is left exactly as it was.
+const toReviseLineInput = (
+  input: PurchaseDraftLineUpdate,
+): ReviseLineInput => ({
+  itemId: input.itemId,
+  orderedQuantity: input.orderedQuantity,
+  packagingTypeId: input.packagingTypeId,
+  valueAddingNote: input.valueAddingNote,
+  destination:
+    input.deliveryMode === undefined
+      ? undefined
       : {
-          capturedQuantity: link.snapshot.capturedQuantity,
-          capturedNeededBy: link.snapshot.capturedNeededBy,
-          capturedState: link.snapshot.capturedState as NonNullable<
-            LinkResponse['snapshot']
-          >['capturedState'],
+          deliveryMode: input.deliveryMode,
+          customerDeliveryAddressId:
+            input.deliveryMode === 'via_warehouse'
+              ? null
+              : (input.customerDeliveryAddressId ?? null),
         },
-  current: {
-    quantity: link.current.quantity,
-    neededBy: link.current.neededBy,
-    state: link.current.state as LinkResponse['current']['state'],
-    outstandingQuantity: link.current.outstandingQuantity,
-    lastChangedAt: link.current.lastChangedAt,
-  },
-  driftSignals: link.driftSignals as LinkResponse['driftSignals'],
-  allocation: link.allocation,
-});
-
-const toLineResponse = (
-  line: PurchaseDraftLineWithDrift,
-): PurchaseDraftDetail['lines'][number] => ({
-  id: line.id,
-  itemId: line.itemId,
-  itemSku: line.itemSku,
-  itemDescription: line.itemDescription,
-  unitOfMeasure: line.unitOfMeasure,
-  orderedQuantity: line.orderedQuantity,
-  packagingTypeId: line.packagingTypeId,
-  valueAddingNote: line.valueAddingNote,
-  receivedQuantity: line.receivedQuantity,
-  links: line.links.map(toLinkResponse),
-});
-
-const toDetailResponse = (
-  detail: PurchaseDraftDetailWithDrift,
-): PurchaseDraftDetail => ({
-  ...toSummaryResponse(detail),
-  lines: detail.lines.map(toLineResponse),
 });
 
 /** Every route whose subject is a Purchase Draft — its assembly, its freeze, its Drift Signals,
@@ -147,6 +94,23 @@ const toDetailResponse = (
  * and discard is the draft-level `DELETE`, each declaring exactly one `PermissionId` so a Role
  * missing one is denied only that one (AC-22, T16 §Notes). Every read is
  * `@ArchivedTolerantRead()` (AC-23); every mutation is `@WriteRateLimited()` (T4).
+ *
+ * **Every handler declares `@ObservedPermission(CUSTOMERS:WATCH)` beside its one required
+ * Permission**, because every one of them answers with openapi.yaml `PurchaseDraftDetail` or
+ * `PurchaseDraftSummary`, and a detail's lines carry a Direct to Customer line's
+ * `customerDestination` and each link's customer, captured address and current address. An observed
+ * Permission can neither admit nor deny — `canActivate` never consults the resolved set — so the
+ * declaration only ever narrows what the response carries (ADR 0001,
+ * server-request-authorization.md § "Declare the Permissions a projection observes"). The draft
+ * list restates it although `PurchaseDraftSummary` carries no identity of its own: openapi.yaml
+ * gives that projection **one** form because its two drift flags are booleans about the draft
+ * rather than a count, a name or an address, and declaring the Permission on every handler of the
+ * surface is what makes a later widening of the summary safe by default rather than by review.
+ *
+ * **Every response is projected by a query, never mapped from a command's result**, so a draft has
+ * exactly one projection in the application and AC-09a's redaction is decided in exactly one place;
+ * the cost is one read-back per mutation, which is the price of not having a second mapping to
+ * remember (sad.md §11).
  *
  * The controller stays a transport adapter — it invokes one command or query, and re-reads the
  * full draft through `ReadPurchaseDraftQuery` to answer with `PurchaseDraftDetail` exactly as
@@ -213,6 +177,7 @@ export class PurchaseDraftsController {
   // AC-16a/AC-23 — every draft with its state and Drift Signal presence, archived-tolerant.
   @Get()
   @RequiredPermission(PermissionId.PURCHASE_DRAFTS_WATCH)
+  @ObservedPermission(PermissionId.CUSTOMERS_WATCH)
   @ArchivedTolerantRead()
   @UseGuards(SessionAuthGuard, WarehouseAccessGuard)
   async listPurchaseDrafts(
@@ -224,31 +189,14 @@ export class PurchaseDraftsController {
       query.state,
     );
 
-    return drafts.map((draft) => ({
-      id: draft.id,
-      reference: draft.reference,
-      state: draft.state as PurchaseDraftSummary['state'],
-      expectedArrivalDate: draft.expectedArrivalDate,
-      lineCount: draft.lineCount,
-      hasDriftSignal: draft.hasDriftSignal,
-      closureReason: draft.closureReason,
-      createdByUserId: draft.createdByUserId,
-      createdAt: draft.createdAt.toISOString(),
-      readiedByUserId: draft.readiedByUserId,
-      readiedAt: draft.readiedAt?.toISOString() ?? null,
-      closedByUserId: draft.closedByUserId,
-      closedAt: draft.closedAt?.toISOString() ?? null,
-      arrivalConfirmedByUserId: draft.arrivalConfirmedByUserId,
-      arrivalConfirmedAt: draft.arrivalConfirmedAt?.toISOString() ?? null,
-      discardedByUserId: draft.discardedByUserId,
-      discardedAt: draft.discardedAt?.toISOString() ?? null,
-    }));
+    return drafts.map(toSummaryResponse);
   }
 
   // AC-10/AC-11/AC-11a/AC-22/AC-23 — records the draft in the Draft state; mutating.
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @RequiredPermission(PermissionId.PURCHASE_DRAFTS_CREATE)
+  @ObservedPermission(PermissionId.CUSTOMERS_WATCH)
   @WriteRateLimited()
   @UseGuards(SessionAuthGuard, WarehouseAccessGuard, WriteRateLimitGuard)
   async createPurchaseDraft(
@@ -266,6 +214,7 @@ export class PurchaseDraftsController {
   // AC-16/AC-23 — one draft with its per-link Drift Signal detail, archived-tolerant.
   @Get(':purchaseDraftId')
   @RequiredPermission(PermissionId.PURCHASE_DRAFTS_WATCH)
+  @ObservedPermission(PermissionId.CUSTOMERS_WATCH)
   @ArchivedTolerantRead()
   @UseGuards(SessionAuthGuard, WarehouseAccessGuard)
   async readPurchaseDraft(
@@ -279,6 +228,7 @@ export class PurchaseDraftsController {
   // state; mutating.
   @Patch(':purchaseDraftId')
   @RequiredPermission(PermissionId.PURCHASE_DRAFTS_UPDATE)
+  @ObservedPermission(PermissionId.CUSTOMERS_WATCH)
   @WriteRateLimited()
   @UseGuards(SessionAuthGuard, WarehouseAccessGuard, WriteRateLimitGuard)
   async revisePurchaseDraft(
@@ -298,6 +248,7 @@ export class PurchaseDraftsController {
   // AC-24/AC-24a/AC-22/AC-23 — discards a draft never made ready; mutating.
   @Delete(':purchaseDraftId')
   @RequiredPermission(PermissionId.PURCHASE_DRAFTS_DISCARD)
+  @ObservedPermission(PermissionId.CUSTOMERS_WATCH)
   @WriteRateLimited()
   @UseGuards(SessionAuthGuard, WarehouseAccessGuard, WriteRateLimitGuard)
   async discardPurchaseDraft(
@@ -320,6 +271,7 @@ export class PurchaseDraftsController {
   @Post(':purchaseDraftId/lines')
   @HttpCode(HttpStatus.CREATED)
   @RequiredPermission(PermissionId.PURCHASE_DRAFTS_UPDATE)
+  @ObservedPermission(PermissionId.CUSTOMERS_WATCH)
   @WriteRateLimited()
   @UseGuards(SessionAuthGuard, WarehouseAccessGuard, WriteRateLimitGuard)
   async addPurchaseDraftLine(
@@ -340,6 +292,7 @@ export class PurchaseDraftsController {
   // mutating.
   @Patch(':purchaseDraftId/lines/:purchaseDraftLineId')
   @RequiredPermission(PermissionId.PURCHASE_DRAFTS_UPDATE)
+  @ObservedPermission(PermissionId.CUSTOMERS_WATCH)
   @WriteRateLimited()
   @UseGuards(SessionAuthGuard, WarehouseAccessGuard, WriteRateLimitGuard)
   async revisePurchaseDraftLine(
@@ -353,7 +306,7 @@ export class PurchaseDraftsController {
       request.access!,
       purchaseDraftId,
       purchaseDraftLineId,
-      input,
+      toReviseLineInput(input),
     );
 
     return this.readDetail(request.access, purchaseDraftId);
@@ -362,6 +315,7 @@ export class PurchaseDraftsController {
   // AC-10a/AC-11a/AC-23 — removes a line and its links; mutating.
   @Delete(':purchaseDraftId/lines/:purchaseDraftLineId')
   @RequiredPermission(PermissionId.PURCHASE_DRAFTS_UPDATE)
+  @ObservedPermission(PermissionId.CUSTOMERS_WATCH)
   @WriteRateLimited()
   @UseGuards(SessionAuthGuard, WarehouseAccessGuard, WriteRateLimitGuard)
   async removePurchaseDraftLine(
@@ -383,6 +337,7 @@ export class PurchaseDraftsController {
   @Post(':purchaseDraftId/lines/:purchaseDraftLineId/links')
   @HttpCode(HttpStatus.CREATED)
   @RequiredPermission(PermissionId.PURCHASE_DRAFTS_UPDATE)
+  @ObservedPermission(PermissionId.CUSTOMERS_WATCH)
   @WriteRateLimited()
   @UseGuards(SessionAuthGuard, WarehouseAccessGuard, WriteRateLimitGuard)
   async linkPurchaseDraftLine(
@@ -407,6 +362,7 @@ export class PurchaseDraftsController {
     ':purchaseDraftId/lines/:purchaseDraftLineId/links/:purchaseDraftLineLinkId',
   )
   @RequiredPermission(PermissionId.PURCHASE_DRAFTS_UPDATE)
+  @ObservedPermission(PermissionId.CUSTOMERS_WATCH)
   @WriteRateLimited()
   @UseGuards(SessionAuthGuard, WarehouseAccessGuard, WriteRateLimitGuard)
   async requantifyPurchaseDraftLineLink(
@@ -431,6 +387,7 @@ export class PurchaseDraftsController {
     ':purchaseDraftId/lines/:purchaseDraftLineId/links/:purchaseDraftLineLinkId',
   )
   @RequiredPermission(PermissionId.PURCHASE_DRAFTS_UPDATE)
+  @ObservedPermission(PermissionId.CUSTOMERS_WATCH)
   @WriteRateLimited()
   @UseGuards(SessionAuthGuard, WarehouseAccessGuard, WriteRateLimitGuard)
   async unlinkPurchaseDraftLine(
@@ -452,6 +409,7 @@ export class PurchaseDraftsController {
   @Post(':purchaseDraftId/readiness')
   @HttpCode(HttpStatus.OK)
   @RequiredPermission(PermissionId.PURCHASE_DRAFTS_READY)
+  @ObservedPermission(PermissionId.CUSTOMERS_WATCH)
   @WriteRateLimited()
   @UseGuards(SessionAuthGuard, WarehouseAccessGuard, WriteRateLimitGuard)
   async readyPurchaseDraft(
@@ -471,6 +429,7 @@ export class PurchaseDraftsController {
   @Post(':purchaseDraftId/arrival')
   @HttpCode(HttpStatus.OK)
   @RequiredPermission(PermissionId.PURCHASE_DRAFTS_RECEIVE)
+  @ObservedPermission(PermissionId.CUSTOMERS_WATCH)
   @WriteRateLimited()
   @UseGuards(SessionAuthGuard, WarehouseAccessGuard, WriteRateLimitGuard)
   async confirmPurchaseDraftArrival(
@@ -497,6 +456,7 @@ export class PurchaseDraftsController {
   @Post(':purchaseDraftId/closure')
   @HttpCode(HttpStatus.OK)
   @RequiredPermission(PermissionId.PURCHASE_DRAFTS_CLOSE)
+  @ObservedPermission(PermissionId.CUSTOMERS_WATCH)
   @WriteRateLimited()
   @UseGuards(SessionAuthGuard, WarehouseAccessGuard, WriteRateLimitGuard)
   async closePurchaseDraft(

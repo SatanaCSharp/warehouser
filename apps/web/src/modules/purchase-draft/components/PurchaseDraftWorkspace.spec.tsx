@@ -6,7 +6,7 @@ import {
   Outlet,
   RouterProvider,
 } from '@tanstack/react-router';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PermissionId } from '@warehouser/shared-types/enums';
 import { Provider } from 'react-redux';
@@ -55,6 +55,7 @@ const summary = (
   expectedArrivalDate: null,
   lineCount: 1,
   hasDriftSignal: false,
+  hasDirectToCustomerAddressDrift: false,
   closureReason: null,
   createdByUserId: accessIds.actingUser,
   createdAt: '2026-08-01T09:00:00.000Z',
@@ -79,6 +80,13 @@ const line: PurchaseDraftLine = {
   packagingTypeId: null,
   valueAddingNote: null,
   receivedQuantity: null,
+  deliveryMode: 'via_warehouse',
+  warehouseDestination: {
+    addressText: 'Test Warehouse North, Test Industrial Estate',
+    accessNotes: null,
+    frozen: false,
+  },
+  customerDestination: null,
   links: [],
 };
 
@@ -392,5 +400,59 @@ describe('PurchaseDraftWorkspace', () => {
     expect(
       await screen.findByRole('button', { name: 'All purchase drafts' }),
     ).toBeInTheDocument();
+  });
+  // T23 / AC-22 — the state tabs keep choosing *which* drafts; the toggle
+  // chooses *how you look at them* (design-handoff.md §Resolved here). It is
+  // an explicitly unpinned presentation choice, so the test pins the
+  // separation AC-22 requires rather than the control's styling.
+  describe('the By draft / By line toggle (AC-22)', () => {
+    it('switches the drafts destination to the split by delivery mode', async () => {
+      const store = authenticatedStore();
+      seed(store, [summary({ id: 'ready-one', state: 'ready_for_ordering' })]);
+      // The by-line read is the surface's own, not the route loader's, so the
+      // spec seeds it exactly as it seeds the list beside it.
+      void store.dispatch(
+        purchaseDraftApi.util.upsertQueryData(
+          'listPurchaseDraftLines',
+          { warehouseId: accessIds.warehouse, state: 'draft' },
+          [],
+        ),
+      );
+      const user = userEvent.setup();
+      renderInEnteredWarehouse(<PurchaseDraftWorkspace />, store);
+
+      await user.click(await screen.findByRole('radio', { name: 'By line' }));
+
+      expect(
+        await screen.findByRole('grid', {
+          name: 'Lines landing at this warehouse',
+        }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('grid', {
+          name: 'Lines shipping direct to customer',
+        }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('list', { name: 'Purchase drafts' }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('names the two ways of looking as one radiogroup', async () => {
+      const store = authenticatedStore();
+      seed(store, [summary({ id: 'draft-one', state: 'draft' })]);
+      renderInEnteredWarehouse(<PurchaseDraftWorkspace />, store);
+
+      const toggle = await screen.findByRole('radiogroup', {
+        name: 'How to look at them',
+      });
+
+      expect(
+        within(toggle).getByRole('radio', { name: 'By draft' }),
+      ).toBeChecked();
+      expect(
+        within(toggle).getByRole('radio', { name: 'By line' }),
+      ).toBeInTheDocument();
+    });
   });
 });

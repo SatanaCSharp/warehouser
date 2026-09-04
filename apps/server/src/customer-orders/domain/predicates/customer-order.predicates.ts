@@ -1,5 +1,3 @@
-import { PermissionId } from '@warehouser/shared-types/enums';
-import { includes } from 'lodash';
 import type { CustomerOrderState } from 'shared/domain/entities/customer-order.entity';
 
 // Pure predicates for the Customer Order lifecycle (server-error-handling.md §1). No NestJS, HTTP
@@ -110,14 +108,3 @@ export const namesExactlyOneCustomerIdentity = (
 export const isRedirectableCustomerOrder = (
   state: CustomerOrderState,
 ): boolean => state === 'unfulfilled';
-
-// AC-09a / ADR 0001 — whether a projection this actor is served may carry customer identity. The
-// input is the **granted** subset of the Permissions the handler declared with
-// `@ObservedPermission`, resolved by `WarehouseAccessGuard` after the required Permission had
-// already admitted the request, so consulting it here can only ever narrow what is returned.
-//
-// A predicate over the identifiers rather than over the principal: it names the condition once for
-// every identity-bearing read of this module, and depends on nothing but the values it is handed.
-export const readsCustomerIdentity = (
-  observedPermissionIds: readonly PermissionId[],
-): boolean => includes(observedPermissionIds, PermissionId.CUSTOMERS_WATCH);

@@ -89,17 +89,29 @@ const customerOrderLifecycleRepositoryDouble = (
     .mockResolvedValue({ order: { ...order, customerDeliveryAddressId } }),
 });
 
+// T19/AC-12 — the Warehouse-scoped address-book read `RevisePurchaseDraftLineCommand` issues before
+// it writes a Direct to Customer destination. It answers with an **active address of this
+// Warehouse** by default, so every case that is not about AC-12 sees the address it names as
+// available; the AC-12 cases hand in the other two answers.
+const addressBookDouble = (
+  address: { deactivatedAt: Date | null } | null = { deactivatedAt: null },
+) => ({
+  findWarehouseDeliveryAddress: jest.fn().mockResolvedValue(address),
+});
+
 // Every command is built from the same doubles, exactly as Nest builds it from the same providers,
 // and over a **real** `PurchaseDraftAssemblyService`: every case below is about the rule being
 // enforced, not about the call being made (server-architecture.md §Services).
 const commandsWith = ({
   assemblyRepository = assemblyRepositoryDouble(),
   customerOrderLifecycleRepository = customerOrderLifecycleRepositoryDouble(),
+  addressBook = addressBookDouble(),
 }: {
   assemblyRepository?: ReturnType<typeof assemblyRepositoryDouble>;
   customerOrderLifecycleRepository?: ReturnType<
     typeof customerOrderLifecycleRepositoryDouble
   >;
+  addressBook?: ReturnType<typeof addressBookDouble>;
 } = {}) => {
   const assemblyService = new PurchaseDraftAssemblyService(
     {
@@ -121,7 +133,9 @@ const commandsWith = ({
     reviseLine: new RevisePurchaseDraftLineCommand(
       assemblyRepository as never,
       assemblyService,
+      addressBook as never,
     ),
+    addressBook,
     addLink: new AddPurchaseDraftLineLinkCommand(
       assemblyRepository as never,
       assemblyService,
@@ -483,5 +497,118 @@ describe('a Via Warehouse line links loosely, as ordering always let it (AC-15b)
     expect(
       assemblyRepository.findLinkedOrderDestinations,
     ).not.toHaveBeenCalled();
+  });
+});
+
+// T19 — the defect T15 left open, and the sad.md §6.7 step 4 proof that closes it: "prove the
+// address belongs to a Customer of the acting Warehouse and is active". Before this, an unknown or
+// cross-Warehouse address reached `fk_purchase_draft_lines_delivery_address` and the resulting
+// `QueryFailedError` was surfaced by the global filter as a **500**, on an operation whose contract
+// declares `404 PurchaseDraftTargetUnavailable` and `409 PurchaseDraftLineDestinationConflict` and
+// no internal failure at all; an Inactive address had no constraint to catch it and was written.
+describe('a Direct to Customer line ships to an address of this Warehouse (AC-12)', () => {
+  // AC-12/spec.md §6.1 — an address that does not exist and one of another Warehouse are the **one**
+  // non-enumerating outcome. The read is scoped to the acting Warehouse, so the command cannot tell
+  // the two apart even if it wanted to, and the refusal carries no details.
+  it('refuses an unknown or cross-Warehouse address with the declared 404 code, and writes nothing', async () => {
+    const assemblyRepository = assemblyRepositoryDouble();
+    const { reviseLine, addressBook } = commandsWith({
+      assemblyRepository,
+      addressBook: addressBookDouble(null),
+    });
+
+    const rejection = reviseLine.execute(currentUser, draftId, lineId, {
+      destination: {
+        deliveryMode: 'direct_to_customer',
+        customerDeliveryAddressId: customerAddressA,
+      },
+    });
+
+    await expect(rejection).rejects.toBeInstanceOf(ApplicationError);
+    await expect(rejection).rejects.toMatchObject({
+      code: ErrorCode.CUSTOMERS_TARGET_UNAVAILABLE,
+    });
+    await expect(rejection).rejects.toHaveProperty('details', undefined);
+    // The Warehouse scope is the read's own, which is what makes the two cases indistinguishable.
+    expect(addressBook.findWarehouseDeliveryAddress).toHaveBeenCalledWith(
+      customerAddressA,
+      warehouseId,
+    );
+    expect(assemblyRepository.updateLine).not.toHaveBeenCalled();
+  });
+
+  // AC-12/AC-06b — an Inactive address is a **different** refusal: the member picked a real address
+  // of a real Customer that has since been withdrawn, and no database constraint catches it at all.
+  it('refuses an Inactive address with the declared 409 code, and writes nothing', async () => {
+    const assemblyRepository = assemblyRepositoryDouble();
+
+    const rejection = commandsWith({
+      assemblyRepository,
+      addressBook: addressBookDouble({
+        deactivatedAt: new Date('2026-08-20T09:00:00.000Z'),
+      }),
+    }).reviseLine.execute(currentUser, draftId, lineId, {
+      destination: {
+        deliveryMode: 'direct_to_customer',
+        customerDeliveryAddressId: customerAddressA,
+      },
+    });
+
+    await expect(rejection).rejects.toBeInstanceOf(ApplicationError);
+    await expect(rejection).rejects.toMatchObject({
+      code: ErrorCode.CUSTOMERS_INVALID_DELIVERY_ADDRESS,
+    });
+    expect(assemblyRepository.updateLine).not.toHaveBeenCalled();
+  });
+
+  // The proof runs **before** the agreement check and before the write, so a revision naming an
+  // unavailable address never reads the line's links and never reaches the constraint.
+  it('proves the address before it reads the line’s links', async () => {
+    const assemblyRepository = assemblyRepositoryDouble({
+      linkedOrders: [
+        {
+          purchaseDraftLineLinkId: linkId,
+          customerOrderId,
+          customerOrderDeliveryAddressId: customerAddressB,
+        },
+      ],
+    });
+
+    await expect(
+      commandsWith({
+        assemblyRepository,
+        addressBook: addressBookDouble(null),
+      }).reviseLine.execute(currentUser, draftId, lineId, {
+        destination: {
+          deliveryMode: 'direct_to_customer',
+          customerDeliveryAddressId: customerAddressA,
+        },
+      }),
+    ).rejects.toMatchObject({ code: ErrorCode.CUSTOMERS_TARGET_UNAVAILABLE });
+
+    expect(
+      assemblyRepository.findLinkedOrderDestinations,
+    ).not.toHaveBeenCalled();
+  });
+
+  // AC-13/AC-15b — coming back to the dock names no address at all, so there is nothing to prove
+  // and no read is issued. A revision that says nothing about the destination asks nothing either.
+  it.each([
+    [
+      'coming back to the dock',
+      {
+        destination: {
+          deliveryMode: 'via_warehouse' as const,
+          customerDeliveryAddressId: null,
+        },
+      },
+    ],
+    ['a revision that states no destination', { orderedQuantity: 20 }],
+  ])('issues no address read when %s', async (_case, changes) => {
+    const { reviseLine, addressBook } = commandsWith();
+
+    await reviseLine.execute(currentUser, draftId, lineId, changes);
+
+    expect(addressBook.findWarehouseDeliveryAddress).not.toHaveBeenCalled();
   });
 });

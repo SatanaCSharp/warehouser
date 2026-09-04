@@ -2,6 +2,7 @@ import { useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import { ArrivalAssignmentRow } from 'modules/purchase-draft/components/purchase-draft-transitions/components/confirm-arrival-dialog/components/ArrivalAssignmentRow';
+import { useLinkNaming } from 'modules/purchase-draft/hooks/projections/useLinkNaming';
 import { isAssignableLink } from 'modules/purchase-draft/utils/arrival-form';
 import { Conditional } from 'shared/components/Conditional';
 import { FormTextField } from 'shared/components/FormTextField';
@@ -48,6 +49,7 @@ export const ArrivalLineFieldset = ({
   line,
 }: ArrivalLineFieldsetProps): ReactElement => {
   const { t } = useTranslation('purchase-draft');
+  const linkNaming = useLinkNaming();
   const { quantity } = useLocaleFormat();
   const {
     formState: { errors, isSubmitting },
@@ -75,7 +77,7 @@ export const ArrivalLineFieldset = ({
     allocationOf(allocationIndex) >= link.current.outstandingQuantity
       ? [
           t('transitions.arrival.summaryFulfilled', {
-            customer: link.customerName,
+            customer: linkNaming(link),
           }),
         ]
       : [],

@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { ArrivalAssignmentRow } from 'modules/purchase-draft/components/purchase-draft-transitions/components/confirm-arrival-dialog/components/ArrivalAssignmentRow';
 import { renderWithProviders } from 'test/render';
 
-import type { PurchaseDraftLineLink } from '@warehouser/contracts/purchase-drafts';
+import type { PurchaseDraftLineLinkIdentified } from '@warehouser/contracts/purchase-drafts';
 
 // One `Assign to them` row of the 720px arrival modal (design-handoff.md
 // `s5EPi`, AC-18): a link whose Customer Order has left `Unfulfilled` is drawn
@@ -12,13 +12,16 @@ import type { PurchaseDraftLineLink } from '@warehouser/contracts/purchase-draft
 // riding on it, so no assignment the boundary is certain to refuse can be typed.
 
 const link = (
-  overrides: Partial<PurchaseDraftLineLink>,
-): PurchaseDraftLineLink => ({
+  overrides: Partial<PurchaseDraftLineLinkIdentified>,
+): PurchaseDraftLineLinkIdentified => ({
   id: '00000000-0000-4000-8000-000000000801',
   customerOrderId: '00000000-0000-4000-8000-000000000901',
+  customer: null,
   customerName: 'Baltic Freight OU',
   statedQuantity: 400,
   snapshot: {
+    capturedDeliveryAddressId: null,
+    capturedDeliveryAddressText: null,
     capturedQuantity: 400,
     capturedNeededBy: '2026-09-12',
     capturedState: 'unfulfilled',
@@ -29,13 +32,14 @@ const link = (
     state: 'unfulfilled',
     outstandingQuantity: 400,
     lastChangedAt: null,
+    deliveryAddress: null,
   },
   driftSignals: [],
   allocation: null,
   ...overrides,
 });
 
-const renderRow = (subject: PurchaseDraftLineLink): void => {
+const renderRow = (subject: PurchaseDraftLineLinkIdentified): void => {
   renderWithProviders(
     <ul>
       <ArrivalAssignmentRow
@@ -59,6 +63,7 @@ describe('ArrivalAssignmentRow', () => {
           quantity: 1200,
           outstandingQuantity: 1200,
           lastChangedAt: null,
+          deliveryAddress: null,
         },
       }),
     );
@@ -76,6 +81,7 @@ describe('ArrivalAssignmentRow', () => {
           state: 'cancelled',
           outstandingQuantity: 0,
           lastChangedAt: '2026-08-24T12:00:00.000Z',
+          deliveryAddress: null,
         },
         driftSignals: ['cancelled'],
       }),
@@ -102,6 +108,7 @@ describe('ArrivalAssignmentRow', () => {
           state: 'fulfilled',
           outstandingQuantity: 0,
           lastChangedAt: '2026-08-26T12:00:00.000Z',
+          deliveryAddress: null,
         },
         driftSignals: ['became_fulfilled'],
       }),
@@ -120,6 +127,7 @@ describe('ArrivalAssignmentRow', () => {
           state: 'cancelled',
           outstandingQuantity: 0,
           lastChangedAt: null,
+          deliveryAddress: null,
         },
         driftSignals: [],
       }),

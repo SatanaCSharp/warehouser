@@ -5,6 +5,12 @@
 // from the same value comparison `ReadPurchaseDraftQuery` uses — so the by-line view and the
 // opened draft can never name a different signal for the same link (openapi.yaml
 // `PurchaseDraftLineListEntry`, `DriftSignalKind`).
+//
+// T19 — and that the by-line read redacts on the same terms the opened draft does, through the
+// same predicate over the same principal, while still serving every Via Warehouse line's
+// `warehouseDestination` in full to a member who holds no `CUSTOMERS:WATCH` at all: the Warehouse's
+// own address is the operator's premises data, not customer identity (AC-09a, AC-10, sad.md §7).
+import { PermissionId } from '@warehouser/shared-types/enums';
 import { ListPurchaseDraftLinesQuery } from 'purchase-drafts/usecases/queries/list-purchase-draft-lines.query';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 
@@ -30,11 +36,20 @@ const destination = (deliveryAddressId: string) => ({
   deactivatedAt: null,
 });
 
+const identifiedUser: AccessCurrentUser = {
+  ...currentUser,
+  observedPermissionIds: [PermissionId.CUSTOMERS_WATCH],
+};
+
 const linkWithCurrentAddress = (deliveryAddressId: string) => ({
   id: 'link-1',
   customerOrderId: 'order-1',
-  customerName: 'Buyer One',
+  customer: { id: 'customer-1', name: 'Buyer One' },
+  customerName: null,
   statedQuantity: 10,
+  // T19 — the repository reports the captured/current address comparison as one boolean, so the
+  // redacted read can keep naming the drift while selecting neither address.
+  addressDrift: deliveryAddressId !== addressA,
   snapshot: {
     capturedQuantity: 10,
     capturedNeededBy: '2026-09-30',
@@ -69,18 +84,80 @@ const entryWith = (deliveryMode: string, links: readonly unknown[]) => ({
     valueAddingNote: null,
     receivedQuantity: null,
     deliveryMode,
-    customerDeliveryAddressId:
-      deliveryMode === 'direct_to_customer' ? addressA : null,
-    frozenDeliveryAddressText: 'Test Address, Test City',
-    frozenAccessNotes: null,
-    frozenCustomerName:
-      deliveryMode === 'direct_to_customer' ? 'Test Customer North' : null,
+    warehouseDestination:
+      deliveryMode === 'via_warehouse'
+        ? {
+            addressText: 'Test Warehouse Dock, Test City',
+            accessNotes: 'Gate code on the intercom',
+            frozen: true,
+          }
+        : null,
+    customerDestination:
+      deliveryMode === 'direct_to_customer'
+        ? {
+            customerDeliveryAddressId: addressA,
+            customerId: 'customer-1',
+            customerName: 'Test Customer North',
+            addressText: 'Test Address, Test City',
+            accessNotes: null,
+            frozen: true,
+          }
+        : null,
     links,
   },
 });
 
-const repositoryDouble = (entries: readonly unknown[]) => ({
-  listLines: jest.fn().mockResolvedValue(entries),
+// The rows the **redacted** query produces: the line keeps its Warehouse destination and drops
+// `customerDestination`, and its links drop the customer and both sides of the address comparison.
+// The properties do not exist rather than holding `null`, because the columns were never selected.
+const redactedEntryWith = (deliveryMode: string) => {
+  const entry = entryWith(deliveryMode, []);
+
+  return {
+    ...entry,
+    line: {
+      id: entry.line.id,
+      itemId: entry.line.itemId,
+      itemSku: entry.line.itemSku,
+      itemDescription: entry.line.itemDescription,
+      unitOfMeasure: entry.line.unitOfMeasure,
+      orderedQuantity: entry.line.orderedQuantity,
+      packagingTypeId: entry.line.packagingTypeId,
+      valueAddingNote: entry.line.valueAddingNote,
+      receivedQuantity: entry.line.receivedQuantity,
+      deliveryMode: entry.line.deliveryMode,
+      warehouseDestination: entry.line.warehouseDestination,
+      links: [
+        {
+          id: 'link-1',
+          customerOrderId: 'order-1',
+          statedQuantity: 10,
+          snapshot: {
+            capturedQuantity: 10,
+            capturedNeededBy: '2026-09-30',
+            capturedState: 'unfulfilled',
+          },
+          current: {
+            quantity: 10,
+            neededBy: '2026-09-30',
+            state: 'unfulfilled',
+            outstandingQuantity: 10,
+            lastChangedAt: null,
+          },
+          allocation: null,
+          addressDrift: true,
+        },
+      ],
+    },
+  };
+};
+
+const repositoryDouble = (
+  entries: readonly unknown[],
+  redactedEntries: readonly unknown[] = entries,
+) => ({
+  listIdentifiedLines: jest.fn().mockResolvedValue(entries),
+  listRedactedLines: jest.fn().mockResolvedValue(redactedEntries),
 });
 
 const firstLinkOf = (entries: { line: { links: unknown[] } }[]) =>
@@ -95,12 +172,12 @@ describe('ListPurchaseDraftLinesQuery', () => {
     ]);
     const query = new ListPurchaseDraftLinesQuery(repository as never);
 
-    const result = await query.execute(currentUser, {
+    const result = await query.execute(identifiedUser, {
       deliveryMode: 'direct_to_customer',
       state: 'ready_for_ordering',
     });
 
-    expect(repository.listLines).toHaveBeenCalledWith(warehouseId, {
+    expect(repository.listIdentifiedLines).toHaveBeenCalledWith(warehouseId, {
       deliveryMode: 'direct_to_customer',
       state: 'ready_for_ordering',
     });
@@ -115,7 +192,7 @@ describe('ListPurchaseDraftLinesQuery', () => {
     ]);
     const query = new ListPurchaseDraftLinesQuery(repository as never);
 
-    const result = await query.execute(currentUser);
+    const result = await query.execute(identifiedUser);
 
     expect(firstLinkOf(result as never).driftSignals).toEqual([
       'delivery_address_changed',
@@ -128,8 +205,64 @@ describe('ListPurchaseDraftLinesQuery', () => {
     ]);
     const query = new ListPurchaseDraftLinesQuery(repository as never);
 
-    const result = await query.execute(currentUser);
+    const result = await query.execute(identifiedUser);
 
     expect(firstLinkOf(result as never).driftSignals).toEqual([]);
+  });
+
+  // ---- AC-09a/AC-10: the two projection forms ---------------------------------------------------
+
+  // ADR 0001 — the redacted form is a different query, and the by-line read chooses between the two
+  // through exactly the predicate the opened draft uses. A member preparing the dock who holds no
+  // `CUSTOMERS:WATCH` reads the Warehouse's own Delivery Address in full and no customer at all.
+  it('reads the redacted by-line projection for an actor without the observed CUSTOMERS:WATCH', async () => {
+    const repository = repositoryDouble(
+      [entryWith('direct_to_customer', [linkWithCurrentAddress(addressB)])],
+      [redactedEntryWith('via_warehouse')],
+    );
+    const query = new ListPurchaseDraftLinesQuery(repository as never);
+
+    const result = await query.execute(currentUser, {
+      deliveryMode: 'via_warehouse',
+    });
+
+    expect(repository.listRedactedLines).toHaveBeenCalledWith(warehouseId, {
+      deliveryMode: 'via_warehouse',
+    });
+    expect(repository.listIdentifiedLines).not.toHaveBeenCalled();
+
+    // T11's precondition, asserted end to end: a member holding `PURCHASE_DRAFTS:WATCH` and no
+    // Workspace Role at all reads the Warehouse's Delivery Address through the line projection.
+    expect(result[0]?.line.warehouseDestination?.addressText).toBe(
+      'Test Warehouse Dock, Test City',
+    );
+
+    // And reads no customer identity through it. The property names are matched with their quotes
+    // so `customerOrderId`, which the redacted form legitimately carries, cannot decide this either
+    // way.
+    const serialized = JSON.stringify(result);
+    expect(serialized).not.toContain('"customerDestination"');
+    expect(serialized).not.toContain('"customer"');
+    expect(serialized).not.toContain('"customerName"');
+    expect(serialized).not.toContain('"deliveryAddress"');
+    expect(serialized).not.toContain('"capturedDeliveryAddressId"');
+    expect(serialized).not.toContain('Buyer One');
+    expect(serialized).not.toContain('Test Customer North');
+    expect(serialized).not.toContain('Test Address');
+  });
+
+  // AC-18a — the drift is still named, because that a drift exists is a fact about the draft.
+  it('still names Address Drift in the redacted by-line projection', async () => {
+    const repository = repositoryDouble(
+      [],
+      [redactedEntryWith('via_warehouse')],
+    );
+    const query = new ListPurchaseDraftLinesQuery(repository as never);
+
+    const result = await query.execute(currentUser);
+
+    expect(firstLinkOf(result as never).driftSignals).toEqual([
+      'delivery_address_changed',
+    ]);
   });
 });

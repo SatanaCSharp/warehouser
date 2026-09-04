@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 // "What"; data-model.md "purchase_draft_demand_snapshots"/"Repository boundaries";
 // openapi.yaml `PurchaseDraftSummary`/`PurchaseDraftLineLink`/`DemandSnapshotEntry`/
 // `LinkedCustomerOrderState`/`ArrivalAllocation`).
+import { PermissionId } from '@warehouser/shared-types/enums';
 import { ReadPurchaseDraftQuery } from 'purchase-drafts/usecases/queries/read-purchase-draft.query';
 // `PurchaseDraftReadRepository` does not exist yet (T14) — this is the RED for the read that joins
 // the Demand Snapshot against the Customer Orders as they stand now, in one purpose-built query per
@@ -128,7 +129,11 @@ interface DraftDetailRead extends DraftSummaryRead {
 // module does not exist yet.
 interface PurchaseDraftReadRepositoryContract {
   listDrafts(warehouseId: string, state?: string): Promise<DraftSummaryRead[]>;
-  readDraft(
+  // T19 — the read is served in two forms, chosen by the observed `CUSTOMERS:WATCH`. This suite
+  // exercises the identified one, which is the superset: every column the redacted query selects,
+  // it selects too (AC-09a). The redaction itself is proved in
+  // `purchase-draft-redaction-read.repository.integration.spec.ts`.
+  readIdentifiedDraft(
     purchaseDraftId: string,
     warehouseId: string,
   ): Promise<DraftDetailRead | null>;
@@ -137,6 +142,15 @@ interface PurchaseDraftReadRepositoryContract {
 const repository = new PurchaseDraftReadRepository(
   dataSource,
 ) as unknown as PurchaseDraftReadRepositoryContract;
+
+// The principal `WarehouseAccessGuard` attaches to a request whose handler declared
+// `@ObservedPermission(CUSTOMERS:WATCH)` and whose actor holds it, so the query issues the
+// identified read this suite asserts against.
+const identifiedActor = (warehouseId: string) =>
+  ({
+    warehouseId,
+    observedPermissionIds: [PermissionId.CUSTOMERS_WATCH],
+  }) as never;
 
 const withQueryCount = async <T>(
   run: () => Promise<T>,
@@ -483,7 +497,7 @@ const registerReadDraftDriftDataTests = (): void => {
     });
 
     const { result: detail, queryCount } = await withQueryCount(() =>
-      repository.readDraft(draftId, warehouseId),
+      repository.readIdentifiedDraft(draftId, warehouseId),
     );
 
     expect(queryCount).toBe(1);
@@ -547,7 +561,7 @@ const registerReadDraftDriftDataTests = (): void => {
       neededBy: '2026-09-30',
     });
 
-    const detail = await repository.readDraft(draftId, warehouseId);
+    const detail = await repository.readIdentifiedDraft(draftId, warehouseId);
 
     const fulfilledLink = findLink(detail, fulfilledLinkId);
     expect(fulfilledLink?.current.state).toBe('fulfilled');
@@ -616,7 +630,7 @@ const registerNoWriteTests = (): void => {
         .findOneOrFail({ where: { id: orderId } }),
     };
 
-    await repository.readDraft(draftId, warehouseId);
+    await repository.readIdentifiedDraft(draftId, warehouseId);
     await repository.listDrafts(warehouseId);
 
     const after = {
@@ -717,7 +731,7 @@ const registerClosedDraftReadableTests = (): void => {
       userId,
     );
 
-    const reasonDetail = await repository.readDraft(
+    const reasonDetail = await repository.readIdentifiedDraft(
       closedByReason,
       warehouseId,
     );
@@ -729,7 +743,7 @@ const registerClosedDraftReadableTests = (): void => {
     // one's own — this draft holds no Allocation for it, so this is genuine drift (AC-16).
     expect(reasonDetail?.hasDriftSignal).toBe(true);
 
-    const arrivalDetail = await repository.readDraft(
+    const arrivalDetail = await repository.readIdentifiedDraft(
       closedByArrival,
       warehouseId,
     );
@@ -873,7 +887,10 @@ const registerWarehouseScopingTests = (): void => {
       'draft',
     );
 
-    const detail = await repository.readDraft(otherDraftId, warehouseId);
+    const detail = await repository.readIdentifiedDraft(
+      otherDraftId,
+      warehouseId,
+    );
     expect(detail).toBeNull();
 
     const ownDraftId = await seedPurchaseDraft(warehouseId, userId, 'draft');
@@ -933,7 +950,7 @@ const registerNonFanOutTests = (): void => {
       }
     }
 
-    const detail = await repository.readDraft(draftId, warehouseId);
+    const detail = await repository.readIdentifiedDraft(draftId, warehouseId);
 
     expect(detail?.lineCount).toBe(2);
     expect(detail?.lines).toHaveLength(2);
@@ -1025,7 +1042,7 @@ const registerExpectedArrivalDateTests = (): void => {
 
     const { rows, detail } = await withTimeZone('Europe/Kyiv', async () => ({
       rows: await repository.listDrafts(warehouseId),
-      detail: await repository.readDraft(datedDraftId, warehouseId),
+      detail: await repository.readIdentifiedDraft(datedDraftId, warehouseId),
     }));
 
     const datedRow = rows.find((row) => row.id === datedDraftId);
@@ -1049,7 +1066,10 @@ const registerExpectedArrivalDateTests = (): void => {
     );
 
     const rows = await repository.listDrafts(warehouseId);
-    const detail = await repository.readDraft(undatedDraftId, warehouseId);
+    const detail = await repository.readIdentifiedDraft(
+      undatedDraftId,
+      warehouseId,
+    );
 
     expect(rows[0]?.expectedArrivalDate).toBeNull();
     expect(detail?.expectedArrivalDate).toBeNull();
@@ -1071,7 +1091,10 @@ const registerReferenceTests = (): void => {
     const secondDraftId = await seedPurchaseDraft(warehouseId, userId, 'draft');
 
     const rows = await repository.listDrafts(warehouseId);
-    const detail = await repository.readDraft(firstDraftId, warehouseId);
+    const detail = await repository.readIdentifiedDraft(
+      firstDraftId,
+      warehouseId,
+    );
 
     const firstReference = rows.find(
       (row) => row.id === firstDraftId,
@@ -1102,11 +1125,11 @@ const registerHasDriftSignalInvariantTests = (): void => {
       state: 'unfulfilled',
     });
 
-    const detail = await repository.readDraft(draftId, warehouseId);
+    const detail = await repository.readIdentifiedDraft(draftId, warehouseId);
     expect(detail).not.toBeNull();
 
     const query = new ReadPurchaseDraftQuery(repository as never);
-    const derived = await query.execute({ warehouseId } as never, draftId);
+    const derived = await query.execute(identifiedActor(warehouseId), draftId);
 
     const derivedHasDriftSignal = (derived?.lines ?? []).some((line) =>
       line.links.some((link) => link.driftSignals.length > 0),
@@ -1125,11 +1148,11 @@ const registerHasDriftSignalInvariantTests = (): void => {
       neededBy: '2026-09-30',
     });
 
-    const detail = await repository.readDraft(draftId, warehouseId);
+    const detail = await repository.readIdentifiedDraft(draftId, warehouseId);
     expect(detail).not.toBeNull();
 
     const query = new ReadPurchaseDraftQuery(repository as never);
-    const derived = await query.execute({ warehouseId } as never, draftId);
+    const derived = await query.execute(identifiedActor(warehouseId), draftId);
 
     const derivedHasDriftSignal = (derived?.lines ?? []).some((line) =>
       line.links.some((link) => link.driftSignals.length > 0),

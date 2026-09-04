@@ -1,8 +1,10 @@
 import { useTranslation } from 'react-i18next';
 
 import { DriftSignal } from 'modules/purchase-draft/components/DriftSignal';
+import { PurchaseDraftLinkIdentity } from 'modules/purchase-draft/components/PurchaseDraftLinkIdentity';
 import { PurchaseDraftLinkRow } from 'modules/purchase-draft/components/PurchaseDraftLinkRow';
 import { useLinkDriftChips } from 'modules/purchase-draft/hooks/projections/useLinkDriftChips';
+import { useLinkNaming } from 'modules/purchase-draft/hooks/projections/useLinkNaming';
 import { isAssignableLink } from 'modules/purchase-draft/utils/arrival-form';
 import { Conditional } from 'shared/components/Conditional';
 import { FormTextField } from 'shared/components/FormTextField';
@@ -45,11 +47,12 @@ export const ArrivalAssignmentRow = ({
   onCommit,
 }: ArrivalAssignmentRowProps): ReactElement => {
   const { t } = useTranslation('purchase-draft');
+  const linkNaming = useLinkNaming();
   const { quantity } = useLocaleFormat();
   const driftChips = useLinkDriftChips();
 
   const label = t('transitions.arrival.assignLabel', {
-    customer: link.customerName,
+    customer: linkNaming(link),
   });
 
   if (!isAssignableLink(link)) {
@@ -66,7 +69,7 @@ export const ArrivalAssignmentRow = ({
     return (
       <li className="flex flex-wrap items-center gap-3 rounded-lg bg-surface-secondary p-3 opacity-70">
         <div className="min-w-0 flex-1">
-          <p className="break-words font-medium">{link.customerName}</p>
+          <PurchaseDraftLinkIdentity link={link} />
           <p className="text-sm text-muted">
             {t('transitions.arrival.unassignable', {
               count: link.statedQuantity,

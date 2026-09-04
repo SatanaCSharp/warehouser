@@ -22,6 +22,7 @@ const summary = (
   expectedArrivalDate: null,
   lineCount: 1,
   hasDriftSignal: false,
+  hasDirectToCustomerAddressDrift: false,
   closureReason: null,
   createdByUserId: accessIds.actingUser,
   createdAt: '2026-08-01T09:00:00.000Z',

@@ -7,8 +7,10 @@ import {
   PATH_METADATA,
 } from '@nestjs/common/constants';
 import { PermissionId } from '@warehouser/shared-types/enums';
+import { PurchaseDraftLinesController } from 'purchase-drafts/rest/controllers/purchase-draft-lines.controller';
 import { PurchaseDraftsController } from 'purchase-drafts/rest/controllers/purchase-drafts.controller';
 import { READ_TOLERANT_KEY } from 'shared/access/archived-tolerant-read.decorator';
+import { OBSERVED_PERMISSION_KEY } from 'shared/decorators/observed-permission.decorator';
 import { REQUIRED_PERMISSION_KEY } from 'shared/decorators/required-permission.decorator';
 import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
 import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
@@ -34,6 +36,7 @@ const method = (name: keyof PurchaseDraftsController): object =>
   Object.getOwnPropertyDescriptor(PurchaseDraftsController.prototype, name)
     ?.value as object;
 
+// eslint-disable-next-line max-lines-per-function -- one metadata suite covering one large controller surface is inherently long, matching the customer-orders precedent
 describe('PurchaseDraftsController', () => {
   it('mounts every Purchase Draft handler under the named Warehouse', () => {
     expect(Reflect.getMetadata(PATH_METADATA, PurchaseDraftsController)).toBe(
@@ -227,4 +230,103 @@ describe('PurchaseDraftsController', () => {
       ).toBe(rateLimited);
     },
   );
+
+  // T19/AC-09a/ADR 0001 — **every** handler of this controller declares the observed
+  // `CUSTOMERS:WATCH` beside its one required Permission, because every one of them answers with a
+  // `PurchaseDraftDetail` or a `PurchaseDraftSummary`, and a detail's lines carry a Direct to
+  // Customer line's `customerDestination` and each link's customer and both captured and current
+  // addresses.
+  //
+  // Asserted for the whole surface rather than for the reads alone: an observed Permission can
+  // neither admit nor deny (`warehouse-access.guard.spec.ts` proves that structurally), so
+  // declaring it costs a mutation nothing and its **absence** is what would silently disclose. A
+  // handler added here without it is the failure this case exists to catch.
+  it.each([
+    'listPurchaseDrafts',
+    'readPurchaseDraft',
+    'createPurchaseDraft',
+    'revisePurchaseDraft',
+    'discardPurchaseDraft',
+    'addPurchaseDraftLine',
+    'revisePurchaseDraftLine',
+    'removePurchaseDraftLine',
+    'linkPurchaseDraftLine',
+    'requantifyPurchaseDraftLineLink',
+    'unlinkPurchaseDraftLine',
+    'readyPurchaseDraft',
+    'confirmPurchaseDraftArrival',
+    'closePurchaseDraft',
+  ] as const)('%s declares the observed CUSTOMERS:WATCH', (handlerName) => {
+    expect(
+      Reflect.getMetadata(OBSERVED_PERMISSION_KEY, method(handlerName)),
+    ).toEqual([PermissionId.CUSTOMERS_WATCH]);
+  });
+
+  // server-request-authorization.md — the two metadata keys exist so one can never be mistaken for
+  // the other. The observed Permission must never appear as the required one on any handler here,
+  // or a member holding only `CUSTOMERS:WATCH` would be admitted to a draft they may not read.
+  it.each([
+    'listPurchaseDrafts',
+    'readPurchaseDraft',
+    'createPurchaseDraft',
+    'readyPurchaseDraft',
+    'closePurchaseDraft',
+  ] as const)(
+    '%s never requires the Permission it merely observes',
+    (handlerName) => {
+      expect(
+        Reflect.getMetadata(REQUIRED_PERMISSION_KEY, method(handlerName)),
+      ).not.toContain(PermissionId.CUSTOMERS_WATCH);
+    },
+  );
+});
+
+// T19/AC-22 — the by-line read, served at `/purchase-draft-lines` at the **top level** rather than
+// as `/purchase-drafts/lines`, so no literal segment competes with a `{purchaseDraftId}` parameter
+// (sad.md §7). Its own controller because a controller carries exactly one prefix;
+// `tests/refactor/route-table.spec.mjs` proves the split serves no method-and-path pair twice.
+describe('PurchaseDraftLinesController', () => {
+  const lineMethod = (name: keyof PurchaseDraftLinesController): object =>
+    Object.getOwnPropertyDescriptor(
+      PurchaseDraftLinesController.prototype,
+      name,
+    )?.value as object;
+
+  it('mounts the by-line read at the top level under the named Warehouse', () => {
+    expect(
+      Reflect.getMetadata(PATH_METADATA, PurchaseDraftLinesController),
+    ).toBe('api/v1/warehouses/:warehouseId/purchase-draft-lines');
+    expect(
+      Reflect.getMetadata(
+        METHOD_METADATA,
+        lineMethod('listPurchaseDraftLines'),
+      ),
+    ).toBe(RequestMethod.GET);
+    expect(
+      Reflect.getMetadata(PATH_METADATA, lineMethod('listPurchaseDraftLines')),
+    ).toBe('/');
+  });
+
+  // AC-22/AC-09a/AC-23 — one required Permission, the observed one beside it because
+  // `PurchaseDraftLineListEntry` carries a `PurchaseDraftLine`, and archived tolerance because it
+  // is a read.
+  it('declares its Permissions, its guard chain and its archived tolerance', () => {
+    const handler = lineMethod('listPurchaseDraftLines');
+
+    expect(Reflect.getMetadata(REQUIRED_PERMISSION_KEY, handler)).toEqual([
+      PermissionId.PURCHASE_DRAFTS_WATCH,
+    ]);
+    expect(Reflect.getMetadata(OBSERVED_PERMISSION_KEY, handler)).toEqual([
+      PermissionId.CUSTOMERS_WATCH,
+    ]);
+    expect(Reflect.getMetadata(GUARDS_METADATA, handler)).toEqual([
+      SessionAuthGuard,
+      WarehouseAccessGuard,
+    ]);
+    expect(Reflect.getMetadata(READ_TOLERANT_KEY, handler)).toBe(true);
+    // A read carries no rate-limit metadata, and this controller carries no mutation at all.
+    expect(
+      Reflect.getMetadata(WRITE_RATE_LIMITED_KEY, handler),
+    ).toBeUndefined();
+  });
 });

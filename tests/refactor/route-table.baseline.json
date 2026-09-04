@@ -332,6 +332,13 @@
   },
   {
     "method": "GET",
+    "path": "/api/v1/warehouses/:warehouseId/purchase-draft-lines",
+    "guards": ["SessionAuthGuard", "WarehouseAccessGuard"],
+    "permission": "RequiredPermission(PermissionId.PURCHASE_DRAFTS_WATCH)",
+    "dto": null
+  },
+  {
+    "method": "GET",
     "path": "/api/v1/warehouses/:warehouseId/purchase-drafts",
     "guards": ["SessionAuthGuard", "WarehouseAccessGuard"],
     "permission": "RequiredPermission(PermissionId.PURCHASE_DRAFTS_WATCH)",

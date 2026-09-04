@@ -18,6 +18,7 @@ import { ListPurchaseDraftLinesQuery } from 'purchase-drafts/usecases/queries/li
 import { ListPurchaseDraftsQuery } from 'purchase-drafts/usecases/queries/list-purchase-drafts.query';
 import { ReadPurchaseDraftQuery } from 'purchase-drafts/usecases/queries/read-purchase-draft.query';
 import { ArrivalConfirmationRepository } from 'shared/domain/repositories/arrival-confirmation.repository';
+import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository';
 import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository';
 import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
 import { PackagingTypeCatalogueRepository } from 'shared/domain/repositories/packaging-type-catalogue.repository';
@@ -49,6 +50,10 @@ import { PurchaseDraftReadRepository } from 'shared/domain/repositories/purchase
     ItemCatalogueRepository,
     CustomerOrderLifecycleRepository,
     PackagingTypeCatalogueRepository,
+    // AC-12/sad.md §6.7 step 4 — `RevisePurchaseDraftLineCommand` proves a Direct to Customer
+    // line's Delivery Address is one of the acting Warehouse's and is active before it writes,
+    // rather than letting `fk_purchase_draft_lines_delivery_address` fire and surface as a 500.
+    CustomerAddressBookRepository,
     CreatePurchaseDraftCommand,
     RevisePurchaseDraftCommand,
     AddPurchaseDraftLineCommand,

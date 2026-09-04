@@ -109,6 +109,35 @@ export const purchaseDraftInvalidDeliveryDestinationError =
       },
     );
 
+// AC-12/sad.md §6.7 step 4 — the Customer Delivery Address a Direct to Customer line names is not
+// one of this Warehouse's. It does not exist, or it belongs to a Customer of another Warehouse, and
+// **both fail identically**, so the refusal never discloses that the address exists elsewhere
+// (spec.md §6.1). It carries no details for exactly that reason.
+//
+// The code is `customers.target_unavailable` rather than a purchase-drafts one because that is the
+// code openapi.yaml `PurchaseDraftTargetUnavailable` documents for this case (`addressElsewhere`
+// example): the subject of the refusal is the address, and a member reading it is told the same
+// thing whichever surface named the address. A second named factory in this module against a code
+// declared in `packages/shared-types` is the same shape the two disagreement factories below
+// already use — the code identifies the rule, the factory names the moment.
+//
+// Until T19 this check did not exist at all, and an unknown or cross-Warehouse address reached
+// `fk_purchase_draft_lines_delivery_address`, whose `QueryFailedError` the global filter reported
+// as a **500** on an operation whose contract declares no internal failure.
+export const purchaseDraftLineDeliveryAddressUnavailableError =
+  (): ApplicationError =>
+    new ApplicationError(ErrorCode.CUSTOMERS_TARGET_UNAVAILABLE);
+
+// AC-12/AC-06b — the named address is this Warehouse's, and Inactive. A distinct refusal from the
+// one above and deliberately so: the member picked a real address of a real Customer that has since
+// been withdrawn, and telling them "unavailable" would hide the one fact they can act on. There is
+// no database constraint that catches this at all, which is why the check is the write path's own
+// (openapi.yaml `PurchaseDraftLineDestinationConflict`, "the named Customer Delivery Address is
+// Inactive").
+export const purchaseDraftLineDeliveryAddressInactiveError =
+  (): ApplicationError =>
+    new ApplicationError(ErrorCode.CUSTOMERS_INVALID_DELIVERY_ADDRESS);
+
 // AC-15a — a Direct to Customer line serves only the demand going to the address it ships to, and
 // the agreement is required continuously rather than only when the link was made. **Every**
 // disagreeing link is named and none is withdrawn: which one to drop is the member's decision.

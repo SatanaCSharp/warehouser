@@ -306,7 +306,7 @@ const redirectCustomerOrder = async (
 };
 
 const findLink = (
-  detail: Awaited<ReturnType<typeof repository.readDraft>>,
+  detail: Awaited<ReturnType<typeof repository.readIdentifiedDraft>>,
   linkId: string,
 ) => detail?.lines.flatMap((line) => line.links).find((l) => l.id === linkId);
 
@@ -424,7 +424,7 @@ const registerComparisonTests = (): void => {
       await buildAddressDriftFixture();
 
     const { result: detail, queryCount } = await withQueryCount(() =>
-      repository.readDraft(draftId, warehouseId),
+      repository.readIdentifiedDraft(draftId, warehouseId),
     );
 
     expect(queryCount).toBe(1);
@@ -456,7 +456,7 @@ const registerComparisonTests = (): void => {
       .getRepository(CustomerDeliveryAddressEntity)
       .update({ id: addressAId }, { addressText: correctedText });
 
-    const detail = await repository.readDraft(draftId, warehouseId);
+    const detail = await repository.readIdentifiedDraft(draftId, warehouseId);
     const link = findLink(detail, directLinkId);
 
     expect(link?.current.deliveryAddress?.addressText).toBe(correctedText);
@@ -483,7 +483,7 @@ const registerComparisonTests = (): void => {
     const linkId = await seedLink(lineId, draftId, warehouseId, orderId);
     await seedSnapshot(linkId, lineId, orderId, null);
 
-    const detail = await repository.readDraft(draftId, warehouseId);
+    const detail = await repository.readIdentifiedDraft(draftId, warehouseId);
 
     expect(findLink(detail, linkId)?.current.deliveryAddress).toBeNull();
     expect(detail?.hasDriftSignal).toBe(false);
@@ -511,7 +511,7 @@ const driftFlagsOf = async (
   draftId: string,
   warehouseId: string,
 ): Promise<DriftFlags> => {
-  const detail = await repository.readDraft(draftId, warehouseId);
+  const detail = await repository.readIdentifiedDraft(draftId, warehouseId);
   const [summary] = await repository.listDrafts(warehouseId);
 
   return {
@@ -546,7 +546,7 @@ const registerFreshnessTests = (): void => {
 
     // The frozen half is untouched; only the live half moved (AC-18).
     const drifted = findLink(
-      await repository.readDraft(draftId, warehouseId),
+      await repository.readIdentifiedDraft(draftId, warehouseId),
       fixture.directLinkId,
     );
     expect(drifted?.snapshot?.capturedDeliveryAddressId).toBe(addressAId);
@@ -560,7 +560,7 @@ const registerFreshnessTests = (): void => {
 
     expect(await driftFlagsOf(draftId, warehouseId)).toEqual(NO_DRIFT);
     const restored = findLink(
-      await repository.readDraft(draftId, warehouseId),
+      await repository.readIdentifiedDraft(draftId, warehouseId),
       fixture.directLinkId,
     );
     expect(restored?.current.deliveryAddress?.deliveryAddressId).toBe(
@@ -578,7 +578,7 @@ const registerFreshnessTests = (): void => {
 
     await redirectCustomerOrder(viaOrderId, addressBId);
 
-    const detail = await repository.readDraft(draftId, warehouseId);
+    const detail = await repository.readIdentifiedDraft(draftId, warehouseId);
     expect(detail?.hasDriftSignal).toBe(true);
     expect(detail?.hasDirectToCustomerAddressDrift).toBe(false);
     expect(
@@ -599,14 +599,14 @@ const registerFreshnessTests = (): void => {
 
     const before = await frozenStateOf(draftId);
 
-    await repository.readDraft(draftId, warehouseId);
+    await repository.readIdentifiedDraft(draftId, warehouseId);
     await repository.listDrafts(warehouseId);
     await redirectCustomerOrder(fixture.directOrderId, addressBId);
     await redirectCustomerOrder(fixture.viaOrderId, addressBId);
-    await repository.readDraft(draftId, warehouseId);
-    await repository.listLines(warehouseId);
+    await repository.readIdentifiedDraft(draftId, warehouseId);
+    await repository.listIdentifiedLines(warehouseId);
     await redirectCustomerOrder(fixture.directOrderId, addressAId);
-    await repository.readDraft(draftId, warehouseId);
+    await repository.readIdentifiedDraft(draftId, warehouseId);
 
     expect(await frozenStateOf(draftId)).toEqual(before);
   });
@@ -729,7 +729,7 @@ const registerScaleTests = (): void => {
     }
 
     const { result: detail, queryCount: readQueryCount } = await withQueryCount(
-      () => repository.readDraft(redirectedDraftId, warehouseId),
+      () => repository.readIdentifiedDraft(redirectedDraftId, warehouseId),
     );
 
     expect(readQueryCount).toBe(1);
@@ -753,7 +753,7 @@ const registerScaleTests = (): void => {
     const { warehouseId } = await seedWarehouseAtScale();
 
     const { result: entries, queryCount } = await withQueryCount(() =>
-      repository.listLines(warehouseId),
+      repository.listIdentifiedLines(warehouseId),
     );
 
     expect(queryCount).toBe(1);
@@ -773,7 +773,7 @@ const registerByLineTests = (): void => {
       await buildAddressDriftFixture();
 
     const { result: entries, queryCount } = await withQueryCount(() =>
-      repository.listLines(warehouseId),
+      repository.listIdentifiedLines(warehouseId),
     );
 
     expect(queryCount).toBe(1);
@@ -789,21 +789,32 @@ const registerByLineTests = (): void => {
     expect(viaEntry?.purchaseDraftState).toBe('ready_for_ordering');
     expect(viaEntry?.purchaseDraftReference).toEqual(expect.any(String));
     expect(viaEntry?.expectedArrivalDate).toBeNull();
-    // The frozen statement, exactly as the freeze wrote it (AC-16, AC-18).
-    expect(viaEntry?.line.frozenDeliveryAddressText).toBe(
-      WAREHOUSE_ADDRESS_TEXT,
-    );
-    expect(viaEntry?.line.frozenAccessNotes).toBe(WAREHOUSE_ACCESS_NOTES);
-    expect(viaEntry?.line.frozenCustomerName).toBeNull();
-    expect(viaEntry?.line.customerDeliveryAddressId).toBeNull();
+    // The frozen statement, exactly as the freeze wrote it, now read back through the destination
+    // shape T19 projects it as (AC-16, AC-18, openapi.yaml `LineWarehouseDestination`).
+    expect(viaEntry?.line.warehouseDestination).toEqual({
+      addressText: WAREHOUSE_ADDRESS_TEXT,
+      accessNotes: WAREHOUSE_ACCESS_NOTES,
+      frozen: true,
+    });
+    // Exactly one of the two destinations is non-null, which is
+    // `chk_purchase_draft_lines_delivery_mode_address` read back.
+    expect(viaEntry?.line.customerDestination).toBeNull();
 
     const directEntry = byMode.get('direct_to_customer');
     expect(directEntry?.line.id).toBe(directLineId);
-    expect(directEntry?.line.frozenDeliveryAddressText).toBe(ADDRESS_A_TEXT);
-    expect(directEntry?.line.frozenCustomerName).toBe(CUSTOMER_NAME);
+    expect(directEntry?.line.warehouseDestination).toBeNull();
+    expect(directEntry?.line.customerDestination?.addressText).toBe(
+      ADDRESS_A_TEXT,
+    );
+    expect(directEntry?.line.customerDestination?.customerName).toBe(
+      CUSTOMER_NAME,
+    );
+    expect(directEntry?.line.customerDestination?.frozen).toBe(true);
     // data-model.md `purchase_draft_lines` — the live reference stays populated on a frozen direct
     // line, and it is what the by-line read uses.
-    expect(directEntry?.line.customerDeliveryAddressId).toBe(addressAId);
+    expect(
+      directEntry?.line.customerDestination?.customerDeliveryAddressId,
+    ).toBe(addressAId);
     expect(directEntry?.line.links).toHaveLength(1);
   });
 
@@ -819,19 +830,19 @@ const registerByLineTests = (): void => {
       itemId,
     );
 
-    const direct = await repository.listLines(warehouseId, {
+    const direct = await repository.listIdentifiedLines(warehouseId, {
       deliveryMode: 'direct_to_customer',
     });
     expect(direct.map((entry) => entry.line.id)).toEqual([directLineId]);
 
-    const via = await repository.listLines(warehouseId, {
+    const via = await repository.listIdentifiedLines(warehouseId, {
       deliveryMode: 'via_warehouse',
     });
     expect(via.map((entry) => entry.line.id).sort()).toEqual(
       [viaLineId, openLineId].sort(),
     );
 
-    const frozen = await repository.listLines(warehouseId, {
+    const frozen = await repository.listIdentifiedLines(warehouseId, {
       state: 'ready_for_ordering',
     });
     expect(frozen.map((entry) => entry.line.id).sort()).toEqual(
@@ -846,7 +857,7 @@ const registerByLineTests = (): void => {
     const { warehouseId } = await buildAddressDriftFixture();
     const other = await buildAddressDriftFixture();
 
-    const entries = await repository.listLines(warehouseId);
+    const entries = await repository.listIdentifiedLines(warehouseId);
 
     expect(entries).toHaveLength(2);
     expect(entries.map((entry) => entry.purchaseDraftId)).not.toContain(

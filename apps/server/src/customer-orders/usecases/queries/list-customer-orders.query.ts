@@ -4,11 +4,11 @@ import {
   toIdentifiedCustomerOrder,
   toRedactedCustomerOrder,
 } from 'customer-orders/domain/mappers/customer-order-projection.mapper';
-import { readsCustomerIdentity } from 'customer-orders/domain/predicates/customer-order.predicates';
 import { map } from 'lodash';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import type { ListCustomerOrdersFilter } from 'shared/domain/repositories/customer-order-lifecycle.repository';
 import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository';
+import { readsCustomerIdentity } from 'shared/predicates/observed-permission.predicates';
 
 // `GET /api/v1/warehouses/{warehouseId}/customer-orders` (openapi.yaml `listCustomerOrders`) — the
 // Warehouse's Customer Orders, optionally narrowed to one Item and/or one lifecycle state. Both

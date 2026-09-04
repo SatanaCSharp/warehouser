@@ -5,6 +5,7 @@ import {
   purchaseDraftLineCreateSchema,
   purchaseDraftLineLinkCreateSchema,
   purchaseDraftLineLinkUpdateSchema,
+  purchaseDraftLineListQuerySchema,
   purchaseDraftLineUpdateSchema,
   purchaseDraftListQuerySchema,
   purchaseDraftReviseSchema,
@@ -24,6 +25,9 @@ export class PurchaseDraftReviseDto extends createZodDto(
 ) {}
 export class PurchaseDraftListQueryDto extends createZodDto(
   purchaseDraftListQuerySchema,
+) {}
+export class PurchaseDraftLineListQueryDto extends createZodDto(
+  purchaseDraftLineListQuerySchema,
 ) {}
 export class PurchaseDraftLineCreateDto extends createZodDto(
   purchaseDraftLineCreateSchema,

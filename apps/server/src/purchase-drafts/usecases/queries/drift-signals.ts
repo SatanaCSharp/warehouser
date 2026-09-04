@@ -1,8 +1,9 @@
 import type {
   ArrivalAllocationRead,
-  DemandSnapshotRead,
-  LinkedCustomerOrderStateRead,
-  PurchaseDraftLineLinkRead,
+  DemandSnapshotRedactedRead,
+  LinkedCustomerOrderStateRedactedRead,
+  PurchaseDraftLineLinkIdentifiedRead,
+  PurchaseDraftLineLinkRedactedRead,
 } from 'shared/domain/repositories/purchase-draft-read.repository';
 
 // openapi.yaml `DriftSignalKind`.
@@ -13,11 +14,20 @@ export type DriftSignalKind =
   | 'became_fulfilled'
   | 'delivery_address_changed';
 
-// openapi.yaml `PurchaseDraftLineLink` — the repository's raw comparison inputs plus the derived
-// `driftSignals` the query layer attaches.
-export type PurchaseDraftLineLinkWithDrift = PurchaseDraftLineLinkRead & {
+// The derived half every link carries whichever form it is served in.
+interface WithDriftSignals {
   readonly driftSignals: readonly DriftSignalKind[];
-};
+}
+
+// openapi.yaml `PurchaseDraftLineLinkRedacted`/`PurchaseDraftLineLinkIdentified` — the repository's
+// raw comparison inputs plus the derived `driftSignals` this layer attaches. Both forms carry the
+// signals: **that** an address drift exists is a fact about the draft rather than customer
+// identity, so withholding it would tell an entitled member less than AC-18a promises (AC-09a).
+export type PurchaseDraftLineLinkRedactedWithDrift =
+  PurchaseDraftLineLinkRedactedRead & WithDriftSignals;
+
+export type PurchaseDraftLineLinkIdentifiedWithDrift =
+  PurchaseDraftLineLinkIdentifiedRead & WithDriftSignals;
 
 // AC-16/AC-18 — one link's Drift Signals, derived as a value comparison between `snapshot` and
 // `current` and nothing else, so a value amended and then put back as it was reports no drift
@@ -35,9 +45,10 @@ export type PurchaseDraftLineLinkWithDrift = PurchaseDraftLineLinkRead & {
 // view can never name a different signal for one link. It is not a use case: nothing wraps an
 // `execute` here (server-use-case-boundaries.md).
 export const driftSignalsOf = (
-  snapshot: DemandSnapshotRead | null,
-  current: LinkedCustomerOrderStateRead,
+  snapshot: DemandSnapshotRedactedRead | null,
+  current: LinkedCustomerOrderStateRedactedRead,
   allocation: ArrivalAllocationRead | null,
+  addressDrift: boolean,
 ): DriftSignalKind[] => {
   if (snapshot === null) {
     return [];
@@ -61,20 +72,24 @@ export const driftSignalsOf = (
   ) {
     signals.push('became_fulfilled');
   }
-  if (
-    (current.deliveryAddress?.deliveryAddressId ?? null) !==
-    snapshot.capturedDeliveryAddressId
-  ) {
+  if (addressDrift) {
     signals.push('delivery_address_changed');
   }
 
   return signals;
 };
 
-// The one place a raw link becomes a link carrying its Drift Signals.
-export const withDriftSignals = (
-  link: PurchaseDraftLineLinkRead,
-): PurchaseDraftLineLinkWithDrift => ({
+// The one place a raw link becomes a link carrying its Drift Signals. Generic over the two
+// projection forms, so the redacted and identified reads derive the same signals from the same
+// comparison and neither can name a signal the other does not.
+export const withDriftSignals = <T extends PurchaseDraftLineLinkRedactedRead>(
+  link: T,
+): T & WithDriftSignals => ({
   ...link,
-  driftSignals: driftSignalsOf(link.snapshot, link.current, link.allocation),
+  driftSignals: driftSignalsOf(
+    link.snapshot,
+    link.current,
+    link.allocation,
+    link.addressDrift,
+  ),
 });

@@ -39,6 +39,10 @@ export const useLinkDriftChips = (): ((
         on: drift.changedAt === null ? '' : shortTimestampDate(drift.changedAt),
         ...mapValues(drift.quantities, quantity),
         ...mapValues(drift.dates, calendarDate),
+        // An address is text a member typed for a human driver to read: it has
+        // no locale form to resolve, so it is interpolated exactly as recorded
+        // rather than passed through a formatter (AC-18).
+        ...drift.addresses,
       }),
     );
 };

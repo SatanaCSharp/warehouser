@@ -2,6 +2,7 @@ import { Alert, Button } from '@heroui/react';
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { useTranslation } from 'react-i18next';
 
+import { useLinkNaming } from 'modules/purchase-draft/hooks/projections/useLinkNaming';
 import { arrivalBoundViolations } from 'modules/purchase-draft/utils/arrival-form';
 import { Conditional } from 'shared/components/Conditional';
 import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
@@ -69,6 +70,7 @@ export const ArrivalRefusalAlert = ({
   onDismiss,
 }: ArrivalRefusalAlertProps): ReactElement | null => {
   const { t } = useTranslation('purchase-draft');
+  const linkNaming = useLinkNaming();
   const { quantity, shortTimestampDate } = useLocaleFormat();
 
   if (code === undefined) {
@@ -80,7 +82,7 @@ export const ArrivalRefusalAlert = ({
   );
   const customerNames = new Map(
     draft.lines.flatMap((line) =>
-      line.links.map((link) => [link.id, link.customerName] as const),
+      line.links.map((link) => [link.id, linkNaming(link)] as const),
     ),
   );
 

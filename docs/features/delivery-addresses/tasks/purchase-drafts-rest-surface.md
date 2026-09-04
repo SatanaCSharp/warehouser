@@ -82,8 +82,17 @@ notes sit unredacted on the `warehouses` row, and that a member with a Warehouse
 in a header comment.
 
 **T19 must assert the end-to-end read**: a member holding `PURCHASE_DRAFTS:WATCH` and **no Workspace
-Role at all** reads the Warehouse's Delivery Address through the draft and line projections. Note
-that this read does not carry `accessNotes`; those stay behind `WAREHOUSES:ADDRESS_UPDATE`.
+Role at all** reads the Warehouse's Delivery Address through the draft and line projections.
+
+**Correction (2026-09-04).** An earlier version of this note said the read "does not carry
+`accessNotes`; those stay behind `WAREHOUSES:ADDRESS_UPDATE`". That was wrong, and T19 was right to
+follow the contract instead. `openapi.yaml` `LineWarehouseDestination` lists `accessNotes` in
+`required` and states the object is "readable by any member holding `PURCHASE_DRAFTS:WATCH` in that
+Warehouse and is **never** gated on `CUSTOMERS:WATCH` — a member who prepares the dock may hold no
+Workspace Role at all". `spec.md` § "Personal data touched" agrees: the Warehouse's own address and
+notes are the operator's own premises data, not a third party's. The note conflated the _write_
+Permission with the read: a member receiving goods needs the gate code. AC-09a withholds the
+_customer's_ address and notes, which is a different object.
 
 ## Notes
 

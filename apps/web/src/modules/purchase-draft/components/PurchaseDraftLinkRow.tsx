@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { DriftSignal } from 'modules/purchase-draft/components/DriftSignal';
+import { PurchaseDraftLinkIdentity } from 'modules/purchase-draft/components/PurchaseDraftLinkIdentity';
 import { useLinkDriftChips } from 'modules/purchase-draft/hooks/projections/useLinkDriftChips';
 import { Conditional } from 'shared/components/Conditional';
 import { FormTextField } from 'shared/components/FormTextField';
@@ -153,7 +154,7 @@ export const PurchaseDraftLinkRow = ({
   return (
     <li className="flex flex-wrap items-center gap-3 rounded-lg bg-surface-secondary p-3">
       <div className="min-w-0 flex-1">
-        <p className="break-words font-medium">{link.customerName}</p>
+        <PurchaseDraftLinkIdentity link={link} />
         <p className="text-sm text-muted">{demand[demandState]}</p>
         <Conditional when={link.driftSignals.length > 0}>
           <span className="mt-1 flex flex-wrap gap-2">

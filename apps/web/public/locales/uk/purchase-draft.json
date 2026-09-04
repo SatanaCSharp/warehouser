@@ -65,7 +65,8 @@
       "closed": "{{lines}} · закрито {{date}}",
       "discarded": "{{lines}} · відхилено {{date}}"
     },
-    "drift": "Попит змінився після заморожування"
+    "drift": "Попит змінився після заморожування",
+    "addressDrift": "Рядок із прямою доставкою тепер прямує в інше місце"
   },
   "state": {
     "draft": "Чернетка",
@@ -117,7 +118,11 @@
       "quantityLowered": "{{customer}} — кількість зменшено з {{from}} до {{to}}, потрібно все ще до {{neededBy}}.",
       "quantityLowered_dated": "{{customer}} — {{on}} кількість зменшено з {{from}} до {{to}}, потрібно все ще до {{neededBy}}.",
       "needed_by_moved": "{{customer}} — дату потреби перенесено з {{from}} на {{to}}.",
-      "needed_by_moved_dated": "{{customer}} — {{on}} дату потреби перенесено з {{from}} на {{to}}."
+      "needed_by_moved_dated": "{{customer}} — {{on}} дату потреби перенесено з {{from}} на {{to}}.",
+      "addressRedirected": "{{customer}} — рядок {{line}} заморожено для {{from}}, а це замовлення тепер прямує на {{to}}.",
+      "addressRedirected_dated": "{{customer}} — рядок {{line}} заморожено для {{from}}, і з {{on}} це замовлення прямує на {{to}}.",
+      "addressRedirectedWithheld": "{{customer}} — рядок {{line}} пов’язано із замовленням, яке перенаправлено на іншу адресу доставки.",
+      "addressRedirectedWithheld_dated": "{{customer}} — рядок {{line}} пов’язано із замовленням, перенаправленим на іншу адресу доставки {{on}}."
     },
     "loading": "Завантаження чернетки закупівлі",
     "error": "Цю чернетку закупівлі не вдалося прочитати. Нічого в ній не змінилося — виберіть її ще раз, щоб спробувати знову."
@@ -171,8 +176,14 @@
       "quantityLowered": "Зменшено до {{to}}",
       "quantityLowered_dated": "{{on}} зменшено до {{to}}",
       "needed_by_moved": "Дату потреби перенесено на {{to}}",
-      "needed_by_moved_dated": "{{on}} дату потреби перенесено на {{to}}"
-    }
+      "needed_by_moved_dated": "{{on}} дату потреби перенесено на {{to}}",
+      "addressRedirected": "Тепер прямує на {{to}} замість {{from}}",
+      "addressRedirected_dated": "З {{on}} прямує на {{to}} замість {{from}}",
+      "addressRedirectedWithheld": "Перенаправлено на іншу адресу доставки",
+      "addressRedirectedWithheld_dated": "{{on}} перенаправлено на іншу адресу доставки"
+    },
+    "withheld": "Дані про клієнта приховано від вас.",
+    "withheldName": "клієнт, дані якого приховано від вас"
   },
   "transitions": {
     "ready": {
@@ -282,5 +293,38 @@
   },
   "archived": {
     "controlReason": "Цей склад заархівовано, тому він не дозволяє жодних змін того, що в ньому зберігається."
+  },
+  "lineDelivery": {
+    "heading": "Доставка",
+    "modeLabel": "Як прямує",
+    "mode": {
+      "via_warehouse": "Через склад",
+      "direct_to_customer": "Прямо до клієнта"
+    },
+    "customerCaption": "Пропонуються лише клієнти цього складу.",
+    "destination": {
+      "warehouseSubject": "Цей склад",
+      "noWarehouseAddress": "Для цього складу ще не записано адресу доставки.",
+      "withheld": "Дані про клієнта приховано від вас."
+    }
+  },
+  "byLine": {
+    "toggleLabel": "Як їх переглядати",
+    "byDraft": "За чернетками",
+    "byLine": "За рядками",
+    "dockHeading": "Прибуває на цей склад",
+    "dockTableLabel": "Рядки, що прибувають на цей склад",
+    "dockEmpty": "На цей склад не прямує жоден рядок.",
+    "directHeading": "Прямо до клієнта",
+    "directTableLabel": "Рядки з прямою доставкою до клієнта",
+    "directEmpty": "Жоден рядок не прямує прямо до клієнта.",
+    "draftColumn": "Чернетка",
+    "itemColumn": "Товар",
+    "orderedColumn": "Замовлено",
+    "destinationColumn": "Прямує на",
+    "expectedArrival": "очікується {{date}}",
+    "noExpectedArrival": "Дату очікуваного прибуття ще не вказано",
+    "loading": "Завантаження рядків чернеток закупівлі",
+    "error": "Не вдалося прочитати рядки чернеток закупівлі цього складу."
   }
 }

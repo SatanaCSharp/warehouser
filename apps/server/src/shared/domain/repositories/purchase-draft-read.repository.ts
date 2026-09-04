@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { getEntityManager } from 'shared/database/db-transaction-context.service';
 import { ArrivalAllocationEntity } from 'shared/domain/entities/arrival-allocation.entity';
+import { CustomerEntity } from 'shared/domain/entities/customer.entity';
 import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
 import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
 import { DemandSnapshotEntryEntity } from 'shared/domain/entities/demand-snapshot-entry.entity';
@@ -8,21 +9,42 @@ import { ItemEntity } from 'shared/domain/entities/item.entity';
 import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
 import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity';
 import { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity';
-import { DataSource, EntityManager } from 'typeorm';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
+import {
+  DataSource,
+  EntityManager,
+  ObjectLiteral,
+  SelectQueryBuilder,
+} from 'typeorm';
 
-// openapi.yaml `DemandSnapshotEntry` — captured once at the freeze, `null` for a link that carries
-// no snapshot at all (a draft never frozen).
-export interface DemandSnapshotRead {
+// AC-09a/ADR 0001 — every read of a Purchase Draft is served in one of two forms, and the choice is
+// made by the actor's observed `CUSTOMERS:WATCH` rather than by the surface. The redacted form is
+// **not** the identified one with the identity fields set to `null`: this repository issues a query
+// that does not select those columns at all, so a redaction failure is a missing SQL expression
+// rather than a forgotten `delete` (server-request-authorization.md § "Consume the observed set in
+// the projection").
+//
+// Everything below is therefore stated as a shared `*Redacted*` shape plus an `*Identified*` shape
+// that extends it. TypeScript then enforces the same boundary the SQL does: a redacted row has no
+// `customer` property to read, so a mapper that meant to withhold identity cannot carry it.
+
+// openapi.yaml `DemandSnapshotEntryRedacted` — the demand captured at the freeze, without the
+// Delivery Address it was going to. `null` for a link that carries no snapshot at all (a draft
+// never frozen).
+export interface DemandSnapshotRedactedRead {
   readonly capturedQuantity: number;
   readonly capturedNeededBy: string;
   readonly capturedState: string;
-  // AC-18 — the Delivery Address the linked Customer Order was going to at the freeze. The
-  // identifier is **the comparison key**: Address Drift is the identity question "is this order
-  // going to a different Delivery Address than the one frozen for it", so correcting a typo in an
-  // address that was never redirected reports nothing. The text is the frozen statement the
-  // member is shown beside the address the demand now expects. Both `null` for a link to a
-  // Customer Order recorded by typed name, which names no address at all (AC-11a,
-  // data-model.md `purchase_draft_demand_snapshots`).
+}
+
+// openapi.yaml `DemandSnapshotEntryIdentified` — the same capture with the Delivery Address the
+// linked Customer Order was going to at the freeze. The identifier is **the comparison key**:
+// Address Drift is the identity question "is this order going to a different Delivery Address than
+// the one frozen for it", so correcting a typo in an address that was never redirected reports
+// nothing. The text is the frozen statement the member is shown beside the address the demand now
+// expects. Both `null` for a link to a Customer Order recorded by typed name, which names no
+// address at all (AC-11a, data-model.md `purchase_draft_demand_snapshots`).
+export interface DemandSnapshotIdentifiedRead extends DemandSnapshotRedactedRead {
   readonly capturedDeliveryAddressId: string | null;
   readonly capturedDeliveryAddressText: string | null;
 }
@@ -39,42 +61,94 @@ export interface CustomerOrderDestinationRead {
   readonly deactivatedAt: string | null;
 }
 
-// openapi.yaml `LinkedCustomerOrderState` — the other half of the drift comparison, read fresh
-// every time.
-export interface LinkedCustomerOrderStateRead {
+// openapi.yaml `LinkedCustomerOrderStateRedacted` — the other half of the drift comparison, read
+// fresh every time, without the order's destination.
+export interface LinkedCustomerOrderStateRedactedRead {
   readonly quantity: number;
   readonly neededBy: string;
   readonly state: string;
   readonly outstandingQuantity: number;
   readonly lastChangedAt: string | null;
-  // The live half of the AC-18 comparison, read fresh on every read and stored nowhere. `null`
-  // for an order recorded by typed name.
+}
+
+// openapi.yaml `LinkedCustomerOrderStateIdentified` — the same values with the address the demand
+// now expects, read fresh on every read and stored nowhere. `null` for an order recorded by typed
+// name.
+export interface LinkedCustomerOrderStateIdentifiedRead extends LinkedCustomerOrderStateRedactedRead {
   readonly deliveryAddress: CustomerOrderDestinationRead | null;
 }
 
-// openapi.yaml `ArrivalAllocation`.
+// openapi.yaml `EndingAllocation` (`ordering`'s `ArrivalAllocation`).
 export interface ArrivalAllocationRead {
   readonly allocatedQuantity: number;
   readonly allocatedByUserId: string;
   readonly createdAt: string;
 }
 
-// The raw per-link comparison inputs. Naming a categorized Drift Signal from `snapshot`/`current`
-// is a business decision that belongs to the use case above this repository
-// (creating-a-server-repository.md "business decisions belong to the owning feature"), so this
-// repository hands the two values back side by side and nothing else.
-export interface PurchaseDraftLineLinkRead {
+// openapi.yaml `CustomerRef` — the Customer a linked order names, by identifier and **current**
+// name, read live so correcting a Customer's name changes every link that names it (AC-03b).
+export interface CustomerRefRead {
   readonly id: string;
-  readonly customerOrderId: string;
-  readonly customerName: string;
-  readonly statedQuantity: number;
-  readonly snapshot: DemandSnapshotRead | null;
-  readonly current: LinkedCustomerOrderStateRead;
-  readonly allocation: ArrivalAllocationRead | null;
+  readonly name: string;
 }
 
-// openapi.yaml `PurchaseDraftLine`.
-export interface PurchaseDraftLineRead {
+// The raw per-link comparison inputs an actor may read without `CUSTOMERS:WATCH`. Naming a
+// categorized Drift Signal from `snapshot`/`current` is a business decision that belongs to the use
+// case above this repository (creating-a-server-repository.md "business decisions belong to the
+// owning feature"), so this repository hands the values back side by side and nothing else.
+export interface PurchaseDraftLineLinkRedactedRead {
+  readonly id: string;
+  readonly customerOrderId: string;
+  readonly statedQuantity: number;
+  readonly snapshot: DemandSnapshotRedactedRead | null;
+  readonly current: LinkedCustomerOrderStateRedactedRead;
+  readonly allocation: ArrivalAllocationRead | null;
+  // AC-18/AC-09a — **whether** the captured Delivery Address and the one this order names now
+  // disagree, as a boolean computed in SQL rather than as the two identifiers compared in
+  // application memory. It is what lets the redacted projection keep `delivery_address_changed`
+  // while selecting neither address: that a drift exists is a fact about the draft, not customer
+  // identity, and withholding it would tell an entitled member less than AC-18a promises
+  // (openapi.yaml `PurchaseDraftLineLinkRedacted`).
+  //
+  // It is a comparison and not a named signal: which Drift Signals a link carries stays the use
+  // case's decision, and this repository only reports that the two keys are distinct.
+  readonly addressDrift: boolean;
+}
+
+// openapi.yaml `PurchaseDraftLineLinkIdentified` — the same link with the customer it names and
+// both sides of the address comparison. **Exactly one** of `customer` and `customerName` is
+// non-null: an order naming a Customer reads that name live, one recorded by typed name names no
+// Customer at all (`chk_customer_orders_customer_identity`, AC-11a).
+export interface PurchaseDraftLineLinkIdentifiedRead extends PurchaseDraftLineLinkRedactedRead {
+  readonly customer: CustomerRefRead | null;
+  readonly customerName: string | null;
+  readonly snapshot: DemandSnapshotIdentifiedRead | null;
+  readonly current: LinkedCustomerOrderStateIdentifiedRead;
+}
+
+// openapi.yaml `LineWarehouseDestination` — where a **Via Warehouse** line's goods travel. The
+// operator's own premises data, so it is present on **both** forms of a line and never withheld: a
+// member who prepares the dock may hold no Workspace Role at all and no customer-read Permission
+// either (AC-10, sad.md §7).
+export interface LineWarehouseDestinationRead {
+  readonly addressText: string | null;
+  readonly accessNotes: string | null;
+  readonly frozen: boolean;
+}
+
+// openapi.yaml `LineCustomerDestination` — where a **Direct to Customer** line's goods travel.
+// Customer identity, and therefore selected only by the identified read (AC-09a).
+export interface LineCustomerDestinationRead {
+  readonly customerDeliveryAddressId: string;
+  readonly customerId: string;
+  readonly customerName: string;
+  readonly addressText: string;
+  readonly accessNotes: string | null;
+  readonly frozen: boolean;
+}
+
+// openapi.yaml `PurchaseDraftLineRedacted`.
+export interface PurchaseDraftLineRedactedRead {
   readonly id: string;
   readonly itemId: string;
   readonly itemSku: string;
@@ -87,27 +161,34 @@ export interface PurchaseDraftLineRead {
   // AC-13/AC-22 — how this line's own goods travel, which is what places it in one half of the
   // by-line read or the other.
   readonly deliveryMode: string;
-  // data-model.md `purchase_draft_lines` — the live reference. It stays populated on a frozen
-  // direct line: it is what the by-line read and the ownership check use, and nothing reads it as
-  // the frozen statement.
-  readonly customerDeliveryAddressId: string | null;
-  // AC-16/AC-17 — the delivery statement captured at Ready for Ordering, as values rather than a
-  // reference, so no later edit in place can travel into what the supplier was told. This read
-  // returns them and writes nothing.
-  readonly frozenDeliveryAddressText: string | null;
-  readonly frozenAccessNotes: string | null;
-  readonly frozenCustomerName: string | null;
-  readonly links: readonly PurchaseDraftLineLinkRead[];
+  // AC-10/AC-16/AC-17 — the destination as one shape rather than as the raw columns: read live from
+  // the Warehouse record while the draft is in `draft`, and the values **captured at Ready for
+  // Ordering** afterwards, with `frozen` saying which. `null` on a Direct to Customer line.
+  readonly warehouseDestination: LineWarehouseDestinationRead | null;
+  readonly links: readonly PurchaseDraftLineLinkRedactedRead[];
+}
+
+// openapi.yaml `PurchaseDraftLineIdentified` — the same line with the Customer destination it ships
+// to and its identified links.
+export interface PurchaseDraftLineIdentifiedRead extends PurchaseDraftLineRedactedRead {
+  // `null` on a Via Warehouse line. Exactly one of the two destination properties is non-null,
+  // which is `chk_purchase_draft_lines_delivery_mode_address` read back.
+  readonly customerDestination: LineCustomerDestinationRead | null;
+  readonly links: readonly PurchaseDraftLineLinkIdentifiedRead[];
 }
 
 // openapi.yaml `PurchaseDraftLineListEntry` — one line of the by-line read, carrying the draft it
 // belongs to so the view reads without a second request (AC-22).
-export interface PurchaseDraftLineListEntryRead {
+export interface PurchaseDraftLineListEntryRedactedRead {
   readonly purchaseDraftId: string;
   readonly purchaseDraftReference: string;
   readonly purchaseDraftState: string;
   readonly expectedArrivalDate: string | null;
-  readonly line: PurchaseDraftLineRead;
+  readonly line: PurchaseDraftLineRedactedRead;
+}
+
+export interface PurchaseDraftLineListEntryIdentifiedRead extends PurchaseDraftLineListEntryRedactedRead {
+  readonly line: PurchaseDraftLineIdentifiedRead;
 }
 
 // The by-line read's optional narrowing (openapi.yaml `listPurchaseDraftLines`).
@@ -146,9 +227,13 @@ export interface PurchaseDraftSummaryRead {
   readonly discardedAt: Date | null;
 }
 
-// openapi.yaml `PurchaseDraftDetail`.
-export interface PurchaseDraftDetailRead extends PurchaseDraftSummaryRead {
-  readonly lines: readonly PurchaseDraftLineRead[];
+// openapi.yaml `PurchaseDraftDetail`, in the two forms AC-09a models.
+export interface PurchaseDraftDetailRedactedRead extends PurchaseDraftSummaryRead {
+  readonly lines: readonly PurchaseDraftLineRedactedRead[];
+}
+
+export interface PurchaseDraftDetailIdentifiedRead extends PurchaseDraftDetailRedactedRead {
+  readonly lines: readonly PurchaseDraftLineIdentifiedRead[];
 }
 
 interface DraftSummaryRawRow {
@@ -172,16 +257,19 @@ interface DraftSummaryRawRow {
   readonly discardedAt: Date | null;
 }
 
-interface DraftDetailRawRow extends Omit<DraftSummaryRawRow, 'lineCount'> {
-  readonly lines: readonly PurchaseDraftLineRead[];
+interface DraftDetailRawRow<TLine> extends Omit<
+  DraftSummaryRawRow,
+  'lineCount'
+> {
+  readonly lines: readonly TLine[];
 }
 
-interface LineListEntryRawRow {
+interface LineListEntryRawRow<TLine> {
   readonly purchaseDraftId: string;
   readonly purchaseDraftReference: string;
   readonly purchaseDraftState: string;
   readonly expectedArrivalDate: string | null;
-  readonly line: PurchaseDraftLineRead;
+  readonly line: TLine;
 }
 
 // openapi.yaml `expectedArrivalDate` is a calendar `date`, and both reads below project it through
@@ -296,20 +384,47 @@ const hasDriftSignalSubquery = (manager: EntityManager): string =>
 // refuses. `NULL` in, `NULL` out — an order recorded by typed name names no address at all.
 const CURRENT_DELIVERY_ADDRESS_SELECT = `CASE WHEN destination.id IS NULL THEN NULL ELSE json_build_object('deliveryAddressId', destination.id, 'addressText', destination.addressText, 'accessNotes', destination.accessNotes, 'isMain', destination.isMain, 'deactivatedAt', to_char(destination.deactivatedAt AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')) END`;
 
+// AC-18/AC-09a — whether the Delivery Address captured for this link and the one its Customer Order
+// names now disagree, as a **boolean** rather than as the two identifiers. It is what lets the
+// redacted projection keep reporting `delivery_address_changed` while selecting neither address:
+// the same `IS DISTINCT FROM` the two draft-level flags use, so the link, the opened draft and the
+// list can never disagree about one link. `NULL` on both sides is agreement rather than drift,
+// which is the typed-name case (AC-11a).
+const ADDRESS_DRIFT_SELECT = `(${ADDRESS_DRIFT_CONDITION})`;
+
+// AC-09a — the customer a linked order names, selected **only** by the identified projection.
+const LINK_CUSTOMER_SELECT = `CASE WHEN linkCustomer.id IS NULL THEN NULL ELSE json_build_object('id', linkCustomer.id, 'name', linkCustomer.name) END`;
+
 // The per-link projection, correlated to the outer `line` alias: the Demand Snapshot captured at
-// the freeze beside the Customer Order as it stands now, both sides of the AC-18 address
-// comparison included, and never a categorized Drift Signal — naming one is the use case's
-// business decision above this repository (creating-a-server-repository.md).
+// the freeze beside the Customer Order as it stands now, and never a categorized Drift Signal —
+// naming one is the use case's business decision above this repository
+// (creating-a-server-repository.md).
 //
-// Received arrival timestamps are normalized to UTC ISO 8601 (`...Z`) here because they are
-// embedded as text inside `json_build_object`, which bypasses the pg driver's own Date decoding —
-// every other timestamp on this read travels as a plain column and is decoded (and later
-// serialized) the same way.
-const linksSubquery = (manager: EntityManager): string =>
-  manager
+// `identified` decides which columns are **selected**, never which are filtered afterwards: the
+// redacted query names no customer, no typed name and neither side of the address comparison, so a
+// redaction failure here is a missing SQL expression rather than a forgotten `delete`
+// (server-request-authorization.md § "Consume the observed set in the projection", ADR 0001). Both
+// forms carry `addressDrift`, because *that* a drift exists is a fact about the draft rather than
+// customer identity (openapi.yaml `PurchaseDraftLineLinkRedacted`).
+//
+// Timestamps are normalized to UTC ISO 8601 (`...Z`) here because they are embedded as text inside
+// `json_build_object`, which bypasses the pg driver's own Date decoding — every other timestamp on
+// this read travels as a plain column and is decoded (and later serialized) the same way.
+const linksSubquery = (manager: EntityManager, identified: boolean): string => {
+  const identity = identified
+    ? `'customer', ${LINK_CUSTOMER_SELECT}, 'customerName', demand.customerName, `
+    : '';
+  const capturedAddress = identified
+    ? `, 'capturedDeliveryAddressId', snapshot.capturedCustomerDeliveryAddressId, 'capturedDeliveryAddressText', snapshot.capturedDeliveryAddressText`
+    : '';
+  const currentAddress = identified
+    ? `, 'deliveryAddress', ${CURRENT_DELIVERY_ADDRESS_SELECT}`
+    : '';
+
+  const query = manager
     .createQueryBuilder()
     .select(
-      `COALESCE(json_agg(json_build_object('id', link.id, 'customerOrderId', link.customerOrderId, 'customerName', demand.customerName, 'statedQuantity', link.statedQuantity, 'snapshot', CASE WHEN snapshot.purchaseDraftLineLinkId IS NULL THEN NULL ELSE json_build_object('capturedQuantity', snapshot.capturedQuantity, 'capturedNeededBy', snapshot.capturedNeededBy, 'capturedState', snapshot.capturedState, 'capturedDeliveryAddressId', snapshot.capturedCustomerDeliveryAddressId, 'capturedDeliveryAddressText', snapshot.capturedDeliveryAddressText) END, 'current', json_build_object('quantity', demand.quantity, 'neededBy', demand.neededBy, 'state', demand.state, 'outstandingQuantity', demand.outstandingQuantity, 'lastChangedAt', ${LAST_CHANGED_AT_SELECT}, 'deliveryAddress', ${CURRENT_DELIVERY_ADDRESS_SELECT}), 'allocation', CASE WHEN allocation.purchaseDraftLineLinkId IS NULL THEN NULL ELSE json_build_object('allocatedQuantity', allocation.allocatedQuantity, 'allocatedByUserId', allocation.allocatedByUserId, 'createdAt', to_char(allocation.createdAt AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')) END) ORDER BY link.createdAt, link.id), '[]'::json)`,
+      `COALESCE(json_agg(json_build_object('id', link.id, 'customerOrderId', link.customerOrderId, ${identity}'statedQuantity', link.statedQuantity, 'snapshot', CASE WHEN snapshot.purchaseDraftLineLinkId IS NULL THEN NULL ELSE json_build_object('capturedQuantity', snapshot.capturedQuantity, 'capturedNeededBy', snapshot.capturedNeededBy, 'capturedState', snapshot.capturedState${capturedAddress}) END, 'current', json_build_object('quantity', demand.quantity, 'neededBy', demand.neededBy, 'state', demand.state, 'outstandingQuantity', demand.outstandingQuantity, 'lastChangedAt', ${LAST_CHANGED_AT_SELECT}${currentAddress}), 'addressDrift', ${ADDRESS_DRIFT_SELECT}, 'allocation', CASE WHEN allocation.purchaseDraftLineLinkId IS NULL THEN NULL ELSE json_build_object('allocatedQuantity', allocation.allocatedQuantity, 'allocatedByUserId', allocation.allocatedByUserId, 'createdAt', to_char(allocation.createdAt AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')) END) ORDER BY link.createdAt, link.id), '[]'::json)`,
     )
     .from(PurchaseDraftLineLinkEntity, 'link')
     .innerJoin(
@@ -323,24 +438,224 @@ const linksSubquery = (manager: EntityManager): string =>
       'snapshot.purchaseDraftLineLinkId = link.id',
     )
     .leftJoin(
-      CustomerDeliveryAddressEntity,
-      'destination',
-      'destination.id = demand.customerDeliveryAddressId',
-    )
-    .leftJoin(
       ArrivalAllocationEntity,
       'allocation',
       'allocation.purchaseDraftLineLinkId = link.id',
     )
-    .where('link.purchaseDraftLineId = line.id')
+    .where('link.purchaseDraftLineId = line.id');
+
+  // The two joins that reach customer identity are added **only** for the identified form, so the
+  // redacted query does not even visit the rows it must not disclose.
+  return identified
+    ? query
+        .leftJoin(
+          CustomerDeliveryAddressEntity,
+          'destination',
+          'destination.id = demand.customerDeliveryAddressId',
+        )
+        .leftJoin(
+          CustomerEntity,
+          'linkCustomer',
+          'linkCustomer.id = demand.customerId',
+        )
+        .getQuery()
+    : query.getQuery();
+};
+
+// openapi.yaml `LineWarehouseDestination` — where a Via Warehouse line's goods travel, as one
+// object rather than as the raw columns. The Warehouse's own address is read **live** while the
+// line carries no frozen statement, and the values captured at Ready for Ordering afterwards;
+// `frozen` says which, and `frozen_delivery_address_text` is the discriminator because the freeze
+// writes the three frozen columns together or not at all (AC-16, AC-17).
+//
+// Both halves are chosen by the *same* condition rather than by `COALESCE` per property: a frozen
+// line whose access notes were `NULL` at the freeze must read back as `NULL`, not fall through to
+// whatever the Warehouse records now — that fall-through would be exactly the later edit AC-17
+// forbids travelling into a frozen statement.
+const WAREHOUSE_DESTINATION_SELECT = `CASE WHEN line.deliveryMode <> 'via_warehouse' THEN NULL ELSE json_build_object('addressText', CASE WHEN line.frozenDeliveryAddressText IS NULL THEN lineWarehouse.deliveryAddressText ELSE line.frozenDeliveryAddressText END, 'accessNotes', CASE WHEN line.frozenDeliveryAddressText IS NULL THEN lineWarehouse.deliveryAccessNotes ELSE line.frozenAccessNotes END, 'frozen', line.frozenDeliveryAddressText IS NOT NULL) END`;
+
+// openapi.yaml `LineCustomerDestination` — where a Direct to Customer line's goods travel, on the
+// same live-or-frozen rule. `customerDeliveryAddressId` stays the live reference even on a frozen
+// line: it is what the by-line read and the ownership check use, and nothing reads it as the frozen
+// statement (data-model.md `purchase_draft_lines`).
+const CUSTOMER_DESTINATION_SELECT = `CASE WHEN line.deliveryMode <> 'direct_to_customer' THEN NULL ELSE json_build_object('customerDeliveryAddressId', line.customerDeliveryAddressId, 'customerId', lineCustomer.id, 'customerName', CASE WHEN line.frozenCustomerName IS NULL THEN lineCustomer.name ELSE line.frozenCustomerName END, 'addressText', CASE WHEN line.frozenDeliveryAddressText IS NULL THEN lineAddress.addressText ELSE line.frozenDeliveryAddressText END, 'accessNotes', CASE WHEN line.frozenDeliveryAddressText IS NULL THEN lineAddress.accessNotes ELSE line.frozenAccessNotes END, 'frozen', line.frozenDeliveryAddressText IS NOT NULL) END`;
+
+// openapi.yaml `PurchaseDraftLine`, as one JSON object over the outer `line`/`item` aliases.
+// Written once and used by **both** the opened draft and the by-line read, so the two can never
+// project one line differently (AC-22), and parameterized by the observed Permission rather than by
+// the surface, so the two can never redact one line differently either (ADR 0001).
+//
+// `warehouseDestination` is in the common half deliberately: the Warehouse's own address and access
+// notes are the operator's premises data, read under `PURCHASE_DRAFTS:WATCH` alone (AC-10).
+const lineJsonObject = (
+  manager: EntityManager,
+  identified: boolean,
+): string => {
+  const customerDestination = identified
+    ? `, 'customerDestination', ${CUSTOMER_DESTINATION_SELECT}`
+    : '';
+
+  return `json_build_object('id', line.id, 'itemId', line.itemId, 'itemSku', item.sku, 'itemDescription', item.description, 'unitOfMeasure', item.unitOfMeasure, 'orderedQuantity', line.orderedQuantity, 'packagingTypeId', line.packagingTypeId, 'valueAddingNote', line.valueAddingNote, 'receivedQuantity', line.receivedQuantity, 'deliveryMode', line.deliveryMode, 'warehouseDestination', ${WAREHOUSE_DESTINATION_SELECT}${customerDestination}, 'links', (${linksSubquery(manager, identified)}))`;
+};
+
+// The joins the two destination projections above dereference, added to whichever query builds a
+// line. The Warehouse is joined for **both** forms — its own address is not customer identity — and
+// the Customer and its Delivery Address only for the identified one, so the redacted query does not
+// even visit the rows it must not disclose (AC-09a, AC-10).
+//
+// A module-level function rather than a repository method: repository classes carry no private
+// methods, and both reads below need exactly the same three joins
+// (creating-a-server-repository.md).
+const joinLineDestinations = <T extends SelectQueryBuilder<ObjectLiteral>>(
+  query: T,
+  identified: boolean,
+): T => {
+  query.leftJoin(
+    WarehouseEntity,
+    'lineWarehouse',
+    'lineWarehouse.id = line.warehouseId',
+  );
+
+  if (identified) {
+    query.leftJoin(
+      CustomerDeliveryAddressEntity,
+      'lineAddress',
+      'lineAddress.id = line.customerDeliveryAddressId',
+    );
+    query.leftJoin(
+      CustomerEntity,
+      'lineCustomer',
+      'lineCustomer.id = lineAddress.customerId',
+    );
+  }
+
+  return query;
+};
+
+// The draft header shared by `listDrafts` and both detail reads, selected once so the three can
+// never disagree about a column.
+const selectDraftHeader = <T extends SelectQueryBuilder<ObjectLiteral>>(
+  query: T,
+): T =>
+  query
+    .select('draft.id', 'id')
+    .addSelect('draft.reference', 'reference')
+    .addSelect('draft.state', 'state')
+    .addSelect(EXPECTED_ARRIVAL_DATE_SELECT, 'expectedArrivalDate')
+    .addSelect('draft.closureReason', 'closureReason')
+    .addSelect('draft.createdByUserId', 'createdByUserId')
+    .addSelect('draft.createdAt', 'createdAt')
+    .addSelect('draft.readiedByUserId', 'readiedByUserId')
+    .addSelect('draft.readiedAt', 'readiedAt')
+    .addSelect('draft.closedByUserId', 'closedByUserId')
+    .addSelect('draft.closedAt', 'closedAt')
+    .addSelect('draft.arrivalConfirmedByUserId', 'arrivalConfirmedByUserId')
+    .addSelect('draft.arrivalConfirmedAt', 'arrivalConfirmedAt')
+    .addSelect('draft.discardedByUserId', 'discardedByUserId')
+    .addSelect('draft.discardedAt', 'discardedAt')
+    .addSelect(
+      `EXISTS (${hasDriftSignalSubquery(query.connection.manager)})`,
+      'hasDriftSignal',
+    )
+    .addSelect(
+      `EXISTS (${hasDirectToCustomerAddressDriftSubquery(query.connection.manager)})`,
+      'hasDirectToCustomerAddressDrift',
+    );
+
+// One opened draft, in whichever of the two forms the observed Permission selects. Written once and
+// parameterized, so the identified and redacted reads can differ only in the columns they name.
+const readDraftRow = async <TLine>(
+  manager: EntityManager,
+  purchaseDraftId: string,
+  warehouseId: string,
+  identified: boolean,
+): Promise<
+  | (Omit<DraftDetailRawRow<TLine>, 'lines'> & {
+      readonly lineCount: number;
+      readonly lines: readonly TLine[];
+    })
+  | null
+> => {
+  const lines = joinLineDestinations(
+    manager
+      .createQueryBuilder()
+      .select(
+        `COALESCE(json_agg(${lineJsonObject(manager, identified)} ORDER BY line.createdAt, line.id), '[]'::json)`,
+      )
+      .from(PurchaseDraftLineEntity, 'line')
+      .innerJoin(ItemEntity, 'item', 'item.id = line.itemId'),
+    identified,
+  )
+    .where('line.purchaseDraftId = draft.id')
     .getQuery();
 
-// openapi.yaml `PurchaseDraftLine`, as one JSON object over the outer `line`/`item` aliases —
-// carrying its Delivery Mode and the delivery statement frozen at Ready for Ordering. Written once
-// and used by **both** the opened draft and the by-line read, so the two can never project one
-// line differently (AC-22).
-const lineJsonObject = (manager: EntityManager): string =>
-  `json_build_object('id', line.id, 'itemId', line.itemId, 'itemSku', item.sku, 'itemDescription', item.description, 'unitOfMeasure', item.unitOfMeasure, 'orderedQuantity', line.orderedQuantity, 'packagingTypeId', line.packagingTypeId, 'valueAddingNote', line.valueAddingNote, 'receivedQuantity', line.receivedQuantity, 'deliveryMode', line.deliveryMode, 'customerDeliveryAddressId', line.customerDeliveryAddressId, 'frozenDeliveryAddressText', line.frozenDeliveryAddressText, 'frozenAccessNotes', line.frozenAccessNotes, 'frozenCustomerName', line.frozenCustomerName, 'links', (${linksSubquery(manager)}))`;
+  const row = await selectDraftHeader(
+    manager.getRepository(PurchaseDraftEntity).createQueryBuilder('draft'),
+  )
+    .addSelect(`(${lines})`, 'lines')
+    .where('draft.id = :purchaseDraftId', { purchaseDraftId })
+    .andWhere('draft.warehouseId = :warehouseId', { warehouseId })
+    .getRawOne<DraftDetailRawRow<TLine>>();
+
+  if (row === undefined) {
+    return null;
+  }
+
+  return {
+    ...row,
+    hasDriftSignal: Boolean(row.hasDriftSignal),
+    hasDirectToCustomerAddressDrift: Boolean(
+      row.hasDirectToCustomerAddressDrift,
+    ),
+    lineCount: row.lines.length,
+  };
+};
+
+// The by-line read, in whichever of the two forms the observed Permission selects.
+const listLineRows = <TLine>(
+  manager: EntityManager,
+  warehouseId: string,
+  filters: PurchaseDraftLineFilters,
+  identified: boolean,
+): Promise<LineListEntryRawRow<TLine>[]> => {
+  let query = joinLineDestinations(
+    manager
+      .createQueryBuilder()
+      .select('draft.id', 'purchaseDraftId')
+      .addSelect('draft.reference', 'purchaseDraftReference')
+      .addSelect('draft.state', 'purchaseDraftState')
+      .addSelect(EXPECTED_ARRIVAL_DATE_SELECT, 'expectedArrivalDate')
+      .addSelect(lineJsonObject(manager, identified), 'line')
+      .from(PurchaseDraftLineEntity, 'line')
+      .innerJoin(
+        PurchaseDraftEntity,
+        'draft',
+        'draft.id = line.purchaseDraftId',
+      )
+      .innerJoin(ItemEntity, 'item', 'item.id = line.itemId'),
+    identified,
+  )
+    .where('draft.warehouseId = :warehouseId', { warehouseId })
+    // openapi.yaml — Delivery Mode, then draft reference, then the line's own position. Every line
+    // of a draft is written with the same timestamp (`purchase-draft-assembly.repository.ts`
+    // "assemble"), so `line.id` breaks that tie deterministically.
+    .orderBy('line.deliveryMode', 'ASC')
+    .addOrderBy('draft.reference', 'ASC')
+    .addOrderBy('line.createdAt', 'ASC')
+    .addOrderBy('line.id', 'ASC');
+
+  if (filters.deliveryMode !== undefined) {
+    query = query.andWhere('line.deliveryMode = :deliveryMode', {
+      deliveryMode: filters.deliveryMode,
+    });
+  }
+
+  if (filters.state !== undefined) {
+    query = query.andWhere('draft.state = :state', { state: filters.state });
+  }
+
+  return query.getRawMany<LineListEntryRawRow<TLine>>();
+};
 
 // AC-16/AC-21a — the Demand Snapshot joined against the Customer Orders as they stand now, each
 // method a single purpose-built query (sad.md §4 "Derived on read, one query, never materialized";
@@ -416,69 +731,40 @@ export class PurchaseDraftReadRepository {
     }));
   }
 
-  // AC-16/AC-21a — one draft with its lines, links, Pre-receipt Requirements, per-link drift
-  // detail, received quantities and Allocations, in one round trip. A Closed draft (whichever
-  // route closed it) is returned exactly as an open draft is; this read never writes anything.
-  // Scoped to the acting Warehouse: a draft that belongs to another Warehouse reads as `null`.
-  async readDraft(
+  // AC-16/AC-21a/AC-09a — one draft with its lines, links, Pre-receipt Requirements, per-line
+  // destination, per-link drift comparison and Allocations, in one round trip, **without** customer
+  // identity. A Closed draft (whichever route closed it) is returned exactly as an open draft is;
+  // this read never writes anything. Scoped to the acting Warehouse: a draft that belongs to
+  // another Warehouse reads as `null`, exactly as a missing one does.
+  //
+  // Two methods rather than one with a flag, following `CustomerOrderLifecycleRepository`'s (T13)
+  // precedent: the redacted read is a *different query*, and naming it separately is what makes
+  // "the redacted form selects no identity column" checkable at the call site.
+  readRedactedDraft(
     purchaseDraftId: string,
     warehouseId: string,
-  ): Promise<PurchaseDraftDetailRead | null> {
-    const manager = getEntityManager(this.dataSource);
+  ): Promise<PurchaseDraftDetailRedactedRead | null> {
+    return readDraftRow<PurchaseDraftLineRedactedRead>(
+      getEntityManager(this.dataSource),
+      purchaseDraftId,
+      warehouseId,
+      false,
+    );
+  }
 
-    const lines = manager
-      .createQueryBuilder()
-      .select(
-        `COALESCE(json_agg(${lineJsonObject(manager)} ORDER BY line.createdAt, line.id), '[]'::json)`,
-      )
-      .from(PurchaseDraftLineEntity, 'line')
-      .innerJoin(ItemEntity, 'item', 'item.id = line.itemId')
-      .where('line.purchaseDraftId = draft.id')
-      .getQuery();
-
-    const hasDriftSignal = hasDriftSignalSubquery(manager);
-    const hasDirectDrift = hasDirectToCustomerAddressDriftSubquery(manager);
-
-    const row = await manager
-      .getRepository(PurchaseDraftEntity)
-      .createQueryBuilder('draft')
-      .select('draft.id', 'id')
-      .addSelect('draft.reference', 'reference')
-      .addSelect('draft.state', 'state')
-      .addSelect(EXPECTED_ARRIVAL_DATE_SELECT, 'expectedArrivalDate')
-      .addSelect('draft.closureReason', 'closureReason')
-      .addSelect('draft.createdByUserId', 'createdByUserId')
-      .addSelect('draft.createdAt', 'createdAt')
-      .addSelect('draft.readiedByUserId', 'readiedByUserId')
-      .addSelect('draft.readiedAt', 'readiedAt')
-      .addSelect('draft.closedByUserId', 'closedByUserId')
-      .addSelect('draft.closedAt', 'closedAt')
-      .addSelect('draft.arrivalConfirmedByUserId', 'arrivalConfirmedByUserId')
-      .addSelect('draft.arrivalConfirmedAt', 'arrivalConfirmedAt')
-      .addSelect('draft.discardedByUserId', 'discardedByUserId')
-      .addSelect('draft.discardedAt', 'discardedAt')
-      .addSelect(`(${lines})`, 'lines')
-      .addSelect(`EXISTS (${hasDriftSignal})`, 'hasDriftSignal')
-      .addSelect(
-        `EXISTS (${hasDirectDrift})`,
-        'hasDirectToCustomerAddressDrift',
-      )
-      .where('draft.id = :purchaseDraftId', { purchaseDraftId })
-      .andWhere('draft.warehouseId = :warehouseId', { warehouseId })
-      .getRawOne<DraftDetailRawRow>();
-
-    if (row === undefined) {
-      return null;
-    }
-
-    return {
-      ...row,
-      hasDriftSignal: Boolean(row.hasDriftSignal),
-      hasDirectToCustomerAddressDrift: Boolean(
-        row.hasDirectToCustomerAddressDrift,
-      ),
-      lineCount: row.lines.length,
-    };
+  // The same draft for an actor holding the observed `CUSTOMERS:WATCH`: the customer each link
+  // names, the destination a Direct to Customer line ships to, and both sides of the AC-18 address
+  // comparison (ADR 0001).
+  readIdentifiedDraft(
+    purchaseDraftId: string,
+    warehouseId: string,
+  ): Promise<PurchaseDraftDetailIdentifiedRead | null> {
+    return readDraftRow<PurchaseDraftLineIdentifiedRead>(
+      getEntityManager(this.dataSource),
+      purchaseDraftId,
+      warehouseId,
+      true,
+    );
   }
 
   // AC-22 — the by-line split: the lines of the acting Warehouse's drafts, each carrying the draft
@@ -490,47 +776,28 @@ export class PurchaseDraftReadRepository {
   // `idx_purchase_draft_lines_draft_id` reaches their lines, which is why data-model.md
   // deliberately adds no `(warehouse_id, delivery_mode)` index.
   //
-  // Scoped through the **draft's** Warehouse, the same ownership the other two reads use.
-  async listLines(
+  // Scoped through the **draft's** Warehouse, the same ownership the other reads use.
+  listRedactedLines(
     warehouseId: string,
     filters: PurchaseDraftLineFilters = {},
-  ): Promise<PurchaseDraftLineListEntryRead[]> {
-    const manager = getEntityManager(this.dataSource);
+  ): Promise<PurchaseDraftLineListEntryRedactedRead[]> {
+    return listLineRows<PurchaseDraftLineRedactedRead>(
+      getEntityManager(this.dataSource),
+      warehouseId,
+      filters,
+      false,
+    );
+  }
 
-    let query = manager
-      .createQueryBuilder()
-      .select('draft.id', 'purchaseDraftId')
-      .addSelect('draft.reference', 'purchaseDraftReference')
-      .addSelect('draft.state', 'purchaseDraftState')
-      .addSelect(EXPECTED_ARRIVAL_DATE_SELECT, 'expectedArrivalDate')
-      .addSelect(lineJsonObject(manager), 'line')
-      .from(PurchaseDraftLineEntity, 'line')
-      .innerJoin(
-        PurchaseDraftEntity,
-        'draft',
-        'draft.id = line.purchaseDraftId',
-      )
-      .innerJoin(ItemEntity, 'item', 'item.id = line.itemId')
-      .where('draft.warehouseId = :warehouseId', { warehouseId })
-      // openapi.yaml — Delivery Mode, then draft reference, then the line's own position. Every
-      // line of a draft is written with the same timestamp
-      // (`purchase-draft-assembly.repository.ts` "assemble"), so `line.id` breaks that tie
-      // deterministically.
-      .orderBy('line.deliveryMode', 'ASC')
-      .addOrderBy('draft.reference', 'ASC')
-      .addOrderBy('line.createdAt', 'ASC')
-      .addOrderBy('line.id', 'ASC');
-
-    if (filters.deliveryMode !== undefined) {
-      query = query.andWhere('line.deliveryMode = :deliveryMode', {
-        deliveryMode: filters.deliveryMode,
-      });
-    }
-
-    if (filters.state !== undefined) {
-      query = query.andWhere('draft.state = :state', { state: filters.state });
-    }
-
-    return query.getRawMany<LineListEntryRawRow>();
+  listIdentifiedLines(
+    warehouseId: string,
+    filters: PurchaseDraftLineFilters = {},
+  ): Promise<PurchaseDraftLineListEntryIdentifiedRead[]> {
+    return listLineRows<PurchaseDraftLineIdentifiedRead>(
+      getEntityManager(this.dataSource),
+      warehouseId,
+      filters,
+      true,
+    );
   }
 }

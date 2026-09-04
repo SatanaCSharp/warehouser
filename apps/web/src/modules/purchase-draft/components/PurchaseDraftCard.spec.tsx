@@ -21,6 +21,7 @@ const summary = (
   expectedArrivalDate: null,
   lineCount: 2,
   hasDriftSignal: false,
+  hasDirectToCustomerAddressDrift: false,
   closureReason: null,
   createdByUserId: '00000000-0000-4000-8000-000000000003',
   createdAt: '2026-08-01T09:00:00.000Z',
@@ -99,5 +100,47 @@ describe('PurchaseDraftCard', () => {
     const status = screen.getByRole('status');
     expect(status).toHaveTextContent('Demand moved since freezing');
     expect(status.querySelector('svg')).not.toBeNull();
+  });
+  // T23 / AC-18a — drift on a **directly-shipped** line is reported on the list
+  // itself, where the member sees it without opening anything, because goods
+  // are travelling to an address nobody now expects them at. It instructs
+  // nothing and blocks nothing: the card is still the same button.
+  it('reports a direct line address drift on the list card itself', () => {
+    render(
+      <PurchaseDraftCard
+        draft={summary({
+          hasDriftSignal: true,
+          hasDirectToCustomerAddressDrift: true,
+        })}
+        isSelected={false}
+        onSelect={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByText('A directly-shipped line is going somewhere else now'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button')).toBeEnabled();
+  });
+
+  // AC-18a's other half: the same disagreement on a Via Warehouse line is
+  // reported when the draft is **opened**, because everything on such a line
+  // lands at one dock either way. The card must not pre-empt it.
+  it('keeps a via-warehouse drift off the card, for the opened draft to report', () => {
+    render(
+      <PurchaseDraftCard
+        draft={summary({
+          hasDriftSignal: true,
+          hasDirectToCustomerAddressDrift: false,
+        })}
+        isSelected={false}
+        onSelect={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.queryByText('A directly-shipped line is going somewhere else now'),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText('Demand moved since freezing')).toBeInTheDocument();
   });
 });

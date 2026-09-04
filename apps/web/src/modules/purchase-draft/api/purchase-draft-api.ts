@@ -1,6 +1,7 @@
 import {
   packagingTypeSchema,
   purchaseDraftDetailSchema,
+  purchaseDraftLineListEntrySchema,
   purchaseDraftSummarySchema,
 } from '@warehouser/contracts/purchase-drafts';
 import { ErrorCode } from '@warehouser/shared-types/enums';
@@ -16,6 +17,7 @@ import type {
   PurchaseDraftDetail,
   PurchaseDraftLineCreate,
   PurchaseDraftLineLinkCreate,
+  PurchaseDraftLineListEntry,
   PurchaseDraftLineUpdate,
   PurchaseDraftState,
   PurchaseDraftSummary,
@@ -63,9 +65,14 @@ const closureFieldErrors = fieldErrorsForCode({
 });
 
 const purchaseDraftSummaryListSchema = z.array(purchaseDraftSummarySchema);
+const purchaseDraftLineListSchema = z.array(purchaseDraftLineListEntrySchema);
 const packagingTypeListSchema = z.array(packagingTypeSchema);
 
 type ListPurchaseDraftsArgs = {
+  warehouseId: string;
+  state?: PurchaseDraftState;
+};
+type ListPurchaseDraftLinesArgs = {
   warehouseId: string;
   state?: PurchaseDraftState;
 };
@@ -104,6 +111,15 @@ type ConfirmPurchaseDraftArrivalArgs = PurchaseDraftIdArgs & {
  */
 const purchaseDraftsPath = (warehouseId: string): string =>
   `/api/v1/warehouses/${warehouseId}/purchase-drafts`;
+
+/**
+ * AC-22's by-line read, served at the **top level** rather than as
+ * `/purchase-drafts/lines`, so no literal segment competes with a
+ * `{purchaseDraftId}` parameter — the same reason `/packaging-types` is served
+ * there (contracts/openapi.yaml, sad.md §7).
+ */
+const purchaseDraftLineListPath = (warehouseId: string): string =>
+  `/api/v1/warehouses/${warehouseId}/purchase-draft-lines`;
 
 const purchaseDraftPath = ({
   warehouseId,
@@ -167,6 +183,21 @@ export const purchaseDraftApi = api.injectEndpoints({
         params: state ? { state } : undefined,
       }),
       extraOptions: { schema: purchaseDraftSummaryListSchema },
+      providesTags: ['PurchaseDrafts'],
+    }),
+    // AC-22 — the Warehouse's lines with their Delivery Modes, so the dock-bound
+    // half is kept apart from the directly-shipped one. It reads the same
+    // records the drafts list reads, so it carries the same tag and every write
+    // that moves a line's mode or destination refreshes it with the drafts.
+    listPurchaseDraftLines: build.query<
+      PurchaseDraftLineListEntry[],
+      ListPurchaseDraftLinesArgs
+    >({
+      query: ({ warehouseId, state }) => ({
+        url: purchaseDraftLineListPath(warehouseId),
+        params: state ? { state } : undefined,
+      }),
+      extraOptions: { schema: purchaseDraftLineListSchema },
       providesTags: ['PurchaseDrafts'],
     }),
     getPurchaseDraft: build.query<PurchaseDraftDetail, PurchaseDraftIdArgs>({
@@ -347,6 +378,7 @@ export const purchaseDraftApi = api.injectEndpoints({
 
 export const {
   useListPurchaseDraftsQuery,
+  useListPurchaseDraftLinesQuery,
   useGetPurchaseDraftQuery,
   useListPackagingTypesQuery,
   useCreatePurchaseDraftMutation,

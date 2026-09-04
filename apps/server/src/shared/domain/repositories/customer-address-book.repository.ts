@@ -72,6 +72,27 @@ export class CustomerAddressBookRepository {
       });
   }
 
+  // AC-12 — one Delivery Address resolved **within the acting Warehouse**, for a caller that names
+  // an address without naming the Customer that owns it. That is the Purchase Draft Line case: a
+  // Direct to Customer line names `customer_delivery_address_id` alone, and
+  // `fk_purchase_draft_lines_delivery_address (id, warehouse_id)` is the composite reference that
+  // proves the ownership — so the read carries `warehouse_id` for the same reason the constraint
+  // does. An address of another Warehouse is not in the set at all and resolves to `null` exactly
+  // as a missing one does, so no refusal built on this read can disclose that the target exists
+  // elsewhere (spec.md §6.1).
+  //
+  // The row is returned rather than a boolean: the caller needs `deactivated_at` to tell an
+  // Inactive address from a missing one, which openapi.yaml refuses with two different codes, and
+  // `customer_id` to name the Customer the line ships to.
+  findWarehouseDeliveryAddress(
+    deliveryAddressId: string,
+    warehouseId: string,
+  ): Promise<CustomerDeliveryAddressEntity | null> {
+    return getEntityManager(this.dataSource)
+      .getRepository(CustomerDeliveryAddressEntity)
+      .findOne({ where: { id: deliveryAddressId, warehouseId } });
+  }
+
   // `sad.md` §6.3 step 4 — "the read is `FOR UPDATE` over the Customer's address rows so two
   // concurrent deactivations cannot both see two remaining". The Inactive rows are locked too: the
   // condition is "at least one **active** address remains", and a caller counting only the rows it

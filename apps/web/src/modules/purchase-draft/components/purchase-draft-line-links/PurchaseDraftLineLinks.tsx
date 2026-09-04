@@ -9,6 +9,7 @@ import {
 } from 'modules/purchase-draft/api/purchase-draft-api';
 import { LinkCustomerOrderAction } from 'modules/purchase-draft/components/purchase-draft-line-links/components/LinkCustomerOrderAction';
 import { PurchaseDraftLinkRow } from 'modules/purchase-draft/components/PurchaseDraftLinkRow';
+import { useLinkNaming } from 'modules/purchase-draft/hooks/projections/useLinkNaming';
 import {
   lineDisablingReason,
   refusesWrites,
@@ -74,6 +75,7 @@ export const PurchaseDraftLineLinks = ({
   purchaseDraftId,
 }: PurchaseDraftLineLinksProps): ReactElement => {
   const { t } = useTranslation('purchase-draft');
+  const linkNaming = useLinkNaming();
   const { quantity } = useLocaleFormat();
   const warehouseId = useEnteredWarehouse() ?? '';
   const { isArchived } = useArchivedWarehouse();
@@ -154,7 +156,7 @@ export const PurchaseDraftLineLinks = ({
                   <Button
                     aria-describedby={refusalReason?.reasonId}
                     aria-label={t('linkRow.unlink', {
-                      customer: link.customerName,
+                      customer: linkNaming(link),
                     })}
                     isDisabled={isDisabled}
                     size="sm"

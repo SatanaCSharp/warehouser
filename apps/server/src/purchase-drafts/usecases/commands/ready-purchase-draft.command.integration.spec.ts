@@ -22,6 +22,7 @@ import { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-dra
 import { UserEntity } from 'shared/domain/entities/user.entity';
 import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
 import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
+import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository';
 import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository';
 import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
 import { PackagingTypeCatalogueRepository } from 'shared/domain/repositories/packaging-type-catalogue.repository';
@@ -66,9 +67,12 @@ const addLineCommand = new AddPurchaseDraftLineCommand(
   assemblyRepository,
   assemblyService,
 );
+// T19/AC-12 — the real address book, so the revisions this suite performs are proved against the
+// same Warehouse-scoped availability read the write path now issues.
 const reviseLineCommand = new RevisePurchaseDraftLineCommand(
   assemblyRepository,
   assemblyService,
+  new CustomerAddressBookRepository(dataSource),
 );
 
 const seedUser = async (workspaceId: string): Promise<string> => {

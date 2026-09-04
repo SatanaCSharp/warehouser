@@ -3,8 +3,10 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { CreatePurchaseDraftAction } from 'modules/purchase-draft/components/CreatePurchaseDraftAction';
+import { PurchaseDraftLineDirectory } from 'modules/purchase-draft/components/purchase-draft-line-directory/PurchaseDraftLineDirectory';
 import { PurchaseDraftDetailPane } from 'modules/purchase-draft/components/PurchaseDraftDetailPane';
 import { PurchaseDraftList } from 'modules/purchase-draft/components/PurchaseDraftList';
+import { PurchaseDraftViewToggle } from 'modules/purchase-draft/components/PurchaseDraftViewToggle';
 import { usePurchaseDraft } from 'modules/purchase-draft/hooks/queries/usePurchaseDraft';
 import { usePurchaseDrafts } from 'modules/purchase-draft/hooks/queries/usePurchaseDrafts';
 import { ArchivedWarehouseChip } from 'shared/components/ArchivedWarehouseChip';
@@ -14,6 +16,7 @@ import { DatasetSkeleton } from 'shared/components/DatasetSkeleton';
 import { ChevronLeftIcon } from 'shared/icons';
 
 import type { PurchaseDraftState } from '@warehouser/contracts/purchase-drafts';
+import type { PurchaseDraftView } from 'modules/purchase-draft/components/PurchaseDraftViewToggle';
 import type { ReactElement } from 'react';
 
 /** The three tabs (design-handoff.md `Hh6Al`): order and count never change. */
@@ -88,6 +91,10 @@ export const PurchaseDraftWorkspace = (): ReactElement => {
   const { t } = useTranslation('purchase-draft');
   const drafts = usePurchaseDrafts();
   const [tab, setTab] = useState<TabState>('draft');
+  // How the member is looking at the drafts the tab chose. Transient, owned by
+  // the toggle that sets it, and never a URL or a Redux concern: it survives
+  // nothing and nobody else reads it (`writing-web-components.md` §9).
+  const [view, setView] = useState<PurchaseDraftView>('byDraft');
   const [selectedDraftId, setSelectedDraftId] = useState<string | undefined>(
     undefined,
   );
@@ -103,6 +110,10 @@ export const PurchaseDraftWorkspace = (): ReactElement => {
     }
   };
   const onSelectDraft = (draftId: string): void => setSelectedDraftId(draftId);
+  const onSelectView = (selected: PurchaseDraftView): void => {
+    setView(selected);
+    setSelectedDraftId(undefined);
+  };
   const onBackToList = (): void => setSelectedDraftId(undefined);
 
   const draftsIn = (state: TabState): typeof drafts =>
@@ -168,43 +179,54 @@ export const PurchaseDraftWorkspace = (): ReactElement => {
           </Tabs.List>
         </Tabs.ListContainer>
 
-        <div className="mt-4 flex justify-end">
+        <div className="mt-4 flex flex-wrap items-end justify-between gap-3">
+          <PurchaseDraftViewToggle value={view} onChange={onSelectView} />
           <CreatePurchaseDraftAction />
         </div>
 
         {TAB_STATES.map((state) => (
           <Tabs.Panel className="pt-5" id={state} key={state}>
-            <div className="flex gap-6">
-              <div
-                className={`w-full md:w-[340px] md:shrink-0 ${
-                  selectedDraftId ? 'hidden md:block' : 'block'
-                }`}
-              >
-                <PurchaseDraftList
-                  drafts={visibleDrafts}
-                  selectedDraftId={selectedDraftId}
-                  state={state}
-                  onSelect={onSelectDraft}
-                />
+            <Conditional when={view === 'byDraft'}>
+              <div className="flex gap-6">
+                <div
+                  className={`w-full md:w-[340px] md:shrink-0 ${
+                    selectedDraftId ? 'hidden md:block' : 'block'
+                  }`}
+                >
+                  <PurchaseDraftList
+                    drafts={visibleDrafts}
+                    selectedDraftId={selectedDraftId}
+                    state={state}
+                    onSelect={onSelectDraft}
+                  />
+                </div>
+                <div
+                  className={`min-w-0 flex-1 ${
+                    selectedDraftId ? 'block' : 'hidden md:block'
+                  }`}
+                >
+                  <Conditional when={selectedDraftId}>
+                    <button
+                      className="mb-3 inline-flex items-center gap-1 text-sm md:hidden"
+                      type="button"
+                      onClick={onBackToList}
+                    >
+                      <ChevronLeftIcon />
+                      {t('workspace.backToList')}
+                    </button>
+                  </Conditional>
+                  {detailContent[detailState]}
+                </div>
               </div>
-              <div
-                className={`min-w-0 flex-1 ${
-                  selectedDraftId ? 'block' : 'hidden md:block'
-                }`}
-              >
-                <Conditional when={selectedDraftId}>
-                  <button
-                    className="mb-3 inline-flex items-center gap-1 text-sm md:hidden"
-                    type="button"
-                    onClick={onBackToList}
-                  >
-                    <ChevronLeftIcon />
-                    {t('workspace.backToList')}
-                  </button>
-                </Conditional>
-                {detailContent[detailState]}
-              </div>
-            </div>
+            </Conditional>
+            {/* AC-22 — the by-line split of the same drafts the tab chose.
+                Each view is mounted only while it is the one on screen, so the
+                list a member is not looking at is not one more thing an
+                assistive technology has to walk past, and the by-line read is
+                issued only for the tab in front of them. */}
+            <Conditional when={view === 'byLine'}>
+              <PurchaseDraftLineDirectory state={state} />
+            </Conditional>
           </Tabs.Panel>
         ))}
       </Tabs>

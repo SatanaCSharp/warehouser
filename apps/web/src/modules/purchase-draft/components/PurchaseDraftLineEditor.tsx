@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useItems } from 'modules/item/hooks/queries/useItems';
+import { PurchaseDraftLineDelivery } from 'modules/purchase-draft/components/purchase-draft-line-delivery/PurchaseDraftLineDelivery';
 import { PurchaseDraftLineLinks } from 'modules/purchase-draft/components/purchase-draft-line-links/PurchaseDraftLineLinks';
 import { PurchaseDraftLineItemField } from 'modules/purchase-draft/components/PurchaseDraftLineItemField';
 import { ValueAddingNoteField } from 'modules/purchase-draft/components/ValueAddingNoteField';
@@ -199,6 +200,17 @@ export const PurchaseDraftLineEditor = ({
         placeholder={t('lineEditor.valueAddingNotePlaceholder')}
         onBlur={onBlurValueAddingNote}
         onChange={onChangeValueAddingNote}
+      />
+
+      {/* AC-13 — where this line's own goods travel and by which of the two
+          routes, which is what places it in one half of the by-line read or
+          the other. It sits between what the line *says* and who it says it
+          for, exactly as `jnl1h` draws it. */}
+      <PurchaseDraftLineDelivery
+        isDisabled={isDisabled}
+        line={line}
+        reasonId={reasonId}
+        onReviseLine={onReviseLine}
       />
 
       <PurchaseDraftLineLinks

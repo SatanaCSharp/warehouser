@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import { describeLinkDrift } from 'modules/purchase-draft/utils/link-drift';
 
-import type { PurchaseDraftLineLink } from '@warehouser/contracts/purchase-drafts';
+import type {
+  PurchaseDraftLineLinkIdentified,
+  PurchaseDraftLineLinkRedacted,
+} from '@warehouser/contracts/purchase-drafts';
 
 // AC-16 — "shows a Drift Signal against the draft naming the Customer Order
 // **and what changed**, compared against the demand captured when the draft was
@@ -11,13 +14,16 @@ import type { PurchaseDraftLineLink } from '@warehouser/contracts/purchase-draft
 // already carry.
 
 const link = (
-  overrides: Partial<PurchaseDraftLineLink> = {},
-): PurchaseDraftLineLink => ({
+  overrides: Partial<PurchaseDraftLineLinkIdentified> = {},
+): PurchaseDraftLineLinkIdentified => ({
   id: '00000000-0000-4000-8000-000000000301',
   customerOrderId: '00000000-0000-4000-8000-000000000401',
+  customer: null,
   customerName: 'Nordwind Logistik GmbH',
   statedQuantity: 800,
   snapshot: {
+    capturedDeliveryAddressId: null,
+    capturedDeliveryAddressText: null,
     capturedQuantity: 800,
     capturedNeededBy: '2026-09-02',
     capturedState: 'unfulfilled',
@@ -28,6 +34,7 @@ const link = (
     state: 'unfulfilled',
     outstandingQuantity: 800,
     lastChangedAt: null,
+    deliveryAddress: null,
   },
   driftSignals: [],
   allocation: null,
@@ -45,6 +52,7 @@ describe('describeLinkDrift', () => {
             state: 'unfulfilled',
             outstandingQuantity: 1000,
             lastChangedAt: '2026-08-25T12:00:00.000Z',
+            deliveryAddress: null,
           },
           driftSignals: ['quantity_changed'],
         }),
@@ -72,6 +80,7 @@ describe('describeLinkDrift', () => {
           state: 'unfulfilled',
           outstandingQuantity: 600,
           lastChangedAt: null,
+          deliveryAddress: null,
         },
         driftSignals: ['quantity_changed'],
       }),
@@ -91,6 +100,7 @@ describe('describeLinkDrift', () => {
             state: 'unfulfilled',
             outstandingQuantity: 800,
             lastChangedAt: null,
+            deliveryAddress: null,
           },
           driftSignals: ['needed_by_moved'],
         }),
@@ -115,6 +125,7 @@ describe('describeLinkDrift', () => {
             state: 'unfulfilled',
             outstandingQuantity: 1000,
             lastChangedAt: null,
+            deliveryAddress: null,
           },
           driftSignals: ['quantity_changed', 'needed_by_moved'],
         }),
@@ -145,6 +156,7 @@ describe('describeLinkDrift', () => {
             state: 'unfulfilled',
             outstandingQuantity: 1000,
             lastChangedAt: '2026-08-25T12:00:00.000Z',
+            deliveryAddress: null,
           },
           driftSignals: ['quantity_changed', 'needed_by_moved'],
         }),
@@ -168,5 +180,84 @@ describe('describeLinkDrift', () => {
         link({ snapshot: null, driftSignals: ['quantity_changed'] }),
       ),
     ).toEqual([]);
+  });
+  // T23 / AC-18 — Address Drift is the comparison "this order is going
+  // somewhere else now", so the drift carries **both** addresses: the one
+  // frozen for the link and the one the demand now expects. Reporting only
+  // that a disagreement exists throws away the half the member acts on.
+  it('names both addresses of an address drift, frozen and now expected', () => {
+    expect(
+      describeLinkDrift(
+        link({
+          snapshot: {
+            capturedDeliveryAddressId: '00000000-0000-4000-8000-000000000301',
+            capturedDeliveryAddressText: 'Nordkai 8, 21079 Hamburg',
+            capturedQuantity: 800,
+            capturedNeededBy: '2026-09-02',
+            capturedState: 'unfulfilled',
+          },
+          current: {
+            quantity: 800,
+            neededBy: '2026-09-02',
+            state: 'unfulfilled',
+            outstandingQuantity: 800,
+            lastChangedAt: '2026-08-26T12:00:00.000Z',
+            deliveryAddress: {
+              deliveryAddressId: '00000000-0000-4000-8000-000000000302',
+              addressText: 'Speicherweg 4, 21107 Hamburg',
+              accessNotes: null,
+              isMain: true,
+              deactivatedAt: null,
+            },
+          },
+          driftSignals: ['delivery_address_changed'],
+        }),
+      ),
+    ).toEqual([
+      {
+        kind: 'addressRedirected',
+        quantities: {},
+        dates: {},
+        addresses: {
+          from: 'Nordkai 8, 21079 Hamburg',
+          to: 'Speicherweg 4, 21107 Hamburg',
+        },
+        changedAt: '2026-08-26T12:00:00.000Z',
+      },
+    ]);
+  });
+
+  // AC-09a — a member without `CUSTOMERS:WATCH` reads a link from which both
+  // addresses are absent as properties. *That* the order was redirected is a
+  // fact about the draft and is still reported; where it now goes is not.
+  it('reports an address drift without naming an address when identity is withheld', () => {
+    const redacted = {
+      id: '00000000-0000-4000-8000-000000000301',
+      customerOrderId: '00000000-0000-4000-8000-000000000401',
+      statedQuantity: 800,
+      snapshot: {
+        capturedQuantity: 800,
+        capturedNeededBy: '2026-09-02',
+        capturedState: 'unfulfilled',
+      },
+      current: {
+        quantity: 800,
+        neededBy: '2026-09-02',
+        state: 'unfulfilled',
+        outstandingQuantity: 800,
+        lastChangedAt: null,
+      },
+      driftSignals: ['delivery_address_changed'],
+      allocation: null,
+    } as const satisfies PurchaseDraftLineLinkRedacted;
+
+    expect(describeLinkDrift(redacted)).toEqual([
+      {
+        kind: 'addressRedirectedWithheld',
+        quantities: {},
+        dates: {},
+        changedAt: null,
+      },
+    ]);
   });
 });

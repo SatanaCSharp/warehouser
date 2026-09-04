@@ -1,3 +1,5 @@
+import { linkAddressComparison } from 'modules/purchase-draft/utils/link-identity';
+
 import type {
   DriftSignalKind,
   PurchaseDraftLineLink,
@@ -15,7 +17,14 @@ export type LinkDriftKind =
   | 'quantityRaised'
   | 'quantityLowered'
   | 'needed_by_moved'
-  | 'delivery_address_changed';
+  // Address Drift resolves to **two** kinds rather than one, because the two
+  // read as different statements. An entitled member is told where the goods
+  // were meant to go and where the demand now expects them; a member without
+  // `CUSTOMERS:WATCH` is told that the order was redirected and nothing more,
+  // because both addresses are absent from the link they read (AC-09a,
+  // AC-18).
+  | 'addressRedirected'
+  | 'addressRedirectedWithheld';
 
 /**
  * What a link's Demand Snapshot and the Customer Order it names now actually
@@ -32,6 +41,16 @@ export type LinkDrift = {
   kind: LinkDriftKind;
   quantities: Record<string, number>;
   dates: Record<string, string>;
+  /**
+   * The two halves of an Address Drift as **text**, interpolated exactly as
+   * they were recorded: an address is written for a human driver to read and
+   * has no locale form to resolve, unlike a quantity or a date.
+   *
+   * Present only on the comparison that is about addresses, and absent — not
+   * empty — on every other, so no renderer can interpolate an address into a
+   * sentence that never had one.
+   */
+  addresses?: Record<string, string>;
   /**
    * When the Customer Order behind the comparison last moved, so the sentence
    * can be dated — `Cancelled on 24 Aug`, `Raised to 1 000 on 25 Aug` (frame
@@ -75,18 +94,24 @@ const DRIFT_RESOLVERS: Record<
           quantities: { from: snapshot.capturedQuantity, to: current.quantity },
           dates: { neededBy: current.neededBy },
         },
-  // Address Drift reports the comparison it made without naming the two
-  // addresses, because the contract does not yet carry them: the captured
-  // address on the Demand Snapshot and the live one on the linked order arrive
-  // with T19, and T23 owns how this drift reads beside the others. Until then
-  // this behaves as `cancelled` and `became_fulfilled` do — the kind is the
-  // whole signal. It is a resolver rather than an omission because
-  // `DRIFT_RESOLVERS` is exhaustive by design.
-  delivery_address_changed: () => ({
-    kind: 'delivery_address_changed',
-    quantities: {},
-    dates: {},
-  }),
+  // AC-18 — the comparison is "this order is going somewhere else now", so
+  // both halves are named: the address frozen for the link and the address the
+  // demand now expects. `linkAddressComparison` answers `null` exactly when
+  // there is no pair to state — a redacted link, or one to an order recorded
+  // by typed name, which names no address on either side — and that absence
+  // selects the withheld wording rather than a sentence with two holes in it.
+  delivery_address_changed: (link) => {
+    const addresses = linkAddressComparison(link);
+
+    return addresses === null
+      ? { kind: 'addressRedirectedWithheld', quantities: {}, dates: {} }
+      : {
+          kind: 'addressRedirected',
+          quantities: {},
+          dates: {},
+          addresses: { from: addresses.captured, to: addresses.current },
+        };
+  },
   needed_by_moved: ({ current, snapshot }) =>
     snapshot === null
       ? null

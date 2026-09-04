@@ -711,6 +711,11 @@ describe('readiness removal — declarative permission gating is unchanged (CR-R
     'modules/purchase-draft/components/CreatePurchaseDraftAction.tsx': 4,
     'modules/purchase-draft/components/ExpectedArrivalDateField.tsx': 4,
     'modules/purchase-draft/components/PurchaseDraftLineEditor.tsx': 4,
+    // delivery-addresses T23 — the `DELIVERY` block's destination pickers are
+    // withheld from an actor without `CUSTOMERS:WATCH`, and the Customers read
+    // they depend on lives inside the gate so nothing is requested for a
+    // dataset that actor may not read (AC-09a).
+    'modules/purchase-draft/components/purchase-draft-line-delivery/components/DirectDestinationFields.tsx': 4,
     'modules/purchase-draft/components/purchase-draft-line-links/PurchaseDraftLineLinks.tsx': 4,
     'modules/purchase-draft/components/purchase-draft-line-links/components/LinkCustomerOrderAction.tsx': 4,
     'modules/purchase-draft/components/purchase-draft-transitions/components/ClosePurchaseDraftAction.tsx': 4,

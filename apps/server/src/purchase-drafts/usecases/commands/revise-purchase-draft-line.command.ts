@@ -4,8 +4,13 @@ import omit from 'lodash/omit';
 import {
   purchaseDraftDeliveryAddressDisagreementError,
   purchaseDraftInvalidDeliveryDestinationError,
+  purchaseDraftLineDeliveryAddressInactiveError,
+  purchaseDraftLineDeliveryAddressUnavailableError,
 } from 'purchase-drafts/domain/errors/purchase-draft.errors';
-import { directLineNamesACustomerAddress } from 'purchase-drafts/domain/predicates/purchase-draft-delivery.predicates';
+import {
+  directLineNamesACustomerAddress,
+  isLineDestinationActive,
+} from 'purchase-drafts/domain/predicates/purchase-draft-delivery.predicates';
 import type { LineDeliveryDestination } from 'purchase-drafts/domain/services/purchase-draft-assembly.service';
 import {
   assertApplied,
@@ -15,6 +20,7 @@ import {
 import { DeliveryMode } from 'purchase-drafts/domain/value-objects/delivery-mode';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
+import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository';
 import { PurchaseDraftAssemblyRepository } from 'shared/domain/repositories/purchase-draft-assembly.repository';
 
 /** Only the halves the member actually stated. An absent key leaves that half as it was; an
@@ -69,6 +75,7 @@ export class RevisePurchaseDraftLineCommand {
   constructor(
     private readonly assemblyRepository: PurchaseDraftAssemblyRepository,
     private readonly assemblyService: PurchaseDraftAssemblyService,
+    private readonly customerAddressBookRepository: CustomerAddressBookRepository,
   ) {}
 
   @Transactional()
@@ -94,6 +101,38 @@ export class RevisePurchaseDraftLineCommand {
       changes.destination === undefined
         ? undefined
         : statedDestination(changes.destination);
+
+    // AC-12/sad.md §6.7 step 4 — "prove the address belongs to a Customer of the acting Warehouse
+    // and is active", **before** the write rather than by letting
+    // `fk_purchase_draft_lines_delivery_address` fire. The composite reference is the same
+    // `(id, warehouse_id)` pair, so this read decides exactly what the constraint would, and
+    // decides it with the two codes the contract declares: an address of another Warehouse, and one
+    // that does not exist, are the one non-enumerating 404; an Inactive one — which no constraint
+    // catches at all — is the documented 409. The repository is injected directly rather than
+    // through `PurchaseDraftAssemblyService`, because exactly one command asks this question and a
+    // service with one caller is a pass-through (server-architecture.md §Services).
+    //
+    // The read runs inside this command's `@Transactional()` boundary, so the address it proved
+    // available cannot be deactivated between the proof and the write by a transaction that
+    // commits in between.
+    if (
+      destination !== undefined &&
+      destination.customerDeliveryAddressId !== null
+    ) {
+      const address =
+        await this.customerAddressBookRepository.findWarehouseDeliveryAddress(
+          destination.customerDeliveryAddressId,
+          currentUser.warehouseId,
+        );
+      assert(
+        address !== null,
+        purchaseDraftLineDeliveryAddressUnavailableError(),
+      );
+      assert(
+        isLineDestinationActive(address.deactivatedAt),
+        purchaseDraftLineDeliveryAddressInactiveError(),
+      );
+    }
 
     // AC-15a — the second of the three moments the agreement is required. The links are read
     // against the destination the line **would** have, so a revision that would strand them is

@@ -197,6 +197,15 @@ const commandsWith = ({
     reviseLine: new RevisePurchaseDraftLineCommand(
       assemblyRepository as never,
       assemblyService,
+      // T19/AC-12 — the address-book read the line revision issues before writing a Direct to
+      // Customer destination. Every case in this file revises something other than the
+      // destination, so it answers with an active address of this Warehouse and is never reached;
+      // the rule itself is proved in `purchase-draft-line-delivery.spec.ts`.
+      {
+        findWarehouseDeliveryAddress: jest
+          .fn()
+          .mockResolvedValue({ deactivatedAt: null }),
+      } as never,
     ),
     removeLine: new RemovePurchaseDraftLineCommand(assemblyRepository as never),
     addLink: new AddPurchaseDraftLineLinkCommand(

@@ -5,10 +5,10 @@ import {
   toIdentifiedCustomerOrder,
   toRedactedCustomerOrder,
 } from 'customer-orders/domain/mappers/customer-order-projection.mapper';
-import { readsCustomerIdentity } from 'customer-orders/domain/predicates/customer-order.predicates';
 import { first } from 'lodash';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository';
+import { readsCustomerIdentity } from 'shared/predicates/observed-permission.predicates';
 
 // The projection every Customer Order **mutation** answers with — openapi.yaml
 // `recordCustomerOrder` 201, `amendCustomerOrder` 200, `redirectCustomerOrder` 200 and the

@@ -5,7 +5,7 @@ import {
   arrivalAllocationCreateSchema,
   arrivalConfirmationLineSchema,
   arrivalConfirmationSchema,
-  linkedCustomerOrderStateSchema,
+  linkedCustomerOrderStateRedactedSchema,
   packagingTypeIdSchema,
   packagingTypeSchema,
   purchaseDraftClosureSchema,
@@ -42,6 +42,8 @@ const validSummary = {
   expectedArrivalDate: '2026-09-02',
   lineCount: 2,
   hasDriftSignal: true,
+  // T19/AC-18a — the second, narrower drift flag the list itself carries.
+  hasDirectToCustomerAddressDrift: false,
   closureReason: null,
   createdByUserId: id(1),
   createdAt: '2026-08-12T08:00:00.000Z',
@@ -65,11 +67,19 @@ const validLine = {
   packagingTypeId: 'cable_coil',
   valueAddingNote: 'Translated sticker on each coil',
   receivedQuantity: null,
+  // T19/AC-13 — how this line's own goods travel, and where. Read here in its redacted form: no
+  // `customerDestination` property at all, which is the shape an actor without `CUSTOMERS:WATCH`
+  // is served (AC-09a).
+  deliveryMode: 'via_warehouse',
+  warehouseDestination: {
+    addressText: 'Test Warehouse Dock, Test City',
+    accessNotes: null,
+    frozen: true,
+  },
   links: [
     {
       id: id(501),
       customerOrderId: id(201),
-      customerName: 'Test Customer North',
       statedQuantity: 100,
       snapshot: {
         capturedQuantity: 100,
@@ -145,13 +155,13 @@ describe('purchase-drafts contracts', () => {
       const [{ current }] = validLine.links;
 
       expect(
-        linkedCustomerOrderStateSchema.parse({
+        linkedCustomerOrderStateRedactedSchema.parse({
           ...current,
           lastChangedAt: null,
         }).lastChangedAt,
       ).toBeNull();
       expect(
-        linkedCustomerOrderStateSchema.safeParse({
+        linkedCustomerOrderStateRedactedSchema.safeParse({
           ...current,
           lastChangedAt: '2026-08-25',
         }).success,
@@ -160,7 +170,7 @@ describe('purchase-drafts contracts', () => {
       const { lastChangedAt, ...withoutMoment } = current;
       expect(lastChangedAt).toBe('2026-08-25T10:20:00.000Z');
       expect(
-        linkedCustomerOrderStateSchema.safeParse(withoutMoment).success,
+        linkedCustomerOrderStateRedactedSchema.safeParse(withoutMoment).success,
       ).toBe(false);
     });
 

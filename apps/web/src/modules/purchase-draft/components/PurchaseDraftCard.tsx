@@ -98,9 +98,24 @@ export const PurchaseDraftCard = ({
           </Chip>
         </div>
         <p className="mt-1 text-sm text-muted">{meta[draft.state]}</p>
+        {/* AC-18a separates the two surfaces. Drift on a **directly-shipped**
+            line is reported here, on the list itself, where the member sees it
+            without opening anything, because goods are travelling to an address
+            nobody now expects them at. The same disagreement on a Via Warehouse
+            line is reported when the draft is opened, since everything on such
+            a line lands at one dock either way — so the card carries the
+            general signal and never the via-warehouse address one.
+
+            Both statements report and neither instructs: the card stays the
+            same button, offering the same one action it always offered. */}
         <Conditional when={draft.hasDriftSignal}>
           <p className="mt-2">
             <DriftSignal label={t('card.drift')} />
+          </p>
+        </Conditional>
+        <Conditional when={draft.hasDirectToCustomerAddressDrift}>
+          <p className="mt-2">
+            <DriftSignal label={t('card.addressDrift')} />
           </p>
         </Conditional>
       </button>
