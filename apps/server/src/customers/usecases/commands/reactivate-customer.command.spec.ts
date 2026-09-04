@@ -119,10 +119,7 @@ const commandWith = (
   new ReactivateCustomerCommand(
     directoryRepository as never,
     addressBookRepository as never,
-    new CustomerAddressBookService(
-      directoryRepository as never,
-      addressBookRepository as never,
-    ),
+    new CustomerAddressBookService(directoryRepository as never),
     { now: () => now },
   );
 

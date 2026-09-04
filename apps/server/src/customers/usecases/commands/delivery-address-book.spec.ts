@@ -291,7 +291,6 @@ const bookWith = (
   const addressBookRepository = addressBookRepositoryDouble(addresses);
   const addressBook = new CustomerAddressBookService(
     directoryRepository as never,
-    addressBookRepository as never,
   );
   const clock = { now: () => now };
 

@@ -141,10 +141,7 @@ const commandWith = (
   new DeactivateCustomerCommand(
     directoryRepository as never,
     addressBookRepository as never,
-    new CustomerAddressBookService(
-      directoryRepository as never,
-      addressBookRepository as never,
-    ),
+    new CustomerAddressBookService(directoryRepository as never),
     { now: () => now },
   );
 
@@ -167,7 +164,6 @@ describe('DeactivateCustomerCommand (AC-06, AC-12)', () => {
     const addressBookRepository = addressBookRepositoryDouble();
     const addressBook = new CustomerAddressBookService(
       directoryRepository as never,
-      addressBookRepository as never,
     );
 
     const deactivated = await commandWith(

@@ -15,7 +15,6 @@ import {
   nextMainDeliveryAddress,
 } from 'customers/domain/services/customer-address-book.service';
 import type { CustomerEntity } from 'shared/domain/entities/customer.entity';
-import type { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
 
 const holder = (
   overrides: Partial<CustomerNameHolder> = {},
@@ -303,31 +302,22 @@ const directoryDouble = (
   findCustomerByName: jest.fn().mockResolvedValue(holder),
 });
 
-const addressBookDouble = (addresses: CustomerDeliveryAddressEntity[]) => ({
-  listDeliveryAddresses: jest.fn().mockResolvedValue(addresses),
-  lockDeliveryAddresses: jest.fn().mockResolvedValue(addresses),
-  deactivateDeliveryAddress: jest.fn().mockResolvedValue('applied'),
-  setMainDeliveryAddress: jest.fn().mockResolvedValue('applied'),
-});
-
+// One repository, because the service reaches one: the address-book writes and the lock they run
+// under moved to the commands that own their transactions (2026-09-04 backend review, findings 2
+// and 3), and the dependency followed them out of the constructor.
 const serviceWith = (
   directory: ReturnType<typeof directoryDouble>,
-  addressBook: ReturnType<typeof addressBookDouble>,
 ): CustomerAddressBookService =>
-  new CustomerAddressBookService(directory as never, addressBook as never);
+  new CustomerAddressBookService(directory as never);
 
 describe('CustomerAddressBookService — resolveCustomer', () => {
   // AC-12/AC-23 — the read is scoped to the acting Warehouse, so a Customer of another Warehouse
   // resolves to nothing exactly as a missing one does and the two refusals are one.
   it('reads the Customer within the acting Warehouse and returns it', async () => {
     const directory = directoryDouble(storedCustomer());
-    const addressBook = addressBookDouble([]);
 
     await expect(
-      serviceWith(directory, addressBook).resolveCustomer(
-        customerId,
-        warehouseId,
-      ),
+      serviceWith(directory).resolveCustomer(customerId, warehouseId),
     ).resolves.toMatchObject({ id: customerId });
     expect(directory.findCustomer).toHaveBeenCalledWith(
       customerId,
@@ -336,10 +326,10 @@ describe('CustomerAddressBookService — resolveCustomer', () => {
   });
 
   it('refuses a Customer the Warehouse-scoped read does not return', async () => {
-    const rejection = serviceWith(
-      directoryDouble(null),
-      addressBookDouble([]),
-    ).resolveCustomer(customerId, warehouseId);
+    const rejection = serviceWith(directoryDouble(null)).resolveCustomer(
+      customerId,
+      warehouseId,
+    );
 
     await expect(rejection).rejects.toMatchObject({
       code: ErrorCode.CUSTOMERS_TARGET_UNAVAILABLE,
@@ -359,10 +349,10 @@ describe('CustomerAddressBookService — assertNameAvailable', () => {
       }),
     );
 
-    const rejection = serviceWith(
-      directory,
-      addressBookDouble([]),
-    ).assertNameAvailable(warehouseId, 'Test Customer North');
+    const rejection = serviceWith(directory).assertNameAvailable(
+      warehouseId,
+      'Test Customer North',
+    );
 
     await expect(rejection).rejects.toMatchObject({
       code: ErrorCode.CUSTOMERS_NAME_TAKEN,
@@ -376,20 +366,21 @@ describe('CustomerAddressBookService — assertNameAvailable', () => {
 
   it('accepts a name no Customer of the Warehouse holds', async () => {
     await expect(
-      serviceWith(
-        directoryDouble(null, null),
-        addressBookDouble([]),
-      ).assertNameAvailable(warehouseId, 'Test Customer South'),
+      serviceWith(directoryDouble(null, null)).assertNameAvailable(
+        warehouseId,
+        'Test Customer South',
+      ),
     ).resolves.toBeUndefined();
   });
 
   // AC-03b — the Customer whose own name is being corrected never conflicts with itself.
   it('accepts the name the corrected Customer already holds', async () => {
     await expect(
-      serviceWith(
-        directoryDouble(null, storedCustomer()),
-        addressBookDouble([]),
-      ).assertNameAvailable(warehouseId, 'Test Customer North', customerId),
+      serviceWith(directoryDouble(null, storedCustomer())).assertNameAvailable(
+        warehouseId,
+        'Test Customer North',
+        customerId,
+      ),
     ).resolves.toBeUndefined();
   });
 });

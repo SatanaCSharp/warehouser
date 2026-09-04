@@ -36,7 +36,6 @@ export const isDeliveryAddressText = (addressText: string): boolean =>
 export const isAccessNotes = (accessNotes: string): boolean =>
   accessNotes.trim().length > 0;
 
-// AC-03/AC-03c/AC-06 — the Customer of this Warehouse that already holds the name, or `null`.
 // AC-06a — activation is the absence of a deactivation instant, matching `warehouses.archived_at`
 // and `items.deactivated_at`. An Inactive address is not offered where an address is chosen.
 export const isActiveDeliveryAddress = (

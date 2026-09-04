@@ -95,10 +95,7 @@ const commandWith = (
   new CorrectCustomerNameCommand(
     directoryRepository as never,
     addressBookRepository as never,
-    new CustomerAddressBookService(
-      directoryRepository as never,
-      addressBookRepository as never,
-    ),
+    new CustomerAddressBookService(directoryRepository as never),
     { now: () => now },
   );
 

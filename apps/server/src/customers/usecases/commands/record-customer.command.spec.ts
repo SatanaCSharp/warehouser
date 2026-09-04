@@ -67,27 +67,15 @@ const directoryRepositoryDouble = (rows: readonly CustomerEntity[] = []) => ({
   ),
 });
 
-const addressBookRepositoryDouble = () => ({
-  listDeliveryAddresses: jest.fn().mockResolvedValue([]),
-  lockDeliveryAddresses: jest.fn().mockResolvedValue([]),
-  addDeliveryAddress: jest.fn(),
-  setMainDeliveryAddress: jest.fn(),
-  deactivateDeliveryAddress: jest.fn(),
-});
-
 // Built over the *real* `CustomerAddressBookService` with doubles beneath it, not over a double of
 // the service: every case is about the rule being enforced, not about the call being made
 // (server-architecture.md §Services, "Unit-test the commands over the real service").
 const commandWith = (
   directoryRepository: ReturnType<typeof directoryRepositoryDouble>,
-  addressBookRepository = addressBookRepositoryDouble(),
 ): RecordCustomerCommand =>
   new RecordCustomerCommand(
     directoryRepository as never,
-    new CustomerAddressBookService(
-      directoryRepository as never,
-      addressBookRepository as never,
-    ),
+    new CustomerAddressBookService(directoryRepository as never),
     {
       customerId: () => customerId,
       deliveryAddressId: () => deliveryAddressId,

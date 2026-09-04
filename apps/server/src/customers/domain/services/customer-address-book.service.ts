@@ -19,7 +19,6 @@ import {
 import { compact, filter, find, orderBy } from 'lodash';
 import type { CustomerEntity } from 'shared/domain/entities/customer.entity';
 import type { DeliveryAddressWriteOutcome } from 'shared/domain/repositories/customer-address-book.repository';
-import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository';
 import type { CustomerWriteOutcome } from 'shared/domain/repositories/customer-directory.repository';
 import { CustomerDirectoryRepository } from 'shared/domain/repositories/customer-directory.repository';
 
@@ -28,13 +27,17 @@ import { CustomerDirectoryRepository } from 'shared/domain/repositories/customer
 //
 // The functions below **state the rules**: each receives every value it decides over, returns or
 // throws, and reaches nothing — so each is testable, and readable, without a database. The
-// `CustomerAddressBookService` at the foot of this file is **the collaboration**: it injects the two
-// repositories once, performs the reads those rules are decided over and the writes AC-06b requires,
-// and calls the functions to state the rules. That is the split
-// server-architecture.md §Services draws — "a shared operation that reaches a repository belongs in
-// an injectable service, so the repository is injected once rather than threaded through every
-// caller as an argument" — and `customer-orders/domain/services/customer-order-lifecycle.service.ts`
-// is the same shape, `assertNeededByStillAhead` beside `CustomerOrderLifecycleService`.
+// `CustomerAddressBookService` at the foot of this file is **the collaboration**: it injects the
+// directory repository once and performs the two reads more than one command needs, then calls the
+// functions to state the rules. That is the split server-architecture.md §Services draws — "a shared
+// operation that reaches a repository belongs in an injectable service, so the repository is
+// injected once rather than threaded through every caller as an argument" — and
+// `customer-orders/domain/services/customer-order-lifecycle.service.ts` is the same shape,
+// `assertNeededByStillAhead` beside `CustomerOrderLifecycleService`.
+//
+// The address-book writes and the lock they are decided under are **not** here: each belongs to the
+// one command that owns its transaction, which is where the 2026-09-04 backend review put them
+// (findings 2 and 3). The functions above are what those commands share.
 
 // Where a Customer is, as far as an authorization-shaped refusal is concerned.
 export interface CustomerLocation {
@@ -213,22 +216,20 @@ export const assertLockedDeliveryAddressWriteApplied = (
   );
 };
 
-// The operations more than one command needs (sad.md §5): resolve the Customer in the acting
-// Warehouse, refuse a name another Customer of that Warehouse holds, resolve an address that belongs
-// to the Customer and is active, and reassign the Main address when the current Main one is
-// deactivated (AC-06b).
+// The two reads more than one command needs (sad.md §5): resolve the Customer in the acting
+// Warehouse, and refuse a name another Customer of that Warehouse already holds. Both are questions;
+// each caller decides what to do with the answer, and every write stays in the command that owns it
+// (server-architecture.md §Services, "the commands still own their operations").
 //
 // Registered on `CustomersUsecaseModule` and **not** exported: nothing outside `customers` calls it,
 // which `usecases/usecase.module.di.spec.ts` proves by compiling a consumer that tries.
 //
-// It opens no transaction of its own. It runs inside the boundary the calling command declares —
-// which is what makes the row lock below that command's lock, and what puts every address-book
-// command on the one ascending-identifier lock order data-model.md fixes for `customers`.
+// It opens no transaction of its own and takes no lock. It runs inside the boundary the calling
+// command declares, so its reads are that command's reads.
 @Injectable()
 export class CustomerAddressBookService {
   constructor(
     private readonly customerDirectoryRepository: CustomerDirectoryRepository,
-    private readonly customerAddressBookRepository: CustomerAddressBookRepository,
   ) {}
 
   // AC-12/AC-23 — the read is scoped to the acting Warehouse, so a Customer of another Warehouse
