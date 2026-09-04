@@ -292,6 +292,28 @@ Recorded so a later run need not re-derive it:
 
 Resolved with the user on 2026-09-04. No blocking finding is open.
 
+**All 18 fixes are implemented and committed** (2026-09-04), each lane test-first through the gate
+`implement` uses — unit + lint + `tsc`, run in the main checkout with nothing else in flight:
+
+| Commit    | Lane                | Fixes            | Gate                                  |
+| --------- | ------------------- | ---------------- | ------------------------------------- |
+| `cfb8f79` | API cache tags      | 1, 2, 3, 13      | 155 files / 1294 tests, lint 0, tsc 0 |
+| `73274c2` | purchase-draft UI   | 5, 6, 10, 11     | 155 files / 1297 tests, lint 0, tsc 0 |
+| `bf06a7f` | customer directory  | 4, 7, 15, 16, 18 | 155 files / 1298 tests, lint 0, tsc 0 |
+| `c93f93f` | pickers + consumers | 8, 9, 12         | 157 files / 1301 tests, lint 0, tsc 0 |
+| `389ae91` | workspace forms     | 14, 17           | 157 files / 1301 tests, lint 0, tsc 0 |
+
+Final state: 157 spec files / 1301 tests green, lint clean, `tsc --noEmit` exit 0, full monorepo
+suite 8/8. Integration tier: **NON-red** — `apps/web` has none, so none was run and none is claimed
+(`require_integration: auto`).
+
+Three fixes were recorded as **changed without a new test**, each with its reasoning rather than a
+manufactured red: fix 5 (the stacked `Conditional`s were already mutually exclusive, so the rule is
+structural with no behavioural delta — a regression guard was kept for the property the lookup must
+preserve), fix 14 (`void` attaches no `.catch`, and `submit` cannot reject because `mutationOutcome`
+turns failure into a value, so the delta is type-level), and fixes 16–18 (presentational, by explicit
+decision not to pin class names).
+
 ### Fix now — all 12 blocking findings
 
 Handed back as follow-up tasks through the same TDD gate `implement` uses:
