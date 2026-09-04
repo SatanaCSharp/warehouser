@@ -51,6 +51,19 @@ const openedDialog = (): HTMLElement =>
   });
 
 describe('CorrectCustomerDialog', () => {
+  // R20 — the field must open holding the name it is correcting. RHF's
+  // `defaultValues` alone cannot do this: HeroUI's `TextField` owns the input's
+  // value, so `register()`'s imperative ref write is discarded on render. Every
+  // other correction dialog in the repo passes `defaultValue` for exactly this
+  // reason (`CorrectItemDialog.tsx`:144). This dialog did not, and opened blank.
+  it('opens with the current name pre-filled (AC-03b)', () => {
+    renderDialog();
+
+    expect(within(openedDialog()).getByLabelText('Customer name')).toHaveValue(
+      'Nordwind Logistik GmbH',
+    );
+  });
+
   it('submits the corrected name and closes (AC-03b)', async () => {
     const user = userEvent.setup();
     const { onClose, onSave } = renderDialog();

@@ -647,6 +647,20 @@
       "dod": "The 21 moved method/path pairs are frozen as a list and asserted by set inclusion, so a dropped moved route fails even when new routes are added at the same prefix; new routes stay governed by the baseline alone.",
       "files_hint": ["tests/refactor/route-table.spec.mjs"],
       "origin": "review-2026-09-04"
+    },
+    {
+      "id": "R20",
+      "title": "Pre-fill the two correction dialogs, which opened blank",
+      "layer": "ui",
+      "deps": ["R8"],
+      "acs": ["AC-03b", "AC-16", "AC-17"],
+      "dod": "CorrectCustomerDialog and CorrectDeliveryAddressDialog pass defaultValue alongside register(), as every other correction dialog in the repository does, so each field opens holding the value it is correcting. Pinned by a pre-fill assertion in each spec, both mutation-checked.",
+      "files_hint": [
+        "apps/web/src/modules/customer/components/customer-directory/components/customers/CorrectCustomerDialog.tsx",
+        "apps/web/src/modules/customer/components/customer-directory/components/addresses/CorrectDeliveryAddressDialog.tsx"
+      ],
+      "origin": "implement-2026-09-04 (found while writing R8's specs; not a review finding)",
+      "note": "HeroUI's TextField owns the input value, so react-hook-form's defaultValues never reach the DOM: register()'s imperative ref write is discarded on render. Only these two dialogs were affected — every other FormTextField consumer either passes defaultValue already or defaults to an empty string with nothing to pre-fill."
     }
   ]
 }

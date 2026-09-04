@@ -67,6 +67,7 @@ export const CorrectCustomerDialog = ({
         validationBehavior="aria"
         isInvalid={Boolean(errors.name)}
         errorMessage={errors.name?.message}
+        defaultValue={customer.name}
         label={t('dialogs.correct.nameLabel')}
         isDisabled={isSubmitting}
         {...register('name', { required: translate('customerName.required') })}

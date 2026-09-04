@@ -88,6 +88,7 @@ export const CorrectDeliveryAddressDialog = ({
         validationBehavior="aria"
         isInvalid={Boolean(errors.addressText)}
         errorMessage={errors.addressText?.message}
+        defaultValue={address.addressText}
         label={t('dialogs.correctAddress.addressLabel')}
         isDisabled={isSubmitting}
         {...register('addressText', {
@@ -99,6 +100,7 @@ export const CorrectDeliveryAddressDialog = ({
         isInvalid={Boolean(errors.accessNotes)}
         errorMessage={errors.accessNotes?.message}
         description={t('dialogs.correctAddress.accessNotesHelp')}
+        defaultValue={address.accessNotes ?? ''}
         label={t('dialogs.correctAddress.accessNotesLabel')}
         isDisabled={isSubmitting}
         {...register('accessNotes')}

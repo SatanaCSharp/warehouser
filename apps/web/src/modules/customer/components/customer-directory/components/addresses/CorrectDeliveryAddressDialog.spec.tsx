@@ -16,13 +16,15 @@ import type { MutationResult } from 'shared/api/client/mutation-outcome';
 // delivery-addresses R8 — AC-16/AC-17, "the correction submitted and shown".
 // Never opened by any prior spec.
 //
-// Every field this suite submits is retyped rather than left at its
-// pre-filled default, matching `CorrectItemDialog.spec.tsx`'s own `retype`
-// helper: `FormTextField`'s pre-filled DOM value is not reliably readable
-// through Testing Library right after mount in this harness (see this
-// task's report — a pre-existing, application-wide gap in `FormTextField`,
-// not something this dialog's own wiring can fix). What both cases below
-// prove is the dialog's own correction, not that gap.
+// Every field this suite submits is retyped rather than left at its pre-filled
+// default, matching `CorrectItemDialog.spec.tsx`'s own `retype` helper.
+//
+// R20: the pre-fill itself is now pinned below. HeroUI's `TextField` owns the
+// input's value, so RHF's `defaultValues` alone never reach the DOM —
+// `register()`'s imperative ref write is discarded on render. This is fixable
+// by the dialog's own wiring, and every other correction dialog in the repo
+// already does it (`CorrectItemDialog.tsx`:144): pass `defaultValue` alongside
+// `register()`. This dialog did not, and opened blank.
 
 const hafen: CustomerDeliveryAddress = {
   id: '00000000-0000-4000-8000-000000000301',
@@ -57,6 +59,18 @@ const openedDialog = (): HTMLElement =>
   screen.getByRole('dialog', { name: 'Correct this delivery address' });
 
 describe('CorrectDeliveryAddressDialog', () => {
+  it('opens with the current address and access notes pre-filled', () => {
+    renderDialog();
+
+    const dialog = openedDialog();
+    expect(within(dialog).getByLabelText('Delivery address')).toHaveValue(
+      'Hafenstraße 14, 20457 Hamburg',
+    );
+    expect(within(dialog).getByLabelText(/access notes/iu)).toHaveValue(
+      'Gate code 4711',
+    );
+  });
+
   it('submits the correction and closes (AC-16/AC-17)', async () => {
     const user = userEvent.setup();
     const { onClose, onSave } = renderDialog();
