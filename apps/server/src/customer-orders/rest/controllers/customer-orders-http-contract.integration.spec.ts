@@ -1244,6 +1244,34 @@ describe('customer-orders HTTP contract', () => {
 
       expect(status).toBe(403);
     });
+
+    // AC-23 — redirection is a mutation and declares no `@ArchivedTolerantRead()`, so it is refused
+    // over an archived Warehouse exactly as recording, amending and cancelling are. Each of those
+    // three carries its own case; this one did not until the 2026-09-04 backend review (finding 14),
+    // and server-request-authorization.md §Verify requires it of every new protected handler.
+    it('refuses a redirection on an archived Warehouse (AC-23)', async () => {
+      await seedWarehouses();
+      const itemId = await seedItem({ sku: 'TEST-SKU-0009' });
+      const { secondDeliveryAddressId } = await seedCustomerWithMainAddress(
+        'Test Customer North',
+      );
+      const recorderId = await seedRecorder();
+      const customerOrderId = await seedCustomerOrder(itemId, {
+        recordedByUserId: recorderId,
+      });
+      const actor = await seedActor([CUSTOMER_ORDERS_UPDATE]);
+      await setWarehouseArchived(warehouseId, seededAt);
+
+      const { status, body } = await request(
+        'PUT',
+        `/api/v1/warehouses/${warehouseId}/customer-orders/${customerOrderId}/delivery-address`,
+        actor.cookie,
+        { customerDeliveryAddressId: secondDeliveryAddressId },
+      );
+
+      expect(status).toBe(409);
+      expect(body).toMatchObject({ code: 'access.warehouse_archived' });
+    });
   });
 
   describe('PATCH /api/v1/warehouses/:warehouseId/customer-orders/:customerOrderId', () => {
