@@ -11,6 +11,7 @@ import {
   assertDeliveryAddressDeactivatable,
   assertDeliveryAddressUsable,
   CustomerAddressBookService,
+  customerHoldingName,
   nextMainDeliveryAddress,
 } from 'customers/domain/services/customer-address-book.service';
 import type { CustomerEntity } from 'shared/domain/entities/customer.entity';
@@ -216,6 +217,60 @@ describe('customer address book', () => {
       expect(nextMainDeliveryAddress('address-1', [main])).toBeNull();
     });
   });
+
+  describe('customerHoldingName', () => {
+    // AC-03/AC-03c/AC-06 — deactivation never releases a name, so an Inactive holder is
+    // treated exactly as an active one.
+    it('treats an Inactive holder exactly as an active one', () => {
+      const inactive = holder({
+        id: 'customer-inactive',
+        deactivatedAt: new Date('2026-08-01T00:00:00.000Z'),
+      });
+      const active = holder({ id: 'customer-active' });
+
+      expect(
+        customerHoldingName('Test Customer North', [inactive]),
+      ).not.toBeNull();
+      expect(
+        customerHoldingName('Test Customer North', [active]),
+      ).not.toBeNull();
+      expect(customerHoldingName('Test Customer North', [inactive])).toBe(
+        inactive,
+      );
+    });
+
+    it('reports the Customer that already holds the name so the refusal can name it', () => {
+      const existing = holder({ id: 'customer-2' });
+
+      expect(customerHoldingName('Test Customer North', [existing])).toBe(
+        existing,
+      );
+    });
+
+    // AC-03 — case-sensitive and non-normalising, following the `items.sku` precedent.
+    it('is case-sensitive, so two spellings are two Customers', () => {
+      expect(customerHoldingName('TEST CUSTOMER NORTH', [holder()])).toBeNull();
+    });
+
+    // AC-03b — correcting a Customer's name never conflicts with the Customer being corrected.
+    it('ignores the Customer whose own name is being corrected', () => {
+      const existing = holder({ id: 'customer-2' });
+
+      expect(
+        customerHoldingName('Test Customer North', [existing], 'customer-2'),
+      ).toBeNull();
+      expect(
+        customerHoldingName('Test Customer North', [existing], 'customer-3'),
+      ).not.toBeNull();
+    });
+
+    it('reports an unused name as available', () => {
+      expect(customerHoldingName('Test Customer South', [holder()])).toBeNull();
+      expect(customerHoldingName('Test Customer South', [holder()])).toBeNull();
+    });
+  });
+
+  // AC-06a — an Inactive address is not offered where an address is chosen.
 });
 
 // The injectable form. Everything above states a rule over values; the service below is the

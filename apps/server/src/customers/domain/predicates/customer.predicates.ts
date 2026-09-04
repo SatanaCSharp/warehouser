@@ -1,4 +1,4 @@
-import { filter, find, some } from 'lodash';
+import { filter, some } from 'lodash';
 
 // Pure predicates for Customer identity and the Delivery Address book (server-error-handling.md
 // §1). No NestJS, HTTP or TypeORM import here — `customers/domain/errors/customer.errors.ts` holds
@@ -37,29 +37,6 @@ export const isAccessNotes = (accessNotes: string): boolean =>
   accessNotes.trim().length > 0;
 
 // AC-03/AC-03c/AC-06 — the Customer of this Warehouse that already holds the name, or `null`.
-// **Active and Inactive alike**: deactivation does not release a name, so `deactivatedAt` is never
-// consulted. Case-sensitive and non-normalising, following the `items.sku` precedent — `"Acme Ltd"`
-// and `"ACME LTD"` are two Customers (data-model.md, seventh open question).
-//
-// `correctedCustomerId` is the Customer whose own name is being corrected, which never conflicts
-// with itself (AC-03b).
-export const customerHoldingName = (
-  name: string,
-  warehouseCustomers: readonly CustomerNameHolder[],
-  correctedCustomerId: string | null = null,
-): CustomerNameHolder | null =>
-  find(
-    warehouseCustomers,
-    (customer) => customer.name === name && customer.id !== correctedCustomerId,
-  ) ?? null;
-
-export const isCustomerNameAvailable = (
-  name: string,
-  warehouseCustomers: readonly CustomerNameHolder[],
-  correctedCustomerId: string | null = null,
-): boolean =>
-  customerHoldingName(name, warehouseCustomers, correctedCustomerId) === null;
-
 // AC-06a — activation is the absence of a deactivation instant, matching `warehouses.archived_at`
 // and `items.deactivated_at`. An Inactive address is not offered where an address is chosen.
 export const isActiveDeliveryAddress = (
@@ -89,21 +66,14 @@ export const hasExactlyOneMainActiveDeliveryAddress = (
     (address) => address.isMain && isActiveDeliveryAddress(address),
   ).length === 1;
 
-// The active addresses the Customer would still have if `addressId` were deactivated. Shared by the
-// condition below and by the AC-06b promotion, so both read the same set.
-export const remainingActiveDeliveryAddresses = (
-  addressId: string,
-  addresses: readonly DeliveryAddressState[],
-): readonly DeliveryAddressState[] =>
-  filter(
-    addresses,
-    (address) => address.id !== addressId && isActiveDeliveryAddress(address),
-  );
-
 // AC-07 — a Customer always keeps at least one active Delivery Address, whether or not it has
 // Unfulfilled Customer Orders. Evaluated against the address rows read under lock at the moment of
 // the change (sad.md §6.3), which is why the whole set is the argument.
 export const canDeactivateDeliveryAddress = (
   addressId: string,
   addresses: readonly DeliveryAddressState[],
-): boolean => remainingActiveDeliveryAddresses(addressId, addresses).length > 0;
+): boolean =>
+  some(
+    addresses,
+    (address) => address.id !== addressId && isActiveDeliveryAddress(address),
+  );

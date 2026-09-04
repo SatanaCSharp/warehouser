@@ -12,13 +12,11 @@ import type {
 } from 'customers/domain/predicates/customer.predicates';
 import {
   canDeactivateDeliveryAddress,
-  customerHoldingName,
   isActiveDeliveryAddress,
   isDeliveryAddressOfCustomer,
   isMainDeliveryAddressOf,
-  remainingActiveDeliveryAddresses,
 } from 'customers/domain/predicates/customer.predicates';
-import { compact, orderBy } from 'lodash';
+import { compact, filter, find, orderBy } from 'lodash';
 import type { CustomerEntity } from 'shared/domain/entities/customer.entity';
 import type { DeliveryAddressWriteOutcome } from 'shared/domain/repositories/customer-address-book.repository';
 import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository';
@@ -54,6 +52,42 @@ type AssertCustomerOfWarehouse = <T extends CustomerLocation>(
   customer: T | null,
   warehouseId: string,
 ) => asserts customer is T;
+
+// Selectors, not conditions — they return the row and the set the callers below need, so
+// server-error-handling.md §1 ("Return `boolean` or a TypeScript type predicate") keeps them out of
+// `customer.predicates.ts`, which now exports only conditions. They live beside the assertions and
+// the promotion that consume them (2026-09-04 backend review, finding 12).
+
+// The Customer of this Warehouse already holding `name`, or `null`. Returns the holder rather than
+// a boolean because the refusal names it: `customerNameTakenError(holder.id, holder.name)`.
+//
+// **Active and Inactive alike**: deactivation does not release a name, so `deactivatedAt` is never
+// consulted. Case-sensitive and non-normalising, following the `items.sku` precedent — `"Acme Ltd"`
+// and `"ACME LTD"` are two Customers (data-model.md, seventh open question).
+//
+// `correctedCustomerId` is the Customer whose own name is being corrected, which never conflicts
+// with itself (AC-03b).
+export const customerHoldingName = (
+  name: string,
+  warehouseCustomers: readonly CustomerNameHolder[],
+  correctedCustomerId: string | null = null,
+): CustomerNameHolder | null =>
+  find(
+    warehouseCustomers,
+    (customer) => customer.name === name && customer.id !== correctedCustomerId,
+  ) ?? null;
+
+// The active addresses the Customer would still have if `addressId` were deactivated — the set the
+// AC-06b promotion orders. `canDeactivateDeliveryAddress` no longer goes through this: it asks only
+// whether *any* remains, which `some` answers without building the set.
+export const remainingActiveDeliveryAddresses = (
+  addressId: string,
+  addresses: readonly DeliveryAddressState[],
+): readonly DeliveryAddressState[] =>
+  filter(
+    addresses,
+    (address) => address.id !== addressId && isActiveDeliveryAddress(address),
+  );
 
 export const assertCustomerOfWarehouse: AssertCustomerOfWarehouse = (
   customer,
