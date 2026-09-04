@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { describe, expect, it, vi } from 'vitest';
 
-import { ArrivalRefusalAlert } from 'modules/purchase-draft/components/purchase-draft-transitions/components/confirm-arrival-dialog/components/ArrivalRefusalAlert';
+import { EndingRefusalAlert } from 'modules/purchase-draft/components/purchase-draft-transitions/components/line-ending-dialog/components/EndingRefusalAlert';
 import { renderWithProviders } from 'test/render';
 
 import type { PurchaseDraftDetail } from '@warehouser/contracts/purchase-drafts';
@@ -48,6 +48,7 @@ const draft = {
       packagingTypeId: 'cartons',
       valueAddingNote: null,
       receivedQuantity: null,
+      ending: null,
       deliveryMode: 'via_warehouse',
       warehouseDestination: {
         addressText: 'Test Warehouse North, Test Industrial Estate',
@@ -103,7 +104,7 @@ const renderAlert = (
   onDismiss = vi.fn(),
 ): void => {
   renderWithProviders(
-    <ArrivalRefusalAlert
+    <EndingRefusalAlert
       code={code}
       details={details}
       draft={draft}
@@ -137,7 +138,7 @@ const allBounds = {
   ],
 };
 
-describe('ArrivalRefusalAlert', () => {
+describe('EndingRefusalAlert', () => {
   it('renders nothing while no refusal has been reported', () => {
     renderAlert(undefined);
 
@@ -233,12 +234,19 @@ describe('ArrivalRefusalAlert', () => {
     );
   });
 
-  it('reports a refusal that is not about bounds without inventing bounds for it', () => {
-    renderAlert(ErrorCode.PURCHASE_DRAFTS_ARRIVAL_ALREADY_CONFIRMED);
+  // AC-20a (`fpRfr`) — reachable only from a stale view, because `LineEndingAction` offers no
+  // second ending; that is precisely why it still needs a sentence, and why the sentence names
+  // *when* rather than restating the generic refusal.
+  it('names when a line ending was already recorded, without inventing bounds for it', () => {
+    renderAlert(ErrorCode.PURCHASE_DRAFTS_ENDING_ALREADY_RECORDED, {
+      endingKind: 'arrival',
+      endingRecordedByUserId: '00000000-0000-4000-8000-000000000001',
+      endingRecordedAt: '2026-09-18T10:00:00.000Z',
+    });
 
     const alert = screen.getByRole('alert');
     expect(alert).toHaveTextContent(
-      /this draft has already had its arrival confirmed/iu,
+      /this line's ending was already recorded on/iu,
     );
     expect(alert).not.toHaveTextContent(/that assignment cannot be recorded/iu);
     expect(
@@ -246,11 +254,27 @@ describe('ArrivalRefusalAlert', () => {
     ).not.toBeInTheDocument();
   });
 
+  // AC-20 (`fssB1`) — the refusal names which of the two ways the goods travelled, which is the
+  // fact the member is missing, rather than which route they happened to call.
+  it.each([
+    ['via_warehouse', /came to the warehouse/iu],
+    ['direct_to_customer', /went straight to the customer/iu],
+  ])(
+    'names how the goods travelled when the ending is the wrong kind (%s)',
+    (deliveryMode, sentence) => {
+      renderAlert(ErrorCode.PURCHASE_DRAFTS_ENDING_MODE_MISMATCH, {
+        deliveryMode,
+      });
+
+      expect(screen.getByRole('alert')).toHaveTextContent(sentence);
+    },
+  );
+
   it('states the rule of a code it does not know, never the code itself', () => {
     renderAlert('purchase_drafts.some_future_refusal');
 
     const alert = screen.getByRole('alert');
-    expect(alert).toHaveTextContent(/the arrival was not recorded/iu);
+    expect(alert).toHaveTextContent(/the ending was not recorded/iu);
     expect(alert).not.toHaveTextContent(/purchase_drafts/u);
   });
 

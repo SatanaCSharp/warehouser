@@ -5,7 +5,7 @@ import { PurchaseDraftLinkIdentity } from 'modules/purchase-draft/components/Pur
 import { PurchaseDraftLinkRow } from 'modules/purchase-draft/components/PurchaseDraftLinkRow';
 import { useLinkDriftChips } from 'modules/purchase-draft/hooks/projections/useLinkDriftChips';
 import { useLinkNaming } from 'modules/purchase-draft/hooks/projections/useLinkNaming';
-import { isAssignableLink } from 'modules/purchase-draft/utils/arrival-form';
+import { isAssignableLink } from 'modules/purchase-draft/utils/line-ending-form';
 import { Conditional } from 'shared/components/Conditional';
 import { FormTextField } from 'shared/components/FormTextField';
 import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
@@ -13,7 +13,7 @@ import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
 import type { PurchaseDraftLineLink } from '@warehouser/contracts/purchase-drafts';
 import type { ReactElement } from 'react';
 
-export type ArrivalAssignmentRowProps = {
+export type EndingAssignmentRowProps = {
   /** Whether the confirmation is in flight, which disables every field in it. */
   isSubmitting: boolean;
   link: PurchaseDraftLineLink;
@@ -41,17 +41,17 @@ const NOTHING_ASSIGNABLE = '—';
  * assignable row is the same `Ordering/Link Row` (`BSmrU`) the draft and frozen
  * lines render, with no arithmetic of its own.
  */
-export const ArrivalAssignmentRow = ({
+export const EndingAssignmentRow = ({
   isSubmitting,
   link,
   onCommit,
-}: ArrivalAssignmentRowProps): ReactElement => {
+}: EndingAssignmentRowProps): ReactElement => {
   const { t } = useTranslation('purchase-draft');
   const linkNaming = useLinkNaming();
   const { quantity } = useLocaleFormat();
   const driftChips = useLinkDriftChips();
 
-  const label = t('transitions.arrival.assignLabel', {
+  const label = t('transitions.lineEnding.assignLabel', {
     customer: linkNaming(link),
   });
 
@@ -71,7 +71,7 @@ export const ArrivalAssignmentRow = ({
         <div className="min-w-0 flex-1">
           <PurchaseDraftLinkIdentity link={link} />
           <p className="text-sm text-muted">
-            {t('transitions.arrival.unassignable', {
+            {t('transitions.lineEnding.unassignable', {
               count: link.statedQuantity,
               formatted: quantity(link.statedQuantity),
             })}
@@ -106,7 +106,7 @@ export const ArrivalAssignmentRow = ({
       trailing={
         <Conditional when={link.current.outstandingQuantity > 0}>
           <span className="shrink-0 text-sm text-muted">
-            {t('transitions.arrival.outstanding', {
+            {t('transitions.lineEnding.outstanding', {
               count: link.current.outstandingQuantity,
               formatted: quantity(link.current.outstandingQuantity),
             })}

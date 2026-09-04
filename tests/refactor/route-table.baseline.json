@@ -386,17 +386,6 @@
   },
   {
     "method": "POST",
-    "path": "/api/v1/warehouses/:warehouseId/purchase-drafts/:purchaseDraftId/arrival",
-    "guards": [
-      "SessionAuthGuard",
-      "WarehouseAccessGuard",
-      "WriteRateLimitGuard"
-    ],
-    "permission": "RequiredPermission(PermissionId.PURCHASE_DRAFTS_RECEIVE)",
-    "dto": "ArrivalConfirmationDto"
-  },
-  {
-    "method": "POST",
     "path": "/api/v1/warehouses/:warehouseId/purchase-drafts/:purchaseDraftId/closure",
     "guards": [
       "SessionAuthGuard",
@@ -438,6 +427,28 @@
     ],
     "permission": "RequiredPermission(PermissionId.PURCHASE_DRAFTS_UPDATE)",
     "dto": "PurchaseDraftLineUpdateDto"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/warehouses/:warehouseId/purchase-drafts/:purchaseDraftId/lines/:purchaseDraftLineId/arrival",
+    "guards": [
+      "SessionAuthGuard",
+      "WarehouseAccessGuard",
+      "WriteRateLimitGuard"
+    ],
+    "permission": "RequiredPermission(PermissionId.PURCHASE_DRAFTS_RECEIVE)",
+    "dto": "PurchaseDraftLineArrivalDto"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/warehouses/:warehouseId/purchase-drafts/:purchaseDraftId/lines/:purchaseDraftLineId/direct-delivery",
+    "guards": [
+      "SessionAuthGuard",
+      "WarehouseAccessGuard",
+      "WriteRateLimitGuard"
+    ],
+    "permission": "RequiredPermission(PermissionId.PURCHASE_DRAFTS_RECEIVE)",
+    "dto": "PurchaseDraftLineDirectDeliveryDto"
   },
   {
     "method": "POST",

@@ -123,4 +123,27 @@ describe('MUTATION_FEEDBACK success copy', () => {
       }),
     ).toBe('Order cancelled · Baltic Freight OÜ · Customer withdrew');
   });
+
+  // T24/design-handoff.md `LDc7S` — "toasts state what committed, including the consequence a
+  // member could not otherwise see". For a per-line ending there are two such consequences, and
+  // neither is visible on the draft: that the draft closes only once *every* line has an ending
+  // (AC-19), and that a direct delivery moved no stock at all because the goods were never here
+  // (AC-21). Pinned as copy rather than as rendering, because the registry is what decides it.
+  it('states that an arrival was recorded and that the draft closes only on the last line (AC-19)', () => {
+    const copy = successToast('recordPurchaseDraftLineArrival', {});
+
+    expect(copy).toMatch(/arrival is recorded/iu);
+    expect(copy).toMatch(/still waiting for has been reduced/iu);
+    expect(copy).toMatch(/closes once every line has an ending/iu);
+  });
+
+  it('states that a direct delivery moved no stock, because the goods were never here (AC-21)', () => {
+    const copy = successToast('recordPurchaseDraftLineDirectDelivery', {});
+
+    expect(copy).toMatch(/delivery is recorded/iu);
+    expect(copy).toMatch(/still waiting for has been reduced/iu);
+    // The invisible consequence — the whole reason this sentence differs from the arrival's.
+    expect(copy).toMatch(/no stock moved/iu);
+    expect(copy).toMatch(/never counted here/iu);
+  });
 });

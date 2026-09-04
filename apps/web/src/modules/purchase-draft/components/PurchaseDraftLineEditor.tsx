@@ -26,9 +26,20 @@ import type {
   PurchaseDraftLine,
   PurchaseDraftLineUpdate,
 } from '@warehouser/contracts/purchase-drafts';
-import type { ChangeEvent, ReactElement } from 'react';
+import type { ChangeEvent, ReactElement, ReactNode } from 'react';
 
 export type PurchaseDraftLineEditorProps = {
+  /**
+   * The line's own ending control, rendered last (design-handoff.md
+   * §Accessibility fixes the order: line head → fields → delivery mode →
+   * destination → note → links → ending action).
+   *
+   * Passed in rather than built here because the ending needs the whole draft
+   * and this component is given only its identifier; taking the slot keeps
+   * `draft` from being drilled a third hop
+   * (`writing-web-components.md` §Two-hop prop budget).
+   */
+  endingAction?: ReactNode;
   /** Which line of the draft this is, as the frames number them from 1. */
   index: number;
   isFrozen: boolean;
@@ -62,6 +73,7 @@ export type PurchaseDraftLineEditorProps = {
  * (`docs/system/adr/19-08-2026-declarative-permission-gates.md`).
  */
 export const PurchaseDraftLineEditor = ({
+  endingAction,
   index,
   isFrozen,
   line,
@@ -219,6 +231,12 @@ export const PurchaseDraftLineEditor = ({
         line={line}
         purchaseDraftId={purchaseDraftId}
       />
+
+      <Conditional when={endingAction}>
+        <div className="mt-4 flex justify-end border-t border-border pt-3">
+          {endingAction}
+        </div>
+      </Conditional>
     </li>
   );
 };

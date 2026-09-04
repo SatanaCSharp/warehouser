@@ -5,7 +5,7 @@
 //
 // `spec.md` §6 "Frozen-record integrity" measures that target with "Integration checks **and**
 // automated architecture checks", and the two prove different things.
-// `confirm-purchase-draft-arrival.integration.spec.ts` proves the frozen values of one seeded draft
+// `purchase-draft-line-ending.integration.spec.ts` proves the frozen values of one seeded draft
 // come back unchanged — a statement about the code as it stands today. This spec is the source-level
 // half: it fails the moment the write path *gains* the ability to touch a frozen field, whether or
 // not any test happens to exercise it. ADR 0002 "Consequences" is what makes that testable at all —
@@ -15,7 +15,7 @@
 // **What this spec cannot do**, and why the integration suite carries the other half: it reasons
 // about source text, so a statement that is textually clean but unscoped at row level — an UPDATE
 // predicated on a caller-supplied identifier alone — passes here. The cross-Warehouse and
-// cross-draft cases in `confirm-purchase-draft-arrival.integration.spec.ts` are what close that
+// cross-draft cases in `purchase-draft-line-ending.integration.spec.ts` are what close that
 // gap.
 //
 // It follows the source-scanning idiom `items/domain/on-hand-write-boundary.spec.ts`
@@ -57,11 +57,15 @@ const FROZEN_FIELDS = [
 const FROZEN_TABLES =
   /PurchaseDraftLineEntity|PurchaseDraftLineLinkEntity|purchase_draft_lines|purchase_draft_line_links/u;
 
-// The whole confirmation: the `purchase-drafts` half plus the demand half ADR 0002 delegates to.
+// The whole ending: the two `purchase-drafts` halves and the rule service they share, plus the
+// demand half ADR 0002 delegates to. T17 replaced the single whole-draft command with the per-line
+// pair, and the boundary widened with it rather than being narrowed to one of them.
 // Both are held to the same strong rule — neither has any business naming a frozen field, and in
 // fact neither does.
 const THE_CONFIRMATION_WRITE_PATH = [
-  'purchase-drafts/usecases/commands/confirm-purchase-draft-arrival.command.ts',
+  'purchase-drafts/usecases/commands/confirm-purchase-draft-line-arrival.command.ts',
+  'purchase-drafts/usecases/commands/record-purchase-draft-line-delivery.command.ts',
+  'purchase-drafts/domain/services/purchase-draft-line-ending.service.ts',
   'shared/domain/repositories/arrival-confirmation.repository.ts',
   'customer-orders/domain/services/demand-allocation.service.ts',
   'shared/domain/repositories/demand-allocation.repository.ts',
@@ -119,7 +123,7 @@ const structuralWriteTargetsOf = (source: string): string[] =>
       match.groups?.repositoryEntity ?? match.groups?.managerEntity ?? match[0],
   );
 
-describe('the frozen-record write boundary of Arrival Confirmation (AC-15, spec.md §6.1)', () => {
+describe('the frozen-record write boundary of a line ending (AC-15, spec.md §6.1)', () => {
   // A frozen field the code never names is a frozen field no refactor can accidentally start
   // writing — and it is also the evidence that no bound of this operation is derived from one,
   // which is what AC-17 requires when it makes the received quantity free to fall short of or

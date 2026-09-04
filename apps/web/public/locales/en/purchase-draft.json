@@ -97,7 +97,7 @@
     },
     "footer": {
       "readyHint": "At least one line is needed",
-      "arrivalHint": "Confirming an arrival closes this draft once and for all"
+      "endingHint": "Each line is ended on its own — the draft closes when the last one is recorded"
     },
     "driftAlert": {
       "heading": "Demand moved since this draft was frozen",
@@ -219,28 +219,29 @@
       "submit": "Close draft",
       "refusal": "This draft can no longer be closed. Nothing has changed."
     },
-    "arrival": {
-      "trigger": "Confirm arrival",
-      "title": "Confirm what arrived on {{reference}}",
-      "closesOnce": "Confirming an arrival closes a draft once and for all. Goods the supplier still owes are ordered on a new draft rather than awaited on this one.",
+    "lineEnding": {
       "lineHeading": "{{sku}} · {{description}}",
       "ordered": "{{formatted}} ordered",
-      "receivedLabel": "Quantity that arrived — {{sku}}",
-      "receivedDescription": "Whatever physically arrived.",
       "assignHeading": "Assign it across the customers this line was ordered for",
       "assignLabel": "Assign to {{customer}}",
       "outstanding": "{{formatted}} still outstanding",
       "noLinks": "No customer order is linked to this line, so nothing is assigned from it.",
       "summaryLabel": "Assignment total for {{sku}}",
-      "summary": "{{received}} arrived · {{assigned}} assigned · {{unassigned}} left unassigned in the transit zone.",
       "cancel": "Cancel",
-      "submit": "Confirm arrival and close the draft",
       "nothingSaved": "Nothing of this confirmation has been saved and the draft is untouched.",
+      "unassignable": "Was linked for {{formatted}} · nothing can be assigned to it now",
+      "summaryFulfilled": "{{customer}} becomes fulfilled and leaves the consolidated demand.",
       "refusal": {
         "allocationOutOfBounds": "An assignment is more than what arrived on its line, more than that customer is still waiting for, or against an order since cancelled or fulfilled.",
-        "alreadyConfirmed": "This draft has already had its arrival confirmed.",
-        "invalidState": "This draft is no longer waiting for an arrival.",
-        "unknown": "The arrival was not recorded.",
+        "alreadyRecorded": "This line's ending is already recorded.",
+        "alreadyRecorded_dated": "This line's ending was already recorded on {{on}}.",
+        "modeMismatch": {
+          "via_warehouse": "These goods came to the warehouse, so their ending is an arrival at the dock — not a delivery to the customer.",
+          "direct_to_customer": "These goods went straight to the customer, so their ending is a delivery to them — not an arrival at the dock.",
+          "unknown": "This is not the way that line's goods travelled."
+        },
+        "invalidState": "This draft is no longer waiting for a line to end.",
+        "unknown": "The ending was not recorded.",
         "bounds": {
           "title": "That assignment cannot be recorded",
           "exceedsReceived": "Line {{line}} — you assigned {{assigned}} across its customers, but recorded {{received}} as arrived.",
@@ -255,9 +256,30 @@
           "back": "Back to the form"
         }
       },
-      "unassignable": "Was linked for {{formatted}} · nothing can be assigned to it now",
-      "summaryFulfilled": "{{customer}} becomes fulfilled and leaves the consolidated demand.",
-      "atomicity": "The received quantities, every assignment, and the resulting outstanding quantity of each customer are recorded together — or none of them is. On-hand quantities are not touched: those move only through an adjustment that states its reason."
+      "arrival": {
+        "trigger": "Record what arrived",
+        "title": "Record what arrived at the dock — {{sku}} on {{reference}}",
+        "endsOnce": "This line ends once. What arrived here is recorded against this line alone; every other line of the draft keeps its own ending, and the draft closes only when the last of them is recorded.",
+        "quantityLabel": "Quantity that arrived — {{sku}}",
+        "quantityDescription": "Whatever physically arrived.",
+        "summary": "{{stated}} arrived · {{assigned}} assigned · {{unassigned}} left unassigned in the transit zone.",
+        "submit": "Record the arrival",
+        "atomicity": "The quantity that arrived, every assignment, and the resulting outstanding quantity of each customer are recorded together — or none of them is. On-hand quantities are not touched: those move only through an adjustment that states its reason."
+      },
+      "directDelivery": {
+        "trigger": "Record the delivery",
+        "title": "Record what the customer received — {{sku}} on {{reference}}",
+        "endsOnce": "This line ends once. What the customer received is recorded against this line alone; every other line of the draft keeps its own ending, and the draft closes only when the last of them is recorded.",
+        "quantityLabel": "Quantity the customer received — {{sku}}",
+        "quantityDescription": "Whatever the customer told you they received. Nothing here proves it.",
+        "summary": "{{stated}} delivered · {{assigned}} assigned · {{unassigned}} left unassigned.",
+        "submit": "Record the delivery",
+        "atomicity": "The quantity delivered, every assignment, and the resulting outstanding quantity of each customer are recorded together — or none of them is. No on-hand quantity moves: these goods went straight to the customer and were never in the transit zone to be counted."
+      },
+      "recorded": {
+        "arrival": "Arrival recorded — {{formatted}} arrived at the dock.",
+        "direct_delivery": "Delivery recorded — the customer received {{formatted}}."
+      }
     }
   },
   "dialogs": {

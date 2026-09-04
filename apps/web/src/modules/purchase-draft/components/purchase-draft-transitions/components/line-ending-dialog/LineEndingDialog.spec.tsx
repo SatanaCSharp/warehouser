@@ -3,25 +3,34 @@ import userEvent from '@testing-library/user-event';
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { describe, expect, it, vi } from 'vitest';
 
-import { ConfirmArrivalDialog } from 'modules/purchase-draft/components/purchase-draft-transitions/components/confirm-arrival-dialog/ConfirmArrivalDialog';
+import { LineEndingDialog } from 'modules/purchase-draft/components/purchase-draft-transitions/components/line-ending-dialog/LineEndingDialog';
+import {
+  parseLineArrivalForm,
+  parseLineDirectDeliveryForm,
+} from 'modules/purchase-draft/utils/line-ending-form';
 import { DialogHost } from 'shared/components/DialogHost';
 import { renderWithProviders } from 'test/render';
 
 import type {
-  ArrivalConfirmation,
   PurchaseDraftDetail,
   PurchaseDraftLine,
+  PurchaseDraftLineArrival,
+  PurchaseDraftLineDirectDelivery,
 } from '@warehouser/contracts/purchase-drafts';
 import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import type { Mock } from 'vitest';
 
-// T21 — the 720px arrival modal (design-handoff.md `s5EPi`, AC-17/AC-17b/AC-18).
+// T17/T24 — the 720px **per-line** ending modal (design-handoff.md `s5EPi`,
+// ADR 0002, AC-19/AC-20a/AC-18). Rewritten from the whole-draft arrival modal
+// this replaced: the dialog now records one line, and the copy no longer
+// promises that recording it closes the draft — that happens only on the draft's
+// last line (AC-19).
 // DoD:
-// - "the arrival modal's running assignment total is announced as a live region";
+// - "the ending modal's running assignment total is announced as a live region";
 // - "a refused assignment surfaces the server's reason and states that nothing
 //   changed — the client does not pre-judge the AC-18 bounds (AC-18)";
-// - "a line assigning nothing is submittable and the copy explains that
-//   confirming closes the draft once and for all (AC-17b)".
+// - "a line assigning nothing is submittable, and the copy states that the line
+//   ends once (AC-20a)".
 
 const ids = {
   draft: '00000000-0000-4000-8000-000000000501',
@@ -42,6 +51,7 @@ const line = (overrides: Partial<PurchaseDraftLine>): PurchaseDraftLine => ({
   packagingTypeId: 'cartons',
   valueAddingNote: null,
   receivedQuantity: null,
+  ending: null,
   deliveryMode: 'via_warehouse',
   warehouseDestination: {
     addressText: 'Test Warehouse North, Test Industrial Estate',
@@ -191,33 +201,45 @@ const frozenDraft: PurchaseDraftDetail = {
 };
 
 const openDialog = (
-  onSubmit: (input: ArrivalConfirmation) => Promise<MutationResult>,
+  onSubmit: (input: PurchaseDraftLineArrival) => Promise<MutationResult>,
   onClose = vi.fn(),
   detail = draft,
+  subject: PurchaseDraftLine = detail.lines[0],
 ): void => {
   renderWithProviders(
     <DialogHost onClose={onClose}>
-      <ConfirmArrivalDialog draft={detail} onSubmit={onSubmit} />
+      <LineEndingDialog
+        draft={detail}
+        kind="arrival"
+        line={subject}
+        parse={parseLineArrivalForm(subject)}
+        onSubmit={onSubmit}
+      />
     </DialogHost>,
   );
 };
 
 const arrivalDialog = (): HTMLElement =>
-  // The title names the draft the arrival is being confirmed on (`s5EPi`).
-  screen.getByRole('dialog', { name: /confirm what arrived on pd-0142/iu });
-
-const submitButton = (dialog: HTMLElement): HTMLElement =>
-  within(dialog).getByRole('button', {
-    name: /confirm arrival and close the draft/iu,
+  // The title names the line and the draft the arrival is being recorded on
+  // (`s5EPi`) — the line, because the act is now per line (ADR 0002).
+  screen.getByRole('dialog', {
+    name: /record what arrived at the dock — wh-100420 on pd-0142/iu,
   });
 
-type SubmitArrival = (input: ArrivalConfirmation) => Promise<MutationResult>;
+const submitButton = (dialog: HTMLElement): HTMLElement =>
+  within(dialog).getByRole('button', { name: /record the arrival/iu });
+
+type SubmitArrival = (
+  input: PurchaseDraftLineArrival,
+) => Promise<MutationResult>;
 
 const succeeds = (): Mock<SubmitArrival> =>
   vi.fn<SubmitArrival>().mockResolvedValue({ data: {} });
 
-describe('ConfirmArrivalDialog', () => {
-  it('records what arrived on each line and every assignment, then closes (AC-17)', async () => {
+describe('LineEndingDialog', () => {
+  // T17/ADR 0002 — the payload is one line's, and it carries **no line identifier at all**: the
+  // line is the route. That is the shape difference the whole-draft form could not express.
+  it('records what arrived on this line and every assignment, then closes (AC-19)', async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
     const onSubmit = succeeds();
@@ -229,8 +251,6 @@ describe('ConfirmArrivalDialog', () => {
       within(dialog).getByLabelText(/arrived.*WH-100420/iu),
       '1180',
     );
-    await user.clear(within(dialog).getByLabelText(/arrived.*WH-100733/iu));
-    await user.type(within(dialog).getByLabelText(/arrived.*WH-100733/iu), '0');
     await user.type(
       within(dialog).getByLabelText(/assign to Nordwind Logistik GmbH/iu),
       '600',
@@ -243,26 +263,10 @@ describe('ConfirmArrivalDialog', () => {
 
     await waitFor(() =>
       expect(onSubmit).toHaveBeenCalledWith({
-        lines: [
-          {
-            purchaseDraftLineId: ids.lineOne,
-            receivedQuantity: 1180,
-            allocations: [
-              {
-                purchaseDraftLineLinkId: ids.linkOne,
-                allocatedQuantity: 600,
-              },
-              {
-                purchaseDraftLineLinkId: ids.linkTwo,
-                allocatedQuantity: 400,
-              },
-            ],
-          },
-          {
-            purchaseDraftLineId: ids.lineTwo,
-            receivedQuantity: 0,
-            allocations: [],
-          },
+        receivedQuantity: 1180,
+        allocations: [
+          { purchaseDraftLineLinkId: ids.linkOne, allocatedQuantity: 600 },
+          { purchaseDraftLineLinkId: ids.linkTwo, allocatedQuantity: 400 },
         ],
       }),
     );
@@ -296,42 +300,31 @@ describe('ConfirmArrivalDialog', () => {
     );
   });
 
-  it('submits a line that assigns nothing, and says that confirming closes the draft once and for all (AC-17b)', async () => {
+  // AC-19/AC-20a — the copy no longer promises that recording this closes the draft, because it
+  // closes only on the draft's **last** line. What replaces it is the fact a member cannot see:
+  // this line ends once.
+  it('submits a line that assigns nothing, and says the line ends once (AC-20a)', async () => {
     const user = userEvent.setup();
     const onSubmit = succeeds();
     openDialog(onSubmit);
 
     const dialog = arrivalDialog();
+    expect(within(dialog).getByText(/this line ends once/iu)).toBeVisible();
     expect(
-      within(dialog).getByText(/closes a draft once and for all/iu),
-    ).toBeVisible();
+      within(dialog).queryByText(/closes a draft once and for all/iu),
+    ).not.toBeInTheDocument();
 
     await user.clear(within(dialog).getByLabelText(/arrived.*WH-100420/iu));
     await user.type(
       within(dialog).getByLabelText(/arrived.*WH-100420/iu),
       '900',
     );
-    await user.clear(within(dialog).getByLabelText(/arrived.*WH-100733/iu));
-    await user.type(
-      within(dialog).getByLabelText(/arrived.*WH-100733/iu),
-      '250',
-    );
     await user.click(submitButton(dialog));
 
     await waitFor(() =>
       expect(onSubmit).toHaveBeenCalledWith({
-        lines: [
-          {
-            purchaseDraftLineId: ids.lineOne,
-            receivedQuantity: 900,
-            allocations: [],
-          },
-          {
-            purchaseDraftLineId: ids.lineTwo,
-            receivedQuantity: 250,
-            allocations: [],
-          },
-        ],
+        receivedQuantity: 900,
+        allocations: [],
       }),
     );
   });
@@ -339,7 +332,7 @@ describe('ConfirmArrivalDialog', () => {
   it('never pre-judges the AC-18 bounds: an over-assignment is still sent, and the server reason is what the member is told (AC-18)', async () => {
     const user = userEvent.setup();
     const onSubmit = vi
-      .fn<(input: ArrivalConfirmation) => Promise<MutationResult>>()
+      .fn<(input: PurchaseDraftLineArrival) => Promise<MutationResult>>()
       .mockResolvedValue({
         error: {
           code: ErrorCode.PURCHASE_DRAFTS_ALLOCATION_OUT_OF_BOUNDS,
@@ -354,8 +347,6 @@ describe('ConfirmArrivalDialog', () => {
       within(dialog).getByLabelText(/arrived.*WH-100420/iu),
       '100',
     );
-    await user.clear(within(dialog).getByLabelText(/arrived.*WH-100733/iu));
-    await user.type(within(dialog).getByLabelText(/arrived.*WH-100733/iu), '0');
     // Far more than arrived, and more than either order is waiting for: the
     // client sends it anyway, because the bounds are the server's to re-check
     // at the moment the confirmation is recorded.
@@ -366,7 +357,7 @@ describe('ConfirmArrivalDialog', () => {
     await user.click(submitButton(dialog));
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalled());
-    expect(onSubmit.mock.calls[0]?.[0].lines[0]?.allocations).toEqual([
+    expect(onSubmit.mock.calls[0]?.[0].allocations).toEqual([
       { purchaseDraftLineLinkId: ids.linkOne, allocatedQuantity: 5000 },
     ]);
 
@@ -397,9 +388,93 @@ describe('ConfirmArrivalDialog', () => {
       .map((button) => button.textContent);
 
     expect(labels.indexOf('Cancel')).toBeLessThan(
-      labels.findIndex((label) =>
-        /confirm arrival and close the draft/iu.test(label ?? ''),
+      labels.findIndex((label) => /record the arrival/iu.test(label ?? '')),
+    );
+  });
+});
+
+// The Direct to Customer half. Everything the arrival half proves about the form holds here
+// identically — the two differ only in the route they reach and the name of the quantity
+// (ADR 0002) — so this suite covers exactly what is genuinely different: the copy, the payload
+// key, and that the same keyboard order holds in the second 720px modal.
+describe('LineEndingDialog, recording a direct delivery', () => {
+  const directLine = line({
+    deliveryMode: 'direct_to_customer',
+    warehouseDestination: null,
+    links: linkedLine.links,
+  });
+  const directDraft: PurchaseDraftDetail = { ...draft, lines: [directLine] };
+
+  const openDirect = (
+    onSubmit: (
+      input: PurchaseDraftLineDirectDelivery,
+    ) => Promise<MutationResult>,
+  ): void => {
+    renderWithProviders(
+      <DialogHost onClose={vi.fn()}>
+        <LineEndingDialog
+          draft={directDraft}
+          kind="directDelivery"
+          line={directLine}
+          parse={parseLineDirectDeliveryForm(directLine)}
+          onSubmit={onSubmit}
+        />
+      </DialogHost>,
+    );
+  };
+
+  const directDialog = (): HTMLElement =>
+    screen.getByRole('dialog', {
+      name: /record what the customer received — wh-100420 on pd-0142/iu,
+    });
+
+  it('sends the quantity as deliveredQuantity, never as receivedQuantity', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi
+      .fn<(input: PurchaseDraftLineDirectDelivery) => Promise<MutationResult>>()
+      .mockResolvedValue({ data: {} });
+    openDirect(onSubmit);
+
+    const dialog = directDialog();
+    await user.clear(within(dialog).getByLabelText(/received.*WH-100420/iu));
+    await user.type(
+      within(dialog).getByLabelText(/received.*WH-100420/iu),
+      '60',
+    );
+    await user.click(
+      within(dialog).getByRole('button', { name: /record the delivery/iu }),
+    );
+
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith({
+        deliveredQuantity: 60,
+        allocations: [],
+      }),
+    );
+    expect(onSubmit.mock.calls[0]?.[0]).not.toHaveProperty('receivedQuantity');
+  });
+
+  // AC-21 — on this half the untouched stock is the *stronger* statement: the goods were never in
+  // the building to be counted, which is not a fact the draft itself shows anywhere.
+  it('states that no stock moved because the goods never entered the building (AC-21)', () => {
+    openDirect(vi.fn().mockResolvedValue({ data: {} }));
+
+    expect(
+      within(directDialog()).getByText(
+        /never in the transit zone to be counted/iu,
       ),
+    ).toBeVisible();
+  });
+
+  it('places cancel before the primary in DOM and keyboard order', () => {
+    openDirect(vi.fn().mockResolvedValue({ data: {} }));
+
+    const labels = within(directDialog())
+      .getAllByRole('button')
+      .map((button) => button.textContent);
+
+    expect(labels.indexOf('Cancel')).toBeLessThan(
+      labels.findIndex((label) => /record the delivery/iu.test(label ?? '')),
     );
   });
 });
@@ -408,7 +483,7 @@ describe('ConfirmArrivalDialog', () => {
 // waiting for 1 000 and one whose order was cancelled after the freeze — which
 // is where the disabled row, the grouped figures and the AC-18 breakdown all
 // land at once.
-describe('ConfirmArrivalDialog, on a frozen draft whose demand moved', () => {
+describe('LineEndingDialog, on a frozen draft whose demand moved', () => {
   it('offers no assignment to a customer order cancelled since the freeze, and says what was riding on it (AC-18)', async () => {
     const user = userEvent.setup();
     const onSubmit = succeeds();
@@ -430,18 +505,13 @@ describe('ConfirmArrivalDialog, on a frozen draft whose demand moved', () => {
     );
     await user.click(submitButton(dialog));
 
-    // Nothing is sent for the cancelled link, so the confirmation cannot be
-    // refused for an assignment the member was never offered.
+    // Nothing is sent for the cancelled link, so the ending cannot be refused
+    // for an assignment the member was never offered.
     await waitFor(() =>
       expect(onSubmit).toHaveBeenCalledWith({
-        lines: [
-          {
-            purchaseDraftLineId: ids.lineOne,
-            receivedQuantity: 1180,
-            allocations: [
-              { purchaseDraftLineLinkId: ids.linkOne, allocatedQuantity: 1000 },
-            ],
-          },
+        receivedQuantity: 1180,
+        allocations: [
+          { purchaseDraftLineLinkId: ids.linkOne, allocatedQuantity: 1000 },
         ],
       }),
     );
@@ -479,7 +549,7 @@ describe('ConfirmArrivalDialog, on a frozen draft whose demand moved', () => {
   it('carries the refusal envelope through to the bound it names, and back to the form leaves the values in place (AC-18)', async () => {
     const user = userEvent.setup();
     const onSubmit = vi
-      .fn<(input: ArrivalConfirmation) => Promise<MutationResult>>()
+      .fn<(input: PurchaseDraftLineArrival) => Promise<MutationResult>>()
       .mockResolvedValue({
         error: {
           code: ErrorCode.PURCHASE_DRAFTS_ALLOCATION_OUT_OF_BOUNDS,

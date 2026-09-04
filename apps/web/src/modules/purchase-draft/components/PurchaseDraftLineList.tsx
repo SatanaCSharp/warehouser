@@ -5,6 +5,7 @@ import {
   useRevisePurchaseDraftLineMutation,
 } from 'modules/purchase-draft/api/purchase-draft-api';
 import { AddPurchaseDraftLineAction } from 'modules/purchase-draft/components/AddPurchaseDraftLineAction';
+import { LineEndingAction } from 'modules/purchase-draft/components/purchase-draft-transitions/components/LineEndingAction';
 import { PurchaseDraftLineEditor } from 'modules/purchase-draft/components/PurchaseDraftLineEditor';
 import { usePackagingTypes } from 'modules/purchase-draft/hooks/queries/usePackagingTypes';
 import { Conditional } from 'shared/components/Conditional';
@@ -72,6 +73,14 @@ export const PurchaseDraftLineList = ({
         {draft.lines.map((line, index) => (
           <PurchaseDraftLineEditor
             key={line.id}
+            endingAction={
+              // AC-19 — a line ends only once the draft is frozen, and each line
+              // ends on its own day. A draft still in `draft` has nothing to end;
+              // a Closed one has already ended every line it holds.
+              draft.state === 'ready_for_ordering' ? (
+                <LineEndingAction draft={draft} line={line} />
+              ) : undefined
+            }
             index={index + 1}
             isFrozen={isFrozen}
             line={line}

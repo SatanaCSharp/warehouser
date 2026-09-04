@@ -1,13 +1,15 @@
 import { Module } from '@nestjs/common';
 import { CustomerOrdersUsecaseModule } from 'customer-orders/usecases/usecase.module';
 import { PurchaseDraftAssemblyService } from 'purchase-drafts/domain/services/purchase-draft-assembly.service';
+import { PurchaseDraftLineEndingService } from 'purchase-drafts/domain/services/purchase-draft-line-ending.service';
 import { AddPurchaseDraftLineCommand } from 'purchase-drafts/usecases/commands/add-purchase-draft-line.command';
 import { AddPurchaseDraftLineLinkCommand } from 'purchase-drafts/usecases/commands/add-purchase-draft-line-link.command';
 import { ClosePurchaseDraftCommand } from 'purchase-drafts/usecases/commands/close-purchase-draft.command';
-import { ConfirmPurchaseDraftArrivalCommand } from 'purchase-drafts/usecases/commands/confirm-purchase-draft-arrival.command';
+import { ConfirmPurchaseDraftLineArrivalCommand } from 'purchase-drafts/usecases/commands/confirm-purchase-draft-line-arrival.command';
 import { CreatePurchaseDraftCommand } from 'purchase-drafts/usecases/commands/create-purchase-draft.command';
 import { DiscardPurchaseDraftCommand } from 'purchase-drafts/usecases/commands/discard-purchase-draft.command';
 import { ReadyPurchaseDraftCommand } from 'purchase-drafts/usecases/commands/ready-purchase-draft.command';
+import { RecordPurchaseDraftLineDeliveryCommand } from 'purchase-drafts/usecases/commands/record-purchase-draft-line-delivery.command';
 import { RemovePurchaseDraftLineCommand } from 'purchase-drafts/usecases/commands/remove-purchase-draft-line.command';
 import { RemovePurchaseDraftLineLinkCommand } from 'purchase-drafts/usecases/commands/remove-purchase-draft-line-link.command';
 import { RevisePurchaseDraftCommand } from 'purchase-drafts/usecases/commands/revise-purchase-draft.command';
@@ -43,6 +45,7 @@ import { PurchaseDraftReadRepository } from 'shared/domain/repositories/purchase
     PurchaseDraftAssemblyRepository,
     PurchaseDraftReadRepository,
     ArrivalConfirmationRepository,
+    PurchaseDraftLineEndingService,
     // Beside `PurchaseDraftAssemblyRepository`, which it reads the links of a line through (AC-15a),
     // `PurchaseDraftAssemblyService` reaches three further repositories, none of them provided by
     // the `@Global()` `DomainModule`, so each is a local provider here exactly as
@@ -66,7 +69,8 @@ import { PurchaseDraftReadRepository } from 'shared/domain/repositories/purchase
     ReadyPurchaseDraftCommand,
     ClosePurchaseDraftCommand,
     DiscardPurchaseDraftCommand,
-    ConfirmPurchaseDraftArrivalCommand,
+    ConfirmPurchaseDraftLineArrivalCommand,
+    RecordPurchaseDraftLineDeliveryCommand,
     ReadPurchaseDraftQuery,
     ListPurchaseDraftsQuery,
     ListPurchaseDraftLinesQuery,
@@ -84,7 +88,8 @@ import { PurchaseDraftReadRepository } from 'shared/domain/repositories/purchase
     ReadyPurchaseDraftCommand,
     ClosePurchaseDraftCommand,
     DiscardPurchaseDraftCommand,
-    ConfirmPurchaseDraftArrivalCommand,
+    ConfirmPurchaseDraftLineArrivalCommand,
+    RecordPurchaseDraftLineDeliveryCommand,
     ReadPurchaseDraftQuery,
     ListPurchaseDraftsQuery,
     ListPurchaseDraftLinesQuery,

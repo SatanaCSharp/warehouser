@@ -82,6 +82,7 @@ const line = (
   packagingTypeId: 'cartons',
   valueAddingNote: 'Label each carton for Nordwind',
   receivedQuantity: null,
+  ending: null,
   deliveryMode: 'via_warehouse',
   warehouseDestination: {
     addressText: 'Test Warehouse North, Test Industrial Estate',

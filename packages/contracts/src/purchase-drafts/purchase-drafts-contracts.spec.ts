@@ -2,16 +2,16 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import {
-  arrivalAllocationCreateSchema,
-  arrivalConfirmationLineSchema,
-  arrivalConfirmationSchema,
+  endingAllocationCreateSchema,
   linkedCustomerOrderStateRedactedSchema,
   packagingTypeIdSchema,
   packagingTypeSchema,
   purchaseDraftClosureSchema,
   purchaseDraftCreateSchema,
   purchaseDraftDetailSchema,
+  purchaseDraftLineArrivalSchema,
   purchaseDraftLineCreateSchema,
+  purchaseDraftLineDirectDeliverySchema,
   purchaseDraftLineLinkCreateSchema,
   purchaseDraftLineLinkUpdateSchema,
   purchaseDraftLineUpdateSchema,
@@ -67,6 +67,7 @@ const validLine = {
   packagingTypeId: 'cable_coil',
   valueAddingNote: 'Translated sticker on each coil',
   receivedQuantity: null,
+  ending: null,
   // T19/AC-13 — how this line's own goods travel, and where. Read here in its redacted form: no
   // `customerDestination` property at all, which is the shape an actor without `CUSTOMERS:WATCH`
   // is served (AC-09a).
@@ -299,7 +300,6 @@ describe('purchase-drafts contracts', () => {
       purchaseDraftLineLinkId: id(301),
       allocatedQuantity: 1,
     };
-    const arrivalLine = { purchaseDraftLineId: id(102), receivedQuantity: 1 };
     const repeat = <T>(value: T, count: number): T[] =>
       Array.from({ length: count }, () => value);
 
@@ -326,24 +326,31 @@ describe('purchase-drafts contracts', () => {
       ).toBe(false);
     });
 
-    it('bounds an arrival confirmation at the same two hundred lines and fifty allocations each', () => {
+    // T17/ADR 0002 — a line's ending is per line, so there is no line ceiling left to bound here:
+    // the payload covers one line by construction. The fifty-allocation ceiling survives on both
+    // halves, and is a payload guard rather than a business rule.
+    it('bounds each per-line ending at fifty allocations', () => {
       expect(
-        arrivalConfirmationSchema.safeParse({ lines: repeat(arrivalLine, 200) })
-          .success,
-      ).toBe(true);
-      expect(
-        arrivalConfirmationSchema.safeParse({ lines: repeat(arrivalLine, 201) })
-          .success,
-      ).toBe(false);
-      expect(
-        arrivalConfirmationLineSchema.safeParse({
-          ...arrivalLine,
+        purchaseDraftLineArrivalSchema.safeParse({
+          receivedQuantity: 140,
           allocations: repeat(allocation, 50),
         }).success,
       ).toBe(true);
       expect(
-        arrivalConfirmationLineSchema.safeParse({
-          ...arrivalLine,
+        purchaseDraftLineArrivalSchema.safeParse({
+          receivedQuantity: 140,
+          allocations: repeat(allocation, 51),
+        }).success,
+      ).toBe(false);
+      expect(
+        purchaseDraftLineDirectDeliverySchema.safeParse({
+          deliveredQuantity: 60,
+          allocations: repeat(allocation, 50),
+        }).success,
+      ).toBe(true);
+      expect(
+        purchaseDraftLineDirectDeliverySchema.safeParse({
+          deliveredQuantity: 60,
           allocations: repeat(allocation, 51),
         }).success,
       ).toBe(false);
@@ -377,57 +384,80 @@ describe('purchase-drafts contracts', () => {
 
   // ---- Arrival Confirmation and closure — AC-15, AC-17, AC-18, AC-21 --------------------------
 
-  describe('ArrivalConfirmation (openapi.yaml `ArrivalConfirmation`) — AC-17, AC-18', () => {
-    const validConfirmation = {
-      lines: [
-        {
-          purchaseDraftLineId: id(401),
-          receivedQuantity: 140,
-          allocations: [
-            { purchaseDraftLineLinkId: id(501), allocatedQuantity: 100 },
-            { purchaseDraftLineLinkId: id(502), allocatedQuantity: 40 },
-          ],
-        },
-        { purchaseDraftLineId: id(402), receivedQuantity: 0, allocations: [] },
+  describe('per-line endings (openapi.yaml `PurchaseDraftLineArrival` / `PurchaseDraftLineDirectDelivery`) — AC-19, AC-20, AC-21', () => {
+    const validArrival = {
+      receivedQuantity: 140,
+      allocations: [
+        { purchaseDraftLineLinkId: id(501), allocatedQuantity: 100 },
+        { purchaseDraftLineLinkId: id(502), allocatedQuantity: 40 },
+      ],
+    };
+    const validDelivery = {
+      deliveredQuantity: 60,
+      allocations: [
+        { purchaseDraftLineLinkId: id(503), allocatedQuantity: 60 },
       ],
     };
 
-    it('accepts a confirmation whose received quantity falls short, exceeds, or is nothing at all', () => {
-      expect(arrivalConfirmationSchema.parse(validConfirmation)).toEqual(
-        validConfirmation,
+    it('accepts a quantity that falls short, exceeds, or is nothing at all', () => {
+      expect(purchaseDraftLineArrivalSchema.parse(validArrival)).toEqual(
+        validArrival,
       );
-    });
-
-    it('requires at least one line', () => {
-      expect(arrivalConfirmationSchema.safeParse({ lines: [] }).success).toBe(
-        false,
-      );
-    });
-
-    it('refuses a negative or fractional received quantity', () => {
       expect(
-        arrivalConfirmationLineSchema.safeParse({
-          purchaseDraftLineId: id(401),
-          receivedQuantity: -1,
+        purchaseDraftLineDirectDeliverySchema.parse(validDelivery),
+      ).toEqual(validDelivery);
+      // A line where nothing arrived records `0` and no Allocation at all. That is an ending, not
+      // the absence of one, which is why the quantity is `nonnegative` rather than `positive`.
+      expect(
+        purchaseDraftLineArrivalSchema.parse({ receivedQuantity: 0 }),
+      ).toEqual({ receivedQuantity: 0 });
+    });
+
+    it('refuses a negative or fractional quantity on either half', () => {
+      for (const invalid of [-1, 1.5]) {
+        expect(
+          purchaseDraftLineArrivalSchema.safeParse({
+            receivedQuantity: invalid,
+          }).success,
+        ).toBe(false);
+        expect(
+          purchaseDraftLineDirectDeliverySchema.safeParse({
+            deliveredQuantity: invalid,
+          }).success,
+        ).toBe(false);
+      }
+    });
+
+    // ADR 0002 — the ending kind is the **route**, not a payload field, so AC-20's refusal sits in
+    // front of the request rather than behind a submitted value. Each half therefore refuses both
+    // the other half's quantity name and any attempt to state a kind.
+    it('makes the ending kind unstateable, and each half refuses the other half quantity', () => {
+      expect(
+        purchaseDraftLineArrivalSchema.safeParse({
+          receivedQuantity: 140,
+          endingKind: 'direct_delivery',
         }).success,
       ).toBe(false);
       expect(
-        arrivalConfirmationLineSchema.safeParse({
-          purchaseDraftLineId: id(401),
-          receivedQuantity: 1.5,
+        purchaseDraftLineArrivalSchema.safeParse({ deliveredQuantity: 60 })
+          .success,
+      ).toBe(false);
+      expect(
+        purchaseDraftLineDirectDeliverySchema.safeParse({
+          receivedQuantity: 140,
         }).success,
       ).toBe(false);
     });
 
     it('addresses an Allocation through the link, never beside it, and refuses a non-positive quantity', () => {
       expect(
-        arrivalAllocationCreateSchema.parse({
+        endingAllocationCreateSchema.parse({
           purchaseDraftLineLinkId: id(501),
           allocatedQuantity: 100,
         }),
       ).toEqual({ purchaseDraftLineLinkId: id(501), allocatedQuantity: 100 });
       expect(
-        arrivalAllocationCreateSchema.safeParse({
+        endingAllocationCreateSchema.safeParse({
           purchaseDraftLineLinkId: id(501),
           allocatedQuantity: 0,
         }).success,
@@ -435,41 +465,39 @@ describe('purchase-drafts contracts', () => {
       // AC-18 — an Allocation names a Customer Order through the link. Naming the Customer Order
       // directly is not part of this shape at all.
       expect(
-        arrivalAllocationCreateSchema.safeParse({
+        endingAllocationCreateSchema.safeParse({
           customerOrderId: id(201),
           allocatedQuantity: 100,
         }).success,
       ).toBe(false);
     });
 
-    // AC-15 — no frozen field is reachable through the arrival payload. The schema is strict, so
-    // submitting one of the draft's frozen fields alongside a legal confirmation is refused
-    // outright rather than silently ignored.
-    // One column: the field name. The value each case submits is always `'irrelevant'` below —
-    // strictness is what is under test, not the value — so a second column would be decorative and
-    // `it.each` would require the callback to declare a parameter it never reads.
+    // AC-15 — no frozen field is reachable through an ending payload, and neither is the
+    // attribution, the time or the draft's state: all four are derived. The schema is strict, so
+    // each is refused outright rather than silently ignored.
     it.each([
       'expectedArrivalDate',
       'closureReason',
-      'lines[0].orderedQuantity',
-      'lines[0].packagingTypeId',
-      'lines[0].valueAddingNote',
-      'lines[0].links',
-    ] as const)('refuses %s on the arrival confirmation payload', (field) => {
-      const [firstSegment] = field.split('.');
-      const payload: Record<string, unknown> =
-        firstSegment === 'lines'
-          ? {
-              lines: [
-                {
-                  ...validConfirmation.lines[0],
-                  [field.split('.')[1]]: 'irrelevant',
-                },
-              ],
-            }
-          : { ...validConfirmation, [field]: 'irrelevant' };
-
-      expect(arrivalConfirmationSchema.safeParse(payload).success).toBe(false);
+      'orderedQuantity',
+      'packagingTypeId',
+      'valueAddingNote',
+      'links',
+      'endingRecordedByUserId',
+      'endingRecordedAt',
+      'state',
+    ] as const)('refuses %s on a per-line ending payload', (field) => {
+      expect(
+        purchaseDraftLineArrivalSchema.safeParse({
+          ...validArrival,
+          [field]: 'irrelevant',
+        }).success,
+      ).toBe(false);
+      expect(
+        purchaseDraftLineDirectDeliverySchema.safeParse({
+          ...validDelivery,
+          [field]: 'irrelevant',
+        }).success,
+      ).toBe(false);
     });
   });
 

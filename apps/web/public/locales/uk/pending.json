@@ -54,7 +54,8 @@
     "revisePurchaseDraftLineLink": "Зберігаємо заявлену кількість…",
     "removePurchaseDraftLineLink": "Видаляємо зв'язок…",
     "readyPurchaseDraft": "Переводимо чернетку в готово до замовлення…",
-    "confirmPurchaseDraftArrival": "Записуємо прибуття…",
+    "recordPurchaseDraftLineArrival": "Записуємо, що прибуло…",
+    "recordPurchaseDraftLineDirectDelivery": "Записуємо доставку…",
     "closePurchaseDraft": "Закриваємо чернетку закупівлі…",
     "discardPurchaseDraft": "Відхиляємо чернетку закупівлі…"
   },

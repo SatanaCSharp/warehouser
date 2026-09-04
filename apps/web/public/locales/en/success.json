@@ -57,7 +57,8 @@
     "revisePurchaseDraftLineLink": "Stated quantity saved.",
     "removePurchaseDraftLineLink": "Link removed.",
     "readyPurchaseDraft": "Purchase draft is ready for ordering.",
-    "confirmPurchaseDraftArrival": "Arrival confirmed and the draft is closed.",
+    "recordPurchaseDraftLineArrival": "This line's arrival is recorded and what each customer is still waiting for has been reduced. The draft closes once every line has an ending.",
+    "recordPurchaseDraftLineDirectDelivery": "The delivery is recorded and what each customer is still waiting for has been reduced. No stock moved — the goods went straight to the customer and were never counted here.",
     "closePurchaseDraft": "Purchase draft closed: {{reason}}",
     "discardPurchaseDraft": "Purchase draft discarded."
   },

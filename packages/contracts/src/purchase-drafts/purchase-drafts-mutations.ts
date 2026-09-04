@@ -33,7 +33,7 @@ export const purchaseDraftLineLinkUpdateSchema = z.strictObject({
 // pipes). Bounding the array bounds the work one request can buy.
 const maxDraftLines = 200;
 const maxLinksPerLine = 50;
-const maxAllocationsPerArrivalLine = 50;
+const maxAllocationsPerEndingLine = 50;
 
 // openapi.yaml `PurchaseDraftLineCreate` — one Item, quantity, optional Pre-receipt Requirement and
 // optional links (AC-10, AC-11, AC-12, AC-13).
@@ -129,30 +129,39 @@ export const purchaseDraftLineListQuerySchema = z.strictObject({
   state: purchaseDraftStateSchema.optional(),
 });
 
-// openapi.yaml `ArrivalAllocationCreate` — the Allocation is addressed through the link, not beside
-// it (AC-18).
-export const arrivalAllocationCreateSchema = z.strictObject({
+// openapi.yaml `EndingAllocationCreate` — the Allocation is addressed through the link, not beside
+// it (AC-18), which is what makes "an Allocation names a Customer Order its line is actually linked
+// to" provable by the reference itself rather than re-checked in application code.
+export const endingAllocationCreateSchema = z.strictObject({
   purchaseDraftLineLinkId: z.string().uuid(),
   allocatedQuantity: z.number().int().min(1),
 });
 
-// openapi.yaml `ArrivalConfirmationLine` — whatever physically arrived, bounded neither above nor
-// below by `orderedQuantity` (AC-17, AC-17b).
-export const arrivalConfirmationLineSchema = z.strictObject({
-  purchaseDraftLineId: z.string().uuid(),
+// openapi.yaml `PurchaseDraftLineArrival` — what arrived at the dock on **one Via Warehouse line**
+// (AC-19). Bounded neither above nor below by `orderedQuantity`; `0` is a line where nothing
+// arrived, which is an ending rather than the absence of one.
+//
+// The ending kind is **not** a property here and that is the point: it is the route
+// (ADR 0002), so AC-20's refusal sits in front of the request rather than behind a submitted value.
+// Attribution, the time and the draft's move to Closed are likewise derived, never inputs.
+export const purchaseDraftLineArrivalSchema = z.strictObject({
   receivedQuantity: z.number().int().nonnegative(),
   allocations: z
-    .array(arrivalAllocationCreateSchema)
-    .max(maxAllocationsPerArrivalLine)
+    .array(endingAllocationCreateSchema)
+    .max(maxAllocationsPerEndingLine)
     .optional(),
 });
 
-// openapi.yaml `ArrivalConfirmation` — one confirmation covers every line of the draft (AC-17,
-// AC-17b). Attribution and the move to Closed are not inputs.
-export const arrivalConfirmationSchema = z.strictObject({
-  // The ceiling matches `maxDraftLines`: a confirmation covers every line of the draft, so it can
-  // never legitimately name more lines than a draft may hold.
-  lines: z.array(arrivalConfirmationLineSchema).min(1).max(maxDraftLines),
+// openapi.yaml `PurchaseDraftLineDirectDelivery` — what the customer received on **one Direct to
+// Customer line**. Identical to the arrival payload except the name of the quantity, which says what
+// actually happened: these goods never entered the building and were never in the Transit Zone to be
+// counted (AC-21).
+export const purchaseDraftLineDirectDeliverySchema = z.strictObject({
+  deliveredQuantity: z.number().int().nonnegative(),
+  allocations: z
+    .array(endingAllocationCreateSchema)
+    .max(maxAllocationsPerEndingLine)
+    .optional(),
 });
 
 // openapi.yaml `PurchaseDraftClosure` — why the supplier could not fulfil the order (AC-21).
@@ -180,11 +189,13 @@ export type PurchaseDraftListQuery = z.infer<
 export type PurchaseDraftLineListQuery = z.infer<
   typeof purchaseDraftLineListQuerySchema
 >;
-export type ArrivalAllocationCreate = z.infer<
-  typeof arrivalAllocationCreateSchema
+export type EndingAllocationCreate = z.infer<
+  typeof endingAllocationCreateSchema
 >;
-export type ArrivalConfirmationLine = z.infer<
-  typeof arrivalConfirmationLineSchema
+export type PurchaseDraftLineArrival = z.infer<
+  typeof purchaseDraftLineArrivalSchema
 >;
-export type ArrivalConfirmation = z.infer<typeof arrivalConfirmationSchema>;
+export type PurchaseDraftLineDirectDelivery = z.infer<
+  typeof purchaseDraftLineDirectDeliverySchema
+>;
 export type PurchaseDraftClosure = z.infer<typeof purchaseDraftClosureSchema>;

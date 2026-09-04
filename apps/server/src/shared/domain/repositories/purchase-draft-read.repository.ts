@@ -147,6 +147,15 @@ export interface LineCustomerDestinationRead {
   readonly frozen: boolean;
 }
 
+// openapi.yaml `PurchaseDraftLineEnding` — the ending as one shape rather than as the four raw
+// columns, so a caller cannot read a quantity without the attribution that makes it meaningful.
+export interface PurchaseDraftLineEndingRead {
+  readonly kind: string;
+  readonly quantity: number;
+  readonly recordedByUserId: string;
+  readonly recordedAt: string;
+}
+
 // openapi.yaml `PurchaseDraftLineRedacted`.
 export interface PurchaseDraftLineRedactedRead {
   readonly id: string;
@@ -158,6 +167,11 @@ export interface PurchaseDraftLineRedactedRead {
   readonly packagingTypeId: string | null;
   readonly valueAddingNote: string | null;
   readonly receivedQuantity: number | null;
+  // AC-19/openapi.yaml `PurchaseDraftLineEnding` — how this line ended, or `null` while it has none.
+  // The four columns arrive together or not at all
+  // (`chk_purchase_draft_lines_ending_attribution`), so the object is built from
+  // `ending_recorded_at` alone deciding whether there is one.
+  readonly ending: PurchaseDraftLineEndingRead | null;
   // AC-13/AC-22 — how this line's own goods travel, which is what places it in one half of the
   // by-line read or the other.
   readonly deliveryMode: string;
@@ -495,7 +509,7 @@ const lineJsonObject = (
     ? `, 'customerDestination', ${CUSTOMER_DESTINATION_SELECT}`
     : '';
 
-  return `json_build_object('id', line.id, 'itemId', line.itemId, 'itemSku', item.sku, 'itemDescription', item.description, 'unitOfMeasure', item.unitOfMeasure, 'orderedQuantity', line.orderedQuantity, 'packagingTypeId', line.packagingTypeId, 'valueAddingNote', line.valueAddingNote, 'receivedQuantity', line.receivedQuantity, 'deliveryMode', line.deliveryMode, 'warehouseDestination', ${WAREHOUSE_DESTINATION_SELECT}${customerDestination}, 'links', (${linksSubquery(manager, identified)}))`;
+  return `json_build_object('id', line.id, 'itemId', line.itemId, 'itemSku', item.sku, 'itemDescription', item.description, 'unitOfMeasure', item.unitOfMeasure, 'orderedQuantity', line.orderedQuantity, 'packagingTypeId', line.packagingTypeId, 'valueAddingNote', line.valueAddingNote, 'receivedQuantity', line.receivedQuantity, 'ending', CASE WHEN line.endingRecordedAt IS NULL THEN NULL ELSE json_build_object('kind', line.endingKind, 'quantity', line.endingQuantity, 'recordedByUserId', line.endingRecordedByUserId, 'recordedAt', line.endingRecordedAt) END, 'deliveryMode', line.deliveryMode, 'warehouseDestination', ${WAREHOUSE_DESTINATION_SELECT}${customerDestination}, 'links', (${linksSubquery(manager, identified)}))`;
 };
 
 // The joins the two destination projections above dereference, added to whichever query builds a

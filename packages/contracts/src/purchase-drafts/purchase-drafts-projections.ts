@@ -61,6 +61,12 @@ export const deliveryModeSchema = z.enum([
   'direct_to_customer',
 ]);
 
+// openapi.yaml `EndingKind` — the one kind of ending each Delivery Mode admits: goods that came Via
+// Warehouse end in an `arrival` at the dock, goods sent Direct to Customer in a `direct_delivery`.
+// The correspondence is `chk_purchase_draft_lines_ending_matches_mode`, and it is a **routing fact**
+// on the write side rather than a submitted value (ADR 0002).
+export const endingKindSchema = z.enum(['arrival', 'direct_delivery']);
+
 // openapi.yaml `LineWarehouseDestination` — where a **Via Warehouse** line's goods travel: the
 // Warehouse's own Delivery Address. The operator's own premises data, so it is readable by any
 // member holding `PURCHASE_DRAFTS:WATCH` in that Warehouse and is **never** gated on
@@ -239,6 +245,20 @@ export const purchaseDraftLineLinkSchema = z.union([
 // What a line carries whatever the actor may read. `warehouseDestination` is deliberately part of
 // it: the Warehouse's own address and access notes are the operator's premises data, read under
 // `PURCHASE_DRAFTS:WATCH` alone and never withheld (AC-10, sad.md §7).
+// openapi.yaml `PurchaseDraftLineEnding` — how one line ended, recorded **once** per line: the
+// quantity, the kind, the acting member and the time, which
+// `chk_purchase_draft_lines_ending_attribution` holds arrive together or not at all (AC-19, AC-20a).
+//
+// The quantity is deliberately unbounded above — what arrived, or what the customer said arrived, is
+// bounded neither above nor below by what was ordered — and `0` is a real ending, recording that
+// nothing came or nothing was delivered, rather than the absence of one.
+export const purchaseDraftLineEndingSchema = z.strictObject({
+  kind: endingKindSchema,
+  quantity: z.number().int().nonnegative(),
+  recordedByUserId: z.string().uuid(),
+  recordedAt: z.string().datetime(),
+});
+
 const purchaseDraftLineCommonShape = {
   id: z.string().uuid(),
   itemId: z.string().uuid(),
@@ -248,7 +268,13 @@ const purchaseDraftLineCommonShape = {
   orderedQuantity: z.number().int().min(1),
   packagingTypeId: packagingTypeIdSchema.nullable(),
   valueAddingNote: z.string().nullable(),
+  // openapi.yaml `PurchaseDraftLineIdentified` — `receivedQuantity` is **superseded by
+  // `ending.quantity`** (T17/ADR 0002). It is served for as long as the column exists, so a client
+  // reading a draft that ended before the per-line endings landed still sees what arrived.
   receivedQuantity: z.number().int().nonnegative().nullable(),
+  // openapi.yaml `PurchaseDraftLineEnding` — how this line ended, or `null` while it has no ending.
+  // AC-19: the draft stays Ready for Ordering until every line of it carries one.
+  ending: purchaseDraftLineEndingSchema.nullable(),
   // AC-13/AC-22 — how this line's own goods travel, which is what places it in one half of the
   // by-line read or the other.
   deliveryMode: deliveryModeSchema,
@@ -345,6 +371,10 @@ export type PackagingType = z.infer<typeof packagingTypeSchema>;
 export type PurchaseDraftState = z.infer<typeof purchaseDraftStateSchema>;
 export type DriftSignalKind = z.infer<typeof driftSignalKindSchema>;
 export type DeliveryMode = z.infer<typeof deliveryModeSchema>;
+export type EndingKind = z.infer<typeof endingKindSchema>;
+export type PurchaseDraftLineEnding = z.infer<
+  typeof purchaseDraftLineEndingSchema
+>;
 export type LineWarehouseDestination = z.infer<
   typeof lineWarehouseDestinationSchema
 >;

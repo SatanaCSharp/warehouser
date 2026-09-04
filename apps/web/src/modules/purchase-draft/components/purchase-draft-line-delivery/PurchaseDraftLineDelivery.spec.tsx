@@ -51,6 +51,7 @@ const viaWarehouseLine = (
   packagingTypeId: null,
   valueAddingNote: null,
   receivedQuantity: null,
+  ending: null,
   deliveryMode: 'via_warehouse',
   warehouseDestination: {
     addressText: WAREHOUSE_ADDRESS,

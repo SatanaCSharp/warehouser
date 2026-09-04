@@ -1,6 +1,5 @@
 import { customerOrderRedirectSchema } from 'customer-orders';
 import {
-  arrivalConfirmationSchema,
   demandSnapshotEntryIdentifiedSchema,
   demandSnapshotEntryRedactedSchema,
   lineCustomerDestinationSchema,
@@ -9,6 +8,7 @@ import {
   linkedCustomerOrderStateRedactedSchema,
   purchaseDraftClosureSchema,
   purchaseDraftDetailSchema,
+  purchaseDraftLineArrivalSchema,
   purchaseDraftLineIdentifiedSchema,
   purchaseDraftLineLinkIdentifiedSchema,
   purchaseDraftLineLinkRedactedSchema,
@@ -126,6 +126,7 @@ const lineCommon = {
   packagingTypeId: 'pallets',
   valueAddingNote: null,
   receivedQuantity: null,
+  ending: null,
 };
 
 const redactedLine = {
@@ -603,8 +604,8 @@ describe('purchase-drafts delivery contracts', () => {
       'refuses %s on the ending payload',
       (field, value) => {
         expect(
-          arrivalConfirmationSchema.safeParse({
-            lines: [{ purchaseDraftLineId: id(701), receivedQuantity: 10 }],
+          purchaseDraftLineArrivalSchema.safeParse({
+            receivedQuantity: 10,
             [field]: value,
           }).success,
         ).toBe(false);

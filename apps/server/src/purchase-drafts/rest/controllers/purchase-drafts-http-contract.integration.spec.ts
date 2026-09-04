@@ -917,15 +917,15 @@ describe('purchase-drafts HTTP contract', () => {
     // AC-15's central assertion: the arrival and closure payload schemas carry none of the
     // frozen fields, so submitting one alongside a legal request is refused at validation, never
     // reaching a write.
-    it('refuses a frozen field submitted on the arrival confirmation payload', async () => {
+    it('refuses a frozen field submitted on the per-line ending payload', async () => {
       const { draftId, cookie } = await freezeADraft();
 
       const { status, body } = await request(
         'POST',
-        `${purchaseDraftsPath(warehouseId)}/${draftId}/arrival`,
+        `${purchaseDraftsPath(warehouseId)}/${draftId}/lines/${randomUUID()}/arrival`,
         cookie,
         {
-          lines: [{ purchaseDraftLineId: randomUUID(), receivedQuantity: 10 }],
+          receivedQuantity: 10,
           expectedArrivalDate: calendarDaysFromToday(1),
         },
       );
@@ -949,10 +949,10 @@ describe('purchase-drafts HTTP contract', () => {
     });
   });
 
-  // -- POST /purchase-drafts/:id/arrival -- AC-17, AC-22, AC-23 -----------------------------------
+  // -- POST /purchase-drafts/:id/lines/:lineId/arrival -- AC-19, AC-22, AC-23 ---------------------
 
-  describe('POST /api/v1/warehouses/:warehouseId/purchase-drafts/:purchaseDraftId/arrival', () => {
-    it('records what arrived and allocates it across the linked Customer Orders, then closes the draft (AC-17)', async () => {
+  describe('POST /api/v1/warehouses/:warehouseId/purchase-drafts/:purchaseDraftId/lines/:purchaseDraftLineId/arrival', () => {
+    it('records what arrived on the line and allocates it across the linked Customer Orders, closing the draft because it was its last line (AC-19)', async () => {
       await seedWarehouses();
       const itemId = await seedItem();
       const orderOneId = await seedCustomerOrder(itemId, { quantity: 100 });
@@ -1009,18 +1009,13 @@ describe('purchase-drafts HTTP contract', () => {
 
       const { status, body } = await request(
         'POST',
-        `${purchaseDraftsPath(warehouseId)}/${draftId}/arrival`,
+        `${purchaseDraftsPath(warehouseId)}/${draftId}/lines/${lineId}/arrival`,
         actor.cookie,
         {
-          lines: [
-            {
-              purchaseDraftLineId: lineId,
-              receivedQuantity: 140,
-              allocations: [
-                { purchaseDraftLineLinkId: linkOneId, allocatedQuantity: 100 },
-                { purchaseDraftLineLinkId: linkTwoId, allocatedQuantity: 40 },
-              ],
-            },
+          receivedQuantity: 140,
+          allocations: [
+            { purchaseDraftLineLinkId: linkOneId, allocatedQuantity: 100 },
+            { purchaseDraftLineLinkId: linkTwoId, allocatedQuantity: 40 },
           ],
         },
       );
@@ -1028,11 +1023,18 @@ describe('purchase-drafts HTTP contract', () => {
       expect(status).toBe(200);
       expect(body).toMatchObject({
         id: draftId,
+        // AC-19 — the draft closes because this was its **last** line without an ending, not
+        // because an ending was recorded at all. The attribution now lives on the line
+        // (`ending`), not on the draft: `arrivalConfirmedByUserId` belonged to the withdrawn
+        // whole-draft act and stays null on a draft closed by per-line endings (ADR 0002).
         state: 'closed',
-        arrivalConfirmedByUserId: actor.userId,
         lines: [
           expect.objectContaining({
-            receivedQuantity: 140,
+            ending: expect.objectContaining({
+              kind: 'arrival',
+              quantity: 140,
+              recordedByUserId: actor.userId,
+            }),
             links: expect.arrayContaining([
               expect.objectContaining({
                 id: linkOneId,
@@ -1049,7 +1051,7 @@ describe('purchase-drafts HTTP contract', () => {
     });
 
     // AC-22 — a Role carrying only `:WATCH` is denied `:RECEIVE`.
-    it('denies the confirmation to an actor without PURCHASE_DRAFTS:RECEIVE (AC-22)', async () => {
+    it("denies the line's ending to an actor without PURCHASE_DRAFTS:RECEIVE (AC-22)", async () => {
       await seedWarehouses();
       const itemId = await seedItem();
       const actor = await seedActor([
@@ -1071,9 +1073,9 @@ describe('purchase-drafts HTTP contract', () => {
 
       const { status, body } = await request(
         'POST',
-        `${purchaseDraftsPath(warehouseId)}/${draftId}/arrival`,
+        `${purchaseDraftsPath(warehouseId)}/${draftId}/lines/${randomUUID()}/arrival`,
         actor.cookie,
-        { lines: [{ purchaseDraftLineId: randomUUID(), receivedQuantity: 0 }] },
+        { receivedQuantity: 0 },
       );
 
       expect(status).toBe(403);
@@ -1517,7 +1519,7 @@ describe('purchase-drafts HTTP contract', () => {
   // -- AC-23 — every mutation is denied on an archived Warehouse ----------------------------------
 
   describe('archived Warehouse (AC-23)', () => {
-    it('denies creating a draft, moving one to Ready for Ordering, and confirming arrival, while reads keep working', async () => {
+    it("denies creating a draft, moving one to Ready for Ordering, and recording a line's ending, while reads keep working", async () => {
       await seedWarehouses();
       const itemId = await seedItem();
       const orderId = await seedCustomerOrder(itemId, { quantity: 100 });
@@ -1557,9 +1559,9 @@ describe('purchase-drafts HTTP contract', () => {
       );
       const arrival = await request(
         'POST',
-        `${purchaseDraftsPath(warehouseId)}/${draftId}/arrival`,
+        `${purchaseDraftsPath(warehouseId)}/${draftId}/lines/${randomUUID()}/arrival`,
         actor.cookie,
-        { lines: [{ purchaseDraftLineId: randomUUID(), receivedQuantity: 0 }] },
+        { receivedQuantity: 0 },
       );
       const stillReads = await request(
         'GET',

@@ -3,10 +3,11 @@ import { Test } from '@nestjs/testing';
 import { AddPurchaseDraftLineCommand } from 'purchase-drafts/usecases/commands/add-purchase-draft-line.command';
 import { AddPurchaseDraftLineLinkCommand } from 'purchase-drafts/usecases/commands/add-purchase-draft-line-link.command';
 import { ClosePurchaseDraftCommand } from 'purchase-drafts/usecases/commands/close-purchase-draft.command';
-import { ConfirmPurchaseDraftArrivalCommand } from 'purchase-drafts/usecases/commands/confirm-purchase-draft-arrival.command';
+import { ConfirmPurchaseDraftLineArrivalCommand } from 'purchase-drafts/usecases/commands/confirm-purchase-draft-line-arrival.command';
 import { CreatePurchaseDraftCommand } from 'purchase-drafts/usecases/commands/create-purchase-draft.command';
 import { DiscardPurchaseDraftCommand } from 'purchase-drafts/usecases/commands/discard-purchase-draft.command';
 import { ReadyPurchaseDraftCommand } from 'purchase-drafts/usecases/commands/ready-purchase-draft.command';
+import { RecordPurchaseDraftLineDeliveryCommand } from 'purchase-drafts/usecases/commands/record-purchase-draft-line-delivery.command';
 import { RemovePurchaseDraftLineCommand } from 'purchase-drafts/usecases/commands/remove-purchase-draft-line.command';
 import { RemovePurchaseDraftLineLinkCommand } from 'purchase-drafts/usecases/commands/remove-purchase-draft-line-link.command';
 import { RevisePurchaseDraftCommand } from 'purchase-drafts/usecases/commands/revise-purchase-draft.command';
@@ -53,15 +54,18 @@ describe('PurchaseDraftsUsecaseModule Nest DI graph', () => {
     expect(moduleRef.get(DiscardPurchaseDraftCommand)).toBeInstanceOf(
       DiscardPurchaseDraftCommand,
     );
-    // The arrival confirmation is the one use case in this module whose graph leaves it:
-    // `ConfirmPurchaseDraftArrivalCommand` takes `DemandAllocationService`, which resolves only
+    // The per-line endings are the use cases in this module whose graph leaves it: both take
+    // `DemandAllocationService`, which resolves only
     // because `PurchaseDraftsUsecaseModule` imports `CustomerOrdersUsecaseModule` and that module
     // exports it (ADR 0002). Compiling it here is what proves the cross-module edge is wired, and
     // that the command's `@Optional()` runtime parameter — an interface, so `Object` under
     // `emitDecoratorMetadata` — does not stop the injector resolving the rest.
-    expect(moduleRef.get(ConfirmPurchaseDraftArrivalCommand)).toBeInstanceOf(
-      ConfirmPurchaseDraftArrivalCommand,
-    );
+    expect(
+      moduleRef.get(ConfirmPurchaseDraftLineArrivalCommand),
+    ).toBeInstanceOf(ConfirmPurchaseDraftLineArrivalCommand);
+    expect(
+      moduleRef.get(RecordPurchaseDraftLineDeliveryCommand),
+    ).toBeInstanceOf(RecordPurchaseDraftLineDeliveryCommand);
     expect(moduleRef.get(ReadPurchaseDraftQuery)).toBeInstanceOf(
       ReadPurchaseDraftQuery,
     );

@@ -1,7 +1,7 @@
 import { screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { ArrivalAssignmentRow } from 'modules/purchase-draft/components/purchase-draft-transitions/components/confirm-arrival-dialog/components/ArrivalAssignmentRow';
+import { EndingAssignmentRow } from 'modules/purchase-draft/components/purchase-draft-transitions/components/line-ending-dialog/components/EndingAssignmentRow';
 import { renderWithProviders } from 'test/render';
 
 import type { PurchaseDraftLineLinkIdentified } from '@warehouser/contracts/purchase-drafts';
@@ -42,7 +42,7 @@ const link = (
 const renderRow = (subject: PurchaseDraftLineLinkIdentified): void => {
   renderWithProviders(
     <ul>
-      <ArrivalAssignmentRow
+      <EndingAssignmentRow
         isSubmitting={false}
         link={subject}
         onCommit={vi.fn()}
@@ -54,7 +54,7 @@ const renderRow = (subject: PurchaseDraftLineLinkIdentified): void => {
 const assignmentField = (): HTMLElement =>
   screen.getByLabelText(/assign to Baltic Freight OU/iu);
 
-describe('ArrivalAssignmentRow', () => {
+describe('EndingAssignmentRow', () => {
   it('offers an assignment to a customer order still waiting, with its outstanding figure grouped', () => {
     renderRow(
       link({

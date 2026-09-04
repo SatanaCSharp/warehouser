@@ -3,15 +3,15 @@ import { ErrorCode } from '@warehouser/shared-types/enums';
 import { useTranslation } from 'react-i18next';
 
 import { useLinkNaming } from 'modules/purchase-draft/hooks/projections/useLinkNaming';
-import { arrivalBoundViolations } from 'modules/purchase-draft/utils/arrival-form';
+import { endingBoundViolations } from 'modules/purchase-draft/utils/line-ending-form';
 import { Conditional } from 'shared/components/Conditional';
 import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
 
 import type { PurchaseDraftDetail } from '@warehouser/contracts/purchase-drafts';
-import type { ArrivalBoundViolation } from 'modules/purchase-draft/utils/arrival-form';
+import type { EndingBoundViolation } from 'modules/purchase-draft/utils/line-ending-form';
 import type { ReactElement } from 'react';
 
-export type ArrivalRefusalAlertProps = {
+export type EndingRefusalAlertProps = {
   /** The stable code of the refusal, or nothing while none has been reported. */
   code?: string;
   /** The refusal's own safe envelope, which carries the bounds it broke. */
@@ -24,15 +24,24 @@ export type ArrivalRefusalAlertProps = {
 type BoundBullet = { key: string; text: string };
 
 /** Which refusal the member is reading. */
-type ArrivalRefusalState =
-  'bounds' | 'alreadyConfirmed' | 'invalidState' | 'unknown';
+type EndingRefusalState =
+  'bounds' | 'alreadyRecorded' | 'modeMismatch' | 'invalidState' | 'unknown';
 
 // A refusal names the rule the boundary applied; the member is told the rule,
 // never the raw code (web-error-handling.md §5). A lookup rather than a chain of
 // conditionals (`writing-web-components.md` §6).
-const REFUSAL_STATE_BY_CODE: Record<string, ArrivalRefusalState> = {
+//
+// T17/ADR 0002 — `arrival_already_confirmed` left with the whole-draft act it
+// belonged to. The two refusals a per-line ending raises in its place are the
+// ones the approved design names: `fpRfr` (AC-20a, already recorded — when and
+// by whom) and `fssB1` (AC-20, the wrong ending for this line — which of the two
+// ways its goods travelled). Both are reachable only from a stale view, because
+// `LineEndingAction` offers neither the second ending nor the wrong one; that is
+// exactly why they still need a sentence.
+const REFUSAL_STATE_BY_CODE: Record<string, EndingRefusalState> = {
   [ErrorCode.PURCHASE_DRAFTS_ALLOCATION_OUT_OF_BOUNDS]: 'bounds',
-  [ErrorCode.PURCHASE_DRAFTS_ARRIVAL_ALREADY_CONFIRMED]: 'alreadyConfirmed',
+  [ErrorCode.PURCHASE_DRAFTS_ENDING_ALREADY_RECORDED]: 'alreadyRecorded',
+  [ErrorCode.PURCHASE_DRAFTS_ENDING_MODE_MISMATCH]: 'modeMismatch',
   [ErrorCode.PURCHASE_DRAFTS_INVALID_STATE]: 'invalidState',
 };
 
@@ -63,12 +72,12 @@ const NOT_UNFULFILLED_KEY: Record<string, string> = {
  * entered exactly where it was — a refused confirmation changed nothing, so
  * there is nothing to re-enter.
  */
-export const ArrivalRefusalAlert = ({
+export const EndingRefusalAlert = ({
   code,
   details,
   draft,
   onDismiss,
-}: ArrivalRefusalAlertProps): ReactElement | null => {
+}: EndingRefusalAlertProps): ReactElement | null => {
   const { t } = useTranslation('purchase-draft');
   const linkNaming = useLinkNaming();
   const { quantity, shortTimestampDate } = useLocaleFormat();
@@ -89,7 +98,7 @@ export const ArrivalRefusalAlert = ({
   // One bullet per bound, dropped only when the identifier names nothing on the
   // draft in front of the member — a bullet that cannot say *which* line or
   // customer was refused says nothing the frame asks it to say.
-  const bulletOf = (violation: ArrivalBoundViolation): BoundBullet[] => {
+  const bulletOf = (violation: EndingBoundViolation): BoundBullet[] => {
     if (violation.rule === 'allocations_exceed_received_quantity') {
       const line = lineNumbers.get(violation.purchaseDraftLineId);
 
@@ -98,7 +107,7 @@ export const ArrivalRefusalAlert = ({
         : [
             {
               key: `${violation.rule}-${violation.purchaseDraftLineId}`,
-              text: t('transitions.arrival.refusal.bounds.exceedsReceived', {
+              text: t('transitions.lineEnding.refusal.bounds.exceedsReceived', {
                 assigned: quantity(violation.allocatedQuantity),
                 line,
                 received: quantity(violation.receivedQuantity),
@@ -117,7 +126,7 @@ export const ArrivalRefusalAlert = ({
       return [
         {
           key,
-          text: t('transitions.arrival.refusal.bounds.exceedsOutstanding', {
+          text: t('transitions.lineEnding.refusal.bounds.exceedsOutstanding', {
             assigned: quantity(violation.allocatedQuantity),
             customer,
             outstanding: quantity(violation.outstandingQuantity),
@@ -133,7 +142,7 @@ export const ArrivalRefusalAlert = ({
     return [
       {
         key,
-        text: t(`transitions.arrival.refusal.bounds.${suffix}`, {
+        text: t(`transitions.lineEnding.refusal.bounds.${suffix}`, {
           // AC-18 — the frame dates the refused order's move ("Baltic Freight
           // OÜ — cancelled on 24 Aug, so nothing can be assigned to it"), and
           // i18next's context suffix selects that wording. A link the server
@@ -147,31 +156,63 @@ export const ArrivalRefusalAlert = ({
     ];
   };
 
-  const bullets = arrivalBoundViolations(details).flatMap(bulletOf);
+  const bullets = endingBoundViolations(details).flatMap(bulletOf);
+
+  // The two per-line refusals carry their own small envelopes. Read defensively:
+  // a refusal whose envelope this build cannot parse still gets its undated or
+  // unqualified sentence rather than no sentence at all.
+  const recordedAt =
+    typeof details?.endingRecordedAt === 'string'
+      ? details.endingRecordedAt
+      : null;
+  const deliveryMode =
+    details?.deliveryMode === 'via_warehouse' ||
+    details?.deliveryMode === 'direct_to_customer'
+      ? details.deliveryMode
+      : null;
 
   /** The sentence a refusal with no per-bound breakdown states on its own. */
-  const generic = (key: ArrivalRefusalState): ReactElement => (
+  const generic = (key: EndingRefusalState): ReactElement => (
     <Alert.Description>
-      {`${t(`transitions.arrival.refusal.${key}`)} ${t('transitions.arrival.nothingSaved')}`}
+      {`${t(`transitions.lineEnding.refusal.${key}`)} ${t('transitions.lineEnding.nothingSaved')}`}
     </Alert.Description>
   );
 
-  const content: Record<ArrivalRefusalState, ReactElement> = {
-    alreadyConfirmed: generic('alreadyConfirmed'),
+  const content: Record<EndingRefusalState, ReactElement> = {
+    // AC-20a — "naming when and by whom", so the sentence is interpolated from
+    // the refusal's own envelope rather than being the generic one.
+    alreadyRecorded: (
+      <Alert.Description>
+        {`${t('transitions.lineEnding.refusal.alreadyRecorded', {
+          on: recordedAt === null ? '' : shortTimestampDate(recordedAt),
+          context: recordedAt === null ? undefined : 'dated',
+        })} ${t('transitions.lineEnding.nothingSaved')}`}
+      </Alert.Description>
+    ),
+    // AC-20 — "naming which of the two ways that line's goods travelled".
+    modeMismatch: (
+      <Alert.Description>
+        {`${t(
+          `transitions.lineEnding.refusal.modeMismatch.${
+            deliveryMode ?? 'unknown'
+          }`,
+        )} ${t('transitions.lineEnding.nothingSaved')}`}
+      </Alert.Description>
+    ),
     invalidState: generic('invalidState'),
     unknown: generic('unknown'),
     bounds: (
       <>
         <Alert.Title>
-          {t('transitions.arrival.refusal.bounds.title')}
+          {t('transitions.lineEnding.refusal.bounds.title')}
         </Alert.Title>
         <Alert.Description>
-          <p>{t('transitions.arrival.nothingSaved')}</p>
+          <p>{t('transitions.lineEnding.nothingSaved')}</p>
           <Conditional
             when={bullets.length > 0}
             otherwise={
               <p className="mt-2">
-                {t('transitions.arrival.refusal.allocationOutOfBounds')}
+                {t('transitions.lineEnding.refusal.allocationOutOfBounds')}
               </p>
             }
           >
@@ -182,7 +223,7 @@ export const ArrivalRefusalAlert = ({
             </ul>
           </Conditional>
           <p className="mt-2">
-            {t('transitions.arrival.refusal.bounds.checkedAgain')}
+            {t('transitions.lineEnding.refusal.bounds.checkedAgain')}
           </p>
           <Button
             className="mt-3"
@@ -190,7 +231,7 @@ export const ArrivalRefusalAlert = ({
             variant="ghost"
             onPress={onDismiss}
           >
-            {t('transitions.arrival.refusal.bounds.back')}
+            {t('transitions.lineEnding.refusal.bounds.back')}
           </Button>
         </Alert.Description>
       </>

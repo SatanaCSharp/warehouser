@@ -719,7 +719,7 @@ describe('readiness removal — declarative permission gating is unchanged (CR-R
     'modules/purchase-draft/components/purchase-draft-line-links/PurchaseDraftLineLinks.tsx': 4,
     'modules/purchase-draft/components/purchase-draft-line-links/components/LinkCustomerOrderAction.tsx': 4,
     'modules/purchase-draft/components/purchase-draft-transitions/components/ClosePurchaseDraftAction.tsx': 4,
-    'modules/purchase-draft/components/purchase-draft-transitions/components/ConfirmArrivalAction.tsx': 4,
+    'modules/purchase-draft/components/purchase-draft-transitions/components/LineEndingAction.tsx': 4,
     'modules/purchase-draft/components/purchase-draft-transitions/components/DiscardPurchaseDraftAction.tsx': 4,
     'modules/purchase-draft/components/purchase-draft-transitions/components/ReadyPurchaseDraftAction.tsx': 4,
     'modules/workspace/components/WorkspaceAdministration.tsx': 3,

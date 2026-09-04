@@ -54,7 +54,8 @@
     "revisePurchaseDraftLineLink": "Saving the stated quantity…",
     "removePurchaseDraftLineLink": "Removing the link…",
     "readyPurchaseDraft": "Moving the draft to ready for ordering…",
-    "confirmPurchaseDraftArrival": "Recording the arrival…",
+    "recordPurchaseDraftLineArrival": "Recording what arrived…",
+    "recordPurchaseDraftLineDirectDelivery": "Recording the delivery…",
     "closePurchaseDraft": "Closing the purchase draft…",
     "discardPurchaseDraft": "Discarding the purchase draft…"
   },

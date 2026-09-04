@@ -21,10 +21,11 @@ import type {
 import { PermissionId } from '@warehouser/shared-types/enums';
 import { assert } from '@warehouser/utils/asserts';
 import {
-  ArrivalConfirmationDto,
   PurchaseDraftClosureDto,
   PurchaseDraftCreateDto,
+  PurchaseDraftLineArrivalDto,
   PurchaseDraftLineCreateDto,
+  PurchaseDraftLineDirectDeliveryDto,
   PurchaseDraftLineLinkCreateDto,
   PurchaseDraftLineLinkUpdateDto,
   PurchaseDraftLineUpdateDto,
@@ -38,10 +39,11 @@ import {
 import { AddPurchaseDraftLineCommand } from 'purchase-drafts/usecases/commands/add-purchase-draft-line.command';
 import { AddPurchaseDraftLineLinkCommand } from 'purchase-drafts/usecases/commands/add-purchase-draft-line-link.command';
 import { ClosePurchaseDraftCommand } from 'purchase-drafts/usecases/commands/close-purchase-draft.command';
-import { ConfirmPurchaseDraftArrivalCommand } from 'purchase-drafts/usecases/commands/confirm-purchase-draft-arrival.command';
+import { ConfirmPurchaseDraftLineArrivalCommand } from 'purchase-drafts/usecases/commands/confirm-purchase-draft-line-arrival.command';
 import { CreatePurchaseDraftCommand } from 'purchase-drafts/usecases/commands/create-purchase-draft.command';
 import { DiscardPurchaseDraftCommand } from 'purchase-drafts/usecases/commands/discard-purchase-draft.command';
 import { ReadyPurchaseDraftCommand } from 'purchase-drafts/usecases/commands/ready-purchase-draft.command';
+import { RecordPurchaseDraftLineDeliveryCommand } from 'purchase-drafts/usecases/commands/record-purchase-draft-line-delivery.command';
 import { RemovePurchaseDraftLineCommand } from 'purchase-drafts/usecases/commands/remove-purchase-draft-line.command';
 import { RemovePurchaseDraftLineLinkCommand } from 'purchase-drafts/usecases/commands/remove-purchase-draft-line-link.command';
 import { RevisePurchaseDraftCommand } from 'purchase-drafts/usecases/commands/revise-purchase-draft.command';
@@ -131,7 +133,8 @@ export class PurchaseDraftsController {
     private readonly revisePurchaseDraftLineLinkCommand: RevisePurchaseDraftLineLinkCommand,
     private readonly removePurchaseDraftLineLinkCommand: RemovePurchaseDraftLineLinkCommand,
     private readonly readyPurchaseDraftCommand: ReadyPurchaseDraftCommand,
-    private readonly confirmPurchaseDraftArrivalCommand: ConfirmPurchaseDraftArrivalCommand,
+    private readonly confirmPurchaseDraftLineArrivalCommand: ConfirmPurchaseDraftLineArrivalCommand,
+    private readonly recordPurchaseDraftLineDeliveryCommand: RecordPurchaseDraftLineDeliveryCommand,
     private readonly closePurchaseDraftCommand: ClosePurchaseDraftCommand,
   ) {}
 
@@ -424,28 +427,60 @@ export class PurchaseDraftsController {
     return this.readDetail(request.access, purchaseDraftId);
   }
 
-  // AC-17/AC-17a/AC-17b/AC-18/AC-22/AC-23 — confirms arrival and allocates it, closing the draft;
-  // mutating.
-  @Post(':purchaseDraftId/arrival')
+  // AC-19/AC-20/AC-20a/AC-21/AC-22/AC-23 — records what arrived at the dock on **one Via Warehouse
+  // line**, closing the draft when it was the last line without an ending; mutating.
+  //
+  // The two endings are two routes rather than one route carrying a kind, and that is the whole
+  // design (ADR 0002): aiming this one at a Direct to Customer line is refused as a routing fact,
+  // in front of the request, rather than behind a value the member submitted.
+  @Post(':purchaseDraftId/lines/:purchaseDraftLineId/arrival')
   @HttpCode(HttpStatus.OK)
   @RequiredPermission(PermissionId.PURCHASE_DRAFTS_RECEIVE)
   @ObservedPermission(PermissionId.CUSTOMERS_WATCH)
   @WriteRateLimited()
   @UseGuards(SessionAuthGuard, WarehouseAccessGuard, WriteRateLimitGuard)
-  async confirmPurchaseDraftArrival(
+  async recordPurchaseDraftLineArrival(
     @Param('purchaseDraftId', new ParseUUIDPipe()) purchaseDraftId: string,
+    @Param('purchaseDraftLineId', new ParseUUIDPipe())
+    purchaseDraftLineId: string,
     @Req() request: WarehouseAccessRequest,
-    @Body() input: ArrivalConfirmationDto,
+    @Body() input: PurchaseDraftLineArrivalDto,
   ): Promise<PurchaseDraftDetail> {
-    await this.confirmPurchaseDraftArrivalCommand.execute(
+    await this.confirmPurchaseDraftLineArrivalCommand.execute(
       request.access!,
       purchaseDraftId,
+      purchaseDraftLineId,
       {
-        lines: input.lines.map((line) => ({
-          purchaseDraftLineId: line.purchaseDraftLineId,
-          receivedQuantity: line.receivedQuantity,
-          allocations: line.allocations ?? [],
-        })),
+        receivedQuantity: input.receivedQuantity,
+        allocations: input.allocations ?? [],
+      },
+    );
+
+    return this.readDetail(request.access, purchaseDraftId);
+  }
+
+  // AC-19/AC-20/AC-20a/AC-21/AC-22/AC-23 — records what the customer received on **one Direct to
+  // Customer line**; mutating. The Direct to Customer half of the same act.
+  @Post(':purchaseDraftId/lines/:purchaseDraftLineId/direct-delivery')
+  @HttpCode(HttpStatus.OK)
+  @RequiredPermission(PermissionId.PURCHASE_DRAFTS_RECEIVE)
+  @ObservedPermission(PermissionId.CUSTOMERS_WATCH)
+  @WriteRateLimited()
+  @UseGuards(SessionAuthGuard, WarehouseAccessGuard, WriteRateLimitGuard)
+  async recordPurchaseDraftLineDirectDelivery(
+    @Param('purchaseDraftId', new ParseUUIDPipe()) purchaseDraftId: string,
+    @Param('purchaseDraftLineId', new ParseUUIDPipe())
+    purchaseDraftLineId: string,
+    @Req() request: WarehouseAccessRequest,
+    @Body() input: PurchaseDraftLineDirectDeliveryDto,
+  ): Promise<PurchaseDraftDetail> {
+    await this.recordPurchaseDraftLineDeliveryCommand.execute(
+      request.access!,
+      purchaseDraftId,
+      purchaseDraftLineId,
+      {
+        deliveredQuantity: input.deliveredQuantity,
+        allocations: input.allocations ?? [],
       },
     );
 

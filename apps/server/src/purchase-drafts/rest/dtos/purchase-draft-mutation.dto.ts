@@ -1,8 +1,9 @@
 import {
-  arrivalConfirmationSchema,
   purchaseDraftClosureSchema,
   purchaseDraftCreateSchema,
+  purchaseDraftLineArrivalSchema,
   purchaseDraftLineCreateSchema,
+  purchaseDraftLineDirectDeliverySchema,
   purchaseDraftLineLinkCreateSchema,
   purchaseDraftLineLinkUpdateSchema,
   purchaseDraftLineListQuerySchema,
@@ -41,8 +42,11 @@ export class PurchaseDraftLineLinkCreateDto extends createZodDto(
 export class PurchaseDraftLineLinkUpdateDto extends createZodDto(
   purchaseDraftLineLinkUpdateSchema,
 ) {}
-export class ArrivalConfirmationDto extends createZodDto(
-  arrivalConfirmationSchema,
+export class PurchaseDraftLineArrivalDto extends createZodDto(
+  purchaseDraftLineArrivalSchema,
+) {}
+export class PurchaseDraftLineDirectDeliveryDto extends createZodDto(
+  purchaseDraftLineDirectDeliverySchema,
 ) {}
 export class PurchaseDraftClosureDto extends createZodDto(
   purchaseDraftClosureSchema,

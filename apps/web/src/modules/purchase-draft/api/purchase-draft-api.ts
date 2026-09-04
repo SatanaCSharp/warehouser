@@ -11,7 +11,8 @@ import { api } from 'shared/api/client/api-client';
 import { fieldErrorsForCode } from 'shared/utils/field-errors';
 
 import type {
-  ArrivalConfirmation,
+  PurchaseDraftLineArrival,
+  PurchaseDraftLineDirectDelivery,
   PackagingType,
   PurchaseDraftClosure,
   PurchaseDraftDetail,
@@ -99,8 +100,14 @@ type LinkIdArgs = PurchaseDraftIdArgs & {
 type ClosePurchaseDraftArgs = PurchaseDraftIdArgs & {
   input: PurchaseDraftClosure;
 };
-type ConfirmPurchaseDraftArrivalArgs = PurchaseDraftIdArgs & {
-  input: ArrivalConfirmation;
+// T17/ADR 0002 — an ending is per line, and its **kind is the route**: the two argument types
+// differ only in which endpoint they reach, which is what keeps a member from recording a dock
+// arrival against a line the goods never came to (AC-20).
+type RecordLineArrivalArgs = LineIdArgs & {
+  input: PurchaseDraftLineArrival;
+};
+type RecordLineDirectDeliveryArgs = LineIdArgs & {
+  input: PurchaseDraftLineDirectDelivery;
 };
 
 /**
@@ -142,8 +149,11 @@ const purchaseDraftLineLinkPath = (args: LinkIdArgs): string =>
 const purchaseDraftReadinessPath = (args: PurchaseDraftIdArgs): string =>
   `${purchaseDraftPath(args)}/readiness`;
 
-const purchaseDraftArrivalPath = (args: PurchaseDraftIdArgs): string =>
-  `${purchaseDraftPath(args)}/arrival`;
+const purchaseDraftLineArrivalPath = (args: LineIdArgs): string =>
+  `${purchaseDraftLinePath(args)}/arrival`;
+
+const purchaseDraftLineDirectDeliveryPath = (args: LineIdArgs): string =>
+  `${purchaseDraftLinePath(args)}/direct-delivery`;
 
 const purchaseDraftClosurePath = (args: PurchaseDraftIdArgs): string =>
   `${purchaseDraftPath(args)}/closure`;
@@ -327,21 +337,38 @@ export const purchaseDraftApi = api.injectEndpoints({
       // the subquery counts.
       invalidatesTags: ['Demand', 'PurchaseDrafts'],
     }),
-    // AC-17/AC-17b/AC-18 — records the arrival and its Allocations, closing the draft.
-    confirmPurchaseDraftArrival: build.mutation<
+    // AC-19/AC-20/AC-21 — records what arrived at the dock on one **Via Warehouse** line and its
+    // Allocations. The draft closes only when this was its last line without an ending, which the
+    // server decides; nothing here assumes it.
+    recordPurchaseDraftLineArrival: build.mutation<
       PurchaseDraftDetail,
-      ConfirmPurchaseDraftArrivalArgs
+      RecordLineArrivalArgs
     >({
       query: (args) => ({
-        url: purchaseDraftArrivalPath(args),
+        url: purchaseDraftLineArrivalPath(args),
         method: 'POST',
         body: args.input,
       }),
       extraOptions: { schema: purchaseDraftDetailSchema },
       // The Allocations fulfil Customer Orders, which leave the consolidated demand
       // altogether (`Sudhafen Handel KG becomes fulfilled and leaves the consolidated
-      // demand`, frame `s5EPi`), and the draft closes out of the covering states. On-hand
-      // quantities are deliberately not touched, so the Item catalogue is unchanged.
+      // demand`, frame `s5EPi`), and the draft may close out of the covering states. On-hand
+      // quantities are deliberately not touched, so the Item catalogue is unchanged (AC-21).
+      invalidatesTags: ['Demand', 'PurchaseDrafts'],
+    }),
+    // AC-19/AC-20/AC-21 — records what the customer received on one **Direct to Customer** line.
+    // Identical in every respect except the route and the name of the quantity: these goods never
+    // entered the building, so no On-hand Quantity moves for a second reason.
+    recordPurchaseDraftLineDirectDelivery: build.mutation<
+      PurchaseDraftDetail,
+      RecordLineDirectDeliveryArgs
+    >({
+      query: (args) => ({
+        url: purchaseDraftLineDirectDeliveryPath(args),
+        method: 'POST',
+        body: args.input,
+      }),
+      extraOptions: { schema: purchaseDraftDetailSchema },
       invalidatesTags: ['Demand', 'PurchaseDrafts'],
     }),
     // AC-21 — closes a frozen draft the supplier cannot fulfil, with a reason.
@@ -390,7 +417,8 @@ export const {
   useRevisePurchaseDraftLineLinkMutation,
   useRemovePurchaseDraftLineLinkMutation,
   useReadyPurchaseDraftMutation,
-  useConfirmPurchaseDraftArrivalMutation,
+  useRecordPurchaseDraftLineArrivalMutation,
+  useRecordPurchaseDraftLineDirectDeliveryMutation,
   useClosePurchaseDraftMutation,
   useDiscardPurchaseDraftMutation,
 } = purchaseDraftApi;

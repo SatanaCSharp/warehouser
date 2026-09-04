@@ -1,21 +1,22 @@
 import { useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import { ArrivalAssignmentRow } from 'modules/purchase-draft/components/purchase-draft-transitions/components/confirm-arrival-dialog/components/ArrivalAssignmentRow';
+import { EndingAssignmentRow } from 'modules/purchase-draft/components/purchase-draft-transitions/components/line-ending-dialog/components/EndingAssignmentRow';
 import { useLinkNaming } from 'modules/purchase-draft/hooks/projections/useLinkNaming';
-import { isAssignableLink } from 'modules/purchase-draft/utils/arrival-form';
+import { isAssignableLink } from 'modules/purchase-draft/utils/line-ending-form';
 import { Conditional } from 'shared/components/Conditional';
 import { FormTextField } from 'shared/components/FormTextField';
 import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
 
 import type { PurchaseDraftLine } from '@warehouser/contracts/purchase-drafts';
-import type { ArrivalForm } from 'modules/purchase-draft/utils/arrival-form';
+import type { LineEndingForm } from 'modules/purchase-draft/utils/line-ending-form';
 import type { ReactElement } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 
-export type ArrivalLineFieldsetProps = {
-  form: UseFormReturn<ArrivalForm>;
-  index: number;
+export type LineEndingFieldsetProps = {
+  form: UseFormReturn<LineEndingForm>;
+  /** Which of the two acts is being recorded — the copy, never the payload. */
+  kind: 'arrival' | 'directDelivery';
   line: PurchaseDraftLine;
 };
 
@@ -25,9 +26,9 @@ const quantityOf = (value: string | undefined): number => {
 };
 
 /**
- * One line of an Arrival Confirmation (design-handoff.md `s5EPi`): what
- * arrived, and how much of it each linked Customer Order is assigned
- * (AC-17).
+ * One line's ending (design-handoff.md `s5EPi`, ADR 0002): what arrived at the
+ * dock or what the customer received, and how much of it each linked Customer
+ * Order is assigned (AC-19).
  *
  * The running total below the assignments is a **live region**, so the figures
  * are announced as they change rather than only on submit — the accessibility
@@ -43,11 +44,11 @@ const quantityOf = (value: string | undefined): number => {
  * `{{formatted}}` string that actually renders are passed side by side, exactly
  * as `modules/item` does (design-handoff.md § Numbers).
  */
-export const ArrivalLineFieldset = ({
+export const LineEndingFieldset = ({
   form,
-  index,
+  kind,
   line,
-}: ArrivalLineFieldsetProps): ReactElement => {
+}: LineEndingFieldsetProps): ReactElement => {
   const { t } = useTranslation('purchase-draft');
   const linkNaming = useLinkNaming();
   const { quantity } = useLocaleFormat();
@@ -56,12 +57,12 @@ export const ArrivalLineFieldset = ({
     register,
     setValue,
   } = form;
-  const values = useWatch({ control: form.control, name: `lines.${index}` });
+  const values = useWatch({ control: form.control });
 
   const allocationOf = (allocationIndex: number): number =>
     quantityOf(values?.allocations?.[allocationIndex]?.allocatedQuantity);
 
-  const received = quantityOf(values?.receivedQuantity);
+  const stated = quantityOf(values?.quantity);
   const assigned = (values?.allocations ?? []).reduce(
     (total, allocation) => total + quantityOf(allocation?.allocatedQuantity),
     0,
@@ -76,7 +77,7 @@ export const ArrivalLineFieldset = ({
     link.current.outstandingQuantity > 0 &&
     allocationOf(allocationIndex) >= link.current.outstandingQuantity
       ? [
-          t('transitions.arrival.summaryFulfilled', {
+          t('transitions.lineEnding.summaryFulfilled', {
             customer: linkNaming(link),
           }),
         ]
@@ -84,10 +85,10 @@ export const ArrivalLineFieldset = ({
   );
 
   const summary = [
-    t('transitions.arrival.summary', {
+    t(`transitions.lineEnding.${kind}.summary`, {
       assigned: quantity(assigned),
-      received: quantity(received),
-      unassigned: quantity(received - assigned),
+      stated: quantity(stated),
+      unassigned: quantity(stated - assigned),
     }),
     ...fulfilling,
   ].join(' ');
@@ -96,20 +97,20 @@ export const ArrivalLineFieldset = ({
     (allocationIndex: number) =>
     (allocatedQuantity: number): void =>
       setValue(
-        `lines.${index}.allocations.${allocationIndex}.allocatedQuantity`,
+        `allocations.${allocationIndex}.allocatedQuantity`,
         String(allocatedQuantity),
       );
 
   return (
-    <li className="rounded-xl border border-border-secondary bg-surface p-4">
+    <div className="rounded-xl border border-border-secondary bg-surface p-4">
       <p className="font-semibold">
-        {t('transitions.arrival.lineHeading', {
+        {t('transitions.lineEnding.lineHeading', {
           description: line.itemDescription,
           sku: line.itemSku,
         })}
       </p>
       <p className="text-sm text-muted">
-        {t('transitions.arrival.ordered', {
+        {t('transitions.lineEnding.ordered', {
           count: line.orderedQuantity,
           formatted: quantity(line.orderedQuantity),
         })}
@@ -121,28 +122,30 @@ export const ArrivalLineFieldset = ({
         validationBehavior="aria"
         type="number"
         isDisabled={isSubmitting}
-        isInvalid={Boolean(errors.lines?.[index]?.receivedQuantity)}
-        description={t('transitions.arrival.receivedDescription')}
-        errorMessage={errors.lines?.[index]?.receivedQuantity?.message}
-        label={t('transitions.arrival.receivedLabel', { sku: line.itemSku })}
-        {...register(`lines.${index}.receivedQuantity`)}
+        isInvalid={Boolean(errors.quantity)}
+        description={t(`transitions.lineEnding.${kind}.quantityDescription`)}
+        errorMessage={errors.quantity?.message}
+        label={t(`transitions.lineEnding.${kind}.quantityLabel`, {
+          sku: line.itemSku,
+        })}
+        {...register('quantity')}
       />
 
       <h4 className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted">
-        {t('transitions.arrival.assignHeading')}
+        {t('transitions.lineEnding.assignHeading')}
       </h4>
 
       <Conditional
         when={line.links.length > 0}
         otherwise={
           <p className="mt-3 text-sm text-muted">
-            {t('transitions.arrival.noLinks')}
+            {t('transitions.lineEnding.noLinks')}
           </p>
         }
       >
         <ul className="mt-3 flex flex-col gap-2">
           {line.links.map((link, allocationIndex) => (
-            <ArrivalAssignmentRow
+            <EndingAssignmentRow
               key={link.id}
               isSubmitting={isSubmitting}
               link={link}
@@ -153,7 +156,7 @@ export const ArrivalLineFieldset = ({
       </Conditional>
 
       <p
-        aria-label={t('transitions.arrival.summaryLabel', {
+        aria-label={t('transitions.lineEnding.summaryLabel', {
           sku: line.itemSku,
         })}
         aria-live="polite"
@@ -162,6 +165,6 @@ export const ArrivalLineFieldset = ({
       >
         {summary}
       </p>
-    </li>
+    </div>
   );
 };

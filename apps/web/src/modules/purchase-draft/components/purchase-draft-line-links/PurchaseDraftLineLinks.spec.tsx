@@ -46,6 +46,7 @@ const line = (
   packagingTypeId: null,
   valueAddingNote: null,
   receivedQuantity: null,
+  ending: null,
   deliveryMode: 'via_warehouse',
   warehouseDestination: {
     addressText: 'Test Warehouse North, Test Industrial Estate',

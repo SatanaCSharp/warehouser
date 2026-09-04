@@ -72,6 +72,7 @@ const detail: PurchaseDraftDetail = {
       packagingTypeId: null,
       valueAddingNote: null,
       receivedQuantity: null,
+      ending: null,
       deliveryMode: 'via_warehouse',
       warehouseDestination: {
         addressText: 'Test Warehouse North, Test Industrial Estate',
@@ -91,7 +92,8 @@ type MutationName =
   | 'addPurchaseDraftLine'
   | 'addPurchaseDraftLineLink'
   | 'closePurchaseDraft'
-  | 'confirmPurchaseDraftArrival'
+  | 'recordPurchaseDraftLineArrival'
+  | 'recordPurchaseDraftLineDirectDelivery'
   | 'createPurchaseDraft'
   | 'discardPurchaseDraft'
   | 'readyPurchaseDraft'
@@ -179,13 +181,26 @@ const MUTATIONS: Record<MutationName, (store: AppStore) => Promise<unknown>> = {
         purchaseDraftApi.endpoints.readyPurchaseDraft.initiate(draftIdArgs),
       )
       .unwrap(),
-  confirmPurchaseDraftArrival: (store) =>
+  recordPurchaseDraftLineArrival: (store) =>
     store
       .dispatch(
-        purchaseDraftApi.endpoints.confirmPurchaseDraftArrival.initiate({
+        purchaseDraftApi.endpoints.recordPurchaseDraftLineArrival.initiate({
           ...draftIdArgs,
-          input: { lines: [{ purchaseDraftLineId, receivedQuantity: 400 }] },
+          purchaseDraftLineId,
+          input: { receivedQuantity: 400 },
         }),
+      )
+      .unwrap(),
+  recordPurchaseDraftLineDirectDelivery: (store) =>
+    store
+      .dispatch(
+        purchaseDraftApi.endpoints.recordPurchaseDraftLineDirectDelivery.initiate(
+          {
+            ...draftIdArgs,
+            purchaseDraftLineId,
+            input: { deliveredQuantity: 400 },
+          },
+        ),
       )
       .unwrap(),
   closePurchaseDraft: (store) =>
@@ -224,7 +239,10 @@ const AFFECTED_READS: Record<MutationName, AffectedReads> = {
   readyPurchaseDraft: { demand: true, items: false },
   // The Allocations fulfil Customer Orders, which leave the demand entirely;
   // on-hand quantities are deliberately untouched, so Items is unchanged.
-  confirmPurchaseDraftArrival: { demand: true, items: false },
+  // AC-21 — neither ending touches an Item's On-hand Quantity, so the Item catalogue is
+  // never invalidated by one.
+  recordPurchaseDraftLineArrival: { demand: true, items: false },
+  recordPurchaseDraftLineDirectDelivery: { demand: true, items: false },
   // A closed or discarded draft leaves the two states coverage counts over;
   // its lines survive and keep naming their Items.
   closePurchaseDraft: { demand: true, items: false },

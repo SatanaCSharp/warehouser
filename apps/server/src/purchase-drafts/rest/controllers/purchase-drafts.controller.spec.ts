@@ -80,9 +80,14 @@ describe('PurchaseDraftsController', () => {
     ],
     ['readyPurchaseDraft', RequestMethod.POST, ':purchaseDraftId/readiness'],
     [
-      'confirmPurchaseDraftArrival',
+      'recordPurchaseDraftLineArrival',
       RequestMethod.POST,
-      ':purchaseDraftId/arrival',
+      ':purchaseDraftId/lines/:purchaseDraftLineId/arrival',
+    ],
+    [
+      'recordPurchaseDraftLineDirectDelivery',
+      RequestMethod.POST,
+      ':purchaseDraftId/lines/:purchaseDraftLineId/direct-delivery',
     ],
     ['closePurchaseDraft', RequestMethod.POST, ':purchaseDraftId/closure'],
   ] as const)('%s is served as %s %s', (handlerName, httpMethod, path) => {
@@ -158,7 +163,12 @@ describe('PurchaseDraftsController', () => {
       [SessionAuthGuard, WarehouseAccessGuard, WriteRateLimitGuard],
     ],
     [
-      'confirmPurchaseDraftArrival',
+      'recordPurchaseDraftLineArrival',
+      PermissionId.PURCHASE_DRAFTS_RECEIVE,
+      [SessionAuthGuard, WarehouseAccessGuard, WriteRateLimitGuard],
+    ],
+    [
+      'recordPurchaseDraftLineDirectDelivery',
       PermissionId.PURCHASE_DRAFTS_RECEIVE,
       [SessionAuthGuard, WarehouseAccessGuard, WriteRateLimitGuard],
     ],
@@ -193,7 +203,8 @@ describe('PurchaseDraftsController', () => {
     ['requantifyPurchaseDraftLineLink', undefined],
     ['unlinkPurchaseDraftLine', undefined],
     ['readyPurchaseDraft', undefined],
-    ['confirmPurchaseDraftArrival', undefined],
+    ['recordPurchaseDraftLineArrival', undefined],
+    ['recordPurchaseDraftLineDirectDelivery', undefined],
     ['closePurchaseDraft', undefined],
   ] as const)(
     '%s declares archived tolerance %s (AC-23)',
@@ -220,7 +231,8 @@ describe('PurchaseDraftsController', () => {
     ['requantifyPurchaseDraftLineLink', true],
     ['unlinkPurchaseDraftLine', true],
     ['readyPurchaseDraft', true],
-    ['confirmPurchaseDraftArrival', true],
+    ['recordPurchaseDraftLineArrival', true],
+    ['recordPurchaseDraftLineDirectDelivery', true],
     ['closePurchaseDraft', true],
   ] as const)(
     '%s declares write-rate-limit metadata %s',
@@ -254,7 +266,8 @@ describe('PurchaseDraftsController', () => {
     'requantifyPurchaseDraftLineLink',
     'unlinkPurchaseDraftLine',
     'readyPurchaseDraft',
-    'confirmPurchaseDraftArrival',
+    'recordPurchaseDraftLineArrival',
+    'recordPurchaseDraftLineDirectDelivery',
     'closePurchaseDraft',
   ] as const)('%s declares the observed CUSTOMERS:WATCH', (handlerName) => {
     expect(

@@ -288,10 +288,16 @@ export const MUTATION_FEEDBACK: Record<string, MutationFeedback> = {
   revisePurchaseDraftLineLink: feedback({ scope: 'purchase-draft' }),
   removePurchaseDraftLineLink: feedback({ scope: 'purchase-draft' }),
 
-  // Purchase draft transitions (T21) — the four irreversible acts: freezing,
-  // confirming arrival, closing with a reason, and discarding.
+  // Purchase draft transitions (T21, T17) — the irreversible acts: freezing,
+  // ending a line either way, closing with a reason, and discarding.
   readyPurchaseDraft: feedback({ scope: 'purchase-draft' }),
-  confirmPurchaseDraftArrival: feedback({ scope: 'purchase-draft' }),
+  // AC-19/AC-21 — each toast states the outcome **and** its invisible
+  // consequence. For an arrival that is the stock the act did not move; for a
+  // direct delivery it is the stronger fact that the goods never entered the
+  // building at all, which is the assumption a member most reasonably brings to
+  // "record what the customer received".
+  recordPurchaseDraftLineArrival: feedback({ scope: 'purchase-draft' }),
+  recordPurchaseDraftLineDirectDelivery: feedback({ scope: 'purchase-draft' }),
   // AC-21 — the success copy states the reason that committed.
   closePurchaseDraft: feedback<{ input: { closureReason: string } }>({
     scope: 'purchase-draft',
