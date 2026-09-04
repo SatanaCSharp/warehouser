@@ -15,10 +15,12 @@ import dataSource from 'shared/database/data-source';
 import { AccountEntity } from 'shared/domain/entities/account.entity';
 import { CustomerEntity } from 'shared/domain/entities/customer.entity';
 import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
+import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
 import { ItemEntity } from 'shared/domain/entities/item.entity';
 import { PermissionEntity } from 'shared/domain/entities/permission.entity';
 import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
 import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity';
+import { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity';
 import { RoleEntity } from 'shared/domain/entities/role.entity';
 import { RolePermissionEntity } from 'shared/domain/entities/role-permission.entity';
 import { SessionEntity } from 'shared/domain/entities/session.entity';
@@ -210,19 +212,16 @@ describe('purchase-drafts delivery HTTP contract', () => {
   const seedActor = (permissionIds: readonly string[]): Promise<string> =>
     seedActorIn(warehouseId, permissionIds);
 
-  const seedCustomerAddress = async (
-    ownerWarehouseId = warehouseId,
-    deactivatedAt: Date | null = null,
-  ): Promise<{ customerId: string; addressId: string }> => {
-    const customerId = randomUUID();
-    const addressId = randomUUID();
+  // One synthetic Account + User to attribute a seeded row to. The address and the order seeds
+  // both need an attributable recorder, and their two blocks were identical but for the prefix.
+  const seedRecordingUser = async (prefix: string): Promise<string> => {
     const recordedByUserId = randomUUID();
 
     await dataSource.transaction(async (manager) => {
       await manager.getRepository(AccountEntity).insert({
         id: recordedByUserId,
         userId: recordedByUserId,
-        normalizedEmail: `recorder.${recordedByUserId}@example.test`,
+        normalizedEmail: `${prefix}.${recordedByUserId}@example.test`,
         passwordHash: 'synthetic-hash',
         passwordHashAlgorithm: 'scrypt',
         passwordHashParameters: { cost: 1_024 },
@@ -237,6 +236,17 @@ describe('purchase-drafts delivery HTTP contract', () => {
         updatedAt: seededAt,
       });
     });
+
+    return recordedByUserId;
+  };
+
+  const seedCustomerAddress = async (
+    ownerWarehouseId = warehouseId,
+    deactivatedAt: Date | null = null,
+  ): Promise<{ customerId: string; addressId: string }> => {
+    const customerId = randomUUID();
+    const addressId = randomUUID();
+    const recordedByUserId = await seedRecordingUser('recorder');
 
     await dataSource.manager.getRepository(CustomerEntity).insert({
       id: customerId,
@@ -279,6 +289,39 @@ describe('purchase-drafts delivery HTTP contract', () => {
       createdAt: seededAt,
       updatedAt: seededAt,
     });
+    return id;
+  };
+
+  // AC-15/AC-15b — a Customer Order bound for a stated Delivery Address (or `null`, going to none at
+  // all), the one fact the direct-line agreement rule reads. Mirrors the seeding pattern
+  // `ready-purchase-draft.command.integration.spec.ts` uses for the same entity.
+  const seedCustomerOrder = async (
+    customerId: string | null,
+    customerDeliveryAddressId: string | null,
+  ): Promise<string> => {
+    const id = randomUUID();
+    const itemId = await seedItem();
+    const recordedByUserId = await seedRecordingUser('orderer');
+
+    await dataSource.manager.getRepository(CustomerOrderEntity).insert({
+      id,
+      warehouseId,
+      itemId,
+      customerId,
+      customerDeliveryAddressId,
+      customerName: customerId === null ? 'Typed Buyer' : null,
+      quantity: 100,
+      outstandingQuantity: 100,
+      neededBy: '2099-01-01',
+      state: 'unfulfilled',
+      cancellationReason: null,
+      recordedByUserId,
+      cancelledByUserId: null,
+      cancelledAt: null,
+      createdAt: seededAt,
+      updatedAt: seededAt,
+    });
+
     return id;
   };
 
@@ -925,6 +968,121 @@ describe('purchase-drafts delivery HTTP contract', () => {
       );
 
       expect(status).toBe(400);
+    });
+  });
+
+  // -- AC-15: a Direct to Customer line refuses a link to demand going anywhere else ----------------
+  //
+  // The rule's only prior proof was against repository doubles told what to return
+  // (`purchase-draft-line-delivery.spec.ts`), and against two bare address UUIDs that distinguished
+  // neither "another address of the same Customer" nor "an address of another Customer" — the two
+  // kinds `test-plan.md`:70 names. Nothing proved the composed `POST .../links` route itself refuses
+  // either kind, or that the refusal names both addresses, or that it writes nothing.
+  describe('POST .../lines/{lineId}/links refuses a disagreeing Customer Order (AC-15)', () => {
+    // The two kinds `test-plan.md`:70 names. They differ only in how the order's address is
+    // seeded; the refusal, the two named addresses and the absence of a link row are one shape.
+    it.each([
+      [
+        'another address of the same Customer',
+        async () => {
+          const { customerId, addressId: lineAddressId } =
+            await seedCustomerAddress();
+          const otherAddressId = randomUUID();
+          await dataSource.manager
+            .getRepository(CustomerDeliveryAddressEntity)
+            .insert({
+              id: otherAddressId,
+              customerId,
+              warehouseId,
+              addressText: 'Test Address 2, Test City',
+              accessNotes: null,
+              isMain: false,
+              deactivatedAt: null,
+              createdAt: seededAt,
+              updatedAt: seededAt,
+            });
+          return { lineAddressId, otherAddressId, orderCustomerId: customerId };
+        },
+      ],
+      [
+        'an address of a different Customer',
+        async () => {
+          const { addressId: lineAddressId } = await seedCustomerAddress();
+          const { customerId: orderCustomerId, addressId: otherAddressId } =
+            await seedCustomerAddress();
+          return { lineAddressId, otherAddressId, orderCustomerId };
+        },
+      ],
+    ])(
+      'refuses %s, naming both addresses and writing nothing',
+      async (_kind, seedAddresses) => {
+        await seedWorld();
+        const { lineAddressId, otherAddressId, orderCustomerId } =
+          await seedAddresses();
+        const { draftId, lineId } = await seedDraftWithLine({
+          deliveryMode: 'direct_to_customer',
+          customerDeliveryAddressId: lineAddressId,
+        });
+        const orderId = await seedCustomerOrder(
+          orderCustomerId,
+          otherAddressId,
+        );
+        const cookie = await seedActor([
+          PURCHASE_DRAFTS_WATCH,
+          PURCHASE_DRAFTS_UPDATE,
+        ]);
+
+        const { status, body } = await request(
+          'POST',
+          `${draftsPath}/${draftId}/lines/${lineId}/links`,
+          cookie,
+          { customerOrderId: orderId, statedQuantity: 10 },
+        );
+
+        expect(status).toBe(409);
+        expect(body).toMatchObject({
+          code: 'purchase_drafts.delivery_address_disagreement',
+          details: {
+            lineDeliveryAddressId: lineAddressId,
+            customerOrderDeliveryAddressId: otherAddressId,
+          },
+        });
+
+        const links = await dataSource.manager
+          .getRepository(PurchaseDraftLineLinkEntity)
+          .findBy({ purchaseDraftLineId: lineId });
+        expect(links).toEqual([]);
+      },
+    );
+
+    // Not vacuous: the same route, the same Direct to Customer line, but the order agrees — the
+    // link is recorded.
+    it('records the link when the Customer Order agrees with the line’s own address', async () => {
+      await seedWorld();
+      const { customerId, addressId } = await seedCustomerAddress();
+      const { draftId, lineId } = await seedDraftWithLine({
+        deliveryMode: 'direct_to_customer',
+        customerDeliveryAddressId: addressId,
+      });
+      const orderId = await seedCustomerOrder(customerId, addressId);
+      const cookie = await seedActor([
+        PURCHASE_DRAFTS_WATCH,
+        PURCHASE_DRAFTS_UPDATE,
+      ]);
+
+      const { status } = await request(
+        'POST',
+        `${draftsPath}/${draftId}/lines/${lineId}/links`,
+        cookie,
+        { customerOrderId: orderId, statedQuantity: 10 },
+      );
+
+      expect(status).toBe(201);
+      const links = await dataSource.manager
+        .getRepository(PurchaseDraftLineLinkEntity)
+        .findBy({ purchaseDraftLineId: lineId });
+      expect(links).toHaveLength(1);
+      expect(links[0]?.customerOrderId).toBe(orderId);
     });
   });
 
