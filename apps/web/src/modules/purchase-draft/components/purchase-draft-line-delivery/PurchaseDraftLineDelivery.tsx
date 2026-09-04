@@ -3,7 +3,10 @@ import { useTranslation } from 'react-i18next';
 
 import { DeliveryModeField } from 'modules/purchase-draft/components/purchase-draft-line-delivery/components/DeliveryModeField';
 import { DirectDestinationFields } from 'modules/purchase-draft/components/purchase-draft-line-delivery/components/direct-destination-fields/DirectDestinationFields';
+import { PurchaseDraftLineDeliveryRefusalAlert } from 'modules/purchase-draft/components/purchase-draft-line-delivery/components/PurchaseDraftLineDeliveryRefusalAlert';
 import { PurchaseDraftLineDestination } from 'modules/purchase-draft/components/PurchaseDraftLineDestination';
+import { disagreeingDeliveryLinks } from 'modules/purchase-draft/utils/delivery-disagreement';
+import { mutationOutcome } from 'shared/api/client/mutation-outcome';
 import { Conditional } from 'shared/components/Conditional';
 
 import type {
@@ -11,14 +14,16 @@ import type {
   PurchaseDraftLine,
   PurchaseDraftLineUpdate,
 } from '@warehouser/contracts/purchase-drafts';
+import type { DisagreeingDeliveryLink } from 'modules/purchase-draft/utils/delivery-disagreement';
 import type { ReactElement } from 'react';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 export type PurchaseDraftLineDeliveryProps = {
   isDisabled: boolean;
   line: PurchaseDraftLine;
   /** The id of the line's lock strip, which states the one reason writes are refused. */
   reasonId?: string;
-  onReviseLine: (input: PurchaseDraftLineUpdate) => void;
+  onReviseLine: (input: PurchaseDraftLineUpdate) => Promise<MutationResult>;
 };
 
 /**
@@ -52,14 +57,24 @@ export const PurchaseDraftLineDelivery = ({
   // as long as it takes them to name an address. Nothing outside this block
   // reads it (`writing-web-components.md` §9).
   const [chosenMode, setChosenMode] = useState<DeliveryMode>(line.deliveryMode);
+  // AC-15a — every disagreeing link a revision was refused for, or nothing
+  // while none has been reported. Cleared on a fresh attempt so a since-fixed
+  // revision does not keep showing a stale refusal.
+  const [disagreeingLinks, setDisagreeingLinks] =
+    useState<DisagreeingDeliveryLink[]>();
+
+  const applyOutcome = (result: MutationResult): void => {
+    const outcome = mutationOutcome(result);
+    setDisagreeingLinks(disagreeingDeliveryLinks(outcome.details));
+  };
 
   const onChangeMode = (mode: DeliveryMode): void => {
     setChosenMode(mode);
     if (mode === 'via_warehouse') {
-      onReviseLine({
+      void onReviseLine({
         deliveryMode: 'via_warehouse',
         customerDeliveryAddressId: null,
-      });
+      }).then(applyOutcome);
     }
   };
 
@@ -67,10 +82,10 @@ export const PurchaseDraftLineDelivery = ({
     if (customerDeliveryAddressId === '') {
       return;
     }
-    onReviseLine({
+    void onReviseLine({
       deliveryMode: 'direct_to_customer',
       customerDeliveryAddressId,
-    });
+    }).then(applyOutcome);
   };
 
   const customerDestination =
@@ -113,6 +128,11 @@ export const PurchaseDraftLineDelivery = ({
           onChangeAddress={onChangeAddress}
         />
       </Conditional>
+
+      <PurchaseDraftLineDeliveryRefusalAlert
+        disagreeingLinks={disagreeingLinks}
+        line={line}
+      />
     </section>
   );
 };

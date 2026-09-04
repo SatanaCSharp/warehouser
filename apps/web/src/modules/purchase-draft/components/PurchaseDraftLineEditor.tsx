@@ -27,6 +27,7 @@ import type {
   PurchaseDraftLineUpdate,
 } from '@warehouser/contracts/purchase-drafts';
 import type { ChangeEvent, ReactElement, ReactNode } from 'react';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 export type PurchaseDraftLineEditorProps = {
   /**
@@ -49,7 +50,7 @@ export type PurchaseDraftLineEditorProps = {
   packagingTypes: PackagingType[];
   purchaseDraftId: string;
   onRemoveLine: () => void;
-  onReviseLine: (input: PurchaseDraftLineUpdate) => void;
+  onReviseLine: (input: PurchaseDraftLineUpdate) => Promise<MutationResult>;
 };
 
 /**
@@ -103,13 +104,13 @@ export const PurchaseDraftLineEditor = ({
     if (Number.isNaN(parsed)) {
       return;
     }
-    onReviseLine({ orderedQuantity: parsed });
+    void onReviseLine({ orderedQuantity: parsed });
   };
 
-  const onChangeItem = (itemId: string): void => onReviseLine({ itemId });
+  const onChangeItem = (itemId: string): void => void onReviseLine({ itemId });
 
   const onChangePackagingType = (packagingTypeId: string): void =>
-    onReviseLine({
+    void onReviseLine({
       packagingTypeId: packagingTypeId === '' ? null : packagingTypeId,
     });
 
@@ -117,7 +118,7 @@ export const PurchaseDraftLineEditor = ({
     event: ChangeEvent<HTMLTextAreaElement>,
   ): void => setValueAddingNote(event.target.value);
   const onBlurValueAddingNote = (): void =>
-    onReviseLine({
+    void onReviseLine({
       valueAddingNote: valueAddingNote === '' ? null : valueAddingNote,
     });
 

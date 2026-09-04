@@ -1,6 +1,6 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { PermissionId } from '@warehouser/shared-types/enums';
+import { ErrorCode, PermissionId } from '@warehouser/shared-types/enums';
 import omit from 'lodash/omit';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -20,6 +20,7 @@ import type {
   PurchaseDraftLineRedacted,
   PurchaseDraftLineUpdate,
 } from '@warehouser/contracts/purchase-drafts';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 // T23 — the `DELIVERY` block of `Delivery/Draft Line` (`jnl1h`), serving the
 // editable **and** the frozen line (AC-13, AC-14, AC-17, AC-09a, AC-23).
@@ -121,7 +122,9 @@ type DeliveryOptions = {
 
 const renderDelivery = (
   line: PurchaseDraftLine,
-  onReviseLine: (input: PurchaseDraftLineUpdate) => void = vi.fn(),
+  onReviseLine: (input: PurchaseDraftLineUpdate) => Promise<MutationResult> = vi
+    .fn<(input: PurchaseDraftLineUpdate) => Promise<MutationResult>>()
+    .mockResolvedValue({ data: {} }),
   {
     customers = [customer],
     isDisabled = false,
@@ -278,7 +281,9 @@ describe('PurchaseDraftLineDelivery', () => {
   // address, so returning to it clears the customer address with the mode
   // rather than leaving one behind.
   it('clears the customer address when the line comes back to the dock', async () => {
-    const onReviseLine = vi.fn();
+    const onReviseLine = vi
+      .fn<(input: PurchaseDraftLineUpdate) => Promise<MutationResult>>()
+      .mockResolvedValue({ data: {} });
     renderDelivery(directLine(), onReviseLine);
 
     await userEvent.click(
@@ -295,7 +300,9 @@ describe('PurchaseDraftLineDelivery', () => {
   // `direct_to_customer`, so the mode alone is not a submittable revision: the
   // write is made once the member has named where the goods travel.
   it('records the direct line only once an address has been named', async () => {
-    const onReviseLine = vi.fn();
+    const onReviseLine = vi
+      .fn<(input: PurchaseDraftLineUpdate) => Promise<MutationResult>>()
+      .mockResolvedValue({ data: {} });
     renderDelivery(viaWarehouseLine(), onReviseLine);
 
     await userEvent.click(
@@ -309,5 +316,61 @@ describe('PurchaseDraftLineDelivery', () => {
         screen.getByRole('button', { name: /customer/iu }),
       ).toBeInTheDocument(),
     );
+  });
+
+  // AC-15a / sad.md §6.7 step 5 — revising a line's Delivery Mode or Delivery
+  // Address is refused while any of its links disagrees with the destination
+  // the revision would give it, naming **every** disagreeing link and
+  // withdrawing none.
+  it('names every disagreeing link when the server refuses the revision (AC-15a)', async () => {
+    const line = directLine({
+      links: [
+        {
+          id: '00000000-0000-4000-8000-000000000801',
+          customerOrderId: '00000000-0000-4000-8000-000000000901',
+          customer: null,
+          customerName: 'Baltic Freight OU',
+          statedQuantity: 100,
+          snapshot: null,
+          current: {
+            quantity: 100,
+            neededBy: '2026-09-02',
+            state: 'unfulfilled',
+            outstandingQuantity: 100,
+            lastChangedAt: null,
+            deliveryAddress: null,
+          },
+          driftSignals: [],
+          allocation: null,
+        },
+      ],
+    });
+    const onReviseLine = vi
+      .fn<(input: PurchaseDraftLineUpdate) => Promise<MutationResult>>()
+      .mockResolvedValue({
+        error: {
+          code: ErrorCode.PURCHASE_DRAFTS_DELIVERY_ADDRESS_DISAGREEMENT,
+          details: {
+            disagreeingLinks: [
+              {
+                purchaseDraftLineLinkId: '00000000-0000-4000-8000-000000000801',
+                customerOrderId: '00000000-0000-4000-8000-000000000901',
+                lineDeliveryAddressId: ADDRESS_ID,
+                customerOrderDeliveryAddressId:
+                  '00000000-0000-4000-8000-000000000399',
+              },
+            ],
+          },
+        },
+      });
+    renderDelivery(line, onReviseLine);
+
+    await userEvent.click(
+      await screen.findByRole('radio', { name: 'Via warehouse' }),
+    );
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(/Baltic Freight OU/u);
+    expect(alert).toHaveTextContent(/your decision/iu);
   });
 });

@@ -65,6 +65,12 @@ export const LinkCustomerOrderAction = ({
   const customerOrdersByItem = useUnfulfilledCustomerOrdersByItem();
   const [addPurchaseDraftLineLink] = useAddPurchaseDraftLineLinkMutation();
   const label = t('lineLinks.addLink');
+  // AC-15 — the address this line ships to, so a refused link can name it;
+  // `null` for a Via Warehouse line, which this refusal never reaches.
+  const lineDeliveryAddressText =
+    'customerDestination' in line
+      ? (line.customerDestination?.addressText ?? null)
+      : null;
 
   const onSave = (
     input: PurchaseDraftLineLinkCreate,
@@ -92,6 +98,7 @@ export const LinkCustomerOrderAction = ({
           <LinkCustomerOrderDialog
             customerOrders={customerOrdersByItem[line.itemId] ?? []}
             index={index}
+            lineDeliveryAddressText={lineDeliveryAddressText}
             unitOfMeasure={line.unitOfMeasure}
             onSave={onSave}
           />

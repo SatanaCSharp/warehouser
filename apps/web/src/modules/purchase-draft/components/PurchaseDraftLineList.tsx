@@ -16,6 +16,7 @@ import type {
   PurchaseDraftLineUpdate,
 } from '@warehouser/contracts/purchase-drafts';
 import type { ReactElement } from 'react';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 export type PurchaseDraftLineListProps = {
   draft: PurchaseDraftDetail;
@@ -44,14 +45,13 @@ export const PurchaseDraftLineList = ({
 
   const onReviseLine =
     (purchaseDraftLineId: string) =>
-    (input: PurchaseDraftLineUpdate): void => {
-      void reviseLine({
+    (input: PurchaseDraftLineUpdate): Promise<MutationResult> =>
+      reviseLine({
         warehouseId,
         purchaseDraftId: draft.id,
         purchaseDraftLineId,
         input,
       });
-    };
   const onRemoveLine = (purchaseDraftLineId: string) => (): void => {
     void removeLine({
       warehouseId,

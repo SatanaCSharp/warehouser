@@ -1,9 +1,10 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import { CustomerOrderPicker } from 'modules/customer-order/components/CustomerOrderPicker';
+import { AddressDisagreementAlert } from 'modules/purchase-draft/components/purchase-draft-line-links/components/AddressDisagreementAlert';
 import { PurchaseDraftRefusalAlert } from 'modules/purchase-draft/components/PurchaseDraftRefusalAlert';
 import { Conditional } from 'shared/components/Conditional';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
@@ -19,6 +20,11 @@ export type LinkCustomerOrderDialogProps = {
   customerOrders: CustomerOrder[];
   /** Which line of the draft this is, as the frames number them from 1. */
   index: number;
+  /**
+   * The address this line ships to, for the AC-15 refusal that names it —
+   * `null` for a Via Warehouse line, which this refusal never reaches.
+   */
+  lineDeliveryAddressText: string | null;
   /** The unit this line's quantities are counted in, named in the field's helper text. */
   unitOfMeasure: string;
   onSave: (input: PurchaseDraftLineLinkCreate) => Promise<MutationResult>;
@@ -50,12 +56,17 @@ const VALIDATION_SECTION: Record<keyof LinkCustomerOrderForm, string> = {
  * `request.invalid` that names no field at all, are answered by
  * `PurchaseDraftRefusalAlert`'s own fallback rather than leaving the dialog
  * open and silent (BRIEF §A note 2).
+ *
+ * AC-15's `delivery_address_disagreement` maps to `null` — silenced here —
+ * because it reads as `AddressDisagreementAlert` instead, which names the two
+ * addresses this table's static `validation` sentences cannot interpolate.
  */
 const ORDER_REFUSAL_CODES: Record<string, string | null> = {
   [ErrorCode.PURCHASE_DRAFTS_TARGET_UNAVAILABLE]:
     'purchaseDraftLinkOrder.unavailable',
   [ErrorCode.PURCHASE_DRAFTS_LINK_EXISTS]: 'purchaseDraftLinkOrder.exists',
   [ErrorCode.PURCHASE_DRAFTS_DRAFT_FROZEN]: 'purchaseDraftLinkOrder.frozen',
+  [ErrorCode.PURCHASE_DRAFTS_DELIVERY_ADDRESS_DISAGREEMENT]: null,
 };
 
 /**
@@ -80,6 +91,7 @@ const ORDER_REFUSAL_CODES: Record<string, string | null> = {
 export const LinkCustomerOrderDialog = ({
   customerOrders,
   index,
+  lineDeliveryAddressText,
   unitOfMeasure,
   onSave,
 }: LinkCustomerOrderDialogProps): ReactElement => {
@@ -94,6 +106,17 @@ export const LinkCustomerOrderDialog = ({
     formState: { errors, isSubmitting },
     register,
   } = form;
+  // AC-15 — which order the member picked, read reactively so the refusal
+  // alert can name the address it is bound for without a second copy of the
+  // server's own identifier-only envelope.
+  const selectedOrderId = useWatch({ control, name: 'customerOrderId' });
+  const selectedOrder = customerOrders.find(
+    (order) => order.id === selectedOrderId,
+  );
+  const orderDeliveryAddressText =
+    selectedOrder !== undefined && 'destination' in selectedOrder
+      ? (selectedOrder.destination?.addressText ?? null)
+      : null;
 
   const translateValidation = (
     code: string,
@@ -160,6 +183,11 @@ export const LinkCustomerOrderDialog = ({
       <PurchaseDraftRefusalAlert
         code={refusalCode}
         codes={ORDER_REFUSAL_CODES}
+      />
+      <AddressDisagreementAlert
+        code={refusalCode}
+        lineDeliveryAddressText={lineDeliveryAddressText}
+        orderDeliveryAddressText={orderDeliveryAddressText}
       />
     </FormModalDialog>
   );

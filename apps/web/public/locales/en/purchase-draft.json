@@ -189,6 +189,7 @@
       "confirm": "Freeze and mark ready",
       "noLines": "A draft is only ready once it says what is being ordered. Add a line first.",
       "refusal": "A draft is only ready once it says what is being ordered. Nothing has changed.",
+      "refusalWarehouseAddressRequired": "A line coming to the warehouse cannot be frozen until the warehouse has a Delivery Address recorded. Someone holding WAREHOUSES:ADDRESS_UPDATE needs to record one — adding and revising lines on this draft keeps working meanwhile. Nothing has changed.",
       "frozenNow_one": "Frozen now — its {{count}} line, its quantity, its links, the packaging and note, and the expected arrival date.",
       "frozenNow_other": "Frozen now — its {{count}} lines, their quantities, their links, the packaging and notes, and the expected arrival date.",
       "capturedNow": "Captured now — what each linked customer order asks for, so you are told if it moves afterwards.",
@@ -298,7 +299,11 @@
       "quantityDescription": "A whole number greater than zero, counted in {{unit}}.",
       "noCustomerOrders": "No unfulfilled customer order names this item yet. Record the demand first, and it can then be linked here.",
       "cancel": "Cancel",
-      "submit": "Link the order"
+      "submit": "Link the order",
+      "refusal": {
+        "addressDisagreement": "This line ships to {{lineAddress}}. The order you picked is going to {{orderAddress}} instead — link it to an order going to the same address.",
+        "addressDisagreement_noOrderAddress": "This line ships to {{lineAddress}}. The order you picked names no delivery address at all — link it to an order going to the same address."
+      }
     },
     "refusal": {
       "invalid": "Some of what you entered was not accepted, and nothing has changed.",
@@ -320,6 +325,11 @@
       "warehouseSubject": "This warehouse",
       "noWarehouseAddress": "No delivery address is recorded for this warehouse yet.",
       "withheld": "Customer identity is withheld from you."
+    },
+    "refusal": {
+      "heading": "This line disagrees with its links",
+      "body": "A directly-shipped line serves only the demand going to the address it ships to. Nothing has changed, and none of the links below is withdrawn — which one to remove is your decision.",
+      "bullet": "{{customer}} — going to a different delivery address"
     }
   },
   "byLine": {
