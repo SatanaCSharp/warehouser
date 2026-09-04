@@ -3,6 +3,11 @@ import { join } from 'node:path';
 
 const repositoryDirectory = __dirname;
 const commandDirectory = join(__dirname, '../../../access/usecases/commands');
+const sourceRoot = join(__dirname, '../../..');
+
+// Not a module: `shared/` holds the pure fabrications and `test/` the reusable test support
+// (server-architecture.md §"Source structure").
+const NON_MODULE_DIRECTORIES = ['shared', 'test'];
 
 describe('shared repository boundaries', () => {
   const repositorySources = readdirSync(repositoryDirectory)
@@ -37,16 +42,17 @@ describe('shared repository boundaries', () => {
   // through `baseUrl: ./src`) and a relative traversal out of `shared/` into a module. A scoped
   // package subpath whose last segment happens to name a module — `@warehouser/contracts/workspaces`
   // — is neither, and is not a module import (CR-AC-13).
-  const FEATURE_MODULES = [
-    'access',
-    'auth',
-    'customer-orders',
-    'customers',
-    'items',
-    'users',
-    'warehouses',
-    'workspaces',
-  ];
+  //
+  // **Read from disk, never enumerated.** The literal this replaces named eight of the nine modules
+  // and omitted `purchase-drafts`, so a shared repository importing it would have passed silently —
+  // and the omission survived the very change that edited the list to add `customers`
+  // (2026-09-04 backend review, finding 7).
+  const FEATURE_MODULES = readdirSync(sourceRoot, { withFileTypes: true })
+    .filter(
+      (entry) =>
+        entry.isDirectory() && !NON_MODULE_DIRECTORIES.includes(entry.name),
+    )
+    .map((entry) => entry.name);
 
   // `creating-a-server-repository.md` § "Keep repositories isolated and operation-oriented":
   // "Repository classes must not contain private methods. If persistence logic is reusable, make it

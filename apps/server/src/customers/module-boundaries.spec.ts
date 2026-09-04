@@ -19,7 +19,10 @@ const usecaseModulePath = join(
 const sourceRoot = join(__dirname, '..');
 
 // The module list is exactly the directories directly under `src/`
-// (adr/14-08-2026-domain-owned-flat-modules.md §Flatness).
+// (adr/14-08-2026-domain-owned-flat-modules.md §Flatness), read from disk so a module added later
+// is policed without anyone remembering to add it here. `shared/` and `test/` are not modules.
+const MODULE_NAME = 'customers';
+const NON_MODULE_DIRECTORIES = ['shared', 'test'];
 const FORBIDDEN_SIBLING = 'purchase-drafts';
 
 // server-architecture.md §Domain — "Domain entities and value objects must not import NestJS, HTTP
@@ -69,6 +72,36 @@ const collectProductionSources = (
       },
     ];
   });
+
+const FEATURE_MODULES = readdirSync(sourceRoot, { withFileTypes: true })
+  .filter(
+    (entry) =>
+      entry.isDirectory() && !NON_MODULE_DIRECTORIES.includes(entry.name),
+  )
+  .map((entry) => entry.name);
+
+// adding-a-server-module.md §8 — "A module's error factories, domain predicates and DTOs are
+// module-private. Another module reaches them only through an exported use-case module."
+const isModulePrivate = (target: string): boolean =>
+  /\/domain\/errors\//u.test(target) ||
+  /\/domain\/predicates\//u.test(target) ||
+  /\.predicates$/u.test(target) ||
+  /\/rest\/dtos\//u.test(target);
+
+// The module a specifier reaches into, when that is a sibling of this one. Mirrors
+// `warehouses/module-boundaries.spec.ts`'s `foreignModuleTarget`.
+const foreignModuleTarget = (specifier: string): string | undefined => {
+  if (specifier.startsWith('@') || specifier.startsWith('node:')) {
+    return undefined;
+  }
+
+  const target = specifier.replace(/^(?:\.\.\/)+/u, '');
+  const [head] = target.split('/');
+
+  return FEATURE_MODULES.includes(head) && head !== MODULE_NAME
+    ? target
+    : undefined;
+};
 
 const importedSpecifiers = (source: string): string[] =>
   Array.from(
@@ -160,6 +193,45 @@ describe('customers module boundaries', () => {
     );
 
     expect(offenders.map(({ path }) => path)).toEqual([]);
+  });
+
+  // adding-a-server-module.md §8 — the general form of the rule above. The single-sibling check
+  // proves one *direction* sad.md §10 names; this proves the rule itself against every sibling, so
+  // reaching into `customer-orders/domain/errors/` or `warehouses/rest/dtos/` fails too. `customers`
+  // projects Customer Orders, which is exactly where that reach would be tempting
+  // (2026-09-04 backend review, finding 8).
+  it("imports no other module's error factories, predicates or DTOs", () => {
+    const offenders = moduleSources.flatMap(({ path, source }) =>
+      importedSpecifiers(source).flatMap((specifier) => {
+        const target = foreignModuleTarget(specifier);
+
+        return target !== undefined && isModulePrivate(target)
+          ? [`${path} imports '${specifier}'`]
+          : [];
+      }),
+    );
+
+    expect(offenders).toEqual([]);
+  });
+
+  // The scan can distinguish a module-private reach from a legal one — otherwise the empty result
+  // above would prove nothing.
+  it("rejects a fixture reaching into another module's internals", () => {
+    expect(
+      foreignModuleTarget(
+        'customer-orders/domain/errors/customer-order.errors',
+      ),
+    ).toBe('customer-orders/domain/errors/customer-order.errors');
+    expect(
+      isModulePrivate('customer-orders/domain/errors/customer-order.errors'),
+    ).toBe(true);
+    expect(isModulePrivate('customer-orders')).toBe(false);
+    expect(
+      foreignModuleTarget('@warehouser/contracts/customers'),
+    ).toBeUndefined();
+    expect(
+      foreignModuleTarget('shared/domain/entities/customer.entity'),
+    ).toBeUndefined();
   });
 
   // sad.md §5 — `CustomerAddressBookService` is registered on the `UsecaseModule` and **not**
