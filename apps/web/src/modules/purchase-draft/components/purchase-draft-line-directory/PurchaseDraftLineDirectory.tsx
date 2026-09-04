@@ -70,7 +70,10 @@ const HALF_COPY: Record<
  *
  * **Neither half is dropped when it is empty.** "Nothing is coming to the
  * dock" is the answer a member preparing it needs, and an absent table reads
- * as a failed load rather than as an answer.
+ * as a failed load rather than as an answer. The sentence is the table's own
+ * empty state rather than a paragraph beside it
+ * (`adr/27-08-2026-heroui-table-for-web-data-tables.md` §Decision rule 3): the
+ * view renders no second responsive surface for either half.
  *
  * The view is read-only by nature, so an archived Warehouse changes nothing
  * about it: every read still succeeds on exactly the terms that applied before
@@ -110,12 +113,10 @@ export const PurchaseDraftLineDirectory = ({
               {t(HALF_COPY[mode].heading)}
             </h3>
             <DockLineTable
+              emptyMessage={t(HALF_COPY[mode].empty)}
               entries={halfOf(mode)}
               label={t(HALF_COPY[mode].label)}
             />
-            <p className="mt-2 text-sm text-muted empty:hidden">
-              {halfOf(mode).length === 0 ? t(HALF_COPY[mode].empty) : ''}
-            </p>
           </section>
         ))}
       </>

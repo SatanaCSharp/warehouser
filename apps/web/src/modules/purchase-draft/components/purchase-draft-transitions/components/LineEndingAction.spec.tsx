@@ -5,6 +5,7 @@ import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { LineEndingAction } from 'modules/purchase-draft/components/purchase-draft-transitions/components/LineEndingAction';
 import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
+import { WarehousePermissionGate } from 'shared/components/WarehousePermissionGate';
 import {
   accessIds,
   authenticatedStore,
@@ -26,6 +27,13 @@ import type {
 // still exist on the server for the stale-view case, and
 // `EndingRefusalAlert.spec.tsx` covers those sentences — this suite covers the
 // half that means a member never reaches them.
+
+/**
+ * Rendered beside the subject behind the very Permission the action gates
+ * itself with, so a test asserting that nothing is offered can wait for the
+ * projection instead of asserting against an empty first paint.
+ */
+const GATE_SENTINEL = 'permission resolved';
 
 const line = (
   overrides: Partial<PurchaseDraftLine> = {},
@@ -51,10 +59,13 @@ const line = (
   ...overrides,
 });
 
-const draft = (subject: PurchaseDraftLine): PurchaseDraftDetail => ({
+const draft = (
+  subject: PurchaseDraftLine,
+  state: PurchaseDraftDetail['state'] = 'ready_for_ordering',
+): PurchaseDraftDetail => ({
   id: '00000000-0000-4000-8000-000000000501',
   reference: 'PD-0143',
-  state: 'ready_for_ordering',
+  state,
   expectedArrivalDate: null,
   lineCount: 1,
   hasDriftSignal: false,
@@ -76,6 +87,7 @@ const draft = (subject: PurchaseDraftLine): PurchaseDraftDetail => ({
 const renderAction = (
   subject: PurchaseDraftLine,
   permissionIds: readonly PermissionId[] = Object.values(PermissionId),
+  state: PurchaseDraftDetail['state'] = 'ready_for_ordering',
 ): void => {
   stubAccessServer({ permissionIds });
   const store = authenticatedStore();
@@ -93,7 +105,14 @@ const renderAction = (
     ),
   );
   renderInEnteredWarehouse(
-    <LineEndingAction draft={draft(subject)} line={subject} />,
+    <>
+      <LineEndingAction draft={draft(subject, state)} line={subject} />
+      <WarehousePermissionGate
+        permission={PermissionId.PURCHASE_DRAFTS_RECEIVE}
+      >
+        <span>{GATE_SENTINEL}</span>
+      </WarehousePermissionGate>
+    </>,
     store,
     accessIds.warehouse,
   );
@@ -182,6 +201,26 @@ describe('LineEndingAction', () => {
       expect(await screen.findByText(sentence)).toBeInTheDocument();
       expect(trigger(/record what arrived/iu)).not.toBeInTheDocument();
       expect(trigger(/record the delivery/iu)).not.toBeInTheDocument();
+    },
+  );
+
+  // AC-19 — a line ends only once the draft is frozen, and each line ends on
+  // its own day. A draft still in `draft` has nothing to end; a Closed one has
+  // already ended every line it holds. The component answers that itself, so
+  // its parent carries no visibility branch (`writing-web-components.md` §6).
+  it.each<PurchaseDraftDetail['state']>(['draft', 'closed'])(
+    'offers no ending on a draft in %s, and states nothing in its place (AC-19)',
+    async (state) => {
+      renderAction(line(), Object.values(PermissionId), state);
+
+      // The gate beside it resolves the same Permission, so once its sentinel
+      // is on screen the action would be offering its trigger if the draft's
+      // state admitted one.
+      await screen.findByText(GATE_SENTINEL);
+
+      expect(trigger(/record what arrived/iu)).not.toBeInTheDocument();
+      expect(trigger(/record the delivery/iu)).not.toBeInTheDocument();
+      expect(screen.queryByText(/recorded/iu)).not.toBeInTheDocument();
     },
   );
 

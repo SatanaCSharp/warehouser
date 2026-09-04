@@ -50,6 +50,11 @@ export type LineEndingActionProps = {
  * member can act on. A second attempt is still possible from a stale view and
  * is still refused by the server, naming when and by whom.
  *
+ * **It gates itself on the draft's own state.** A line is offered an ending
+ * only while the draft is frozen, and the component answers that question
+ * rather than taking a visibility flag or leaving its caller a ternary
+ * (`writing-web-components.md` §6).
+ *
  * The mapping from mode to the act it admits is a total
  * `Record<DeliveryMode, ReactElement>`, not an `if`/`else` or a ternary ladder
  * (`writing-web-components.md` §6): a third Delivery Mode would fail to compile
@@ -58,7 +63,7 @@ export type LineEndingActionProps = {
 export const LineEndingAction = ({
   draft,
   line,
-}: LineEndingActionProps): ReactElement => {
+}: LineEndingActionProps): ReactElement | null => {
   const { t } = useTranslation('purchase-draft');
   const warehouseId = useEnteredWarehouse() ?? '';
   const { isArchived, reasonId } = useArchivedWarehouse();
@@ -128,22 +133,33 @@ export const LineEndingAction = ({
     ),
   };
 
+  // AC-19 — a line ends only once the draft is frozen, and each line ends on
+  // its own day. A draft still in `draft` has nothing to end; a Closed one has
+  // already ended every line it holds. The component answers that itself, so
+  // no caller carries a visibility branch for it
+  // (`writing-web-components.md` §6).
+  if (draft.state !== 'ready_for_ordering') {
+    return null;
+  }
+
+  // The sentence reads the ending the line carries, so it is resolved here
+  // rather than gated inline — `Conditional` builds both arms
+  // (`writing-web-conditional-components.md` §2). Resolving it is what types
+  // the ending non-nullable where its copy is written, so no placeholder kind
+  // or quantity can stand in for one that is not there.
+  const recorded =
+    line.ending === null ? null : (
+      <p className="text-sm text-muted">
+        {t(`transitions.lineEnding.recorded.${line.ending.kind}`, {
+          count: line.ending.quantity,
+          formatted: quantity(line.ending.quantity),
+        })}
+      </p>
+    );
+
   return (
     <WarehousePermissionGate permission={PermissionId.PURCHASE_DRAFTS_RECEIVE}>
-      <Conditional
-        when={line.ending === null}
-        otherwise={
-          <p className="text-sm text-muted">
-            {t(
-              `transitions.lineEnding.recorded.${line.ending?.kind ?? 'arrival'}`,
-              {
-                count: line.ending?.quantity ?? 0,
-                formatted: quantity(line.ending?.quantity ?? 0),
-              },
-            )}
-          </p>
-        }
-      >
+      <Conditional otherwise={recorded} when={line.ending === null}>
         {offer[line.deliveryMode]}
       </Conditional>
     </WarehousePermissionGate>

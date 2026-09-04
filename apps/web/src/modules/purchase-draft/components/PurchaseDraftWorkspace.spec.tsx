@@ -224,6 +224,24 @@ const renderInArchivedWarehouse = (): void => {
   );
 };
 
+/**
+ * The toggle's own surface: one draft in the `draft` tab, and the by-line read
+ * that tab issues — the surface's own read, not the route loader's, so the
+ * spec seeds it exactly as it seeds the list beside it.
+ */
+const renderToggleSurface = (): void => {
+  const store = authenticatedStore();
+  seed(store, [summary({ id: 'draft-one', state: 'draft' })]);
+  void store.dispatch(
+    purchaseDraftApi.util.upsertQueryData(
+      'listPurchaseDraftLines',
+      { warehouseId: accessIds.warehouse, state: 'draft' },
+      [],
+    ),
+  );
+  renderInEnteredWarehouse(<PurchaseDraftWorkspace />, store);
+};
+
 describe('PurchaseDraftWorkspace', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -408,19 +426,8 @@ describe('PurchaseDraftWorkspace', () => {
   // separation AC-22 requires rather than the control's styling.
   describe('the By draft / By line toggle (AC-22)', () => {
     it('switches the drafts destination to the split by delivery mode', async () => {
-      const store = authenticatedStore();
-      seed(store, [summary({ id: 'ready-one', state: 'ready_for_ordering' })]);
-      // The by-line read is the surface's own, not the route loader's, so the
-      // spec seeds it exactly as it seeds the list beside it.
-      void store.dispatch(
-        purchaseDraftApi.util.upsertQueryData(
-          'listPurchaseDraftLines',
-          { warehouseId: accessIds.warehouse, state: 'draft' },
-          [],
-        ),
-      );
       const user = userEvent.setup();
-      renderInEnteredWarehouse(<PurchaseDraftWorkspace />, store);
+      renderToggleSurface();
 
       await user.click(await screen.findByRole('radio', { name: 'By line' }));
 
@@ -436,6 +443,36 @@ describe('PurchaseDraftWorkspace', () => {
       ).toBeInTheDocument();
       expect(
         screen.queryByRole('list', { name: 'Purchase drafts' }),
+      ).not.toBeInTheDocument();
+    });
+
+    // Only the view on screen is mounted, in both directions: the list a
+    // member is not looking at is not one more thing an assistive technology
+    // walks past, and its read is not issued. The lookup that chooses the view
+    // (`writing-web-conditional-components.md` §3) keeps that property because
+    // element creation runs no hook — this pins it.
+    it('unmounts the by-line split when the member looks by draft again', async () => {
+      const user = userEvent.setup();
+      renderToggleSurface();
+
+      await user.click(await screen.findByRole('radio', { name: 'By line' }));
+      await screen.findByRole('grid', {
+        name: 'Lines landing at this warehouse',
+      });
+      await user.click(screen.getByRole('radio', { name: 'By draft' }));
+
+      expect(
+        await screen.findByRole('list', { name: 'Purchase drafts' }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('grid', {
+          name: 'Lines landing at this warehouse',
+        }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('grid', {
+          name: 'Lines shipping direct to customer',
+        }),
       ).not.toBeInTheDocument();
     });
 

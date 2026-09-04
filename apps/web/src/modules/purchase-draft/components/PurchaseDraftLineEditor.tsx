@@ -37,7 +37,9 @@ export type PurchaseDraftLineEditorProps = {
    * Passed in rather than built here because the ending needs the whole draft
    * and this component is given only its identifier; taking the slot keeps
    * `draft` from being drilled a third hop
-   * (`writing-web-components.md` §Two-hop prop budget).
+   * (`writing-web-components.md` §Two-hop prop budget). The action gates
+   * itself on the draft's state and on the Permission, so the slot is filled
+   * unconditionally and the row around it collapses when it renders nothing.
    */
   endingAction?: ReactNode;
   /** Which line of the draft this is, as the frames number them from 1. */
@@ -232,11 +234,11 @@ export const PurchaseDraftLineEditor = ({
         purchaseDraftId={purchaseDraftId}
       />
 
-      <Conditional when={endingAction}>
-        <div className="mt-4 flex justify-end border-t border-border pt-3">
-          {endingAction}
-        </div>
-      </Conditional>
+      {/* The action gates itself, so the row it sits in collapses with
+          `empty:hidden` rather than being branched on here. */}
+      <div className="mt-4 flex justify-end border-t border-border pt-3 empty:hidden empty:border-0 empty:pt-0">
+        {endingAction}
+      </div>
     </li>
   );
 };

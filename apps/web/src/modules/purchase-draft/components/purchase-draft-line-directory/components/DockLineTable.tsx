@@ -1,4 +1,4 @@
-import { Table } from '@heroui/react';
+import { EmptyState, Table } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 
 import { DockLineDraftCell } from 'modules/purchase-draft/components/purchase-draft-line-directory/components/DockLineDraftCell';
@@ -11,6 +11,14 @@ import type { ReactElement } from 'react';
 
 export type DockLineTableProps = {
   entries: PurchaseDraftLineListEntry[];
+  /**
+   * What this half says when nothing lands in it. The table states it itself —
+   * `renderEmptyState` on `Table.Body`
+   * (`docs/system/adr/27-08-2026-heroui-table-for-web-data-tables.md`
+   * §Decision rule 3) — rather than leaving it to a paragraph beside the
+   * table, which the by-line view has no second responsive surface to justify.
+   */
+  emptyMessage: string;
   /** Names the table for assistive technology. */
   label: string;
 };
@@ -30,10 +38,19 @@ export type DockLineTableProps = {
  * ambiguous (design-handoff.md §Component mapping, §Accessibility).
  */
 export const DockLineTable = ({
+  emptyMessage,
   entries,
   label,
 }: DockLineTableProps): ReactElement => {
   const { t } = useTranslation('purchase-draft');
+
+  // Reaching an empty half is a resolved answer a member preparing the dock
+  // needs, not a failure, so it announces itself with `role="status"`.
+  const renderEmptyState = (): ReactElement => (
+    <EmptyState className="p-3 text-sm text-muted" role="status">
+      {emptyMessage}
+    </EmptyState>
+  );
 
   const renderLineRow = (entry: PurchaseDraftLineListEntry): ReactElement => (
     <Table.Row
@@ -72,7 +89,9 @@ export const DockLineTable = ({
               {t('byLine.destinationColumn')}
             </Table.Column>
           </Table.Header>
-          <Table.Body items={entries}>{renderLineRow}</Table.Body>
+          <Table.Body items={entries} renderEmptyState={renderEmptyState}>
+            {renderLineRow}
+          </Table.Body>
         </Table.Content>
       </Table.ScrollContainer>
     </Table>

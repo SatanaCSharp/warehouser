@@ -190,11 +190,20 @@ describe('PurchaseDraftLineDirectory', () => {
   // Neither half is hidden when it is empty: "no lines are coming to the dock"
   // is the answer a member preparing it needs, and an absent table would read
   // as a failed load.
-  it('says a half is empty rather than dropping it', async () => {
+  //
+  // The message belongs to the table itself — `renderEmptyState` on
+  // `Table.Body` (`adr/27-08-2026-heroui-table-for-web-data-tables.md`
+  // §Decision rule 3), not a paragraph beside it, so a member reading the
+  // table's own region is told the answer rather than having to leave it.
+  it('says a half is empty inside the table for that half rather than dropping it', async () => {
     renderDirectory([entryFor(directLine)]);
 
+    const dock = await screen.findByRole('grid', {
+      name: 'Lines landing at this warehouse',
+    });
+
     expect(
-      await screen.findByText('No lines are coming to this warehouse.'),
+      within(dock).getByText('No lines are coming to this warehouse.'),
     ).toBeInTheDocument();
   });
 });

@@ -152,6 +152,55 @@ export const PurchaseDraftWorkspace = (): ReactElement => {
     ready: <>{detailPane}</>,
   };
 
+  // AC-22 — what the toggle chose, resolved per tab because each panel shows
+  // the drafts its own state selects. A total `Record<PurchaseDraftView, …>`
+  // rather than a stack of `Conditional`s re-testing `view`
+  // (`writing-web-conditional-components.md` §3): a third way of looking fails
+  // to compile until it is given something to render.
+  //
+  // Only the chosen element is rendered, so the list a member is not looking
+  // at is not one more thing an assistive technology has to walk past, and the
+  // by-line read is issued only for the tab in front of them. Building both
+  // costs nothing: element creation runs no hook and has no effect.
+  const viewContent = (
+    state: TabState,
+  ): Record<PurchaseDraftView, ReactElement> => ({
+    byDraft: (
+      <div className="flex gap-6">
+        <div
+          className={`w-full md:w-[340px] md:shrink-0 ${
+            selectedDraftId ? 'hidden md:block' : 'block'
+          }`}
+        >
+          <PurchaseDraftList
+            drafts={visibleDrafts}
+            selectedDraftId={selectedDraftId}
+            state={state}
+            onSelect={onSelectDraft}
+          />
+        </div>
+        <div
+          className={`min-w-0 flex-1 ${
+            selectedDraftId ? 'block' : 'hidden md:block'
+          }`}
+        >
+          <Conditional when={selectedDraftId}>
+            <button
+              className="mb-3 inline-flex items-center gap-1 text-sm md:hidden"
+              type="button"
+              onClick={onBackToList}
+            >
+              <ChevronLeftIcon />
+              {t('workspace.backToList')}
+            </button>
+          </Conditional>
+          {detailContent[detailState]}
+        </div>
+      </div>
+    ),
+    byLine: <PurchaseDraftLineDirectory state={state} />,
+  });
+
   return (
     <main className="mx-auto max-w-[1440px] px-6 py-8">
       <div className="flex flex-wrap items-center gap-3">
@@ -186,47 +235,7 @@ export const PurchaseDraftWorkspace = (): ReactElement => {
 
         {TAB_STATES.map((state) => (
           <Tabs.Panel className="pt-5" id={state} key={state}>
-            <Conditional when={view === 'byDraft'}>
-              <div className="flex gap-6">
-                <div
-                  className={`w-full md:w-[340px] md:shrink-0 ${
-                    selectedDraftId ? 'hidden md:block' : 'block'
-                  }`}
-                >
-                  <PurchaseDraftList
-                    drafts={visibleDrafts}
-                    selectedDraftId={selectedDraftId}
-                    state={state}
-                    onSelect={onSelectDraft}
-                  />
-                </div>
-                <div
-                  className={`min-w-0 flex-1 ${
-                    selectedDraftId ? 'block' : 'hidden md:block'
-                  }`}
-                >
-                  <Conditional when={selectedDraftId}>
-                    <button
-                      className="mb-3 inline-flex items-center gap-1 text-sm md:hidden"
-                      type="button"
-                      onClick={onBackToList}
-                    >
-                      <ChevronLeftIcon />
-                      {t('workspace.backToList')}
-                    </button>
-                  </Conditional>
-                  {detailContent[detailState]}
-                </div>
-              </div>
-            </Conditional>
-            {/* AC-22 — the by-line split of the same drafts the tab chose.
-                Each view is mounted only while it is the one on screen, so the
-                list a member is not looking at is not one more thing an
-                assistive technology has to walk past, and the by-line read is
-                issued only for the tab in front of them. */}
-            <Conditional when={view === 'byLine'}>
-              <PurchaseDraftLineDirectory state={state} />
-            </Conditional>
+            {viewContent(state)[view]}
           </Tabs.Panel>
         ))}
       </Tabs>
