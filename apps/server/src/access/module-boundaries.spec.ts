@@ -44,8 +44,21 @@ const appModulePath = join(sourceRoot, 'app.module.ts');
 
 // The module list is exactly the directories directly under `src/`
 // (adr/14-08-2026-domain-owned-flat-modules.md, §Flatness). `shared/` is explicitly *not* a module,
-// so imports into it are unconstrained here.
-const FEATURE_MODULES = ['access', 'auth', 'users', 'warehouses', 'workspaces'];
+// so imports into it are unconstrained here, and neither is `test/`.
+//
+// **Read from disk, never enumerated.** The literal this replaces named five of the nine modules,
+// so an import of `customers`, `customer-orders`, `items` or `purchase-drafts` could not have
+// failed it — the comment claimed a completeness it did not have. Same rot, and same fix, as
+// `warehouses/module-boundaries.spec.ts` (2026-09-04 backend review, finding 6 and its
+// pre-existing observation).
+const NON_MODULE_DIRECTORIES = ['shared', 'test'];
+
+const FEATURE_MODULES = readdirSync(sourceRoot, { withFileTypes: true })
+  .filter(
+    (entry) =>
+      entry.isDirectory() && !NON_MODULE_DIRECTORIES.includes(entry.name),
+  )
+  .map((entry) => entry.name);
 
 // A module contains layer directories, never another module (adding-a-server-module.md §1).
 const LAYER_DIRECTORIES = ['domain', 'usecases', 'rest', 'handlers'];
