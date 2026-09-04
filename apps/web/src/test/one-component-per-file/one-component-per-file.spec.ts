@@ -27,6 +27,15 @@ import { describe, expect, it } from 'vitest';
  * under `src/`, including files added after this was written, so no colocated
  * spec could fail when a *new* file grows a second component
  * (`placing-web-tests.md` §3, "Structural gates").
+ *
+ * **Why this spec drives the matcher on synthetic sources, not just the real
+ * tree.** A regex-shaped gate that only ever runs against a corpus with no
+ * violations is unfalsifiable from its own output — a broken pattern and a
+ * correct one both read `{}`. `conflatedComponentsIn` therefore takes an
+ * injected `{ file, source }` pair the way
+ * `tests/delivery-addresses/architecture-boundaries.mjs`'s rules do, so the
+ * teeth cases below drive the **same function** the real-corpus test uses,
+ * over a deliberate fixture source, rather than a reimplementation of it.
  */
 
 const SRC_DIRECTORY = posix.dirname(
@@ -75,10 +84,19 @@ const exportedTypesIn = (code: string): string[] =>
  * The name of every non-exported component annotated with a props type its own
  * file exports — §1's "it needs a props type worth naming and exporting",
  * already conceded.
+ *
+ * `injected` lets a test drive this exact function over a deliberate fixture
+ * source instead of a file on disk, the way
+ * `tests/delivery-addresses/architecture-boundaries.mjs`'s `productionSources`
+ * lets a rule be driven over a fixture. Passing it is what makes the teeth
+ * cases below exercise the real matcher rather than a copy of it.
  */
-const conflatedComponentsIn = (relativePath: string): string[] => {
+const conflatedComponentsIn = (
+  relativePath: string,
+  injected?: string,
+): string[] => {
   const code = codeOf(
-    readFileSync(posix.join(SRC_DIRECTORY, relativePath), 'utf8'),
+    injected ?? readFileSync(posix.join(SRC_DIRECTORY, relativePath), 'utf8'),
   );
   const exportedTypes = exportedTypesIn(code);
   const declarations = componentsIn(code);
@@ -94,11 +112,50 @@ const conflatedComponentsIn = (relativePath: string): string[] => {
 };
 
 describe('one component per file', () => {
+  it('scans a non-empty corpus of production .tsx files', () => {
+    // A broken glob or an over-eager `.spec.tsx` filter would make every
+    // assertion below pass on an empty corpus without proving anything —
+    // exactly the failure mode this gate exists to avoid.
+    expect(componentFiles().length).toBeGreaterThan(0);
+  });
+
   it('keeps no private component that already has an exported props type', () => {
     const offenders = componentFiles()
       .map((file) => [file, conflatedComponentsIn(file)] as const)
       .filter(([, components]) => components.length > 0);
 
     expect(Object.fromEntries(offenders)).toStrictEqual({});
+  });
+
+  it('reports a private component annotated with its file’s own exported props type', () => {
+    // The exact violation §1 names: `Helper` is not exported, but its `props`
+    // parameter is typed with `HelperProps`, which this same file exports —
+    // "a props type worth naming and exporting", already conceded.
+    const source = [
+      'export type HelperProps = { label: string };',
+      '',
+      'const Helper = (props: HelperProps): ReactNode => <span>{props.label}</span>;',
+      '',
+      'export const Widget = (): ReactNode => <Helper label="hi" />;',
+    ].join('\n');
+
+    expect(conflatedComponentsIn('fixtures/Widget.tsx', source)).toStrictEqual([
+      'Helper',
+    ]);
+  });
+
+  it('does not report a private component whose parameter type the file does not export', () => {
+    // The accepted shape `DatasetCard`/`MemberRow` keep: `Helper` takes an
+    // inline, unexported parameter type, so it has conceded nothing the guide
+    // asks it to move out.
+    const source = [
+      'const Helper = (props: { label: string }): ReactNode => <span>{props.label}</span>;',
+      '',
+      'export const Widget = (): ReactNode => <Helper label="hi" />;',
+    ].join('\n');
+
+    expect(conflatedComponentsIn('fixtures/Widget.tsx', source)).toStrictEqual(
+      [],
+    );
   });
 });
