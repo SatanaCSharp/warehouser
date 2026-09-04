@@ -67,10 +67,12 @@ import { WriteRateLimited } from 'shared/guards/write-rate-limited.decorator';
 // above this line rather than a case every caller has to remember; the payload schema has already
 // refused it at 400 in any event.
 //
-// Setting `via_warehouse` normalizes the address to `null`, because a Via Warehouse line's
-// destination *is* the Warehouse's own and there is no identifier to keep (AC-13, openapi.yaml
-// "setting `via_warehouse` clears it"). A payload that states no `deliveryMode` states no
-// destination at all, and the line's own is left exactly as it was.
+// Structural only: the two flat payload fields fold into one `destination`, and a payload that
+// states no `deliveryMode` states no destination at all, so the line's own is left exactly as it
+// was. Clearing the address when the mode is `via_warehouse` (AC-13, openapi.yaml "setting
+// `via_warehouse` clears it") is the *command's* rule and is decided by `statedDestination` inside
+// its transaction — a controller holds no business rule
+// (adding-a-server-module.md §4, §"Common failures").
 const toReviseLineInput = (
   input: PurchaseDraftLineUpdate,
 ): ReviseLineInput => ({
@@ -83,10 +85,7 @@ const toReviseLineInput = (
       ? undefined
       : {
           deliveryMode: input.deliveryMode,
-          customerDeliveryAddressId:
-            input.deliveryMode === 'via_warehouse'
-              ? null
-              : (input.customerDeliveryAddressId ?? null),
+          customerDeliveryAddressId: input.customerDeliveryAddressId ?? null,
         },
 });
 
