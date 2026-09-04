@@ -40,11 +40,17 @@ export const renderWithProviders = (
  * importing the production `warehouseRoute` singleton — whose `beforeLoad`
  * publishes an `entered` verdict for `warehouseId`. Use `renderWithProviders`
  * for a component that reads no Warehouse authority.
+ *
+ * Pass `verdict` to publish a different entry state — AC-23's archived
+ * Warehouse is `{ status: 'entered-read-only', reason: 'archived' }`, which is
+ * what makes a destination render its writes as disabled-and-explained rather
+ * than absent.
  */
 export const renderInEnteredWarehouse = (
   ui: React.ReactElement,
   store: AppStore = makeStore(),
   warehouseId: string = accessIds.warehouse,
+  verdict: Omit<WarehouseEntryVerdict, 'warehouseId'> = { status: 'entered' },
 ): RenderResult => {
   const testRootRoute = createRootRouteWithContext<{ store: AppStore }>()({
     component: () => <Outlet />,
@@ -53,7 +59,7 @@ export const renderInEnteredWarehouse = (
     getParentRoute: () => testRootRoute,
     path: ROUTES.WAREHOUSE,
     beforeLoad: ({ params }): WarehouseEntryVerdict => ({
-      status: 'entered',
+      ...verdict,
       warehouseId: params.warehouseId,
     }),
   });

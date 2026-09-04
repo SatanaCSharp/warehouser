@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { customerApi } from 'modules/customer/api/customer-api';
 import { CustomerDirectory } from 'modules/customer/components/customer-directory/CustomerDirectory';
 import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
+import { ARCHIVED_WAREHOUSE_REASON_ID } from 'shared/hooks/projections/useArchivedWarehouse';
 import {
   accessIds,
   authenticatedStore,
@@ -120,10 +121,12 @@ const renderDirectory = ({
   customers = [north, south],
   detail = northDetail,
   permissionIds = Object.values(PermissionId),
+  archived = false,
 }: {
   customers?: Customer[];
   detail?: CustomerDetail;
   permissionIds?: readonly PermissionId[];
+  archived?: boolean;
 } = {}): AppStore => {
   stubAccessServer({ permissionIds });
   const store = authenticatedStore();
@@ -151,12 +154,19 @@ const renderDirectory = ({
         roleId: accessIds.managerRole,
         roleKind: 'warehouse_manager',
         permissionIds: [...permissionIds],
-        archivedAt: null,
+        archivedAt: archived ? '2026-08-20T09:00:00.000Z' : null,
       },
     ),
   );
 
-  renderInEnteredWarehouse(<CustomerDirectory />, store, accessIds.warehouse);
+  renderInEnteredWarehouse(
+    <CustomerDirectory />,
+    store,
+    accessIds.warehouse,
+    archived
+      ? { status: 'entered-read-only', reason: 'archived' }
+      : { status: 'entered' },
+  );
   return store;
 };
 
@@ -322,6 +332,33 @@ describe('CustomerDirectory (frames KRDln, b7gaH9)', () => {
         screen.queryByRole('button', { name: 'Record customer' }),
       ).not.toBeInTheDocument();
     });
+  });
+
+  // AC-23 — the Customers destination in an archived Warehouse. The drafts and
+  // demand halves were already covered (`PurchaseDraftWorkspace.spec.tsx`,
+  // `DemandDirectory.spec.tsx`); this one had only the loader read, so nothing
+  // proved the destination itself reacts. The distinction that matters is
+  // disabled-and-explained rather than absent: an absent trigger is what a
+  // missing Permission produces (the case above), and a member whose Warehouse
+  // was archived must be told why the control will not act rather than left to
+  // conclude their Role changed.
+  it('renders its writes as disabled-and-explained in an archived Warehouse (AC-23)', async () => {
+    renderDirectory({ archived: true });
+
+    await screen.findByRole('button', { name: /^Nordwind Logistik GmbH/u });
+
+    const record = await screen.findByRole('button', {
+      name: 'Record customer',
+    });
+    expect(record).toBeInTheDocument();
+    expect(record).toBeDisabled();
+    // The sentence itself is published once by `WarehouseLayout`, above this
+    // destination; what this destination owes is the reference to it, so a
+    // disabled control is never mute about why.
+    expect(record).toHaveAttribute(
+      'aria-describedby',
+      ARCHIVED_WAREHOUSE_REASON_ID,
+    );
   });
 
   // AC-06a — an Inactive address is never offered where an address is chosen,
