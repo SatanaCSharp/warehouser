@@ -346,6 +346,8 @@
     "itemColumn": "Item",
     "orderedColumn": "Ordered",
     "destinationColumn": "Goes to",
+    "expectedColumn": "Expected",
+    "endingColumn": "Ending",
     "expectedArrival": "expected {{date}}",
     "noExpectedArrival": "No expected arrival date yet",
     "loading": "Loading purchase draft lines",

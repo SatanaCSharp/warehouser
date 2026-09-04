@@ -27,8 +27,23 @@ import type {
 import type { ReactElement } from 'react';
 import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
+/**
+ * What an ending act needs to know about the draft it belongs to — its
+ * identity, its reference for the dialog's title, its own lifecycle state,
+ * and the lines `EndingRefusalAlert` resolves a bound violation's line number
+ * or customer name against. The by-line view's own read
+ * (`PurchaseDraftLineListEntry`) carries every one of these already, so this
+ * is the narrowest contract that lets it reuse this action without fetching a
+ * second, full `PurchaseDraftDetail` it has no other use for
+ * (`writing-web-components.md` §5).
+ */
+export type LineEndingDraft = Pick<
+  PurchaseDraftDetail,
+  'id' | 'reference' | 'state' | 'lines'
+>;
+
 export type LineEndingActionProps = {
-  draft: PurchaseDraftDetail;
+  draft: LineEndingDraft;
   line: PurchaseDraftLine;
 };
 

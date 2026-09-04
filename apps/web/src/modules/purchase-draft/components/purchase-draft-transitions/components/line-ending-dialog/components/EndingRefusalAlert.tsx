@@ -7,7 +7,7 @@ import { endingBoundViolations } from 'modules/purchase-draft/utils/line-ending-
 import { Conditional } from 'shared/components/Conditional';
 import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
 
-import type { PurchaseDraftDetail } from '@warehouser/contracts/purchase-drafts';
+import type { LineEndingDraft } from 'modules/purchase-draft/components/purchase-draft-transitions/components/LineEndingAction';
 import type { EndingBoundViolation } from 'modules/purchase-draft/utils/line-ending-form';
 import type { ReactElement } from 'react';
 
@@ -16,7 +16,7 @@ export type EndingRefusalAlertProps = {
   code?: string;
   /** The refusal's own safe envelope, which carries the bounds it broke. */
   details?: Record<string, unknown>;
-  draft: PurchaseDraftDetail;
+  draft: LineEndingDraft;
   onDismiss: () => void;
 };
 

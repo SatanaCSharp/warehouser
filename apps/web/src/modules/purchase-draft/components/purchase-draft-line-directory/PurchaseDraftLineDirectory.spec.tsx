@@ -205,4 +205,57 @@ describe('PurchaseDraftLineDirectory', () => {
       within(dock).getByText('No lines are coming to this warehouse.'),
     ).toBeInTheDocument();
   });
+
+  // R11 / AC-22, AC-19 — approved frame `zj46c` draws EXPECTED and ENDING as
+  // their own columns, and a member preparing the dock can only record an
+  // arrival from the by-line view if the ending action is actually reachable
+  // there, not merely a header naming the column.
+  it('states when a line is expected and offers its ending action from the by-line view', async () => {
+    renderDirectory([entryFor(dockLine), entryFor(directLine)]);
+
+    const dock = await screen.findByRole('grid', {
+      name: 'Lines landing at this warehouse',
+    });
+    const direct = await screen.findByRole('grid', {
+      name: 'Lines shipping direct to customer',
+    });
+
+    expect(within(dock).getByText('18 Sep')).toBeInTheDocument();
+    expect(
+      within(dock).getByRole('button', { name: 'Record what arrived' }),
+    ).toBeInTheDocument();
+    expect(
+      within(direct).getByRole('button', { name: 'Record the delivery' }),
+    ).toBeInTheDocument();
+  });
+
+  // AC-20a — a line whose ending is already recorded offers no second one; the
+  // by-line view states the ending it carries instead, exactly as the
+  // draft-detail view does.
+  it('states a line’s already-recorded ending in the by-line view rather than offering a second one', async () => {
+    const endedDockLine: PurchaseDraftLineIdentified = {
+      ...dockLine,
+      ending: {
+        kind: 'arrival',
+        quantity: 140,
+        recordedByUserId: accessIds.actingUser,
+        recordedAt: '2026-08-26T10:00:00.000Z',
+      },
+    };
+
+    renderDirectory([entryFor(endedDockLine)]);
+
+    const dock = await screen.findByRole('grid', {
+      name: 'Lines landing at this warehouse',
+    });
+
+    expect(
+      await within(dock).findByText(
+        'Arrival recorded — 140 arrived at the dock.',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(dock).queryByRole('button', { name: 'Record what arrived' }),
+    ).not.toBeInTheDocument();
+  });
 });

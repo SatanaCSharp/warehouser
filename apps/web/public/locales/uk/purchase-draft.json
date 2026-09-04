@@ -354,6 +354,8 @@
     "itemColumn": "Товар",
     "orderedColumn": "Замовлено",
     "destinationColumn": "Прямує на",
+    "expectedColumn": "Очікується",
+    "endingColumn": "Завершення",
     "expectedArrival": "очікується {{date}}",
     "noExpectedArrival": "Дату очікуваного прибуття ще не вказано",
     "loading": "Завантаження рядків чернеток закупівлі",

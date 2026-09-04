@@ -2,6 +2,8 @@ import { EmptyState, Table } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 
 import { DockLineDraftCell } from 'modules/purchase-draft/components/purchase-draft-line-directory/components/DockLineDraftCell';
+import { DockLineEndingCell } from 'modules/purchase-draft/components/purchase-draft-line-directory/components/DockLineEndingCell';
+import { DockLineExpectedCell } from 'modules/purchase-draft/components/purchase-draft-line-directory/components/DockLineExpectedCell';
 import { DockLineItemCell } from 'modules/purchase-draft/components/purchase-draft-line-directory/components/DockLineItemCell';
 import { DockLineQuantityCell } from 'modules/purchase-draft/components/purchase-draft-line-directory/components/DockLineQuantityCell';
 import { PurchaseDraftLineDestination } from 'modules/purchase-draft/components/PurchaseDraftLineDestination';
@@ -70,6 +72,12 @@ export const DockLineTable = ({
       <Table.Cell className="align-middle">
         <PurchaseDraftLineDestination line={entry.line} />
       </Table.Cell>
+      <Table.Cell className="align-middle">
+        <DockLineExpectedCell entry={entry} />
+      </Table.Cell>
+      <Table.Cell className="align-middle text-right">
+        <DockLineEndingCell entry={entry} />
+      </Table.Cell>
     </Table.Row>
   );
 
@@ -88,6 +96,10 @@ export const DockLineTable = ({
             <Table.Column id="destination">
               {t('byLine.destinationColumn')}
             </Table.Column>
+            <Table.Column id="expected">
+              {t('byLine.expectedColumn')}
+            </Table.Column>
+            <Table.Column id="ending">{t('byLine.endingColumn')}</Table.Column>
           </Table.Header>
           <Table.Body items={entries} renderEmptyState={renderEmptyState}>
             {renderLineRow}

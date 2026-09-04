@@ -7,10 +7,8 @@ import { LineEndingFieldset } from 'modules/purchase-draft/components/purchase-d
 import { lineEndingFormDefaults } from 'modules/purchase-draft/utils/line-ending-form';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 
-import type {
-  PurchaseDraftDetail,
-  PurchaseDraftLine,
-} from '@warehouser/contracts/purchase-drafts';
+import type { PurchaseDraftLine } from '@warehouser/contracts/purchase-drafts';
+import type { LineEndingDraft } from 'modules/purchase-draft/components/purchase-draft-transitions/components/LineEndingAction';
 import type { LineEndingForm } from 'modules/purchase-draft/utils/line-ending-form';
 import type { ReactElement } from 'react';
 import type { MutationResult } from 'shared/api/client/mutation-outcome';
@@ -20,7 +18,7 @@ import type { FormParse } from 'shared/utils/form-parse';
 type EndingRefusal = { code?: string; details?: Record<string, unknown> };
 
 export type LineEndingDialogProps<TInput> = {
-  draft: PurchaseDraftDetail;
+  draft: LineEndingDraft;
   line: PurchaseDraftLine;
   parse: FormParse<LineEndingForm, TInput>;
   /** Which of the two acts this dialog records — the copy, never the payload. */
