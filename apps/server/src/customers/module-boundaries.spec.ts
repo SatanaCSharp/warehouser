@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 // T6 — the executable form of the DoD's purity rule: "`customers/domain` imports no NestJS, HTTP or
@@ -102,6 +102,141 @@ const foreignModuleTarget = (specifier: string): string | undefined => {
     ? target
     : undefined;
 };
+
+const PUBLIC_SURFACE_RULE =
+  "not public surface — a cross-module dependency resolves through an exported NestJS module, a module barrel, or a provider that module's usecase.module.ts exports, never a deep file path (server-architecture.md §'Dependency direction')";
+
+/** The provider names a module's `usecases/usecase.module.ts` lists in its `exports` array. */
+const exportedProviders = (featureModule: string): Set<string> => {
+  const modulePath = join(
+    sourceRoot,
+    featureModule,
+    'usecases',
+    'usecase.module.ts',
+  );
+
+  if (!existsSync(modulePath)) {
+    return new Set();
+  }
+
+  const source = readFileSync(modulePath, 'utf8');
+  const exportsBlock = /exports:\s*\[(?<providers>[^\]]*)\]/u.exec(source);
+
+  if (exportsBlock?.groups === undefined) {
+    return new Set();
+  }
+
+  const names = new Set<string>();
+  const tokens = exportsBlock.groups.providers
+    .split(',')
+    .map((token) => token.trim())
+    .filter(Boolean);
+
+  for (const token of tokens) {
+    if (!token.startsWith('...')) {
+      names.add(token);
+      continue;
+    }
+
+    // A spread names a `const` array declared above it; its members are the exported providers.
+    const group = new RegExp(
+      `const\\s+${token.slice(3)}\\s*=\\s*\\[(?<members>[^\\]]*)\\]`,
+      'u',
+    ).exec(source);
+
+    if (group?.groups !== undefined) {
+      for (const name of group.groups.members
+        .split(',')
+        .map((entry) => entry.trim())) {
+        if (name !== '') {
+          names.add(name);
+        }
+      }
+    }
+  }
+
+  return names;
+};
+
+/**
+ * `true` when `target` is part of the owning module's declared public surface: its barrel, an
+ * exported NestJS module, or a provider its `usecase.module.ts` exports. The last case is what
+ * `server-architecture.md` §"NestJS modules and exports" permits — NestJS requires the provider
+ * class itself as the injection token, so importing that file is how a consumer names a provider
+ * the sibling deliberately exported. Mirrors `warehouses/module-boundaries.spec.ts`.
+ */
+const isPublicSurface = (target: string, importedNames: string[]): boolean => {
+  const [featureModule, ...rest] = target.split('/');
+
+  if (rest.length === 0 || target.endsWith('/index')) {
+    return true;
+  }
+
+  if (target.endsWith('.module')) {
+    return true;
+  }
+
+  if (rest[0] !== 'usecases') {
+    return false;
+  }
+
+  const exported = exportedProviders(featureModule);
+
+  return (
+    importedNames.length > 0 &&
+    importedNames.every((name) => exported.has(name))
+  );
+};
+
+const namedImportsBySpecifier = (source: string): Map<string, string[]> => {
+  const named = new Map<string, string[]>();
+
+  for (const match of source.matchAll(
+    /import\s+(?:type\s+)?\{(?<names>[^}]*)\}\s*from\s*['"](?<specifier>[^'"]+)['"]/gu,
+  )) {
+    named.set(
+      match.groups?.specifier ?? '',
+      (match.groups?.names ?? '')
+        .split(',')
+        .map((entry) =>
+          entry
+            .trim()
+            .split(/\s+as\s+/u)[0]
+            .replace(/^type\s+/u, ''),
+        )
+        .filter(Boolean),
+    );
+  }
+
+  return named;
+};
+
+/**
+ * Foreign imports that resolve to something other than the sibling's declared surface. The
+ * module-private ones are the other scan's finding and are left to it, so each rule reports its own
+ * violations and neither hides the other.
+ */
+const findPublicSurfaceViolations = (
+  sources: Array<{ path: string; source: string }>,
+): string[] =>
+  sources.flatMap(({ path, source }) => {
+    const named = namedImportsBySpecifier(source);
+
+    return [
+      ...source.matchAll(/from\s*['"](?<specifier>[^'"]+)['"]/gu),
+    ].flatMap((match) => {
+      const specifier = match.groups?.specifier ?? '';
+      const target = foreignModuleTarget(specifier);
+
+      if (target === undefined || isModulePrivate(target)) {
+        return [];
+      }
+
+      return isPublicSurface(target, named.get(specifier) ?? [])
+        ? []
+        : [`${path} imports '${specifier}', which is ${PUBLIC_SURFACE_RULE}`];
+    });
+  });
 
 const importedSpecifiers = (source: string): string[] =>
   Array.from(
@@ -212,6 +347,43 @@ describe('customers module boundaries', () => {
     );
 
     expect(offenders).toEqual([]);
+  });
+
+  // server-architecture.md §"Dependency direction" — "modules communicate through exported use-case
+  // modules, explicit services, or events". The module-private clause above is only half of that: a
+  // deep import of a sibling file that is *not* an error factory, predicate or DTO — a domain
+  // service, say — is still a reach past that sibling's declared surface. The sibling specs enforce
+  // both halves; this one enforced only the first (2026-09-04 backend re-review, finding 5).
+  it('imports nothing from another module outside its declared public surface', () => {
+    expect(findPublicSurfaceViolations(moduleSources)).toEqual([]);
+  });
+
+  // The public-surface clause discriminates, so the empty result above is a fact rather than a
+  // filter that matches nothing.
+  it('rejects a fixture reaching past a sibling surface, and admits the legal spellings', () => {
+    expect(
+      findPublicSurfaceViolations([
+        {
+          path: 'customers/domain/mappers/customer-awaiting-order.mapper.ts',
+          source:
+            "import { DemandAllocationService } from 'customer-orders/domain/services/demand-allocation.service';",
+        },
+      ]),
+    ).toHaveLength(1);
+
+    // A barrel, an exported NestJS module, and a provider the sibling's usecase.module.ts exports
+    // are the three legal spellings.
+    expect(
+      findPublicSurfaceViolations([
+        {
+          path: 'customers/rest/rest.module.ts',
+          source: [
+            "import { AuthModule } from 'auth/auth.module';",
+            "import { CustomerOrdersModule } from 'customer-orders';",
+          ].join('\n'),
+        },
+      ]),
+    ).toEqual([]);
   });
 
   // The scan can distinguish a module-private reach from a legal one — otherwise the empty result
