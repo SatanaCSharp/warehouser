@@ -89,6 +89,20 @@ describe('DeactivateDeliveryAddressDialog', () => {
     ).not.toBeInTheDocument();
   });
 
+  // R9 (review-2026-09-04 finding 6, AC-06b) — the dialog used to promise
+  // "You will be told which", but nothing ever named the promoted address:
+  // the success toast only ever carried the Customer's name
+  // (`shared/alerts/mutation-actions.ts`), and naming a specific address in a
+  // toast would put confidential free text (spec.md §6.1) on a surface that
+  // outlives the dialog. The promise is dropped rather than kept with a
+  // notification this product does not send.
+  it('does not promise a notification of which address becomes Main', () => {
+    renderDialog(mainAddress);
+    expect(
+      screen.queryByText(/you will be told which/iu),
+    ).not.toBeInTheDocument();
+  });
+
   // AC-07 — the Customer's last active address is refused, and this is the
   // one dialog that shows the member the way forward.
   it('names the AC-07 rule and the order to follow when it is the last active address', async () => {

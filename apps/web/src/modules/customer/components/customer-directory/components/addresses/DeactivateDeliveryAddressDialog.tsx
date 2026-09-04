@@ -26,7 +26,14 @@ export type DeactivateDeliveryAddressDialogProps = {
  * before). Deactivating the **Main** address additionally makes one of the
  * remaining active addresses Main in the same transaction, so the dialog says
  * so before it happens rather than leaving the member to discover it on the
- * next order (AC-06b, tile `QRFjQ`).
+ * next order (AC-06b, tile `QRFjQ`). It does not promise to say **which**
+ * address that becomes: the address book itself carries that answer — the
+ * promoted address's `Main` chip is visible in the same list the moment the
+ * dialog closes (`CustomerAddressRow`) — and naming a specific address's
+ * text in a toast, the one surface that outlives this dialog, would put
+ * confidential free text (spec.md §6.1) somewhere the address-
+ * confidentiality design deliberately keeps it out of
+ * (`shared/alerts/mutation-actions.ts`).
  *
  * The address is rendered as text inside the confirmation for the same reason
  * `CustomerAddressRow` renders it as text: it is confidential free text this

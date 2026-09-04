@@ -143,7 +143,7 @@
       "title": "Deactivate this delivery address?",
       "lede": "This address stops being offered wherever a delivery address is chosen.",
       "recordsKeepCounting": "Every order and every frozen purchase draft line that already names it keeps reading and counting exactly as before.",
-      "mainMoves": "This is the main address, so one of the remaining active addresses becomes the main one instead. You will be told which.",
+      "mainMoves": "This is the main address, so one of the remaining active addresses becomes the main one instead.",
       "reversible": "You can offer this address again at any time.",
       "cancel": "Cancel",
       "submit": "Deactivate address"
