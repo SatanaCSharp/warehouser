@@ -3,11 +3,18 @@ import { useTranslation } from 'react-i18next';
 import { FormSelectField } from 'shared/components/FormSelectField';
 
 import type { CustomerDeliveryAddress } from '@warehouser/contracts/customers';
-import type { ReactElement } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 
 export type CustomerDeliveryAddressPickerProps = {
   addresses: CustomerDeliveryAddress[];
   className?: string;
+  /**
+   * Why the field is refused, rendered as its `FieldError`. A caller that
+   * marks the field with `isInvalid` states the reason here too, so the
+   * `Label`/`FieldError` pairing HeroUI relies on carries a sentence rather
+   * than an empty element (`heroui-design-principles.md` §2).
+   */
+  errorMessage?: ReactNode;
   isDisabled?: boolean;
   isInvalid?: boolean;
   onBlur?: () => void;
@@ -40,6 +47,7 @@ export type CustomerDeliveryAddressPickerProps = {
 export const CustomerDeliveryAddressPicker = ({
   addresses,
   className,
+  errorMessage,
   isDisabled,
   isInvalid,
   onBlur,
@@ -64,6 +72,7 @@ export const CustomerDeliveryAddressPicker = ({
     <FormSelectField
       className={className}
       description={t('picker.address.inactiveNote')}
+      errorMessage={errorMessage}
       isDisabled={isDisabled}
       isInvalid={isInvalid}
       label={t('picker.address.label')}

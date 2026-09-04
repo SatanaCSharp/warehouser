@@ -14,6 +14,13 @@ export type CustomerPickerProps = {
    * disabled by it can point at it (AC-23).
    */
   description?: ReactNode;
+  /**
+   * Why the field is refused, rendered as its `FieldError`. A caller that
+   * marks the field with `isInvalid` states the reason here too, so the
+   * `Label`/`FieldError` pairing HeroUI relies on carries a sentence rather
+   * than an empty element (`heroui-design-principles.md` §2).
+   */
+  errorMessage?: ReactNode;
   isDisabled?: boolean;
   isInvalid?: boolean;
   onBlur?: () => void;
@@ -48,6 +55,7 @@ export const CustomerPicker = ({
   className,
   customers,
   description,
+  errorMessage,
   isDisabled,
   isInvalid,
   onBlur,
@@ -69,6 +77,7 @@ export const CustomerPicker = ({
     <FormSelectField
       className={className}
       description={description}
+      errorMessage={errorMessage}
       isDisabled={isDisabled}
       isInvalid={isInvalid}
       label={t('picker.customer.label')}

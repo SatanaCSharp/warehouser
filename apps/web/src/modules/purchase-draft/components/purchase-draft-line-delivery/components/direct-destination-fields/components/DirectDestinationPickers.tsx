@@ -1,15 +1,13 @@
-import { PermissionId } from '@warehouser/shared-types/enums';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { CustomerDeliveryAddressPicker } from 'modules/customer/components/CustomerDeliveryAddressPicker';
 import { CustomerPicker } from 'modules/customer/components/CustomerPicker';
 import { useCustomers } from 'modules/customer/hooks/queries/useCustomers';
-import { WarehousePermissionGate } from 'shared/components/WarehousePermissionGate';
 
-import type { ReactElement, ReactNode } from 'react';
+import type { ReactElement } from 'react';
 
-export type DirectDestinationFieldsProps = {
+export type DirectDestinationPickersProps = {
   isDisabled: boolean;
   /** The address the line already names, or `''` while none has been chosen. */
   customerDeliveryAddressId: string;
@@ -34,13 +32,18 @@ export type DirectDestinationFieldsProps = {
  *
  * Both pickers reach `modules/customer` through its declared public surface
  * rather than a third picker being built here.
+ *
+ * It is its own file rather than a private helper of `DirectDestinationFields`
+ * because it owns the Customers read and the chosen-Customer state, and its
+ * props are a type worth naming — both triggers `writing-web-components.md`
+ * §1 moves a helper out on.
  */
-const DirectDestinationPickers = ({
+export const DirectDestinationPickers = ({
   isDisabled,
   customerDeliveryAddressId,
   customerId,
   onChangeAddress,
-}: DirectDestinationFieldsProps): ReactElement => {
+}: DirectDestinationPickersProps): ReactElement => {
   const { t } = useTranslation('purchase-draft');
   const customers = useCustomers();
   // Which Customer's address book is on offer is a choice the member makes on
@@ -80,20 +83,3 @@ const DirectDestinationPickers = ({
     </div>
   );
 };
-
-/**
- * The gate around the pickers above. It is separate so the Customers read they
- * depend on is never issued for an actor the gate closes over — nothing is
- * requested for a dataset the actor may not read (design-handoff.md §States).
- *
- * A member without `CUSTOMERS:WATCH` is therefore offered no way to redirect a
- * line to a customer, and reads the destination that line already states
- * through `PurchaseDraftLineDestination`'s withheld arm instead (AC-09a).
- */
-export const DirectDestinationFields = (
-  props: DirectDestinationFieldsProps,
-): ReactNode => (
-  <WarehousePermissionGate permission={PermissionId.CUSTOMERS_WATCH}>
-    <DirectDestinationPickers {...props} />
-  </WarehousePermissionGate>
-);

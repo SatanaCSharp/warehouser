@@ -76,6 +76,10 @@ export const RedirectCustomerOrderDialog = ({
     formState: { errors, isSubmitting },
   } = form;
 
+  // The alert steps aside only because the field itself now states the reason:
+  // the picker is handed that message alongside `isInvalid`, so a marked field
+  // always carries a sentence rather than an empty `FieldError`
+  // (`heroui-design-principles.md` §2).
   const isFieldExplained = Object.keys(errors).length > 0;
 
   const translateValidation = (
@@ -110,6 +114,7 @@ export const RedirectCustomerOrderDialog = ({
           <CustomerDeliveryAddressPicker
             retainsDeactivatedValue
             addresses={addresses}
+            errorMessage={errors.customerDeliveryAddressId?.message}
             isDisabled={isSubmitting}
             isInvalid={Boolean(errors.customerDeliveryAddressId)}
             value={field.value}

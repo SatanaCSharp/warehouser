@@ -695,7 +695,7 @@ describe('readiness removal — declarative permission gating is unchanged (CR-R
     // `CUSTOMERS:WATCH`, and the read they depend on lives inside that gate so
     // nothing is requested for a dataset the actor may not read (AC-09a,
     // AC-11a).
-    'modules/customer-order/components/demand-directory/components/RecordCustomerOrderCustomerFields.tsx': 4,
+    'modules/customer-order/components/demand-directory/components/record-customer-order-customer-fields/RecordCustomerOrderCustomerFields.tsx': 4,
     'modules/customer-order/components/demand-directory/components/RecordDemandAction.tsx': 4,
     'modules/customer-order/hooks/projections/useCustomerOrderActions.ts': 3,
     // delivery-addresses T21 — the Customers destination's four gating sites:
@@ -715,7 +715,7 @@ describe('readiness removal — declarative permission gating is unchanged (CR-R
     // withheld from an actor without `CUSTOMERS:WATCH`, and the Customers read
     // they depend on lives inside the gate so nothing is requested for a
     // dataset that actor may not read (AC-09a).
-    'modules/purchase-draft/components/purchase-draft-line-delivery/components/DirectDestinationFields.tsx': 4,
+    'modules/purchase-draft/components/purchase-draft-line-delivery/components/direct-destination-fields/DirectDestinationFields.tsx': 4,
     'modules/purchase-draft/components/purchase-draft-line-links/PurchaseDraftLineLinks.tsx': 4,
     'modules/purchase-draft/components/purchase-draft-line-links/components/LinkCustomerOrderAction.tsx': 4,
     'modules/purchase-draft/components/purchase-draft-transitions/components/ClosePurchaseDraftAction.tsx': 4,
