@@ -123,11 +123,18 @@ const customerWriteErrors = (failure: ApiFailure): ApiFailure =>
  * A write that changes a **name or an address** invalidates `Demand` and
  * `PurchaseDrafts` beside it, because neither is copied anywhere: an order
  * dereferences its Customer and its Delivery Address on every read, and a
- * draft link carries both live too. Recording a Customer and de/reactivating
- * one deliberately do not — a new Customer is named by nothing yet, and
- * `DeactivateCustomerCommand` writes the customer row alone, whose
- * `deactivatedAt` no order or draft projection carries
- * (ADR 02-08-2026 §Decision).
+ * draft link carries both live too. Adding an address counts as such a write:
+ * `main: true` clears the previous Main in the same transaction (AC-06b), and
+ * `isMain` is a field of both destinations. `invalidatesTags` is a static
+ * literal and cannot answer differently for `main: false`, so the endpoint
+ * declares for the widest case it admits — a plain address creation refetches
+ * a little more than it strictly must, which is the cheap side of the trade
+ * against serving a demoted address still flagged Main.
+ *
+ * Recording a Customer and de/reactivating one deliberately do not — a new
+ * Customer is named by nothing yet, and `DeactivateCustomerCommand` writes the
+ * customer row alone, whose `deactivatedAt` no order or draft projection
+ * carries (ADR 02-08-2026 §Decision).
  */
 export const customerApi = api.injectEndpoints({
   endpoints: (build) => ({
@@ -191,7 +198,7 @@ export const customerApi = api.injectEndpoints({
         body: input,
       }),
       extraOptions: { schema: customerSchema },
-      invalidatesTags: ['Customers'],
+      invalidatesTags: ['Customers', 'Demand', 'PurchaseDrafts'],
       transformErrorResponse: formFieldNames,
     }),
     correctCustomerDeliveryAddress: build.mutation<

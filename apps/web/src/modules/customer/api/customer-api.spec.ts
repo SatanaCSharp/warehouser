@@ -21,10 +21,15 @@ import type { AppStore } from 'store';
 // (ADR 02-08-2026 §Decision).
 //
 // This pins the set **per mutation**, negatives included: the three writes that
-// change nothing an order or a draft reads must not refetch either
-// destination. The assertion is a live subscriber refetching, as
-// `customer-order-api.spec` makes it, rather than an introspection of the
-// endpoint's config.
+// change nothing an order or a draft reads — recording a Customer, and
+// de/reactivating one — must not refetch either destination. The assertion is a
+// live subscriber refetching, as `customer-order-api.spec` makes it, rather
+// than an introspection of the endpoint's config.
+//
+// A negative is only worth as much as its fixture. `addCustomerDeliveryAddress`
+// was pinned inert here against a `main: false` input, which agreed with the
+// endpoint by asserting the same wrong premise; the case below submits
+// `main: true`, which is the one the dialog's checkbox actually produces.
 
 const warehouseId = accessIds.warehouse;
 const customerId = '00000000-0000-4000-8000-000000000701';
@@ -127,7 +132,13 @@ const MUTATIONS: Record<MutationName, (store: AppStore) => Promise<unknown>> = {
           input: {
             addressText: 'Speicherweg 11, 20457 Hamburg',
             accessNotes: null,
-            main: false,
+            // `main: true` is the case that moves state an order reads:
+            // `customerDeliveryAddressCreateSchema` clears the previous Main in
+            // the same transaction, so this write demotes an address both
+            // destinations carry. `invalidatesTags` is a static literal and
+            // cannot answer differently for `main: false`, so the endpoint must
+            // declare the wider set for both.
+            main: true,
           },
         }),
       )
@@ -177,8 +188,12 @@ const AFFECTED_READS: Record<MutationName, AffectedReads> = {
   // is carried by neither `customerRefSchema` nor any destination.
   deactivateCustomer: { demand: false, drafts: false },
   reactivateCustomer: { demand: false, drafts: false },
-  // A new address is not yet named by any order, and does not become Main.
-  addCustomerDeliveryAddress: { demand: false, drafts: false },
+  // A new address is named by no order yet — but `main: true` clears the
+  // previous Main in the same transaction (AC-06b), and `isMain` is read live
+  // on both destinations. Tags are static, so the endpoint declares for the
+  // widest case it admits: creating with `main: false` refetches a little more
+  // than it must, which is the cheap side of the trade.
+  addCustomerDeliveryAddress: { demand: true, drafts: true },
   // The text and the access notes are dereferenced live by every order going
   // there and by every draft link's `current.deliveryAddress`.
   correctCustomerDeliveryAddress: { demand: true, drafts: true },
