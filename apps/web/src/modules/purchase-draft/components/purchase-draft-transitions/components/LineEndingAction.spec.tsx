@@ -87,6 +87,13 @@ const renderAction = (
   subject: PurchaseDraftLine,
   permissionIds: readonly PermissionId[] = Object.values(PermissionId),
   state: PurchaseDraftDetail['state'] = 'ready_for_ordering',
+  // The sentinel gate defaults to the same Permission the action itself
+  // gates on, so an actor holding every Permission (the common case) sees
+  // it exactly when the action would offer its trigger. A case that
+  // withholds PURCHASE_DRAFTS:RECEIVE from the actor passes a Permission
+  // the actor *does* hold here, so the sentinel still gives it a positive
+  // control to wait on.
+  sentinelPermission: PermissionId = PermissionId.PURCHASE_DRAFTS_RECEIVE,
 ): void => {
   stubAccessServer({ permissionIds });
   const store = authenticatedStore();
@@ -106,9 +113,7 @@ const renderAction = (
   renderInEnteredWarehouse(
     <>
       <LineEndingAction draft={draft(subject, state)} line={subject} />
-      <WarehousePermissionGate
-        permission={PermissionId.PURCHASE_DRAFTS_RECEIVE}
-      >
+      <WarehousePermissionGate permission={sentinelPermission}>
         <span>{GATE_SENTINEL}</span>
       </WarehousePermissionGate>
     </>,
@@ -223,13 +228,23 @@ describe('LineEndingAction', () => {
     },
   );
 
-  // AC-22 — the act is offered only behind the Permission that authorizes it,
-  // as a gate at the control rather than a capability boolean
+  // AC-19 — the act is offered only behind PURCHASE_DRAFTS:RECEIVE, as a gate
+  // at the control rather than a capability boolean
   // (`adr/19-08-2026-declarative-permission-gates.md`).
-  it('offers no ending at all without PURCHASE_DRAFTS:RECEIVE (AC-22)', async () => {
-    renderAction(line(), [PermissionId.PURCHASE_DRAFTS_WATCH]);
+  it('offers no ending at all without PURCHASE_DRAFTS:RECEIVE (AC-19)', async () => {
+    renderAction(
+      line(),
+      [PermissionId.PURCHASE_DRAFTS_WATCH],
+      'ready_for_ordering',
+      // A positive control the actor does hold: PURCHASE_DRAFTS:WATCH.
+      // Waiting for its sentinel proves the access read has settled, so
+      // the absences below are the gate withholding the control rather
+      // than nothing having rendered yet.
+      PermissionId.PURCHASE_DRAFTS_WATCH,
+    );
 
-    await screen.findByRole('generic', { hidden: true }).catch(() => null);
+    await screen.findByText(GATE_SENTINEL);
+
     expect(trigger(/record what arrived/iu)).not.toBeInTheDocument();
     expect(trigger(/record the delivery/iu)).not.toBeInTheDocument();
   });
