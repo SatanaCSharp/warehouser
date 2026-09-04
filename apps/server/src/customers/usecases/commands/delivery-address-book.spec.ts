@@ -31,7 +31,6 @@ import { filter, find, forEach, map, orderBy } from 'lodash';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import type { CustomerEntity } from 'shared/domain/entities/customer.entity';
 import type { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
-import type { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
 import type { ReviseDeliveryAddressPersistenceInput } from 'shared/domain/repositories/customer-address-book.repository';
 
 const uuid = (suffix: string): string =>
@@ -517,39 +516,13 @@ describe('CorrectCustomerDeliveryAddressCommand (sad.md §4)', () => {
 
 describe('DeactivateCustomerDeliveryAddressCommand (AC-06a, AC-06b, AC-07)', () => {
   // AC-06a — "leaves every Customer Order and every frozen Purchase Draft Line that already names
-  // it reading and counting exactly as before". This is true **by construction**, so the property
-  // is what is asserted and no machinery is built for it: an order names the address by identifier
-  // and holds no copy of its text, and a frozen line holds captured text and **no reference at
-  // all** (data-model.md `purchase_draft_lines`). The deactivation writes `is_main`,
-  // `deactivated_at` and `updated_at` on the address row and nothing else, so the text and notes
-  // the order dereferences are the same characters afterwards, and the order's own quantity and
-  // state are untouched because nothing writes them.
-  it('leaves every naming Customer Order and frozen Purchase Draft Line reading and counting exactly as before', async () => {
+  // it reading and counting exactly as before". The command's own contract is that it writes only
+  // the address row (`is_main`, `deactivated_at`, `updated_at`) and touches neither Customer Orders
+  // nor Purchase Draft Lines; real coverage of that half against seeded rows lives at HTTP level
+  // (customers-http-contract.integration.spec.ts), because a command unit spec has no repository
+  // double for tables it never reaches to assert anything meaningful over.
+  it('deactivates the address and writes nothing else', async () => {
     const book = bookWith();
-    const namingOrder: Pick<
-      CustomerOrderEntity,
-      | 'id'
-      | 'customerId'
-      | 'customerDeliveryAddressId'
-      | 'quantity'
-      | 'outstandingQuantity'
-      | 'state'
-    > = {
-      id: uuid('601'),
-      customerId,
-      customerDeliveryAddressId: mainAddressId,
-      quantity: 12,
-      outstandingQuantity: 12,
-      state: 'unfulfilled',
-    };
-    const frozenLine = {
-      id: uuid('701'),
-      // Captured at Ready for Ordering: text, and no reference the deactivation could reach.
-      frozenDeliveryAddressText: 'Test Address 1, Test City',
-      frozenAccessNotes: 'Gate code on the intercom; deliveries 09:00-17:00',
-    };
-    const orderBefore = { ...namingOrder };
-    const frozenLineBefore = { ...frozenLine };
 
     const customer = await book.deactivate.execute(
       currentUser,
@@ -559,17 +532,10 @@ describe('DeactivateCustomerDeliveryAddressCommand (AC-06a, AC-06b, AC-07)', () 
 
     const deactivated = find(customer.deliveryAddresses, { id: mainAddressId });
     expect(deactivated?.deactivatedAt).toBe(now);
-    // Reading as before: the order dereferences the same row and finds the same characters.
-    expect(namingOrder).toEqual(orderBefore);
     expect(deactivated?.addressText).toBe('Test Address 1, Test City');
     expect(deactivated?.accessNotes).toBe(
       'Gate code on the intercom; deliveries 09:00-17:00',
     );
-    // Counting as before: nothing wrote the order, so its quantities and state are what they were.
-    expect(namingOrder.outstandingQuantity).toBe(12);
-    expect(namingOrder.state).toBe('unfulfilled');
-    // The frozen line was never reachable: it holds text and no address identifier.
-    expect(frozenLine).toEqual(frozenLineBefore);
     // Every write the command issued went to the address book, and only to it.
     expect(book.directoryRepository.correctCustomerName).not.toHaveBeenCalled();
     expect(

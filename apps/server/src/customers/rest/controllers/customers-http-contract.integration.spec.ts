@@ -17,6 +17,8 @@ import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-d
 import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
 import { ItemEntity } from 'shared/domain/entities/item.entity';
 import { PermissionEntity } from 'shared/domain/entities/permission.entity';
+import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
+import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity';
 import { RoleEntity } from 'shared/domain/entities/role.entity';
 import { RolePermissionEntity } from 'shared/domain/entities/role-permission.entity';
 import { SessionEntity } from 'shared/domain/entities/session.entity';
@@ -24,6 +26,7 @@ import { UserEntity } from 'shared/domain/entities/user.entity';
 import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
 import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
 import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
+import { PurchaseDraftReadRepository } from 'shared/domain/repositories/purchase-draft-read.repository';
 import { GlobalHttpExceptionFilter } from 'shared/errors/global-http-exception.filter';
 
 // T10 — the `/api/v1/warehouses/{warehouseId}/customers*` HTTP contract of
@@ -67,6 +70,11 @@ const CUSTOMERS_DEACTIVATE = 'CUSTOMERS:DEACTIVATE';
 // The confidential values AC-09 and sad.md §8 keep out of every refusal.
 const SECRET_ACCESS_NOTES = 'Gate code 4417; deliveries 09:00-17:00';
 const SECRET_ADDRESS_TEXT = 'Test Address 1, Test City';
+
+// R3/AC-06a — reads a frozen line's `customerDestination` projection the same way the Purchase
+// Drafts surface does, so the address-book command's writes are proven against the real read path
+// rather than against the entity columns alone.
+const readRepository = new PurchaseDraftReadRepository(dataSource);
 
 // eslint-disable-next-line max-lines-per-function -- one HTTP contract suite covering one surface is inherently long, matching the customer-orders and items precedents
 describe('customers HTTP contract', () => {
@@ -396,6 +404,69 @@ describe('customers HTTP contract', () => {
       updatedAt: seededAt,
     });
     return id;
+  };
+
+  /** A frozen `direct_to_customer` Purchase Draft Line naming `customerDeliveryAddressId`, on a
+   * Purchase Draft already in Ready for Ordering — the real row R3's AC-06a and AC-03b cases read
+   * back after mutating the Customer or its address, following `ready-purchase-draft.command.
+   * integration.spec.ts`'s seeding shape (frozen text written directly rather than produced by the
+   * freeze command, because the point here is what a later Customer/address write does to an
+   * already-frozen row, not the freeze itself). */
+  const seedFrozenDirectLine = async (
+    itemId: string,
+    customerDeliveryAddressId: string,
+    overrides: Partial<{
+      frozenDeliveryAddressText: string;
+      frozenAccessNotes: string | null;
+      frozenCustomerName: string;
+    }> = {},
+  ): Promise<string> => {
+    const draftId = randomUUID();
+    const draftUserId = await seedRecorder();
+    await dataSource.manager.getRepository(PurchaseDraftEntity).insert({
+      id: draftId,
+      warehouseId,
+      state: 'ready_for_ordering',
+      expectedArrivalDate: null,
+      createdByUserId: draftUserId,
+      readiedByUserId: draftUserId,
+      readiedAt: seededAt,
+      closedByUserId: null,
+      closedAt: null,
+      closureReason: null,
+      arrivalConfirmedByUserId: null,
+      arrivalConfirmedAt: null,
+      discardedByUserId: null,
+      discardedAt: null,
+      createdAt: seededAt,
+      updatedAt: seededAt,
+    });
+    const lineId = randomUUID();
+    await dataSource.manager.getRepository(PurchaseDraftLineEntity).insert({
+      id: lineId,
+      purchaseDraftId: draftId,
+      warehouseId,
+      itemId,
+      orderedQuantity: 40,
+      packagingTypeId: null,
+      valueAddingNote: null,
+      deliveryMode: 'direct_to_customer',
+      customerDeliveryAddressId,
+      frozenDeliveryAddressText:
+        overrides.frozenDeliveryAddressText ?? SECRET_ADDRESS_TEXT,
+      frozenAccessNotes:
+        overrides.frozenAccessNotes === undefined
+          ? SECRET_ACCESS_NOTES
+          : overrides.frozenAccessNotes,
+      frozenCustomerName: overrides.frozenCustomerName ?? 'Test Customer North',
+      endingQuantity: null,
+      endingKind: null,
+      endingRecordedByUserId: null,
+      endingRecordedAt: null,
+      createdAt: seededAt,
+      updatedAt: seededAt,
+    });
+    return lineId;
   };
 
   const request = async (
@@ -946,6 +1017,13 @@ describe('customers HTTP contract', () => {
         customer.id,
         customer.addressIds[0],
       );
+      // A frozen line carrying `frozen_customer_name` — the other half of AC-03b, unbacked before
+      // R3: the captured name is a snapshot the correction deliberately does not touch.
+      const frozenLineId = await seedFrozenDirectLine(
+        itemId,
+        customer.addressIds[0],
+        { frozenCustomerName: 'Test Customer North' },
+      );
       const actor = await seedActor([CUSTOMERS_UPDATE]);
 
       const { status, body } = await request(
@@ -966,6 +1044,18 @@ describe('customers HTTP contract', () => {
         .findOneByOrFail({ id: orderId });
       expect(order.customerName).toBeNull();
       expect(order.customerId).toBe(customer.id);
+      // The frozen line's captured name survives the correction, and the line still resolves to
+      // the same Customer.
+      const frozenLine = await dataSource.manager
+        .getRepository(PurchaseDraftLineEntity)
+        .findOneByOrFail({ id: frozenLineId });
+      expect(frozenLine.frozenCustomerName).toBe('Test Customer North');
+      const draft = await readRepository.readIdentifiedDraft(
+        frozenLine.purchaseDraftId,
+        warehouseId,
+      );
+      const draftLine = draft?.lines.find((line) => line.id === frozenLineId);
+      expect(draftLine?.customerDestination?.customerId).toBe(customer.id);
     });
 
     it('refuses a name another Customer of this Warehouse already holds (AC-03c)', async () => {
@@ -1257,6 +1347,13 @@ describe('customers HTTP contract', () => {
         customer.id,
         customer.addressIds[0],
       );
+      // A frozen `direct_to_customer` line that names the address being deactivated — the other
+      // half of AC-06a, unbacked before R3: the frozen line holds captured text and no reachable
+      // reference, so deactivating the address it once named cannot touch it.
+      const frozenLineId = await seedFrozenDirectLine(
+        itemId,
+        customer.addressIds[0],
+      );
       const actor = await seedActor([CUSTOMERS_UPDATE]);
 
       const { status, body } = await request(
@@ -1275,6 +1372,24 @@ describe('customers HTTP contract', () => {
         .findOneByOrFail({ id: orderId });
       expect(order.customerDeliveryAddressId).toBe(customer.addressIds[0]);
       expect(order.outstandingQuantity).toBe(100);
+      // The frozen Purchase Draft Line reads and counts exactly as before: its captured text is
+      // unchanged, and its `customerDestination` projection — read live from the frozen columns —
+      // still reports the same statement.
+      const frozenLine = await dataSource.manager
+        .getRepository(PurchaseDraftLineEntity)
+        .findOneByOrFail({ id: frozenLineId });
+      expect(frozenLine.frozenDeliveryAddressText).toBe(SECRET_ADDRESS_TEXT);
+      expect(frozenLine.frozenAccessNotes).toBe(SECRET_ACCESS_NOTES);
+      const draft = await readRepository.readIdentifiedDraft(
+        frozenLine.purchaseDraftId,
+        warehouseId,
+      );
+      const draftLine = draft?.lines.find((line) => line.id === frozenLineId);
+      expect(draftLine?.customerDestination).toMatchObject({
+        addressText: SECRET_ADDRESS_TEXT,
+        accessNotes: SECRET_ACCESS_NOTES,
+        frozen: true,
+      });
     });
 
     // AC-07 — the refusal names the rule and holds whether or not the Customer has Unfulfilled

@@ -10,7 +10,6 @@ import { find } from 'lodash';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import type { CustomerEntity } from 'shared/domain/entities/customer.entity';
 import type { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
-import type { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
 
 const uuid = (suffix: string): string =>
   `00000000-0000-4000-8000-${suffix.padStart(12, '0')}`;
@@ -140,32 +139,13 @@ describe('CorrectCustomerNameCommand (AC-03b, AC-03c, AC-12)', () => {
   });
 
   // AC-03b — "every Customer Order and every frozen line that named the Customer continues to name
-  // the same Customer". This is true **by construction** (data-model.md §`customers`: "Nothing
-  // denormalizes the name … which is what makes AC-03b true by construction rather than by a
-  // cascade"), so the property is what is asserted and no machinery is built for it: an order
-  // naming a Customer carries `customer_id` and **no** `customer_name`, so it reads the corrected
-  // name live, and a frozen line's captured `frozen_customer_name` is a snapshot the correction
-  // deliberately does not touch. Both are unchanged by the command because nothing writes them.
-  it('leaves every naming Customer Order and frozen line reading as before', async () => {
+  // the same Customer". The command's own contract is that it writes only the customer row's name
+  // and touches no other table; real coverage of the Customer Order and frozen-line halves lives at
+  // HTTP level against seeded rows (customers-http-contract.integration.spec.ts), because a command
+  // unit spec has no repository double for tables it never reaches to assert anything meaningful
+  // over.
+  it('writes only the customer row and nothing else', async () => {
     const directoryRepository = directoryRepositoryDouble();
-    const namingOrder: Pick<
-      CustomerOrderEntity,
-      'id' | 'customerId' | 'customerName' | 'customerDeliveryAddressId'
-    > = {
-      id: uuid('601'),
-      customerId,
-      // A Customer-naming order carries no name copy: the name is read live from `customers`.
-      customerName: null,
-      customerDeliveryAddressId: deliveryAddressId,
-    };
-    const frozenLine = {
-      id: uuid('701'),
-      customerDeliveryAddressId: deliveryAddressId,
-      // Captured at Ready for Ordering; a snapshot of what was ordered, not a copy to migrate.
-      frozenCustomerName: 'Test Customer North',
-    };
-    const orderBefore = { ...namingOrder };
-    const frozenLineBefore = { ...frozenLine };
 
     const corrected = await commandWith(directoryRepository).execute(
       currentUser,
@@ -175,14 +155,7 @@ describe('CorrectCustomerNameCommand (AC-03b, AC-03c, AC-12)', () => {
 
     // The one write the correction issues is the customer row's name.
     expect(directoryRepository.correctCustomerName).toHaveBeenCalledTimes(1);
-    expect(namingOrder).toEqual(orderBefore);
-    expect(frozenLine).toEqual(frozenLineBefore);
-    // The order still names the same Customer, and holds no name of its own to have gone stale —
-    // so what it reads is the corrected name.
-    expect(namingOrder.customerId).toBe(corrected.id);
-    expect(namingOrder.customerName).toBeNull();
-    // The frozen line keeps reading exactly as before, because its name was captured at freeze.
-    expect(frozenLine.frozenCustomerName).toBe('Test Customer North');
+    expect(corrected.name).toBe('Test Customer North (Ltd)');
   });
 
   // AC-03c — the name the *second* Customer holds is refused, active or Inactive alike, and the
