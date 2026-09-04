@@ -62,15 +62,21 @@ export interface RecordLineEndingResult {
 export class ArrivalConfirmationRepository {
   constructor(private readonly dataSource: DataSource) {}
 
-  // T17/sad.md §6.10 step 2 — the draft in the acting Warehouse, then the one named line within it.
-  // The line is resolved through the composite tuple rather than by identifier alone, so a line of
-  // another draft or another Warehouse resolves to `null` exactly as a missing one does and the
+  // T17/T18/sad.md §6.10 step 2 — the draft in the acting Warehouse, then the one named line within
+  // it. The line is resolved through the composite tuple rather than by identifier alone, so a line
+  // of another draft or another Warehouse resolves to `null` exactly as a missing one does and the
   // caller's single refusal cannot disclose that it exists elsewhere (spec.md §6.1).
   //
-  // Despite the name it takes no explicit row lock, for the same reason
-  // `PurchaseDraftFreezeRepository.findDraftHeader` does not: isolation comes from
-  // `recordLineEnding`'s conditional writes, which is what lets a lost race be told apart from an
-  // illegal pre-read (server-error-handling.md §3).
+  // The draft row is taken `FOR UPDATE` first, per data-model.md § "Concurrency, locks and
+  // transactions" ("the Purchase Draft row, then its lines … in ascending identifier order").
+  // `recordLineEnding`'s conditional writes are still what tells a lost race apart from an illegal
+  // pre-read (server-error-handling.md §3), but they are not on their own enough to serialise the
+  // draft's *closure*: two members ending the last two lines of a draft concurrently update
+  // disjoint line rows, so each closure's `NOT EXISTS (… ending_recorded_at IS NULL)` predicate
+  // would otherwise evaluate against a snapshot in which the other line is still un-ended, and
+  // *both* closures would affect zero rows — every line ends up with an ending and the draft never
+  // reaches Closed. Holding this lock for the rest of the caller's transaction is what forces the
+  // second ending's closure to wait for the first's commit and see the first line's ending.
   async lockDraftLineForEnding(
     purchaseDraftId: string,
     purchaseDraftLineId: string,
@@ -78,10 +84,14 @@ export class ArrivalConfirmationRepository {
   ): Promise<LockPurchaseDraftLineForEndingResult> {
     const manager = getEntityManager(this.dataSource);
 
-    const draft = await manager.getRepository(PurchaseDraftEntity).findOne({
-      where: { id: purchaseDraftId, warehouseId },
-      select: ['id', 'warehouseId', 'state'],
-    });
+    const draft = await manager
+      .getRepository(PurchaseDraftEntity)
+      .createQueryBuilder('draft')
+      .select(['draft.id', 'draft.warehouseId', 'draft.state'])
+      .where('draft.id = :purchaseDraftId', { purchaseDraftId })
+      .andWhere('draft.warehouseId = :warehouseId', { warehouseId })
+      .setLock('pessimistic_write')
+      .getOne();
 
     if (draft === null) {
       return { draft: null, line: null };

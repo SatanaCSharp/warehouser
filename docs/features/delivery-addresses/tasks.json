@@ -423,13 +423,14 @@
       "layer": "infra",
       "deps": ["R1"],
       "acs": ["AC-19", "AC-20a"],
-      "dod": "lockDraftLineForEnding takes SELECT ... FOR UPDATE on the purchase_drafts row as sad.md 6.10 step 2 and data-model.md's lock order prescribe; a two-QueryRunner integration test proves two concurrent last endings close the draft exactly once, and a second proves two concurrent first endings on one line yield exactly one recorded ending and one typed concurrency refusal.",
+      "dod": "lockDraftLineForEnding takes SELECT ... FOR UPDATE on the purchase_drafts row as sad.md 6.10 step 2 and data-model.md's lock order prescribe, inside the caller's transaction. Asserted the way this repository's tier permits: statement shape (the lock is issued, on the draft row, before the line read) and zero-row behaviour of both conditional updates. The genuine two-backend race is NOT asserted -- jest.pglite.config.cjs runs Postgres in single-user mode and states the repository deliberately holds no two-backend specs -- so the residual risk is recorded in spec.md 8 rather than papered over with a test that cannot fail.",
       "files_hint": [
         "apps/server/src/shared/domain/repositories/arrival-confirmation.repository.ts",
         "apps/server/src/purchase-drafts/usecases/commands/purchase-draft-line-ending.integration.spec.ts",
         "apps/server/src/shared/domain/repositories/arrival-confirmation.repository.integration.spec.ts"
       ],
-      "origin": "review-2026-09-04"
+      "origin": "review-2026-09-04",
+      "note": "The review suggested porting a two-QueryRunner/pg_stat_activity idiom from purchase-draft-freeze.repository.integration.spec.ts. That file only describes the technique in a comment; no createQueryRunner exists in it and the tier cannot express one. Corrected 2026-09-04."
     },
     {
       "id": "R3",

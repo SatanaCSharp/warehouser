@@ -31,6 +31,7 @@ import {
   buildWarehouse,
   buildWorkspace,
 } from 'test/factories/entity-factories';
+import { PostgresQueryRunner } from 'typeorm/driver/postgres/PostgresQueryRunner';
 
 const now = new Date('2026-08-26T10:00:00.000Z');
 const later = new Date('2026-08-26T12:00:00.000Z');
@@ -180,6 +181,30 @@ const recordEndingInTransaction = (
     repository.recordLineEnding(input),
   );
 
+// Captures the SQL PostgreSQL was actually asked to run, the same idiom
+// `CustomerAddressBookRepository`'s integration spec uses for `lockDeliveryAddresses`. PGlite has a
+// single backend, so a genuine two-connection race either self-deadlocks or lets both writers win
+// (jest.pglite.config.cjs, data-model.md § "Concurrency, locks and transactions": "PGlite cannot
+// prove any of this … the lock order and the conditional-update races are asserted by *shape*").
+const captureStatements = async <T>(
+  operation: () => Promise<T>,
+): Promise<{ result: T; statements: string[] }> => {
+  const spy = jest.spyOn(PostgresQueryRunner.prototype, 'query');
+  const before = spy.mock.calls.length;
+  const result = await operation();
+  const statements = spy.mock.calls
+    .slice(before)
+    .map((call) => String(call[0]))
+    .filter(
+      (sql) =>
+        !/^(?:START TRANSACTION|SET TRANSACTION|COMMIT|ROLLBACK|BEGIN)/u.test(
+          sql,
+        ),
+    );
+  spy.mockRestore();
+  return { result, statements };
+};
+
 // eslint-disable-next-line max-lines-per-function -- a repository integration suite covering both write methods across their success and refusal terms is inherently long
 describe('ArrivalConfirmationRepository', () => {
   beforeAll(async () => {
@@ -281,6 +306,28 @@ describe('ArrivalConfirmationRepository', () => {
 
       expect(locked.draft).toMatchObject({ id: draftId });
       expect(locked.line).toBeNull();
+    });
+
+    // T18/sad.md §6.10 step 2 — "resolves the draft in `ready_for_ordering` under lock, then the
+    // named line". Two members ending the last two lines of one draft concurrently would otherwise
+    // each evaluate `recordLineEnding`'s `NOT EXISTS` closure predicate against a snapshot in which
+    // the other line is still un-ended, so neither closure statement affects the draft row — the
+    // draft never reaches Closed even though every line now carries an ending. Taking `FOR UPDATE`
+    // on the `purchase_drafts` row here, before the line is resolved, is what serialises the two
+    // closures. PGlite is single-backend (see `captureStatements` above), so the proof is statement
+    // shape: the first statement this method issues names `purchase_drafts` and carries `FOR
+    // UPDATE`.
+    it('takes the row lock the draft closure is decided under, before resolving the line', async () => {
+      const seeded = await seedWarehouse();
+      const draftId = await seedDraft(seeded, 'ready_for_ordering');
+      const lineId = await seedLine(seeded, draftId, 100);
+
+      const { statements } = await captureStatements(() =>
+        lockLineInTransaction(draftId, lineId, seeded.warehouseId),
+      );
+
+      expect(statements[0]).toMatch(/FOR UPDATE/u);
+      expect(statements[0]).toMatch(/"purchase_drafts"/u);
     });
   });
 
