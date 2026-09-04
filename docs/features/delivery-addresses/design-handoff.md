@@ -328,7 +328,33 @@ Drawn on `okRzd` unless noted.
 
 ## Approved deviations
 
-None. Implementation must report any visible deviation for approval.
+Recorded 2026-09-04, from the independent review's design-fidelity pass. Each was reported for
+approval as this section requires, and each is approved as shipped. Any further visible deviation
+still has to be reported.
+
+- **Customers detail header — no `Recorded by … · <date>` meta line and no `Active` / `Inactive`
+  status chip.** Frames `KRDln` / `b7gaH9` draw both; `CustomerDetailPane.tsx`:92-96 renders only the
+  name. The `CustomerDetail` projection already carries the data, so this is a rendering choice, not
+  a data constraint.
+- **Section labels rendered as headings rather than micro-labels, and without counts.** The frames
+  draw `DELIVERY ADDRESSES` and `AWAITING · 4 CUSTOMER ORDERS` as 11px uppercase muted micro-labels;
+  `CustomerAddressBook.tsx`:80-82 and `CustomerAwaitingList.tsx`:57-59 implement them as
+  `text-lg font-semibold text-foreground` without the counts.
+- **No explanatory footnotes under the card list, the address book or the awaiting table.** The
+  frames draw three; `apps/web/public/locales/en/customer.json` has no keys for them, although the
+  sibling drafts surface ships exactly this pattern as `purchase-draft.json` `footnote.*`.
+- **Filter tabs carry no counts.** The frames draw `Active · 12` / `Inactive · 3`;
+  `CustomerDirectory.tsx`:80-85 renders bare labels, where `purchase-draft.json` `tabs.*` already
+  does the counted form.
+- **Customer card meta line drops the `· 4 orders awaiting` half** (`CustomerCard.tsx`:69-71). Unlike
+  the four above, this one is a data constraint: the `Customer` list schema carries no awaiting
+  count, so restoring it needs either an `openapi.yaml` `Customer` field or a frame amendment. Left
+  to whichever the next Customers-surface change chooses.
+
+**Not deviations — corrected instead.** Frame `zj46c`'s `EXPECTED` and `ENDING` columns were missing
+from `DockLineTable.tsx`, which removed the dock's ability to record an ending where the frame puts
+it. The contract already carries `PurchaseDraftLineListEntry.expectedArrivalDate` and `line.ending`,
+so this was fixed rather than approved.
 
 ## Open questions
 
