@@ -20,7 +20,6 @@ import {
 } from 'customers/domain/predicates/customer.predicates';
 import { compact, find, orderBy } from 'lodash';
 import type { CustomerEntity } from 'shared/domain/entities/customer.entity';
-import type { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
 import type { DeliveryAddressWriteOutcome } from 'shared/domain/repositories/customer-address-book.repository';
 import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository';
 import type { CustomerWriteOutcome } from 'shared/domain/repositories/customer-directory.repository';
@@ -228,26 +227,6 @@ export class CustomerAddressBookService {
     );
 
     assertCustomerNameAvailable(name, compact([holder]), correctedCustomerId);
-  }
-
-  // AC-11c/AC-12 — the address a member named belongs to the Customer that was named and is one they
-  // may still choose. Reads the whole address book rather than the row, because "belongs to this
-  // Customer" and "is active" are the two conditions and both are answered from the same set.
-  async resolveDeliveryAddress(
-    customerId: string,
-    deliveryAddressId: string,
-  ): Promise<CustomerDeliveryAddressEntity> {
-    const addresses =
-      await this.customerAddressBookRepository.listDeliveryAddresses(
-        customerId,
-      );
-    const address =
-      find(addresses, (candidate) => candidate.id === deliveryAddressId) ??
-      null;
-
-    assertDeliveryAddressUsable(address, customerId);
-
-    return address;
   }
 
   // AC-06a/AC-06b/AC-07, the whole of sad.md §6.3 step 4 onwards, as one atomic operation because

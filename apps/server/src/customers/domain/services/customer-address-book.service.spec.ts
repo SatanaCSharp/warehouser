@@ -358,46 +358,6 @@ describe('CustomerAddressBookService — assertNameAvailable', () => {
   });
 });
 
-describe('CustomerAddressBookService — resolveDeliveryAddress', () => {
-  it('returns an active address of that Customer', async () => {
-    const addressBook = addressBookDouble([storedAddress()]);
-
-    await expect(
-      serviceWith(
-        directoryDouble(storedCustomer()),
-        addressBook,
-      ).resolveDeliveryAddress(customerId, 'address-1'),
-    ).resolves.toMatchObject({ id: 'address-1' });
-    expect(addressBook.listDeliveryAddresses).toHaveBeenCalledWith(customerId);
-  });
-
-  it('refuses an address the Customer does not hold', async () => {
-    await expect(
-      serviceWith(
-        directoryDouble(storedCustomer()),
-        addressBookDouble([storedAddress()]),
-      ).resolveDeliveryAddress(customerId, 'address-absent'),
-    ).rejects.toMatchObject({
-      code: ErrorCode.CUSTOMERS_TARGET_UNAVAILABLE,
-    });
-  });
-
-  it('refuses an Inactive address of that Customer as an invalid Delivery Address', async () => {
-    await expect(
-      serviceWith(
-        directoryDouble(storedCustomer()),
-        addressBookDouble([
-          storedAddress({
-            deactivatedAt: new Date('2026-08-01T00:00:00.000Z'),
-          }),
-        ]),
-      ).resolveDeliveryAddress(customerId, 'address-1'),
-    ).rejects.toMatchObject({
-      code: ErrorCode.CUSTOMERS_INVALID_DELIVERY_ADDRESS,
-    });
-  });
-});
-
 describe('CustomerAddressBookService — deactivateDeliveryAddress (AC-06b, AC-07)', () => {
   const main = storedAddress({ id: 'address-main', isMain: true });
   const successor = storedAddress({
