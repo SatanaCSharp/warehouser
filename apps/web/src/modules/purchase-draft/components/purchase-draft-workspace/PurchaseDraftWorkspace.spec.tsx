@@ -14,7 +14,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { itemApi } from 'modules/item/api/item-api';
 import { purchaseDraftApi } from 'modules/purchase-draft/api/purchase-draft-api';
-import { PurchaseDraftWorkspace } from 'modules/purchase-draft/components/PurchaseDraftWorkspace';
+import { PurchaseDraftWorkspace } from 'modules/purchase-draft/components/purchase-draft-workspace/PurchaseDraftWorkspace';
 import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
 import { ROUTES } from 'shared/constants/routes';
 import { accessIds, authenticatedStore } from 'test/access-fixtures';
