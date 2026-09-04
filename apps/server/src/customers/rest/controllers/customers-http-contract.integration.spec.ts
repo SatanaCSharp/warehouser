@@ -1393,7 +1393,10 @@ describe('customers HTTP contract', () => {
     });
 
     // AC-07 — the refusal names the rule and holds whether or not the Customer has Unfulfilled
-    // orders.
+    // orders. The two cases below prove both sides: no order at all, and an Unfulfilled order
+    // naming the very address being deactivated. The refusal is identical either way, because
+    // `assertDeliveryAddressDeactivatable` decides only over the locked address rows
+    // (customer-address-book.service.ts) and never reads `customer_orders`.
     it('refuses to deactivate the only remaining active address (AC-07)', async () => {
       await seedWarehouses();
       const customer = await seedCustomer({
@@ -1405,6 +1408,33 @@ describe('customers HTTP contract', () => {
           },
         ],
       });
+      const actor = await seedActor([CUSTOMERS_UPDATE]);
+
+      const { status, body } = await request(
+        'POST',
+        `${addressesPath(customer.id)}/${customer.addressIds[0]}/deactivation`,
+        actor.cookie,
+      );
+
+      expect(status).toBe(409);
+      expect(body).toMatchObject({
+        code: 'customers.last_active_delivery_address',
+      });
+    });
+
+    it('refuses identically when the Customer holds an Unfulfilled Customer Order against the address (AC-07)', async () => {
+      await seedWarehouses();
+      const customer = await seedCustomer({
+        addresses: [
+          { isMain: true },
+          {
+            isMain: false,
+            deactivatedAt: new Date('2026-09-02T12:30:00.000Z'),
+          },
+        ],
+      });
+      const itemId = await seedItem();
+      await seedCustomerOrder(itemId, customer.id, customer.addressIds[0]);
       const actor = await seedActor([CUSTOMERS_UPDATE]);
 
       const { status, body } = await request(
