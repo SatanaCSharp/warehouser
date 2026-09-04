@@ -3,12 +3,18 @@ import { globSync } from 'node:fs';
 import test from 'node:test';
 
 import {
+  CONTROLLER_LAYER_GLOB,
+  CUSTOMERS_DOMAIN_FRAMEWORK_GLOB,
+  CUSTOMERS_IMPORTING_PURCHASE_DRAFTS_GLOB,
+  MODULE_PRIVATE_GLOB,
+  REPOSITORY_FEATURE_GLOB,
   findControllerLayerViolations,
   findCustomersDomainFrameworkImports,
   findCustomersImportingPurchaseDrafts,
   findModulePrivateImports,
   findRepositoryFeatureImports,
   featureModules,
+  productionSourceCount,
 } from './architecture-boundaries.mjs';
 import {
   allHandlers,
@@ -224,6 +230,45 @@ test('a fabricated identity-bearing handler with neither declaration is caught',
   assert.match(gaps[0], /leakCustomers/u);
 });
 
+// The parser's blind spot — a paginated wrapper, a union, or any return type shape past
+// `Promise<Identifier>` / `Promise<Identifier[]>` — must not become the rule's blind spot too. A
+// handler the parser cannot resolve is reported with its own message, never dropped from the join
+// silently: whether it can carry customer identity is unknown, not "no" (sad.md §11).
+test('a handler with an unresolved return type is reported rather than skipped', () => {
+  const { types } = identityBearingContractTypes();
+
+  const gaps = gapsInHandlerSet(
+    [
+      {
+        file: 'fixture.controller.ts',
+        methodName: 'readPaginatedCustomers',
+        verb: 'Get',
+        responseType: null,
+        decorators: '@Get()',
+      },
+    ],
+    types,
+  );
+
+  assert.equal(gaps.length, 1);
+  assert.match(gaps[0], /readPaginatedCustomers/u);
+  assert.match(gaps[0], /return type could not be resolved/u);
+});
+
+// The current verdict, pinned so a future change to the parser or the controller tree cannot
+// silently widen or narrow what "unresolved" means without this failing: every handler this
+// feature's controllers declare parses to a resolvable return type today.
+test('every handler in the real controller tree resolves to a return type', () => {
+  const handlers = allHandlers(controllerFiles());
+
+  assert.equal(handlers.length, 76, `expected 76 parsed handlers, got ${handlers.length}`);
+  assert.equal(
+    handlers.filter((handler) => handler.responseType === null).length,
+    0,
+    'expected no handler with an unresolved return type',
+  );
+});
+
 // ---------------------------------------------------------------------------------------------
 // Every new handler is classified per sad.md §8
 // ---------------------------------------------------------------------------------------------
@@ -274,23 +319,48 @@ test('the governed module list is derived from the tree, not remembered', () => 
   assert.ok(!modules.includes('test'), 'test/ is support, not a module');
 });
 
+// Each companion rule below scans a glob whose corpus is asserted non-empty here, once, before the
+// rule itself is asserted to report nothing — the same discipline the controller-scan test above
+// applies at line 56. Without it, a rule that scans zero files reports `[]` for the wrong reason,
+// and `customers/domain/` or `customers/` disappearing under a rename would make its rule pass
+// vacuously forever rather than fail loudly.
 test('controllers call use cases only', () => {
+  assert.ok(
+    productionSourceCount(CONTROLLER_LAYER_GLOB) > 0,
+    'expected controller files to scan',
+  );
   assert.deepEqual(findControllerLayerViolations(), []);
 });
 
 test('no module imports another module domain/errors/, predicates or DTOs', () => {
+  assert.ok(
+    productionSourceCount(MODULE_PRIVATE_GLOB) > 0,
+    'expected production files to scan',
+  );
   assert.deepEqual(findModulePrivateImports(), []);
 });
 
 test('shared repositories import no feature module', () => {
+  assert.ok(
+    productionSourceCount(REPOSITORY_FEATURE_GLOB) > 0,
+    'expected shared repository files to scan',
+  );
   assert.deepEqual(findRepositoryFeatureImports(), []);
 });
 
 test('customers domain code imports no framework', () => {
+  assert.ok(
+    productionSourceCount(CUSTOMERS_DOMAIN_FRAMEWORK_GLOB) > 0,
+    'expected customers/domain/ files to scan',
+  );
   assert.deepEqual(findCustomersDomainFrameworkImports(), []);
 });
 
 test('customers does not import purchase-drafts', () => {
+  assert.ok(
+    productionSourceCount(CUSTOMERS_IMPORTING_PURCHASE_DRAFTS_GLOB) > 0,
+    'expected customers/ files to scan',
+  );
   assert.deepEqual(findCustomersImportingPurchaseDrafts(), []);
 });
 

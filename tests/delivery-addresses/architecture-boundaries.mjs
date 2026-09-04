@@ -53,6 +53,21 @@ const productionSources = (pattern, injected) =>
     .filter((file) => !file.includes('.spec.'))
     .map((file) => ({ file, source: readFileSync(file, 'utf8') }));
 
+// The glob each companion rule below scans, named so a test can assert the corpus is non-empty
+// without re-typing (and risking drifting from) the pattern the rule itself uses. Renaming or
+// emptying the directory a rule scans must fail the corresponding "non-empty corpus" assertion
+// rather than make the rule pass vacuously — the same "derived, never remembered" reasoning this
+// module states above for `featureModules()`.
+export const CONTROLLER_LAYER_GLOB = `${SOURCE_ROOT}/**/*.controller.ts`;
+export const MODULE_PRIVATE_GLOB = `${SOURCE_ROOT}/**/*.ts`;
+export const REPOSITORY_FEATURE_GLOB = `${SOURCE_ROOT}/shared/domain/repositories/**/*.ts`;
+export const CUSTOMERS_DOMAIN_FRAMEWORK_GLOB = `${SOURCE_ROOT}/customers/domain/**/*.ts`;
+export const CUSTOMERS_IMPORTING_PURCHASE_DRAFTS_GLOB = `${SOURCE_ROOT}/customers/**/*.ts`;
+
+/** The count of production files one of the globs above scans, for a test to assert non-empty. */
+export const productionSourceCount = (pattern) =>
+  productionSources(pattern).length;
+
 const importedSpecifiers = (source) =>
   Array.from(
     source.matchAll(/(?:from|require\()\s*['"]([^'"]+)['"]/gu),
@@ -124,7 +139,7 @@ export const findModulePrivateImports = (injected) => {
   const violations = [];
 
   for (const { file, source } of productionSources(
-    `${SOURCE_ROOT}/**/*.ts`,
+    MODULE_PRIVATE_GLOB,
     injected,
   )) {
     const owner = owningModule(file);
@@ -177,7 +192,7 @@ export const findControllerLayerViolations = (injected) => {
   const violations = [];
 
   for (const { file, source } of productionSources(
-    `${SOURCE_ROOT}/**/*.controller.ts`,
+    CONTROLLER_LAYER_GLOB,
     injected,
   )) {
 
@@ -220,7 +235,7 @@ export const findRepositoryFeatureImports = (injected) => {
   const violations = [];
 
   for (const { file, source } of productionSources(
-    `${SOURCE_ROOT}/shared/domain/repositories/**/*.ts`,
+    REPOSITORY_FEATURE_GLOB,
     injected,
   )) {
 
@@ -260,7 +275,7 @@ export const findCustomersDomainFrameworkImports = (injected) => {
   const violations = [];
 
   for (const { file, source } of productionSources(
-    `${SOURCE_ROOT}/customers/domain/**/*.ts`,
+    CUSTOMERS_DOMAIN_FRAMEWORK_GLOB,
     injected,
   )) {
 
@@ -288,7 +303,10 @@ export const findCustomersDomainFrameworkImports = (injected) => {
 
 /** Every `customers` file importing `purchase-drafts` — sad.md §10's one-directional edge. */
 export const findCustomersImportingPurchaseDrafts = (injected) =>
-  productionSources(`${SOURCE_ROOT}/customers/**/*.ts`, injected).flatMap(
+  productionSources(
+    CUSTOMERS_IMPORTING_PURCHASE_DRAFTS_GLOB,
+    injected,
+  ).flatMap(
     ({ file, source }) =>
       importedSpecifiers(source)
         .filter((specifier) => reachesModule(specifier, 'purchase-drafts'))

@@ -272,6 +272,56 @@ const REQUIRES_CUSTOMERS_PERMISSION =
   /@RequiredPermission\(\s*PermissionId\.CUSTOMERS_[A-Z_]+\s*\)/u;
 
 /**
+ * The rule itself, over an already-parsed handler set: every handler whose response can carry
+ * customer identity but which neither requires a `CUSTOMERS:*` Permission nor declares the
+ * observed one, **plus** every handler whose return type the parser could not resolve at all.
+ *
+ * An unresolved return type — a paginated wrapper, a union, or any shape the
+ * `Promise<Identifier>` / `Promise<Identifier[]>` parser cannot read — is reported rather than
+ * skipped. The parser's blind spot must not become the check's: whether the response can carry
+ * customer identity is unknown, not "no", so an unresolved handler is reported with its own
+ * message rather than dropped out of the join silently (sad.md §11: "a missed surface leaks
+ * silently and forever").
+ *
+ * Shared by `findObservedPermissionGaps`, which parses the real controller tree, and
+ * `gapsInHandlerSet`, which re-runs the same rule over the positive control's mutated in-memory
+ * set — so the two cannot silently diverge into different rules.
+ */
+const gapsFor = (handlers, identityTypes) => {
+  const gaps = [];
+
+  for (const handler of handlers) {
+    if (handler.responseType === null) {
+      gaps.push(
+        `${handler.file}::${handler.methodName}: return type could not be resolved by the ` +
+          '`Promise<Identifier>` / `Promise<Identifier[]>` parser, so whether it can carry ' +
+          'customer identity is unknown — sad.md §10, AC-09a',
+      );
+      continue;
+    }
+
+    if (!identityTypes.has(handler.responseType)) {
+      continue;
+    }
+
+    const declaresObserved = OBSERVES_CUSTOMERS_WATCH.test(handler.decorators);
+    const requiresCustomers = REQUIRES_CUSTOMERS_PERMISSION.test(
+      handler.decorators,
+    );
+
+    if (!declaresObserved && !requiresCustomers) {
+      gaps.push(
+        `${handler.file}::${handler.methodName}: returns ${handler.responseType}, which can carry ` +
+          'customer identity, but declares neither @ObservedPermission(CUSTOMERS:WATCH) nor a ' +
+          'required CUSTOMERS:* Permission — sad.md §10, AC-09a',
+      );
+    }
+  }
+
+  return gaps;
+};
+
+/**
  * Every handler whose response can carry customer identity but which neither requires a
  * `CUSTOMERS:*` Permission nor declares the observed one — the violations sad.md §10's check exists
  * to make impossible to merge.
@@ -280,37 +330,11 @@ const REQUIRES_CUSTOMERS_PERMISSION =
  * rule against a deliberately altered handler set and prove it fails — the positive control the
  * Definition of Done requires ("proven by removing one").
  */
-export const findObservedPermissionGaps = (controllerFiles, identityTypes) => {
-  const gaps = [];
-
-  for (const file of controllerFiles) {
-    for (const handler of parseHandlers(file)) {
-      if (
-        handler.responseType === null ||
-        !identityTypes.has(handler.responseType)
-      ) {
-        continue;
-      }
-
-      const declaresObserved = OBSERVES_CUSTOMERS_WATCH.test(
-        handler.decorators,
-      );
-      const requiresCustomers = REQUIRES_CUSTOMERS_PERMISSION.test(
-        handler.decorators,
-      );
-
-      if (!declaresObserved && !requiresCustomers) {
-        gaps.push(
-          `${file}::${handler.methodName}: returns ${handler.responseType}, which can carry ` +
-            'customer identity, but declares neither @ObservedPermission(CUSTOMERS:WATCH) nor a ' +
-            'required CUSTOMERS:* Permission — sad.md §10, AC-09a',
-        );
-      }
-    }
-  }
-
-  return gaps;
-};
+export const findObservedPermissionGaps = (controllerFiles, identityTypes) =>
+  gapsFor(
+    controllerFiles.flatMap((file) => parseHandlers(file)),
+    identityTypes,
+  );
 
 /** Exposed so a test can assert the join actually found handlers rather than passing on an empty set. */
 export const identityBearingHandlers = (controllerFiles, identityTypes) =>
@@ -352,19 +376,4 @@ export const withoutObservedPermission = (controllerFiles, methodName) =>
 
 /** Re-runs the observed-Permission rule over an already-parsed handler set. */
 export const gapsInHandlerSet = (handlers, identityTypes) =>
-  handlers
-    .filter(
-      (handler) =>
-        handler.responseType !== null && identityTypes.has(handler.responseType),
-    )
-    .filter(
-      (handler) =>
-        !OBSERVES_CUSTOMERS_WATCH.test(handler.decorators) &&
-        !REQUIRES_CUSTOMERS_PERMISSION.test(handler.decorators),
-    )
-    .map(
-      (handler) =>
-        `${handler.file}::${handler.methodName}: returns ${handler.responseType}, which can carry ` +
-        'customer identity, but declares neither @ObservedPermission(CUSTOMERS:WATCH) nor a ' +
-        'required CUSTOMERS:* Permission — sad.md §10, AC-09a',
-    );
+  gapsFor(handlers, identityTypes);
