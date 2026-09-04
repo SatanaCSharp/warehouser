@@ -1,0 +1,112 @@
+import { screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { ErrorCode } from '@warehouser/shared-types/enums';
+import { describe, expect, it, vi } from 'vitest';
+
+import { DeactivateDeliveryAddressDialog } from 'modules/customer/components/customer-directory/components/addresses/DeactivateDeliveryAddressDialog';
+import { DialogHost } from 'shared/components/DialogHost';
+import { renderWithProviders } from 'test/render';
+
+import type { CustomerDeliveryAddress } from '@warehouser/contracts/customers';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
+
+// delivery-addresses R8 — AC-06's address half (AC-06a/AC-06b) and AC-07's
+// refusal. `CustomerDirectory.spec.tsx` opens this dialog only to assert it
+// carries no `<form>`; it never confirms and never asserts an outcome. Never
+// opened any other way.
+
+const mainAddress: CustomerDeliveryAddress = {
+  id: '00000000-0000-4000-8000-000000000301',
+  customerId: '00000000-0000-4000-8000-000000000201',
+  addressText: 'Hafenstraße 14, 20457 Hamburg',
+  accessNotes: null,
+  isMain: true,
+  deactivatedAt: null,
+  createdAt: '2026-08-01T09:00:00.000Z',
+  updatedAt: '2026-08-01T09:00:00.000Z',
+};
+
+const ordinaryAddress: CustomerDeliveryAddress = {
+  ...mainAddress,
+  id: '00000000-0000-4000-8000-000000000302',
+  addressText: 'Dockweg 3, 20457 Hamburg',
+  isMain: false,
+};
+
+const renderDialog = (
+  address: CustomerDeliveryAddress,
+  result: MutationResult = { data: {} },
+): {
+  onClose: ReturnType<typeof vi.fn>;
+  onConfirm: ReturnType<typeof vi.fn>;
+} => {
+  const onClose = vi.fn();
+  const onConfirm = vi
+    .fn<() => Promise<MutationResult>>()
+    .mockResolvedValue(result);
+  renderWithProviders(
+    <DialogHost onClose={onClose}>
+      <DeactivateDeliveryAddressDialog
+        address={address}
+        onConfirm={onConfirm}
+      />
+    </DialogHost>,
+  );
+  return { onClose, onConfirm };
+};
+
+const openedDialog = (): HTMLElement =>
+  screen.getByRole('alertdialog', {
+    name: 'Deactivate this delivery address?',
+  });
+
+describe('DeactivateDeliveryAddressDialog', () => {
+  it('confirms with no value to submit, then closes (AC-06a)', async () => {
+    const user = userEvent.setup();
+    const { onClose, onConfirm } = renderDialog(ordinaryAddress);
+
+    const dialog = openedDialog();
+    expect(dialog.querySelector('form')).toBeNull();
+    await user.click(
+      within(dialog).getByRole('button', { name: 'Deactivate address' }),
+    );
+
+    await waitFor(() => expect(onConfirm).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+  });
+
+  it('warns that deactivating the Main address moves the flag (AC-06b)', () => {
+    renderDialog(mainAddress);
+    expect(
+      screen.getByText(/one of the remaining active addresses becomes/iu),
+    ).toBeVisible();
+  });
+
+  it('stays silent about the Main flag when the address is not Main', () => {
+    renderDialog(ordinaryAddress);
+    expect(
+      screen.queryByText(/one of the remaining active addresses becomes/iu),
+    ).not.toBeInTheDocument();
+  });
+
+  // AC-07 — the Customer's last active address is refused, and this is the
+  // one dialog that shows the member the way forward.
+  it('names the AC-07 rule and the order to follow when it is the last active address', async () => {
+    const user = userEvent.setup();
+    const { onClose } = renderDialog(ordinaryAddress, {
+      error: { code: ErrorCode.CUSTOMERS_LAST_ACTIVE_DELIVERY_ADDRESS },
+    });
+
+    const dialog = openedDialog();
+    await user.click(
+      within(dialog).getByRole('button', { name: 'Deactivate address' }),
+    );
+
+    expect(
+      await within(dialog).findByText(
+        'A customer always keeps at least one active delivery address. Add the replacement address first, then deactivate this one.',
+      ),
+    ).toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+});
