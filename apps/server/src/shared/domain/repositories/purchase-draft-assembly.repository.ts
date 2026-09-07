@@ -214,6 +214,10 @@ export class PurchaseDraftAssemblyRepository {
         endingKind: null,
         endingRecordedByUserId: null,
         endingRecordedAt: null,
+        // A composed line has no ending, so it can carry no Pre-receipt Conformance
+        // (`chk_purchase_draft_lines_conformance_requires_ending`); the ending command writes both.
+        preReceiptConformance: null,
+        preReceiptConformanceNote: null,
         createdAt: input.createdAt,
         updatedAt: input.createdAt,
       };

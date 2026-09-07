@@ -17,6 +17,8 @@ import { PermissionEntity } from 'shared/domain/entities/permission.entity';
 import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
 import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity';
 import { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity';
+import { PurchaseDraftLineRejectionEntity } from 'shared/domain/entities/purchase-draft-line-rejection.entity';
+import { RejectionReasonEntity } from 'shared/domain/entities/rejection-reason.entity';
 import { RoleEntity } from 'shared/domain/entities/role.entity';
 import { RolePermissionEntity } from 'shared/domain/entities/role-permission.entity';
 import { SessionEntity } from 'shared/domain/entities/session.entity';
@@ -110,6 +112,32 @@ describe('DomainModule', () => {
     expect(typeOrmFeatureModule?.providers).toEqual(
       expect.arrayContaining(
         deliveryAddressEntities.map(
+          (entity): unknown =>
+            expect.objectContaining({
+              provide: String(getRepositoryToken(entity)),
+            }) as unknown,
+        ),
+      ),
+    );
+  });
+
+  it('registers every arrival-inspection shared entity with TypeORM (T3 AC-05, AC-15, AC-24)', () => {
+    const arrivalInspectionEntities = [
+      RejectionReasonEntity,
+      PurchaseDraftLineRejectionEntity,
+      PurchaseDraftLineEntity,
+    ];
+    const imports = Reflect.getMetadata(
+      MODULE_METADATA.IMPORTS,
+      DomainModule,
+    ) as Array<{ module?: unknown; providers?: unknown[] }>;
+    const typeOrmFeatureModule = imports.find(
+      (importedModule) => importedModule.module === TypeOrmModule,
+    );
+
+    expect(typeOrmFeatureModule?.providers).toEqual(
+      expect.arrayContaining(
+        arrivalInspectionEntities.map(
           (entity): unknown =>
             expect.objectContaining({
               provide: String(getRepositoryToken(entity)),
