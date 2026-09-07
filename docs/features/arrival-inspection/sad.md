@@ -804,9 +804,13 @@ sequenceDiagram
 
 - No shipped route is withdrawn and no path changes, so the route-table baseline gains **two** rows
   and loses none (§10).
-- The Accepted Quantity, the Rejected Quantity, the Rejection Source, the raising member and the time
-  are **derived or attributed, never accepted as input**. No endpoint accepts a count, a derived
-  figure or an attribution.
+- The Accepted Quantity, the Rejected Quantity, the raising member and the time are **derived or
+  attributed, never accepted as input**. No endpoint accepts a count, a derived figure or an
+  attribution. The **Rejection Source is accepted as input**: the member states where the refusal was
+  observed (AC-24), and AC-25 — which refuses a customer's report on goods that arrived at our own
+  dock — cannot refuse a value the request has no way to express. Its legality against the line's
+  Delivery Mode is asserted by the server, in both directions, not by the schema. Adjudicated in
+  [`contracts/api-sync-report.md`](contracts/api-sync-report.md) § "Finding 1".
 - Contract schemas stay `z.strictObject`, so an unknown property is a validation failure rather than
   a silently ignored one. Reason identifiers are validated against the catalogue by the server, not
   by the schema, because the catalogue is data (AC-06).
