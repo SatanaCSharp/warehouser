@@ -312,6 +312,7 @@
       "WAREHOUSES_CREATE": "Створення складів",
       "WAREHOUSES_RENAME": "Перейменування складів",
       "WAREHOUSES_ARCHIVE": "Архівування та відновлення складів",
+      "WAREHOUSES_ADDRESS_UPDATE": "Запис адрес доставки складів",
       "WAREHOUSE_MEMBERSHIPS_ASSIGN": "Надання доступу до складів",
       "WAREHOUSE_MEMBERSHIPS_REVOKE": "Відкликання доступу до складів",
       "WORKSPACE_OWNER_ROLE_REASSIGN": "Передавання власності над робочим простором"

@@ -1,6 +1,7 @@
 import mapValues from 'lodash/mapValues';
 import { useTranslation } from 'react-i18next';
 
+import { useLinkNaming } from 'modules/purchase-draft/hooks/projections/useLinkNaming';
 import { describeLinkDrift } from 'modules/purchase-draft/utils/link-drift';
 import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
 
@@ -36,18 +37,19 @@ export const useDriftBullets = (): ((
   draft: PurchaseDraftDetail,
 ) => DriftBullet[]) => {
   const { t } = useTranslation('purchase-draft');
+  const linkNaming = useLinkNaming();
   const { quantity, shortCalendarDate, shortTimestampDate } = useLocaleFormat();
 
   return (draft) =>
     draft.lines.flatMap((line, index) =>
       line.links.flatMap((link) =>
-        describeLinkDrift(link).map((drift) => ({
+        describeLinkDrift(link, line.deliveryMode).map((drift) => ({
           key: `${link.id}-${drift.kind}`,
           text: t(`detail.driftAlert.${drift.kind}`, {
             // The moment selects the `…_dated` wording through i18next's own
             // context suffix; without one the plain sentence stands.
             context: drift.changedAt === null ? undefined : 'dated',
-            customer: link.customerName,
+            customer: linkNaming(link),
             line: index + 1,
             on:
               drift.changedAt === null
@@ -59,6 +61,9 @@ export const useDriftBullets = (): ((
             // the sentence already carries a dated clause and two full dates in
             // one bullet read as a coincidence rather than a comparison.
             ...mapValues(drift.dates, shortCalendarDate),
+            // Unformatted, for the same reason the chip leaves it alone: an
+            // address has no locale form (AC-18).
+            ...drift.addresses,
           }),
         })),
       ),

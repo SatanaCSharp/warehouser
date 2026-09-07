@@ -19,6 +19,7 @@ const currentUser: AccessCurrentUser = {
   roleId: uuid('4'),
   roleKind: 'custom',
   permissionId: 'CUSTOMER_ORDERS:WATCH',
+  observedPermissionIds: [],
   archived: false,
 };
 

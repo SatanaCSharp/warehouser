@@ -1,0 +1,271 @@
+<!doctype html>
+<!--
+  Preview evidence - design-ui skill. Review artifact only; never an implementation source.
+
+  Frame:         Delivery Addresses / Customers / Mobile / v1
+  Design source: docs/mockups/app.pen
+  Node ID:       b7gaH9
+  Viewport:      mobile 390×1430
+  States:        default (customer detail; one address inactive, four orders awaiting)
+-->
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Delivery addresses · Customers · Mobile</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style type="text/tailwindcss">
+      @theme inline {
+        --color-background: var(--background);
+        --color-background-secondary: var(--background-secondary);
+        --color-foreground: var(--foreground);
+        --color-muted: var(--muted);
+
+        --color-surface: var(--surface);
+        --color-surface-foreground: var(--surface-foreground);
+        --color-surface-secondary: var(--surface-secondary);
+        --color-surface-tertiary: var(--surface-tertiary);
+        --color-overlay: var(--overlay);
+        --color-overlay-foreground: var(--overlay-foreground);
+
+        --color-accent: var(--accent);
+        --color-accent-foreground: var(--accent-foreground);
+        --color-accent-soft: var(--accent-soft);
+        --color-accent-soft-foreground: var(--accent-soft-foreground);
+
+        --color-default: var(--default);
+        --color-default-foreground: var(--default-foreground);
+        --color-default-soft-foreground: var(--default-soft-foreground);
+        --color-success: var(--success);
+        --color-success-foreground: var(--success-foreground);
+        --color-success-soft: var(--success-soft);
+        --color-success-soft-foreground: var(--success-soft-foreground);
+        --color-warning: var(--warning);
+        --color-warning-foreground: var(--warning-foreground);
+        --color-warning-soft: var(--warning-soft);
+        --color-warning-soft-foreground: var(--warning-soft-foreground);
+        --color-danger: var(--danger);
+        --color-danger-foreground: var(--danger-foreground);
+        --color-danger-soft: var(--danger-soft);
+        --color-danger-soft-foreground: var(--danger-soft-foreground);
+
+        --color-border: var(--border);
+        --color-separator: var(--separator);
+        --color-focus: var(--focus);
+        --color-link: var(--link);
+
+        --color-field: var(--field-background);
+        --color-field-foreground: var(--field-foreground);
+        --color-field-placeholder: var(--field-placeholder);
+        --color-field-border: var(--field-border);
+
+        --radius-field: var(--field-radius);
+        --shadow-surface: var(--surface-shadow);
+        --shadow-overlay: var(--overlay-shadow);
+      }
+
+      :root,
+      [data-theme='light'] {
+        color-scheme: light;
+
+        --white: oklch(100% 0 0);
+        --snow: oklch(0.9911 0 0);
+        --eclipse: oklch(0.2103 0.0059 285.89);
+
+        --radius: 0.5rem;
+        --field-radius: calc(var(--radius) * 1.5);
+
+        --background: oklch(0.9702 0 0);
+        --foreground: var(--eclipse);
+        --muted: oklch(0.5517 0.0138 285.94);
+
+        --surface: var(--white);
+        --surface-foreground: var(--foreground);
+        --surface-secondary: oklch(0.9524 0.0013 286.37);
+        --surface-tertiary: oklch(0.9373 0.0013 286.37);
+        --overlay: var(--white);
+        --overlay-foreground: var(--foreground);
+
+        --accent: oklch(0.6204 0.195 253.83);
+        --accent-foreground: var(--snow);
+        --default: oklch(94% 0.001 286.375);
+        --default-foreground: var(--eclipse);
+
+        --success: oklch(0.7329 0.1935 150.81);
+        --success-foreground: var(--eclipse);
+        --warning: oklch(0.7819 0.1585 72.33);
+        --warning-foreground: var(--eclipse);
+        --danger: oklch(0.6532 0.2328 25.74);
+        --danger-foreground: var(--snow);
+
+        --field-background: var(--white);
+        --field-foreground: var(--eclipse);
+        --field-placeholder: var(--muted);
+        --field-border: transparent;
+
+        --border: oklch(90% 0.004 286.32);
+        --separator: oklch(92% 0.004 286.32);
+        --focus: var(--accent);
+        --link: var(--foreground);
+
+        --background-secondary: color-mix(
+          in oklab,
+          var(--background) 96%,
+          var(--foreground) 4%
+        );
+        --accent-soft: color-mix(in oklab, var(--accent) 15%, transparent);
+        --accent-soft-foreground: color-mix(
+          in oklab,
+          var(--accent) 70%,
+          var(--foreground) 30%
+        );
+        --default-soft-foreground: var(--default-foreground);
+        --success-soft: color-mix(in oklab, var(--success) 15%, transparent);
+        --success-soft-foreground: color-mix(
+          in oklab,
+          var(--success) 80%,
+          var(--foreground) 60%
+        );
+        --warning-soft: color-mix(in oklab, var(--warning) 15%, transparent);
+        --warning-soft-foreground: color-mix(
+          in oklab,
+          var(--warning) 80%,
+          var(--foreground) 70%
+        );
+        --danger-soft: color-mix(in oklab, var(--danger) 15%, transparent);
+        --danger-soft-foreground: color-mix(
+          in oklab,
+          var(--danger) 70%,
+          var(--foreground) 40%
+        );
+
+        --surface-shadow:
+          0 2px 4px 0 rgba(0, 0, 0, 0.04), 0 1px 2px 0 rgba(0, 0, 0, 0.06),
+          0 0 1px 0 rgba(0, 0, 0, 0.06);
+        --overlay-shadow:
+          0 2px 8px 0 rgba(0, 0, 0, 0.06), 0 -6px 12px 0 rgba(0, 0, 0, 0.03),
+          0 14px 28px 0 rgba(0, 0, 0, 0.08);
+      }
+
+      [data-theme='dark'] {
+        color-scheme: dark;
+
+        --background: oklch(12% 0.005 285.823);
+        --foreground: var(--snow);
+        --muted: oklch(70.5% 0.015 286.067);
+
+        --surface: oklch(0.2103 0.0059 285.89);
+        --surface-foreground: var(--foreground);
+        --surface-secondary: oklch(0.257 0.0037 286.14);
+        --surface-tertiary: oklch(0.2721 0.0024 247.91);
+        --overlay: oklch(0.2103 0.0059 285.89);
+        --overlay-foreground: var(--foreground);
+
+        --default: oklch(27.4% 0.006 286.033);
+        --default-foreground: var(--snow);
+        --warning: oklch(0.8203 0.1388 76.34);
+        --danger: oklch(0.594 0.1967 24.63);
+
+        --field-background: oklch(0.2103 0.0059 285.89);
+        --field-foreground: var(--foreground);
+
+        --border: oklch(28% 0.006 286.033);
+        --separator: oklch(25% 0.006 286.033);
+
+        --accent-soft: color-mix(in oklab, var(--accent) 12%, transparent);
+        --accent-soft-foreground: color-mix(
+          in oklab,
+          var(--accent) 80%,
+          var(--foreground) 30%
+        );
+        --default-soft-foreground: var(--default-foreground);
+        --danger-soft-foreground: color-mix(
+          in oklab,
+          var(--danger) 80%,
+          var(--foreground) 30%
+        );
+        --warning-soft-foreground: color-mix(
+          in oklab,
+          var(--warning) 80%,
+          var(--foreground) 30%
+        );
+        --success-soft-foreground: color-mix(
+          in oklab,
+          var(--success) 80%,
+          var(--foreground) 30%
+        );
+
+        --surface-shadow: 0 0 0 0 transparent inset;
+        --overlay-shadow: 0 0 1px 0 rgba(255, 255, 255, 0.3) inset;
+      }
+
+    </style>
+  </head>
+
+  <body class="bg-background text-foreground min-h-screen antialiased">
+    <main class="mx-auto w-[390px] max-w-full">
+<div class="flex min-h-full flex-col bg-background">
+  <header class="flex h-[68px] items-center border-b border-border bg-surface px-5">
+    <div class="flex items-center gap-3">
+      <span class="flex size-[34px] items-center justify-center rounded-lg bg-accent text-accent-foreground"><svg class="size-[19px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 8.35V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.35A2 2 0 0 1 3.26 6.5l8-3.2a2 2 0 0 1 1.48 0l8 3.2A2 2 0 0 1 22 8.35Z"/><path d="M6 18h12"/><path d="M6 14h12"/><rect x="6" y="10" width="12" height="12"/></svg></span>
+      <span class="text-lg font-bold tracking-tight text-foreground">Warehouser</span>
+    </div>
+  </header>
+  <div class="flex h-[60px] items-center border-b border-border bg-surface px-5">
+    <span class="flex h-10 w-full items-center gap-2 rounded-field border border-border bg-surface px-3 text-[13px] font-medium text-foreground"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 8.35V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.35A2 2 0 0 1 3.26 6.5l8-3.2a2 2 0 0 1 1.48 0l8 3.2A2 2 0 0 1 22 8.35Z"/><path d="M6 18h12"/><path d="M6 14h12"/><rect x="6" y="10" width="12" height="12"/></svg>Central DC<svg class="size-4 ml-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span>
+  </div>
+  <div class="flex flex-1 flex-col gap-3.5 px-5 py-8">
+<div class="flex items-center gap-1.5 text-[13px] font-semibold text-link"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>All customers</div>
+<div class="flex flex-col gap-1.5">
+  <div class="flex items-start gap-2.5"><h1 class="flex-1 text-2xl leading-tight font-bold tracking-tight text-foreground">Nordwind Logistik GmbH</h1><span class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium bg-success-soft text-success-soft-foreground"><span class="size-1.5 rounded-full bg-current opacity-70"></span>Active</span><button type="button" aria-label="Actions" class="inline-flex size-8 shrink-0 items-center justify-center rounded-field text-muted"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button></div>
+  <p class="text-[13px] text-muted">Recorded by Yurii H. · 12 Aug 2026</p>
+</div>
+<div class="h-px w-full bg-separator"></div>
+<p class="text-[11px] font-bold tracking-[0.06em] text-muted">DELIVERY ADDRESSES</p>
+<div class="flex items-center gap-3 rounded-field border border-border bg-surface-secondary px-3.5 py-3">
+  <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+    <div class="flex flex-wrap items-center gap-2"><span class="text-[13px] leading-snug font-semibold text-foreground">Hafenstraße 14, 20457 Hamburg, Germany</span><span class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium bg-accent-soft text-accent-soft-foreground"><span class="size-1.5 rounded-full bg-current opacity-70"></span>Main</span></div>
+    <p class="text-[11px] leading-snug text-muted">Gate 3, code 4417 · deliveries 07:00–15:00 · ask for Dispatch</p>
+  </div><button type="button" aria-label="Actions" class="inline-flex size-7 shrink-0 items-center justify-center rounded-field text-muted"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+</div><div class="flex items-center gap-3 rounded-field border border-border bg-surface-secondary px-3.5 py-3">
+  <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+    <div class="flex flex-wrap items-center gap-2"><span class="text-[13px] leading-snug font-semibold text-foreground">Werftweg 2, 27568 Bremerhaven, Germany</span></div>
+    <p class="text-[11px] leading-snug text-muted">Ring the bell at the yard office. No forklift on site — tail lift required.</p>
+  </div><button type="button" aria-label="Actions" class="inline-flex size-7 shrink-0 items-center justify-center rounded-field text-muted"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+</div><div class="flex items-center gap-3 rounded-field border border-border bg-surface-secondary px-3.5 py-3">
+  <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+    <div class="flex flex-wrap items-center gap-2"><span class="text-[13px] leading-snug font-semibold text-muted">Lagerplatz 9, 24937 Flensburg, Germany</span><span class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium bg-default text-default-foreground"><span class="size-1.5 rounded-full bg-current opacity-70"></span>Inactive</span></div>
+    <p class="text-[11px] leading-snug text-muted">Closed since June 2026. Kept because three orders still name it.</p>
+  </div><button type="button" aria-label="Actions" class="inline-flex size-7 shrink-0 items-center justify-center rounded-field text-muted"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+</div>
+<button type="button" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-field font-semibold bg-surface text-foreground border border-border h-11 px-5 text-[15px] w-full"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>Add address</button>
+<p class="text-xs leading-relaxed text-muted ">Exactly one active address is the main one — an order takes it unless you state another. A customer always keeps at least one active address, so add the replacement before deactivating the old one.</p>
+<div class="h-px w-full bg-separator"></div>
+<p class="text-[11px] font-bold tracking-[0.06em] text-muted">AWAITING · 4 CUSTOMER ORDERS</p>
+<div class="flex flex-col gap-2 rounded-field border border-border bg-surface p-3">
+  <div class="flex flex-col gap-0.5"><span class="text-[13px] font-semibold text-foreground">Pallet wrap, 500mm</span><span class="text-[11px] text-muted">WH-100420 · counted in pieces</span></div>
+  <div class="flex items-center gap-2.5"><span class="text-[13px] font-semibold text-foreground">800 pieces outstanding</span><span class="flex-1"></span><span class="text-xs text-muted">by 2 Sep 2026</span></div>
+  <div class="flex items-start gap-1.5"><span class="mt-0.5 shrink-0 text-muted"><svg class="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg></span>
+    <div class="flex min-w-0 flex-col"><span class="text-xs leading-snug font-medium text-foreground">Hafenstraße 14, 20457 Hamburg</span><span class="text-[11px] text-muted">Main delivery address</span></div></div>
+</div><div class="flex flex-col gap-2 rounded-field border border-border bg-surface p-3">
+  <div class="flex flex-col gap-0.5"><span class="text-[13px] font-semibold text-foreground">Carton 600×400×300</span><span class="text-[11px] text-muted">WH-100733 · counted in pieces</span></div>
+  <div class="flex items-center gap-2.5"><span class="text-[13px] font-semibold text-foreground">1 500 pieces outstanding</span><span class="flex-1"></span><span class="text-xs text-muted">by 9 Sep 2026</span></div>
+  <div class="flex items-start gap-1.5"><span class="mt-0.5 shrink-0 text-muted"><svg class="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg></span>
+    <div class="flex min-w-0 flex-col"><span class="text-xs leading-snug font-medium text-foreground">Hafenstraße 14, 20457 Hamburg</span><span class="text-[11px] text-muted">Main delivery address</span></div></div>
+</div><div class="flex flex-col gap-2 rounded-field border border-border bg-surface p-3">
+  <div class="flex flex-col gap-0.5"><span class="text-[13px] font-semibold text-foreground">Thermal labels 4×6</span><span class="text-[11px] text-muted">WH-100511 · counted in rolls</span></div>
+  <div class="flex items-center gap-2.5"><span class="text-[13px] font-semibold text-foreground">40 rolls outstanding</span><span class="flex-1"></span><span class="text-xs text-muted">by 4 Sep 2026</span></div>
+  <div class="flex items-start gap-1.5"><span class="mt-0.5 shrink-0 text-muted"><svg class="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg></span>
+    <div class="flex min-w-0 flex-col"><span class="text-xs leading-snug font-medium text-foreground">Werftweg 2, 27568 Bremerhaven</span><span class="text-[11px] text-muted">Stated on this order</span></div></div>
+</div><div class="flex flex-col gap-2 rounded-field border border-border bg-surface p-3">
+  <div class="flex flex-col gap-0.5"><span class="text-[13px] font-semibold text-foreground">Cable, 3×2.5mm²</span><span class="text-[11px] text-muted">WH-100902 · counted in metres</span></div>
+  <div class="flex items-center gap-2.5"><span class="text-[13px] font-semibold text-foreground">2 400 metres outstanding</span><span class="flex-1"></span><span class="text-xs text-muted">by 18 Sep 2026</span></div>
+  <div class="flex items-start gap-1.5"><span class="mt-0.5 shrink-0 text-muted"><svg class="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg></span>
+    <div class="flex min-w-0 flex-col"><span class="text-xs leading-snug font-medium text-foreground">Lagerplatz 9, 24937 Flensburg</span><span class="text-[11px] text-muted">Address now inactive · redirect</span></div></div>
+</div>
+<p class="text-xs leading-relaxed text-muted ">Only orders still waiting appear here. Fulfilled and cancelled orders leave this list, and the total each customer awaits is the same figure the demand page consolidates by item.</p>
+  </div>
+</div>
+    </main>
+  </body>
+</html>

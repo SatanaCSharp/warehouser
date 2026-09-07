@@ -7,6 +7,7 @@ import localeBaseline from 'test/locale-baseline.json';
 import enAccess from '../public/locales/en/access.json';
 import enCommon from '../public/locales/en/common.json';
 import enCustomerOrder from '../public/locales/en/customer-order.json';
+import enCustomer from '../public/locales/en/customer.json';
 import enErrors from '../public/locales/en/errors.json';
 import enHome from '../public/locales/en/home.json';
 import enItem from '../public/locales/en/item.json';
@@ -21,6 +22,7 @@ import enWorkspace from '../public/locales/en/workspace.json';
 import ukAccess from '../public/locales/uk/access.json';
 import ukCommon from '../public/locales/uk/common.json';
 import ukCustomerOrder from '../public/locales/uk/customer-order.json';
+import ukCustomer from '../public/locales/uk/customer.json';
 import ukErrors from '../public/locales/uk/errors.json';
 import ukHome from '../public/locales/uk/home.json';
 import ukItem from '../public/locales/uk/item.json';
@@ -37,6 +39,7 @@ const resources = {
   en: {
     access: enAccess,
     common: enCommon,
+    customer: enCustomer,
     'customer-order': enCustomerOrder,
     errors: enErrors,
     home: enHome,
@@ -53,6 +56,7 @@ const resources = {
   uk: {
     access: ukAccess,
     common: ukCommon,
+    customer: ukCustomer,
     'customer-order': ukCustomerOrder,
     errors: ukErrors,
     home: ukHome,
@@ -297,6 +301,16 @@ describe('localization resources', () => {
       'Primary navigation',
     );
     expect(instance.t('nav.toggle', { ns: 'common' })).toBe('Open navigation');
+    // The collapsible sidebar's two directions, resolved in both languages
+    // because the control's accessible name is the only thing naming it on the
+    // rail (`adding-and-maintaining-web-localization.md` §"Add a translation
+    // key", step 6).
+    expect(instance.t('nav.collapse', { ns: 'common' })).toBe(
+      'Collapse navigation',
+    );
+    expect(instance.t('nav.expand', { ns: 'common' })).toBe(
+      'Expand navigation',
+    );
     expect(instance.t('language.label', { ns: 'common' })).toBe(
       'Change language',
     );
@@ -311,6 +325,12 @@ describe('localization resources', () => {
     );
     expect(instance.t('nav.dashboard', { ns: 'common' })).toBe('Дашборд');
     expect(instance.t('nav.access', { ns: 'common' })).toBe('Доступ');
+    expect(instance.t('nav.collapse', { ns: 'common' })).toBe(
+      'Згорнути навігацію',
+    );
+    expect(instance.t('nav.expand', { ns: 'common' })).toBe(
+      'Розгорнути навігацію',
+    );
     // Fixed native-name labels never change with the active locale (CR-AC-06).
     expect(instance.t('language.english', { ns: 'common' })).toBe('English');
     expect(instance.t('language.ukrainian', { ns: 'common' })).toBe(
@@ -653,4 +673,240 @@ describe('global-loader waiting copy (CR-AC-12)', () => {
       ).not.toBe('shell.landing.pendingLabel');
     },
   );
+});
+
+// --- the Warehouse detail pane's Cancel (delivery-addresses design review) ----------------------
+//
+// `warehouses.detail.cancel` was declared in both languages and rendered by nothing, while the
+// warehouse detail pane the design draws
+// (`docs/features/delivery-addresses/previews/warehouse-address-desktop-v1.html`) shows a Cancel
+// beside the primary of every editable block. The key is now the label of the reset control in
+// `WarehouseNameForm` and `WarehouseDeliveryAddressForm`, so it is pinned as *resolvable copy* in
+// each supported language rather than left as an orphan a later change could quietly delete.
+describe('warehouse detail Cancel copy (delivery-addresses design review)', () => {
+  /** Total over the supported languages, so adding one fails to compile until it is translated. */
+  const CANCEL_LABEL: Record<(typeof supportedLanguages)[number], string> = {
+    en: 'Cancel',
+    uk: 'Скасувати',
+  };
+
+  it.each(supportedLanguages)(
+    'resolves the detail pane Cancel label in %s',
+    async (language) => {
+      const instance = createInstance();
+      await instance.init({
+        fallbackLng: 'en',
+        lng: language,
+        ns: namespaces,
+        resources,
+      });
+
+      expect(
+        translationKeys(resources[language].warehouse).includes(
+          'warehouses.detail.cancel',
+        ),
+      ).toBe(true);
+      expect(instance.t('warehouses.detail.cancel', { ns: 'warehouse' })).toBe(
+        CANCEL_LABEL[language],
+      );
+    },
+  );
+});
+
+// The copy the delivery-addresses design pass added to the `purchase-draft`
+// namespace: the destination field's label and caption (keyed by tense and by
+// Delivery Mode), the via-warehouse reading of an Address Drift, the by-line
+// drift warning, the recorded-ending chip, and the two titles the per-line
+// ending modal's information panels carry. Each is resolved through the real
+// resource assembly in **both** languages, because a key present in only one
+// of them is the commonest localization failure this repository has
+// (`adding-and-maintaining-web-localization.md` §"Common failures").
+describe('delivery-addresses purchase-draft copy', () => {
+  const ADDED_KEYS = [
+    'lineDelivery.destination.label.editable.via_warehouse',
+    'lineDelivery.destination.label.editable.direct_to_customer',
+    'lineDelivery.destination.label.frozen.via_warehouse',
+    'lineDelivery.destination.label.frozen.direct_to_customer',
+    'lineDelivery.destination.caption.editable.via_warehouse',
+    'lineDelivery.destination.caption.editable.direct_to_customer',
+    'lineDelivery.destination.caption.frozen.via_warehouse',
+    'lineDelivery.destination.caption.frozen.direct_to_customer',
+    'detail.driftAlert.addressRedirectedViaWarehouse',
+    'detail.driftAlert.addressRedirectedViaWarehouse_dated',
+    'linkRow.drift.addressRedirectedViaWarehouse',
+    'linkRow.drift.addressRedirectedViaWarehouse_dated',
+    'byLine.addressDrift',
+    'transitions.lineEnding.recorded.arrival',
+    'transitions.lineEnding.recorded.direct_delivery',
+    'transitions.lineEnding.endsOnceTitle',
+    'transitions.lineEnding.atomicityTitle',
+    'dialogs.addLink.refusal.addressDisagreementTitle',
+  ];
+
+  it.each(supportedLanguages)(
+    'resolves every added key in %s',
+    async (language) => {
+      const instance = createInstance();
+      await instance.init({
+        fallbackLng: 'en',
+        lng: language,
+        ns: namespaces,
+        resources,
+      });
+
+      for (const key of ADDED_KEYS) {
+        const value = instance.t(key, { ns: 'purchase-draft' });
+        expect(value, `${language}:purchase-draft:${key}`).not.toBe(key);
+        expect(
+          value.length,
+          `${language}:purchase-draft:${key}`,
+        ).toBeGreaterThan(0);
+      }
+    },
+  );
+
+  it('states the tense of the destination field, and its two English labels', async () => {
+    const instance = createInstance();
+    await instance.init({
+      fallbackLng: 'en',
+      lng: 'en',
+      ns: namespaces,
+      resources,
+    });
+
+    expect(
+      instance.t('lineDelivery.destination.label.editable.via_warehouse', {
+        ns: 'purchase-draft',
+      }),
+    ).toBe('Goes to');
+    expect(
+      instance.t('lineDelivery.destination.label.frozen.direct_to_customer', {
+        ns: 'purchase-draft',
+      }),
+    ).toBe('Went to');
+  });
+
+  // AC-18 — a via-warehouse line's reading of a moved Delivery Address is
+  // reassurance, and the copy has to actually say so rather than repeating the
+  // direct line's alarm under a different key.
+  it('reassures rather than alarms on a via-warehouse address drift', async () => {
+    const instance = createInstance();
+    await instance.init({
+      fallbackLng: 'en',
+      lng: 'en',
+      ns: namespaces,
+      resources,
+    });
+
+    expect(
+      instance.t('detail.driftAlert.addressRedirectedViaWarehouse', {
+        ns: 'purchase-draft',
+        customer: 'Nordwind Logistik GmbH',
+        line: 1,
+      }),
+    ).toContain('still come to your dock');
+  });
+});
+
+// --- delivery-addresses Customers copy (design review remediation) --------------------------------
+//
+// The keys the Customers destination gained when its search, its awaiting table and its two
+// deactivation confirmations were brought back to the approved frames. Each is resolved through the
+// real resource assembly in **both** supported languages, because a key added to one file only is
+// the commonest localization defect
+// (`adding-and-maintaining-web-localization.md` §"Add a translation key", step 6).
+describe('delivery-addresses customer copy (design review)', () => {
+  const customerInstance = async (
+    language: 'en' | 'uk',
+  ): Promise<ReturnType<typeof createInstance>> => {
+    const instance = createInstance();
+    await instance.init({
+      fallbackLng: 'en',
+      lng: language,
+      ns: namespaces,
+      resources,
+    });
+    return instance;
+  };
+
+  it('resolves every added key in en', async () => {
+    const instance = await customerInstance('en');
+
+    expect(instance.t('directory.search', { ns: 'customer' })).toBe(
+      'Search customers or addresses',
+    );
+    expect(instance.t('directory.toolbar', { ns: 'customer' })).toBe(
+      'Customer search and actions',
+    );
+    expect(
+      instance.t('detail.awaiting.itemMeta', {
+        ns: 'customer',
+        sku: 'WH-100420',
+        unit: 'pieces',
+      }),
+    ).toBe('WH-100420 · counted in pieces');
+    expect(
+      instance.t('dialogs.deactivate.staysTitle', { ns: 'customer' }),
+    ).toBe('What stays');
+    expect(
+      instance.t('dialogs.deactivate.awaitingDescription', {
+        ns: 'customer',
+        count: 1,
+      }),
+    ).toContain('1 unfulfilled order.');
+    expect(
+      instance.t('dialogs.deactivate.awaitingDescription', {
+        ns: 'customer',
+        count: 3,
+      }),
+    ).toContain('3 unfulfilled orders.');
+    expect(
+      instance.t('dialogs.deactivateAddress.staysTitle', { ns: 'customer' }),
+    ).toBe('What stays');
+    expect(
+      instance.t('dialogs.deactivateAddress.mainTitle', { ns: 'customer' }),
+    ).toBe('This is the main delivery address');
+  });
+
+  it('resolves every added key in uk', async () => {
+    const instance = await customerInstance('uk');
+
+    for (const key of [
+      'directory.search',
+      'directory.toolbar',
+      'dialogs.deactivate.staysTitle',
+      'dialogs.deactivate.awaitingTitle',
+      'dialogs.deactivateAddress.staysTitle',
+      'dialogs.deactivateAddress.mainTitle',
+    ]) {
+      expect(instance.exists(key, { ns: 'customer' })).toBe(true);
+      expect(instance.t(key, { ns: 'customer' })).not.toBe(key);
+    }
+
+    expect(
+      instance.t('detail.awaiting.itemMeta', {
+        ns: 'customer',
+        sku: 'WH-100420',
+        unit: 'шт',
+      }),
+    ).toContain('WH-100420');
+    expect(
+      instance.t('dialogs.deactivate.awaitingDescription', {
+        ns: 'customer',
+        count: 3,
+      }),
+    ).toContain('3');
+  });
+
+  // The search field's placeholder is a promise about what the field does, and
+  // `CustomerCatalogue` keeps it: the term is matched against the addresses as
+  // well as the name. Both languages have to name addresses for that promise
+  // to survive localization.
+  it('promises addresses in the search placeholder in both languages', async () => {
+    const en = await customerInstance('en');
+    const uk = await customerInstance('uk');
+
+    expect(en.t('directory.search', { ns: 'customer' })).toMatch(/addresses/iu);
+    expect(uk.t('directory.search', { ns: 'customer' })).toMatch(/адрес/iu);
+  });
 });

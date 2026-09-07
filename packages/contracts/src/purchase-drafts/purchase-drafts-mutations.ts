@@ -1,4 +1,5 @@
 import {
+  deliveryModeSchema,
   packagingTypeIdSchema,
   purchaseDraftStateSchema,
 } from 'purchase-drafts/purchase-drafts-projections';
@@ -32,7 +33,7 @@ export const purchaseDraftLineLinkUpdateSchema = z.strictObject({
 // pipes). Bounding the array bounds the work one request can buy.
 const maxDraftLines = 200;
 const maxLinksPerLine = 50;
-const maxAllocationsPerArrivalLine = 50;
+const maxAllocationsPerEndingLine = 50;
 
 // openapi.yaml `PurchaseDraftLineCreate` — one Item, quantity, optional Pre-receipt Requirement and
 // optional links (AC-10, AC-11, AC-12, AC-13).
@@ -49,16 +50,58 @@ export const purchaseDraftLineCreateSchema = z.strictObject({
 
 // openapi.yaml `PurchaseDraftLineUpdate` — every property optional; at least one must be present
 // (AC-10a, AC-12, AC-13). `null` on either half of the Pre-receipt Requirement clears it.
+//
+// **Changed by this feature:** `deliveryMode` and `customerDeliveryAddressId`. Links are managed
+// through their own sub-resource, not here, and no frozen column is submittable at all — this
+// object is strict, so `frozenDeliveryAddressText`, `frozenAccessNotes`, `frozenCustomerName` and
+// both projected destinations are refused rather than ignored (AC-17).
+//
+// The two destination properties are accepted **only** while the draft is in `draft`. After Ready
+// for Ordering they are unwritable by construction rather than by a check: the write path resolves
+// no frozen draft at all.
 export const purchaseDraftLineUpdateSchema = z
   .strictObject({
     itemId: z.string().uuid().optional(),
     orderedQuantity: z.number().int().min(1).optional(),
     packagingTypeId: packagingTypeIdSchema.nullable().optional(),
     valueAddingNote: z.string().min(1).nullable().optional(),
+    deliveryMode: deliveryModeSchema.optional(),
+    // An **active** Delivery Address of a Customer of this Warehouse, proven by the composite
+    // reference `(id, warehouse_id)` (AC-12). The Warehouse's own Delivery Address has no
+    // identifier this property could hold, so naming it here is structurally impossible; AC-14's
+    // refusal is about the member's submitted intent and is bound to this field, and is decided by
+    // the command rather than here.
+    customerDeliveryAddressId: z.string().uuid().nullable().optional(),
   })
   .refine((value) => Object.keys(value).length > 0, {
     message: 'At least one Purchase Draft Line field must be present',
-  });
+  })
+  // openapi.yaml `dependentRequired: { customerDeliveryAddressId: [deliveryMode] }` — "an address
+  // with no mode" is not a payload this endpoint has a meaning for. Bound to the field so the
+  // refusal names it.
+  .refine(
+    (value) =>
+      value.customerDeliveryAddressId === undefined ||
+      value.deliveryMode !== undefined,
+    {
+      path: ['customerDeliveryAddressId'],
+      message: 'A Customer Delivery Address states the Delivery Mode with it',
+    },
+  )
+  // `chk_purchase_draft_lines_delivery_mode_address` as a payload rule, refused at 400 rather than
+  // left to the database: a Via Warehouse line's destination *is* the Warehouse's own address and
+  // there is no identifier to keep, so setting `via_warehouse` clears it (AC-13). Stating
+  // `via_warehouse` with an address is a contradiction, not a clearance, and is refused; stating it
+  // with `null` or with the key absent is the clearance.
+  .refine(
+    (value) =>
+      value.deliveryMode !== 'via_warehouse' ||
+      (value.customerDeliveryAddressId ?? null) === null,
+    {
+      path: ['customerDeliveryAddressId'],
+      message: 'A Via Warehouse line names no Customer Delivery Address',
+    },
+  );
 
 // openapi.yaml `PurchaseDraftCreate` — state, attribution and time are not inputs (AC-10, AC-10a).
 export const purchaseDraftCreateSchema = z.strictObject({
@@ -78,30 +121,47 @@ export const purchaseDraftListQuerySchema = z.strictObject({
   state: purchaseDraftStateSchema.optional(),
 });
 
-// openapi.yaml `ArrivalAllocationCreate` — the Allocation is addressed through the link, not beside
-// it (AC-18).
-export const arrivalAllocationCreateSchema = z.strictObject({
+// `GET .../purchase-draft-lines` query parameters (openapi.yaml `listPurchaseDraftLines`) — the
+// by-line read narrowed by the Delivery Mode that places a line in one half or the other, and by
+// draft state. Omitting both returns every line of the acting Warehouse (AC-22).
+export const purchaseDraftLineListQuerySchema = z.strictObject({
+  deliveryMode: deliveryModeSchema.optional(),
+  state: purchaseDraftStateSchema.optional(),
+});
+
+// openapi.yaml `EndingAllocationCreate` — the Allocation is addressed through the link, not beside
+// it (AC-18), which is what makes "an Allocation names a Customer Order its line is actually linked
+// to" provable by the reference itself rather than re-checked in application code.
+export const endingAllocationCreateSchema = z.strictObject({
   purchaseDraftLineLinkId: z.string().uuid(),
   allocatedQuantity: z.number().int().min(1),
 });
 
-// openapi.yaml `ArrivalConfirmationLine` — whatever physically arrived, bounded neither above nor
-// below by `orderedQuantity` (AC-17, AC-17b).
-export const arrivalConfirmationLineSchema = z.strictObject({
-  purchaseDraftLineId: z.string().uuid(),
+// openapi.yaml `PurchaseDraftLineArrival` — what arrived at the dock on **one Via Warehouse line**
+// (AC-19). Bounded neither above nor below by `orderedQuantity`; `0` is a line where nothing
+// arrived, which is an ending rather than the absence of one.
+//
+// The ending kind is **not** a property here and that is the point: it is the route
+// (ADR 0002), so AC-20's refusal sits in front of the request rather than behind a submitted value.
+// Attribution, the time and the draft's move to Closed are likewise derived, never inputs.
+export const purchaseDraftLineArrivalSchema = z.strictObject({
   receivedQuantity: z.number().int().nonnegative(),
   allocations: z
-    .array(arrivalAllocationCreateSchema)
-    .max(maxAllocationsPerArrivalLine)
+    .array(endingAllocationCreateSchema)
+    .max(maxAllocationsPerEndingLine)
     .optional(),
 });
 
-// openapi.yaml `ArrivalConfirmation` — one confirmation covers every line of the draft (AC-17,
-// AC-17b). Attribution and the move to Closed are not inputs.
-export const arrivalConfirmationSchema = z.strictObject({
-  // The ceiling matches `maxDraftLines`: a confirmation covers every line of the draft, so it can
-  // never legitimately name more lines than a draft may hold.
-  lines: z.array(arrivalConfirmationLineSchema).min(1).max(maxDraftLines),
+// openapi.yaml `PurchaseDraftLineDirectDelivery` — what the customer received on **one Direct to
+// Customer line**. Identical to the arrival payload except the name of the quantity, which says what
+// actually happened: these goods never entered the building and were never in the Transit Zone to be
+// counted (AC-21).
+export const purchaseDraftLineDirectDeliverySchema = z.strictObject({
+  deliveredQuantity: z.number().int().nonnegative(),
+  allocations: z
+    .array(endingAllocationCreateSchema)
+    .max(maxAllocationsPerEndingLine)
+    .optional(),
 });
 
 // openapi.yaml `PurchaseDraftClosure` — why the supplier could not fulfil the order (AC-21).
@@ -126,11 +186,16 @@ export type PurchaseDraftRevise = z.infer<typeof purchaseDraftReviseSchema>;
 export type PurchaseDraftListQuery = z.infer<
   typeof purchaseDraftListQuerySchema
 >;
-export type ArrivalAllocationCreate = z.infer<
-  typeof arrivalAllocationCreateSchema
+export type PurchaseDraftLineListQuery = z.infer<
+  typeof purchaseDraftLineListQuerySchema
 >;
-export type ArrivalConfirmationLine = z.infer<
-  typeof arrivalConfirmationLineSchema
+export type EndingAllocationCreate = z.infer<
+  typeof endingAllocationCreateSchema
 >;
-export type ArrivalConfirmation = z.infer<typeof arrivalConfirmationSchema>;
+export type PurchaseDraftLineArrival = z.infer<
+  typeof purchaseDraftLineArrivalSchema
+>;
+export type PurchaseDraftLineDirectDelivery = z.infer<
+  typeof purchaseDraftLineDirectDeliverySchema
+>;
 export type PurchaseDraftClosure = z.infer<typeof purchaseDraftClosureSchema>;

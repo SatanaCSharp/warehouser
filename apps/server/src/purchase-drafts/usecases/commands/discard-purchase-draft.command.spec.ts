@@ -27,6 +27,7 @@ const currentUser: AccessCurrentUser = {
   roleId: uuid('4'),
   roleKind: 'custom',
   permissionId: 'PURCHASE_DRAFTS:DISCARD',
+  observedPermissionIds: [],
   archived: false,
 };
 

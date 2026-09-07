@@ -23,6 +23,7 @@ const currentUserOf = (warehouseId: string): AccessCurrentUser => ({
   roleId: '00000000-0000-4000-8000-000000000004',
   roleKind: 'custom',
   permissionId: 'ITEMS:CREATE',
+  observedPermissionIds: [],
   archived: false,
 });
 

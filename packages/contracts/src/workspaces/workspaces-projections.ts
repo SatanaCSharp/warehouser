@@ -86,6 +86,17 @@ export const warehouseSchema = z.strictObject({
   archivedAt: z.string().datetime().nullable(),
 });
 
+// AC-10 — the Warehouse's one Delivery Address and its access notes: two
+// columns on the Warehouse record rather than a row in the Customer address
+// relation, so there is no Main flag and no `deactivatedAt`. `addressText` is
+// `null` until recorded, which is exactly the state a freeze of a Via
+// Warehouse line is refused from (AC-16a).
+export const warehouseDeliveryAddressSchema = z.strictObject({
+  warehouseId: z.string().uuid(),
+  addressText: z.string().min(1).nullable(),
+  accessNotes: z.string().min(1).nullable(),
+});
+
 export const assignableWarehouseRoleSchema = z.strictObject({
   id: z.string().uuid(),
   name: z.string().min(1).max(100),
@@ -115,6 +126,9 @@ export type WorkspaceOwnerTransferResult = z.infer<
   typeof workspaceOwnerTransferResultSchema
 >;
 export type Warehouse = z.infer<typeof warehouseSchema>;
+export type WarehouseDeliveryAddress = z.infer<
+  typeof warehouseDeliveryAddressSchema
+>;
 export type AssignableWarehouseRole = z.infer<
   typeof assignableWarehouseRoleSchema
 >;

@@ -2,12 +2,17 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { DriftSignal } from 'modules/purchase-draft/components/DriftSignal';
+import { PurchaseDraftLinkIdentity } from 'modules/purchase-draft/components/PurchaseDraftLinkIdentity';
 import { useLinkDriftChips } from 'modules/purchase-draft/hooks/projections/useLinkDriftChips';
 import { Conditional } from 'shared/components/Conditional';
 import { FormTextField } from 'shared/components/FormTextField';
+import { ROW_ENTER } from 'shared/constants/motion';
 import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
 
-import type { PurchaseDraftLineLink } from '@warehouser/contracts/purchase-drafts';
+import type {
+  DeliveryMode,
+  PurchaseDraftLineLink,
+} from '@warehouser/contracts/purchase-drafts';
 import type { ChangeEvent, ReactElement, ReactNode } from 'react';
 
 /**
@@ -18,6 +23,13 @@ import type { ChangeEvent, ReactElement, ReactNode } from 'react';
  * assignment is a form value the running total reads as it changes.
  */
 export type PurchaseDraftLinkRowField = {
+  /**
+   * The line's lock strip, when the line refuses writes. The reason is stated
+   * once above these rows rather than repeated into every one of their captions
+   * (design-handoff.md §Accessibility), so the field points at it instead of
+   * restating it.
+   */
+  'aria-describedby'?: string;
   commitOn: 'blur' | 'change';
   description?: string;
   isDisabled: boolean;
@@ -27,6 +39,12 @@ export type PurchaseDraftLinkRowField = {
 };
 
 export type PurchaseDraftLinkRowProps = {
+  /**
+   * How the line this link hangs on travels. A moved Delivery Address reads as
+   * an alarm on a direct line and as reassurance on a via-warehouse one, and
+   * the link alone cannot tell the two apart (AC-18).
+   */
+  deliveryMode: DeliveryMode;
   field: PurchaseDraftLinkRowField;
   /**
    * Whether the draft this link belongs to has been frozen, which decides
@@ -81,6 +99,7 @@ const DEMAND_STATES: readonly {
  * confirmation is recorded rather than when the member composed it.
  */
 export const PurchaseDraftLinkRow = ({
+  deliveryMode,
   field,
   isFrozen,
   link,
@@ -151,19 +170,22 @@ export const PurchaseDraftLinkRow = ({
   // 96px (`w-24`) — so the customer name wraps into the space that frees up
   // rather than the unlink action moving.
   return (
-    <li className="flex flex-wrap items-center gap-3 rounded-lg bg-surface-secondary p-3">
+    <li
+      className={`flex flex-wrap items-center gap-3 rounded-lg bg-surface-secondary p-3 ${ROW_ENTER}`}
+    >
       <div className="min-w-0 flex-1">
-        <p className="break-words font-medium">{link.customerName}</p>
+        <PurchaseDraftLinkIdentity link={link} />
         <p className="text-sm text-muted">{demand[demandState]}</p>
         <Conditional when={link.driftSignals.length > 0}>
           <span className="mt-1 flex flex-wrap gap-2">
-            {driftChips(link).map((label) => (
+            {driftChips(link, deliveryMode).map((label) => (
               <DriftSignal key={label} label={label} />
             ))}
           </span>
         </Conditional>
       </div>
       <FormTextField
+        aria-describedby={field['aria-describedby']}
         className="w-24 shrink-0 md:w-32"
         defaultValue={field.value}
         description={field.description}

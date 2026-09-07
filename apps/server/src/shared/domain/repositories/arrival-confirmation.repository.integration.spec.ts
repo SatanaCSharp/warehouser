@@ -1,16 +1,15 @@
 import { randomUUID } from 'node:crypto';
 
-// T15 — `ArrivalConfirmationRepository` does not exist yet. data-model.md "Repository boundaries"
-// names it explicitly, alongside `PurchaseDraftFreezeRepository` and `DemandAllocationRepository`.
-// This is the RED for the Purchase Draft half of Arrival Confirmation (sad.md §6.9/§8): reading the
-// draft row and then its lines in the ascending order the fixed lock order names ("the draft row,
-// then its lines, then the Customer Orders it touches in ascending identifier order", data-model.md
-// "Concurrency, locks and transactions" — no explicit row lock is taken here, despite the method
-// name) — and writing every line's received quantity together with
-// the guarded move to Closed, so a second confirmation of one draft affects zero rows exactly as
-// `PurchaseDraftFreezeRepository.freeze`/`.close` do for their own transitions (T13's proven
-// idiom). The genuinely concurrent race reuses the two-`QueryRunner`, `pg_stat_activity`-poll
-// technique `purchase-draft-freeze.repository.integration.spec.ts` (T13) established.
+// R1 (review-2026-09-04 finding 39) — repointed from `lockDraftForArrival`/`confirmArrival`, the
+// whole-draft methods T17 withdrew, onto `lockDraftLineForEnding`/`recordLineEnding`, the per-line
+// write path those describes replaced without ever gaining their own repository-level integration
+// coverage (ADR 0002, sad.md §6.9/§6.10/§8). Reading the draft header and then the one named line
+// within it, in the composite tuple the fixed lock order and `uq_purchase_draft_lines_id_draft_warehouse`
+// both name ("the draft row, then its lines, then the Customer Orders it touches in ascending
+// identifier order", data-model.md "Concurrency, locks and transactions") — and writing the line's
+// ending together with the draft's guarded closure, so a second ending on one line, or the last line
+// of a draft, resolve on the same guarded-write terms `PurchaseDraftFreezeRepository.freeze`/`.close`
+// already establish (T13's proven idiom).
 import dataSource from 'shared/database/data-source';
 import { DbTransactionService } from 'shared/database/db-transaction.service';
 import { DbTransactionContext } from 'shared/database/db-transaction-context.service';
@@ -22,59 +21,23 @@ import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-l
 import { UserEntity } from 'shared/domain/entities/user.entity';
 import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
 import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
-// The shape this RED step expects the implementer to expose (tasks/arrival-confirmation.md "What";
-// data-model.md "purchase_draft_lines.received_quantity", "purchase_drafts.arrival_confirmed_*").
-import { ArrivalConfirmationRepository } from 'shared/domain/repositories/arrival-confirmation.repository';
+import {
+  ArrivalConfirmationRepository,
+  type LockPurchaseDraftLineForEndingResult,
+  type RecordLineEndingInput,
+  type RecordLineEndingResult,
+} from 'shared/domain/repositories/arrival-confirmation.repository';
 import {
   buildWarehouse,
   buildWorkspace,
 } from 'test/factories/entity-factories';
+import { PostgresQueryRunner } from 'typeorm/driver/postgres/PostgresQueryRunner';
 
 const now = new Date('2026-08-26T10:00:00.000Z');
 const later = new Date('2026-08-26T12:00:00.000Z');
+const evenLater = new Date('2026-08-26T13:00:00.000Z');
 
-interface ReceivedQuantityInput {
-  readonly purchaseDraftLineId: string;
-  readonly receivedQuantity: number;
-}
-
-interface ConfirmArrivalInput {
-  readonly purchaseDraftId: string;
-  readonly warehouseId: string;
-  readonly receivedQuantities: readonly ReceivedQuantityInput[];
-  readonly arrivalConfirmedByUserId: string;
-  readonly arrivalConfirmedAt: Date;
-}
-
-interface LockedPurchaseDraftForArrival {
-  readonly id: string;
-  readonly warehouseId: string;
-  readonly state: string;
-}
-
-// AC-15/spec.md §6.1 — the identifier and nothing else. The lines are read because the fixed lock
-// order names them (sad.md §8) and because the caller needs to know which lines the confirmation
-// may write, not to read a frozen field off them.
-interface LockedPurchaseDraftLineForArrival {
-  readonly id: string;
-}
-
-interface LockPurchaseDraftForArrivalResult {
-  readonly draft: LockedPurchaseDraftForArrival | null;
-  readonly lines: readonly LockedPurchaseDraftLineForArrival[];
-}
-
-interface ArrivalConfirmationRepositoryContract {
-  lockDraftForArrival(
-    purchaseDraftId: string,
-    warehouseId: string,
-  ): Promise<LockPurchaseDraftForArrivalResult>;
-  confirmArrival(input: ConfirmArrivalInput): Promise<boolean>;
-}
-
-const repository = new ArrivalConfirmationRepository(
-  dataSource,
-) as unknown as ArrivalConfirmationRepositoryContract;
+const repository = new ArrivalConfirmationRepository(dataSource);
 
 const context = new DbTransactionContext(dataSource);
 const transactions = new DbTransactionService(dataSource, context);
@@ -146,8 +109,8 @@ const seedDraft = async (
     createdByUserId: seeded.userId,
     readiedByUserId: readied ? seeded.userId : null,
     readiedAt: readied ? now : null,
-    arrivalConfirmedByUserId: state === 'closed' ? seeded.userId : null,
-    arrivalConfirmedAt: state === 'closed' ? now : null,
+    arrivalConfirmedByUserId: null,
+    arrivalConfirmedAt: null,
     closedByUserId: state === 'closed' ? seeded.userId : null,
     closedAt: state === 'closed' ? now : null,
     closureReason: null,
@@ -159,10 +122,18 @@ const seedDraft = async (
   return id;
 };
 
+interface SeedLineOverrides {
+  readonly endingKind?: PurchaseDraftLineEntity['endingKind'];
+  readonly endingQuantity?: number | null;
+  readonly endingRecordedByUserId?: string | null;
+  readonly endingRecordedAt?: Date | null;
+}
+
 const seedLine = async (
   seeded: Seeded,
   draftId: string,
   orderedQuantity = 100,
+  overrides: SeedLineOverrides = {},
 ): Promise<string> => {
   const id = randomUUID();
   await dataSource.manager.getRepository(PurchaseDraftLineEntity).insert({
@@ -173,7 +144,11 @@ const seedLine = async (
     orderedQuantity,
     packagingTypeId: null,
     valueAddingNote: null,
-    receivedQuantity: null,
+    deliveryMode: 'via_warehouse',
+    endingKind: overrides.endingKind ?? null,
+    endingQuantity: overrides.endingQuantity ?? null,
+    endingRecordedByUserId: overrides.endingRecordedByUserId ?? null,
+    endingRecordedAt: overrides.endingRecordedAt ?? null,
     createdAt: now,
     updatedAt: now,
   });
@@ -186,17 +161,51 @@ const readDraft = (id: string): Promise<PurchaseDraftEntity | null> =>
 const readLine = (id: string): Promise<PurchaseDraftLineEntity | null> =>
   dataSource.manager.getRepository(PurchaseDraftLineEntity).findOneBy({ id });
 
-const lockInTransaction = (
+const lockLineInTransaction = (
   purchaseDraftId: string,
+  purchaseDraftLineId: string,
   warehouseId: string,
-): Promise<LockPurchaseDraftForArrivalResult> =>
+): Promise<LockPurchaseDraftLineForEndingResult> =>
   transactions.executeInTransaction({}, () =>
-    repository.lockDraftForArrival(purchaseDraftId, warehouseId),
+    repository.lockDraftLineForEnding(
+      purchaseDraftId,
+      purchaseDraftLineId,
+      warehouseId,
+    ),
   );
 
-const confirmInTransaction = (input: ConfirmArrivalInput): Promise<boolean> =>
-  transactions.executeInTransaction({}, () => repository.confirmArrival(input));
+const recordEndingInTransaction = (
+  input: RecordLineEndingInput,
+): Promise<RecordLineEndingResult> =>
+  transactions.executeInTransaction({}, () =>
+    repository.recordLineEnding(input),
+  );
 
+// Captures the SQL PostgreSQL was actually asked to run, the same idiom
+// `CustomerAddressBookRepository`'s integration spec uses for `lockDeliveryAddresses`. PGlite has a
+// single backend, so a genuine two-connection race either self-deadlocks or lets both writers win
+// (jest.pglite.config.cjs, data-model.md § "Concurrency, locks and transactions": "PGlite cannot
+// prove any of this … the lock order and the conditional-update races are asserted by *shape*").
+const captureStatements = async <T>(
+  operation: () => Promise<T>,
+): Promise<{ result: T; statements: string[] }> => {
+  const spy = jest.spyOn(PostgresQueryRunner.prototype, 'query');
+  const before = spy.mock.calls.length;
+  const result = await operation();
+  const statements = spy.mock.calls
+    .slice(before)
+    .map((call) => String(call[0]))
+    .filter(
+      (sql) =>
+        !/^(?:START TRANSACTION|SET TRANSACTION|COMMIT|ROLLBACK|BEGIN)/u.test(
+          sql,
+        ),
+    );
+  spy.mockRestore();
+  return { result, statements };
+};
+
+// eslint-disable-next-line max-lines-per-function -- a repository integration suite covering both write methods across their success and refusal terms is inherently long
 describe('ArrivalConfirmationRepository', () => {
   beforeAll(async () => {
     await dataSource.initialize();
@@ -212,117 +221,221 @@ describe('ArrivalConfirmationRepository', () => {
     await dataSource.destroy();
   });
 
-  describe('lockDraftForArrival', () => {
-    it('reads the draft header and every one of its lines, scoped to the Warehouse', async () => {
+  describe('lockDraftLineForEnding', () => {
+    it('reads the draft header and the one named line, scoped to the Warehouse', async () => {
       const seeded = await seedWarehouse();
       const draftId = await seedDraft(seeded, 'ready_for_ordering');
-      const lineOneId = await seedLine(seeded, draftId, 150);
-      const lineTwoId = await seedLine(seeded, draftId, 40);
+      const lineId = await seedLine(seeded, draftId, 150);
 
-      const locked = await lockInTransaction(draftId, seeded.warehouseId);
+      const locked = await lockLineInTransaction(
+        draftId,
+        lineId,
+        seeded.warehouseId,
+      );
 
       expect(locked.draft).toMatchObject({
         id: draftId,
         warehouseId: seeded.warehouseId,
         state: 'ready_for_ordering',
       });
-      expect(locked.lines.map((line) => line.id).sort()).toEqual(
-        [lineOneId, lineTwoId].sort(),
-      );
+      expect(locked.line).toMatchObject({
+        id: lineId,
+        deliveryMode: 'via_warehouse',
+        endingKind: null,
+        endingRecordedByUserId: null,
+        endingRecordedAt: null,
+      });
     });
 
-    // AC-03/AC-11 — a draft of another Warehouse, or one that does not exist, resolves to nothing
-    // on the same non-enumerating terms every other locking read in this feature already follows.
-    it('resolves nothing for a draft of another Warehouse', async () => {
+    // AC-20a — the pre-read is what lets a caller name when and by whom an existing ending was
+    // recorded, which only a read of the four attribution columns together can answer.
+    it('reads the existing attribution of a line whose ending is already recorded', async () => {
+      const seeded = await seedWarehouse();
+      const draftId = await seedDraft(seeded, 'ready_for_ordering');
+      const lineId = await seedLine(seeded, draftId, 100, {
+        endingKind: 'arrival',
+        endingQuantity: 90,
+        endingRecordedByUserId: seeded.userId,
+        endingRecordedAt: now,
+      });
+
+      const locked = await lockLineInTransaction(
+        draftId,
+        lineId,
+        seeded.warehouseId,
+      );
+
+      expect(locked.line).toMatchObject({
+        endingKind: 'arrival',
+        endingRecordedByUserId: seeded.userId,
+        endingRecordedAt: now,
+      });
+    });
+
+    // AC-15/spec.md §6.1 "Allocation as a back door onto a frozen record" — a line of another draft
+    // or another Warehouse resolves to `null` exactly as a missing one does, on the composite tuple
+    // rather than by identifier alone, so the caller's single refusal cannot disclose that it exists
+    // elsewhere.
+    it('resolves no line for a draft of another Warehouse', async () => {
       const seeded = await seedWarehouse();
       const elsewhere = await seedWarehouse();
       const foreignDraftId = await seedDraft(elsewhere, 'ready_for_ordering');
-      await seedLine(elsewhere, foreignDraftId);
+      const foreignLineId = await seedLine(elsewhere, foreignDraftId);
 
-      const locked = await lockInTransaction(
+      const locked = await lockLineInTransaction(
         foreignDraftId,
+        foreignLineId,
         seeded.warehouseId,
       );
 
       expect(locked.draft).toBeNull();
-      expect(locked.lines).toEqual([]);
+      expect(locked.line).toBeNull();
+    });
+
+    it('resolves no line that belongs to a different draft of the same Warehouse', async () => {
+      const seeded = await seedWarehouse();
+      const draftId = await seedDraft(seeded, 'ready_for_ordering');
+      const otherDraftId = await seedDraft(seeded, 'ready_for_ordering');
+      const otherDraftLineId = await seedLine(seeded, otherDraftId);
+
+      const locked = await lockLineInTransaction(
+        draftId,
+        otherDraftLineId,
+        seeded.warehouseId,
+      );
+
+      expect(locked.draft).toMatchObject({ id: draftId });
+      expect(locked.line).toBeNull();
+    });
+
+    // T18/sad.md §6.10 step 2 — "resolves the draft in `ready_for_ordering` under lock, then the
+    // named line". Two members ending the last two lines of one draft concurrently would otherwise
+    // each evaluate `recordLineEnding`'s `NOT EXISTS` closure predicate against a snapshot in which
+    // the other line is still un-ended, so neither closure statement affects the draft row — the
+    // draft never reaches Closed even though every line now carries an ending. Taking `FOR UPDATE`
+    // on the `purchase_drafts` row here, before the line is resolved, is what serialises the two
+    // closures. PGlite is single-backend (see `captureStatements` above), so the proof is statement
+    // shape: the first statement this method issues names `purchase_drafts` and carries `FOR
+    // UPDATE`.
+    it('takes the row lock the draft closure is decided under, before resolving the line', async () => {
+      const seeded = await seedWarehouse();
+      const draftId = await seedDraft(seeded, 'ready_for_ordering');
+      const lineId = await seedLine(seeded, draftId, 100);
+
+      const { statements } = await captureStatements(() =>
+        lockLineInTransaction(draftId, lineId, seeded.warehouseId),
+      );
+
+      expect(statements[0]).toMatch(/FOR UPDATE/u);
+      expect(statements[0]).toMatch(/"purchase_drafts"/u);
     });
   });
 
-  describe('confirmArrival', () => {
-    // AC-17/AC-17b — every line's received quantity and the move to Closed land as one persistence
-    // operation; `received_quantity` is unbounded above and below by `ordered_quantity`.
-    it('writes every received quantity and moves a Ready for Ordering draft to Closed together', async () => {
+  describe('recordLineEnding', () => {
+    // AC-19 — one line's ending is written with its acting member and the time, and the draft stays
+    // in Ready for Ordering while another line of it is still without one.
+    it('writes the ending and leaves the draft in Ready for Ordering while another line has none', async () => {
       const seeded = await seedWarehouse();
       const draftId = await seedDraft(seeded, 'ready_for_ordering');
-      const shortLineId = await seedLine(seeded, draftId, 150);
-      const overLineId = await seedLine(seeded, draftId, 40);
+      const endingLineId = await seedLine(seeded, draftId, 150);
+      await seedLine(seeded, draftId, 40);
 
-      const confirmed = await confirmInTransaction({
+      const written = await recordEndingInTransaction({
         purchaseDraftId: draftId,
+        purchaseDraftLineId: endingLineId,
         warehouseId: seeded.warehouseId,
-        receivedQuantities: [
-          { purchaseDraftLineId: shortLineId, receivedQuantity: 100 },
-          { purchaseDraftLineId: overLineId, receivedQuantity: 55 },
-        ],
-        arrivalConfirmedByUserId: seeded.userId,
-        arrivalConfirmedAt: later,
+        endingQuantity: 140,
+        endingKind: 'arrival',
+        endingRecordedByUserId: seeded.userId,
+        endingRecordedAt: later,
       });
 
-      expect(confirmed).toBe(true);
-      expect(await readLine(shortLineId)).toMatchObject({
-        receivedQuantity: 100,
-      });
-      expect(await readLine(overLineId)).toMatchObject({
-        receivedQuantity: 55,
+      expect(written).toEqual({ recorded: true, closed: false });
+      expect(await readLine(endingLineId)).toMatchObject({
+        endingQuantity: 140,
+        endingKind: 'arrival',
+        endingRecordedByUserId: seeded.userId,
+        endingRecordedAt: later,
       });
       expect(await readDraft(draftId)).toMatchObject({
-        state: 'closed',
-        arrivalConfirmedByUserId: seeded.userId,
-        arrivalConfirmedAt: later,
-      });
-    });
-
-    // AC-15/spec.md §6.1 — the guarded header write is bound to the acting Warehouse as well as to
-    // the state, matching the line writes. The service's pre-read already resolves the draft within
-    // the Warehouse, so this is the second bound rather than the first; asserting it here is what
-    // stops the header write being the one single-bound statement left on this path.
-    it('moves no draft of another Warehouse to Closed', async () => {
-      const seeded = await seedWarehouse();
-      const elsewhere = await seedWarehouse();
-      const foreignDraftId = await seedDraft(elsewhere, 'ready_for_ordering');
-      const foreignLineId = await seedLine(elsewhere, foreignDraftId, 100);
-
-      const confirmed = await confirmInTransaction({
-        purchaseDraftId: foreignDraftId,
-        warehouseId: seeded.warehouseId,
-        receivedQuantities: [
-          { purchaseDraftLineId: foreignLineId, receivedQuantity: 100 },
-        ],
-        arrivalConfirmedByUserId: seeded.userId,
-        arrivalConfirmedAt: later,
-      });
-
-      expect(confirmed).toBe(false);
-      expect(await readDraft(foreignDraftId)).toMatchObject({
         state: 'ready_for_ordering',
-        arrivalConfirmedByUserId: null,
-      });
-      expect(await readLine(foreignLineId)).toMatchObject({
-        receivedQuantity: null,
       });
     });
 
-    // AC-15/spec.md §6.1 — the second, independent bound on which rows a confirmation may reach.
-    // The service checks the submitted identifiers against the lines it read; this asserts the
-    // repository refuses to widen that on its own, writing each received quantity through the
-    // composite tuple `uq_purchase_draft_lines_id_draft_warehouse` indexes rather than by
-    // identifier alone. Exercised here because the service guard short-circuits it in the
-    // end-to-end path, so nothing else can observe this predicate.
-    it('writes no received quantity to a line of another draft or another Warehouse', async () => {
+    // AC-19/sad.md §6.10 step 5 — the ending of the draft's **last** unrecorded line moves it to
+    // Closed in the same transaction, predicated on `NOT EXISTS (… ending_recorded_at IS NULL)`
+    // rather than on a separate read-then-write.
+    it('closes the draft in the same write as the ending of its last unrecorded line', async () => {
       const seeded = await seedWarehouse();
       const draftId = await seedDraft(seeded, 'ready_for_ordering');
-      const ownLineId = await seedLine(seeded, draftId, 100);
+      const firstLineId = await seedLine(seeded, draftId, 100);
+      const lastLineId = await seedLine(seeded, draftId, 40);
+
+      await recordEndingInTransaction({
+        purchaseDraftId: draftId,
+        purchaseDraftLineId: firstLineId,
+        warehouseId: seeded.warehouseId,
+        endingQuantity: 100,
+        endingKind: 'arrival',
+        endingRecordedByUserId: seeded.userId,
+        endingRecordedAt: later,
+      });
+
+      const written = await recordEndingInTransaction({
+        purchaseDraftId: draftId,
+        purchaseDraftLineId: lastLineId,
+        warehouseId: seeded.warehouseId,
+        endingQuantity: 40,
+        endingKind: 'arrival',
+        endingRecordedByUserId: seeded.userId,
+        endingRecordedAt: evenLater,
+      });
+
+      expect(written).toEqual({ recorded: true, closed: true });
+      expect(await readDraft(draftId)).toMatchObject({
+        state: 'closed',
+        closedByUserId: seeded.userId,
+        closedAt: evenLater,
+        closureReason: null,
+      });
+    });
+
+    // AC-20a — the write is predicated on `ending_recorded_at IS NULL`, so a second ending on an
+    // already-ended line affects zero rows and neither the line nor the draft changes.
+    it('writes nothing against a line whose ending is already recorded', async () => {
+      const seeded = await seedWarehouse();
+      const draftId = await seedDraft(seeded, 'ready_for_ordering');
+      const lineId = await seedLine(seeded, draftId, 100, {
+        endingKind: 'arrival',
+        endingQuantity: 90,
+        endingRecordedByUserId: seeded.userId,
+        endingRecordedAt: now,
+      });
+      const before = await readLine(lineId);
+
+      const written = await recordEndingInTransaction({
+        purchaseDraftId: draftId,
+        purchaseDraftLineId: lineId,
+        warehouseId: seeded.warehouseId,
+        endingQuantity: 100,
+        endingKind: 'arrival',
+        endingRecordedByUserId: seeded.userId,
+        endingRecordedAt: later,
+      });
+
+      expect(written).toEqual({ recorded: false, closed: false });
+      expect(await readLine(lineId)).toEqual(before);
+      expect(await readDraft(draftId)).toMatchObject({
+        state: 'ready_for_ordering',
+      });
+    });
+
+    // AC-15/spec.md §6.1 — the second, independent bound on which row an ending may reach: the
+    // composite tuple `uq_purchase_draft_lines_id_draft_warehouse`, never the identifier alone.
+    it('writes no ending to a line of another draft or another Warehouse', async () => {
+      const seeded = await seedWarehouse();
+      const draftId = await seedDraft(seeded, 'ready_for_ordering');
+      await seedLine(seeded, draftId, 100);
 
       const otherDraftId = await seedDraft(seeded, 'ready_for_ordering');
       const otherDraftLineId = await seedLine(seeded, otherDraftId, 100);
@@ -331,59 +444,62 @@ describe('ArrivalConfirmationRepository', () => {
       const foreignDraftId = await seedDraft(elsewhere, 'ready_for_ordering');
       const foreignLineId = await seedLine(elsewhere, foreignDraftId, 100);
 
-      const confirmed = await confirmInTransaction({
+      const written = await recordEndingInTransaction({
         purchaseDraftId: draftId,
+        purchaseDraftLineId: otherDraftLineId,
         warehouseId: seeded.warehouseId,
-        receivedQuantities: [
-          { purchaseDraftLineId: ownLineId, receivedQuantity: 100 },
-          { purchaseDraftLineId: otherDraftLineId, receivedQuantity: 999 },
-          { purchaseDraftLineId: foreignLineId, receivedQuantity: 999 },
-        ],
-        arrivalConfirmedByUserId: seeded.userId,
-        arrivalConfirmedAt: later,
+        endingQuantity: 999,
+        endingKind: 'arrival',
+        endingRecordedByUserId: seeded.userId,
+        endingRecordedAt: later,
       });
 
-      expect(confirmed).toBe(true);
-      expect(await readLine(ownLineId)).toMatchObject({
-        receivedQuantity: 100,
-      });
-      // Neither foreign line was reached, in either direction.
+      expect(written).toEqual({ recorded: false, closed: false });
       expect(await readLine(otherDraftLineId)).toMatchObject({
-        receivedQuantity: null,
+        endingRecordedAt: null,
       });
+
+      const writtenForeign = await recordEndingInTransaction({
+        purchaseDraftId: foreignDraftId,
+        purchaseDraftLineId: foreignLineId,
+        warehouseId: seeded.warehouseId,
+        endingQuantity: 999,
+        endingKind: 'arrival',
+        endingRecordedByUserId: seeded.userId,
+        endingRecordedAt: later,
+      });
+
+      expect(writtenForeign).toEqual({ recorded: false, closed: false });
       expect(await readLine(foreignLineId)).toMatchObject({
-        receivedQuantity: null,
+        endingRecordedAt: null,
       });
     });
 
-    // AC-17b/sad.md §8 — confirming an arrival closes a draft once and for all: a draft that no
-    // longer resolves in Ready for Ordering (already Closed by an arrival, closed with a reason, or
-    // discarded) affects zero rows and writes no received quantity at all.
+    // sad.md §6.10 step 5 — the closure is guarded on `state = 'ready_for_ordering'` too, so a draft
+    // that no longer resolves there (already Closed with a reason, or discarded) never closes a
+    // second time even when every line of it now carries an ending.
     describe.each<[PurchaseDraftEntity['state'], string]>([
       ['closed', 'already Closed'],
       ['discarded', 'already discarded'],
     ])('against a draft %s (%s)', (state) => {
-      it('affects zero rows and writes no received quantity', async () => {
+      it('writes the ending but does not close the draft again', async () => {
         const seeded = await seedWarehouse();
         const draftId = await seedDraft(seeded, state);
-        const lineId = await seedLine(seeded, draftId);
+        const lineId = await seedLine(seeded, draftId, 100);
         const before = await readDraft(draftId);
 
-        const confirmed = await confirmInTransaction({
+        const written = await recordEndingInTransaction({
           purchaseDraftId: draftId,
+          purchaseDraftLineId: lineId,
           warehouseId: seeded.warehouseId,
-          receivedQuantities: [
-            { purchaseDraftLineId: lineId, receivedQuantity: 10 },
-          ],
-          arrivalConfirmedByUserId: seeded.userId,
-          arrivalConfirmedAt: later,
+          endingQuantity: 100,
+          endingKind: 'arrival',
+          endingRecordedByUserId: seeded.userId,
+          endingRecordedAt: later,
         });
 
-        expect(confirmed).toBe(false);
+        expect(written).toEqual({ recorded: true, closed: false });
         expect(await readDraft(draftId)).toEqual(before);
-        expect(await readLine(lineId)).toMatchObject({
-          receivedQuantity: null,
-        });
       });
     });
   });

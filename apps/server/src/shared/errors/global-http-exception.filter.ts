@@ -458,6 +458,90 @@ export const applicationErrors: Readonly<
         'The confirmation was not recorded. Correct the assignments it will not accept.',
     },
   },
+  // `delivery-addresses/contracts/api-sync-report.md` §2 fixes the status of each code below;
+  // the messages stay neutral about which record was addressed, as every mapping here does.
+  [ErrorCode.CUSTOMERS_INVALID_INPUT]: {
+    status: 400,
+    envelope: {
+      code: ErrorCode.CUSTOMERS_INVALID_INPUT,
+      message: 'The customer details submitted cannot be accepted as given.',
+    },
+  },
+  [ErrorCode.CUSTOMERS_NAME_TAKEN]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.CUSTOMERS_NAME_TAKEN,
+      message: 'Another customer of this warehouse already has that name.',
+    },
+  },
+  [ErrorCode.CUSTOMERS_TARGET_UNAVAILABLE]: {
+    status: 404,
+    envelope: {
+      code: ErrorCode.CUSTOMERS_TARGET_UNAVAILABLE,
+      message: 'That customer or delivery address is no longer available.',
+    },
+  },
+  [ErrorCode.CUSTOMERS_LAST_ACTIVE_DELIVERY_ADDRESS]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.CUSTOMERS_LAST_ACTIVE_DELIVERY_ADDRESS,
+      message: 'A customer keeps at least one active delivery address.',
+    },
+  },
+  [ErrorCode.CUSTOMERS_INVALID_DELIVERY_ADDRESS]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.CUSTOMERS_INVALID_DELIVERY_ADDRESS,
+      message: 'That delivery address cannot take the change requested.',
+    },
+  },
+  [ErrorCode.CUSTOMER_ORDERS_INVALID_DELIVERY_ADDRESS]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.CUSTOMER_ORDERS_INVALID_DELIVERY_ADDRESS,
+      message:
+        'An order goes to one of the delivery addresses of the customer it names.',
+    },
+  },
+  [ErrorCode.PURCHASE_DRAFTS_INVALID_DELIVERY_DESTINATION]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.PURCHASE_DRAFTS_INVALID_DELIVERY_DESTINATION,
+      message:
+        'Goods shipped to your own site travel via the warehouse, so a direct line names a customer address.',
+    },
+  },
+  [ErrorCode.PURCHASE_DRAFTS_DELIVERY_ADDRESS_DISAGREEMENT]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.PURCHASE_DRAFTS_DELIVERY_ADDRESS_DISAGREEMENT,
+      message:
+        'A direct line and the orders it covers must be going to the same delivery address.',
+    },
+  },
+  [ErrorCode.PURCHASE_DRAFTS_WAREHOUSE_DELIVERY_ADDRESS_REQUIRED]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.PURCHASE_DRAFTS_WAREHOUSE_DELIVERY_ADDRESS_REQUIRED,
+      message:
+        'A line coming to the warehouse cannot be frozen before the warehouse has an address to be delivered to.',
+    },
+  },
+  [ErrorCode.PURCHASE_DRAFTS_ENDING_ALREADY_RECORDED]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.PURCHASE_DRAFTS_ENDING_ALREADY_RECORDED,
+      message: 'That line already has an ending recorded against it.',
+    },
+  },
+  [ErrorCode.PURCHASE_DRAFTS_ENDING_MODE_MISMATCH]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.PURCHASE_DRAFTS_ENDING_MODE_MISMATCH,
+      message:
+        'That ending does not match the way this line’s goods travelled.',
+    },
+  },
 };
 
 export const systemErrors: Readonly<

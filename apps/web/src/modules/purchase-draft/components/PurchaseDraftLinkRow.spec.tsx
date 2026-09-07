@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { PurchaseDraftLinkRow } from 'modules/purchase-draft/components/PurchaseDraftLinkRow';
 
-import type { PurchaseDraftLineLink } from '@warehouser/contracts/purchase-drafts';
+import type { PurchaseDraftLineLinkIdentified } from '@warehouser/contracts/purchase-drafts';
 import type { PurchaseDraftLinkRowField } from 'modules/purchase-draft/components/PurchaseDraftLinkRow';
 
 // T20 DoD: "A test proves link quantities are never adjusted client-side and
@@ -17,10 +17,11 @@ import type { PurchaseDraftLinkRowField } from 'modules/purchase-draft/component
 // (`PurchaseDraftLineEditor.spec.tsx`), not here.
 
 const link = (
-  overrides: Partial<PurchaseDraftLineLink> = {},
-): PurchaseDraftLineLink => ({
+  overrides: Partial<PurchaseDraftLineLinkIdentified> = {},
+): PurchaseDraftLineLinkIdentified => ({
   id: '00000000-0000-4000-8000-000000000301',
   customerOrderId: '00000000-0000-4000-8000-000000000401',
+  customer: null,
   customerName: 'Nordwind Logistik GmbH',
   statedQuantity: 500,
   snapshot: null,
@@ -30,6 +31,7 @@ const link = (
     state: 'unfulfilled',
     outstandingQuantity: 500,
     lastChangedAt: null,
+    deliveryAddress: null,
   },
   driftSignals: [],
   allocation: null,
@@ -56,6 +58,7 @@ describe('PurchaseDraftLinkRow', () => {
     const onCommit = vi.fn();
     render(
       <PurchaseDraftLinkRow
+        deliveryMode="via_warehouse"
         isFrozen={false}
         link={link({ statedQuantity: 500 })}
         field={statedQuantityField({ onCommit })}
@@ -78,6 +81,7 @@ describe('PurchaseDraftLinkRow', () => {
     const onCommit = vi.fn();
     render(
       <PurchaseDraftLinkRow
+        deliveryMode="via_warehouse"
         isFrozen={false}
         link={link({ current: { ...link().current, outstandingQuantity: 10 } })}
         field={statedQuantityField({
@@ -103,9 +107,11 @@ describe('PurchaseDraftLinkRow', () => {
     render(
       <ul>
         <PurchaseDraftLinkRow
+          deliveryMode="via_warehouse"
           isFrozen={false}
           link={link({
             id: '1',
+            customer: null,
             customerName: 'Nordwind Logistik GmbH',
             statedQuantity: 400,
           })}
@@ -113,9 +119,11 @@ describe('PurchaseDraftLinkRow', () => {
           trailing={null}
         />
         <PurchaseDraftLinkRow
+          deliveryMode="via_warehouse"
           isFrozen={false}
           link={link({
             id: '2',
+            customer: null,
             customerName: 'Baltic Freight OÜ',
             statedQuantity: 400,
           })}
@@ -135,6 +143,7 @@ describe('PurchaseDraftLinkRow', () => {
     const onCommit = vi.fn();
     render(
       <PurchaseDraftLinkRow
+        deliveryMode="via_warehouse"
         isFrozen={false}
         link={link()}
         field={statedQuantityField({ isDisabled: true, onCommit })}
@@ -153,6 +162,7 @@ describe('PurchaseDraftLinkRow', () => {
   it('states the customer\u2019s live demand on an unfrozen link', () => {
     render(
       <PurchaseDraftLinkRow
+        deliveryMode="via_warehouse"
         isFrozen={false}
         link={link()}
         field={statedQuantityField()}
@@ -172,9 +182,12 @@ describe('PurchaseDraftLinkRow', () => {
   it('reads the snapshot on a frozen link and names what moved', () => {
     render(
       <PurchaseDraftLinkRow
+        deliveryMode="via_warehouse"
         isFrozen
         link={link({
           snapshot: {
+            capturedDeliveryAddressId: null,
+            capturedDeliveryAddressText: null,
             capturedQuantity: 800,
             capturedNeededBy: '2026-09-02',
             capturedState: 'unfulfilled',
@@ -185,6 +198,7 @@ describe('PurchaseDraftLinkRow', () => {
             state: 'unfulfilled',
             outstandingQuantity: 1000,
             lastChangedAt: '2026-08-25T12:00:00.000Z',
+            deliveryAddress: null,
           },
           driftSignals: ['quantity_changed'],
         })}
@@ -208,9 +222,12 @@ describe('PurchaseDraftLinkRow', () => {
   it('says the state itself is what moved when the order was cancelled', () => {
     render(
       <PurchaseDraftLinkRow
+        deliveryMode="via_warehouse"
         isFrozen
         link={link({
           snapshot: {
+            capturedDeliveryAddressId: null,
+            capturedDeliveryAddressText: null,
             capturedQuantity: 440,
             capturedNeededBy: '2026-09-09',
             capturedState: 'unfulfilled',
@@ -221,6 +238,7 @@ describe('PurchaseDraftLinkRow', () => {
             state: 'cancelled',
             outstandingQuantity: 0,
             lastChangedAt: '2026-08-24T12:00:00.000Z',
+            deliveryAddress: null,
           },
           driftSignals: ['cancelled'],
         })}
@@ -244,6 +262,7 @@ describe('PurchaseDraftLinkRow', () => {
     it('narrows the quantity field to 96px below md: rather than moving the trailing action (BSmrU, O42LHI 390 vs yGhkK/F0SpRx 1440)', () => {
       render(
         <PurchaseDraftLinkRow
+          deliveryMode="via_warehouse"
           isFrozen={false}
           link={link()}
           field={statedQuantityField()}

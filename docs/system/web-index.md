@@ -78,6 +78,15 @@ first, then read only the entries that cover the change you are making. Paths ar
 - [Adding and maintaining web localization](guides/adding-and-maintaining-web-localization.md) — how
   i18next is initialized, where namespace JSON lives under `public/locales/<language>/`, and how to
   add copy, a namespace, or a language. Use whenever you add or change user-visible text.
+- [Web motion](guides/web-motion.md) — decides **how a change on screen is animated**: the one
+  duration and curve every surface shares (200ms, `ease-out`), and which of the three mechanisms a
+  case takes — `useContentTransition` when a mounted element's content changes (a route swap, a
+  detail pane opened for another record), the `ROW_ENTER` class when an element joins a collection,
+  and nothing at all when a HeroUI component animates itself. Carries the two prohibitions that make
+  it safe: never re-key a subtree to force an entrance (it costs a refetch on every navigation), and
+  never reach for the View Transitions API (HeroUI's toast queue already owns it, and the platform
+  allows one at a time). Also states why there are no exit animations, and how motion is tested
+  under jsdom. Use when adding or changing any animation.
 - [HeroUI design principles](guides/heroui-design-principles.md) — HeroUI v3's own principles mapped
   to this repository: semantic `variant` intent, compound components, token usage, and accessibility
   expectations. Use when building or reviewing UI with `@heroui/react`.

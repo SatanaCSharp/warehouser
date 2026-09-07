@@ -120,6 +120,32 @@ describe('ReadyPurchaseDraftDialog', () => {
     expect(within(dialog).getByText(/By anyone\.$/u)).toBeVisible();
   });
 
+  // AC-16a — a Via Warehouse line cannot be frozen before the warehouse has
+  // a Delivery Address recorded, and the refusal names the capability that
+  // records one rather than the generic "not ready" sentence.
+  it('names the capability that records a warehouse address when readiness is refused for lacking one (AC-16a)', async () => {
+    const user = userEvent.setup();
+    const onConfirm = vi.fn<() => Promise<MutationResult>>().mockResolvedValue({
+      error: {
+        code: ErrorCode.PURCHASE_DRAFTS_WAREHOUSE_DELIVERY_ADDRESS_REQUIRED,
+        fieldErrors: {},
+      },
+    });
+    openDialog(2, onConfirm);
+
+    const dialog = readyDialog();
+    await user.click(
+      within(dialog).getByRole('button', { name: /freeze and mark ready/iu }),
+    );
+
+    const refusal = await within(dialog).findByRole('alert');
+    expect(refusal).toHaveTextContent('WAREHOUSES:ADDRESS_UPDATE');
+    expect(refusal).not.toHaveTextContent(
+      /only ready once it says what is being ordered/iu,
+    );
+    expect(dialog).toBeInTheDocument();
+  });
+
   it('places cancel before the destructive primary in DOM and keyboard order', () => {
     openDialog(
       2,

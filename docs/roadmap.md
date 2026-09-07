@@ -1,6 +1,6 @@
 ---
 status: Living
-updated_at: '2026-08-11'
+updated_at: '2026-09-01'
 ---
 
 # Roadmap
@@ -25,6 +25,15 @@ links to the feature folder where the solution is specified. Horizons are **Now*
   order as a draft carrying how the goods must physically arrive — introducing the first business
   entities the warehouse owns.
   → [`docs/features/ordering`](features/ordering/spec.md) · size XL · route full · status: spec drafted
+
+- **Goods can go straight from the supplier to the customer, and every order says where it is
+  going.** Today a customer is a name typed by hand, so one company fragments across three
+  spellings and none of them has an address; an order to a supplier never records where the goods
+  should be sent; and the only ending is that they arrive at our own dock. Makes a customer a
+  record carrying the addresses its goods may be sent to, gives each order line a delivery mode and
+  a delivery address that freeze with the rest of the order, and reports it when the customer's address
+  moves out from under a shipment already in transit.
+  → [`docs/features/delivery-addresses`](features/delivery-addresses/spec.md) · size L · route full · status: spec drafted
 
 ## Next
 

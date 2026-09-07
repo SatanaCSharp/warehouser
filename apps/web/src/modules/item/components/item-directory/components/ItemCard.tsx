@@ -5,6 +5,7 @@ import { ItemActionsMenu } from 'modules/item/components/item-directory/componen
 import { ItemCardMeta } from 'modules/item/components/item-directory/components/ItemCardMeta';
 import { ItemOnHand } from 'modules/item/components/item-directory/components/ItemOnHand';
 import { ItemStatusChip } from 'modules/item/components/item-directory/components/ItemStatusChip';
+import { ROW_ENTER } from 'shared/constants/motion';
 
 import type { Item } from '@warehouser/contracts/items';
 import type { ItemActionHandlers } from 'modules/item/hooks/projections/useItemActions';
@@ -38,7 +39,7 @@ export const ItemCard = ({
   const { t } = useTranslation('item');
 
   return (
-    <li>
+    <li className={ROW_ENTER}>
       <Card className={item.deactivatedAt === null ? undefined : 'opacity-60'}>
         <Card.Header className="flex flex-row items-start justify-between gap-2">
           <div>

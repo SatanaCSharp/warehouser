@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import { CustomerOrderRefusalAlert } from 'modules/customer-order/components/demand-directory/components/CustomerOrderRefusalAlert';
+import { useCustomerOrderNaming } from 'modules/customer-order/hooks/projections/useCustomerOrderNaming';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormTextField } from 'shared/components/FormTextField';
 
@@ -50,6 +51,7 @@ export const CancelCustomerOrderDialog = ({
 }: CancelCustomerOrderDialogProps): ReactElement => {
   const { t } = useTranslation('customer-order');
   const { t: translate } = useTranslation('validation');
+  const naming = useCustomerOrderNaming();
   const [refusalCode, setRefusalCode] = useState<string>();
   const form = useForm<CancelCustomerOrderForm>({
     defaultValues: { cancellationReason: '' },
@@ -68,7 +70,9 @@ export const CancelCustomerOrderDialog = ({
 
   return (
     <FormModalDialog
-      title={t('dialogs.cancel.title', { customerName: order.customerName })}
+      title={t('dialogs.cancel.title', {
+        customerName: naming(order),
+      })}
       cancelLabel={t('dialogs.cancel.cancel')}
       submitLabel={t('dialogs.cancel.submit')}
       submitVariant="danger"

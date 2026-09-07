@@ -48,6 +48,19 @@ const REQUIRED_ICONS: Record<string, keyof typeof Icons> = {
   lock: 'LockIcon',
   truck: 'TruckIcon',
   'corner-down-right': 'CornerDownRightIcon',
+  // delivery-addresses T21 — the three glyphs the Customers destination adds
+  // (`docs/features/delivery-addresses/design-handoff.md` §Icons: `contact`,
+  // `map-pin` and `package-check` are the only Lucide names that feature uses
+  // which `shared/icons/` does not already export).
+  contact: 'ContactIcon',
+  'map-pin': 'MapPinIcon',
+  'package-check': 'PackageCheckIcon',
+  // The collapsible sidebar's expand direction — the mirror of `chevron-left`,
+  // which this shell already uses for the collapse direction. Added by the
+  // sidebar-collapse change rather than by a design handoff, so it is listed
+  // here for the same reason as the rest: the icon is required by a shipped
+  // control, and its absence must fail rather than pass silently.
+  'chevron-right': 'ChevronRightIcon',
 };
 
 describe('shared/icons', () => {

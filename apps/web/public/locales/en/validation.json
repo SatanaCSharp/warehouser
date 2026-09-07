@@ -178,5 +178,33 @@
     "notMultipleOf": "State why this order is being cancelled.",
     "trimmed_non_empty": "A reason cannot be empty once trimmed.",
     "invalidState": "This order has already been fulfilled or cancelled, so it cannot be cancelled again."
+  },
+  "warehouseDeliveryAddress": {
+    "required": "Enter the address a supplier delivers to.",
+    "invalid": "Enter an address this warehouse accepts."
+  },
+  "customerName": {
+    "required": "Enter a customer name.",
+    "trimmed_non_empty": "Enter a customer name.",
+    "invalid": "Enter a customer name this warehouse accepts.",
+    "nameTaken": "“{{name}}” already names a customer in this warehouse. A customer name identifies at most one customer here."
+  },
+  "customerAddressText": {
+    "required": "Enter the address the goods are sent to.",
+    "trimmed_non_empty": "Enter the address the goods are sent to.",
+    "invalid": "Enter an address this warehouse accepts."
+  },
+  "customerAccessNotes": {
+    "required": "Enter the access notes, or leave the field empty to record none.",
+    "trimmed_non_empty": "Enter the access notes, or leave the field empty to record none.",
+    "invalid": "Enter access notes this warehouse accepts."
+  },
+  "customerOrderDeliveryAddress": {
+    "required": "Choose a delivery address.",
+    "invalid": "That delivery address is not one this customer offers."
+  },
+  "customerOrderCustomer": {
+    "required": "Choose a customer.",
+    "invalid": "That customer is not one this warehouse holds."
   }
 }

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Conditional } from 'shared/components/Conditional';
+import { ROW_ENTER } from 'shared/constants/motion';
 import { SearchIcon } from 'shared/icons';
 
 import type { WorkspaceRole } from '@warehouser/contracts/workspaces';
@@ -55,7 +56,7 @@ export const WorkspaceRoleList = ({
         {visibleRoles.map((role) => {
           const isSelected = role.id === selectedRoleId;
           return (
-            <li key={role.id}>
+            <li key={role.id} className={ROW_ENTER}>
               <button
                 aria-pressed={isSelected}
                 className={`w-full rounded-xl border bg-surface p-4 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${isSelected ? 'border-2 border-accent' : 'border-border hover:border-accent/40'}`}

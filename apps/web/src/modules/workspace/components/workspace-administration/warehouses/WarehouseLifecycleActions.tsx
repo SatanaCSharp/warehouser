@@ -1,4 +1,4 @@
-import { Alert, AlertDialog, Button } from '@heroui/react';
+import { Alert, AlertDialog, Button, Separator } from '@heroui/react';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
 import { useTranslation } from 'react-i18next';
 
@@ -101,6 +101,13 @@ export const WarehouseLifecycleActions = ({
     <WorkspacePermissionGate
       permission={WorkspacePermissionId.WAREHOUSES_ARCHIVE}
     >
+      {/*
+        The lifecycle row closes the detail pane, ruled off from the people
+        above it (`warehouse-address-desktop-v1.html`). The rule is inside the
+        gate because the row it introduces is withheld whole from an actor
+        without `WAREHOUSES:ARCHIVE`.
+      */}
+      <Separator />
       <Conditional
         when={warehouse.archivedAt !== null}
         otherwise={

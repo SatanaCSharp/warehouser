@@ -3,6 +3,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { TransactionModule } from 'shared/database/transaction.module';
 import { AccountEntity } from 'shared/domain/entities/account.entity';
 import { ArrivalAllocationEntity } from 'shared/domain/entities/arrival-allocation.entity';
+import { CustomerEntity } from 'shared/domain/entities/customer.entity';
+import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
 import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
 import { DemandSnapshotEntryEntity } from 'shared/domain/entities/demand-snapshot-entry.entity';
 import { ItemEntity } from 'shared/domain/entities/item.entity';
@@ -44,6 +46,8 @@ import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/wor
 const domainEntities = [
   AccountEntity,
   ArrivalAllocationEntity,
+  CustomerEntity,
+  CustomerDeliveryAddressEntity,
   CustomerOrderEntity,
   DemandSnapshotEntryEntity,
   ItemEntity,

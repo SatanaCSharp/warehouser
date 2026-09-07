@@ -5,6 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AccessRestModule } from 'access';
 import { AuthModule } from 'auth/auth.module';
 import { CustomerOrdersModule } from 'customer-orders';
+import { CustomersModule } from 'customers';
 import { ItemsModule } from 'items';
 import { PurchaseDraftsModule } from 'purchase-drafts';
 import { createTypeOrmOptions } from 'shared/database/typeorm.options';
@@ -31,6 +32,7 @@ import { WorkspacesRestModule } from 'workspaces';
     AccessRestModule,
     ItemsModule,
     CustomerOrdersModule,
+    CustomersModule,
     PurchaseDraftsModule,
     WarehousesRestModule,
     WorkspacesRestModule,

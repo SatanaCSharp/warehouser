@@ -237,6 +237,7 @@ describe('DeleteMemberCommand', () => {
     roleId: deleterRoleId,
     roleKind: 'custom',
     permissionId: usersDeletePermissionId,
+    observedPermissionIds: [],
     archived: false,
   });
 

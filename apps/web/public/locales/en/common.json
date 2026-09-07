@@ -21,8 +21,11 @@
     "demand": "Demand",
     "purchaseDrafts": "Purchase drafts",
     "items": "Items",
+    "customers": "Customers",
     "workspace": "Workspace",
-    "toggle": "Open navigation"
+    "toggle": "Open navigation",
+    "collapse": "Collapse navigation",
+    "expand": "Expand navigation"
   },
   "language": {
     "label": "Change language",

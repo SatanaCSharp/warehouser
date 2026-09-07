@@ -9,6 +9,7 @@ import { TriggeredDialog } from 'shared/components/TriggeredDialog';
 import { WarehousePermissionGate } from 'shared/components/WarehousePermissionGate';
 import { useArchivedWarehouse } from 'shared/hooks/projections/useArchivedWarehouse';
 import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
+import { PlusIcon } from 'shared/icons';
 
 import type {
   PurchaseDraftLine,
@@ -65,6 +66,12 @@ export const LinkCustomerOrderAction = ({
   const customerOrdersByItem = useUnfulfilledCustomerOrdersByItem();
   const [addPurchaseDraftLineLink] = useAddPurchaseDraftLineLinkMutation();
   const label = t('lineLinks.addLink');
+  // AC-15 — the address this line ships to, so a refused link can name it;
+  // `null` for a Via Warehouse line, which this refusal never reaches.
+  const lineDeliveryAddressText =
+    'customerDestination' in line
+      ? (line.customerDestination?.addressText ?? null)
+      : null;
 
   const onSave = (
     input: PurchaseDraftLineLinkCreate,
@@ -79,19 +86,25 @@ export const LinkCustomerOrderAction = ({
   return (
     <WarehousePermissionGate permission={PermissionId.PURCHASE_DRAFTS_UPDATE}>
       <Modal>
+        {/* `+ Link a customer order` as both frames draw it: the outline
+            treatment on the surface, not a filled one, and the `plus` that
+            says it adds a further order rather than restating this one
+            (design-handoff.md §Component mapping, §Icons). */}
         <Button
           aria-describedby={reasonId}
           aria-label={label}
           isDisabled={isArchived}
           size="sm"
-          variant="secondary"
+          variant="outline"
         >
+          <PlusIcon />
           {label}
         </Button>
         <TriggeredDialog>
           <LinkCustomerOrderDialog
             customerOrders={customerOrdersByItem[line.itemId] ?? []}
             index={index}
+            lineDeliveryAddressText={lineDeliveryAddressText}
             unitOfMeasure={line.unitOfMeasure}
             onSave={onSave}
           />

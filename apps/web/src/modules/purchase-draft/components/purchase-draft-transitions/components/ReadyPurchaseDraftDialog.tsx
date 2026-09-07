@@ -1,4 +1,5 @@
 import { Alert } from '@heroui/react';
+import { ErrorCode } from '@warehouser/shared-types/enums';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -7,6 +8,14 @@ import { ConfirmAlertDialog } from 'shared/components/ConfirmAlertDialog';
 
 import type { ReactElement } from 'react';
 import type { MutationResult } from 'shared/api/client/mutation-outcome';
+
+// AC-16a — the one refusal this dialog explains with copy of its own; every
+// other code reads the shared `transitions.ready.refusal` sentence
+// (`writing-web-components.md` §6 — a lookup, never a chain).
+const READY_REFUSAL_KEY: Record<string, string> = {
+  [ErrorCode.PURCHASE_DRAFTS_WAREHOUSE_DELIVERY_ADDRESS_REQUIRED]:
+    'transitions.ready.refusalWarehouseAddressRequired',
+};
 
 export type ReadyPurchaseDraftDialogProps = {
   /**
@@ -79,7 +88,10 @@ export const ReadyPurchaseDraftDialog = ({
           <Alert.Indicator />
           <Alert.Content>
             <Alert.Description>
-              {t('transitions.ready.refusal')}
+              {t(
+                READY_REFUSAL_KEY[refusalCode ?? ''] ??
+                  'transitions.ready.refusal',
+              )}
             </Alert.Description>
           </Alert.Content>
         </Alert>

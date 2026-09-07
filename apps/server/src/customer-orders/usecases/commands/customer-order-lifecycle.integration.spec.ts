@@ -7,6 +7,7 @@ import { ApplicationError } from '@warehouser/shared-types/errors';
 // against the values the member composed against". Here the three lifecycle commands, their real
 // repositories and a real transaction run together, so what is proven is that the refused amendment
 // leaves the stored row **exactly** as it was — not merely that a double was not called.
+import { CustomerOrderDestinationService } from 'customer-orders/domain/services/customer-order-destination.service';
 import { CustomerOrderLifecycleService } from 'customer-orders/domain/services/customer-order-lifecycle.service';
 import { AmendCustomerOrderCommand } from 'customer-orders/usecases/commands/amend-customer-order.command';
 import { CancelCustomerOrderCommand } from 'customer-orders/usecases/commands/cancel-customer-order.command';
@@ -24,6 +25,8 @@ import { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-dra
 import { UserEntity } from 'shared/domain/entities/user.entity';
 import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
 import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
+import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository';
+import { CustomerDirectoryRepository } from 'shared/domain/repositories/customer-directory.repository';
 import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository';
 import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
 import {
@@ -42,9 +45,16 @@ let newCustomerOrderId = randomUUID();
 
 const lifecycleRepository = new CustomerOrderLifecycleRepository(dataSource);
 
+// These cases record by typed name, so the Customer directory and the address book below are never
+// consulted — they are the collaborators AC-11's customer-naming shape needs, and this spec is
+// deliberately not the place that exercises them (AC-11a).
 const recordCommand = new RecordCustomerOrderCommand(
   lifecycleRepository,
   new ItemCatalogueRepository(dataSource),
+  new CustomerDirectoryRepository(dataSource),
+  new CustomerOrderDestinationService(
+    new CustomerAddressBookRepository(dataSource),
+  ),
   { customerOrderId: () => newCustomerOrderId, now: () => later },
 );
 const lifecycleService = new CustomerOrderLifecycleService(lifecycleRepository);
@@ -186,7 +196,6 @@ const seedAllocation = async (
     orderedQuantity: allocatedQuantity,
     packagingTypeId: null,
     valueAddingNote: null,
-    receivedQuantity: allocatedQuantity,
     createdAt: now,
     updatedAt: later,
   });

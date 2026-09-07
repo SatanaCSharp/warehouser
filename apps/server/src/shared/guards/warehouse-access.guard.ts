@@ -12,6 +12,7 @@ import {
 } from 'shared/access/access-denial.errors';
 import type { WarehouseAccessRequest } from 'shared/access/access-request';
 import { READ_TOLERANT_KEY } from 'shared/access/archived-tolerant-read.decorator';
+import { OBSERVED_PERMISSION_KEY } from 'shared/decorators/observed-permission.decorator';
 import { REQUIRED_PERMISSION_KEY } from 'shared/decorators/required-permission.decorator';
 import { AccessCurrentUserRepository } from 'shared/domain/repositories/access-current-user.repository';
 
@@ -43,6 +44,15 @@ export class WarehouseAccessGuard implements CanActivate {
       REQUIRED_PERMISSION_KEY,
       [context.getHandler(), context.getClass()],
     );
+    // Read only, never enforced: `@ObservedPermission` declares Permissions the projection wants
+    // resolved. Nothing below consults the resolved set to decide admission, so a handler that
+    // declares only observed Permissions is denied by the very next condition, exactly as an
+    // undecorated handler is (AC-09a, ADR 0001).
+    const observedPermissionIds =
+      this.reflector.getAllAndOverride<PermissionId[]>(
+        OBSERVED_PERMISSION_KEY,
+        [context.getHandler(), context.getClass()],
+      ) ?? [];
     const warehouseId = resolveNamedWarehouseId(request);
     if (!request.user || !permissionIds?.length || !warehouseId) {
       throw accessDeniedError();
@@ -52,6 +62,7 @@ export class WarehouseAccessGuard implements CanActivate {
       request.user.userId,
       warehouseId,
       permissionIds[0],
+      observedPermissionIds,
     );
     if (!current?.granted) {
       throw accessDeniedError();
@@ -72,6 +83,8 @@ export class WarehouseAccessGuard implements CanActivate {
       roleId: current.roleId,
       roleKind: current.roleKind,
       permissionId: current.permissionId as PermissionId,
+      observedPermissionIds:
+        current.observedPermissionIds as readonly PermissionId[],
       archived,
     });
     return true;

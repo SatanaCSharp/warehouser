@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PermissionId } from '@warehouser/shared-types/enums';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -65,6 +65,18 @@ const UNPERMITTED_REASON =
 
 const WATCH_ONLY = [PermissionId.PURCHASE_DRAFTS_WATCH] as const;
 
+/**
+ * Whether one element comes before another in the document, which is the order
+ * the keyboard walks them in. Read off the document's own element order rather
+ * than out of `compareDocumentPosition`'s bit mask, so the assertion reads as
+ * the question it is asking.
+ */
+const precedes = (earlier: Element, later: Element): boolean => {
+  const elements = [...document.querySelectorAll('*')];
+
+  return elements.indexOf(earlier) < elements.indexOf(later);
+};
+
 const packagingTypes: PackagingType[] = [
   { id: 'cartons', label: 'Cartons' },
   { id: 'pallets', label: 'Pallets' },
@@ -81,7 +93,14 @@ const line = (
   orderedQuantity: 400,
   packagingTypeId: 'cartons',
   valueAddingNote: 'Label each carton for Nordwind',
-  receivedQuantity: null,
+  ending: null,
+  deliveryMode: 'via_warehouse',
+  warehouseDestination: {
+    addressText: 'Test Warehouse North, Test Industrial Estate',
+    accessNotes: null,
+    frozen: false,
+  },
+  customerDestination: null,
   links: [],
   ...overrides,
 });
@@ -91,6 +110,7 @@ const linkedLine = line({
     {
       id: '00000000-0000-4000-8000-000000000301',
       customerOrderId: '00000000-0000-4000-8000-000000000401',
+      customer: null,
       customerName: 'Nordwind Logistik GmbH',
       statedQuantity: 400,
       snapshot: null,
@@ -100,6 +120,7 @@ const linkedLine = line({
         state: 'unfulfilled',
         outstandingQuantity: 400,
         lastChangedAt: null,
+        deliveryAddress: null,
       },
       driftSignals: [],
       allocation: null,
@@ -208,16 +229,19 @@ const unlink = (): HTMLElement | null =>
     name: 'Remove Nordwind Logistik GmbH from this line',
   });
 
+// Shared by both suites in this file: the Warehouse projection is stubbed for
+// every case, and each case restores it along with whatever `renderEditor`
+// stubbed on `globalThis`.
+beforeEach(() => {
+  inArchivedWarehouse(false);
+});
+
+afterEach(() => {
+  vi.mocked(useArchivedWarehouse).mockReset();
+  vi.unstubAllGlobals();
+});
+
 describe('PurchaseDraftLineEditor', () => {
-  beforeEach(() => {
-    inArchivedWarehouse(false);
-  });
-
-  afterEach(() => {
-    vi.mocked(useArchivedWarehouse).mockReset();
-    vi.unstubAllGlobals();
-  });
-
   it('renders the Packaging Type and the Value-adding Note when the draft is opened', async () => {
     renderEditor(editor(false));
 
@@ -356,7 +380,13 @@ describe('PurchaseDraftLineEditor', () => {
       expect(screen.getByLabelText('Packaging type')).toBeDisabled();
       expect(screen.getByLabelText('Value-adding note')).toBeDisabled();
       expect(screen.getByLabelText('Intended for them')).toBeDisabled();
-      expect(itemField()).toHaveAccessibleDescription(UNPERMITTED_REASON);
+      // The sentence is the line's, so it is drawn once by the lock strip and
+      // the field that can point at it does — it is not written into every
+      // caption (design-handoff.md §Accessibility).
+      expect(screen.getAllByText(UNPERMITTED_REASON)).toHaveLength(1);
+      expect(
+        screen.getByLabelText('Value-adding note'),
+      ).toHaveAccessibleDescription(new RegExp(UNPERMITTED_REASON, 'u'));
     });
 
     it('withholds the destructive controls rather than offering them refused', async () => {
@@ -384,11 +414,35 @@ describe('PurchaseDraftLineEditor', () => {
   // cannot see. `toHaveAccessibleDescription` resolves `aria-describedby`
   // exactly as an assistive technology does, so it fails on both.
   describe('the reason a refused control announces', () => {
-    it('gives the Item picker the same stated reason its three sibling fields carry (AC-15)', async () => {
+    // design-handoff.md §Accessibility: "the reason exposed once for the whole
+    // line by the lock strip, **not repeated per field**". Each field keeps the
+    // caption the frames give it, so a frozen line states the refusal once
+    // rather than five times over.
+    // "Once for the whole line" is a claim about what is DRAWN, not about what
+    // is announced: the sentence appears on screen exactly once, and every
+    // field points at that one sentence instead of restating it. So each field
+    // announces its own caption *and* the shared reason — which is what the
+    // note field and the two buttons already did, and what the Item, Quantity
+    // and Packaging fields were silently missing.
+    it('states the reason once for the whole line and keeps every field’s own caption (AC-15)', async () => {
       renderEditor(editor(true));
 
       expect(await screen.findByLabelText('Item')).toBeDisabled();
-      expect(itemField()).toHaveAccessibleDescription(FROZEN_REASON);
+      expect(screen.getAllByText(FROZEN_REASON)).toHaveLength(1);
+
+      const frozen = new RegExp(FROZEN_REASON, 'u');
+      expect(screen.getByLabelText('Item')).toHaveAccessibleDescription(frozen);
+      expect(screen.getByLabelText('Quantity')).toHaveAccessibleDescription(
+        new RegExp(`pieces.*${FROZEN_REASON}`, 'u'),
+      );
+      expect(
+        screen.getByLabelText('Packaging type'),
+      ).toHaveAccessibleDescription(
+        new RegExp(`How the goods must arrive.*${FROZEN_REASON}`, 'u'),
+      );
+      expect(
+        screen.getByLabelText('Value-adding note'),
+      ).toHaveAccessibleDescription(frozen);
     });
 
     it('states the frozen reason on the line’s own controls in a Warehouse still in operation (AC-15)', async () => {
@@ -421,7 +475,9 @@ describe('PurchaseDraftLineEditor', () => {
       expect(await screen.findAllByText(ARCHIVED_REASON)).not.toHaveLength(0);
       expect(removeLine()).toHaveAccessibleDescription(ARCHIVED_REASON);
       expect(unlink()).toHaveAccessibleDescription(ARCHIVED_REASON);
-      expect(itemField()).toHaveAccessibleDescription(ARCHIVED_REASON);
+      expect(
+        screen.getByLabelText('Value-adding note'),
+      ).toHaveAccessibleDescription(new RegExp(ARCHIVED_REASON, 'u'));
     });
 
     it('describes nothing while the line accepts writes', async () => {
@@ -447,5 +503,58 @@ describe('PurchaseDraftLineEditor', () => {
       expect(fieldRow?.className).toContain('flex-col');
       expect(fieldRow?.className).toContain('md:flex-row');
     });
+  });
+});
+
+/**
+ * The line head and the order the line is walked in are one subject — what the
+ * frames put beside `LINE 1`, and where the `DELIVERY` block sits relative to
+ * the note. They are filed here rather than in the suite above so neither
+ * describe grows past what one screen can hold.
+ */
+describe('PurchaseDraftLineEditor’s line head and keyboard order', () => {
+  /**
+   * `yGhkK` / `F0SpRx` draw a Delivery Mode chip beside `LINE 1`, so how a
+   * line's goods travel is readable from the head without opening the
+   * `DELIVERY` block below it. The chip states its mode in words, so nothing
+   * rests on its tone (design-handoff.md §Accessibility).
+   */
+  it.each<[PurchaseDraftLine['deliveryMode'], string]>([
+    ['via_warehouse', 'Via warehouse'],
+    ['direct_to_customer', 'Direct to customer'],
+  ])(
+    'states a %s line’s delivery mode as a chip in the line head',
+    async (deliveryMode, label) => {
+      renderEditor(editor(false, line({ deliveryMode })));
+
+      const heading = await screen.findByText('Line 1');
+      const head = heading.parentElement as HTMLElement;
+
+      expect(within(head).getByText(label)).toBeInTheDocument();
+    },
+  );
+
+  /**
+   * design-handoff.md §Accessibility fixes the keyboard order of a draft line:
+   * "line head → fields → delivery mode → destination → note → links → ending
+   * action". The note used to be rendered above the `DELIVERY` block, so the
+   * DOM contradicted the order this component's own contract documents — and
+   * nothing failed when it did. This pins it.
+   */
+  it('walks line head → fields → delivery mode → destination → note → links, as the design fixes it', async () => {
+    renderEditor(editor(false, linkedLine));
+
+    const packagingType = await screen.findByLabelText('Packaging type');
+    const deliveryMode = screen.getByRole('radiogroup', {
+      name: 'How it travels',
+    });
+    const destination = screen.getByLabelText('Goes to');
+    const note = screen.getByLabelText('Value-adding note');
+    const links = screen.getByLabelText('Intended for them');
+
+    expect(precedes(packagingType, deliveryMode)).toBe(true);
+    expect(precedes(deliveryMode, destination)).toBe(true);
+    expect(precedes(destination, note)).toBe(true);
+    expect(precedes(note, links)).toBe(true);
   });
 });

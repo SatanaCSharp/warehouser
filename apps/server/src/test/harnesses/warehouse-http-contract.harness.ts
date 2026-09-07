@@ -69,6 +69,9 @@ export interface WarehouseHttpContractHarness {
     fixture: WorkspaceFixture,
     permissionIds: readonly string[],
   ) => Promise<Actor>;
+  /** An authenticated session for a User seeded without `seedActor`, so a spec
+   * can drive a request as somebody holding **no** Workspace Role at all. */
+  readonly seedSessionCookie: (accountId: string) => Promise<string>;
 }
 
 // This suite boots the real Nest module graph and drives every
@@ -347,5 +350,6 @@ export const setupWarehouseHttpContractHarness =
       seedUser,
       seedWarehouseMembership,
       seedActor,
+      seedSessionCookie,
     };
   };

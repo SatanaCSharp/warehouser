@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Conditional } from 'shared/components/Conditional';
+import { ROW_ENTER } from 'shared/constants/motion';
 import { SearchIcon } from 'shared/icons';
 
 import type { AccessRole } from 'modules/access/types/access.types';
@@ -52,7 +53,7 @@ export const RoleList = ({
         {visibleRoles.map((role) => {
           const isSelected = role.id === selectedRoleId;
           return (
-            <li key={role.id}>
+            <li key={role.id} className={ROW_ENTER}>
               <button
                 type="button"
                 aria-pressed={isSelected}

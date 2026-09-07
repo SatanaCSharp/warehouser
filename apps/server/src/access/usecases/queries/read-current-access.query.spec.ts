@@ -56,6 +56,30 @@ describe('ReadCurrentAccessQuery', () => {
     });
   });
 
+  // AC-09a / ADR 0001: `observedPermissionIds` is a server-side projection input, not a claim.
+  // `AccessCurrentUser` is never returned to the browser, and the one projection that does describe
+  // the actor's authority is built from the membership read rather than from the principal — so an
+  // observed Permission can never reach a client, whatever a handler declares.
+  it('never returns the principal or its observed Permissions to the browser (AC-09a)', async () => {
+    const repository = repositoryDouble();
+    const query = new ReadCurrentAccessQuery(
+      repository as unknown as AccessCurrentUserRepository,
+    );
+
+    const projection = await query.execute(userId, warehouseId);
+
+    expect(Object.keys(projection).sort()).toEqual(
+      [
+        'archivedAt',
+        'permissionIds',
+        'roleId',
+        'roleKind',
+        'warehouseId',
+      ].sort(),
+    );
+    expect(projection).not.toHaveProperty('observedPermissionIds');
+  });
+
   it('denies without disclosure when the actor holds no membership in that Warehouse (AC-04)', async () => {
     const repository = repositoryDouble();
     repository.resolveCurrentAccess.mockResolvedValue(null);

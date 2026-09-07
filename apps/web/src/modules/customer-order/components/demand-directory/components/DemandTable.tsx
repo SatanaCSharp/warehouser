@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { CoverageChips } from 'modules/customer-order/components/demand-directory/components/CoverageChips';
 import { CustomerOrderActionsMenu } from 'modules/customer-order/components/demand-directory/components/CustomerOrderActionsMenu';
+import { CustomerOrderIdentityCell } from 'modules/customer-order/components/demand-directory/components/CustomerOrderIdentityCell';
 import { CustomerOrderNeededByCell } from 'modules/customer-order/components/demand-directory/components/CustomerOrderNeededByCell';
 import { CustomerOrderOutstandingCell } from 'modules/customer-order/components/demand-directory/components/CustomerOrderOutstandingCell';
 import { CustomerOrderStateChip } from 'modules/customer-order/components/demand-directory/components/CustomerOrderStateChip';
@@ -12,6 +13,7 @@ import { DemandItemCell } from 'modules/customer-order/components/demand-directo
 import { DemandNeededByCell } from 'modules/customer-order/components/demand-directory/components/DemandNeededByCell';
 import { DemandOnHandCell } from 'modules/customer-order/components/demand-directory/components/DemandOnHandCell';
 import { DemandOutstandingCell } from 'modules/customer-order/components/demand-directory/components/DemandOutstandingCell';
+import { useCustomerOrderNaming } from 'modules/customer-order/hooks/projections/useCustomerOrderNaming';
 import { useUnfulfilledCustomerOrdersByItem } from 'modules/customer-order/hooks/queries/useUnfulfilledCustomerOrdersByItem';
 import { CornerDownRightIcon } from 'shared/icons';
 
@@ -23,8 +25,20 @@ import type {
 import type { CustomerOrderActionHandlers } from 'modules/customer-order/hooks/projections/useCustomerOrderActions';
 import type { ReactElement } from 'react';
 
+/**
+ * One Customer Order sub-row, carrying the name any sentence about it uses.
+ *
+ * The name is **on the record** rather than resolved inside the renderer, for
+ * the same reason the orders themselves are: React Aria caches a row's element
+ * tree per record, so copy a renderer closed over would keep the language it
+ * had when the row was first built. Carried here, switching language changes
+ * the record and the collection rebuilds
+ * (`docs/system/adr/27-08-2026-heroui-table-for-web-data-tables.md`).
+ */
+type CustomerOrderRow = { id: string; name: string; order: CustomerOrder };
+
 /** A Demand Line paired with the Customer Orders it expands into. */
-type DemandRow = DemandLine & { customerOrders: CustomerOrder[] };
+type DemandRow = DemandLine & { customerOrders: CustomerOrderRow[] };
 
 export type DemandTableProps = CustomerOrderActionHandlers & {
   demandLines: DemandLine[];
@@ -78,28 +92,37 @@ export const DemandTable = ({
   label,
   onAmend,
   onCancel,
+  onRedirect,
 }: DemandTableProps): ReactElement => {
   const { t } = useTranslation('customer-order');
   const [expandedKeys, setExpandedKeys] = useState<Selection>(() => new Set());
   const customerOrdersByItem = useUnfulfilledCustomerOrdersByItem();
+  const naming = useCustomerOrderNaming();
 
   const demandRows: DemandRow[] = useMemo(
     () =>
       demandLines.map((line) => ({
         ...line,
-        customerOrders: customerOrdersByItem[line.itemId] ?? [],
+        customerOrders: (customerOrdersByItem[line.itemId] ?? []).map(
+          (order) => ({ id: order.id, name: naming(order), order }),
+        ),
       })),
-    [customerOrdersByItem, demandLines],
+    [customerOrdersByItem, demandLines, naming],
   );
 
   const onExpandedChange = (keys: Selection): void => setExpandedKeys(keys);
 
-  const renderCustomerOrderRow = (order: CustomerOrder): ReactElement => (
-    <Table.Row id={order.id} key={order.id} textValue={order.customerName}>
-      <Table.Cell className="pl-12" textValue={order.customerName}>
-        <span className="inline-flex items-center gap-2">
-          <CornerDownRightIcon />
-          {order.customerName}
+  const renderCustomerOrderRow = ({
+    name,
+    order,
+  }: CustomerOrderRow): ReactElement => (
+    <Table.Row id={order.id} key={order.id} textValue={name}>
+      <Table.Cell className="pl-12" textValue={name}>
+        <span className="flex items-start gap-2">
+          <span className="mt-0.5 shrink-0">
+            <CornerDownRightIcon />
+          </span>
+          <CustomerOrderIdentityCell order={order} />
         </span>
       </Table.Cell>
       <Table.Cell>
@@ -117,6 +140,7 @@ export const DemandTable = ({
           order={order}
           onAmend={onAmend}
           onCancel={onCancel}
+          onRedirect={onRedirect}
         />
       </Table.Cell>
     </Table.Row>

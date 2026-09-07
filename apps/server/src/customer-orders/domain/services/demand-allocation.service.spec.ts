@@ -42,6 +42,8 @@ const storedOrder = (
   id: customerOrderId1,
   warehouseId,
   itemId: uuid('101'),
+  customerId: null,
+  customerDeliveryAddressId: null,
   customerName: 'Test Customer North',
   quantity: 100,
   outstandingQuantity: 100,

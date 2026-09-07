@@ -21,6 +21,7 @@ const customerOrders: CustomerOrder[] = [
   {
     id: '00000000-0000-4000-8000-000000000401',
     itemId: '00000000-0000-4000-8000-000000000101',
+    customer: null,
     customerName: 'Nordwind Logistik GmbH',
     quantity: 800,
     outstandingQuantity: 800,
@@ -35,16 +36,47 @@ const customerOrders: CustomerOrder[] = [
   },
 ];
 
+// AC-15 — a Customer Order going to a Delivery Address other than the one this
+// line ships to, so the refusal has a real order address to name.
+const elsewhereOrder: CustomerOrder = {
+  id: '00000000-0000-4000-8000-000000000402',
+  itemId: '00000000-0000-4000-8000-000000000101',
+  customer: {
+    id: '00000000-0000-4000-8000-000000000201',
+    name: 'Baltic Freight OU',
+  },
+  customerName: null,
+  destination: {
+    deliveryAddressId: '00000000-0000-4000-8000-000000000302',
+    addressText: 'Sadama tee 2, 10111 Tallinn',
+    accessNotes: null,
+    isMain: true,
+    deactivatedAt: null,
+  },
+  quantity: 200,
+  outstandingQuantity: 200,
+  neededBy: '2026-09-05',
+  state: 'unfulfilled',
+  cancellationReason: null,
+  recordedByUserId: '00000000-0000-4000-8000-000000000003',
+  cancelledByUserId: null,
+  cancelledAt: null,
+  createdAt: '2026-08-01T09:00:00.000Z',
+  updatedAt: '2026-08-01T09:00:00.000Z',
+};
+
 const openDialog = (
   onSave: (input: PurchaseDraftLineLinkCreate) => Promise<MutationResult>,
   orders: CustomerOrder[] = customerOrders,
   onClose = vi.fn(),
+  lineDeliveryAddressText: string | null = null,
 ): void => {
   renderWithProviders(
     <DialogHost onClose={onClose}>
       <LinkCustomerOrderDialog
         customerOrders={orders}
         index={1}
+        lineDeliveryAddressText={lineDeliveryAddressText}
         unitOfMeasure="pieces"
         onSave={onSave}
       />
@@ -202,5 +234,37 @@ describe('LinkCustomerOrderDialog', () => {
     expect(labels.indexOf('Cancel')).toBeLessThan(
       labels.indexOf('Link the order'),
     );
+  });
+
+  // AC-15 — the link is refused because the order goes to a different
+  // Delivery Address than this line ships to, and the refusal names the
+  // address each of the two is bound for.
+  it('names the address each of the two is bound for when the order goes elsewhere (AC-15)', async () => {
+    const user = userEvent.setup();
+    const onSave = vi
+      .fn<(input: PurchaseDraftLineLinkCreate) => Promise<MutationResult>>()
+      .mockResolvedValue({
+        error: {
+          code: ErrorCode.PURCHASE_DRAFTS_DELIVERY_ADDRESS_DISAGREEMENT,
+          details: {
+            lineDeliveryAddressId: '00000000-0000-4000-8000-000000000301',
+            customerOrderDeliveryAddressId:
+              '00000000-0000-4000-8000-000000000302',
+          },
+        },
+      });
+    openDialog(onSave, [elsewhereOrder], vi.fn(), 'Nordkai 8, 21079 Hamburg');
+
+    const dialog = linkDialog();
+    await pickCustomerOrder(user, dialog, 'Baltic Freight OU');
+    await user.type(within(dialog).getByLabelText('Intended for them'), '200');
+    await user.click(
+      within(dialog).getByRole('button', { name: 'Link the order' }),
+    );
+
+    const alert = await within(dialog).findByRole('alert');
+    expect(alert).toHaveTextContent('Nordkai 8, 21079 Hamburg');
+    expect(alert).toHaveTextContent('Sadama tee 2, 10111 Tallinn');
+    expect(dialog).toBeInTheDocument();
   });
 });

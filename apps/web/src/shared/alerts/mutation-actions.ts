@@ -20,6 +20,7 @@ export type MutationFeedback = {
   scope:
     | 'access'
     | 'auth'
+    | 'customer'
     | 'customer-order'
     | 'item'
     | 'purchase-draft'
@@ -89,6 +90,9 @@ export const MUTATION_FEEDBACK: Record<string, MutationFeedback> = {
     action: ({ archived }) =>
       archived ? 'archiveWarehouse' : 'restoreWarehouse',
   }),
+  // AC-10 — one endpoint, one outcome: the address is recorded the first time
+  // and corrected in place afterwards, and the copy has to read for both.
+  setWarehouseDeliveryAddress: feedback({ scope: 'workspace' }),
   assignWarehouseMembership: feedback<{ warehouseName: string }>({
     scope: 'workspace',
     action: 'giveWarehouseAccess',
@@ -199,6 +203,14 @@ export const MUTATION_FEEDBACK: Record<string, MutationFeedback> = {
           : formatCalendarDate(input.neededBy, activeLocale()),
     }),
   }),
+  // AC-11b — the redirection's **invisible consequence** is the whole reason
+  // this entry exists: every frozen Purchase Draft Line linked to this order
+  // now reports Address Drift, and nothing on the screen the member is looking
+  // at would say so (design-handoff.md `oEWEj`, `LDc7S`).
+  redirectCustomerOrder: feedback<{ customerName: string }>({
+    scope: 'customer-order',
+    describe: ({ customerName }) => ({ customer: customerName }),
+  }),
   // AC-19a — the reason is recorded with the cancellation, so the toast states
   // it, exactly as closing a draft with a reason does.
   cancelCustomerOrder: feedback<{
@@ -210,6 +222,58 @@ export const MUTATION_FEEDBACK: Record<string, MutationFeedback> = {
       customer: customerName,
       reason: input.cancellationReason,
     }),
+  }),
+
+  // Customers and their address books (delivery-addresses T21). Every write is
+  // a member's own decision, so every one reports. Each toast names the
+  // CUSTOMER and never the address text: the address is confidential data of
+  // the same classification as the Customer holding it (spec.md §6.1), and a
+  // toast is the one surface that outlives the dialog that showed it.
+  recordCustomer: feedback<{ input: { name: string } }>({
+    scope: 'customer',
+    describe: ({ input }) => ({ customer: input.name }),
+  }),
+  correctCustomerName: feedback<{ customerName: string }>({
+    scope: 'customer',
+    describe: ({ customerName }) => ({ customer: customerName }),
+  }),
+  deactivateCustomer: feedback<{ customerName: string }>({
+    scope: 'customer',
+    describe: ({ customerName }) => ({ customer: customerName }),
+  }),
+  reactivateCustomer: feedback<{ customerName: string }>({
+    scope: 'customer',
+    describe: ({ customerName }) => ({ customer: customerName }),
+  }),
+  // AC-04 — one endpoint, two outcomes: adding an address and adding one that
+  // also becomes the Main one are different consequences, and the second is
+  // invisible unless the toast says so.
+  addCustomerDeliveryAddress: feedback<{
+    customerName: string;
+    input: { main: boolean };
+  }>({
+    scope: 'customer',
+    action: ({ input }) =>
+      input.main
+        ? 'addCustomerMainDeliveryAddress'
+        : 'addCustomerDeliveryAddress',
+    describe: ({ customerName }) => ({ customer: customerName }),
+  }),
+  correctCustomerDeliveryAddress: feedback<{ customerName: string }>({
+    scope: 'customer',
+    describe: ({ customerName }) => ({ customer: customerName }),
+  }),
+  setMainCustomerDeliveryAddress: feedback<{ customerName: string }>({
+    scope: 'customer',
+    describe: ({ customerName }) => ({ customer: customerName }),
+  }),
+  deactivateCustomerDeliveryAddress: feedback<{ customerName: string }>({
+    scope: 'customer',
+    describe: ({ customerName }) => ({ customer: customerName }),
+  }),
+  reactivateCustomerDeliveryAddress: feedback<{ customerName: string }>({
+    scope: 'customer',
+    describe: ({ customerName }) => ({ customer: customerName }),
   }),
 
   // Purchase drafts (T20/T16). Every endpoint below is a member's own decision
@@ -224,10 +288,16 @@ export const MUTATION_FEEDBACK: Record<string, MutationFeedback> = {
   revisePurchaseDraftLineLink: feedback({ scope: 'purchase-draft' }),
   removePurchaseDraftLineLink: feedback({ scope: 'purchase-draft' }),
 
-  // Purchase draft transitions (T21) — the four irreversible acts: freezing,
-  // confirming arrival, closing with a reason, and discarding.
+  // Purchase draft transitions (T21, T17) — the irreversible acts: freezing,
+  // ending a line either way, closing with a reason, and discarding.
   readyPurchaseDraft: feedback({ scope: 'purchase-draft' }),
-  confirmPurchaseDraftArrival: feedback({ scope: 'purchase-draft' }),
+  // AC-19/AC-21 — each toast states the outcome **and** its invisible
+  // consequence. For an arrival that is the stock the act did not move; for a
+  // direct delivery it is the stronger fact that the goods never entered the
+  // building at all, which is the assumption a member most reasonably brings to
+  // "record what the customer received".
+  recordPurchaseDraftLineArrival: feedback({ scope: 'purchase-draft' }),
+  recordPurchaseDraftLineDirectDelivery: feedback({ scope: 'purchase-draft' }),
   // AC-21 — the success copy states the reason that committed.
   closePurchaseDraft: feedback<{ input: { closureReason: string } }>({
     scope: 'purchase-draft',

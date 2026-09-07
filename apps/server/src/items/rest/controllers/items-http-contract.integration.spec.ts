@@ -319,7 +319,6 @@ describe('items HTTP contract', () => {
       orderedQuantity: 10,
       packagingTypeId: null,
       valueAddingNote: null,
-      receivedQuantity: null,
       createdAt: now,
       updatedAt: now,
     });

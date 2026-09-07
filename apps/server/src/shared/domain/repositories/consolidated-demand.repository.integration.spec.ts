@@ -268,7 +268,6 @@ const seedPurchaseDraftLine = async (
     orderedQuantity: 1,
     packagingTypeId: null,
     valueAddingNote: null,
-    receivedQuantity: null,
     createdAt: now,
     updatedAt: now,
   });

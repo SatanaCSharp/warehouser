@@ -5,6 +5,7 @@ import {
   useRevisePurchaseDraftLineMutation,
 } from 'modules/purchase-draft/api/purchase-draft-api';
 import { AddPurchaseDraftLineAction } from 'modules/purchase-draft/components/AddPurchaseDraftLineAction';
+import { LineEndingAction } from 'modules/purchase-draft/components/purchase-draft-transitions/components/LineEndingAction';
 import { PurchaseDraftLineEditor } from 'modules/purchase-draft/components/PurchaseDraftLineEditor';
 import { usePackagingTypes } from 'modules/purchase-draft/hooks/queries/usePackagingTypes';
 import { Conditional } from 'shared/components/Conditional';
@@ -15,6 +16,7 @@ import type {
   PurchaseDraftLineUpdate,
 } from '@warehouser/contracts/purchase-drafts';
 import type { ReactElement } from 'react';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 export type PurchaseDraftLineListProps = {
   draft: PurchaseDraftDetail;
@@ -43,14 +45,13 @@ export const PurchaseDraftLineList = ({
 
   const onReviseLine =
     (purchaseDraftLineId: string) =>
-    (input: PurchaseDraftLineUpdate): void => {
-      void reviseLine({
+    (input: PurchaseDraftLineUpdate): Promise<MutationResult> =>
+      reviseLine({
         warehouseId,
         purchaseDraftId: draft.id,
         purchaseDraftLineId,
         input,
       });
-    };
   const onRemoveLine = (purchaseDraftLineId: string) => (): void => {
     void removeLine({
       warehouseId,
@@ -72,6 +73,10 @@ export const PurchaseDraftLineList = ({
         {draft.lines.map((line, index) => (
           <PurchaseDraftLineEditor
             key={line.id}
+            // AC-19 — the action decides for itself whether this draft's
+            // state admits an ending, so there is no branch here
+            // (`writing-web-components.md` §6).
+            endingAction={<LineEndingAction draft={draft} line={line} />}
             index={index + 1}
             isFrozen={isFrozen}
             line={line}

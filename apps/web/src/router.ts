@@ -7,6 +7,7 @@ import {
 import { accessRoute } from 'modules/access/route';
 import { loginRoute } from 'modules/auth/login/route';
 import { signUpRoute } from 'modules/auth/sign-up/route';
+import { customerRoute } from 'modules/customer/route';
 import { customerOrderRoute } from 'modules/customer-order/route';
 import { homeRoute } from 'modules/home/route';
 import { itemRoute } from 'modules/item/route';
@@ -40,6 +41,9 @@ const routeTree = rootRoute.addChildren([
     customerOrderRoute,
     purchaseDraftRoute,
     itemRoute,
+    // delivery-addresses T21 — the Customers destination, declared before the
+    // splat for the same reason (that feature's sad.md §5 Web).
+    customerRoute,
     warehouseCatchAllRoute,
   ]),
   // T7 — last root child: the splat ranks below every explicit route, so it

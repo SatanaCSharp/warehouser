@@ -3,7 +3,7 @@ import type { ReactElement } from 'react';
 export const ChevronDownIcon = (): ReactElement => (
   <svg
     aria-hidden="true"
-    className="hidden size-4 sm:block"
+    className="hidden shrink-0 size-4 sm:block"
     fill="none"
     viewBox="0 0 24 24"
     stroke="currentColor"

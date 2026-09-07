@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { getEntityManager } from 'shared/database/db-transaction-context.service';
+import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
 import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
+import type { PurchaseDraftLineDeliveryMode } from 'shared/domain/entities/purchase-draft-line.entity';
 import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity';
 import { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity';
 import { DataSource, EntityManager } from 'typeorm';
@@ -37,6 +39,11 @@ export interface AddLinePersistenceInput {
   readonly orderedQuantity: number;
   readonly packagingTypeId?: string | null;
   readonly valueAddingNote?: string | null;
+  // How the line's goods travel, and where to when they do not come to the dock. Both are stated by
+  // the caller rather than left to the column default, so what a new line records is a decision the
+  // `purchase-drafts` module makes and this repository writes (AC-13).
+  readonly deliveryMode: PurchaseDraftLineDeliveryMode;
+  readonly customerDeliveryAddressId: string | null;
 }
 
 export interface UpdateLinePersistenceInput {
@@ -44,6 +51,28 @@ export interface UpdateLinePersistenceInput {
   readonly orderedQuantity?: number;
   readonly packagingTypeId?: string | null;
   readonly valueAddingNote?: string | null;
+  // The two halves of the destination (AC-13). They are written together or not at all — the pairing
+  // `chk_purchase_draft_lines_delivery_mode_address` is the schema's, so a caller stating one half
+  // alone is refused by the database rather than silently half-applied here.
+  readonly deliveryMode?: PurchaseDraftLineDeliveryMode;
+  readonly customerDeliveryAddressId?: string | null;
+}
+
+/** Where one link's Customer Order is going, beside the link that names it. Persistence-oriented
+ * values only: the rule they are decided against — "a Direct to Customer line serves only the demand
+ * going to the address it ships to" — belongs to `purchase-drafts/domain`, never here
+ * (creating-a-server-repository.md § "Keep repositories isolated and operation-oriented"). The
+ * address is nullable because a Customer Order recorded by typed name is going to none. */
+export interface LinkedOrderDestination {
+  readonly purchaseDraftLineLinkId: string;
+  readonly customerOrderId: string;
+  readonly customerOrderDeliveryAddressId: string | null;
+}
+
+/** Where a line's goods travel, as the row holds it now. */
+export interface LineDestinationRead {
+  readonly deliveryMode: PurchaseDraftLineDeliveryMode;
+  readonly customerDeliveryAddressId: string | null;
 }
 
 export interface UpdateDraftPersistenceInput {
@@ -173,7 +202,18 @@ export class PurchaseDraftAssemblyRepository {
         orderedQuantity: line.orderedQuantity,
         packagingTypeId: line.packagingTypeId ?? null,
         valueAddingNote: line.valueAddingNote ?? null,
-        receivedQuantity: null,
+        // Every line is composed Via Warehouse — the column's own default and the behaviour every
+        // line had before this release (AC-13). Setting a line's Delivery Mode and its destination
+        // arrives with T15, and the freeze and the ending with T16 and T17.
+        deliveryMode: 'via_warehouse',
+        customerDeliveryAddressId: null,
+        frozenDeliveryAddressText: null,
+        frozenAccessNotes: null,
+        frozenCustomerName: null,
+        endingQuantity: null,
+        endingKind: null,
+        endingRecordedByUserId: null,
+        endingRecordedAt: null,
         createdAt: input.createdAt,
         updatedAt: input.createdAt,
       };
@@ -254,7 +294,8 @@ export class PurchaseDraftAssemblyRepository {
       orderedQuantity: input.orderedQuantity,
       packagingTypeId: input.packagingTypeId ?? null,
       valueAddingNote: input.valueAddingNote ?? null,
-      receivedQuantity: null,
+      deliveryMode: input.deliveryMode,
+      customerDeliveryAddressId: input.customerDeliveryAddressId,
       createdAt: now,
       updatedAt: now,
     });
@@ -407,6 +448,67 @@ export class PurchaseDraftAssemblyRepository {
       });
 
     return deleted.affected === 1 ? 'applied' : 'target-missing';
+  }
+
+  // AC-15/AC-15b — where one line's goods travel, so the caller can tell whether the agreement
+  // applies to it at all. Scoped to the draft **and** the acting Warehouse, exactly as every write
+  // on these routes is: a line of another Warehouse's draft resolves to nothing here, so nothing is
+  // disclosed by asking (spec.md §6.1).
+  findLineDestination(
+    scope: PurchaseDraftWriteScope,
+    purchaseDraftLineId: string,
+  ): Promise<LineDestinationRead | null> {
+    return getEntityManager(this.dataSource)
+      .getRepository(PurchaseDraftLineEntity)
+      .findOne({
+        where: {
+          id: purchaseDraftLineId,
+          purchaseDraftId: scope.purchaseDraftId,
+          warehouseId: scope.warehouseId,
+        },
+        select: { deliveryMode: true, customerDeliveryAddressId: true },
+      });
+  }
+
+  // AC-15/AC-15a — every link on one line, with the Delivery Address the Customer Order it names is
+  // going to **now**. One join rather than a link read followed by an order read per link, so the
+  // whole set the agreement is decided over comes from one query
+  // (creating-a-server-repository.md § "Prefer one purpose-built query"). It runs inside the calling
+  // command's transaction, which has already taken the draft row's lock, so no concurrent assembly
+  // write can change the set between this read and the write that follows it (sad.md §8).
+  //
+  // It reports the addresses and decides nothing: which of them disagree is a rule of
+  // `purchase-drafts/domain`, and a repository that filtered here would hold half of it.
+  findLinkedOrderDestinations(
+    scope: PurchaseDraftWriteScope,
+    purchaseDraftLineId: string,
+  ): Promise<LinkedOrderDestination[]> {
+    return getEntityManager(this.dataSource)
+      .getRepository(PurchaseDraftLineLinkEntity)
+      .createQueryBuilder('link')
+      .innerJoin(
+        CustomerOrderEntity,
+        'demand',
+        'demand.id = link.customerOrderId',
+      )
+      .select('link.id', 'purchaseDraftLineLinkId')
+      .addSelect('link.customerOrderId', 'customerOrderId')
+      .addSelect(
+        'demand.customerDeliveryAddressId',
+        'customerOrderDeliveryAddressId',
+      )
+      .where('link.purchaseDraftLineId = :purchaseDraftLineId', {
+        purchaseDraftLineId,
+      })
+      .andWhere('link.purchaseDraftId = :purchaseDraftId', {
+        purchaseDraftId: scope.purchaseDraftId,
+      })
+      .andWhere('link.warehouseId = :warehouseId', {
+        warehouseId: scope.warehouseId,
+      })
+      .orderBy('link.createdAt', 'ASC')
+      .addOrderBy('link.id', 'ASC')
+      .getRawMany<LinkedOrderDestination>();
   }
 
   findLines(purchaseDraftId: string): Promise<PurchaseDraftLineEntity[]> {

@@ -1,4 +1,5 @@
 import { Button, Modal } from '@heroui/react';
+import { useRef } from 'react';
 
 import { mutationOutcome } from 'shared/api/client/mutation-outcome';
 import { useCloseDialog } from 'shared/hooks/effects/useCloseDialog';
@@ -105,6 +106,8 @@ export const FormModalDialog = <TForm extends FieldValues, TInput = TForm>({
   const closeDialog = useCloseDialog();
   const { setFieldErrors } = useFormFieldErrors<TForm>(form.setError);
   const { isSubmitting } = form.formState;
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
 
   const showFieldErrors = (
     errors?: FieldErrorCodes<TForm>,
@@ -116,6 +119,39 @@ export const FormModalDialog = <TForm extends FieldValues, TInput = TForm>({
     setFieldErrors(errors, (field, code) =>
       translateValidation(code, field, details),
     );
+  };
+
+  /**
+   * "Focus moves to the first invalid field, or to the dialog heading, after
+   * submission" (`docs/features/delivery-addresses/design-handoff.md`
+   * §Accessibility). A refused submission leaves focus on the submit button in
+   * the footer, so a keyboard or screen-reader user is told nothing about what
+   * was rejected until they walk back up the dialog.
+   *
+   * `setFocus` is silently a no-op for a field that registered no focusable
+   * ref — every `Controller`-bound picker — and for a refusal no field
+   * explains there is no field to move to at all. Both cases are read off the
+   * result rather than predicted: focus that did not land inside the body is
+   * focus that did not reach a field, and the heading is where it goes
+   * instead. It carries `tabIndex={-1}` for that, so it takes focus
+   * programmatically without joining the tab sequence.
+   */
+  const focusFirstInvalid = (errors?: FieldErrorCodes<TForm>): void => {
+    const [firstInvalid] = (
+      Object.entries(errors ?? {}) as [Path<TForm>, string | undefined][]
+    )
+      .filter(([, code]) => Boolean(code))
+      .map(([field]) => field);
+
+    if (firstInvalid) {
+      form.setFocus(firstInvalid);
+    }
+
+    const focused = document.activeElement;
+    if (focused instanceof Node && bodyRef.current?.contains(focused)) {
+      return;
+    }
+    headingRef.current?.focus();
   };
 
   const submit = form.handleSubmit(async (values) => {
@@ -130,6 +166,7 @@ export const FormModalDialog = <TForm extends FieldValues, TInput = TForm>({
       // A locally rejected value has no server envelope behind it, so the
       // field's message is the one the rule alone can state.
       showFieldErrors(parsed.error);
+      focusFirstInvalid(parsed.error);
       return;
     }
 
@@ -141,6 +178,7 @@ export const FormModalDialog = <TForm extends FieldValues, TInput = TForm>({
 
     showFieldErrors(outcome.fieldErrors, outcome.details);
     onRefusal?.(outcome.code, outcome.details);
+    focusFirstInvalid(outcome.fieldErrors);
   });
 
   const isWide = size === 'wide';
@@ -168,9 +206,13 @@ export const FormModalDialog = <TForm extends FieldValues, TInput = TForm>({
             onSubmit={submit}
           >
             <Modal.Header>
-              <Modal.Heading>{title}</Modal.Heading>
+              <Modal.Heading ref={headingRef} tabIndex={-1}>
+                {title}
+              </Modal.Heading>
             </Modal.Header>
-            <Modal.Body className="flex flex-col gap-4">{children}</Modal.Body>
+            <Modal.Body ref={bodyRef} className="flex flex-col gap-4">
+              {children}
+            </Modal.Body>
             {/*
               Cancel precedes the primary in DOM — and therefore keyboard —
               order at every width. Below the split breakpoint the column is

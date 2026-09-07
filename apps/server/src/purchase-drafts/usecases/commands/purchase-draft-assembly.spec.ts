@@ -23,6 +23,7 @@ import { RevisePurchaseDraftLineCommand } from 'purchase-drafts/usecases/command
 import { RevisePurchaseDraftLineLinkCommand } from 'purchase-drafts/usecases/commands/revise-purchase-draft-line-link.command';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import type { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
+import type { PurchaseDraftLineDeliveryMode } from 'shared/domain/entities/purchase-draft-line.entity';
 import type { AssemblyWriteOutcome } from 'shared/domain/repositories/purchase-draft-assembly.repository';
 
 const uuid = (suffix: string): string =>
@@ -36,6 +37,10 @@ const otherItemId = uuid('102');
 const customerOrderId = uuid('201');
 const otherCustomerOrderId = uuid('202');
 const draftId = uuid('301');
+// Where the Customer Order a link names is going. The agreement between that address and the one a
+// Direct to Customer line ships to is `purchase-draft-line-delivery.spec.ts`; here it is only the
+// value the locked order carries, so the link commands have one to read.
+const customerAddressA = uuid('901');
 const now = new Date('2026-08-26T10:00:00.000Z');
 
 const currentUser: AccessCurrentUser = {
@@ -44,6 +49,7 @@ const currentUser: AccessCurrentUser = {
   roleId: uuid('4'),
   roleKind: 'custom',
   permissionId: 'PURCHASE_DRAFTS:CREATE',
+  observedPermissionIds: [],
   archived: false,
 };
 
@@ -84,8 +90,18 @@ const itemCatalogueRepositoryDouble = (
 ) => ({ findById: jest.fn().mockResolvedValue(item) });
 
 const customerOrderLifecycleRepositoryDouble = (
-  locked: { order: { id: string; warehouseId: string } } | null = {
-    order: { id: customerOrderId, warehouseId },
+  locked: {
+    order: {
+      id: string;
+      warehouseId: string;
+      customerDeliveryAddressId?: string | null;
+    };
+  } | null = {
+    order: {
+      id: customerOrderId,
+      warehouseId,
+      customerDeliveryAddressId: customerAddressA,
+    },
   },
 ) => ({
   lockOrderWithAllocatedTotal: jest.fn().mockResolvedValue(locked),
@@ -99,7 +115,28 @@ const packagingTypeCatalogueRepositoryDouble = () => ({
 
 const assemblyRepositoryDouble = (
   outcome: AssemblyWriteOutcome = 'applied',
+  delivery: {
+    lineDestination?: {
+      deliveryMode: PurchaseDraftLineDeliveryMode;
+      customerDeliveryAddressId: string | null;
+    } | null;
+    linkedOrders?: readonly {
+      purchaseDraftLineLinkId: string;
+      customerOrderId: string;
+      customerOrderDeliveryAddressId: string | null;
+    }[];
+  } = {},
 ) => ({
+  findLineDestination: jest
+    .fn()
+    .mockResolvedValue(
+      delivery.lineDestination === undefined
+        ? { deliveryMode: 'via_warehouse', customerDeliveryAddressId: null }
+        : delivery.lineDestination,
+    ),
+  findLinkedOrderDestinations: jest
+    .fn()
+    .mockResolvedValue(delivery.linkedOrders ?? []),
   createDraft: jest
     .fn()
     .mockImplementation((input: { id: string }) =>
@@ -137,6 +174,7 @@ const commandsWith = ({
     itemCatalogueRepository as never,
     customerOrderLifecycleRepository as never,
     packagingTypeCatalogueRepository as never,
+    assemblyRepository as never,
   );
 
   return {
@@ -159,6 +197,15 @@ const commandsWith = ({
     reviseLine: new RevisePurchaseDraftLineCommand(
       assemblyRepository as never,
       assemblyService,
+      // T19/AC-12 — the address-book read the line revision issues before writing a Direct to
+      // Customer destination. Every case in this file revises something other than the
+      // destination, so it answers with an active address of this Warehouse and is never reached;
+      // the rule itself is proved in `purchase-draft-line-delivery.spec.ts`.
+      {
+        findWarehouseDeliveryAddress: jest
+          .fn()
+          .mockResolvedValue({ deactivatedAt: null }),
+      } as never,
     ),
     removeLine: new RemovePurchaseDraftLineCommand(assemblyRepository as never),
     addLink: new AddPurchaseDraftLineLinkCommand(

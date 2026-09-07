@@ -1,10 +1,12 @@
 import {
-  arrivalConfirmationSchema,
   purchaseDraftClosureSchema,
   purchaseDraftCreateSchema,
+  purchaseDraftLineArrivalSchema,
   purchaseDraftLineCreateSchema,
+  purchaseDraftLineDirectDeliverySchema,
   purchaseDraftLineLinkCreateSchema,
   purchaseDraftLineLinkUpdateSchema,
+  purchaseDraftLineListQuerySchema,
   purchaseDraftLineUpdateSchema,
   purchaseDraftListQuerySchema,
   purchaseDraftReviseSchema,
@@ -25,6 +27,9 @@ export class PurchaseDraftReviseDto extends createZodDto(
 export class PurchaseDraftListQueryDto extends createZodDto(
   purchaseDraftListQuerySchema,
 ) {}
+export class PurchaseDraftLineListQueryDto extends createZodDto(
+  purchaseDraftLineListQuerySchema,
+) {}
 export class PurchaseDraftLineCreateDto extends createZodDto(
   purchaseDraftLineCreateSchema,
 ) {}
@@ -37,8 +42,11 @@ export class PurchaseDraftLineLinkCreateDto extends createZodDto(
 export class PurchaseDraftLineLinkUpdateDto extends createZodDto(
   purchaseDraftLineLinkUpdateSchema,
 ) {}
-export class ArrivalConfirmationDto extends createZodDto(
-  arrivalConfirmationSchema,
+export class PurchaseDraftLineArrivalDto extends createZodDto(
+  purchaseDraftLineArrivalSchema,
+) {}
+export class PurchaseDraftLineDirectDeliveryDto extends createZodDto(
+  purchaseDraftLineDirectDeliverySchema,
 ) {}
 export class PurchaseDraftClosureDto extends createZodDto(
   purchaseDraftClosureSchema,

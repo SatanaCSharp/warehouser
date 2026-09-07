@@ -23,7 +23,9 @@ import type { ArchiveWarehouseCommand } from 'warehouses/usecases/commands/archi
 import type { CreateWarehouseCommand } from 'warehouses/usecases/commands/create-warehouse.command';
 import type { RenameWarehouseCommand } from 'warehouses/usecases/commands/rename-warehouse.command';
 import type { RestoreWarehouseCommand } from 'warehouses/usecases/commands/restore-warehouse.command';
+import type { SetWarehouseDeliveryAddressCommand } from 'warehouses/usecases/commands/set-warehouse-delivery-address.command';
 import type { ListWorkspaceWarehousesQuery } from 'warehouses/usecases/queries/list-workspace-warehouses.query';
+import type { ReadWarehouseDeliveryAddressQuery } from 'warehouses/usecases/queries/read-warehouse-delivery-address.query';
 
 const id = (suffix: number): string =>
   `00000000-0000-4000-8000-${suffix.toString().padStart(12, '0')}`;
@@ -75,6 +77,14 @@ describe('WarehouseController', () => {
   const restoreWarehouse = {
     execute: jest.fn(),
   } as unknown as RestoreWarehouseCommand;
+  // T11/AC-10 — the Warehouse's own Delivery Address, the fifth and sixth
+  // routes whose subject is the Warehouse record.
+  const readWarehouseDeliveryAddress = {
+    execute: jest.fn(),
+  } as unknown as ReadWarehouseDeliveryAddressQuery;
+  const setWarehouseDeliveryAddress = {
+    execute: jest.fn(),
+  } as unknown as SetWarehouseDeliveryAddressCommand;
 
   const controller = new WarehouseController(
     listWarehouses,
@@ -82,6 +92,8 @@ describe('WarehouseController', () => {
     renameWarehouse,
     archiveWarehouse,
     restoreWarehouse,
+    readWarehouseDeliveryAddress,
+    setWarehouseDeliveryAddress,
   );
 
   beforeEach(() => jest.clearAllMocks());
@@ -107,11 +119,33 @@ describe('WarehouseController', () => {
         Reflect.getMetadata(PATH_METADATA, method('setWarehouseArchival')),
         Reflect.getMetadata(METHOD_METADATA, method('setWarehouseArchival')),
       ],
+      [
+        Reflect.getMetadata(
+          PATH_METADATA,
+          method('readWarehouseDeliveryAddress'),
+        ),
+        Reflect.getMetadata(
+          METHOD_METADATA,
+          method('readWarehouseDeliveryAddress'),
+        ),
+      ],
+      [
+        Reflect.getMetadata(
+          PATH_METADATA,
+          method('setWarehouseDeliveryAddress'),
+        ),
+        Reflect.getMetadata(
+          METHOD_METADATA,
+          method('setWarehouseDeliveryAddress'),
+        ),
+      ],
     ]).toEqual([
       ['/', RequestMethod.GET],
       ['/', RequestMethod.POST],
       [':warehouseId', RequestMethod.PATCH],
       [':warehouseId/archival', RequestMethod.PUT],
+      [':warehouseId/delivery-address', RequestMethod.GET],
+      [':warehouseId/delivery-address', RequestMethod.PUT],
     ]);
   });
 
@@ -123,6 +157,14 @@ describe('WarehouseController', () => {
     ['createWarehouse', WorkspacePermissionId.WAREHOUSES_CREATE],
     ['renameWarehouse', WorkspacePermissionId.WAREHOUSES_RENAME],
     ['setWarehouseArchival', WorkspacePermissionId.WAREHOUSES_ARCHIVE],
+    [
+      'readWarehouseDeliveryAddress',
+      WorkspacePermissionId.WAREHOUSES_ADDRESS_UPDATE,
+    ],
+    [
+      'setWarehouseDeliveryAddress',
+      WorkspacePermissionId.WAREHOUSES_ADDRESS_UPDATE,
+    ],
   ] as const)('%s declares its Workspace Permission', (name, permissionId) => {
     expect(
       Reflect.getMetadata(REQUIRED_WORKSPACE_PERMISSION_KEY, method(name)),
@@ -142,6 +184,8 @@ describe('WarehouseController', () => {
     'createWarehouse',
     'renameWarehouse',
     'setWarehouseArchival',
+    'readWarehouseDeliveryAddress',
+    'setWarehouseDeliveryAddress',
   ] as const)(
     '%s declares no Warehouse Permission and is never behind WarehouseAccessGuard',
     (name) => {

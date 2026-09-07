@@ -24,7 +24,8 @@
   "customer-order": {
     "recordCustomerOrder": "Записуємо попит…",
     "amendCustomerOrder": "Змінюємо замовлення…",
-    "cancelCustomerOrder": "Скасовуємо замовлення…"
+    "cancelCustomerOrder": "Скасовуємо замовлення…",
+    "redirectCustomerOrder": "Перенаправляємо замовлення…"
   },
   "workspace": {
     "renameWorkspace": "Називаємо робочий простір…",
@@ -32,6 +33,7 @@
     "renameWarehouse": "Перейменовуємо склад…",
     "archiveWarehouse": "Архівуємо склад…",
     "restoreWarehouse": "Відновлюємо склад…",
+    "setWarehouseDeliveryAddress": "Збереження адреси доставки…",
     "giveWarehouseAccess": "Надаємо доступ до {{name}}…",
     "withdrawWarehouseAccess": "Відкликаємо доступ до {{name}}…",
     "createWorkspaceRole": "Створення ролі робочого простору…",
@@ -52,8 +54,21 @@
     "revisePurchaseDraftLineLink": "Зберігаємо заявлену кількість…",
     "removePurchaseDraftLineLink": "Видаляємо зв'язок…",
     "readyPurchaseDraft": "Переводимо чернетку в готово до замовлення…",
-    "confirmPurchaseDraftArrival": "Записуємо прибуття…",
+    "recordPurchaseDraftLineArrival": "Записуємо, що прибуло…",
+    "recordPurchaseDraftLineDirectDelivery": "Записуємо доставку…",
     "closePurchaseDraft": "Закриваємо чернетку закупівлі…",
     "discardPurchaseDraft": "Відхиляємо чернетку закупівлі…"
+  },
+  "customer": {
+    "recordCustomer": "Записуємо клієнта…",
+    "correctCustomerName": "Зберігаємо назву клієнта…",
+    "deactivateCustomer": "Деактивуємо клієнта…",
+    "reactivateCustomer": "Активуємо клієнта…",
+    "addCustomerDeliveryAddress": "Додаємо адресу доставки…",
+    "addCustomerMainDeliveryAddress": "Додаємо адресу доставки…",
+    "correctCustomerDeliveryAddress": "Зберігаємо адресу доставки…",
+    "setMainCustomerDeliveryAddress": "Змінюємо основну адресу доставки…",
+    "deactivateCustomerDeliveryAddress": "Деактивуємо адресу доставки…",
+    "reactivateCustomerDeliveryAddress": "Знову пропонуємо адресу доставки…"
   }
 }

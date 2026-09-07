@@ -21,6 +21,10 @@
       "types": "./dist/customer-orders/index.d.ts",
       "default": "./dist/customer-orders/index.js"
     },
+    "./customers": {
+      "types": "./dist/customers/index.d.ts",
+      "default": "./dist/customers/index.js"
+    },
     "./items": {
       "types": "./dist/items/index.d.ts",
       "default": "./dist/items/index.js"

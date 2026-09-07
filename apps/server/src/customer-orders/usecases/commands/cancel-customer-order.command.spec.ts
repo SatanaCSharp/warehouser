@@ -23,6 +23,7 @@ const currentUser: AccessCurrentUser = {
   roleId: uuid('4'),
   roleKind: 'custom',
   permissionId: 'CUSTOMER_ORDERS:CANCEL',
+  observedPermissionIds: [],
   archived: false,
 };
 
@@ -32,6 +33,8 @@ const storedOrder = (
   id: customerOrderId,
   warehouseId,
   itemId,
+  customerId: null,
+  customerDeliveryAddressId: null,
   customerName: 'Test Customer North',
   quantity: 100,
   outstandingQuantity: 100,

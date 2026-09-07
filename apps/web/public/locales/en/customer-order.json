@@ -20,12 +20,6 @@
     "item": {
       "meta": "{{sku}} · counted in {{unit}}"
     },
-    "outstanding": {
-      "caption": "{{unit}} outstanding"
-    },
-    "onHand": {
-      "caption": "on hand"
-    },
     "urgency": {
       "today": "needed today",
       "upcoming_one": "in {{count}} day",
@@ -63,7 +57,11 @@
     "customerOrder": {
       "actions": "Actions for {{customerName}}",
       "outstanding": "{{outstanding}} of {{quantity}} outstanding",
-      "neededBy": "by {{date}}"
+      "neededBy": "by {{date}}",
+      "goingTo": "Going to {{address}}",
+      "typedName": "Recorded by typed name — no delivery address",
+      "withheld": "Customer identity withheld",
+      "withheldName": "a customer you may not see"
     },
     "card": {
       "onHandCaption": "{{unit}} in the transit zone",
@@ -71,7 +69,8 @@
     },
     "menu": {
       "amend": "Amend",
-      "cancel": "Cancel order"
+      "cancel": "Cancel order",
+      "redirect": "Redirect"
     }
   },
   "chips": {
@@ -89,8 +88,8 @@
       "description": "The order is recorded against this warehouse and joins the consolidated demand immediately.",
       "cancel": "Cancel",
       "submit": "Record demand",
-      "customerNameLabel": "Customer",
-      "customerNameHelp": "The end customer waiting for the goods. A name is all this release records.",
+      "customerNameLabel": "Customer name",
+      "customerNameHelp": "The end customer waiting for the goods, typed by hand. No customer is created or matched for it.",
       "itemHelp": "Only active items of this warehouse are offered.",
       "quantityLabel": "Quantity",
       "quantityHelp": "A whole number greater than zero, counted in the unit the item is counted in.",
@@ -99,8 +98,11 @@
       "refusal": {
         "invalid": "Nothing was recorded. Correct the values this warehouse will not accept and try again.",
         "unavailable": "Nothing was recorded. That item is not one this warehouse offers.",
-        "invalidState": "Nothing was recorded."
-      }
+        "invalidState": "Nothing was recorded.",
+        "invalidDeliveryAddress": "Nothing was recorded. Choose one of that customer’s active delivery addresses and try again."
+      },
+      "customerHelp": "Choose a customer of this warehouse to record the order against them and their delivery address. Leave it empty to type a name instead.",
+      "customerNameSupersededHelp": "Not used while a customer is chosen — the order is recorded against that customer."
     },
     "amend": {
       "title": "Amend {{customerName}}'s order",
@@ -118,7 +120,8 @@
       "refusal": {
         "invalid": "Nothing was changed. Change the quantity or the needed-by date before saving.",
         "unavailable": "Nothing was changed. That customer order is no longer available.",
-        "invalidState": "Nothing was changed. This order has already been fulfilled or cancelled."
+        "invalidState": "Nothing was changed. This order has already been fulfilled or cancelled.",
+        "invalidDeliveryAddress": "Nothing was changed. Choose one of that customer’s active delivery addresses and try again."
       }
     },
     "cancel": {
@@ -132,7 +135,24 @@
       "refusal": {
         "invalid": "Nothing was cancelled. State a reason and try again.",
         "unavailable": "Nothing was cancelled. That customer order is no longer available.",
-        "invalidState": "Nothing was cancelled. This order has already been fulfilled or cancelled."
+        "invalidState": "Nothing was cancelled. This order has already been fulfilled or cancelled.",
+        "invalidDeliveryAddress": "Nothing was cancelled. That customer order names a delivery address this warehouse will not accept."
+      }
+    },
+    "redirect": {
+      "title": "Redirect {{customerName}}'s order",
+      "description": "The order stays with the same customer and keeps counting in the consolidated demand exactly as before.",
+      "cancel": "Cancel",
+      "submit": "Redirect the order",
+      "drift": {
+        "heading": "A frozen draft linked to this order will report address drift",
+        "body": "No frozen draft changes — each one records the address the supplier was told. What moves is the comparison against where this order now goes. Redirecting it back to the frozen address stops the report."
+      },
+      "refusal": {
+        "invalid": "Nothing was changed. Choose one of this customer’s active delivery addresses and try again.",
+        "unavailable": "Nothing was changed. That customer order is no longer available.",
+        "invalidState": "Nothing was changed. Only an outstanding customer order is redirected.",
+        "invalidDeliveryAddress": "Nothing was changed. An outstanding customer order is redirected only to another active delivery address of the customer it already names — serving a different customer means recording a new customer order."
       }
     }
   }

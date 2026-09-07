@@ -183,7 +183,6 @@ const insertPurchaseDraftWithLine = async (
     orderedQuantity: 5,
     packagingTypeId: null,
     valueAddingNote: null,
-    receivedQuantity: null,
     createdAt: now,
     updatedAt: now,
   });

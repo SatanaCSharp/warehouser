@@ -1,5 +1,3 @@
-import { useTranslation } from 'react-i18next';
-
 import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
 
 import type { DemandLine } from '@warehouser/contracts/customer-orders';
@@ -9,20 +7,25 @@ export type DemandOutstandingCellProps = { line: DemandLine };
 
 /**
  * The `OUTSTANDING` cell of one Demand row (design frame `G6jhw`): the
- * group-separated total above the unit caption `pieces outstanding`.
+ * group-separated total above its unit of measure.
+ *
+ * The caption is the **unit alone** — `pieces`, not `pieces outstanding`. The
+ * column header one line above already says `Outstanding`, so repeating the
+ * word once per row said nothing a reader had not just read, and the unit is
+ * the only part of that caption a row actually varies. The mobile card writes
+ * the same caption the same way (`DemandCard`), so the two surfaces agree.
  *
  * The figure goes through `useLocaleFormat().quantity` rather than being
  * rendered raw, because every quantity in the approved frames is
  * group-separated (`1 240`) and an ungrouped one is a visible deviation.
  *
  * It is a component rather than markup inlined in the row renderer because it
- * calls two hooks, and a React Aria row renderer may call none
+ * calls a hook, and a React Aria row renderer may call none
  * (`docs/system/adr/27-08-2026-heroui-table-for-web-data-tables.md`).
  */
 export const DemandOutstandingCell = ({
   line,
 }: DemandOutstandingCellProps): ReactElement => {
-  const { t } = useTranslation('customer-order');
   const format = useLocaleFormat();
 
   return (
@@ -30,9 +33,7 @@ export const DemandOutstandingCell = ({
       <p className="font-semibold text-foreground">
         {format.quantity(line.totalOutstandingQuantity)}
       </p>
-      <p className="text-xs text-muted">
-        {t('demand.outstanding.caption', { unit: line.unitOfMeasure })}
-      </p>
+      <p className="text-xs text-muted">{line.unitOfMeasure}</p>
     </div>
   );
 };

@@ -28,6 +28,13 @@ index first, then read only the entries that cover the change you are making. Pa
   specialized concrete repository in `shared/domain/repositories/` shaped around a cohesive
   persistence operation rather than one table. Use whenever production code needs new TypeORM
   persistence access.
+- [Server request authorization](guides/server-request-authorization.md) — the declarative
+  authorization stage: `SessionAuthGuard` followed by the Warehouse or Workspace level guard, the
+  Permission each handler declares, the principal each guard attaches, archived-Warehouse tolerance,
+  and `@ObservedPermission` — a Permission resolved for the projection that by construction can
+  neither deny nor admit a request. Use whenever a handler must be authorized, whenever a response's
+  contents depend on a Permission the read does not require, and before adding a guard or a
+  Permission declaration.
 - [Server error handling](guides/server-error-handling.md) — predicates as named conditions, typed
   errors and assertion factories, propagation without routine `try/catch`, the global NestJS
   exception filter, logging, and safe REST error responses. Use whenever code can fail, reject a

@@ -36,6 +36,7 @@ const draft = (
   expectedArrivalDate: null,
   lineCount: 1,
   hasDriftSignal: false,
+  hasDirectToCustomerAddressDrift: false,
   closureReason: null,
   createdByUserId: accessIds.actingUser,
   createdAt: '2026-08-01T09:00:00.000Z',
@@ -57,7 +58,14 @@ const draft = (
       orderedQuantity: 400,
       packagingTypeId: null,
       valueAddingNote: null,
-      receivedQuantity: null,
+      ending: null,
+      deliveryMode: 'via_warehouse',
+      warehouseDestination: {
+        addressText: 'Test Warehouse North, Test Industrial Estate',
+        accessNotes: null,
+        frozen: false,
+      },
+      customerDestination: null,
       links: [],
     },
   ],
@@ -113,15 +121,23 @@ describe('PurchaseDraftTransitions', () => {
 
     expect(await trigger(/move to ready/iu)).toBeInTheDocument();
     expect(await trigger(/discard/iu)).toBeInTheDocument();
-    noTrigger(/confirm arrival/iu);
+    noTrigger(/record what arrived/iu);
     noTrigger(/close with a reason/iu);
   });
 
-  it('never offers discard for a draft already made ready (AC-24a)', async () => {
+  // T17/ADR 0002 — a frozen draft no longer ends in one whole-draft act, so this footer offers
+  // **no** ending at all: each line carries its own (`LineEndingAction`). Closing with a reason
+  // stays a whole-draft act available at any time (AC-21). The absent arrival trigger is asserted
+  // rather than merely dropped, because "the footer stopped offering it" is the change.
+  it('never offers discard for a draft already made ready, and no longer offers a whole-draft arrival (AC-24a, AC-19)', async () => {
     renderTransitions(draft({ state: 'ready_for_ordering' }));
 
-    expect(await trigger(/confirm arrival/iu)).toBeInTheDocument();
     expect(await trigger(/close with a reason/iu)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/each line is ended on its own/iu),
+    ).toBeInTheDocument();
+    noTrigger(/record what arrived/iu);
+    noTrigger(/confirm arrival/iu);
     noTrigger(/discard/iu);
     noTrigger(/move to ready/iu);
   });

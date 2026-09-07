@@ -5,9 +5,17 @@ import { Conditional } from 'shared/components/Conditional';
 import type { ChangeEvent, ReactElement, ReactNode } from 'react';
 
 export type ValueAddingNoteFieldProps = {
+  /**
+   * The id of the line's lock strip, so a disabled field points at the one
+   * sentence that says why — stated once for the whole line rather than
+   * repeated into this field's own caption (design-handoff.md §Accessibility).
+   * React Aria's `useField` composes it with the `Description` below rather
+   * than replacing it, so the field announces both.
+   */
+  'aria-describedby'?: string;
   className?: string;
   defaultValue: string;
-  /** The helper sentence under the field, or why the field is refused. */
+  /** The helper sentence under the field. */
   description?: ReactNode;
   isDisabled?: boolean;
   label: ReactNode;
@@ -35,6 +43,7 @@ export type ValueAddingNoteFieldProps = {
  * (`docs/system/guides/placing-web-components.md`).
  */
 export const ValueAddingNoteField = ({
+  'aria-describedby': ariaDescribedBy,
   className,
   defaultValue,
   description,
@@ -45,6 +54,7 @@ export const ValueAddingNoteField = ({
   onChange,
 }: ValueAddingNoteFieldProps): ReactElement => (
   <TextField
+    aria-describedby={ariaDescribedBy}
     className={className}
     defaultValue={defaultValue}
     isDisabled={isDisabled}

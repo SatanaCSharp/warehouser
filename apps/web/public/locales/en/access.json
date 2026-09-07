@@ -305,6 +305,7 @@
       "WAREHOUSES_CREATE": "Create warehouses",
       "WAREHOUSES_RENAME": "Rename warehouses",
       "WAREHOUSES_ARCHIVE": "Archive and restore warehouses",
+      "WAREHOUSES_ADDRESS_UPDATE": "Recording warehouse delivery addresses",
       "WAREHOUSE_MEMBERSHIPS_ASSIGN": "Assign warehouse memberships",
       "WAREHOUSE_MEMBERSHIPS_REVOKE": "Revoke warehouse memberships",
       "WORKSPACE_OWNER_ROLE_REASSIGN": "Transfer workspace ownership"

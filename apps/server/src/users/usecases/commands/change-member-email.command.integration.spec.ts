@@ -236,6 +236,7 @@ describe('ChangeMemberEmailCommand', () => {
     roleId: actorRoleId,
     roleKind: 'custom',
     permissionId: emailUpdatePermissionId,
+    observedPermissionIds: [],
     archived: false,
   });
 

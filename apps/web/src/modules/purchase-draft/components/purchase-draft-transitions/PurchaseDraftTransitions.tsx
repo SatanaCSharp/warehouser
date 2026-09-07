@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
 import { ClosePurchaseDraftAction } from 'modules/purchase-draft/components/purchase-draft-transitions/components/ClosePurchaseDraftAction';
-import { ConfirmArrivalAction } from 'modules/purchase-draft/components/purchase-draft-transitions/components/ConfirmArrivalAction';
 import { DiscardPurchaseDraftAction } from 'modules/purchase-draft/components/purchase-draft-transitions/components/DiscardPurchaseDraftAction';
 import { ReadyPurchaseDraftAction } from 'modules/purchase-draft/components/purchase-draft-transitions/components/ReadyPurchaseDraftAction';
 import { Conditional } from 'shared/components/Conditional';
@@ -60,15 +59,16 @@ export const PurchaseDraftTransitions = ({
         </div>
       </>
     ),
+    // T17/ADR 0002 — a frozen draft no longer ends in one whole-draft act, so this footer offers
+    // none. Each line carries its own ending action (`LineEndingAction`), because a dock arrival
+    // and a direct delivery on one draft fall on different days. Closing with a reason stays a
+    // whole-draft act available at any time (AC-21).
     ready_for_ordering: (
       <>
         <ClosePurchaseDraftAction draft={draft} />
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="text-sm text-muted">
-            {t('detail.footer.arrivalHint')}
-          </span>
-          <ConfirmArrivalAction draft={draft} />
-        </div>
+        <span className="text-sm text-muted">
+          {t('detail.footer.endingHint')}
+        </span>
       </>
     ),
     closed: null,

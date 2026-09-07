@@ -4,6 +4,7 @@ import { PermissionId } from '@warehouser/shared-types/enums';
 import { ReadConsolidatedDemandQuery } from 'customer-orders/usecases/queries/read-consolidated-demand.query';
 import type { WarehouseAccessRequest } from 'shared/access/access-request';
 import { ArchivedTolerantRead } from 'shared/access/archived-tolerant-read.decorator';
+import { ObservedPermission } from 'shared/decorators/observed-permission.decorator';
 import { RequiredPermission } from 'shared/decorators/required-permission.decorator';
 import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
 import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
@@ -16,7 +17,21 @@ import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
  * invariants it depends on owns it. A module's URL prefix and its owning module are allowed to
  * disagree (ADR 18-08-2026, retaining ADR 14-08-2026 §"Two modules may serve one URL prefix").
  *
- * AC-05 — the read declares exactly `CUSTOMER_ORDERS:WATCH`. The denial is produced entirely by
+ * AC-09a — the read declares `CUSTOMERS:WATCH` **observed** beside its one required Permission,
+ * because the demand surface as a whole carries customer identity through the Customer Orders behind
+ * each Demand Line. Under the aggregation shape `ordering` established — which this feature leaves
+ * unchanged (sad.md §6.6 read note) — a Demand Line itself carries no customer name, no Delivery
+ * Address and no count of either, so **this operation has no field to redact**: the per-order
+ * customer and destination are read through `listCustomerOrders`, which is where AC-09a's and
+ * AC-24's redaction lands (api-sync-report.md Finding 1, resolved (a)).
+ *
+ * The declaration is made anyway and deliberately. It leaves sad.md §8's authorization-coverage
+ * check no exception to carve out for a read on the identity-bearing demand surface, and it means
+ * that adding an identity field to `DemandLine` later cannot silently skip the Permission that
+ * governs it. It costs nothing and can deny nothing: the guard resolves observed Permissions in the
+ * grant read it already issues, and `canActivate` never consults the result (ADR 0001).
+ *
+ * AC-05 — the read requires exactly `CUSTOMER_ORDERS:WATCH`. The denial is produced entirely by
  * `WarehouseAccessGuard` before this handler runs, so it is the same `access.denied` response for a
  * Warehouse holding demand and for one holding none: nothing here can leak a customer name, a
  * quantity, an Item, or whether any demand exists at all. */
@@ -34,6 +49,7 @@ export class DemandController {
   // `toItemResponse` do.
   @Get()
   @RequiredPermission(PermissionId.CUSTOMER_ORDERS_WATCH)
+  @ObservedPermission(PermissionId.CUSTOMERS_WATCH)
   @ArchivedTolerantRead()
   @UseGuards(SessionAuthGuard, WarehouseAccessGuard)
   async readConsolidatedDemand(

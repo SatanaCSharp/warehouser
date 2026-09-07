@@ -27,7 +27,8 @@
     "amendCustomerOrderQuantity": "Замовлення змінено · {{customer}} тепер чекає на {{quantity}}",
     "amendCustomerOrderNeededBy": "Замовлення змінено · {{customer}} тепер потребує до {{date}}",
     "amendCustomerOrderBoth": "Замовлення змінено · {{customer}} тепер чекає на {{quantity}} до {{date}}",
-    "cancelCustomerOrder": "Замовлення скасовано · {{customer}} · {{reason}}"
+    "cancelCustomerOrder": "Замовлення скасовано · {{customer}} · {{reason}}",
+    "redirectCustomerOrder": "Замовлення перенаправлено · {{customer}} · кожен заморожений рядок чернетки, пов’язаний із ним, тепер повідомляє про розбіжність адрес"
   },
   "workspace": {
     "renameWorkspace": "Робочий простір названо.",
@@ -35,6 +36,7 @@
     "renameWarehouse": "Склад перейменовано.",
     "archiveWarehouse": "Склад заархівовано.",
     "restoreWarehouse": "Склад відновлено.",
+    "setWarehouseDeliveryAddress": "Адресу доставки збережено.",
     "giveWarehouseAccess": "Доступ до {{name}} надано.",
     "withdrawWarehouseAccess": "Доступ до {{name}} відкликано.",
     "createWorkspaceRole": "Роль робочого простору створено.",
@@ -55,8 +57,21 @@
     "revisePurchaseDraftLineLink": "Заявлену кількість збережено.",
     "removePurchaseDraftLineLink": "Зв'язок видалено.",
     "readyPurchaseDraft": "Чернетка закупівлі готова до замовлення.",
-    "confirmPurchaseDraftArrival": "Прибуття підтверджено, чернетку закрито.",
+    "recordPurchaseDraftLineArrival": "Прибуття цього рядка записано, і те, на що ще чекає кожен клієнт, зменшено. Чернетка закриється, коли кожен рядок матиме завершення.",
+    "recordPurchaseDraftLineDirectDelivery": "Доставку записано, і те, на що ще чекає кожен клієнт, зменшено. Жодні залишки не рухалися — товар поїхав одразу до клієнта і тут ніколи не рахувався.",
     "closePurchaseDraft": "Чернетку закупівлі закрито: {{reason}}",
     "discardPurchaseDraft": "Чернетку закупівлі відхилено."
+  },
+  "customer": {
+    "recordCustomer": "Клієнта записано · {{customer}}",
+    "correctCustomerName": "Клієнта перейменовано · {{customer}}",
+    "deactivateCustomer": "Деактивовано · {{customer}} · уже розміщені замовлення й далі враховуються",
+    "reactivateCustomer": "Активовано · {{customer}}",
+    "addCustomerDeliveryAddress": "Адресу доставки додано · {{customer}}",
+    "addCustomerMainDeliveryAddress": "Адресу доставки додано й зроблено основною · {{customer}}",
+    "correctCustomerDeliveryAddress": "Адресу доставки виправлено · {{customer}}",
+    "setMainCustomerDeliveryAddress": "Основну адресу доставки змінено · {{customer}}",
+    "deactivateCustomerDeliveryAddress": "Адресу доставки деактивовано · {{customer}} · записи, що вже називають її, й далі враховуються",
+    "reactivateCustomerDeliveryAddress": "Адресу доставки знову пропонують · {{customer}}"
   }
 }

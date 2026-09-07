@@ -2,6 +2,8 @@ import { ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ErrorCode, PermissionId } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { OBSERVED_PERMISSION_KEY } from 'shared/decorators/observed-permission.decorator';
 import { REQUIRED_PERMISSION_KEY } from 'shared/decorators/required-permission.decorator';
 import type { AccessCurrentUserRepository } from 'shared/domain/repositories/access-current-user.repository';
 import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
@@ -17,6 +19,8 @@ const warehouseId = '00000000-0000-4000-8000-000000000002';
 const otherWarehouseId = '00000000-0000-4000-8000-000000000009';
 const roleId = '00000000-0000-4000-8000-000000000003';
 const permissionId = PermissionId.ROLES_WATCH;
+const observedPermissionId = PermissionId.CUSTOMERS_WATCH;
+const otherObservedPermissionId = PermissionId.ITEMS_WATCH;
 
 // A metadata key a WorkspaceAccessGuard-shaped decorator would use; the value itself is irrelevant —
 // only that this guard must never resolve authority from it (AC-31 runtime half, DoD "own metadata
@@ -32,6 +36,7 @@ const grantedResult = {
   roleKind: 'custom' as const,
   granted: true,
   permissionId,
+  observedPermissionIds: [] as readonly PermissionId[],
   archivedAt: null as Date | null,
 };
 
@@ -61,6 +66,34 @@ const reflectorForArchivedScenario = (readTolerant: boolean): Reflector =>
       }
       if (key === READ_TOLERANT_KEY) {
         return readTolerant;
+      }
+      return undefined;
+    }),
+  }) as unknown as Reflector;
+
+/** Reads the attached principal at its real type, so an assertion about the observed set is
+ * checked against `AccessCurrentUser` rather than against `unknown`. */
+const principalOf = (request: Record<string, unknown>): AccessCurrentUser =>
+  request.access as AccessCurrentUser;
+
+/** A Reflector double answering the full handler declaration — the required Permissions, the
+ * observed ones and the read tolerance — so an observed-Permission scenario can state exactly what
+ * a handler declared without the guard being able to confuse one key for another (ADR 0001). */
+const reflectorForDeclaration = (declaration: {
+  required?: readonly PermissionId[];
+  observed?: readonly PermissionId[];
+  readTolerant?: boolean;
+}): Reflector =>
+  ({
+    getAllAndOverride: jest.fn((key: string) => {
+      if (key === REQUIRED_PERMISSION_KEY) {
+        return declaration.required;
+      }
+      if (key === OBSERVED_PERMISSION_KEY) {
+        return declaration.observed;
+      }
+      if (key === READ_TOLERANT_KEY) {
+        return declaration.readTolerant;
       }
       return undefined;
     }),
@@ -116,6 +149,7 @@ const describeSessionCompositionAndOwnMetadataKey = (): void => {
         userId,
         warehouseId,
         permissionId,
+        [],
       );
       expect(Object.isFrozen(request.access)).toBe(true);
       expect(request.access).toEqual({
@@ -124,12 +158,15 @@ const describeSessionCompositionAndOwnMetadataKey = (): void => {
         roleId,
         roleKind: 'custom',
         permissionId,
+        observedPermissionIds: [],
         archived: false,
       });
-      // Nothing beyond the five proven fields plus archived state reaches the principal.
+      // Nothing beyond the five proven fields, the archived state and the granted observed subset
+      // reaches the principal.
       expect(Object.keys(request.access as object).sort()).toEqual(
         [
           'archived',
+          'observedPermissionIds',
           'permissionId',
           'roleId',
           'roleKind',
@@ -362,6 +399,247 @@ const describeAc30IndistinguishableDenial = (): void => {
   });
 };
 
+/** AC-09a / ADR 0001: an observed Permission is resolved in the same membership read as the
+ * required one and carried on the principal, and it can only ever narrow a projection — it never
+ * admits and never denies. */
+const describeAc09aObservedPermissions = (): void => {
+  describe('AC-09a — an observed Permission annotates the principal and never decides admission', () => {
+    it('resolves the observed Permissions in the same membership read as the required one', async () => {
+      const resolveRequiredPermission = jest
+        .fn()
+        .mockResolvedValue(grantedResult);
+      const guard = guardWith(
+        reflectorForDeclaration({
+          required: [permissionId],
+          observed: [observedPermissionId],
+        }),
+        resolveRequiredPermission,
+      );
+      const request = requestWithGuardedSelection({ params: { warehouseId } });
+
+      await expect(guard.canActivate(contextFor(request))).resolves.toBe(true);
+
+      expect(resolveRequiredPermission).toHaveBeenCalledTimes(1);
+      expect(resolveRequiredPermission).toHaveBeenCalledWith(
+        userId,
+        warehouseId,
+        permissionId,
+        [observedPermissionId],
+      );
+    });
+
+    it('admits the request and leaves the principal without an observed Permission that is not granted', async () => {
+      const resolveRequiredPermission = jest.fn().mockResolvedValue({
+        ...grantedResult,
+        observedPermissionIds: [],
+      });
+      const guard = guardWith(
+        reflectorForDeclaration({
+          required: [permissionId],
+          observed: [observedPermissionId],
+        }),
+        resolveRequiredPermission,
+      );
+      const request = requestWithGuardedSelection({ params: { warehouseId } });
+
+      await expect(guard.canActivate(contextFor(request))).resolves.toBe(true);
+      expect(request.access).toMatchObject({ observedPermissionIds: [] });
+    });
+
+    it('carries exactly the granted subset of what the handler declared, and nothing else', async () => {
+      const resolveRequiredPermission = jest.fn().mockResolvedValue({
+        ...grantedResult,
+        observedPermissionIds: [observedPermissionId],
+      });
+      const guard = guardWith(
+        reflectorForDeclaration({
+          required: [permissionId],
+          observed: [observedPermissionId, otherObservedPermissionId],
+        }),
+        resolveRequiredPermission,
+      );
+      const request = requestWithGuardedSelection({ params: { warehouseId } });
+
+      await expect(guard.canActivate(contextFor(request))).resolves.toBe(true);
+      expect(principalOf(request).observedPermissionIds).toEqual([
+        observedPermissionId,
+      ]);
+      expect(principalOf(request).observedPermissionIds).not.toContain(
+        otherObservedPermissionId,
+      );
+      // The principal is a frozen server-side value: the observed set cannot be widened after the
+      // guard resolved it.
+      expect(Object.isFrozen(request.access)).toBe(true);
+      expect(Object.isFrozen(principalOf(request).observedPermissionIds)).toBe(
+        true,
+      );
+    });
+
+    it('leaves the observed set empty when the handler declares none', async () => {
+      const resolveRequiredPermission = jest
+        .fn()
+        .mockResolvedValue(grantedResult);
+      const guard = guardWith(
+        reflectorForDeclaration({ required: [permissionId] }),
+        resolveRequiredPermission,
+      );
+      const request = requestWithGuardedSelection({ params: { warehouseId } });
+
+      await expect(guard.canActivate(contextFor(request))).resolves.toBe(true);
+      expect(resolveRequiredPermission).toHaveBeenCalledWith(
+        userId,
+        warehouseId,
+        permissionId,
+        [],
+      );
+      expect(principalOf(request).observedPermissionIds).toEqual([]);
+    });
+  });
+};
+
+/** AC-09a / ADR 0001, the direction a mistake would be dangerous in: an observed Permission must
+ * never widen access. Nothing below may pass because a Permission was observed rather than
+ * required. */
+const describeAc09aObservedPermissionsNeverAdmit = (): void => {
+  describe('AC-09a — an observed Permission never admits a request the required one would refuse', () => {
+    it('still denies when the required Permission is not granted, however many observed ones are', async () => {
+      const resolveRequiredPermission = jest.fn().mockResolvedValue({
+        ...grantedResult,
+        granted: false,
+        observedPermissionIds: [observedPermissionId],
+      });
+      const guard = guardWith(
+        reflectorForDeclaration({
+          required: [permissionId],
+          observed: [observedPermissionId],
+        }),
+        resolveRequiredPermission,
+      );
+      const request = requestWithGuardedSelection({ params: { warehouseId } });
+
+      await expect(guard.canActivate(contextFor(request))).rejects.toEqual(
+        expect.objectContaining<Partial<ApplicationError>>({
+          code: ErrorCode.ACCESS_DENIED,
+        }),
+      );
+      expect(request).not.toHaveProperty('access');
+    });
+
+    it('never lets the same Permission observed on a handler substitute for the required grant', async () => {
+      const resolveRequiredPermission = jest.fn().mockResolvedValue({
+        ...grantedResult,
+        granted: false,
+        observedPermissionIds: [permissionId],
+      });
+      const guard = guardWith(
+        reflectorForDeclaration({
+          required: [permissionId],
+          observed: [permissionId],
+        }),
+        resolveRequiredPermission,
+      );
+      const request = requestWithGuardedSelection({ params: { warehouseId } });
+
+      await expect(guard.canActivate(contextFor(request))).rejects.toEqual(
+        expect.objectContaining<Partial<ApplicationError>>({
+          code: ErrorCode.ACCESS_DENIED,
+        }),
+      );
+      expect(request).not.toHaveProperty('access');
+    });
+
+    it('denies a handler that declares only observed Permissions and no required one, resolving nothing', async () => {
+      const resolveRequiredPermission = jest
+        .fn()
+        .mockResolvedValue(grantedResult);
+      const guard = guardWith(
+        reflectorForDeclaration({ observed: [observedPermissionId] }),
+        resolveRequiredPermission,
+      );
+      const request = requestWithGuardedSelection({ params: { warehouseId } });
+
+      await expect(guard.canActivate(contextFor(request))).rejects.toEqual(
+        expect.objectContaining<Partial<ApplicationError>>({
+          code: ErrorCode.ACCESS_DENIED,
+        }),
+      );
+      expect(resolveRequiredPermission).not.toHaveBeenCalled();
+      expect(request).not.toHaveProperty('access');
+    });
+
+    it('refuses an ambiguous warehouseId exactly as before, resolving nothing, observed or otherwise', async () => {
+      const resolveRequiredPermission = jest
+        .fn()
+        .mockResolvedValue(grantedResult);
+      const guard = guardWith(
+        reflectorForDeclaration({
+          required: [permissionId],
+          observed: [observedPermissionId],
+        }),
+        resolveRequiredPermission,
+      );
+      const request = requestWithGuardedSelection({
+        params: { warehouseId },
+        body: { warehouseId: otherWarehouseId },
+      });
+
+      await expect(guard.canActivate(contextFor(request))).rejects.toEqual(
+        expect.objectContaining<Partial<ApplicationError>>({
+          code: ErrorCode.ACCESS_DENIED,
+        }),
+      );
+      expect(resolveRequiredPermission).not.toHaveBeenCalled();
+    });
+
+    it('keeps archived handling unchanged: an archived Warehouse still refuses a handler that is not read-tolerant', async () => {
+      const resolveRequiredPermission = jest.fn().mockResolvedValue({
+        ...grantedResult,
+        observedPermissionIds: [observedPermissionId],
+        archivedAt: new Date('2026-01-01T00:00:00.000Z'),
+      });
+      const guard = guardWith(
+        reflectorForDeclaration({
+          required: [permissionId],
+          observed: [observedPermissionId],
+          readTolerant: false,
+        }),
+        resolveRequiredPermission,
+      );
+      const request = requestWithGuardedSelection({ params: { warehouseId } });
+
+      await expect(guard.canActivate(contextFor(request))).rejects.toEqual(
+        expect.objectContaining<Partial<ApplicationError>>({
+          code: ErrorCode.ACCESS_WAREHOUSE_ARCHIVED,
+        }),
+      );
+      expect(request).not.toHaveProperty('access');
+    });
+
+    it('keeps archived handling unchanged: a read-tolerant handler is served and still carries its observed set', async () => {
+      const resolveRequiredPermission = jest.fn().mockResolvedValue({
+        ...grantedResult,
+        observedPermissionIds: [observedPermissionId],
+        archivedAt: new Date('2026-01-01T00:00:00.000Z'),
+      });
+      const guard = guardWith(
+        reflectorForDeclaration({
+          required: [permissionId],
+          observed: [observedPermissionId],
+          readTolerant: true,
+        }),
+        resolveRequiredPermission,
+      );
+      const request = requestWithGuardedSelection({ params: { warehouseId } });
+
+      await expect(guard.canActivate(contextFor(request))).resolves.toBe(true);
+      expect(request.access).toMatchObject({
+        archived: true,
+        observedPermissionIds: [observedPermissionId],
+      });
+    });
+  });
+};
+
 describe('WarehouseAccessGuard', () => {
   describeSessionCompositionAndOwnMetadataKey();
   describeAc03aUnnamedWarehouse();
@@ -370,4 +648,6 @@ describe('WarehouseAccessGuard', () => {
   describeAc12AndAc12aArchivedWarehouse();
   describeAc31RuntimeHalf();
   describeAc30IndistinguishableDenial();
+  describeAc09aObservedPermissions();
+  describeAc09aObservedPermissionsNeverAdmit();
 });

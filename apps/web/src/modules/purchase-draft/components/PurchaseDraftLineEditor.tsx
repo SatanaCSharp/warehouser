@@ -1,9 +1,10 @@
-import { Button } from '@heroui/react';
+import { Button, Chip } from '@heroui/react';
 import { PermissionId } from '@warehouser/shared-types/enums';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useItems } from 'modules/item/hooks/queries/useItems';
+import { PurchaseDraftLineDelivery } from 'modules/purchase-draft/components/purchase-draft-line-delivery/PurchaseDraftLineDelivery';
 import { PurchaseDraftLineLinks } from 'modules/purchase-draft/components/purchase-draft-line-links/PurchaseDraftLineLinks';
 import { PurchaseDraftLineItemField } from 'modules/purchase-draft/components/PurchaseDraftLineItemField';
 import { ValueAddingNoteField } from 'modules/purchase-draft/components/ValueAddingNoteField';
@@ -16,18 +17,34 @@ import { Conditional } from 'shared/components/Conditional';
 import { FormSelectField } from 'shared/components/FormSelectField';
 import { FormTextField } from 'shared/components/FormTextField';
 import { WarehousePermissionGate } from 'shared/components/WarehousePermissionGate';
+import { ROW_ENTER } from 'shared/constants/motion';
 import { useArchivedWarehouse } from 'shared/hooks/projections/useArchivedWarehouse';
 import { useHasPermission } from 'shared/hooks/queries/usePermissions';
 import { LockIcon, TrashIcon } from 'shared/icons';
 
 import type {
+  DeliveryMode,
   PackagingType,
   PurchaseDraftLine,
   PurchaseDraftLineUpdate,
 } from '@warehouser/contracts/purchase-drafts';
-import type { ChangeEvent, ReactElement } from 'react';
+import type { ChangeEvent, ReactElement, ReactNode } from 'react';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 export type PurchaseDraftLineEditorProps = {
+  /**
+   * The line's own ending control, rendered last (design-handoff.md
+   * §Accessibility fixes the order: line head → fields → delivery mode →
+   * destination → note → links → ending action).
+   *
+   * Passed in rather than built here because the ending needs the whole draft
+   * and this component is given only its identifier; taking the slot keeps
+   * `draft` from being drilled a third hop
+   * (`writing-web-components.md` §Two-hop prop budget). The action gates
+   * itself on the draft's state and on the Permission, so the slot is filled
+   * unconditionally and the row around it collapses when it renders nothing.
+   */
+  endingAction?: ReactNode;
   /** Which line of the draft this is, as the frames number them from 1. */
   index: number;
   isFrozen: boolean;
@@ -35,7 +52,7 @@ export type PurchaseDraftLineEditorProps = {
   packagingTypes: PackagingType[];
   purchaseDraftId: string;
   onRemoveLine: () => void;
-  onReviseLine: (input: PurchaseDraftLineUpdate) => void;
+  onReviseLine: (input: PurchaseDraftLineUpdate) => Promise<MutationResult>;
 };
 
 /**
@@ -43,11 +60,15 @@ export type PurchaseDraftLineEditorProps = {
  * the editable and the frozen presentation of a Purchase Draft Line, never two
  * lookalikes (AC-15). A line that cannot be written uses HeroUI's own disabled
  * field treatment on every control — `isDisabled`, never a read-only rendering
- * of the same markup — and states the reason right beside the fields it
- * disables, so the reason travels with the control it explains rather than
- * living only in a banner the member may have scrolled past. That holds for
- * both reasons a write is refused: the draft being frozen (AC-15) and the
- * Warehouse having been archived (AC-23).
+ * of the same markup — and states the reason **once**, in the lock strip
+ * directly under the line head, where it sits beside every field it disables
+ * rather than being repeated into each of their captions
+ * (design-handoff.md §Accessibility: "the reason exposed once for the whole
+ * line by the lock strip, not repeated per field"). Each field therefore keeps
+ * the caption the design gives it, and the controls that can point at the
+ * strip do so with `aria-describedby`. That holds for both reasons a write is
+ * refused: the draft being frozen (AC-15) and the Warehouse having been
+ * archived (AC-23).
  *
  * The Item, the quantity, the Packaging Type and the Value-adding Note are the
  * four things a line says (AC-10a, AC-12); the `SERVES` section below them is
@@ -61,6 +82,7 @@ export type PurchaseDraftLineEditorProps = {
  * (`docs/system/adr/19-08-2026-declarative-permission-gates.md`).
  */
 export const PurchaseDraftLineEditor = ({
+  endingAction,
   index,
   isFrozen,
   line,
@@ -88,13 +110,13 @@ export const PurchaseDraftLineEditor = ({
     if (Number.isNaN(parsed)) {
       return;
     }
-    onReviseLine({ orderedQuantity: parsed });
+    void onReviseLine({ orderedQuantity: parsed });
   };
 
-  const onChangeItem = (itemId: string): void => onReviseLine({ itemId });
+  const onChangeItem = (itemId: string): void => void onReviseLine({ itemId });
 
   const onChangePackagingType = (packagingTypeId: string): void =>
-    onReviseLine({
+    void onReviseLine({
       packagingTypeId: packagingTypeId === '' ? null : packagingTypeId,
     });
 
@@ -102,7 +124,7 @@ export const PurchaseDraftLineEditor = ({
     event: ChangeEvent<HTMLTextAreaElement>,
   ): void => setValueAddingNote(event.target.value);
   const onBlurValueAddingNote = (): void =>
-    onReviseLine({
+    void onReviseLine({
       valueAddingNote: valueAddingNote === '' ? null : valueAddingNote,
     });
 
@@ -124,12 +146,38 @@ export const PurchaseDraftLineEditor = ({
     })),
   ];
 
+  // How this line's goods travel, stated beside `LINE 1` exactly as `yGhkK`
+  // and `F0SpRx` draw it, so the mode is readable without opening the
+  // `DELIVERY` block below. Total by construction: a third Delivery Mode fails
+  // to compile here rather than silently rendering no chip
+  // (`writing-web-components.md` §6). The two tones are the ones
+  // design-handoff.md §Colour fixes — `default` for a line coming to the dock,
+  // `accent` for one leaving for a customer — and neither carries the meaning
+  // alone: each chip states its own mode in words.
+  const modeChip: Record<DeliveryMode, ReactElement> = {
+    via_warehouse: (
+      <Chip color="default" size="sm" variant="soft">
+        {t('lineDelivery.mode.via_warehouse')}
+      </Chip>
+    ),
+    direct_to_customer: (
+      <Chip color="accent" size="sm" variant="soft">
+        {t('lineDelivery.mode.direct_to_customer')}
+      </Chip>
+    ),
+  };
+
   return (
-    <li className="rounded-xl border border-border-secondary bg-surface p-4">
+    <li
+      className={`rounded-xl border border-border-secondary bg-surface p-4 ${ROW_ENTER}`}
+    >
       <div className="flex items-start justify-between gap-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-          {t('lineEditor.heading', { index })}
-        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+            {t('lineEditor.heading', { index })}
+          </p>
+          {modeChip[line.deliveryMode]}
+        </div>
         <WarehousePermissionGate
           permission={PermissionId.PURCHASE_DRAFTS_UPDATE}
         >
@@ -148,7 +196,7 @@ export const PurchaseDraftLineEditor = ({
 
       <Conditional when={reason}>
         <p
-          className="mt-2 flex items-center gap-1.5 text-sm text-default"
+          className="mt-2 flex items-center gap-1.5 text-sm text-muted"
           id={lineRefusalReasonId(line.id)}
         >
           <LockIcon />
@@ -162,17 +210,18 @@ export const PurchaseDraftLineEditor = ({
           `PurchaseDraftWorkspace` uses for its own list/detail split. */}
       <div className="mt-3 flex flex-col gap-3 md:flex-row">
         <PurchaseDraftLineItemField
+          aria-describedby={reasonId}
           className="md:flex-1"
-          description={reason}
           isDisabled={isDisabled}
           items={items}
           line={line}
           onChange={onChangeItem}
         />
         <FormTextField
+          aria-describedby={reasonId}
           className="md:w-40"
           defaultValue={orderedQuantity}
-          description={reason ?? line.unitOfMeasure}
+          description={line.unitOfMeasure}
           isDisabled={isDisabled}
           label={t('lineEditor.quantity')}
           type="number"
@@ -180,8 +229,9 @@ export const PurchaseDraftLineEditor = ({
           onChange={onChangeOrderedQuantity}
         />
         <FormSelectField
+          aria-describedby={reasonId}
           className="md:w-48"
-          description={reason ?? t('lineEditor.packagingTypeCaption')}
+          description={t('lineEditor.packagingTypeCaption')}
           isDisabled={isDisabled}
           label={t('lineEditor.packagingType')}
           options={packagingOptions}
@@ -190,10 +240,24 @@ export const PurchaseDraftLineEditor = ({
         />
       </div>
 
+      {/* AC-13 — where this line's own goods travel and by which of the two
+          routes, which is what places it in one half of the by-line read or
+          the other. It comes **before** the note, because that is the order
+          design-handoff.md §Accessibility fixes for the keyboard: line head →
+          fields → delivery mode → destination → note → links → ending. */}
+      <PurchaseDraftLineDelivery
+        isDisabled={isDisabled}
+        isFrozen={isFrozen}
+        line={line}
+        reasonId={reasonId}
+        onReviseLine={onReviseLine}
+      />
+
       <ValueAddingNoteField
+        aria-describedby={reasonId}
         className="mt-3"
         defaultValue={valueAddingNote}
-        description={reason ?? t('lineEditor.valueAddingNoteCaption')}
+        description={t('lineEditor.valueAddingNoteCaption')}
         isDisabled={isDisabled}
         label={t('lineEditor.valueAddingNote')}
         placeholder={t('lineEditor.valueAddingNotePlaceholder')}
@@ -207,6 +271,12 @@ export const PurchaseDraftLineEditor = ({
         line={line}
         purchaseDraftId={purchaseDraftId}
       />
+
+      {/* The action gates itself, so the row it sits in collapses with
+          `empty:hidden` rather than being branched on here. */}
+      <div className="mt-4 flex justify-end border-t border-border pt-3 empty:hidden empty:border-0 empty:pt-0">
+        {endingAction}
+      </div>
     </li>
   );
 };

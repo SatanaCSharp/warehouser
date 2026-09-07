@@ -11,13 +11,13 @@ import { useTranslation } from 'react-i18next';
 import { SignOutButton } from 'modules/auth/sign-out/components/SignOutButton';
 import { selectIsAuthenticated } from 'modules/auth/store/auth.selectors';
 import { Conditional } from 'shared/components/Conditional';
-import { RetainedContextMessage } from 'shared/components/RetainedContextMessage';
 import { ROUTES } from 'shared/constants/routes';
 import { useEnteredContext } from 'shared/hooks/projections/useEnteredContext';
 import { MenuIcon } from 'shared/icons';
 import { Footer } from 'shared/layouts/Footer';
 import { LanguageSelector } from 'shared/layouts/LanguageSelector';
-import { Sidebar } from 'shared/layouts/Sidebar';
+import { RoutedContent } from 'shared/layouts/RoutedContent';
+import { Sidebar } from 'shared/layouts/sidebar/Sidebar';
 import { WarehouseSwitcher } from 'shared/layouts/WarehouseSwitcher';
 import { useAppSelector } from 'store/hooks';
 
@@ -112,17 +112,11 @@ export const RootLayout = (): ReactElement => {
           </div>
           <div className="flex flex-1">
             <Sidebar isOpen={isDrawerOpen} onOpenChange={setIsDrawerOpen} />
-            <div className="min-w-0 flex-1">
-              {/* T19 / CR-RG-03 — the retained messages are page-level
-                  content, so they mount once here, above the routed outlet,
-                  and never inside the fixed-height header the switcher sits
-                  in. Mounting them on every page is what lets the remembered
-                  Warehouse of the selection-ended message observe the stored
-                  selection ending while the actor is still inside the context
-                  it named (CR-AC-20). */}
-              <RetainedContextMessage />
-              <Outlet />
-            </div>
+            {/* The retained messages and the routed outlet, plus the
+                transition they re-enter on when the destination changes —
+                entering another Warehouse or the Workspace from the context
+                switcher included. `RoutedContent` owns both. */}
+            <RoutedContent />
           </div>
           <Footer />
         </div>

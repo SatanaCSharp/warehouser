@@ -8,7 +8,13 @@ import type {
 export interface CustomerOrder {
   readonly id: string;
   readonly itemId: string;
-  readonly customerName: string;
+  // The Customer this demand names and the one of that Customer's Delivery Addresses it is going
+  // to, or `null` on both when the order was recorded by typing a customer name (AC-11, AC-11a).
+  // `chk_customer_orders_customer_identity` admits exactly those two shapes, which is why the three
+  // fields below are never nullable independently of one another.
+  readonly customerId: string | null;
+  readonly customerDeliveryAddressId: string | null;
+  readonly customerName: string | null;
   readonly quantity: number;
   readonly outstandingQuantity: number;
   readonly neededBy: string;
@@ -29,6 +35,12 @@ export const toCustomerOrder = (
 ): CustomerOrder => ({
   id: entity.id,
   itemId: entity.itemId,
+  customerId: entity.customerId,
+  customerDeliveryAddressId: entity.customerDeliveryAddressId,
+  // `customer_name` is nullable because an order naming a Customer reads that name live from
+  // `customers` and carries none of its own (AC-11a) — which is what makes correcting a Customer's
+  // name change every order that names it without rewriting a row (AC-03b). The value travels
+  // through unchanged, `null` included; nothing narrows it here.
   customerName: entity.customerName,
   quantity: entity.quantity,
   outstandingQuantity: entity.outstandingQuantity,

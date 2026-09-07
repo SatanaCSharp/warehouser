@@ -301,6 +301,7 @@ describe('CreateMemberCommand', () => {
       roleId: actorRoleId,
       roleKind: 'custom',
       permissionId: USERS_CREATE,
+      observedPermissionIds: [],
       archived: false,
     });
 

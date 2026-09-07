@@ -45,9 +45,7 @@
         "heading": "No draft has been discarded",
         "description": "A draft that was never made ready can be discarded, and it then leaves the list it was being worked on in."
       }
-    },
-    "driftBadge_one": "{{count}} draft whose demand moved",
-    "driftBadge_other": "{{count}} drafts whose demand moved"
+    }
   },
   "card": {
     "lineCount_one": "{{count}} line",
@@ -59,7 +57,8 @@
       "closed": "{{lines}} · closed {{date}}",
       "discarded": "{{lines}} · discarded {{date}}"
     },
-    "drift": "Demand moved since freezing"
+    "drift": "Demand moved since freezing",
+    "addressDrift": "A directly-shipped line is going somewhere else now"
   },
   "state": {
     "draft": "Draft",
@@ -96,7 +95,7 @@
     },
     "footer": {
       "readyHint": "At least one line is needed",
-      "arrivalHint": "Confirming an arrival closes this draft once and for all"
+      "endingHint": "Each line is ended on its own — the draft closes when the last one is recorded"
     },
     "driftAlert": {
       "heading": "Demand moved since this draft was frozen",
@@ -111,7 +110,13 @@
       "quantityLowered": "{{customer}} — quantity lowered from {{from}} to {{to}}, still needed by {{neededBy}}.",
       "quantityLowered_dated": "{{customer}} — quantity lowered from {{from}} to {{to}} on {{on}}, still needed by {{neededBy}}.",
       "needed_by_moved": "{{customer}} — needed by moved from {{from}} to {{to}}.",
-      "needed_by_moved_dated": "{{customer}} — needed by moved from {{from}} to {{to}} on {{on}}."
+      "needed_by_moved_dated": "{{customer}} — needed by moved from {{from}} to {{to}} on {{on}}.",
+      "addressRedirected": "{{customer}} — line {{line}} was frozen for {{from}}, and that order now goes to {{to}}.",
+      "addressRedirected_dated": "{{customer}} — line {{line}} was frozen for {{from}}, and since {{on}} that order goes to {{to}}.",
+      "addressRedirectedWithheld": "{{customer}} — line {{line}} is linked to an order that has been redirected to another delivery address.",
+      "addressRedirectedWithheld_dated": "{{customer}} — line {{line}} is linked to an order redirected to another delivery address on {{on}}.",
+      "addressRedirectedViaWarehouse": "{{customer}} — line {{line}} is linked to an order that has been redirected to another delivery address. These goods still come to your dock, so they land where you expect them.",
+      "addressRedirectedViaWarehouse_dated": "{{customer}} — line {{line}} is linked to an order redirected to another delivery address on {{on}}. These goods still come to your dock, so they land where you expect them."
     },
     "loading": "Loading the purchase draft",
     "error": "This purchase draft could not be read. Nothing on it has changed — select it again to retry."
@@ -165,8 +170,16 @@
       "quantityLowered": "Lowered to {{to}}",
       "quantityLowered_dated": "Lowered to {{to}} on {{on}}",
       "needed_by_moved": "Needed by moved to {{to}}",
-      "needed_by_moved_dated": "Needed by moved to {{to}} on {{on}}"
-    }
+      "needed_by_moved_dated": "Needed by moved to {{to}} on {{on}}",
+      "addressRedirected": "Now going to {{to}} instead of {{from}}",
+      "addressRedirected_dated": "Going to {{to}} instead of {{from}} since {{on}}",
+      "addressRedirectedWithheld": "Redirected to another delivery address",
+      "addressRedirectedWithheld_dated": "Redirected to another delivery address on {{on}}",
+      "addressRedirectedViaWarehouse": "Order redirected — still comes to your dock",
+      "addressRedirectedViaWarehouse_dated": "Order redirected on {{on}} — still comes to your dock"
+    },
+    "withheld": "Customer identity is withheld from you.",
+    "withheldName": "a customer whose identity is withheld from you"
   },
   "transitions": {
     "ready": {
@@ -178,6 +191,7 @@
       "confirm": "Freeze and mark ready",
       "noLines": "A draft is only ready once it says what is being ordered. Add a line first.",
       "refusal": "A draft is only ready once it says what is being ordered. Nothing has changed.",
+      "refusalWarehouseAddressRequired": "A line coming to the warehouse cannot be frozen until the warehouse has a Delivery Address recorded. Someone holding WAREHOUSES:ADDRESS_UPDATE needs to record one — adding and revising lines on this draft keeps working meanwhile. Nothing has changed.",
       "frozenNow_one": "Frozen now — its {{count}} line, its quantity, its links, the packaging and note, and the expected arrival date.",
       "frozenNow_other": "Frozen now — its {{count}} lines, their quantities, their links, the packaging and notes, and the expected arrival date.",
       "capturedNow": "Captured now — what each linked customer order asks for, so you are told if it moves afterwards.",
@@ -208,28 +222,29 @@
       "submit": "Close draft",
       "refusal": "This draft can no longer be closed. Nothing has changed."
     },
-    "arrival": {
-      "trigger": "Confirm arrival",
-      "title": "Confirm what arrived on {{reference}}",
-      "closesOnce": "Confirming an arrival closes a draft once and for all. Goods the supplier still owes are ordered on a new draft rather than awaited on this one.",
+    "lineEnding": {
       "lineHeading": "{{sku}} · {{description}}",
       "ordered": "{{formatted}} ordered",
-      "receivedLabel": "Quantity that arrived — {{sku}}",
-      "receivedDescription": "Whatever physically arrived.",
       "assignHeading": "Assign it across the customers this line was ordered for",
       "assignLabel": "Assign to {{customer}}",
       "outstanding": "{{formatted}} still outstanding",
       "noLinks": "No customer order is linked to this line, so nothing is assigned from it.",
       "summaryLabel": "Assignment total for {{sku}}",
-      "summary": "{{received}} arrived · {{assigned}} assigned · {{unassigned}} left unassigned in the transit zone.",
       "cancel": "Cancel",
-      "submit": "Confirm arrival and close the draft",
       "nothingSaved": "Nothing of this confirmation has been saved and the draft is untouched.",
+      "unassignable": "Was linked for {{formatted}} · nothing can be assigned to it now",
+      "summaryFulfilled": "{{customer}} becomes fulfilled and leaves the consolidated demand.",
       "refusal": {
         "allocationOutOfBounds": "An assignment is more than what arrived on its line, more than that customer is still waiting for, or against an order since cancelled or fulfilled.",
-        "alreadyConfirmed": "This draft has already had its arrival confirmed.",
-        "invalidState": "This draft is no longer waiting for an arrival.",
-        "unknown": "The arrival was not recorded.",
+        "alreadyRecorded": "This line's ending is already recorded.",
+        "alreadyRecorded_dated": "This line's ending was already recorded on {{on}}.",
+        "modeMismatch": {
+          "via_warehouse": "These goods came to the warehouse, so their ending is an arrival at the dock — not a delivery to the customer.",
+          "direct_to_customer": "These goods went straight to the customer, so their ending is a delivery to them — not an arrival at the dock.",
+          "unknown": "This is not the way that line's goods travelled."
+        },
+        "invalidState": "This draft is no longer waiting for a line to end.",
+        "unknown": "The ending was not recorded.",
         "bounds": {
           "title": "That assignment cannot be recorded",
           "exceedsReceived": "Line {{line}} — you assigned {{assigned}} across its customers, but recorded {{received}} as arrived.",
@@ -244,9 +259,32 @@
           "back": "Back to the form"
         }
       },
-      "unassignable": "Was linked for {{formatted}} · nothing can be assigned to it now",
-      "summaryFulfilled": "{{customer}} becomes fulfilled and leaves the consolidated demand.",
-      "atomicity": "The received quantities, every assignment, and the resulting outstanding quantity of each customer are recorded together — or none of them is. On-hand quantities are not touched: those move only through an adjustment that states its reason."
+      "arrival": {
+        "trigger": "Record what arrived",
+        "title": "Record what arrived at the dock — {{sku}} on {{reference}}",
+        "endsOnce": "This line ends once. What arrived here is recorded against this line alone; every other line of the draft keeps its own ending, and the draft closes only when the last of them is recorded.",
+        "quantityLabel": "Quantity that arrived — {{sku}}",
+        "quantityDescription": "Whatever physically arrived.",
+        "summary": "{{stated}} arrived · {{assigned}} assigned · {{unassigned}} left unassigned in the transit zone.",
+        "submit": "Record the arrival",
+        "atomicity": "The quantity that arrived, every assignment, and the resulting outstanding quantity of each customer are recorded together — or none of them is. On-hand quantities are not touched: those move only through an adjustment that states its reason."
+      },
+      "directDelivery": {
+        "trigger": "Record the delivery",
+        "title": "Record what the customer received — {{sku}} on {{reference}}",
+        "endsOnce": "This line ends once. What the customer received is recorded against this line alone; every other line of the draft keeps its own ending, and the draft closes only when the last of them is recorded.",
+        "quantityLabel": "Quantity the customer received — {{sku}}",
+        "quantityDescription": "Whatever the customer told you they received. Nothing here proves it.",
+        "summary": "{{stated}} delivered · {{assigned}} assigned · {{unassigned}} left unassigned.",
+        "submit": "Record the delivery",
+        "atomicity": "The quantity delivered, every assignment, and the resulting outstanding quantity of each customer are recorded together — or none of them is. No on-hand quantity moves: these goods went straight to the customer and were never in the transit zone to be counted."
+      },
+      "recorded": {
+        "arrival": "Arrived {{formatted}} · {{on}}",
+        "direct_delivery": "Delivered {{formatted}} · {{on}}"
+      },
+      "endsOnceTitle": "This ends this line only",
+      "atomicityTitle": "On-hand quantity does not move"
     }
   },
   "dialogs": {
@@ -265,7 +303,12 @@
       "quantityDescription": "A whole number greater than zero, counted in {{unit}}.",
       "noCustomerOrders": "No unfulfilled customer order names this item yet. Record the demand first, and it can then be linked here.",
       "cancel": "Cancel",
-      "submit": "Link the order"
+      "submit": "Link the order",
+      "refusal": {
+        "addressDisagreement": "This line ships to {{lineAddress}}. The order you picked is going to {{orderAddress}} instead — link it to an order going to the same address.",
+        "addressDisagreement_noOrderAddress": "This line ships to {{lineAddress}}. The order you picked names no delivery address at all — link it to an order going to the same address.",
+        "addressDisagreementTitle": "This line ships to one address, and that order goes to another"
+      }
     },
     "refusal": {
       "invalid": "Some of what you entered was not accepted, and nothing has changed.",
@@ -274,5 +317,68 @@
   },
   "archived": {
     "controlReason": "This warehouse has been archived, so it authorizes no change to what it holds."
+  },
+  "lineDelivery": {
+    "heading": "Delivery",
+    "modeLabel": "How it travels",
+    "mode": {
+      "via_warehouse": "Via warehouse",
+      "direct_to_customer": "Direct to customer"
+    },
+    "customerCaption": "Only customers of this warehouse are offered.",
+    "destination": {
+      "warehouseSubject": "This warehouse",
+      "noWarehouseAddress": "No delivery address is recorded for this warehouse yet.",
+      "withheld": "Customer identity is withheld from you.",
+      "label": {
+        "editable": {
+          "via_warehouse": "Goes to",
+          "direct_to_customer": "Goes to"
+        },
+        "frozen": {
+          "via_warehouse": "Went to",
+          "direct_to_customer": "Went to"
+        }
+      },
+      "caption": {
+        "editable": {
+          "via_warehouse": "Your warehouse delivery address. Every via-warehouse line goes here and it is not chosen per line.",
+          "direct_to_customer": "An active delivery address of a customer. Your own warehouse address cannot be chosen here."
+        },
+        "frozen": {
+          "via_warehouse": "Your warehouse delivery address, captured as it read at the freeze.",
+          "direct_to_customer": "The customer address this line was frozen shipping to. This is what the supplier was told."
+        }
+      }
+    },
+    "refusal": {
+      "heading": "This line disagrees with its links",
+      "body": "A directly-shipped line serves only the demand going to the address it ships to. Nothing has changed, and none of the links below is withdrawn — which one to remove is your decision.",
+      "bullet": "{{customer}} — going to a different delivery address"
+    }
+  },
+  "byLine": {
+    "toggleLabel": "How to look at them",
+    "byDraft": "By draft",
+    "byLine": "By line",
+    "search": "Search lines, items or customers",
+    "noMatches": "No line matches “{{query}}”.",
+    "dockHeading": "Landing at this warehouse",
+    "dockTableLabel": "Lines landing at this warehouse",
+    "dockEmpty": "No lines are coming to this warehouse.",
+    "directHeading": "Shipping direct to customer",
+    "directTableLabel": "Lines shipping direct to customer",
+    "directEmpty": "No lines are shipping direct to a customer.",
+    "draftColumn": "Draft",
+    "itemColumn": "Item",
+    "orderedColumn": "Ordered",
+    "destinationColumn": "Goes to",
+    "expectedColumn": "Expected",
+    "endingColumn": "Ending",
+    "expectedArrival": "expected {{date}}",
+    "noExpectedArrival": "No expected arrival date yet",
+    "loading": "Loading purchase draft lines",
+    "error": "We couldn't read the lines of this warehouse's purchase drafts.",
+    "addressDrift": "A linked order has been redirected to another delivery address."
   }
 }

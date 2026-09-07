@@ -1,7 +1,7 @@
 import { PermissionId } from '@warehouser/shared-types/enums';
 import { useTranslation } from 'react-i18next';
 
-import { PurchaseDraftWorkspace } from 'modules/purchase-draft/components/PurchaseDraftWorkspace';
+import { PurchaseDraftWorkspace } from 'modules/purchase-draft/components/purchase-draft-workspace/PurchaseDraftWorkspace';
 import { useCurrentPermissions } from 'shared/hooks/queries/usePermissions';
 
 import type { ReactElement } from 'react';

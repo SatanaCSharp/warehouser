@@ -24,7 +24,8 @@
   "customer-order": {
     "recordCustomerOrder": "Recording demand…",
     "amendCustomerOrder": "Amending the order…",
-    "cancelCustomerOrder": "Cancelling the order…"
+    "cancelCustomerOrder": "Cancelling the order…",
+    "redirectCustomerOrder": "Redirecting the order…"
   },
   "workspace": {
     "renameWorkspace": "Naming the workspace…",
@@ -32,6 +33,7 @@
     "renameWarehouse": "Renaming the warehouse…",
     "archiveWarehouse": "Archiving the warehouse…",
     "restoreWarehouse": "Restoring the warehouse…",
+    "setWarehouseDeliveryAddress": "Saving the delivery address…",
     "giveWarehouseAccess": "Giving access to {{name}}…",
     "withdrawWarehouseAccess": "Withdrawing access to {{name}}…",
     "createWorkspaceRole": "Creating the workspace role…",
@@ -52,8 +54,21 @@
     "revisePurchaseDraftLineLink": "Saving the stated quantity…",
     "removePurchaseDraftLineLink": "Removing the link…",
     "readyPurchaseDraft": "Moving the draft to ready for ordering…",
-    "confirmPurchaseDraftArrival": "Recording the arrival…",
+    "recordPurchaseDraftLineArrival": "Recording what arrived…",
+    "recordPurchaseDraftLineDirectDelivery": "Recording the delivery…",
     "closePurchaseDraft": "Closing the purchase draft…",
     "discardPurchaseDraft": "Discarding the purchase draft…"
+  },
+  "customer": {
+    "recordCustomer": "Recording the customer…",
+    "correctCustomerName": "Saving the customer name…",
+    "deactivateCustomer": "Deactivating the customer…",
+    "reactivateCustomer": "Reactivating the customer…",
+    "addCustomerDeliveryAddress": "Adding the delivery address…",
+    "addCustomerMainDeliveryAddress": "Adding the delivery address…",
+    "correctCustomerDeliveryAddress": "Saving the delivery address…",
+    "setMainCustomerDeliveryAddress": "Changing the main delivery address…",
+    "deactivateCustomerDeliveryAddress": "Deactivating the delivery address…",
+    "reactivateCustomerDeliveryAddress": "Offering the delivery address again…"
   }
 }

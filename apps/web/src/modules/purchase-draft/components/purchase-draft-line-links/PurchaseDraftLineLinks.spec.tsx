@@ -12,7 +12,7 @@ import {
 } from 'test/access-fixtures';
 import { renderInEnteredWarehouse } from 'test/render';
 
-import type { PurchaseDraftLine } from '@warehouser/contracts/purchase-drafts';
+import type { PurchaseDraftLineIdentified } from '@warehouser/contracts/purchase-drafts';
 
 // AC-10 / AC-10a / AC-11a — the `SERVES` section (frame `yGhkK`) and its frozen
 // counterpart `SERVED, AS FROZEN` (frame `F0SpRx`): who a line is for, how much
@@ -34,9 +34,13 @@ const linkUrl = (linkId: string): string =>
 const UNPERMITTED_REASON =
   'Your role does not allow purchase drafts to be changed in this warehouse, so this is shown as it stands.';
 
+/** The caption the design gives the stated-quantity field, whatever refuses the write. */
+const COVERAGE_CAPTION =
+  'Coverage is a note, not a claim — it is never adjusted for you.';
+
 const line = (
-  overrides: Partial<PurchaseDraftLine> = {},
-): PurchaseDraftLine => ({
+  overrides: Partial<PurchaseDraftLineIdentified> = {},
+): PurchaseDraftLineIdentified => ({
   id: LINE_ID,
   itemId: '00000000-0000-4000-8000-000000000101',
   itemSku: 'WH-100420',
@@ -45,11 +49,19 @@ const line = (
   orderedQuantity: 1200,
   packagingTypeId: null,
   valueAddingNote: null,
-  receivedQuantity: null,
+  ending: null,
+  deliveryMode: 'via_warehouse',
+  warehouseDestination: {
+    addressText: 'Test Warehouse North, Test Industrial Estate',
+    accessNotes: null,
+    frozen: false,
+  },
+  customerDestination: null,
   links: [
     {
       id: FIRST_LINK_ID,
       customerOrderId: '00000000-0000-4000-8000-000000000401',
+      customer: null,
       customerName: 'Nordwind Logistik GmbH',
       statedQuantity: 800,
       snapshot: null,
@@ -59,6 +71,7 @@ const line = (
         state: 'unfulfilled',
         outstandingQuantity: 800,
         lastChangedAt: null,
+        deliveryAddress: null,
       },
       driftSignals: [],
       allocation: null,
@@ -66,6 +79,7 @@ const line = (
     {
       id: '00000000-0000-4000-8000-000000000302',
       customerOrderId: '00000000-0000-4000-8000-000000000402',
+      customer: null,
       customerName: 'Baltic Freight OÜ',
       statedQuantity: 400,
       snapshot: null,
@@ -75,6 +89,7 @@ const line = (
         state: 'unfulfilled',
         outstandingQuantity: 440,
         lastChangedAt: null,
+        deliveryAddress: null,
       },
       driftSignals: [],
       allocation: null,
@@ -253,15 +268,21 @@ describe('PurchaseDraftLineLinks', () => {
   // its reason; the `×` only writes and is withheld with the button that adds
   // a link (`adr/19-08-2026-declarative-permission-gates.md`).
   describe('an actor holding PURCHASE_DRAFTS:WATCH alone (AC-22)', () => {
-    it('shows what is intended for each customer, disabled and explained', async () => {
+    // The reason a write is refused is the **line's**, stated once by its lock
+    // strip, so these rows keep the caption the design gives them rather than
+    // repeating that sentence once per link (design-handoff.md
+    // §Accessibility). What this proves is that the field is disabled and the
+    // refusal is not written into it.
+    it('shows what is intended for each customer, disabled and keeping its own caption', async () => {
       renderLinks(false, line(), [PermissionId.PURCHASE_DRAFTS_WATCH]);
 
       const [first, second] =
         await screen.findAllByLabelText('Intended for them');
       expect(first).toBeDisabled();
-      expect(first).toHaveAccessibleDescription(UNPERMITTED_REASON);
       expect(second).toBeDisabled();
-      expect(second).toHaveAccessibleDescription(UNPERMITTED_REASON);
+      expect(first).toHaveAccessibleDescription(COVERAGE_CAPTION);
+      expect(second).toHaveAccessibleDescription(COVERAGE_CAPTION);
+      expect(screen.queryAllByText(UNPERMITTED_REASON)).toHaveLength(0);
     });
 
     it('withholds every control that would write', async () => {

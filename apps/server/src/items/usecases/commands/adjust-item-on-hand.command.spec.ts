@@ -25,6 +25,7 @@ const currentUser: AccessCurrentUser = {
   roleId: uuid('4'),
   roleKind: 'custom',
   permissionId: 'ITEM_STOCK:ADJUST',
+  observedPermissionIds: [],
   archived: false,
 };
 

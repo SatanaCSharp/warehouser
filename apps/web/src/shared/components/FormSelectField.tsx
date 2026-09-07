@@ -22,6 +22,14 @@ type FormSelectFieldProps = Pick<
   | 'placeholder'
   | 'validationBehavior'
 > & {
+  /**
+   * An element elsewhere on screen that explains this field — typically the one
+   * sentence a surface states once for a whole group rather than repeating into
+   * every field's own caption (design-handoff.md §Accessibility). React Aria's
+   * `useField` composes it with the `Description` below rather than replacing
+   * it, so the field announces both.
+   */
+  'aria-describedby'?: string;
   description?: ReactNode;
   errorMessage?: ReactNode;
   label: ReactNode;
@@ -32,6 +40,7 @@ type FormSelectFieldProps = Pick<
 };
 
 export const FormSelectField = ({
+  'aria-describedby': ariaDescribedBy,
   className,
   description,
   errorMessage,
@@ -54,6 +63,7 @@ export const FormSelectField = ({
 
   return (
     <Select
+      aria-describedby={ariaDescribedBy}
       className={className}
       isDisabled={isDisabled}
       isInvalid={isInvalid}

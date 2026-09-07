@@ -102,6 +102,8 @@ const buildCustomerOrder = (
     Pick<CustomerOrderEntity, 'warehouseId' | 'itemId' | 'recordedByUserId'>,
 ): CustomerOrderEntity => ({
   id: randomUUID(),
+  customerId: null,
+  customerDeliveryAddressId: null,
   customerName: 'Buyer One',
   quantity: 3,
   outstandingQuantity: 3,
@@ -144,7 +146,15 @@ const buildPurchaseDraftLine = (
   orderedQuantity: 10,
   packagingTypeId: null,
   valueAddingNote: null,
-  receivedQuantity: null,
+  deliveryMode: 'via_warehouse',
+  customerDeliveryAddressId: null,
+  frozenDeliveryAddressText: null,
+  frozenAccessNotes: null,
+  frozenCustomerName: null,
+  endingQuantity: null,
+  endingKind: null,
+  endingRecordedByUserId: null,
+  endingRecordedAt: null,
   createdAt: now,
   updatedAt: now,
   ...overrides,
@@ -164,6 +174,21 @@ const buildPurchaseDraftLineLink = (
   statedQuantity: 2,
   createdAt: now,
   updatedAt: now,
+  ...overrides,
+});
+
+const buildDemandSnapshotEntry = (
+  overrides: Pick<
+    DemandSnapshotEntryEntity,
+    'purchaseDraftLineLinkId' | 'purchaseDraftLineId' | 'customerOrderId'
+  >,
+): DemandSnapshotEntryEntity => ({
+  capturedQuantity: 3,
+  capturedNeededBy: futureNeededBy,
+  capturedState: 'unfulfilled',
+  capturedCustomerDeliveryAddressId: null,
+  capturedDeliveryAddressText: null,
+  createdAt: now,
   ...overrides,
 });
 
@@ -366,7 +391,6 @@ const describeRoundTrips = (): void => {
         itemId: item.id,
         orderedQuantity: 25,
         packagingTypeId: null,
-        receivedQuantity: null,
       });
     });
 
@@ -397,15 +421,11 @@ const describeRoundTrips = (): void => {
       const { purchaseDraftLineLinkId, purchaseDraftLineId, customerOrderId } =
         await seedLinkedPurchaseDraftLine(seeded);
 
-      const snapshot: DemandSnapshotEntryEntity = {
+      const snapshot = buildDemandSnapshotEntry({
         purchaseDraftLineLinkId,
         purchaseDraftLineId,
         customerOrderId,
-        capturedQuantity: 3,
-        capturedNeededBy: futureNeededBy,
-        capturedState: 'unfulfilled',
-        createdAt: now,
-      };
+      });
       await dataSource.manager
         .getRepository(DemandSnapshotEntryEntity)
         .insert(snapshot);

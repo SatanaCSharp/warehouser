@@ -7,6 +7,7 @@ import { WithdrawWarehouseAccessDialog } from 'modules/workspace/components/work
 import { Conditional } from 'shared/components/Conditional';
 import { TriggeredDialog } from 'shared/components/TriggeredDialog';
 import { WorkspacePermissionGate } from 'shared/components/WorkspacePermissionGate';
+import { ROW_ENTER } from 'shared/constants/motion';
 import { useAppSelector } from 'store/hooks';
 
 import type {
@@ -51,7 +52,9 @@ export const WarehousePersonRow = ({
   const reasonId = `withdraw-own-reason-${person.userId}`;
 
   return (
-    <li className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface p-3">
+    <li
+      className={`flex items-center justify-between gap-3 rounded-lg border border-border bg-surface p-3 ${ROW_ENTER}`}
+    >
       <span>{person.email}</span>
       <WorkspacePermissionGate
         permission={WorkspacePermissionId.WAREHOUSE_MEMBERSHIPS_REVOKE}

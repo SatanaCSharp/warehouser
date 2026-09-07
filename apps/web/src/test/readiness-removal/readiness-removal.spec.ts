@@ -356,7 +356,7 @@ describe('readiness removal — the deleted skeleton surfaces (CR-AC-08)', () =>
     const declarations = [
       'test/module-boundaries/module-surface.ts',
       'test/warehouses-tab-case-inventory/warehouses-tab-case-inventory.spec.ts',
-      'shared/layouts/Sidebar.spec.tsx',
+      'shared/layouts/sidebar/Sidebar.spec.tsx',
     ];
 
     expect(
@@ -632,6 +632,10 @@ describe('readiness removal — declarative permission gating is unchanged (CR-R
     'modules/access/hooks/queries/useWorkspaceUsers.ts': [
       'canWatchWorkspaceMembers',
     ],
+    // delivery-addresses T11/AC-10 — a query `skip`, the first category ADR
+    // §3 licenses: the address a member may not update is never requested.
+    'modules/workspace/components/workspace-administration/warehouses/WarehouseDeliveryAddressSection.tsx':
+      ['canUpdateAddress'],
     'modules/workspace/components/workspace-administration/warehouses/WarehouseRow.tsx':
       ['canEnter'],
     'modules/workspace/components/workspace-administration/warehouses/WarehousesTab.tsx':
@@ -686,24 +690,43 @@ describe('readiness removal — declarative permission gating is unchanged (CR-R
     'modules/access/components/workspace-administration/members/WorkspaceMemberRow.tsx': 4,
     'modules/access/components/workspace-administration/roles/CreateWorkspaceRoleAction.tsx': 4,
     'modules/access/components/workspace-administration/roles/DeleteWorkspaceRoleAction.tsx': 4,
+    // delivery-addresses T22 — the record-demand dialog's Customer and
+    // Delivery Address fields are offered only to an actor holding
+    // `CUSTOMERS:WATCH`, and the read they depend on lives inside that gate so
+    // nothing is requested for a dataset the actor may not read (AC-09a,
+    // AC-11a).
+    'modules/customer-order/components/demand-directory/components/record-customer-order-customer-fields/RecordCustomerOrderCustomerFields.tsx': 4,
     'modules/customer-order/components/demand-directory/components/RecordDemandAction.tsx': 4,
     'modules/customer-order/hooks/projections/useCustomerOrderActions.ts': 3,
+    // delivery-addresses T21 — the Customers destination's four gating sites:
+    // the two triggers an actor may not be offered at all, and the two
+    // collection descriptors a kebab is filtered by.
+    'modules/customer/components/customer-directory/components/addresses/AddDeliveryAddressAction.tsx': 4,
+    'modules/customer/components/customer-directory/components/customers/RecordCustomerAction.tsx': 4,
+    'modules/customer/hooks/projections/useCustomerActions.ts': 3,
+    'modules/customer/hooks/projections/useDeliveryAddressActions.ts': 3,
     'modules/item/components/item-directory/components/CreateItemAction.tsx': 4,
     'modules/item/hooks/projections/useItemActions.ts': 3,
     'modules/purchase-draft/components/AddPurchaseDraftLineAction.tsx': 4,
     'modules/purchase-draft/components/CreatePurchaseDraftAction.tsx': 4,
     'modules/purchase-draft/components/ExpectedArrivalDateField.tsx': 4,
     'modules/purchase-draft/components/PurchaseDraftLineEditor.tsx': 4,
+    // delivery-addresses T23 — the `DELIVERY` block's destination pickers are
+    // withheld from an actor without `CUSTOMERS:WATCH`, and the Customers read
+    // they depend on lives inside the gate so nothing is requested for a
+    // dataset that actor may not read (AC-09a).
+    'modules/purchase-draft/components/purchase-draft-line-delivery/components/direct-destination-fields/DirectDestinationFields.tsx': 4,
     'modules/purchase-draft/components/purchase-draft-line-links/PurchaseDraftLineLinks.tsx': 4,
     'modules/purchase-draft/components/purchase-draft-line-links/components/LinkCustomerOrderAction.tsx': 4,
     'modules/purchase-draft/components/purchase-draft-transitions/components/ClosePurchaseDraftAction.tsx': 4,
-    'modules/purchase-draft/components/purchase-draft-transitions/components/ConfirmArrivalAction.tsx': 4,
+    'modules/purchase-draft/components/purchase-draft-transitions/components/LineEndingAction.tsx': 4,
     'modules/purchase-draft/components/purchase-draft-transitions/components/DiscardPurchaseDraftAction.tsx': 4,
     'modules/purchase-draft/components/purchase-draft-transitions/components/ReadyPurchaseDraftAction.tsx': 4,
     'modules/workspace/components/WorkspaceAdministration.tsx': 3,
     'modules/workspace/components/workspace-administration/NameWorkspaceAction.tsx': 4,
     'modules/workspace/components/workspace-administration/warehouses/AddWarehouseAction.tsx': 4,
     'modules/workspace/components/workspace-administration/warehouses/GiveWarehouseAccessAction.tsx': 4,
+    'modules/workspace/components/workspace-administration/warehouses/WarehouseDeliveryAddressSection.tsx': 4,
     'modules/workspace/components/workspace-administration/warehouses/WarehouseLifecycleActions.tsx': 4,
     'modules/workspace/components/workspace-administration/warehouses/WarehouseNameForm.tsx': 4,
     'modules/workspace/components/workspace-administration/warehouses/WarehousePersonRow.tsx': 4,
@@ -711,7 +734,14 @@ describe('readiness removal — declarative permission gating is unchanged (CR-R
     'shared/components/WorkspacePermissionGate.tsx': 1,
     'shared/hooks/projections/usePermittedItems.ts': 1,
     'shared/hooks/projections/useWorkspacePermittedItems.ts': 1,
-    'shared/layouts/Sidebar.tsx': 14,
+    // The sidebar's gates moved with its entries when `Sidebar.tsx` was split
+    // into `shared/layouts/sidebar/`: each context's entry set now owns the
+    // gates its own entries carry, and the shell that selects between the two
+    // sets carries none. The Warehouse count is delivery-addresses T21's six
+    // gated entries (five gates, opened and closed, plus the import) and the
+    // Workspace count is AC-30's single one.
+    'shared/layouts/sidebar/components/WarehouseNavEntries.tsx': 12,
+    'shared/layouts/sidebar/components/WorkspaceNavEntries.tsx': 4,
   };
 
   it('keeps every gate and descriptor call site', () => {

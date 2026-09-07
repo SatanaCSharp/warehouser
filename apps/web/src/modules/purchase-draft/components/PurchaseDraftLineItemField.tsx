@@ -4,13 +4,18 @@ import { FormSelectField } from 'shared/components/FormSelectField';
 
 import type { Item } from '@warehouser/contracts/items';
 import type { PurchaseDraftLine } from '@warehouser/contracts/purchase-drafts';
-import type { ReactElement, ReactNode } from 'react';
+import type { ReactElement } from 'react';
 import type { SelectOption } from 'shared/components/FormSelectField';
 
 export type PurchaseDraftLineItemFieldProps = {
+  /**
+   * The line's lock strip, when the line refuses writes. The reason is stated
+   * once for the whole line rather than repeated into this field's own caption
+   * (design-handoff.md §Accessibility); passing it through means a member
+   * reaching this field still hears why it will not take one.
+   */
+  'aria-describedby'?: string;
   className?: string;
-  /** The helper sentence under the field, or why the field is refused. */
-  description?: ReactNode;
   isDisabled?: boolean;
   /** The Warehouse's catalogue as it was last read, active and inactive alike. */
   items: Item[];
@@ -40,8 +45,8 @@ export type PurchaseDraftLineItemFieldProps = {
  * option is nameable even when the catalogue read never returned that Item.
  */
 export const PurchaseDraftLineItemField = ({
+  'aria-describedby': ariaDescribedBy,
   className,
-  description,
   isDisabled,
   items,
   line,
@@ -82,8 +87,8 @@ export const PurchaseDraftLineItemField = ({
 
   return (
     <FormSelectField
+      aria-describedby={ariaDescribedBy}
       className={className}
-      description={description}
       isDisabled={isDisabled}
       label={t('lineEditor.item')}
       options={isOffered ? offered : [retained, ...offered]}

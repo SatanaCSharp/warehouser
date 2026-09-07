@@ -5,6 +5,7 @@ import {
   assertApplied,
   PurchaseDraftAssemblyService,
 } from 'purchase-drafts/domain/services/purchase-draft-assembly.service';
+import { NEW_LINE_DELIVERY_MODE } from 'purchase-drafts/domain/value-objects/delivery-mode';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { PurchaseDraftAssemblyRepository } from 'shared/domain/repositories/purchase-draft-assembly.repository';
@@ -55,6 +56,13 @@ export class AddPurchaseDraftLineCommand {
       orderedQuantity: input.orderedQuantity,
       packagingTypeId: input.packagingTypeId ?? null,
       valueAddingNote: input.valueAddingNote ?? null,
+      // AC-13 — every new line is recorded as Via Warehouse travelling to the Warehouse's own
+      // Delivery Address, with no address stored on it, because a Via Warehouse line's destination
+      // *is* the Warehouse's. Setting a line Direct to Customer is a revision of a line that
+      // already exists (openapi.yaml `PurchaseDraftLineUpdate`), so this command states the one
+      // mode a line starts in rather than accepting one.
+      deliveryMode: NEW_LINE_DELIVERY_MODE,
+      customerDeliveryAddressId: null,
     });
 
     assertApplied(outcome);

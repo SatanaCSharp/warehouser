@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
   useAmendCustomerOrderMutation,
   useCancelCustomerOrderMutation,
+  useRedirectCustomerOrderMutation,
 } from 'modules/customer-order/api/customer-order-api';
 import { AmendCustomerOrderDialog } from 'modules/customer-order/components/demand-directory/components/AmendCustomerOrderDialog';
 import { CancelCustomerOrderDialog } from 'modules/customer-order/components/demand-directory/components/CancelCustomerOrderDialog';
@@ -13,6 +14,8 @@ import { DemandEmptyState } from 'modules/customer-order/components/demand-direc
 import { DemandSearchField } from 'modules/customer-order/components/demand-directory/components/DemandSearchField';
 import { DemandTable } from 'modules/customer-order/components/demand-directory/components/DemandTable';
 import { RecordDemandAction } from 'modules/customer-order/components/demand-directory/components/RecordDemandAction';
+import { RedirectCustomerOrderDialog } from 'modules/customer-order/components/demand-directory/components/RedirectCustomerOrderDialog';
+import { useCustomerOrderNaming } from 'modules/customer-order/hooks/projections/useCustomerOrderNaming';
 import { matchesDemandQuery } from 'modules/customer-order/utils/demand-search';
 import { ActionDialogHost } from 'shared/components/ActionDialogHost';
 import { ArchivedWarehouseChip } from 'shared/components/ArchivedWarehouseChip';
@@ -24,13 +27,14 @@ import type {
   CustomerOrder,
   CustomerOrderAmend,
   CustomerOrderCancellation,
+  CustomerOrderRedirect,
   DemandLine,
 } from '@warehouser/contracts/customer-orders';
 import type { ReactElement } from 'react';
 import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 /** Which per-Customer-Order dialog a sub-row opens. */
-type CustomerOrderDialogKind = 'amend' | 'cancel';
+type CustomerOrderDialogKind = 'amend' | 'cancel' | 'redirect';
 
 /** What the destination presents instead of, or alongside, its rows. */
 type DemandListState = 'empty' | 'noMatches' | 'ready';
@@ -86,9 +90,11 @@ export const DemandDirectory = ({
 }: DemandDirectoryProps): ReactElement => {
   const { t } = useTranslation('customer-order');
   const warehouseId = useEnteredWarehouse();
+  const naming = useCustomerOrderNaming();
   const dialog = useActionDialog<CustomerOrderDialogKind, CustomerOrder>();
   const [amendCustomerOrder] = useAmendCustomerOrderMutation();
   const [cancelCustomerOrder] = useCancelCustomerOrderMutation();
+  const [redirectCustomerOrder] = useRedirectCustomerOrderMutation();
   const [query, setQuery] = useState('');
 
   const trimmedQuery = query.trim();
@@ -100,12 +106,14 @@ export const DemandDirectory = ({
 
   const onAmend = (order: CustomerOrder): void => dialog.open('amend', order);
   const onCancel = (order: CustomerOrder): void => dialog.open('cancel', order);
+  const onRedirect = (order: CustomerOrder): void =>
+    dialog.open('redirect', order);
 
   const onSaveAmendment =
     (order: CustomerOrder) =>
     (input: CustomerOrderAmend): Promise<MutationResult> =>
       amendCustomerOrder({
-        customerName: order.customerName,
+        customerName: naming(order),
         warehouseId: warehouseId ?? '',
         customerOrderId: order.id,
         input,
@@ -115,7 +123,17 @@ export const DemandDirectory = ({
     (order: CustomerOrder) =>
     (input: CustomerOrderCancellation): Promise<MutationResult> =>
       cancelCustomerOrder({
-        customerName: order.customerName,
+        customerName: naming(order),
+        warehouseId: warehouseId ?? '',
+        customerOrderId: order.id,
+        input,
+      });
+
+  const onSaveRedirection =
+    (order: CustomerOrder) =>
+    (input: CustomerOrderRedirect): Promise<MutationResult> =>
+      redirectCustomerOrder({
+        customerName: naming(order),
         warehouseId: warehouseId ?? '',
         customerOrderId: order.id,
         input,
@@ -151,12 +169,14 @@ export const DemandDirectory = ({
           label={heading}
           onAmend={onAmend}
           onCancel={onCancel}
+          onRedirect={onRedirect}
         />
         <DemandCardList
           demandLines={visibleLines}
           label={heading}
           onAmend={onAmend}
           onCancel={onCancel}
+          onRedirect={onRedirect}
         />
         <DemandCoverageNote />
       </>
@@ -190,6 +210,12 @@ export const DemandDirectory = ({
             <CancelCustomerOrderDialog
               order={order}
               onSave={onSaveCancellation(order)}
+            />
+          ),
+          redirect: (order) => (
+            <RedirectCustomerOrderDialog
+              order={order}
+              onSave={onSaveRedirection(order)}
             />
           ),
         }}

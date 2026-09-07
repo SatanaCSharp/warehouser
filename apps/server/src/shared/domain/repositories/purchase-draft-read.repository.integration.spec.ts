@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 // "What"; data-model.md "purchase_draft_demand_snapshots"/"Repository boundaries";
 // openapi.yaml `PurchaseDraftSummary`/`PurchaseDraftLineLink`/`DemandSnapshotEntry`/
 // `LinkedCustomerOrderState`/`ArrivalAllocation`).
+import { PermissionId } from '@warehouser/shared-types/enums';
 import { ReadPurchaseDraftQuery } from 'purchase-drafts/usecases/queries/read-purchase-draft.query';
 // `PurchaseDraftReadRepository` does not exist yet (T14) — this is the RED for the read that joins
 // the Demand Snapshot against the Customer Orders as they stand now, in one purpose-built query per
@@ -50,6 +51,8 @@ interface SnapshotRead {
   readonly capturedQuantity: number;
   readonly capturedNeededBy: string;
   readonly capturedState: string;
+  readonly capturedDeliveryAddressId: string | null;
+  readonly capturedDeliveryAddressText: string | null;
 }
 
 // openapi.yaml `LinkedCustomerOrderState`.
@@ -59,6 +62,7 @@ interface CurrentDemandRead {
   readonly state: string;
   readonly outstandingQuantity: number;
   readonly lastChangedAt: string | null;
+  readonly deliveryAddress: { readonly deliveryAddressId: string } | null;
 }
 
 // openapi.yaml `ArrivalAllocation`.
@@ -90,7 +94,6 @@ interface LineRead {
   readonly orderedQuantity: number;
   readonly packagingTypeId: string | null;
   readonly valueAddingNote: string | null;
-  readonly receivedQuantity: number | null;
   readonly links: readonly LinkDemandRead[];
 }
 
@@ -103,6 +106,7 @@ interface DraftSummaryRead {
   readonly expectedArrivalDate: string | null;
   readonly lineCount: number;
   readonly hasDriftSignal: boolean;
+  readonly hasDirectToCustomerAddressDrift: boolean;
   readonly closureReason: string | null;
   readonly createdByUserId: string;
   readonly createdAt: Date | string;
@@ -124,7 +128,11 @@ interface DraftDetailRead extends DraftSummaryRead {
 // module does not exist yet.
 interface PurchaseDraftReadRepositoryContract {
   listDrafts(warehouseId: string, state?: string): Promise<DraftSummaryRead[]>;
-  readDraft(
+  // T19 — the read is served in two forms, chosen by the observed `CUSTOMERS:WATCH`. This suite
+  // exercises the identified one, which is the superset: every column the redacted query selects,
+  // it selects too (AC-09a). The redaction itself is proved in
+  // `purchase-draft-redaction-read.repository.integration.spec.ts`.
+  readIdentifiedDraft(
     purchaseDraftId: string,
     warehouseId: string,
   ): Promise<DraftDetailRead | null>;
@@ -133,6 +141,15 @@ interface PurchaseDraftReadRepositoryContract {
 const repository = new PurchaseDraftReadRepository(
   dataSource,
 ) as unknown as PurchaseDraftReadRepositoryContract;
+
+// The principal `WarehouseAccessGuard` attaches to a request whose handler declared
+// `@ObservedPermission(CUSTOMERS:WATCH)` and whose actor holds it, so the query issues the
+// identified read this suite asserts against.
+const identifiedActor = (warehouseId: string) =>
+  ({
+    warehouseId,
+    observedPermissionIds: [PermissionId.CUSTOMERS_WATCH],
+  }) as never;
 
 const withQueryCount = async <T>(
   run: () => Promise<T>,
@@ -315,7 +332,6 @@ const seedPurchaseDraftLine = async (
   purchaseDraftId: string,
   warehouseId: string,
   itemId: string,
-  receivedQuantity: number | null = null,
 ): Promise<string> => {
   const id = randomUUID();
   await dataSource.manager.getRepository(PurchaseDraftLineEntity).insert({
@@ -326,7 +342,6 @@ const seedPurchaseDraftLine = async (
     orderedQuantity: 10,
     packagingTypeId: null,
     valueAddingNote: null,
-    receivedQuantity,
     createdAt: now,
     updatedAt: now,
   });
@@ -479,7 +494,7 @@ const registerReadDraftDriftDataTests = (): void => {
     });
 
     const { result: detail, queryCount } = await withQueryCount(() =>
-      repository.readDraft(draftId, warehouseId),
+      repository.readIdentifiedDraft(draftId, warehouseId),
     );
 
     expect(queryCount).toBe(1);
@@ -490,6 +505,12 @@ const registerReadDraftDriftDataTests = (): void => {
       capturedQuantity: 10,
       capturedNeededBy: '2026-09-30',
       capturedState: 'unfulfilled',
+      // T18/AC-18 — the captured Delivery Address, both `null` here because these scenarios seed
+      // Customer Orders recorded by **typed name**, which name no address at all (AC-11a). The
+      // Address Drift scenarios live in
+      // `purchase-draft-address-drift-read.repository.integration.spec.ts`.
+      capturedDeliveryAddressId: null,
+      capturedDeliveryAddressText: null,
     });
     // AC-16 — `lastChangedAt` is what dates the drift statement the frame draws ("Cancelled on
     // 24 Aug", `F0SpRx.png`). It travels as UTC ISO 8601 with a `Z`, not with the session's own
@@ -500,6 +521,7 @@ const registerReadDraftDriftDataTests = (): void => {
       state: 'cancelled',
       outstandingQuantity: 10,
       lastChangedAt: '2026-08-28T09:15:00.000Z',
+      deliveryAddress: null,
     });
 
     const requantifiedLink = findLink(detail, requantifiedLinkId);
@@ -515,6 +537,18 @@ const registerReadDraftDriftDataTests = (): void => {
     // The needed-by scenario seeds no `updatedAt`, so the row still stands as it was recorded and
     // has no moment to report — the read must not offer the creation time as one.
     expect(rescheduledLink?.current.lastChangedAt).toBeNull();
+  });
+
+  // R1 (review-2026-09-04 finding 19) — `received_quantity` is dropped from the schema by
+  // `DropReceivedQuantity1786700300000`, and `ending.quantity` is the one figure the contract still
+  // serves for what arrived (openapi.yaml `PurchaseDraftLineIdentified`, `PurchaseDraftLineRedacted`,
+  // both `additionalProperties: false` and neither naming `receivedQuantity`).
+  it('does not carry receivedQuantity on the read line', async () => {
+    const { warehouseId, draftId } = await buildDriftScenarioFixture();
+
+    const detail = await repository.readIdentifiedDraft(draftId, warehouseId);
+
+    expect(detail?.lines[0]).not.toHaveProperty('receivedQuantity');
   });
 
   // AC-16 — became Fulfilled through the arrival of a different draft, and the amended-then-put-
@@ -536,7 +570,7 @@ const registerReadDraftDriftDataTests = (): void => {
       neededBy: '2026-09-30',
     });
 
-    const detail = await repository.readDraft(draftId, warehouseId);
+    const detail = await repository.readIdentifiedDraft(draftId, warehouseId);
 
     const fulfilledLink = findLink(detail, fulfilledLinkId);
     expect(fulfilledLink?.current.state).toBe('fulfilled');
@@ -605,7 +639,7 @@ const registerNoWriteTests = (): void => {
         .findOneOrFail({ where: { id: orderId } }),
     };
 
-    await repository.readDraft(draftId, warehouseId);
+    await repository.readIdentifiedDraft(draftId, warehouseId);
     await repository.listDrafts(warehouseId);
 
     const after = {
@@ -655,7 +689,6 @@ const registerClosedDraftReadableTests = (): void => {
       closedByReason,
       warehouseId,
       item.id,
-      10,
     );
     const closedByReasonLinkId = await seedLink(
       closedByReasonLine,
@@ -681,7 +714,6 @@ const registerClosedDraftReadableTests = (): void => {
       closedByArrival,
       warehouseId,
       item.id,
-      10,
     );
     const closedByArrivalLinkId = await seedLink(
       closedByArrivalLine,
@@ -706,19 +738,18 @@ const registerClosedDraftReadableTests = (): void => {
       userId,
     );
 
-    const reasonDetail = await repository.readDraft(
+    const reasonDetail = await repository.readIdentifiedDraft(
       closedByReason,
       warehouseId,
     );
     expect(reasonDetail?.state).toBe('closed');
     expect(reasonDetail?.closureReason).toBe('Supplier discontinued the line');
     expect(reasonDetail?.lines).toHaveLength(1);
-    expect(reasonDetail?.lines[0]?.receivedQuantity).toBe(10);
     // The shared Customer Order became Fulfilled through the *other* draft's arrival, not this
     // one's own — this draft holds no Allocation for it, so this is genuine drift (AC-16).
     expect(reasonDetail?.hasDriftSignal).toBe(true);
 
-    const arrivalDetail = await repository.readDraft(
+    const arrivalDetail = await repository.readIdentifiedDraft(
       closedByArrival,
       warehouseId,
     );
@@ -726,7 +757,6 @@ const registerClosedDraftReadableTests = (): void => {
     expect(arrivalDetail?.closureReason).toBeNull();
     expect(arrivalDetail?.arrivalConfirmedByUserId).toBe(userId);
     expect(arrivalDetail?.lines).toHaveLength(1);
-    expect(arrivalDetail?.lines[0]?.receivedQuantity).toBe(10);
     const allocatedLink = findLink(arrivalDetail, closedByArrivalLinkId);
     expect(allocatedLink?.allocation).toEqual(
       expect.objectContaining({
@@ -862,7 +892,10 @@ const registerWarehouseScopingTests = (): void => {
       'draft',
     );
 
-    const detail = await repository.readDraft(otherDraftId, warehouseId);
+    const detail = await repository.readIdentifiedDraft(
+      otherDraftId,
+      warehouseId,
+    );
     expect(detail).toBeNull();
 
     const ownDraftId = await seedPurchaseDraft(warehouseId, userId, 'draft');
@@ -922,7 +955,7 @@ const registerNonFanOutTests = (): void => {
       }
     }
 
-    const detail = await repository.readDraft(draftId, warehouseId);
+    const detail = await repository.readIdentifiedDraft(draftId, warehouseId);
 
     expect(detail?.lineCount).toBe(2);
     expect(detail?.lines).toHaveLength(2);
@@ -1014,7 +1047,7 @@ const registerExpectedArrivalDateTests = (): void => {
 
     const { rows, detail } = await withTimeZone('Europe/Kyiv', async () => ({
       rows: await repository.listDrafts(warehouseId),
-      detail: await repository.readDraft(datedDraftId, warehouseId),
+      detail: await repository.readIdentifiedDraft(datedDraftId, warehouseId),
     }));
 
     const datedRow = rows.find((row) => row.id === datedDraftId);
@@ -1038,7 +1071,10 @@ const registerExpectedArrivalDateTests = (): void => {
     );
 
     const rows = await repository.listDrafts(warehouseId);
-    const detail = await repository.readDraft(undatedDraftId, warehouseId);
+    const detail = await repository.readIdentifiedDraft(
+      undatedDraftId,
+      warehouseId,
+    );
 
     expect(rows[0]?.expectedArrivalDate).toBeNull();
     expect(detail?.expectedArrivalDate).toBeNull();
@@ -1060,7 +1096,10 @@ const registerReferenceTests = (): void => {
     const secondDraftId = await seedPurchaseDraft(warehouseId, userId, 'draft');
 
     const rows = await repository.listDrafts(warehouseId);
-    const detail = await repository.readDraft(firstDraftId, warehouseId);
+    const detail = await repository.readIdentifiedDraft(
+      firstDraftId,
+      warehouseId,
+    );
 
     const firstReference = rows.find(
       (row) => row.id === firstDraftId,
@@ -1091,11 +1130,11 @@ const registerHasDriftSignalInvariantTests = (): void => {
       state: 'unfulfilled',
     });
 
-    const detail = await repository.readDraft(draftId, warehouseId);
+    const detail = await repository.readIdentifiedDraft(draftId, warehouseId);
     expect(detail).not.toBeNull();
 
     const query = new ReadPurchaseDraftQuery(repository as never);
-    const derived = await query.execute({ warehouseId } as never, draftId);
+    const derived = await query.execute(identifiedActor(warehouseId), draftId);
 
     const derivedHasDriftSignal = (derived?.lines ?? []).some((line) =>
       line.links.some((link) => link.driftSignals.length > 0),
@@ -1114,11 +1153,11 @@ const registerHasDriftSignalInvariantTests = (): void => {
       neededBy: '2026-09-30',
     });
 
-    const detail = await repository.readDraft(draftId, warehouseId);
+    const detail = await repository.readIdentifiedDraft(draftId, warehouseId);
     expect(detail).not.toBeNull();
 
     const query = new ReadPurchaseDraftQuery(repository as never);
-    const derived = await query.execute({ warehouseId } as never, draftId);
+    const derived = await query.execute(identifiedActor(warehouseId), draftId);
 
     const derivedHasDriftSignal = (derived?.lines ?? []).some((line) =>
       line.links.some((link) => link.driftSignals.length > 0),

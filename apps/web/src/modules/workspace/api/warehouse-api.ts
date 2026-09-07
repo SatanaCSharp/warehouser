@@ -1,10 +1,12 @@
 import {
   assignableWarehouseRoleSchema,
+  warehouseDeliveryAddressSchema,
   warehouseMembershipSchema,
   warehouseSchema,
 } from '@warehouser/contracts/workspaces';
 import { z } from 'zod';
 
+import { warehouseDeliveryAddressValidationKey } from 'modules/workspace/utils/warehouse-delivery-address-validation';
 import { warehouseNameValidationKey } from 'modules/workspace/utils/warehouse-name-validation';
 import { api } from 'shared/api/client/api-client';
 import { workspaceUsersApi } from 'shared/api/workspace/workspace-users-api';
@@ -13,6 +15,8 @@ import type {
   AssignableWarehouseRole,
   Warehouse,
   WarehouseArchival,
+  WarehouseDeliveryAddress,
+  WarehouseDeliveryAddressWrite,
   WarehouseMembership,
   WarehouseMembershipAssignment,
   WarehouseWrite,
@@ -27,6 +31,9 @@ const assignableWarehouseRoleListSchema = z.array(
 
 type WarehouseRename = WarehouseWrite & { warehouseId: string };
 type WarehouseArchivalChange = WarehouseArchival & { warehouseId: string };
+type WarehouseDeliveryAddressChange = WarehouseDeliveryAddressWrite & {
+  warehouseId: string;
+};
 /**
  * The membership commands name the Warehouse they act on twice: `warehouseId`
  * addresses it, and `warehouseName` is what the outcome's toast interpolates
@@ -89,6 +96,37 @@ export const workspaceWarehousesApi = api.injectEndpoints({
       }),
       extraOptions: { schema: warehouseSchema },
       invalidatesTags: ['WorkspaceContext', 'WorkspaceWarehouses'],
+    }),
+    // AC-10 — the Warehouse's own Delivery Address. Both halves carry the
+    // Workspace Permission `WAREHOUSES:ADDRESS_UPDATE`, because the subject is
+    // the Warehouse record; the read accompanies the write so the section
+    // shows what is being corrected in place. There is no deactivation
+    // counterpart: an address is corrected, never withdrawn.
+    getWarehouseDeliveryAddress: build.query<WarehouseDeliveryAddress, string>({
+      query: (warehouseId) =>
+        `${WAREHOUSES_PATH}/${warehouseId}/delivery-address`,
+      extraOptions: { schema: warehouseDeliveryAddressSchema },
+      providesTags: ['WarehouseDeliveryAddress'],
+    }),
+    setWarehouseDeliveryAddress: build.mutation<
+      WarehouseDeliveryAddress,
+      WarehouseDeliveryAddressChange
+    >({
+      query: ({ warehouseId, ...body }) => ({
+        url: `${WAREHOUSES_PATH}/${warehouseId}/delivery-address`,
+        method: 'PUT',
+        body,
+      }),
+      extraOptions: { schema: warehouseDeliveryAddressSchema },
+      // Which field explains a refusal is the endpoint's declaration, not the
+      // caller's (web-error-handling.md §3).
+      transformErrorResponse: warehouseDeliveryAddressValidationKey,
+      // An **unfrozen** Via Warehouse line's `addressText` is the Warehouse's
+      // current address rather than a captured one
+      // (`lineWarehouseDestinationSchema.frozen`), and the by-line read serves
+      // it under the drafts tag, so correcting it here restates every such line
+      // (ADR 02-08-2026 §Decision).
+      invalidatesTags: ['WarehouseDeliveryAddress', 'PurchaseDrafts'],
     }),
     // The narrow read `WAREHOUSE_MEMBERSHIPS:ASSIGN` carries: identifiers and
     // names of a Warehouse's assignable custom Roles only, the protected
@@ -161,9 +199,11 @@ export const workspaceWarehousesApi = api.injectEndpoints({
 export const {
   useAssignWarehouseMembershipMutation,
   useCreateWarehouseMutation,
+  useGetWarehouseDeliveryAddressQuery,
   useListAssignableWarehouseRolesQuery,
   useListWorkspaceWarehousesQuery,
   useRenameWarehouseMutation,
   useRevokeWarehouseMembershipMutation,
   useSetWarehouseArchivalMutation,
+  useSetWarehouseDeliveryAddressMutation,
 } = workspaceWarehousesApi;

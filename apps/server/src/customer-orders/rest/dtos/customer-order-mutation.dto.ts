@@ -3,6 +3,7 @@ import {
   customerOrderCancellationSchema,
   customerOrderCreateSchema,
   customerOrderListQuerySchema,
+  customerOrderRedirectSchema,
 } from '@warehouser/contracts/customer-orders';
 import { createZodDto } from 'nestjs-zod';
 
@@ -22,4 +23,9 @@ export class CustomerOrderCancellationDto extends createZodDto(
 ) {}
 export class CustomerOrderListQueryDto extends createZodDto(
   customerOrderListQuerySchema,
+) {}
+// AC-11c — the redirection's payload is its own: which of the same Customer's active Delivery
+// Addresses the order is now going to, and nothing else. The Customer is deliberately not an input.
+export class CustomerOrderRedirectDto extends createZodDto(
+  customerOrderRedirectSchema,
 ) {}

@@ -27,7 +27,8 @@
     "amendCustomerOrderQuantity": "Order amended · {{customer}} is now waiting for {{quantity}}",
     "amendCustomerOrderNeededBy": "Order amended · {{customer}} now needs it by {{date}}",
     "amendCustomerOrderBoth": "Order amended · {{customer}} is now waiting for {{quantity}} by {{date}}",
-    "cancelCustomerOrder": "Order cancelled · {{customer}} · {{reason}}"
+    "cancelCustomerOrder": "Order cancelled · {{customer}} · {{reason}}",
+    "redirectCustomerOrder": "Order redirected · {{customer}} · every frozen draft line linked to it now reports address drift"
   },
   "workspace": {
     "renameWorkspace": "Workspace named.",
@@ -35,6 +36,7 @@
     "renameWarehouse": "Warehouse renamed.",
     "archiveWarehouse": "Warehouse archived.",
     "restoreWarehouse": "Warehouse restored.",
+    "setWarehouseDeliveryAddress": "Delivery address saved.",
     "giveWarehouseAccess": "Access to {{name}} granted.",
     "withdrawWarehouseAccess": "Access to {{name}} withdrawn.",
     "createWorkspaceRole": "Workspace role created.",
@@ -55,8 +57,21 @@
     "revisePurchaseDraftLineLink": "Stated quantity saved.",
     "removePurchaseDraftLineLink": "Link removed.",
     "readyPurchaseDraft": "Purchase draft is ready for ordering.",
-    "confirmPurchaseDraftArrival": "Arrival confirmed and the draft is closed.",
+    "recordPurchaseDraftLineArrival": "This line's arrival is recorded and what each customer is still waiting for has been reduced. The draft closes once every line has an ending.",
+    "recordPurchaseDraftLineDirectDelivery": "The delivery is recorded and what each customer is still waiting for has been reduced. No stock moved — the goods went straight to the customer and were never counted here.",
     "closePurchaseDraft": "Purchase draft closed: {{reason}}",
     "discardPurchaseDraft": "Purchase draft discarded."
+  },
+  "customer": {
+    "recordCustomer": "Customer recorded · {{customer}}",
+    "correctCustomerName": "Customer renamed · {{customer}}",
+    "deactivateCustomer": "Deactivated · {{customer}} · orders already placed keep counting",
+    "reactivateCustomer": "Reactivated · {{customer}}",
+    "addCustomerDeliveryAddress": "Delivery address added · {{customer}}",
+    "addCustomerMainDeliveryAddress": "Delivery address added and made the main one · {{customer}}",
+    "correctCustomerDeliveryAddress": "Delivery address corrected · {{customer}}",
+    "setMainCustomerDeliveryAddress": "Main delivery address changed · {{customer}}",
+    "deactivateCustomerDeliveryAddress": "Delivery address deactivated · {{customer}} · records already naming it keep counting",
+    "reactivateCustomerDeliveryAddress": "Delivery address offered again · {{customer}}"
   }
 }

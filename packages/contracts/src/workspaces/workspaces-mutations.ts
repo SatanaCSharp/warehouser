@@ -61,6 +61,21 @@ export const warehouseArchivalSchema = z.strictObject({
   archived: z.boolean(),
 });
 
+// AC-10 — the Warehouse's own Delivery Address. There is no clearing
+// operation and no deactivation flag: an address, once recorded, is corrected
+// in place and never withdrawn, so `addressText` is always stated.
+//
+// Like the name schemas above it carries no lower bound. openapi.yaml
+// documents "empty after trimming" as a *business* rejection —
+// `workspace.invalid_input` with `field: addressText`,
+// `rule: trimmed_non_empty` — raised by the command, which is also what trims.
+// `AddressText` states no upper bound either, matching the `TEXT` column and
+// its trimmed-non-empty check.
+export const warehouseDeliveryAddressWriteSchema = z.strictObject({
+  addressText: z.string(),
+  accessNotes: z.string().nullish(),
+});
+
 export const warehouseMembershipAssignmentSchema = z.strictObject({
   userId: z.string().uuid(),
   roleId: z.string().uuid(),
@@ -79,6 +94,9 @@ export type WorkspaceOwnerTransfer = z.infer<
 >;
 export type WarehouseWrite = z.infer<typeof warehouseWriteSchema>;
 export type WarehouseArchival = z.infer<typeof warehouseArchivalSchema>;
+export type WarehouseDeliveryAddressWrite = z.infer<
+  typeof warehouseDeliveryAddressWriteSchema
+>;
 export type WarehouseMembershipAssignment = z.infer<
   typeof warehouseMembershipAssignmentSchema
 >;

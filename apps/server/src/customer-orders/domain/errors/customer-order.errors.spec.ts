@@ -7,6 +7,9 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
 import {
+  customerOrderCustomerIdentityError,
+  customerOrderCustomerUnavailableError,
+  customerOrderInvalidDeliveryAddressError,
   customerOrderInvalidInputError,
   customerOrderInvalidStateError,
   customerOrderItemUnavailableError,
@@ -98,6 +101,51 @@ describe('customer order domain error factories', () => {
     expect(error).toBeInstanceOf(ApplicationError);
     expect(error).toMatchObject({
       code: ErrorCode.CUSTOMER_ORDERS_INVALID_STATE,
+    });
+    expect(error.details).toBeUndefined();
+  });
+
+  // openapi.yaml `InvalidCustomerOrderInput` `bothIdentities`/`neitherIdentity` examples:
+  // `details: { rule }` and **no field**, because the refusal is about the combination and because
+  // naming the value would echo the typed customer name (spec.md §6.1).
+  it.each([
+    'customer_identity_exclusive',
+    'customer_identity_required',
+    'delivery_address_requires_customer',
+  ] as const)('builds an ApplicationError naming the %s rule alone', (rule) => {
+    const error = customerOrderCustomerIdentityError(rule);
+
+    expect(error).toBeInstanceOf(ApplicationError);
+    expect(error).toMatchObject({
+      code: ErrorCode.CUSTOMER_ORDERS_INVALID_INPUT,
+      details: { rule },
+    });
+    expect(error.details).not.toHaveProperty('customerName');
+  });
+
+  // AC-12 — openapi.yaml `CustomerOrderTargetUnavailable` `customerElsewhere` carries no `details`,
+  // so a Customer of another Warehouse and a missing one produce the identical value.
+  it('builds an identical detail-free ApplicationError for any unavailable Customer', () => {
+    const error = customerOrderCustomerUnavailableError();
+
+    expect(error).toBeInstanceOf(ApplicationError);
+    expect(error).toMatchObject({
+      code: ErrorCode.CUSTOMERS_TARGET_UNAVAILABLE,
+    });
+    expect(error.details).toBeUndefined();
+    expect({ ...error }).toEqual({
+      ...customerOrderCustomerUnavailableError(),
+    });
+  });
+
+  // AC-11c — openapi.yaml `CustomerOrderDestinationConflict` / `CustomerOrderRedirectConflict`
+  // carry no `details`: the address text and its access notes are confidential (sad.md §8).
+  it('builds a detail-free ApplicationError for a destination the order may not take', () => {
+    const error = customerOrderInvalidDeliveryAddressError();
+
+    expect(error).toBeInstanceOf(ApplicationError);
+    expect(error).toMatchObject({
+      code: ErrorCode.CUSTOMER_ORDERS_INVALID_DELIVERY_ADDRESS,
     });
     expect(error.details).toBeUndefined();
   });

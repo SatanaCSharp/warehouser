@@ -19,6 +19,10 @@ export default defineConfig({
         __dirname,
         '../../packages/contracts/src/customer-orders/index.ts',
       ),
+      '@warehouser/contracts/customers': path.resolve(
+        __dirname,
+        '../../packages/contracts/src/customers/index.ts',
+      ),
       '@warehouser/contracts/items': path.resolve(
         __dirname,
         '../../packages/contracts/src/items/index.ts',
@@ -43,6 +47,15 @@ export default defineConfig({
       'customer-orders': path.resolve(
         __dirname,
         '../../packages/contracts/src/customer-orders',
+      ),
+      // `packages/contracts/tsconfig.json` sets `baseUrl: src`, so a contracts module importing
+      // another one names it bare — `customers/customers-projections`. Both aliases are required:
+      // without the subpath one above, vite resolves the import through the package `exports` map
+      // to the compiled CommonJS `dist`, whose `__exportStar` re-exports rollup cannot statically
+      // analyse, and only `vite build` fails while every test tier stays green.
+      customers: path.resolve(
+        __dirname,
+        '../../packages/contracts/src/customers',
       ),
       items: path.resolve(__dirname, '../../packages/contracts/src/items'),
       'purchase-drafts': path.resolve(

@@ -34,6 +34,17 @@
       "peopleHeading": "People with access",
       "peopleDescription": "Giving access places a person in this warehouse with a role defined there. What they may do inside it is decided by that role, not by the workspace — manage those roles on the warehouse's Access page."
     },
+    "deliveryAddress": {
+      "title": "Delivery address",
+      "description": "The address a supplier is told for every line coming to this warehouse. A warehouse has exactly one — you correct it in place and it is never deactivated.",
+      "addressLabel": "Address",
+      "addressDescription": "Text a human driver reads. Warehouser never validates, geocodes or interprets it.",
+      "accessNotesLabel": "Access notes",
+      "accessNotesDescription": "What a driver needs to get in. Treat a gate or door code recorded here as confidential — it is read by everyone who may read this warehouse.",
+      "freezeNoteTitle": "A draft cannot be made ready before this is recorded",
+      "freezeNoteDescription": "Any purchase draft holding a line that comes to this warehouse needs an address for the supplier to deliver to. Adding and revising lines keeps working; only the move to Ready for ordering is refused until this is filled in.",
+      "save": "Save delivery address"
+    },
     "archive": {
       "trigger": "Archive warehouse",
       "title": "Archive {{name}}?",

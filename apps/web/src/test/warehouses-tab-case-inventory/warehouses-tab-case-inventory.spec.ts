@@ -153,6 +153,16 @@ const ADDED_CASES: Record<string, string[]> = {
   'WarehousePeopleList.spec.tsx': [
     'offers no withdraw control at all to an actor without WAREHOUSE_MEMBERSHIPS:REVOKE',
   ],
+  // delivery-addresses T11/AC-10 — the Warehouse's own Delivery Address is a
+  // new section of the detail pane, so its spec colocates beside it
+  // (placing-web-tests.md §1) and is enumerated here for the same reason the
+  // entries above are: the baseline is compared, never regenerated, and an
+  // addition nobody named still fails as `unexpected`.
+  'WarehouseDeliveryAddressSection.spec.tsx': [
+    'AC-10: offers the recorded address and its access notes to a holder of WAREHOUSES:ADDRESS_UPDATE',
+    'AC-10: is absent, not disabled, for a member without WAREHOUSES:ADDRESS_UPDATE, and reads nothing',
+    'AC-10: records a corrected address in place, sending the address and its access notes',
+  ],
 };
 
 /**
@@ -226,16 +236,21 @@ const TAB_SPEC_CASES = baseline.cases.filter(
   (name) => !MOVED_CASES.includes(name),
 );
 
-/** Exact, not a lower bound — and it also rejects a fifth colocated spec. The
- * list spec keeps seven of its own: six of the seven it was assigned, the
- * seventh deleted with the skeleton, plus the search-empty case that replaces
- * it. */
+/** Exact, not a lower bound. Every colocated spec is named here with the count
+ * it must declare, so a case appearing in a file this change request did not
+ * assign one to still fails. The list spec keeps seven of its own: six of the
+ * seven it was assigned, the seventh deleted with the skeleton, plus the
+ * search-empty case that replaces it. `WarehouseDeliveryAddressSection` is a
+ * later feature's file and declares only its own enumerated additions. */
 const EXPECTED_DISTRIBUTION: Record<string, number> = {
   'WarehousesTab.spec.tsx': 25 + addedIn('WarehousesTab.spec.tsx').length,
   'WarehouseList.spec.tsx': 6 + addedIn('WarehouseList.spec.tsx').length,
   'WarehouseRow.spec.tsx': 4 + addedIn('WarehouseRow.spec.tsx').length,
   'WarehousePeopleList.spec.tsx':
     3 + addedIn('WarehousePeopleList.spec.tsx').length,
+  'WarehouseDeliveryAddressSection.spec.tsx': addedIn(
+    'WarehouseDeliveryAddressSection.spec.tsx',
+  ).length,
 };
 
 const occurrences = (names: string[]): Map<string, number> =>
@@ -338,7 +353,7 @@ describe('the Warehouses tab case inventory (CR-RG-01)', () => {
     expect(declared.filter((name) => !survives(name))).toEqual([]);
   });
 
-  it('distributes the cases exactly 26 / 7 / 4 / 4, with no fifth spec', () => {
+  it('distributes the cases exactly as the enumerated split and its later additions require', () => {
     expect(
       Object.fromEntries(
         specFileNames().map((fileName) => [

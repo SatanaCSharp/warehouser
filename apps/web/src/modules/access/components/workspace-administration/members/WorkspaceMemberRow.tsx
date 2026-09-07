@@ -7,6 +7,7 @@ import { RemoveWorkspaceMemberDialog } from 'modules/access/components/workspace
 import { TransferWorkspaceOwnershipDialog } from 'modules/access/components/workspace-administration/members/TransferWorkspaceOwnershipDialog';
 import { ActionDialogHost } from 'shared/components/ActionDialogHost';
 import { Conditional } from 'shared/components/Conditional';
+import { ROW_ENTER } from 'shared/constants/motion';
 import { useWorkspacePermittedItems } from 'shared/hooks/projections/useWorkspacePermittedItems';
 import { useActionDialog } from 'shared/hooks/state/useActionDialog';
 import {
@@ -164,7 +165,7 @@ export const WorkspaceMemberRow = ({
   return (
     <li
       aria-label={identity}
-      className="flex min-h-[72px] items-center justify-between gap-3 rounded-xl border border-border bg-surface p-4"
+      className={`flex min-h-[72px] items-center justify-between gap-3 rounded-xl border border-border bg-surface p-4 ${ROW_ENTER}`}
     >
       <div>
         <p className="font-semibold">{identity}</p>
