@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import { Injectable } from '@nestjs/common';
 import { getEntityManager } from 'shared/database/db-transaction-context.service';
 import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
@@ -5,7 +7,12 @@ import {
   type PurchaseDraftLineDeliveryMode,
   type PurchaseDraftLineEndingKind,
   PurchaseDraftLineEntity,
+  type PurchaseDraftLinePreReceiptConformance,
 } from 'shared/domain/entities/purchase-draft-line.entity';
+import {
+  PurchaseDraftLineRejectionEntity,
+  type PurchaseDraftLineRejectionSource,
+} from 'shared/domain/entities/purchase-draft-line-rejection.entity';
 import { DataSource, IsNull } from 'typeorm';
 
 export interface LockedPurchaseDraftForArrival {
@@ -20,14 +27,22 @@ export interface LockedPurchaseDraftForArrival {
 // attribution columns come across together because `chk_purchase_draft_lines_ending_attribution`
 // admits them only as a set — a refusal that names "when and by whom" has no other source.
 //
-// This projection deliberately still withholds `ordered_quantity`, `packaging_type_id` and
-// `value_adding_note`, for the reason `LockedPurchaseDraftLineForArrival` gives above: AC-19 bounds
-// the ending quantity neither above nor below the ordered figure, so no bound of this operation is
-// derived from a frozen field, and keeping them out of reach is what makes spec.md §6.1's
-// "Allocation as a back door" a property of the write path rather than a check on it.
+// T5/AC-17/AC-17a/sad.md §6.1 step 3 — `packaging_type_id` and `value_adding_note` were added to
+// this projection because the Pre-receipt Conformance is decided against the instruction **frozen on
+// the line**: `chk_purchase_draft_lines_pre_receipt_conformance_instruction` makes Not applicable
+// legal only where the line was given neither, so the verdict has no other source than this row.
+// That is a bounded narrowing of the withholding (sad.md §2), not a reversal of it.
+//
+// Exactly one column stays withheld: **`ordered_quantity`**. AC-19 bounds the ending quantity
+// neither above nor below the ordered figure, so no bound of this operation is derived from it, and
+// keeping it out of reach is what makes spec.md §6.1's "Refusal as a route around the Allocation
+// bound" a property of the write path rather than a check on it. sad.md §11 treats a third added
+// column as a finding; an architecture check asserts this list.
 export interface LockedPurchaseDraftLineForEnding {
   readonly id: string;
   readonly deliveryMode: PurchaseDraftLineDeliveryMode;
+  readonly packagingTypeId: string | null;
+  readonly valueAddingNote: string | null;
   readonly endingKind: PurchaseDraftLineEndingKind | null;
   readonly endingRecordedByUserId: string | null;
   readonly endingRecordedAt: Date | null;
@@ -38,6 +53,32 @@ export interface LockPurchaseDraftLineForEndingResult {
   readonly line: LockedPurchaseDraftLineForEnding | null;
 }
 
+// One refused quantity against one Reason of the catalogue (AC-01, AC-03, AC-06, AC-09). It names
+// its Reason rather than copying the wording (AC-23a), and it carries no identifier of its own: the
+// row is raised by this write, so its identity is this write's to mint.
+export interface RecordLineEndingRejectionInput {
+  readonly rejectionReasonId: string;
+  readonly quantity: number;
+  readonly source: PurchaseDraftLineRejectionSource;
+  readonly description: string | null;
+}
+
+// The condition half of one submission (spec.md §6 "Ending atomicity"). Both parts are stated
+// together because they are judged together and stored together: no caller may leave a Rejection
+// behind without the verdict it was raised beside, and none may record a verdict whose refusals
+// failed.
+//
+// Nothing here is second-guessed by this repository. A verdict beside a nothing-received ending, or
+// Not applicable on a line frozen carrying an instruction, is refused by
+// `chk_purchase_draft_lines_conformance_requires_ending` and
+// `chk_purchase_draft_lines_pre_receipt_conformance_instruction` — the store is the arbiter
+// (AC-04a, AC-17, AC-17a), and a duplicate guard here would only decide it in a second place.
+export interface RecordLineEndingConditionInput {
+  readonly preReceiptConformance: PurchaseDraftLinePreReceiptConformance | null;
+  readonly preReceiptConformanceNote: string | null;
+  readonly rejections: readonly RecordLineEndingRejectionInput[];
+}
+
 export interface RecordLineEndingInput {
   readonly purchaseDraftId: string;
   readonly purchaseDraftLineId: string;
@@ -46,7 +87,24 @@ export interface RecordLineEndingInput {
   readonly endingKind: PurchaseDraftLineEndingKind;
   readonly endingRecordedByUserId: string;
   readonly endingRecordedAt: Date;
+  // `null` where the submission judged nothing and refused nothing — a nothing-received ending
+  // (AC-04a), or an ending recorded by a caller that carries no condition at all.
+  readonly condition: RecordLineEndingConditionInput | null;
 }
+
+// A Rejection carries the Delivery Mode of the line it refuses, so
+// `fk_purchase_draft_line_rejections_line` proves the line, its Warehouse and its Mode through one
+// reference (AC-25, AC-26). The Mode is derived rather than stated: the ending's kind already fixes
+// it — `chk_purchase_draft_lines_ending_matches_mode` admits an arrival only on a Via Warehouse line
+// and a direct delivery only on a Direct to Customer one — so accepting it as a second input would
+// let a caller state a pair the line cannot hold.
+const deliveryModeOfEndingKind: Record<
+  PurchaseDraftLineEndingKind,
+  PurchaseDraftLineDeliveryMode
+> = {
+  arrival: 'via_warehouse',
+  direct_delivery: 'direct_to_customer',
+};
 
 // Whether the ending was written at all, and whether it was the one that closed the draft. The two
 // are separate answers because a lost race writes nothing (`recorded: false`) while an ending that
@@ -102,6 +160,8 @@ export class ArrivalConfirmationRepository {
       select: [
         'id',
         'deliveryMode',
+        'packagingTypeId',
+        'valueAddingNote',
         'endingKind',
         'endingRecordedByUserId',
         'endingRecordedAt',
@@ -120,6 +180,8 @@ export class ArrivalConfirmationRepository {
           : {
               id: line.id,
               deliveryMode: line.deliveryMode,
+              packagingTypeId: line.packagingTypeId,
+              valueAddingNote: line.valueAddingNote,
               endingKind: line.endingKind,
               endingRecordedByUserId: line.endingRecordedByUserId,
               endingRecordedAt: line.endingRecordedAt,
@@ -127,8 +189,17 @@ export class ArrivalConfirmationRepository {
     };
   }
 
-  // AC-19/AC-20a/sad.md §6.10 steps 4–5 — the line's ending, then the draft's closure, both as
-  // guarded writes inside the caller's one transaction.
+  // AC-19/AC-20a/sad.md §6.10 steps 4–5 — the line's ending and its Pre-receipt Conformance, then
+  // that line's refusals, then the draft's closure, all inside the caller's one transaction. This
+  // repository opens none of its own, so spec.md §6's "Ending atomicity" holds by construction: a
+  // failure anywhere — a Reason outside the catalogue, a verdict the store refuses — rolls the whole
+  // submission back, its refusals included, because nothing here was ever committed separately.
+  //
+  // The order is `delivery-addresses`' fixed lock order **extended**, not replaced (sad.md §8,
+  // data-model.md § "Concurrency, locks and transactions"): the draft row — already held from
+  // `lockDraftLineForEnding`, which is why no statement re-takes it here — then its line, then that
+  // line's refusals, then the Customer Orders. The draft's closure is the last write of the set for
+  // the same reason, since it touches the row the caller locked first.
   //
   // The ending is predicated on `ending_recorded_at IS NULL`, which is what makes "a line admits one
   // ending" a property of the write rather than of the caller's pre-read: two concurrent first
@@ -157,12 +228,45 @@ export class ArrivalConfirmationRepository {
         endingKind: input.endingKind,
         endingRecordedByUserId: input.endingRecordedByUserId,
         endingRecordedAt: input.endingRecordedAt,
+        preReceiptConformance: input.condition?.preReceiptConformance ?? null,
+        preReceiptConformanceNote:
+          input.condition?.preReceiptConformanceNote ?? null,
         updatedAt: input.endingRecordedAt,
       },
     );
 
     if (ending.affected !== 1) {
       return { recorded: false, closed: false };
+    }
+
+    // AC-04 — the refusals belong to the ending's own `ending_recorded_at IS NULL` predicate rather
+    // than to a second one of their own. Reaching them only through the guarded update above is what
+    // makes "no further refusal against a recorded ending" unreachable, instead of a rule an insert
+    // ordered ahead of the ending could walk around.
+    const rejections = input.condition?.rejections ?? [];
+
+    if (rejections.length > 0) {
+      await manager.insert(
+        PurchaseDraftLineRejectionEntity,
+        rejections.map((rejection) => ({
+          id: randomUUID(),
+          purchaseDraftLineId: input.purchaseDraftLineId,
+          warehouseId: input.warehouseId,
+          deliveryMode: deliveryModeOfEndingKind[input.endingKind],
+          rejectionReasonId: rejection.rejectionReasonId,
+          quantity: rejection.quantity,
+          source: rejection.source,
+          description: rejection.description,
+          // AC-19 — every Rejection starts Undecided; what became of the goods is decided later, by
+          // §6.4's amendment. `created_at` **is** the time it was raised.
+          disposition: 'undecided' as const,
+          raisedByUserId: input.endingRecordedByUserId,
+          amendedByUserId: null,
+          amendedAt: null,
+          createdAt: input.endingRecordedAt,
+          updatedAt: input.endingRecordedAt,
+        })),
+      );
     }
 
     // `chk_purchase_drafts_closure_attribution` requires `closed_by_user_id`/`closed_at` on every

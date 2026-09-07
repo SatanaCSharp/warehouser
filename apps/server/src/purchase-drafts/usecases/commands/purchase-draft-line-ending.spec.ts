@@ -45,6 +45,10 @@ const lockResult = (
   line: {
     id: lineId,
     deliveryMode: 'via_warehouse',
+    // T5 — the two frozen columns the locked-line projection gained; no case here judges a
+    // Pre-receipt Conformance, so both stay as an unfrozen line carries them.
+    packagingTypeId: null,
+    valueAddingNote: null,
     endingKind: null,
     endingRecordedByUserId: null,
     endingRecordedAt: null,

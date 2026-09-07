@@ -90,6 +90,8 @@ export class ConfirmPurchaseDraftLineArrivalCommand {
       endingKind: EndingKind.Arrival,
       endingRecordedByUserId: currentUser.userId,
       endingRecordedAt,
+      // T5 — this command states no condition yet; the Condition Split reaches it in its own task.
+      condition: null,
     });
     // A pre-read that resolved legally but whose guarded write still affected zero rows is the
     // concurrency answer, distinct from the AC-20a refusal above (server-error-handling.md §3).

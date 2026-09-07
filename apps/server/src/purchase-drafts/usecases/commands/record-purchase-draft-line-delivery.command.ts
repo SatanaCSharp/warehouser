@@ -73,6 +73,8 @@ export class RecordPurchaseDraftLineDeliveryCommand {
       endingKind: EndingKind.DirectDelivery,
       endingRecordedByUserId: currentUser.userId,
       endingRecordedAt,
+      // T5 — this command states no condition yet; the Condition Split reaches it in its own task.
+      condition: null,
     });
     assert(written.recorded, purchaseDraftConcurrentChangeError());
 

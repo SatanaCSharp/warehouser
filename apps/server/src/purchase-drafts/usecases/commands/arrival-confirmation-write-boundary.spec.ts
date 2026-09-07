@@ -23,6 +23,8 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { difference } from 'lodash';
+
 const sourceRoot = join(__dirname, '../../..');
 
 const read = (path: string): string =>
@@ -77,6 +79,29 @@ const THE_CONFIRMATION_WRITE_PATH = [
 const THE_UNFROZEN_WRITE_PATH =
   'shared/domain/repositories/purchase-draft-assembly.repository.ts';
 
+// T5/`sad.md` §2 "Three consequences that are easy to mistake for deviations" — the one place this
+// path is now *allowed* to name a frozen field, and the exact two it may name.
+// `chk_purchase_draft_lines_pre_receipt_conformance_instruction` makes the Pre-receipt Conformance a
+// bound derived from the Packaging Type and Value-adding Note frozen on the line (AC-17, AC-17a), so
+// `lockDraftLineForEnding` must *read* both. Reading them is all it may do: "writes no frozen field"
+// below still holds this file to the full list, unnarrowed.
+const THE_NARROWED_PROJECTION =
+  'shared/domain/repositories/arrival-confirmation.repository.ts';
+
+const THE_NARROWING = [
+  'packagingTypeId',
+  'packaging_type_id',
+  'valueAddingNote',
+  'value_adding_note',
+];
+
+// The half of the withholding `sad.md` §2 keeps absolute, and §11 records as the risk T5 carries.
+// AC-19 bounds the ending quantity neither above nor below the ordered figure, so a path that could
+// read it could derive a bound this operation does not have — which is what would turn `spec.md`
+// §6.1's "Refusal as a route around the Allocation bound" from a property of the write path back
+// into a check on it. Split out of the blanket rule above so the narrowing cannot take it with it.
+const THE_UNNARROWABLE = ['orderedQuantity', 'ordered_quantity'];
+
 // Every persistence call that can change a row. `set(` is QueryBuilder's assignment form; `query(`
 // is raw SQL, without which a hand-written UPDATE would be invisible to this spec.
 const WRITE_CALL =
@@ -129,9 +154,30 @@ describe('the frozen-record write boundary of a line ending (AC-15, spec.md §6.
   // which is what AC-17 requires when it makes the received quantity free to fall short of or
   // exceed what was ordered.
   it.each(THE_CONFIRMATION_WRITE_PATH)(
-    '%s names no frozen field at all',
+    '%s names no frozen field at all, beyond the two `sad.md` §2 narrows the withholding by',
     (path) => {
-      expect(namesFrozenField(stripComments(read(path)))).toEqual([]);
+      const permitted = path === THE_NARROWED_PROJECTION ? THE_NARROWING : [];
+      const named = namesFrozenField(stripComments(read(path)));
+
+      // `difference` rather than equality, because either spelling of the two narrowed columns is
+      // legal and neither is required — while a *third* frozen field, in any spelling, still fails.
+      expect({ path, offending: difference(named, permitted) }).toMatchObject({
+        offending: [],
+      });
+    },
+  );
+
+  // The narrowing is bounded, so it is asserted twice over: the list above admits exactly two
+  // columns and no third, and this admits none of the ordered figure anywhere on the path — the
+  // guarantee that survives every later widening of the projection.
+  it.each(THE_CONFIRMATION_WRITE_PATH)(
+    '%s never names the ordered quantity',
+    (path) => {
+      const named = THE_UNNARROWABLE.filter((field) =>
+        new RegExp(`\\b${field}\\b`, 'u').test(stripComments(read(path))),
+      );
+
+      expect({ path, named }).toMatchObject({ named: [] });
     },
   );
 
