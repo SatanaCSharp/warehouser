@@ -150,6 +150,8 @@ const buildPurchaseDraftLine = (
   customerDeliveryAddressId: null,
   frozenDeliveryAddressText: null,
   frozenAccessNotes: null,
+  preReceiptConformance: null,
+  preReceiptConformanceNote: null,
   frozenCustomerName: null,
   endingQuantity: null,
   endingKind: null,
