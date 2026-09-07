@@ -1,7 +1,7 @@
 ---
 title: 'implement run notes — arrival-inspection'
 date: '2026-09-07'
-status: 'in progress — 9 of 20 tasks committed'
+status: 'paused — 9 of 20 tasks committed; T11 RED preserved unmerged'
 ---
 
 Findings discovered during `/implement` that the task docs do not contain, plus the resume
@@ -216,3 +216,20 @@ should never reach it (a submission with no stated Reason has nothing to resolve
 
 It states outright that "the server side is not reconciled by this decision". Including it in a
 server task's manifest is harmless but adds nothing. Drop it from server briefs; keep it for web.
+
+## RAISED AGAINST THE SPEC — needs a human decision before T11/T13 ship
+
+`spec.md` §6's NFR table asks for **"structured server timing logs"** for authorization and
+line-ending latency. That directly contradicts `docs/system/guides/server-use-case-boundaries.md` §2
+and `apps/server/AGENTS.md`, which forbid measuring anything in production code ("no `durationMs`
+field in a production log entry"), and the repo-wide rule that coding agents must not add telemetry.
+No timing was written anywhere in this run. Whoever implements T11/T13 must NOT add one to satisfy
+the NFR table — the spec needs amending instead (a `clarify`/`change-request` decision, not an
+implement one).
+
+## STILL UNRAISED — sad.md §11 change-request item 7
+
+"Any repository-wide assertion that a Closed draft is immutable is now wrong."
+T11's author searched and found no such assertion in `apps/server` that its specs break
+(`purchase-drafts/module-boundaries.spec.ts` enumerates commands by hand and needs no extension for
+a new command file). The CR item nonetheless remains outstanding for the epic.

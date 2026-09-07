@@ -1,0 +1,832 @@
+diff --git a/apps/server/src/purchase-drafts/usecases/commands/amend-purchase-draft-rejection.command.integration.spec.ts b/apps/server/src/purchase-drafts/usecases/commands/amend-purchase-draft-rejection.command.integration.spec.ts
+new file mode 100644
+index 0000000..6fc84d3
+--- /dev/null
++++ b/apps/server/src/purchase-drafts/usecases/commands/amend-purchase-draft-rejection.command.integration.spec.ts
+@@ -0,0 +1,477 @@
++import { randomUUID } from 'node:crypto';
++
++import { ErrorCode } from '@warehouser/shared-types/enums';
++import { AmendPurchaseDraftRejectionCommand } from 'purchase-drafts/usecases/commands/amend-purchase-draft-rejection.command';
++import type { AccessCurrentUser } from 'shared/access/access-current-user';
++import dataSource from 'shared/database/data-source';
++import { DbTransactionService } from 'shared/database/db-transaction.service';
++import { DbTransactionContext } from 'shared/database/db-transaction-context.service';
++import { AccountEntity } from 'shared/domain/entities/account.entity';
++import { ArrivalAllocationEntity } from 'shared/domain/entities/arrival-allocation.entity';
++import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
++import { ItemEntity } from 'shared/domain/entities/item.entity';
++import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
++import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity';
++import { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity';
++import {
++  type PurchaseDraftLineRejectionDisposition,
++  PurchaseDraftLineRejectionEntity,
++} from 'shared/domain/entities/purchase-draft-line-rejection.entity';
++import { UserEntity } from 'shared/domain/entities/user.entity';
++import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
++import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
++import { PurchaseDraftRejectionRepository } from 'shared/domain/repositories/purchase-draft-rejection.repository';
++import {
++  buildWarehouse,
++  buildWorkspace,
++} from 'test/factories/entity-factories';
++
++// T11/AC-18 — **the first write this product aims at a Closed draft** (sad.md §6.4, and the notes of
++// `tasks/amend-rejection-command.md`). The command's state precondition is the Rejection and never
++// the draft's state, which is a claim about a real schema and a real closed draft rather than about
++// a double: only the store can show that the amendment lands and that its postcondition holds —
++// "no quantity, Reason, Source or line changed, so no Allocation, outstanding quantity or draft
++// state moved, and no other read changed" (sad.md §6.4 postcondition).
++//
++// So the assertion here is not that the command returned. It is a **full before/after comparison of
++// everything hanging off that Closed draft** — the draft row, both of its lines, its links, its
++// Allocations, the Customer Order the Allocation feeds, and every Rejection except the amended one —
++// with only the amended row's six amendment columns allowed to differ.
++//
++// The rule-level cases (which refusal is owed and what it carries) live beside this file in
++// `amend-purchase-draft-rejection.command.spec.ts` over doubles.
++
++const now = new Date('2026-09-07T09:00:00.000Z');
++const raisedAt = new Date('2026-09-07T10:00:00.000Z');
++const amendedAt = new Date('2026-09-19T14:05:00.000Z');
++
++const context = new DbTransactionContext(dataSource);
++const transactions = new DbTransactionService(dataSource, context);
++
++const command = new AmendPurchaseDraftRejectionCommand(
++  new PurchaseDraftRejectionRepository(dataSource),
++  { now: () => amendedAt },
++);
++
++/** `accounts.user_id` / `users.account_id` are a deferred circular FK pair, so both land together. */
++const seedUser = async (workspaceId: string): Promise<string> => {
++  const userId = randomUUID();
++  await dataSource.transaction(async (manager) => {
++    await manager.getRepository(AccountEntity).insert({
++      id: userId,
++      userId,
++      normalizedEmail: `member.${userId}@example.test`,
++      passwordHash: 'synthetic-hash',
++      passwordHashAlgorithm: 'scrypt',
++      passwordHashParameters: { cost: 1_024 },
++      createdAt: now,
++      updatedAt: now,
++    });
++    await manager.getRepository(UserEntity).insert({
++      id: userId,
++      accountId: userId,
++      workspaceId,
++      createdAt: now,
++      updatedAt: now,
++    });
++  });
++  return userId;
++};
++
++interface SeededDraft {
++  readonly warehouseId: string;
++  readonly userId: string;
++  readonly draftId: string;
++  readonly refusedLineId: string;
++  readonly untouchedLineId: string;
++  readonly customerOrderId: string;
++  readonly amendableRejectionId: string;
++  readonly siblingRejectionId: string;
++  readonly otherLineRejectionId: string;
++}
++
++const seedLine = async (
++  warehouseId: string,
++  itemId: string,
++  userId: string,
++  draftId: string,
++): Promise<string> => {
++  const id = randomUUID();
++  await dataSource.manager.getRepository(PurchaseDraftLineEntity).insert({
++    id,
++    purchaseDraftId: draftId,
++    warehouseId,
++    itemId,
++    orderedQuantity: 100,
++    packagingTypeId: null,
++    valueAddingNote: null,
++    deliveryMode: 'via_warehouse',
++    customerDeliveryAddressId: null,
++    frozenDeliveryAddressText: null,
++    frozenAccessNotes: null,
++    frozenCustomerName: null,
++    endingQuantity: 100,
++    endingKind: 'arrival',
++    endingRecordedByUserId: userId,
++    endingRecordedAt: raisedAt,
++    preReceiptConformance: null,
++    preReceiptConformanceNote: null,
++    createdAt: now,
++    updatedAt: now,
++  });
++  return id;
++};
++
++const seedRejection = async (
++  warehouseId: string,
++  userId: string,
++  lineId: string,
++  fields: {
++    rejectionReasonId: string;
++    quantity: number;
++    description: string | null;
++    disposition: PurchaseDraftLineRejectionDisposition;
++  },
++): Promise<string> => {
++  const id = randomUUID();
++  const decided = fields.disposition !== 'undecided';
++  await dataSource.manager
++    .getRepository(PurchaseDraftLineRejectionEntity)
++    .insert({
++      id,
++      purchaseDraftLineId: lineId,
++      warehouseId,
++      deliveryMode: 'via_warehouse',
++      rejectionReasonId: fields.rejectionReasonId,
++      quantity: fields.quantity,
++      source: 'inspected',
++      description: fields.description,
++      disposition: fields.disposition,
++      raisedByUserId: userId,
++      amendedByUserId: decided ? userId : null,
++      amendedAt: decided ? raisedAt : null,
++      createdAt: raisedAt,
++      updatedAt: raisedAt,
++    });
++  return id;
++};
++
++/**
++ * A **Closed** draft carrying everything the amendment must leave alone: two ended lines, a link
++ * from the refused line to a Customer Order, the Allocation that link records, and three
++ * Rejections — the one to amend, a sibling on the same line, and one on the other line.
++ */
++const seedClosedDraft = async (): Promise<SeededDraft> => {
++  const workspace = buildWorkspace();
++  await dataSource.manager.getRepository(WorkspaceEntity).insert(workspace);
++  const warehouse = buildWarehouse({ workspaceId: workspace.id! });
++  await dataSource.manager.getRepository(WarehouseEntity).insert(warehouse);
++  const warehouseId = warehouse.id!;
++  const userId = await seedUser(workspace.id!);
++
++  const itemId = randomUUID();
++  await dataSource.manager.getRepository(ItemEntity).insert({
++    id: itemId,
++    warehouseId,
++    sku: `SKU-${itemId}`,
++    description: 'Cable reel, 50m',
++    unitOfMeasure: 'each',
++    onHandQuantity: 0,
++    deactivatedAt: null,
++    createdAt: now,
++    updatedAt: now,
++  });
++
++  const draftId = randomUUID();
++  await dataSource.manager.getRepository(PurchaseDraftEntity).insert({
++    id: draftId,
++    warehouseId,
++    state: 'closed',
++    expectedArrivalDate: null,
++    createdByUserId: userId,
++    readiedByUserId: userId,
++    readiedAt: now,
++    arrivalConfirmedByUserId: userId,
++    arrivalConfirmedAt: raisedAt,
++    closedByUserId: userId,
++    closedAt: raisedAt,
++    closureReason: null,
++    discardedByUserId: null,
++    discardedAt: null,
++    createdAt: now,
++    updatedAt: now,
++  });
++
++  const refusedLineId = await seedLine(warehouseId, itemId, userId, draftId);
++  const untouchedLineId = await seedLine(warehouseId, itemId, userId, draftId);
++
++  const customerOrderId = randomUUID();
++  await dataSource.manager.getRepository(CustomerOrderEntity).insert({
++    id: customerOrderId,
++    warehouseId,
++    itemId,
++    customerId: null,
++    customerDeliveryAddressId: null,
++    customerName: 'Typed Buyer',
++    quantity: 100,
++    // The Outstanding Quantity the ending already reduced. If the amendment moved a quantity, this
++    // is the figure that would move with it.
++    outstandingQuantity: 40,
++    neededBy: '2099-01-01',
++    state: 'unfulfilled',
++    cancellationReason: null,
++    recordedByUserId: userId,
++    cancelledByUserId: null,
++    cancelledAt: null,
++    createdAt: now,
++    updatedAt: now,
++  });
++
++  const linkId = randomUUID();
++  await dataSource.manager.getRepository(PurchaseDraftLineLinkEntity).insert({
++    id: linkId,
++    purchaseDraftLineId: refusedLineId,
++    purchaseDraftId: draftId,
++    warehouseId,
++    customerOrderId,
++    statedQuantity: 60,
++    createdAt: now,
++    updatedAt: now,
++  });
++  await dataSource.manager.getRepository(ArrivalAllocationEntity).insert({
++    purchaseDraftLineLinkId: linkId,
++    purchaseDraftLineId: refusedLineId,
++    customerOrderId,
++    allocatedQuantity: 60,
++    allocatedByUserId: userId,
++    createdAt: raisedAt,
++  });
++
++  return {
++    warehouseId,
++    userId,
++    draftId,
++    refusedLineId,
++    untouchedLineId,
++    customerOrderId,
++    amendableRejectionId: await seedRejection(
++      warehouseId,
++      userId,
++      refusedLineId,
++      {
++        rejectionReasonId: 'damaged_in_transit',
++        quantity: 5,
++        description: 'Crushed on the pallet corner',
++        disposition: 'undecided',
++      },
++    ),
++    siblingRejectionId: await seedRejection(
++      warehouseId,
++      userId,
++      refusedLineId,
++      {
++        rejectionReasonId: 'quality_defect',
++        quantity: 3,
++        description: 'Seal split',
++        disposition: 'held_for_return',
++      },
++    ),
++    otherLineRejectionId: await seedRejection(
++      warehouseId,
++      userId,
++      untouchedLineId,
++      {
++        rejectionReasonId: 'damaged_in_transit',
++        quantity: 2,
++        description: null,
++        disposition: 'scrapped_on_site',
++      },
++    ),
++  };
++};
++
++const currentUserFor = (seeded: SeededDraft): AccessCurrentUser => ({
++  userId: seeded.userId,
++  warehouseId: seeded.warehouseId,
++  roleId: randomUUID(),
++  roleKind: 'custom',
++  permissionId: 'REJECTIONS:UPDATE',
++  observedPermissionIds: [],
++  archived: false,
++});
++
++/**
++ * Everything hanging off one draft, read in a stable order. Compared whole, so a column nobody
++ * thought to name is still compared: a future writer who adds one to the amendment fails this.
++ */
++const snapshotDraft = async (seeded: SeededDraft) => ({
++  draft: await dataSource.manager
++    .getRepository(PurchaseDraftEntity)
++    .findOneBy({ id: seeded.draftId }),
++  lines: await dataSource.manager.getRepository(PurchaseDraftLineEntity).find({
++    where: { purchaseDraftId: seeded.draftId },
++    order: { id: 'ASC' },
++  }),
++  links: await dataSource.manager
++    .getRepository(PurchaseDraftLineLinkEntity)
++    .find({ where: { purchaseDraftId: seeded.draftId }, order: { id: 'ASC' } }),
++  allocations: await dataSource.manager
++    .getRepository(ArrivalAllocationEntity)
++    .find({ order: { purchaseDraftLineLinkId: 'ASC' } }),
++  customerOrders: await dataSource.manager
++    .getRepository(CustomerOrderEntity)
++    .find({ order: { id: 'ASC' } }),
++  otherRejections: await dataSource.manager
++    .getRepository(PurchaseDraftLineRejectionEntity)
++    .find({ order: { id: 'ASC' } })
++    .then((rows) =>
++      rows.filter((row) => row.id !== seeded.amendableRejectionId),
++    ),
++});
++
++const readRejection = (
++  id: string,
++): Promise<PurchaseDraftLineRejectionEntity | null> =>
++  dataSource.manager
++    .getRepository(PurchaseDraftLineRejectionEntity)
++    .findOneBy({ id });
++
++describe('AmendPurchaseDraftRejectionCommand over a Closed draft', () => {
++  beforeAll(async () => {
++    await dataSource.initialize();
++  });
++
++  afterEach(async () => {
++    await dataSource.query(
++      'TRUNCATE purchase_draft_line_rejections, arrival_allocations, purchase_draft_line_links, purchase_draft_lines, purchase_drafts, customer_orders, items, warehouses, workspaces, users, accounts CASCADE',
++    );
++  });
++
++  afterAll(async () => {
++    await dataSource.destroy();
++  });
++
++  // AC-18 — the telephone call happens after closure. The draft is `closed` and stays `closed`, and
++  // the amendment lands anyway: the precondition is the Rejection.
++  it('amends a Rejection whose draft is Closed, and moves nothing else on that draft', async () => {
++    const seeded = await seedClosedDraft();
++    const before = await snapshotDraft(seeded);
++
++    const amendment = await transactions.executeInTransaction({}, () =>
++      command.execute(currentUserFor(seeded), seeded.amendableRejectionId, {
++        description: 'Crushed across two pallet corners',
++        disposition: 'held_for_return',
++      }),
++    );
++
++    expect(amendment).toEqual({
++      id: seeded.amendableRejectionId,
++      description: 'Crushed across two pallet corners',
++      disposition: 'held_for_return',
++      amendedByUserId: seeded.userId,
++      amendedAt,
++    });
++
++    // The postcondition, whole: the draft row, both lines, the link, the Allocation, the Customer
++    // Order carrying the Outstanding Quantity, and the two Rejections this amendment was not about
++    // are byte-for-byte what they were.
++    expect(await snapshotDraft(seeded)).toEqual(before);
++    expect(before.draft).toMatchObject({ state: 'closed' });
++
++    // And on the amended row itself: only the description, the Disposition and the attribution
++    // moved. The quantity, the Reason, the Source, the line and the raising member did not
++    // (spec.md §6 "Condition immutability").
++    expect(await readRejection(seeded.amendableRejectionId)).toMatchObject({
++      description: 'Crushed across two pallet corners',
++      disposition: 'held_for_return',
++      amendedByUserId: seeded.userId,
++      amendedAt,
++      quantity: 5,
++      rejectionReasonId: 'damaged_in_transit',
++      source: 'inspected',
++      purchaseDraftLineId: seeded.refusedLineId,
++      raisedByUserId: seeded.userId,
++      createdAt: raisedAt,
++    });
++  });
++
++  // AC-18b over the real schema — the description alone, on a Closed draft, still attributed, and
++  // the Disposition standing on the row untouched.
++  it('records a description-only amendment on a Closed draft with the acting member and the time', async () => {
++    const seeded = await seedClosedDraft();
++    const siblingBefore = await readRejection(seeded.amendableRejectionId);
++
++    await transactions.executeInTransaction({}, () =>
++      command.execute(currentUserFor(seeded), seeded.siblingRejectionId, {
++        description: 'Seal split along the whole length',
++      }),
++    );
++
++    expect(await readRejection(seeded.siblingRejectionId)).toMatchObject({
++      description: 'Seal split along the whole length',
++      disposition: 'held_for_return',
++      amendedByUserId: seeded.userId,
++      amendedAt,
++      quantity: 3,
++      rejectionReasonId: 'quality_defect',
++    });
++    // The line's other Rejection is not swept along by an amendment scoped to its neighbour.
++    expect(await readRejection(seeded.amendableRejectionId)).toEqual(
++      siblingBefore,
++    );
++    expect(
++      await dataSource.manager
++        .getRepository(CustomerOrderEntity)
++        .findOneBy({ id: seeded.customerOrderId }),
++    ).toMatchObject({ outstandingQuantity: 40, state: 'unfulfilled' });
++  });
++
++  // AC-18a against the real conditional update — the refusal is the store's zero-row result, and
++  // the row it refused is exactly as it was, attribution included.
++  it('refuses a return to Undecided on a Closed draft and leaves the Rejection as it was', async () => {
++    const seeded = await seedClosedDraft();
++    const before = await readRejection(seeded.siblingRejectionId);
++
++    const attempt = transactions.executeInTransaction({}, () =>
++      command.execute(currentUserFor(seeded), seeded.siblingRejectionId, {
++        disposition: 'undecided',
++      }),
++    );
++
++    await expect(attempt).rejects.toMatchObject({
++      code: ErrorCode.PURCHASE_DRAFTS_DISPOSITION_NOT_REVERSIBLE,
++      details: { currentDisposition: 'held_for_return' },
++    });
++    expect(await readRejection(seeded.siblingRejectionId)).toEqual(before);
++  });
++
++  // AC-26 through the real resolve — a Rejection of another Warehouse fails identically to one that
++  // does not exist, and the foreign row does not move. Both Warehouses hold a real Rejection, so an
++  // implementation that simply failed to find anything would not pass.
++  it('fails identically for a Rejection of another Warehouse and for one that does not exist', async () => {
++    const acting = await seedClosedDraft();
++    const other = await seedClosedDraft();
++    const foreignBefore = await readRejection(other.amendableRejectionId);
++
++    const foreign = transactions.executeInTransaction({}, () =>
++      command.execute(currentUserFor(acting), other.amendableRejectionId, {
++        disposition: 'held_for_return',
++      }),
++    );
++    const missing = transactions.executeInTransaction({}, () =>
++      command.execute(currentUserFor(acting), randomUUID(), {
++        disposition: 'held_for_return',
++      }),
++    );
++
++    await expect(foreign).rejects.toMatchObject({
++      code: ErrorCode.PURCHASE_DRAFTS_TARGET_UNAVAILABLE,
++    });
++    await expect(missing).rejects.toMatchObject({
++      code: ErrorCode.PURCHASE_DRAFTS_TARGET_UNAVAILABLE,
++    });
++    expect(await readRejection(other.amendableRejectionId)).toEqual(
++      foreignBefore,
++    );
++  });
++});
+diff --git a/apps/server/src/purchase-drafts/usecases/commands/amend-purchase-draft-rejection.command.spec.ts b/apps/server/src/purchase-drafts/usecases/commands/amend-purchase-draft-rejection.command.spec.ts
+new file mode 100644
+index 0000000..c86b5f0
+--- /dev/null
++++ b/apps/server/src/purchase-drafts/usecases/commands/amend-purchase-draft-rejection.command.spec.ts
+@@ -0,0 +1,312 @@
++// T11/AC-18, AC-18a, AC-18b, AC-19, AC-26 — the amendment of one recorded Rejection, at the rule
++// level, over controlled repository doubles (server-architecture.md §Testing).
++//
++// The command's precondition is **the Rejection and never the draft's state** (sad.md §6.4 step 5),
++// which is visible here as an absence: the double below exposes only the two Rejection methods, so
++// an implementation that reached for a draft header, a line or a state guard could not run at all.
++// The positive half of that — a Rejection on a **Closed** draft amending, and nothing else on that
++// draft moving — needs the store and lives in
++// `amend-purchase-draft-rejection.command.integration.spec.ts`.
++//
++// Two rules this file deliberately does not restate, because they are already decided and already
++// proven elsewhere: the SQL predicate that excludes the return to Undecided (T4,
++// `purchase-draft-rejection.repository.integration.spec.ts`) and the two predicates the refusals are
++// read from (T7, `purchase-draft-condition.predicates.spec.ts`). What is asserted here is only what
++// the command owns: which refusal is owed, what it carries, what is handed to the write, and what
++// the amendment returns.
++import { ErrorCode } from '@warehouser/shared-types/enums';
++import { ApplicationError } from '@warehouser/shared-types/errors';
++import { REJECTION_DISPOSITIONS } from 'purchase-drafts/domain/value-objects/line-condition';
++import {
++  AmendPurchaseDraftRejectionCommand,
++  type AmendRejectionCommandInput,
++} from 'purchase-drafts/usecases/commands/amend-purchase-draft-rejection.command';
++import type { AccessCurrentUser } from 'shared/access/access-current-user';
++import {
++  TRANSACTIONAL_KEY,
++  type TransactionalMetadata,
++} from 'shared/decorators/transactional.decorator';
++import type { LockedPurchaseDraftLineRejection } from 'shared/domain/repositories/purchase-draft-rejection.repository';
++
++const uuid = (suffix: string): string =>
++  `00000000-0000-4000-8000-${suffix.padStart(12, '0')}`;
++
++const warehouseId = uuid('1');
++const actorId = uuid('2');
++const rejectionId = uuid('451');
++const lineId = uuid('452');
++const now = new Date('2026-09-19T14:05:00.000Z');
++
++const currentUser: AccessCurrentUser = {
++  userId: actorId,
++  warehouseId,
++  roleId: uuid('3'),
++  roleKind: 'custom',
++  permissionId: 'REJECTIONS:UPDATE',
++  observedPermissionIds: [],
++  archived: false,
++};
++
++const lockedRejection = (
++  overrides: Partial<LockedPurchaseDraftLineRejection> = {},
++): LockedPurchaseDraftLineRejection => ({
++  id: rejectionId,
++  purchaseDraftLineId: lineId,
++  warehouseId,
++  disposition: 'undecided',
++  description: 'Crushed on the pallet corner',
++  ...overrides,
++});
++
++const commandWith = ({
++  locked = lockedRejection(),
++  affected = 1,
++}: {
++  locked?: LockedPurchaseDraftLineRejection | null;
++  affected?: number;
++} = {}) => {
++  // Only the two methods sad.md §6.4 names. Any other reach — a draft header, a line, a state
++  // guard — is a `TypeError`, which is how "the precondition is the Rejection, not the draft's
++  // state" is enforced rather than merely asserted.
++  const rejectionRepository = {
++    lockRejectionForAmendment: jest.fn().mockResolvedValue(locked),
++    amendRejection: jest.fn().mockResolvedValue({ affected }),
++  };
++  const command = new AmendPurchaseDraftRejectionCommand(
++    rejectionRepository as never,
++    { now: () => now },
++  );
++  return { command, rejectionRepository };
++};
++
++const amend = (
++  input: AmendRejectionCommandInput,
++  options: Parameters<typeof commandWith>[0] = {},
++) => {
++  const { command, rejectionRepository } = commandWith(options);
++  return {
++    rejectionRepository,
++    attempt: command.execute(currentUser, rejectionId, input),
++  };
++};
++
++// The whole vocabulary the write is allowed to address. spec.md §6 "Condition immutability": the
++// quantity, Reason, Source and line of a Rejection are unwritable after insert, and this command is
++// the only write that ever reopens the row — so the set is asserted as a closed set rather than by
++// spot-checking a few forbidden names.
++const WRITABLE_AMENDMENT_KEYS = [
++  'amendedAt',
++  'amendedByUserId',
++  'description',
++  'disposition',
++  'rejectionId',
++  'warehouseId',
++];
++
++describe('AmendPurchaseDraftRejectionCommand', () => {
++  // AC-18 — the decision, the acting member and the time, in one write carrying the acting
++  // Warehouse (AC-26 on the write path is the repository's predicate, so the command has to hand it
++  // over).
++  it('records a decision with the acting member and the time', async () => {
++    const { attempt, rejectionRepository } = amend({
++      disposition: 'held_for_return',
++    });
++
++    await expect(attempt).resolves.toEqual({
++      id: rejectionId,
++      description: 'Crushed on the pallet corner',
++      disposition: 'held_for_return',
++      amendedByUserId: actorId,
++      amendedAt: now,
++    });
++    expect(rejectionRepository.lockRejectionForAmendment).toHaveBeenCalledWith(
++      rejectionId,
++      warehouseId,
++    );
++    expect(rejectionRepository.amendRejection).toHaveBeenCalledWith({
++      rejectionId,
++      warehouseId,
++      disposition: 'held_for_return',
++      amendedByUserId: actorId,
++      amendedAt: now,
++    });
++  });
++
++  // AC-18a — the refusal is owed on the zero-row result of the conditional update, and it names the
++  // decision standing so the surface can drop `undecided` from the menu (openapi.yaml
++  // `RejectionAmendmentConflict`). It names no Reason, description or quantity.
++  it('refuses a Disposition aimed back at Undecided from a decided one, naming the decision standing', async () => {
++    const { attempt } = amend(
++      { disposition: 'undecided' },
++      {
++        locked: lockedRejection({ disposition: 'held_for_return' }),
++        affected: 0,
++      },
++    );
++
++    await expect(attempt).rejects.toBeInstanceOf(ApplicationError);
++    await expect(attempt).rejects.toMatchObject({
++      code: ErrorCode.PURCHASE_DRAFTS_DISPOSITION_NOT_REVERSIBLE,
++      details: { currentDisposition: 'held_for_return' },
++    });
++  });
++
++  // AC-18a's other half, and the case a naive "a decided Rejection is frozen" implementation
++  // breaks: **no decision is terminal**. Held for return becomes scrapped on site, and the
++  // amendment is attributed exactly as the first decision was.
++  it('accepts a correction from one decided Disposition to another', async () => {
++    const { attempt, rejectionRepository } = amend(
++      { disposition: 'scrapped_on_site' },
++      { locked: lockedRejection({ disposition: 'held_for_return' }) },
++    );
++
++    await expect(attempt).resolves.toMatchObject({
++      disposition: 'scrapped_on_site',
++      amendedByUserId: actorId,
++      amendedAt: now,
++    });
++    expect(rejectionRepository.amendRejection).toHaveBeenCalledWith(
++      expect.objectContaining({ disposition: 'scrapped_on_site' }),
++    );
++  });
++
++  // AC-19 — the refusal names the Dispositions that are available, in the order openapi.yaml's
++  // `unknownDisposition` example fixes, and nothing is written.
++  it('refuses a Disposition outside the offered set, naming those that are offered', async () => {
++    const { attempt, rejectionRepository } = amend({
++      disposition: 'returned_to_supplier',
++    });
++
++    await expect(attempt).rejects.toBeInstanceOf(ApplicationError);
++    await expect(attempt).rejects.toMatchObject({
++      code: ErrorCode.PURCHASE_DRAFTS_INVALID_INPUT,
++      details: { availableDispositions: [...REJECTION_DISPOSITIONS] },
++    });
++    expect(rejectionRepository.amendRejection).not.toHaveBeenCalled();
++  });
++
++  // AC-18b — the description alone. The Disposition is not written back: an implementation that
++  // defaulted the absent one to the Rejection's current value would push `undecided` through the
++  // repository's predicate and refuse a legitimate correction of a decided Rejection.
++  it('records a description-only amendment without addressing the Disposition', async () => {
++    const { attempt, rejectionRepository } = amend(
++      { description: 'Crushed across two pallet corners' },
++      { locked: lockedRejection({ disposition: 'held_for_return' }) },
++    );
++
++    await expect(attempt).resolves.toEqual({
++      id: rejectionId,
++      description: 'Crushed across two pallet corners',
++      disposition: 'held_for_return',
++      amendedByUserId: actorId,
++      amendedAt: now,
++    });
++    const [written] = rejectionRepository.amendRejection.mock.calls[0] as [
++      Record<string, unknown>,
++    ];
++    expect(written).not.toHaveProperty('disposition');
++    expect(written).toMatchObject({
++      description: 'Crushed across two pallet corners',
++    });
++  });
++
++  // "every amendment records the acting member and the time" (spec.md §6, AC-18/AC-18b) — on every
++  // accepted shape, not only on the one that decides a Disposition.
++  it.each([
++    ['a decision alone', { disposition: 'refused_at_delivery' }],
++    ['a description alone', { description: 'Seal split along the length' }],
++    [
++      'both together',
++      {
++        description: 'Supplier collected on 21 September.',
++        disposition: 'refused_at_delivery',
++      },
++    ],
++  ] as [string, AmendRejectionCommandInput][])(
++    'attributes the amendment to the acting member and the time when it amends %s',
++    async (_shape, input) => {
++      const { attempt, rejectionRepository } = amend(input);
++
++      await expect(attempt).resolves.toMatchObject({
++        amendedByUserId: actorId,
++        amendedAt: now,
++      });
++      expect(rejectionRepository.amendRejection).toHaveBeenCalledWith(
++        expect.objectContaining({
++          amendedByUserId: actorId,
++          amendedAt: now,
++        }),
++      );
++    },
++  );
++
++  // spec.md §6 "Condition immutability" — the fixed part of a Rejection Record is unwritable after
++  // insert. The command never names a quantity, a Reason, a Source or a line on any path, so the
++  // keys it hands the write are a subset of the six the amendment addresses.
++  it('addresses no quantity, Reason, Source or line on any accepted path', async () => {
++    const { attempt, rejectionRepository } = amend({
++      description: 'Supplier collected on 21 September.',
++      disposition: 'refused_at_delivery',
++    });
++
++    await attempt;
++    const [written] = rejectionRepository.amendRejection.mock.calls[0] as [
++      Record<string, unknown>,
++    ];
++    expect(Object.keys(written).sort()).toEqual(WRITABLE_AMENDMENT_KEYS);
++  });
++
++  // AC-26 — a Rejection of a Warehouse the actor is not acting in resolves to nothing, exactly as
++  // one that does not exist, and both fail with the one non-enumerating outcome. The two refusals
++  // are compared to each other, so a variant that leaked "it exists elsewhere" into either the code
++  // or the details would fail here even if each looked reasonable alone.
++  it('fails identically for a Rejection of another Warehouse and for one that does not exist', async () => {
++    const foreign = amend({ disposition: 'held_for_return' }, { locked: null });
++    const missing = amend({ disposition: 'held_for_return' }, { locked: null });
++
++    const foreignError = await foreign.attempt.catch(
++      (error: ApplicationError) => error,
++    );
++    const missingError = await missing.attempt.catch(
++      (error: ApplicationError) => error,
++    );
++
++    expect(foreignError).toBeInstanceOf(ApplicationError);
++    expect(foreignError.code).toBe(
++      ErrorCode.PURCHASE_DRAFTS_TARGET_UNAVAILABLE,
++    );
++    expect(foreignError.code).toBe(missingError.code);
++    expect(foreignError.details).toEqual(missingError.details);
++    expect(foreign.rejectionRepository.amendRejection).not.toHaveBeenCalled();
++  });
++
++  // The edge T4's implementer surfaced and **no acceptance criterion covers**: `undecided` aimed at
++  // a Rejection that is still `undecided`. It is pinned as **accepted** — a no-change amendment
++  // that writes only the attribution — because that is what both already-decided halves say:
++  // `dispositionMayBeRecorded` admits it (T7), the repository's predicate matches it (T4), and
++  // openapi.yaml's `RejectionAmend.disposition` states it outright ("legal against a Rejection still
++  // undecided, and refused against one already decided"). Refusing it here would make AC-18a's rule
++  // depend on the payload rather than on the stored state.
++  it('accepts Undecided aimed at a Rejection that is still Undecided, as a no-change amendment', async () => {
++    const { attempt, rejectionRepository } = amend(
++      { disposition: 'undecided' },
++      { locked: lockedRejection({ disposition: 'undecided' }), affected: 1 },
++    );
++
++    await expect(attempt).resolves.toMatchObject({
++      disposition: 'undecided',
++      amendedByUserId: actorId,
++      amendedAt: now,
++    });
++    expect(rejectionRepository.amendRejection).toHaveBeenCalled();
++  });
++
++  it('runs inside its own transaction boundary (server-architecture.md: the command owning the complete atomic operation)', () => {
++    expect(
++      Reflect.getMetadata(
++        TRANSACTIONAL_KEY,
++        AmendPurchaseDraftRejectionCommand.prototype.execute,
++      ) as TransactionalMetadata | undefined,
++    ).toBeDefined();
++  });
++});
+diff --git a/apps/server/src/purchase-drafts/usecases/usecase.module.di.spec.ts b/apps/server/src/purchase-drafts/usecases/usecase.module.di.spec.ts
+index 87f3264..46eccf8 100644
+--- a/apps/server/src/purchase-drafts/usecases/usecase.module.di.spec.ts
++++ b/apps/server/src/purchase-drafts/usecases/usecase.module.di.spec.ts
+@@ -2,6 +2,7 @@ import { Global, Module } from '@nestjs/common';
+ import { Test } from '@nestjs/testing';
+ import { AddPurchaseDraftLineCommand } from 'purchase-drafts/usecases/commands/add-purchase-draft-line.command';
+ import { AddPurchaseDraftLineLinkCommand } from 'purchase-drafts/usecases/commands/add-purchase-draft-line-link.command';
++import { AmendPurchaseDraftRejectionCommand } from 'purchase-drafts/usecases/commands/amend-purchase-draft-rejection.command';
+ import { ClosePurchaseDraftCommand } from 'purchase-drafts/usecases/commands/close-purchase-draft.command';
+ import { ConfirmPurchaseDraftLineArrivalCommand } from 'purchase-drafts/usecases/commands/confirm-purchase-draft-line-arrival.command';
+ import { CreatePurchaseDraftCommand } from 'purchase-drafts/usecases/commands/create-purchase-draft.command';
+@@ -114,4 +115,18 @@ describe('PurchaseDraftsUsecaseModule Nest DI graph', () => {
+       ListPackagingTypesQuery,
+     );
+   });
++
++  // T11/AC-18 — the Rejection amendment reaches `PurchaseDraftRejectionRepository`, which
++  // `DomainModule` does not provide either, so it has to be a local provider of this module exactly
++  // as the assembly repositories are. Registered *and* exported: T13's `PATCH` route is a transport
++  // adapter and reaches this module only through the use case.
++  it('constructs the Rejection amendment use case through Nest injection', async () => {
++    const moduleRef = await Test.createTestingModule({
++      imports: [TestDataSourceDoubleModule, PurchaseDraftsUsecaseModule],
++    }).compile();
++
++    expect(moduleRef.get(AmendPurchaseDraftRejectionCommand)).toBeInstanceOf(
++      AmendPurchaseDraftRejectionCommand,
++    );
++  });
+ });
