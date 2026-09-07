@@ -1,12 +1,12 @@
 import { EmptyState, Table } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 
+import { DockLineDestinationCell } from 'modules/purchase-draft/components/purchase-draft-line-directory/components/DockLineDestinationCell';
 import { DockLineDraftCell } from 'modules/purchase-draft/components/purchase-draft-line-directory/components/DockLineDraftCell';
 import { DockLineEndingCell } from 'modules/purchase-draft/components/purchase-draft-line-directory/components/DockLineEndingCell';
 import { DockLineExpectedCell } from 'modules/purchase-draft/components/purchase-draft-line-directory/components/DockLineExpectedCell';
 import { DockLineItemCell } from 'modules/purchase-draft/components/purchase-draft-line-directory/components/DockLineItemCell';
 import { DockLineQuantityCell } from 'modules/purchase-draft/components/purchase-draft-line-directory/components/DockLineQuantityCell';
-import { PurchaseDraftLineDestination } from 'modules/purchase-draft/components/PurchaseDraftLineDestination';
 
 import type { PurchaseDraftLineListEntry } from '@warehouser/contracts/purchase-drafts';
 import type { ReactElement } from 'react';
@@ -70,7 +70,7 @@ export const DockLineTable = ({
         <DockLineQuantityCell line={entry.line} />
       </Table.Cell>
       <Table.Cell className="align-middle">
-        <PurchaseDraftLineDestination line={entry.line} />
+        <DockLineDestinationCell line={entry.line} />
       </Table.Cell>
       <Table.Cell className="align-middle">
         <DockLineExpectedCell entry={entry} />

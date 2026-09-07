@@ -35,8 +35,10 @@ import type { AppStore } from 'store';
 const ids = {
   north: '00000000-0000-4000-8000-000000000201',
   south: '00000000-0000-4000-8000-000000000202',
+  ostsee: '00000000-0000-4000-8000-000000000203',
   hafen: '00000000-0000-4000-8000-000000000301',
   dock: '00000000-0000-4000-8000-000000000302',
+  werft: '00000000-0000-4000-8000-000000000303',
   order: '00000000-0000-4000-8000-000000000601',
   item: '00000000-0000-4000-8000-000000000101',
 } as const;
@@ -84,6 +86,22 @@ const north: Customer = {
   updatedAt: '2026-09-01T08:00:00.000Z',
 };
 
+/**
+ * A second active Customer, sharing no word with `north` in its name and
+ * carrying an address that shares none either. It is what makes the search
+ * cases discriminating: a term that matches one must leave the other out.
+ */
+const werft = {
+  id: ids.werft,
+  customerId: ids.ostsee,
+  addressText: 'Werftweg 2, 27568 Bremerhaven',
+  accessNotes: null,
+  isMain: true,
+  deactivatedAt: null,
+  createdAt: '2026-09-01T08:00:00.000Z',
+  updatedAt: '2026-09-01T08:00:00.000Z',
+};
+
 const south: Customer = {
   id: ids.south,
   name: 'Südsee Handel AG',
@@ -93,6 +111,17 @@ const south: Customer = {
   recordedByUserId: accessIds.actingUser,
   createdAt: '2026-09-01T08:00:00.000Z',
   updatedAt: '2026-09-03T08:00:00.000Z',
+};
+
+const ostsee: Customer = {
+  id: ids.ostsee,
+  name: 'Ostsee Handel AS',
+  deactivatedAt: null,
+  mainDeliveryAddressId: ids.werft,
+  deliveryAddresses: [werft],
+  recordedByUserId: accessIds.actingUser,
+  createdAt: '2026-09-01T08:00:00.000Z',
+  updatedAt: '2026-09-01T08:00:00.000Z',
 };
 
 const northDetail: CustomerDetail = {
@@ -118,7 +147,7 @@ const northDetail: CustomerDetail = {
 };
 
 const renderDirectory = ({
-  customers = [north, south],
+  customers = [north, south, ostsee],
   detail = northDetail,
   permissionIds = Object.values(PermissionId),
   archived = false,
@@ -171,13 +200,18 @@ const renderDirectory = ({
 };
 
 /**
- * Opens the customer whose card carries `name`. The pattern is anchored so it
- * cannot also match that card's kebab, whose accessible name is
- * `Actions for <name>`.
+ * Opens the customer whose card carries `name`. The pattern stays anchored
+ * because the opened Customer's detail header carries a kebab named
+ * `Actions for <name>`, which an unanchored pattern would also match once a
+ * Customer is open.
  */
 const openCustomer = async (name: RegExp): Promise<void> => {
   await userEvent.click(await screen.findByRole('button', { name }));
 };
+
+/** The destination's one search field, named by its own placeholder copy. */
+const searchField = async (): Promise<HTMLElement> =>
+  screen.findByRole('searchbox', { name: 'Search customers or addresses' });
 
 describe('CustomerDirectory (frames KRDln, b7gaH9)', () => {
   // AC-01 — a recorded Customer is selectable and readable; the list is the
@@ -193,12 +227,55 @@ describe('CustomerDirectory (frames KRDln, b7gaH9)', () => {
     ).not.toBeInTheDocument();
   });
 
+  // Frame `KRDln` — the field is `Search customers or addresses`, and it means
+  // it: a member who remembers where the goods go rather than who ordered them
+  // still reaches the Customer.
+  it('finds a Customer by the text of one of its delivery addresses', async () => {
+    renderDirectory();
+    await screen.findByRole('button', { name: /^Nordwind Logistik GmbH/u });
+
+    await userEvent.type(await searchField(), 'Werftweg');
+
+    expect(
+      await screen.findByRole('button', { name: /^Ostsee Handel AS/u }),
+    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('button', { name: /^Nordwind Logistik GmbH/u }),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  // The kebab is on the detail header and nowhere else (frame `KRDln`): a card
+  // is a name and a meta line, so no destructive action is offered for a
+  // Customer the member has not opened.
+  it('carries the Customer actions kebab on the detail header and none on the cards', async () => {
+    renderDirectory();
+    await screen.findByRole('button', { name: /^Nordwind Logistik GmbH/u });
+
+    expect(
+      screen.queryByRole('button', {
+        name: 'Actions for Nordwind Logistik GmbH',
+      }),
+    ).not.toBeInTheDocument();
+
+    await openCustomer(/^Nordwind Logistik GmbH/u);
+
+    expect(
+      await screen.findByRole('button', {
+        name: 'Actions for Nordwind Logistik GmbH',
+      }),
+    ).toBeInTheDocument();
+  });
+
   // AC-06 — an Inactive Customer stays readable, on its own tab, rather than
   // disappearing from the destination.
   it('shows the Inactive Customers on the Inactive tab', async () => {
     renderDirectory();
 
-    await userEvent.click(await screen.findByRole('tab', { name: 'Inactive' }));
+    await userEvent.click(
+      await screen.findByRole('tab', { name: /Inactive/u }),
+    );
 
     expect(
       await screen.findByRole('button', { name: /^Südsee Handel AG/u }),

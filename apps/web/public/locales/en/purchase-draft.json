@@ -45,9 +45,7 @@
         "heading": "No draft has been discarded",
         "description": "A draft that was never made ready can be discarded, and it then leaves the list it was being worked on in."
       }
-    },
-    "driftBadge_one": "{{count}} draft whose demand moved",
-    "driftBadge_other": "{{count}} drafts whose demand moved"
+    }
   },
   "card": {
     "lineCount_one": "{{count}} line",
@@ -116,7 +114,9 @@
       "addressRedirected": "{{customer}} — line {{line}} was frozen for {{from}}, and that order now goes to {{to}}.",
       "addressRedirected_dated": "{{customer}} — line {{line}} was frozen for {{from}}, and since {{on}} that order goes to {{to}}.",
       "addressRedirectedWithheld": "{{customer}} — line {{line}} is linked to an order that has been redirected to another delivery address.",
-      "addressRedirectedWithheld_dated": "{{customer}} — line {{line}} is linked to an order redirected to another delivery address on {{on}}."
+      "addressRedirectedWithheld_dated": "{{customer}} — line {{line}} is linked to an order redirected to another delivery address on {{on}}.",
+      "addressRedirectedViaWarehouse": "{{customer}} — line {{line}} is linked to an order that has been redirected to another delivery address. These goods still come to your dock, so they land where you expect them.",
+      "addressRedirectedViaWarehouse_dated": "{{customer}} — line {{line}} is linked to an order redirected to another delivery address on {{on}}. These goods still come to your dock, so they land where you expect them."
     },
     "loading": "Loading the purchase draft",
     "error": "This purchase draft could not be read. Nothing on it has changed — select it again to retry."
@@ -174,7 +174,9 @@
       "addressRedirected": "Now going to {{to}} instead of {{from}}",
       "addressRedirected_dated": "Going to {{to}} instead of {{from}} since {{on}}",
       "addressRedirectedWithheld": "Redirected to another delivery address",
-      "addressRedirectedWithheld_dated": "Redirected to another delivery address on {{on}}"
+      "addressRedirectedWithheld_dated": "Redirected to another delivery address on {{on}}",
+      "addressRedirectedViaWarehouse": "Order redirected — still comes to your dock",
+      "addressRedirectedViaWarehouse_dated": "Order redirected on {{on}} — still comes to your dock"
     },
     "withheld": "Customer identity is withheld from you.",
     "withheldName": "a customer whose identity is withheld from you"
@@ -278,9 +280,11 @@
         "atomicity": "The quantity delivered, every assignment, and the resulting outstanding quantity of each customer are recorded together — or none of them is. No on-hand quantity moves: these goods went straight to the customer and were never in the transit zone to be counted."
       },
       "recorded": {
-        "arrival": "Arrival recorded — {{formatted}} arrived at the dock.",
-        "direct_delivery": "Delivery recorded — the customer received {{formatted}}."
-      }
+        "arrival": "Arrived {{formatted}} · {{on}}",
+        "direct_delivery": "Delivered {{formatted}} · {{on}}"
+      },
+      "endsOnceTitle": "This ends this line only",
+      "atomicityTitle": "On-hand quantity does not move"
     }
   },
   "dialogs": {
@@ -302,7 +306,8 @@
       "submit": "Link the order",
       "refusal": {
         "addressDisagreement": "This line ships to {{lineAddress}}. The order you picked is going to {{orderAddress}} instead — link it to an order going to the same address.",
-        "addressDisagreement_noOrderAddress": "This line ships to {{lineAddress}}. The order you picked names no delivery address at all — link it to an order going to the same address."
+        "addressDisagreement_noOrderAddress": "This line ships to {{lineAddress}}. The order you picked names no delivery address at all — link it to an order going to the same address.",
+        "addressDisagreementTitle": "This line ships to one address, and that order goes to another"
       }
     },
     "refusal": {
@@ -324,7 +329,27 @@
     "destination": {
       "warehouseSubject": "This warehouse",
       "noWarehouseAddress": "No delivery address is recorded for this warehouse yet.",
-      "withheld": "Customer identity is withheld from you."
+      "withheld": "Customer identity is withheld from you.",
+      "label": {
+        "editable": {
+          "via_warehouse": "Goes to",
+          "direct_to_customer": "Goes to"
+        },
+        "frozen": {
+          "via_warehouse": "Went to",
+          "direct_to_customer": "Went to"
+        }
+      },
+      "caption": {
+        "editable": {
+          "via_warehouse": "Your warehouse delivery address. Every via-warehouse line goes here and it is not chosen per line.",
+          "direct_to_customer": "An active delivery address of a customer. Your own warehouse address cannot be chosen here."
+        },
+        "frozen": {
+          "via_warehouse": "Your warehouse delivery address, captured as it read at the freeze.",
+          "direct_to_customer": "The customer address this line was frozen shipping to. This is what the supplier was told."
+        }
+      }
     },
     "refusal": {
       "heading": "This line disagrees with its links",
@@ -336,6 +361,8 @@
     "toggleLabel": "How to look at them",
     "byDraft": "By draft",
     "byLine": "By line",
+    "search": "Search lines, items or customers",
+    "noMatches": "No line matches “{{query}}”.",
     "dockHeading": "Landing at this warehouse",
     "dockTableLabel": "Lines landing at this warehouse",
     "dockEmpty": "No lines are coming to this warehouse.",
@@ -351,6 +378,7 @@
     "expectedArrival": "expected {{date}}",
     "noExpectedArrival": "No expected arrival date yet",
     "loading": "Loading purchase draft lines",
-    "error": "We couldn't read the lines of this warehouse's purchase drafts."
+    "error": "We couldn't read the lines of this warehouse's purchase drafts.",
+    "addressDrift": "A linked order has been redirected to another delivery address."
   }
 }

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { WarehouseRow } from 'modules/workspace/components/workspace-administration/warehouses/WarehouseRow';
 import { WarehouseSearchField } from 'modules/workspace/components/workspace-administration/warehouses/WarehouseSearchField';
+import { ROW_ENTER } from 'shared/constants/motion';
 
 import type { Warehouse } from '@warehouser/contracts/workspaces';
 import type { ReactElement } from 'react';
@@ -140,7 +141,7 @@ export const WarehouseList = ({
         className="mt-3 space-y-3"
       >
         {visibleWarehouses.map((warehouse) => (
-          <li key={warehouse.id}>
+          <li key={warehouse.id} className={ROW_ENTER}>
             <WarehouseRow
               isSelected={warehouse.id === selectedWarehouseId}
               membershipWarehouseIds={membershipWarehouseIds}

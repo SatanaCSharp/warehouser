@@ -34,6 +34,7 @@ export const WarehouseNameForm = ({
     formState: { errors, isDirty, isSubmitting },
     handleSubmit,
     register,
+    reset,
     setError,
   } = useForm<WarehouseNameFormValues>({
     defaultValues: { name: warehouse.name },
@@ -65,6 +66,10 @@ export const WarehouseNameForm = ({
     }
   };
 
+  // Cancel abandons the edit rather than the name: the field goes back to the
+  // recorded one, and nothing is sent.
+  const onPressCancel = (): void => reset({ name: warehouse.name });
+
   return (
     <WorkspacePermissionGate
       permission={WorkspacePermissionId.WAREHOUSES_RENAME}
@@ -85,7 +90,20 @@ export const WarehouseNameForm = ({
           isDisabled={isSubmitting}
           {...register('name')}
         />
-        <div>
+        {/*
+          Cancel precedes the primary in DOM — and therefore keyboard — order,
+          as it does in every dialog footer (design-handoff.md §"Component
+          mapping").
+        */}
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            isDisabled={!isDirty || isSubmitting}
+            onPress={onPressCancel}
+          >
+            {t('warehouses.detail.cancel')}
+          </Button>
           <Button
             type="submit"
             variant="primary"

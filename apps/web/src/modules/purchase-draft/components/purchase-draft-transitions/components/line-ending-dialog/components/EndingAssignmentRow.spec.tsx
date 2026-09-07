@@ -43,6 +43,7 @@ const renderRow = (subject: PurchaseDraftLineLinkIdentified): void => {
   renderWithProviders(
     <ul>
       <EndingAssignmentRow
+        deliveryMode="via_warehouse"
         isSubmitting={false}
         link={subject}
         onCommit={vi.fn()}

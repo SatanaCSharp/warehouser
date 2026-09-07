@@ -5,6 +5,7 @@ export { CalendarIcon } from 'shared/icons/CalendarIcon';
 export { CheckIcon } from 'shared/icons/CheckIcon';
 export { ChevronDownIcon } from 'shared/icons/ChevronDownIcon';
 export { ChevronLeftIcon } from 'shared/icons/ChevronLeftIcon';
+export { ChevronRightIcon } from 'shared/icons/ChevronRightIcon';
 export { ChevronUpIcon } from 'shared/icons/ChevronUpIcon';
 export { CircleCheckIcon } from 'shared/icons/CircleCheckIcon';
 export { ClipboardListIcon } from 'shared/icons/ClipboardListIcon';

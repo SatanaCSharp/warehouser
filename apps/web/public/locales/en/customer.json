@@ -8,12 +8,13 @@
     "loading": "Loading customers",
     "error": "You do not have access to the customers of this warehouse.",
     "listLabel": "Customers",
-    "search": "Search customers",
+    "search": "Search customers or addresses",
+    "toolbar": "Customer search and actions",
     "recordAction": "Record customer",
     "filter": {
       "label": "Customer status",
-      "active": "Active",
-      "inactive": "Inactive"
+      "active": "Active · {{count}}",
+      "inactive": "Inactive · {{count}}"
     },
     "empty": {
       "noMatches": "No customer matches “{{query}}”.",
@@ -48,6 +49,7 @@
       "heading": "Waiting for",
       "tableLabel": "What {{name}} is waiting for",
       "item": "Item",
+      "itemMeta": "{{sku}} · counted in {{unit}}",
       "outstanding": "Outstanding",
       "neededBy": "Needed by",
       "goingTo": "Going to",
@@ -111,9 +113,13 @@
     "deactivate": {
       "title": "Deactivate {{name}}?",
       "lede": "This customer stops being offered when demand is recorded.",
+      "staysTitle": "What stays",
       "ordersKeepCounting": "Every order that already names it stays readable and keeps counting exactly as before.",
       "addressesUnchanged": "Its delivery addresses are left exactly as they are.",
       "nameStaysTaken": "The name stays taken, so no new customer can reuse it.",
+      "awaitingTitle": "It can be deactivated while it is still waiting",
+      "awaitingDescription_one": "This customer has {{count}} unfulfilled order. Deactivating does not fulfil, cancel or hide it.",
+      "awaitingDescription_other": "This customer has {{count}} unfulfilled orders. Deactivating does not fulfil, cancel or hide them.",
       "reversible": "You can make this customer active again at any time.",
       "cancel": "Cancel",
       "submit": "Deactivate customer"
@@ -142,7 +148,9 @@
     "deactivateAddress": {
       "title": "Deactivate this delivery address?",
       "lede": "This address stops being offered wherever a delivery address is chosen.",
+      "staysTitle": "What stays",
       "recordsKeepCounting": "Every order and every frozen purchase draft line that already names it keeps reading and counting exactly as before.",
+      "mainTitle": "This is the main delivery address",
       "mainMoves": "This is the main address, so one of the remaining active addresses becomes the main one instead.",
       "reversible": "You can offer this address again at any time.",
       "cancel": "Cancel",

@@ -1,3 +1,4 @@
+import { Alert } from '@heroui/react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -20,24 +21,30 @@ export type DeactivateDeliveryAddressDialogProps = {
  * — so it takes the **alert** dialog rather than the form dialog
  * (design-handoff.md §Component mapping).
  *
- * Its body states what stops (the address is no longer offered where one is
- * chosen) and what does not (every Customer Order and every frozen Purchase
- * Draft Line that already names it keeps reading and counting exactly as
- * before). Deactivating the **Main** address additionally makes one of the
- * remaining active addresses Main in the same transaction, so the dialog says
- * so before it happens rather than leaving the member to discover it on the
- * next order (AC-06b, tile `QRFjQ`). It does not promise to say **which**
- * address that becomes: the address book itself carries that answer — the
- * promoted address's `Main` chip is visible in the same list the moment the
- * dialog closes (`CustomerAddressRow`) — and naming a specific address's
- * text in a toast, the one surface that outlives this dialog, would put
- * confidential free text (spec.md §6.1) somewhere the address-
- * confidentiality design deliberately keeps it out of
+ * Its body is the two panels the frame draws: a neutral **What stays** panel —
+ * every Customer Order and every frozen Purchase Draft Line that already names
+ * the address keeps reading and counting exactly as before — and, when the
+ * address is the **Main** one, a warning panel saying that one of the
+ * remaining active addresses becomes Main in the same transaction, so the
+ * member is told before it happens rather than discovering it on the next
+ * order (AC-06b, tile `QRFjQ`).
+ *
+ * It does not promise to say **which** address that becomes: the address book
+ * itself carries that answer — the promoted address's `Main` chip is visible
+ * in the same list the moment the dialog closes (`CustomerAddressRow`) — and
+ * naming a specific address's text in a toast, the one surface that outlives
+ * this dialog, would put confidential free text (spec.md §6.1) somewhere the
+ * address-confidentiality design deliberately keeps it out of
  * (`shared/alerts/mutation-actions.ts`).
  *
  * The address is rendered as text inside the confirmation for the same reason
  * `CustomerAddressRow` renders it as text: it is confidential free text this
  * system never interprets (spec.md §6.1).
+ *
+ * The confirmation takes `ConfirmAlertDialog`'s own `danger` treatment rather
+ * than overriding it with a `primary` confirm: the design draws the
+ * destructive primary as solid `danger` (design-handoff.md §Component
+ * mapping), and that the withdrawal is reversible is what the body says.
  *
  * AC-07 — the Customer's last active address is refused by the server, and
  * `CustomerRefusalAlert` is what states the rule and the order the member must
@@ -55,8 +62,6 @@ export const DeactivateDeliveryAddressDialog = ({
       title={t('dialogs.deactivateAddress.title')}
       cancelLabel={t('dialogs.deactivateAddress.cancel')}
       confirmLabel={t('dialogs.deactivateAddress.submit')}
-      confirmVariant="primary"
-      status="warning"
       onConfirm={onConfirm}
       onRefusal={setRefusalCode}
     >
@@ -64,11 +69,29 @@ export const DeactivateDeliveryAddressDialog = ({
         {address.addressText}
       </p>
       <p className="text-muted">{t('dialogs.deactivateAddress.lede')}</p>
-      <p>{t('dialogs.deactivateAddress.recordsKeepCounting')}</p>
+      <Alert>
+        <Alert.Indicator />
+        <Alert.Content>
+          <Alert.Title>{t('dialogs.deactivateAddress.staysTitle')}</Alert.Title>
+          <Alert.Description>
+            {t('dialogs.deactivateAddress.recordsKeepCounting')}
+          </Alert.Description>
+        </Alert.Content>
+      </Alert>
       <Conditional when={address.isMain}>
-        <p>{t('dialogs.deactivateAddress.mainMoves')}</p>
+        <Alert status="warning">
+          <Alert.Indicator />
+          <Alert.Content>
+            <Alert.Title>
+              {t('dialogs.deactivateAddress.mainTitle')}
+            </Alert.Title>
+            <Alert.Description>
+              {t('dialogs.deactivateAddress.mainMoves')}
+            </Alert.Description>
+          </Alert.Content>
+        </Alert>
       </Conditional>
-      <p>{t('dialogs.deactivateAddress.reversible')}</p>
+      <p className="text-muted">{t('dialogs.deactivateAddress.reversible')}</p>
       <CustomerRefusalAlert code={refusalCode} />
     </ConfirmAlertDialog>
   );

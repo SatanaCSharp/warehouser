@@ -20,12 +20,6 @@
     "item": {
       "meta": "{{sku}} · облік у: {{unit}}"
     },
-    "outstanding": {
-      "caption": "залишок, {{unit}}"
-    },
-    "onHand": {
-      "caption": "в наявності"
-    },
     "urgency": {
       "today": "потрібно сьогодні",
       "upcoming_one": "через {{count}} день",

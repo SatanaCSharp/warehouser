@@ -107,8 +107,6 @@ export const MODULE_SURFACE = {
   'purchase-draft': [
     // router.ts
     'modules/purchase-draft/route',
-    // shared/layouts/Sidebar.tsx
-    'modules/purchase-draft/components/PurchaseDraftDriftBadge',
   ],
   warehouse: [
     // router.ts

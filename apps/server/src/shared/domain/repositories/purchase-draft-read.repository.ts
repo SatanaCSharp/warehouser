@@ -297,6 +297,19 @@ interface LineListEntryRawRow<TLine> {
 // Written once here and used by both methods, so neither can regress on its own.
 const EXPECTED_ARRIVAL_DATE_SELECT = '(draft.expectedArrivalDate)::text';
 
+// Every `timestamptz` this file embeds as text inside `json_build_object` has to be rendered here
+// rather than left to the pg driver: inside the JSON builder the value never reaches the driver's
+// Date decoding, and PostgreSQL renders it with the session's own UTC offset
+// (`2026-09-04T15:09:25.589+00:00`), which `z.string().datetime()` refuses — it accepts the `Z`
+// form alone. A timestamp that travels as a plain column is decoded and serialized by the driver
+// and needs none of this.
+//
+// It is one named helper rather than the literal repeated at each site because the literal *was*
+// repeated, and the by-line read's `ending.recordedAt` is the one site that was written without it
+// — which failed the whole read for any Warehouse holding an ended line (AC-19, AC-22).
+const utcIsoText = (column: string): string =>
+  `to_char(${column} AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')`;
+
 // openapi.yaml `LinkedCustomerOrderState.lastChangedAt` — when the linked Customer Order last
 // moved, which is what dates a Drift Signal (`Cancelled on 24 Aug`, design frame `F0SpRx.png`,
 // AC-16). `updated_at` is written by every path that moves the row — the amendment, the
@@ -305,11 +318,9 @@ const EXPECTED_ARRIVAL_DATE_SELECT = '(draft.expectedArrivalDate)::text';
 // is reported as `null` rather than as a change that never happened.
 //
 // Unlike `expectedArrivalDate` above this needs no `::text` cast — it is a `timestamptz`, not a
-// `date`, so no calendar day can shift under the server's timezone. It does need `to_char` for the
-// same reason `allocation.createdAt` below does: embedded inside `json_build_object` it bypasses
-// the pg driver's Date decoding, and PostgreSQL would otherwise render it with the session's own
-// UTC offset, which `z.string().datetime()` refuses.
-const LAST_CHANGED_AT_SELECT = `CASE WHEN demand.updatedAt > demand.createdAt THEN to_char(demand.updatedAt AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') ELSE NULL END`;
+// `date`, so no calendar day can shift under the server's timezone. It goes through `utcIsoText`
+// because it is embedded inside `json_build_object`.
+const LAST_CHANGED_AT_SELECT = `CASE WHEN demand.updatedAt > demand.createdAt THEN ${utcIsoText('demand.updatedAt')} ELSE NULL END`;
 
 // AC-18 — Address Drift as a **value comparison**: the captured comparison key against the key the
 // Customer Order names now. `IS DISTINCT FROM` rather than `<>` because either side is legitimately
@@ -391,11 +402,10 @@ const hasDriftSignalSubquery = (manager: EntityManager): string =>
     .getQuery();
 
 // AC-18 — where the linked Customer Order is going **now**, dereferenced from the Delivery Address
-// it names. `deactivatedAt` needs `to_char` for the same reason `allocation.createdAt` does:
-// embedded inside `json_build_object` it bypasses the pg driver's Date decoding, and PostgreSQL
-// would otherwise render it with the session's own UTC offset, which `z.string().datetime()`
-// refuses. `NULL` in, `NULL` out — an order recorded by typed name names no address at all.
-const CURRENT_DELIVERY_ADDRESS_SELECT = `CASE WHEN destination.id IS NULL THEN NULL ELSE json_build_object('deliveryAddressId', destination.id, 'addressText', destination.addressText, 'accessNotes', destination.accessNotes, 'isMain', destination.isMain, 'deactivatedAt', to_char(destination.deactivatedAt AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')) END`;
+// it names. `deactivatedAt` goes through `utcIsoText` because it is embedded inside
+// `json_build_object`. `NULL` in, `NULL` out — an order recorded by typed name names no address at
+// all.
+const CURRENT_DELIVERY_ADDRESS_SELECT = `CASE WHEN destination.id IS NULL THEN NULL ELSE json_build_object('deliveryAddressId', destination.id, 'addressText', destination.addressText, 'accessNotes', destination.accessNotes, 'isMain', destination.isMain, 'deactivatedAt', ${utcIsoText('destination.deactivatedAt')}) END`;
 
 // AC-18/AC-09a — whether the Delivery Address captured for this link and the one its Customer Order
 // names now disagree, as a **boolean** rather than as the two identifiers. It is what lets the
@@ -420,9 +430,9 @@ const LINK_CUSTOMER_SELECT = `CASE WHEN linkCustomer.id IS NULL THEN NULL ELSE j
 // forms carry `addressDrift`, because *that* a drift exists is a fact about the draft rather than
 // customer identity (openapi.yaml `PurchaseDraftLineLinkRedacted`).
 //
-// Timestamps are normalized to UTC ISO 8601 (`...Z`) here because they are embedded as text inside
-// `json_build_object`, which bypasses the pg driver's own Date decoding — every other timestamp on
-// this read travels as a plain column and is decoded (and later serialized) the same way.
+// Timestamps go through `utcIsoText` because they are embedded as text inside `json_build_object`
+// — every other timestamp on this read travels as a plain column and is decoded (and later
+// serialized) by the driver.
 const linksSubquery = (manager: EntityManager, identified: boolean): string => {
   const identity = identified
     ? `'customer', ${LINK_CUSTOMER_SELECT}, 'customerName', demand.customerName, `
@@ -437,7 +447,7 @@ const linksSubquery = (manager: EntityManager, identified: boolean): string => {
   const query = manager
     .createQueryBuilder()
     .select(
-      `COALESCE(json_agg(json_build_object('id', link.id, 'customerOrderId', link.customerOrderId, ${identity}'statedQuantity', link.statedQuantity, 'snapshot', CASE WHEN snapshot.purchaseDraftLineLinkId IS NULL THEN NULL ELSE json_build_object('capturedQuantity', snapshot.capturedQuantity, 'capturedNeededBy', snapshot.capturedNeededBy, 'capturedState', snapshot.capturedState${capturedAddress}) END, 'current', json_build_object('quantity', demand.quantity, 'neededBy', demand.neededBy, 'state', demand.state, 'outstandingQuantity', demand.outstandingQuantity, 'lastChangedAt', ${LAST_CHANGED_AT_SELECT}${currentAddress}), 'addressDrift', ${ADDRESS_DRIFT_SELECT}, 'allocation', CASE WHEN allocation.purchaseDraftLineLinkId IS NULL THEN NULL ELSE json_build_object('allocatedQuantity', allocation.allocatedQuantity, 'allocatedByUserId', allocation.allocatedByUserId, 'createdAt', to_char(allocation.createdAt AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')) END) ORDER BY link.createdAt, link.id), '[]'::json)`,
+      `COALESCE(json_agg(json_build_object('id', link.id, 'customerOrderId', link.customerOrderId, ${identity}'statedQuantity', link.statedQuantity, 'snapshot', CASE WHEN snapshot.purchaseDraftLineLinkId IS NULL THEN NULL ELSE json_build_object('capturedQuantity', snapshot.capturedQuantity, 'capturedNeededBy', snapshot.capturedNeededBy, 'capturedState', snapshot.capturedState${capturedAddress}) END, 'current', json_build_object('quantity', demand.quantity, 'neededBy', demand.neededBy, 'state', demand.state, 'outstandingQuantity', demand.outstandingQuantity, 'lastChangedAt', ${LAST_CHANGED_AT_SELECT}${currentAddress}), 'addressDrift', ${ADDRESS_DRIFT_SELECT}, 'allocation', CASE WHEN allocation.purchaseDraftLineLinkId IS NULL THEN NULL ELSE json_build_object('allocatedQuantity', allocation.allocatedQuantity, 'allocatedByUserId', allocation.allocatedByUserId, 'createdAt', ${utcIsoText('allocation.createdAt')}) END) ORDER BY link.createdAt, link.id), '[]'::json)`,
     )
     .from(PurchaseDraftLineLinkEntity, 'link')
     .innerJoin(
@@ -508,7 +518,7 @@ const lineJsonObject = (
     ? `, 'customerDestination', ${CUSTOMER_DESTINATION_SELECT}`
     : '';
 
-  return `json_build_object('id', line.id, 'itemId', line.itemId, 'itemSku', item.sku, 'itemDescription', item.description, 'unitOfMeasure', item.unitOfMeasure, 'orderedQuantity', line.orderedQuantity, 'packagingTypeId', line.packagingTypeId, 'valueAddingNote', line.valueAddingNote, 'ending', CASE WHEN line.endingRecordedAt IS NULL THEN NULL ELSE json_build_object('kind', line.endingKind, 'quantity', line.endingQuantity, 'recordedByUserId', line.endingRecordedByUserId, 'recordedAt', line.endingRecordedAt) END, 'deliveryMode', line.deliveryMode, 'warehouseDestination', ${WAREHOUSE_DESTINATION_SELECT}${customerDestination}, 'links', (${linksSubquery(manager, identified)}))`;
+  return `json_build_object('id', line.id, 'itemId', line.itemId, 'itemSku', item.sku, 'itemDescription', item.description, 'unitOfMeasure', item.unitOfMeasure, 'orderedQuantity', line.orderedQuantity, 'packagingTypeId', line.packagingTypeId, 'valueAddingNote', line.valueAddingNote, 'ending', CASE WHEN line.endingRecordedAt IS NULL THEN NULL ELSE json_build_object('kind', line.endingKind, 'quantity', line.endingQuantity, 'recordedByUserId', line.endingRecordedByUserId, 'recordedAt', ${utcIsoText('line.endingRecordedAt')}) END, 'deliveryMode', line.deliveryMode, 'warehouseDestination', ${WAREHOUSE_DESTINATION_SELECT}${customerDestination}, 'links', (${linksSubquery(manager, identified)}))`;
 };
 
 // The joins the two destination projections above dereference, added to whichever query builds a

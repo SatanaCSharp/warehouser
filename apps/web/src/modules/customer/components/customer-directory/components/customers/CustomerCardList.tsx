@@ -1,20 +1,7 @@
-import {
-  useCorrectCustomerNameMutation,
-  useDeactivateCustomerMutation,
-} from 'modules/customer/api/customer-api';
-import { CorrectCustomerDialog } from 'modules/customer/components/customer-directory/components/customers/CorrectCustomerDialog';
 import { CustomerCard } from 'modules/customer/components/customer-directory/components/customers/CustomerCard';
-import { DeactivateCustomerDialog } from 'modules/customer/components/customer-directory/components/customers/DeactivateCustomerDialog';
-import { ActionDialogHost } from 'shared/components/ActionDialogHost';
-import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
-import { useActionDialog } from 'shared/hooks/state/useActionDialog';
 
-import type { Customer, CustomerUpdate } from '@warehouser/contracts/customers';
+import type { Customer } from '@warehouser/contracts/customers';
 import type { ReactElement } from 'react';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
-
-/** Which per-Customer dialog a card's kebab opens. */
-type CustomerDialogKind = 'correct' | 'deactivate';
 
 export type CustomerCardListProps = {
   customers: Customer[];
@@ -33,94 +20,28 @@ export type CustomerCardListProps = {
  * also what design-handoff.md §Accessibility asks for ("lists for customer,
  * address and awaiting collections").
  *
- * It is its own **surface** in the reducer-driven sense, exactly as
- * `CustomerAddressBook` is for its rows: the narrowest common ancestor of the
- * cards that open these dialogs holds the `Kind` union, the `useActionDialog`
- * controller and the total `renderDialogs` lookup
- * (`docs/system/adr/27-08-2026-reducer-driven-action-dialogs.md`). Owning them
- * here is what keeps the two reports one hop from the kebab that sends them —
- * list → card → menu — rather than four from the destination
- * (`writing-web-components.md` §4).
- *
- * The Warehouse the customer-level mutations are addressed to is read here for
- * the same reason: it is used here, so it is not threaded down to be used here
- * either.
+ * It opens no dialog and runs no mutation. The design puts the Customer's
+ * actions kebab on the **detail header** rather than on every card, so the
+ * `useActionDialog` controller and the `ActionDialogHost` that used to sit
+ * here live with the trigger, in `CustomerDetailHeader`
+ * (`docs/system/adr/27-08-2026-reducer-driven-action-dialogs.md`: the surface
+ * that holds the controller is the narrowest ancestor of the controls that
+ * open it). What is left here is the collection and nothing else.
  */
 export const CustomerCardList = ({
   customers,
   label,
   selectedCustomerId,
   onSelect,
-}: CustomerCardListProps): ReactElement => {
-  const warehouseId = useEnteredWarehouse();
-  const dialog = useActionDialog<CustomerDialogKind, Customer>();
-  const [correctCustomerName] = useCorrectCustomerNameMutation();
-  const [deactivateCustomer] = useDeactivateCustomerMutation();
-
-  // The two reports a card's kebab sends upward. Each only names the Customer
-  // a dialog was chosen for, which is the single thing a cached row renderer
-  // may close over
-  // (`docs/system/adr/27-08-2026-heroui-table-for-web-data-tables.md`).
-  const onCorrect = (customer: Customer): void =>
-    dialog.open('correct', customer);
-  const onDeactivate = (customer: Customer): void =>
-    dialog.open('deactivate', customer);
-
-  // Each command carries what its success toast names the Customer by, beside
-  // the id that addresses it: a correction is reported by the name it leaves
-  // behind, which is what the member just committed. The address text never
-  // rides along — it is confidential and a toast outlives the dialog that
-  // showed it (spec.md §6.1).
-  const onSaveCorrection =
-    (customer: Customer) =>
-    (input: CustomerUpdate): Promise<MutationResult> =>
-      correctCustomerName({
-        customerName: input.name,
-        warehouseId: warehouseId ?? '',
-        customerId: customer.id,
-        input,
-      });
-
-  const onConfirmDeactivate =
-    (customer: Customer) => (): Promise<MutationResult> =>
-      deactivateCustomer({
-        customerName: customer.name,
-        warehouseId: warehouseId ?? '',
-        customerId: customer.id,
-      });
-
-  return (
-    <>
-      <ul aria-label={label} className="mt-4 grid gap-3">
-        {customers.map((customer) => (
-          <CustomerCard
-            key={customer.id}
-            customer={customer}
-            isSelected={customer.id === selectedCustomerId}
-            onCorrect={onCorrect}
-            onDeactivate={onDeactivate}
-            onSelect={onSelect}
-          />
-        ))}
-      </ul>
-
-      <ActionDialogHost
-        controller={dialog}
-        renderDialogs={{
-          correct: (customer) => (
-            <CorrectCustomerDialog
-              customer={customer}
-              onSave={onSaveCorrection(customer)}
-            />
-          ),
-          deactivate: (customer) => (
-            <DeactivateCustomerDialog
-              customer={customer}
-              onConfirm={onConfirmDeactivate(customer)}
-            />
-          ),
-        }}
+}: CustomerCardListProps): ReactElement => (
+  <ul aria-label={label} className="mt-4 grid gap-3">
+    {customers.map((customer) => (
+      <CustomerCard
+        key={customer.id}
+        customer={customer}
+        isSelected={customer.id === selectedCustomerId}
+        onSelect={onSelect}
       />
-    </>
-  );
-};
+    ))}
+  </ul>
+);

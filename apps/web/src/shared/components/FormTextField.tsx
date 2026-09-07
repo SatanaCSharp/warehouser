@@ -41,6 +41,15 @@ type FormTextFieldProps = Pick<
     | 'onChange'
     | 'placeholder'
   > & {
+    /**
+     * An element elsewhere on screen that explains this field — typically the
+     * one sentence a surface states once for a whole group rather than
+     * repeating into every field's own caption
+     * (design-handoff.md §Accessibility). React Aria's `useField` composes it
+     * with the `Description` below rather than replacing it, so the field
+     * announces both.
+     */
+    'aria-describedby'?: string;
     description?: ReactNode;
     errorMessage?: ReactNode;
     label: ReactNode;
@@ -49,6 +58,7 @@ type FormTextFieldProps = Pick<
 export const FormTextField = forwardRef<HTMLInputElement, FormTextFieldProps>(
   (
     {
+      'aria-describedby': ariaDescribedBy,
       autoComplete,
       autoFocus,
       className,
@@ -69,6 +79,7 @@ export const FormTextField = forwardRef<HTMLInputElement, FormTextFieldProps>(
     ref,
   ) => (
     <TextField
+      aria-describedby={ariaDescribedBy}
       className={className}
       defaultValue={defaultValue}
       isDisabled={isDisabled}

@@ -185,6 +185,55 @@ describe('FormModalDialog', () => {
     );
   });
 
+  // "Focus moves to the first invalid field, or to the dialog heading, after
+  // submission" (`docs/features/delivery-addresses/design-handoff.md`
+  // §Accessibility). A refused submission otherwise leaves focus on the submit
+  // button, below everything it was refused for.
+  it('moves focus to the first invalid field after a rejected submission', async () => {
+    const user = userEvent.setup();
+    renderDialog({ data: null });
+
+    await save(user);
+
+    expect(
+      await within(formDialog()).findByText('Enter a name.'),
+    ).toBeVisible();
+    expect(within(formDialog()).getByLabelText('Name')).toHaveFocus();
+  });
+
+  it('moves focus to the first field the server named, not to the button that was pressed', async () => {
+    const user = userEvent.setup();
+    renderDialog({
+      error: {
+        code: 'workspace.name_conflict',
+        fieldErrors: { name: 'duplicate' },
+      },
+    });
+
+    await save(user, 'Central DC');
+
+    expect(
+      await within(formDialog()).findByText('That name is taken.'),
+    ).toBeVisible();
+    await waitFor(() =>
+      expect(within(formDialog()).getByLabelText('Name')).toHaveFocus(),
+    );
+  });
+
+  // A refusal no field explains has no field to move to, and neither does a
+  // `Controller`-bound picker that registered no input ref. The heading is the
+  // fallback both land on, which is why it carries `tabIndex={-1}`.
+  it('falls back to the dialog heading when no field matches the refusal', async () => {
+    const user = userEvent.setup();
+    renderDialog({ error: { code: 'workspace.denied' } }, vi.fn());
+
+    await save(user, 'Central DC');
+
+    const heading = within(formDialog()).getByText('Rename warehouse');
+    await waitFor(() => expect(heading).toHaveFocus());
+    expect(heading).toHaveAttribute('tabindex', '-1');
+  });
+
   it('cancels without making the request', async () => {
     const user = userEvent.setup();
     const { onClose, onSubmit } = renderDialog({ data: null });

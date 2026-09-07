@@ -34,6 +34,10 @@ const linkUrl = (linkId: string): string =>
 const UNPERMITTED_REASON =
   'Your role does not allow purchase drafts to be changed in this warehouse, so this is shown as it stands.';
 
+/** The caption the design gives the stated-quantity field, whatever refuses the write. */
+const COVERAGE_CAPTION =
+  'Coverage is a note, not a claim — it is never adjusted for you.';
+
 const line = (
   overrides: Partial<PurchaseDraftLineIdentified> = {},
 ): PurchaseDraftLineIdentified => ({
@@ -264,15 +268,21 @@ describe('PurchaseDraftLineLinks', () => {
   // its reason; the `×` only writes and is withheld with the button that adds
   // a link (`adr/19-08-2026-declarative-permission-gates.md`).
   describe('an actor holding PURCHASE_DRAFTS:WATCH alone (AC-22)', () => {
-    it('shows what is intended for each customer, disabled and explained', async () => {
+    // The reason a write is refused is the **line's**, stated once by its lock
+    // strip, so these rows keep the caption the design gives them rather than
+    // repeating that sentence once per link (design-handoff.md
+    // §Accessibility). What this proves is that the field is disabled and the
+    // refusal is not written into it.
+    it('shows what is intended for each customer, disabled and keeping its own caption', async () => {
       renderLinks(false, line(), [PermissionId.PURCHASE_DRAFTS_WATCH]);
 
       const [first, second] =
         await screen.findAllByLabelText('Intended for them');
       expect(first).toBeDisabled();
-      expect(first).toHaveAccessibleDescription(UNPERMITTED_REASON);
       expect(second).toBeDisabled();
-      expect(second).toHaveAccessibleDescription(UNPERMITTED_REASON);
+      expect(first).toHaveAccessibleDescription(COVERAGE_CAPTION);
+      expect(second).toHaveAccessibleDescription(COVERAGE_CAPTION);
+      expect(screen.queryAllByText(UNPERMITTED_REASON)).toHaveLength(0);
     });
 
     it('withholds every control that would write', async () => {

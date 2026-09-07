@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { DeliveryModeField } from 'modules/purchase-draft/components/purchase-draft-line-delivery/components/DeliveryModeField';
 import { DirectDestinationFields } from 'modules/purchase-draft/components/purchase-draft-line-delivery/components/direct-destination-fields/DirectDestinationFields';
 import { PurchaseDraftLineDeliveryRefusalAlert } from 'modules/purchase-draft/components/purchase-draft-line-delivery/components/PurchaseDraftLineDeliveryRefusalAlert';
-import { PurchaseDraftLineDestination } from 'modules/purchase-draft/components/PurchaseDraftLineDestination';
+import { PurchaseDraftLineDestination } from 'modules/purchase-draft/components/purchase-draft-line-delivery/components/PurchaseDraftLineDestination';
 import { disagreeingDeliveryLinks } from 'modules/purchase-draft/utils/delivery-disagreement';
 import { mutationOutcome } from 'shared/api/client/mutation-outcome';
 import { Conditional } from 'shared/components/Conditional';
@@ -20,6 +20,14 @@ import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 export type PurchaseDraftLineDeliveryProps = {
   isDisabled: boolean;
+  /**
+   * Whether the draft has been frozen, which decides the tense the destination
+   * speaks in — `Goes to` while it can still be written, `Went to` once it
+   * records what the supplier was told. It is **not** `isDisabled`: an
+   * archived Warehouse or a missing Permission stops the writes without
+   * putting the line in the past.
+   */
+  isFrozen: boolean;
   line: PurchaseDraftLine;
   /** The id of the line's lock strip, which states the one reason writes are refused. */
   reasonId?: string;
@@ -48,6 +56,7 @@ export type PurchaseDraftLineDeliveryProps = {
  */
 export const PurchaseDraftLineDelivery = ({
   isDisabled,
+  isFrozen,
   line,
   reasonId,
   onReviseLine,
@@ -94,7 +103,7 @@ export const PurchaseDraftLineDelivery = ({
   return (
     <section
       aria-label={t('lineDelivery.heading')}
-      className="mt-3 rounded-lg bg-surface-secondary p-3"
+      className="mt-3 rounded-lg border border-border bg-surface-secondary p-3.5"
     >
       <p className="text-xs font-semibold uppercase tracking-wide text-muted">
         {t('lineDelivery.heading')}
@@ -103,7 +112,7 @@ export const PurchaseDraftLineDelivery = ({
       {/* design-handoff.md's first documented mobile difference for this block
           (`jnl1h`): the mode control and the destination stack below `md:` and
           become a row from it up — the same breakpoint the field row above uses. */}
-      <div className="mt-2 flex flex-col gap-3 md:flex-row md:items-start md:gap-6">
+      <div className="mt-2 flex flex-col gap-3 md:flex-row md:items-start">
         <DeliveryModeField
           isDisabled={isDisabled}
           reasonId={reasonId}
@@ -111,7 +120,11 @@ export const PurchaseDraftLineDelivery = ({
           onChange={onChangeMode}
         />
         <div className="min-w-0 md:flex-1">
-          <PurchaseDraftLineDestination line={line} />
+          <PurchaseDraftLineDestination
+            aria-describedby={reasonId}
+            isFrozen={isFrozen}
+            line={line}
+          />
         </div>
       </div>
 

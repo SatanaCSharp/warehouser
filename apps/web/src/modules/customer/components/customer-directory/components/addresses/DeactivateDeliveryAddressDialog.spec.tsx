@@ -103,6 +103,36 @@ describe('DeactivateDeliveryAddressDialog', () => {
     ).not.toBeInTheDocument();
   });
 
+  // design-handoff.md §Component mapping (`ee6Ez` `Zzn8c`) — the body is two
+  // panels rather than a run of bare paragraphs: a neutral one for what
+  // survives the withdrawal, and the Main-flag warning beside it.
+  it('states what stays in its own panel, beside the Main-flag warning', () => {
+    renderDialog(mainAddress);
+
+    const dialog = openedDialog();
+    expect(within(dialog).getByText('What stays')).toBeVisible();
+    expect(
+      within(dialog).getByText('This is the main delivery address'),
+    ).toBeVisible();
+  });
+
+  // design-handoff.md §Component mapping — "Destructive primaries are solid
+  // `danger`". The dialog used to override `ConfirmAlertDialog`'s default with
+  // a `primary` confirm; the shared default is what the design draws.
+  it('confirms with the shared danger treatment rather than a primary one', () => {
+    renderDialog(ordinaryAddress);
+
+    const confirm = within(openedDialog()).getByRole('button', {
+      name: 'Deactivate address',
+    });
+    // HeroUI names a Button's variant in a BEM class it documents as its
+    // styling contract (`.heroui-docs/react/components/(buttons)/button.mdx`
+    // §"Styling Reference"), which is the only place the choice is observable
+    // from the DOM.
+    expect(confirm).toHaveClass('button--danger');
+    expect(confirm).not.toHaveClass('button--primary');
+  });
+
   // AC-07 — the Customer's last active address is refused, and this is the
   // one dialog that shows the member the way forward.
   it('names the AC-07 rule and the order to follow when it is the last active address', async () => {

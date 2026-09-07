@@ -8,6 +8,7 @@ import { PurchaseDraftLineList } from 'modules/purchase-draft/components/Purchas
 import { useMinuteTimestamp } from 'modules/purchase-draft/hooks/projections/useMinuteTimestamp';
 import { usePurchaseDraftAttribution } from 'modules/purchase-draft/hooks/projections/usePurchaseDraftAttribution';
 import { Conditional } from 'shared/components/Conditional';
+import { useContentTransition } from 'shared/hooks/effects/useContentTransition';
 import { LockIcon } from 'shared/icons';
 
 import type {
@@ -42,6 +43,12 @@ export const PurchaseDraftDetailPane = ({
   const { t } = useTranslation('purchase-draft');
   const attribution = usePurchaseDraftAttribution();
   const minuteTimestamp = useMinuteTimestamp();
+  // Opening another draft from the list, and a draft changing state under
+  // the actor, both replace everything below — so both are what the pane
+  // re-enters on.
+  const paneRef = useContentTransition<HTMLElement>(
+    `${draft.id}:${draft.state}`,
+  );
 
   // Both are resolved before the return rather than gated inline, because
   // `Conditional` evaluates both arms and formatting a moment that does not
@@ -84,7 +91,7 @@ export const PurchaseDraftDetailPane = ({
           <PurchaseDraftDriftAlert draft={draft} />
         </Conditional>
         <Conditional when={frozenNote}>
-          <p className="mt-3 flex items-start gap-2 rounded-lg bg-surface-secondary p-3 text-sm text-default">
+          <p className="mt-3 flex items-start gap-2 rounded-lg bg-surface-secondary p-3 text-sm text-muted">
             <LockIcon />
             <span>{frozenNote}</span>
           </p>
@@ -116,6 +123,7 @@ export const PurchaseDraftDetailPane = ({
     // (border, background, padding) drops entirely rather than nesting a
     // card inside a card; from `md:` up the frame returns.
     <section
+      ref={paneRef}
       aria-label={draft.reference}
       className="flex flex-col gap-3 md:rounded-xl md:border md:border-border md:bg-surface md:p-6"
     >

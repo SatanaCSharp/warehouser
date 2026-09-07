@@ -135,11 +135,17 @@ export const PurchaseDraftLineLinks = ({
           {line.links.map((link) => (
             <PurchaseDraftLinkRow
               key={link.id}
+              deliveryMode={line.deliveryMode}
               isFrozen={isFrozen}
               link={link}
               field={{
+                'aria-describedby': refusalReason?.reasonId,
                 commitOn: 'blur',
-                description: t(refusalReason?.key ?? 'linkRow.claimsNothing'),
+                // The design caption, always. Why the field is disabled is
+                // stated once by the line's lock strip above these rows, not
+                // repeated into every one of them
+                // (design-handoff.md §Accessibility).
+                description: t('linkRow.claimsNothing'),
                 isDisabled,
                 label: t(
                   isFrozen

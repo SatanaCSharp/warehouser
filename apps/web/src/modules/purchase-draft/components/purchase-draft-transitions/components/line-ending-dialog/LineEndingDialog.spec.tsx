@@ -378,6 +378,20 @@ describe('LineEndingDialog', () => {
     ).toBeVisible();
   });
 
+  // `s5EPi` draws both of the modal's consequences as titled information
+  // panels, not as bare paragraphs: a member skimming a 720px form reads
+  // headings before prose, and the heading is what tells them the paragraph is
+  // about something other than the field beside it.
+  it('carries both consequences as titled panels rather than loose paragraphs', () => {
+    openDialog(succeeds());
+
+    const dialog = arrivalDialog();
+    expect(within(dialog).getByText('This ends this line only')).toBeVisible();
+    expect(
+      within(dialog).getByText('On-hand quantity does not move'),
+    ).toBeVisible();
+  });
+
   it('places cancel before the primary in DOM and keyboard order, in a 720px modal', () => {
     openDialog(succeeds());
 

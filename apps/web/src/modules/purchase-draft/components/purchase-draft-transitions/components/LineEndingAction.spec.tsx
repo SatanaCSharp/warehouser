@@ -177,16 +177,11 @@ describe('LineEndingAction', () => {
       RegExp,
     ]
   >([
-    [
-      'arrival',
-      'via_warehouse',
-      /arrival recorded — 140 arrived at the dock/iu,
-    ],
-    [
-      'direct_delivery',
-      'direct_to_customer',
-      /delivery recorded — the customer received 140/iu,
-    ],
+    // `zj46c` / `F0SpRx` draw the recorded ending as a success chip carrying
+    // the day it was recorded on — not a muted sentence — because the by-line
+    // view's `ENDING` column has to be readable at a glance.
+    ['arrival', 'via_warehouse', /arrived 140 · 18 Sep/iu],
+    ['direct_delivery', 'direct_to_customer', /delivered 140 · 18 Sep/iu],
   ])(
     'offers no second ending on a line already ended by %s, and states the one it carries (AC-20a)',
     async (kind, deliveryMode, sentence) => {
@@ -202,7 +197,14 @@ describe('LineEndingAction', () => {
         }),
       );
 
-      expect(await screen.findByText(sentence)).toBeInTheDocument();
+      const recorded = await screen.findByText(sentence);
+      expect(recorded).toBeInTheDocument();
+      // A recorded ending is the resolved outcome of the line, so the frames
+      // draw it as a success chip rather than a muted sentence — and the chip
+      // carries the day, which is what the by-line `ENDING` column reads.
+      expect(recorded.closest('[data-slot="chip"]')?.className).toContain(
+        'chip--success',
+      );
       expect(trigger(/record what arrived/iu)).not.toBeInTheDocument();
       expect(trigger(/record the delivery/iu)).not.toBeInTheDocument();
     },

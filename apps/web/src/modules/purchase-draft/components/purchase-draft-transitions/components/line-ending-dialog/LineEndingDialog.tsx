@@ -1,3 +1,4 @@
+import { Alert } from '@heroui/react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -116,8 +117,21 @@ export const LineEndingDialog = <TInput,>({
         now be a lie on every line but one. What replaces it is the fact a
         member cannot see: this line ends once and cannot be recorded again
         (AC-20a).
+
+        It is a titled information panel rather than a bare paragraph (`s5EPi`
+        draws both panels with a heading): the two things this modal has to say
+        beyond its fields are consequences, and a member skimming a 720px form
+        reads headings before prose.
       */}
-      <p>{t(`transitions.lineEnding.${kind}.endsOnce`)}</p>
+      <Alert status="accent">
+        <Alert.Indicator />
+        <Alert.Content>
+          <Alert.Title>{t('transitions.lineEnding.endsOnceTitle')}</Alert.Title>
+          <Alert.Description>
+            {t(`transitions.lineEnding.${kind}.endsOnce`)}
+          </Alert.Description>
+        </Alert.Content>
+      </Alert>
       <LineEndingFieldset form={form} kind={kind} line={line} />
       {/*
         AC-21 — the on-hand quantity this act does not touch is named here
@@ -125,9 +139,17 @@ export const LineEndingDialog = <TInput,>({
         "record what arrived". On the direct half it is the stronger statement:
         the goods were never in the building to be counted.
       */}
-      <p className="text-sm text-muted">
-        {t(`transitions.lineEnding.${kind}.atomicity`)}
-      </p>
+      <Alert status="default">
+        <Alert.Indicator />
+        <Alert.Content>
+          <Alert.Title>
+            {t('transitions.lineEnding.atomicityTitle')}
+          </Alert.Title>
+          <Alert.Description>
+            {t(`transitions.lineEnding.${kind}.atomicity`)}
+          </Alert.Description>
+        </Alert.Content>
+      </Alert>
     </FormModalDialog>
   );
 };

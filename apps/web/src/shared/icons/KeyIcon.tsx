@@ -3,7 +3,7 @@ import type { ReactElement } from 'react';
 export const KeyIcon = (): ReactElement => (
   <svg
     aria-hidden="true"
-    className="size-4"
+    className="shrink-0 size-4"
     fill="none"
     viewBox="0 0 24 24"
     stroke="currentColor"

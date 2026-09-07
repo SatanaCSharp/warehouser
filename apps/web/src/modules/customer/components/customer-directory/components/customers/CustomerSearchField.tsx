@@ -26,6 +26,11 @@ export type CustomerSearchFieldProps = {
  * named for what it means rather than hand-drawn with a border, a surface
  * background and a suppressed shadow (`heroui-design-principles.md` §1). Only
  * the 48px height the frames fix is left as a class.
+ *
+ * It takes the 320px the frame gives it once there is room for the primary
+ * action beside it, and the whole row below that — the field and the action
+ * are one row at desktop and stack at 390px (design-handoff.md §Responsive
+ * behavior).
  */
 export const CustomerSearchField = ({
   value,
@@ -36,7 +41,7 @@ export const CustomerSearchField = ({
   return (
     <SearchField
       aria-label={t('directory.search')}
-      className="w-full"
+      className="w-full sm:w-80"
       value={value}
       variant="secondary"
       onChange={onChange}

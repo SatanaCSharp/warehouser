@@ -24,9 +24,8 @@ export type CustomerAction = {
 };
 
 /**
- * What the card list hands down to its cards: two reports upward and nothing
- * else. Each only tells the surface that owns the dialogs which Customer was
- * chosen.
+ * What the detail header hands its kebab: two reports upward and nothing else.
+ * Each only tells the surface that owns the dialogs which Customer was chosen.
  *
  * Reactivation is deliberately absent from this pair: it asks nothing, so the
  * menu runs it itself rather than reporting it — see `CustomerActionsMenu`.
@@ -45,8 +44,8 @@ export type CustomerActionRunners = {
 /**
  * One Customer's actions, kept to the ones the actor's Role admits (AC-03b,
  * AC-06) and disabled — never hidden — while the Warehouse is archived
- * (AC-23). Both surfaces that draw a kebab for a Customer read this one
- * projection rather than each declaring its own Permission mapping
+ * (AC-23). The surface that draws a kebab for a Customer reads this one
+ * projection rather than declaring its own Permission mapping
  * (`docs/system/adr/19-08-2026-declarative-permission-gates.md`).
  *
  * It is called by the component that renders the actions, never by whatever

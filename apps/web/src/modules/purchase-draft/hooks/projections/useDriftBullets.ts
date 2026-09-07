@@ -43,7 +43,7 @@ export const useDriftBullets = (): ((
   return (draft) =>
     draft.lines.flatMap((line, index) =>
       line.links.flatMap((link) =>
-        describeLinkDrift(link).map((drift) => ({
+        describeLinkDrift(link, line.deliveryMode).map((drift) => ({
           key: `${link.id}-${drift.kind}`,
           text: t(`detail.driftAlert.${drift.kind}`, {
             // The moment selects the `…_dated` wording through i18next's own

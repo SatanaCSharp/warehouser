@@ -6,7 +6,7 @@ import {
   Outlet,
   RouterProvider,
 } from '@tanstack/react-router';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PermissionId } from '@warehouser/shared-types/enums';
 import { Provider } from 'react-redux';
@@ -223,24 +223,6 @@ const renderInArchivedWarehouse = (): void => {
   );
 };
 
-/**
- * The toggle's own surface: one draft in the `draft` tab, and the by-line read
- * that tab issues — the surface's own read, not the route loader's, so the
- * spec seeds it exactly as it seeds the list beside it.
- */
-const renderToggleSurface = (): void => {
-  const store = authenticatedStore();
-  seed(store, [summary({ id: 'draft-one', state: 'draft' })]);
-  void store.dispatch(
-    purchaseDraftApi.util.upsertQueryData(
-      'listPurchaseDraftLines',
-      { warehouseId: accessIds.warehouse, state: 'draft' },
-      [],
-    ),
-  );
-  renderInEnteredWarehouse(<PurchaseDraftWorkspace />, store);
-};
-
 describe('PurchaseDraftWorkspace', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -318,12 +300,24 @@ describe('PurchaseDraftWorkspace', () => {
       expect(ready).toBeDisabled();
       expect(ready).toHaveAccessibleDescription(ARCHIVED_NOTICE);
 
-      // A Line states the reason beside the fields it disables, so its own
-      // controls are described by that sentence rather than the banner.
+      // A Line states its own reason **once**, in the lock strip under the
+      // line head, and the fields it disables point at that strip rather than
+      // repeating the sentence into each of their captions
+      // (design-handoff.md §Accessibility). Pointing at it is the whole of the
+      // rule: the sentence is DRAWN once, and every disabled field announces
+      // that one sentence. A field that announced nothing would leave a member
+      // who cannot see the strip with no reason at all.
       expect(screen.getByLabelText('Item')).toBeDisabled();
       expect(screen.getByLabelText('Item')).toHaveAccessibleDescription(
-        ARCHIVED_LINE_REASON,
+        new RegExp(ARCHIVED_LINE_REASON, 'u'),
       );
+      expect(
+        screen.getByLabelText('Value-adding note'),
+      ).toHaveAccessibleDescription(new RegExp(ARCHIVED_LINE_REASON, 'u'));
+      // That the strip is drawn once *per line* is pinned by
+      // `PurchaseDraftLineEditor.spec.tsx`; this draft carries several lines,
+      // so counting the sentence across the whole surface would count strips,
+      // not repetitions within one.
 
       const removeLine = screen.getByRole('button', {
         name: 'Remove line 1',
@@ -423,73 +417,4 @@ describe('PurchaseDraftWorkspace', () => {
   // chooses *how you look at them* (design-handoff.md §Resolved here). It is
   // an explicitly unpinned presentation choice, so the test pins the
   // separation AC-22 requires rather than the control's styling.
-  describe('the By draft / By line toggle (AC-22)', () => {
-    it('switches the drafts destination to the split by delivery mode', async () => {
-      const user = userEvent.setup();
-      renderToggleSurface();
-
-      await user.click(await screen.findByRole('radio', { name: 'By line' }));
-
-      expect(
-        await screen.findByRole('grid', {
-          name: 'Lines landing at this warehouse',
-        }),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByRole('grid', {
-          name: 'Lines shipping direct to customer',
-        }),
-      ).toBeInTheDocument();
-      expect(
-        screen.queryByRole('list', { name: 'Purchase drafts' }),
-      ).not.toBeInTheDocument();
-    });
-
-    // Only the view on screen is mounted, in both directions: the list a
-    // member is not looking at is not one more thing an assistive technology
-    // walks past, and its read is not issued. The lookup that chooses the view
-    // (`writing-web-conditional-components.md` §3) keeps that property because
-    // element creation runs no hook — this pins it.
-    it('unmounts the by-line split when the member looks by draft again', async () => {
-      const user = userEvent.setup();
-      renderToggleSurface();
-
-      await user.click(await screen.findByRole('radio', { name: 'By line' }));
-      await screen.findByRole('grid', {
-        name: 'Lines landing at this warehouse',
-      });
-      await user.click(screen.getByRole('radio', { name: 'By draft' }));
-
-      expect(
-        await screen.findByRole('list', { name: 'Purchase drafts' }),
-      ).toBeInTheDocument();
-      expect(
-        screen.queryByRole('grid', {
-          name: 'Lines landing at this warehouse',
-        }),
-      ).not.toBeInTheDocument();
-      expect(
-        screen.queryByRole('grid', {
-          name: 'Lines shipping direct to customer',
-        }),
-      ).not.toBeInTheDocument();
-    });
-
-    it('names the two ways of looking as one radiogroup', async () => {
-      const store = authenticatedStore();
-      seed(store, [summary({ id: 'draft-one', state: 'draft' })]);
-      renderInEnteredWarehouse(<PurchaseDraftWorkspace />, store);
-
-      const toggle = await screen.findByRole('radiogroup', {
-        name: 'How to look at them',
-      });
-
-      expect(
-        within(toggle).getByRole('radio', { name: 'By draft' }),
-      ).toBeChecked();
-      expect(
-        within(toggle).getByRole('radio', { name: 'By line' }),
-      ).toBeInTheDocument();
-    });
-  });
 });

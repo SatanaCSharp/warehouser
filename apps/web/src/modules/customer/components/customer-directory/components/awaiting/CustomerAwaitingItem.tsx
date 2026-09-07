@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 import type { CustomerAwaitingOrder } from '@warehouser/contracts/customers';
 import type { ReactElement } from 'react';
 
@@ -6,9 +8,16 @@ export type CustomerAwaitingItemProps = {
 };
 
 /**
- * The `Item` cell of `Delivery/Awaiting Row` (`zw3n9`): the SKU above the
- * description, because a SKU alone identifies nothing to a member reading a
- * list of them and a description alone is not unique.
+ * The `Item` cell of `Delivery/Awaiting Row` (`zw3n9`): what the goods **are**
+ * first, and what identifies them second — the description carries the
+ * emphasis and the SKU sits under it beside the unit the line is counted in
+ * (`WH-100420 · counted in pieces`).
+ *
+ * That order is the design's (frames `KRDln`, `b7gaH9`) and it is the reading
+ * order too: a member scanning what a Customer awaits is looking for the
+ * thing, and reaches for the SKU only once they have found it. The unit rides
+ * here rather than only beside the figure so the row says what it counts even
+ * where the outstanding column is off screen.
  *
  * Its own component rather than an expression in a cell: a React Aria
  * collection caches a row's element tree per record, so a cell renders a
@@ -17,9 +26,18 @@ export type CustomerAwaitingItemProps = {
  */
 export const CustomerAwaitingItem = ({
   order,
-}: CustomerAwaitingItemProps): ReactElement => (
-  <div>
-    <p className="font-semibold text-foreground">{order.itemSku}</p>
-    <p className="text-muted">{order.itemDescription}</p>
-  </div>
-);
+}: CustomerAwaitingItemProps): ReactElement => {
+  const { t } = useTranslation('customer');
+
+  return (
+    <div>
+      <p className="font-semibold text-foreground">{order.itemDescription}</p>
+      <p className="text-sm text-muted">
+        {t('detail.awaiting.itemMeta', {
+          sku: order.itemSku,
+          unit: order.unitOfMeasure,
+        })}
+      </p>
+    </div>
+  );
+};

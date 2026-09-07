@@ -5,7 +5,14 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router';
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import {
+  act,
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
   PermissionId,
@@ -16,7 +23,7 @@ import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ROUTES, ROUTE_SEGMENTS } from 'shared/constants/routes';
-import { Sidebar } from 'shared/layouts/Sidebar';
+import { Sidebar } from 'shared/layouts/sidebar/Sidebar';
 import { makeStore } from 'store';
 import { namedWorkspaceContext } from 'test/workspace-fixtures';
 
@@ -795,5 +802,250 @@ describe('Sidebar drawer behavior (CR-RG-06)', () => {
     await waitFor(() =>
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
     );
+  });
+});
+
+// The collapsible sidebar. Either context's list is offered at two widths, and
+// the rail is a width change rather than a second, shorter list: it withholds
+// no destination, and every entry keeps the accessible name and the address the
+// wide list gives it. The preference is one preference for the shell, so it
+// survives leaving the page and is not re-decided per context.
+describe('Sidebar collapse', () => {
+  afterEach(() => {
+    window.localStorage.clear();
+    vi.unstubAllGlobals();
+  });
+
+  it('starts expanded, showing the collapse control with its labels on screen', async () => {
+    stubAccess({ ...baseAccess, permissionIds: [] });
+    renderSidebar();
+
+    const collapse = await screen.findByRole('button', {
+      name: 'Collapse navigation',
+    });
+    expect(collapse).toHaveAttribute('aria-expanded', 'true');
+    expect(
+      within(await screen.findByRole('link', { name: 'Dashboard' })).getByText(
+        'Dashboard',
+      ),
+    ).not.toHaveClass('sr-only');
+  });
+
+  // The control leads the rail rather than trailing it, so it stays reachable
+  // without reading past a list whose length depends on the entered context and
+  // the actor's Permissions. Asserted as document order inside the landmark,
+  // which is what decides both the reading order and the tab order.
+  it('places the collapse control above the list it resizes', async () => {
+    stubAccess({ ...baseAccess, permissionIds: [] });
+    renderSidebar();
+
+    const collapse = await screen.findByRole('button', {
+      name: 'Collapse navigation',
+    });
+    const landmark = screen.getByRole('navigation');
+    const list = within(landmark).getByRole('list');
+
+    expect(landmark.firstElementChild).toContainElement(collapse);
+    expect(landmark.lastElementChild).toBe(list);
+  });
+
+  // The two widths are one landmark changing size, so the change is animated
+  // rather than snapped — and `motion-reduce` opts an actor who asked for less
+  // motion back out of it. jsdom computes no layout, so what is asserted is the
+  // declaration that produces the transition.
+  it('animates the landmark between its two widths', async () => {
+    stubAccess({ ...baseAccess, permissionIds: [] });
+    const user = userEvent.setup();
+    renderSidebar();
+
+    await screen.findByRole('link', { name: 'Dashboard' });
+    const landmark = screen.getByRole('navigation');
+    expect(landmark).toHaveClass('transition-[width]');
+    expect(landmark).toHaveClass('motion-reduce:transition-none');
+    expect(landmark).toHaveClass('w-[240px]');
+
+    await user.click(
+      screen.getByRole('button', { name: 'Collapse navigation' }),
+    );
+
+    expect(screen.getByRole('navigation')).toHaveClass('w-[72px]');
+    expect(screen.getByRole('navigation')).toHaveClass('transition-[width]');
+  });
+
+  it('keeps every destination reachable by name once collapsed, with its label off screen', async () => {
+    stubAccess({
+      ...baseAccess,
+      permissionIds: [PermissionId.ROLES_WATCH, PermissionId.ITEMS_WATCH],
+    });
+    const user = userEvent.setup();
+    renderSidebar();
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Collapse navigation' }),
+    );
+
+    for (const name of ['Dashboard', 'Items', 'Access']) {
+      const link = screen.getByRole('link', { name });
+      expect(within(link).getByText(name)).toHaveClass('sr-only');
+    }
+    expect(screen.getByRole('link', { name: 'Dashboard' })).toHaveAttribute(
+      'href',
+      warehouseAddress(WAREHOUSE_ONE),
+    );
+    expect(screen.getByRole('link', { name: 'Access' })).toHaveAttribute(
+      'href',
+      accessAddress(WAREHOUSE_ONE),
+    );
+  });
+
+  it('offers the reverse control once collapsed, and expands again from it', async () => {
+    stubAccess({ ...baseAccess, permissionIds: [] });
+    const user = userEvent.setup();
+    renderSidebar();
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Collapse navigation' }),
+    );
+
+    const expand = screen.getByRole('button', { name: 'Expand navigation' });
+    expect(expand).toHaveAttribute('aria-expanded', 'false');
+
+    await user.click(expand);
+
+    expect(
+      await screen.findByRole('button', { name: 'Collapse navigation' }),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('link', { name: 'Dashboard' })).getByText(
+        'Dashboard',
+      ),
+    ).not.toHaveClass('sr-only');
+  });
+
+  it('collapses the Workspace list on the same control and the same terms', async () => {
+    stubAccessAndWorkspace(
+      namedWorkspaceContext([WorkspacePermissionId.WAREHOUSES_WATCH]),
+    );
+    const user = userEvent.setup();
+    renderSidebar({ entry: ROUTES.WORKSPACE });
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Collapse navigation' }),
+    );
+
+    const workspace = await screen.findByRole('link', { name: 'Workspace' });
+    expect(workspace).toHaveAttribute('href', ROUTES.WORKSPACE);
+    expect(within(workspace).getByText('Workspace')).toHaveClass('sr-only');
+  });
+
+  it('remembers the collapsed width for the next visit rather than re-expanding', async () => {
+    stubAccess({ ...baseAccess, permissionIds: [] });
+    const user = userEvent.setup();
+    renderSidebar();
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Collapse navigation' }),
+    );
+    // The next visit is a fresh mount reading the same browser, which is what
+    // makes the stored preference — rather than a surviving component — the
+    // thing under test.
+    cleanup();
+
+    renderSidebar();
+
+    expect(
+      await screen.findByRole('button', { name: 'Expand navigation' }),
+    ).toBeInTheDocument();
+  });
+
+  // The drawer is the narrow-viewport presentation of the same list. It is
+  // already an overlay the actor dismisses, so it offers no second width.
+  it('leaves the drawer at the wide list, with no collapse control inside it', async () => {
+    stubAccess({ ...baseAccess, permissionIds: [] });
+    const user = userEvent.setup();
+    renderSidebar({ component: SidebarWithToggle });
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Open navigation' }),
+    );
+    const dialog = await screen.findByRole('dialog');
+
+    expect(
+      within(dialog).queryByRole('button', { name: 'Collapse navigation' }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(within(dialog).getByRole('link', { name: 'Dashboard' })).getByText(
+        'Dashboard',
+      ),
+    ).not.toHaveClass('sr-only');
+  });
+});
+// The `Purchase drafts` entry used to carry a count — the number of frozen
+// drafts whose demand had moved — in a `trailing` slot, anchored as a HeroUI
+// `Badge` so it took no width out of the 72px rail. The count has been
+// withdrawn from the shell and the slot with it, so an entry is now an icon and
+// a label and nothing else.
+//
+// These cases hold that line. The first is the regression test for the removal:
+// the destination that once carried the count exposes no status of any kind,
+// and its name is its label alone. The second keeps the systemic guard the
+// squeeze left behind — every icon refuses to shrink — so a slot added to a row
+// later cannot quietly reintroduce the bug one entry at a time.
+describe('Sidebar Purchase drafts entry (US-08, frame yGhkK)', () => {
+  afterEach(() => {
+    window.localStorage.clear();
+    vi.unstubAllGlobals();
+  });
+
+  /** A Warehouse the actor may watch drafts in, answering no drafts request. */
+  const stubDraftsWatcher = (): ReturnType<typeof vi.fn> => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (url.includes('/access/current')) {
+        return Promise.resolve(
+          Response.json({
+            ...baseAccess,
+            permissionIds: [PermissionId.PURCHASE_DRAFTS_WATCH],
+          }),
+        );
+      }
+      return Promise.resolve(Response.json({}, { status: 404 }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    return fetchMock;
+  };
+
+  it('carries no count, and asks for no drafts projection to build one from', async () => {
+    const fetchMock = stubDraftsWatcher();
+    renderSidebar();
+
+    const entry = await screen.findByRole('link', { name: 'Purchase drafts' });
+
+    expect(within(entry).queryByRole('status')).not.toBeInTheDocument();
+    expect(entry).toHaveTextContent('Purchase drafts');
+    // The withdrawn badge was the sidebar's only reader of the drafts
+    // projection, so the shell now issues no request for it at all.
+    expect(
+      fetchMock.mock.calls.filter(([input]) =>
+        String(input instanceof Request ? input.url : input).includes(
+          '/purchase-drafts',
+        ),
+      ),
+    ).toHaveLength(0);
+  });
+
+  // `size-5` is a flex BASIS, not a floor, so an icon sharing its line with
+  // anything of its own min-content width shrank below it. Every icon now
+  // refuses to shrink, which is what keeps a slot added later from
+  // reintroducing that one entry at a time.
+  it('gives every entry an icon that refuses to shrink', async () => {
+    stubDraftsWatcher();
+    renderSidebar();
+
+    const entry = await screen.findByRole('link', { name: 'Purchase drafts' });
+    const icon = entry.querySelector('svg');
+
+    expect(icon).not.toBeNull();
+    expect(icon?.getAttribute('class')).toMatch(/\bshrink-0\b/u);
   });
 });

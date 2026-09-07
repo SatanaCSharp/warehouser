@@ -15,10 +15,10 @@ export type CustomerActionsMenuProps = CustomerActionHandlers & {
 };
 
 /**
- * The kebab one `Delivery/Customer Card` carries (`r80F1`). Its accessible
- * name identifies its subject — `Actions for Nordwind Logistik GmbH` —
- * matching the convention documented for Users Management
- * (design-handoff.md §Accessibility).
+ * The kebab the opened Customer's detail header carries (frame `KRDln`); the
+ * list cards carry none. Its accessible name identifies its subject —
+ * `Actions for Nordwind Logistik GmbH` — matching the convention documented
+ * for Users Management (design-handoff.md §Accessibility).
  *
  * It reads its own actions rather than being handed them, and an actor
  * permissioned for none of them gets no trigger at all rather than an empty

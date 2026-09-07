@@ -94,6 +94,7 @@ const entryFor = (
 const renderDirectory = (
   entries: PurchaseDraftLineListEntry[],
   permissionIds: readonly PermissionId[] = Object.values(PermissionId),
+  query = '',
 ): void => {
   stubAccessServer({ permissionIds });
   const served = globalThis.fetch;
@@ -123,7 +124,7 @@ const renderDirectory = (
   );
 
   renderInEnteredWarehouse(
-    <PurchaseDraftLineDirectory state="ready_for_ordering" />,
+    <PurchaseDraftLineDirectory query={query} state="ready_for_ordering" />,
     store,
   );
 };
@@ -194,6 +195,64 @@ describe('PurchaseDraftLineDirectory', () => {
   // `Table.Body` (`adr/27-08-2026-heroui-table-for-web-data-tables.md`
   // §Decision rule 3), not a paragraph beside it, so a member reading the
   // table's own region is told the answer rather than having to leave it.
+  // Frame `zj46c` — the toolbar's `Search lines, items or customers`, applied
+  // over the lines the by-line read already returned.
+  describe('the by-line search', () => {
+    it('keeps only the lines whose draft, item or customer answers the term', async () => {
+      renderDirectory(
+        [entryFor(dockLine), entryFor(directLine)],
+        Object.values(PermissionId),
+        'Nordwind',
+      );
+
+      expect(
+        await screen.findByRole('grid', {
+          name: 'Lines shipping direct to customer',
+        }),
+      ).toHaveTextContent('Nordwind Logistik GmbH');
+      expect(
+        within(
+          screen.getByRole('grid', { name: 'Lines landing at this warehouse' }),
+        ).queryByText(dockLine.itemSku),
+      ).not.toBeInTheDocument();
+    });
+
+    // AC-09a — the redacted projection carries no `customerDestination` at
+    // all, so a member without `CUSTOMERS:WATCH` cannot use the field to probe
+    // for a name the read withheld.
+    it('matches no customer name for a member who may not read customers', async () => {
+      renderDirectory(
+        [entryFor(redactedDirectLine())],
+        [PermissionId.PURCHASE_DRAFTS_WATCH],
+        'Nordwind',
+      );
+
+      expect(await screen.findByText(/No line matches/u)).toBeInTheDocument();
+    });
+
+    // "Nothing matches what you typed" and "nothing is coming to this
+    // warehouse" are different answers; showing the second for the first
+    // reason would tell a member the dock is clear when it is not.
+    it('answers a term that matches nothing once, not as two empty docks', async () => {
+      renderDirectory(
+        [entryFor(dockLine), entryFor(directLine)],
+        Object.values(PermissionId),
+        'nothing-matches-this',
+      );
+
+      expect(
+        await screen.findByText(
+          'No line matches \u201Cnothing-matches-this\u201D.',
+        ),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('grid', {
+          name: 'Lines landing at this warehouse',
+        }),
+      ).not.toBeInTheDocument();
+    });
+  });
+
   it('says a half is empty inside the table for that half rather than dropping it', async () => {
     renderDirectory([entryFor(directLine)]);
 
@@ -250,12 +309,75 @@ describe('PurchaseDraftLineDirectory', () => {
     });
 
     expect(
-      await within(dock).findByText(
-        'Arrival recorded — 140 arrived at the dock.',
-      ),
+      await within(dock).findByText('Arrived 140 · 26 Aug'),
     ).toBeInTheDocument();
     expect(
       within(dock).queryByRole('button', { name: 'Record what arrived' }),
+    ).not.toBeInTheDocument();
+  });
+
+  // AC-18 / design-handoff.md §States — the by-line frame's declared states
+  // include "one carrying address drift", drawn as a warning second line in
+  // the `DESTINATION` cell. A member preparing the dock reads this table and
+  // nothing else, so a table that never consults `driftSignals` is the one
+  // surface that decides what goes on a pallet without mentioning that the
+  // demand behind it moved.
+  it('warns in the destination cell when a linked order has been redirected (AC-18)', async () => {
+    const driftedDirectLine: PurchaseDraftLineIdentified = {
+      ...directLine,
+      links: [
+        {
+          id: '00000000-0000-4000-8000-000000000701',
+          customerOrderId: '00000000-0000-4000-8000-000000000801',
+          customer: null,
+          customerName: 'Nordwind Logistik GmbH',
+          statedQuantity: 60,
+          snapshot: {
+            capturedDeliveryAddressId: '00000000-0000-4000-8000-000000000301',
+            capturedDeliveryAddressText: CUSTOMER_ADDRESS,
+            capturedQuantity: 60,
+            capturedNeededBy: '2026-09-09',
+            capturedState: 'unfulfilled',
+          },
+          current: {
+            quantity: 60,
+            neededBy: '2026-09-09',
+            state: 'unfulfilled',
+            outstandingQuantity: 60,
+            lastChangedAt: '2026-08-26T12:00:00.000Z',
+            deliveryAddress: {
+              deliveryAddressId: '00000000-0000-4000-8000-000000000302',
+              addressText: 'Speicherweg 4, 21107 Hamburg',
+              accessNotes: null,
+              isMain: true,
+              deactivatedAt: null,
+            },
+          },
+          driftSignals: ['delivery_address_changed'],
+          allocation: null,
+        },
+      ],
+    };
+
+    renderDirectory([entryFor(dockLine), entryFor(driftedDirectLine)]);
+
+    const direct = await screen.findByRole('grid', {
+      name: 'Lines shipping direct to customer',
+    });
+    expect(
+      await within(direct).findByText(
+        'A linked order has been redirected to another delivery address.',
+      ),
+    ).toBeInTheDocument();
+
+    // A line whose links carry no signal says nothing of the sort.
+    const dock = screen.getByRole('grid', {
+      name: 'Lines landing at this warehouse',
+    });
+    expect(
+      within(dock).queryByText(
+        'A linked order has been redirected to another delivery address.',
+      ),
     ).not.toBeInTheDocument();
   });
 });

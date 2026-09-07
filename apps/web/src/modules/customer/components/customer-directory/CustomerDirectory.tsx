@@ -4,7 +4,9 @@ import { useTranslation } from 'react-i18next';
 
 import { CustomerDetailPane } from 'modules/customer/components/customer-directory/components/CustomerDetailPane';
 import { CustomerCatalogue } from 'modules/customer/components/customer-directory/components/customers/CustomerCatalogue';
+import { CustomerToolbar } from 'modules/customer/components/customer-directory/components/customers/CustomerToolbar';
 import { useCustomers } from 'modules/customer/hooks/queries/useCustomers';
+import { Conditional } from 'shared/components/Conditional';
 
 import type { Customer } from '@warehouser/contracts/customers';
 import type { ReactElement } from 'react';
@@ -50,6 +52,12 @@ export const CustomerDirectory = (): ReactElement => {
   const { t } = useTranslation('customer');
   const customers = useCustomers();
   const [tab, setTab] = useState<TabKey>('active');
+  // What was typed into the toolbar's search field. It sits here rather than
+  // with the collection it filters because the frame puts the field in a row
+  // spanning the destination, above the list-and-detail split: the field and
+  // the list it filters are no longer the same subtree, and this is their
+  // nearest common owner (`writing-web-components.md` §8).
+  const [query, setQuery] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState<
     string | undefined
   >(undefined);
@@ -60,6 +68,7 @@ export const CustomerDirectory = (): ReactElement => {
       (TAB_KEYS as readonly string[]).includes(key)
     ) {
       setTab(key as TabKey);
+      setQuery('');
       setSelectedCustomerId(undefined);
     }
   };
@@ -69,6 +78,10 @@ export const CustomerDirectory = (): ReactElement => {
   const onBackToList = (): void => setSelectedCustomerId(undefined);
 
   const visibleCustomers = customers.filter(TAB_PREDICATES[tab]);
+  // Whether this tab has anything to search at all. It is the same condition
+  // `CustomerCatalogue` resolves to its `empty` state, read here because the
+  // toolbar now sits above that state rather than inside it.
+  const hasCustomers = visibleCustomers.length > 0;
   const selectedCustomer = visibleCustomers.find(
     (customer) => customer.id === selectedCustomerId,
   );
@@ -79,7 +92,9 @@ export const CustomerDirectory = (): ReactElement => {
         <Tabs.List aria-label={t('directory.filter.label')}>
           {TAB_KEYS.map((key) => (
             <Tabs.Tab id={key} key={key}>
-              {t(`directory.filter.${key}`)}
+              {t(`directory.filter.${key}`, {
+                count: customers.filter(TAB_PREDICATES[key]).length,
+              })}
               <Tabs.Indicator />
             </Tabs.Tab>
           ))}
@@ -88,7 +103,18 @@ export const CustomerDirectory = (): ReactElement => {
 
       {TAB_KEYS.map((key) => (
         <Tabs.Panel className="pt-5" id={key} key={key}>
-          <div className="flex gap-6">
+          {/* The toolbar spans the destination above the split, which is where
+              the frame puts it and the only width at which the 320px field and
+              the primary action fit on one line. It belongs to the list, so on
+              a phone showing the detail instead it goes with it, and a tab
+              with nothing in it renders no search over its empty state. */}
+          <Conditional when={hasCustomers}>
+            <div className={selectedCustomerId ? 'hidden lg:block' : 'block'}>
+              <CustomerToolbar query={query} onQueryChange={setQuery} />
+            </div>
+          </Conditional>
+
+          <div className="mt-4 flex gap-6">
             <div
               className={`w-full lg:w-[340px] lg:shrink-0 ${
                 selectedCustomerId ? 'hidden lg:block' : 'block'
@@ -96,6 +122,7 @@ export const CustomerDirectory = (): ReactElement => {
             >
               <CustomerCatalogue
                 customers={visibleCustomers}
+                query={query}
                 selectedCustomerId={selectedCustomerId}
                 tab={key}
                 onSelect={onSelectCustomer}

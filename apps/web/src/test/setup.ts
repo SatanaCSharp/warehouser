@@ -128,6 +128,30 @@ if (!('getAnimations' in Element.prototype)) {
   });
 }
 
+// jsdom implements no `matchMedia` either. Anything that asks the platform a
+// media question — HeroUI's own `useMediaQuery`, and the reduced-motion check
+// `useContentTransition` makes before it animates — reads it unguarded,
+// because every browser the application targets has it. Answering "no match"
+// here gives those reads the desktop, full-motion default; a spec that needs
+// the other answer stubs the global itself.
+if (typeof window.matchMedia !== 'function') {
+  Object.defineProperty(window, 'matchMedia', {
+    configurable: true,
+    value: (query: string): MediaQueryList =>
+      ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: () => {},
+        removeListener: () => {},
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        dispatchEvent: () => false,
+      }) as MediaQueryList,
+    writable: true,
+  });
+}
+
 // @testing-library/react only auto-registers its afterEach(cleanup) hook when
 // it detects a global `afterEach` at import time. This project doesn't set
 // `test.globals: true` in vite.config.ts, so that auto-registration never

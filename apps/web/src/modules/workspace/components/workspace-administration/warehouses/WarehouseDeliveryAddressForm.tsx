@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useSetWarehouseDeliveryAddressMutation } from 'modules/workspace/api/warehouse-api';
 import { mutationOutcome } from 'shared/api/client/mutation-outcome';
-import { FormTextField } from 'shared/components/FormTextField';
+import { FormTextAreaField } from 'shared/components/FormTextAreaField';
 import { useFormFieldErrors } from 'shared/hooks/forms/useFormFieldErrors';
 
 import type {
@@ -54,6 +54,7 @@ export const WarehouseDeliveryAddressForm = ({
     formState: { errors, isSubmitting },
     handleSubmit,
     register,
+    reset,
     setError,
   } = useForm<WarehouseDeliveryAddressFormValues>({
     defaultValues: { addressText, accessNotes },
@@ -90,9 +91,19 @@ export const WarehouseDeliveryAddressForm = ({
   const onSubmitForm = (event: FormEvent<HTMLFormElement>): void =>
     void handleSubmit(submit)(event);
 
+  // Cancel abandons the correction rather than the address: the fields go back
+  // to what is recorded, and nothing is sent.
+  const onPressCancel = (): void => reset({ addressText, accessNotes });
+
   return (
     <form className="flex flex-col gap-3" noValidate onSubmit={onSubmitForm}>
-      <FormTextField
+      {/*
+        An address and the notes under it are long by nature and must wrap
+        rather than truncate, so both are the multi-line field the design draws
+        them as (design-handoff.md §"Component mapping": "Address and access
+        notes are the 56px-tall variant").
+      */}
+      <FormTextAreaField
         isRequired
         validationBehavior="aria"
         isInvalid={Boolean(errors.addressText)}
@@ -101,14 +112,16 @@ export const WarehouseDeliveryAddressForm = ({
         label={t('warehouses.deliveryAddress.addressLabel')}
         description={t('warehouses.deliveryAddress.addressDescription')}
         isDisabled={isSubmitting}
+        rows={2}
         {...register('addressText')}
       />
-      <FormTextField
+      <FormTextAreaField
         validationBehavior="aria"
         defaultValue={accessNotes}
         label={t('warehouses.deliveryAddress.accessNotesLabel')}
         description={t('warehouses.deliveryAddress.accessNotesDescription')}
         isDisabled={isSubmitting}
+        rows={2}
         {...register('accessNotes')}
       />
       <Alert status="accent">
@@ -122,7 +135,19 @@ export const WarehouseDeliveryAddressForm = ({
           </Alert.Description>
         </Alert.Content>
       </Alert>
-      <div>
+      {/*
+        Cancel precedes the primary in DOM — and therefore keyboard — order, as
+        it does in every dialog footer (design-handoff.md §"Component mapping").
+      */}
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          variant="ghost"
+          isDisabled={isSubmitting}
+          onPress={onPressCancel}
+        >
+          {t('warehouses.detail.cancel')}
+        </Button>
         <Button
           type="submit"
           variant="primary"

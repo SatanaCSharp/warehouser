@@ -1,14 +1,13 @@
 import { Card, Chip } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 
-import { CustomerActionsMenu } from 'modules/customer/components/customer-directory/components/customers/CustomerActionsMenu';
 import { Conditional } from 'shared/components/Conditional';
+import { ROW_ENTER } from 'shared/constants/motion';
 
 import type { Customer } from '@warehouser/contracts/customers';
-import type { CustomerActionHandlers } from 'modules/customer/hooks/projections/useCustomerActions';
 import type { ReactElement } from 'react';
 
-export type CustomerCardProps = CustomerActionHandlers & {
+export type CustomerCardProps = {
   customer: Customer;
   isSelected: boolean;
   onSelect: (customerId: string) => void;
@@ -25,8 +24,10 @@ export type CustomerCardProps = CustomerActionHandlers & {
  *
  * The Customer's name is a real `<button>` rather than a clickable `<div>`:
  * opening a Customer is an action, so it has to be reachable and announced as
- * one. The kebab sits **outside** that button, because a control inside a
- * control is unreachable by keyboard.
+ * one. It is the card's **only** control: the design gives the list card a
+ * name and a meta line and puts the actions kebab on the detail header
+ * instead (`CustomerDetailHeader`, frame `KRDln`), so nothing here acts on the
+ * Customer beyond opening it.
  *
  * The heading wraps the control rather than the control wrapping the heading.
  * A `<button>` admits phrasing content only, so putting `Card.Title` (an
@@ -39,8 +40,6 @@ export type CustomerCardProps = CustomerActionHandlers & {
 export const CustomerCard = ({
   customer,
   isSelected,
-  onCorrect,
-  onDeactivate,
   onSelect,
 }: CustomerCardProps): ReactElement => {
   const { t } = useTranslation('customer');
@@ -51,7 +50,7 @@ export const CustomerCard = ({
   const onPress = (): void => onSelect(customer.id);
 
   return (
-    <li>
+    <li className={ROW_ENTER}>
       <Card
         className={
           isSelected
@@ -59,7 +58,7 @@ export const CustomerCard = ({
             : 'border border-border shadow-none'
         }
       >
-        <Card.Header className="flex flex-row items-start justify-between gap-2">
+        <Card.Header>
           <div className="min-w-0 flex-1">
             <Card.Title className="text-base font-semibold">
               <button className="text-left" type="button" onClick={onPress}>
@@ -75,11 +74,6 @@ export const CustomerCard = ({
               </Chip>
             </Conditional>
           </div>
-          <CustomerActionsMenu
-            customer={customer}
-            onCorrect={onCorrect}
-            onDeactivate={onDeactivate}
-          />
         </Card.Header>
       </Card>
     </li>

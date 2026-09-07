@@ -1,10 +1,7 @@
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { CustomerCardList } from 'modules/customer/components/customer-directory/components/customers/CustomerCardList';
-import { CustomerSearchField } from 'modules/customer/components/customer-directory/components/customers/CustomerSearchField';
 import { RecordCustomerAction } from 'modules/customer/components/customer-directory/components/customers/RecordCustomerAction';
-import { Conditional } from 'shared/components/Conditional';
 import { DatasetEmptyState } from 'shared/components/DatasetEmptyState';
 import { ContactIcon } from 'shared/icons';
 
@@ -13,6 +10,13 @@ import type { ReactElement } from 'react';
 
 export type CustomerCatalogueProps = {
   customers: Customer[];
+  /**
+   * What was typed into the destination's search field. It arrives as a prop
+   * rather than being owned here because the field that sets it is in the
+   * toolbar above the split, which spans the destination rather than this
+   * column (`CustomerToolbar`).
+   */
+  query: string;
   selectedCustomerId: string | undefined;
   /** Which filter tab this catalogue is the panel of. */
   tab: 'active' | 'inactive';
@@ -38,6 +42,25 @@ const EMPTY_STATE_ACTIONS: Record<
   inactive: undefined,
 };
 
+/**
+ * Whether one Customer answers what was typed into the search field.
+ *
+ * The design's field is `Search customers or addresses` (frame `KRDln`), so a
+ * member who remembers where the goods go rather than who ordered them still
+ * finds the Customer: the term is tested against the name **and** against the
+ * text of every Delivery Address the Customer carries, active and Inactive
+ * alike, because an Inactive address is still what a member remembers typing.
+ *
+ * Access notes are deliberately not searched: they are what a driver needs to
+ * get in, not an identifier, and matching a gate code would put confidential
+ * text (spec.md §6.1) behind a guessable probe.
+ */
+const matchesSearchTerm = (customer: Customer, term: string): boolean =>
+  customer.name.toLocaleLowerCase().includes(term) ||
+  customer.deliveryAddresses.some((address) =>
+    address.addressText.toLocaleLowerCase().includes(term),
+  );
+
 /** The states that displace the cards, most significant first. */
 const DISPLACING_STATES: readonly {
   state: CustomerCatalogueState;
@@ -48,13 +71,15 @@ const DISPLACING_STATES: readonly {
 ];
 
 /**
- * The Customers collection and everything a member reads it through: the
- * search field, the `Record customer` action beside it, the 340px card list,
- * and the state that displaces them (frames `KRDln`, `b7gaH9`, tile `S9TOH`).
+ * The Customers collection itself: the 340px card list and the state that
+ * displaces it (frames `KRDln`, `b7gaH9`, tile `S9TOH`).
  *
- * The search term lives here and nowhere higher, because nothing outside this
- * collection reads it (`writing-web-components.md` §8), and it filters the
- * list the route already loaded rather than issuing a request.
+ * The search **term** is applied here and the search **field** is not: the
+ * frame puts the field in a toolbar spanning the destination above the
+ * list-and-detail split, so it is `CustomerToolbar` that owns the markup and
+ * `CustomerDirectory` that holds the term for both. Filtering stays here
+ * because this is the collection being filtered, and it filters the list the
+ * route already loaded rather than issuing a request.
  *
  * Which of the three states is on screen is resolved to a **name** and
  * rendered through a total `Record<State, ReactElement>` lookup, so adding a
@@ -62,20 +87,22 @@ const DISPLACING_STATES: readonly {
  * (`writing-web-components.md` §6).
  *
  * The empty state's copy is the tab's own; what it offers is
- * `EMPTY_STATE_ACTIONS` above.
+ * `EMPTY_STATE_ACTIONS` above — a Warehouse dealing with nobody has nothing to
+ * search, so `CustomerDirectory` renders no toolbar over it and this is the
+ * only `Record customer` on screen.
  */
 export const CustomerCatalogue = ({
   customers,
+  query,
   selectedCustomerId,
   tab,
   onSelect,
 }: CustomerCatalogueProps): ReactElement => {
   const { t } = useTranslation('customer');
-  const [query, setQuery] = useState('');
 
   const term = query.trim().toLocaleLowerCase();
   const matches = customers.filter((customer) =>
-    customer.name.toLocaleLowerCase().includes(term),
+    matchesSearchTerm(customer, term),
   );
   const state =
     DISPLACING_STATES.find(({ holds }) =>
@@ -106,19 +133,5 @@ export const CustomerCatalogue = ({
     ),
   };
 
-  return (
-    <div>
-      {/* A Warehouse dealing with nobody has nothing to search and one thing
-          to do, so the empty state carries the only `Record customer` on
-          screen rather than a second one competing with the toolbar's. */}
-      <Conditional when={state !== 'empty'}>
-        <div className="flex flex-col gap-3">
-          <CustomerSearchField value={query} onChange={setQuery} />
-          <RecordCustomerAction />
-        </div>
-      </Conditional>
-
-      {content[state]}
-    </div>
-  );
+  return <div>{content[state]}</div>;
 };

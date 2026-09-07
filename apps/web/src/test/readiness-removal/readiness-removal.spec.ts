@@ -356,7 +356,7 @@ describe('readiness removal — the deleted skeleton surfaces (CR-AC-08)', () =>
     const declarations = [
       'test/module-boundaries/module-surface.ts',
       'test/warehouses-tab-case-inventory/warehouses-tab-case-inventory.spec.ts',
-      'shared/layouts/Sidebar.spec.tsx',
+      'shared/layouts/sidebar/Sidebar.spec.tsx',
     ];
 
     expect(
@@ -734,8 +734,14 @@ describe('readiness removal — declarative permission gating is unchanged (CR-R
     'shared/components/WorkspacePermissionGate.tsx': 1,
     'shared/hooks/projections/usePermittedItems.ts': 1,
     'shared/hooks/projections/useWorkspacePermittedItems.ts': 1,
-    // delivery-addresses T21 adds the `Customers` entry's own gate, at 16.
-    'shared/layouts/Sidebar.tsx': 16,
+    // The sidebar's gates moved with its entries when `Sidebar.tsx` was split
+    // into `shared/layouts/sidebar/`: each context's entry set now owns the
+    // gates its own entries carry, and the shell that selects between the two
+    // sets carries none. The Warehouse count is delivery-addresses T21's six
+    // gated entries (five gates, opened and closed, plus the import) and the
+    // Workspace count is AC-30's single one.
+    'shared/layouts/sidebar/components/WarehouseNavEntries.tsx': 12,
+    'shared/layouts/sidebar/components/WorkspaceNavEntries.tsx': 4,
   };
 
   it('keeps every gate and descriptor call site', () => {

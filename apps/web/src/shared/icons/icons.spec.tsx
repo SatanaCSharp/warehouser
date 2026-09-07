@@ -55,6 +55,12 @@ const REQUIRED_ICONS: Record<string, keyof typeof Icons> = {
   contact: 'ContactIcon',
   'map-pin': 'MapPinIcon',
   'package-check': 'PackageCheckIcon',
+  // The collapsible sidebar's expand direction — the mirror of `chevron-left`,
+  // which this shell already uses for the collapse direction. Added by the
+  // sidebar-collapse change rather than by a design handoff, so it is listed
+  // here for the same reason as the rest: the icon is required by a shipped
+  // control, and its absence must fail rather than pass silently.
+  'chevron-right': 'ChevronRightIcon',
 };
 
 describe('shared/icons', () => {

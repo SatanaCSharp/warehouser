@@ -3,7 +3,7 @@ import type { ReactElement } from 'react';
 export const SearchIcon = (): ReactElement => (
   <svg
     aria-hidden="true"
-    className="size-5 text-foreground-400"
+    className="shrink-0 size-5 text-foreground-400"
     fill="none"
     viewBox="0 0 24 24"
     stroke="currentColor"

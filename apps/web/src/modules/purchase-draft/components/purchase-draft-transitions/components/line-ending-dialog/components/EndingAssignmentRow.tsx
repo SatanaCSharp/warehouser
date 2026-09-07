@@ -10,10 +10,18 @@ import { Conditional } from 'shared/components/Conditional';
 import { FormTextField } from 'shared/components/FormTextField';
 import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
 
-import type { PurchaseDraftLineLink } from '@warehouser/contracts/purchase-drafts';
+import type {
+  DeliveryMode,
+  PurchaseDraftLineLink,
+} from '@warehouser/contracts/purchase-drafts';
 import type { ReactElement } from 'react';
 
 export type EndingAssignmentRowProps = {
+  /**
+   * How the line being ended travels, which decides what a moved Delivery
+   * Address on one of its links means (AC-18).
+   */
+  deliveryMode: DeliveryMode;
   /** Whether the confirmation is in flight, which disables every field in it. */
   isSubmitting: boolean;
   link: PurchaseDraftLineLink;
@@ -42,6 +50,7 @@ const NOTHING_ASSIGNABLE = '—';
  * lines render, with no arithmetic of its own.
  */
 export const EndingAssignmentRow = ({
+  deliveryMode,
   isSubmitting,
   link,
   onCommit,
@@ -60,7 +69,7 @@ export const EndingAssignmentRow = ({
     // `Fulfilled elsewhere` (AC-16). A link the server reported no signal for — an
     // order that was already cancelled when the draft was frozen, so nothing about
     // it moved — still names its state, because the row must say why it is disabled.
-    const drifted = driftChips(link);
+    const drifted = driftChips(link, deliveryMode);
     const chips =
       drifted.length > 0
         ? drifted
@@ -94,6 +103,7 @@ export const EndingAssignmentRow = ({
 
   return (
     <PurchaseDraftLinkRow
+      deliveryMode={deliveryMode}
       isFrozen={false}
       link={link}
       field={{

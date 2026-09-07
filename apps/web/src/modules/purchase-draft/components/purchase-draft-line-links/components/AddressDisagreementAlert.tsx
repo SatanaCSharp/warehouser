@@ -39,6 +39,9 @@ export const AddressDisagreementAlert = ({
     <Alert role="alert" status="danger">
       <Alert.Indicator />
       <Alert.Content>
+        <Alert.Title>
+          {t('dialogs.addLink.refusal.addressDisagreementTitle')}
+        </Alert.Title>
         <Alert.Description>
           {t('dialogs.addLink.refusal.addressDisagreement', {
             context:

@@ -62,7 +62,11 @@ export const CustomerAwaitingTable = ({
             <Table.Column isRowHeader id="item">
               {t('detail.awaiting.item')}
             </Table.Column>
-            <Table.Column id="outstanding">
+            {/* The figures are right-aligned so the column reads as one
+                stack of comparable numbers, and its header goes with them —
+                a heading that stays left of the values it names points at
+                nothing (frame `KRDln`). */}
+            <Table.Column className="text-right" id="outstanding">
               {t('detail.awaiting.outstanding')}
             </Table.Column>
             <Table.Column id="neededBy">

@@ -1,3 +1,4 @@
+import { Separator } from '@heroui/react';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
 import { useTranslation } from 'react-i18next';
 
@@ -46,6 +47,13 @@ export const WarehouseDeliveryAddressSection = ({
     <WorkspacePermissionGate
       permission={WorkspacePermissionId.WAREHOUSES_ADDRESS_UPDATE}
     >
+      {/*
+        The rule that separates this block from the name field above it is the
+        block's own, not the pane's: the section is withheld entirely from a
+        member without the Permission, and a rule left behind in the pane would
+        divide nothing (`warehouse-address-desktop-v1.html`).
+      */}
+      <Separator />
       <section className="flex flex-col gap-3">
         <div className="flex flex-col gap-1">
           <h3 className="text-sm font-semibold">

@@ -5,10 +5,12 @@ import { useTranslation } from 'react-i18next';
 import { CreatePurchaseDraftAction } from 'modules/purchase-draft/components/CreatePurchaseDraftAction';
 import { PurchaseDraftLineDirectory } from 'modules/purchase-draft/components/purchase-draft-line-directory/PurchaseDraftLineDirectory';
 import { PurchaseDraftByDraftView } from 'modules/purchase-draft/components/purchase-draft-workspace/components/PurchaseDraftByDraftView';
+import { PurchaseDraftLineSearchField } from 'modules/purchase-draft/components/purchase-draft-workspace/components/PurchaseDraftLineSearchField';
 import { PurchaseDraftViewToggle } from 'modules/purchase-draft/components/purchase-draft-workspace/components/PurchaseDraftViewToggle';
 import { usePurchaseDrafts } from 'modules/purchase-draft/hooks/queries/usePurchaseDrafts';
 import { ArchivedWarehouseChip } from 'shared/components/ArchivedWarehouseChip';
 import { ArchivedWarehouseNotice } from 'shared/components/ArchivedWarehouseNotice';
+import { Conditional } from 'shared/components/Conditional';
 
 import type { PurchaseDraftState } from '@warehouser/contracts/purchase-drafts';
 import type { PurchaseDraftView } from 'modules/purchase-draft/components/purchase-draft-workspace/components/PurchaseDraftViewToggle';
@@ -22,6 +24,27 @@ const TAB_STATES = [
 ] as const satisfies readonly PurchaseDraftState[];
 
 type TabState = (typeof TAB_STATES)[number];
+
+/**
+ * Whether a tab offers the `By draft / By line` toggle at all.
+ *
+ * AC-22 scopes the split to a Warehouse "whose **frozen** Purchase Drafts hold
+ * lines of both delivery modes", and the approved frames draw it that way: the
+ * `Being worked on` toolbar carries the `New draft` action alone (`cvX6h`),
+ * while the toggle appears on the frozen tabs (`zj46c`). A draft still being
+ * assembled has no dock to prepare — its lines are a decision in progress, not
+ * goods anybody is about to handle — so looking at it by line answers nothing
+ * the list beside it does not already answer.
+ *
+ * It is a total `Record` rather than a `state !== 'draft'` test so that a
+ * fourth state cannot be added without someone deciding this for it
+ * (`writing-web-components.md` §6).
+ */
+const TAB_OFFERS_VIEW_TOGGLE: Record<TabState, boolean> = {
+  draft: false,
+  ready_for_ordering: true,
+  closed: true,
+};
 
 /** Which copy key each tab's label reads; the count is interpolated into it. */
 const TAB_LABELS: Record<TabState, string> = {
@@ -55,6 +78,11 @@ export const PurchaseDraftWorkspace = (): ReactElement => {
   // the toggle that sets it, and never a URL or a Redux concern: it survives
   // nothing and nobody else reads it (`writing-web-components.md` §9).
   const [view, setView] = useState<PurchaseDraftView>('byDraft');
+  // What was typed into the by-line search. It sits here because the field is
+  // in the toolbar row beside the toggle, while the rows it filters are inside
+  // the panel below — this is their nearest common owner
+  // (`writing-web-components.md` §8).
+  const [lineQuery, setLineQuery] = useState('');
   const [selectedDraftId, setSelectedDraftId] = useState<string | undefined>(
     undefined,
   );
@@ -64,12 +92,14 @@ export const PurchaseDraftWorkspace = (): ReactElement => {
       (TAB_STATES as readonly string[]).includes(key)
     ) {
       setTab(key as TabState);
+      setLineQuery('');
       setSelectedDraftId(undefined);
     }
   };
   const onSelectDraft = (draftId: string): void => setSelectedDraftId(draftId);
   const onSelectView = (selected: PurchaseDraftView): void => {
     setView(selected);
+    setLineQuery('');
     setSelectedDraftId(undefined);
   };
   const onBackToList = (): void => setSelectedDraftId(undefined);
@@ -77,6 +107,15 @@ export const PurchaseDraftWorkspace = (): ReactElement => {
   const draftsIn = (state: TabState): typeof drafts =>
     drafts.filter((draft) => draft.state === state);
   const visibleDrafts = draftsIn(tab);
+
+  // A tab that offers no toggle is always read by draft, whatever the member
+  // last chose on a tab that did. Deriving it here rather than resetting
+  // `view` in `onSelectTab` is what makes the invariant hold for every route
+  // into this state — including the first paint — instead of only for the one
+  // that goes through the handler: there is no reachable moment where the
+  // by-line split is on screen with no control to leave it by.
+  const offersViewToggle = TAB_OFFERS_VIEW_TOGGLE[tab];
+  const effectiveView = offersViewToggle ? view : 'byDraft';
 
   // AC-22 — what the toggle chose, resolved per tab because each panel shows
   // the drafts its own state selects. A total `Record<PurchaseDraftView, …>`
@@ -100,7 +139,7 @@ export const PurchaseDraftWorkspace = (): ReactElement => {
         onSelect={onSelectDraft}
       />
     ),
-    byLine: <PurchaseDraftLineDirectory state={state} />,
+    byLine: <PurchaseDraftLineDirectory query={lineQuery} state={state} />,
   });
 
   return (
@@ -130,14 +169,31 @@ export const PurchaseDraftWorkspace = (): ReactElement => {
           </Tabs.List>
         </Tabs.ListContainer>
 
-        <div className="mt-4 flex flex-wrap items-end justify-between gap-3">
-          <PurchaseDraftViewToggle value={view} onChange={onSelectView} />
-          <CreatePurchaseDraftAction />
+        {/* The toolbar the frames draw across the destination: the by-line
+            search at the start, and the toggle beside the one primary action
+            at the end (`zj46c`). The search is absent while the member is
+            looking by draft, because the rows it filters are not on screen. */}
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <Conditional when={effectiveView === 'byLine'}>
+            <PurchaseDraftLineSearchField
+              value={lineQuery}
+              onChange={setLineQuery}
+            />
+          </Conditional>
+          <div className="ms-auto flex flex-wrap items-center gap-3">
+            <Conditional when={offersViewToggle}>
+              <PurchaseDraftViewToggle
+                value={effectiveView}
+                onChange={onSelectView}
+              />
+            </Conditional>
+            <CreatePurchaseDraftAction />
+          </div>
         </div>
 
         {TAB_STATES.map((state) => (
           <Tabs.Panel className="pt-5" id={state} key={state}>
-            {viewContent(state)[view]}
+            {viewContent(state)[effectiveView]}
           </Tabs.Panel>
         ))}
       </Tabs>

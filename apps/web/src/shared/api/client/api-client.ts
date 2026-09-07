@@ -68,6 +68,37 @@ const normalizeError = (payload: unknown): ApiFailure => {
   };
 };
 
+/**
+ * The query string an endpoint asked for, appended to its path.
+ *
+ * `FetchArgs` carries `params` because RTK Query's own `fetchBaseQuery` reads
+ * it; this base query is hand-written, so a `params` it did not read was
+ * accepted by the type checker and then silently dropped — the request went
+ * out unfiltered and the endpoint's own filter never happened. That is not a
+ * cosmetic loss: the by-line purchase-draft read (AC-22) filters by draft
+ * state on the server, so dropping `state` returned every state's lines at
+ * once.
+ *
+ * `undefined` and `null` values are omitted rather than sent as the strings
+ * `"undefined"`/`"null"`, so `params: { state: undefined }` is the same
+ * request as no `params` at all.
+ */
+const withParams = (url: string, params: FetchArgs['params']): string => {
+  if (!params) {
+    return url;
+  }
+
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null) {
+      search.append(key, String(value));
+    }
+  }
+
+  const query = search.toString();
+  return query ? `${url}${url.includes('?') ? '&' : '?'}${query}` : url;
+};
+
 const apiBaseQuery: BaseQueryFn<
   string | FetchArgs,
   unknown,
@@ -82,7 +113,7 @@ const apiBaseQuery: BaseQueryFn<
   }
   let response: Response;
   try {
-    response = await fetch(request.url, {
+    response = await fetch(withParams(request.url, request.params), {
       body:
         request.body === undefined ? undefined : JSON.stringify(request.body),
       credentials: 'include',

@@ -2,6 +2,7 @@ import { Button, Chip, Dropdown, Label } from '@heroui/react';
 import { PermissionId } from '@warehouser/shared-types/enums';
 import { useTranslation } from 'react-i18next';
 
+import { ROW_ENTER } from 'shared/constants/motion';
 import { usePermittedItems } from 'shared/hooks/projections/usePermittedItems';
 import { KebabIcon, KeyIcon, MailIcon, TrashIcon } from 'shared/icons';
 
@@ -168,7 +169,7 @@ export const MemberRow = ({
   return (
     <li
       aria-label={member.email}
-      className="flex min-h-[72px] items-center justify-between gap-3 rounded-xl border border-border bg-surface p-4"
+      className={`flex min-h-[72px] items-center justify-between gap-3 rounded-xl border border-border bg-surface p-4 ${ROW_ENTER}`}
     >
       <div>
         <p className="font-semibold">{member.email}</p>

@@ -20,12 +20,6 @@
     "item": {
       "meta": "{{sku}} · counted in {{unit}}"
     },
-    "outstanding": {
-      "caption": "{{unit}} outstanding"
-    },
-    "onHand": {
-      "caption": "on hand"
-    },
     "urgency": {
       "today": "needed today",
       "upcoming_one": "in {{count}} day",

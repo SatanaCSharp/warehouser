@@ -147,6 +147,7 @@ export const LineEndingFieldset = ({
           {line.links.map((link, allocationIndex) => (
             <EndingAssignmentRow
               key={link.id}
+              deliveryMode={line.deliveryMode}
               isSubmitting={isSubmitting}
               link={link}
               onCommit={onCommitAllocation(allocationIndex)}
@@ -160,7 +161,7 @@ export const LineEndingFieldset = ({
           sku: line.itemSku,
         })}
         aria-live="polite"
-        className="mt-3 text-sm text-default"
+        className="mt-3 text-sm text-muted"
         role="status"
       >
         {summary}

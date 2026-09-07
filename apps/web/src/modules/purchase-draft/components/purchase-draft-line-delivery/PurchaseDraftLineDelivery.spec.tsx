@@ -163,6 +163,7 @@ const renderDelivery = (
     <div id={LOCK_STRIP_ID}>
       <PurchaseDraftLineDelivery
         isDisabled={isDisabled}
+        isFrozen={isDisabled}
         line={line}
         reasonId={isDisabled ? LOCK_STRIP_ID : undefined}
         onReviseLine={onReviseLine}
@@ -224,8 +225,28 @@ describe('PurchaseDraftLineDelivery', () => {
       permissionIds: [PermissionId.PURCHASE_DRAFTS_WATCH],
     });
 
-    expect(await screen.findByText(WAREHOUSE_ADDRESS)).toBeInTheDocument();
-    expect(screen.getByText(WAREHOUSE_ACCESS_NOTES)).toBeInTheDocument();
+    // AC-15/AC-17 — the destination is a real HeroUI field, so it is read
+    // through its label and its value, exactly as every other control on the
+    // line is. Before it was, it was the one bare `<div>` of spans a frozen
+    // line rendered in place of a disabled field.
+    expect(await screen.findByLabelText('Goes to')).toHaveValue(
+      `This warehouse\n${WAREHOUSE_ADDRESS}\n${WAREHOUSE_ACCESS_NOTES}`,
+    );
+  });
+
+  // AC-17 — a frozen line states where its goods **went**, and says why that
+  // address is what it is. Both are the field's own copy, keyed by the tense
+  // and by the Delivery Mode, so neither can be a lookalike of the editable
+  // one.
+  it('speaks in the past tense on a frozen line, and captions the address it kept', async () => {
+    renderDelivery(viaWarehouseLine(), vi.fn(), { isDisabled: true });
+
+    const destination = await screen.findByLabelText('Went to');
+    expect(destination).toBeDisabled();
+    expect(destination).toHaveAccessibleDescription(
+      /Your warehouse delivery address, captured as it read at the freeze\./u,
+    );
+    expect(screen.queryByLabelText('Goes to')).not.toBeInTheDocument();
   });
 
   // AC-16a refuses to freeze from this state; it is nonetheless reachable while
@@ -242,21 +263,20 @@ describe('PurchaseDraftLineDelivery', () => {
       }),
     );
 
-    expect(
-      await screen.findByText(
-        'No delivery address is recorded for this warehouse yet.',
-      ),
-    ).toBeInTheDocument();
+    expect(await screen.findByLabelText('Goes to')).toHaveValue(
+      'This warehouse\nNo delivery address is recorded for this warehouse yet.',
+    );
   });
 
   it('states the customer, the address and the access notes of a direct line', async () => {
     renderDelivery(directLine());
 
-    expect(
-      await screen.findByText('Nordwind Logistik GmbH'),
-    ).toBeInTheDocument();
-    expect(screen.getByText(CUSTOMER_ADDRESS)).toBeInTheDocument();
-    expect(screen.getByText(CUSTOMER_ACCESS_NOTES)).toBeInTheDocument();
+    expect(await screen.findByLabelText('Goes to')).toHaveValue(
+      `Nordwind Logistik GmbH\n${CUSTOMER_ADDRESS}\n${CUSTOMER_ACCESS_NOTES}`,
+    );
+    expect(screen.getByLabelText('Goes to')).toHaveAccessibleDescription(
+      /An active delivery address of a customer\./u,
+    );
   });
 
   // AC-09a — the redacted arm omits `customerDestination` entirely, so the

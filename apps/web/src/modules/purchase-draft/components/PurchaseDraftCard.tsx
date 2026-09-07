@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { DriftSignal } from 'modules/purchase-draft/components/DriftSignal';
 import { useDraftActorName } from 'modules/purchase-draft/hooks/projections/useDraftActorName';
 import { Conditional } from 'shared/components/Conditional';
+import { ROW_ENTER } from 'shared/constants/motion';
 import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
 
 import type {
@@ -80,7 +81,7 @@ export const PurchaseDraftCard = ({
   };
 
   return (
-    <li>
+    <li className={ROW_ENTER}>
       <button
         aria-current={isSelected}
         className={`w-full rounded-xl border p-4 text-left ${

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { CustomerRefusalAlert } from 'modules/customer/components/customer-directory/components/CustomerRefusalAlert';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
+import { FormTextAreaField } from 'shared/components/FormTextAreaField';
 import { FormTextField } from 'shared/components/FormTextField';
 
 import type { CustomerCreate } from '@warehouser/contracts/customers';
@@ -101,7 +102,13 @@ export const RecordCustomerDialog = ({
         isDisabled={isSubmitting}
         {...register('name', { required: translate('customerName.required') })}
       />
-      <FormTextField
+      {/*
+        An address and the notes under it are long by nature and must wrap
+        rather than truncate, so both are the multi-line field the design
+        draws them as (design-handoff.md §"Component mapping": "Address and
+        access notes are the 56px-tall variant").
+      */}
+      <FormTextAreaField
         isRequired
         validationBehavior="aria"
         isInvalid={Boolean(errors.addressText)}
@@ -109,17 +116,19 @@ export const RecordCustomerDialog = ({
         description={t('dialogs.record.addressHelp')}
         label={t('dialogs.record.addressLabel')}
         isDisabled={isSubmitting}
+        rows={2}
         {...register('addressText', {
           required: translate('customerAddressText.required'),
         })}
       />
-      <FormTextField
+      <FormTextAreaField
         validationBehavior="aria"
         isInvalid={Boolean(errors.accessNotes)}
         errorMessage={errors.accessNotes?.message}
         description={t('dialogs.record.accessNotesHelp')}
         label={t('dialogs.record.accessNotesLabel')}
         isDisabled={isSubmitting}
+        rows={2}
         {...register('accessNotes')}
       />
       <p className="text-sm text-muted">{t('dialogs.record.note')}</p>

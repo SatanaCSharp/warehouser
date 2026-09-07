@@ -99,7 +99,7 @@ export const ExpectedArrivalDateField = ({
 
       <Conditional when={reason}>
         <p
-          className="mt-2 flex items-center gap-1.5 text-sm text-default"
+          className="mt-2 flex items-center gap-1.5 text-sm text-muted"
           id={EXPECTED_ARRIVAL_REFUSAL_REASON_ID}
         >
           <LockIcon />

@@ -5,6 +5,7 @@ import { CoverageChips } from 'modules/customer-order/components/demand-director
 import { CustomerOrderActionsMenu } from 'modules/customer-order/components/demand-directory/components/CustomerOrderActionsMenu';
 import { CustomerOrderIdentityCell } from 'modules/customer-order/components/demand-directory/components/CustomerOrderIdentityCell';
 import { DemandUrgencyChip } from 'modules/customer-order/components/demand-directory/components/DemandUrgencyChip';
+import { ROW_ENTER } from 'shared/constants/motion';
 import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
 
 import type {
@@ -73,7 +74,7 @@ export const DemandCard = ({
   const format = useLocaleFormat();
 
   return (
-    <li>
+    <li className={ROW_ENTER}>
       <Card>
         <Disclosure>
           {({ isExpanded }) => (

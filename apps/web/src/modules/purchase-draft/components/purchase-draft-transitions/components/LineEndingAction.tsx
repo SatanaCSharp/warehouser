@@ -1,4 +1,4 @@
-import { Button, Modal } from '@heroui/react';
+import { Button, Chip, Modal } from '@heroui/react';
 import { PermissionId } from '@warehouser/shared-types/enums';
 import { useTranslation } from 'react-i18next';
 
@@ -19,10 +19,12 @@ import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehous
 import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
 
 import type {
+  EndingKind,
   PurchaseDraftDetail,
   PurchaseDraftLine,
   PurchaseDraftLineArrival,
   PurchaseDraftLineDirectDelivery,
+  PurchaseDraftLineEnding,
 } from '@warehouser/contracts/purchase-drafts';
 import type { ReactElement } from 'react';
 import type { MutationResult } from 'shared/api/client/mutation-outcome';
@@ -82,7 +84,7 @@ export const LineEndingAction = ({
   const { t } = useTranslation('purchase-draft');
   const warehouseId = useEnteredWarehouse() ?? '';
   const { isArchived, reasonId } = useArchivedWarehouse();
-  const { quantity } = useLocaleFormat();
+  const { quantity, shortTimestampDate } = useLocaleFormat();
   const [recordArrival] = useRecordPurchaseDraftLineArrivalMutation();
   const [recordDirectDelivery] =
     useRecordPurchaseDraftLineDirectDeliveryMutation();
@@ -106,6 +108,26 @@ export const LineEndingAction = ({
       purchaseDraftLineId: line.id,
       input,
     });
+
+  // Total by construction: every ending kind names what it says once recorded,
+  // so a third kind fails to compile here rather than falling through to a
+  // key that resolves to nothing (`writing-web-components.md` §6).
+  const recordedLabel = (ending: PurchaseDraftLineEnding): string => {
+    const values = {
+      count: ending.quantity,
+      formatted: quantity(ending.quantity),
+      on: shortTimestampDate(ending.recordedAt),
+    };
+    const label: Record<EndingKind, string> = {
+      arrival: t('transitions.lineEnding.recorded.arrival', values),
+      direct_delivery: t(
+        'transitions.lineEnding.recorded.direct_delivery',
+        values,
+      ),
+    };
+
+    return label[ending.kind];
+  };
 
   const endingTrigger = (
     kind: 'arrival' | 'directDelivery',
@@ -157,19 +179,24 @@ export const LineEndingAction = ({
     return null;
   }
 
-  // The sentence reads the ending the line carries, so it is resolved here
-  // rather than gated inline — `Conditional` builds both arms
+  // The chip reads the ending the line carries, so it is resolved here rather
+  // than gated inline — `Conditional` builds both arms
   // (`writing-web-conditional-components.md` §2). Resolving it is what types
   // the ending non-nullable where its copy is written, so no placeholder kind
   // or quantity can stand in for one that is not there.
+  //
+  // **It is a success chip carrying the day, not a muted sentence** (`zj46c`
+  // `Delivered 28 Aug`, `F0SpRx` `Arrived … · 26 Aug`): a recorded ending is
+  // the resolved outcome of the line, and the by-line table's `ENDING` column
+  // has to be readable at a glance. `recordedAt` is on the ending itself, so
+  // the day costs no second read. The chip states its own kind in words, so
+  // `success` is never the thing carrying the meaning
+  // (design-handoff.md §Accessibility).
   const recorded =
     line.ending === null ? null : (
-      <p className="text-sm text-muted">
-        {t(`transitions.lineEnding.recorded.${line.ending.kind}`, {
-          count: line.ending.quantity,
-          formatted: quantity(line.ending.quantity),
-        })}
-      </p>
+      <Chip color="success" size="sm" variant="soft">
+        {recordedLabel(line.ending)}
+      </Chip>
     );
 
   return (

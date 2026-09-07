@@ -25,3 +25,98 @@ html {
 body {
   @apply bg-background text-foreground antialiased;
 }
+
+/*
+ * Disabled contrast.
+ *
+ * HeroUI expresses "disabled" as opacity alone (`--disabled-opacity`, applied by the
+ * `status-disabled` utility), and its default of 0.5 puts foreground text at roughly 1.9:1
+ * against the surface behind it — pale enough that a disabled field's own value could not be
+ * read. Two changes make it legible without taking the affordance away:
+ *
+ * 1. The ratio itself is raised. `--disabled-opacity` is a scalar, not one of the oklch colour
+ *    tokens the policy above protects, so this diverges from a HeroUI default without touching
+ *    the palette the design board owns; the light and dark themes share the single declaration
+ *    HeroUI makes for it, so one override covers both.
+ * 2. The compounding is stopped. Several HeroUI components apply `status-disabled` at more than
+ *    one level of the same subtree — a disabled `input-group` dims itself and the `input` inside
+ *    it, and a disabled field dims its `label` too — so the ratios multiplied and the worst cases
+ *    landed at a quarter opacity. Nested elements are pinned to 1 and inherit their ancestor's
+ *    dimming exactly once.
+ *
+ * Both rules sit outside `@layer`, so they win over the layered `@heroui/styles` declarations
+ * regardless of selector specificity. Disabledness is still carried by
+ * `cursor: not-allowed`, `pointer-events: none` and each control's own disabled colours.
+ */
+:root {
+  --disabled-opacity: 0.75;
+}
+
+[data-disabled='true'] [data-disabled='true'],
+[data-disabled='true'] [aria-disabled='true'],
+[data-disabled='true'] :disabled,
+[aria-disabled='true'] [data-disabled='true'],
+[aria-disabled='true'] [aria-disabled='true'],
+[aria-disabled='true'] :disabled,
+:disabled [data-disabled='true'],
+:disabled :disabled {
+  opacity: 1;
+}
+
+/*
+ * The ground a disabled field stands on, rather than a paler copy of its value.
+ *
+ * The dimming above keeps every disabled control legible enough to read, but a
+ * field is the one control whose whole purpose is to state a value: a frozen
+ * Purchase Draft line, a Warehouse an actor may watch but not write, an
+ * archived site. `@heroui/styles` gives those fields no disabled colours at
+ * all — only the opacity — so their value is always some fraction of the
+ * foreground over the surface behind it, which is what made a frozen draft
+ * hard to read.
+ *
+ * The frames answer it the other way round, and this follows them: the value
+ * keeps its own colour and the **field** turns `default`, exactly as
+ * `frozen-draft-desktop-v1.html` draws a frozen line's Item, Quantity,
+ * Packaging type and destination. `--field-background` and `--field-shadow`
+ * are the variables every field surface already reads
+ * (`background-color: var(--field-background, var(--default))`), so redeclaring
+ * them on the disabled element re-grounds the field without touching the
+ * palette the design board owns. Buttons, tabs, links and the rest keep the
+ * opacity treatment the frames draw for them.
+ *
+ * Disabledness is still carried by the flat `default` ground, by
+ * `cursor: not-allowed`, by `pointer-events: none` and by `aria-disabled`.
+ */
+.input:disabled,
+.input[data-disabled='true'],
+.input[aria-disabled='true'],
+.input-group[data-disabled='true'],
+.input-group[aria-disabled='true'],
+.textarea:disabled,
+.textarea[data-disabled='true'],
+.textarea[aria-disabled='true'],
+.select__trigger[data-disabled='true'],
+.select__trigger[aria-disabled='true'],
+.search-field__group[data-disabled='true'],
+.search-field__group[aria-disabled='true'],
+.number-field__group[data-disabled='true'],
+.number-field__group[aria-disabled='true'],
+.date-input-group[data-disabled='true'],
+.date-input-group[aria-disabled='true'],
+.date-picker__trigger[data-disabled='true'],
+.date-picker__trigger[aria-disabled='true'] {
+  opacity: 1;
+  --field-background: var(--default);
+  --field-shadow: 0 0 0 0 transparent inset;
+}
+
+/*
+ * A field's label names what the value is, so it is never the thing that gets
+ * dimmed: the frames keep it at `foreground` on a frozen line and let the
+ * field's own ground say the field is closed.
+ */
+.label--disabled,
+[data-disabled='true'] .label,
+[aria-disabled='true'] .label {
+  opacity: 1;
+}
