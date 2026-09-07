@@ -542,6 +542,34 @@ export const applicationErrors: Readonly<
         'That ending does not match the way this line’s goods travelled.',
     },
   },
+  [ErrorCode.PURCHASE_DRAFTS_REJECTION_CAPABILITY_REQUIRED]: {
+    status: 403,
+    envelope: {
+      code: ErrorCode.PURCHASE_DRAFTS_REJECTION_CAPABILITY_REQUIRED,
+      message: 'Refusing part of a line needs the refusing capability.',
+    },
+  },
+  [ErrorCode.PURCHASE_DRAFTS_CONDITION_SPLIT_INVALID]: {
+    status: 400,
+    envelope: {
+      code: ErrorCode.PURCHASE_DRAFTS_CONDITION_SPLIT_INVALID,
+      message: 'What was refused does not add up against what arrived.',
+    },
+  },
+  [ErrorCode.PURCHASE_DRAFTS_PRE_RECEIPT_CONFORMANCE_INVALID]: {
+    status: 400,
+    envelope: {
+      code: ErrorCode.PURCHASE_DRAFTS_PRE_RECEIPT_CONFORMANCE_INVALID,
+      message: 'That judgement of the delivery as presented is not valid.',
+    },
+  },
+  [ErrorCode.PURCHASE_DRAFTS_DISPOSITION_NOT_REVERSIBLE]: {
+    status: 409,
+    envelope: {
+      code: ErrorCode.PURCHASE_DRAFTS_DISPOSITION_NOT_REVERSIBLE,
+      message: 'A decision that has been made cannot be made undecided again.',
+    },
+  },
 };
 
 export const systemErrors: Readonly<
