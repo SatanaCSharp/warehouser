@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 // T13 — the executable form of the coordinator's ruling: "purchase-drafts currently has no
@@ -93,6 +93,76 @@ describe('purchase-drafts usecase module surface (T18)', () => {
       expect(exportsBlockOf(source)).toMatch(
         new RegExp(`\\b${queryName}\\b`, 'u'),
       );
+    },
+  );
+});
+
+// T7 — server-architecture.md §Domain: "Domain entities and value objects must not import NestJS,
+// HTTP adapters, BullMQ, TypeORM, or concrete persistence models", and server-error-handling.md §5:
+// "Domain code and use cases throw framework-independent errors and do not import NestJS
+// `HttpException` classes". The predicates and error factories this feature adds are the largest
+// single addition this module's `domain/` has taken, so the rule is asserted over the **directory**
+// rather than over a hand-written list of files: a file added tomorrow is covered without anyone
+// remembering to extend an array (the rotted-list failure mode).
+//
+// **Scoped to the pure directories, and deliberately so.** T7's Definition of Done says "no file
+// under `domain/` imports NestJS, HTTP or TypeORM", which the shipped tree already contradicts:
+// `domain/services/purchase-draft-assembly.service.ts` is an `@Injectable()` provider, which
+// server-architecture.md §Services sanctions — the rule it states is about entities and value
+// objects, not about every file beneath `domain/`. Widening this scan to `services/` would turn a
+// green shipped file red for obeying the architecture, so the scan covers `predicates/`,
+// `value-objects/` and `errors/`, which is exactly the surface T7 adds to. Recorded rather than
+// silently narrowed.
+describe('purchase-drafts domain independence (T7)', () => {
+  const FORBIDDEN_SPECIFIERS = [
+    '@nestjs/',
+    'typeorm',
+    'shared/domain/entities/',
+  ];
+
+  const PURE_DOMAIN_DIRECTORIES = ['predicates', 'value-objects', 'errors'];
+
+  const domainSourceFiles = (): readonly string[] => {
+    const domainRoot = join(__dirname, 'domain');
+    const walk = (directory: string): readonly string[] =>
+      readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+        const path = join(directory, entry.name);
+        if (entry.isDirectory()) {
+          return walk(path);
+        }
+        return entry.isFile() &&
+          entry.name.endsWith('.ts') &&
+          !entry.name.endsWith('.spec.ts')
+          ? [path]
+          : [];
+      });
+    return PURE_DOMAIN_DIRECTORIES.flatMap((directory) =>
+      walk(join(domainRoot, directory)),
+    );
+  };
+
+  // The scan proves nothing unless it reaches this feature's own additions, so the two modules
+  // T7 adds are named here — the one assertion in this block that is about placement rather than
+  // about independence.
+  it.each([
+    'predicates/purchase-draft-condition.predicates.ts',
+    'value-objects/line-condition.ts',
+  ])('reaches %s under domain/', (relativePath) => {
+    expect(
+      domainSourceFiles().map((path) =>
+        path.slice(join(__dirname, 'domain').length + 1),
+      ),
+    ).toContain(relativePath);
+  });
+
+  it.each(FORBIDDEN_SPECIFIERS)(
+    'imports nothing from %s anywhere under domain/',
+    (specifier) => {
+      const offenders = domainSourceFiles().filter((path) =>
+        readFileSync(path, 'utf8').includes(specifier),
+      );
+
+      expect(offenders).toEqual([]);
     },
   );
 });
