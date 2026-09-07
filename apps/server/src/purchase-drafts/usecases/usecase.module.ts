@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { CustomerOrdersUsecaseModule } from 'customer-orders/usecases/usecase.module';
+import { ArrivalInspectionService } from 'purchase-drafts/domain/services/arrival-inspection.service';
 import { PurchaseDraftAssemblyService } from 'purchase-drafts/domain/services/purchase-draft-assembly.service';
 import { AddPurchaseDraftLineCommand } from 'purchase-drafts/usecases/commands/add-purchase-draft-line.command';
 import { AddPurchaseDraftLineLinkCommand } from 'purchase-drafts/usecases/commands/add-purchase-draft-line-link.command';
@@ -26,6 +27,7 @@ import { PackagingTypeCatalogueRepository } from 'shared/domain/repositories/pac
 import { PurchaseDraftAssemblyRepository } from 'shared/domain/repositories/purchase-draft-assembly.repository';
 import { PurchaseDraftFreezeRepository } from 'shared/domain/repositories/purchase-draft-freeze.repository';
 import { PurchaseDraftReadRepository } from 'shared/domain/repositories/purchase-draft-read.repository';
+import { RejectionReasonCatalogueRepository } from 'shared/domain/repositories/rejection-reason-catalogue.repository';
 
 // The assembly, freeze, closure, discard and arrival-confirmation transitions, and the drift-aware
 // reads, are the application boundary the REST surface calls through (server-architecture.md
@@ -55,6 +57,13 @@ import { PurchaseDraftReadRepository } from 'shared/domain/repositories/purchase
     // line's Delivery Address is one of the acting Warehouse's and is active before it writes,
     // rather than letting `fk_purchase_draft_lines_delivery_address` fire and surface as a 500.
     CustomerAddressBookRepository,
+    // T8/sad.md §5 — the condition rules **both** ending commands enforce, and the Reason catalogue
+    // they are judged against, which the `@Global()` `DomainModule` does not provide either. Local
+    // providers and deliberately unexported, exactly as `PurchaseDraftAssemblyService` is: a
+    // transport adapter, and any other module, reaches these rules only through the use cases that
+    // own them.
+    ArrivalInspectionService,
+    RejectionReasonCatalogueRepository,
     CreatePurchaseDraftCommand,
     RevisePurchaseDraftCommand,
     AddPurchaseDraftLineCommand,

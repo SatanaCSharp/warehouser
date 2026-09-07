@@ -1,5 +1,6 @@
-import { Global, Module } from '@nestjs/common';
+import { Global, Injectable, Module } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { ArrivalInspectionService } from 'purchase-drafts/domain/services/arrival-inspection.service';
 import { AddPurchaseDraftLineCommand } from 'purchase-drafts/usecases/commands/add-purchase-draft-line.command';
 import { AddPurchaseDraftLineLinkCommand } from 'purchase-drafts/usecases/commands/add-purchase-draft-line-link.command';
 import { ClosePurchaseDraftCommand } from 'purchase-drafts/usecases/commands/close-purchase-draft.command';
@@ -113,5 +114,74 @@ describe('PurchaseDraftsUsecaseModule Nest DI graph', () => {
     expect(moduleRef.get(ListPackagingTypesQuery)).toBeInstanceOf(
       ListPackagingTypesQuery,
     );
+  });
+});
+
+// T8 — `ArrivalInspectionService` is the module's second internal collaborator, beside
+// `PurchaseDraftAssemblyService`. Its own dependency, `RejectionReasonCatalogueRepository`, is not
+// provided by the `@Global()` `DomainModule` either, so it has to become a local provider of this
+// module exactly as the four catalogue/lifecycle repositories above already are — a fact only a
+// compiled graph observes.
+//
+// Kept as its own `describe` block, following T14's and T15's precedent, so a concurrent addition to
+// this file never collides with theirs.
+describe('PurchaseDraftsUsecaseModule Nest DI graph (T8)', () => {
+  it('constructs ArrivalInspectionService, with the Reason catalogue injected', async () => {
+    const moduleRef = await Test.createTestingModule({
+      imports: [TestDataSourceDoubleModule, PurchaseDraftsUsecaseModule],
+    }).compile();
+
+    expect(moduleRef.get(ArrivalInspectionService)).toBeInstanceOf(
+      ArrivalInspectionService,
+    );
+  });
+
+  // sad.md §5 — "registered on `UsecaseModule` and **not** exported". The service holds a rule of
+  // the two ending commands, so nothing outside this module may reach it: a transport adapter, and
+  // any other feature module, reaches these rules only through the use cases that own them
+  // (server-architecture.md §"NestJS modules and exports").
+  //
+  // Proven behaviourally rather than by reading the decorator: a provider in an importing module
+  // that asks for it cannot be constructed, which is the consequence the rule exists to produce.
+  it('does not export ArrivalInspectionService, so no importing module can inject it', async () => {
+    @Injectable()
+    class ArrivalInspectionProbe {
+      constructor(readonly inspection: ArrivalInspectionService) {}
+    }
+
+    @Module({
+      imports: [PurchaseDraftsUsecaseModule],
+      providers: [ArrivalInspectionProbe],
+    })
+    class ProbeModule {}
+
+    await expect(
+      Test.createTestingModule({
+        imports: [TestDataSourceDoubleModule, ProbeModule],
+      }).compile(),
+    ).rejects.toThrow(/ArrivalInspectionService/u);
+  });
+
+  // The control for the case above: the same probe shape resolves for a provider this module does
+  // export, so the refusal above is the missing export and not a broken probe.
+  it('resolves an exported use case through the same probe shape', async () => {
+    @Injectable()
+    class ExportedUsecaseProbe {
+      constructor(readonly command: ReadyPurchaseDraftCommand) {}
+    }
+
+    @Module({
+      imports: [PurchaseDraftsUsecaseModule],
+      providers: [ExportedUsecaseProbe],
+    })
+    class ProbeModule {}
+
+    const moduleRef = await Test.createTestingModule({
+      imports: [TestDataSourceDoubleModule, ProbeModule],
+    }).compile();
+
+    expect(
+      moduleRef.get(ExportedUsecaseProbe, { strict: false }),
+    ).toBeInstanceOf(ExportedUsecaseProbe);
   });
 });
