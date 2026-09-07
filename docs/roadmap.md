@@ -1,6 +1,6 @@
 ---
 status: Living
-updated_at: '2026-09-01'
+updated_at: '2026-09-07'
 ---
 
 # Roadmap
@@ -35,9 +35,26 @@ links to the feature folder where the solution is specified. Horizons are **Now*
   moves out from under a shipment already in transit.
   → [`docs/features/delivery-addresses`](features/delivery-addresses/spec.md) · size L · route full · status: spec drafted
 
+- **Goods that arrive unusable stop counting as goods the customer received.** Today an arrival
+  records only how much came, so a crushed pallet or a carton of the wrong item reduces a customer's
+  outstanding demand exactly as sound goods do, and the shortfall surfaces when the customer
+  telephones. Splits every arriving line into what was accepted and what was refused, gives each
+  refused quantity a reason from a catalogue the team maintains, allows only accepted goods to be
+  assigned to a customer, and records whether the packaging instruction the supplier was given was
+  honoured.
+  → [`docs/features/arrival-inspection`](features/arrival-inspection/spec.md) · size L · route full · status: spec drafted
+
 ## Next
 
-_Nothing committed yet._
+- **A warehouse can see which items and packaging keep failing, and the demand a refusal restored
+  says why it came back.** `arrival-inspection` records the reason a delivery was refused but leaves
+  it on the closed order it happened on, so a restored shortfall is indistinguishable from demand
+  that was never ordered, and a failure that repeats every month is visible only to whoever was at
+  the dock. Carries the reason onto the consolidated demand, and adds one warehouse-scoped,
+  period-bounded register of refusals grouped by item, reason and packaging type. Deliberately
+  deferred out of `arrival-inspection` rather than descoped: it is the visibility half of a feature
+  whose judgement half ships first.
+  → committed follow-up to [`docs/features/arrival-inspection`](features/arrival-inspection/spec.md) · not yet specified
 
 ## Later
 

@@ -1,0 +1,2371 @@
+openapi: 3.1.0
+
+info:
+  title: Arrival Inspection API
+  version: 0.1.0
+  description: |
+    `delivery-addresses` split a Purchase Draft's ending per line, so each line now records **how
+    much** turned up and who recorded it. Nothing anywhere records **in what state**. Because a
+    quantity recorded as arrived may be allocated, and an Allocation reduces a customer's Outstanding
+    Quantity, a crushed pallet reduces demand exactly as sound goods do — and the customer learns of
+    it by telephone.
+
+    This API adds the condition dimension to that ending and to nothing else. It introduces one piece
+    of system reference data (the Rejection Reason catalogue), one child record of a line (the
+    Rejection), two judgements written with the ending (the Condition Split and the Pre-receipt
+    Conformance), and the product's first write aimed at a **Closed** draft — the amendment of a
+    Rejection's description or Disposition.
+
+    Six shapes are load-bearing and readable from the paths below.
+
+    - **The Accepted Quantity is derived and is the only figure an Allocation may draw on.** It is
+      `receivedQuantity` less every Rejection on the line, computed by the server and **never
+      accepted as input**. There is no field a member can raise to assign more; the only way to assign
+      more is to have refused less, which is recorded and attributable (spec.md AC-10, AC-11,
+      §6.1 "Refusal as a route around the Allocation bound"). This narrows the bound `ordering` set at
+      the received quantity, which is why `DemandAllocationService`'s field becomes
+      `assignableQuantity` (sad.md §4, §8 "Naming").
+    - **The ending is one atomic act, and a refused submission records no part of itself.** One
+      request carries the line's quantity, its Condition Split, its Pre-receipt Conformance and its
+      Allocations; all of it is written together or none of it is (spec.md AC-01a, AC-02, §6 "Ending
+      atomicity"). The Condition Split and Conformance refusals **collect every violation before
+      refusing** rather than short-circuiting on the first — `details.violations` is an array for
+      exactly that reason (sad.md §6.1 steps 5–6 and its flag).
+    - **The refusing capability is demanded by the payload, not by the operation.** An ending that
+      carries at least one Rejection requires `PURCHASE_DRAFTS:RECEIVE` **and** `REJECTIONS:CREATE`;
+      an ending that refuses nothing requires only the first (AC-01a, AC-01b). `REJECTIONS:CREATE` is
+      declared **observed**, consulted after admission and able only to narrow — it never admits and
+      never denies a request the required Permission already settled
+      ([ADR 0001](../adr/0001-payload-conditional-permission.md)).
+    - **A refusal's cause is a confidentiality boundary, and withholding it leaves no trace.**
+      `REJECTIONS:WATCH` is declared **observed** on both reads. Without it a line's condition carries
+      ordered, presented, accepted and **one** total refused figure, and the `rejections` array is
+      **absent as a property** — no Reason, description, Disposition, count, badge or placeholder
+      survives, because a placeholder is itself probeable (AC-22, spec.md §6.1). That a refusal
+      happened stays visible wherever presented and accepted differ: the protection is over the cause
+      and never over the fact.
+    - **The line therefore has four legal shapes, not two.** `CUSTOMERS:WATCH` and `REJECTIONS:WATCH`
+      are independent observed grants, so the projection is the product of both — modelled as a
+      `oneOf` on the line (customer identity) nested with a `oneOf` on the condition (refusal cause).
+      A test matrix covering only two of the four leaves half the projection unproven (sad.md §6.3 and
+      its flag, §10).
+    - **A Rejection's Source is an input the server refuses when it disagrees with the line.** A Via
+      Warehouse line admits only `inspected` and a Direct to Customer line only `customer_reported`
+      (AC-24, AC-25). The approved surface derives it and shows it as a chip rather than a field
+      (sad.md §6.2), but the contract must let the wrong value be expressed or AC-25's refusal is
+      unreachable — see `api-sync-report.md` § Finding 1.
+
+    **Nothing here is asynchronous.** sad.md §6 states the feature introduces no queue, event,
+    scheduled job or third-party callback; no §6 diagram carries a `<message-bus>` or
+    `<external-system>` participant, and §7 closes with "No queue, event, CLI, SDK or worker interface
+    is introduced". So no operation carries an `Idempotency-Key` and **no `events.md` is written** —
+    both correctly absent rather than missing.
+
+    **Lists are returned whole and deterministically ordered, not paged.** spec.md §1's sixth boundary
+    fixes the scale: "the §6 targets assume the volumes `ordering` already assumes, at which every
+    list this feature touches is returned whole rather than in pages, because this release adds no
+    list of its own." See `api-sync-report.md` § "Recorded deviations".
+
+    **Scope of this document.** It restates the two operations this feature adds and the four whose
+    request, response or declared Permissions it changes. Every other `ordering` and
+    `delivery-addresses` operation is unchanged and stays governed by
+    [`delivery-addresses/contracts/openapi.yaml`](../../delivery-addresses/contracts/openapi.yaml) and
+    [`ordering/contracts/openapi.yaml`](../../ordering/contracts/openapi.yaml). Schemas restated here
+    without change carry an "Unchanged from …" note, following the convention `delivery-addresses`
+    set over `ordering`.
+
+servers:
+  - url: http://localhost:3000
+    description: Local development
+
+# Every operation requires the session cookie issued by `POST /api/v1/auth/sign-up` and
+# `POST /api/v1/auth/sign-in`. This feature introduces no public endpoint, so no operation
+# overrides with `security: []`. Authentication grants no authority: a valid session with no
+# membership in the named Warehouse is denied every capability here, reads included (AC-26).
+security:
+  - SessionCookie: []
+
+tags:
+  - name: purchase-drafts
+    description: |
+      The Rejection Reason catalogue, the two per-line endings extended with their condition, the
+      amendment of one Rejection, and the two reads that carry a line's condition breakdown.
+
+      There is no `rejections` tag and no `rejections` module on either side of the stack: a Rejection
+      has no life apart from the line's ending that carries it, so `purchase-drafts` owns it and the
+      `REJECTIONS:` prefix names a **capability**, not a module (sad.md §4, §8 "Naming") — exactly as
+      `ITEM_STOCK:ADJUST` does inside `items`.
+
+paths:
+  ##########################################################################################
+  # The Rejection Reason catalogue — system reference data, read-only, unscoped by Warehouse
+  ##########################################################################################
+
+  /api/v1/warehouses/{warehouseId}/rejection-reasons:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+
+    get:
+      tags: [purchase-drafts]
+      summary: Read the Rejection Reason catalogue
+      description: |
+        **New.** The system-managed catalogue one Rejection's Reason is chosen from. Requires
+        `PURCHASE_DRAFTS:WATCH` — the same Permission the Packaging Type catalogue is read under, and
+        the one a member composing an ending already holds.
+
+        **There is no mutation handler, and there never will be one.** Members neither create, rename
+        nor retire an entry: the catalogue is seeded and **extended only** through migrations, and
+        extension is the only change it admits. That is stronger than the Packaging Type rule and it
+        is why a Rejection **names** its Reason rather than copying the wording — no wording ever
+        changes beneath a recorded Rejection, so AC-23a needs no frozen column (data-model.md
+        `rejection_reasons`, CONTEXT.md §Invariants). Half the rule is a database fact
+        (`fk_purchase_draft_line_rejections_reason` is `ON DELETE RESTRICT`, so a named Reason cannot
+        be deleted by anything, a migration included); the other half is the architecture check
+        sad.md §10 requires, asserting that no migration updates or deletes a row here.
+
+        **Workspace-wide, and returned whole.** It takes no Warehouse scope and nothing filters it: the
+        `{warehouseId}` in the path is what `WarehouseAccessGuard` resolves authority from, not a
+        narrowing of the data (sad.md §6.5). At ten rows there is nothing to page.
+
+        Served at `/rejection-reasons` rather than under `/purchase-drafts/` so no literal segment
+        competes with a `{purchaseDraftId}` parameter — the same reason `ordering` serves
+        `/packaging-types` at the top level, and why `PackagingTypesController` is its own controller
+        (sad.md §7).
+
+        Archived-tolerant: a member whose Role carries `PURCHASE_DRAFTS:WATCH` reads the catalogue of
+        an archived Warehouse exactly as before archiving.
+      operationId: listRejectionReasons
+      responses:
+        "200":
+          description: |
+            The catalogue whole, ordered by `id` — the primary key, and the access path data-model.md
+            records for this read. `requiresDescription` is what the surface uses to demand the
+            member's prose **before** the ending may be submitted, and what the server asserts AC-07
+            against; it is catalogue **data** rather than a hard-coded `unfit_other`, so the next
+            prose-requiring Reason is one migration row and not a client release (sad.md §4,
+            data-model.md `rejection_reasons`).
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/RejectionReason" }
+              example:
+                - id: "damaged_by_packing"
+                  label: "Damaged by packing"
+                  requiresDescription: false
+                - id: "damaged_in_transit"
+                  label: "Damaged in transit"
+                  requiresDescription: false
+                - id: "documentation_missing"
+                  label: "Documentation missing"
+                  requiresDescription: false
+                - id: "packaging_not_as_instructed"
+                  label: "Packaging not as instructed"
+                  requiresDescription: false
+                - id: "quality_defect"
+                  label: "Quality defect"
+                  requiresDescription: false
+                - id: "shelf_life_insufficient"
+                  label: "Shelf life insufficient"
+                  requiresDescription: false
+                - id: "short_within_packaging"
+                  label: "Short within packaging"
+                  requiresDescription: false
+                - id: "unfit_other"
+                  label: "Unfit — other"
+                  requiresDescription: true
+                - id: "value_adding_note_not_applied"
+                  label: "Value-adding note not applied"
+                  requiresDescription: false
+                - id: "wrong_item_supplied"
+                  label: "Wrong item supplied"
+                  requiresDescription: false
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  ##########################################################################################
+  # Reading a draft's condition — four shapes, two observed Permissions
+  ##########################################################################################
+
+  /api/v1/warehouses/{warehouseId}/purchase-drafts/{purchaseDraftId}:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+      - $ref: "#/components/parameters/PurchaseDraftIdPath"
+
+    get:
+      tags: [purchase-drafts]
+      summary: Read one Purchase Draft with each line's condition breakdown
+      description: |
+        **Changed by this feature: the line projection and one further observed Permission.** Requires
+        `PURCHASE_DRAFTS:WATCH`, declaring **both** `CUSTOMERS:WATCH` (unchanged, from
+        `delivery-addresses`) and `REJECTIONS:WATCH` (new) as **observed** Permissions.
+
+        Each line whose ending recorded a Condition Split now carries `ending.condition`: what the
+        supplier presented, the derived Accepted Quantity, the derived Rejected Quantity, the
+        Pre-receipt Conformance, and each refused quantity beside its Reason, description, Source and
+        Disposition (AC-21). All of it is built in the query that already assembles the line's links
+        and drift, not in a second one — which is what keeps the 250 ms p95 budget honest (sad.md §8).
+
+        **Neither observed grant can admit or deny this read; each only narrows what it carries, and
+        they are independent — so the line has four legal shapes** (sad.md §6.3):
+
+        | `CUSTOMERS:WATCH` | `REJECTIONS:WATCH` | Shape |
+        | --- | --- | --- |
+        | held | held | the whole account and the customer half of the line (AC-21, AC-23, AC-23a) |
+        | held | absent | the customer half, and the condition **without cause** (AC-22) |
+        | absent | held | the whole condition account, customer half withheld as `delivery-addresses` already withholds it |
+        | absent | absent | both withheld |
+
+        **The cause-withheld form omits the `rejections` array as a property rather than emptying
+        it.** No Reason, description, Disposition, count, badge or placeholder survives, and nothing
+        indicates that anything was withheld — the withheld columns are not selected at all. A
+        placeholder or a count would itself be a disclosure that can be probed, and the number of
+        distinct refusals on a line is exactly what spec.md §6.1 protects (AC-22, sad.md §8). That a
+        refusal happened stays visible, because `receivedQuantity` and `acceptedQuantity` differ.
+
+        **`ending.condition` is `null` in two correct cases, and they read alike.** A line where
+        **nothing was received** records neither judgement (AC-04a), and an ending recorded **before
+        this release** was left untouched and carries neither either (spec.md §8, tenth question). The
+        discriminator is the Conformance verdict's absence, not the absence of Rejections — both cases
+        share that. Such a line's Accepted Quantity equals its Received Quantity, which is exactly the
+        treatment the Allocation bound was told to give it (data-model.md § Derived quantities).
+
+        **What the catalogue reads now cannot rewrite what was recorded.** `packagingTypeId` is the
+        type **frozen on the line** when it was ordered, whatever the Packaging Type catalogue reads
+        today (AC-23); `rejectionReasonLabel` is the Rejection Reason catalogue's current wording,
+        which **is** the wording the member stated, because that catalogue is extended only and no
+        entry is ever reworded (AC-23a). The two hold for opposite reasons, and neither is an accident.
+
+        A draft of a Warehouse the actor is not acting in fails identically to one that does not
+        exist, disclosing nothing about whether it exists (AC-26).
+
+        Archived-tolerant. Nothing is written.
+      operationId: readPurchaseDraft
+      responses:
+        "200":
+          description: The draft, its lines, their destinations, their links and each line's condition breakdown in whichever of the four shapes the actor's observed grants select.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PurchaseDraftDetail" }
+              examples:
+                bothGrantsHeld:
+                  summary: AC-21 — `CUSTOMERS:WATCH` and `REJECTIONS:WATCH` both held
+                  value:
+                    id: "00000000-0000-4000-8000-000000000401"
+                    reference: "PD-0143"
+                    state: "closed"
+                    expectedArrivalDate: "2026-09-18"
+                    lineCount: 1
+                    hasDriftSignal: false
+                    hasDirectToCustomerAddressDrift: false
+                    closureReason: null
+                    createdByUserId: "00000000-0000-4000-8000-000000000001"
+                    createdAt: "2026-09-10T08:00:00.000Z"
+                    readiedByUserId: "00000000-0000-4000-8000-000000000001"
+                    readiedAt: "2026-09-11T09:00:00.000Z"
+                    closedByUserId: null
+                    closedAt: "2026-09-18T10:30:00.000Z"
+                    arrivalConfirmedByUserId: null
+                    arrivalConfirmedAt: null
+                    discardedByUserId: null
+                    discardedAt: null
+                    lines:
+                      - id: "00000000-0000-4000-8000-000000000411"
+                        itemId: "00000000-0000-4000-8000-000000000101"
+                        itemSku: "TEST-SKU-0001"
+                        itemDescription: "Test Item - 2 m cable"
+                        unitOfMeasure: "metres"
+                        orderedQuantity: 140
+                        packagingTypeId: "cable_coil"
+                        valueAddingNote: "Label each coil with the customer reference"
+                        deliveryMode: "via_warehouse"
+                        warehouseDestination:
+                          addressText: "Test Warehouse North, Test Industrial Estate"
+                          accessNotes: "Dock 3; deliveries 07:00-15:00"
+                          frozen: true
+                        customerDestination: null
+                        ending:
+                          kind: "arrival"
+                          quantity: 100
+                          recordedByUserId: "00000000-0000-4000-8000-000000000001"
+                          recordedAt: "2026-09-18T10:30:00.000Z"
+                          condition:
+                            acceptedQuantity: 92
+                            rejectedQuantity: 8
+                            preReceiptConformance:
+                              verdict: "not_met"
+                              note: "Coils arrived uncoiled and unlabelled; the packaging was honoured, the labelling was not."
+                            rejections:
+                              - id: "00000000-0000-4000-8000-000000000451"
+                                rejectionReasonId: "damaged_in_transit"
+                                rejectionReasonLabel: "Damaged in transit"
+                                quantity: 5
+                                source: "inspected"
+                                description: "Outer coil crushed; two runs severed."
+                                disposition: "held_for_return"
+                                raisedByUserId: "00000000-0000-4000-8000-000000000001"
+                                raisedAt: "2026-09-18T10:30:00.000Z"
+                                amendedByUserId: "00000000-0000-4000-8000-000000000002"
+                                amendedAt: "2026-09-19T14:05:00.000Z"
+                              - id: "00000000-0000-4000-8000-000000000452"
+                                rejectionReasonId: "value_adding_note_not_applied"
+                                rejectionReasonLabel: "Value-adding note not applied"
+                                quantity: 3
+                                source: "inspected"
+                                description: null
+                                disposition: "undecided"
+                                raisedByUserId: "00000000-0000-4000-8000-000000000001"
+                                raisedAt: "2026-09-18T10:30:00.000Z"
+                                amendedByUserId: null
+                                amendedAt: null
+                        links: []
+                causeWithheld:
+                  summary: AC-22 — `PURCHASE_DRAFTS:WATCH` without `REJECTIONS:WATCH`; the `rejections` property is absent, not empty
+                  value:
+                    id: "00000000-0000-4000-8000-000000000401"
+                    reference: "PD-0143"
+                    state: "closed"
+                    expectedArrivalDate: "2026-09-18"
+                    lineCount: 1
+                    hasDriftSignal: false
+                    hasDirectToCustomerAddressDrift: false
+                    closureReason: null
+                    createdByUserId: "00000000-0000-4000-8000-000000000001"
+                    createdAt: "2026-09-10T08:00:00.000Z"
+                    readiedByUserId: "00000000-0000-4000-8000-000000000001"
+                    readiedAt: "2026-09-11T09:00:00.000Z"
+                    closedByUserId: null
+                    closedAt: "2026-09-18T10:30:00.000Z"
+                    arrivalConfirmedByUserId: null
+                    arrivalConfirmedAt: null
+                    discardedByUserId: null
+                    discardedAt: null
+                    lines:
+                      - id: "00000000-0000-4000-8000-000000000411"
+                        itemId: "00000000-0000-4000-8000-000000000101"
+                        itemSku: "TEST-SKU-0001"
+                        itemDescription: "Test Item - 2 m cable"
+                        unitOfMeasure: "metres"
+                        orderedQuantity: 140
+                        packagingTypeId: "cable_coil"
+                        valueAddingNote: "Label each coil with the customer reference"
+                        deliveryMode: "via_warehouse"
+                        warehouseDestination:
+                          addressText: "Test Warehouse North, Test Industrial Estate"
+                          accessNotes: "Dock 3; deliveries 07:00-15:00"
+                          frozen: true
+                        customerDestination: null
+                        ending:
+                          kind: "arrival"
+                          quantity: 100
+                          recordedByUserId: "00000000-0000-4000-8000-000000000001"
+                          recordedAt: "2026-09-18T10:30:00.000Z"
+                          condition:
+                            acceptedQuantity: 92
+                            rejectedQuantity: 8
+                            preReceiptConformance:
+                              verdict: "not_met"
+                              note: "Coils arrived uncoiled and unlabelled; the packaging was honoured, the labelling was not."
+                        links: []
+                preReleaseEnding:
+                  summary: spec.md §8 tenth question — an ending recorded before this release carries no Condition Split at all
+                  value:
+                    id: "00000000-0000-4000-8000-000000000402"
+                    reference: "PD-0102"
+                    state: "closed"
+                    expectedArrivalDate: "2026-07-04"
+                    lineCount: 1
+                    hasDriftSignal: false
+                    hasDirectToCustomerAddressDrift: false
+                    closureReason: null
+                    createdByUserId: "00000000-0000-4000-8000-000000000001"
+                    createdAt: "2026-06-28T08:00:00.000Z"
+                    readiedByUserId: "00000000-0000-4000-8000-000000000001"
+                    readiedAt: "2026-06-29T09:00:00.000Z"
+                    closedByUserId: null
+                    closedAt: "2026-07-04T11:00:00.000Z"
+                    arrivalConfirmedByUserId: null
+                    arrivalConfirmedAt: null
+                    discardedByUserId: null
+                    discardedAt: null
+                    lines:
+                      - id: "00000000-0000-4000-8000-000000000413"
+                        itemId: "00000000-0000-4000-8000-000000000103"
+                        itemSku: "TEST-SKU-0003"
+                        itemDescription: "Test Item - labelled carton insert"
+                        unitOfMeasure: "pieces"
+                        orderedQuantity: 100
+                        packagingTypeId: null
+                        valueAddingNote: null
+                        deliveryMode: "via_warehouse"
+                        warehouseDestination:
+                          addressText: "Test Warehouse North, Test Industrial Estate"
+                          accessNotes: null
+                          frozen: true
+                        customerDestination: null
+                        ending:
+                          kind: "arrival"
+                          quantity: 100
+                          recordedByUserId: "00000000-0000-4000-8000-000000000001"
+                          recordedAt: "2026-07-04T11:00:00.000Z"
+                          condition: null
+                        links: []
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/PurchaseDraftTargetUnavailable" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/warehouses/{warehouseId}/purchase-draft-lines:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+
+    get:
+      tags: [purchase-drafts]
+      summary: Read the Warehouse's frozen lines split by Delivery Mode, each with its condition breakdown
+      description: |
+        **Changed by this feature identically to the draft read: the line projection and one further
+        observed Permission.** Requires `PURCHASE_DRAFTS:WATCH`, declaring `CUSTOMERS:WATCH` and
+        `REJECTIONS:WATCH` **observed**.
+
+        Every rule the draft read states about `ending.condition` — the four shapes, the
+        `rejections` array absent as a property rather than emptied, the two `null` cases, and the
+        frozen-vs-current catalogue distinction — holds here unchanged. The two reads share one
+        projection, and that single point is the mechanism sad.md §4 names: one field on the principal
+        consulted by both, rather than two independently maintained redactions.
+
+        `deliveryMode` and `state` narrow the response as before. Nothing is paged.
+
+        Archived-tolerant. Nothing is written.
+      operationId: listPurchaseDraftLines
+      parameters:
+        - in: query
+          name: deliveryMode
+          required: false
+          schema: { $ref: "#/components/schemas/DeliveryMode" }
+        - in: query
+          name: state
+          required: false
+          schema: { $ref: "#/components/schemas/PurchaseDraftState" }
+      responses:
+        "200":
+          description: |
+            The lines of the Warehouse's drafts, each carrying the draft it belongs to and its own
+            condition breakdown, ordered by Delivery Mode then by draft reference then by line
+            position. Returned whole.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/PurchaseDraftLineListEntry" }
+              example:
+                - purchaseDraftId: "00000000-0000-4000-8000-000000000401"
+                  purchaseDraftReference: "PD-0143"
+                  purchaseDraftState: "closed"
+                  expectedArrivalDate: "2026-09-18"
+                  line:
+                    id: "00000000-0000-4000-8000-000000000412"
+                    itemId: "00000000-0000-4000-8000-000000000102"
+                    itemSku: "TEST-SKU-0002"
+                    itemDescription: "Test Item - labelled carton insert"
+                    unitOfMeasure: "pieces"
+                    orderedQuantity: 60
+                    packagingTypeId: "cartons"
+                    valueAddingNote: null
+                    deliveryMode: "direct_to_customer"
+                    warehouseDestination: null
+                    customerDestination:
+                      customerDeliveryAddressId: "00000000-0000-4000-8000-000000000301"
+                      customerId: "00000000-0000-4000-8000-000000000201"
+                      customerName: "Test Customer North"
+                      addressText: "Test Address 1, Test City"
+                      accessNotes: "Gate code on the intercom; deliveries 09:00-17:00"
+                      frozen: true
+                    ending:
+                      kind: "direct_delivery"
+                      quantity: 60
+                      recordedByUserId: "00000000-0000-4000-8000-000000000001"
+                      recordedAt: "2026-09-20T16:00:00.000Z"
+                      condition:
+                        acceptedQuantity: 54
+                        rejectedQuantity: 6
+                        preReceiptConformance:
+                          verdict: "met"
+                          note: null
+                        rejections:
+                          - id: "00000000-0000-4000-8000-000000000453"
+                            rejectionReasonId: "damaged_in_transit"
+                            rejectionReasonLabel: "Damaged in transit"
+                            quantity: 6
+                            source: "customer_reported"
+                            description: "The customer reported six cartons crushed on the pallet base."
+                            disposition: "undecided"
+                            raisedByUserId: "00000000-0000-4000-8000-000000000001"
+                            raisedAt: "2026-09-20T16:00:00.000Z"
+                            amendedByUserId: null
+                            amendedAt: null
+                    links: []
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  ##########################################################################################
+  # Recording a line's ending with its condition — the payload-conditional Permission
+  ##########################################################################################
+
+  /api/v1/warehouses/{warehouseId}/purchase-drafts/{purchaseDraftId}/lines/{purchaseDraftLineId}/arrival:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+      - $ref: "#/components/parameters/PurchaseDraftIdPath"
+      - $ref: "#/components/parameters/PurchaseDraftLineIdPath"
+
+    post:
+      tags: [purchase-drafts]
+      summary: Record what arrived at the dock on one Via Warehouse line, with its condition
+      description: |
+        **Changed by this feature: the request gains the Condition Split and the Pre-receipt
+        Conformance, the Allocation bound narrows, and one observed Permission is added.** Requires
+        `PURCHASE_DRAFTS:RECEIVE`, declaring `REJECTIONS:CREATE` and `CUSTOMERS:WATCH` **observed**.
+
+        Everything `delivery-addresses` states about this route is unchanged and still holds: it is the
+        Via Warehouse half and a dock arrival against a Direct to Customer line is refused by the route
+        rather than by a submitted value (ADR 0002); one transaction resolves the draft in
+        `ready_for_ordering` under lock, then the line; a line whose ending is already recorded is
+        refused; the draft moves to **Closed** in the same transaction as the ending of its **last**
+        line, by a conditional update predicated on no line remaining without an ending; and **no
+        Item's On-hand Quantity changes**.
+
+        **Four things this feature adds.**
+
+        1. **`rejections` — the Condition Split.** Each entry refuses part of what was presented,
+           carrying a quantity, one catalogue Reason, its Source and optionally the member's prose. At
+           most one entry per Reason (AC-09) — the quantities for a Reason belong together, which
+           `uq_purchase_draft_line_rejections_line_reason` proves rather than the command remembering.
+        2. **`preReceiptConformance` — the supplier's instruction judged.** One verdict per line,
+           covering the frozen Packaging Type and Value-adding Note **together**: a line whose
+           packaging was honoured and whose note was not is `not_met` with the member's note naming
+           which of the two failed (AC-15, AC-15a).
+        3. **The refusing capability, demanded by the payload.** A submission carrying at least one
+           entry in `rejections` and made by an actor whose resolved grants lack `REJECTIONS:CREATE`
+           is refused, naming the capability, and **records no part of the ending** (AC-01a). A
+           submission carrying none never reaches that rule and needs only
+           `PURCHASE_DRAFTS:RECEIVE` (AC-01b). The observed grant is consulted **after** the required
+           Permission has admitted the request and can only narrow — reading it to refuse a write can
+           make the system stricter and never wider (ADR 0001, sad.md §8).
+        4. **The Allocation bound narrows to the derived Accepted Quantity.** `receivedQuantity` less
+           the sum of `rejections[].quantity`. Assigning more than that is refused, naming the accepted
+           and the refused figures (AC-11); every other bound `ordering` set is unchanged (AC-12). The
+           refused quantity is assigned to nobody and **stays on the customer's Outstanding Quantity**,
+           which is the whole point of the feature.
+
+        **Every violation is collected before the submission is refused**, never short-circuited on the
+        first — the Condition Split rules in one pass and the Conformance rules in another, each
+        returning `details.violations` with every figure intact (sad.md §6.1 steps 5–6 and its flag,
+        following the shipped allocation bound). A refused submission records **no part** of itself,
+        its refusals included (spec.md §6 "Ending atomicity").
+
+        **A line where nothing was received records neither judgement.** `receivedQuantity: 0` with no
+        `rejections` and no `preReceiptConformance` — and the two condition checks are not run at all,
+        because a line where nothing arrived may carry neither (AC-04a). Sending either alongside a
+        zero quantity is refused.
+
+        **Nothing here is amendable afterwards.** The Condition Split and the Pre-receipt Conformance
+        are recorded exactly once, with the ending; no Rejection is ever raised against a line whose
+        ending exists (AC-04). Only a recorded Rejection's description and Disposition may be amended,
+        through the `PATCH` below.
+
+        **Derived and attributed values are never inputs.** The Accepted Quantity, the Rejected
+        Quantity, the ending kind, the raising member and the time are computed or attributed by the
+        server; no property here accepts one.
+
+        Mutating: refused while the Warehouse is archived, and rate limited by the shipped
+        `@WriteRateLimited()` — no second mechanism is added
+        ([ordering ADR 0003](../../ordering/adr/0003-per-member-write-rate-limit.md)).
+      operationId: recordPurchaseDraftLineArrival
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PurchaseDraftLineArrival" }
+            examples:
+              refusedInPart:
+                summary: AC-01, AC-05, AC-08, AC-13, AC-15a — one hundred presented, eight refused for two reasons
+                value:
+                  receivedQuantity: 100
+                  rejections:
+                    - rejectionReasonId: "damaged_in_transit"
+                      quantity: 5
+                      source: "inspected"
+                      description: "Outer coil crushed; two runs severed."
+                    - rejectionReasonId: "value_adding_note_not_applied"
+                      quantity: 3
+                      source: "inspected"
+                  preReceiptConformance:
+                    verdict: "not_met"
+                    note: "Coils arrived uncoiled and unlabelled; the packaging was honoured, the labelling was not."
+                  allocations:
+                    - purchaseDraftLineLinkId: "00000000-0000-4000-8000-000000000501"
+                      allocatedQuantity: 60
+                    - purchaseDraftLineLinkId: "00000000-0000-4000-8000-000000000502"
+                      allocatedQuantity: 32
+              refusedNothing:
+                summary: AC-01b — an ending refusing nothing needs only `PURCHASE_DRAFTS:RECEIVE`
+                value:
+                  receivedQuantity: 140
+                  preReceiptConformance:
+                    verdict: "met"
+                  allocations:
+                    - purchaseDraftLineLinkId: "00000000-0000-4000-8000-000000000501"
+                      allocatedQuantity: 140
+              nothingReceived:
+                summary: AC-04a — nothing arrived, so neither judgement is recorded and neither may be sent
+                value:
+                  receivedQuantity: 0
+              uninstructedLine:
+                summary: AC-17 — a line frozen with neither a Packaging Type nor a Value-adding Note records only `not_applicable`
+                value:
+                  receivedQuantity: 40
+                  preReceiptConformance:
+                    verdict: "not_applicable"
+                  allocations:
+                    - purchaseDraftLineLinkId: "00000000-0000-4000-8000-000000000501"
+                      allocatedQuantity: 40
+      responses:
+        "200":
+          description: |
+            The draft with this line's ending recorded, its Condition Split, its Pre-receipt
+            Conformance and its Allocations, in whichever of the four projection shapes the acting
+            member's observed grants select. The draft is `closed` when this was the last line without
+            an ending, and `ready_for_ordering` otherwise.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PurchaseDraftDetail" }
+        "400": { $ref: "#/components/responses/InvalidLineEndingConditionInput" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/LineEndingDenied" }
+        "404": { $ref: "#/components/responses/PurchaseDraftTargetUnavailable" }
+        "409": { $ref: "#/components/responses/PurchaseDraftLineEndingConflict" }
+        "429": { $ref: "#/components/responses/WriteRateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /api/v1/warehouses/{warehouseId}/purchase-drafts/{purchaseDraftId}/lines/{purchaseDraftLineId}/direct-delivery:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+      - $ref: "#/components/parameters/PurchaseDraftIdPath"
+      - $ref: "#/components/parameters/PurchaseDraftLineIdPath"
+
+    post:
+      tags: [purchase-drafts]
+      summary: Record what the customer received on one Direct to Customer line, with its condition
+      description: |
+        **Changed by this feature identically to the arrival route.** Requires
+        `PURCHASE_DRAFTS:RECEIVE`, declaring `REJECTIONS:CREATE` and `CUSTOMERS:WATCH` **observed**.
+
+        Every rule the arrival route states holds here unchanged — the capability rule, the Condition
+        Split rules, the Conformance rules, the collected refusals, the narrowed Allocation bound, the
+        atomicity, the single-ending rule, the closure of the draft on its last line and the untouched
+        On-hand Quantity (AC-04, AC-04a, AC-11, AC-12, AC-15b, AC-16, AC-17, AC-17a). One thing
+        differs, and the rules already carry it:
+
+        **Every Rejection on this line takes the `customer_reported` Source, and one claiming
+        `inspected` is refused** (AC-24, AC-25 mirrored). The refused quantity is assigned to nobody
+        and stays on that customer's Outstanding Quantity — goods that never touched the dock are
+        accounted for exactly as goods that did.
+
+        `chk_purchase_draft_line_rejections_source_matches_mode` and the composite reference behind it
+        make the pairing a schema fact rather than a rule the command has to remember: a refusal
+        cannot claim a Source its line's mode does not admit, and cannot lie about the mode to get one
+        (data-model.md). The named refusal below is what the member sees; the constraint is the
+        backstop that makes "0 Rejections carrying the customer-reported source on lines delivered to
+        our own dock" structural rather than a tolerance to monitor.
+
+        **The finality acknowledgement the approved surface requires is an interaction, not a state.**
+        The member alone judges when the customer's account is settled; no reporting window, timer or
+        time-driven transition exists and none may be inferred — so nothing here is a field, a header
+        or a query parameter (sad.md §6.2 and its flag, spec.md §8 ninth question).
+
+        The member records what the customer told them and the system inspects none of it: this
+        release provides no proof that a Direct Delivery happened, and verifies nothing a customer
+        reports (spec.md §1 second boundary, §3).
+
+        Mutating: refused while the Warehouse is archived, and rate limited.
+      operationId: recordPurchaseDraftLineDirectDelivery
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PurchaseDraftLineDirectDelivery" }
+            examples:
+              customerRefusedPart:
+                summary: AC-24 — the customer reported six cartons broken; that quantity is assigned to nobody
+                value:
+                  deliveredQuantity: 60
+                  rejections:
+                    - rejectionReasonId: "damaged_in_transit"
+                      quantity: 6
+                      source: "customer_reported"
+                      description: "The customer reported six cartons crushed on the pallet base."
+                  preReceiptConformance:
+                    verdict: "met"
+                  allocations:
+                    - purchaseDraftLineLinkId: "00000000-0000-4000-8000-000000000503"
+                      allocatedQuantity: 54
+              deliveredWhole:
+                summary: AC-01b — nothing refused, so `REJECTIONS:CREATE` is not required
+                value:
+                  deliveredQuantity: 60
+                  preReceiptConformance:
+                    verdict: "not_applicable"
+                  allocations:
+                    - purchaseDraftLineLinkId: "00000000-0000-4000-8000-000000000503"
+                      allocatedQuantity: 60
+      responses:
+        "200":
+          description: |
+            The draft with this line's ending recorded, its Condition Split, its Pre-receipt
+            Conformance and its Allocations. The draft is `closed` when this was the last line without
+            an ending, and `ready_for_ordering` otherwise.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PurchaseDraftDetail" }
+        "400": { $ref: "#/components/responses/InvalidLineEndingConditionInput" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/LineEndingDenied" }
+        "404": { $ref: "#/components/responses/PurchaseDraftTargetUnavailable" }
+        "409": { $ref: "#/components/responses/PurchaseDraftLineEndingConflict" }
+        "429": { $ref: "#/components/responses/WriteRateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  ##########################################################################################
+  # Amending one Rejection — the product's first write aimed at a Closed draft
+  ##########################################################################################
+
+  /api/v1/warehouses/{warehouseId}/purchase-drafts/{purchaseDraftId}/lines/{purchaseDraftLineId}/rejections/{rejectionId}:
+    parameters:
+      - $ref: "#/components/parameters/WarehouseIdPath"
+      - $ref: "#/components/parameters/PurchaseDraftIdPath"
+      - $ref: "#/components/parameters/PurchaseDraftLineIdPath"
+      - $ref: "#/components/parameters/RejectionIdPath"
+
+    patch:
+      tags: [purchase-drafts]
+      summary: Amend one Rejection's description or Disposition
+      description: |
+        **New.** Requires `REJECTIONS:UPDATE`. A sub-resource of the line, mirroring the shape
+        `ordering` §7 established for links and endings (sad.md §7).
+
+        **This is the first write this product aims at a Closed draft, and that is deliberate.** The
+        precondition is the *Rejection*, not the draft's state: a decision taken after a telephone call
+        two days later must be recordable, and by then the draft is closed (AC-18, sad.md §6.4). Any
+        repository-wide assertion that a Closed draft is immutable is now wrong for this one path and
+        for nothing else — no quantity, Reason, Source, line, Allocation, Outstanding Quantity or draft
+        state moves, so no other read changes (sad.md §6.4 postcondition, §11).
+
+        **The fixed part of a Rejection is unwritable and is not addressable here.** Its quantity,
+        Reason, Source and line were settled when the ending was recorded and stay settled — the
+        request carries no property for any of them, which is the contract half of "condition cannot
+        become unaudited fiction" (AC-18b, spec.md §6.1).
+
+        **A Disposition once decided is corrected, never undecided.** It starts `undecided`; an
+        authorized member may move it to any decision and later to another — no decision is terminal.
+        Moving a **decided** Disposition back to `undecided` is refused (AC-18a). `undecided` is
+        therefore a legal value in this request and its refusal is **conditional on the stored state**,
+        not on the payload: the write is a conditional update whose zero-row result is a typed refusal
+        rather than a silent no-op, so the refusal is the same one under concurrency
+        (`… WHERE id = :id AND warehouse_id = :warehouseId AND (disposition = 'undecided' OR
+        :disposition <> 'undecided')`, data-model.md).
+
+        **Every value is available on every Rejection whatever its Source**, because a Disposition
+        records what the Warehouse decided rather than where the goods physically were — a
+        `customer_reported` refusal may be `scrapped_on_site` (CONTEXT.md "Disposition").
+
+        **At least one of the two properties must be present**, and each amendment records the acting
+        member and the time together (AC-18, AC-18b) — never one without the other
+        (`chk_purchase_draft_line_rejections_amendment_attribution`).
+
+        **The response is the amendment, not the Rejection.** It carries the identifier, the amended
+        description and Disposition, and the attribution — and deliberately **not** the Reason,
+        quantity or Source. Those are the cause `REJECTIONS:WATCH` gates, and `REJECTIONS:UPDATE` is a
+        separate Permission that does not imply it; echoing them here would make the amendment a
+        second, ungated read of the thing spec.md §6.1's fourth quality goal protects. See
+        `api-sync-report.md` § Finding 2.
+
+        A Rejection of a Warehouse the actor is not acting in fails identically to one that does not
+        exist, disclosing nothing about whether it exists — including where the actor holds a
+        membership and `REJECTIONS:UPDATE` in that other Warehouse (AC-26). The composite reference
+        `(purchase_draft_line_id, warehouse_id, delivery_mode)` is what proves the ownership rather
+        than an application check.
+
+        Mutating: refused while the Warehouse is archived, and rate limited by the shipped
+        `@WriteRateLimited()`.
+      operationId: amendPurchaseDraftLineRejection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RejectionAmend" }
+            examples:
+              decideDisposition:
+                summary: AC-18 — the goods are being held for return
+                value:
+                  disposition: "held_for_return"
+              correctDescription:
+                summary: AC-18b — the member corrects what they wrote, changing no quantity, Reason or Source
+                value:
+                  description: "Outer coil crushed; three runs severed, not two."
+              both:
+                summary: Both amended in one request
+                value:
+                  description: "Supplier collected on 21 September."
+                  disposition: "refused_at_delivery"
+      responses:
+        "200":
+          description: The amendment as recorded, attributed to the acting member and the time.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RejectionAmendment" }
+              example:
+                id: "00000000-0000-4000-8000-000000000451"
+                description: "Outer coil crushed; two runs severed."
+                disposition: "held_for_return"
+                amendedByUserId: "00000000-0000-4000-8000-000000000002"
+                amendedAt: "2026-09-19T14:05:00.000Z"
+        "400": { $ref: "#/components/responses/InvalidRejectionAmendmentInput" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/WarehouseDenied" }
+        "404": { $ref: "#/components/responses/PurchaseDraftTargetUnavailable" }
+        "409": { $ref: "#/components/responses/RejectionAmendmentConflict" }
+        "429": { $ref: "#/components/responses/WriteRateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+components:
+  ##########################################################################################
+  # Security
+  ##########################################################################################
+
+  securitySchemes:
+    SessionCookie:
+      type: apiKey
+      in: cookie
+      name: warehouser_session
+      description: |
+        Unchanged from `delivery-addresses`. The opaque session cookie issued by
+        `POST /api/v1/auth/sign-up` and `POST /api/v1/auth/sign-in`, resolved to the acting User by
+        `SessionAuthGuard`.
+
+        It is not a bearer token and carries no authority. Every authorization decision — the required
+        Permission **and** every observed Permission, including the two this feature adds — is re-read
+        from the store on the request being authorized, never from the session, a cache or the actor's
+        selection (spec.md §6 "Authority staleness", ADR 0001).
+
+  ##########################################################################################
+  # Parameters
+  ##########################################################################################
+
+  parameters:
+    WarehouseIdPath:
+      in: path
+      name: warehouseId
+      required: true
+      description: |
+        Unchanged from `delivery-addresses`. The Warehouse this request applies to, and the only thing
+        `WarehouseAccessGuard` resolves authority from. Every handler this feature adds or changes is
+        a class-2 **Warehouse-Permission** handler — a `PermissionId` declared together with this
+        parameter — and none belongs to the infrastructure-exempt, session-only or self-projection
+        classes (sad.md §8 "Authorization coverage").
+      schema: { type: string, format: uuid }
+
+    PurchaseDraftIdPath:
+      in: path
+      name: purchaseDraftId
+      required: true
+      description: A Purchase Draft of the named Warehouse. One of another Warehouse is indistinguishable from a missing one (AC-26).
+      schema: { type: string, format: uuid }
+
+    PurchaseDraftLineIdPath:
+      in: path
+      name: purchaseDraftLineId
+      required: true
+      description: A line of the named draft. A line of another draft or another Warehouse is indistinguishable from a missing one.
+      schema: { type: string, format: uuid }
+
+    RejectionIdPath:
+      in: path
+      name: rejectionId
+      required: true
+      description: |
+        **New.** A Rejection of the named line. One belonging to another line, another draft or
+        another Warehouse is **indistinguishable from a missing one** and discloses nothing about what
+        exists elsewhere — including where the actor holds a membership and `REJECTIONS:UPDATE` in
+        that other Warehouse (AC-26).
+
+        The composite reference `(purchase_draft_line_id, warehouse_id, delivery_mode)` →
+        `purchase_draft_lines(id, warehouse_id, delivery_mode)` is what proves the ownership, and
+        §6.4 resolves the row `FOR UPDATE` on the primary key with `warehouse_id` as a filter
+        (data-model.md § Access patterns).
+      schema: { type: string, format: uuid }
+
+  ##########################################################################################
+  # Responses — one per error branch of the sad.md §6 sequences
+  ##########################################################################################
+
+  responses:
+    Unauthenticated:
+      description: |
+        Unchanged. No valid session; the request is denied before anything is resolved. Existing
+        behaviour of `SessionAuthGuard` and the global filter, not a code this feature adds.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            code: "request.invalid"
+            message: "The request is invalid."
+
+    WarehouseDenied:
+      description: |
+        Unchanged. The actor holds no membership in the named Warehouse, or the Role of that membership
+        does not carry the Permission this operation **requires**, or the Permission is held only
+        through another Warehouse's Role. The denial is non-enumerating: it names no record and
+        presents no count from which the existence of one could be inferred.
+
+        On the amendment this is **AC-20**: a member permitted to read Rejections but not to amend them
+        is declined, and the Disposition is left exactly as it was.
+
+        **An observed Permission never produces this response.** It is consulted only after the
+        required Permission has already admitted the request, `canActivate` does not read it, and a
+        Permission the actor does not hold is simply absent from the principal — so declaring
+        `REJECTIONS:CREATE`, `REJECTIONS:WATCH` or `CUSTOMERS:WATCH` can never make a denied request
+        succeed and can never widen access (ADR 0001, sad.md §8).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          examples:
+            noMembership:
+              summary: AC-26 — no membership in the named Warehouse
+              value:
+                code: "access.membership_required"
+                message: "Warehouse access is unavailable."
+            permissionMissing:
+              summary: AC-20 — the required Permission is not granted
+              value:
+                code: "access.denied"
+                message: "Access is not permitted."
+            archived:
+              summary: The Warehouse is archived and this handler is mutating
+              value:
+                code: "access.warehouse_archived"
+                message: "The Warehouse is archived."
+
+    LineEndingDenied:
+      description: |
+        **Extended by this feature.** Everything `WarehouseDenied` describes, **plus the product's
+        first authorization rule whose required Permission set is decided by what is being written**
+        (spec.md §6.1, ADR 0001).
+
+        The submission carries at least one entry in `rejections` and the actor's resolved grants do
+        not include `REJECTIONS:CREATE`, so it is refused, naming the capability they do not hold, and
+        **no part of the ending is recorded** — not the quantity, not the Conformance, not one refusal,
+        not one Allocation (AC-01a). A submission carrying no `rejections` never reaches this rule and
+        needs only `PURCHASE_DRAFTS:RECEIVE` (AC-01b).
+
+        The rule runs **inside the command, after admission**, from the grant set resolved on this same
+        request — never in `canActivate`. That ordering is what makes it narrowing-only: the worst a
+        mistake here produces is an operation refused to someone entitled to it, which is visible and
+        reportable, and never a disclosure (ADR 0001, sad.md §8).
+
+        `details.requiredPermissionId` names the capability so the surface can say which one, following
+        the shape `purchase_drafts.warehouse_delivery_address_required` already uses. It names **no
+        Rejection**: no Reason, description, quantity or Disposition appears in a denial payload
+        (spec.md §6.1, sad.md §8).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          examples:
+            rejectionCapabilityRequired:
+              summary: AC-01a — refusing goods needs a capability this member does not hold
+              value:
+                code: "purchase_drafts.rejection_capability_required"
+                message: "Refusing goods needs a capability you do not hold."
+                details:
+                  requiredPermissionId: "REJECTIONS:CREATE"
+            permissionMissing:
+              summary: The required Permission itself is not granted
+              value:
+                code: "access.denied"
+                message: "Access is not permitted."
+            archived:
+              summary: The Warehouse is archived
+              value:
+                code: "access.warehouse_archived"
+                message: "The Warehouse is archived."
+
+    WriteRateLimited:
+      description: |
+        Unchanged. The acting member exceeded the shipped per-member write limit, declared through the
+        existing `@WriteRateLimited()` — the two ending routes already declare it and the amendment
+        adds it; no second mechanism exists (sad.md §8). The guard composes **after** the access
+        guards, so an unauthorized actor is denied before reaching the counter and this refusal can
+        never be used to distinguish a Warehouse that holds Rejections from one that does not. The
+        limit is recorded in
+        [ordering ADR 0003](../../ordering/adr/0003-per-member-write-rate-limit.md).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            code: "access.write_rate_limited"
+            message: "Too many changes were recorded. Try again shortly."
+
+    InternalError:
+      description: An unexpected error occurred.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            code: "system.internal_error"
+            message: "An unexpected error occurred."
+
+    PurchaseDraftTargetUnavailable:
+      description: |
+        Unchanged in code, **extended in what it covers.** The draft, the line or — new here — the
+        **Rejection** named in the path is not one of the named Warehouse's. Reported as unavailable
+        without disclosing that it exists elsewhere, so a cross-Warehouse read or amendment fails
+        identically to one aimed at a record that never existed (AC-26, sad.md §6.3 and §6.4).
+
+        This is the same non-enumerating failure a member who mistypes an identifier receives, which is
+        what makes probing useless: the two are indistinguishable by design.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            code: "purchase_drafts.target_unavailable"
+            message: "The requested record is unavailable."
+
+    InvalidLineEndingConditionInput:
+      description: |
+        **New shape over an existing code plus two this feature adds.** The whole submission is
+        refused and **nothing is recorded** — no quantity, no Conformance, no refusal, no Allocation
+        (spec.md §6 "Ending atomicity").
+
+        **Every violation is returned together.** `details.violations` is an array because sad.md §6.1
+        steps 5–6 require the member's whole submission to be judged in one pass and returned with
+        every figure intact, following the shipped allocation bound. The first failing rule must not
+        short-circuit the rest: a member at a dock correcting one figure at a time, resubmitting after
+        each, is the failure mode this shape exists to prevent.
+
+        Three codes, in the order the sequences evaluate them:
+
+        - `purchase_drafts.invalid_input` — the payload's own shape: a refused quantity that is not a
+          whole number of at least one (AC-03), a description or a Conformance note beyond one
+          thousand characters (AC-14, AC-15b), a Disposition or verdict outside its value domain, a
+          note sent beside a `met` or `not_applicable` verdict, a Condition Split or Conformance sent
+          on a line where nothing was received (AC-04a), or an unknown property — the contract schemas
+          are `z.strictObject`, so an unknown property is a validation failure rather than a silently
+          ignored one (sad.md §7).
+        - `purchase_drafts.condition_split_invalid` — the Condition Split judged against the locked
+          line and the catalogue: refusals totalling more than what was presented (AC-02), two
+          refusals carrying the same Reason (AC-09), a Reason the catalogue does not offer — which
+          **names the Reasons it does** (AC-06), a Reason the catalogue marks `requires_description`
+          submitted without prose (AC-07), or a Source disagreeing with how the line's goods travelled
+          (AC-25).
+        - `purchase_drafts.pre_receipt_conformance_invalid` — the Conformance judged against the same
+          locked line: `met` beside a refusal for `packaging_not_as_instructed` or
+          `value_adding_note_not_applied` (AC-16), `not_applicable` on a line frozen carrying either
+          instruction (AC-17a), or `met`/`not_met` on a line frozen carrying neither (AC-17).
+
+        The unknown-Reason refusal **deliberately returns the catalogue and must not return anything
+        else** (sad.md §8, security review scope). No violation entry ever carries a customer name, an
+        address or a Rejection's prose: identifiers and figures only, which are meaningless to an actor
+        who cannot already read the record (spec.md §6.1).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          examples:
+            conditionSplitViolations:
+              summary: AC-02, AC-06, AC-07, AC-09, AC-25 — every violation collected in one pass
+              value:
+                code: "purchase_drafts.condition_split_invalid"
+                message: "This ending cannot be recorded as submitted."
+                details:
+                  receivedQuantity: 100
+                  rejectedQuantity: 118
+                  violations:
+                    - rule: "rejections_exceed_received"
+                      rejectionReasonId: null
+                      receivedQuantity: 100
+                      rejectedQuantity: 118
+                    - rule: "unknown_rejection_reason"
+                      rejectionReasonId: "damaged_by_forklift"
+                      availableRejectionReasonIds:
+                        - "damaged_by_packing"
+                        - "damaged_in_transit"
+                        - "documentation_missing"
+                        - "packaging_not_as_instructed"
+                        - "quality_defect"
+                        - "shelf_life_insufficient"
+                        - "short_within_packaging"
+                        - "unfit_other"
+                        - "value_adding_note_not_applied"
+                        - "wrong_item_supplied"
+                    - rule: "description_required"
+                      rejectionReasonId: "unfit_other"
+                    - rule: "duplicate_rejection_reason"
+                      rejectionReasonId: "damaged_in_transit"
+                    - rule: "source_mismatch"
+                      rejectionReasonId: "quality_defect"
+                      deliveryMode: "via_warehouse"
+                      submittedSource: "customer_reported"
+                      requiredSource: "inspected"
+            conformanceViolations:
+              summary: AC-16, AC-17a — the verdict contradicts the refusals and the frozen instruction
+              value:
+                code: "purchase_drafts.pre_receipt_conformance_invalid"
+                message: "This judgement of the supplier's instruction cannot be recorded as submitted."
+                details:
+                  violations:
+                    - rule: "met_contradicts_rejection"
+                      verdict: "met"
+                      rejectionReasonId: "packaging_not_as_instructed"
+                    - rule: "not_applicable_on_instructed_line"
+                      verdict: "not_applicable"
+                      frozenPackagingTypeId: "cable_coil"
+                      frozenValueAddingNote: true
+            uninstructedLineJudged:
+              summary: AC-17 — a line frozen with no instruction can only record `not_applicable`
+              value:
+                code: "purchase_drafts.pre_receipt_conformance_invalid"
+                message: "This judgement of the supplier's instruction cannot be recorded as submitted."
+                details:
+                  violations:
+                    - rule: "verdict_on_uninstructed_line"
+                      verdict: "met"
+                      frozenPackagingTypeId: null
+                      frozenValueAddingNote: false
+            payloadShape:
+              summary: AC-03, AC-14 — the payload's own bounds, refused before the line is judged
+              value:
+                code: "purchase_drafts.invalid_input"
+                message: "The request is invalid."
+                details:
+                  violations:
+                    - rule: "quantity_out_of_range"
+                      path: "rejections.0.quantity"
+                    - rule: "description_too_long"
+                      path: "rejections.1.description"
+                      maxLength: 1000
+
+    PurchaseDraftLineEndingConflict:
+      description: |
+        **Unchanged in code, extended in what it covers.** The line's ending is refused and **nothing
+        is changed** — no quantity, no Conformance, no refusal and nothing further assigned to any
+        Customer Order.
+
+        - **the ending is already recorded** on this line; the refusal names when and by whom. This is
+          also **AC-04**: a line's ending, its condition included, is recorded once and cannot be
+          revisited, so a further refusal against a line that already ended is refused by the same
+          rule. There is no path that raises a Rejection afterwards, and none is added by a later
+          release without the movement ledger spec.md §3 defers it to;
+        - **the ending does not match the way the line travelled** — a dock arrival against a Direct to
+          Customer line, or a direct delivery against a Via Warehouse line;
+        - **an Allocation is out of bounds** — new in what bounds it. The sum may not exceed the
+          **derived Accepted Quantity**, `receivedQuantity` less every refusal, rather than the
+          received figure `ordering` bounded it by (AC-11). `details` names the accepted and the
+          refused figures so the member reads why the ceiling moved. The other bounds are unchanged: a
+          Customer Order assigned more than it is still waiting for, or one that is cancelled or
+          already Fulfilled (AC-12). Every bound is re-checked against the rows just locked;
+        - the draft is not in `ready_for_ordering`, or a concurrent last ending already closed it;
+        - the Warehouse is archived.
+
+        **There is no reconciliation path behind the accepted figure.** A Rejection's quantity is
+        immutable and none may be added after the ending, so nothing can move the figure an Allocation
+        was bounded by after the fact — no repair job exists and none may be introduced (sad.md §8).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          examples:
+            alreadyRecorded:
+              summary: AC-04 — the ending, its condition included, is recorded once
+              value:
+                code: "purchase_drafts.ending_already_recorded"
+                message: "This line's ending is already recorded."
+                details:
+                  endingKind: "arrival"
+                  endingRecordedByUserId: "00000000-0000-4000-8000-000000000001"
+                  endingRecordedAt: "2026-09-18T10:30:00.000Z"
+            modeMismatch:
+              summary: The route does not match how this line's goods travelled
+              value:
+                code: "purchase_drafts.ending_mode_mismatch"
+                message: "This line's goods travelled Direct to Customer."
+                details:
+                  deliveryMode: "direct_to_customer"
+            allocationExceedsAccepted:
+              summary: AC-11 — only accepted goods may be assigned, and eight of the hundred were refused
+              value:
+                code: "purchase_drafts.allocation_out_of_bounds"
+                message: "Only accepted goods may be assigned."
+                details:
+                  receivedQuantity: 100
+                  rejectedQuantity: 8
+                  acceptedQuantity: 92
+                  allocatedQuantity: 100
+            orderNoLongerWaiting:
+              summary: AC-12 — the order named is cancelled or already Fulfilled
+              value:
+                code: "purchase_drafts.allocation_out_of_bounds"
+                message: "An Allocation names an order that is no longer waiting."
+                details:
+                  purchaseDraftLineLinkId: "00000000-0000-4000-8000-000000000501"
+            concurrentChange:
+              summary: Two concurrent last endings cannot both close the draft
+              value:
+                code: "purchase_drafts.concurrent_change"
+                message: "This draft was changed by someone else. Read it again."
+
+    InvalidRejectionAmendmentInput:
+      description: |
+        **New.** The amendment is refused, the Disposition and the description are left exactly as they
+        were, and nothing is recorded.
+
+        - the request carries **neither** `description` nor `disposition` — an amendment that amends
+          nothing would still write an attribution, which would make "every amendment records the
+          acting member and the time" mean something it does not;
+        - a `disposition` that is not one the system offers — the refusal **names those that are**
+          (AC-19);
+        - a `description` beyond one thousand characters, or blank after trimming (AC-14's bound,
+          applied to the amendment);
+        - an unknown property — the schema is `z.strictObject`.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          examples:
+            unknownDisposition:
+              summary: AC-19 — the refusal names the Dispositions that are available
+              value:
+                code: "purchase_drafts.invalid_input"
+                message: "That is not a disposition this system offers."
+                details:
+                  availableDispositions:
+                    - "undecided"
+                    - "refused_at_delivery"
+                    - "held_for_return"
+                    - "scrapped_on_site"
+            emptyAmendment:
+              summary: An amendment must amend at least one of the two
+              value:
+                code: "purchase_drafts.invalid_input"
+                message: "The request is invalid."
+                details:
+                  violations:
+                    - rule: "amendment_empty"
+
+    RejectionAmendmentConflict:
+      description: |
+        **New.** The amendment is refused under the conditional update sad.md §6.4 specifies, whose
+        zero-row result is a typed refusal rather than a silent no-op.
+
+        **A Disposition once decided may be corrected to another decision but never returned to
+        `undecided`** (AC-18a). The predicate is `(disposition = 'undecided' OR :disposition <>
+        'undecided')`, so the same request is legal against a Rejection still undecided and refused
+        against one already decided — which means the refusal survives concurrency rather than
+        depending on a read that happened first.
+
+        `details.currentDisposition` names the decision standing, so the surface can drop `undecided`
+        from the menu rather than show it disabled (sad.md §6.4 step 1). It names no Reason,
+        description or quantity.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            code: "purchase_drafts.disposition_not_reversible"
+            message: "A disposition once decided may be corrected to another decision, but never returned to undecided."
+            details:
+              currentDisposition: "held_for_return"
+
+  ##########################################################################################
+  # Schemas
+  ##########################################################################################
+
+  schemas:
+    # ---- Shared envelope ----------------------------------------------------------------------
+
+    Error:
+      type: object
+      description: |
+        Unchanged. The unified error envelope produced once by the global exception filter. `code`
+        follows the `module.error_name` convention in
+        `packages/shared-types/src/enums/error-code.ts`; `message` is the safe, non-enumerating
+        explanation; `details` carries optional structured context.
+
+        `details` **never** carries a Rejection's Reason wording, description or Disposition beyond
+        what the request itself submitted, nor a customer name, an address or a count of refusals — a
+        Rejection is confidential about the operator and about the supplier a reader can often infer,
+        and it appears in no log line, no error detail, no denial payload and no toast (spec.md §6.1,
+        sad.md §8). Identifiers and figures are carried instead. The one deliberate exception is the
+        Rejection Reason **catalogue**, returned by the unknown-Reason refusal (AC-06), which is
+        reference data every reader of this endpoint may already read at `/rejection-reasons`.
+      required: [code, message]
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          pattern: "^[a-z_]+\\.[a-z_]+$"
+          examples:
+            ["purchase_drafts.condition_split_invalid", "purchase_drafts.rejection_capability_required",
+             "purchase_drafts.disposition_not_reversible"]
+        message: { type: string }
+        details:
+          type: object
+          additionalProperties: true
+
+    # ---- Vocabularies this feature adds --------------------------------------------------------
+
+    RejectionReasonId:
+      type: string
+      maxLength: 32
+      pattern: "^[a-z][a-z0-9_]*$"
+      description: |
+        **New.** The identifier of one catalogue entry, which a Rejection **names** rather than copies
+        (`rejection_reasons.id VARCHAR(32)`, migration-seeded).
+
+        Ten are seeded: `damaged_in_transit`, `damaged_by_packing`, `quality_defect`,
+        `wrong_item_supplied`, `short_within_packaging`, `packaging_not_as_instructed`,
+        `value_adding_note_not_applied`, `shelf_life_insufficient`, `documentation_missing`,
+        `unfit_other`.
+
+        **Not modelled as an `enum`, and that is deliberate.** The catalogue is *data*, extended by a
+        migration; freezing the ten seeded values into the schema would make the eleventh Reason a
+        contract change and a client release. Validation against the catalogue is the server's, on the
+        read it already makes for AC-07 — sad.md §7 states this outright. `pattern` and `maxLength` are
+        the column's shape, not the catalogue's contents.
+
+        **Never reworded, never retired.** The catalogue is extended only, which is why a recorded
+        Rejection needs no frozen copy of the wording and why `packagingTypeId` — which *is* frozen by
+        value onto a line, precisely because it *can* be reworded — is its exact opposite (AC-23,
+        AC-23a, data-model.md `rejection_reasons`).
+      examples: ["damaged_in_transit"]
+
+    RejectionSource:
+      type: string
+      enum: [inspected, customer_reported]
+      description: |
+        **New.** Who found the problem, fixed when the Rejection is recorded and never amended
+        afterwards.
+
+        `inspected` — a Warehouse Member judged the goods at the Warehouse's own dock. The only Source
+        a **Via Warehouse** line admits. Not a verification the system performed, which it never does:
+        the member looked and stated what they saw.
+
+        `customer_reported` — the end customer refused the goods and told the member. The only Source a
+        **Direct to Customer** line admits, because no member ever saw those goods; the system verifies
+        none of it, on exactly the terms `delivery-addresses` already sets for a Direct Delivery
+        (AC-24). Not a customer return, which would be a movement this release does not model.
+
+        It **follows from the line's Delivery Mode** and is recorded anyway, so a Rejection read on its
+        own says which it is. The pairing is proved by
+        `chk_purchase_draft_line_rejections_source_matches_mode` together with the composite reference
+        that carries the mode, so a refusal can neither claim a Source its line does not admit nor lie
+        about the mode to get one (AC-25). Not a Delivery Mode, which is a property of the **line**
+        saying where goods travelled.
+
+    RejectionDisposition:
+      type: string
+      enum: [undecided, refused_at_delivery, held_for_return, scrapped_on_site]
+      description: |
+        **New.** What the Warehouse decided became of the goods one Rejection refused. It records a
+        **decision, not an event**: nothing here is evidence the goods went anywhere, there is no Stock
+        Movement ledger and no quarantine area, and no Item's On-hand Quantity moves with it
+        (spec.md §3, CONTEXT.md "Disposition").
+
+        Starts `undecided`. An authorized member may move it to any decision and later correct it to
+        another — **no decision is terminal** — but a decided Disposition is never returned to
+        `undecided` (AC-18, AC-18a). `undecided` therefore stays a legal request value: the refusal is
+        conditional on the stored state, not on the payload.
+
+        **Every value is available on every Rejection whatever its Source**, because the Disposition
+        records what the Warehouse decided rather than where the goods physically were — a
+        `customer_reported` refusal may be `scrapped_on_site`.
+
+        `refused_at_delivery` is a deliberate departure from documented warehouse practice, which
+        describes no door refusal and an invariable offload-then-quarantine pattern. It is a product
+        decision made knowingly and must not be presented downstream as trade practice (spec.md §1,
+        third boundary).
+
+    PreReceiptConformanceVerdict:
+      type: string
+      enum: [met, not_met, not_applicable]
+      description: |
+        **New.** Whether the supplier honoured the Packaging Type and Value-adding Note **frozen on the
+        line**. One verdict covers both instructions, so a line whose packaging was honoured and whose
+        note was not is `not_met` with the member's note naming which of the two failed (AC-15a).
+
+        Which verdicts are legal is decided by what the line was frozen with, and by nothing else:
+
+        | Line frozen with | Legal verdicts |
+        | --- | --- |
+        | a Packaging Type, a Value-adding Note, or both | `met` or `not_met` (AC-17a) |
+        | neither | `not_applicable` only (AC-17) |
+
+        `chk_purchase_draft_lines_pre_receipt_conformance_instruction` expresses both halves as one
+        schema fact — both instructions live on the same row, so the rule is decidable without reading
+        anything else, which is exactly why sad.md §6.1 step 3 widens the locked-line projection by
+        `packaging_type_id` and `value_adding_note` **and by nothing else**. The ordered quantity stays
+        out of that projection, so no bound of the ending is derivable from a frozen field.
+
+        `met` never coexists with a `packaging_not_as_instructed` or `value_adding_note_not_applied`
+        refusal on the same line: the two statements contradict each other, since such a refusal **is**
+        the instruction not being met (AC-16).
+
+        **The approved surface offers no default selection**, so the fastest path through the dock
+        still requires looking at the goods (sad.md §8, spec.md §7 "Endings that refuse nothing").
+
+        Not a Pre-receipt Requirement, which is the instruction given to the supplier rather than the
+        judgement of whether they followed it. Not a Drift Signal, which compares a frozen draft
+        against current demand rather than against what arrived.
+
+    RejectionDescription:
+      type: string
+      minLength: 1
+      maxLength: 1000
+      description: |
+        **New.** The member's own words about what was wrong with the refused goods, so the problem can
+        be put to the supplier with more than a reason code (AC-13). Bounded at one thousand
+        **characters** — `char_length`, not `octet_length`, so a Ukrainian description is not refused
+        at five hundred for costing two bytes each (AC-14, data-model.md). Trimmed non-empty: a blank
+        string is a refusal, not a `null`.
+
+        Required when the Reason is one the catalogue marks `requires_description` — today only
+        `unfit_other` — and the server asserts that against the catalogue row rather than against a
+        hard-coded identifier (AC-07).
+
+        **Stored as submitted and rendered as text, never as markup and never as a link.** It is a
+        statement about goods; a member who types a driver's or a customer contact's name into it puts
+        personal data somewhere this specification does not expect, which is why it is handled at the
+        classification of the record carrying it (spec.md §6.1, sad.md §8).
+      examples: ["Outer coil crushed; two runs severed."]
+
+    PreReceiptConformanceNote:
+      type: string
+      minLength: 1
+      maxLength: 1000
+      description: |
+        **New.** The member's note carried by a `not_met` verdict, naming which of the two frozen
+        instructions failed (AC-15, AC-15a). Same bound and same handling as `RejectionDescription`:
+        one thousand characters, trimmed non-empty, stored as submitted, rendered as text and never as
+        markup or a link (AC-15b).
+
+        **Never amended.** Unlike a Rejection's description it belongs to the ending, which is recorded
+        once (`purchase_draft_lines.pre_receipt_conformance_note`).
+      examples: ["Coils arrived uncoiled and unlabelled; the packaging was honoured, the labelling was not."]
+
+    # ---- Vocabularies restated unchanged -------------------------------------------------------
+
+    DeliveryMode:
+      type: string
+      enum: [via_warehouse, direct_to_customer]
+      description: |
+        Unchanged from `delivery-addresses`. Which of the two ways one line's goods travel, chosen per
+        line and frozen at Ready for Ordering. It is what decides the ending route, and — new here —
+        the only `RejectionSource` each of that line's refusals may carry.
+
+    EndingKind:
+      type: string
+      enum: [arrival, direct_delivery]
+      description: Unchanged from `delivery-addresses`. How one line ended. The two are refused against each other's Delivery Mode, which is why they are two routes rather than one field a member submits (ADR 0002).
+
+    PurchaseDraftState:
+      type: string
+      enum: [draft, ready_for_ordering, closed, discarded]
+      description: |
+        Unchanged from `delivery-addresses` in its values, **changed in what `closed` admits.** A
+        Closed draft is no longer write-free: the amendment of a Rejection's description or Disposition
+        reaches one, and it is the first write this product aims at a Closed draft (sad.md §6.4, §11).
+        It changes no quantity, Reason, Source, line, Allocation, Outstanding Quantity or draft state,
+        so `spec.md` §6 "Frozen-record integrity" is untouched — an addition is not a change, and this
+        is not even an addition to the draft.
+
+    CustomerOrderState:
+      type: string
+      enum: [unfulfilled, fulfilled, cancelled]
+      description: Unchanged from `ordering`. Only an `unfulfilled` order may receive an Allocation (AC-12).
+
+    UnitOfMeasure:
+      type: string
+      minLength: 1
+      maxLength: 32
+      description: Unchanged from `ordering` (`items.unit_of_measure varchar(32)`).
+
+    PackagingTypeId:
+      type: string
+      maxLength: 32
+      description: |
+        Unchanged from `ordering`. **Frozen by value onto the line** at Ready for Ordering precisely
+        because the Packaging Type catalogue can be reworded, so a closed draft reads the type it was
+        ordered with whatever the catalogue reads now (AC-23). The exact opposite of
+        `RejectionReasonId`, and for the exact opposite reason.
+      examples: ["cable_coil"]
+
+    AddressText:
+      type: string
+      minLength: 1
+      description: Unchanged from `delivery-addresses`. Where goods are sent, as text a member types; never validated, geocoded or normalized, and never rendered as markup or a link.
+
+    AccessNotes:
+      type: [string, "null"]
+      minLength: 1
+      description: Unchanged from `delivery-addresses`. What a driver needs to get in; `null` when none was recorded, never an empty string.
+
+    DriftSignalKind:
+      type: string
+      enum: [cancelled, quantity_changed, needed_by_moved, became_fulfilled, delivery_address_changed]
+      description: Unchanged from `delivery-addresses`. What differs between a link's Demand Snapshot and the Customer Order it names now, derived on every read as a value comparison.
+
+    # ---- The Rejection Reason catalogue ---------------------------------------------------------
+
+    RejectionReason:
+      type: object
+      description: |
+        **New.** One entry of the system-managed catalogue. Workspace-wide reference data taking no
+        Warehouse scope, exactly as `PackagingType` does — with one rule added and one removed
+        (data-model.md `rejection_reasons`).
+      required: [id, label, requiresDescription]
+      additionalProperties: false
+      properties:
+        id: { $ref: "#/components/schemas/RejectionReasonId" }
+        label:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: |
+            The catalogue's own wording (AC-06). **Server data, not translated client copy** — the
+            catalogue is extended by the team, so a new Reason must not require a client release
+            (sad.md §8 "Naming"). Never reworded, which is what lets a Rejection name its Reason rather
+            than copy it.
+        requiresDescription:
+          type: boolean
+          description: |
+            Whether a Rejection naming this Reason must carry the member's prose. `true` on
+            `unfit_other` alone today. **Catalogue data rather than a hard-coded identifier**: a
+            hard-coded `unfit_other` would pass every test written today and would make the next
+            prose-requiring Reason a code change and a release rather than one migration row
+            (sad.md §4, confirmed in data-model.md).
+
+            The surface reads it to demand the prose **before** the ending may be submitted; the server
+            asserts it against the same catalogue read it already makes for AC-06 (AC-07).
+
+    # ---- A recorded Rejection and a line's condition ---------------------------------------------
+
+    PurchaseDraftLineRejection:
+      type: object
+      description: |
+        **New.** One quantity of a line's arrival the Warehouse refused, with its Rejection Record —
+        the cause `REJECTIONS:WATCH` gates. It appears **only** in the cause-bearing projection; the
+        withheld one omits the array carrying it as a property rather than emptying it (AC-22).
+
+        **Its fixed part never moves.** The quantity, Reason, Source and line are unwritable after
+        recording; only the description and the Disposition are amendable, and every amendment records
+        the acting member and the time — which is what makes a later-disputed refusal attributable
+        (AC-18, AC-18b, spec.md §6.1 "Condition as unaudited fiction"). This attribution is the whole
+        audit: no history relation exists and CONTEXT.md is explicit that none is implied.
+
+        A Rejection is never allocated and never reduces any Customer Order's Outstanding Quantity, so
+        the customer it was meant for keeps waiting — which is the point.
+      required:
+        [id, rejectionReasonId, rejectionReasonLabel, quantity, source, description, disposition,
+         raisedByUserId, raisedAt, amendedByUserId, amendedAt]
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        rejectionReasonId: { $ref: "#/components/schemas/RejectionReasonId" }
+        rejectionReasonLabel:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: |
+            The catalogue's current wording, joined in on this read. It **is** the wording the member
+            stated: the catalogue is extended only and no entry is ever reworded, so AC-23a holds by
+            construction rather than by a frozen column. Carried here so a member reading a closed
+            draft — who is not composing a refusal and would otherwise have no reason to fetch
+            `/rejection-reasons` at all — reads the account in one request (api-sync-report.md,
+            Finding 3).
+        quantity:
+          type: integer
+          minimum: 1
+          description: |
+            How many units this refusal covers — a whole number of at least one, which the `INTEGER`
+            column and `chk_purchase_draft_line_rejections_quantity_positive` carry together (AC-03).
+            Immutable after recording, which is what stops the derived Accepted Quantity drifting after
+            an Allocation was bounded by it (sad.md §8).
+        source: { $ref: "#/components/schemas/RejectionSource" }
+        description:
+          oneOf:
+            - $ref: "#/components/schemas/RejectionDescription"
+            - type: "null"
+          description: "`null` when the member recorded none, which is legal for every Reason the catalogue does not mark `requiresDescription`."
+        disposition: { $ref: "#/components/schemas/RejectionDisposition" }
+        raisedByUserId:
+          type: string
+          format: uuid
+          description: The member who refused. Attributed by the server, never accepted as input.
+        raisedAt:
+          type: string
+          format: date-time
+          description: |
+            When the refusal was raised — `created_at`, which **is** the raising time. There is no
+            separate `raised_at` column, following `arrival_allocations` and `item_stock_adjustments`,
+            the repo's two existing attributed rows (data-model.md).
+        amendedByUserId:
+          type: [string, "null"]
+          format: uuid
+          description: The member who last amended the description or Disposition; `null` until one has been. Arrives with `amendedAt` or not at all (`chk_purchase_draft_line_rejections_amendment_attribution`).
+        amendedAt: { type: [string, "null"], format: date-time }
+
+    PreReceiptConformance:
+      type: object
+      description: |
+        **New.** The supplier's frozen instruction judged, recorded once with the line's ending and
+        never afterwards changed. It closes the non-goal `ordering` stated when it excluded recording
+        whether a Pre-receipt Requirement was met on arrival.
+
+        **Read under `PURCHASE_DRAFTS:WATCH` and not gated on `REJECTIONS:WATCH`.** It is a judgement
+        about the supplier's instruction, not a Rejection's cause: spec.md §6.1's abuse case protects
+        "every reason, description and disposition together with the division of that total into
+        separate refusals", and this is none of them. It survives in the cause-withheld shape, and
+        discloses nothing about the refusals — `not_met` arises with or without a Rejection, so no
+        count can be inferred from it (api-sync-report.md, Section B point 4).
+      required: [verdict, note]
+      additionalProperties: false
+      properties:
+        verdict: { $ref: "#/components/schemas/PreReceiptConformanceVerdict" }
+        note:
+          oneOf:
+            - $ref: "#/components/schemas/PreReceiptConformanceNote"
+            - type: "null"
+          description: "Non-null only under `not_met`; `null` under `met` and `not_applicable` (`chk_purchase_draft_lines_conformance_note_shape`)."
+
+    LineCondition:
+      oneOf:
+        - $ref: "#/components/schemas/LineConditionWithCause"
+        - $ref: "#/components/schemas/LineConditionCauseWithheld"
+      description: |
+        **New.** How a line's Received Quantity divided between what was accepted and what was refused,
+        stated with the ending and never afterwards changed — modelled in the **two shapes**
+        `REJECTIONS:WATCH` selects (AC-21, AC-22).
+
+        Crossed with the `CUSTOMERS:WATCH` `oneOf` on the line itself, this is what makes the line's
+        **four** legal shapes (sad.md §6.3). A test matrix covering only two of them leaves half the
+        projection unproven, which is why §10 requires all four.
+
+    LineConditionWithCause:
+      type: object
+      description: |
+        The whole account, read by an actor holding `REJECTIONS:WATCH`: every refused quantity beside
+        its Reason, description, Source and Disposition (AC-21).
+      required: [acceptedQuantity, rejectedQuantity, preReceiptConformance, rejections]
+      additionalProperties: false
+      properties:
+        acceptedQuantity:
+          type: integer
+          minimum: 0
+          description: |
+            What the member judged fit to go out to a customer, **derived** as `ending.quantity` less
+            `rejectedQuantity` and re-derived on every read inside the query that already assembles the
+            line. Never a column and never an input.
+
+            It is **the only quantity an Allocation may draw on**, which narrows the bound `ordering`
+            set at the received figure. Not materialized, and that is what makes spec.md §6.1's
+            "Refusal as a route around the Allocation bound" a structural property rather than a
+            policy: a stored column is a column some future write path can set, and the guarantee stops
+            being structural the day it exists (data-model.md § Derived quantities).
+        rejectedQuantity:
+          type: integer
+          minimum: 0
+          description: |
+            The line's total across every Rejection on it — `SUM(quantity)`, `0` when there are none.
+            Not a quantity that was never delivered, which is simply the difference between what was
+            ordered and what was received and is refused by nobody.
+        preReceiptConformance: { $ref: "#/components/schemas/PreReceiptConformance" }
+        rejections:
+          type: array
+          items: { $ref: "#/components/schemas/PurchaseDraftLineRejection" }
+          description: |
+            Every Rejection on the line, at most one per Reason (AC-09), ordered by Reason identifier.
+            Empty when the member refused nothing — which is a Condition Split that refused nothing,
+            **not** the absence of one. The two are distinguished by `condition` itself being non-null.
+
+    LineConditionCauseWithheld:
+      type: object
+      description: |
+        The same condition read by an actor **without** `REJECTIONS:WATCH`: ordered, presented,
+        accepted and **one** total refused figure (AC-22).
+
+        **`rejections` is absent as a property, not empty**, and `additionalProperties: false` is what
+        makes a leak fail contract validation on the way out instead of reaching a screen. No Reason,
+        description, Disposition, count, badge or placeholder survives, and nothing indicates that
+        anything was withheld — the withheld columns are not selected at all. A placeholder would
+        itself be a disclosure that can be probed, and the number of distinct refusals on a line is
+        exactly what spec.md §6.1 protects (sad.md §8).
+
+        **That a refusal happened stays visible**, because `ending.quantity` and `acceptedQuantity`
+        differ. The protection is over the cause and never over the fact.
+      required: [acceptedQuantity, rejectedQuantity, preReceiptConformance]
+      additionalProperties: false
+      properties:
+        acceptedQuantity: { type: integer, minimum: 0 }
+        rejectedQuantity:
+          type: integer
+          minimum: 0
+          description: One total, with the division of it into separate refusals withheld together with every cause (AC-22).
+        preReceiptConformance: { $ref: "#/components/schemas/PreReceiptConformance" }
+
+    # ---- The line, its ending, and the draft ------------------------------------------------------
+
+    PurchaseDraftLineEnding:
+      type: object
+      description: |
+        **Changed by this feature: `condition` is added.** How one line ended, recorded **once** per
+        line — the quantity, the kind, the acting member and the time, which
+        `chk_purchase_draft_lines_ending_attribution` holds arrive together or not at all. A second
+        attempt against the same line is refused, naming when and by whom (AC-04).
+      required: [kind, quantity, recordedByUserId, recordedAt, condition]
+      additionalProperties: false
+      properties:
+        kind: { $ref: "#/components/schemas/EndingKind" }
+        quantity:
+          type: integer
+          minimum: 0
+          description: |
+            The **Received Quantity** — what the supplier *presented* at the dock, or what the customer
+            reported receiving. Unchanged in name and column, **narrowed in meaning by this feature**:
+            it counts goods the Warehouse went on to refuse and goods a sealed unit declared but did
+            not hold, so the Condition Split always balances and the Disposition rather than the
+            arithmetic says where refused goods went (spec.md §1, fourth boundary — a product decision,
+            not documented trade practice).
+
+            `0` when nothing came, which records no Allocation, no Condition Split and no Pre-receipt
+            Conformance at all (AC-04a). Deliberately **unbounded above**: what arrived is bounded
+            neither above nor below by what was ordered.
+        recordedByUserId: { type: string, format: uuid }
+        recordedAt: { type: string, format: date-time }
+        condition:
+          oneOf:
+            - $ref: "#/components/schemas/LineCondition"
+            - type: "null"
+          description: |
+            **New.** `null` in exactly two cases, and they read alike by design:
+
+            - **nothing was received** — a line where nothing arrived records neither a Condition Split
+              nor a Pre-receipt Conformance, and the two condition checks were never run (AC-04a,
+              `chk_purchase_draft_lines_conformance_requires_ending`);
+            - **the ending predates this release** — those endings were left untouched and never
+              backfilled, so they carry neither (spec.md §8 tenth question, sad.md §7). Their Accepted
+              Quantity equals their Received Quantity for the Allocation bound, which the derivation
+              gives for free: no Rejections to sum, the `COALESCE` reaches zero, and no branch is
+              needed (data-model.md).
+
+            The discriminator between "no Condition Split was recorded" and "a Condition Split was
+            recorded and refused nothing" is **this property being `null`** — never the absence of
+            Rejections, which both cases share.
+
+    PurchaseDraftLine:
+      oneOf:
+        - $ref: "#/components/schemas/PurchaseDraftLineIdentified"
+        - $ref: "#/components/schemas/PurchaseDraftLineRedacted"
+      description: |
+        Unchanged in mechanism, doubled in shapes. The redacted form omits `customerDestination` and
+        serves the redacted links, keeping `warehouseDestination` — the operator's own premises data is
+        not customer identity and is never withheld. Crossed with `ending.condition`'s two forms this
+        gives the **four** shapes sad.md §6.3 requires; the two withholdings are independent and
+        neither can admit or deny the read.
+
+    PurchaseDraftLineIdentified:
+      type: object
+      description: |
+        One Item and quantity within the draft, with its Pre-receipt Requirement, its destination, its
+        ending — **now carrying that ending's condition** — and its links.
+      required:
+        [id, itemId, itemSku, itemDescription, unitOfMeasure, orderedQuantity, packagingTypeId,
+         valueAddingNote, deliveryMode, warehouseDestination, customerDestination, ending, links]
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        itemId: { type: string, format: uuid }
+        itemSku: { type: string, minLength: 1 }
+        itemDescription: { type: string, minLength: 1 }
+        unitOfMeasure: { $ref: "#/components/schemas/UnitOfMeasure" }
+        orderedQuantity:
+          type: integer
+          minimum: 1
+          description: |
+            What the supplier was told to send. **Read here and deliberately kept out of the ending's
+            write path**: the locked-line projection sad.md §6.1 step 3 builds carries the Delivery
+            Mode, any ending already recorded and the two frozen instruction columns — and nothing
+            else, so no bound of the ending is derivable from a frozen field (sad.md §6 flags).
+        packagingTypeId:
+          oneOf:
+            - $ref: "#/components/schemas/PackagingTypeId"
+            - type: "null"
+          description: |
+            The type **frozen on this line** when it was ordered. One of the two columns
+            `PreReceiptConformanceVerdict` is judged against: non-null here, or a non-null
+            `valueAddingNote`, makes `not_applicable` illegal (AC-17a) and makes `met`/`not_met` the
+            only legal verdicts.
+        valueAddingNote:
+          type: [string, "null"]
+          description: The instruction frozen on this line. The second of the two columns the Conformance verdict is judged against (AC-17, AC-17a).
+        deliveryMode:
+          $ref: "#/components/schemas/DeliveryMode"
+        warehouseDestination:
+          oneOf:
+            - $ref: "#/components/schemas/LineWarehouseDestination"
+            - type: "null"
+          description: Present when `deliveryMode` is `via_warehouse`; `null` otherwise. Never withheld.
+        customerDestination:
+          oneOf:
+            - $ref: "#/components/schemas/LineCustomerDestination"
+            - type: "null"
+          description: Present when `deliveryMode` is `direct_to_customer`; `null` otherwise.
+        ending:
+          oneOf:
+            - $ref: "#/components/schemas/PurchaseDraftLineEnding"
+            - type: "null"
+          description: "`null` until this line's ending is recorded. The draft moves to Closed exactly when the last of its lines stops being `null` here."
+        links:
+          type: array
+          items: { $ref: "#/components/schemas/PurchaseDraftLineLink" }
+
+    PurchaseDraftLineRedacted:
+      type: object
+      description: |
+        The same line read by an actor **without** `CUSTOMERS:WATCH`. `customerDestination` is absent as
+        a property; the ending and its **condition are returned unchanged**, because a refusal's cause
+        is gated on `REJECTIONS:WATCH` and never on customer identity. Which of the two condition
+        shapes arrives is decided independently — this is one axis of the four, not both.
+      required:
+        [id, itemId, itemSku, itemDescription, unitOfMeasure, orderedQuantity, packagingTypeId,
+         valueAddingNote, deliveryMode, warehouseDestination, ending, links]
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        itemId: { type: string, format: uuid }
+        itemSku: { type: string, minLength: 1 }
+        itemDescription: { type: string, minLength: 1 }
+        unitOfMeasure: { $ref: "#/components/schemas/UnitOfMeasure" }
+        orderedQuantity: { type: integer, minimum: 1 }
+        packagingTypeId:
+          oneOf:
+            - $ref: "#/components/schemas/PackagingTypeId"
+            - type: "null"
+        valueAddingNote: { type: [string, "null"] }
+        deliveryMode: { $ref: "#/components/schemas/DeliveryMode" }
+        warehouseDestination:
+          oneOf:
+            - $ref: "#/components/schemas/LineWarehouseDestination"
+            - type: "null"
+        ending:
+          oneOf:
+            - $ref: "#/components/schemas/PurchaseDraftLineEnding"
+            - type: "null"
+        links:
+          type: array
+          items: { $ref: "#/components/schemas/PurchaseDraftLineLink" }
+
+    PurchaseDraftLineListEntry:
+      type: object
+      description: Unchanged from `delivery-addresses` in shape; its `line` now carries the condition. One line of the by-line read, carrying the draft it belongs to so the view reads without a second request.
+      required: [purchaseDraftId, purchaseDraftReference, purchaseDraftState, expectedArrivalDate, line]
+      additionalProperties: false
+      properties:
+        purchaseDraftId: { type: string, format: uuid }
+        purchaseDraftReference: { type: string, minLength: 1 }
+        purchaseDraftState: { $ref: "#/components/schemas/PurchaseDraftState" }
+        expectedArrivalDate: { type: [string, "null"], format: date }
+        line: { $ref: "#/components/schemas/PurchaseDraftLine" }
+
+    PurchaseDraftDetail:
+      type: object
+      description: |
+        Unchanged from `delivery-addresses` in shape; its `lines` now carry the condition. `lineCount`
+        equals `lines.length`. From Ready for Ordering onward every value here is frozen; the only
+        additions afterwards are each line's ending — **its Condition Split, its Pre-receipt
+        Conformance and its Rejections included** — the Allocations made from it, and the closure. An
+        addition is not a change (spec.md §6 "Frozen-record integrity", which names these three as
+        permitted additions explicitly).
+      required:
+        [id, reference, state, expectedArrivalDate, lineCount, hasDriftSignal,
+         hasDirectToCustomerAddressDrift, closureReason, createdByUserId, createdAt, readiedByUserId,
+         readiedAt, closedByUserId, closedAt, arrivalConfirmedByUserId, arrivalConfirmedAt,
+         discardedByUserId, discardedAt, lines]
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        reference: { type: string, minLength: 1 }
+        state: { $ref: "#/components/schemas/PurchaseDraftState" }
+        expectedArrivalDate: { type: [string, "null"], format: date }
+        lineCount: { type: integer, minimum: 0 }
+        hasDriftSignal: { type: boolean }
+        hasDirectToCustomerAddressDrift: { type: boolean }
+        closureReason: { type: [string, "null"] }
+        createdByUserId: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+        readiedByUserId: { type: [string, "null"], format: uuid }
+        readiedAt: { type: [string, "null"], format: date-time }
+        closedByUserId: { type: [string, "null"], format: uuid }
+        closedAt: { type: [string, "null"], format: date-time }
+        arrivalConfirmedByUserId: { type: [string, "null"], format: uuid }
+        arrivalConfirmedAt: { type: [string, "null"], format: date-time }
+        discardedByUserId: { type: [string, "null"], format: uuid }
+        discardedAt: { type: [string, "null"], format: date-time }
+        lines:
+          type: array
+          items: { $ref: "#/components/schemas/PurchaseDraftLine" }
+
+    # ---- Destinations and links, restated unchanged ------------------------------------------------
+
+    LineWarehouseDestination:
+      type: object
+      description: |
+        Unchanged from `delivery-addresses`. Where a **Via Warehouse** line's goods travel: the Warehouse's own Delivery Address. The operator's own premises data, readable under `PURCHASE_DRAFTS:WATCH` and never gated on `CUSTOMERS:WATCH`.
+      required: [addressText, accessNotes, frozen]
+      additionalProperties: false
+      properties:
+        addressText:
+          oneOf:
+            - $ref: "#/components/schemas/AddressText"
+            - type: "null"
+        accessNotes: { $ref: "#/components/schemas/AccessNotes" }
+        frozen: { type: boolean }
+
+    LineCustomerDestination:
+      type: object
+      description: Unchanged from `delivery-addresses`. Where a **Direct to Customer** line's goods travel, with the customer name captured beside it at the freeze. Customer identity — omitted entirely from the redacted projection.
+      required: [customerDeliveryAddressId, customerId, customerName, addressText, accessNotes, frozen]
+      additionalProperties: false
+      properties:
+        customerDeliveryAddressId: { type: string, format: uuid }
+        customerId: { type: string, format: uuid }
+        customerName: { type: string, minLength: 1 }
+        addressText: { $ref: "#/components/schemas/AddressText" }
+        accessNotes: { $ref: "#/components/schemas/AccessNotes" }
+        frozen: { type: boolean }
+
+    CustomerRef:
+      type: object
+      description: Unchanged from `delivery-addresses`. The Customer a Customer Order names, by identifier and current name.
+      required: [id, name]
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, minLength: 1 }
+
+    CustomerOrderDestination:
+      type: object
+      description: Unchanged from `delivery-addresses`. Where one Customer Order's goods are going, joined in from the Delivery Address it names.
+      required: [deliveryAddressId, addressText, accessNotes, isMain, deactivatedAt]
+      additionalProperties: false
+      properties:
+        deliveryAddressId: { type: string, format: uuid }
+        addressText: { $ref: "#/components/schemas/AddressText" }
+        accessNotes: { $ref: "#/components/schemas/AccessNotes" }
+        isMain: { type: boolean }
+        deactivatedAt: { type: [string, "null"], format: date-time }
+
+    PurchaseDraftLineLink:
+      oneOf:
+        - $ref: "#/components/schemas/PurchaseDraftLineLinkIdentified"
+        - $ref: "#/components/schemas/PurchaseDraftLineLinkRedacted"
+      description: Unchanged from `delivery-addresses`. Both forms are modelled; the redacted one omits the customer and both sides of the address comparison, keeping the Drift Signal itself.
+
+    PurchaseDraftLineLinkIdentified:
+      type: object
+      description: |
+        Unchanged from `delivery-addresses`. What the member intends of this line for one customer.
+
+        **`allocation` is what this feature bounds differently.** Its quantity is unchanged in shape and
+        narrowed in what may produce it: an Allocation may draw only on the derived Accepted Quantity,
+        never on what was presented (AC-10, AC-11). The refused quantity is assigned to nobody and stays
+        on the Customer Order's Outstanding Quantity.
+      required:
+        [id, customerOrderId, customer, customerName, statedQuantity, snapshot, current, driftSignals,
+         allocation]
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        customerOrderId: { type: string, format: uuid }
+        customer:
+          oneOf:
+            - $ref: "#/components/schemas/CustomerRef"
+            - type: "null"
+        customerName: { type: [string, "null"], minLength: 1 }
+        statedQuantity: { type: integer, minimum: 1 }
+        snapshot:
+          oneOf:
+            - $ref: "#/components/schemas/DemandSnapshotEntryIdentified"
+            - type: "null"
+        current: { $ref: "#/components/schemas/LinkedCustomerOrderStateIdentified" }
+        driftSignals:
+          type: array
+          items: { $ref: "#/components/schemas/DriftSignalKind" }
+        allocation:
+          oneOf:
+            - $ref: "#/components/schemas/EndingAllocation"
+            - type: "null"
+
+    PurchaseDraftLineLinkRedacted:
+      type: object
+      description: Unchanged from `delivery-addresses`. The same link without the customer and without either side of the address comparison.
+      required: [id, customerOrderId, statedQuantity, snapshot, current, driftSignals, allocation]
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        customerOrderId: { type: string, format: uuid }
+        statedQuantity: { type: integer, minimum: 1 }
+        snapshot:
+          oneOf:
+            - $ref: "#/components/schemas/DemandSnapshotEntryRedacted"
+            - type: "null"
+        current: { $ref: "#/components/schemas/LinkedCustomerOrderStateRedacted" }
+        driftSignals:
+          type: array
+          items: { $ref: "#/components/schemas/DriftSignalKind" }
+        allocation:
+          oneOf:
+            - $ref: "#/components/schemas/EndingAllocation"
+            - type: "null"
+
+    DemandSnapshotEntryIdentified:
+      type: object
+      description: Unchanged from `delivery-addresses`. The demand exactly as it stood at the freeze.
+      required:
+        [capturedQuantity, capturedNeededBy, capturedState, capturedDeliveryAddressId,
+         capturedDeliveryAddressText]
+      additionalProperties: false
+      properties:
+        capturedQuantity: { type: integer, minimum: 1 }
+        capturedNeededBy: { type: string, format: date }
+        capturedState: { $ref: "#/components/schemas/CustomerOrderState" }
+        capturedDeliveryAddressId: { type: [string, "null"], format: uuid }
+        capturedDeliveryAddressText:
+          oneOf:
+            - $ref: "#/components/schemas/AddressText"
+            - type: "null"
+
+    DemandSnapshotEntryRedacted:
+      type: object
+      description: Unchanged from `delivery-addresses`. The captured demand without the captured Delivery Address.
+      required: [capturedQuantity, capturedNeededBy, capturedState]
+      additionalProperties: false
+      properties:
+        capturedQuantity: { type: integer, minimum: 1 }
+        capturedNeededBy: { type: string, format: date }
+        capturedState: { $ref: "#/components/schemas/CustomerOrderState" }
+
+    LinkedCustomerOrderStateIdentified:
+      type: object
+      description: |
+        Unchanged from `delivery-addresses` in shape. `outstandingQuantity` is what this feature
+        protects: a refused quantity never reduces it, so the customer keeps waiting and the shortfall
+        stays on the consolidated demand to be re-ordered by hand (spec.md §2, AC-24).
+      required: [quantity, neededBy, state, outstandingQuantity, lastChangedAt, deliveryAddress]
+      additionalProperties: false
+      properties:
+        quantity: { type: integer, minimum: 1 }
+        neededBy: { type: string, format: date }
+        state: { $ref: "#/components/schemas/CustomerOrderState" }
+        outstandingQuantity: { type: integer, minimum: 0 }
+        lastChangedAt: { type: [string, "null"], format: date-time }
+        deliveryAddress:
+          oneOf:
+            - $ref: "#/components/schemas/CustomerOrderDestination"
+            - type: "null"
+
+    LinkedCustomerOrderStateRedacted:
+      type: object
+      description: Unchanged from `delivery-addresses`. The linked order's current values without its destination.
+      required: [quantity, neededBy, state, outstandingQuantity, lastChangedAt]
+      additionalProperties: false
+      properties:
+        quantity: { type: integer, minimum: 1 }
+        neededBy: { type: string, format: date }
+        state: { $ref: "#/components/schemas/CustomerOrderState" }
+        outstandingQuantity: { type: integer, minimum: 0 }
+        lastChangedAt: { type: [string, "null"], format: date-time }
+
+    EndingAllocation:
+      type: object
+      description: Unchanged from `delivery-addresses`. What one link received of the line's ending, with the acting member and the time.
+      required: [allocatedQuantity, allocatedByUserId, createdAt]
+      additionalProperties: false
+      properties:
+        allocatedQuantity: { type: integer, minimum: 1 }
+        allocatedByUserId: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+
+    # ---- Request schemas ---------------------------------------------------------------------------
+
+    RejectionCreate:
+      type: object
+      description: |
+        **New.** One refusal within a line's ending. Recorded with the ending and **never afterwards**:
+        no Rejection is raised against a line whose ending exists, and there is no endpoint that would
+        (AC-04, spec.md §3).
+
+        **At most one entry per Reason on one line** (AC-09) — the quantities for a Reason belong
+        together, which `uq_purchase_draft_line_rejections_line_reason` proves rather than the command
+        remembering. The refusal names the duplicated Reason.
+
+        **The raising member, the time, and the Rejection's own identifier are not inputs**: the server
+        attributes and mints them.
+      required: [rejectionReasonId, quantity, source]
+      additionalProperties: false
+      properties:
+        rejectionReasonId:
+          $ref: "#/components/schemas/RejectionReasonId"
+          description: |
+            One entry of the catalogue. Validated by the **server against the catalogue**, not by this
+            schema, because the catalogue is data and an eleventh Reason must not be a contract change
+            (sad.md §7). One the catalogue does not offer is refused, and the refusal **names the
+            Reasons it does offer**, since members do not maintain the list (AC-06).
+        quantity:
+          type: integer
+          minimum: 1
+          description: A whole number of at least one (AC-03). The sum across all entries may not exceed `receivedQuantity` / `deliveredQuantity` (AC-02), which is a cross-field rule the command asserts against the locked line rather than a bound this schema can state.
+        source:
+          $ref: "#/components/schemas/RejectionSource"
+          description: |
+            Must agree with the line's Delivery Mode — `inspected` on a Via Warehouse line,
+            `customer_reported` on a Direct to Customer one — and a disagreement is refused, naming
+            which the line admits (AC-24, AC-25).
+
+            **It is an input even though the server could derive it**, because AC-25's refusal is
+            otherwise unreachable: a value that cannot be expressed cannot be refused. The approved
+            surface derives it and renders it as a chip rather than a field, so the wrong value cannot
+            be expressed *there* (sad.md §6.2) — a surface rule, not an API one. sad.md §7 states both
+            halves and contradicts itself; see `api-sync-report.md` § Finding 1.
+        description:
+          $ref: "#/components/schemas/RejectionDescription"
+          description: |
+            Required when the catalogue marks this Reason `requiresDescription` — today `unfit_other`
+            alone — and optional otherwise (AC-07, AC-13). Omitted rather than sent as an empty string.
+
+    PreReceiptConformanceCreate:
+      oneOf:
+        - $ref: "#/components/schemas/PreReceiptConformanceNotMetCreate"
+        - $ref: "#/components/schemas/PreReceiptConformanceWithoutNoteCreate"
+      description: |
+        **New.** The supplier's frozen instruction judged, submitted with the ending and never
+        afterwards.
+
+        **The note belongs only to `not_met`, and that is expressed here rather than as a database
+        constraint.** data-model.md hands this rule to the contract deliberately: a `CHECK` would
+        produce an unnamed constraint violation where the server error-handling guide requires a named
+        predicate and a stable `ErrorCode`, and no acceptance criterion names a refusal for a note
+        beside `met`. The request schema is its natural home, so it is a 400 naming the property.
+
+        Which **verdicts** are legal is not expressible here at all — it depends on what the line was
+        frozen with, which the server reads under lock (AC-17, AC-17a).
+      examples:
+        - verdict: "not_met"
+          note: "Coils arrived uncoiled and unlabelled; the packaging was honoured, the labelling was not."
+        - verdict: "met"
+
+    PreReceiptConformanceNotMetCreate:
+      type: object
+      description: The supplier did not honour the frozen instruction. One judgement covers both, so the note names which of the two failed (AC-15, AC-15a). The note is optional — no acceptance criterion requires one, and `chk_purchase_draft_lines_conformance_note_shape` requires only that it never stand without a verdict.
+      required: [verdict]
+      additionalProperties: false
+      properties:
+        verdict: { type: string, const: "not_met" }
+        note: { $ref: "#/components/schemas/PreReceiptConformanceNote" }
+
+    PreReceiptConformanceWithoutNoteCreate:
+      type: object
+      description: |
+        The instruction was honoured (`met`), or the line was frozen carrying none and there is nothing
+        to judge (`not_applicable`). **Neither admits a note** — this arm is what makes a note beside
+        `met` a named 400 rather than an unnamed constraint violation.
+
+        `met` is additionally refused when the same submission carries a `packaging_not_as_instructed`
+        or `value_adding_note_not_applied` refusal, since such a refusal **is** the instruction not
+        being met — a cross-field rule the command asserts, not this schema (AC-16).
+      required: [verdict]
+      additionalProperties: false
+      properties:
+        verdict:
+          type: string
+          enum: [met, not_applicable]
+
+    EndingAllocationCreate:
+      type: object
+      description: |
+        Unchanged from `delivery-addresses` in shape, **narrowed in what bounds it.** The Allocation is
+        addressed through the link rather than beside it, which is what makes "an Allocation names a
+        Customer Order its line is actually linked to" provable by the reference itself.
+      required: [purchaseDraftLineLinkId, allocatedQuantity]
+      additionalProperties: false
+      properties:
+        purchaseDraftLineLinkId: { type: string, format: uuid }
+        allocatedQuantity:
+          type: integer
+          minimum: 1
+          description: |
+            The sum across all entries may not exceed the **derived Accepted Quantity** — the received
+            figure less every refusal in this same submission — rather than the received figure itself
+            (AC-10, AC-11). Every other bound `ordering` set is unchanged and re-checked against the
+            rows locked inside this transaction: never more than a Customer Order's Outstanding
+            Quantity, and never to one cancelled or already Fulfilled (AC-12). A link receiving nothing
+            is omitted rather than sent as `0`.
+
+    PurchaseDraftLineArrival:
+      type: object
+      description: |
+        **Extended by this feature: `rejections` and `preReceiptConformance` are added.** What arrived
+        at the dock on **one Via Warehouse line**, with the condition it arrived in.
+
+        The ending kind, the attribution, the time, the Accepted Quantity, the Rejected Quantity and
+        the draft's move to Closed are **not inputs**: the kind is the route, the attribution and time
+        are the acting member and now, the two quantities are derived, and the closure follows from
+        whether any line is left without an ending.
+
+        `additionalProperties: false` throughout, matching the `z.strictObject` contract schemas the
+        repository ships — an unknown property is a validation failure rather than a silently ignored
+        one (sad.md §7).
+      required: [receivedQuantity]
+      additionalProperties: false
+      properties:
+        receivedQuantity:
+          type: integer
+          minimum: 0
+          description: |
+            **What the supplier presented**, including goods about to be refused at the door and goods a
+            sealed unit declared but did not hold — not what physically arrived, which is a rule this
+            product decided and which supersedes `ordering`'s (spec.md §1, second and fourth
+            boundaries). Bounded neither above nor below by `orderedQuantity`.
+
+            `0` records that nothing came, and then `rejections`, `preReceiptConformance` and
+            `allocations` must all be absent or empty: a line where nothing was received records
+            neither judgement, and the two condition checks are not run at all (AC-04a).
+        rejections:
+          type: array
+          maxItems: 50
+          items: { $ref: "#/components/schemas/RejectionCreate" }
+          description: |
+            The Condition Split. Omitted or empty when nothing was refused — and **an ending that
+            refuses nothing needs only `PURCHASE_DRAFTS:RECEIVE`** (AC-01b), while one carrying any
+            entry needs `REJECTIONS:CREATE` as well (AC-01a). This property's presence is what decides
+            the required Permission set, which is the product's first such rule (ADR 0001).
+
+            The real bound is one entry per Reason (AC-09), enforced by
+            `uq_purchase_draft_line_rejections_line_reason`; `maxItems` is a payload guard mirroring
+            `allocations`, deliberately loose so extending the catalogue never requires changing it.
+        preReceiptConformance:
+          $ref: "#/components/schemas/PreReceiptConformanceCreate"
+          description: |
+            Required on any line where something was received, and refused on a line where nothing was
+            (AC-04a). Which verdicts are legal depends on what the line was frozen with (AC-17,
+            AC-17a); the approved surface offers **no default selection**, so the fastest path through
+            the dock still requires looking at the goods.
+        allocations:
+          type: array
+          maxItems: 50
+          items: { $ref: "#/components/schemas/EndingAllocationCreate" }
+          description: |
+            May be omitted or empty for a line whose linked demand has all gone, and must be for a line
+            where nothing arrived. Their sum may not exceed the **derived Accepted Quantity**. The
+            ceiling is a payload guard, not a business rule.
+
+    PurchaseDraftLineDirectDelivery:
+      type: object
+      description: |
+        **Extended identically to the arrival payload.** What the customer received on **one Direct to
+        Customer line**, with the condition they reported. Identical in every respect except the name of
+        the quantity, which says what actually happened: these goods never entered the building.
+
+        The one rule that differs is carried by `RejectionCreate.source`: every entry takes
+        `customer_reported`, and one claiming `inspected` is refused (AC-24, AC-25 mirrored).
+      required: [deliveredQuantity]
+      additionalProperties: false
+      properties:
+        deliveredQuantity:
+          type: integer
+          minimum: 0
+          description: |
+            What the customer received, as the member was told it. This release provides no proof that a
+            Direct Delivery happened and verifies nothing a customer reports; the member alone judges
+            when the account is settled, and **no reporting window, timer or time-driven state exists**
+            (spec.md §1, §3; sad.md §6.2 and its flag). Bounded neither above nor below by
+            `orderedQuantity`.
+        rejections:
+          type: array
+          maxItems: 50
+          items: { $ref: "#/components/schemas/RejectionCreate" }
+          description: |
+            Every entry takes `source: customer_reported`; the refused quantity is assigned to nobody and stays on that customer's Outstanding Quantity (AC-24).
+        preReceiptConformance:
+          $ref: "#/components/schemas/PreReceiptConformanceCreate"
+        allocations:
+          type: array
+          maxItems: 50
+          items: { $ref: "#/components/schemas/EndingAllocationCreate" }
+
+    RejectionAmend:
+      type: object
+      description: |
+        **New.** The description, the Disposition, or both. **At least one must be present** — an
+        amendment that amends nothing would still write an attribution, which would make "every
+        amendment records the acting member and the time" mean something it does not.
+
+        **Nothing else about a Rejection is addressable.** Its quantity, Reason, Source and line were
+        settled when the ending was recorded and there is no property for any of them here — which is
+        the contract half of what the repository's narrow conditional `UPDATE` enforces, since this
+        codebase has no triggers and column-level immutability would need one (data-model.md
+        § Constraints the model deliberately does not express).
+
+        The amending member and the time are attributed by the server, never accepted as input, and
+        arrive together or not at all.
+      minProperties: 1
+      additionalProperties: false
+      properties:
+        description:
+          $ref: "#/components/schemas/RejectionDescription"
+          description: |
+            The corrected prose (AC-18b). **Clearing is not offered**: a Rejection carrying a Reason the
+            catalogue marks `requiresDescription` must always carry one (CONTEXT.md §Invariants), and a
+            nullable property here would let an amendment break an invariant the ending established.
+            Blank after trimming is a refusal, not a clear.
+        disposition:
+          $ref: "#/components/schemas/RejectionDisposition"
+          description: |
+            The decision recorded (AC-18). `undecided` is a legal value and its refusal is conditional
+            on the **stored** state, not on the payload: legal against a Rejection still undecided, and
+            refused against one already decided (AC-18a). A value outside the four is refused, naming
+            those that are available (AC-19).
+
+    RejectionAmendment:
+      type: object
+      description: |
+        **New.** The amendment as recorded, attributed to the acting member and the time (AC-18,
+        AC-18b).
+
+        **It is the amendment and not the Rejection.** The Reason, quantity and Source are deliberately
+        absent: those are the cause `REJECTIONS:WATCH` gates, and `REJECTIONS:UPDATE` is a separate
+        Permission that does not imply it — echoing them here would make the amendment a second,
+        ungated read of exactly what spec.md §6.1's fourth quality goal protects. `description` and
+        `disposition` are returned because the actor is the one who just set them.
+
+        The surface refreshes the line it belongs to through the RTK Query tags sad.md §8 already
+        connects, rather than from this response.
+
+        Nothing about the line's quantities moved, so no Allocation, Outstanding Quantity or draft state
+        is touched and no other read changed.
+      required: [id, description, disposition, amendedByUserId, amendedAt]
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        description:
+          oneOf:
+            - $ref: "#/components/schemas/RejectionDescription"
+            - type: "null"
+          description: "`null` when the Rejection was recorded without one and this amendment did not add one."
+        disposition: { $ref: "#/components/schemas/RejectionDisposition" }
+        amendedByUserId: { type: string, format: uuid }
+        amendedAt: { type: string, format: date-time }
