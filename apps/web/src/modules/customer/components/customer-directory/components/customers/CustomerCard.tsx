@@ -36,6 +36,22 @@ export type CustomerCardProps = {
  * components as designed is what keeps the announcement right
  * (`heroui-design-principles.md` §2). The control is therefore named by the
  * Customer alone, which is also the only thing pressing it acts on.
+ *
+ * **The whole card is the press target, and it is still that one button.** The
+ * control stretches its own `::after` box over the positioned card, so a click
+ * anywhere on the card — the meta line, the chip, the padding — lands on the
+ * same control the name is, doing exactly what pressing the name does. Growing
+ * the target this way rather than by handing the card root an `onClick` is what
+ * keeps the card at one tab stop, one accessible name and one announced role:
+ * a click handler on the `Card`'s `<div>` would be an unreachable control
+ * beside a reachable one, and moving the button up to wrap the card would put
+ * the heading and the meta line back inside it. Nothing under the overlay is
+ * interactive, so it covers no control but this one.
+ *
+ * The overlay is geometry, which jsdom does not compute: the spec suite can
+ * pin what the control is named and what pressing it does, but not that a
+ * click on the card's padding reaches it — that one belongs to a look at the
+ * running app.
  */
 export const CustomerCard = ({
   customer,
@@ -54,14 +70,18 @@ export const CustomerCard = ({
       <Card
         className={
           isSelected
-            ? 'border-2 border-accent shadow-none'
-            : 'border border-border shadow-none'
+            ? 'relative border-2 border-accent shadow-none'
+            : 'relative border border-border shadow-none'
         }
       >
         <Card.Header>
           <div className="min-w-0 flex-1">
             <Card.Title className="text-base font-semibold">
-              <button className="text-left" type="button" onClick={onPress}>
+              <button
+                className="text-left after:absolute after:inset-0 after:content-['']"
+                type="button"
+                onClick={onPress}
+              >
                 {customer.name}
               </button>
             </Card.Title>
