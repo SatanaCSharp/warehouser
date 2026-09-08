@@ -288,4 +288,210 @@ describe('EndingRefusalAlert', () => {
 
     expect(onDismiss).toHaveBeenCalledTimes(1);
   });
+
+  // ---------------------------------------------------------------------------------------------
+  // T19 — the nine refusal codes this feature adds. Nested in its own `describe` purely to keep
+  // each callback under the repository's per-function line budget; every case below still runs
+  // inside `EndingRefusalAlert`'s shared `renderAlert`/`draft` fixtures above.
+  describeT19RefusalCodes();
 });
+
+/**
+ * T19 — the nine refusal codes this feature adds. Every one names the rule it broke and states
+ * that nothing of the submission was recorded (design-handoff.md `N4IoNS`, cells `b799Xv`,
+ * `KOuxb`, `MBCzx`, `Hy3k1`, `QS499`, `XJ5GY`, `aNXAl`). Each test submits **more than one**
+ * violation at once, as `contracts/api-sync-report.md`'s "every violation is returned together"
+ * requires — which is also what a single generic fallback message could never satisfy, since two
+ * distinct bullets with two distinct figures both have to be readable at once.
+ */
+function describeT19RefusalCodes(): void {
+  const CONDITION_SPLIT = ErrorCode.PURCHASE_DRAFTS_CONDITION_SPLIT_INVALID;
+  const CONFORMANCE = ErrorCode.PURCHASE_DRAFTS_PRE_RECEIPT_CONFORMANCE_INVALID;
+  const INVALID_INPUT = ErrorCode.PURCHASE_DRAFTS_INVALID_INPUT;
+
+  /** Renders the alert for a batch of violations under one code, and returns it. */
+  const renderViolations = (
+    code: string,
+    violations: Record<string, unknown>[],
+  ): HTMLElement => {
+    renderAlert(code, { violations });
+    return screen.getByRole('alert');
+  };
+
+  it('names the over-refusal and the duplicate reason together, each in its own words (AC-02, AC-09)', () => {
+    const alert = renderViolations(CONDITION_SPLIT, [
+      {
+        rule: 'rejections_exceed_received',
+        rejectionReasonId: null,
+        receivedQuantity: 100,
+        rejectedQuantity: 118,
+      },
+      {
+        rule: 'duplicate_rejection_reason',
+        rejectionReasonId: 'damaged_in_transit',
+      },
+    ]);
+
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
+    expect(alert).toHaveTextContent(/118/u);
+    expect(alert).toHaveTextContent(/100/u);
+    expect(alert).toHaveTextContent(
+      /no more can be refused than was presented/iu,
+    );
+    expect(alert).toHaveTextContent(/damaged_in_transit/u);
+    expect(alert).toHaveTextContent(/one refusal per reason/iu);
+    // Neither bullet's own words are the other's — a shared fallback sentence would fail this.
+    expect(alert).not.toHaveTextContent(
+      /duplicate_rejection_reason bullet reads as the over-refusal one/iu,
+    );
+  });
+
+  it("lists the catalogue's own reasons and names the description-requiring reason together (AC-06, AC-07)", () => {
+    const alert = renderViolations(CONDITION_SPLIT, [
+      {
+        rule: 'unknown_rejection_reason',
+        rejectionReasonId: 'damaged_by_forklift',
+        availableRejectionReasonIds: [
+          'damaged_by_packing',
+          'damaged_in_transit',
+        ],
+      },
+      { rule: 'description_required', rejectionReasonId: 'unfit_other' },
+    ]);
+
+    expect(alert).toHaveTextContent(/damaged_by_packing/u);
+    expect(alert).toHaveTextContent(/damaged_in_transit/u);
+    expect(alert).toHaveTextContent(/maintained by the team/iu);
+    // AC-06's own guarantee: the team maintains it, members do not.
+    expect(alert).not.toHaveTextContent(/maintained by (?:the )?members/iu);
+    expect(alert).toHaveTextContent(/unfit_other/u);
+    expect(alert).toHaveTextContent(
+      /always (?:needs|requires) a description/iu,
+    );
+  });
+
+  it('names which source that line carries when it disagrees with the delivery mode (AC-25)', () => {
+    const alert = renderViolations(CONDITION_SPLIT, [
+      {
+        rule: 'source_mismatch',
+        rejectionReasonId: 'quality_defect',
+        deliveryMode: 'via_warehouse',
+        submittedSource: 'customer_reported',
+        requiredSource: 'inspected',
+      },
+    ]);
+
+    expect(alert).toHaveTextContent(/own dock/iu);
+    expect(alert).toHaveTextContent(/inspected source/iu);
+    expect(alert).toHaveTextContent(/nothing.*(?:recorded|saved)/iu);
+  });
+
+  it('names the contradiction and the uninstructed line together, in different words (AC-16, AC-17a)', () => {
+    const alert = renderViolations(CONFORMANCE, [
+      {
+        rule: 'met_contradicts_rejection',
+        verdict: 'met',
+        rejectionReasonId: 'packaging_not_as_instructed',
+      },
+      {
+        rule: 'not_applicable_on_instructed_line',
+        verdict: 'not_applicable',
+        frozenPackagingTypeId: 'cable_coil',
+        frozenValueAddingNote: true,
+      },
+    ]);
+
+    expect(alert).toHaveTextContent(/contradict/iu);
+    expect(alert).toHaveTextContent(/packaging_not_as_instructed/u);
+    expect(alert).not.toHaveTextContent(/nothing was frozen on this line/iu);
+  });
+
+  it('names a line frozen with no instruction as the mirror case (AC-17)', () => {
+    const alert = renderViolations(CONFORMANCE, [
+      {
+        rule: 'verdict_on_uninstructed_line',
+        verdict: 'met',
+        frozenPackagingTypeId: null,
+        frozenValueAddingNote: false,
+      },
+    ]);
+
+    expect(alert).toHaveTextContent(/nothing (?:was frozen|to judge)/iu);
+    expect(alert).not.toHaveTextContent(/contradict/iu);
+  });
+
+  it('names the quantity bound and the over-long description together, each against its own field (AC-03, AC-14)', () => {
+    const alert = renderViolations(INVALID_INPUT, [
+      { rule: 'quantity_out_of_range', path: 'rejections.0.quantity' },
+      {
+        rule: 'description_too_long',
+        path: 'rejections.1.description',
+        maxLength: 1000,
+      },
+      { rule: 'description_empty', path: 'rejections.2.description' },
+      { rule: 'description_not_trimmed', path: 'rejections.3.description' },
+    ]);
+
+    expect(alert).toHaveTextContent(/whole number/iu);
+    expect(alert).toHaveTextContent(/at least one/iu);
+    expect(alert).toHaveTextContent(
+      /1[,\s]?000 characters|one thousand characters/iu,
+    );
+    // Three distinct description faults, not one message repeated three times.
+    expect(
+      alert.textContent?.match(/description/giu)?.length ?? 0,
+    ).toBeGreaterThanOrEqual(3);
+  });
+
+  it('names the over-long note and the nothing-received conflict together (AC-15b, AC-04a)', () => {
+    const alert = renderViolations(INVALID_INPUT, [
+      {
+        rule: 'note_too_long',
+        path: 'preReceiptConformance.note',
+        maxLength: 1000,
+      },
+      { rule: 'note_empty', path: 'preReceiptConformance.note' },
+      { rule: 'note_not_trimmed', path: 'preReceiptConformance.note' },
+      { rule: 'note_not_admitted_by_verdict', verdict: 'met' },
+      { rule: 'condition_on_nothing_received', path: 'preReceiptConformance' },
+    ]);
+
+    expect(alert).toHaveTextContent(
+      /1[,\s]?000 characters|one thousand characters/iu,
+    );
+    expect(alert).toHaveTextContent(/note/iu);
+    expect(alert).toHaveTextContent(/nothing.*(?:received|arrived)/iu);
+  });
+
+  // AC-11 — the assignment field that overshoots is named, not the refusal, and the shortfall is
+  // stated in words rather than left for the member to subtract themselves. Bundled with AC-12's
+  // already-shipped `customer_order_not_unfulfilled` bullet, exactly as design frame `aNXAl` draws
+  // the two together, so a fallback covering only the shipped rule cannot pass this test.
+  it('names the line whose assignment overshoots what was accepted, stating the shortfall in words, alongside the cancelled order (AC-11, AC-12)', () => {
+    const alert = renderViolations(BOUNDS, [
+      {
+        purchaseDraftLineId: ids.line,
+        rule: 'allocations_exceed_accepted_quantity',
+        receivedQuantity: 100,
+        rejectedQuantity: 8,
+        acceptedQuantity: 92,
+        allocatedQuantity: 100,
+      },
+      {
+        purchaseDraftLineLinkId: ids.cancelledLink,
+        rule: 'customer_order_not_unfulfilled',
+        customerOrderState: 'cancelled',
+        customerOrderLastChangedAt: '2026-08-24T12:00:00.000Z',
+      },
+    ]);
+
+    expect(alert).toHaveTextContent(/Line 1/iu);
+    expect(alert).toHaveTextContent(/100/u);
+    expect(alert).toHaveTextContent(/8/u);
+    expect(alert).toHaveTextContent(/92/u);
+    expect(alert).toHaveTextContent(/only accepted goods may be assigned/iu);
+    expect(alert).toHaveTextContent(
+      /Baltic Freight OU — cancelled on 24 Aug, so nothing can be assigned to it/iu,
+    );
+  });
+}

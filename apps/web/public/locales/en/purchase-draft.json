@@ -255,8 +255,35 @@
           "fulfilled_dated": "{{customer}} — already fulfilled on {{on}}, so nothing can be assigned to it.",
           "unavailable": "{{customer}} — no longer waiting for anything, so nothing can be assigned to it.",
           "unavailable_dated": "{{customer}} — no longer waiting for anything since {{on}}, so nothing can be assigned to it.",
+          "exceedsAccepted": "Line {{line}} — you presented {{received}} and refused {{rejected}}, so {{accepted}} can be assigned. You have assigned {{allocated}}. Only accepted goods may be assigned.",
           "checkedAgain": "Each bound is checked again at the moment the confirmation is recorded, not when you started filling it in.",
           "back": "Back to the form"
+        },
+        "conditionSplit": {
+          "title": "This ending cannot be recorded as submitted",
+          "rejectionsExceedReceived": "No more can be refused than was presented — you refused {{rejected}}, but only presented {{received}}.",
+          "unknownReason": "\"{{reason}}\" is not a Reason this catalogue offers. It offers: {{available}}. The list is maintained by the team, not by members.",
+          "descriptionRequired": "\"{{reason}}\" always needs a description — say what was wrong, in your own words.",
+          "duplicateReason": "\"{{reason}}\" is refused twice on this line. One refusal per reason — combine the quantities into one.",
+          "sourceMismatch": "These goods came to your own dock, so a refusal for \"{{reason}}\" needs the inspected source, not the customer's report."
+        },
+        "conformance": {
+          "title": "This judgement of the supplier's instruction cannot be recorded as submitted",
+          "metContradictsRejection": "Met contradicts the refusal for \"{{reason}}\" — a refusal for that reason is the instruction not being met.",
+          "notApplicableOnInstructedLine": "Not applicable contradicts the instruction frozen on this line — a line given an instruction must be judged Met or Not met.",
+          "verdictOnUninstructedLine": "Nothing was frozen on this line to judge, so the only judgement available is Not applicable."
+        },
+        "invalidInput": {
+          "title": "The request is invalid",
+          "quantityOutOfRange": "The refused quantity must be a whole number of at least one.",
+          "descriptionTooLong": "A description cannot be longer than {{maxLength}} characters.",
+          "descriptionEmpty": "A description cannot be empty.",
+          "descriptionNotTrimmed": "A description cannot start or end with a space.",
+          "noteTooLong": "The judgement's note cannot be longer than {{maxLength}} characters.",
+          "noteEmpty": "The judgement's note cannot be empty.",
+          "noteNotTrimmed": "The judgement's note cannot start or end with a space.",
+          "noteNotAdmittedByVerdict": "A note is only recorded beside a Not met judgement.",
+          "conditionOnNothingReceived": "Nothing was received on this line, so no condition or judgement can be recorded against it."
         }
       },
       "arrival": {

@@ -304,4 +304,21 @@ export const MUTATION_FEEDBACK: Record<string, MutationFeedback> = {
     describe: ({ input }) => ({ reason: input.closureReason }),
   }),
   discardPurchaseDraft: feedback({ scope: 'purchase-draft' }),
+  // T19/design-handoff.md `NLEI2` — the invisible consequence is that the
+  // correction is attributed to the member who made it, together with when.
+  // The disposition is translated here, in the presentation adapter, rather
+  // than in the component that triggers the mutation
+  // (`guides/adding-and-maintaining-web-localization.md` "React and non-React
+  // usage").
+  amendPurchaseDraftLineRejection: feedback<{
+    input: { disposition: string };
+  }>({
+    scope: 'purchase-draft',
+    describe: ({ input }) => ({
+      disposition: i18n.t(
+        `closedLine.refusalRow.disposition.${input.disposition}`,
+        { ns: 'purchase-draft' },
+      ),
+    }),
+  }),
 };

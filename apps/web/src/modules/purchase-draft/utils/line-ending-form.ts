@@ -96,6 +96,18 @@ const endingBoundViolationSchema = z.discriminatedUnion('rule', [
     receivedQuantity: z.number(),
     allocatedQuantity: z.number(),
   }),
+  // AC-11 — the bound narrowed from what arrived to what was accepted, once the
+  // line's own condition split has a figure to subtract. `receivedQuantity` and
+  // `rejectedQuantity` travel alongside `acceptedQuantity` so the bullet can
+  // state the shortfall in words rather than leaving the member to subtract it.
+  z.object({
+    rule: z.literal('allocations_exceed_accepted_quantity'),
+    purchaseDraftLineId: z.string(),
+    receivedQuantity: z.number(),
+    rejectedQuantity: z.number(),
+    acceptedQuantity: z.number(),
+    allocatedQuantity: z.number(),
+  }),
   z.object({
     rule: z.literal('exceeds_outstanding_quantity'),
     purchaseDraftLineLinkId: z.string(),

@@ -60,7 +60,8 @@
     "recordPurchaseDraftLineArrival": "This line's arrival is recorded and what each customer is still waiting for has been reduced. The draft closes once every line has an ending.",
     "recordPurchaseDraftLineDirectDelivery": "The delivery is recorded and what each customer is still waiting for has been reduced. No stock moved — the goods went straight to the customer and were never counted here.",
     "closePurchaseDraft": "Purchase draft closed: {{reason}}",
-    "discardPurchaseDraft": "Purchase draft discarded."
+    "discardPurchaseDraft": "Purchase draft discarded.",
+    "amendPurchaseDraftLineRejection": "Refusal updated · {{disposition}} · attributed to you"
   },
   "customer": {
     "recordCustomer": "Customer recorded · {{customer}}",

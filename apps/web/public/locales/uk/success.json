@@ -60,7 +60,8 @@
     "recordPurchaseDraftLineArrival": "Прибуття цього рядка записано, і те, на що ще чекає кожен клієнт, зменшено. Чернетка закриється, коли кожен рядок матиме завершення.",
     "recordPurchaseDraftLineDirectDelivery": "Доставку записано, і те, на що ще чекає кожен клієнт, зменшено. Жодні залишки не рухалися — товар поїхав одразу до клієнта і тут ніколи не рахувався.",
     "closePurchaseDraft": "Чернетку закупівлі закрито: {{reason}}",
-    "discardPurchaseDraft": "Чернетку закупівлі відхилено."
+    "discardPurchaseDraft": "Чернетку закупівлі відхилено.",
+    "amendPurchaseDraftLineRejection": "Відмову оновлено · {{disposition}} · зараховано на вас"
   },
   "customer": {
     "recordCustomer": "Клієнта записано · {{customer}}",

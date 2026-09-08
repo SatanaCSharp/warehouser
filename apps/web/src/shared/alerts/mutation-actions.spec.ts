@@ -146,4 +146,21 @@ describe('MUTATION_FEEDBACK success copy', () => {
     expect(copy).toMatch(/no stock moved/iu);
     expect(copy).toMatch(/never counted here/iu);
   });
+
+  // T19/design-handoff.md `NLEI2` — "Refusal updated" states the invisible consequence a member
+  // could not otherwise see: that the correction is attributed to them, together with when. An
+  // endpoint absent from the registry reports nothing at all (web-error-handling.md §4), which is
+  // exactly the gap this pins: `amendPurchaseDraftLineRejection` (T18) has no entry yet, so this
+  // fails on the registry lookup itself before it ever reaches a translated sentence.
+  it('states that a refusal amendment is attributed to the member who made it', () => {
+    const feedback = MUTATION_FEEDBACK.amendPurchaseDraftLineRejection;
+    expect(feedback).toBeDefined();
+
+    const copy = successToast('amendPurchaseDraftLineRejection', {
+      input: { disposition: 'held_for_return' },
+    });
+
+    expect(copy).toMatch(/refusal updated/iu);
+    expect(copy).toMatch(/attributed to you/iu);
+  });
 });
