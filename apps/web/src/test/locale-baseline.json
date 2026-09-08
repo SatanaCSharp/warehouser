@@ -1090,7 +1090,19 @@
       "byLine.noExpectedArrival": "No expected arrival date yet",
       "byLine.loading": "Loading purchase draft lines",
       "byLine.error": "We couldn't read the lines of this warehouse's purchase drafts.",
-      "byLine.addressDrift": "A linked order has been redirected to another delivery address."
+      "byLine.addressDrift": "A linked order has been redirected to another delivery address.",
+      "closedLine.conditionHeading.arrival": "CONDITION ON ARRIVAL",
+      "closedLine.conditionHeading.direct_delivery": "CONDITION ON ARRIVAL",
+      "closedLine.refusalRow.disposition.undecided": "Undecided",
+      "closedLine.refusalRow.disposition.refused_at_delivery": "Refused at delivery",
+      "closedLine.refusalRow.disposition.held_for_return": "Held for return",
+      "closedLine.refusalRow.disposition.scrapped_on_site": "Scrapped on site",
+      "closedLine.refusalRow.actionsFor": "Actions for the refusal of {{quantity}} {{reason}}",
+      "closedLine.conformance.verdict.met": "Supplier's instruction — Met",
+      "closedLine.conformance.verdict.not_met": "Supplier's instruction — Not met",
+      "closedLine.conformance.verdict.not_applicable": "Supplier's instruction — Not applicable",
+      "closedLine.conformance.explanation.met": "The supplier followed the packaging and labelling instruction frozen on this line.",
+      "closedLine.conformance.explanation.notApplicable": "This line was frozen carrying no packaging or labelling instruction to judge."
     },
     "sign-in": {
       "title": "Sign in to your account",
@@ -2489,7 +2501,19 @@
       "byLine.noExpectedArrival": "Дату очікуваного прибуття ще не вказано",
       "byLine.loading": "Завантаження рядків чернеток закупівлі",
       "byLine.error": "Не вдалося прочитати рядки чернеток закупівлі цього складу.",
-      "byLine.addressDrift": "Пов’язане замовлення перенаправлено на іншу адресу доставки."
+      "byLine.addressDrift": "Пов’язане замовлення перенаправлено на іншу адресу доставки.",
+      "closedLine.conditionHeading.arrival": "СТАН ПРИ ПРИБУТТІ",
+      "closedLine.conditionHeading.direct_delivery": "СТАН ПРИ ПРИБУТТІ",
+      "closedLine.refusalRow.disposition.undecided": "Не вирішено",
+      "closedLine.refusalRow.disposition.refused_at_delivery": "Відхилено при доставці",
+      "closedLine.refusalRow.disposition.held_for_return": "Утримано для повернення",
+      "closedLine.refusalRow.disposition.scrapped_on_site": "Утилізовано на місці",
+      "closedLine.refusalRow.actionsFor": "Дії щодо відмови від {{quantity}} — {{reason}}",
+      "closedLine.conformance.verdict.met": "Інструкція постачальника — Дотримано",
+      "closedLine.conformance.verdict.not_met": "Інструкція постачальника — Не дотримано",
+      "closedLine.conformance.verdict.not_applicable": "Інструкція постачальника — Не застосовується",
+      "closedLine.conformance.explanation.met": "Постачальник дотримався інструкції з пакування та маркування, зафіксованої на цьому рядку.",
+      "closedLine.conformance.explanation.notApplicable": "Цей рядок був зафіксований без інструкції з пакування чи маркування для оцінки."
     },
     "sign-in": {
       "title": "Увійдіть до свого облікового запису",

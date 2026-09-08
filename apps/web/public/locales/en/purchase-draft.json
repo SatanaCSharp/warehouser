@@ -425,5 +425,31 @@
     "loading": "Loading purchase draft lines",
     "error": "We couldn't read the lines of this warehouse's purchase drafts.",
     "addressDrift": "A linked order has been redirected to another delivery address."
+  },
+  "closedLine": {
+    "conditionHeading": {
+      "arrival": "CONDITION ON ARRIVAL",
+      "direct_delivery": "CONDITION ON ARRIVAL"
+    },
+    "refusalRow": {
+      "disposition": {
+        "undecided": "Undecided",
+        "refused_at_delivery": "Refused at delivery",
+        "held_for_return": "Held for return",
+        "scrapped_on_site": "Scrapped on site"
+      },
+      "actionsFor": "Actions for the refusal of {{quantity}} {{reason}}"
+    },
+    "conformance": {
+      "verdict": {
+        "met": "Supplier's instruction — Met",
+        "not_met": "Supplier's instruction — Not met",
+        "not_applicable": "Supplier's instruction — Not applicable"
+      },
+      "explanation": {
+        "met": "The supplier followed the packaging and labelling instruction frozen on this line.",
+        "notApplicable": "This line was frozen carrying no packaging or labelling instruction to judge."
+      }
+    }
   }
 }
