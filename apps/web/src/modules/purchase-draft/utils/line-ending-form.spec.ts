@@ -7,6 +7,7 @@ import {
 } from 'modules/purchase-draft/utils/line-ending-form';
 
 import type { PurchaseDraftLine } from '@warehouser/contracts/purchase-drafts';
+import type { LineEndingForm } from 'modules/purchase-draft/utils/line-ending-form';
 
 // T15 — the seam `ConditionBlock`'s own spec deliberately does not cover: the
 // Condition Split as the two ending endpoints actually take it, built from the
@@ -182,5 +183,84 @@ describe('parseLineDirectDeliveryForm — the same Split, sourced from the custo
         source: 'customer_reported',
       },
     ]);
+  });
+});
+
+// 2026-09-08 frontend review: the verdict → payload mapping ran through a
+// sequence of guards with a trailing default, so a fourth ConformanceVerdict
+// would have compiled and fallen through to `{ verdict }` — silently dropping
+// whatever the new verdict needed to carry. Only the un-answered `''` case had
+// a test; these pin the other three so the lookup that replaces the guards is
+// checked against behaviour and not only against the compiler.
+describe('parseLineArrivalForm — the Pre-receipt Conformance verdict (AC-16, AC-17)', () => {
+  const parseWith = (
+    preReceiptConformance: LineEndingForm['preReceiptConformance'],
+  ): unknown =>
+    parseLineArrivalForm(line())({
+      allocations: [],
+      finalityAcknowledged: false,
+      preReceiptConformance,
+      quantity: '100',
+      rejections: [],
+    });
+
+  it('carries a Met verdict with no note — not even an empty one', () => {
+    expect(parseWith({ note: '', verdict: 'met' })).toEqual({
+      success: true,
+      data: {
+        receivedQuantity: 100,
+        allocations: [],
+        preReceiptConformance: { verdict: 'met' },
+      },
+    });
+  });
+
+  it('carries a Not applicable verdict with no note', () => {
+    expect(parseWith({ note: '', verdict: 'not_applicable' })).toEqual({
+      success: true,
+      data: {
+        receivedQuantity: 100,
+        allocations: [],
+        preReceiptConformance: { verdict: 'not_applicable' },
+      },
+    });
+  });
+
+  it('carries the member’s own note under Not met', () => {
+    expect(
+      parseWith({ note: '  Seal was broken  ', verdict: 'not_met' }),
+    ).toEqual({
+      success: true,
+      data: {
+        receivedQuantity: 100,
+        allocations: [],
+        preReceiptConformance: {
+          verdict: 'not_met',
+          note: 'Seal was broken',
+        },
+      },
+    });
+  });
+
+  it('omits the note under Not met when the member typed only whitespace', () => {
+    expect(parseWith({ note: '   ', verdict: 'not_met' })).toEqual({
+      success: true,
+      data: {
+        receivedQuantity: 100,
+        allocations: [],
+        preReceiptConformance: { verdict: 'not_met' },
+      },
+    });
+  });
+
+  it('drops a Met verdict’s stray note rather than sending a shape the contract refuses', () => {
+    expect(parseWith({ note: 'typed then switched', verdict: 'met' })).toEqual({
+      success: true,
+      data: {
+        receivedQuantity: 100,
+        allocations: [],
+        preReceiptConformance: { verdict: 'met' },
+      },
+    });
   });
 });

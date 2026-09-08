@@ -238,20 +238,39 @@ const buildRejections = (
  * member has actually typed something (2026-09-08 review pattern: the RED
  * pins `.toEqual`, not `.objectContaining`, on this exact shape).
  */
+/**
+ * Which payload each verdict carries, as a total lookup: a fourth
+ * `ConformanceVerdict` does not compile until it is answered here. The guards
+ * this replaced ended in a trailing `return { verdict }`, so a new verdict would
+ * have fallen through it silently and dropped whatever it needed to carry
+ * (`writing-web-components.md` §6).
+ *
+ * `''` — the un-defaulted opening state — answers `undefined`: no property at
+ * all, which is why the contract makes it optional (AC-04a).
+ */
+const PRE_RECEIPT_CONFORMANCE_BY_VERDICT: Record<
+  ConformanceVerdict,
+  (note: string) => PreReceiptConformanceCreate | undefined
+> = {
+  '': () => undefined,
+  met: () => ({ verdict: 'met' }),
+  not_applicable: () => ({ verdict: 'not_applicable' }),
+  // `Not met` carries the member's own note, and only once they have actually
+  // typed one — a whitespace-only note is no note.
+  not_met: (note) => {
+    const trimmed = note.trim();
+    return trimmed === ''
+      ? { verdict: 'not_met' }
+      : { verdict: 'not_met', note: trimmed };
+  },
+};
+
 const buildPreReceiptConformance = ({
   note,
   verdict,
 }: LineEndingForm['preReceiptConformance']):
-  PreReceiptConformanceCreate | undefined => {
-  if (verdict === '') {
-    return undefined;
-  }
-  if (verdict === 'not_met') {
-    const trimmedNote = note.trim();
-    return trimmedNote === '' ? { verdict } : { verdict, note: trimmedNote };
-  }
-  return { verdict };
-};
+  PreReceiptConformanceCreate | undefined =>
+  PRE_RECEIPT_CONFORMANCE_BY_VERDICT[verdict](note);
 
 /**
  * Turns the form session into the request one of the two ending endpoints
