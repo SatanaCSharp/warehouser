@@ -1,6 +1,7 @@
 import { ErrorCode, PermissionId } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
 import { DemandAllocationService } from 'customer-orders/domain/services/demand-allocation.service';
+import type { EndingPreReceiptConformanceInput } from 'purchase-drafts/domain/mappers/purchase-draft-line-ending.mapper';
 import { ArrivalInspectionService } from 'purchase-drafts/domain/services/arrival-inspection.service';
 import type { EndingAllocationInput } from 'purchase-drafts/usecases/commands/confirm-purchase-draft-line-arrival.command';
 import { ConfirmPurchaseDraftLineArrivalCommand } from 'purchase-drafts/usecases/commands/confirm-purchase-draft-line-arrival.command';
@@ -14,6 +15,7 @@ import type { RejectionReasonEntity } from 'shared/domain/entities/rejection-rea
 import type {
   ArrivalConfirmationRepository,
   LockPurchaseDraftLineForEndingResult,
+  RecordLineEndingRejectionInput,
 } from 'shared/domain/repositories/arrival-confirmation.repository';
 
 // T17/ADR 0002 — the whole-draft arrival is replaced by two per-line endings whose **kind is a
@@ -40,7 +42,9 @@ const currentUser = (
 // T10 — a legal refusal within a line's Condition Split: a whole-number quantity, a Reason the
 // seeded catalogue offers, the inspected Source a Via Warehouse line requires, and no description
 // (only `unfit_other` requires one, AC-07).
-const validRejection = (overrides: Record<string, unknown> = {}) => ({
+const validRejection = (
+  overrides: Partial<RecordLineEndingRejectionInput> = {},
+): RecordLineEndingRejectionInput => ({
   rejectionReasonId: 'damaged_in_transit',
   quantity: 8,
   source: 'inspected',
@@ -48,16 +52,15 @@ const validRejection = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
-// T10 (post-review) — the condition half of a submission, defaulted to "nothing refused, nothing
-// judged" so each test states only what it is proving. `rejections`/`preReceiptConformance` stay
-// loosely typed because the commands themselves accept them loosely (the REST boundary is what
-// narrows them, per the review's type-looseness verdict); `allocations` is typed against the
-// command's own `EndingAllocationInput`, which is strict again post-review.
+// T13 (post-review) — `rejections`/`preReceiptConformance` are now typed against the same shapes
+// the commands themselves declare, re-narrowed from T10's `unknown` now that the REST boundary
+// parses a request body before either command ever sees it; `allocations` is typed against the
+// command's own `EndingAllocationInput`, unchanged from T10.
 const conditionInput = (
   overrides: {
     receivedQuantity?: number;
-    rejections?: readonly unknown[];
-    preReceiptConformance?: unknown;
+    rejections?: readonly RecordLineEndingRejectionInput[];
+    preReceiptConformance?: EndingPreReceiptConformanceInput | null;
     allocations?: readonly EndingAllocationInput[];
   } = {},
 ) => ({

@@ -2,6 +2,7 @@ import { Injectable, Optional } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
 import { DemandAllocationService } from 'customer-orders/domain/services/demand-allocation.service';
 import { purchaseDraftConcurrentChangeError } from 'purchase-drafts/domain/errors/purchase-draft.errors';
+import type { EndingPreReceiptConformanceInput } from 'purchase-drafts/domain/mappers/purchase-draft-line-ending.mapper';
 import {
   buildEndingConditionInput,
   toEndingConditionSubmission,
@@ -20,15 +21,17 @@ import type {
 } from 'purchase-drafts/usecases/commands/confirm-purchase-draft-line-arrival.command';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
+import type { RecordLineEndingRejectionInput } from 'shared/domain/repositories/arrival-confirmation.repository';
 import { ArrivalConfirmationRepository } from 'shared/domain/repositories/arrival-confirmation.repository';
 
-// T10 — the `rejections`/`preReceiptConformance` fields are loosely typed for the same reason
-// `ConfirmPurchaseDraftLineArrivalInput`'s are: the REST boundary narrows a request body to its real
-// shape, and this command trusts that shape once, in `toEndingConditionSubmission`.
+// T13 — re-narrowed from T10's `unknown`, for the same reason and to the same shapes
+// `ConfirmPurchaseDraftLineArrivalInput`'s are: the REST boundary now parses a request body against
+// `@warehouser/contracts/purchase-drafts` before this command ever sees it, so `tsc` enforces the
+// boundary rather than a runtime assertion in `toEndingConditionSubmission`.
 export interface RecordPurchaseDraftLineDeliveryInput {
   readonly deliveredQuantity: number;
-  readonly rejections?: readonly unknown[];
-  readonly preReceiptConformance?: unknown;
+  readonly rejections?: readonly RecordLineEndingRejectionInput[];
+  readonly preReceiptConformance?: EndingPreReceiptConformanceInput | null;
   readonly allocations: readonly EndingAllocationInput[];
 }
 

@@ -1141,7 +1141,7 @@ components:
                       frozenPackagingTypeId: null
                       frozenValueAddingNote: false
             payloadShape:
-              summary: AC-03, AC-14 — the payload's own bounds, refused before the line is judged
+              summary: AC-03, AC-14, AC-15b, AC-04a — the payload's own bounds, refused before the line is judged
               value:
                 code: "purchase_drafts.invalid_input"
                 message: "The request is invalid."
@@ -1152,6 +1152,21 @@ components:
                     - rule: "description_too_long"
                       path: "rejections.1.description"
                       maxLength: 1000
+                    - rule: "description_empty"
+                      path: "rejections.2.description"
+                    - rule: "description_not_trimmed"
+                      path: "rejections.3.description"
+                    - rule: "note_too_long"
+                      path: "preReceiptConformance.note"
+                      maxLength: 1000
+                    - rule: "note_empty"
+                      path: "preReceiptConformance.note"
+                    - rule: "note_not_trimmed"
+                      path: "preReceiptConformance.note"
+                    - rule: "note_not_admitted_by_verdict"
+                      verdict: "met"
+                    - rule: "condition_on_nothing_received"
+                      path: "preReceiptConformance"
 
     PurchaseDraftLineEndingConflict:
       description: |
@@ -1204,10 +1219,13 @@ components:
                 code: "purchase_drafts.allocation_out_of_bounds"
                 message: "Only accepted goods may be assigned."
                 details:
-                  receivedQuantity: 100
-                  rejectedQuantity: 8
-                  acceptedQuantity: 92
-                  allocatedQuantity: 100
+                  violations:
+                    - purchaseDraftLineId: "00000000-0000-4000-8000-000000000101"
+                      rule: "allocations_exceed_accepted_quantity"
+                      receivedQuantity: 100
+                      rejectedQuantity: 8
+                      acceptedQuantity: 92
+                      allocatedQuantity: 100
             orderNoLongerWaiting:
               summary: AC-12 — the order named is cancelled or already Fulfilled
               value:
@@ -1229,8 +1247,10 @@ components:
         - the request carries **neither** `description` nor `disposition` — an amendment that amends
           nothing would still write an attribution, which would make "every amendment records the
           acting member and the time" mean something it does not;
-        - a `disposition` that is not one the system offers — the refusal **names those that are**
-          (AC-19);
+        - a `disposition` that is not one the system offers — `rejectionAmendSchema` enumerates the
+          four Dispositions, so this is refused by the wire schema itself, under the shared
+          `request.invalid` envelope, before the command's own defence-in-depth check
+          (`purchaseDraftUnknownDispositionError`) ever runs (AC-19 reconciled, 2026-09-08 review);
         - a `description` beyond one thousand characters, or blank after trimming (AC-14's bound,
           applied to the amendment);
         - an unknown property — the schema is `z.strictObject`.
@@ -1239,16 +1259,13 @@ components:
           schema: { $ref: "#/components/schemas/Error" }
           examples:
             unknownDisposition:
-              summary: AC-19 — the refusal names the Dispositions that are available
+              summary: AC-19 — an unoffered Disposition is refused by the wire schema
               value:
-                code: "purchase_drafts.invalid_input"
-                message: "That is not a disposition this system offers."
+                code: "request.invalid"
+                message: "The request is invalid."
                 details:
-                  availableDispositions:
-                    - "undecided"
-                    - "refused_at_delivery"
-                    - "held_for_return"
-                    - "scrapped_on_site"
+                  fields:
+                    disposition: "invalid"
             emptyAmendment:
               summary: An amendment must amend at least one of the two
               value:

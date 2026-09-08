@@ -2,6 +2,7 @@ import { Injectable, Optional } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
 import { DemandAllocationService } from 'customer-orders/domain/services/demand-allocation.service';
 import { purchaseDraftConcurrentChangeError } from 'purchase-drafts/domain/errors/purchase-draft.errors';
+import type { EndingPreReceiptConformanceInput } from 'purchase-drafts/domain/mappers/purchase-draft-line-ending.mapper';
 import {
   buildEndingConditionInput,
   toEndingConditionSubmission,
@@ -15,6 +16,7 @@ import { assertAdmitsEnding } from 'purchase-drafts/domain/services/purchase-dra
 import { EndingKind } from 'purchase-drafts/domain/value-objects/delivery-mode';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
+import type { RecordLineEndingRejectionInput } from 'shared/domain/repositories/arrival-confirmation.repository';
 import { ArrivalConfirmationRepository } from 'shared/domain/repositories/arrival-confirmation.repository';
 
 export interface EndingAllocationInput {
@@ -24,16 +26,14 @@ export interface EndingAllocationInput {
 
 export interface ConfirmPurchaseDraftLineArrivalInput {
   readonly receivedQuantity: number;
-  // T10 — both optional and defaulted to "nothing refused, nothing judged" (sad.md §6.1 step 1's
-  // "opening at presented, none refused, all presented accepted"), so a caller stating only
-  // `receivedQuantity` still submits a legal, refusal-free ending. Typed loosely (`unknown`) rather
-  // than against a named shape: the REST boundary is what narrows a request body
-  // (`@warehouser/contracts`), and narrowing again here would duplicate that validation rather than
-  // delegate to it. `toEndingConditionSubmission` is the one place this command trusts the shape,
-  // exactly as far as `EndingConditionSubmission` already does (T13 requirement: re-narrow both,
-  // once the REST DTOs exist — see the review note on this task).
-  readonly rejections?: readonly unknown[];
-  readonly preReceiptConformance?: unknown;
+  // T13 — re-narrowed from T10's `unknown` now that the REST boundary parses a request body against
+  // `@warehouser/contracts/purchase-drafts` before this command ever sees it: `tsc`, rather than a
+  // runtime assertion, is what now proves the controller passes the parsed DTO. Both remain
+  // optional and default to "nothing refused, nothing judged" (sad.md §6.1 step 1's "opening at
+  // presented, none refused, all presented accepted"), so a caller stating only `receivedQuantity`
+  // still submits a legal, refusal-free ending.
+  readonly rejections?: readonly RecordLineEndingRejectionInput[];
+  readonly preReceiptConformance?: EndingPreReceiptConformanceInput | null;
   readonly allocations: readonly EndingAllocationInput[];
 }
 

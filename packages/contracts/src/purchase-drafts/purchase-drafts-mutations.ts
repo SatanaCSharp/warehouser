@@ -174,6 +174,18 @@ const proseSchema = z
     message: `Must be at most ${String(maxProseLength)} characters`,
   });
 
+// The same code-point bound as `proseSchema`, without its `.trim()` transform: a **response**
+// schema reads a value the store already holds trimmed (the write side is what enforces that), and
+// must not carry a transform that could silently rewrite what a mutation just recorded. Sharing
+// `maxProseLength` rather than restating `1000` is what keeps the two bounds from diverging the way
+// `rejectionAmendmentSchema`'s own `.max(1000)` once did (2026-09-08 review).
+const storedProseSchema = z
+  .string()
+  .min(1)
+  .refine((value) => [...value].length <= maxProseLength, {
+    message: `Must be at most ${String(maxProseLength)} characters`,
+  });
+
 // Upper bound on the Condition Split of one ending, mirroring `maxAllocationsPerEndingLine`. A
 // payload guard rather than a business rule: the real bound is one entry per Reason (AC-09), proved
 // by `uq_purchase_draft_line_rejections_line_reason`. Deliberately loose, so extending the
@@ -259,6 +271,17 @@ export const rejectionAmendSchema = z
       message: 'At least one Rejection amendment field must be present',
     },
   );
+
+// openapi.yaml `RejectionAmendment` — the amendment as recorded. It is the amendment and not the
+// Rejection: the Reason, quantity and Source are deliberately absent, because those are the cause
+// `REJECTIONS:WATCH` gates, and `REJECTIONS:UPDATE` does not imply it (T13).
+export const rejectionAmendmentSchema = z.strictObject({
+  id: z.string().uuid(),
+  description: storedProseSchema.nullable(),
+  disposition: rejectionDispositionSchema,
+  amendedByUserId: z.string().uuid(),
+  amendedAt: z.string().datetime(),
+});
 
 // openapi.yaml `PurchaseDraftLineArrival` — what arrived at the dock on **one Via Warehouse line**
 // (AC-19). Bounded neither above nor below by `orderedQuantity`; `0` is a line where nothing
@@ -347,4 +370,5 @@ export type PreReceiptConformanceCreate = z.infer<
   typeof preReceiptConformanceCreateSchema
 >;
 export type RejectionAmend = z.infer<typeof rejectionAmendSchema>;
+export type RejectionAmendment = z.infer<typeof rejectionAmendmentSchema>;
 export type PurchaseDraftClosure = z.infer<typeof purchaseDraftClosureSchema>;

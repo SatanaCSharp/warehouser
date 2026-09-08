@@ -48,7 +48,10 @@ export class PurchaseDraftLinesController {
 
   @Get()
   @RequiredPermission(PermissionId.PURCHASE_DRAFTS_WATCH)
-  @ObservedPermission(PermissionId.CUSTOMERS_WATCH)
+  @ObservedPermission(
+    PermissionId.CUSTOMERS_WATCH,
+    PermissionId.REJECTIONS_WATCH,
+  )
   @ArchivedTolerantRead()
   @UseGuards(SessionAuthGuard, WarehouseAccessGuard)
   async listPurchaseDraftLines(

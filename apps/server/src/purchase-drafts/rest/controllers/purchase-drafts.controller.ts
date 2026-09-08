@@ -17,9 +17,11 @@ import type {
   PurchaseDraftDetail,
   PurchaseDraftLineUpdate,
   PurchaseDraftSummary,
+  RejectionAmendment,
 } from '@warehouser/contracts/purchase-drafts';
 import { PermissionId } from '@warehouser/shared-types/enums';
 import { assert } from '@warehouser/utils/asserts';
+import type { EndingPreReceiptConformanceInput } from 'purchase-drafts/domain/mappers/purchase-draft-line-ending.mapper';
 import {
   PurchaseDraftClosureDto,
   PurchaseDraftCreateDto,
@@ -31,6 +33,7 @@ import {
   PurchaseDraftLineUpdateDto,
   PurchaseDraftListQueryDto,
   PurchaseDraftReviseDto,
+  RejectionAmendDto,
 } from 'purchase-drafts/rest/dtos/purchase-draft-mutation.dto';
 import {
   toDetailResponse,
@@ -38,11 +41,14 @@ import {
 } from 'purchase-drafts/rest/purchase-draft-response';
 import { AddPurchaseDraftLineCommand } from 'purchase-drafts/usecases/commands/add-purchase-draft-line.command';
 import { AddPurchaseDraftLineLinkCommand } from 'purchase-drafts/usecases/commands/add-purchase-draft-line-link.command';
+import { AmendPurchaseDraftRejectionCommand } from 'purchase-drafts/usecases/commands/amend-purchase-draft-rejection.command';
 import { ClosePurchaseDraftCommand } from 'purchase-drafts/usecases/commands/close-purchase-draft.command';
+import type { ConfirmPurchaseDraftLineArrivalInput } from 'purchase-drafts/usecases/commands/confirm-purchase-draft-line-arrival.command';
 import { ConfirmPurchaseDraftLineArrivalCommand } from 'purchase-drafts/usecases/commands/confirm-purchase-draft-line-arrival.command';
 import { CreatePurchaseDraftCommand } from 'purchase-drafts/usecases/commands/create-purchase-draft.command';
 import { DiscardPurchaseDraftCommand } from 'purchase-drafts/usecases/commands/discard-purchase-draft.command';
 import { ReadyPurchaseDraftCommand } from 'purchase-drafts/usecases/commands/ready-purchase-draft.command';
+import type { RecordPurchaseDraftLineDeliveryInput } from 'purchase-drafts/usecases/commands/record-purchase-draft-line-delivery.command';
 import { RecordPurchaseDraftLineDeliveryCommand } from 'purchase-drafts/usecases/commands/record-purchase-draft-line-delivery.command';
 import { RemovePurchaseDraftLineCommand } from 'purchase-drafts/usecases/commands/remove-purchase-draft-line.command';
 import { RemovePurchaseDraftLineLinkCommand } from 'purchase-drafts/usecases/commands/remove-purchase-draft-line-link.command';
@@ -56,10 +62,37 @@ import type { WarehouseAccessRequest } from 'shared/access/access-request';
 import { ArchivedTolerantRead } from 'shared/access/archived-tolerant-read.decorator';
 import { ObservedPermission } from 'shared/decorators/observed-permission.decorator';
 import { RequiredPermission } from 'shared/decorators/required-permission.decorator';
+import type { RecordLineEndingRejectionInput } from 'shared/domain/repositories/arrival-confirmation.repository';
 import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
 import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
 import { WriteRateLimitGuard } from 'shared/guards/write-rate-limit.guard';
 import { WriteRateLimited } from 'shared/guards/write-rate-limited.decorator';
+
+// T13 — the ending payload's `rejections`/`preReceiptConformance` narrowed **once**, at the REST
+// boundary, to the shapes both ending commands now declare (T13 requirement: re-narrow both once the
+// REST DTOs exist). `description ?? null` is the one gap between the wire shape — `proseSchema`
+// optional — and `RecordLineEndingRejectionInput`'s own `string | null`; every other field passes
+// through unchanged.
+const toEndingRejectionInputs = (
+  rejections: PurchaseDraftLineArrivalDto['rejections'],
+): readonly RecordLineEndingRejectionInput[] | undefined =>
+  rejections?.map((rejection) => ({
+    rejectionReasonId: rejection.rejectionReasonId,
+    quantity: rejection.quantity,
+    source: rejection.source,
+    description: rejection.description ?? null,
+  }));
+
+const toEndingPreReceiptConformanceInput = (
+  preReceiptConformance: PurchaseDraftLineArrivalDto['preReceiptConformance'],
+): EndingPreReceiptConformanceInput | null | undefined =>
+  preReceiptConformance === undefined
+    ? undefined
+    : {
+        verdict: preReceiptConformance.verdict,
+        note:
+          'note' in preReceiptConformance ? preReceiptConformance.note : null,
+      };
 
 // openapi.yaml `PurchaseDraftLineUpdate` -> `ReviseLineInput` — the payload's two flat destination
 // properties folded into the **one** the use-case boundary takes (T15). The contract's
@@ -135,6 +168,7 @@ export class PurchaseDraftsController {
     private readonly confirmPurchaseDraftLineArrivalCommand: ConfirmPurchaseDraftLineArrivalCommand,
     private readonly recordPurchaseDraftLineDeliveryCommand: RecordPurchaseDraftLineDeliveryCommand,
     private readonly closePurchaseDraftCommand: ClosePurchaseDraftCommand,
+    private readonly amendPurchaseDraftRejectionCommand: AmendPurchaseDraftRejectionCommand,
   ) {}
 
   // Every write below shares one shape: invoke the command that owns the rule, then re-read the
@@ -216,7 +250,10 @@ export class PurchaseDraftsController {
   // AC-16/AC-23 — one draft with its per-link Drift Signal detail, archived-tolerant.
   @Get(':purchaseDraftId')
   @RequiredPermission(PermissionId.PURCHASE_DRAFTS_WATCH)
-  @ObservedPermission(PermissionId.CUSTOMERS_WATCH)
+  @ObservedPermission(
+    PermissionId.CUSTOMERS_WATCH,
+    PermissionId.REJECTIONS_WATCH,
+  )
   @ArchivedTolerantRead()
   @UseGuards(SessionAuthGuard, WarehouseAccessGuard)
   async readPurchaseDraft(
@@ -432,10 +469,21 @@ export class PurchaseDraftsController {
   // The two endings are two routes rather than one route carrying a kind, and that is the whole
   // design (ADR 0002): aiming this one at a Direct to Customer line is refused as a routing fact,
   // in front of the request, rather than behind a value the member submitted.
+  //
+  // Deliberately does not observe `REJECTIONS:WATCH`, although its 200 body is a
+  // `PurchaseDraftDetail` that can carry a Rejection's cause: sad.md §7 line 799 fixes this route's
+  // observed list as exactly `(REJECTIONS:CREATE, CUSTOMERS:WATCH)`, and the only cost of leaving it
+  // off is that the same actor's own just-submitted refusal comes back cause-withheld in this
+  // response, which is corrected on the very next `GET` — a withholding, never a disclosure. See T14's
+  // brief for the corresponding scoping of the repository-wide observed-Permission check to `@Get`
+  // handlers (2026-09-08 review).
   @Post(':purchaseDraftId/lines/:purchaseDraftLineId/arrival')
   @HttpCode(HttpStatus.OK)
   @RequiredPermission(PermissionId.PURCHASE_DRAFTS_RECEIVE)
-  @ObservedPermission(PermissionId.CUSTOMERS_WATCH)
+  @ObservedPermission(
+    PermissionId.REJECTIONS_CREATE,
+    PermissionId.CUSTOMERS_WATCH,
+  )
   @WriteRateLimited()
   @UseGuards(SessionAuthGuard, WarehouseAccessGuard, WriteRateLimitGuard)
   async recordPurchaseDraftLineArrival(
@@ -445,14 +493,20 @@ export class PurchaseDraftsController {
     @Req() request: WarehouseAccessRequest,
     @Body() input: PurchaseDraftLineArrivalDto,
   ): Promise<PurchaseDraftDetail> {
+    const confirmation: ConfirmPurchaseDraftLineArrivalInput = {
+      receivedQuantity: input.receivedQuantity,
+      rejections: toEndingRejectionInputs(input.rejections),
+      preReceiptConformance: toEndingPreReceiptConformanceInput(
+        input.preReceiptConformance,
+      ),
+      allocations: input.allocations ?? [],
+    };
+
     await this.confirmPurchaseDraftLineArrivalCommand.execute(
       request.access!,
       purchaseDraftId,
       purchaseDraftLineId,
-      {
-        receivedQuantity: input.receivedQuantity,
-        allocations: input.allocations ?? [],
-      },
+      confirmation,
     );
 
     return this.readDetail(request.access, purchaseDraftId);
@@ -460,10 +514,16 @@ export class PurchaseDraftsController {
 
   // AC-19/AC-20/AC-20a/AC-21/AC-22/AC-23 — records what the customer received on **one Direct to
   // Customer line**; mutating. The Direct to Customer half of the same act.
+  //
+  // Same non-observance of `REJECTIONS:WATCH`, for the same sad.md §7 reason given above
+  // `recordPurchaseDraftLineArrival`.
   @Post(':purchaseDraftId/lines/:purchaseDraftLineId/direct-delivery')
   @HttpCode(HttpStatus.OK)
   @RequiredPermission(PermissionId.PURCHASE_DRAFTS_RECEIVE)
-  @ObservedPermission(PermissionId.CUSTOMERS_WATCH)
+  @ObservedPermission(
+    PermissionId.REJECTIONS_CREATE,
+    PermissionId.CUSTOMERS_WATCH,
+  )
   @WriteRateLimited()
   @UseGuards(SessionAuthGuard, WarehouseAccessGuard, WriteRateLimitGuard)
   async recordPurchaseDraftLineDirectDelivery(
@@ -473,14 +533,20 @@ export class PurchaseDraftsController {
     @Req() request: WarehouseAccessRequest,
     @Body() input: PurchaseDraftLineDirectDeliveryDto,
   ): Promise<PurchaseDraftDetail> {
+    const delivery: RecordPurchaseDraftLineDeliveryInput = {
+      deliveredQuantity: input.deliveredQuantity,
+      rejections: toEndingRejectionInputs(input.rejections),
+      preReceiptConformance: toEndingPreReceiptConformanceInput(
+        input.preReceiptConformance,
+      ),
+      allocations: input.allocations ?? [],
+    };
+
     await this.recordPurchaseDraftLineDeliveryCommand.execute(
       request.access!,
       purchaseDraftId,
       purchaseDraftLineId,
-      {
-        deliveredQuantity: input.deliveredQuantity,
-        allocations: input.allocations ?? [],
-      },
+      delivery,
     );
 
     return this.readDetail(request.access, purchaseDraftId);
@@ -505,5 +571,45 @@ export class PurchaseDraftsController {
     );
 
     return this.readDetail(request.access, purchaseDraftId);
+  }
+
+  // T13/AC-18/AC-18a/AC-18b/AC-19/AC-20/AC-26 — amends one recorded Rejection's description, its
+  // Disposition, or both; mutating. Its precondition is the Rejection and never the draft's state
+  // (sad.md §6.4 step 5), which is why this handler names `REJECTIONS:UPDATE` rather than
+  // `PURCHASE_DRAFTS:RECEIVE` (AC-22): the amendment reaches only a Rejection, never the draft or its
+  // lines. It answers with an `AmendedRejection` rather than a draft projection, so it has nothing to
+  // observe (no `@ObservedPermission`), and it does not tolerate an archived Warehouse: every
+  // mutating handler of this feature denies one.
+  //
+  // `purchaseDraftId` and `purchaseDraftLineId` are bound with `ParseUUIDPipe` like every sibling
+  // handler, matching openapi.yaml's declared `uuid` path parameters, even though the command below
+  // resolves the Rejection by `rejectionId` and the acting Warehouse alone (2026-09-08 review): the
+  // served route and the declared contract must agree on shape, though warehouse scoping — not these
+  // two segments — is what AC-26 actually enforces.
+  @Patch(':purchaseDraftId/lines/:purchaseDraftLineId/rejections/:rejectionId')
+  @RequiredPermission(PermissionId.REJECTIONS_UPDATE)
+  @WriteRateLimited()
+  @UseGuards(SessionAuthGuard, WarehouseAccessGuard, WriteRateLimitGuard)
+  async amendPurchaseDraftLineRejection(
+    @Param('purchaseDraftId', new ParseUUIDPipe()) purchaseDraftId: string,
+    @Param('purchaseDraftLineId', new ParseUUIDPipe())
+    purchaseDraftLineId: string,
+    @Param('rejectionId', new ParseUUIDPipe()) rejectionId: string,
+    @Req() request: WarehouseAccessRequest,
+    @Body() input: RejectionAmendDto,
+  ): Promise<RejectionAmendment> {
+    const amended = await this.amendPurchaseDraftRejectionCommand.execute(
+      request.access!,
+      rejectionId,
+      { description: input.description, disposition: input.disposition },
+    );
+
+    return {
+      id: amended.id,
+      description: amended.description,
+      disposition: amended.disposition,
+      amendedByUserId: amended.amendedByUserId,
+      amendedAt: amended.amendedAt.toISOString(),
+    };
   }
 }

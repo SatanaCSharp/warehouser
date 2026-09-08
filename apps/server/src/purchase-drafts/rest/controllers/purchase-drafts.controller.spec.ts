@@ -90,6 +90,13 @@ describe('PurchaseDraftsController', () => {
       ':purchaseDraftId/lines/:purchaseDraftLineId/direct-delivery',
     ],
     ['closePurchaseDraft', RequestMethod.POST, ':purchaseDraftId/closure'],
+    // T13/sad.md §7 — the amendment of one recorded Rejection, a sub-resource of the line mirroring
+    // the shape `ordering` §7 established for links and endings.
+    [
+      'amendPurchaseDraftLineRejection',
+      RequestMethod.PATCH,
+      ':purchaseDraftId/lines/:purchaseDraftLineId/rejections/:rejectionId',
+    ],
   ] as const)('%s is served as %s %s', (handlerName, httpMethod, path) => {
     expect(Reflect.getMetadata(METHOD_METADATA, method(handlerName))).toBe(
       httpMethod,
@@ -177,6 +184,13 @@ describe('PurchaseDraftsController', () => {
       PermissionId.PURCHASE_DRAFTS_CLOSE,
       [SessionAuthGuard, WarehouseAccessGuard, WriteRateLimitGuard],
     ],
+    // T13/AC-20/AC-26 — the amendment reaches only a Rejection, never the draft or its lines, so it
+    // names `REJECTIONS:UPDATE` alone rather than `PURCHASE_DRAFTS:RECEIVE`.
+    [
+      'amendPurchaseDraftLineRejection',
+      PermissionId.REJECTIONS_UPDATE,
+      [SessionAuthGuard, WarehouseAccessGuard, WriteRateLimitGuard],
+    ],
   ] as const)(
     '%s declares exactly one Permission and its guard chain in order',
     (handlerName, permission, guards) => {
@@ -206,6 +220,9 @@ describe('PurchaseDraftsController', () => {
     ['recordPurchaseDraftLineArrival', undefined],
     ['recordPurchaseDraftLineDirectDelivery', undefined],
     ['closePurchaseDraft', undefined],
+    // T13/sad.md §"Authorization coverage" — the amendment writes a Closed draft's Rejection, so it
+    // must not tolerate an archived Warehouse: no mutating handler in this feature does.
+    ['amendPurchaseDraftLineRejection', undefined],
   ] as const)(
     '%s declares archived tolerance %s (AC-23)',
     (handlerName, tolerant) => {
@@ -234,6 +251,7 @@ describe('PurchaseDraftsController', () => {
     ['recordPurchaseDraftLineArrival', true],
     ['recordPurchaseDraftLineDirectDelivery', true],
     ['closePurchaseDraft', true],
+    ['amendPurchaseDraftLineRejection', true],
   ] as const)(
     '%s declares write-rate-limit metadata %s',
     (handlerName, rateLimited) => {
@@ -253,9 +271,15 @@ describe('PurchaseDraftsController', () => {
   // neither admit nor deny (`warehouse-access.guard.spec.ts` proves that structurally), so
   // declaring it costs a mutation nothing and its **absence** is what would silently disclose. A
   // handler added here without it is the failure this case exists to catch.
+  // 2026-09-08 review — exact equality restored for these twelve: T13 widened
+  // `recordPurchaseDraftLineArrival`, `recordPurchaseDraftLineDirectDelivery` and `readPurchaseDraft`
+  // beyond `[CUSTOMERS_WATCH]`, and each of those three carries its own exact-equality case below,
+  // so this list is deliberately theirs to exclude. Weakening this case to `arrayContaining` for
+  // all fifteen — as an earlier revision of this file did — would stop catching an observed
+  // Permission accidentally **added** to any of these twelve, which is exactly what this case's own
+  // comment above says it exists to catch.
   it.each([
     'listPurchaseDrafts',
-    'readPurchaseDraft',
     'createPurchaseDraft',
     'revisePurchaseDraft',
     'discardPurchaseDraft',
@@ -266,13 +290,56 @@ describe('PurchaseDraftsController', () => {
     'requantifyPurchaseDraftLineLink',
     'unlinkPurchaseDraftLine',
     'readyPurchaseDraft',
-    'recordPurchaseDraftLineArrival',
-    'recordPurchaseDraftLineDirectDelivery',
     'closePurchaseDraft',
   ] as const)('%s declares the observed CUSTOMERS:WATCH', (handlerName) => {
     expect(
       Reflect.getMetadata(OBSERVED_PERMISSION_KEY, method(handlerName)),
     ).toEqual([PermissionId.CUSTOMERS_WATCH]);
+  });
+
+  // T13/AC-01a/AC-01b/sad.md §7 — an ending that may carry a Rejection observes `REJECTIONS:CREATE`
+  // beside the unchanged `CUSTOMERS:WATCH`, in the order sad.md §7's HTTP table states, so the
+  // command's capability assertion (`ArrivalInspectionService`) has a granted set to read from
+  // `WarehouseAccessGuard` without a second membership lookup.
+  it.each([
+    'recordPurchaseDraftLineArrival',
+    'recordPurchaseDraftLineDirectDelivery',
+  ] as const)(
+    '%s observes REJECTIONS:CREATE beside CUSTOMERS:WATCH (AC-01a, AC-01b)',
+    (handlerName) => {
+      expect(
+        Reflect.getMetadata(OBSERVED_PERMISSION_KEY, method(handlerName)),
+      ).toEqual([PermissionId.REJECTIONS_CREATE, PermissionId.CUSTOMERS_WATCH]);
+    },
+  );
+
+  // T13/AC-21/AC-22/sad.md §7 — the one-draft read gains `REJECTIONS:WATCH` in its observed list, so
+  // `ReadPurchaseDraftQuery` can decide the cause-withheld shape from the same guard-resolved grant
+  // set `readsRejectionCause` already consults. The draft *list* is deliberately absent: a
+  // `PurchaseDraftSummary` carries no line and therefore no Rejection to withhold.
+  it('readPurchaseDraft observes REJECTIONS:WATCH beside CUSTOMERS:WATCH (AC-21, AC-22)', () => {
+    expect(
+      Reflect.getMetadata(OBSERVED_PERMISSION_KEY, method('readPurchaseDraft')),
+    ).toEqual(
+      expect.arrayContaining([
+        PermissionId.CUSTOMERS_WATCH,
+        PermissionId.REJECTIONS_WATCH,
+      ]),
+    );
+    expect(
+      Reflect.getMetadata(OBSERVED_PERMISSION_KEY, method('readPurchaseDraft')),
+    ).toHaveLength(2);
+  });
+
+  // T13 — the amendment answers with an `AmendedRejection`, never a draft projection, so it has
+  // nothing to observe: declaring `CUSTOMERS:WATCH` here would be dead metadata nobody reads.
+  it('amendPurchaseDraftLineRejection observes nothing', () => {
+    expect(
+      Reflect.getMetadata(
+        OBSERVED_PERMISSION_KEY,
+        method('amendPurchaseDraftLineRejection'),
+      ),
+    ).toBeUndefined();
   });
 
   // server-request-authorization.md — the two metadata keys exist so one can never be mistaken for
@@ -329,9 +396,18 @@ describe('PurchaseDraftLinesController', () => {
     expect(Reflect.getMetadata(REQUIRED_PERMISSION_KEY, handler)).toEqual([
       PermissionId.PURCHASE_DRAFTS_WATCH,
     ]);
-    expect(Reflect.getMetadata(OBSERVED_PERMISSION_KEY, handler)).toEqual([
-      PermissionId.CUSTOMERS_WATCH,
-    ]);
+    // T13/AC-22/sad.md §7 — the by-line read gains `REJECTIONS:WATCH` alongside `CUSTOMERS:WATCH`:
+    // its `PurchaseDraftLineListEntry` carries a `PurchaseDraftLine` whose ending can name a
+    // Rejection's cause, the same fact `readPurchaseDraft` observes.
+    expect(Reflect.getMetadata(OBSERVED_PERMISSION_KEY, handler)).toEqual(
+      expect.arrayContaining([
+        PermissionId.CUSTOMERS_WATCH,
+        PermissionId.REJECTIONS_WATCH,
+      ]),
+    );
+    expect(Reflect.getMetadata(OBSERVED_PERMISSION_KEY, handler)).toHaveLength(
+      2,
+    );
     expect(Reflect.getMetadata(GUARDS_METADATA, handler)).toEqual([
       SessionAuthGuard,
       WarehouseAccessGuard,

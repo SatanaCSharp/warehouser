@@ -11,31 +11,30 @@ import type {
 // decides nothing a rule has not already decided. Called from a use case above the repository
 // boundary, exactly as `toSession`/`toSessionEntity` are.
 
-// T10 — a caller's raw condition statement, narrowed to the one shape every rule judges. The two
-// ending commands accept `rejections`/`preReceiptConformance` loosely (`unknown`) because narrowing
-// a request body to these shapes belongs to the REST boundary (`@warehouser/contracts`), not to a
-// second, duplicate narrowing here; this is the one place that trust is spent, exactly as far as
-// `EndingConditionSubmission` itself already goes.
+// T13 — the one shape a caller's Pre-receipt Conformance statement takes once the REST boundary has
+// narrowed it (`@warehouser/contracts` `PreReceiptConformanceCreate`). Named and exported so both
+// ending commands can re-narrow `preReceiptConformance` to it instead of trusting `unknown`, which
+// is what makes `tsc` — rather than a runtime assertion here — enforce that the controller passes
+// the parsed DTO (T13 requirement).
+export interface EndingPreReceiptConformanceInput {
+  readonly verdict: EndingConditionSubmission['preReceiptConformance'];
+  readonly note?: string | null;
+}
+
+// T10 (post-review) — a caller's condition statement, already narrowed by the REST boundary to the
+// shapes both ending commands declare, folded into the one shape every rule judges. Trivial field
+// reads only: the narrowing itself now happens once, at the command's own input type (T13), so this
+// function decides nothing beyond defaulting an absent property to "nothing stated".
 export const toEndingConditionSubmission = (
   receivedQuantity: number,
-  rejections: readonly unknown[] | undefined,
-  preReceiptConformance: unknown,
-): EndingConditionSubmission => {
-  const parsedConformance = preReceiptConformance as
-    | {
-        readonly verdict: EndingConditionSubmission['preReceiptConformance'];
-        readonly note?: string | null;
-      }
-    | null
-    | undefined;
-
-  return {
-    receivedQuantity,
-    rejections: (rejections ?? []) as readonly RecordLineEndingRejectionInput[],
-    preReceiptConformance: parsedConformance?.verdict ?? null,
-    preReceiptConformanceNote: parsedConformance?.note ?? null,
-  };
-};
+  rejections: readonly RecordLineEndingRejectionInput[] | undefined,
+  preReceiptConformance: EndingPreReceiptConformanceInput | null | undefined,
+): EndingConditionSubmission => ({
+  receivedQuantity,
+  rejections: rejections ?? [],
+  preReceiptConformance: preReceiptConformance?.verdict ?? null,
+  preReceiptConformanceNote: preReceiptConformance?.note ?? null,
+});
 
 // T10 (post-review) — the condition half of what `recordLineEnding` persists, derived from the same
 // submission the assertions already judged. `null` exactly where the repository's own contract
