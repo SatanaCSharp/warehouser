@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { AmendRefusalDialog } from 'modules/purchase-draft/components/AmendRefusalDialog';
+import { AmendRefusalDialog } from 'modules/purchase-draft/components/closed-purchase-draft-line/components/AmendRefusalDialog';
 import { DialogHost } from 'shared/components/DialogHost';
 import { selectHeroOption } from 'test/hero-select';
 import { renderWithProviders } from 'test/render';

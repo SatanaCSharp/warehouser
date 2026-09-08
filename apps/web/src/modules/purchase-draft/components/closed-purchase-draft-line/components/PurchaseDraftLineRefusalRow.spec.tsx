@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { PermissionId } from '@warehouser/shared-types/enums';
 import { describe, expect, it, vi } from 'vitest';
 
-import { PurchaseDraftLineRefusalRow } from 'modules/purchase-draft/components/PurchaseDraftLineRefusalRow';
+import { PurchaseDraftLineRefusalRow } from 'modules/purchase-draft/components/closed-purchase-draft-line/components/PurchaseDraftLineRefusalRow';
 import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
 import {
   accessIds,

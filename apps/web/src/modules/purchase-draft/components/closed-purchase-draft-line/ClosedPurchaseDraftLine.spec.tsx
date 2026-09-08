@@ -7,7 +7,7 @@ import userEvent from '@testing-library/user-event';
 import { PermissionId } from '@warehouser/shared-types/enums';
 import { describe, expect, it } from 'vitest';
 
-import { ClosedPurchaseDraftLine } from 'modules/purchase-draft/components/ClosedPurchaseDraftLine';
+import { ClosedPurchaseDraftLine } from 'modules/purchase-draft/components/closed-purchase-draft-line/ClosedPurchaseDraftLine';
 import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
 import {
   accessIds,

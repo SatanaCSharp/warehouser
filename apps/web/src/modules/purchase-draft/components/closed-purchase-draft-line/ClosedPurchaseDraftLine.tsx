@@ -2,11 +2,11 @@ import { Chip } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 
 import { useAmendPurchaseDraftLineRejectionMutation } from 'modules/purchase-draft/api/purchase-draft-api';
-import { AmendRefusalDialog } from 'modules/purchase-draft/components/AmendRefusalDialog';
+import { AmendRefusalDialog } from 'modules/purchase-draft/components/closed-purchase-draft-line/components/AmendRefusalDialog';
+import { PurchaseDraftLineConditionSummary } from 'modules/purchase-draft/components/closed-purchase-draft-line/components/PurchaseDraftLineConditionSummary';
+import { PurchaseDraftLineRefusalRow } from 'modules/purchase-draft/components/closed-purchase-draft-line/components/PurchaseDraftLineRefusalRow';
 import { PurchaseDraftLineDestination } from 'modules/purchase-draft/components/purchase-draft-line-delivery/components/PurchaseDraftLineDestination';
 import { PurchaseDraftLineLinks } from 'modules/purchase-draft/components/purchase-draft-line-links/PurchaseDraftLineLinks';
-import { PurchaseDraftLineConditionSummary } from 'modules/purchase-draft/components/PurchaseDraftLineConditionSummary';
-import { PurchaseDraftLineRefusalRow } from 'modules/purchase-draft/components/PurchaseDraftLineRefusalRow';
 import { ActionDialogHost } from 'shared/components/ActionDialogHost';
 import { Conditional } from 'shared/components/Conditional';
 import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
