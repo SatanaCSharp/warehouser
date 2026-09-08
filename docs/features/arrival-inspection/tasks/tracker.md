@@ -24,6 +24,6 @@
 | T17 | [Render the closed line's condition account in all four shapes, with the withheld shape leaving no trace](./closed-line-condition-ui.md)                                                                             | `ui`        | Frontend Lead | L        | T13           | todo   |
 | T18 | [Add the amend-refusal dialog, opened from the read row under REJECTIONS:UPDATE](./amend-refusal-dialog-ui.md)                                                                                                       | `ui`        | Frontend Lead | M        | T17           | todo   |
 | T19 | [Explain every new refusal in EndingRefusalAlert and register the three success toasts with their invisible consequence](./condition-copy-and-alerts-ui.md)                                                          | `ui`        | Frontend Lead | S        | T15, T16, T18 | todo   |
-| T20 | [Promote the narrowing-only observed-Permission rule into docs/system in this same change](./observed-permission-system-docs.md)                                                                                     | `docs`      | Tech Lead     | S        | T10           | todo   |
+| T20 | [Promote the narrowing-only observed-Permission rule into docs/system in this same change](./observed-permission-system-docs.md)                                                                                     | `docs`      | Tech Lead     | S        | T10           | done   |
 
 **Total:** 20 tasks, ~15 person-days.

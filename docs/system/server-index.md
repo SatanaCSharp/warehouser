@@ -31,9 +31,12 @@ index first, then read only the entries that cover the change you are making. Pa
 - [Server request authorization](guides/server-request-authorization.md) — the declarative
   authorization stage: `SessionAuthGuard` followed by the Warehouse or Workspace level guard, the
   Permission each handler declares, the principal each guard attaches, archived-Warehouse tolerance,
-  and `@ObservedPermission` — a Permission resolved for the projection that by construction can
-  neither deny nor admit a request. Use whenever a handler must be authorized, whenever a response's
-  contents depend on a Permission the read does not require, and before adding a guard or a
+  and `@ObservedPermission` — a Permission resolved for a use case that by construction can neither
+  deny nor admit a request at the guard, and that the use case may read only to **narrow** an
+  already-admitted request, whether by withholding a projection's field or by refusing a write whose
+  payload requires a capability the actor does not hold. Use whenever a handler must be authorized,
+  whenever a response's contents depend on a Permission the read does not require, whenever a
+  write's required capability depends on what its payload carries, and before adding a guard or a
   Permission declaration.
 - [Server error handling](guides/server-error-handling.md) — predicates as named conditions, typed
   errors and assertion factories, propagation without routine `try/catch`, the global NestJS
