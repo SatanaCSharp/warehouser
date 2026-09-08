@@ -19,6 +19,7 @@ import { RevisePurchaseDraftLineLinkCommand } from 'purchase-drafts/usecases/com
 import { ListPackagingTypesQuery } from 'purchase-drafts/usecases/queries/list-packaging-types.query';
 import { ListPurchaseDraftLinesQuery } from 'purchase-drafts/usecases/queries/list-purchase-draft-lines.query';
 import { ListPurchaseDraftsQuery } from 'purchase-drafts/usecases/queries/list-purchase-drafts.query';
+import { ListRejectionReasonsQuery } from 'purchase-drafts/usecases/queries/list-rejection-reasons.query';
 import { ReadPurchaseDraftQuery } from 'purchase-drafts/usecases/queries/read-purchase-draft.query';
 import { ArrivalConfirmationRepository } from 'shared/domain/repositories/arrival-confirmation.repository';
 import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository';
@@ -89,6 +90,7 @@ import { RejectionReasonCatalogueRepository } from 'shared/domain/repositories/r
     ReadPurchaseDraftQuery,
     ListPurchaseDraftsQuery,
     ListPurchaseDraftLinesQuery,
+    ListRejectionReasonsQuery,
   ],
   exports: [
     AmendPurchaseDraftRejectionCommand,
@@ -109,6 +111,7 @@ import { RejectionReasonCatalogueRepository } from 'shared/domain/repositories/r
     ReadPurchaseDraftQuery,
     ListPurchaseDraftsQuery,
     ListPurchaseDraftLinesQuery,
+    ListRejectionReasonsQuery,
   ],
 })
 export class PurchaseDraftsUsecaseModule {}

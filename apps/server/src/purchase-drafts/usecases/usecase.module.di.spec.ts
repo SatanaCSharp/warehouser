@@ -17,6 +17,7 @@ import { RevisePurchaseDraftLineCommand } from 'purchase-drafts/usecases/command
 import { RevisePurchaseDraftLineLinkCommand } from 'purchase-drafts/usecases/commands/revise-purchase-draft-line-link.command';
 import { ListPackagingTypesQuery } from 'purchase-drafts/usecases/queries/list-packaging-types.query';
 import { ListPurchaseDraftsQuery } from 'purchase-drafts/usecases/queries/list-purchase-drafts.query';
+import { ListRejectionReasonsQuery } from 'purchase-drafts/usecases/queries/list-rejection-reasons.query';
 import { ReadPurchaseDraftQuery } from 'purchase-drafts/usecases/queries/read-purchase-draft.query';
 import { PurchaseDraftsUsecaseModule } from 'purchase-drafts/usecases/usecase.module';
 import { DataSource } from 'typeorm';
@@ -73,6 +74,12 @@ describe('PurchaseDraftsUsecaseModule Nest DI graph', () => {
     );
     expect(moduleRef.get(ListPurchaseDraftsQuery)).toBeInstanceOf(
       ListPurchaseDraftsQuery,
+    );
+    // T12/AC-06 — an unregistered `@Injectable` compiles and passes every unit test while being
+    // unreachable from any transport adapter; resolving it through the real DI graph is what
+    // catches that.
+    expect(moduleRef.get(ListRejectionReasonsQuery)).toBeInstanceOf(
+      ListRejectionReasonsQuery,
     );
   });
 

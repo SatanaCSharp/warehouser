@@ -57,6 +57,18 @@ describe('purchase-drafts usecase module surface', () => {
       );
     },
   );
+
+  // T12/AC-06 — `ListRejectionReasonsQuery` is the application boundary a `/rejection-reasons`
+  // route calls through, following `ListPackagingTypesQuery`'s precedent immediately above it. An
+  // `@Injectable` that exists but is absent from both blocks compiles clean and passes every unit
+  // test while being unreachable from any transport adapter, which is exactly what `lint` and the
+  // unit tier cannot catch and this regex assertion can.
+  it('provides and exports ListRejectionReasonsQuery from the use-case module', () => {
+    const source = readUsecaseModuleSource();
+
+    expect(providersBlockOf(source)).toMatch(/\bListRejectionReasonsQuery\b/u);
+    expect(exportsBlockOf(source)).toMatch(/\bListRejectionReasonsQuery\b/u);
+  });
 });
 
 // T15 — the arrival-confirmation command is this feature's fourth application-boundary member;

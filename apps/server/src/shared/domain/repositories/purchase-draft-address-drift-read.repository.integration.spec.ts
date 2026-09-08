@@ -617,7 +617,10 @@ const registerFreshnessTests = (): void => {
     const { warehouseId, draftId, addressBId } = fixture;
     await redirectCustomerOrder(fixture.directOrderId, addressBId);
 
-    const query = new ReadPurchaseDraftQuery(repository);
+    // No Rejection is involved in an address-drift fixture, so this double never resolves one.
+    const query = new ReadPurchaseDraftQuery(repository, {
+      resolveRejectionReasons: jest.fn().mockResolvedValue([]),
+    } as never);
     const derived = await query.execute({ warehouseId } as never, draftId);
 
     const signalled = (derived?.lines ?? [])

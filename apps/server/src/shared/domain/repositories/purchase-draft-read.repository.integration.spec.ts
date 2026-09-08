@@ -1115,6 +1115,11 @@ const registerReferenceTests = (): void => {
   });
 };
 
+// Neither test below touches a Rejection, so this double never needs to resolve one.
+const emptyRejectionReasonCatalogue = () => ({
+  resolveRejectionReasons: jest.fn().mockResolvedValue([]),
+});
+
 const registerHasDriftSignalInvariantTests = (): void => {
   // The list's `hasDriftSignal` and the read's per-link `driftSignals` are two views of exactly
   // the same four named conditions (openapi.yaml `DriftSignalKind`); they must never disagree,
@@ -1133,7 +1138,10 @@ const registerHasDriftSignalInvariantTests = (): void => {
     const detail = await repository.readIdentifiedDraft(draftId, warehouseId);
     expect(detail).not.toBeNull();
 
-    const query = new ReadPurchaseDraftQuery(repository as never);
+    const query = new ReadPurchaseDraftQuery(
+      repository as never,
+      emptyRejectionReasonCatalogue() as never,
+    );
     const derived = await query.execute(identifiedActor(warehouseId), draftId);
 
     const derivedHasDriftSignal = (derived?.lines ?? []).some((line) =>
@@ -1156,7 +1164,10 @@ const registerHasDriftSignalInvariantTests = (): void => {
     const detail = await repository.readIdentifiedDraft(draftId, warehouseId);
     expect(detail).not.toBeNull();
 
-    const query = new ReadPurchaseDraftQuery(repository as never);
+    const query = new ReadPurchaseDraftQuery(
+      repository as never,
+      emptyRejectionReasonCatalogue() as never,
+    );
     const derived = await query.execute(identifiedActor(warehouseId), draftId);
 
     const derivedHasDriftSignal = (derived?.lines ?? []).some((line) =>

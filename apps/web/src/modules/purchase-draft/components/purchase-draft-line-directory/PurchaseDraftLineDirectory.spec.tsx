@@ -299,6 +299,9 @@ describe('PurchaseDraftLineDirectory', () => {
         quantity: 140,
         recordedByUserId: accessIds.actingUser,
         recordedAt: '2026-08-26T10:00:00.000Z',
+        // This ending predates the arrival-inspection release and was never
+        // backfilled, so it carries no condition account (AC-04a).
+        condition: null,
       },
     };
 

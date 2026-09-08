@@ -1,4 +1,10 @@
 import { Injectable } from '@nestjs/common';
+import type { PurchaseDraftLineEndingWithCondition } from 'purchase-drafts/domain/mappers/line-condition.mapper';
+import {
+  rejectionReasonIdsOf,
+  withCondition,
+} from 'purchase-drafts/domain/mappers/line-condition.mapper';
+import { readsRejectionCause } from 'purchase-drafts/domain/predicates/rejection-cause-access.predicates';
 import type {
   PurchaseDraftLineLinkIdentifiedWithDrift,
   PurchaseDraftLineLinkRedactedWithDrift,
@@ -11,6 +17,7 @@ import type {
   PurchaseDraftSummaryRead,
 } from 'shared/domain/repositories/purchase-draft-read.repository';
 import { PurchaseDraftReadRepository } from 'shared/domain/repositories/purchase-draft-read.repository';
+import { RejectionReasonCatalogueRepository } from 'shared/domain/repositories/rejection-reason-catalogue.repository';
 import { readsCustomerIdentity } from 'shared/predicates/observed-permission.predicates';
 
 // openapi.yaml `PurchaseDraftLineRedacted` with every link's `driftSignals` derived — what an actor
@@ -19,17 +26,19 @@ import { readsCustomerIdentity } from 'shared/predicates/observed-permission.pre
 // nothing to carry (AC-09a, ADR 0001).
 export type PurchaseDraftLineRedactedWithDrift = Omit<
   PurchaseDraftLineRedactedRead,
-  'links'
+  'links' | 'ending'
 > & {
   readonly links: readonly PurchaseDraftLineLinkRedactedWithDrift[];
+  readonly ending: PurchaseDraftLineEndingWithCondition | null;
 };
 
 // openapi.yaml `PurchaseDraftLineIdentified` with the same signals derived.
 export type PurchaseDraftLineIdentifiedWithDrift = Omit<
   PurchaseDraftLineIdentifiedRead,
-  'links'
+  'links' | 'ending'
 > & {
   readonly links: readonly PurchaseDraftLineLinkIdentifiedWithDrift[];
+  readonly ending: PurchaseDraftLineEndingWithCondition | null;
 };
 
 // openapi.yaml `PurchaseDraftLine` — `oneOf` the two forms, exactly as the contract models it. The
@@ -64,14 +73,28 @@ export const identifiesCustomer = (
 // captured address and no current address at all (ADR 0001,
 // server-request-authorization.md § "Consume the observed set in the projection"). The surface
 // never makes this choice; a handler only declares the Permission it observes.
+//
+// AC-21/AC-22 — and it builds each line's condition account the same way: the repository hands the
+// condition's figures back flat, spliced into the ending's own columns, and this layer nests them
+// under `condition` and resolves each Rejection's Reason label from the catalogue, exactly as
+// openapi.yaml's `PurchaseDraftLineEnding.condition` models it.
 @Injectable()
 export class ReadPurchaseDraftQuery {
-  constructor(private readonly repository: PurchaseDraftReadRepository) {}
+  constructor(
+    private readonly repository: PurchaseDraftReadRepository,
+    private readonly rejectionReasonCatalogue: RejectionReasonCatalogueRepository,
+  ) {}
 
   async execute(
     currentUser: AccessCurrentUser,
     purchaseDraftId: string,
   ): Promise<PurchaseDraftDetailWithDrift | null> {
+    // The cause narrowing is independent of the identity one and decided the same way: over the
+    // observed Permission set, never over the surface (AC-21, AC-22, sad.md §6.3).
+    const cause = readsRejectionCause(currentUser.observedPermissionIds)
+      ? 'with_cause'
+      : 'cause_withheld';
+
     // Two branches rather than one read behind a flag, following `ReadCustomerOrderQuery`'s (T13)
     // shape: each names the query it issues, so "the redacted form selects no identity column" is
     // readable at the call site rather than hidden in a parameter.
@@ -79,32 +102,68 @@ export class ReadPurchaseDraftQuery {
       const redacted = await this.repository.readRedactedDraft(
         purchaseDraftId,
         currentUser.warehouseId,
+        cause,
       );
 
-      return redacted === null
-        ? null
-        : {
-            ...redacted,
-            lines: redacted.lines.map((line) => ({
-              ...line,
-              links: line.links.map(withDriftSignals),
-            })),
-          };
+      if (redacted === null) {
+        return null;
+      }
+
+      const rejectionReasonLabels = await this.rejectionReasonLabelsOf(
+        redacted.lines.map((line) => line.ending),
+      );
+
+      return {
+        ...redacted,
+        lines: redacted.lines.map((line) => ({
+          ...line,
+          ending: withCondition(line.ending, rejectionReasonLabels),
+          links: line.links.map(withDriftSignals),
+        })),
+      };
     }
 
     const identified = await this.repository.readIdentifiedDraft(
       purchaseDraftId,
       currentUser.warehouseId,
+      cause,
     );
 
-    return identified === null
-      ? null
-      : {
-          ...identified,
-          lines: identified.lines.map((line) => ({
-            ...line,
-            links: line.links.map(withDriftSignals),
-          })),
-        };
+    if (identified === null) {
+      return null;
+    }
+
+    const rejectionReasonLabels = await this.rejectionReasonLabelsOf(
+      identified.lines.map((line) => line.ending),
+    );
+
+    return {
+      ...identified,
+      lines: identified.lines.map((line) => ({
+        ...line,
+        ending: withCondition(line.ending, rejectionReasonLabels),
+        links: line.links.map(withDriftSignals),
+      })),
+    };
+  }
+
+  // AC-23a — resolved **once** for the whole draft rather than once per line, and only when the
+  // read's endings actually name a Rejection: a withheld read, and a draft carrying no ending at
+  // all, ask the catalogue nothing.
+  private async rejectionReasonLabelsOf(
+    endings: ReadonlyArray<PurchaseDraftLineRedactedRead['ending']>,
+  ): Promise<ReadonlyMap<string, string>> {
+    const rejectionReasonIds = rejectionReasonIdsOf(endings);
+
+    if (rejectionReasonIds.length === 0) {
+      return new Map();
+    }
+
+    const reasons =
+      await this.rejectionReasonCatalogue.resolveRejectionReasons(
+        rejectionReasonIds,
+      );
+
+    return new Map(reasons.map((reason) => [reason.id, reason.label]));
   }
 }

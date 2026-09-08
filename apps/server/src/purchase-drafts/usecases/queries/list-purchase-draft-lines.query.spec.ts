@@ -163,6 +163,13 @@ const repositoryDouble = (
 const firstLinkOf = (entries: { line: { links: unknown[] } }[]) =>
   entries[0]?.line.links[0] as { readonly driftSignals: readonly string[] };
 
+// The catalogue double every instantiation below hands the query's second constructor
+// parameter — none of these cases assert on a Rejection's resolved label, so it never needs to
+// resolve anything.
+const catalogueDouble = () => ({
+  resolveRejectionReasons: jest.fn().mockResolvedValue([]),
+});
+
 describe('ListPurchaseDraftLinesQuery', () => {
   // AC-22 — every line the read returns keeps its own delivery mode, which is what places it in
   // one half of the view or the other. The use case narrows nothing itself.
@@ -170,17 +177,22 @@ describe('ListPurchaseDraftLinesQuery', () => {
     const repository = repositoryDouble([
       entryWith('direct_to_customer', [linkWithCurrentAddress(addressA)]),
     ]);
-    const query = new ListPurchaseDraftLinesQuery(repository as never);
+    const query = new ListPurchaseDraftLinesQuery(
+      repository as never,
+      catalogueDouble() as never,
+    );
 
     const result = await query.execute(identifiedUser, {
       deliveryMode: 'direct_to_customer',
       state: 'ready_for_ordering',
     });
 
-    expect(repository.listIdentifiedLines).toHaveBeenCalledWith(warehouseId, {
-      deliveryMode: 'direct_to_customer',
-      state: 'ready_for_ordering',
-    });
+    expect(repository.listIdentifiedLines).toHaveBeenCalledWith(
+      warehouseId,
+      { deliveryMode: 'direct_to_customer', state: 'ready_for_ordering' },
+      // T12/AC-22 — `identifiedUser` carries no observed `REJECTIONS:WATCH`.
+      'cause_withheld',
+    );
     expect(result[0]?.line.deliveryMode).toBe('direct_to_customer');
   });
 
@@ -190,7 +202,10 @@ describe('ListPurchaseDraftLinesQuery', () => {
     const repository = repositoryDouble([
       entryWith('direct_to_customer', [linkWithCurrentAddress(addressB)]),
     ]);
-    const query = new ListPurchaseDraftLinesQuery(repository as never);
+    const query = new ListPurchaseDraftLinesQuery(
+      repository as never,
+      catalogueDouble() as never,
+    );
 
     const result = await query.execute(identifiedUser);
 
@@ -203,7 +218,10 @@ describe('ListPurchaseDraftLinesQuery', () => {
     const repository = repositoryDouble([
       entryWith('via_warehouse', [linkWithCurrentAddress(addressA)]),
     ]);
-    const query = new ListPurchaseDraftLinesQuery(repository as never);
+    const query = new ListPurchaseDraftLinesQuery(
+      repository as never,
+      catalogueDouble() as never,
+    );
 
     const result = await query.execute(identifiedUser);
 
@@ -220,15 +238,21 @@ describe('ListPurchaseDraftLinesQuery', () => {
       [entryWith('direct_to_customer', [linkWithCurrentAddress(addressB)])],
       [redactedEntryWith('via_warehouse')],
     );
-    const query = new ListPurchaseDraftLinesQuery(repository as never);
+    const query = new ListPurchaseDraftLinesQuery(
+      repository as never,
+      catalogueDouble() as never,
+    );
 
     const result = await query.execute(currentUser, {
       deliveryMode: 'via_warehouse',
     });
 
-    expect(repository.listRedactedLines).toHaveBeenCalledWith(warehouseId, {
-      deliveryMode: 'via_warehouse',
-    });
+    expect(repository.listRedactedLines).toHaveBeenCalledWith(
+      warehouseId,
+      { deliveryMode: 'via_warehouse' },
+      // T12/AC-22 — `currentUser` carries no observed `REJECTIONS:WATCH` either.
+      'cause_withheld',
+    );
     expect(repository.listIdentifiedLines).not.toHaveBeenCalled();
 
     // T11's precondition, asserted end to end: a member holding `PURCHASE_DRAFTS:WATCH` and no
@@ -257,7 +281,10 @@ describe('ListPurchaseDraftLinesQuery', () => {
       [],
       [redactedEntryWith('via_warehouse')],
     );
-    const query = new ListPurchaseDraftLinesQuery(repository as never);
+    const query = new ListPurchaseDraftLinesQuery(
+      repository as never,
+      catalogueDouble() as never,
+    );
 
     const result = await query.execute(currentUser);
 
