@@ -4,6 +4,7 @@ import { ArrivalInspectionService } from 'purchase-drafts/domain/services/arriva
 import { PurchaseDraftAssemblyService } from 'purchase-drafts/domain/services/purchase-draft-assembly.service';
 import { AddPurchaseDraftLineCommand } from 'purchase-drafts/usecases/commands/add-purchase-draft-line.command';
 import { AddPurchaseDraftLineLinkCommand } from 'purchase-drafts/usecases/commands/add-purchase-draft-line-link.command';
+import { AmendPurchaseDraftRejectionCommand } from 'purchase-drafts/usecases/commands/amend-purchase-draft-rejection.command';
 import { ClosePurchaseDraftCommand } from 'purchase-drafts/usecases/commands/close-purchase-draft.command';
 import { ConfirmPurchaseDraftLineArrivalCommand } from 'purchase-drafts/usecases/commands/confirm-purchase-draft-line-arrival.command';
 import { CreatePurchaseDraftCommand } from 'purchase-drafts/usecases/commands/create-purchase-draft.command';
@@ -27,6 +28,7 @@ import { PackagingTypeCatalogueRepository } from 'shared/domain/repositories/pac
 import { PurchaseDraftAssemblyRepository } from 'shared/domain/repositories/purchase-draft-assembly.repository';
 import { PurchaseDraftFreezeRepository } from 'shared/domain/repositories/purchase-draft-freeze.repository';
 import { PurchaseDraftReadRepository } from 'shared/domain/repositories/purchase-draft-read.repository';
+import { PurchaseDraftRejectionRepository } from 'shared/domain/repositories/purchase-draft-rejection.repository';
 import { RejectionReasonCatalogueRepository } from 'shared/domain/repositories/rejection-reason-catalogue.repository';
 
 // The assembly, freeze, closure, discard and arrival-confirmation transitions, and the drift-aware
@@ -64,6 +66,12 @@ import { RejectionReasonCatalogueRepository } from 'shared/domain/repositories/r
     // own them.
     ArrivalInspectionService,
     RejectionReasonCatalogueRepository,
+    // T11/sad.md §6.4 — the Rejection amendment's own repository, not provided by the `@Global()`
+    // `DomainModule` either. Provider-only: no module reaches it except through the command below.
+    PurchaseDraftRejectionRepository,
+    // Registered *and* exported: T13's `PATCH` route is a transport adapter and reaches this
+    // module only through `AmendPurchaseDraftRejectionCommand`.
+    AmendPurchaseDraftRejectionCommand,
     CreatePurchaseDraftCommand,
     RevisePurchaseDraftCommand,
     AddPurchaseDraftLineCommand,
@@ -83,6 +91,7 @@ import { RejectionReasonCatalogueRepository } from 'shared/domain/repositories/r
     ListPurchaseDraftLinesQuery,
   ],
   exports: [
+    AmendPurchaseDraftRejectionCommand,
     CreatePurchaseDraftCommand,
     RevisePurchaseDraftCommand,
     AddPurchaseDraftLineCommand,

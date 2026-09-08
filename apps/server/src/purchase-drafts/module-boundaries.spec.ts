@@ -97,6 +97,28 @@ describe('purchase-drafts usecase module surface (T18)', () => {
   );
 });
 
+// T11 — the Rejection amendment command is this module's sixth application-boundary member; its
+// own `it.each` block, following T14/T15/T18's precedent, so a concurrent addition never collides
+// on the same array literal. `usecase.module.di.spec.ts` (T11) only proves the command constructs
+// through Nest injection — `moduleRef.get()` resolves a non-exported provider too, so the export
+// claim itself is proved here, over the module's source text, exactly as the other five members
+// are.
+describe('purchase-drafts usecase module surface (T11)', () => {
+  it.each(['AmendPurchaseDraftRejectionCommand'])(
+    'provides and exports %s from the use-case module',
+    (commandName) => {
+      const source = readUsecaseModuleSource();
+
+      expect(providersBlockOf(source)).toMatch(
+        new RegExp(`\\b${commandName}\\b`, 'u'),
+      );
+      expect(exportsBlockOf(source)).toMatch(
+        new RegExp(`\\b${commandName}\\b`, 'u'),
+      );
+    },
+  );
+});
+
 // T7 — server-architecture.md §Domain: "Domain entities and value objects must not import NestJS,
 // HTTP adapters, BullMQ, TypeORM, or concrete persistence models", and server-error-handling.md §5:
 // "Domain code and use cases throw framework-independent errors and do not import NestJS

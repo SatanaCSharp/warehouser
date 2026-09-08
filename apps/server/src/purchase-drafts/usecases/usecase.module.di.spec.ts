@@ -3,6 +3,7 @@ import { Test } from '@nestjs/testing';
 import { ArrivalInspectionService } from 'purchase-drafts/domain/services/arrival-inspection.service';
 import { AddPurchaseDraftLineCommand } from 'purchase-drafts/usecases/commands/add-purchase-draft-line.command';
 import { AddPurchaseDraftLineLinkCommand } from 'purchase-drafts/usecases/commands/add-purchase-draft-line-link.command';
+import { AmendPurchaseDraftRejectionCommand } from 'purchase-drafts/usecases/commands/amend-purchase-draft-rejection.command';
 import { ClosePurchaseDraftCommand } from 'purchase-drafts/usecases/commands/close-purchase-draft.command';
 import { ConfirmPurchaseDraftLineArrivalCommand } from 'purchase-drafts/usecases/commands/confirm-purchase-draft-line-arrival.command';
 import { CreatePurchaseDraftCommand } from 'purchase-drafts/usecases/commands/create-purchase-draft.command';
@@ -113,6 +114,25 @@ describe('PurchaseDraftsUsecaseModule Nest DI graph', () => {
     // member picks from, served at `/packaging-types` (openapi.yaml).
     expect(moduleRef.get(ListPackagingTypesQuery)).toBeInstanceOf(
       ListPackagingTypesQuery,
+    );
+  });
+});
+
+// T11/AC-18 — the Rejection amendment reaches `PurchaseDraftRejectionRepository`, which
+// `DomainModule` does not provide either, so it has to be a local provider of this module exactly
+// as the assembly repositories are. Its own `describe` block, following T14's/T15's/T8's
+// precedent, so a concurrent addition to this file never collides with theirs. The export claim
+// itself is proved in `module-boundaries.spec.ts` (T11), not here — `moduleRef.get()` on a
+// compiled testing module resolves a non-exported provider too, so this case only proves
+// construction.
+describe('PurchaseDraftsUsecaseModule Nest DI graph (T11)', () => {
+  it('constructs the Rejection amendment use case through Nest injection', async () => {
+    const moduleRef = await Test.createTestingModule({
+      imports: [TestDataSourceDoubleModule, PurchaseDraftsUsecaseModule],
+    }).compile();
+
+    expect(moduleRef.get(AmendPurchaseDraftRejectionCommand)).toBeInstanceOf(
+      AmendPurchaseDraftRejectionCommand,
     );
   });
 });
