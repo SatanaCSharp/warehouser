@@ -108,6 +108,15 @@ export const sourceMatchesDeliveryMode = (
 export const isWithinProseBound = (prose: string): boolean =>
   [...prose].length <= MAX_PROSE_LENGTH;
 
+// AC-14/AC-15b (post-review) — the two halves of `chk_purchase_draft_line_rejections_description_stored_trimmed`
+// and `chk_purchase_draft_lines_conformance_note_shape` beyond the length bound above:
+// `column <> ''` and `column = btrim(column)`. Shared by a Rejection's description and the
+// Conformance note, exactly as `isWithinProseBound` already is.
+export const isNonEmptyProse = (prose: string): boolean => prose.length > 0;
+
+export const isTrimmedProse = (prose: string): boolean =>
+  prose === prose.trim();
+
 // AC-04a — a line where nothing was received records neither judgement: no condition breakdown and
 // no judgement of the supplier's instruction. This is
 // `chk_purchase_draft_lines_conformance_requires_ending` (`ending_quantity > 0`) reached before the

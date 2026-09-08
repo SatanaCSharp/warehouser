@@ -268,7 +268,12 @@ export type PreReceiptConformanceViolation = ReturnType<
 export type EndingConditionInputViolation = ReturnType<
   | typeof quantityOutOfRangeViolation
   | typeof descriptionTooLongViolation
+  | typeof descriptionEmptyViolation
+  | typeof descriptionNotTrimmedViolation
   | typeof noteTooLongViolation
+  | typeof noteEmptyViolation
+  | typeof noteNotTrimmedViolation
+  | typeof noteNotAdmittedByVerdictViolation
   | typeof conditionOnNothingReceivedViolation
 >;
 
@@ -376,12 +381,52 @@ export const descriptionTooLongViolation = (path: string) => ({
   maxLength: MAX_PROSE_LENGTH,
 });
 
+// AC-14 (post-review) — `chk_purchase_draft_line_rejections_description_stored_trimmed` refuses a
+// blank-after-trim description as an unnamed 500; this is the named refusal that reaches it first.
+export const descriptionEmptyViolation = (path: string) => ({
+  rule: 'description_empty',
+  path,
+});
+
+// AC-14 (post-review) — the sibling half of the same constraint: stored untrimmed, never merely
+// blank (`description <> btrim(description)`).
+export const descriptionNotTrimmedViolation = (path: string) => ({
+  rule: 'description_not_trimmed',
+  path,
+});
+
 // AC-15b — the Conformance note's own bound. A distinct rule from AC-14's so the refusal names the
 // note rather than a description the member never wrote.
 export const noteTooLongViolation = (path: string) => ({
   rule: 'note_too_long',
   path,
   maxLength: MAX_PROSE_LENGTH,
+});
+
+// AC-15b (post-review) — the note half of `chk_purchase_draft_lines_conformance_note_shape`'s
+// `note <> ''`, named before the constraint can turn a blank-after-trim note into an unnamed 500.
+export const noteEmptyViolation = (path: string) => ({
+  rule: 'note_empty',
+  path,
+});
+
+// AC-15b (post-review) — the same constraint's `note = btrim(note)` half.
+export const noteNotTrimmedViolation = (path: string) => ({
+  rule: 'note_not_trimmed',
+  path,
+});
+
+// AC-15/AC-15a (post-review) — `PreReceiptConformanceWithoutNoteCreate`
+// (`@warehouser/contracts`) admits a note only beside `not_met`; a note beside `met` or
+// `not_applicable` would otherwise persist silently rather than being refused. Named here, at the
+// payload-shape layer, because it is a property of the request rather than a judgement against the
+// frozen line — `verdict_on_uninstructed_line` and its neighbours stay `PreReceiptConformanceViolation`s
+// unaffected by this one.
+export const noteNotAdmittedByVerdictViolation = (
+  verdict: PreReceiptConformanceVerdict,
+) => ({
+  rule: 'note_not_admitted_by_verdict',
+  verdict,
 });
 
 // AC-04a — a line where nothing was received records neither judgement, and the refusal says so

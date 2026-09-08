@@ -37,6 +37,14 @@ import type { LockPurchaseDraftLineForEndingResult } from 'shared/domain/reposit
 // whole service"), exactly as `assertApplied` in `purchase-draft-assembly.service.ts` already is.
 // `function` and not an arrow const because TypeScript only accepts an assertion signature on a
 // declaration or an explicitly annotated name.
+//
+// T10 (post-review) — the condition half of the ending (the refusing capability, the Condition
+// Split, the catalogue check and the Pre-receipt Conformance) used to be a second module-level
+// function here, `assertEndingCondition`, taking the catalogue check as a parameter. It moved onto
+// `ArrivalInspectionService` as a method: that catalogue check reaches
+// `RejectionReasonCatalogueRepository`, and server-architecture.md §117-120 requires a shared
+// operation reaching a repository to live in an injectable service rather than be threaded through
+// every caller as an argument. Both ending commands already inject that class.
 export function assertAdmitsEnding(
   locked: LockPurchaseDraftLineForEndingResult,
   endingKind: EndingKind,

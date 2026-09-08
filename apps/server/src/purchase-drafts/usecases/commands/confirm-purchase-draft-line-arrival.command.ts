@@ -2,6 +2,15 @@ import { Injectable, Optional } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
 import { DemandAllocationService } from 'customer-orders/domain/services/demand-allocation.service';
 import { purchaseDraftConcurrentChangeError } from 'purchase-drafts/domain/errors/purchase-draft.errors';
+import {
+  buildEndingConditionInput,
+  toEndingConditionSubmission,
+} from 'purchase-drafts/domain/mappers/purchase-draft-line-ending.mapper';
+import {
+  ArrivalInspectionService,
+  deriveAcceptedQuantity,
+  deriveRejectedQuantity,
+} from 'purchase-drafts/domain/services/arrival-inspection.service';
 import { assertAdmitsEnding } from 'purchase-drafts/domain/services/purchase-draft-line-ending.service';
 import { EndingKind } from 'purchase-drafts/domain/value-objects/delivery-mode';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
@@ -15,6 +24,16 @@ export interface EndingAllocationInput {
 
 export interface ConfirmPurchaseDraftLineArrivalInput {
   readonly receivedQuantity: number;
+  // T10 — both optional and defaulted to "nothing refused, nothing judged" (sad.md §6.1 step 1's
+  // "opening at presented, none refused, all presented accepted"), so a caller stating only
+  // `receivedQuantity` still submits a legal, refusal-free ending. Typed loosely (`unknown`) rather
+  // than against a named shape: the REST boundary is what narrows a request body
+  // (`@warehouser/contracts`), and narrowing again here would duplicate that validation rather than
+  // delegate to it. `toEndingConditionSubmission` is the one place this command trusts the shape,
+  // exactly as far as `EndingConditionSubmission` already does (T13 requirement: re-narrow both,
+  // once the REST DTOs exist — see the review note on this task).
+  readonly rejections?: readonly unknown[];
+  readonly preReceiptConformance?: unknown;
   readonly allocations: readonly EndingAllocationInput[];
 }
 
@@ -51,15 +70,18 @@ const defaultPurchaseDraftLineEndingRuntime: PurchaseDraftLineEndingRuntime = {
 // No Item's On-hand Quantity is written here or in the service it delegates to — it moves only
 // through an adjustment that states its reason (AC-21).
 //
-// `DemandAllocationService` belongs to `customer-orders` and is reached through that module's
-// exported provider, never re-implemented. It is typed as the concrete class (a value import)
-// because `emitDecoratorMetadata` needs a real constructor reference to resolve it through Nest's DI
-// container.
+// `DemandAllocationService` and `ArrivalInspectionService` are both required constructor
+// collaborators (server-architecture.md §118 "every constructor parameter is used by the body"):
+// the catalogue check they wire in is one of the rules every submission runs, never an optional
+// extra a caller may omit. Unit tests exercise the **real** `ArrivalInspectionService` with a
+// catalogue-repository double beneath it (server-architecture.md §216-218), never a double of the
+// service itself.
 @Injectable()
 export class ConfirmPurchaseDraftLineArrivalCommand {
   constructor(
     private readonly arrivalConfirmationRepository: ArrivalConfirmationRepository,
     private readonly demandAllocationService: DemandAllocationService,
+    private readonly arrivalInspectionService: ArrivalInspectionService,
     @Optional()
     private readonly runtime: PurchaseDraftLineEndingRuntime = defaultPurchaseDraftLineEndingRuntime,
   ) {}
@@ -80,6 +102,19 @@ export class ConfirmPurchaseDraftLineArrivalCommand {
 
     assertAdmitsEnding(locked, EndingKind.Arrival);
 
+    const submission = toEndingConditionSubmission(
+      input.receivedQuantity,
+      input.rejections,
+      input.preReceiptConformance,
+    );
+
+    await this.arrivalInspectionService.assertEndingCondition(
+      currentUser,
+      locked.line,
+      submission,
+    );
+
+    const acceptedQuantity = deriveAcceptedQuantity(submission);
     const endingRecordedAt = this.runtime.now();
 
     const written = await this.arrivalConfirmationRepository.recordLineEnding({
@@ -90,22 +125,23 @@ export class ConfirmPurchaseDraftLineArrivalCommand {
       endingKind: EndingKind.Arrival,
       endingRecordedByUserId: currentUser.userId,
       endingRecordedAt,
-      // T5 — this command states no condition yet; the Condition Split reaches it in its own task.
-      condition: null,
+      condition: buildEndingConditionInput(submission),
     });
     // A pre-read that resolved legally but whose guarded write still affected zero rows is the
     // concurrency answer, distinct from the AC-20a refusal above (server-error-handling.md §3).
     assert(written.recorded, purchaseDraftConcurrentChangeError());
 
     // Delegated only after the ending is written, so the bounds AC-18 re-checks are evaluated
-    // against rows this same transaction already holds.
+    // against rows this same transaction already holds. Bounded by the derived Accepted Quantity
+    // rather than by what was presented (AC-01/AC-11).
     await this.demandAllocationService.allocate(
       currentUser.warehouseId,
       currentUser.userId,
       [
         {
           purchaseDraftLineId,
-          receivedQuantity: input.receivedQuantity,
+          assignableQuantity: acceptedQuantity,
+          rejectedQuantity: deriveRejectedQuantity(submission),
           allocations: input.allocations,
         },
       ],

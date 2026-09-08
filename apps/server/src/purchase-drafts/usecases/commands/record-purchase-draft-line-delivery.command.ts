@@ -2,6 +2,15 @@ import { Injectable, Optional } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
 import { DemandAllocationService } from 'customer-orders/domain/services/demand-allocation.service';
 import { purchaseDraftConcurrentChangeError } from 'purchase-drafts/domain/errors/purchase-draft.errors';
+import {
+  buildEndingConditionInput,
+  toEndingConditionSubmission,
+} from 'purchase-drafts/domain/mappers/purchase-draft-line-ending.mapper';
+import {
+  ArrivalInspectionService,
+  deriveAcceptedQuantity,
+  deriveRejectedQuantity,
+} from 'purchase-drafts/domain/services/arrival-inspection.service';
 import { assertAdmitsEnding } from 'purchase-drafts/domain/services/purchase-draft-line-ending.service';
 import { EndingKind } from 'purchase-drafts/domain/value-objects/delivery-mode';
 import type {
@@ -13,8 +22,13 @@ import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { ArrivalConfirmationRepository } from 'shared/domain/repositories/arrival-confirmation.repository';
 
+// T10 — the `rejections`/`preReceiptConformance` fields are loosely typed for the same reason
+// `ConfirmPurchaseDraftLineArrivalInput`'s are: the REST boundary narrows a request body to its real
+// shape, and this command trusts that shape once, in `toEndingConditionSubmission`.
 export interface RecordPurchaseDraftLineDeliveryInput {
   readonly deliveredQuantity: number;
+  readonly rejections?: readonly unknown[];
+  readonly preReceiptConformance?: unknown;
   readonly allocations: readonly EndingAllocationInput[];
 }
 
@@ -30,11 +44,17 @@ const defaultPurchaseDraftLineEndingRuntime: PurchaseDraftLineEndingRuntime = {
 // are deliberate:
 //
 // - The quantity is named `deliveredQuantity` rather than `receivedQuantity`, because it says what
-//   actually happened. It is carried into `DemandAllocationService` through that service's own
-//   `receivedQuantity` field: the demand effect is the same act — this much of the line's goods
-//   reached the named customers — whichever way they travelled.
+//   actually happened. It feeds the same `EndingConditionSubmission.receivedQuantity` field and the
+//   same demand delegation the arrival half uses: the demand effect is the same act — this much of
+//   the line's goods reached the named customers — whichever way they travelled.
 // - The goods never entered the building, so they were never in the Transit Zone to be counted, and
 //   no Item's On-hand Quantity moves here for a second, independent reason (AC-21).
+//
+// T10/AC-24/AC-25 — the Condition Split's Source rule mirrors here through the locked line's own
+// Delivery Mode: a Rejection on this line must carry the customer-reported Source, never the
+// inspected one, exactly as `sourceMatchesDeliveryMode`/`requiredSourceFor` already state it. Nothing
+// here re-decides that; it is the same `assertConditionSplit` the arrival half calls, judged against
+// this line's own `deliveryMode` (sad.md §6.2 step 3).
 //
 // This release provides no proof that a Direct Delivery happened and the system does not inspect
 // what is recorded (spec.md §3, CONTEXT.md "Direct Delivery").
@@ -43,6 +63,7 @@ export class RecordPurchaseDraftLineDeliveryCommand {
   constructor(
     private readonly arrivalConfirmationRepository: ArrivalConfirmationRepository,
     private readonly demandAllocationService: DemandAllocationService,
+    private readonly arrivalInspectionService: ArrivalInspectionService,
     @Optional()
     private readonly runtime: PurchaseDraftLineEndingRuntime = defaultPurchaseDraftLineEndingRuntime,
   ) {}
@@ -63,6 +84,19 @@ export class RecordPurchaseDraftLineDeliveryCommand {
 
     assertAdmitsEnding(locked, EndingKind.DirectDelivery);
 
+    const submission = toEndingConditionSubmission(
+      input.deliveredQuantity,
+      input.rejections,
+      input.preReceiptConformance,
+    );
+
+    await this.arrivalInspectionService.assertEndingCondition(
+      currentUser,
+      locked.line,
+      submission,
+    );
+
+    const acceptedQuantity = deriveAcceptedQuantity(submission);
     const endingRecordedAt = this.runtime.now();
 
     const written = await this.arrivalConfirmationRepository.recordLineEnding({
@@ -73,8 +107,7 @@ export class RecordPurchaseDraftLineDeliveryCommand {
       endingKind: EndingKind.DirectDelivery,
       endingRecordedByUserId: currentUser.userId,
       endingRecordedAt,
-      // T5 — this command states no condition yet; the Condition Split reaches it in its own task.
-      condition: null,
+      condition: buildEndingConditionInput(submission),
     });
     assert(written.recorded, purchaseDraftConcurrentChangeError());
 
@@ -84,7 +117,8 @@ export class RecordPurchaseDraftLineDeliveryCommand {
       [
         {
           purchaseDraftLineId,
-          receivedQuantity: input.deliveredQuantity,
+          assignableQuantity: acceptedQuantity,
+          rejectedQuantity: deriveRejectedQuantity(submission),
           allocations: input.allocations,
         },
       ],

@@ -210,7 +210,8 @@ const registerRefusalDetailTests = (): void => {
       service.allocate(seeded.warehouseId, seeded.userId, [
         {
           purchaseDraftLineId: link.purchaseDraftLineId,
-          receivedQuantity: 100,
+          assignableQuantity: 100,
+          rejectedQuantity: 0,
           allocations: [
             { purchaseDraftLineLinkId: link.linkId, allocatedQuantity: 10 },
           ],
@@ -250,7 +251,8 @@ const registerRefusalDetailTests = (): void => {
       service.allocate(acting.warehouseId, acting.userId, [
         {
           purchaseDraftLineId: foreignLink.purchaseDraftLineId,
-          receivedQuantity: 100,
+          assignableQuantity: 100,
+          rejectedQuantity: 0,
           allocations: [
             {
               purchaseDraftLineLinkId: foreignLink.linkId,
@@ -313,7 +315,8 @@ describe('DemandAllocationService', () => {
       service.allocate(seeded.warehouseId, seeded.userId, [
         {
           purchaseDraftLineId: linkA.purchaseDraftLineId,
-          receivedQuantity: 100,
+          assignableQuantity: 100,
+          rejectedQuantity: 0,
           allocations: [
             {
               purchaseDraftLineLinkId: linkA.linkId,
@@ -323,7 +326,8 @@ describe('DemandAllocationService', () => {
         },
         {
           purchaseDraftLineId: linkB.purchaseDraftLineId,
-          receivedQuantity: 30,
+          assignableQuantity: 30,
+          rejectedQuantity: 0,
           allocations: [
             {
               purchaseDraftLineLinkId: linkB.linkId,
@@ -370,7 +374,8 @@ describe('DemandAllocationService', () => {
       service.allocate(seeded.warehouseId, seeded.userId, [
         {
           purchaseDraftLineId: linkA.purchaseDraftLineId,
-          receivedQuantity: 100,
+          assignableQuantity: 100,
+          rejectedQuantity: 0,
           allocations: [
             {
               purchaseDraftLineLinkId: linkA.linkId,
@@ -380,7 +385,8 @@ describe('DemandAllocationService', () => {
         },
         {
           purchaseDraftLineId: linkB.purchaseDraftLineId,
-          receivedQuantity: 40,
+          assignableQuantity: 40,
+          rejectedQuantity: 0,
           allocations: [
             {
               purchaseDraftLineLinkId: linkB.linkId,
@@ -425,7 +431,8 @@ describe('DemandAllocationService', () => {
       return service.allocate(seeded.warehouseId, seeded.userId, [
         {
           purchaseDraftLineId: link.purchaseDraftLineId,
-          receivedQuantity: 100,
+          assignableQuantity: 100,
+          rejectedQuantity: 0,
           allocations: [
             {
               purchaseDraftLineLinkId: link.linkId,

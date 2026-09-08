@@ -1,8 +1,9 @@
 import { randomUUID } from 'node:crypto';
 
-import { ErrorCode } from '@warehouser/shared-types/enums';
+import { ErrorCode, PermissionId } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
 import { DemandAllocationService } from 'customer-orders/domain/services/demand-allocation.service';
+import { ArrivalInspectionService } from 'purchase-drafts/domain/services/arrival-inspection.service';
 // The application boundary (ADR 0002 "Decision outcome").
 import { ConfirmPurchaseDraftLineArrivalCommand } from 'purchase-drafts/usecases/commands/confirm-purchase-draft-line-arrival.command';
 import { RecordPurchaseDraftLineDeliveryCommand } from 'purchase-drafts/usecases/commands/record-purchase-draft-line-delivery.command';
@@ -35,11 +36,13 @@ import type { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.
 import { PurchaseDraftEntity as PurchaseDraftEntityClass } from 'shared/domain/entities/purchase-draft.entity';
 import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity';
 import { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity';
+import { PurchaseDraftLineRejectionEntity } from 'shared/domain/entities/purchase-draft-line-rejection.entity';
 import { UserEntity } from 'shared/domain/entities/user.entity';
 import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
 import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 import { ArrivalConfirmationRepository } from 'shared/domain/repositories/arrival-confirmation.repository';
 import { DemandAllocationRepository } from 'shared/domain/repositories/demand-allocation.repository';
+import { RejectionReasonCatalogueRepository } from 'shared/domain/repositories/rejection-reason-catalogue.repository';
 import {
   buildWarehouse,
   buildWorkspace,
@@ -60,6 +63,15 @@ const demandAllocationService = new DemandAllocationService(
   demandAllocationRepository,
   { now: () => later },
 );
+// T10 (post-review) — `ArrivalInspectionService` is a required constructor collaborator of both
+// ending commands (server-architecture.md §118); this integration suite gives it the **real**
+// `RejectionReasonCatalogueRepository` against the same database, per sad.md §10 "Command
+// integration", so every case here genuinely exercises the catalogue check rather than skipping it.
+const rejectionReasonCatalogueRepository =
+  new RejectionReasonCatalogueRepository(dataSource);
+const arrivalInspectionService = new ArrivalInspectionService(
+  rejectionReasonCatalogueRepository,
+);
 
 const buildArrivalCommand = (
   demand: Pick<DemandAllocationService, 'allocate'> = demandAllocationService,
@@ -67,6 +79,7 @@ const buildArrivalCommand = (
   new ConfirmPurchaseDraftLineArrivalCommand(
     arrivalConfirmationRepository,
     demand as DemandAllocationService,
+    arrivalInspectionService,
     { now: () => later },
   );
 
@@ -76,6 +89,7 @@ const buildDeliveryCommand = (
   new RecordPurchaseDraftLineDeliveryCommand(
     arrivalConfirmationRepository,
     demand as DemandAllocationService,
+    arrivalInspectionService,
     { now: () => later },
   );
 
@@ -193,6 +207,11 @@ const seedLine = async (
   draftId: string,
   orderedQuantity = 100,
   deliveryMode: 'via_warehouse' | 'direct_to_customer' = 'via_warehouse',
+  valueAddingNote: string | null = null,
+  // T10 (post-review) — AC-15a needs a line frozen carrying **both** a Packaging Type and a
+  // Value-adding Note; every other seeded line stays unfrozen on this one, as before. `'cartons'`
+  // is a migration-seeded packaging type identifier (`fk_purchase_draft_lines_packaging_type`).
+  packagingTypeId: string | null = null,
 ): Promise<string> => {
   const id = randomUUID();
   const customerDeliveryAddressId =
@@ -205,8 +224,10 @@ const seedLine = async (
     warehouseId: seeded.warehouseId,
     itemId: seeded.itemId,
     orderedQuantity,
-    packagingTypeId: null,
-    valueAddingNote: null,
+    packagingTypeId,
+    // T10 — a frozen Value-adding Note is what lets a Pre-receipt Conformance be judged at all
+    // (AC-15, AC-17a); every other seeded line stays unfrozen, as before.
+    valueAddingNote,
     deliveryMode,
     customerDeliveryAddressId,
     endingQuantity: null,
@@ -265,15 +286,23 @@ const seedLink = async (
   return id;
 };
 
-const currentUserFor = (seeded: Seeded): AccessCurrentUser => ({
+const currentUserFor = (
+  seeded: Seeded,
+  observedPermissionIds: readonly PermissionId[] = [],
+): AccessCurrentUser => ({
   userId: seeded.userId,
   warehouseId: seeded.warehouseId,
   roleId: randomUUID(),
   roleKind: 'custom',
   permissionId: 'PURCHASE_DRAFTS:RECEIVE',
-  observedPermissionIds: [],
+  observedPermissionIds,
   archived: false,
 });
+
+// T10 — an actor holding both `PURCHASE_DRAFTS:RECEIVE` (the required Permission) and
+// `REJECTIONS:CREATE` (observed, ADR 0001), which every condition-carrying submission below needs.
+const rejectingUserFor = (seeded: Seeded): AccessCurrentUser =>
+  currentUserFor(seeded, [PermissionId.REJECTIONS_CREATE]);
 
 const readDraft = (id: string): Promise<PurchaseDraftEntity | null> =>
   dataSource.manager.getRepository(PurchaseDraftEntityClass).findOneBy({ id });
@@ -293,6 +322,13 @@ const readAllocationsForLine = (
   dataSource.manager
     .getRepository(ArrivalAllocationEntity)
     .find({ where: { purchaseDraftLineId } });
+
+const readRejectionsForLine = (
+  purchaseDraftLineId: string,
+): Promise<PurchaseDraftLineRejectionEntity[]> =>
+  dataSource.manager
+    .getRepository(PurchaseDraftLineRejectionEntity)
+    .find({ where: { purchaseDraftLineId }, order: { createdAt: 'ASC' } });
 
 // eslint-disable-next-line max-lines-per-function -- integration suite setup is inherently long
 describe('per-line endings (T17, ADR 0002)', () => {
@@ -594,9 +630,19 @@ describe('per-line endings (T17, ADR 0002)', () => {
     );
 
     expect(result.state).toBe('closed');
+    // test-plan.md:61 — records the passing shape of a nothing-received ending (both conformance
+    // columns stay empty when the caller states no verdict at all). This is not, on its own, proof
+    // that a *stated* verdict against a zero-quantity ending is refused rather than reaching
+    // `chk_purchase_draft_lines_conformance_requires_ending` as an unnamed 500 — a submission that
+    // states nothing would pass this assertion under a broken implementation too. That refusal is
+    // proved at `purchase-draft-line-ending.spec.ts`'s AC-04a cases, against a real command with a
+    // real `ArrivalInspectionService`, since asserting it here would require this test to expect a
+    // refusal rather than the happy path it demonstrates.
     expect(await readLine(lineId)).toMatchObject({
       endingQuantity: 0,
       endingKind: 'arrival',
+      preReceiptConformance: null,
+      preReceiptConformanceNote: null,
     });
     expect(await readAllocationsForLine(lineId)).toEqual([]);
     // Nothing arrived, so the customer is still waiting for all of it.
@@ -693,5 +739,406 @@ describe('per-line endings (T17, ADR 0002)', () => {
       code: ErrorCode.PURCHASE_DRAFTS_INVALID_STATE,
     });
     expect(await readLine(lineId)).toMatchObject({ endingQuantity: null });
+  });
+
+  // T10 — the condition half of the ending, against a real database: the Condition Split, the
+  // Pre-receipt Conformance and every Rejection land beside the ending quantity and its
+  // Allocations, in the one transaction spec.md §6 "Ending atomicity" already requires (AC-01,
+  // AC-05, AC-08, AC-10, AC-15).
+  it('records the ending, its Conformance and every Rejection together with the Allocations they bound (AC-01, AC-05, AC-08, AC-10, AC-15)', async () => {
+    const seeded = await seedWarehouse();
+    const draftId = await seedDraft(seeded, 'ready_for_ordering');
+    const lineId = await seedLine(
+      seeded,
+      draftId,
+      100,
+      'via_warehouse',
+      'Shrink-wrap each pallet',
+    );
+    const orderOneId = await seedCustomerOrder(seeded, {
+      quantity: 60,
+      outstandingQuantity: 60,
+    });
+    const orderTwoId = await seedCustomerOrder(seeded, {
+      quantity: 32,
+      outstandingQuantity: 32,
+    });
+    const linkOneId = await seedLink(seeded, draftId, lineId, orderOneId, 60);
+    const linkTwoId = await seedLink(seeded, draftId, lineId, orderTwoId, 32);
+
+    const result = await transactions.executeInTransaction({}, () =>
+      buildArrivalCommand().execute(rejectingUserFor(seeded), draftId, lineId, {
+        receivedQuantity: 100,
+        rejections: [
+          {
+            rejectionReasonId: 'damaged_by_packing',
+            quantity: 5,
+            source: 'inspected',
+            // AC-13 — a member's own description reaches persistence, on a Reason that does not
+            // require one (only `unfit_other` does, AC-07): stating one is always legal.
+            description: 'Two cartons were crushed against the pallet strap',
+          },
+          {
+            rejectionReasonId: 'packaging_not_as_instructed',
+            quantity: 3,
+            source: 'inspected',
+            description: null,
+          },
+        ],
+        preReceiptConformance: {
+          verdict: 'not_met',
+          note: 'Pallets arrived without shrink-wrap',
+        },
+        allocations: [
+          { purchaseDraftLineLinkId: linkOneId, allocatedQuantity: 60 },
+          { purchaseDraftLineLinkId: linkTwoId, allocatedQuantity: 32 },
+        ],
+      }),
+    );
+
+    expect(result.state).toBe('closed');
+    expect(await readLine(lineId)).toMatchObject({
+      endingQuantity: 100,
+      preReceiptConformance: 'not_met',
+      preReceiptConformanceNote: 'Pallets arrived without shrink-wrap',
+    });
+
+    const rejections = await readRejectionsForLine(lineId);
+    expect(rejections).toHaveLength(2);
+    expect(rejections).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          rejectionReasonId: 'damaged_by_packing',
+          quantity: 5,
+          source: 'inspected',
+          description: 'Two cartons were crushed against the pallet strap',
+          disposition: 'undecided',
+        }),
+        expect.objectContaining({
+          rejectionReasonId: 'packaging_not_as_instructed',
+          quantity: 3,
+          source: 'inspected',
+          disposition: 'undecided',
+        }),
+      ]),
+    );
+
+    // Accepted is 92 (100 presented less 8 refused), which is exactly what the two Allocations sum
+    // to — the demand delegation was bounded by the derived figure, not the presented one.
+    expect(await readOrder(orderOneId)).toMatchObject({
+      outstandingQuantity: 0,
+      state: 'fulfilled',
+    });
+    expect(await readOrder(orderTwoId)).toMatchObject({
+      outstandingQuantity: 0,
+      state: 'fulfilled',
+    });
+  });
+
+  // spec.md §6 "Ending atomicity" — the mid-way failure test above already proves the ending and
+  // its Allocations roll back together; this is the same proof widened to include the condition
+  // half a real Rejection insert adds to that same transaction.
+  it('rolls back the ending, its Conformance, its Rejections and the demand effect when the demand half fails mid-way', async () => {
+    const seeded = await seedWarehouse();
+    const draftId = await seedDraft(seeded, 'ready_for_ordering');
+    const lineId = await seedLine(
+      seeded,
+      draftId,
+      100,
+      'via_warehouse',
+      'Shrink-wrap each pallet',
+    );
+    const orderId = await seedCustomerOrder(seeded, { quantity: 100 });
+    const linkId = await seedLink(seeded, draftId, lineId, orderId, 100);
+
+    const injectedFailure = new Error('injected mid-way failure');
+    const failingDemand = {
+      allocate: jest.fn().mockRejectedValue(injectedFailure),
+    };
+
+    const rejection = transactions.executeInTransaction({}, () =>
+      buildArrivalCommand(failingDemand).execute(
+        rejectingUserFor(seeded),
+        draftId,
+        lineId,
+        {
+          receivedQuantity: 100,
+          rejections: [
+            {
+              rejectionReasonId: 'damaged_in_transit',
+              quantity: 8,
+              source: 'inspected',
+              description: null,
+            },
+          ],
+          preReceiptConformance: { verdict: 'not_met', note: 'Torn cartons' },
+          allocations: [
+            { purchaseDraftLineLinkId: linkId, allocatedQuantity: 92 },
+          ],
+        },
+      ),
+    );
+
+    await expect(rejection).rejects.toBe(injectedFailure);
+
+    expect(await readLine(lineId)).toMatchObject({
+      endingQuantity: null,
+      endingKind: null,
+      endingRecordedAt: null,
+      preReceiptConformance: null,
+      preReceiptConformanceNote: null,
+    });
+    expect(await readRejectionsForLine(lineId)).toEqual([]);
+    expect(await readDraft(draftId)).toMatchObject({
+      state: 'ready_for_ordering',
+      closedAt: null,
+    });
+    expect(await readAllocationsForLine(lineId)).toEqual([]);
+    expect(await readOrder(orderId)).toMatchObject({
+      outstandingQuantity: 100,
+      state: 'unfulfilled',
+    });
+  });
+
+  // A Condition Split rule refusing the whole submission before any write is reached — proof that
+  // the domain refusal, not merely the demand effect above, also leaves nothing behind.
+  it('records nothing when the Condition Split refuses the submission (two refusals naming the same Reason, AC-09)', async () => {
+    const seeded = await seedWarehouse();
+    const draftId = await seedDraft(seeded, 'ready_for_ordering');
+    const lineId = await seedLine(seeded, draftId, 100, 'via_warehouse');
+    const orderId = await seedCustomerOrder(seeded, { quantity: 100 });
+    const linkId = await seedLink(seeded, draftId, lineId, orderId, 100);
+
+    const rejection = transactions.executeInTransaction({}, () =>
+      buildArrivalCommand().execute(rejectingUserFor(seeded), draftId, lineId, {
+        receivedQuantity: 100,
+        rejections: [
+          {
+            rejectionReasonId: 'damaged_in_transit',
+            quantity: 3,
+            source: 'inspected',
+            description: null,
+          },
+          {
+            rejectionReasonId: 'damaged_in_transit',
+            quantity: 2,
+            source: 'inspected',
+            description: null,
+          },
+        ],
+        preReceiptConformance: null,
+        allocations: [
+          { purchaseDraftLineLinkId: linkId, allocatedQuantity: 95 },
+        ],
+      }),
+    );
+
+    await expect(rejection).rejects.toMatchObject({
+      code: ErrorCode.PURCHASE_DRAFTS_CONDITION_SPLIT_INVALID,
+    });
+    expect(await readLine(lineId)).toMatchObject({
+      endingQuantity: null,
+      endingRecordedAt: null,
+    });
+    expect(await readRejectionsForLine(lineId)).toEqual([]);
+    expect(await readAllocationsForLine(lineId)).toEqual([]);
+    expect(await readOrder(orderId)).toMatchObject({
+      outstandingQuantity: 100,
+      state: 'unfulfilled',
+    });
+  });
+
+  // AC-07 (post-review) — the real catalogue's `requires_description` flag, seeded true only on
+  // `unfit_other` (`1786800000000-CreateArrivalInspectionSchema.ts`'s `initialRejectionReasons`),
+  // drives this refusal. No unit double can prove this: a double's catalogue is fabricated, so it
+  // proves only that *some* flag was read, never that the real migration-seeded flag is the one
+  // read. Deleting `await this.assertStatedRejectionReasons(submission)` from
+  // `ArrivalInspectionService.assertEndingCondition` leaves this the only test in the whole suite
+  // that would then fail, because every other integration case either states no Reason requiring a
+  // description or already carries one.
+  it('refuses `unfit_other` stated without a description, against the real catalogue (AC-07)', async () => {
+    const seeded = await seedWarehouse();
+    const draftId = await seedDraft(seeded, 'ready_for_ordering');
+    const lineId = await seedLine(seeded, draftId, 100, 'via_warehouse');
+    const orderId = await seedCustomerOrder(seeded, { quantity: 100 });
+    const linkId = await seedLink(seeded, draftId, lineId, orderId, 100);
+
+    const rejection = transactions.executeInTransaction({}, () =>
+      buildArrivalCommand().execute(rejectingUserFor(seeded), draftId, lineId, {
+        receivedQuantity: 100,
+        rejections: [
+          {
+            rejectionReasonId: 'unfit_other',
+            quantity: 5,
+            source: 'inspected',
+            description: null,
+          },
+        ],
+        preReceiptConformance: null,
+        allocations: [
+          { purchaseDraftLineLinkId: linkId, allocatedQuantity: 95 },
+        ],
+      }),
+    );
+
+    await expect(rejection).rejects.toMatchObject({
+      code: ErrorCode.PURCHASE_DRAFTS_CONDITION_SPLIT_INVALID,
+      details: {
+        violations: [
+          expect.objectContaining({
+            rule: 'description_required',
+            rejectionReasonId: 'unfit_other',
+          }),
+        ],
+      },
+    });
+    expect(await readLine(lineId)).toMatchObject({
+      endingQuantity: null,
+      endingRecordedAt: null,
+    });
+    expect(await readRejectionsForLine(lineId)).toEqual([]);
+    expect(await readAllocationsForLine(lineId)).toEqual([]);
+  });
+
+  // AC-15a — a line frozen carrying **both** a Packaging Type and a Value-adding Note is judged
+  // with one verdict covering both, against the real row rather than a projection a double could
+  // fabricate agreement over.
+  it('judges a line frozen carrying both a Packaging Type and a Value-adding Note with one verdict (AC-15a)', async () => {
+    const seeded = await seedWarehouse();
+    const draftId = await seedDraft(seeded, 'ready_for_ordering');
+    const lineId = await seedLine(
+      seeded,
+      draftId,
+      100,
+      'via_warehouse',
+      'Shrink-wrap each pallet',
+      'cartons',
+    );
+    const orderId = await seedCustomerOrder(seeded, { quantity: 100 });
+    const linkId = await seedLink(seeded, draftId, lineId, orderId, 100);
+
+    const result = await transactions.executeInTransaction({}, () =>
+      buildArrivalCommand().execute(currentUserFor(seeded), draftId, lineId, {
+        receivedQuantity: 100,
+        preReceiptConformance: {
+          verdict: 'not_met',
+          note: 'Wrong cartons, and no shrink-wrap',
+        },
+        allocations: [
+          { purchaseDraftLineLinkId: linkId, allocatedQuantity: 100 },
+        ],
+      }),
+    );
+
+    expect(result.state).toBe('closed');
+    expect(await readLine(lineId)).toMatchObject({
+      preReceiptConformance: 'not_met',
+      preReceiptConformanceNote: 'Wrong cartons, and no shrink-wrap',
+    });
+  });
+
+  // AC-11 — an over-assignment through the whole ending command, not merely against
+  // `DemandAllocationService` in isolation: the ending, its Conformance, its Rejections and its
+  // Allocations all roll back together when the demand bound refuses (spec.md §6 "Ending
+  // atomicity").
+  it('refuses the whole ending when an assignment exceeds the derived Accepted Quantity, recording nothing (AC-11)', async () => {
+    const seeded = await seedWarehouse();
+    const draftId = await seedDraft(seeded, 'ready_for_ordering');
+    const lineId = await seedLine(seeded, draftId, 100, 'via_warehouse');
+    const orderId = await seedCustomerOrder(seeded, { quantity: 100 });
+    const linkId = await seedLink(seeded, draftId, lineId, orderId, 100);
+
+    const rejection = transactions.executeInTransaction({}, () =>
+      buildArrivalCommand().execute(rejectingUserFor(seeded), draftId, lineId, {
+        receivedQuantity: 100,
+        rejections: [
+          {
+            rejectionReasonId: 'damaged_in_transit',
+            quantity: 8,
+            source: 'inspected',
+            description: null,
+          },
+        ],
+        preReceiptConformance: null,
+        // Ninety-two is accepted (100 presented less 8 refused); one hundred is assigned.
+        allocations: [
+          { purchaseDraftLineLinkId: linkId, allocatedQuantity: 100 },
+        ],
+      }),
+    );
+
+    await expect(rejection).rejects.toMatchObject({
+      code: ErrorCode.PURCHASE_DRAFTS_ALLOCATION_OUT_OF_BOUNDS,
+      details: {
+        violations: [
+          expect.objectContaining({
+            rule: 'allocations_exceed_accepted_quantity',
+            acceptedQuantity: 92,
+            rejectedQuantity: 8,
+          }),
+        ],
+      },
+    });
+    // The ending was written before the demand bound was reached, so this is the assertion that
+    // the rollback happened rather than the write never having been attempted.
+    expect(await readLine(lineId)).toMatchObject({
+      endingQuantity: null,
+      endingKind: null,
+      endingRecordedAt: null,
+      preReceiptConformance: null,
+      preReceiptConformanceNote: null,
+    });
+    expect(await readRejectionsForLine(lineId)).toEqual([]);
+    expect(await readAllocationsForLine(lineId)).toEqual([]);
+    expect(await readOrder(orderId)).toMatchObject({
+      outstandingQuantity: 100,
+      state: 'unfulfilled',
+    });
+  });
+
+  // AC-12 — the same whole-command proof for the other bound: an assignment naming a Customer
+  // Order that is no longer waiting refuses the whole ending, whatever the Accepted Quantity is.
+  it('refuses the whole ending when an assignment names a Customer Order that is no longer waiting (AC-12)', async () => {
+    const seeded = await seedWarehouse();
+    const draftId = await seedDraft(seeded, 'ready_for_ordering');
+    const lineId = await seedLine(seeded, draftId, 100, 'via_warehouse');
+    const cancelledOrderId = await seedCustomerOrder(seeded, {
+      quantity: 100,
+      outstandingQuantity: 100,
+      state: 'cancelled',
+      cancellationReason: 'Customer withdrew the order',
+      cancelledByUserId: seeded.userId,
+      cancelledAt: now,
+    });
+    const linkId = await seedLink(
+      seeded,
+      draftId,
+      lineId,
+      cancelledOrderId,
+      100,
+    );
+
+    const rejection = transactions.executeInTransaction({}, () =>
+      buildArrivalCommand().execute(currentUserFor(seeded), draftId, lineId, {
+        receivedQuantity: 100,
+        allocations: [
+          { purchaseDraftLineLinkId: linkId, allocatedQuantity: 10 },
+        ],
+      }),
+    );
+
+    await expect(rejection).rejects.toMatchObject({
+      code: ErrorCode.PURCHASE_DRAFTS_ALLOCATION_OUT_OF_BOUNDS,
+      details: {
+        violations: [
+          expect.objectContaining({ rule: 'customer_order_not_unfulfilled' }),
+        ],
+      },
+    });
+    expect(await readLine(lineId)).toMatchObject({
+      endingQuantity: null,
+      endingRecordedAt: null,
+    });
+    expect(await readAllocationsForLine(lineId)).toEqual([]);
   });
 });

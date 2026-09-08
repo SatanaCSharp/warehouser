@@ -31,6 +31,7 @@ import {
   assertPreReceiptConformance,
   assertRejectionCapability,
   deriveAcceptedQuantity,
+  deriveRejectedQuantity,
   type EndingConditionSubmission,
 } from 'purchase-drafts/domain/services/arrival-inspection.service';
 import { DeliveryMode } from 'purchase-drafts/domain/value-objects/delivery-mode';
@@ -119,6 +120,7 @@ const submission = (
   receivedQuantity: 100,
   rejections: [],
   preReceiptConformance: null,
+  preReceiptConformanceNote: null,
   ...overrides,
 });
 
@@ -514,6 +516,102 @@ describe('assertPreReceiptConformance — the shared Conformance assertion (AC-1
     expect(rulesOf(error)).toContain('condition_on_nothing_received');
   });
 
+  // AC-15b (post-review) — a note beyond one thousand characters is refused as the payload's own
+  // bound, exactly like AC-04a above, rather than reaching
+  // `chk_purchase_draft_lines_conformance_note_length` and surfacing as an unnamed 500.
+  it('refuses a Pre-receipt Conformance note beyond one thousand characters', () => {
+    const error = refusalFrom(() =>
+      assertPreReceiptConformance(
+        lockedLine({ packagingTypeId }),
+        submission({
+          preReceiptConformance: PreReceiptConformanceVerdict.NotMet,
+          preReceiptConformanceNote: 'x'.repeat(1001),
+        }),
+      ),
+    );
+
+    expect(error.code).toBe(ErrorCode.PURCHASE_DRAFTS_INVALID_INPUT);
+    expect(rulesOf(error)).toContain('note_too_long');
+  });
+
+  // The note is measured only where it would actually reach persistence: a note stated without a
+  // verdict is `buildEndingConditionInput`'s to drop, never this rule's to refuse, so an overlong
+  // note beside no verdict at all must not surface here as a false "note_too_long".
+  it('does not measure a note stated without a verdict', () => {
+    expect(() =>
+      assertPreReceiptConformance(
+        lockedLine({ packagingTypeId }),
+        submission({
+          preReceiptConformance: null,
+          preReceiptConformanceNote: 'x'.repeat(1001),
+        }),
+      ),
+    ).not.toThrow();
+  });
+
+  // AC-15b (post-review) — the note shape bound's other two named refusals: blank after trim, and
+  // stored untrimmed. Both would otherwise reach `chk_purchase_draft_lines_conformance_note_shape`
+  // as an unnamed 500.
+  it('refuses a blank Pre-receipt Conformance note', () => {
+    const error = refusalFrom(() =>
+      assertPreReceiptConformance(
+        lockedLine({ packagingTypeId }),
+        submission({
+          preReceiptConformance: PreReceiptConformanceVerdict.NotMet,
+          preReceiptConformanceNote: '',
+        }),
+      ),
+    );
+
+    expect(error.code).toBe(ErrorCode.PURCHASE_DRAFTS_INVALID_INPUT);
+    expect(rulesOf(error)).toContain('note_empty');
+  });
+
+  it('refuses a Pre-receipt Conformance note that is not trimmed', () => {
+    const error = refusalFrom(() =>
+      assertPreReceiptConformance(
+        lockedLine({ packagingTypeId }),
+        submission({
+          preReceiptConformance: PreReceiptConformanceVerdict.NotMet,
+          preReceiptConformanceNote: ' Torn cartons ',
+        }),
+      ),
+    );
+
+    expect(error.code).toBe(ErrorCode.PURCHASE_DRAFTS_INVALID_INPUT);
+    expect(rulesOf(error)).toContain('note_not_trimmed');
+  });
+
+  // AC-15/AC-15a (post-review) — `PreReceiptConformanceWithoutNoteCreate` admits a note only beside
+  // Not met; a note beside Met would otherwise persist silently rather than being refused.
+  it.each([
+    PreReceiptConformanceVerdict.Met,
+    PreReceiptConformanceVerdict.NotApplicable,
+  ])('refuses a note stated beside the verdict %s', (verdict) => {
+    const line =
+      verdict === PreReceiptConformanceVerdict.NotApplicable
+        ? lockedLine()
+        : lockedLine({ packagingTypeId });
+
+    const error = refusalFrom(() =>
+      assertPreReceiptConformance(
+        line,
+        submission({
+          preReceiptConformance: verdict,
+          preReceiptConformanceNote: 'Everything arrived as instructed',
+        }),
+      ),
+    );
+
+    expect(error.code).toBe(ErrorCode.PURCHASE_DRAFTS_INVALID_INPUT);
+    expect(violationsOf(error)).toContainEqual(
+      expect.objectContaining({
+        rule: 'note_not_admitted_by_verdict',
+        verdict,
+      }),
+    );
+  });
+
   it('admits a judged instructed line and an unjudged uninstructed one', () => {
     expect(() =>
       assertPreReceiptConformance(
@@ -579,6 +677,174 @@ describe('assertRejectionCapability — the shared capability assertion (AC-01a)
   });
 });
 
+// T10 (post-review) — `assertRejectionShapes` (AC-03/AC-14) is private, reached only through
+// `ArrivalInspectionService.assertEndingCondition`, so these cases prove the payload's own bounds
+// on each Rejection the same way the class's other rule already is: over the real service, with
+// only its catalogue repository doubled beneath it.
+describe('ArrivalInspectionService.assertEndingCondition — the payload shape on each Rejection (AC-03/AC-14, post-review)', () => {
+  it.each([0, -1, 1.5])(
+    'refuses a refused quantity of %s, naming which entry',
+    async (quantity) => {
+      const error = await refusalFromAwaiting(() =>
+        serviceWith(catalogueRepositoryDouble()).assertEndingCondition(
+          actorHolding(PermissionId.REJECTIONS_CREATE),
+          lockedLine(),
+          submission({
+            rejections: [refusal('damaged_in_transit', { quantity })],
+          }),
+        ),
+      );
+
+      expect(error.code).toBe(ErrorCode.PURCHASE_DRAFTS_INVALID_INPUT);
+      expect(violationsOf(error)).toContainEqual(
+        expect.objectContaining({
+          rule: 'quantity_out_of_range',
+          path: 'rejections.0.quantity',
+        }),
+      );
+    },
+  );
+
+  it('refuses a blank Rejection description', async () => {
+    const error = await refusalFromAwaiting(() =>
+      serviceWith(catalogueRepositoryDouble()).assertEndingCondition(
+        actorHolding(PermissionId.REJECTIONS_CREATE),
+        lockedLine(),
+        submission({
+          rejections: [refusal('damaged_in_transit', { description: '' })],
+        }),
+      ),
+    );
+
+    expect(error.code).toBe(ErrorCode.PURCHASE_DRAFTS_INVALID_INPUT);
+    expect(violationsOf(error)).toContainEqual(
+      expect.objectContaining({
+        rule: 'description_empty',
+        path: 'rejections.0.description',
+      }),
+    );
+  });
+
+  it('refuses a Rejection description that is not trimmed', async () => {
+    const error = await refusalFromAwaiting(() =>
+      serviceWith(catalogueRepositoryDouble()).assertEndingCondition(
+        actorHolding(PermissionId.REJECTIONS_CREATE),
+        lockedLine(),
+        submission({
+          rejections: [
+            refusal('damaged_in_transit', { description: ' crushed corner ' }),
+          ],
+        }),
+      ),
+    );
+
+    expect(error.code).toBe(ErrorCode.PURCHASE_DRAFTS_INVALID_INPUT);
+    expect(violationsOf(error)).toContainEqual(
+      expect.objectContaining({
+        rule: 'description_not_trimmed',
+        path: 'rejections.0.description',
+      }),
+    );
+  });
+
+  it('admits a whole refused quantity of at least one and a trimmed, non-empty description', async () => {
+    await expect(
+      serviceWith(catalogueRepositoryDouble()).assertEndingCondition(
+        actorHolding(PermissionId.REJECTIONS_CREATE),
+        lockedLine(),
+        submission({
+          rejections: [
+            refusal('damaged_in_transit', {
+              quantity: 1,
+              description: 'crushed corner',
+            }),
+          ],
+        }),
+      ),
+    ).resolves.toBeUndefined();
+  });
+});
+
+// T10 (post-review) — sad.md §6.1 steps 4-6: the payload's own shape, then the refusing capability,
+// then the Condition Split (and the catalogue check it shares), then the Pre-receipt Conformance —
+// never a different order, because each later rule is judged only once the more fundamental one has
+// passed. Proved by outcome rather than by spying on the module's own functions: `assertEndingCondition`
+// now calls them as same-file bindings, which a cross-module `jest.mock` cannot intercept. Each case
+// below states a submission breaking **two** rules at once and asserts which one's code is
+// returned, which is only possible if the rules run in the stated order.
+describe('ArrivalInspectionService.assertEndingCondition — the rules run in the documented order (sad.md §6.1 steps 4-6, post-review)', () => {
+  it('checks the payload shape before the refusing capability', async () => {
+    const error = await refusalFromAwaiting(() =>
+      serviceWith(catalogueRepositoryDouble()).assertEndingCondition(
+        actorHolding(), // lacks REJECTIONS:CREATE
+        lockedLine(),
+        submission({
+          // A quantity of zero breaks the shape bound; refusing at all breaks the capability one.
+          rejections: [refusal('damaged_in_transit', { quantity: 0 })],
+        }),
+      ),
+    );
+
+    expect(error.code).toBe(ErrorCode.PURCHASE_DRAFTS_INVALID_INPUT);
+  });
+
+  it('checks the refusing capability before the Condition Split', async () => {
+    const error = await refusalFromAwaiting(() =>
+      serviceWith(catalogueRepositoryDouble()).assertEndingCondition(
+        actorHolding(), // lacks REJECTIONS:CREATE
+        lockedLine(),
+        submission({
+          receivedQuantity: 10,
+          // Refusing more than was presented breaks the Condition Split; refusing at all, held by
+          // an actor without the capability, breaks the capability rule.
+          rejections: [refusal('damaged_in_transit', { quantity: 40 })],
+        }),
+      ),
+    );
+
+    expect(error.code).toBe(
+      ErrorCode.PURCHASE_DRAFTS_REJECTION_CAPABILITY_REQUIRED,
+    );
+  });
+
+  it('checks the Condition Split (and its catalogue check) before the Pre-receipt Conformance', async () => {
+    const error = await refusalFromAwaiting(() =>
+      serviceWith(catalogueRepositoryDouble()).assertEndingCondition(
+        actorHolding(PermissionId.REJECTIONS_CREATE),
+        lockedLine({ packagingTypeId }), // instructed
+        submission({
+          // Two refusals naming the same Reason breaks the Condition Split; Not applicable on an
+          // instructed line breaks the Pre-receipt Conformance.
+          rejections: [
+            refusal('damaged_in_transit', { quantity: 3 }),
+            refusal('damaged_in_transit', { quantity: 2 }),
+          ],
+          preReceiptConformance: PreReceiptConformanceVerdict.NotApplicable,
+        }),
+      ),
+    );
+
+    expect(error.code).toBe(ErrorCode.PURCHASE_DRAFTS_CONDITION_SPLIT_INVALID);
+  });
+
+  it('checks the catalogue before the Pre-receipt Conformance', async () => {
+    const error = await refusalFromAwaiting(() =>
+      serviceWith(catalogueRepositoryDouble()).assertEndingCondition(
+        actorHolding(PermissionId.REJECTIONS_CREATE),
+        lockedLine({ packagingTypeId }), // instructed
+        submission({
+          // A Reason the catalogue does not offer breaks the catalogue check; Not applicable on an
+          // instructed line breaks the Pre-receipt Conformance.
+          rejections: [refusal('crushed_by_forklift', { quantity: 3 })],
+          preReceiptConformance: PreReceiptConformanceVerdict.NotApplicable,
+        }),
+      ),
+    );
+
+    expect(error.code).toBe(ErrorCode.PURCHASE_DRAFTS_CONDITION_SPLIT_INVALID);
+  });
+});
+
 describe('deriveAcceptedQuantity — the shared derivation', () => {
   it('accepts everything presented when the submission refuses nothing', () => {
     expect(
@@ -616,6 +882,28 @@ describe('deriveAcceptedQuantity — the shared derivation', () => {
   });
 });
 
+describe('deriveRejectedQuantity — the shared derivation (post-review)', () => {
+  // AC-11 — the one figure `deriveAcceptedQuantity` and a refused Allocation's violation both need,
+  // derived here once so neither re-sums the Rejections nor re-subtracts the accepted figure to get
+  // it back.
+  it('sums every refused quantity on the line', () => {
+    expect(
+      deriveRejectedQuantity(
+        submission({
+          rejections: [
+            refusal('damaged_in_transit', { quantity: 8 }),
+            refusal('unfit_other', { quantity: 3 }),
+          ],
+        }),
+      ),
+    ).toBe(11);
+  });
+
+  it('is zero when nothing was refused', () => {
+    expect(deriveRejectedQuantity(submission({ rejections: [] }))).toBe(0);
+  });
+});
+
 describe('the shape of the shared rules', () => {
   // server-architecture.md §Services — "keep a shared helper as a plain exported function only when
   // it needs no collaborator at all". Each of the four is reachable **without** an instance, which
@@ -635,14 +923,26 @@ describe('the shape of the shared rules', () => {
     },
   );
 
-  // The one rule that earns the class: the catalogue read. Anything else on it would be a rule that
-  // took a collaborator it does not need.
-  it('keeps the catalogue assertion as the service’s only public method', () => {
+  // T10 (post-review) — the class now owns two public methods, not one: the catalogue read
+  // (needing the injected repository) and `assertEndingCondition` (needing that same read, reached
+  // through this service rather than threaded through a parameter — server-architecture.md
+  // §117-120). Anything else on it would be a rule that needs neither.
+  it('keeps the catalogue assertion and the condition orchestration as the service’s only public methods', () => {
     expect(
       Object.getOwnPropertyNames(ArrivalInspectionService.prototype).filter(
         (name) => name !== 'constructor',
       ),
-    ).toEqual(['assertStatedRejectionReasons']);
+    ).toEqual(
+      expect.arrayContaining([
+        'assertStatedRejectionReasons',
+        'assertEndingCondition',
+      ]),
+    );
+    expect(
+      Object.getOwnPropertyNames(ArrivalInspectionService.prototype).filter(
+        (name) => name !== 'constructor',
+      ),
+    ).toHaveLength(2);
   });
 });
 

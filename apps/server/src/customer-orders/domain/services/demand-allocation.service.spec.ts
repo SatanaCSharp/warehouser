@@ -104,7 +104,8 @@ describe('DemandAllocationService — allocate (AC-18)', () => {
     const rejection = serviceWith(repository).allocate(warehouseId, actorId, [
       {
         purchaseDraftLineId,
-        receivedQuantity: 100,
+        assignableQuantity: 100,
+        rejectedQuantity: 0,
         allocations: [
           { purchaseDraftLineLinkId: linkId1, allocatedQuantity: 60 },
           { purchaseDraftLineLinkId: linkId2, allocatedQuantity: 60 },
@@ -119,8 +120,10 @@ describe('DemandAllocationService — allocate (AC-18)', () => {
         violations: [
           {
             purchaseDraftLineId,
-            rule: 'allocations_exceed_received_quantity',
+            rule: 'allocations_exceed_accepted_quantity',
             receivedQuantity: 100,
+            rejectedQuantity: 0,
+            acceptedQuantity: 100,
             allocatedQuantity: 120,
           },
         ],
@@ -142,7 +145,8 @@ describe('DemandAllocationService — allocate (AC-18)', () => {
     const rejection = serviceWith(repository).allocate(warehouseId, actorId, [
       {
         purchaseDraftLineId,
-        receivedQuantity: 100,
+        assignableQuantity: 100,
+        rejectedQuantity: 0,
         allocations: [
           { purchaseDraftLineLinkId: linkId1, allocatedQuantity: 80 },
         ],
@@ -182,7 +186,8 @@ describe('DemandAllocationService — allocate (AC-18)', () => {
       const rejection = serviceWith(repository).allocate(warehouseId, actorId, [
         {
           purchaseDraftLineId,
-          receivedQuantity: 100,
+          assignableQuantity: 100,
+          rejectedQuantity: 0,
           allocations: [
             { purchaseDraftLineLinkId: linkId1, allocatedQuantity: 10 },
           ],
@@ -225,7 +230,8 @@ describe('DemandAllocationService — allocate (AC-18)', () => {
     const rejection = serviceWith(repository).allocate(warehouseId, actorId, [
       {
         purchaseDraftLineId,
-        receivedQuantity: 140,
+        assignableQuantity: 140,
+        rejectedQuantity: 0,
         allocations: [
           { purchaseDraftLineLinkId: linkId1, allocatedQuantity: 100 },
           { purchaseDraftLineLinkId: linkId2, allocatedQuantity: 40 },
@@ -233,7 +239,8 @@ describe('DemandAllocationService — allocate (AC-18)', () => {
       },
       {
         purchaseDraftLineId: otherPurchaseDraftLineId,
-        receivedQuantity: 0,
+        assignableQuantity: 0,
+        rejectedQuantity: 0,
         allocations: [],
       },
     ]);
@@ -274,14 +281,16 @@ describe('DemandAllocationService — allocate (AC-18)', () => {
     await serviceWith(repository).allocate(warehouseId, actorId, [
       {
         purchaseDraftLineId,
-        receivedQuantity: 10,
+        assignableQuantity: 10,
+        rejectedQuantity: 0,
         allocations: [
           { purchaseDraftLineLinkId: linkId1, allocatedQuantity: 10 },
         ],
       },
       {
         purchaseDraftLineId: otherPurchaseDraftLineId,
-        receivedQuantity: 10,
+        assignableQuantity: 10,
+        rejectedQuantity: 0,
         allocations: [
           { purchaseDraftLineLinkId: linkId2, allocatedQuantity: 10 },
         ],
@@ -324,7 +333,8 @@ describe('DemandAllocationService — allocate (AC-17a)', () => {
       [
         {
           purchaseDraftLineId,
-          receivedQuantity: 130,
+          assignableQuantity: 130,
+          rejectedQuantity: 0,
           allocations: [
             { purchaseDraftLineLinkId: linkId1, allocatedQuantity: 100 },
             { purchaseDraftLineLinkId: linkId2, allocatedQuantity: 30 },
@@ -381,7 +391,14 @@ describe('DemandAllocationService — allocate (AC-17a)', () => {
     const outcome = await serviceWith(repository).allocate(
       warehouseId,
       actorId,
-      [{ purchaseDraftLineId, receivedQuantity: 0, allocations: [] }],
+      [
+        {
+          purchaseDraftLineId,
+          assignableQuantity: 0,
+          rejectedQuantity: 0,
+          allocations: [],
+        },
+      ],
     );
 
     expect(repository.lockCustomerOrdersForLinks).toHaveBeenCalledWith(
