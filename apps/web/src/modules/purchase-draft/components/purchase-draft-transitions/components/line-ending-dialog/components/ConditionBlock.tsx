@@ -11,7 +11,6 @@ import { WarehousePermissionGate } from 'shared/components/WarehousePermissionGa
 import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
 import { PackageXIcon } from 'shared/icons/PackageXIcon';
 
-import type { RejectionReason } from '@warehouser/contracts/purchase-drafts';
 import type { RejectionRow } from 'modules/purchase-draft/utils/line-ending-form';
 import type { ReactElement } from 'react';
 import type { ArrayPath, UseFormReturn } from 'react-hook-form';
@@ -48,27 +47,11 @@ export type ConditionBlockProps<
    * line is recorded with (AC-24). */
   kind: 'arrival' | 'directDelivery';
   /** What the line was originally ordered for — the first of the summary's
-   * four figures (design-handoff.md § Component mapping, `bllT3`/`M9G5z`).
-   * Every production caller passes it; it defaults to `presented` only so a
-   * harness exercising this block without a real line's `orderedQuantity` in
-   * hand still renders a complete summary rather than a fifth, undefined
-   * figure. */
-  ordered?: number;
+   * four figures (design-handoff.md § Component mapping, `bllT3`/`M9G5z`). */
+  ordered: number;
   /** What the line's ending states arrived or was delivered — never refused
    * by this block; the accepted figure is derived from it, live. */
   presented: number;
-  /**
-   * The Rejection Reason catalogue (AC-06, AC-07): server data, never
-   * translated client copy, so a new Reason needs no client release. Read by
-   * this component itself through `useRejectionReasons()` when omitted — the
-   * default for every production caller, so the catalogue is requested only
-   * while a condition block is actually mounted, never for a line where
-   * nothing arrived (`writing-web-components.md` §4,
-   * `placing-web-hooks.md` §4). A caller may still hand over an
-   * already-resolved catalogue; this component's own spec does, to exercise
-   * the block without a live query.
-   */
-  rejectionReasons?: RejectionReason[];
 };
 
 /** The Rejection Source chip's wording, derived from the line's Delivery Mode
@@ -142,8 +125,7 @@ export const ConditionBlock = <TForm extends ConditionBlockForm>({
   itemSku,
   kind,
   presented,
-  ordered = presented,
-  rejectionReasons,
+  ordered,
 }: ConditionBlockProps<TForm>): ReactElement => {
   const { t } = useTranslation('purchase-draft');
   const { quantity } = useLocaleFormat();
@@ -163,11 +145,11 @@ export const ConditionBlock = <TForm extends ConditionBlockForm>({
     name: 'rejections' as ArrayPath<TForm>,
   });
   const values = useWatch({ control });
-  // Called unconditionally on every render — Rules of Hooks — even though its
-  // result is used only when a caller has not handed over its own catalogue
-  // (`ConditionBlockProps.rejectionReasons` doc comment above).
-  const catalogueFromQuery = useRejectionReasons();
-  const catalogue = rejectionReasons ?? catalogueFromQuery;
+  // The catalogue is read here, by the component that uses it, rather than
+  // taken as a prop — so the production read is the only shape there is, and a
+  // spec exercises it by seeding the same cache the component subscribes to
+  // (`writing-web-components.md` §4, `placing-web-hooks.md` §4).
+  const catalogue = useRejectionReasons();
 
   const reasonOptions = catalogue.map((reason) => ({
     id: reason.id,

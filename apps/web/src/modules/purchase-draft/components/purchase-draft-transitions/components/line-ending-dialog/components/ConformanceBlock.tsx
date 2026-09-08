@@ -1,4 +1,5 @@
 import { Radio, RadioGroup } from '@heroui/react';
+import { useId } from 'react';
 import { Controller, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
@@ -7,7 +8,6 @@ import { Conditional } from 'shared/components/Conditional';
 import { FormTextAreaField } from 'shared/components/FormTextAreaField';
 import { LockIcon } from 'shared/icons/LockIcon';
 
-import type { PackagingType } from '@warehouser/contracts/purchase-drafts';
 import type { ConformanceVerdict } from 'modules/purchase-draft/utils/line-ending-form';
 import type { ReactElement } from 'react';
 import type { Path, UseFormReturn } from 'react-hook-form';
@@ -36,20 +36,6 @@ export type ConformanceBlockProps<
    * frozen with none, which is what makes `Met`/`Not met` illegal answers for
    * it (AC-17). */
   packagingTypeId: string | null;
-  /**
-   * The Packaging Type catalogue this block resolves `packagingTypeId`
-   * against for display — never for the value it sends, which stays the id
-   * (AC-23: a closed line reads the type frozen on it, not a later reading of
-   * the catalogue). Read by this component itself through
-   * `usePackagingTypes()` when omitted — the default for every production
-   * caller, so the catalogue is requested only while a conformance block is
-   * actually mounted (`writing-web-components.md` §4,
-   * `placing-web-hooks.md` §4). A caller may hand over an already-resolved
-   * catalogue instead; this component's own spec does, to exercise the block
-   * without a live query (the same shape `ConditionBlock`'s own
-   * `rejectionReasons` prop takes for `useRejectionReasons()`).
-   */
-  packagingTypes?: PackagingType[];
   valueAddingNote: string | null;
 };
 
@@ -93,20 +79,20 @@ export const ConformanceBlock = <TForm extends ConformanceBlockForm>({
   className,
   form,
   packagingTypeId,
-  packagingTypes,
   valueAddingNote,
 }: ConformanceBlockProps<TForm>): ReactElement => {
   const { t } = useTranslation('purchase-draft');
+  const headingId = useId();
   const {
     control,
     formState: { isSubmitting },
     register,
   } = form;
-  // Called unconditionally on every render — Rules of Hooks — even though its
-  // result is used only when a caller has not handed over its own catalogue
-  // (`ConformanceBlockProps.packagingTypes` doc comment above).
-  const catalogueFromQuery = usePackagingTypes();
-  const catalogue = packagingTypes ?? catalogueFromQuery;
+  // The catalogue is read here, by the component that uses it, rather than
+  // taken as a prop — so the production read is the only shape there is, and a
+  // spec exercises it by seeding the same cache the component subscribes to
+  // (`writing-web-components.md` §4, `placing-web-hooks.md` §4).
+  const catalogue = usePackagingTypes();
   // The raw id is a deliberate fallback, not the intended reading: it covers
   // only the tick before the catalogue resolves (or the rare id the catalogue
   // no longer lists), never the steady state. `ConformanceBlock.spec.tsx`
@@ -131,7 +117,20 @@ export const ConformanceBlock = <TForm extends ConformanceBlockForm>({
     <div
       className={`flex w-full flex-col gap-3 rounded-2xl border border-border bg-surface p-4 ${className ?? ''}`}
     >
-      <p className="shrink-0 text-[11px] font-semibold uppercase tracking-wide text-muted">
+      {/* The heading labels this whole block — the frozen instruction panel as
+          well as the verdicts — so it stays where the frame draws it and the
+          group points at it with `aria-labelledby`. Putting it inside the group
+          as HeroUI's `<Label>` would be the ordinary shape
+          (`radio-group.mdx` § Anatomy), but it would also move the heading
+          below the instruction panel. What the review actually found was the
+          duplication: the same sentence rendered here and copied again into the
+          group's `aria-label`, so it entered the accessibility tree twice and
+          React Aria's own association was bypassed
+          (`heroui-design-principles.md` §2). */}
+      <p
+        className="shrink-0 text-[11px] font-semibold uppercase tracking-wide text-muted"
+        id={headingId}
+      >
         {t('transitions.lineEnding.conformance.heading')}
       </p>
 
@@ -164,7 +163,7 @@ export const ConformanceBlock = <TForm extends ConformanceBlockForm>({
         name={'preReceiptConformance.verdict' as Path<TForm>}
         render={({ field }): ReactElement => (
           <RadioGroup
-            aria-label={t('transitions.lineEnding.conformance.heading')}
+            aria-labelledby={headingId}
             className="flex w-full flex-col gap-2.5 md:flex-row md:flex-wrap md:items-center md:gap-7"
             isDisabled={isSubmitting}
             value={field.value as string}

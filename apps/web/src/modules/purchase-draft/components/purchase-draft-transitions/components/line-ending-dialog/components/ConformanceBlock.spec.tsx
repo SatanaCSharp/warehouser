@@ -26,11 +26,9 @@ import type { ReactElement } from 'react';
 
 const Harness = ({
   packagingTypeId = 'cartons',
-  packagingTypes,
   valueAddingNote = null,
 }: {
   packagingTypeId?: string | null;
-  packagingTypes?: PackagingType[];
   valueAddingNote?: string | null;
 }): ReactElement => {
   const form = useForm<ConformanceBlockForm>({
@@ -40,7 +38,6 @@ const Harness = ({
     <ConformanceBlock
       form={form}
       packagingTypeId={packagingTypeId}
-      packagingTypes={packagingTypes}
       valueAddingNote={valueAddingNote}
     />
   );
@@ -52,6 +49,31 @@ const Harness = ({
 // warehouse-scoped read: as a descendant of an **entered** Warehouse match,
 // never a bare store. `renderWithProviders` under-described this component's
 // real dependency and crashed `usePackagingTypes` outside any router context.
+/**
+ * Mounts the block with the Packaging Type catalogue seeded into the cache its
+ * own `usePackagingTypes()` subscribes to, rather than handed over as a prop.
+ * The production read is then the only shape under test — a catalogue prop no
+ * production caller passed left the live-query arm asserted by nothing
+ * (2026-09-08 review).
+ */
+const renderWithCatalogue = (
+  catalogue: PackagingType[],
+  props: {
+    packagingTypeId?: string | null;
+    valueAddingNote?: string | null;
+  } = {},
+): void => {
+  const store = authenticatedStore();
+  void store.dispatch(
+    purchaseDraftApi.util.upsertQueryData(
+      'listPackagingTypes',
+      accessIds.warehouse,
+      catalogue,
+    ),
+  );
+  renderInEnteredWarehouse(<Harness {...props} />, store, accessIds.warehouse);
+};
+
 const renderInstructed = (): void => {
   renderInEnteredWarehouse(<Harness />);
 };
@@ -190,13 +212,10 @@ describe('ConformanceBlock', () => {
   // id leaks through beside it — a `find` comparing against `label` instead
   // of `id` would always miss, fall through to the id, and leave every other
   // case in this file green.
-  it('resolves the frozen Packaging Type to its catalogue label, never the raw id, via the packagingTypes override', async () => {
-    renderInEnteredWarehouse(
-      <Harness
-        packagingTypeId="cartons"
-        packagingTypes={[{ id: 'cartons', label: 'Carton, palletized' }]}
-      />,
-    );
+  it('resolves the frozen Packaging Type to its catalogue label, never the raw id, from the catalogue it reads itself', async () => {
+    renderWithCatalogue([{ id: 'cartons', label: 'Carton, palletized' }], {
+      packagingTypeId: 'cartons',
+    });
 
     await radiogroup();
     expect(screen.getByText(/carton, palletized/iu)).toBeInTheDocument();
@@ -222,5 +241,36 @@ describe('ConformanceBlock', () => {
     await radiogroup();
     expect(await screen.findByText(/carton, palletized/iu)).toBeInTheDocument();
     expect(screen.queryByText(/^cartons$/iu)).not.toBeInTheDocument();
+  });
+});
+
+// 2026-09-08 frontend review: the heading was rendered twice — once as a
+// hand-styled <p> and once as the group's aria-label — so the same sentence
+// entered the accessibility tree twice and React Aria's own label association
+// was bypassed. The heading labels the whole block (the frozen instruction
+// panel as well as the verdicts), so it stays where the frame draws it and the
+// group points at it, rather than moving inside the group as a <Label> and
+// dropping below the panel.
+describe('the conformance heading labels the group once', () => {
+  it('renders the heading exactly once', async () => {
+    renderWithCatalogue([{ id: 'cartons', label: 'Carton, palletized' }]);
+    await radiogroup();
+
+    expect(
+      screen.getAllByText(/did the supplier follow your instruction/iu),
+    ).toHaveLength(1);
+  });
+
+  it('labels the radiogroup by that heading rather than by a copy of its text', async () => {
+    renderWithCatalogue([{ id: 'cartons', label: 'Carton, palletized' }]);
+    const group = await radiogroup();
+
+    expect(group).not.toHaveAttribute('aria-label');
+
+    const labelledBy = group.getAttribute('aria-labelledby');
+    expect(labelledBy).not.toBeNull();
+    expect(
+      document.getElementById(labelledBy ?? '')?.textContent?.toLowerCase(),
+    ).toContain('did the supplier follow your instruction');
   });
 });

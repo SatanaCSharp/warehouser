@@ -4,6 +4,7 @@ import { PermissionId } from '@warehouser/shared-types/enums';
 import { useForm } from 'react-hook-form';
 import { describe, expect, it } from 'vitest';
 
+import { purchaseDraftApi } from 'modules/purchase-draft/api/purchase-draft-api';
 import { ConditionBlock } from 'modules/purchase-draft/components/purchase-draft-transitions/components/line-ending-dialog/components/ConditionBlock';
 import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
 import { WarehousePermissionGate } from 'shared/components/WarehousePermissionGate';
@@ -71,8 +72,8 @@ const Harness = ({
         form={form}
         itemSku="WH-100420"
         kind={kind}
+        ordered={presented}
         presented={presented}
-        rejectionReasons={reasons}
       />
       {withSentinel && (
         // Gated on a Permission the case under test still holds (it withholds
@@ -108,6 +109,19 @@ const render = (
       },
     ),
   );
+  // The catalogue is seeded into the cache the component's own
+  // `useRejectionReasons()` subscribes to, rather than handed over as a prop:
+  // the production read is then the only shape under test (2026-09-08 review —
+  // a catalogue prop no production caller passed left the live-query arm
+  // asserted by nothing).
+  void store.dispatch(
+    purchaseDraftApi.util.upsertQueryData(
+      'listRejectionReasons',
+      accessIds.warehouse,
+      reasons,
+    ),
+  );
+
   renderInEnteredWarehouse(<Harness {...props} />, store, accessIds.warehouse);
 };
 
