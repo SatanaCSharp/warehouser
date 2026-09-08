@@ -152,6 +152,92 @@ export const endingBoundViolations = (
     : [];
 };
 
+// T19 — the violation families the three condition refusals publish
+// (contracts/openapi.yaml `InvalidLineEndingConditionInput`). They are read the
+// same way `endingBoundViolationSchema` is read rather than with hand-written
+// `typeof` guards: a schema states which fields a rule actually carries, so a
+// server that renames one is refused and the bullet is dropped, instead of
+// degrading silently to `0`/`''` inside a sentence the member is asked to act on.
+//
+// Every family follows the same drop-unknown discipline: an entry this build
+// does not recognize becomes `null` and is filtered out, so a server that grows
+// a rule still explains the ones this build can read.
+
+/** A refusal naming a Rejection Reason the catalogue does not admit, or admits differently. */
+const rejectionReasonRuleSchema = z.object({
+  rule: z.enum([
+    'unknown_rejection_reason',
+    'description_required',
+    'duplicate_rejection_reason',
+    'source_mismatch',
+  ]),
+  rejectionReasonId: z.string(),
+  availableRejectionReasonIds: z.array(z.string()).catch([]),
+});
+
+export const conditionSplitViolationSchema = z.discriminatedUnion('rule', [
+  z.object({
+    rule: z.literal('rejections_exceed_received'),
+    receivedQuantity: z.number(),
+    rejectedQuantity: z.number(),
+  }),
+  rejectionReasonRuleSchema.extend({
+    rule: z.literal('unknown_rejection_reason'),
+  }),
+  rejectionReasonRuleSchema.extend({ rule: z.literal('description_required') }),
+  rejectionReasonRuleSchema.extend({
+    rule: z.literal('duplicate_rejection_reason'),
+  }),
+  rejectionReasonRuleSchema.extend({ rule: z.literal('source_mismatch') }),
+]);
+
+export const conformanceViolationSchema = z.discriminatedUnion('rule', [
+  z.object({
+    rule: z.literal('met_contradicts_rejection'),
+    rejectionReasonId: z.string(),
+  }),
+  z.object({ rule: z.literal('not_applicable_on_instructed_line') }),
+  z.object({ rule: z.literal('verdict_on_uninstructed_line') }),
+]);
+
+export const invalidInputViolationSchema = z.discriminatedUnion('rule', [
+  z.object({ rule: z.literal('quantity_out_of_range') }),
+  z.object({ rule: z.literal('description_too_long'), maxLength: z.number() }),
+  z.object({ rule: z.literal('description_empty') }),
+  z.object({ rule: z.literal('description_not_trimmed') }),
+  z.object({ rule: z.literal('note_too_long'), maxLength: z.number() }),
+  z.object({ rule: z.literal('note_empty') }),
+  z.object({ rule: z.literal('note_not_trimmed') }),
+  z.object({ rule: z.literal('note_not_admitted_by_verdict') }),
+  z.object({ rule: z.literal('condition_on_nothing_received') }),
+]);
+
+export type ConditionSplitViolation = z.infer<
+  typeof conditionSplitViolationSchema
+>;
+export type ConformanceViolation = z.infer<typeof conformanceViolationSchema>;
+export type InvalidInputViolation = z.infer<typeof invalidInputViolationSchema>;
+
+/**
+ * The violations one refusal reports, read against the family's own schema.
+ * Nothing survives an envelope this build cannot parse, which is what lets the
+ * alert fall back to its own sentence rather than render an empty list.
+ */
+export const endingConditionViolations = <TSchema extends z.ZodTypeAny>(
+  schema: TSchema,
+  details: Record<string, unknown> | undefined,
+): z.infer<TSchema>[] => {
+  const parsed = z
+    .object({ violations: z.array(schema.nullable().catch(null)) })
+    .safeParse(details);
+
+  return parsed.success
+    ? parsed.data.violations.flatMap((violation) =>
+        violation === null ? [] : [violation],
+      )
+    : [];
+};
+
 /** A line's links, or none — the redacted form of a line serves an empty list (AC-09a). */
 const linksOf = (line: PurchaseDraftLine): readonly PurchaseDraftLineLink[] =>
   line.links;

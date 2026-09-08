@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  conditionSplitViolationSchema,
+  conformanceViolationSchema,
+  endingConditionViolations,
+  invalidInputViolationSchema,
   lineEndingFormDefaults,
   parseLineArrivalForm,
   parseLineDirectDeliveryForm,
@@ -262,5 +266,73 @@ describe('parseLineArrivalForm — the Pre-receipt Conformance verdict (AC-16, A
         preReceiptConformance: { verdict: 'met' },
       },
     });
+  });
+});
+
+// 2026-09-08 frontend review: these families were read with hand-written typeof
+// guards inside EndingRefusalAlert, so a violation whose fields the server
+// renamed degraded to 0 / '' inside a sentence the member is asked to act on,
+// rather than being refused. These cases pin the difference — a malformed entry
+// is dropped, not silently zeroed — which is the whole point of the change and
+// the one thing a green suite would otherwise not have noticed.
+describe('endingConditionViolations', () => {
+  it('reads a well-formed Condition Split violation with its figures intact', () => {
+    expect(
+      endingConditionViolations(conditionSplitViolationSchema, {
+        violations: [
+          {
+            rule: 'rejections_exceed_received',
+            receivedQuantity: 100,
+            rejectedQuantity: 120,
+          },
+        ],
+      }),
+    ).toEqual([
+      {
+        rule: 'rejections_exceed_received',
+        receivedQuantity: 100,
+        rejectedQuantity: 120,
+      },
+    ]);
+  });
+
+  it('drops a violation whose figure the server renamed, rather than reading it as zero', () => {
+    expect(
+      endingConditionViolations(conditionSplitViolationSchema, {
+        violations: [
+          {
+            rule: 'rejections_exceed_received',
+            // renamed by the server; the old typeof guard read this as 0 and
+            // rendered "you refused 0", which is worse than saying nothing.
+            received: 100,
+            rejectedQuantity: 120,
+          },
+        ],
+      }),
+    ).toEqual([]);
+  });
+
+  it('keeps the violations it recognizes when a sibling entry is unreadable', () => {
+    const read = endingConditionViolations(invalidInputViolationSchema, {
+      violations: [
+        { rule: 'note_too_long', maxLength: 1000 },
+        { rule: 'a_rule_this_build_does_not_know' },
+        { rule: 'note_empty' },
+      ],
+    });
+
+    expect(read).toEqual([
+      { rule: 'note_too_long', maxLength: 1000 },
+      { rule: 'note_empty' },
+    ]);
+  });
+
+  it('reads nothing at all from an envelope carrying no violations array', () => {
+    expect(
+      endingConditionViolations(conformanceViolationSchema, { detail: 'nope' }),
+    ).toEqual([]);
+    expect(
+      endingConditionViolations(conformanceViolationSchema, undefined),
+    ).toEqual([]);
   });
 });

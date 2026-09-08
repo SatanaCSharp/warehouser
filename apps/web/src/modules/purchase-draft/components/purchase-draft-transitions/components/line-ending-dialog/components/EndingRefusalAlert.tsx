@@ -3,12 +3,23 @@ import { ErrorCode } from '@warehouser/shared-types/enums';
 import { useTranslation } from 'react-i18next';
 
 import { useLinkNaming } from 'modules/purchase-draft/hooks/projections/useLinkNaming';
-import { endingBoundViolations } from 'modules/purchase-draft/utils/line-ending-form';
+import {
+  conditionSplitViolationSchema,
+  conformanceViolationSchema,
+  endingBoundViolations,
+  endingConditionViolations,
+  invalidInputViolationSchema,
+} from 'modules/purchase-draft/utils/line-ending-form';
 import { Conditional } from 'shared/components/Conditional';
 import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
 
 import type { LineEndingDraft } from 'modules/purchase-draft/components/purchase-draft-transitions/components/LineEndingAction';
-import type { EndingBoundViolation } from 'modules/purchase-draft/utils/line-ending-form';
+import type {
+  ConditionSplitViolation,
+  ConformanceViolation,
+  EndingBoundViolation,
+  InvalidInputViolation,
+} from 'modules/purchase-draft/utils/line-ending-form';
 import type { ReactElement } from 'react';
 
 export type EndingRefusalAlertProps = {
@@ -22,9 +33,6 @@ export type EndingRefusalAlertProps = {
 
 /** One sentence naming one broken bound, keyed by the identifier it resolved. */
 type BoundBullet = { key: string; text: string };
-
-/** One violation entry of a T19 refusal, read defensively (rule fields differ per code). */
-type Violation = Record<string, unknown>;
 
 /** Which refusal the member is reading. */
 type EndingRefusalState =
@@ -62,47 +70,29 @@ const REFUSAL_STATE_BY_CODE: Record<string, EndingRefusalState> = {
   [ErrorCode.PURCHASE_DRAFTS_INVALID_INPUT]: 'invalidInput',
 };
 
-/** A violation's own `violations` array, read defensively — an envelope this
- * build cannot parse yields none rather than throwing. */
-const violationsOf = (
-  details: Record<string, unknown> | undefined,
-): Violation[] => {
-  const raw = details?.violations;
-  return Array.isArray(raw)
-    ? raw.filter(
-        (entry): entry is Violation =>
-          typeof entry === 'object' && entry !== null,
-      )
-    : [];
-};
-
-const numberOf = (value: unknown): number =>
-  typeof value === 'number' ? value : 0;
-const stringOf = (value: unknown): string =>
-  typeof value === 'string' ? value : '';
-const listOf = (value: unknown): string =>
-  Array.isArray(value)
-    ? value
-        .filter((entry): entry is string => typeof entry === 'string')
-        .join(', ')
-    : '';
-const ruleOf = (violation: Violation): string | undefined =>
-  typeof violation.rule === 'string' ? violation.rule : undefined;
-
-/** One bullet per violation this build recognizes for the given rule table — a
- * rule this build does not know is dropped rather than failing the whole list
- * (the same defence `bulletOf` below applies to the bounds violations). */
-const violationBullets = (
-  details: Record<string, unknown> | undefined,
-  textByRule: Record<string, (violation: Violation) => string>,
+/**
+ * One bullet per violation, built by the rule's own entry in the family's table.
+ * The violations arrive already parsed against the family's schema
+ * (`endingConditionViolations`), so the table is keyed by the rule union and
+ * every field it reads is typed — there is nothing left to coerce, and a rule
+ * the server adds is dropped by the schema before it reaches here.
+ */
+const bulletsFor = <TViolation extends { rule: string }>(
+  violations: TViolation[],
+  textByRule: {
+    [TRule in TViolation['rule']]: (
+      violation: Extract<TViolation, { rule: TRule }>,
+    ) => string;
+  },
 ): BoundBullet[] =>
-  violationsOf(details).flatMap((violation, index) => {
-    const rule = ruleOf(violation);
-    const build = rule === undefined ? undefined : textByRule[rule];
-    return build === undefined
-      ? []
-      : [{ key: `${rule}-${index}`, text: build(violation) }];
-  });
+  violations.map((violation, index) => ({
+    key: `${violation.rule}-${String(index)}`,
+    text: (
+      textByRule[violation.rule as TViolation['rule']] as (
+        entry: TViolation,
+      ) => string
+    )(violation),
+  }));
 
 /** A namespace-scoped translator, narrowed to what the T19 rule tables need. */
 type Translate = (key: string, options?: Record<string, unknown>) => string;
@@ -116,31 +106,35 @@ type FormatQuantity = (value: number) => string;
 const conditionSplitTextByRule = (
   t: Translate,
   quantity: FormatQuantity,
-): Record<string, (violation: Violation) => string> => ({
+): {
+  [TRule in ConditionSplitViolation['rule']]: (
+    violation: Extract<ConditionSplitViolation, { rule: TRule }>,
+  ) => string;
+} => ({
   rejections_exceed_received: (violation) =>
     t(
       'transitions.lineEnding.refusal.conditionSplit.rejectionsExceedReceived',
       {
-        received: quantity(numberOf(violation.receivedQuantity)),
-        rejected: quantity(numberOf(violation.rejectedQuantity)),
+        received: quantity(violation.receivedQuantity),
+        rejected: quantity(violation.rejectedQuantity),
       },
     ),
   unknown_rejection_reason: (violation) =>
     t('transitions.lineEnding.refusal.conditionSplit.unknownReason', {
-      available: listOf(violation.availableRejectionReasonIds),
-      reason: stringOf(violation.rejectionReasonId),
+      available: violation.availableRejectionReasonIds.join(', '),
+      reason: violation.rejectionReasonId,
     }),
   description_required: (violation) =>
     t('transitions.lineEnding.refusal.conditionSplit.descriptionRequired', {
-      reason: stringOf(violation.rejectionReasonId),
+      reason: violation.rejectionReasonId,
     }),
   duplicate_rejection_reason: (violation) =>
     t('transitions.lineEnding.refusal.conditionSplit.duplicateReason', {
-      reason: stringOf(violation.rejectionReasonId),
+      reason: violation.rejectionReasonId,
     }),
   source_mismatch: (violation) =>
     t('transitions.lineEnding.refusal.conditionSplit.sourceMismatch', {
-      reason: stringOf(violation.rejectionReasonId),
+      reason: violation.rejectionReasonId,
     }),
 });
 
@@ -148,10 +142,14 @@ const conditionSplitTextByRule = (
 // AC-17, AC-17a).
 const conformanceTextByRule = (
   t: Translate,
-): Record<string, (violation: Violation) => string> => ({
+): {
+  [TRule in ConformanceViolation['rule']]: (
+    violation: Extract<ConformanceViolation, { rule: TRule }>,
+  ) => string;
+} => ({
   met_contradicts_rejection: (violation) =>
     t('transitions.lineEnding.refusal.conformance.metContradictsRejection', {
-      reason: stringOf(violation.rejectionReasonId),
+      reason: violation.rejectionReasonId,
     }),
   not_applicable_on_instructed_line: () =>
     t(
@@ -165,12 +163,16 @@ const conformanceTextByRule = (
 const invalidInputTextByRule = (
   t: Translate,
   quantity: FormatQuantity,
-): Record<string, (violation: Violation) => string> => ({
+): {
+  [TRule in InvalidInputViolation['rule']]: (
+    violation: Extract<InvalidInputViolation, { rule: TRule }>,
+  ) => string;
+} => ({
   quantity_out_of_range: () =>
     t('transitions.lineEnding.refusal.invalidInput.quantityOutOfRange'),
   description_too_long: (violation) =>
     t('transitions.lineEnding.refusal.invalidInput.descriptionTooLong', {
-      maxLength: quantity(numberOf(violation.maxLength)),
+      maxLength: quantity(violation.maxLength),
     }),
   description_empty: () =>
     t('transitions.lineEnding.refusal.invalidInput.descriptionEmpty'),
@@ -178,7 +180,7 @@ const invalidInputTextByRule = (
     t('transitions.lineEnding.refusal.invalidInput.descriptionNotTrimmed'),
   note_too_long: (violation) =>
     t('transitions.lineEnding.refusal.invalidInput.noteTooLong', {
-      maxLength: quantity(numberOf(violation.maxLength)),
+      maxLength: quantity(violation.maxLength),
     }),
   note_empty: () => t('transitions.lineEnding.refusal.invalidInput.noteEmpty'),
   note_not_trimmed: () =>
@@ -364,16 +366,16 @@ export const EndingRefusalAlert = ({
   // its own rule table (`conditionSplitTextByRule`, `conformanceTextByRule`,
   // `invalidInputTextByRule` above) and rendered through the shared
   // `renderViolationAlert` shape.
-  const conditionSplitBullets = violationBullets(
-    details,
+  const conditionSplitBullets = bulletsFor(
+    endingConditionViolations(conditionSplitViolationSchema, details),
     conditionSplitTextByRule(t, quantity),
   );
-  const conformanceBullets = violationBullets(
-    details,
+  const conformanceBullets = bulletsFor(
+    endingConditionViolations(conformanceViolationSchema, details),
     conformanceTextByRule(t),
   );
-  const invalidInputBullets = violationBullets(
-    details,
+  const invalidInputBullets = bulletsFor(
+    endingConditionViolations(invalidInputViolationSchema, details),
     invalidInputTextByRule(t, quantity),
   );
 
