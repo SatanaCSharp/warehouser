@@ -279,6 +279,32 @@
         "submit": "Record the delivery",
         "atomicity": "The quantity delivered, every assignment, and the resulting outstanding quantity of each customer are recorded together — or none of them is. No on-hand quantity moves: these goods went straight to the customer and were never in the transit zone to be counted."
       },
+      "condition": {
+        "heading": {
+          "arrival": "CONDITION",
+          "directDelivery": "CONDITION, AS THE CUSTOMER REPORTED IT"
+        },
+        "sourceInspected": "Inspected at your dock",
+        "sourceCustomerReported": "Reported by the customer",
+        "refuseButton": "Refuse some of this",
+        "summaryFigures": {
+          "ordered": "ORDERED",
+          "presented": "PRESENTED",
+          "delivered": "DELIVERED",
+          "refused": "REFUSED",
+          "accepted": "ACCEPTED"
+        },
+        "summaryLabel": "Condition summary for {{sku}}",
+        "quantityLabel": "Quantity refused",
+        "reasonLabel": "Reason",
+        "reasonPlaceholder": "Choose a reason",
+        "descriptionLabel": "Describe what was wrong",
+        "removeRefusal": "Remove the refusal of {{quantity}} {{reason}}",
+        "footnote": {
+          "arrival": "Accepted is what remains — you never type it, so it can never disagree with the refusals above. One refusal per reason. The Source above names where every refusal on this line was recorded from — this line came to your own dock.",
+          "directDelivery": "Accepted is what remains — you never type it. The Source above names who told you about every refusal on this line: these goods never came to your dock, so nobody here could have found the problem themselves."
+        }
+      },
       "recorded": {
         "arrival": "Arrived {{formatted}} · {{on}}",
         "direct_delivery": "Delivered {{formatted}} · {{on}}"

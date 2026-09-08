@@ -1,0 +1,176 @@
+import { describe, expect, it } from 'vitest';
+
+import {
+  lineEndingFormDefaults,
+  parseLineArrivalForm,
+  parseLineDirectDeliveryForm,
+} from 'modules/purchase-draft/utils/line-ending-form';
+
+import type { PurchaseDraftLine } from '@warehouser/contracts/purchase-drafts';
+
+// T15 — the seam `ConditionBlock`'s own spec deliberately does not cover: the
+// Condition Split as the two ending endpoints actually take it, built from the
+// same `rejections` field array the block appends to and removes from.
+//
+// Every assertion below pins the **whole** parsed object with `toEqual`
+// rather than probing one property with `.not.toHaveProperty` on
+// `parsed.success && parsed.data`: that expression collapses to
+// `expect(false).not.toHaveProperty(...)` the moment parsing fails, which
+// passes vacuously and would still pass if the case it names stopped holding
+// (2026-09-08 review).
+
+const line = (
+  overrides: Partial<PurchaseDraftLine> = {},
+): PurchaseDraftLine => ({
+  id: '00000000-0000-4000-8000-000000000601',
+  itemId: '00000000-0000-4000-8000-000000000701',
+  itemSku: 'WH-100420',
+  itemDescription: 'Pallet wrap, 500mm',
+  unitOfMeasure: 'each',
+  orderedQuantity: 100,
+  packagingTypeId: null,
+  valueAddingNote: null,
+  ending: null,
+  deliveryMode: 'via_warehouse',
+  warehouseDestination: null,
+  customerDestination: null,
+  links: [],
+  ...overrides,
+});
+
+describe('lineEndingFormDefaults', () => {
+  it('opens with no refusal row at all — refusing costs one click, never a default row', () => {
+    expect(lineEndingFormDefaults(line()).rejections).toEqual([]);
+  });
+});
+
+describe('parseLineArrivalForm — the Condition Split (AC-05, AC-08, AC-24)', () => {
+  it('omits `rejections` entirely when nothing was refused, matching the shipped payload shape', () => {
+    const parsed = parseLineArrivalForm(line())({
+      allocations: [],
+      quantity: '100',
+      rejections: [],
+    });
+
+    expect(parsed).toEqual({
+      success: true,
+      data: { receivedQuantity: 100, allocations: [] },
+    });
+  });
+
+  it('records every complete row, sourced `inspected` — never a field on this half (AC-24)', () => {
+    const parsed = parseLineArrivalForm(line())({
+      allocations: [],
+      quantity: '100',
+      rejections: [
+        {
+          description: '  Two split at the seam.  ',
+          quantity: '5',
+          rejectionReasonId: 'damaged_by_packing',
+        },
+        {
+          description: '',
+          quantity: '3',
+          rejectionReasonId: 'packaging_not_as_instructed',
+        },
+      ],
+    });
+
+    expect(parsed.success && parsed.data.rejections).toEqual([
+      {
+        rejectionReasonId: 'damaged_by_packing',
+        quantity: 5,
+        source: 'inspected',
+        description: 'Two split at the seam.',
+      },
+      {
+        rejectionReasonId: 'packaging_not_as_instructed',
+        quantity: 3,
+        source: 'inspected',
+      },
+    ]);
+  });
+
+  it('drops a wholly empty row — no quantity and no Reason — rather than sending nothing as a refusal', () => {
+    const parsed = parseLineArrivalForm(line())({
+      allocations: [],
+      quantity: '100',
+      rejections: [{ description: '', quantity: '', rejectionReasonId: '' }],
+    });
+
+    expect(parsed).toEqual({
+      success: true,
+      data: { receivedQuantity: 100, allocations: [] },
+    });
+  });
+
+  // 2026-09-08 review — a row a member has started (typed a quantity, or
+  // picked a Reason) states an intent the server can name a refusal for
+  // (`quantity_out_of_range`, `unknown_rejection_reason`); dropping it here
+  // would silently discard that intent from a write-once ending (AC-04) the
+  // member can never revisit. Only a row nobody touched is not a refusal yet.
+  it('sends a partially composed row through as stated, rather than discarding a member’s intent silently', () => {
+    const parsed = parseLineArrivalForm(line())({
+      allocations: [],
+      quantity: '100',
+      rejections: [
+        // Quantity typed, no Reason chosen yet.
+        { description: '', quantity: '5', rejectionReasonId: '' },
+        // Reason chosen, quantity left at zero.
+        {
+          description: '',
+          quantity: '0',
+          rejectionReasonId: 'damaged_by_packing',
+        },
+        // Reason chosen, quantity field left blank.
+        {
+          description: '',
+          quantity: '',
+          rejectionReasonId: 'packaging_not_as_instructed',
+        },
+      ],
+    });
+
+    expect(parsed.success && parsed.data.rejections).toEqual([
+      { rejectionReasonId: '', quantity: 5, source: 'inspected' },
+      {
+        rejectionReasonId: 'damaged_by_packing',
+        quantity: 0,
+        source: 'inspected',
+      },
+      {
+        rejectionReasonId: 'packaging_not_as_instructed',
+        quantity: 0,
+        source: 'inspected',
+      },
+    ]);
+  });
+});
+
+describe('parseLineDirectDeliveryForm — the same Split, sourced from the customer (AC-24, AC-25)', () => {
+  it('sources every refusal `customer_reported`, never `inspected`', () => {
+    const directLine = line({
+      deliveryMode: 'direct_to_customer',
+      warehouseDestination: null,
+    });
+    const parsed = parseLineDirectDeliveryForm(directLine)({
+      allocations: [],
+      quantity: '40',
+      rejections: [
+        {
+          description: '',
+          quantity: '4',
+          rejectionReasonId: 'damaged_by_packing',
+        },
+      ],
+    });
+
+    expect(parsed.success && parsed.data.rejections).toEqual([
+      {
+        rejectionReasonId: 'damaged_by_packing',
+        quantity: 4,
+        source: 'customer_reported',
+      },
+    ]);
+  });
+});

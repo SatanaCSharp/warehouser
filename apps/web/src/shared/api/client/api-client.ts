@@ -177,6 +177,7 @@ export const api = createApi({
     'PackagingTypes',
     'Permissions',
     'PurchaseDrafts',
+    'RejectionReasons',
     'Roles',
     'WarehouseDeliveryAddress',
     'WorkspaceContext',

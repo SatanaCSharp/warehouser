@@ -5,8 +5,22 @@ import type {
   PurchaseDraftLineArrival,
   PurchaseDraftLineDirectDelivery,
   PurchaseDraftLineLink,
+  RejectionCreate,
+  RejectionSource,
 } from '@warehouser/contracts/purchase-drafts';
 import type { FormParse, FormParseResult } from 'shared/utils/form-parse';
+
+/**
+ * One refusal row of the condition block (T15, AC-05/AC-08). `ConditionBlock`
+ * appends and removes these through `useFieldArray`; the Rejection Source is
+ * never one of its fields (AC-24) because it is derived from the line's
+ * Delivery Mode at parse time, below.
+ */
+export type RejectionRow = {
+  description: string;
+  quantity: string;
+  rejectionReasonId: string;
+};
 
 /**
  * One line ending's form session (T17, AC-19). Its `allocations` array is
@@ -19,10 +33,15 @@ import type { FormParse, FormParseResult } from 'shared/utils/form-parse';
  * It is held as the string the field produced. A number field yields `''` while
  * empty and `NaN` for anything unparsable, and neither is a quantity — the
  * transform below is the one place either becomes one.
+ *
+ * `rejections` is the Condition Split (T15) `ConditionBlock` owns. Its shape is
+ * exactly `ConditionBlockForm`'s own `rejections` field, which is what lets
+ * `LineEndingFieldset` hand this whole form to `ConditionBlock` as one.
  */
 export type LineEndingForm = {
   allocations: { allocatedQuantity: string }[];
   quantity: string;
+  rejections: RejectionRow[];
 };
 
 /** Validation codes this form raises. Never display text (web-error-handling.md §5). */
@@ -112,9 +131,66 @@ export const lineEndingFormDefaults = (
 ): LineEndingForm => ({
   allocations: linksOf(line).map(() => ({ allocatedQuantity: '' })),
   quantity: String(line.orderedQuantity),
+  // T15 — opens with no refusal at all: refusing costs one click, never a
+  // default row (design-handoff.md § States and interactions).
+  rejections: [],
 });
 
 const quantity = (value: string): number => Number.parseInt(value, 10);
+
+/**
+ * A field's raw string as a whole number, or `0` for anything that is not one
+ * yet — `''` while a number field is empty, `NaN` for anything unparsable.
+ * Shared by `LineEndingFieldset`'s running total and `ConditionBlock`'s
+ * derived accepted figure, so the two summaries can never read a blank field
+ * two different ways.
+ */
+export const quantityOf = (value: string | undefined): number => {
+  const parsed = Number.parseInt(value ?? '', 10);
+  return Number.isNaN(parsed) ? 0 : parsed;
+};
+
+/**
+ * The Condition Split as the ending endpoints take it (T15, AC-02/AC-05/AC-08).
+ *
+ * **Only a row nobody has touched is dropped** — no quantity typed and no
+ * Reason chosen. That is genuinely nothing, the same way a blank allocation
+ * above is genuinely "assign nothing". A row a member has started, even
+ * incompletely, states an intent: an ending is recorded once and cannot be
+ * revisited (AC-04), so silently discarding a half-typed refusal here would
+ * lose it for good, where the server would instead have named the rule it
+ * broke (`quantity_out_of_range`, `unknown_rejection_reason`) and explained
+ * it through the normal refusal path. This function does not pre-judge that
+ * outcome; it only decides what "the member expressed something" means
+ * (2026-09-08 review).
+ *
+ * The Rejection Source is never one of `ConditionBlock`'s own fields (AC-24)
+ * — it is the one argument this function takes beyond the form, because it
+ * is the line's Delivery Mode read at the two call sites below, not a value
+ * the member can express.
+ */
+const buildRejections = (
+  rejections: RejectionRow[],
+  source: RejectionSource,
+): RejectionCreate[] =>
+  rejections.flatMap((rejection) => {
+    const isWhollyEmpty =
+      rejection.quantity.trim() === '' && rejection.rejectionReasonId === '';
+    if (isWhollyEmpty) {
+      return [];
+    }
+
+    const description = rejection.description.trim();
+
+    return [
+      {
+        rejectionReasonId: rejection.rejectionReasonId,
+        quantity: quantityOf(rejection.quantity),
+        source,
+        ...(description === '' ? {} : { description }),
+      },
+    ];
+  });
 
 /**
  * Turns the form session into the request one of the two ending endpoints
@@ -136,6 +212,7 @@ const quantity = (value: string): number => Number.parseInt(value, 10);
 const parseQuantityAndAllocations = (
   line: PurchaseDraftLine,
   values: LineEndingForm,
+  source: RejectionSource,
 ):
   | { error: Record<string, string>; success: false }
   | {
@@ -145,6 +222,7 @@ const parseQuantityAndAllocations = (
           purchaseDraftLineLinkId: string;
         }[];
         quantity: number;
+        rejections: RejectionCreate[];
       };
       success: true;
     } => {
@@ -162,28 +240,47 @@ const parseQuantityAndAllocations = (
       : [{ allocatedQuantity: allocated, purchaseDraftLineLinkId: link.id }];
   });
 
-  return { data: { allocations, quantity: stated }, success: true };
+  return {
+    data: {
+      allocations,
+      quantity: stated,
+      rejections: buildRejections(values.rejections, source),
+    },
+    success: true,
+  };
 };
 
-/** The Via Warehouse half — what arrived at the dock. */
+/** The Via Warehouse half — what arrived at the dock. Every refusal on it is
+ * recorded `inspected`: it is the acting member's own dock, so nobody else
+ * could have reported it (AC-24, AC-25). */
 export const parseLineArrivalForm =
   (
     line: PurchaseDraftLine,
   ): FormParse<LineEndingForm, PurchaseDraftLineArrival> =>
   (values): FormParseResult<LineEndingForm, PurchaseDraftLineArrival> => {
-    const parsed = parseQuantityAndAllocations(line, values);
+    const parsed = parseQuantityAndAllocations(line, values, 'inspected');
     return parsed.success
       ? {
           data: {
             allocations: parsed.data.allocations,
             receivedQuantity: parsed.data.quantity,
+            // Send only what the member expressed: `rejections` is contract-optional
+            // (`purchase-drafts-mutations.ts` `.optional()`) and the server's own
+            // `assertRejectionCapability` returns early on an empty array, so an empty
+            // one would carry no different meaning — omitting it is simply not stating
+            // a Condition Split the member never opened (AC-01a is unaffected either way).
+            ...(parsed.data.rejections.length > 0
+              ? { rejections: parsed.data.rejections }
+              : {}),
           },
           success: true,
         }
       : parsed;
   };
 
-/** The Direct to Customer half — what the customer received. */
+/** The Direct to Customer half — what the customer received. Every refusal on
+ * it is recorded `customer_reported`: these goods never came to this
+ * Warehouse's dock, so nobody here inspected them (AC-24, AC-25). */
 export const parseLineDirectDeliveryForm =
   (
     line: PurchaseDraftLine,
@@ -191,12 +288,19 @@ export const parseLineDirectDeliveryForm =
   (
     values,
   ): FormParseResult<LineEndingForm, PurchaseDraftLineDirectDelivery> => {
-    const parsed = parseQuantityAndAllocations(line, values);
+    const parsed = parseQuantityAndAllocations(
+      line,
+      values,
+      'customer_reported',
+    );
     return parsed.success
       ? {
           data: {
             allocations: parsed.data.allocations,
             deliveredQuantity: parsed.data.quantity,
+            ...(parsed.data.rejections.length > 0
+              ? { rejections: parsed.data.rejections }
+              : {}),
           },
           success: true,
         }

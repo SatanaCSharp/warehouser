@@ -44,6 +44,10 @@ const draftsUrl = `/api/v1/warehouses/${warehouseId}/purchase-drafts`;
 // allocates against exactly those, so the two endings can make that read stale
 // (ADR 02-08-2026 §Decision).
 const customersUrl = `/api/v1/warehouses/${warehouseId}/customers`;
+// T15 — the Rejection Reason catalogue is system-managed reference data, seeded by migration and
+// never written by any of the twelve mutations below (contracts/openapi.yaml), so it is the
+// negative case every row of this matrix now also proves: nothing here moves it.
+const rejectionReasonsUrl = `/api/v1/warehouses/${warehouseId}/rejection-reasons`;
 
 const summary: PurchaseDraftSummary = {
   id: purchaseDraftId,
@@ -274,7 +278,12 @@ const stubServer = (): ((url: string) => number) => {
   const fetchMock = vi.fn(
     (input: Request | string | URL, init?: RequestInit) => {
       const url = String(input instanceof Request ? input.url : input);
-      if (url === demandUrl || url === itemsUrl || url === customersUrl) {
+      if (
+        url === demandUrl ||
+        url === itemsUrl ||
+        url === customersUrl ||
+        url === rejectionReasonsUrl
+      ) {
         return Promise.resolve(Response.json([]));
       }
       if (url.startsWith(draftsUrl)) {
@@ -324,11 +333,15 @@ describe('purchaseDraftApi tag invalidation', () => {
       const customers = store.dispatch(
         customerApi.endpoints.listCustomers.initiate(warehouseId),
       );
-      await Promise.all([demand, items, customers]);
+      const rejectionReasons = store.dispatch(
+        purchaseDraftApi.endpoints.listRejectionReasons.initiate(warehouseId),
+      );
+      await Promise.all([demand, items, customers, rejectionReasons]);
 
       expect(countOf(demandUrl)).toBe(1);
       expect(countOf(itemsUrl)).toBe(1);
       expect(countOf(customersUrl)).toBe(1);
+      expect(countOf(rejectionReasonsUrl)).toBe(1);
 
       await MUTATIONS[name](store);
       // RTK Query's tag invalidation refetches on the next tick.
@@ -337,10 +350,13 @@ describe('purchaseDraftApi tag invalidation', () => {
       expect(countOf(demandUrl)).toBe(affected.demand ? 2 : 1);
       expect(countOf(itemsUrl)).toBe(affected.items ? 2 : 1);
       expect(countOf(customersUrl)).toBe(affected.customers ? 2 : 1);
+      // The catalogue is written by no mutation this feature adds, so it never refetches.
+      expect(countOf(rejectionReasonsUrl)).toBe(1);
 
       demand.unsubscribe();
       items.unsubscribe();
       customers.unsubscribe();
+      rejectionReasons.unsubscribe();
     },
   );
 });

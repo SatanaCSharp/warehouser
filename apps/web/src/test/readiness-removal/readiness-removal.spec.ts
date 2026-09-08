@@ -719,6 +719,10 @@ describe('readiness removal — declarative permission gating is unchanged (CR-R
     'modules/purchase-draft/components/purchase-draft-line-links/PurchaseDraftLineLinks.tsx': 4,
     'modules/purchase-draft/components/purchase-draft-line-links/components/LinkCustomerOrderAction.tsx': 4,
     'modules/purchase-draft/components/purchase-draft-transitions/components/ClosePurchaseDraftAction.tsx': 4,
+    // T15 — the condition block's `Refuse some of this` control is withheld
+    // from an actor without `REJECTIONS:CREATE`, absent rather than disabled
+    // (AC-01a).
+    'modules/purchase-draft/components/purchase-draft-transitions/components/line-ending-dialog/components/ConditionBlock.tsx': 4,
     'modules/purchase-draft/components/purchase-draft-transitions/components/LineEndingAction.tsx': 4,
     'modules/purchase-draft/components/purchase-draft-transitions/components/DiscardPurchaseDraftAction.tsx': 4,
     'modules/purchase-draft/components/purchase-draft-transitions/components/ReadyPurchaseDraftAction.tsx': 4,

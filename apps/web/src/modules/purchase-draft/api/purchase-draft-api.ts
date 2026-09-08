@@ -3,6 +3,7 @@ import {
   purchaseDraftDetailSchema,
   purchaseDraftLineListEntrySchema,
   purchaseDraftSummarySchema,
+  rejectionReasonSchema,
 } from '@warehouser/contracts/purchase-drafts';
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { z } from 'zod';
@@ -22,10 +23,17 @@ import type {
   PurchaseDraftLineUpdate,
   PurchaseDraftState,
   PurchaseDraftSummary,
+  RejectionReason,
 } from '@warehouser/contracts/purchase-drafts';
 
 const packagingTypesPath = (warehouseId: string): string =>
   `/api/v1/warehouses/${warehouseId}/packaging-types`;
+
+// T15 — served at its own top-level segment rather than nested under
+// `/purchase-drafts`, mirroring `packagingTypesPath`, so no literal segment
+// competes with a `{purchaseDraftId}` parameter (contracts/openapi.yaml).
+const rejectionReasonsPath = (warehouseId: string): string =>
+  `/api/v1/warehouses/${warehouseId}/rejection-reasons`;
 
 /**
  * BRIEF §A — which field explains a refusal the server named none for. A Zod
@@ -68,6 +76,7 @@ const closureFieldErrors = fieldErrorsForCode({
 const purchaseDraftSummaryListSchema = z.array(purchaseDraftSummarySchema);
 const purchaseDraftLineListSchema = z.array(purchaseDraftLineListEntrySchema);
 const packagingTypeListSchema = z.array(packagingTypeSchema);
+const rejectionReasonListSchema = z.array(rejectionReasonSchema);
 
 type ListPurchaseDraftsArgs = {
   warehouseId: string;
@@ -219,6 +228,14 @@ export const purchaseDraftApi = api.injectEndpoints({
       query: (warehouseId) => packagingTypesPath(warehouseId),
       extraOptions: { schema: packagingTypeListSchema },
       providesTags: ['PackagingTypes'],
+    }),
+    // T15 — the Rejection Reason catalogue (AC-06/AC-07). System-managed reference data, workspace-wide
+    // like Packaging Types, so it carries its own tag rather than `PurchaseDrafts` and never invalidates
+    // on a draft write: this feature adds no mutation that changes the catalogue.
+    listRejectionReasons: build.query<RejectionReason[], string>({
+      query: (warehouseId) => rejectionReasonsPath(warehouseId),
+      extraOptions: { schema: rejectionReasonListSchema },
+      providesTags: ['RejectionReasons'],
     }),
     createPurchaseDraft: build.mutation<
       PurchaseDraftDetail,
@@ -411,6 +428,7 @@ export const {
   useListPurchaseDraftLinesQuery,
   useGetPurchaseDraftQuery,
   useListPackagingTypesQuery,
+  useListRejectionReasonsQuery,
   useCreatePurchaseDraftMutation,
   useRevisePurchaseDraftMutation,
   useAddPurchaseDraftLineMutation,

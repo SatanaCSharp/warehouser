@@ -1,9 +1,13 @@
 import { useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
+import { ConditionBlock } from 'modules/purchase-draft/components/purchase-draft-transitions/components/line-ending-dialog/components/ConditionBlock';
 import { EndingAssignmentRow } from 'modules/purchase-draft/components/purchase-draft-transitions/components/line-ending-dialog/components/EndingAssignmentRow';
 import { useLinkNaming } from 'modules/purchase-draft/hooks/projections/useLinkNaming';
-import { isAssignableLink } from 'modules/purchase-draft/utils/line-ending-form';
+import {
+  isAssignableLink,
+  quantityOf,
+} from 'modules/purchase-draft/utils/line-ending-form';
 import { Conditional } from 'shared/components/Conditional';
 import { FormTextField } from 'shared/components/FormTextField';
 import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
@@ -18,11 +22,6 @@ export type LineEndingFieldsetProps = {
   /** Which of the two acts is being recorded — the copy, never the payload. */
   kind: 'arrival' | 'directDelivery';
   line: PurchaseDraftLine;
-};
-
-const quantityOf = (value: string | undefined): number => {
-  const parsed = Number.parseInt(value ?? '', 10);
-  return Number.isNaN(parsed) ? 0 : parsed;
 };
 
 /**
@@ -130,6 +129,23 @@ export const LineEndingFieldset = ({
         })}
         {...register('quantity')}
       />
+
+      {/*
+        T15/design-handoff.md `W6TARi` cell `H0jcSr` — condition is stated
+        **before** assignment (spec §8), and never at all on a line where
+        nothing was received (AC-04a): a `0` presented has nothing to refuse
+        and nothing to accept.
+      */}
+      <Conditional when={stated > 0}>
+        <ConditionBlock
+          className="mt-4"
+          form={form}
+          itemSku={line.itemSku}
+          kind={kind}
+          ordered={line.orderedQuantity}
+          presented={stated}
+        />
+      </Conditional>
 
       <h4 className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted">
         {t('transitions.lineEnding.assignHeading')}
