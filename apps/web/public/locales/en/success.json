@@ -61,7 +61,10 @@
     "recordPurchaseDraftLineDirectDelivery": "The delivery is recorded and what each customer is still waiting for has been reduced. No stock moved — the goods went straight to the customer and were never counted here.",
     "closePurchaseDraft": "Purchase draft closed: {{reason}}",
     "discardPurchaseDraft": "Purchase draft discarded.",
-    "amendPurchaseDraftLineRejection": "Refusal updated · {{disposition}} · attributed to you"
+    "amendPurchaseDraftLineRejection": "Refusal updated · attributed to you",
+    "amendPurchaseDraftLineRejectionBoth": "Refusal updated · {{disposition}} · description revised · attributed to you",
+    "amendPurchaseDraftLineRejectionDescription": "Refusal description updated · attributed to you",
+    "amendPurchaseDraftLineRejectionDisposition": "Refusal updated · {{disposition}} · attributed to you"
   },
   "customer": {
     "recordCustomer": "Customer recorded · {{customer}}",

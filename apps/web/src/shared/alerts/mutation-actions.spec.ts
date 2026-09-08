@@ -34,6 +34,27 @@ const successToast = (endpoint: string, originalArgs: unknown): string => {
   });
 };
 
+/**
+ * The in-flight description, assembled exactly as `mutationFeedbackMiddleware`
+ * assembles it — same registry entry, same `i18n` instance, same `pending`
+ * namespace. The middleware resolves the pending arm through the *same*
+ * `action` as the success arm, so an entry whose `action` varies by argument
+ * needs a `pending` key for every name it can produce; without one the member
+ * is shown the raw key while the request is in flight.
+ */
+const pendingToast = (endpoint: string, originalArgs: unknown): string => {
+  const feedback = MUTATION_FEEDBACK[endpoint];
+  const action =
+    typeof feedback.action === 'function'
+      ? feedback.action(originalArgs as never)
+      : (feedback.action ?? endpoint);
+
+  return i18n.t(`${feedback.scope}.${action}`, {
+    ns: 'pending',
+    ...feedback.describe?.(originalArgs as never),
+  });
+};
+
 const grouped = (digits: string): string =>
   digits.replace(' ', QUANTITY_GROUP_SEPARATOR);
 
@@ -163,4 +184,60 @@ describe('MUTATION_FEEDBACK success copy', () => {
     expect(copy).toMatch(/refusal updated/iu);
     expect(copy).toMatch(/attributed to you/iu);
   });
+});
+
+// T19 review — the amendment reports which half of the Rejection committed, and
+// neither arm may leak a translation key. `disposition` is optional on
+// `rejectionAmendSchema` and `AmendRefusalDialog.parse` omits it when only the
+// description changed (AC-18b), so the description-only argument is the one that
+// previously interpolated `disposition.undefined` into the sentence.
+describe('amendPurchaseDraftLineRejection feedback', () => {
+  const bothChanged = {
+    input: { description: 'Crushed corner', disposition: 'held_for_return' },
+  };
+  const dispositionOnly = { input: { disposition: 'scrapped_on_site' } };
+  const descriptionOnly = { input: { description: 'Crushed corner' } };
+
+  it('names the Disposition that committed when one was decided', () => {
+    expect(
+      successToast('amendPurchaseDraftLineRejection', dispositionOnly),
+    ).toBe('Refusal updated · Scrapped on site · attributed to you');
+  });
+
+  it('names both halves when both changed', () => {
+    expect(successToast('amendPurchaseDraftLineRejection', bothChanged)).toBe(
+      'Refusal updated · Held for return · description revised · attributed to you',
+    );
+  });
+
+  it('names no Disposition when only the description changed (AC-18b)', () => {
+    expect(
+      successToast('amendPurchaseDraftLineRejection', descriptionOnly),
+    ).toBe('Refusal description updated · attributed to you');
+  });
+
+  it.each([
+    ['both halves', bothChanged],
+    ['the Disposition alone', dispositionOnly],
+    ['the description alone', descriptionOnly],
+  ])('resolves real in-flight copy for %s', (_label, args) => {
+    const pending = pendingToast('amendPurchaseDraftLineRejection', args);
+
+    expect(pending).not.toContain('purchase-draft.');
+    expect(pending).toBe('Updating the refusal…');
+  });
+
+  it.each([
+    ['both halves', bothChanged],
+    ['the Disposition alone', dispositionOnly],
+    ['the description alone', descriptionOnly],
+  ])(
+    'leaves no unresolved translation key in the success copy for %s',
+    (_label, args) => {
+      const sentence = successToast('amendPurchaseDraftLineRejection', args);
+
+      expect(sentence).not.toContain('closedLine.');
+      expect(sentence).not.toContain('undefined');
+    },
+  );
 });

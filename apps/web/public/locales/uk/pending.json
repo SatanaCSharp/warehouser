@@ -57,7 +57,11 @@
     "recordPurchaseDraftLineArrival": "Записуємо, що прибуло…",
     "recordPurchaseDraftLineDirectDelivery": "Записуємо доставку…",
     "closePurchaseDraft": "Закриваємо чернетку закупівлі…",
-    "discardPurchaseDraft": "Відхиляємо чернетку закупівлі…"
+    "discardPurchaseDraft": "Відхиляємо чернетку закупівлі…",
+    "amendPurchaseDraftLineRejection": "Оновлюємо відмову…",
+    "amendPurchaseDraftLineRejectionBoth": "Оновлюємо відмову…",
+    "amendPurchaseDraftLineRejectionDescription": "Оновлюємо відмову…",
+    "amendPurchaseDraftLineRejectionDisposition": "Оновлюємо відмову…"
   },
   "customer": {
     "recordCustomer": "Записуємо клієнта…",
