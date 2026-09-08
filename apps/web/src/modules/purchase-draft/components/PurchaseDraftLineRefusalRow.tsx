@@ -1,6 +1,8 @@
-import { Button, Chip } from '@heroui/react';
+import { Button, Chip, Dropdown, Label } from '@heroui/react';
+import { PermissionId } from '@warehouser/shared-types/enums';
 import { useTranslation } from 'react-i18next';
 
+import { WarehousePermissionGate } from 'shared/components/WarehousePermissionGate';
 import { KebabIcon } from 'shared/icons';
 
 import type {
@@ -8,10 +10,17 @@ import type {
   RejectionSource,
   PurchaseDraftLineRejection,
 } from '@warehouser/contracts/purchase-drafts';
-import type { ReactElement } from 'react';
+import type { Key, ReactElement } from 'react';
 
 export type PurchaseDraftLineRefusalRowProps = {
   rejection: PurchaseDraftLineRejection;
+  /**
+   * Reports that this row's "Amend this refusal" was chosen, with the
+   * Rejection it names. The row owns none of what opens next — T18's dialog
+   * and its `useActionDialog` controller belong to `ClosedPurchaseDraftLine`
+   * (`docs/system/guides/web-action-dialogs.md`).
+   */
+  onAmend: (subject: PurchaseDraftLineRejection) => void;
 };
 
 /** The Source chip's wording — the same phrasing `ConditionBlock`'s own
@@ -49,6 +58,7 @@ const DISPOSITION_KEY: Record<RejectionDisposition, string> = {
  */
 export const PurchaseDraftLineRefusalRow = ({
   rejection,
+  onAmend,
 }: PurchaseDraftLineRefusalRowProps): ReactElement => {
   const { t } = useTranslation('purchase-draft');
 
@@ -56,6 +66,13 @@ export const PurchaseDraftLineRefusalRow = ({
     quantity: rejection.quantity,
     reason: rejection.rejectionReasonLabel,
   });
+  const amendLabel = t('closedLine.refusalRow.menu.amend');
+
+  const onAction = (key: Key): void => {
+    if (key === 'amend') {
+      onAmend(rejection);
+    }
+  };
 
   return (
     <li className="flex w-full flex-wrap items-center gap-3.5 rounded-2xl bg-surface-secondary px-3.5 py-2.5">
@@ -89,9 +106,22 @@ export const PurchaseDraftLineRefusalRow = ({
         </Chip>
       </div>
 
-      <Button isIconOnly aria-label={kebabLabel} size="sm" variant="ghost">
-        <KebabIcon />
-      </Button>
+      {/* AC-20 — offers nothing without `REJECTIONS:UPDATE`, not a disabled
+          kebab: the whole trigger and its menu are withheld by the gate. */}
+      <WarehousePermissionGate permission={PermissionId.REJECTIONS_UPDATE}>
+        <Dropdown>
+          <Button isIconOnly aria-label={kebabLabel} size="sm" variant="ghost">
+            <KebabIcon />
+          </Button>
+          <Dropdown.Popover>
+            <Dropdown.Menu aria-label={kebabLabel} onAction={onAction}>
+              <Dropdown.Item id="amend" textValue={amendLabel}>
+                <Label>{amendLabel}</Label>
+              </Dropdown.Item>
+            </Dropdown.Menu>
+          </Dropdown.Popover>
+        </Dropdown>
+      </WarehousePermissionGate>
     </li>
   );
 };

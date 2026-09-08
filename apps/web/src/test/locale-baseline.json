@@ -1102,7 +1102,15 @@
       "closedLine.conformance.verdict.not_met": "Supplier's instruction — Not met",
       "closedLine.conformance.verdict.not_applicable": "Supplier's instruction — Not applicable",
       "closedLine.conformance.explanation.met": "The supplier followed the packaging and labelling instruction frozen on this line.",
-      "closedLine.conformance.explanation.notApplicable": "This line was frozen carrying no packaging or labelling instruction to judge."
+      "closedLine.conformance.explanation.notApplicable": "This line was frozen carrying no packaging or labelling instruction to judge.",
+      "closedLine.refusalRow.menu.amend": "Amend this refusal",
+      "closedLine.amendDialog.title": "Amend this refusal",
+      "closedLine.amendDialog.cancel": "Cancel",
+      "closedLine.amendDialog.submit": "Save",
+      "closedLine.amendDialog.descriptionLabel": "Description",
+      "closedLine.amendDialog.descriptionRequired": "Description is required",
+      "closedLine.amendDialog.dispositionLabel": "Disposition",
+      "closedLine.amendDialog.dispositionUnavailable": "Choose one of the Dispositions this Warehouse offers: {{dispositions}}."
     },
     "sign-in": {
       "title": "Sign in to your account",
@@ -2513,7 +2521,15 @@
       "closedLine.conformance.verdict.not_met": "Інструкція постачальника — Не дотримано",
       "closedLine.conformance.verdict.not_applicable": "Інструкція постачальника — Не застосовується",
       "closedLine.conformance.explanation.met": "Постачальник дотримався інструкції з пакування та маркування, зафіксованої на цьому рядку.",
-      "closedLine.conformance.explanation.notApplicable": "Цей рядок був зафіксований без інструкції з пакування чи маркування для оцінки."
+      "closedLine.conformance.explanation.notApplicable": "Цей рядок був зафіксований без інструкції з пакування чи маркування для оцінки.",
+      "closedLine.refusalRow.menu.amend": "Змінити цю відмову",
+      "closedLine.amendDialog.title": "Змінити цю відмову",
+      "closedLine.amendDialog.cancel": "Скасувати",
+      "closedLine.amendDialog.submit": "Зберегти",
+      "closedLine.amendDialog.descriptionLabel": "Опис",
+      "closedLine.amendDialog.descriptionRequired": "Опис є обов'язковим",
+      "closedLine.amendDialog.dispositionLabel": "Рішення",
+      "closedLine.amendDialog.dispositionUnavailable": "Оберіть одне з рішень, які пропонує цей склад: {{dispositions}}."
     },
     "sign-in": {
       "title": "Увійдіть до свого облікового запису",

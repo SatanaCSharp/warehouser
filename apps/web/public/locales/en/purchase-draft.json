@@ -438,7 +438,10 @@
         "held_for_return": "Held for return",
         "scrapped_on_site": "Scrapped on site"
       },
-      "actionsFor": "Actions for the refusal of {{quantity}} {{reason}}"
+      "actionsFor": "Actions for the refusal of {{quantity}} {{reason}}",
+      "menu": {
+        "amend": "Amend this refusal"
+      }
     },
     "conformance": {
       "verdict": {
@@ -450,6 +453,15 @@
         "met": "The supplier followed the packaging and labelling instruction frozen on this line.",
         "notApplicable": "This line was frozen carrying no packaging or labelling instruction to judge."
       }
+    },
+    "amendDialog": {
+      "title": "Amend this refusal",
+      "cancel": "Cancel",
+      "submit": "Save",
+      "descriptionLabel": "Description",
+      "descriptionRequired": "Description is required",
+      "dispositionLabel": "Disposition",
+      "dispositionUnavailable": "Choose one of the Dispositions this Warehouse offers: {{dispositions}}."
     }
   }
 }

@@ -1,12 +1,17 @@
 import { Chip } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 
+import { useAmendPurchaseDraftLineRejectionMutation } from 'modules/purchase-draft/api/purchase-draft-api';
+import { AmendRefusalDialog } from 'modules/purchase-draft/components/AmendRefusalDialog';
 import { PurchaseDraftLineDestination } from 'modules/purchase-draft/components/purchase-draft-line-delivery/components/PurchaseDraftLineDestination';
 import { PurchaseDraftLineLinks } from 'modules/purchase-draft/components/purchase-draft-line-links/PurchaseDraftLineLinks';
 import { PurchaseDraftLineConditionSummary } from 'modules/purchase-draft/components/PurchaseDraftLineConditionSummary';
 import { PurchaseDraftLineRefusalRow } from 'modules/purchase-draft/components/PurchaseDraftLineRefusalRow';
+import { ActionDialogHost } from 'shared/components/ActionDialogHost';
 import { Conditional } from 'shared/components/Conditional';
+import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
 import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
+import { useActionDialog } from 'shared/hooks/state/useActionDialog';
 import { CircleCheckIcon, CircleXIcon, ClipboardCheckIcon } from 'shared/icons';
 
 import type {
@@ -16,8 +21,11 @@ import type {
   PackagingType,
   PreReceiptConformanceVerdict,
   PurchaseDraftLine,
+  PurchaseDraftLineRejection,
+  RejectionAmend,
 } from '@warehouser/contracts/purchase-drafts';
 import type { ReactElement } from 'react';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 export type ClosedPurchaseDraftLineProps = {
   /** Which line of the draft this is, as the frames number them from 1. */
@@ -77,6 +85,7 @@ type ConditionOnArrivalSectionProps = {
   itemSku: string;
   orderedQuantity: number;
   presentedQuantity: number;
+  onAmend: (subject: PurchaseDraftLineRejection) => void;
 };
 
 /**
@@ -99,6 +108,7 @@ const ConditionOnArrivalSection = ({
   itemSku,
   orderedQuantity,
   presentedQuantity,
+  onAmend,
 }: ConditionOnArrivalSectionProps): ReactElement => {
   const { t } = useTranslation('purchase-draft');
   const rejections =
@@ -145,6 +155,7 @@ const ConditionOnArrivalSection = ({
             <PurchaseDraftLineRefusalRow
               key={rejection.id}
               rejection={rejection}
+              onAmend={onAmend}
             />
           ))}
         </ul>
@@ -194,6 +205,11 @@ const ConditionOnArrivalSection = ({
  * `ending.condition: null`; this component then renders neither the
  * condition block nor the conformance judgement.
  */
+/** Which per-refusal dialog this closed line's own rows open — this
+ * surface's own `Kind` union, shared with no other
+ * (`docs/system/guides/web-action-dialogs.md`). */
+type ClosedLineDialogKind = 'amendRefusal';
+
 export const ClosedPurchaseDraftLine = ({
   index,
   line,
@@ -202,6 +218,26 @@ export const ClosedPurchaseDraftLine = ({
 }: ClosedPurchaseDraftLineProps): ReactElement => {
   const { t } = useTranslation('purchase-draft');
   const { quantity } = useLocaleFormat();
+  const warehouseId = useEnteredWarehouse() ?? '';
+  const [amendRejection] = useAmendPurchaseDraftLineRejectionMutation();
+  const dialog = useActionDialog<
+    ClosedLineDialogKind,
+    PurchaseDraftLineRejection
+  >();
+
+  const onAmend = (subject: PurchaseDraftLineRejection): void =>
+    dialog.open('amendRefusal', subject);
+
+  const onSaveAmend =
+    (subject: PurchaseDraftLineRejection) =>
+    (input: RejectionAmend): Promise<MutationResult> =>
+      amendRejection({
+        warehouseId,
+        purchaseDraftId,
+        purchaseDraftLineId: line.id,
+        rejectionId: subject.id,
+        input,
+      });
 
   const packagingTypeLabel = packagingTypes.find(
     (type) => type.id === line.packagingTypeId,
@@ -217,6 +253,7 @@ export const ClosedPurchaseDraftLine = ({
         itemSku={line.itemSku}
         orderedQuantity={line.orderedQuantity}
         presentedQuantity={line.ending?.quantity ?? 0}
+        onAmend={onAmend}
       />
     );
 
@@ -290,6 +327,18 @@ export const ClosedPurchaseDraftLine = ({
         isFrozen
         line={line}
         purchaseDraftId={purchaseDraftId}
+      />
+
+      <ActionDialogHost
+        controller={dialog}
+        renderDialogs={{
+          amendRefusal: (subject) => (
+            <AmendRefusalDialog
+              rejection={subject}
+              onSave={onSaveAmend(subject)}
+            />
+          ),
+        }}
       />
     </li>
   );

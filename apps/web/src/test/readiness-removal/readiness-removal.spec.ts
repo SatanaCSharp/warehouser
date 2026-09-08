@@ -711,6 +711,10 @@ describe('readiness removal — declarative permission gating is unchanged (CR-R
     'modules/purchase-draft/components/CreatePurchaseDraftAction.tsx': 4,
     'modules/purchase-draft/components/ExpectedArrivalDateField.tsx': 4,
     'modules/purchase-draft/components/PurchaseDraftLineEditor.tsx': 4,
+    // T18 — the closed line's read row offers "Amend this refusal" only to an
+    // actor holding `REJECTIONS:UPDATE`, absent rather than a disabled kebab
+    // (AC-20).
+    'modules/purchase-draft/components/PurchaseDraftLineRefusalRow.tsx': 4,
     // delivery-addresses T23 — the `DELIVERY` block's destination pickers are
     // withheld from an actor without `CUSTOMERS:WATCH`, and the Customers read
     // they depend on lives inside the gate so nothing is requested for a

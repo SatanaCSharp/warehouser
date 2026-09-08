@@ -1,4 +1,9 @@
-import { cleanup, screen, within } from '@testing-library/react';
+import { readFileSync } from 'node:fs';
+import { posix } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import { cleanup, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { PermissionId } from '@warehouser/shared-types/enums';
 import { describe, expect, it } from 'vitest';
 
@@ -595,4 +600,111 @@ describe('ClosedPurchaseDraftLine — the four projection shapes', () => {
       identityAssertion[identity]();
     },
   );
+});
+
+// T18 — `Modal · Amend this refusal` (`iNstk`), opened from this closed line's
+// own read row (`web-action-dialogs.md`, ADR
+// `27-08-2026-reducer-driven-action-dialogs.md`). The `Kind` union and its
+// `useActionDialog` controller belong to *this* surface, not to
+// `PurchaseDraftLineRefusalRow`, which only reports the event upward — so the
+// wiring end to end is proven here, not on the row in isolation.
+
+const CLOSED_LINE_SOURCE_PATH = posix.join(
+  posix.dirname(fileURLToPath(import.meta.url)),
+  'ClosedPurchaseDraftLine.tsx',
+);
+
+const closedLineSource = (): string =>
+  readFileSync(CLOSED_LINE_SOURCE_PATH, 'utf8');
+
+describe('ClosedPurchaseDraftLine — T18 structural: the amend dialog is opened through the shared mechanism, never by hand', () => {
+  it('uses useActionDialog and ActionDialogHost — the mechanism this surface must take rather than a Modal root or a hand-rolled null check', () => {
+    const source = closedLineSource();
+
+    expect(source).toMatch(/useActionDialog/u);
+    expect(source).toMatch(/ActionDialogHost/u);
+  });
+
+  it('hands the dialog no onClose and keeps no isOpen anywhere in this surface (web-action-dialogs.md §4)', () => {
+    const source = closedLineSource();
+
+    // A surface that reintroduces either of these has gone back to the
+    // pattern the reducer replaced — a boolean beside the controller that can
+    // disagree with it, or a dialog closing itself through a prop the guide
+    // forbids handing it. This is the "no surface hands a dialog an onClose;
+    // none keeps an isOpen" rule made a fact about this file rather than an
+    // aspiration in its comments.
+    expect(source).not.toMatch(/onClose/u);
+    expect(source).not.toMatch(/isOpen/u);
+  });
+});
+
+describe('ClosedPurchaseDraftLine — opening and dismissing the amend dialog end to end', () => {
+  const decidedRejectionLine = closedLine({
+    ending: {
+      kind: 'arrival',
+      quantity: 100,
+      recordedByUserId: '00000000-0000-4000-8000-000000000601',
+      recordedAt: '2026-09-01T09:00:00.000Z',
+      condition: {
+        acceptedQuantity: 95,
+        rejectedQuantity: 5,
+        preReceiptConformance: { verdict: 'not_applicable', note: null },
+        rejections: [
+          rejectionOf({
+            description: 'Two pallets were crushed in transit.',
+            disposition: 'held_for_return',
+          }),
+        ],
+      },
+    },
+  });
+
+  it('opens the FormModalDialog pre-filled from the kebab, for a member holding REJECTIONS:UPDATE', async () => {
+    const user = userEvent.setup();
+    renderLine(decidedRejectionLine, {
+      permissionIds: [
+        PermissionId.PURCHASE_DRAFTS_WATCH,
+        PermissionId.REJECTIONS_WATCH,
+        PermissionId.REJECTIONS_UPDATE,
+      ],
+    });
+
+    const kebab = await screen.findByRole('button', {
+      name: /actions for the refusal of 5 damaged by packing/iu,
+    });
+    await user.click(kebab);
+    await user.click(
+      await screen.findByRole('menuitem', { name: /amend this refusal/iu }),
+    );
+
+    const dialog = await screen.findByRole('dialog');
+    expect(
+      within(dialog).getByLabelText(/description/iu, {
+        selector: 'textarea',
+      }),
+    ).toHaveValue('Two pallets were crushed in transit.');
+
+    await user.keyboard('{Escape}');
+    await screen.findByText(/damaged by packing/iu); // the row survived the round trip
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    // React Aria restores focus to the trigger asynchronously, after the
+    // dialog has already unmounted — neither await above is that restore, so
+    // this has to poll for it rather than read it synchronously.
+    await waitFor(() => expect(kebab).toHaveFocus());
+  });
+
+  it('offers no amend action at all for a member lacking REJECTIONS:UPDATE (AC-20)', async () => {
+    renderLine(decidedRejectionLine, {
+      permissionIds: [
+        PermissionId.PURCHASE_DRAFTS_WATCH,
+        PermissionId.REJECTIONS_WATCH,
+      ],
+    });
+
+    await screen.findByText(/damaged by packing/iu);
+    expect(
+      screen.queryByRole('button', { name: /actions for the refusal/iu }),
+    ).not.toBeInTheDocument();
+  });
 });

@@ -444,7 +444,10 @@
         "held_for_return": "Утримано для повернення",
         "scrapped_on_site": "Утилізовано на місці"
       },
-      "actionsFor": "Дії щодо відмови від {{quantity}} — {{reason}}"
+      "actionsFor": "Дії щодо відмови від {{quantity}} — {{reason}}",
+      "menu": {
+        "amend": "Змінити цю відмову"
+      }
     },
     "conformance": {
       "verdict": {
@@ -456,6 +459,15 @@
         "met": "Постачальник дотримався інструкції з пакування та маркування, зафіксованої на цьому рядку.",
         "notApplicable": "Цей рядок був зафіксований без інструкції з пакування чи маркування для оцінки."
       }
+    },
+    "amendDialog": {
+      "title": "Змінити цю відмову",
+      "cancel": "Скасувати",
+      "submit": "Зберегти",
+      "descriptionLabel": "Опис",
+      "descriptionRequired": "Опис є обов'язковим",
+      "dispositionLabel": "Рішення",
+      "dispositionUnavailable": "Оберіть одне з рішень, які пропонує цей склад: {{dispositions}}."
     }
   }
 }

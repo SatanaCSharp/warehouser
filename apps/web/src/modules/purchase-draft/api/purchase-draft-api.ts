@@ -3,6 +3,7 @@ import {
   purchaseDraftDetailSchema,
   purchaseDraftLineListEntrySchema,
   purchaseDraftSummarySchema,
+  rejectionAmendmentSchema,
   rejectionReasonSchema,
 } from '@warehouser/contracts/purchase-drafts';
 import { ErrorCode } from '@warehouser/shared-types/enums';
@@ -23,6 +24,8 @@ import type {
   PurchaseDraftLineUpdate,
   PurchaseDraftState,
   PurchaseDraftSummary,
+  RejectionAmend,
+  RejectionAmendment,
   RejectionReason,
 } from '@warehouser/contracts/purchase-drafts';
 
@@ -118,6 +121,13 @@ type RecordLineArrivalArgs = LineIdArgs & {
 type RecordLineDirectDeliveryArgs = LineIdArgs & {
   input: PurchaseDraftLineDirectDelivery;
 };
+// T18 — AC-18/AC-18a/AC-18b/AC-19/AC-20: a Rejection amended after the draft
+// closed. `rejectionId` names the sub-resource; the amendment carries no
+// Reason, quantity, Source or line (`rejectionAmendSchema`).
+type AmendRejectionArgs = LineIdArgs & {
+  rejectionId: string;
+  input: RejectionAmend;
+};
 
 /**
  * Every Warehouse-scoped Purchase Drafts path, built from the same argument
@@ -166,6 +176,9 @@ const purchaseDraftLineDirectDeliveryPath = (args: LineIdArgs): string =>
 
 const purchaseDraftClosurePath = (args: PurchaseDraftIdArgs): string =>
   `${purchaseDraftPath(args)}/closure`;
+
+const purchaseDraftLineRejectionPath = (args: AmendRejectionArgs): string =>
+  `${purchaseDraftLinePath(args)}/rejections/${args.rejectionId}`;
 
 /**
  * The Warehouse's Purchase Drafts endpoints (sad.md §5 `purchase-drafts/usecases`, T20).
@@ -419,6 +432,24 @@ export const purchaseDraftApi = api.injectEndpoints({
       // closed one, its lines stay on the record and keep naming their Items.
       invalidatesTags: ['Demand', 'PurchaseDrafts'],
     }),
+    // T18 — AC-18/AC-18a/AC-18b/AC-19/AC-20: the product's first write aimed at a Closed
+    // draft (sad.md §6.4). The response is the amendment, not the Rejection — no quantity,
+    // Reason, Source or line moves, so this touches no other read: `Demand` and `Items` both
+    // key off a link or a line's Item, neither of which this endpoint ever writes.
+    amendPurchaseDraftLineRejection: build.mutation<
+      RejectionAmendment,
+      AmendRejectionArgs
+    >({
+      query: (args) => ({
+        url: purchaseDraftLineRejectionPath(args),
+        method: 'PATCH',
+        body: args.input,
+      }),
+      extraOptions: { schema: rejectionAmendmentSchema },
+      // Refreshes the closed draft that carries this Rejection, so the read row
+      // updates without a manual refetch.
+      invalidatesTags: ['PurchaseDrafts'],
+    }),
   }),
   overrideExisting: false,
 });
@@ -442,4 +473,5 @@ export const {
   useRecordPurchaseDraftLineDirectDeliveryMutation,
   useClosePurchaseDraftMutation,
   useDiscardPurchaseDraftMutation,
+  useAmendPurchaseDraftLineRejectionMutation,
 } = purchaseDraftApi;
