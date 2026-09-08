@@ -48,6 +48,8 @@ describe('parseLineArrivalForm — the Condition Split (AC-05, AC-08, AC-24)', (
   it('omits `rejections` entirely when nothing was refused, matching the shipped payload shape', () => {
     const parsed = parseLineArrivalForm(line())({
       allocations: [],
+      finalityAcknowledged: false,
+      preReceiptConformance: { note: '', verdict: '' },
       quantity: '100',
       rejections: [],
     });
@@ -61,6 +63,8 @@ describe('parseLineArrivalForm — the Condition Split (AC-05, AC-08, AC-24)', (
   it('records every complete row, sourced `inspected` — never a field on this half (AC-24)', () => {
     const parsed = parseLineArrivalForm(line())({
       allocations: [],
+      finalityAcknowledged: false,
+      preReceiptConformance: { note: '', verdict: '' },
       quantity: '100',
       rejections: [
         {
@@ -94,6 +98,8 @@ describe('parseLineArrivalForm — the Condition Split (AC-05, AC-08, AC-24)', (
   it('drops a wholly empty row — no quantity and no Reason — rather than sending nothing as a refusal', () => {
     const parsed = parseLineArrivalForm(line())({
       allocations: [],
+      finalityAcknowledged: false,
+      preReceiptConformance: { note: '', verdict: '' },
       quantity: '100',
       rejections: [{ description: '', quantity: '', rejectionReasonId: '' }],
     });
@@ -112,6 +118,8 @@ describe('parseLineArrivalForm — the Condition Split (AC-05, AC-08, AC-24)', (
   it('sends a partially composed row through as stated, rather than discarding a member’s intent silently', () => {
     const parsed = parseLineArrivalForm(line())({
       allocations: [],
+      finalityAcknowledged: false,
+      preReceiptConformance: { note: '', verdict: '' },
       quantity: '100',
       rejections: [
         // Quantity typed, no Reason chosen yet.
@@ -155,6 +163,8 @@ describe('parseLineDirectDeliveryForm — the same Split, sourced from the custo
     });
     const parsed = parseLineDirectDeliveryForm(directLine)({
       allocations: [],
+      finalityAcknowledged: false,
+      preReceiptConformance: { note: '', verdict: '' },
       quantity: '40',
       rejections: [
         {

@@ -2,6 +2,7 @@ import { useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import { ConditionBlock } from 'modules/purchase-draft/components/purchase-draft-transitions/components/line-ending-dialog/components/ConditionBlock';
+import { ConformanceBlock } from 'modules/purchase-draft/components/purchase-draft-transitions/components/line-ending-dialog/components/ConformanceBlock';
 import { EndingAssignmentRow } from 'modules/purchase-draft/components/purchase-draft-transitions/components/line-ending-dialog/components/EndingAssignmentRow';
 import { useLinkNaming } from 'modules/purchase-draft/hooks/projections/useLinkNaming';
 import {
@@ -144,6 +145,19 @@ export const LineEndingFieldset = ({
           kind={kind}
           ordered={line.orderedQuantity}
           presented={stated}
+        />
+        {/*
+          T16/AC-04a — the conformance block is the condition block's sibling
+          in this same `Conditional`: nothing was received, so there is
+          nothing to judge either. Order is hard-ruled: presented → condition
+          → conformance → assign (design-handoff.md § States and interactions,
+          spec §8's third question).
+        */}
+        <ConformanceBlock
+          className="mt-4"
+          form={form}
+          packagingTypeId={line.packagingTypeId}
+          valueAddingNote={line.valueAddingNote}
         />
       </Conditional>
 

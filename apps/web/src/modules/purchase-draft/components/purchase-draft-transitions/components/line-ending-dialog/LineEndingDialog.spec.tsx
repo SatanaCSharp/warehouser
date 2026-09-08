@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ErrorCode, PermissionId } from '@warehouser/shared-types/enums';
 import { describe, expect, it, vi } from 'vitest';
@@ -285,6 +285,31 @@ type SubmitArrival = (
 const succeeds = (): Mock<SubmitArrival> =>
   vi.fn<SubmitArrival>().mockResolvedValue({ data: {} });
 
+/**
+ * T16 — every fixture line in this file is frozen carrying a Packaging Type
+ * (`line()`'s own default), so the supplier's-instruction judgement now gates
+ * every submission the same way the assignment fields already did. "Met" is
+ * the fastest legal answer and carries no note, so a case testing something
+ * else entirely is not also made to type prose it does not care about.
+ */
+const answerConformanceHonoured = async (
+  user: ReturnType<typeof userEvent.setup>,
+  dialog: HTMLElement,
+): Promise<void> => {
+  await user.click(within(dialog).getByRole('radio', { name: /^met$/iu }));
+};
+
+const acknowledgeFinality = async (
+  user: ReturnType<typeof userEvent.setup>,
+  dialog: HTMLElement,
+): Promise<void> => {
+  await user.click(
+    within(dialog).getByRole('checkbox', {
+      name: /the customer has told me what arrived/iu,
+    }),
+  );
+};
+
 describe('LineEndingDialog', () => {
   // T17/ADR 0002 — the payload is one line's, and it carries **no line identifier at all**: the
   // line is the route. That is the shape difference the whole-draft form could not express.
@@ -308,6 +333,7 @@ describe('LineEndingDialog', () => {
       within(dialog).getByLabelText(/assign to Baltic Freight OU/iu),
       '400',
     );
+    await answerConformanceHonoured(user, dialog);
     await user.click(submitButton(dialog));
 
     await waitFor(() =>
@@ -317,6 +343,7 @@ describe('LineEndingDialog', () => {
           { purchaseDraftLineLinkId: ids.linkOne, allocatedQuantity: 600 },
           { purchaseDraftLineLinkId: ids.linkTwo, allocatedQuantity: 400 },
         ],
+        preReceiptConformance: { verdict: 'met' },
       }),
     );
     await waitFor(() => expect(onClose).toHaveBeenCalled());
@@ -368,12 +395,14 @@ describe('LineEndingDialog', () => {
       within(dialog).getByLabelText(/arrived.*WH-100420/iu),
       '900',
     );
+    await answerConformanceHonoured(user, dialog);
     await user.click(submitButton(dialog));
 
     await waitFor(() =>
       expect(onSubmit).toHaveBeenCalledWith({
         receivedQuantity: 900,
         allocations: [],
+        preReceiptConformance: { verdict: 'met' },
       }),
     );
   });
@@ -403,6 +432,7 @@ describe('LineEndingDialog', () => {
       within(dialog).getByLabelText(/assign to Nordwind Logistik GmbH/iu),
       '5000',
     );
+    await answerConformanceHonoured(user, dialog);
     await user.click(submitButton(dialog));
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalled());
@@ -544,6 +574,7 @@ describe('LineEndingDialog condition block wiring (2026-09-08 review)', () => {
       within(dialog).getByRole('button', { name: /reason/iu }),
       'Damaged by packing',
     );
+    await answerConformanceHonoured(user, dialog);
     await user.click(submitButton(dialog));
 
     await waitFor(() =>
@@ -557,6 +588,7 @@ describe('LineEndingDialog condition block wiring (2026-09-08 review)', () => {
             source: 'inspected',
           },
         ],
+        preReceiptConformance: { verdict: 'met' },
       }),
     );
   });
@@ -582,6 +614,7 @@ describe('LineEndingDialog condition block wiring (2026-09-08 review)', () => {
       within(dialog).queryByRole('button', { name: /refuse some of this/iu }),
     ).not.toBeInTheDocument();
 
+    await answerConformanceHonoured(user, dialog);
     await user.click(submitButton(dialog));
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalled());
@@ -649,6 +682,167 @@ describe('LineEndingDialog condition block wiring (2026-09-08 review)', () => {
     expect(
       within(dialog).queryByRole('status', { name: /condition summary/iu }),
     ).not.toBeInTheDocument();
+    // T16/AC-04a — the conformance block is the condition block's sibling in
+    // `LineEndingFieldset`'s own `Conditional`, so it is absent for the same
+    // reason and on the same line: nothing was received, so there is nothing
+    // to judge. Paired with
+    // 'blocks the primary action until the supplier's-instruction judgement...'
+    // below, which proves the radiogroup exists on this very line once
+    // something is received — so this is not an absence that would hold
+    // whether or not the feature exists at all.
+    expect(
+      within(dialog).queryByRole('radiogroup', {
+        name: /did the supplier follow your instruction/iu,
+      }),
+    ).not.toBeInTheDocument();
+  });
+});
+
+describe('LineEndingDialog conformance block (T16)', () => {
+  // AC-15/AC-17a — the fastest path through the dock still requires looking
+  // at the goods: nothing is pre-selected, and the primary action stays
+  // unavailable until the judgement is given, on a line frozen carrying an
+  // instruction (`line()`'s default `packagingTypeId: 'cartons'`).
+  it("blocks the primary action until the supplier's-instruction judgement is answered on an instructed line (AC-15, AC-17a)", async () => {
+    const user = userEvent.setup();
+    openDialog(succeeds());
+
+    const dialog = await arrivalDialog();
+    const radiogroup = within(dialog).getByRole('radiogroup', {
+      name: /did the supplier follow your instruction/iu,
+    });
+    for (const option of within(radiogroup).getAllByRole('radio')) {
+      expect(option).not.toBeChecked();
+    }
+    expect(submitButton(dialog)).toBeDisabled();
+
+    await user.click(
+      within(radiogroup).getByRole('radio', { name: /^met$/iu }),
+    );
+
+    await waitFor(() => expect(submitButton(dialog)).toBeEnabled());
+  });
+
+  // AC-17a — "not applicable" is not a legal answer for a line frozen
+  // carrying an instruction; the option withholds itself rather than being
+  // offered and refused server-side.
+  it('withholds "not applicable" on a line frozen with an instruction (AC-17a)', async () => {
+    openDialog(succeeds());
+
+    const dialog = await arrivalDialog();
+    expect(
+      within(dialog).getByRole('radio', { name: /not applicable/iu }),
+    ).toBeDisabled();
+  });
+
+  // AC-17 — the opposite line: no Packaging Type and no Value-adding Note, so
+  // only "not applicable" is a legal answer.
+  it('withholds "Met" and "Not met" on a line frozen with no instruction (AC-17)', async () => {
+    openDialog(
+      succeeds(),
+      vi.fn(),
+      draft,
+      line({ id: ids.lineOne, packagingTypeId: null, valueAddingNote: null }),
+    );
+
+    const dialog = await arrivalDialog();
+    expect(
+      within(dialog).getByRole('radio', { name: /^met$/iu }),
+    ).toBeDisabled();
+    expect(
+      within(dialog).getByRole('radio', { name: /^not met$/iu }),
+    ).toBeDisabled();
+    expect(
+      within(dialog).getByRole('radio', { name: /not applicable/iu }),
+    ).toBeEnabled();
+  });
+
+  // AC-15a — one judgement covers both a Packaging Type and a Value-adding
+  // Note frozen on the same line: never a second radiogroup for the second
+  // instruction.
+  it('offers one judgement for a line frozen with both a Packaging Type and a Value-adding Note (AC-15a)', async () => {
+    openDialog(
+      succeeds(),
+      vi.fn(),
+      draft,
+      line({ valueAddingNote: 'Add desiccant packs' }),
+    );
+
+    const dialog = await arrivalDialog();
+    expect(within(dialog).getAllByRole('radiogroup')).toHaveLength(1);
+  });
+
+  // AC-15/AC-15a — the note is where the member names which of the two failed;
+  // it exists only once "Not met" needs one explained.
+  it('shows the conformance note only under "Not met" (AC-15)', async () => {
+    const user = userEvent.setup();
+    openDialog(succeeds());
+    const dialog = await arrivalDialog();
+    const radiogroup = within(dialog).getByRole('radiogroup', {
+      name: /did the supplier follow your instruction/iu,
+    });
+
+    await user.click(
+      within(radiogroup).getByRole('radio', { name: /^met$/iu }),
+    );
+    expect(within(dialog).queryByRole('textbox')).not.toBeInTheDocument();
+
+    await user.click(
+      within(radiogroup).getByRole('radio', { name: /^not met$/iu }),
+    );
+    const note = await within(dialog).findByRole('textbox');
+    await user.type(note, 'value-adding note not applied');
+    expect(note).toHaveValue('value-adding note not applied');
+  });
+
+  // T16 seam (2026-09-08 review pattern, `answerConformanceHonoured` above) —
+  // no prior case in this file ever carries a verdict through submit into the
+  // payload; this proves the field the radiogroup writes into is the field
+  // the parse step reads, exactly the way the T15 review blocker proved it for
+  // `rejections`.
+  it('carries the verdict and its note through submit into the payload (AC-15, AC-15a)', async () => {
+    const user = userEvent.setup();
+    const onSubmit = succeeds();
+    openDialog(onSubmit);
+    const dialog = await arrivalDialog();
+
+    await user.click(
+      within(dialog).getByRole('radio', { name: /^not met$/iu }),
+    );
+    const note = await within(dialog).findByRole('textbox');
+    await user.type(note, 'wrong labels used');
+    await user.click(submitButton(dialog));
+
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          preReceiptConformance: {
+            verdict: 'not_met',
+            note: 'wrong labels used',
+          },
+        }),
+      ),
+    );
+  });
+
+  // The two-arm contract shape (`preReceiptConformanceWithoutNoteCreateSchema`
+  // vs `...NotMetCreateSchema`) admits no `note` property at all under "Met" —
+  // not an empty string. A client that always sent `note: ''` would pass a
+  // looser check than this one.
+  it('sends a Met verdict with no `note` property at all', async () => {
+    const user = userEvent.setup();
+    const onSubmit = succeeds();
+    openDialog(onSubmit);
+    const dialog = await arrivalDialog();
+
+    await answerConformanceHonoured(user, dialog);
+    await user.click(submitButton(dialog));
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalled());
+    const payload = onSubmit.mock.calls[0]?.[0] as {
+      preReceiptConformance?: { note?: string; verdict: string };
+    };
+    expect(payload.preReceiptConformance).toEqual({ verdict: 'met' });
   });
 });
 
@@ -690,6 +884,13 @@ describe('LineEndingDialog, recording a direct delivery', () => {
       name: /record what the customer received — wh-100420 on pd-0142/iu,
     });
 
+  type SubmitDirectDelivery = (
+    input: PurchaseDraftLineDirectDelivery,
+  ) => Promise<MutationResult>;
+
+  const succeedsDirect = (): Mock<SubmitDirectDelivery> =>
+    vi.fn<SubmitDirectDelivery>().mockResolvedValue({ data: {} });
+
   it('sends the quantity as deliveredQuantity, never as receivedQuantity', async () => {
     const user = userEvent.setup();
     const onSubmit = vi
@@ -703,6 +904,8 @@ describe('LineEndingDialog, recording a direct delivery', () => {
       within(dialog).getByLabelText(/received.*WH-100420/iu),
       '60',
     );
+    await answerConformanceHonoured(user, dialog);
+    await acknowledgeFinality(user, dialog);
     await user.click(
       within(dialog).getByRole('button', { name: /record the delivery/iu }),
     );
@@ -711,6 +914,7 @@ describe('LineEndingDialog, recording a direct delivery', () => {
       expect(onSubmit).toHaveBeenCalledWith({
         deliveredQuantity: 60,
         allocations: [],
+        preReceiptConformance: { verdict: 'met' },
       }),
     );
     expect(onSubmit.mock.calls[0]?.[0]).not.toHaveProperty('receivedQuantity');
@@ -739,6 +943,87 @@ describe('LineEndingDialog, recording a direct delivery', () => {
       labels.findIndex((label) => /record the delivery/iu.test(label ?? '')),
     );
   });
+
+  // T16, design-handoff.md `S9PcQ`, spec.md §8 ninth question — the member
+  // alone judges when a directly delivered line's account is settled; the
+  // acknowledgement is the one deliberate friction on that act.
+  describe('finality acknowledgement (T16)', () => {
+    it('disables the primary action until the acknowledgement is ticked, even once the judgement is answered', async () => {
+      const user = userEvent.setup();
+      openDirect(succeedsDirect());
+      const dialog = await directDialog();
+
+      const submit = within(dialog).getByRole('button', {
+        name: /record the delivery/iu,
+      });
+      const checkbox = within(dialog).getByRole('checkbox', {
+        name: /the customer has told me what arrived/iu,
+      });
+      expect(submit).toBeDisabled();
+      expect(checkbox).not.toBeChecked();
+
+      await answerConformanceHonoured(user, dialog);
+      expect(submit).toBeDisabled();
+
+      await user.click(checkbox);
+      await waitFor(() => expect(submit).toBeEnabled());
+    });
+
+    it('is a labelled checkbox, never a styled div, with its consequence associated so it is heard before ticking', async () => {
+      openDirect(succeedsDirect());
+      const dialog = await directDialog();
+
+      const checkbox = within(dialog).getByRole('checkbox', {
+        name: /the customer has told me what arrived/iu,
+      });
+      expect(checkbox.tagName).toBe('INPUT');
+
+      const describedBy = checkbox.getAttribute('aria-describedby');
+      expect(describedBy).toBeTruthy();
+      const description = describedBy
+        ? document.getElementById(describedBy)
+        : null;
+      expect(description).not.toBeNull();
+      expect(description).toHaveTextContent(/final/iu);
+    });
+
+    // sad.md §6.2's hard rule: an interaction, not a state. No column, no
+    // timer, no scheduled transition, and none inferable from this step.
+    // `advanceTimers` lets `userEvent` and `findBy*` cooperate with the faked
+    // clock (`route-readiness.spec.tsx`'s own pattern) — the clock is what
+    // actually gets exercised here, thirty days deep, not merely spied on.
+    it('introduces no scheduled transition and no derived deadline: thirty days change nothing (sad.md §6.2)', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      try {
+        const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+        openDirect(succeedsDirect());
+        const dialog = await directDialog();
+
+        const checkbox = within(dialog).getByRole('checkbox', {
+          name: /the customer has told me what arrived/iu,
+        });
+        await user.click(checkbox);
+        expect(checkbox).toBeChecked();
+
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(1000 * 60 * 60 * 24 * 30);
+        });
+
+        // Still exactly what the member did, nothing a clock did to it.
+        expect(checkbox).toBeChecked();
+        expect(
+          within(dialog).getByRole('button', { name: /record the delivery/iu }),
+        ).toBeDisabled(); // the judgement is still unanswered — a clock alone never opens the primary action
+        expect(
+          within(dialog).queryByText(
+            /expires|deadline|window|countdown|days? (?:remaining|left)/iu,
+          ),
+        ).not.toBeInTheDocument();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+  });
 });
 
 // The frozen draft the frame draws — line 1 ordered 1 200, one customer still
@@ -765,6 +1050,7 @@ describe('LineEndingDialog, on a frozen draft whose demand moved', () => {
       within(dialog).getByLabelText(/assign to Nordwind Logistik GmbH/iu),
       '1000',
     );
+    await answerConformanceHonoured(user, dialog);
     await user.click(submitButton(dialog));
 
     // Nothing is sent for the cancelled link, so the ending cannot be refused
@@ -775,6 +1061,7 @@ describe('LineEndingDialog, on a frozen draft whose demand moved', () => {
         allocations: [
           { purchaseDraftLineLinkId: ids.linkOne, allocatedQuantity: 1000 },
         ],
+        preReceiptConformance: { verdict: 'met' },
       }),
     );
   });
@@ -836,6 +1123,7 @@ describe('LineEndingDialog, on a frozen draft whose demand moved', () => {
       within(dialog).getByLabelText(/assign to Nordwind Logistik GmbH/iu),
       '1100',
     );
+    await answerConformanceHonoured(user, dialog);
     await user.click(submitButton(dialog));
 
     const refusal = await within(dialog).findByRole('alert');

@@ -305,6 +305,25 @@
           "directDelivery": "Accepted is what remains — you never type it. The Source above names who told you about every refusal on this line: these goods never came to your dock, so nobody here could have found the problem themselves."
         }
       },
+      "conformance": {
+        "heading": "Did the supplier follow your instruction?",
+        "packagingType": "Packaging type — {{packagingType}}",
+        "valueAddingNote": "Value-adding note — “{{note}}”",
+        "options": {
+          "met": "Met",
+          "not_met": "Not met",
+          "not_applicable": "Not applicable"
+        },
+        "noteLabel": "What was wrong with it",
+        "noteDescription": "Required when the instruction was not met. Up to 1 000 characters.",
+        "notApplicableWithheld": "This line was frozen carrying an instruction, so it can only be judged as honoured or not honoured — the judgement does not apply to a line frozen with none.",
+        "judgementWithheld": "This line was frozen with no instruction, so it can only record that the judgement does not apply."
+      },
+      "finality": {
+        "title": "This ending is final — has the customer told you what arrived?",
+        "description": "This ending is final. Once recorded, nothing here reminds you to revisit it — you alone judge when the customer's account is settled. Nothing is lost by waiting.",
+        "checkboxLabel": "The customer has told me what arrived."
+      },
       "recorded": {
         "arrival": "Arrived {{formatted}} · {{on}}",
         "direct_delivery": "Delivered {{formatted}} · {{on}}"

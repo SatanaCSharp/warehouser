@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import type {
+  PreReceiptConformanceCreate,
   PurchaseDraftLine,
   PurchaseDraftLineArrival,
   PurchaseDraftLineDirectDelivery,
@@ -23,6 +24,15 @@ export type RejectionRow = {
 };
 
 /**
+ * The Pre-receipt Conformance judgement's own field shape (T16, AC-15/AC-17a).
+ * `''` is not a verdict — it is the un-defaulted opening state a member must
+ * move away from before the ending can be submitted (AC-15, AC-17a). Shared by
+ * `ConformanceBlock`'s own `ConformanceBlockForm` and by `LineEndingForm`
+ * below, exactly the way `RejectionRow` is shared with `ConditionBlockForm`.
+ */
+export type ConformanceVerdict = '' | 'met' | 'not_applicable' | 'not_met';
+
+/**
  * One line ending's form session (T17, AC-19). Its `allocations` array is
  * positional — `allocations[j]` is the line's `links[j]` — which is what lets
  * the request be rebuilt from the line the dialog was opened for without every
@@ -37,9 +47,17 @@ export type RejectionRow = {
  * `rejections` is the Condition Split (T15) `ConditionBlock` owns. Its shape is
  * exactly `ConditionBlockForm`'s own `rejections` field, which is what lets
  * `LineEndingFieldset` hand this whole form to `ConditionBlock` as one.
+ *
+ * `preReceiptConformance` is the judgement `ConformanceBlock` owns (T16),
+ * shaped exactly like its own `ConformanceBlockForm`. `finalityAcknowledged`
+ * is the direct-delivery-only acknowledgement `FinalityAcknowledgementAlert`
+ * owns — an interaction, never a state (sad.md §6.2): it exists only in this
+ * form session and is never itself sent to the server.
  */
 export type LineEndingForm = {
   allocations: { allocatedQuantity: string }[];
+  finalityAcknowledged: boolean;
+  preReceiptConformance: { note: string; verdict: ConformanceVerdict };
   quantity: string;
   rejections: RejectionRow[];
 };
@@ -130,6 +148,10 @@ export const lineEndingFormDefaults = (
   line: PurchaseDraftLine,
 ): LineEndingForm => ({
   allocations: linksOf(line).map(() => ({ allocatedQuantity: '' })),
+  // T16 — never ticked, and never pre-answered: both cost a member's own act
+  // (AC-15, AC-17a; design-handoff.md § States and interactions).
+  finalityAcknowledged: false,
+  preReceiptConformance: { note: '', verdict: '' },
   quantity: String(line.orderedQuantity),
   // T15 — opens with no refusal at all: refusing costs one click, never a
   // default row (design-handoff.md § States and interactions).
@@ -193,6 +215,33 @@ const buildRejections = (
   });
 
 /**
+ * The two-arm contract shape (T16, `preReceiptConformanceWithoutNoteCreateSchema`
+ * vs `...NotMetCreateSchema`) built from the form's own field, never restated
+ * as a second parallel shape. `''` — the un-defaulted opening state — becomes
+ * no property at all: a line where nothing was received never had the block
+ * rendered at all (AC-04a), and the property is contract-optional for exactly
+ * that reason. `Met`/`Not applicable` never carry a `note` — not even an empty
+ * one, which is what would happen if this instead always sent
+ * `{ verdict, note: values.note }` — and `Not met` carries one only once the
+ * member has actually typed something (2026-09-08 review pattern: the RED
+ * pins `.toEqual`, not `.objectContaining`, on this exact shape).
+ */
+const buildPreReceiptConformance = ({
+  note,
+  verdict,
+}: LineEndingForm['preReceiptConformance']):
+  PreReceiptConformanceCreate | undefined => {
+  if (verdict === '') {
+    return undefined;
+  }
+  if (verdict === 'not_met') {
+    const trimmedNote = note.trim();
+    return trimmedNote === '' ? { verdict } : { verdict, note: trimmedNote };
+  }
+  return { verdict };
+};
+
+/**
  * Turns the form session into the request one of the two ending endpoints
  * takes. The **kind is the route**, not a field, so the only difference between
  * the two payloads is the name of the quantity — which is exactly what the two
@@ -221,6 +270,7 @@ const parseQuantityAndAllocations = (
           allocatedQuantity: number;
           purchaseDraftLineLinkId: string;
         }[];
+        preReceiptConformance: PreReceiptConformanceCreate | undefined;
         quantity: number;
         rejections: RejectionCreate[];
       };
@@ -243,6 +293,13 @@ const parseQuantityAndAllocations = (
   return {
     data: {
       allocations,
+      // `?? { note: '', verdict: '' }` — the un-defaulted opening shape —
+      // matches every other optional array on this form (`values.rejections`,
+      // `values.allocations` elsewhere): a caller that never touched the
+      // conformance judgement is read the same as one that opened at it.
+      preReceiptConformance: buildPreReceiptConformance(
+        values.preReceiptConformance ?? { note: '', verdict: '' },
+      ),
       quantity: stated,
       rejections: buildRejections(values.rejections, source),
     },
@@ -272,6 +329,9 @@ export const parseLineArrivalForm =
             ...(parsed.data.rejections.length > 0
               ? { rejections: parsed.data.rejections }
               : {}),
+            ...(parsed.data.preReceiptConformance
+              ? { preReceiptConformance: parsed.data.preReceiptConformance }
+              : {}),
           },
           success: true,
         }
@@ -300,6 +360,9 @@ export const parseLineDirectDeliveryForm =
             deliveredQuantity: parsed.data.quantity,
             ...(parsed.data.rejections.length > 0
               ? { rejections: parsed.data.rejections }
+              : {}),
+            ...(parsed.data.preReceiptConformance
+              ? { preReceiptConformance: parsed.data.preReceiptConformance }
               : {}),
           },
           success: true,
