@@ -3,7 +3,7 @@
 Date: 2026-09-08
 Work item: feature `arrival-inspection` (`docs/features/arrival-inspection`), `.size` = `L`, `.route` = `full`
 Reviewer: `code-review-front-end` — three clean-context `reviewer` workers (reasoning tier, effort `xhigh`), one per dimension group, merged here
-Verdict: **CHANGES REQUESTED**
+Verdict: **CHANGES REQUESTED** — every finding resolved _fix now_ and applied; see § Resolution outcome.
 
 ## Diff scope
 
@@ -143,3 +143,54 @@ the module barrel, and are consumed only through the `@warehouser/contracts/purc
 Hooks and helpers are filed correctly: `useRejectionReasons` in `hooks/queries/`, `line-ending-form.ts`
 in `utils/`. Every spec sits beside its subject, and the one cross-cutting spec is in its own
 `src/test/readiness-removal/` directory.
+
+## Resolution outcome
+
+All twelve findings were resolved **fix now** and are committed. Each went through the same
+per-task gate `implement` uses (unit + lint + vet); the integration tier is **NON-red** because
+`apps/web` has no integration script, which `require_integration: auto` records rather than claims.
+
+| #   | Finding                                               | Commit    |
+| --- | ----------------------------------------------------- | --------- |
+| 1   | Duplicate `checkedAgain` key in `uk`                  | `3da20a3` |
+| 2   | Pending toast rendered a raw key                      | `df34f0b` |
+| 3   | Description-only amendment interpolated a missing key | `df34f0b` |
+| 4   | Closed line's private tree left flat                  | `e9765bd` |
+| 5   | Read schemas restated the prose bound in code units   | `513ff30` |
+| 6   | `ClosedPurchaseDraftLine` had no production consumer  | `3f13a73` |
+| 7   | Second hook-calling component in one file             | `3f16718` |
+| 8   | Conformance judgement re-implemented `Alert`          | `3f16718` |
+| 9   | Verdict mapping was not total                         | `708041d` |
+| 10  | Catalogue props existed only for the specs            | `7f10f9f` |
+| 11  | Conformance heading duplicated into `aria-label`      | `7f10f9f` |
+| 12  | T19 envelopes parsed by hand rather than with Zod     | `8da3805` |
+
+Final gate: web 1558/1558 with lint, tsc and build clean; contracts 318/318 with lint and build
+clean; server 1779/1779 against the rebuilt `dist`, re-run because a `packages/contracts` change is
+invisible to server gates until it is rebuilt.
+
+### Where the fix departed from the suggestion, and why
+
+- **Finding 11.** The suggestion was to move the heading inside the group as HeroUI's `<Label>`
+  (`radio-group.mdx` § Anatomy). It is instead the heading element with the group pointing at it
+  through `aria-labelledby`. The heading labels the whole block — the frozen instruction panel as
+  well as the verdicts — and moving it into the group would drop it below that panel, changing the
+  approved layout. What the finding identified was the duplication, and that is removed either way.
+- **Finding 12.** The rule → sentence tables stayed in the component rather than moving to `utils/`
+  with the readers. They call the namespace translator, so they are presentation; what moved is the
+  parsing. The tables are now keyed by the rule union and read typed fields, so the coercion the
+  finding objected to is gone.
+
+### Observations — real, out of this diff's scope
+
+- **The same pending-key defect exists for `customer-order`.** `amendCustomerOrder`'s `action`
+  resolves to four names (`mutation-actions.ts`:64-69) and `mutationFeedbackMiddleware` resolves the
+  pending arm through that same `action`, but `pending.json` carries only `amendCustomerOrder`. Three
+  of the four outcomes therefore show a raw key while the request is in flight, exactly as the
+  amendment did. It is in untouched code, so the shared protocol makes it an observation rather than
+  a finding of this review — it needs its own change.
+- **A new spec case was written that could not fail and was replaced.** The first assertion for
+  finding 11 counted visible occurrences of the heading and passed against the defective code,
+  because an `aria-label` is an attribute rather than a text node: the duplication existed only in
+  the accessibility tree. Recorded because a green assertion that cannot fail is the failure mode
+  this feature's own gate notes already warn about.
