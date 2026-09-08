@@ -250,3 +250,44 @@ describe('PurchaseDraftLineEnding.condition (openapi.yaml `PurchaseDraftLineEndi
     ).toBe(false);
   });
 });
+
+// 2026-09-08 frontend conformance review. The write side counts the prose bound in **code points**
+// (`maxProseLength`, deliberately, because PostgreSQL's `char_length` counts characters); the read
+// side restated it as `.max(1000)`, which counts UTF-16 code units. Above the BMP one character
+// costs two units, so a description the server accepted and stored at exactly the bound would fail
+// the response schema — and `api-client.ts` turns a response-schema failure into `api.unexpected`,
+// so a valid closed-line read would surface to the member as an unexpected error.
+describe('stored prose bounds agree with the write side', () => {
+  // One astral character per code point, so `String.length` is double `[...value].length`.
+  const astral = (codePoints: number): string => '𐐷'.repeat(codePoints);
+
+  it('accepts a description at exactly the stored bound, astral characters included', () => {
+    const description = astral(1000);
+
+    expect(description.length).toBe(2000);
+    expect([...description].length).toBe(1000);
+
+    const parsed =
+      purchaseDraftLineRejectionSchema.shape.description.safeParse(description);
+
+    expect(parsed.success).toBe(true);
+  });
+
+  it('accepts a conformance note at exactly the stored bound, astral characters included', () => {
+    const parsed = preReceiptConformanceSchema.shape.note.safeParse(
+      astral(1000),
+    );
+
+    expect(parsed.success).toBe(true);
+  });
+
+  it('still refuses prose past the bound — the control that keeps the two cases honest', () => {
+    expect(
+      purchaseDraftLineRejectionSchema.shape.description.safeParse(astral(1001))
+        .success,
+    ).toBe(false);
+    expect(
+      preReceiptConformanceSchema.shape.note.safeParse(astral(1001)).success,
+    ).toBe(false);
+  });
+});

@@ -1,10 +1,12 @@
 import {
   deliveryModeSchema,
+  maxProseLength,
   packagingTypeIdSchema,
   purchaseDraftStateSchema,
   rejectionDispositionSchema,
   rejectionReasonIdSchema,
   rejectionSourceSchema,
+  storedProseSchema,
 } from 'purchase-drafts/purchase-drafts-projections';
 import { z } from 'zod';
 
@@ -165,22 +167,9 @@ export const endingAllocationCreateSchema = z.strictObject({
 //
 // Trimmed non-empty: a blank string is a refusal rather than an absence, which is what keeps
 // "omitted or present with content" the only two states either property has (data-model.md).
-const maxProseLength = 1000;
 const proseSchema = z
   .string()
   .trim()
-  .min(1)
-  .refine((value) => [...value].length <= maxProseLength, {
-    message: `Must be at most ${String(maxProseLength)} characters`,
-  });
-
-// The same code-point bound as `proseSchema`, without its `.trim()` transform: a **response**
-// schema reads a value the store already holds trimmed (the write side is what enforces that), and
-// must not carry a transform that could silently rewrite what a mutation just recorded. Sharing
-// `maxProseLength` rather than restating `1000` is what keeps the two bounds from diverging the way
-// `rejectionAmendmentSchema`'s own `.max(1000)` once did (2026-09-08 review).
-const storedProseSchema = z
-  .string()
   .min(1)
   .refine((value) => [...value].length <= maxProseLength, {
     message: `Must be at most ${String(maxProseLength)} characters`,

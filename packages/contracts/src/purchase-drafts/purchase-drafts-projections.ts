@@ -291,11 +291,37 @@ export const preReceiptConformanceVerdictSchema = z.enum([
 // with the ending and never afterwards. Read under `PURCHASE_DRAFTS:WATCH` alone, never gated on
 // `REJECTIONS:WATCH`: it is a judgement about the instruction, not a Rejection's cause, and it
 // survives unchanged in the cause-withheld shape (AC-22, sad.md §4).
+/**
+ * Upper bound on every piece of member-written prose this feature stores, counted in **code
+ * points** rather than `String.length`'s UTF-16 code units. PostgreSQL's `char_length` counts
+ * characters, so the two agree across the BMP and diverge above it: one astral character costs two
+ * code units, and a `.max()` on `length` would refuse at half the stated bound a column would have
+ * stored.
+ *
+ * It lives here, on the read side, because it describes a **stored** value. The write side imports
+ * it and adds its own `.trim()`. Restating the number on either side is what let the read schemas
+ * drift to a `.max(1000)` that would have refused prose the server had just accepted — surfacing to
+ * the member as `api.unexpected`, since a response-schema failure is what `api-client.ts` reports.
+ */
+export const maxProseLength = 1000;
+
+/**
+ * Prose as the store holds it: bounded in code points and non-empty, with **no** `.trim()`
+ * transform. A response schema must not rewrite what a mutation just recorded — the write side is
+ * what enforces trimming.
+ */
+export const storedProseSchema = z
+  .string()
+  .min(1)
+  .refine((value) => [...value].length <= maxProseLength, {
+    message: `Must be at most ${String(maxProseLength)} characters`,
+  });
+
 export const preReceiptConformanceSchema = z.strictObject({
   verdict: preReceiptConformanceVerdictSchema,
   // Non-null only under `not_met`; `null` under `met` and `not_applicable`
   // (`chk_purchase_draft_lines_conformance_note_shape`).
-  note: z.string().min(1).max(1000).nullable(),
+  note: storedProseSchema.nullable(),
 });
 
 // openapi.yaml `PurchaseDraftLineRejection` — one quantity of a line's arrival the Warehouse
@@ -309,7 +335,7 @@ export const purchaseDraftLineRejectionSchema = z.strictObject({
   rejectionReasonLabel: z.string().min(1).max(100),
   quantity: z.number().int().min(1),
   source: rejectionSourceSchema,
-  description: z.string().min(1).max(1000).nullable(),
+  description: storedProseSchema.nullable(),
   disposition: rejectionDispositionSchema,
   raisedByUserId: z.string().uuid(),
   raisedAt: z.string().datetime(),
