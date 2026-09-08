@@ -1046,6 +1046,20 @@ release gate; the UI approval gate is already satisfied by
    remains part of this feature's definition of done.
 4. `apps/web` has **no integration-test script**, so an "integration tier" verdict for the web half is
    recorded as non-red rather than green. The web evidence above is the vitest tier.
+5. `tests/delivery-addresses/identity-coverage.spec.mjs` — `delivery-addresses`' repository-wide
+   observed-Permission coverage gate — parses every `apps/server/**/*.controller.ts` handler's
+   decorators and declared types from source text. T13's `@ObservedPermission(REJECTIONS:CREATE,
+CUSTOMERS:WATCH)` declarations (multi-argument, several of them multi-line) exposed a latent
+   parsing defect in that gate — a decorator's arguments were captured only when the whole call fit
+   on one line, and a handler's return-type annotation could be mis-attributed to a _later_ handler's
+   signature when the search window was not anchored to this handler's own parameter list — which had
+   nothing to do with this feature's own correctness but turned the gate false-positive the moment
+   any observed declaration on this subpath became multi-argument. T14 fixed the parser in place
+   (both defects were pre-existing, not introduced by this feature) and reconciled the pinned parsed-
+   handler count from 76 to 78 for the two routes T13 added outside the gate's own identity-bearing
+   set (the amendment route and the Rejection Reasons catalogue route). This item is listed here
+   because reconciling it was necessary in this change even though the identity-coverage suite is not
+   itself an artifact this feature owns.
 
 ## 11. Risks and open questions
 

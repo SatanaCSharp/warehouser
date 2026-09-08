@@ -149,6 +149,15 @@ const structuralWriteTargetsOf = (source: string): string[] =>
   );
 
 describe('the frozen-record write boundary of a line ending (AC-15, spec.md §6.1)', () => {
+  // T14, 2026-09-08 review — check 3's own DoD was unmet on two counts: `THE_CONFIRMATION_WRITE_PATH`
+  // and `THE_UNNARROWABLE` are both hand-written lists with no assertion that either is non-empty, so
+  // emptying either (or misspelling both of `THE_UNNARROWABLE`'s two entries) would make every case
+  // below pass silently — the exact "glob that stops matching" failure mode the DoD names.
+  it('the write-path corpus and the unnarrowable-field list are both non-empty', () => {
+    expect(THE_CONFIRMATION_WRITE_PATH.length).toBeGreaterThan(0);
+    expect(THE_UNNARROWABLE.length).toBeGreaterThan(0);
+  });
+
   // A frozen field the code never names is a frozen field no refactor can accidentally start
   // writing — and it is also the evidence that no bound of this operation is derived from one,
   // which is what AC-17 requires when it makes the received quantity free to fall short of or
@@ -222,6 +231,28 @@ describe('the frozen-record write boundary of a line ending (AC-15, spec.md §6.
 
       expect(offending.length).toBeGreaterThan(0);
     });
+
+    // T14, 2026-09-08 review — `'%s never names the ordered quantity'` above was the one rule in
+    // this file with no positive control at all: nothing proved a projection naming `ordered_quantity`
+    // (in either spelling) would actually be caught, so emptying `THE_UNNARROWABLE` or misspelling
+    // both of its entries would have made every case of that rule pass silently. This is the fixture
+    // check 3's own DoD requires — "a projection naming `ordered_quantity`" — run against the same
+    // detector the real files above are checked with.
+    it.each(['orderedQuantity', 'ordered_quantity'])(
+      'detects a projection naming the ordered quantity as %s',
+      (spelling) => {
+        const fixture = `
+          const lockDraftLineForEnding = async (manager, lineId) =>
+            manager.query('SELECT id, ${spelling}, delivery_mode FROM purchase_draft_lines WHERE id = $1', [lineId]);
+        `;
+
+        const named = THE_UNNARROWABLE.filter((field) =>
+          new RegExp(`\\b${field}\\b`, 'u').test(stripComments(fixture)),
+        );
+
+        expect(named).toContain(spelling);
+      },
+    );
 
     // The raw-SQL and `manager.insert(Entity, ...)` branches of `STRUCTURAL_WRITE` have no
     // real-world example in this repository today, so a typo in either would go unnoticed by the
