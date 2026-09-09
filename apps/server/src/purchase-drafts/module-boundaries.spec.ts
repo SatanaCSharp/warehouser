@@ -147,33 +147,77 @@ describe('purchase-drafts usecase module surface (T11)', () => {
 // green shipped file red for obeying the architecture, so the scan covers `predicates/`,
 // `value-objects/` and `errors/`, which is exactly the surface T7 adds to. Recorded rather than
 // silently narrowed.
+//
+// **Two tiers, because the layers differ in what they are for**
+// (code-review-back-end-2026-09-09.md). `mappers/` was outside the scan entirely, which is how a
+// mapper that built the REST response shape out of `@warehouser/contracts` types passed unnoticed.
+// It is scanned now — but not against the pure tier's specifier list, because
+// server-architecture.md §"Layer responsibilities → Domain" puts the translation of a **shared
+// persistence entity** into a feature-owned object in exactly this directory, so
+// `shared/domain/entities/` is the one import a mapper is supposed to have and forbidding it here
+// would turn a conforming file red.
+//
+// `@warehouser/contracts` is deliberately **not** on either list, and that is a limitation worth
+// stating rather than hiding: `predicates/` legitimately re-exports the contract's `maxProseLength`
+// and `mappers/` legitimately types its input mappings off the contract's request shapes, so no
+// specifier rule can separate those from the response shape this review removed. The response-shape
+// regression is pinned by name below instead.
 describe('purchase-drafts domain independence (T7)', () => {
+  // `rest/dtos/` joins the list on this review: server-architecture.md §"Use cases" forbids
+  // depending on a REST DTO class outright, and nothing under `domain/` has a reason to.
   const FORBIDDEN_SPECIFIERS = [
     '@nestjs/',
     'typeorm',
     'shared/domain/entities/',
+    'rest/dtos/',
   ];
+
+  // What a mapper may not import. It keeps every entry above except the persistence entity, which is
+  // its input.
+  const FORBIDDEN_MAPPER_SPECIFIERS = FORBIDDEN_SPECIFIERS.filter(
+    (specifier) => specifier !== 'shared/domain/entities/',
+  );
 
   const PURE_DOMAIN_DIRECTORIES = ['predicates', 'value-objects', 'errors'];
 
-  const domainSourceFiles = (): readonly string[] => {
-    const domainRoot = join(__dirname, 'domain');
-    const walk = (directory: string): readonly string[] =>
-      readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-        const path = join(directory, entry.name);
-        if (entry.isDirectory()) {
-          return walk(path);
-        }
-        return entry.isFile() &&
-          entry.name.endsWith('.ts') &&
-          !entry.name.endsWith('.spec.ts')
-          ? [path]
-          : [];
-      });
-    return PURE_DOMAIN_DIRECTORIES.flatMap((directory) =>
-      walk(join(domainRoot, directory)),
+  const walk = (directory: string): readonly string[] =>
+    readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+      const path = join(directory, entry.name);
+      if (entry.isDirectory()) {
+        return walk(path);
+      }
+      return entry.isFile() &&
+        entry.name.endsWith('.ts') &&
+        !entry.name.endsWith('.spec.ts')
+        ? [path]
+        : [];
+    });
+
+  const domainSourceFiles = (): readonly string[] =>
+    PURE_DOMAIN_DIRECTORIES.flatMap((directory) =>
+      walk(join(__dirname, 'domain', directory)),
     );
-  };
+
+  const mapperSourceFiles = (): readonly string[] =>
+    walk(join(__dirname, 'domain', 'mappers'));
+
+  /** The module specifiers a file actually imports, rather than every substring in it. Scanning raw
+   * text made a *comment* naming a forbidden path fail the check — and, worse, would have let a
+   * comment be what made it pass. Both `from '…'` and a dynamic `import('…')` are read. */
+  const importedSpecifiers = (path: string): readonly string[] =>
+    [
+      ...readFileSync(path, 'utf8').matchAll(
+        /(?:from|import)\s*\(?\s*['"](?<specifier>[^'"]+)['"]/gu,
+      ),
+    ].map((match) => match.groups?.specifier ?? '');
+
+  const offendersImporting = (
+    paths: readonly string[],
+    specifier: string,
+  ): readonly string[] =>
+    paths.filter((path) =>
+      importedSpecifiers(path).some((imported) => imported.includes(specifier)),
+    );
 
   // The scan proves nothing unless it reaches this feature's own additions, so the two modules
   // T7 adds are named here — the one assertion in this block that is about placement rather than
@@ -189,12 +233,40 @@ describe('purchase-drafts domain independence (T7)', () => {
     ).toContain(relativePath);
   });
 
+  it.each(FORBIDDEN_MAPPER_SPECIFIERS)(
+    'imports nothing from %s anywhere under domain/mappers/',
+    (specifier) => {
+      const offenders = offendersImporting(mapperSourceFiles(), specifier);
+
+      expect(offenders).toEqual([]);
+    },
+  );
+
+  it('scans the mappers, which is the layer the response-shape regression hid in', () => {
+    expect(
+      mapperSourceFiles().map((path) =>
+        path.slice(join(__dirname, 'domain', 'mappers').length + 1),
+      ),
+    ).toEqual(expect.arrayContaining(['line-condition.mapper.ts']));
+  });
+
+  // The regression a specifier list cannot express, named outright: this mapper's job is the
+  // condition account a read serves, and it must produce the **feature-owned** form. It once
+  // imported `LineCondition`, `PurchaseDraftLineRejection` and `PreReceiptConformance` and returned
+  // them, which put the wire shape two layers inward; the contract shapes are assembled in
+  // `rest/purchase-draft-response.ts` now.
+  it('builds the condition account without reaching for a contract response shape', () => {
+    expect(
+      importedSpecifiers(
+        join(__dirname, 'domain/mappers/line-condition.mapper.ts'),
+      ),
+    ).not.toContain('@warehouser/contracts/purchase-drafts');
+  });
+
   it.each(FORBIDDEN_SPECIFIERS)(
     'imports nothing from %s anywhere under domain/',
     (specifier) => {
-      const offenders = domainSourceFiles().filter((path) =>
-        readFileSync(path, 'utf8').includes(specifier),
-      );
+      const offenders = offendersImporting(domainSourceFiles(), specifier);
 
       expect(offenders).toEqual([]);
     },
