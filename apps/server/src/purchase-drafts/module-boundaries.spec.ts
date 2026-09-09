@@ -272,3 +272,57 @@ describe('purchase-drafts domain independence (T7)', () => {
     },
   );
 });
+
+// The app-tier mirror of the repo-root gate `tests/delivery-addresses/identity-coverage.spec.mjs`
+// §"controllers call use cases only". That gate caught this module's controller reaching into
+// `domain/mappers/` only *after* the change had been committed and every `apps/server` command was
+// green, because the fix-up run's gate never invoked the root suite
+// (`_review/review-2026-09-09.md`, finding 1). Asserted here as well so `pnpm test` — the command a
+// server change is actually gated on — refuses the regression on its own, without depending on a
+// reviewer remembering to run a second suite from the repository root.
+//
+// server-architecture.md §REST assigns HTTP-input-to-use-case-input translation to the REST layer,
+// so the `to*` mappings a controller needs live under `rest/mappers/`; `domain/mappers/` keeps only
+// the mappings a *use case* calls. The rule is stated over the whole directory rather than over a
+// named file so a new controller inherits it.
+describe('purchase-drafts controller layer (review 2026-09-09)', () => {
+  const controllersDirectory = join(__dirname, 'rest', 'controllers');
+
+  const controllerSourceFiles = (): readonly string[] =>
+    readdirSync(controllersDirectory, { withFileTypes: true })
+      .filter(
+        (entry) =>
+          entry.isFile() &&
+          entry.name.endsWith('.controller.ts') &&
+          !entry.name.endsWith('.spec.ts'),
+      )
+      .map((entry) => join(controllersDirectory, entry.name));
+
+  const specifiersOf = (path: string): readonly string[] =>
+    [
+      ...readFileSync(path, 'utf8').matchAll(
+        /(?:from|import)\s*\(?\s*['"](?<specifier>[^'"]+)['"]/gu,
+      ),
+    ].map((match) => match.groups?.specifier ?? '');
+
+  it('scans the controllers, so the rule below cannot pass vacuously', () => {
+    expect(
+      controllerSourceFiles().map((path) =>
+        path.slice(controllersDirectory.length + 1),
+      ),
+    ).toEqual(expect.arrayContaining(['purchase-drafts.controller.ts']));
+  });
+
+  it('imports no purchase-drafts domain code from any controller', () => {
+    const offenders = controllerSourceFiles().flatMap((path) =>
+      specifiersOf(path)
+        .filter((specifier) => specifier.includes('purchase-drafts/domain/'))
+        .map(
+          (specifier) =>
+            `${path.slice(controllersDirectory.length + 1)} -> ${specifier}`,
+        ),
+    );
+
+    expect(offenders).toEqual([]);
+  });
+});

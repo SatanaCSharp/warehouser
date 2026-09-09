@@ -1,4 +1,3 @@
-import type { PurchaseDraftLineArrival } from '@warehouser/contracts/purchase-drafts';
 import { isEmpty } from 'lodash';
 import type { EndingConditionSubmission } from 'purchase-drafts/domain/services/arrival-inspection.service';
 import type {
@@ -57,33 +56,4 @@ export const buildEndingConditionInput = (
             ? null
             : submission.preReceiptConformanceNote,
         rejections: submission.rejections,
-      };
-
-// openapi.yaml `PurchaseDraftLineArrival` -> the shapes both ending commands declare, narrowed
-// **once**. Moved out of `PurchaseDraftsController`, where a `to*` mapping does not belong
-// (code-review-back-end-2026-09-09.md); typed off the contract rather than off
-// `PurchaseDraftLineArrivalDto` so nothing under `domain/` imports a `rest/dtos/` class, which
-// server-architecture.md §"Use cases" forbids outright.
-//
-// `description ?? null` is the one gap between the wire shape — `proseSchema` optional — and
-// `RecordLineEndingRejectionInput`'s own `string | null`; every other field passes through unchanged.
-export const toEndingRejectionInputs = (
-  rejections: PurchaseDraftLineArrival['rejections'],
-): readonly RecordLineEndingRejectionInput[] | undefined =>
-  rejections?.map((rejection) => ({
-    rejectionReasonId: rejection.rejectionReasonId,
-    quantity: rejection.quantity,
-    source: rejection.source,
-    description: rejection.description ?? null,
-  }));
-
-export const toEndingPreReceiptConformanceInput = (
-  preReceiptConformance: PurchaseDraftLineArrival['preReceiptConformance'],
-): EndingPreReceiptConformanceInput | null | undefined =>
-  preReceiptConformance === undefined
-    ? undefined
-    : {
-        verdict: preReceiptConformance.verdict,
-        note:
-          'note' in preReceiptConformance ? preReceiptConformance.note : null,
       };

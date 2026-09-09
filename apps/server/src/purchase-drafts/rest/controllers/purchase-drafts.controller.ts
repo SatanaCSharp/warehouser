@@ -21,11 +21,6 @@ import type {
 import { PermissionId } from '@warehouser/shared-types/enums';
 import { assert } from '@warehouser/utils/asserts';
 import {
-  toEndingPreReceiptConformanceInput,
-  toEndingRejectionInputs,
-} from 'purchase-drafts/domain/mappers/purchase-draft-line-ending.mapper';
-import { toReviseLineInput } from 'purchase-drafts/domain/mappers/purchase-draft-line-revision.mapper';
-import {
   PurchaseDraftClosureDto,
   PurchaseDraftCreateDto,
   PurchaseDraftLineArrivalDto,
@@ -38,6 +33,11 @@ import {
   PurchaseDraftReviseDto,
   RejectionAmendDto,
 } from 'purchase-drafts/rest/dtos/purchase-draft-mutation.dto';
+import {
+  toEndingPreReceiptConformanceInput,
+  toEndingRejectionInputs,
+  toReviseLineInput,
+} from 'purchase-drafts/rest/mappers/purchase-draft-request.mapper';
 import {
   toDetailResponse,
   toSummaryResponse,
