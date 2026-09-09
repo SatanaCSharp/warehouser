@@ -515,7 +515,12 @@ describe('readiness removal — the surviving error term and the scope bound (CR
    *    The other seven CR-RG-06 components express the same state as
    *    `isPending`, asserted separately below.
    * 3. **`mutation-feedback.middleware.ts`** reads the flag off the mutation
-   *    lifecycle it subscribes to.
+   *    lifecycle it subscribes to, and names it again as the toast option that
+   *    holds the pending toast open. `shared/alerts/toast.ts` is the other
+   *    half of that one site: it is where the application's toast queue and
+   *    its option type live, so `isLoading` appears there as HeroUI's own
+   *    field name for a toast that shows a spinner — a property of the toast,
+   *    not a readiness state any surface renders.
    *
    * 2. **`router.state.isLoading`** is TanStack Router's own field and is
    *    named only from `modules/home/route.spec.tsx`, outside this scan's
@@ -524,6 +529,7 @@ describe('readiness removal — the surviving error term and the scope bound (CR
    */
   const ALLOWED_READINESS_SITES: Record<string, string[]> = {
     'modules/auth/sign-out/components/SignOutButton.tsx': ['isLoading'],
+    'shared/alerts/toast.ts': ['isLoading'],
     'store/middleware/mutation-feedback.middleware.ts': ['isLoading'],
   };
 

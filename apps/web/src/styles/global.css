@@ -120,3 +120,29 @@ body {
 [aria-disabled='true'] .label {
   opacity: 1;
 }
+
+/*
+ * Toasts sit above every overlay.
+ *
+ * `@heroui/styles` gives the toast region and every overlay backdrop — modal,
+ * drawer — the same `z-50`, so which one covered the other was decided by
+ * nothing but the order the two portals happened to be appended to `<body>`:
+ * whichever mounted last won. A member who opened a dialog while a toast was
+ * on screen could therefore have the toast painted behind the dialog's
+ * backdrop, and the same code would order them the other way round on the next
+ * interaction.
+ *
+ * A toast is the only surface that reports the outcome of something the member
+ * already did, so it is the one that must never be covered — including by the
+ * dialog they opened while it was up. One rule above the shared overlay layer
+ * settles it for every placement and every overlay, instead of each pairing
+ * being resolved by mount order.
+ *
+ * It sits outside `@layer`, so it wins over the layered `@heroui/styles`
+ * declaration regardless of selector specificity. The region stays
+ * `pointer-events: none` — it is painted over the backdrop, it does not take
+ * the interaction away from it.
+ */
+.toast-region {
+  z-index: 60;
+}
