@@ -396,6 +396,30 @@ function describeT19RefusalCodes(): void {
     expect(alert).toHaveTextContent(/nothing.*(?:recorded|saved)/iu);
   });
 
+  // review-2026-09-09, finding 7. The violation carries `deliveryMode`,
+  // `submittedSource` and `requiredSource` precisely so the sentence can state
+  // both directions (AC-25 and its mirror, sad.md §6.2). The renderer passed
+  // only `rejectionReasonId`, so one hard-coded string — "these goods came to
+  // your own dock … needs the inspected source" — answered every mismatch,
+  // and on a Direct to Customer line it is simply false: there the required
+  // Source is the customer's report, not the inspection.
+  it('names the customer report as the required source on a directly delivered line (AC-25 mirror)', () => {
+    const alert = renderViolations(CONDITION_SPLIT, [
+      {
+        rule: 'source_mismatch',
+        rejectionReasonId: 'quality_defect',
+        deliveryMode: 'direct_to_customer',
+        submittedSource: 'inspected',
+        requiredSource: 'customer_reported',
+      },
+    ]);
+
+    expect(alert).toHaveTextContent(/customer/iu);
+    // The own-dock sentence must not be what a direct line is told.
+    expect(alert).not.toHaveTextContent(/your own dock/iu);
+    expect(alert).not.toHaveTextContent(/needs the inspected source/iu);
+  });
+
   it('names the contradiction and the uninstructed line together, in different words (AC-16, AC-17a)', () => {
     const alert = renderViolations(CONFORMANCE, [
       {

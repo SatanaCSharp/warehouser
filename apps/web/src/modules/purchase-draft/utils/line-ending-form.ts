@@ -182,7 +182,17 @@ export const conditionSplitViolationSchema = z.discriminatedUnion('rule', [
   rejectionReasonRuleSchema.extend({
     rule: z.literal('duplicate_rejection_reason'),
   }),
-  rejectionReasonRuleSchema.extend({ rule: z.literal('source_mismatch') }),
+  // AC-25 and its mirror — the server states both directions (`deliveryMode`,
+  // `submittedSource`, `requiredSource`) so the sentence can name which of the
+  // member's two statements to change. Parsed here rather than dropped, which
+  // is what left one hard-coded own-dock sentence answering both directions
+  // (review-2026-09-09).
+  rejectionReasonRuleSchema.extend({
+    rule: z.literal('source_mismatch'),
+    deliveryMode: z.enum(['via_warehouse', 'direct_to_customer']),
+    submittedSource: z.enum(['inspected', 'customer_reported']),
+    requiredSource: z.enum(['inspected', 'customer_reported']),
+  }),
   // The server refuses refusals stated without a Conformance verdict, because a condition is only
   // readable beside one (server code-review-back-end-2026-09-09.md, blocking finding 4). Carried
   // here so the sentence explaining it survives the drop-unknown discipline above.

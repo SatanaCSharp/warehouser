@@ -265,6 +265,7 @@
           "descriptionRequired": "\"{{reason}}\" always needs a description — say what was wrong, in your own words.",
           "duplicateReason": "\"{{reason}}\" is refused twice on this line. One refusal per reason — combine the quantities into one.",
           "sourceMismatch": "These goods came to your own dock, so a refusal for \"{{reason}}\" needs the inspected source, not the customer's report.",
+          "sourceMismatchCustomerReported": "These goods went straight to the customer, so a refusal for \"{{reason}}\" carries the customer's report, not an inspection at your dock.",
           "verdictRequired": "You refused {{rejected}}, so this line also needs a judgement of the supplier's instruction — a refusal is only recorded alongside one. Judge the instruction, or withdraw the refusal."
         },
         "conformance": {

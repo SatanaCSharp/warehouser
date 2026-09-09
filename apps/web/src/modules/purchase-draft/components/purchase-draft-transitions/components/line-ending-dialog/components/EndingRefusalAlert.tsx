@@ -99,6 +99,21 @@ type Translate = (key: string, options?: Record<string, unknown>) => string;
 /** The group-separated quantity formatter every other figure on this alert renders through. */
 type FormatQuantity = (value: number) => string;
 
+// The Source a line's Delivery Mode requires, mapped to the sentence that names
+// it. Declared as a total `Record` over the Source union so a Source added to
+// the contract cannot reach the member as a missing key.
+const SOURCE_MISMATCH_KEY: Record<
+  Extract<
+    ConditionSplitViolation,
+    { rule: 'source_mismatch' }
+  >['requiredSource'],
+  string
+> = {
+  inspected: 'transitions.lineEnding.refusal.conditionSplit.sourceMismatch',
+  customer_reported:
+    'transitions.lineEnding.refusal.conditionSplit.sourceMismatchCustomerReported',
+};
+
 // T19 — the Condition Split judged against the locked line and the catalogue
 // (AC-02, AC-06, AC-07, AC-09, AC-25). No violation ever carries a customer
 // name or the line's own prose (contracts/openapi.yaml `InvalidLineEndingConditionInput`),
@@ -132,8 +147,17 @@ const conditionSplitTextByRule = (
     t('transitions.lineEnding.refusal.conditionSplit.duplicateReason', {
       reason: violation.rejectionReasonId,
     }),
+  // Which sentence depends on which Source the line's Delivery Mode requires:
+  // goods that came to our own dock carry the inspection, goods that went
+  // straight to the customer carry the customer's report (AC-25 and its
+  // mirror). One sentence for both directions told a Direct to Customer line
+  // the opposite of the truth (review-2026-09-09).
+  //
+  // A lookup keyed by the required Source rather than a chain, so a third
+  // Source fails to compile until it is answered (`writing-web-components.md`
+  // §6, and the totality the 2026-09-08 review required of the verdict map).
   source_mismatch: (violation) =>
-    t('transitions.lineEnding.refusal.conditionSplit.sourceMismatch', {
+    t(SOURCE_MISMATCH_KEY[violation.requiredSource], {
       reason: violation.rejectionReasonId,
     }),
   verdict_required_with_rejections: (violation) =>
