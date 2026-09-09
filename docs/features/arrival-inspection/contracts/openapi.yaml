@@ -1065,8 +1065,10 @@ components:
           line and the catalogue: refusals totalling more than what was presented (AC-02), two
           refusals carrying the same Reason (AC-09), a Reason the catalogue does not offer — which
           **names the Reasons it does** (AC-06), a Reason the catalogue marks `requires_description`
-          submitted without prose (AC-07), or a Source disagreeing with how the line's goods travelled
-          (AC-25).
+          submitted without prose (AC-07), a Source disagreeing with how the line's goods travelled
+          (AC-25), or a refusal stated without a Pre-receipt Conformance verdict (AC-01) — a refusal
+          is only readable beside one, so an ending that refuses any quantity states a judgement
+          while one that refuses nothing need not.
         - `purchase_drafts.pre_receipt_conformance_invalid` — the Conformance judged against the same
           locked line: `met` beside a refusal for `packaging_not_as_instructed` or
           `value_adding_note_not_applied` (AC-16), `not_applicable` on a line frozen carrying either
@@ -1081,7 +1083,7 @@ components:
           schema: { $ref: "#/components/schemas/Error" }
           examples:
             conditionSplitViolations:
-              summary: AC-02, AC-06, AC-07, AC-09, AC-25 — every violation collected in one pass
+              summary: AC-01, AC-02, AC-06, AC-07, AC-09, AC-25 — every violation collected in one pass
               value:
                 code: "purchase_drafts.condition_split_invalid"
                 message: "This ending cannot be recorded as submitted."
@@ -1115,6 +1117,8 @@ components:
                       deliveryMode: "via_warehouse"
                       submittedSource: "customer_reported"
                       requiredSource: "inspected"
+                    - rule: "verdict_required_with_rejections"
+                      rejectedQuantity: 118
             conformanceViolations:
               summary: AC-16, AC-17a — the verdict contradicts the refusals and the frozen instruction
               value:

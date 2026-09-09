@@ -466,8 +466,9 @@ describe('purchase-draft rejections HTTP contract (T13)', () => {
               source: 'inspected',
             },
           ],
-          // Incidental to the allocation bound this case is about; a refusal requires a verdict
-          // beside it (code-review-back-end-2026-09-09.md, blocking finding 4).
+          // Not incidental — AC-01: an ending that refuses any quantity states a
+          // Pre-receipt Conformance judgement, because a refusal is only readable
+          // beside one (spec.md §5, named there since the 2026-09-09 review).
           preReceiptConformance: { verdict: 'not_applicable' },
           allocations: [
             { purchaseDraftLineLinkId: linkId, allocatedQuantity: 100 },

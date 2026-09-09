@@ -539,8 +539,9 @@ describe('T10 — the condition half of a line ending', () => {
           rejections: [
             validRejection({ rejectionReasonId: 'not_a_real_reason' }),
           ],
-          // Incidental to what this case is about; a refusal requires a verdict beside it
-          // (code-review-back-end-2026-09-09.md, blocking finding 4). The locked line carries no
+          // Not incidental — AC-01: an ending that refuses any quantity states a
+          // Pre-receipt Conformance judgement, because a refusal is only readable beside
+          // one. Named in spec.md §5 since the 2026-09-09 review. The locked line carries no
           // frozen instruction, so Not applicable is the verdict it admits.
           preReceiptConformance: { verdict: 'not_applicable', note: null },
         }),
@@ -661,8 +662,9 @@ describe('T10 — the condition half of a line ending (nothing received, accepte
       const input = conditionInput({
         receivedQuantity: 100,
         rejections: [validRejection({ quantity: 8 })],
-        // Incidental to the accepted-figure bound this case is about; a refusal requires a verdict
-        // beside it (code-review-back-end-2026-09-09.md, blocking finding 4).
+        // Not incidental — AC-01: an ending that refuses any quantity states a
+        // Pre-receipt Conformance judgement, because a refusal is only readable
+        // beside one (spec.md §5, named there since the 2026-09-09 review).
         preReceiptConformance: { verdict: 'not_applicable', note: null },
         allocations: [
           {
@@ -717,8 +719,8 @@ describe('T10 — the condition half of a line ending (direct-delivery Source mi
         rejections: [
           validRejection({ source: 'customer_reported', quantity: 6 }),
         ],
-        // Incidental to the Source mirror this case is about; a refusal requires a verdict beside it
-        // (code-review-back-end-2026-09-09.md, blocking finding 4).
+        // Not incidental — AC-01: an ending that refuses any quantity states a
+        // Pre-receipt Conformance judgement (spec.md §5, since the 2026-09-09 review).
         preReceiptConformance: {
           verdict: 'not_applicable' as const,
           note: null,

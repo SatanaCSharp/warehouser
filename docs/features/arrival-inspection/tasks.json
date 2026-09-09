@@ -283,7 +283,7 @@
       "title": "Add the amend-refusal dialog, opened from the read row under REJECTIONS:UPDATE",
       "layer": "ui",
       "deps": ["T17"],
-      "acs": ["AC-18", "AC-18a", "AC-19", "AC-20"],
+      "acs": ["AC-18", "AC-18a", "AC-18b", "AC-19", "AC-20"],
       "dod": "The dialog is a FormModalDialog opened through useActionDialog and ActionDialogHost with the closed-line surface's own Kind union, taking no onClose and keeping no isOpen; it validates a description and a Disposition through the generated mutation hook; the row menu offers nothing without REJECTIONS:UPDATE and Undecided is absent from the list — not shown disabled — once a Disposition is decided; the kebab carries an accessible name identifying its refusal; the amendment refreshes the closed draft that carries it through the RTK Query tag; en/uk keys are added with the locale baseline regenerated; frame W6TARi cell Ue4xn renders as approved at both viewports.",
       "files_hint": [
         "apps/web/src/modules/purchase-draft/components/",

@@ -460,8 +460,9 @@ describe('assertConditionSplit — the shared Condition Split assertion (AC-02, 
             refusal('damaged_in_transit', { quantity: 5 }),
             refusal('unfit_other', { quantity: 3 }),
           ],
-          // Incidental to the bound this case is about, but a refusal now requires a verdict beside
-          // it (code-review-back-end-2026-09-09.md, blocking finding 4).
+          // Not incidental — AC-01: an ending that refuses any quantity states a
+          // Pre-receipt Conformance judgement, because a refusal is only readable
+          // beside one (spec.md §5, named there since the 2026-09-09 review).
           preReceiptConformance: PreReceiptConformanceVerdict.NotApplicable,
         }),
       ),
@@ -825,8 +826,9 @@ describe('ArrivalInspectionService.assertEndingCondition — the payload shape o
               description: 'crushed corner',
             }),
           ],
-          // Incidental to the payload shape this case is about; a refusal requires a verdict beside
-          // it (code-review-back-end-2026-09-09.md, blocking finding 4).
+          // Not incidental — AC-01: an ending that refuses any quantity states a
+          // Pre-receipt Conformance judgement, because a refusal is only readable
+          // beside one (spec.md §5, named there since the 2026-09-09 review).
           preReceiptConformance: PreReceiptConformanceVerdict.NotApplicable,
         }),
       ),

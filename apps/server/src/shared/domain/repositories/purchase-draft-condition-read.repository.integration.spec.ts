@@ -752,7 +752,17 @@ const registerCatalogueExtensionTests = (): void => {
   // AC-23 — the Packaging Type shown is the one **frozen on the line** when it was ordered,
   // whatever the catalogue reads now. The line stores the identifier, so extending the catalogue
   // and reworking a label reaches no recorded line.
-  it('reads the Packaging Type frozen on the line after the Packaging Type catalogue is extended and reworded', async () => {
+  // review-2026-09-09, finding 12 — the name said "and reworded" but the
+  // assertion only reads `packagingTypeId`, which a reword cannot move. The
+  // label a member actually reads is resolved client-side against the live
+  // catalogue (`ClosedPurchaseDraftLine.tsx`), so a reword *would* change what
+  // is shown and nothing here proves otherwise. AC-23 names only extension —
+  // "read after the catalogue has been extended with further types" — which is
+  // what this case genuinely proves; the reword is left in the fixture as
+  // noise the read is indifferent to, not as a claim. Packaging-type rewording
+  // is outside AC-23's scope and, unlike the Rejection Reason catalogue, has
+  // no extend-only gate.
+  it('reads the Packaging Type frozen on the line after the Packaging Type catalogue is extended', async () => {
     const { warehouseId, draftId, refusedLineId } =
       await buildConditionFixture();
 
