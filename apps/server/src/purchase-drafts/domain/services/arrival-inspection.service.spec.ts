@@ -188,13 +188,16 @@ describe('ArrivalInspectionService — the catalogue assertion (AC-06, AC-07)', 
   it('reads the catalogue once per ending however many Reasons the submission names', async () => {
     const repository = catalogueRepositoryDouble();
 
-    await serviceWith(repository).assertStatedRejectionReasons(
+    await serviceWith(repository).assertEndingCondition(
+      actorHolding(PermissionId.REJECTIONS_CREATE),
+      lockedLine(),
       submission({
         rejections: [
           refusal('damaged_in_transit'),
           refusal('unfit_other'),
           refusal('soaked_through', { description: 'wet through the pallet' }),
         ],
+        preReceiptConformance: PreReceiptConformanceVerdict.NotApplicable,
       }),
     );
 
@@ -206,10 +209,13 @@ describe('ArrivalInspectionService — the catalogue assertion (AC-06, AC-07)', 
   // catalogue is data the surface cannot hard-code.
   it('refuses an unknown Reason, naming every Reason the catalogue offers', async () => {
     const error = await refusalFromAwaiting(() =>
-      serviceWith(catalogueRepositoryDouble()).assertStatedRejectionReasons(
+      serviceWith(catalogueRepositoryDouble()).assertEndingCondition(
+        actorHolding(PermissionId.REJECTIONS_CREATE),
+        lockedLine(),
         submission({
           receivedQuantity: 100,
           rejections: [refusal('crushed_by_forklift', { quantity: 8 })],
+          preReceiptConformance: PreReceiptConformanceVerdict.NotApplicable,
         }),
       ),
     );
@@ -230,11 +236,19 @@ describe('ArrivalInspectionService — the catalogue assertion (AC-06, AC-07)', 
   // AC-07 — the requirement is the catalogue's flag. `soaked_through` carries it in the fabricated
   // catalogue and `unfit_other` does not, so an implementation that refuses by identifier fails
   // this case and the next one together.
+  //
+  // The absence is stated as `null` rather than as whitespace: read through the public method, a
+  // whitespace description is refused by `assertRejectionShapes` under
+  // `purchase_drafts.invalid_input` before the catalogue is consulted at all, so whitespace could
+  // never reach this rule in production either.
   it('refuses a Reason the catalogue flags as requiring prose when none was written', async () => {
     const error = await refusalFromAwaiting(() =>
-      serviceWith(catalogueRepositoryDouble()).assertStatedRejectionReasons(
+      serviceWith(catalogueRepositoryDouble()).assertEndingCondition(
+        actorHolding(PermissionId.REJECTIONS_CREATE),
+        lockedLine(),
         submission({
-          rejections: [refusal('soaked_through', { description: '   ' })],
+          rejections: [refusal('soaked_through', { description: null })],
+          preReceiptConformance: PreReceiptConformanceVerdict.NotApplicable,
         }),
       ),
     );
@@ -250,12 +264,15 @@ describe('ArrivalInspectionService — the catalogue assertion (AC-06, AC-07)', 
     const repository = catalogueRepositoryDouble();
 
     await expect(
-      serviceWith(repository).assertStatedRejectionReasons(
+      serviceWith(repository).assertEndingCondition(
+        actorHolding(PermissionId.REJECTIONS_CREATE),
+        lockedLine(),
         submission({
           rejections: [
             refusal('unfit_other', { description: null }),
             refusal('damaged_in_transit', { description: null }),
           ],
+          preReceiptConformance: PreReceiptConformanceVerdict.NotApplicable,
         }),
       ),
     ).resolves.toBeUndefined();
@@ -265,12 +282,15 @@ describe('ArrivalInspectionService — the catalogue assertion (AC-06, AC-07)', 
   // different refusals are reported together, so the member corrects both at once.
   it('collects an unknown Reason and a missing description in one pass before refusing', async () => {
     const error = await refusalFromAwaiting(() =>
-      serviceWith(catalogueRepositoryDouble()).assertStatedRejectionReasons(
+      serviceWith(catalogueRepositoryDouble()).assertEndingCondition(
+        actorHolding(PermissionId.REJECTIONS_CREATE),
+        lockedLine(),
         submission({
           rejections: [
             refusal('crushed_by_forklift'),
             refusal('soaked_through', { description: null }),
           ],
+          preReceiptConformance: PreReceiptConformanceVerdict.NotApplicable,
         }),
       ),
     );
@@ -972,21 +992,23 @@ describe('the shape of the shared rules', () => {
     },
   );
 
-  // T10 (post-review) — the class now owns two public methods, not one: the catalogue read
-  // (needing the injected repository) and `assertEndingCondition` (needing that same read, reached
-  // through this service rather than threaded through a parameter — server-architecture.md
-  // §117-120). Anything else on it would be a rule that needs neither.
-  it('keeps the catalogue assertion and the condition orchestration as the service’s only public methods', () => {
-    expect(
-      Object.getOwnPropertyNames(ArrivalInspectionService.prototype).filter(
-        (name) => name !== 'constructor',
-      ),
-    ).toEqual(
-      expect.arrayContaining([
-        'assertStatedRejectionReasons',
-        'assertEndingCondition',
-      ]),
+  // The class owns **one** public method. `assertStatedRejectionReasons` is private: its only
+  // caller is its sibling `assertEndingCondition`, and server-architecture.md §Services is explicit
+  // that "a method called by one command belongs in that command" — a public method with no caller
+  // outside the class is surface the extraction does not need
+  // (code-review-back-end-2026-09-09.md). TypeScript's `private` is compile-time only, so the
+  // runtime list below still sees it; the assertion is over what the class *declares*, read from
+  // the source, which is where the modifier lives.
+  it('keeps the condition orchestration as the service’s only public method', () => {
+    const declaration = readFileSync(
+      join(__dirname, 'arrival-inspection.service.ts'),
+      'utf8',
     );
+
+    expect(declaration).toMatch(
+      /private async assertStatedRejectionReasons\(/u,
+    );
+    expect(declaration).toMatch(/\n {2}async assertEndingCondition\(/u);
     expect(
       Object.getOwnPropertyNames(ArrivalInspectionService.prototype).filter(
         (name) => name !== 'constructor',

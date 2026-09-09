@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { PermissionId } from '@warehouser/shared-types/enums';
 import { assert } from '@warehouser/utils/asserts';
 import { isEmpty, keyBy, map } from 'lodash';
 import type {
@@ -51,6 +50,7 @@ import {
   sourceMatchesDeliveryMode,
   totalRefusedQuantity,
 } from 'purchase-drafts/domain/predicates/purchase-draft-condition.predicates';
+import { raisesRejections } from 'purchase-drafts/domain/predicates/rejection-cause-access.predicates';
 import {
   PreReceiptConformanceVerdict,
   requiredSourceFor,
@@ -261,7 +261,7 @@ export const assertRejectionCapability = (
   }
 
   assert(
-    actor.observedPermissionIds.includes(PermissionId.REJECTIONS_CREATE),
+    raisesRejections(actor.observedPermissionIds),
     purchaseDraftRejectionCapabilityRequiredError(),
   );
 };
@@ -385,7 +385,7 @@ export class ArrivalInspectionService {
   // however many Reasons the submission names (data-model.md § "Repository boundaries"): the whole
   // catalogue answers both rules at once, because AC-06's refusal has to name what is offered and
   // AC-07's requirement is each offered entry's own flag.
-  async assertStatedRejectionReasons(
+  private async assertStatedRejectionReasons(
     submission: EndingConditionSubmission,
   ): Promise<void> {
     if (isEmpty(submission.rejections)) {
