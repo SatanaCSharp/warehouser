@@ -77,6 +77,18 @@ export const AmendRefusalDialog = ({
   // does not require one; the field still opens with what is there, and an
   // absent one is blank rather than a literal "null".
   const originalDescription = rejection.description ?? '';
+  // Whether prose is required at all is decided by whether the Rejection was
+  // recorded with any (review-2026-09-09, finding 4). A description is optional
+  // on every Reason the catalogue does not flag, so requiring one here blocked
+  // AC-18's own Given — "a recorded Rejection whose disposition is still
+  // undecided" — for any refusal recorded without prose: the member had to
+  // invent a description to record "held for return".
+  //
+  // Where prose *was* recorded the rule stands, because
+  // `rejectionAmendSchema.description` is optional rather than nullable:
+  // "clearing is not offered", so blank after trimming is a refusal, not a
+  // clear, and the dialog must not offer a way to send one.
+  const isDescriptionRequired = originalDescription !== '';
   const form = useForm<AmendRefusalForm>({
     defaultValues: {
       description: originalDescription,
@@ -132,16 +144,19 @@ export const AmendRefusalDialog = ({
       onSubmit={onSave}
     >
       <FormTextAreaField
-        isRequired
+        isRequired={isDescriptionRequired}
         validationBehavior="aria"
         isDisabled={isSubmitting}
         isInvalid={Boolean(errors.description)}
         errorMessage={errors.description?.message}
         defaultValue={originalDescription}
         label={t('closedLine.amendDialog.descriptionLabel')}
-        {...register('description', {
-          required: t('closedLine.amendDialog.descriptionRequired'),
-        })}
+        {...register(
+          'description',
+          isDescriptionRequired
+            ? { required: t('closedLine.amendDialog.descriptionRequired') }
+            : {},
+        )}
       />
       <Controller
         control={control}

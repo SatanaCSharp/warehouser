@@ -210,6 +210,65 @@ describe('AmendRefusalDialog — a correction between two decided Dispositions i
   });
 });
 
+// review-2026-09-09, finding 4. AC-18's Given is "a recorded Rejection whose
+// disposition is still undecided" — it says nothing about a description, and a
+// description is optional on every Reason the catalogue does not flag
+// (`rejectionCreateSchema.description` is `.optional()`), so
+// `line-ending-form.ts` stores an omitted one as NULL. The dialog rendered the
+// field `isRequired` with a react-hook-form `required` rule seeded from
+// `rejection.description ?? ''`, so on such a Rejection `handleSubmit` never
+// ran and the member had to invent prose to record "held for return". Every
+// fixture in this file set a non-null description, which is why nothing caught
+// it.
+describe('AmendRefusalDialog — a Rejection recorded without prose can still be decided (AC-18)', () => {
+  it('submits a Disposition alone when the Rejection carries no description', async () => {
+    const user = userEvent.setup();
+    const { onClose, onSave } = renderDialog(
+      rejection({ disposition: 'undecided', description: null }),
+    );
+
+    await selectHeroOption(
+      user,
+      screen.getByRole('button', { name: /disposition/iu }),
+      'Held for return',
+    );
+    await user.click(screen.getByRole('button', { name: /save/iu }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    const [input] = onSave.mock.calls[0] as [RejectionAmend];
+    expect(input).toStrictEqual({ disposition: 'held_for_return' });
+    expect(input).not.toHaveProperty('description');
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  // The other half of the rule: where prose *was* recorded, blanking it is
+  // still refused. `rejectionAmendSchema.description` is `.optional()` and not
+  // nullable precisely because "clearing is not offered" — blank after
+  // trimming is a refusal, not a clear — so the dialog must not offer a way to
+  // send one.
+  it('still refuses a blank description on a Rejection that was recorded with one', async () => {
+    const user = userEvent.setup();
+    const { onSave } = renderDialog(
+      rejection({
+        disposition: 'undecided',
+        description: 'Two pallets were crushed in transit.',
+      }),
+    );
+
+    await user.clear(
+      screen.getByLabelText(/description/iu, { selector: 'textarea' }),
+    );
+    await user.click(screen.getByRole('button', { name: /save/iu }));
+
+    await waitFor(() =>
+      expect(
+        screen.getByLabelText(/description/iu, { selector: 'textarea' }),
+      ).toBeInvalid(),
+    );
+    expect(onSave).not.toHaveBeenCalled();
+  });
+});
+
 describe('AmendRefusalDialog — AC-18a: once decided, Undecided is absent from the list, never shown disabled', () => {
   it('offers Undecided while the Rejection is still undecided', async () => {
     const user = userEvent.setup();
