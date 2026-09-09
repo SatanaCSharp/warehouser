@@ -15,13 +15,16 @@ import {
 } from '@nestjs/common';
 import type {
   PurchaseDraftDetail,
-  PurchaseDraftLineUpdate,
   PurchaseDraftSummary,
   RejectionAmendment,
 } from '@warehouser/contracts/purchase-drafts';
 import { PermissionId } from '@warehouser/shared-types/enums';
 import { assert } from '@warehouser/utils/asserts';
-import type { EndingPreReceiptConformanceInput } from 'purchase-drafts/domain/mappers/purchase-draft-line-ending.mapper';
+import {
+  toEndingPreReceiptConformanceInput,
+  toEndingRejectionInputs,
+} from 'purchase-drafts/domain/mappers/purchase-draft-line-ending.mapper';
+import { toReviseLineInput } from 'purchase-drafts/domain/mappers/purchase-draft-line-revision.mapper';
 import {
   PurchaseDraftClosureDto,
   PurchaseDraftCreateDto,
@@ -53,7 +56,6 @@ import { RecordPurchaseDraftLineDeliveryCommand } from 'purchase-drafts/usecases
 import { RemovePurchaseDraftLineCommand } from 'purchase-drafts/usecases/commands/remove-purchase-draft-line.command';
 import { RemovePurchaseDraftLineLinkCommand } from 'purchase-drafts/usecases/commands/remove-purchase-draft-line-link.command';
 import { RevisePurchaseDraftCommand } from 'purchase-drafts/usecases/commands/revise-purchase-draft.command';
-import type { ReviseLineInput } from 'purchase-drafts/usecases/commands/revise-purchase-draft-line.command';
 import { RevisePurchaseDraftLineCommand } from 'purchase-drafts/usecases/commands/revise-purchase-draft-line.command';
 import { RevisePurchaseDraftLineLinkCommand } from 'purchase-drafts/usecases/commands/revise-purchase-draft-line-link.command';
 import { ListPurchaseDraftsQuery } from 'purchase-drafts/usecases/queries/list-purchase-drafts.query';
@@ -62,65 +64,10 @@ import type { WarehouseAccessRequest } from 'shared/access/access-request';
 import { ArchivedTolerantRead } from 'shared/access/archived-tolerant-read.decorator';
 import { ObservedPermission } from 'shared/decorators/observed-permission.decorator';
 import { RequiredPermission } from 'shared/decorators/required-permission.decorator';
-import type { RecordLineEndingRejectionInput } from 'shared/domain/repositories/arrival-confirmation.repository';
 import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
 import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
 import { WriteRateLimitGuard } from 'shared/guards/write-rate-limit.guard';
 import { WriteRateLimited } from 'shared/guards/write-rate-limited.decorator';
-
-// T13 — the ending payload's `rejections`/`preReceiptConformance` narrowed **once**, at the REST
-// boundary, to the shapes both ending commands now declare (T13 requirement: re-narrow both once the
-// REST DTOs exist). `description ?? null` is the one gap between the wire shape — `proseSchema`
-// optional — and `RecordLineEndingRejectionInput`'s own `string | null`; every other field passes
-// through unchanged.
-const toEndingRejectionInputs = (
-  rejections: PurchaseDraftLineArrivalDto['rejections'],
-): readonly RecordLineEndingRejectionInput[] | undefined =>
-  rejections?.map((rejection) => ({
-    rejectionReasonId: rejection.rejectionReasonId,
-    quantity: rejection.quantity,
-    source: rejection.source,
-    description: rejection.description ?? null,
-  }));
-
-const toEndingPreReceiptConformanceInput = (
-  preReceiptConformance: PurchaseDraftLineArrivalDto['preReceiptConformance'],
-): EndingPreReceiptConformanceInput | null | undefined =>
-  preReceiptConformance === undefined
-    ? undefined
-    : {
-        verdict: preReceiptConformance.verdict,
-        note:
-          'note' in preReceiptConformance ? preReceiptConformance.note : null,
-      };
-
-// openapi.yaml `PurchaseDraftLineUpdate` -> `ReviseLineInput` — the payload's two flat destination
-// properties folded into the **one** the use-case boundary takes (T15). The contract's
-// `dependentRequired` is expressed there as a type, so "an address with no mode" is unrepresentable
-// above this line rather than a case every caller has to remember; the payload schema has already
-// refused it at 400 in any event.
-//
-// Structural only: the two flat payload fields fold into one `destination`, and a payload that
-// states no `deliveryMode` states no destination at all, so the line's own is left exactly as it
-// was. Clearing the address when the mode is `via_warehouse` (AC-13, openapi.yaml "setting
-// `via_warehouse` clears it") is the *command's* rule and is decided by `statedDestination` inside
-// its transaction — a controller holds no business rule
-// (adding-a-server-module.md §4, §"Common failures").
-const toReviseLineInput = (
-  input: PurchaseDraftLineUpdate,
-): ReviseLineInput => ({
-  itemId: input.itemId,
-  orderedQuantity: input.orderedQuantity,
-  packagingTypeId: input.packagingTypeId,
-  valueAddingNote: input.valueAddingNote,
-  destination:
-    input.deliveryMode === undefined
-      ? undefined
-      : {
-          deliveryMode: input.deliveryMode,
-          customerDeliveryAddressId: input.customerDeliveryAddressId ?? null,
-        },
-});
 
 /** Every route whose subject is a Purchase Draft — its assembly, its freeze, its Drift Signals,
  * Arrival Confirmation, closure and discard (contracts/openapi.yaml `/purchase-drafts*`, sad.md

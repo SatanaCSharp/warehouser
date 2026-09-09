@@ -24,13 +24,11 @@ export class RejectionReasonsController {
   @RequiredPermission(PermissionId.PURCHASE_DRAFTS_WATCH)
   @ArchivedTolerantRead()
   @UseGuards(SessionAuthGuard, WarehouseAccessGuard)
-  async listRejectionReasons(): Promise<RejectionReason[]> {
-    const catalogue = await this.listRejectionReasonsQuery.execute();
-
-    return catalogue.map((entry) => ({
-      id: entry.id,
-      label: entry.label,
-      requiresDescription: entry.requiresDescription,
-    }));
+  // The query already projects the catalogue to a feature-owned shape, so there is no mapping left
+  // to do here. Declaring the contract type is what proves the projection still matches it: a field
+  // renamed on either side is a compile error rather than a hand-written map that silently agrees
+  // with itself (code-review-back-end-2026-09-09.md).
+  listRejectionReasons(): Promise<RejectionReason[]> {
+    return this.listRejectionReasonsQuery.execute();
   }
 }
