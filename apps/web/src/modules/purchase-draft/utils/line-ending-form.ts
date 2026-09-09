@@ -189,6 +189,13 @@ export const conditionSplitViolationSchema = z.discriminatedUnion('rule', [
     rule: z.literal('duplicate_rejection_reason'),
   }),
   rejectionReasonRuleSchema.extend({ rule: z.literal('source_mismatch') }),
+  // The server refuses refusals stated without a Conformance verdict, because a condition is only
+  // readable beside one (server code-review-back-end-2026-09-09.md, blocking finding 4). Carried
+  // here so the sentence explaining it survives the drop-unknown discipline above.
+  z.object({
+    rule: z.literal('verdict_required_with_rejections'),
+    rejectedQuantity: z.number(),
+  }),
 ]);
 
 export const conformanceViolationSchema = z.discriminatedUnion('rule', [

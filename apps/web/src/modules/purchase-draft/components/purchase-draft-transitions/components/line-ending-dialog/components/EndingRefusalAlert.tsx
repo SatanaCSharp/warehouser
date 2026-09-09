@@ -136,6 +136,10 @@ const conditionSplitTextByRule = (
     t('transitions.lineEnding.refusal.conditionSplit.sourceMismatch', {
       reason: violation.rejectionReasonId,
     }),
+  verdict_required_with_rejections: (violation) =>
+    t('transitions.lineEnding.refusal.conditionSplit.verdictRequired', {
+      rejected: quantity(violation.rejectedQuantity),
+    }),
 });
 
 // T19 — the Conformance judgement judged against the same locked line (AC-16,

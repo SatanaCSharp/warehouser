@@ -318,6 +318,25 @@ function describeT19RefusalCodes(): void {
     return screen.getByRole('alert');
   };
 
+  // The sixth condition-split rule the server can send. Without an entry in
+  // `conditionSplitViolationSchema` the drop-unknown discipline swallows it and the member reads an
+  // alert that explains nothing, which is what this case exists to prevent (server
+  // code-review-back-end-2026-09-09.md, blocking finding 4).
+  it('explains a refusal stated without a Conformance verdict, naming the refused figure', () => {
+    const alert = renderViolations(CONDITION_SPLIT, [
+      {
+        rule: 'verdict_required_with_rejections',
+        rejectionReasonId: null,
+        rejectedQuantity: 8,
+      },
+    ]);
+
+    expect(alert).toHaveTextContent(/8/u);
+    expect(alert).toHaveTextContent(
+      /judgement of the supplier's instruction/iu,
+    );
+  });
+
   it('names the over-refusal and the duplicate reason together, each in its own words (AC-02, AC-09)', () => {
     const alert = renderViolations(CONDITION_SPLIT, [
       {
