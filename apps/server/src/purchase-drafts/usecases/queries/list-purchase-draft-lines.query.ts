@@ -1,9 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import {
-  rejectionReasonIdsOf,
-  withCondition,
-} from 'purchase-drafts/domain/mappers/line-condition.mapper';
+import { withCondition } from 'purchase-drafts/domain/mappers/line-condition.mapper';
 import { readsRejectionCause } from 'purchase-drafts/domain/predicates/rejection-cause-access.predicates';
+import { RejectionReasonLabelService } from 'purchase-drafts/domain/services/rejection-reason-label.service';
 import { withDriftSignals } from 'purchase-drafts/usecases/queries/drift-signals';
 import type { PurchaseDraftLineWithDrift } from 'purchase-drafts/usecases/queries/read-purchase-draft.query';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
@@ -12,7 +10,6 @@ import type {
   PurchaseDraftLineListEntryRedactedRead,
 } from 'shared/domain/repositories/purchase-draft-read.repository';
 import { PurchaseDraftReadRepository } from 'shared/domain/repositories/purchase-draft-read.repository';
-import { RejectionReasonCatalogueRepository } from 'shared/domain/repositories/rejection-reason-catalogue.repository';
 import { readsCustomerIdentity } from 'shared/predicates/observed-permission.predicates';
 
 // openapi.yaml `PurchaseDraftLineListEntry`, with every link's `driftSignals` derived and its line
@@ -42,7 +39,7 @@ export type PurchaseDraftLineListEntryWithDrift = Omit<
 export class ListPurchaseDraftLinesQuery {
   constructor(
     private readonly repository: PurchaseDraftReadRepository,
-    private readonly rejectionReasonCatalogue: RejectionReasonCatalogueRepository,
+    private readonly rejectionReasonLabels: RejectionReasonLabelService,
   ) {}
 
   async execute(
@@ -62,7 +59,7 @@ export class ListPurchaseDraftLinesQuery {
         cause,
       );
 
-      const rejectionReasonLabels = await this.rejectionReasonLabelsOf(
+      const rejectionReasonLabels = await this.rejectionReasonLabels.labelsFor(
         redacted.map((entry) => entry.line.ending),
       );
 
@@ -82,7 +79,7 @@ export class ListPurchaseDraftLinesQuery {
       cause,
     );
 
-    const rejectionReasonLabels = await this.rejectionReasonLabelsOf(
+    const rejectionReasonLabels = await this.rejectionReasonLabels.labelsFor(
       identified.map((entry) => entry.line.ending),
     );
 
@@ -94,26 +91,5 @@ export class ListPurchaseDraftLinesQuery {
         links: entry.line.links.map(withDriftSignals),
       },
     }));
-  }
-
-  // AC-23a — resolved once for the whole page rather than once per line (see
-  // `ReadPurchaseDraftQuery`'s identical method).
-  private async rejectionReasonLabelsOf(
-    endings: ReadonlyArray<
-      PurchaseDraftLineListEntryRedactedRead['line']['ending']
-    >,
-  ): Promise<ReadonlyMap<string, string>> {
-    const rejectionReasonIds = rejectionReasonIdsOf(endings);
-
-    if (rejectionReasonIds.length === 0) {
-      return new Map();
-    }
-
-    const reasons =
-      await this.rejectionReasonCatalogue.resolveRejectionReasons(
-        rejectionReasonIds,
-      );
-
-    return new Map(reasons.map((reason) => [reason.id, reason.label]));
   }
 }

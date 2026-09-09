@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { CustomerOrdersUsecaseModule } from 'customer-orders/usecases/usecase.module';
 import { ArrivalInspectionService } from 'purchase-drafts/domain/services/arrival-inspection.service';
 import { PurchaseDraftAssemblyService } from 'purchase-drafts/domain/services/purchase-draft-assembly.service';
+import { RejectionReasonLabelService } from 'purchase-drafts/domain/services/rejection-reason-label.service';
 import { AddPurchaseDraftLineCommand } from 'purchase-drafts/usecases/commands/add-purchase-draft-line.command';
 import { AddPurchaseDraftLineLinkCommand } from 'purchase-drafts/usecases/commands/add-purchase-draft-line-link.command';
 import { AmendPurchaseDraftRejectionCommand } from 'purchase-drafts/usecases/commands/amend-purchase-draft-rejection.command';
@@ -66,6 +67,7 @@ import { RejectionReasonCatalogueRepository } from 'shared/domain/repositories/r
     // transport adapter, and any other module, reaches these rules only through the use cases that
     // own them.
     ArrivalInspectionService,
+    RejectionReasonLabelService,
     RejectionReasonCatalogueRepository,
     // T11/sad.md §6.4 — the Rejection amendment's own repository, not provided by the `@Global()`
     // `DomainModule` either. Provider-only: no module reaches it except through the command below.

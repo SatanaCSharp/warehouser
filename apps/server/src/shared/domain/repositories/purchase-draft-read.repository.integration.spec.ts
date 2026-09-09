@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 // openapi.yaml `PurchaseDraftSummary`/`PurchaseDraftLineLink`/`DemandSnapshotEntry`/
 // `LinkedCustomerOrderState`/`ArrivalAllocation`).
 import { PermissionId } from '@warehouser/shared-types/enums';
+import { RejectionReasonLabelService } from 'purchase-drafts/domain/services/rejection-reason-label.service';
 import { ReadPurchaseDraftQuery } from 'purchase-drafts/usecases/queries/read-purchase-draft.query';
 // `PurchaseDraftReadRepository` does not exist yet (T14) — this is the RED for the read that joins
 // the Demand Snapshot against the Customer Orders as they stand now, in one purpose-built query per
@@ -1140,7 +1141,7 @@ const registerHasDriftSignalInvariantTests = (): void => {
 
     const query = new ReadPurchaseDraftQuery(
       repository as never,
-      emptyRejectionReasonCatalogue() as never,
+      new RejectionReasonLabelService(emptyRejectionReasonCatalogue() as never),
     );
     const derived = await query.execute(identifiedActor(warehouseId), draftId);
 
@@ -1166,7 +1167,7 @@ const registerHasDriftSignalInvariantTests = (): void => {
 
     const query = new ReadPurchaseDraftQuery(
       repository as never,
-      emptyRejectionReasonCatalogue() as never,
+      new RejectionReasonLabelService(emptyRejectionReasonCatalogue() as never),
     );
     const derived = await query.execute(identifiedActor(warehouseId), draftId);
 

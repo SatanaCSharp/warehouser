@@ -1,10 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import type { PurchaseDraftLineEndingWithCondition } from 'purchase-drafts/domain/mappers/line-condition.mapper';
-import {
-  rejectionReasonIdsOf,
-  withCondition,
-} from 'purchase-drafts/domain/mappers/line-condition.mapper';
+import { withCondition } from 'purchase-drafts/domain/mappers/line-condition.mapper';
 import { readsRejectionCause } from 'purchase-drafts/domain/predicates/rejection-cause-access.predicates';
+import { RejectionReasonLabelService } from 'purchase-drafts/domain/services/rejection-reason-label.service';
 import type {
   PurchaseDraftLineLinkIdentifiedWithDrift,
   PurchaseDraftLineLinkRedactedWithDrift,
@@ -17,7 +15,6 @@ import type {
   PurchaseDraftSummaryRead,
 } from 'shared/domain/repositories/purchase-draft-read.repository';
 import { PurchaseDraftReadRepository } from 'shared/domain/repositories/purchase-draft-read.repository';
-import { RejectionReasonCatalogueRepository } from 'shared/domain/repositories/rejection-reason-catalogue.repository';
 import { readsCustomerIdentity } from 'shared/predicates/observed-permission.predicates';
 
 // openapi.yaml `PurchaseDraftLineRedacted` with every link's `driftSignals` derived — what an actor
@@ -82,7 +79,7 @@ export const identifiesCustomer = (
 export class ReadPurchaseDraftQuery {
   constructor(
     private readonly repository: PurchaseDraftReadRepository,
-    private readonly rejectionReasonCatalogue: RejectionReasonCatalogueRepository,
+    private readonly rejectionReasonLabels: RejectionReasonLabelService,
   ) {}
 
   async execute(
@@ -109,7 +106,7 @@ export class ReadPurchaseDraftQuery {
         return null;
       }
 
-      const rejectionReasonLabels = await this.rejectionReasonLabelsOf(
+      const rejectionReasonLabels = await this.rejectionReasonLabels.labelsFor(
         redacted.lines.map((line) => line.ending),
       );
 
@@ -133,7 +130,7 @@ export class ReadPurchaseDraftQuery {
       return null;
     }
 
-    const rejectionReasonLabels = await this.rejectionReasonLabelsOf(
+    const rejectionReasonLabels = await this.rejectionReasonLabels.labelsFor(
       identified.lines.map((line) => line.ending),
     );
 
@@ -145,25 +142,5 @@ export class ReadPurchaseDraftQuery {
         links: line.links.map(withDriftSignals),
       })),
     };
-  }
-
-  // AC-23a — resolved **once** for the whole draft rather than once per line, and only when the
-  // read's endings actually name a Rejection: a withheld read, and a draft carrying no ending at
-  // all, ask the catalogue nothing.
-  private async rejectionReasonLabelsOf(
-    endings: ReadonlyArray<PurchaseDraftLineRedactedRead['ending']>,
-  ): Promise<ReadonlyMap<string, string>> {
-    const rejectionReasonIds = rejectionReasonIdsOf(endings);
-
-    if (rejectionReasonIds.length === 0) {
-      return new Map();
-    }
-
-    const reasons =
-      await this.rejectionReasonCatalogue.resolveRejectionReasons(
-        rejectionReasonIds,
-      );
-
-    return new Map(reasons.map((reason) => [reason.id, reason.label]));
   }
 }

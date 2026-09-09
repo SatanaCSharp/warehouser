@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import { RejectionReasonLabelService } from 'purchase-drafts/domain/services/rejection-reason-label.service';
 // T18 — AC-11b/AC-18/AC-18a/AC-22 against `PurchaseDraftReadRepository`. Address Drift is a
 // **value comparison** between the Delivery Address captured in the Demand Snapshot and the
 // address the Customer Order names now: nothing about it is stored and no job repairs one, which
@@ -634,9 +635,12 @@ const registerFreshnessTests = (): void => {
     await redirectCustomerOrder(fixture.directOrderId, addressBId);
 
     // No Rejection is involved in an address-drift fixture, so this double never resolves one.
-    const query = new ReadPurchaseDraftQuery(repository, {
-      resolveRejectionReasons: jest.fn().mockResolvedValue([]),
-    } as never);
+    const query = new ReadPurchaseDraftQuery(
+      repository,
+      new RejectionReasonLabelService({
+        resolveRejectionReasons: jest.fn().mockResolvedValue([]),
+      } as never),
+    );
     const derived = await query.execute({ warehouseId } as never, draftId);
 
     const signalled = (derived?.lines ?? [])

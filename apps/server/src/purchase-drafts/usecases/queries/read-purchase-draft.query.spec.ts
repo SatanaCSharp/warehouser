@@ -17,6 +17,7 @@
 // that the boolean becomes the named signal, and that the two projection forms are chosen by the
 // observed Permission and never by the surface.
 import { PermissionId } from '@warehouser/shared-types/enums';
+import { RejectionReasonLabelService } from 'purchase-drafts/domain/services/rejection-reason-label.service';
 import { ReadPurchaseDraftQuery } from 'purchase-drafts/usecases/queries/read-purchase-draft.query';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 
@@ -213,7 +214,7 @@ describe('ReadPurchaseDraftQuery', () => {
     const repository = purchaseDraftReadRepositoryDouble(detail);
     const query = new ReadPurchaseDraftQuery(
       repository as never,
-      catalogueDouble() as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
     );
 
     const result = await query.execute(identifiedUser, purchaseDraftId);
@@ -230,7 +231,7 @@ describe('ReadPurchaseDraftQuery', () => {
     const repository = purchaseDraftReadRepositoryDouble(detail);
     const query = new ReadPurchaseDraftQuery(
       repository as never,
-      catalogueDouble() as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
     );
 
     const result = await query.execute(identifiedUser, purchaseDraftId);
@@ -250,7 +251,7 @@ describe('ReadPurchaseDraftQuery', () => {
     const repository = purchaseDraftReadRepositoryDouble(detail);
     const query = new ReadPurchaseDraftQuery(
       repository as never,
-      catalogueDouble() as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
     );
 
     const result = await query.execute(identifiedUser, purchaseDraftId);
@@ -270,7 +271,7 @@ describe('ReadPurchaseDraftQuery', () => {
     const repository = purchaseDraftReadRepositoryDouble(detail);
     const query = new ReadPurchaseDraftQuery(
       repository as never,
-      catalogueDouble() as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
     );
 
     const result = await query.execute(identifiedUser, purchaseDraftId);
@@ -292,7 +293,7 @@ describe('ReadPurchaseDraftQuery', () => {
     const repository = purchaseDraftReadRepositoryDouble(detail);
     const query = new ReadPurchaseDraftQuery(
       repository as never,
-      catalogueDouble() as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
     );
 
     const result = await query.execute(identifiedUser, purchaseDraftId);
@@ -314,7 +315,7 @@ describe('ReadPurchaseDraftQuery', () => {
     const repository = purchaseDraftReadRepositoryDouble(detail);
     const query = new ReadPurchaseDraftQuery(
       repository as never,
-      catalogueDouble() as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
     );
 
     const result = await query.execute(identifiedUser, purchaseDraftId);
@@ -342,7 +343,7 @@ describe('ReadPurchaseDraftQuery', () => {
     const repository = purchaseDraftReadRepositoryDouble(detail);
     const query = new ReadPurchaseDraftQuery(
       repository as never,
-      catalogueDouble() as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
     );
 
     const result = await query.execute(identifiedUser, purchaseDraftId);
@@ -367,7 +368,7 @@ describe('ReadPurchaseDraftQuery', () => {
     const repository = purchaseDraftReadRepositoryDouble(detail);
     const query = new ReadPurchaseDraftQuery(
       repository as never,
-      catalogueDouble() as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
     );
 
     const result = await query.execute(identifiedUser, purchaseDraftId);
@@ -393,7 +394,7 @@ describe('ReadPurchaseDraftQuery', () => {
     const repository = purchaseDraftReadRepositoryDouble(detail);
     const query = new ReadPurchaseDraftQuery(
       repository as never,
-      catalogueDouble() as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
     );
 
     const result = await query.execute(identifiedUser, purchaseDraftId);
@@ -417,7 +418,7 @@ describe('ReadPurchaseDraftQuery', () => {
     const repository = purchaseDraftReadRepositoryDouble(detail);
     const query = new ReadPurchaseDraftQuery(
       repository as never,
-      catalogueDouble() as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
     );
 
     const result = await query.execute(identifiedUser, purchaseDraftId);
@@ -445,7 +446,7 @@ describe('ReadPurchaseDraftQuery', () => {
     const repository = purchaseDraftReadRepositoryDouble(detail);
     const query = new ReadPurchaseDraftQuery(
       repository as never,
-      catalogueDouble() as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
     );
 
     const result = await query.execute(identifiedUser, purchaseDraftId);
@@ -470,7 +471,7 @@ describe('ReadPurchaseDraftQuery', () => {
     const repository = purchaseDraftReadRepositoryDouble(detail);
     const query = new ReadPurchaseDraftQuery(
       repository as never,
-      catalogueDouble() as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
     );
 
     const result = await query.execute(identifiedUser, purchaseDraftId);
@@ -487,7 +488,7 @@ describe('ReadPurchaseDraftQuery', () => {
     const repository = purchaseDraftReadRepositoryDouble(detail);
     const query = new ReadPurchaseDraftQuery(
       repository as never,
-      catalogueDouble() as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
     );
 
     await query.execute(identifiedUser, purchaseDraftId);
@@ -522,7 +523,7 @@ describe('ReadPurchaseDraftQuery', () => {
     );
     const query = new ReadPurchaseDraftQuery(
       repository as never,
-      catalogueDouble() as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
     );
 
     const result = await query.execute(currentUser, purchaseDraftId);
@@ -568,7 +569,7 @@ describe('ReadPurchaseDraftQuery', () => {
     );
     const query = new ReadPurchaseDraftQuery(
       repository as never,
-      catalogueDouble() as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
     );
 
     const result = await query.execute(currentUser, purchaseDraftId);
@@ -591,7 +592,7 @@ describe('ReadPurchaseDraftQuery', () => {
     );
     const query = new ReadPurchaseDraftQuery(
       repository as never,
-      catalogueDouble() as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
     );
 
     const result = await query.execute(currentUser, purchaseDraftId);
@@ -607,7 +608,7 @@ describe('ReadPurchaseDraftQuery', () => {
     const repository = purchaseDraftReadRepositoryDouble(null, null);
     const query = new ReadPurchaseDraftQuery(
       repository as never,
-      catalogueDouble() as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
     );
 
     await expect(

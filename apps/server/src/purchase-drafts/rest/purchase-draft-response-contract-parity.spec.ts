@@ -19,6 +19,7 @@ import {
   purchaseDraftLineListEntrySchema,
 } from '@warehouser/contracts/purchase-drafts';
 import { PermissionId } from '@warehouser/shared-types/enums';
+import { RejectionReasonLabelService } from 'purchase-drafts/domain/services/rejection-reason-label.service';
 import {
   toDetailResponse,
   toLineListEntryResponse,
@@ -213,7 +214,7 @@ describe('a served purchase-draft read parses against its own contract (AC-21, A
     async (_label, observedPermissionIds) => {
       const query = new ReadPurchaseDraftQuery(
         repositoryDouble() as never,
-        catalogueDouble() as never,
+        new RejectionReasonLabelService(catalogueDouble() as never),
       );
 
       const detail = await query.execute(
@@ -241,7 +242,7 @@ describe('a served purchase-draft read parses against its own contract (AC-21, A
     async (_label, observedPermissionIds) => {
       const query = new ListPurchaseDraftLinesQuery(
         repositoryDouble() as never,
-        catalogueDouble() as never,
+        new RejectionReasonLabelService(catalogueDouble() as never),
       );
 
       const [entry] = await query.execute(userWith(...observedPermissionIds));
@@ -263,7 +264,7 @@ describe('a served purchase-draft read parses against its own contract (AC-21, A
     );
     const query = new ReadPurchaseDraftQuery(
       repository as never,
-      catalogueDouble() as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
     );
 
     const detail = await query.execute(baseUser, purchaseDraftId);
@@ -284,7 +285,7 @@ describe('a served purchase-draft read parses against its own contract (AC-21, A
   it('discriminates a flat ending from a nested one at the same, otherwise-valid header', async () => {
     const query = new ReadPurchaseDraftQuery(
       repositoryDouble() as never,
-      catalogueDouble() as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
     );
     const detail = await query.execute(
       userWith(PermissionId.REJECTIONS_WATCH, PermissionId.CUSTOMERS_WATCH),

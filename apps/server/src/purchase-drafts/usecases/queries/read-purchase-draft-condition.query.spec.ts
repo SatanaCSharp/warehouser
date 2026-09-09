@@ -9,6 +9,7 @@
 // repository method it calls and with which `cause` argument — and the **build** it performs on top
 // of that choice.
 import { PermissionId } from '@warehouser/shared-types/enums';
+import { RejectionReasonLabelService } from 'purchase-drafts/domain/services/rejection-reason-label.service';
 import { ReadPurchaseDraftQuery } from 'purchase-drafts/usecases/queries/read-purchase-draft.query';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 
@@ -163,7 +164,7 @@ describe('ReadPurchaseDraftQuery — the condition account’s four shapes (AC-2
     const catalogue = catalogueDouble();
     const query = new ReadPurchaseDraftQuery(
       repository as never,
-      catalogue as never,
+      new RejectionReasonLabelService(catalogue as never),
     );
 
     const result = await query.execute(
@@ -191,7 +192,7 @@ describe('ReadPurchaseDraftQuery — the condition account’s four shapes (AC-2
     const catalogue = catalogueDouble();
     const query = new ReadPurchaseDraftQuery(
       repository as never,
-      catalogue as never,
+      new RejectionReasonLabelService(catalogue as never),
     );
 
     const result = await query.execute(
@@ -213,7 +214,7 @@ describe('ReadPurchaseDraftQuery — the condition account’s four shapes (AC-2
     const repository = repositoryDouble();
     const query = new ReadPurchaseDraftQuery(
       repository as never,
-      catalogueDouble() as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
     );
 
     const result = await query.execute(
@@ -234,7 +235,7 @@ describe('ReadPurchaseDraftQuery — the condition account’s four shapes (AC-2
     const catalogue = catalogueDouble();
     const query = new ReadPurchaseDraftQuery(
       repository as never,
-      catalogue as never,
+      new RejectionReasonLabelService(catalogue as never),
     );
 
     const result = await query.execute(baseUser, purchaseDraftId);
@@ -258,7 +259,7 @@ describe('ReadPurchaseDraftQuery — the condition account’s four shapes (AC-2
     const repository = repositoryDouble();
     const query = new ReadPurchaseDraftQuery(
       repository as never,
-      catalogueDouble() as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
     );
 
     const result = await query.execute(baseUser, purchaseDraftId);
@@ -274,7 +275,7 @@ describe('ReadPurchaseDraftQuery — the condition account’s four shapes (AC-2
     const repository = repositoryDouble();
     const query = new ReadPurchaseDraftQuery(
       repository as never,
-      catalogueDouble() as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
     );
 
     const result = await query.execute(baseUser, purchaseDraftId);
@@ -294,7 +295,7 @@ describe('ReadPurchaseDraftQuery — the condition account’s four shapes (AC-2
     const repository = repositoryDouble();
     const query = new ReadPurchaseDraftQuery(
       repository as never,
-      catalogueDouble() as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
     );
 
     const resultA = await query.execute(baseUser, purchaseDraftId);
@@ -361,7 +362,7 @@ describe('ReadPurchaseDraftQuery — the condition account’s four shapes (AC-2
       );
       const query = new ReadPurchaseDraftQuery(
         repository as never,
-        catalogueDouble() as never,
+        new RejectionReasonLabelService(catalogueDouble() as never),
       );
 
       const result = await query.execute(user, purchaseDraftId);
@@ -388,7 +389,7 @@ describe('ReadPurchaseDraftQuery — the condition account’s four shapes (AC-2
     repository.readIdentifiedDraft.mockResolvedValue(twoLineDetail);
     const query = new ReadPurchaseDraftQuery(
       repository as never,
-      catalogue as never,
+      new RejectionReasonLabelService(catalogue as never),
     );
 
     await query.execute(

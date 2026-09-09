@@ -3,6 +3,7 @@
 // `read-purchase-draft-condition.query.spec.ts` for the by-line read (AC-21, AC-22, AC-23a,
 // sad.md §6.3).
 import { PermissionId } from '@warehouser/shared-types/enums';
+import { RejectionReasonLabelService } from 'purchase-drafts/domain/services/rejection-reason-label.service';
 import { ListPurchaseDraftLinesQuery } from 'purchase-drafts/usecases/queries/list-purchase-draft-lines.query';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 
@@ -131,7 +132,7 @@ describe('ListPurchaseDraftLinesQuery — the condition account’s four shapes 
     const repository = repositoryDouble();
     const query = new ListPurchaseDraftLinesQuery(
       repository as never,
-      catalogueDouble() as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
     );
 
     const result = await query.execute(
@@ -157,7 +158,7 @@ describe('ListPurchaseDraftLinesQuery — the condition account’s four shapes 
     const catalogue = catalogueDouble();
     const query = new ListPurchaseDraftLinesQuery(
       repository as never,
-      catalogue as never,
+      new RejectionReasonLabelService(catalogue as never),
     );
 
     const result = await query.execute(
@@ -179,7 +180,7 @@ describe('ListPurchaseDraftLinesQuery — the condition account’s four shapes 
     const repository = repositoryDouble();
     const query = new ListPurchaseDraftLinesQuery(
       repository as never,
-      catalogueDouble() as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
     );
 
     const result = await query.execute(
@@ -200,7 +201,7 @@ describe('ListPurchaseDraftLinesQuery — the condition account’s four shapes 
     const catalogue = catalogueDouble();
     const query = new ListPurchaseDraftLinesQuery(
       repository as never,
-      catalogue as never,
+      new RejectionReasonLabelService(catalogue as never),
     );
 
     const result = await query.execute(baseUser, {});
@@ -219,7 +220,7 @@ describe('ListPurchaseDraftLinesQuery — the condition account’s four shapes 
     const repository = repositoryDouble();
     const query = new ListPurchaseDraftLinesQuery(
       repository as never,
-      catalogueDouble() as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
     );
 
     const result = await query.execute(baseUser, {});
@@ -233,7 +234,7 @@ describe('ListPurchaseDraftLinesQuery — the condition account’s four shapes 
     const repository = repositoryDouble();
     const query = new ListPurchaseDraftLinesQuery(
       repository as never,
-      catalogueDouble() as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
     );
 
     await query.execute(baseUser, { deliveryMode: 'via_warehouse' });
@@ -264,7 +265,7 @@ describe('ListPurchaseDraftLinesQuery — the condition account’s four shapes 
     ]);
     const query = new ListPurchaseDraftLinesQuery(
       repository as never,
-      catalogue as never,
+      new RejectionReasonLabelService(catalogue as never),
     );
 
     await query.execute(
