@@ -90,12 +90,6 @@ export const isAssignableLink = ({ current }: PurchaseDraftLineLink): boolean =>
  * number are resolved here, from the draft the dialog was opened for.
  */
 const endingBoundViolationSchema = z.discriminatedUnion('rule', [
-  z.object({
-    rule: z.literal('allocations_exceed_received_quantity'),
-    purchaseDraftLineId: z.string(),
-    receivedQuantity: z.number(),
-    allocatedQuantity: z.number(),
-  }),
   // AC-11 — the bound narrowed from what arrived to what was accepted, once the
   // line's own condition split has a figure to subtract. `receivedQuantity` and
   // `rejectedQuantity` travel alongside `acceptedQuantity` so the bullet can

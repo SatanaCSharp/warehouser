@@ -910,3 +910,35 @@ describe('delivery-addresses customer copy (design review)', () => {
     expect(uk.t('directory.search', { ns: 'customer' })).toMatch(/адрес/iu);
   });
 });
+
+// review-2026-09-09, finding 6 (stage 2). This branch renamed the allocation
+// bound's rule on the server — `allocations_exceed_received_quantity` became
+// `allocations_exceed_accepted_quantity` when the bound narrowed from what
+// arrived to what was accepted (AC-11) — and left the web's arm for the old
+// rule behind, parsing and rendering a violation no deployed server can emit.
+// Removing that arm orphaned its sentence, so the sentence goes too, and the
+// identity baseline is updated to match: this is a deliberate removal of a key
+// that existed at `baseline_revision`, pinned here the way CR-AC-12's seven
+// orphaned skeleton labels are, so it reads as an act rather than as drift.
+describe('arrival-inspection orphaned allocation-bound copy (review 2026-09-09)', () => {
+  const ORPHANED_BOUND_KEY =
+    'transitions.lineEnding.refusal.bounds.exceedsReceived';
+
+  it.each(supportedLanguages)(
+    'holds no sentence for the renamed received-quantity bound in %s',
+    (language) => {
+      expect(
+        translationKeys(resources[language]['purchase-draft']),
+      ).not.toContain(ORPHANED_BOUND_KEY);
+    },
+  );
+
+  it.each(supportedLanguages)(
+    'keeps the accepted-quantity sentence that replaced it in %s',
+    (language) => {
+      expect(translationKeys(resources[language]['purchase-draft'])).toContain(
+        'transitions.lineEnding.refusal.bounds.exceedsAccepted',
+      );
+    },
+  );
+});

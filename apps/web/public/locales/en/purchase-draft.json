@@ -247,7 +247,6 @@
         "unknown": "The ending was not recorded.",
         "bounds": {
           "title": "That assignment cannot be recorded",
-          "exceedsReceived": "Line {{line}} — you assigned {{assigned}} across its customers, but recorded {{received}} as arrived.",
           "exceedsOutstanding": "{{customer}} — you assigned {{assigned}}, but they are waiting for {{outstanding}}.",
           "cancelled": "{{customer}} — cancelled, so nothing can be assigned to it.",
           "cancelled_dated": "{{customer}} — cancelled on {{on}}, so nothing can be assigned to it.",

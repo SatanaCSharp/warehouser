@@ -117,12 +117,6 @@ const BOUNDS = ErrorCode.PURCHASE_DRAFTS_ALLOCATION_OUT_OF_BOUNDS;
 const allBounds = {
   violations: [
     {
-      purchaseDraftLineId: ids.line,
-      rule: 'allocations_exceed_received_quantity',
-      receivedQuantity: 1180,
-      allocatedQuantity: 1300,
-    },
-    {
       purchaseDraftLineLinkId: ids.waitingLink,
       rule: 'exceeds_outstanding_quantity',
       outstandingQuantity: 1000,
@@ -151,9 +145,6 @@ describe('EndingRefusalAlert', () => {
     expect(alert).toHaveTextContent(/that assignment cannot be recorded/iu);
     expect(alert).toHaveTextContent(
       /nothing of this confirmation has been saved and the draft is untouched/iu,
-    );
-    expect(alert).toHaveTextContent(
-      /Line 1 — you assigned 1\s300 across its customers, but recorded 1\s180 as arrived/u,
     );
     expect(alert).toHaveTextContent(
       /Nordwind Logistik GmbH — you assigned 1\s100, but they are waiting for 1\s000/u,

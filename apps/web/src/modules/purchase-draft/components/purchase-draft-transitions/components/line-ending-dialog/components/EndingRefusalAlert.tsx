@@ -285,26 +285,13 @@ export const EndingRefusalAlert = ({
   // draft in front of the member — a bullet that cannot say *which* line or
   // customer was refused says nothing the frame asks it to say.
   const bulletOf = (violation: EndingBoundViolation): BoundBullet[] => {
-    if (violation.rule === 'allocations_exceed_received_quantity') {
-      const line = lineNumbers.get(violation.purchaseDraftLineId);
-
-      return line === undefined
-        ? []
-        : [
-            {
-              key: `${violation.rule}-${violation.purchaseDraftLineId}`,
-              text: t('transitions.lineEnding.refusal.bounds.exceedsReceived', {
-                assigned: quantity(violation.allocatedQuantity),
-                line,
-                received: quantity(violation.receivedQuantity),
-              }),
-            },
-          ];
-    }
-
     // AC-11 — the bound narrowed from what arrived to what was accepted, so the
     // bullet names the assignment field that overshoots (the line) and states
-    // the shortfall in words, alongside the shipped `exceedsReceived` bullet.
+    // the shortfall in words. This branch replaced the received-quantity one
+    // rather than joining it: the server renamed the rule in the same change
+    // (`demand-allocation.errors.ts`), and the old arm survived here for a
+    // release, parsing and rendering a rule no deployed server can emit and
+    // kept green by a fabricated fixture (review-2026-09-09).
     if (violation.rule === 'allocations_exceed_accepted_quantity') {
       const line = lineNumbers.get(violation.purchaseDraftLineId);
 
