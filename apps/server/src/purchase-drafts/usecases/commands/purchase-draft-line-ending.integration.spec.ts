@@ -1,3 +1,9 @@
+/* eslint-disable max-lines -- this file is one per-line-ending suite over both ending routes
+   sharing one seeding closure (`seedWarehouse`/`seedDraft`/`seedLine`/`seedLink`); splitting it
+   would duplicate that closure rather than shorten anything, matching
+   `customers-http-contract.integration.spec.ts`. It crossed the cap when review-2026-09-09's
+   finding 5 added AC-24's missing direct-delivery case */
+
 import { randomUUID } from 'node:crypto';
 
 import { ErrorCode, PermissionId } from '@warehouser/shared-types/enums';
@@ -832,6 +838,71 @@ describe('per-line endings (T17, ADR 0002)', () => {
     expect(await readOrder(orderTwoId)).toMatchObject({
       outstandingQuantity: 0,
       state: 'fulfilled',
+    });
+  });
+
+  // review-2026-09-09, finding 5 — AC-24's *recording* half had no command-level proof. The unit
+  // case doubles the repository and asserts only `demand.allocate`, and the only persisted
+  // `customer_reported` rows were hand-inserted in the schema spec, which proves the CHECK
+  // constraint rather than the command. `test-plan.md`:140 asks for this at integration level.
+  it('records a customer-reported refusal on a directly delivered line, leaving that quantity assigned to nobody (AC-24)', async () => {
+    const seeded = await seedWarehouse();
+    const draftId = await seedDraft(seeded, 'ready_for_ordering');
+    const lineId = await seedLine(seeded, draftId, 40, 'direct_to_customer');
+    const orderId = await seedCustomerOrder(seeded, {
+      quantity: 40,
+      outstandingQuantity: 40,
+    });
+    const linkId = await seedLink(seeded, draftId, lineId, orderId, 40);
+
+    await transactions.executeInTransaction({}, () =>
+      buildDeliveryCommand().execute(
+        rejectingUserFor(seeded),
+        draftId,
+        lineId,
+        {
+          deliveredQuantity: 40,
+          rejections: [
+            {
+              rejectionReasonId: 'damaged_in_transit',
+              quantity: 6,
+              // The half the unit case could not see: on a Direct to Customer line this is the only
+              // legal Source (AC-25's mirror), and it has to survive the mapper, the command and the
+              // repository insert to reach the row.
+              source: 'customer_reported',
+              description: 'Customer reported six units broken on arrival',
+            },
+          ],
+          preReceiptConformance: { verdict: 'not_applicable', note: null },
+          // Accepted is 34; assigning all 34 is what leaves the refused 6 assigned to nobody.
+          allocations: [
+            { purchaseDraftLineLinkId: linkId, allocatedQuantity: 34 },
+          ],
+        },
+      ),
+    );
+
+    expect(await readLine(lineId)).toMatchObject({
+      endingQuantity: 40,
+      endingKind: 'direct_delivery',
+    });
+
+    const rejections = await readRejectionsForLine(lineId);
+    expect(rejections).toHaveLength(1);
+    expect(rejections[0]).toMatchObject({
+      rejectionReasonId: 'damaged_in_transit',
+      quantity: 6,
+      source: 'customer_reported',
+      deliveryMode: 'direct_to_customer',
+      description: 'Customer reported six units broken on arrival',
+      disposition: 'undecided',
+    });
+
+    // The refused six were never assigned: the customer is still waiting for them, which is the
+    // whole point of recording the refusal rather than absorbing it into the delivered figure.
+    expect(await readOrder(orderId)).toMatchObject({
+      outstandingQuantity: 6,
+      state: 'unfulfilled',
     });
   });
 
