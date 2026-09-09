@@ -554,6 +554,10 @@ describe('purchase-draft rejections HTTP contract (T13)', () => {
 
   // -- AC-20/AC-26 — the amendment route --------------------------------------------------------
 
+  // One route's contract block covering the two amendment shapes, both authorization arms and both
+  // cross-Warehouse cases over one seeding closure; splitting it would duplicate the fixtures
+  // rather than shorten anything, matching the customers and warehouses HTTP-contract precedents.
+  // eslint-disable-next-line max-lines-per-function -- see above
   describe('PATCH .../lines/{lineId}/rejections/{rejectionId} (AC-20, AC-26)', () => {
     // BLOCKING (2026-09-08 review) — the feature's only new mutating route had no 200 path tested
     // at any HTTP tier: `purchase-drafts.controller.ts`'s `amendPurchaseDraftLineRejection` builds
@@ -605,6 +609,48 @@ describe('purchase-draft rejections HTTP contract (T13)', () => {
       expect(rejection.disposition).toBe('held_for_return');
       expect(rejection.description).toBe('Corrected description');
       expect(rejection.amendedAt).not.toBeNull();
+    });
+
+    // review-2026-09-09, finding 2. The case above states **both** fields, so it never reaches the
+    // branch that answers with the *stored* value of the field the request left out. On a
+    // disposition-only amendment that branch returned `locked.description` — prose this actor holds
+    // no `REJECTIONS:WATCH` to read — against spec.md §7's "0 coverage failures in which a
+    // Rejection's reason, description or disposition reaches a member lacking `REJECTIONS:WATCH`
+    // through **any** surface", and `rejectionAmendmentSchema`'s own comment that
+    // "`REJECTIONS:UPDATE` does not imply it".
+    //
+    // The Disposition is deliberately still echoed: `purchaseDraftDispositionNotReversibleError`
+    // hands `currentDisposition` to exactly this actor by contract (AC-18a), so a member holding
+    // `REJECTIONS:UPDATE` can already obtain it through a sanctioned refusal. The description has no
+    // such path, which is what makes it — and only it — a disclosure.
+    it('answers a disposition-only amendment without the stored description, which this actor may not read (AC-22)', async () => {
+      await seedWorld();
+      const { draftId, lineId, rejectionId } =
+        await seedClosedLineWithRejection();
+      const cookie = await seedActor([REJECTIONS_UPDATE]);
+
+      const { status, body } = await request(
+        'PATCH',
+        `${draftsPath}/${draftId}/lines/${lineId}/rejections/${rejectionId}`,
+        cookie,
+        { disposition: 'held_for_return' },
+      );
+
+      expect(status).toBe(200);
+      expect(body).toMatchObject({
+        id: rejectionId,
+        description: null,
+        disposition: 'held_for_return',
+      });
+      expect(JSON.stringify(body)).not.toContain('Pallet crushed in transit');
+
+      // The amendment still wrote only the Disposition: the stored prose is untouched, so the
+      // withheld response is a narrower *answer*, never a silent clear (AC-18b).
+      const rejection = await dataSource.manager
+        .getRepository(PurchaseDraftLineRejectionEntity)
+        .findOneByOrFail({ id: rejectionId });
+      expect(rejection.description).toBe('Pallet crushed in transit');
+      expect(rejection.disposition).toBe('held_for_return');
     });
 
     it('declines a member holding REJECTIONS:WATCH but not REJECTIONS:UPDATE, leaving the Disposition unchanged (AC-20)', async () => {

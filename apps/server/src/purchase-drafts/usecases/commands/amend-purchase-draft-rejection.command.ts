@@ -104,12 +104,22 @@ export class AmendPurchaseDraftRejectionCommand {
       purchaseDraftDispositionNotReversibleError(locked.disposition),
     );
 
+    // The answer states what **this amendment wrote**, never what the Rejection already held
+    // (review-2026-09-09, finding 2). Falling back to `locked.description` turned a
+    // disposition-only amendment into a second, ungated read of prose that `REJECTIONS:WATCH`
+    // gates and `REJECTIONS:UPDATE` does not imply — against spec.md §7's "0 coverage failures in
+    // which a Rejection's reason, description or disposition reaches a member lacking
+    // `REJECTIONS:WATCH` through **any** surface". `null` here means "this amendment wrote no
+    // description", not "the Rejection has none"; the stored prose is left exactly as it was.
+    //
+    // The Disposition is still echoed when unstated, and that is deliberate rather than an
+    // oversight: `purchaseDraftDispositionNotReversibleError` hands `currentDisposition` to this
+    // same actor by contract (AC-18a), so a member holding `REJECTIONS:UPDATE` can already obtain
+    // it through a sanctioned refusal. The description has no equivalent path, which is what makes
+    // it — and only it — a disclosure.
     return {
       id: rejectionId,
-      description:
-        input.description !== undefined
-          ? input.description
-          : locked.description,
+      description: input.description ?? null,
       disposition:
         input.disposition !== undefined
           ? input.disposition

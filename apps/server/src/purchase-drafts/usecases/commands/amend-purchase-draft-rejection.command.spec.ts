@@ -112,9 +112,14 @@ describe('AmendPurchaseDraftRejectionCommand', () => {
       disposition: 'held_for_return',
     });
 
+    // `description: null` — not the stored `'Crushed on the pallet corner'` this case asserted
+    // before review-2026-09-09, finding 2. The answer states what this amendment **wrote**; echoing
+    // the locked prose made a disposition-only amendment a second, ungated read of a field
+    // `REJECTIONS:WATCH` gates. `null` here means "this amendment wrote no description" — the
+    // stored prose is untouched, which the assertion on the repository call below still proves.
     await expect(attempt).resolves.toEqual({
       id: rejectionId,
-      description: 'Crushed on the pallet corner',
+      description: null,
       disposition: 'held_for_return',
       amendedByUserId: actorId,
       amendedAt: now,
