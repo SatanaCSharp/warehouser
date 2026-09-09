@@ -357,7 +357,58 @@ Not findings of this review (shared protocol §7): scope is the diff.
 **CHANGES REQUESTED** — four blocking findings, all resolved as "fix now", plus eight advisory fixes
 accepted and four advisories closed without change. No blocking finding is left open.
 
+## Applied — fix-up run, 2026-09-09
+
+Every "fix now" resolution above was implemented through the per-task TDD gate `implement` uses.
+Each commit carries an `SDD-Review: code-review-back-end` trailer.
+
+| Finding                                                     | Commit    |
+| ----------------------------------------------------------- | --------- |
+| blocking 1 — migration class driven by a spec               | `590c207` |
+| blocking 4 — refusals without a verdict                     | `de15383` |
+| — its member-facing sentence on the web                     | `6cc175f` |
+| advisory — service surface + named capability predicate     | `6c376d7` |
+| advisory — fail-closed cause selector + shared prose bound  | `77049b3` |
+| blocking 3 — label resolution extracted to one service      | `d3c2f42` |
+| blocking 2 — wire shape assembled at the REST boundary      | `db88a4b` |
+| advisory — `to*` mappings moved, catalogue entity projected | `99a367b` |
+| advisory — two-tier boundary scan                           | `2bf93f4` |
+
+Final gate: unit **1825/1825** (139 suites), integration **900/900** (89 suites), `lint` clean,
+`typecheck` clean; `apps/web` 1559/1559 (185 files), lint and `tsc` clean.
+
+Three things the fixes uncovered that this review had not seen, recorded so the re-review does not
+have to rediscover them:
+
+- **The fail-closed change proved its own premise.** Making `cause` required turned seven cases in
+  `purchase-draft-condition-read.repository.integration.spec.ts` red: it declared its own narrowed
+  contract with `cause` optional behind an `as unknown as` cast, so it had been calling the real
+  methods with two arguments — invisible to `tsc` — and the default was answering for it. Those cases
+  were reading the withheld projection while asserting the cause-bearing one. The local contract now
+  mirrors the repository parameter for parameter. `filters = {}` went too: behind a required
+  parameter that default was unreachable.
+- **One case was testing an unreachable path.** AC-07's "no description written" was stated as
+  whitespace, but `assertRejectionShapes` refuses whitespace under `purchase_drafts.invalid_input`
+  before the catalogue is consulted, so `description_required` could never see it in production.
+- **The widened scan matched raw text, not imports.** Adding `rest/dtos/` made a _comment_ naming
+  that path fail the check — which also means a comment could have been what made it pass. It reads
+  module specifiers now, a tightening of the three pre-existing specifiers as well.
+
+Two scope notes carried forward rather than closed:
+
+- `@warehouser/contracts` is on neither tier's forbidden list, because `predicates/` legitimately
+  re-exports `maxProseLength` and `mappers/` legitimately types its input mappings off the contract's
+  request shapes. Blocking finding 2's regression is pinned by a named assertion on
+  `line-condition.mapper.ts` instead. This is the cost the Tech Lead accepted when choosing the
+  two-tier scan.
+- Moving `toEndingRejectionInputs`, `toEndingPreReceiptConformanceInput` and `toReviseLineInput` out
+  of the controller cuts against `docs/system/server-architecture.md` §REST, which assigns
+  HTTP-input-to-use-case-input translation to the controller. It is the Tech Lead's decision, scoped
+  to the controllers this change touched; `rest/purchase-draft-response.ts` and
+  `packaging-types.controller.ts` are outside the diff and unchanged.
+
 ## Run next
 
-`/implement arrival-inspection` for the fixes (no `/clear` — stay in context), then re-run
-`/code-review-back-end arrival-inspection` over the changed surface.
+The fixes are applied and committed (see § Applied above). Because the run also changed `apps/web`,
+the next stages are `/code-review-front-end arrival-inspection`, then a re-run of
+`/code-review-back-end arrival-inspection` over the changed surface, then `/review arrival-inspection`.
