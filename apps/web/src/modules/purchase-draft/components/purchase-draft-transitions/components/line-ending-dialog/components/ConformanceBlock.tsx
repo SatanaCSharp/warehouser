@@ -1,4 +1,5 @@
 import { Radio, RadioGroup } from '@heroui/react';
+import { maxProseLength } from '@warehouser/contracts/purchase-drafts';
 import { useId } from 'react';
 import { Controller, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -190,6 +191,7 @@ export const ConformanceBlock = <TForm extends ConformanceBlockForm>({
       <Conditional when={verdict === 'not_met'}>
         <FormTextAreaField
           isDisabled={isSubmitting}
+          maxLength={maxProseLength}
           label={t('transitions.lineEnding.conformance.noteLabel')}
           description={t('transitions.lineEnding.conformance.noteDescription')}
           {...register('preReceiptConformance.note' as Path<TForm>)}

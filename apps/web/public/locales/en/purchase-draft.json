@@ -327,6 +327,7 @@
         "reasonLabel": "Reason",
         "reasonPlaceholder": "Choose a reason",
         "descriptionLabel": "Describe what was wrong",
+        "descriptionBound": "Up to 1 000 characters.",
         "removeRefusal": "Remove the refusal of {{quantity}} {{reason}}",
         "footnote": {
           "arrival": "Accepted is what remains — you never type it, so it can never disagree with the refusals above. One refusal per reason. The Source above names where every refusal on this line was recorded from — this line came to your own dock.",

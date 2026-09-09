@@ -1,5 +1,6 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { maxProseLength } from '@warehouser/contracts/purchase-drafts';
 import { PermissionId } from '@warehouser/shared-types/enums';
 import { useForm } from 'react-hook-form';
 import { describe, expect, it } from 'vitest';
@@ -169,6 +170,28 @@ describe('ConditionBlock', () => {
       ).not.toBeInTheDocument();
     },
   );
+
+  // review-2026-09-09, finding 6 — AC-14 blocks correctly at three layers but
+  // never told the member the bound. `proseSchema` refuses 1001 characters at
+  // the validation pipe as `request.invalid`, a code `EndingRefusalAlert` does
+  // not map, so the domain's `description_too_long` sentence and its
+  // `{{maxLength}}` were unreachable and the member got the generic "unknown"
+  // refusal. Bounding the control is what makes the server refusal never the
+  // member's first notice.
+  it('bounds the refusal description at the stored maximum and names it (AC-14)', async () => {
+    const user = userEvent.setup();
+    render(Object.values(PermissionId));
+
+    await user.click(await findRefuseButton());
+
+    const description = await screen.findByRole('textbox', {
+      name: /describe what was wrong/iu,
+    });
+    expect(description).toHaveAttribute('maxLength', String(maxProseLength));
+    expect(
+      await screen.findByText(/up to 1\s?000 characters/iu),
+    ).toBeInTheDocument();
+  });
 
   // AC-01a — absent, not disabled, and nothing else in the render hints that a
   // refusal capability exists for this member.

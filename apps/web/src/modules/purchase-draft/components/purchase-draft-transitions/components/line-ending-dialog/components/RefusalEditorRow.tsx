@@ -1,4 +1,5 @@
 import { Button } from '@heroui/react';
+import { maxProseLength } from '@warehouser/contracts/purchase-drafts';
 import { Controller } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
@@ -104,7 +105,9 @@ export const RefusalEditorRow = <TForm extends ConditionBlockForm>({
       </div>
       <FormTextAreaField
         isDisabled={isSubmitting}
+        maxLength={maxProseLength}
         label={t('transitions.lineEnding.condition.descriptionLabel')}
+        description={t('transitions.lineEnding.condition.descriptionBound')}
         {...register(`rejections.${index}.description` as Path<TForm>)}
       />
     </div>
