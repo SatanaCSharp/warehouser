@@ -1,27 +1,78 @@
-import type {
-  LineCondition,
-  PreReceiptConformance,
-  PurchaseDraftLineRejection,
-} from '@warehouser/contracts/purchase-drafts';
 import uniq from 'lodash/uniq';
 import type {
   PurchaseDraftLineEndingRead,
   PurchaseDraftLineRejectionRead,
 } from 'shared/domain/repositories/purchase-draft-read.repository';
 
+// The types below are **feature-owned**, not transport shapes. This is a `domain/mappers/` file, so
+// what it produces is the ending as this feature's application boundary knows it
+// (server-architecture.md § "Layer responsibilities → Domain": "Mappings between shared persistence
+// entities and feature-owned domain objects belong in `<feature-name>/domain/mappers/`"). Assembling
+// the contract's `PurchaseDraftLineEnding`/`LineCondition` out of these is the REST boundary's job
+// and lives in `purchase-drafts/rest/purchase-draft-response.ts`, beside every other `to*Response`
+// (server-architecture.md § REST). Field names and semantics are deliberately the contract's, so
+// the translation at the boundary is a rename-free one; the domain owning the type is what keeps
+// the wire shape from being built inward.
+
+// The supplier's frozen instruction judged, as the repository read it back. `verdict` is a plain
+// string here: narrowing it to the contract's enum is a transport concern, and this layer neither
+// widens nor validates it.
+export interface LineConformanceVerdict {
+  readonly verdict: string;
+  readonly note: string | null;
+}
+
+// One quantity of a line's arrival the Warehouse refused, with its Reason's current wording joined
+// in (AC-21, AC-23a). `source` and `disposition` stay strings for the same reason `verdict` does.
+export interface LineRejection {
+  readonly id: string;
+  readonly rejectionReasonId: string;
+  readonly rejectionReasonLabel: string;
+  readonly quantity: number;
+  readonly source: string;
+  readonly description: string | null;
+  readonly disposition: string;
+  readonly raisedByUserId: string;
+  readonly raisedAt: string;
+  readonly amendedByUserId: string | null;
+  readonly amendedAt: string | null;
+}
+
+// AC-22/sad.md §10 "Redaction unit" — the condition account read **without** `REJECTIONS:WATCH`:
+// ordered, presented, accepted and the one total refused figure, and no `rejections` property at
+// all.
+export interface LineConditionCauseWithheld {
+  readonly acceptedQuantity: number;
+  readonly rejectedQuantity: number;
+  readonly preReceiptConformance: LineConformanceVerdict;
+}
+
+// AC-21 — the same account read **with** `REJECTIONS:WATCH`, every refused quantity beside its
+// cause.
+export interface LineConditionWithCause extends LineConditionCauseWithheld {
+  readonly rejections: readonly LineRejection[];
+}
+
+// The two forms as a union rather than as one shape with an emptied array, mirroring
+// `PurchaseDraftLineEndingRead`'s own union: in the withheld form `rejections` is **absent as a
+// property**, because the repository never selected the columns carrying it. TypeScript then
+// enforces the same boundary the SQL does, and the REST boundary reads the presence of `rejections`
+// as the one discriminator between the contract's two `LineCondition` forms — so a withheld read
+// cannot leak a cause it never fetched.
+export type LineConditionAccount =
+  LineConditionCauseWithheld | LineConditionWithCause;
+
 // openapi.yaml `PurchaseDraftLineEnding` — the ending as this feature serves it, with its condition
-// account nested under `condition` exactly as the contract models it (AC-21, AC-22). The
-// repository hands back the ending's own columns and the condition's figures **flat**, spliced
-// together in one `json_build_object` (sad.md §6.3); nesting them into the shape the contract
-// requires is this mapping's own business decision, invoked from a use case above the repository
-// boundary (server-architecture.md § "Mappings between shared persistence entities and
-// feature-owned domain objects").
+// account nested under `condition` (AC-21, AC-22). The repository hands back the ending's own
+// columns and the condition's figures **flat**, spliced together in one `json_build_object`
+// (sad.md §6.3); nesting them is this mapping's own business decision, invoked from a use case above
+// the repository boundary.
 export interface PurchaseDraftLineEndingWithCondition {
   readonly kind: string;
   readonly quantity: number;
   readonly recordedByUserId: string;
   readonly recordedAt: string;
-  readonly condition: LineCondition | null;
+  readonly condition: LineConditionAccount | null;
 }
 
 // The identifiers named by every Rejection of every ending this read carries, deduplicated — what
@@ -57,17 +108,16 @@ export const rejectionReasonIdsOf = (
 export const withRejectionReasonLabel = (
   rejection: PurchaseDraftLineRejectionRead,
   rejectionReasonLabels: ReadonlyMap<string, string>,
-): PurchaseDraftLineRejection => ({
+): LineRejection => ({
   id: rejection.id,
   rejectionReasonId: rejection.rejectionReasonId,
   rejectionReasonLabel:
     rejectionReasonLabels.get(rejection.rejectionReasonId) ??
     rejection.rejectionReasonId,
   quantity: rejection.quantity,
-  source: rejection.source as PurchaseDraftLineRejection['source'],
+  source: rejection.source,
   description: rejection.description,
-  disposition:
-    rejection.disposition as PurchaseDraftLineRejection['disposition'],
+  disposition: rejection.disposition,
   raisedByUserId: rejection.raisedByUserId,
   raisedAt: rejection.raisedAt,
   amendedByUserId: rejection.amendedByUserId,
@@ -78,21 +128,23 @@ export const withRejectionReasonLabel = (
 // from the repository's flat columns rather than routed through unchanged. `preReceiptConformance`
 // being `null` is the discriminator `purchase-draft-read.repository.ts` hands up explicitly for the
 // absent case — a line where nothing was received, or whose ending predates this release and was
-// never backfilled (AC-04a) — and naming what that means in the response is this layer's business
-// decision, not the repository's.
+// never backfilled (AC-04a) — and naming what that means is this layer's business decision, not the
+// repository's.
 export const conditionOf = (
   ending: PurchaseDraftLineEndingRead,
   rejectionReasonLabels: ReadonlyMap<string, string>,
-): LineCondition | null => {
+): LineConditionAccount | null => {
   if (ending.preReceiptConformance === null) {
     return null;
   }
 
-  const withheld: LineCondition = {
+  const withheld: LineConditionCauseWithheld = {
     acceptedQuantity: ending.acceptedQuantity,
     rejectedQuantity: ending.rejectedQuantity,
-    preReceiptConformance:
-      ending.preReceiptConformance as PreReceiptConformance,
+    preReceiptConformance: {
+      verdict: ending.preReceiptConformance.verdict,
+      note: ending.preReceiptConformance.note,
+    },
   };
 
   if (!('rejections' in ending)) {
@@ -108,8 +160,8 @@ export const conditionOf = (
 };
 
 // The one place a repository's flat ending becomes the ending this feature serves, its condition
-// nested exactly as the contract models it. `null` passes straight through: a line with no ending
-// at all has no condition to build either.
+// nested. `null` passes straight through: a line with no ending at all has no condition to build
+// either.
 export const withCondition = (
   ending: PurchaseDraftLineEndingRead | null,
   rejectionReasonLabels: ReadonlyMap<string, string>,

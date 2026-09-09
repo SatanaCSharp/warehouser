@@ -1,13 +1,23 @@
 import type {
+  LineCondition,
+  PreReceiptConformance,
   PurchaseDraftDetail,
   PurchaseDraftLine,
+  PurchaseDraftLineEnding,
   PurchaseDraftLineIdentified,
   PurchaseDraftLineLinkIdentified,
   PurchaseDraftLineLinkRedacted,
   PurchaseDraftLineListEntry,
   PurchaseDraftLineRedacted,
+  PurchaseDraftLineRejection,
   PurchaseDraftSummary,
 } from '@warehouser/contracts/purchase-drafts';
+import type {
+  LineConditionAccount,
+  LineConformanceVerdict,
+  LineRejection,
+  PurchaseDraftLineEndingWithCondition,
+} from 'purchase-drafts/domain/mappers/line-condition.mapper';
 import type {
   PurchaseDraftLineLinkIdentifiedWithDrift,
   PurchaseDraftLineLinkRedactedWithDrift,
@@ -133,6 +143,80 @@ const toIdentifiedLinkResponse = (
   },
 });
 
+// openapi.yaml `PreReceiptConformance` — the verdict the application boundary carries as a plain
+// string, narrowed to the contract's enum here. The database's
+// `chk_purchase_draft_lines_conformance_note_shape` and the write side are what keep it one of the
+// three; this is the same narrowing every other `state`/`mode` in this file performs.
+const toConformanceResponse = (
+  conformance: LineConformanceVerdict,
+): PreReceiptConformance => ({
+  verdict: conformance.verdict as PreReceiptConformance['verdict'],
+  note: conformance.note,
+});
+
+// openapi.yaml `PurchaseDraftLineRejection` — named property by property for this file's stated
+// reason: the domain type is confidential-adjacent, and nothing on the server `safeParse`s an
+// outgoing response, so a spread would let a field added to it later travel into a response that
+// has no Permission for it.
+const toRejectionResponse = (
+  rejection: LineRejection,
+): PurchaseDraftLineRejection => ({
+  id: rejection.id,
+  rejectionReasonId: rejection.rejectionReasonId,
+  rejectionReasonLabel: rejection.rejectionReasonLabel,
+  quantity: rejection.quantity,
+  source: rejection.source as PurchaseDraftLineRejection['source'],
+  description: rejection.description,
+  disposition:
+    rejection.disposition as PurchaseDraftLineRejection['disposition'],
+  raisedByUserId: rejection.raisedByUserId,
+  raisedAt: rejection.raisedAt,
+  amendedByUserId: rejection.amendedByUserId,
+  amendedAt: rejection.amendedAt,
+});
+
+// openapi.yaml `LineCondition` — `oneOf` `LineConditionWithCause` and `LineConditionCauseWithheld`,
+// discriminated exactly as the schemas are: by whether the account carries a `rejections` property
+// at all. The withheld branch therefore **constructs no such property** — not an empty array and
+// not `null` — so a leak of a cause the read never fetched is impossible here rather than caught
+// downstream (AC-21, AC-22, sad.md §10 "Redaction unit").
+const toConditionResponse = (condition: LineConditionAccount): LineCondition =>
+  'rejections' in condition
+    ? {
+        acceptedQuantity: condition.acceptedQuantity,
+        rejectedQuantity: condition.rejectedQuantity,
+        preReceiptConformance: toConformanceResponse(
+          condition.preReceiptConformance,
+        ),
+        rejections: condition.rejections.map(toRejectionResponse),
+      }
+    : {
+        acceptedQuantity: condition.acceptedQuantity,
+        rejectedQuantity: condition.rejectedQuantity,
+        preReceiptConformance: toConformanceResponse(
+          condition.preReceiptConformance,
+        ),
+      };
+
+// openapi.yaml `PurchaseDraftLineEnding` — how the line ended, or `null` while it has none.
+// `condition` is `null` in the two cases that read alike: nothing was received, or the ending
+// predates this release and was never backfilled (AC-04a).
+const toEndingResponse = (
+  ending: PurchaseDraftLineEndingWithCondition | null,
+): PurchaseDraftLineEnding | null =>
+  ending === null
+    ? null
+    : {
+        kind: ending.kind as PurchaseDraftLineEnding['kind'],
+        quantity: ending.quantity,
+        recordedByUserId: ending.recordedByUserId,
+        recordedAt: ending.recordedAt,
+        condition:
+          ending.condition === null
+            ? null
+            : toConditionResponse(ending.condition),
+      };
+
 // openapi.yaml `PurchaseDraftLineRedacted` minus its links — everything a line carries whatever the
 // actor may read. `warehouseDestination` is part of it and not of the identified half: the
 // Warehouse's own address and access notes are the operator's premises data, read under
@@ -149,7 +233,7 @@ const toLineCommonResponse = (
   orderedQuantity: line.orderedQuantity,
   packagingTypeId: line.packagingTypeId,
   valueAddingNote: line.valueAddingNote,
-  ending: line.ending as PurchaseDraftLineRedacted['ending'],
+  ending: toEndingResponse(line.ending),
   deliveryMode: line.deliveryMode as PurchaseDraftLineRedacted['deliveryMode'],
   warehouseDestination: line.warehouseDestination,
 });
