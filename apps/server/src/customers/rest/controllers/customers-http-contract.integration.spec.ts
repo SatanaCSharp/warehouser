@@ -1053,6 +1053,7 @@ describe('customers HTTP contract', () => {
       const draft = await readRepository.readIdentifiedDraft(
         frozenLine.purchaseDraftId,
         warehouseId,
+        'with_cause',
       );
       const draftLine = draft?.lines.find((line) => line.id === frozenLineId);
       expect(draftLine?.customerDestination?.customerId).toBe(customer.id);
@@ -1383,6 +1384,7 @@ describe('customers HTTP contract', () => {
       const draft = await readRepository.readIdentifiedDraft(
         frozenLine.purchaseDraftId,
         warehouseId,
+        'with_cause',
       );
       const draftLine = draft?.lines.find((line) => line.id === frozenLineId);
       expect(draftLine?.customerDestination).toMatchObject({

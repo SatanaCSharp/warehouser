@@ -130,23 +130,31 @@ interface ConditionLineEntryRead {
 // `rejections` property to delete.
 type CauseProjection = 'with_cause' | 'cause_withheld';
 
+// Every parameter is required here, mirroring the repository exactly. An optional `cause` let this
+// suite call the real methods with two arguments — legal against this narrowed contract, invisible to
+// `tsc` behind the cast below, and silently answered by a default the repository no longer has
+// (code-review-back-end-2026-09-09.md).
 interface PurchaseDraftConditionReadContract {
   readIdentifiedDraft(
     purchaseDraftId: string,
     warehouseId: string,
-    cause?: CauseProjection,
+    cause: CauseProjection,
   ): Promise<ConditionDraftRead | null>;
   readRedactedDraft(
     purchaseDraftId: string,
     warehouseId: string,
-    cause?: CauseProjection,
+    cause: CauseProjection,
   ): Promise<ConditionDraftRead | null>;
   listIdentifiedLines(
     warehouseId: string,
-    filters?: Record<string, never>,
-    cause?: CauseProjection,
+    filters: Record<string, never>,
+    cause: CauseProjection,
   ): Promise<ConditionLineEntryRead[]>;
-  listRedactedLines(warehouseId: string): Promise<ConditionLineEntryRead[]>;
+  listRedactedLines(
+    warehouseId: string,
+    filters: Record<string, never>,
+    cause: CauseProjection,
+  ): Promise<ConditionLineEntryRead[]>;
 }
 
 const repository = new PurchaseDraftReadRepository(
@@ -568,7 +576,7 @@ const registerOpenedDraftTests = (): void => {
       await buildConditionFixture();
 
     const { result: detail, queryCount } = await withQueryCount(() =>
-      repository.readIdentifiedDraft(draftId, warehouseId),
+      repository.readIdentifiedDraft(draftId, warehouseId, 'with_cause'),
     );
 
     expect(queryCount).toBe(1);
@@ -584,7 +592,7 @@ const registerOpenedDraftTests = (): void => {
       await buildConditionFixture();
 
     const { result: detail, queryCount } = await withQueryCount(() =>
-      repository.readRedactedDraft(draftId, warehouseId),
+      repository.readRedactedDraft(draftId, warehouseId, 'with_cause'),
     );
 
     expect(queryCount).toBe(1);
@@ -601,7 +609,7 @@ const registerByLineTests = (): void => {
       await buildConditionFixture();
 
     const { result: entries, queryCount } = await withQueryCount(() =>
-      repository.listIdentifiedLines(warehouseId),
+      repository.listIdentifiedLines(warehouseId, {}, 'with_cause'),
     );
 
     expect(queryCount).toBe(1);
@@ -613,7 +621,11 @@ const registerByLineTests = (): void => {
   it('carries the same account on the redacted by-line read', async () => {
     const { warehouseId, refusedLineId } = await buildConditionFixture();
 
-    const entries = await repository.listRedactedLines(warehouseId);
+    const entries = await repository.listRedactedLines(
+      warehouseId,
+      {},
+      'with_cause',
+    );
 
     expectRefusedLineAccount(findEntryLine(entries, refusedLineId));
   });
@@ -628,7 +640,11 @@ const registerPreReleaseEndingTests = (): void => {
     const { warehouseId, draftId, preReleaseLineId } =
       await buildConditionFixture();
 
-    const detail = await repository.readIdentifiedDraft(draftId, warehouseId);
+    const detail = await repository.readIdentifiedDraft(
+      draftId,
+      warehouseId,
+      'with_cause',
+    );
 
     expectPreReleaseLineAccount(findLine(detail, preReleaseLineId));
   });
@@ -685,7 +701,11 @@ const registerNonFanOutTests = (): void => {
       });
     }
 
-    const detail = await repository.readIdentifiedDraft(draftId, warehouseId);
+    const detail = await repository.readIdentifiedDraft(
+      draftId,
+      warehouseId,
+      'with_cause',
+    );
     const line = findLine(detail, refusedLineId);
 
     expect(line?.links).toHaveLength(2);
@@ -703,7 +723,11 @@ const registerCatalogueExtensionTests = (): void => {
     const { warehouseId, draftId, refusedLineId } =
       await buildConditionFixture();
 
-    const before = await repository.readIdentifiedDraft(draftId, warehouseId);
+    const before = await repository.readIdentifiedDraft(
+      draftId,
+      warehouseId,
+      'with_cause',
+    );
 
     await dataSource.manager.getRepository(RejectionReasonEntity).insert({
       id: LATER_REJECTION_REASON_ID,
@@ -713,7 +737,11 @@ const registerCatalogueExtensionTests = (): void => {
       updatedAt: amendedAt,
     });
 
-    const after = await repository.readIdentifiedDraft(draftId, warehouseId);
+    const after = await repository.readIdentifiedDraft(
+      draftId,
+      warehouseId,
+      'with_cause',
+    );
 
     expectRefusedLineAccount(findLine(after, refusedLineId));
     expect(findLine(after, refusedLineId)?.ending?.rejections).toEqual(
@@ -741,7 +769,11 @@ const registerCatalogueExtensionTests = (): void => {
         { label: 'Cable coil (reworded)' },
       );
 
-    const detail = await repository.readIdentifiedDraft(draftId, warehouseId);
+    const detail = await repository.readIdentifiedDraft(
+      draftId,
+      warehouseId,
+      'with_cause',
+    );
     const line = findLine(detail, refusedLineId);
 
     expect(line?.packagingTypeId).toBe(FROZEN_PACKAGING_TYPE_ID);
@@ -758,7 +790,7 @@ const registerPlanTests = (): void => {
     const { warehouseId, draftId } = await buildConditionFixture();
 
     const plan = await explainLastQuery(() =>
-      repository.readIdentifiedDraft(draftId, warehouseId),
+      repository.readIdentifiedDraft(draftId, warehouseId, 'with_cause'),
     );
 
     expect(plan).toContain('uq_purchase_draft_line_rejections_line_reason');

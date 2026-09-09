@@ -423,7 +423,7 @@ const registerComparisonTests = (): void => {
       await buildAddressDriftFixture();
 
     const { result: detail, queryCount } = await withQueryCount(() =>
-      repository.readIdentifiedDraft(draftId, warehouseId),
+      repository.readIdentifiedDraft(draftId, warehouseId, 'with_cause'),
     );
 
     expect(queryCount).toBe(1);
@@ -455,7 +455,11 @@ const registerComparisonTests = (): void => {
       .getRepository(CustomerDeliveryAddressEntity)
       .update({ id: addressAId }, { addressText: correctedText });
 
-    const detail = await repository.readIdentifiedDraft(draftId, warehouseId);
+    const detail = await repository.readIdentifiedDraft(
+      draftId,
+      warehouseId,
+      'with_cause',
+    );
     const link = findLink(detail, directLinkId);
 
     expect(link?.current.deliveryAddress?.addressText).toBe(correctedText);
@@ -482,7 +486,11 @@ const registerComparisonTests = (): void => {
     const linkId = await seedLink(lineId, draftId, warehouseId, orderId);
     await seedSnapshot(linkId, lineId, orderId, null);
 
-    const detail = await repository.readIdentifiedDraft(draftId, warehouseId);
+    const detail = await repository.readIdentifiedDraft(
+      draftId,
+      warehouseId,
+      'with_cause',
+    );
 
     expect(findLink(detail, linkId)?.current.deliveryAddress).toBeNull();
     expect(detail?.hasDriftSignal).toBe(false);
@@ -510,7 +518,11 @@ const driftFlagsOf = async (
   draftId: string,
   warehouseId: string,
 ): Promise<DriftFlags> => {
-  const detail = await repository.readIdentifiedDraft(draftId, warehouseId);
+  const detail = await repository.readIdentifiedDraft(
+    draftId,
+    warehouseId,
+    'with_cause',
+  );
   const [summary] = await repository.listDrafts(warehouseId);
 
   return {
@@ -545,7 +557,7 @@ const registerFreshnessTests = (): void => {
 
     // The frozen half is untouched; only the live half moved (AC-18).
     const drifted = findLink(
-      await repository.readIdentifiedDraft(draftId, warehouseId),
+      await repository.readIdentifiedDraft(draftId, warehouseId, 'with_cause'),
       fixture.directLinkId,
     );
     expect(drifted?.snapshot?.capturedDeliveryAddressId).toBe(addressAId);
@@ -559,7 +571,7 @@ const registerFreshnessTests = (): void => {
 
     expect(await driftFlagsOf(draftId, warehouseId)).toEqual(NO_DRIFT);
     const restored = findLink(
-      await repository.readIdentifiedDraft(draftId, warehouseId),
+      await repository.readIdentifiedDraft(draftId, warehouseId, 'with_cause'),
       fixture.directLinkId,
     );
     expect(restored?.current.deliveryAddress?.deliveryAddressId).toBe(
@@ -577,7 +589,11 @@ const registerFreshnessTests = (): void => {
 
     await redirectCustomerOrder(viaOrderId, addressBId);
 
-    const detail = await repository.readIdentifiedDraft(draftId, warehouseId);
+    const detail = await repository.readIdentifiedDraft(
+      draftId,
+      warehouseId,
+      'with_cause',
+    );
     expect(detail?.hasDriftSignal).toBe(true);
     expect(detail?.hasDirectToCustomerAddressDrift).toBe(false);
     expect(
@@ -598,14 +614,14 @@ const registerFreshnessTests = (): void => {
 
     const before = await frozenStateOf(draftId);
 
-    await repository.readIdentifiedDraft(draftId, warehouseId);
+    await repository.readIdentifiedDraft(draftId, warehouseId, 'with_cause');
     await repository.listDrafts(warehouseId);
     await redirectCustomerOrder(fixture.directOrderId, addressBId);
     await redirectCustomerOrder(fixture.viaOrderId, addressBId);
-    await repository.readIdentifiedDraft(draftId, warehouseId);
-    await repository.listIdentifiedLines(warehouseId);
+    await repository.readIdentifiedDraft(draftId, warehouseId, 'with_cause');
+    await repository.listIdentifiedLines(warehouseId, {}, 'with_cause');
     await redirectCustomerOrder(fixture.directOrderId, addressAId);
-    await repository.readIdentifiedDraft(draftId, warehouseId);
+    await repository.readIdentifiedDraft(draftId, warehouseId, 'with_cause');
 
     expect(await frozenStateOf(draftId)).toEqual(before);
   });
@@ -731,7 +747,12 @@ const registerScaleTests = (): void => {
     }
 
     const { result: detail, queryCount: readQueryCount } = await withQueryCount(
-      () => repository.readIdentifiedDraft(redirectedDraftId, warehouseId),
+      () =>
+        repository.readIdentifiedDraft(
+          redirectedDraftId,
+          warehouseId,
+          'with_cause',
+        ),
     );
 
     expect(readQueryCount).toBe(1);
@@ -755,7 +776,7 @@ const registerScaleTests = (): void => {
     const { warehouseId } = await seedWarehouseAtScale();
 
     const { result: entries, queryCount } = await withQueryCount(() =>
-      repository.listIdentifiedLines(warehouseId),
+      repository.listIdentifiedLines(warehouseId, {}, 'with_cause'),
     );
 
     expect(queryCount).toBe(1);
@@ -775,7 +796,7 @@ const registerByLineTests = (): void => {
       await buildAddressDriftFixture();
 
     const { result: entries, queryCount } = await withQueryCount(() =>
-      repository.listIdentifiedLines(warehouseId),
+      repository.listIdentifiedLines(warehouseId, {}, 'with_cause'),
     );
 
     expect(queryCount).toBe(1);
@@ -832,21 +853,27 @@ const registerByLineTests = (): void => {
       itemId,
     );
 
-    const direct = await repository.listIdentifiedLines(warehouseId, {
-      deliveryMode: 'direct_to_customer',
-    });
+    const direct = await repository.listIdentifiedLines(
+      warehouseId,
+      { deliveryMode: 'direct_to_customer' },
+      'with_cause',
+    );
     expect(direct.map((entry) => entry.line.id)).toEqual([directLineId]);
 
-    const via = await repository.listIdentifiedLines(warehouseId, {
-      deliveryMode: 'via_warehouse',
-    });
+    const via = await repository.listIdentifiedLines(
+      warehouseId,
+      { deliveryMode: 'via_warehouse' },
+      'with_cause',
+    );
     expect(via.map((entry) => entry.line.id).sort()).toEqual(
       [viaLineId, openLineId].sort(),
     );
 
-    const frozen = await repository.listIdentifiedLines(warehouseId, {
-      state: 'ready_for_ordering',
-    });
+    const frozen = await repository.listIdentifiedLines(
+      warehouseId,
+      { state: 'ready_for_ordering' },
+      'with_cause',
+    );
     expect(frozen.map((entry) => entry.line.id).sort()).toEqual(
       [viaLineId, directLineId].sort(),
     );
@@ -859,7 +886,11 @@ const registerByLineTests = (): void => {
     const { warehouseId } = await buildAddressDriftFixture();
     const other = await buildAddressDriftFixture();
 
-    const entries = await repository.listIdentifiedLines(warehouseId);
+    const entries = await repository.listIdentifiedLines(
+      warehouseId,
+      {},
+      'with_cause',
+    );
 
     expect(entries).toHaveLength(2);
     expect(entries.map((entry) => entry.purchaseDraftId)).not.toContain(

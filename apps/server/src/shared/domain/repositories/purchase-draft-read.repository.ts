@@ -912,7 +912,7 @@ export class PurchaseDraftReadRepository {
   readRedactedDraft(
     purchaseDraftId: string,
     warehouseId: string,
-    cause: RejectionCauseProjection = 'with_cause',
+    cause: RejectionCauseProjection,
   ): Promise<PurchaseDraftDetailRedactedRead | null> {
     return readDraftRow<PurchaseDraftLineRedactedRead>(
       getEntityManager(this.dataSource),
@@ -929,7 +929,7 @@ export class PurchaseDraftReadRepository {
   readIdentifiedDraft(
     purchaseDraftId: string,
     warehouseId: string,
-    cause: RejectionCauseProjection = 'with_cause',
+    cause: RejectionCauseProjection,
   ): Promise<PurchaseDraftDetailIdentifiedRead | null> {
     return readDraftRow<PurchaseDraftLineIdentifiedRead>(
       getEntityManager(this.dataSource),
@@ -952,8 +952,8 @@ export class PurchaseDraftReadRepository {
   // Scoped through the **draft's** Warehouse, the same ownership the other reads use.
   listRedactedLines(
     warehouseId: string,
-    filters: PurchaseDraftLineFilters = {},
-    cause: RejectionCauseProjection = 'with_cause',
+    filters: PurchaseDraftLineFilters,
+    cause: RejectionCauseProjection,
   ): Promise<PurchaseDraftLineListEntryRedactedRead[]> {
     return listLineRows<PurchaseDraftLineRedactedRead>(
       getEntityManager(this.dataSource),
@@ -966,8 +966,8 @@ export class PurchaseDraftReadRepository {
 
   listIdentifiedLines(
     warehouseId: string,
-    filters: PurchaseDraftLineFilters = {},
-    cause: RejectionCauseProjection = 'with_cause',
+    filters: PurchaseDraftLineFilters,
+    cause: RejectionCauseProjection,
   ): Promise<PurchaseDraftLineListEntryIdentifiedRead[]> {
     return listLineRows<PurchaseDraftLineIdentifiedRead>(
       getEntityManager(this.dataSource),

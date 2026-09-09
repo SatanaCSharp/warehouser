@@ -58,7 +58,7 @@ export class ListPurchaseDraftLinesQuery {
     if (!readsCustomerIdentity(currentUser.observedPermissionIds)) {
       const redacted = await this.repository.listRedactedLines(
         currentUser.warehouseId,
-        filters,
+        filters ?? {},
         cause,
       );
 
@@ -78,7 +78,7 @@ export class ListPurchaseDraftLinesQuery {
 
     const identified = await this.repository.listIdentifiedLines(
       currentUser.warehouseId,
-      filters,
+      filters ?? {},
       cause,
     );
 

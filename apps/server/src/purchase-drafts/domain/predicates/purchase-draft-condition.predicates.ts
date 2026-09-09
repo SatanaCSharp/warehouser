@@ -1,3 +1,4 @@
+import { maxProseLength } from '@warehouser/contracts/purchase-drafts';
 import { countBy, intersection, keys, pickBy, sum, uniq } from 'lodash';
 import { type DeliveryMode } from 'purchase-drafts/domain/value-objects/delivery-mode';
 import {
@@ -31,7 +32,14 @@ export type RejectionReasonCatalogueEntry = {
 // AC-14/AC-15b — one bound, shared by a refusal's description and by the Conformance note
 // (`chk_purchase_draft_line_rejections_description_length`,
 // `chk_purchase_draft_lines_conformance_note_length`, both `char_length`).
-export const MAX_PROSE_LENGTH = 1000;
+//
+// Re-exported from the contract rather than restated: `@warehouser/contracts` owns the value, and
+// its own comment records that restating the number is what let the read and write schemas drift to
+// a bound that refused prose the server had just accepted. The server still **evaluates** the bound
+// itself, which guides/server-error-handling.md §1 requires ("Server evaluation remains
+// authoritative for business conditions"); only the figure is shared, and it is the figure the
+// too-long refusals report back to the client (code-review-back-end-2026-09-09.md).
+export const MAX_PROSE_LENGTH = maxProseLength;
 
 // The two Reasons a Met verdict cannot stand beside, because refusing for either **is** the
 // instruction not being met (AC-16). Unlike AC-07's flag these are named by the acceptance criterion
