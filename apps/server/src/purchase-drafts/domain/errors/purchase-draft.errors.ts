@@ -257,6 +257,7 @@ export type ConditionSplitViolation = ReturnType<
   | typeof descriptionRequiredViolation
   | typeof duplicateRejectionReasonViolation
   | typeof sourceMismatchViolation
+  | typeof verdictRequiredWithRejectionsViolation
 >;
 
 export type PreReceiptConformanceViolation = ReturnType<
@@ -308,6 +309,18 @@ export const unknownRejectionReasonViolation = (
 export const descriptionRequiredViolation = (rejectionReasonId: string) => ({
   rule: 'description_required',
   rejectionReasonId,
+});
+
+// code-review-back-end-2026-09-09.md, blocking finding 4 — the entry names the refused total the
+// member must either withdraw or state a verdict beside. `rejectionReasonId` is `null` because the
+// rule is about the line's whole Condition Split rather than about any one refusal, as
+// `rejections_exceed_received` above.
+export const verdictRequiredWithRejectionsViolation = (
+  rejectedQuantity: number,
+) => ({
+  rule: 'verdict_required_with_rejections',
+  rejectionReasonId: null,
+  rejectedQuantity,
 });
 
 // AC-09 — the entry names the Reason repeated on the line.

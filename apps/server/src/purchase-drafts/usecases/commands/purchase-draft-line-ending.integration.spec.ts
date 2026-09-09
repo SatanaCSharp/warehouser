@@ -926,7 +926,9 @@ describe('per-line endings (T17, ADR 0002)', () => {
             description: null,
           },
         ],
-        preReceiptConformance: null,
+        // Incidental to the duplicate-Reason rule this case is about; a refusal requires a verdict
+        // beside it (code-review-back-end-2026-09-09.md, blocking finding 4).
+        preReceiptConformance: { verdict: 'not_applicable', note: null },
         allocations: [
           { purchaseDraftLineLinkId: linkId, allocatedQuantity: 95 },
         ],
@@ -974,7 +976,9 @@ describe('per-line endings (T17, ADR 0002)', () => {
             description: null,
           },
         ],
-        preReceiptConformance: null,
+        // Incidental to the description requirement this case is about; a refusal requires a verdict
+        // beside it (code-review-back-end-2026-09-09.md, blocking finding 4).
+        preReceiptConformance: { verdict: 'not_applicable', note: null },
         allocations: [
           { purchaseDraftLineLinkId: linkId, allocatedQuantity: 95 },
         ],
@@ -1059,7 +1063,9 @@ describe('per-line endings (T17, ADR 0002)', () => {
             description: null,
           },
         ],
-        preReceiptConformance: null,
+        // Incidental to the allocation bound this case is about; a refusal requires a verdict beside
+        // it (code-review-back-end-2026-09-09.md, blocking finding 4).
+        preReceiptConformance: { verdict: 'not_applicable', note: null },
         // Ninety-two is accepted (100 presented less 8 refused); one hundred is assigned.
         allocations: [
           { purchaseDraftLineLinkId: linkId, allocatedQuantity: 100 },

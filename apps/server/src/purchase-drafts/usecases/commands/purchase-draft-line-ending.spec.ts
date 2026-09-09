@@ -539,6 +539,10 @@ describe('T10 — the condition half of a line ending', () => {
           rejections: [
             validRejection({ rejectionReasonId: 'not_a_real_reason' }),
           ],
+          // Incidental to what this case is about; a refusal requires a verdict beside it
+          // (code-review-back-end-2026-09-09.md, blocking finding 4). The locked line carries no
+          // frozen instruction, so Not applicable is the verdict it admits.
+          preReceiptConformance: { verdict: 'not_applicable', note: null },
         }),
       );
 
@@ -657,6 +661,9 @@ describe('T10 — the condition half of a line ending (nothing received, accepte
       const input = conditionInput({
         receivedQuantity: 100,
         rejections: [validRejection({ quantity: 8 })],
+        // Incidental to the accepted-figure bound this case is about; a refusal requires a verdict
+        // beside it (code-review-back-end-2026-09-09.md, blocking finding 4).
+        preReceiptConformance: { verdict: 'not_applicable', note: null },
         allocations: [
           {
             purchaseDraftLineLinkId: '00000000-0000-4000-8000-000000000501',
@@ -710,7 +717,12 @@ describe('T10 — the condition half of a line ending (direct-delivery Source mi
         rejections: [
           validRejection({ source: 'customer_reported', quantity: 6 }),
         ],
-        preReceiptConformance: null,
+        // Incidental to the Source mirror this case is about; a refusal requires a verdict beside it
+        // (code-review-back-end-2026-09-09.md, blocking finding 4).
+        preReceiptConformance: {
+          verdict: 'not_applicable' as const,
+          note: null,
+        },
         allocations: [],
       };
 

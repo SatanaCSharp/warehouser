@@ -29,6 +29,7 @@ import {
   sourceMismatchViolation,
   unknownRejectionReasonViolation,
   verdictOnUninstructedLineViolation,
+  verdictRequiredWithRejectionsViolation,
 } from 'purchase-drafts/domain/errors/purchase-draft.errors';
 import type { RejectionReasonCatalogueEntry } from 'purchase-drafts/domain/predicates/purchase-draft-condition.predicates';
 import {
@@ -44,6 +45,7 @@ import {
   lineCarriesFrozenInstruction,
   metAgreesWithRefusals,
   notApplicableOnlyOnUninstructedLine,
+  refusalsStateVerdict,
   refusalsWithinPresented,
   satisfiesDescriptionRequirement,
   sourceMatchesDeliveryMode,
@@ -286,6 +288,12 @@ export const assertConditionSplit = (
       duplicateRejectionReasonViolation,
     ),
     ...sourceMismatchViolationsOf(line, submission),
+    ...(refusalsStateVerdict(
+      !isEmpty(submission.rejections),
+      submission.preReceiptConformance !== null,
+    )
+      ? []
+      : [verdictRequiredWithRejectionsViolation(rejectedQuantity)]),
   ];
 
   assert(

@@ -62,6 +62,16 @@ export const refusalsWithinPresented = (
   rejectedQuantity: number,
 ): boolean => rejectedQuantity <= receivedQuantity;
 
+// code-review-back-end-2026-09-09.md, blocking finding 4 — a refusal is readable only beside a
+// verdict, because `LineCondition` declares `preReceiptConformance` non-nullable in both its forms
+// (`@warehouser/contracts` `lineConditionWithCauseSchema`, `lineConditionCauseWithheldSchema`). A
+// submission that refuses nothing states no verdict legally: that is the plain ending a member
+// without `REJECTIONS:CREATE` records, and the nothing-received ending of AC-04a.
+export const refusalsStateVerdict = (
+  refusesAnything: boolean,
+  verdictStated: boolean,
+): boolean => !refusesAnything || verdictStated;
+
 // AC-09 — one line carries one refusal per Reason
 // (`uq_purchase_draft_line_rejections_line_reason`).
 export const hasOneRefusalPerReason = (

@@ -307,6 +307,49 @@ describe('assertConditionSplit — the shared Condition Split assertion (AC-02, 
     });
   });
 
+  // code-review-back-end-2026-09-09.md, blocking finding 4 — a refusal is only readable beside a
+  // verdict, because `LineCondition` declares `preReceiptConformance` non-nullable in both its forms.
+  // Persisting Rejections without one produced a row every read served as `condition: null`, so the
+  // refused quantity, the accepted quantity and every Rejection vanished for an actor who held
+  // `REJECTIONS:WATCH`. The state is refused here rather than modelled in the contract, which is what
+  // makes it unrepresentable instead of merely reported.
+  it('refuses refusals stated without a Pre-receipt Conformance verdict', () => {
+    const error = refusalFrom(() =>
+      assertConditionSplit(
+        lockedLine(),
+        submission({
+          receivedQuantity: 100,
+          rejections: [refusal('damaged_in_transit', { quantity: 8 })],
+          preReceiptConformance: null,
+        }),
+      ),
+    );
+
+    expect(error.code).toBe(ErrorCode.PURCHASE_DRAFTS_CONDITION_SPLIT_INVALID);
+    expect(violationsOf(error)).toContainEqual({
+      rule: 'verdict_required_with_rejections',
+      rejectionReasonId: null,
+      rejectedQuantity: 8,
+    });
+  });
+
+  // The two legal shapes the rule above must not reach: a plain ending states no verdict and refuses
+  // nothing, which is what keeps a member without `REJECTIONS:CREATE` able to record one at all
+  // (server-request-authorization.md § "Declare the Permissions a projection observes"), and a
+  // nothing-received ending carries no condition by AC-04a.
+  it('admits a plain ending that states no verdict and refuses nothing', () => {
+    expect(() =>
+      assertConditionSplit(
+        lockedLine(),
+        submission({
+          receivedQuantity: 100,
+          rejections: [],
+          preReceiptConformance: null,
+        }),
+      ),
+    ).not.toThrow();
+  });
+
   // AC-09 — "one line carries one refusal per reason", and the refusal names the repeated Reason
   // rather than only reporting that one exists.
   it('refuses two refusals carrying one Reason, naming the repeated Reason', () => {
@@ -397,6 +440,9 @@ describe('assertConditionSplit — the shared Condition Split assertion (AC-02, 
             refusal('damaged_in_transit', { quantity: 5 }),
             refusal('unfit_other', { quantity: 3 }),
           ],
+          // Incidental to the bound this case is about, but a refusal now requires a verdict beside
+          // it (code-review-back-end-2026-09-09.md, blocking finding 4).
+          preReceiptConformance: PreReceiptConformanceVerdict.NotApplicable,
         }),
       ),
     ).not.toThrow();
@@ -759,6 +805,9 @@ describe('ArrivalInspectionService.assertEndingCondition — the payload shape o
               description: 'crushed corner',
             }),
           ],
+          // Incidental to the payload shape this case is about; a refusal requires a verdict beside
+          // it (code-review-back-end-2026-09-09.md, blocking finding 4).
+          preReceiptConformance: PreReceiptConformanceVerdict.NotApplicable,
         }),
       ),
     ).resolves.toBeUndefined();
