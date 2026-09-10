@@ -1,16 +1,14 @@
 import { screen, waitFor, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { ErrorCode } from '@warehouser/shared-types/enums';
-import { describe, expect, it, vi } from 'vitest';
-
-import { LinkCustomerOrderDialog } from 'modules/purchase-draft/components/purchase-draft-line-links/components/LinkCustomerOrderDialog';
-import { DialogHost } from 'shared/components/DialogHost';
-import { renderWithProviders } from 'test/render';
-
 import type { UserEvent } from '@testing-library/user-event';
+import userEvent from '@testing-library/user-event';
 import type { CustomerOrder } from '@warehouser/contracts/customer-orders';
 import type { PurchaseDraftLineLinkCreate } from '@warehouser/contracts/purchase-drafts';
+import { ErrorCode } from '@warehouser/shared-types/enums';
+import { LinkCustomerOrderDialog } from 'modules/purchase-draft/components/purchase-draft-line-links/components/LinkCustomerOrderDialog';
 import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import { DialogHost } from 'shared/components/DialogHost';
+import { renderWithProviders } from 'test/render';
+import { describe, expect, it, vi } from 'vitest';
 
 // AC-10 / AC-10a / AC-11a — linking a draft line to the demand it is intended
 // to serve. This is the destination's core loop: without it a draft can never

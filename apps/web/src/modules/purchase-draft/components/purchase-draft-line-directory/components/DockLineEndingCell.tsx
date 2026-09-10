@@ -1,7 +1,6 @@
-import { LineEndingAction } from 'modules/purchase-draft/components/purchase-draft-transitions/components/LineEndingAction';
-
 import type { PurchaseDraftLineListEntry } from '@warehouser/contracts/purchase-drafts';
 import type { LineEndingDraft } from 'modules/purchase-draft/components/purchase-draft-transitions/components/LineEndingAction';
+import { LineEndingAction } from 'modules/purchase-draft/components/purchase-draft-transitions/components/LineEndingAction';
 import type { ReactElement } from 'react';
 
 export type DockLineEndingCellProps = {

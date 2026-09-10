@@ -1,6 +1,5 @@
-import { workspaceContextApi } from 'shared/api/workspace/workspace-context-api';
-
 import type { RouterContext } from 'routes/__root.route';
+import { workspaceContextApi } from 'shared/api/workspace/workspace-context-api';
 
 /**
  * What the addressed Warehouse admits.

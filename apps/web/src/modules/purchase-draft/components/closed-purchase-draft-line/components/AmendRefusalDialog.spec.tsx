@@ -1,17 +1,15 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
-
-import { AmendRefusalDialog } from 'modules/purchase-draft/components/closed-purchase-draft-line/components/AmendRefusalDialog';
-import { DialogHost } from 'shared/components/DialogHost';
-import { selectHeroOption } from 'test/hero-select';
-import { renderWithProviders } from 'test/render';
-
 import type {
   PurchaseDraftLineRejection,
   RejectionAmend,
 } from '@warehouser/contracts/purchase-drafts';
+import { AmendRefusalDialog } from 'modules/purchase-draft/components/closed-purchase-draft-line/components/AmendRefusalDialog';
 import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import { DialogHost } from 'shared/components/DialogHost';
+import { selectHeroOption } from 'test/hero-select';
+import { renderWithProviders } from 'test/render';
+import { describe, expect, it, vi } from 'vitest';
 
 // T18 — `Modal · Amend this refusal` (`iNstk`, design-handoff.md § Component
 // mapping, `W6TARi` cell `Ue4xn`): the dialog a member holding

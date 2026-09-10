@@ -1,6 +1,5 @@
-import { describe, expect, it } from 'vitest';
-
 import { mutationOutcome } from 'shared/api/client/mutation-outcome';
+import { describe, expect, it } from 'vitest';
 
 describe('mutationOutcome', () => {
   it('reports a committed mutation as a success with nothing to explain', () => {

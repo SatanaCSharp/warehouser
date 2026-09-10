@@ -1,7 +1,6 @@
+import type { ReactNode } from 'react';
 import { useContext } from 'react';
 import { OverlayTriggerStateContext } from 'react-aria-components';
-
-import type { ReactNode } from 'react';
 
 type TriggeredDialogProps = {
   /** The dialog the surrounding `Modal`'s trigger opens. */

@@ -1,17 +1,15 @@
 import { Chip } from '@heroui/react';
-import { useTranslation } from 'react-i18next';
-
-import { DriftSignal } from 'modules/purchase-draft/components/DriftSignal';
-import { useDraftActorName } from 'modules/purchase-draft/hooks/projections/useDraftActorName';
-import { Conditional } from 'shared/components/Conditional';
-import { ROW_ENTER } from 'shared/constants/motion';
-import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
-
 import type {
   PurchaseDraftState,
   PurchaseDraftSummary,
 } from '@warehouser/contracts/purchase-drafts';
+import { DriftSignal } from 'modules/purchase-draft/components/DriftSignal';
+import { useDraftActorName } from 'modules/purchase-draft/hooks/projections/useDraftActorName';
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Conditional } from 'shared/components/Conditional';
+import { ROW_ENTER } from 'shared/constants/motion';
+import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
 
 export type PurchaseDraftCardProps = {
   draft: PurchaseDraftSummary;

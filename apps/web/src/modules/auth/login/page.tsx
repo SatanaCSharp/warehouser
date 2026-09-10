@@ -1,17 +1,15 @@
 import { Card } from '@heroui/react';
 import { useNavigate, useSearch } from '@tanstack/react-router';
-import { useEffect, useRef } from 'react';
-import { useTranslation } from 'react-i18next';
-
 import { useSignInMutation } from 'modules/auth/api/auth-api';
 import { LoginForm } from 'modules/auth/login/components/LoginForm';
+import type { LoginFormValues } from 'modules/auth/login/schemas/login-form.schema';
 import { authBecameAuthenticated } from 'modules/auth/store/auth.slice';
+import type { ReactElement } from 'react';
+import { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Conditional } from 'shared/components/Conditional';
 import { ROUTES } from 'shared/constants/routes';
 import { useAppDispatch } from 'store/hooks';
-
-import type { LoginFormValues } from 'modules/auth/login/schemas/login-form.schema';
-import type { ReactElement } from 'react';
 
 export const LoginPage = (): ReactElement => {
   const { t } = useTranslation('sign-in');

@@ -1,7 +1,6 @@
 import { I18nProvider } from '@react-aria/i18n';
-import { useTranslation } from 'react-i18next';
-
 import type { ReactElement, ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
 type LocaleProviderProps = { children: ReactNode };
 

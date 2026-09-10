@@ -1,5 +1,4 @@
 import { createRoute, lazyRouteComponent } from '@tanstack/react-router';
-
 import { warehouseRoute } from 'routes/warehouse.route';
 
 // T4 — the Warehouse dashboard: the index child of the layout route. Its

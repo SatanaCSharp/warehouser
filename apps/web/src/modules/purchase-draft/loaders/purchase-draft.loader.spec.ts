@@ -3,14 +3,12 @@ import { posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { purchaseDraftApi } from 'modules/purchase-draft/api/purchase-draft-api';
-import { loadPurchaseDrafts } from 'modules/purchase-draft/loaders/purchase-draft.loader';
-import { accessIds, authenticatedStore } from 'test/access-fixtures';
-
 import type { PurchaseDraftLoaderContext } from 'modules/purchase-draft/loaders/purchase-draft.loader';
+import { loadPurchaseDrafts } from 'modules/purchase-draft/loaders/purchase-draft.loader';
 import type { AppStore } from 'store';
+import { accessIds, authenticatedStore } from 'test/access-fixtures';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // T20 — the Purchase drafts destination's route loader (DoD "a test proves a
 // loader refused by a missing PURCHASE_DRAFTS:WATCH issues zero requests").

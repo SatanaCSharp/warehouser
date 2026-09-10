@@ -1,13 +1,11 @@
 import { Button, Dropdown, Label } from '@heroui/react';
-import { useTranslation } from 'react-i18next';
-
-import { useCustomerOrderActions } from 'modules/customer-order/hooks/projections/useCustomerOrderActions';
-import { useCustomerOrderNaming } from 'modules/customer-order/hooks/projections/useCustomerOrderNaming';
-import { KebabIcon } from 'shared/icons';
-
 import type { CustomerOrder } from '@warehouser/contracts/customer-orders';
 import type { CustomerOrderActionHandlers } from 'modules/customer-order/hooks/projections/useCustomerOrderActions';
+import { useCustomerOrderActions } from 'modules/customer-order/hooks/projections/useCustomerOrderActions';
+import { useCustomerOrderNaming } from 'modules/customer-order/hooks/projections/useCustomerOrderNaming';
 import type { Key, ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import { KebabIcon } from 'shared/icons';
 
 export type CustomerOrderActionsMenuProps = CustomerOrderActionHandlers & {
   order: CustomerOrder;

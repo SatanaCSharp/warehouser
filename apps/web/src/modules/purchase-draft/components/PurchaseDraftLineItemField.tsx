@@ -1,11 +1,9 @@
-import { useTranslation } from 'react-i18next';
-
-import { FormSelectField } from 'shared/components/FormSelectField';
-
 import type { Item } from '@warehouser/contracts/items';
 import type { PurchaseDraftLine } from '@warehouser/contracts/purchase-drafts';
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { SelectOption } from 'shared/components/FormSelectField';
+import { FormSelectField } from 'shared/components/FormSelectField';
 
 export type PurchaseDraftLineItemFieldProps = {
   /**

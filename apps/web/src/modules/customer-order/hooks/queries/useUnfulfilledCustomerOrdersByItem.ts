@@ -1,10 +1,8 @@
-import groupBy from 'lodash/groupBy';
-import { useMemo } from 'react';
-
-import { useListCustomerOrdersQuery } from 'modules/customer-order/api/customer-order-api';
-import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
-
 import type { CustomerOrder } from '@warehouser/contracts/customer-orders';
+import groupBy from 'lodash/groupBy';
+import { useListCustomerOrdersQuery } from 'modules/customer-order/api/customer-order-api';
+import { useMemo } from 'react';
+import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
 
 /** One Item's Unfulfilled Customer Orders, by the Item they were placed for. */
 export type UnfulfilledCustomerOrdersByItem = Record<string, CustomerOrder[]>;

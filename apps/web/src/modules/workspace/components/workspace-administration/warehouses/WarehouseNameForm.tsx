@@ -1,18 +1,16 @@
 import { Button } from '@heroui/react';
+import type { Warehouse } from '@warehouser/contracts/workspaces';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
+import { useRenameWarehouseMutation } from 'modules/workspace/api/warehouse-api';
+import type { WarehouseNameFormValues } from 'modules/workspace/schemas/warehouse-name-form.schema';
+import { warehouseNameFormSchema } from 'modules/workspace/schemas/warehouse-name-form.schema';
+import type { ReactElement } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-
-import { useRenameWarehouseMutation } from 'modules/workspace/api/warehouse-api';
-import { warehouseNameFormSchema } from 'modules/workspace/schemas/warehouse-name-form.schema';
 import { mutationOutcome } from 'shared/api/client/mutation-outcome';
 import { FormTextField } from 'shared/components/FormTextField';
 import { WorkspacePermissionGate } from 'shared/components/WorkspacePermissionGate';
 import { useFormFieldErrors } from 'shared/hooks/forms/useFormFieldErrors';
-
-import type { Warehouse } from '@warehouser/contracts/workspaces';
-import type { WarehouseNameFormValues } from 'modules/workspace/schemas/warehouse-name-form.schema';
-import type { ReactElement } from 'react';
 
 type WarehouseNameFormProps = { warehouse: Warehouse };
 

@@ -1,11 +1,9 @@
 import { Checkbox, Chip } from '@heroui/react';
-import { useTranslation } from 'react-i18next';
-
-import { useWorkspacePermissionLabel } from 'modules/access/hooks/projections/useWorkspacePermissionLabel';
-import { Conditional } from 'shared/components/Conditional';
-
 import type { WorkspacePermission } from '@warehouser/contracts/workspaces';
+import { useWorkspacePermissionLabel } from 'modules/access/hooks/projections/useWorkspacePermissionLabel';
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Conditional } from 'shared/components/Conditional';
 
 type WorkspacePermissionCheckboxProps = {
   isDisabled: boolean;

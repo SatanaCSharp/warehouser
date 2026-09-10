@@ -6,17 +6,15 @@ import {
   Outlet,
   RouterProvider,
 } from '@tanstack/react-router';
-import { render } from '@testing-library/react';
-import { Provider } from 'react-redux';
-
-import { ROUTES } from 'shared/constants/routes';
-import { makeStore } from 'store';
-import { accessIds } from 'test/access-fixtures';
-
 import type { RenderResult } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import type { WarehouseEntryVerdict } from 'guards/warehouse-entry.guard';
 import type React from 'react';
+import { Provider } from 'react-redux';
+import { ROUTES } from 'shared/constants/routes';
 import type { AppStore } from 'store';
+import { makeStore } from 'store';
+import { accessIds } from 'test/access-fixtures';
 
 /**
  * Renders `ui` inside a Redux `Provider`, matching the production render

@@ -1,8 +1,7 @@
 import { createRoute, redirect } from '@tanstack/react-router';
-
 import { rootRoute } from 'routes/__root.route';
 import { warehouseRoute } from 'routes/warehouse.route';
-import { ROUTES, ROUTE_SEGMENTS } from 'shared/constants/routes';
+import { ROUTE_SEGMENTS, ROUTES } from 'shared/constants/routes';
 
 // T4 / CH-10 / CR-AC-16 — the Warehouse-level splat child. Because it is a
 // child of `warehouseRoute`, `/warehouses/:warehouseId/anything` matches the

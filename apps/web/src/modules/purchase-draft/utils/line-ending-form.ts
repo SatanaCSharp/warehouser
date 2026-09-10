@@ -1,5 +1,3 @@
-import { z } from 'zod';
-
 import type {
   PreReceiptConformanceCreate,
   PurchaseDraftLine,
@@ -10,6 +8,7 @@ import type {
   RejectionSource,
 } from '@warehouser/contracts/purchase-drafts';
 import type { FormParse, FormParseResult } from 'shared/utils/form-parse';
+import { z } from 'zod';
 
 /**
  * One refusal row of the condition block (T15, AC-05/AC-08). `ConditionBlock`

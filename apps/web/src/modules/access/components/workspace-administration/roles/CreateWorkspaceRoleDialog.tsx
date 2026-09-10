@@ -1,16 +1,14 @@
-import { Controller, useForm } from 'react-hook-form';
-import { useTranslation } from 'react-i18next';
-
+import type { WorkspacePermission } from '@warehouser/contracts/workspaces';
 import { useCreateWorkspaceRoleMutation } from 'modules/access/api/workspace-roles-api';
 import { WorkspacePermissionFieldset } from 'modules/access/components/workspace-administration/roles/WorkspacePermissionFieldset';
+import type { WorkspaceRoleFormValues } from 'modules/access/schemas/workspace-role-form.schema';
 import { workspaceRoleFormSchema } from 'modules/access/schemas/workspace-role-form.schema';
+import type { ReactElement } from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormTextField } from 'shared/components/FormTextField';
 import { parseWithSchema } from 'shared/utils/form-parse';
-
-import type { WorkspacePermission } from '@warehouser/contracts/workspaces';
-import type { WorkspaceRoleFormValues } from 'modules/access/schemas/workspace-role-form.schema';
-import type { ReactElement } from 'react';
 
 type CreateWorkspaceRoleDialogProps = {
   permissions: WorkspacePermission[];

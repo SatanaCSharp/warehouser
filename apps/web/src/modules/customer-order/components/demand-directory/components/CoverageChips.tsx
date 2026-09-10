@@ -1,10 +1,8 @@
 import { Chip } from '@heroui/react';
-import { useTranslation } from 'react-i18next';
-
-import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
-
 import type { DemandLine } from '@warehouser/contracts/customer-orders';
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
 
 export type CoverageChipsProps = {
   coverage: DemandLine['coverage'];

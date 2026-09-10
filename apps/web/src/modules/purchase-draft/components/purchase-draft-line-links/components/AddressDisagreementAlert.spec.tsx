@@ -1,8 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { ErrorCode } from '@warehouser/shared-types/enums';
-import { describe, expect, it } from 'vitest';
-
 import { AddressDisagreementAlert } from 'modules/purchase-draft/components/purchase-draft-line-links/components/AddressDisagreementAlert';
+import { describe, expect, it } from 'vitest';
 
 // AC-15 / design-handoff.md `IcUGb` — the refusal is drawn as a titled panel:
 // the title names the rule ("this line ships to one address, and that order

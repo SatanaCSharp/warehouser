@@ -1,15 +1,13 @@
 import { screen, within } from '@testing-library/react';
+import type { UserEvent } from '@testing-library/user-event';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
-
+import type { PurchaseDraftSummary } from '@warehouser/contracts/purchase-drafts';
 import { purchaseDraftApi } from 'modules/purchase-draft/api/purchase-draft-api';
 import { PurchaseDraftWorkspace } from 'modules/purchase-draft/components/purchase-draft-workspace/PurchaseDraftWorkspace';
+import type { AppStore } from 'store';
 import { accessIds, authenticatedStore } from 'test/access-fixtures';
 import { renderInEnteredWarehouse } from 'test/render';
-
-import type { UserEvent } from '@testing-library/user-event';
-import type { PurchaseDraftSummary } from '@warehouser/contracts/purchase-drafts';
-import type { AppStore } from 'store';
+import { describe, expect, it } from 'vitest';
 
 // T23 / AC-22 — the state tabs keep choosing *which* drafts; the toggle
 // chooses *how you look at them* (design-handoff.md §Resolved here). The

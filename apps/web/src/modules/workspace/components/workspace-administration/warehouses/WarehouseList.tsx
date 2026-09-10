@@ -1,12 +1,10 @@
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-
+import type { Warehouse } from '@warehouser/contracts/workspaces';
 import { WarehouseRow } from 'modules/workspace/components/workspace-administration/warehouses/WarehouseRow';
 import { WarehouseSearchField } from 'modules/workspace/components/workspace-administration/warehouses/WarehouseSearchField';
-import { ROW_ENTER } from 'shared/constants/motion';
-
-import type { Warehouse } from '@warehouser/contracts/workspaces';
 import type { ReactElement } from 'react';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ROW_ENTER } from 'shared/constants/motion';
 
 type WarehouseListProps = {
   className?: string;

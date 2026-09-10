@@ -1,19 +1,17 @@
 import { Button, Chip } from '@heroui/react';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { useFieldArray, useWatch } from 'react-hook-form';
-import { useTranslation } from 'react-i18next';
-
 import { RefusalEditorRow } from 'modules/purchase-draft/components/purchase-draft-transitions/components/line-ending-dialog/components/RefusalEditorRow';
 import { useRejectionReasons } from 'modules/purchase-draft/hooks/queries/useRejectionReasons';
+import type { RejectionRow } from 'modules/purchase-draft/utils/line-ending-form';
 import { quantityOf } from 'modules/purchase-draft/utils/line-ending-form';
+import type { ReactElement } from 'react';
+import type { ArrayPath, UseFormReturn } from 'react-hook-form';
+import { useFieldArray, useWatch } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import { Conditional } from 'shared/components/Conditional';
 import { WarehousePermissionGate } from 'shared/components/WarehousePermissionGate';
 import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
 import { PackageXIcon } from 'shared/icons/PackageXIcon';
-
-import type { RejectionRow } from 'modules/purchase-draft/utils/line-ending-form';
-import type { ReactElement } from 'react';
-import type { ArrayPath, UseFormReturn } from 'react-hook-form';
 
 /**
  * The condition block's own form fragment (T15, design-handoff.md `W6TARi`

@@ -3,12 +3,10 @@ import { posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
-
 import { RolesDatasetCard } from 'modules/access/components/access-workspace/components/roles/RolesDatasetCard';
-
 import type { AccessRole } from 'modules/access/types/access.types';
 import type { AccessDataset } from 'modules/access/utils/access-dataset';
+import { describe, expect, it } from 'vitest';
 
 // `new URL('./x', import.meta.url)` is rewritten by Vite into an asset URL, so
 // the subject is resolved from this spec's own directory instead.

@@ -1,12 +1,10 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { PurchaseDraftDetail } from '@warehouser/contracts/purchase-drafts';
 import { ErrorCode } from '@warehouser/shared-types/enums';
-import { describe, expect, it, vi } from 'vitest';
-
 import { EndingRefusalAlert } from 'modules/purchase-draft/components/purchase-draft-transitions/components/line-ending-dialog/components/EndingRefusalAlert';
 import { renderWithProviders } from 'test/render';
-
-import type { PurchaseDraftDetail } from '@warehouser/contracts/purchase-drafts';
+import { describe, expect, it, vi } from 'vitest';
 
 // The AC-18 refusal, as the approved frame `s5EPi` writes it: the heading, that
 // nothing was saved, one bullet per broken bound naming it, the closing line

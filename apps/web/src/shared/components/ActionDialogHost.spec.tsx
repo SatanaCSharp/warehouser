@@ -1,12 +1,10 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
-
+import type { ReactElement } from 'react';
 import { ActionDialogHost } from 'shared/components/ActionDialogHost';
 import { useCloseDialog } from 'shared/hooks/effects/useCloseDialog';
 import { useActionDialog } from 'shared/hooks/state/useActionDialog';
-
-import type { ReactElement } from 'react';
+import { describe, expect, it } from 'vitest';
 
 type Kind = 'amend' | 'cancel';
 type Order = { customerName: string };

@@ -1,14 +1,12 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { CustomerDeliveryAddressCreate } from '@warehouser/contracts/customers';
 import { ErrorCode } from '@warehouser/shared-types/enums';
-import { describe, expect, it, vi } from 'vitest';
-
 import { AddDeliveryAddressDialog } from 'modules/customer/components/customer-directory/components/addresses/AddDeliveryAddressDialog';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { DialogHost } from 'shared/components/DialogHost';
 import { renderWithProviders } from 'test/render';
-
-import type { CustomerDeliveryAddressCreate } from '@warehouser/contracts/customers';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import { describe, expect, it, vi } from 'vitest';
 
 // delivery-addresses R8 — AC-04, including the `main: true` checkbox path,
 // which is what the frontend review's blocking finding was about (findings 1

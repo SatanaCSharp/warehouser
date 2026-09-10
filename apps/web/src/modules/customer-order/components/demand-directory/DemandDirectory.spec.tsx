@@ -1,18 +1,13 @@
 import { getLocalTimeZone, today } from '@internationalized/date';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type {
+  CustomerOrder,
+  DemandLine,
+} from '@warehouser/contracts/customer-orders';
+import type { Customer } from '@warehouser/contracts/customers';
 import { PermissionId } from '@warehouser/shared-types/enums';
 import i18n from 'i18next';
-import {
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from 'vitest';
-
 import { customerApi } from 'modules/customer/api/customer-api';
 import { customerOrderApi } from 'modules/customer-order/api/customer-order-api';
 import { DemandDirectory } from 'modules/customer-order/components/demand-directory/DemandDirectory';
@@ -27,19 +22,22 @@ import {
   useArchivedWarehouse,
 } from 'shared/hooks/projections/useArchivedWarehouse';
 import { QUANTITY_GROUP_SEPARATOR } from 'shared/utils/number-format';
+import type { AppStore } from 'store';
 import {
   accessIds,
   authenticatedStore,
   stubAccessServer,
 } from 'test/access-fixtures';
 import { renderInEnteredWarehouse } from 'test/render';
-
-import type {
-  CustomerOrder,
-  DemandLine,
-} from '@warehouser/contracts/customer-orders';
-import type { Customer } from '@warehouser/contracts/customers';
-import type { AppStore } from 'store';
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 
 // T19 — the Demand destination's list owner, composing `Ordering/Demand Row`
 // (`prm7R`, desktop `G6jhw`) and `Ordering/Demand Card Mobile` (`XYIfs`,

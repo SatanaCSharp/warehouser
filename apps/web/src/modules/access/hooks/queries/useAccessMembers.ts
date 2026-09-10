@@ -1,11 +1,10 @@
 import { useListAccessMembersQuery } from 'modules/access/api/access-api';
 import { useAccessScope } from 'modules/access/hooks/projections/useAccessScope';
+import type { AccessMember } from 'modules/access/types/access.types';
+import type { AccessDataset } from 'modules/access/utils/access-dataset';
 import { toAccessDataset } from 'modules/access/utils/access-dataset';
 import { membersReadPermissions } from 'modules/access/utils/access-permission-sets';
 import { useHasPermission } from 'shared/hooks/queries/usePermissions';
-
-import type { AccessMember } from 'modules/access/types/access.types';
-import type { AccessDataset } from 'modules/access/utils/access-dataset';
 
 /**
  * Members, loaded for whoever asks. Role assignment and manager transfer both

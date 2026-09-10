@@ -1,7 +1,6 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
-
 import { DatasetEmptyState } from 'shared/components/DatasetEmptyState';
+import { describe, expect, it } from 'vitest';
 
 describe('DatasetEmptyState', () => {
   it('names why the collection is empty, explains it, and offers the action that fills it', () => {

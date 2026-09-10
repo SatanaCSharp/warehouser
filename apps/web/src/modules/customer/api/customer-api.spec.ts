@@ -1,14 +1,12 @@
+import type { Customer } from '@warehouser/contracts/customers';
 import { ErrorCode } from '@warehouser/shared-types/enums';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { customerApi } from 'modules/customer/api/customer-api';
 import { customerOrderApi } from 'modules/customer-order/api/customer-order-api';
 import { purchaseDraftApi } from 'modules/purchase-draft/api/purchase-draft-api';
+import type { AppStore } from 'store';
 import { makeStore } from 'store';
 import { accessIds } from 'test/access-fixtures';
-
-import type { Customer } from '@warehouser/contracts/customers';
-import type { AppStore } from 'store';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // Every address-book write invalidated `Customers` and nothing else, so two
 // destinations went stale behind a member's back. A Customer Order's

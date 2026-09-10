@@ -1,10 +1,8 @@
 import { screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
-
+import type { PurchaseDraftLineLinkIdentified } from '@warehouser/contracts/purchase-drafts';
 import { EndingAssignmentRow } from 'modules/purchase-draft/components/purchase-draft-transitions/components/line-ending-dialog/components/EndingAssignmentRow';
 import { renderWithProviders } from 'test/render';
-
-import type { PurchaseDraftLineLinkIdentified } from '@warehouser/contracts/purchase-drafts';
+import { describe, expect, it, vi } from 'vitest';
 
 // One `Assign to them` row of the 720px arrival modal (design-handoff.md
 // `s5EPi`, AC-18): a link whose Customer Order has left `Unfulfilled` is drawn

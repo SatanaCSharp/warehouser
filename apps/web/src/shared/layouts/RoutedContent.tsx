@@ -1,9 +1,7 @@
 import { Outlet, useRouterState } from '@tanstack/react-router';
-
+import type { ReactElement } from 'react';
 import { RetainedContextMessage } from 'shared/components/RetainedContextMessage';
 import { useContentTransition } from 'shared/hooks/effects/useContentTransition';
-
-import type { ReactElement } from 'react';
 
 /**
  * The shell's content region: the retained-context messages above whatever the

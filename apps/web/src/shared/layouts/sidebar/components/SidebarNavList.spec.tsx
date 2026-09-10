@@ -1,7 +1,6 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
-
 import { SidebarNavList } from 'shared/layouts/sidebar/components/SidebarNavList';
+import { describe, expect, it } from 'vitest';
 
 // The list container both contexts share. Its whole subject is that there is
 // exactly ONE of it: the Warehouse and Workspace entry sets used to write the

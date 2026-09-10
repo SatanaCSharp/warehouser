@@ -1,9 +1,8 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { purchaseDraftApi } from 'modules/purchase-draft/api/purchase-draft-api';
 import { workspaceWarehousesApi } from 'modules/workspace/api/warehouse-api';
 import { makeStore } from 'store';
 import { accessIds } from 'test/access-fixtures';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // delivery-addresses — correcting the Warehouse's own Delivery Address left the
 // Purchase Drafts destination stale. An **unfrozen** Via Warehouse line's

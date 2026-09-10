@@ -1,15 +1,13 @@
 import { InputGroup } from '@heroui/react';
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-
 import { MemberRow } from 'modules/access/components/access-workspace/components/members/MemberRow';
-import { SearchIcon } from 'shared/icons';
-
 import type {
   AccessMember,
   AccessRole,
 } from 'modules/access/types/access.types';
 import type { ChangeEvent, ReactElement, ReactNode } from 'react';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { SearchIcon } from 'shared/icons';
 
 /** Which of the list's three mutually exclusive states is on screen. */
 type MemberListStatus = 'empty' | 'ready' | 'searchEmpty';

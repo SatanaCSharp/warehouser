@@ -1,15 +1,13 @@
 import { Button, Modal } from '@heroui/react';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import { useTranslation } from 'react-i18next';
-
 import { NameWorkspaceDialog } from 'modules/workspace/components/workspace-administration/NameWorkspaceDialog';
+import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Conditional } from 'shared/components/Conditional';
 import { TriggeredDialog } from 'shared/components/TriggeredDialog';
 import { WorkspacePermissionGate } from 'shared/components/WorkspacePermissionGate';
 import { useCurrentWorkspaceContext } from 'shared/hooks/queries/useWorkspacePermissions';
 import { PencilIcon } from 'shared/icons';
-
-import type { ReactElement } from 'react';
 
 /**
  * Sets the Workspace's name, or later changes it (AC-29): the gate, the page

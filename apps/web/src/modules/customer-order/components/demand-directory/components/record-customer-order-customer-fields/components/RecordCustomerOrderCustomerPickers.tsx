@@ -1,13 +1,11 @@
-import { Controller, useWatch } from 'react-hook-form';
-import { useTranslation } from 'react-i18next';
-
 import { CustomerDeliveryAddressPicker } from 'modules/customer/components/CustomerDeliveryAddressPicker';
 import { CustomerPicker } from 'modules/customer/components/CustomerPicker';
 import { useCustomers } from 'modules/customer/hooks/queries/useCustomers';
-
 import type { RecordCustomerOrderForm } from 'modules/customer-order/utils/record-customer-order-form';
 import type { ReactElement } from 'react';
 import type { Control } from 'react-hook-form';
+import { Controller, useWatch } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 
 export type RecordCustomerOrderCustomerPickersProps = {
   control: Control<RecordCustomerOrderForm>;

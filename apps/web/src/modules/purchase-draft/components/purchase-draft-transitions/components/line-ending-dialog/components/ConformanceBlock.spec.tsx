@@ -1,16 +1,14 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { useForm } from 'react-hook-form';
-import { describe, expect, it } from 'vitest';
-
+import type { PackagingType } from '@warehouser/contracts/purchase-drafts';
 import { purchaseDraftApi } from 'modules/purchase-draft/api/purchase-draft-api';
+import type { ConformanceBlockForm } from 'modules/purchase-draft/components/purchase-draft-transitions/components/line-ending-dialog/components/ConformanceBlock';
 import { ConformanceBlock } from 'modules/purchase-draft/components/purchase-draft-transitions/components/line-ending-dialog/components/ConformanceBlock';
+import type { ReactElement } from 'react';
+import { useForm } from 'react-hook-form';
 import { accessIds, authenticatedStore } from 'test/access-fixtures';
 import { renderInEnteredWarehouse } from 'test/render';
-
-import type { PackagingType } from '@warehouser/contracts/purchase-drafts';
-import type { ConformanceBlockForm } from 'modules/purchase-draft/components/purchase-draft-transitions/components/line-ending-dialog/components/ConformanceBlock';
-import type { ReactElement } from 'react';
+import { describe, expect, it } from 'vitest';
 
 // T16 — design-handoff.md `W6TARi` cells `upEnS`/`lBacq`/`B00NU` (mobile
 // `LZx6B`): the frozen-instruction read-out, then a real `radiogroup` of

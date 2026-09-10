@@ -1,17 +1,15 @@
 import { Radio, RadioGroup } from '@heroui/react';
 import { maxProseLength } from '@warehouser/contracts/purchase-drafts';
+import { usePackagingTypes } from 'modules/purchase-draft/hooks/queries/usePackagingTypes';
+import type { ConformanceVerdict } from 'modules/purchase-draft/utils/line-ending-form';
+import type { ReactElement } from 'react';
 import { useId } from 'react';
+import type { Path, UseFormReturn } from 'react-hook-form';
 import { Controller, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-
-import { usePackagingTypes } from 'modules/purchase-draft/hooks/queries/usePackagingTypes';
 import { Conditional } from 'shared/components/Conditional';
 import { FormTextAreaField } from 'shared/components/FormTextAreaField';
 import { LockIcon } from 'shared/icons/LockIcon';
-
-import type { ConformanceVerdict } from 'modules/purchase-draft/utils/line-ending-form';
-import type { ReactElement } from 'react';
-import type { Path, UseFormReturn } from 'react-hook-form';
 
 /**
  * The conformance block's own form fragment (T16, design-handoff.md `W6TARi`

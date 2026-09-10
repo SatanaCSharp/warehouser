@@ -1,9 +1,8 @@
+import type { PermissionId } from '@warehouser/shared-types/enums';
 import {
   hasPermission,
   useCurrentPermissions,
 } from 'shared/hooks/queries/usePermissions';
-
-import type { PermissionId } from '@warehouser/shared-types/enums';
 
 /** What a descriptor must carry for this hook to decide whether it is offered. */
 export type PermissionScopedItem = {

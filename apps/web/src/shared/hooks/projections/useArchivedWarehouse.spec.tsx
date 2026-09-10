@@ -7,19 +7,17 @@ import {
   RouterProvider,
 } from '@tanstack/react-router';
 import { render, screen } from '@testing-library/react';
+import type { WarehouseEntryVerdict } from 'guards/warehouse-entry.guard';
+import type { ReactElement } from 'react';
 import { Provider } from 'react-redux';
-import { describe, expect, it } from 'vitest';
-
 import { ROUTES } from 'shared/constants/routes';
 import {
   ARCHIVED_WAREHOUSE_REASON_ID,
   useArchivedWarehouse,
 } from 'shared/hooks/projections/useArchivedWarehouse';
-import { makeStore } from 'store';
-
-import type { WarehouseEntryVerdict } from 'guards/warehouse-entry.guard';
-import type { ReactElement } from 'react';
 import type { AppStore } from 'store';
+import { makeStore } from 'store';
+import { describe, expect, it } from 'vitest';
 
 const WAREHOUSE_ID = '00000000-0000-4000-8000-000000000010';
 

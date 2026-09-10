@@ -1,3 +1,4 @@
+import type { AnyRouter } from '@tanstack/react-router';
 import {
   createMemoryHistory,
   createRootRouteWithContext,
@@ -7,17 +8,14 @@ import {
   RouterProvider,
 } from '@tanstack/react-router';
 import { render, screen } from '@testing-library/react';
-import { Provider } from 'react-redux';
-import { describe, expect, it, vi } from 'vitest';
-
-import { useRecordWarehouseEntry } from 'modules/warehouse/hooks/effects/useRecordWarehouseEntry';
-import { ROUTES, ROUTE_SEGMENTS } from 'shared/constants/routes';
-import { WarehouseLayout } from 'shared/layouts/WarehouseLayout';
-import { makeStore } from 'store';
-
-import type { AnyRouter } from '@tanstack/react-router';
 import type { WarehouseEntryVerdict } from 'guards/warehouse-entry.guard';
+import { useRecordWarehouseEntry } from 'modules/warehouse/hooks/effects/useRecordWarehouseEntry';
+import { Provider } from 'react-redux';
+import { ROUTE_SEGMENTS, ROUTES } from 'shared/constants/routes';
+import { WarehouseLayout } from 'shared/layouts/WarehouseLayout';
 import type { AppStore } from 'store';
+import { makeStore } from 'store';
+import { describe, expect, it, vi } from 'vitest';
 
 // T4 — `WarehouseLayout` is the Warehouse layout route's own component. It
 // reads the entry verdict its own route's `beforeLoad` published (the

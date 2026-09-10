@@ -148,10 +148,14 @@ describe('ListPurchaseDraftLinesQuery — the condition account’s four shapes 
     );
     const condition = conditionOf(result);
     expect(condition).toHaveProperty('rejections');
-    expect(
-      (condition?.rejections as Record<string, unknown>[])[0]
-        .rejectionReasonLabel,
-    ).toBe('Damaged in transit');
+
+    const rejections = condition?.rejections as
+      Record<string, unknown>[] | undefined;
+
+    expect(rejections?.[0]).toHaveProperty(
+      'rejectionReasonLabel',
+      'Damaged in transit',
+    );
   });
 
   it('withholds the cause but keeps identity for an actor holding CUSTOMERS:WATCH alone', async () => {

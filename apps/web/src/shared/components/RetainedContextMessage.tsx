@@ -1,13 +1,11 @@
 import { Alert, Button } from '@heroui/react';
+import type { WorkspaceContext } from '@warehouser/contracts/workspaces';
+import type { ReactElement } from 'react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-
 import { useEnteredContext } from 'shared/hooks/projections/useEnteredContext';
 import { useCurrentWorkspaceContext } from 'shared/hooks/queries/useWorkspacePermissions';
 import { WarehouseIcon } from 'shared/icons';
-
-import type { WorkspaceContext } from '@warehouser/contracts/workspaces';
-import type { ReactElement } from 'react';
 
 // T19 — CR-RG-03's three retained messages, with their existing copy and
 // intent. They accompany the grouped switcher rather than replacing it

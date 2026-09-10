@@ -1,10 +1,9 @@
-import { readFileSync, readdirSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { describe, expect, it } from 'vitest';
-
 import baseline from 'test/baselines/warehouses-tab-cases.json';
+import { describe, expect, it } from 'vitest';
 
 /**
  * The case-inventory gate for the CH-W5 spec split

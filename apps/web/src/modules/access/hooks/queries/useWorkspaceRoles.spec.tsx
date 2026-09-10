@@ -1,17 +1,15 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import { Provider } from 'react-redux';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { useWorkspaceRoles } from 'modules/access/hooks/queries/useWorkspaceRoles';
+import type { ReactElement, ReactNode } from 'react';
+import { Provider } from 'react-redux';
+import type { AppStore } from 'store';
 import { makeStore } from 'store';
 import {
   namedWorkspaceContext,
   stubWorkspaceServer,
 } from 'test/workspace-fixtures';
-
-import type { ReactElement, ReactNode } from 'react';
-import type { AppStore } from 'store';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const withStore =
   (store: AppStore = makeStore()) =>

@@ -1,7 +1,9 @@
 import { Description, Header, Label, ListBox, Select } from '@heroui/react';
 import { useNavigate, useRouterState } from '@tanstack/react-router';
+import type { WorkspaceContext } from '@warehouser/contracts/workspaces';
+import type { ReactElement } from 'react';
+import type { Key } from 'react-aria-components';
 import { useTranslation } from 'react-i18next';
-
 import { Conditional } from 'shared/components/Conditional';
 import { ROUTES } from 'shared/constants/routes';
 import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
@@ -11,10 +13,6 @@ import {
   workspaceAdministrationPermissionIds,
 } from 'shared/hooks/queries/useWorkspacePermissions';
 import { Building2Icon, LayoutGridIcon, WarehouseIcon } from 'shared/icons';
-
-import type { WorkspaceContext } from '@warehouser/contracts/workspaces';
-import type { ReactElement } from 'react';
-import type { Key } from 'react-aria-components';
 
 // T9 — the grouped context switcher (spec.md CR-AC-01–CR-AC-04, CR-RG-02,
 // CR-RG-03; sad.md §6.3; approved frame `Shell / Context Switcher / States /

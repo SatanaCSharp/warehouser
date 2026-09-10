@@ -1,9 +1,7 @@
-import { useTranslation } from 'react-i18next';
-
-import { FormSelectField } from 'shared/components/FormSelectField';
-
 import type { Item } from '@warehouser/contracts/items';
 import type { ReactElement, ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import { FormSelectField } from 'shared/components/FormSelectField';
 
 export type ItemPickerProps = {
   className?: string;

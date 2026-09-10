@@ -1,10 +1,8 @@
+import type { CustomerDeliveryAddress } from '@warehouser/contracts/customers';
 import { PermissionId } from '@warehouser/shared-types/enums';
 import { useTranslation } from 'react-i18next';
-
 import { useArchivedWarehouse } from 'shared/hooks/projections/useArchivedWarehouse';
 import { usePermittedItems } from 'shared/hooks/projections/usePermittedItems';
-
-import type { CustomerDeliveryAddress } from '@warehouser/contracts/customers';
 
 export type DeliveryAddressAction = {
   id: 'correct' | 'setMain' | 'toggleActive';

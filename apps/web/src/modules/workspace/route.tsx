@@ -1,5 +1,4 @@
 import { createRoute, lazyRouteComponent } from '@tanstack/react-router';
-
 import { requireAuth } from 'guards/auth.guard';
 import { requireWorkspaceCapability } from 'guards/workspace.guard';
 import { loadWorkspaceAdministration } from 'modules/workspace/loaders/workspace-administration.loader';

@@ -1,16 +1,14 @@
 import { Chip, Tabs } from '@heroui/react';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { useTranslation } from 'react-i18next';
-
 import { MembersTab } from 'modules/access/components/access-workspace/components/members/MembersTab';
 import { PermissionsTab } from 'modules/access/components/access-workspace/components/permissions/PermissionsTab';
 import { RolesTab } from 'modules/access/components/access-workspace/components/roles/RolesTab';
 import { useAccessScope } from 'modules/access/hooks/projections/useAccessScope';
 import { rolesTabPermissions } from 'modules/access/utils/access-permission-sets';
+import type { ReactElement, ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Conditional } from 'shared/components/Conditional';
 import { usePermittedItems } from 'shared/hooks/projections/usePermittedItems';
-
-import type { ReactElement, ReactNode } from 'react';
 
 type WorkspaceTab = {
   id: string;

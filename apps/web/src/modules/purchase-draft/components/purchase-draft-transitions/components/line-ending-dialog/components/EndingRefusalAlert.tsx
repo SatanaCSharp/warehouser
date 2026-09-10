@@ -1,8 +1,13 @@
 import { Alert, Button } from '@heroui/react';
 import { ErrorCode } from '@warehouser/shared-types/enums';
-import { useTranslation } from 'react-i18next';
-
+import type { LineEndingDraft } from 'modules/purchase-draft/components/purchase-draft-transitions/components/LineEndingAction';
 import { useLinkNaming } from 'modules/purchase-draft/hooks/projections/useLinkNaming';
+import type {
+  ConditionSplitViolation,
+  ConformanceViolation,
+  EndingBoundViolation,
+  InvalidInputViolation,
+} from 'modules/purchase-draft/utils/line-ending-form';
 import {
   conditionSplitViolationSchema,
   conformanceViolationSchema,
@@ -10,17 +15,10 @@ import {
   endingConditionViolations,
   invalidInputViolationSchema,
 } from 'modules/purchase-draft/utils/line-ending-form';
+import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Conditional } from 'shared/components/Conditional';
 import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
-
-import type { LineEndingDraft } from 'modules/purchase-draft/components/purchase-draft-transitions/components/LineEndingAction';
-import type {
-  ConditionSplitViolation,
-  ConformanceViolation,
-  EndingBoundViolation,
-  InvalidInputViolation,
-} from 'modules/purchase-draft/utils/line-ending-form';
-import type { ReactElement } from 'react';
 
 export type EndingRefusalAlertProps = {
   /** The stable code of the refusal, or nothing while none has been reported. */

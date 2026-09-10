@@ -11,7 +11,8 @@ an agent can simply follow do not belong here — a guard costs a process per co
 ## `deny-git-hook-bypass.sh`
 
 Enforces `AGENTS.md` section **Committing**: every commit runs `.husky/pre-commit` (lint-staged,
-`eslint <staged files> --max-warnings=0`) and `.husky/commit-msg` (commitlint). The guard refuses a
+`oxlint --type-aware --max-warnings=0 <staged files>`) and `.husky/commit-msg` (commitlint). The
+guard refuses a
 command that would skip them:
 
 - the bypass flags (`--no-verify`, `-n` on a commit, `--no-hooks`) on `commit`, `merge`, `rebase`,

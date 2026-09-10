@@ -4,14 +4,12 @@ import { fileURLToPath } from 'node:url';
 
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
-
+import type { Item, OnHandAdjustmentCreate } from '@warehouser/contracts/items';
 import { AdjustOnHandDialog } from 'modules/item/components/item-directory/components/AdjustOnHandDialog';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { DialogHost } from 'shared/components/DialogHost';
 import { renderWithProviders } from 'test/render';
-
-import type { Item, OnHandAdjustmentCreate } from '@warehouser/contracts/items';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import { describe, expect, it, vi } from 'vitest';
 
 // T18 — sets an Item's On-hand Quantity with a stated reason (AC-08, frames
 // `s5EPi` / `blZtz` "Set the on-hand quantity"). DoD: the dialog names its

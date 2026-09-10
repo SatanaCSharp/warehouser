@@ -1,13 +1,11 @@
 import { useRouterState } from '@tanstack/react-router';
+import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-
 import { WorkspacePermissionGate } from 'shared/components/WorkspacePermissionGate';
 import { ROUTES } from 'shared/constants/routes';
 import { workspaceAdministrationPermissionIds } from 'shared/hooks/queries/useWorkspacePermissions';
 import { Building2Icon } from 'shared/icons';
 import { SidebarNavItem } from 'shared/layouts/sidebar/components/SidebarNavItem';
-
-import type { ReactElement } from 'react';
 
 export type WorkspaceNavEntriesProps = {
   /** Whether the list around these entries is reduced to its icon rail. */

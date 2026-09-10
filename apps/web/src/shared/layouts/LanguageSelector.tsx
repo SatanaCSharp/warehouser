@@ -1,10 +1,8 @@
 import { Button, Dropdown, Label } from '@heroui/react';
+import type { Key, ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-
 import { Conditional } from 'shared/components/Conditional';
 import { CheckIcon, ChevronDownIcon, GlobeIcon } from 'shared/icons';
-
-import type { Key, ReactElement } from 'react';
 
 type SupportedLanguage = 'en' | 'uk';
 

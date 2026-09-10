@@ -1,8 +1,7 @@
 import { screen, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
-
 import { Footer } from 'shared/layouts/Footer';
 import { renderWithProviders } from 'test/render';
+import { describe, expect, it } from 'vitest';
 
 describe('Footer', () => {
   it('renders a full-width footer landmark with no focusable control', () => {

@@ -1,15 +1,14 @@
+import 'src/styles/global.css';
+
 import { Toast } from '@heroui/react';
+import App from 'App';
+import { i18nReady } from 'i18n';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Provider } from 'react-redux';
-
-import App from 'App';
-import { i18nReady } from 'i18n';
 import { toastQueue } from 'shared/alerts/toast';
 import { LocaleProvider } from 'shared/components/LocaleProvider';
 import { store } from 'store';
-
-import 'src/styles/global.css';
 
 async function bootstrap(): Promise<void> {
   await i18nReady;

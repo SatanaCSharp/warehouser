@@ -2,21 +2,19 @@ import { readFileSync } from 'node:fs';
 import { posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import type { WorkspacePermissionId as WorkspacePermissionIdValue } from '@warehouser/shared-types/enums';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { workspaceWarehousesApi } from 'modules/workspace/api/warehouse-api';
 import { loadWorkspaceAdministration } from 'modules/workspace/loaders/workspace-administration.loader';
 import { workspaceContextApi } from 'shared/api/workspace/workspace-context-api';
 import { workspaceUsersApi } from 'shared/api/workspace/workspace-users-api';
+import type { AppStore } from 'store';
 import {
   authenticatedWorkspaceStore,
   namedWorkspaceContext,
   stubWorkspaceServer,
 } from 'test/workspace-fixtures';
-
-import type { WorkspacePermissionId as WorkspacePermissionIdValue } from '@warehouser/shared-types/enums';
-import type { AppStore } from 'store';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // T4 / CH-03, CH-15 — `/workspace`'s route loader. It awaits the Workspace
 // context as its primary read and fans every dataset the actor's admitted

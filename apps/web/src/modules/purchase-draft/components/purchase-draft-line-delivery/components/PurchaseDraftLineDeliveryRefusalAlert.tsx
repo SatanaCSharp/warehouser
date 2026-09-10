@@ -1,11 +1,9 @@
 import { Alert } from '@heroui/react';
-import { useTranslation } from 'react-i18next';
-
-import { useLinkNaming } from 'modules/purchase-draft/hooks/projections/useLinkNaming';
-
 import type { PurchaseDraftLine } from '@warehouser/contracts/purchase-drafts';
+import { useLinkNaming } from 'modules/purchase-draft/hooks/projections/useLinkNaming';
 import type { DisagreeingDeliveryLink } from 'modules/purchase-draft/utils/delivery-disagreement';
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export type PurchaseDraftLineDeliveryRefusalAlertProps = {
   /** Every disagreeing link the last revision was refused for, or nothing while none has been reported. */

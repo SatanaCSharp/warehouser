@@ -1,15 +1,13 @@
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { useTranslation } from 'react-i18next';
-
 import { CreateRoleAction } from 'modules/access/components/access-workspace/components/roles/CreateRoleAction';
 import { MemberAssignmentList } from 'modules/access/components/access-workspace/components/roles/MemberAssignmentList';
 import { RoleDirectory } from 'modules/access/components/access-workspace/components/roles/RoleDirectory';
 import { RolesDatasetCard } from 'modules/access/components/access-workspace/components/roles/RolesDatasetCard';
 import { TransferManagerAction } from 'modules/access/components/access-workspace/components/roles/TransferManagerAction';
 import { useAccessRoles } from 'modules/access/hooks/queries/useAccessRoles';
-import { useHasPermission } from 'shared/hooks/queries/usePermissions';
-
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useHasPermission } from 'shared/hooks/queries/usePermissions';
 
 /** Any Role administration at all; each control below still gates on its own. */
 const roleAdministrationPermissions = [

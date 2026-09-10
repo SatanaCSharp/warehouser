@@ -1,12 +1,10 @@
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { useTranslation } from 'react-i18next';
-
 import { CustomerDirectory } from 'modules/customer/components/customer-directory/CustomerDirectory';
+import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ArchivedWarehouseChip } from 'shared/components/ArchivedWarehouseChip';
 import { ArchivedWarehouseNotice } from 'shared/components/ArchivedWarehouseNotice';
 import { useCurrentPermissions } from 'shared/hooks/queries/usePermissions';
-
-import type { ReactElement } from 'react';
 
 /**
  * The Customers destination (frames `KRDln` desktop, `b7gaH9` mobile). The

@@ -3,14 +3,12 @@ import { posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { customerOrderApi } from 'modules/customer-order/api/customer-order-api';
-import { loadDemand } from 'modules/customer-order/loaders/demand.loader';
-import { accessIds, authenticatedStore } from 'test/access-fixtures';
-
 import type { DemandLoaderContext } from 'modules/customer-order/loaders/demand.loader';
+import { loadDemand } from 'modules/customer-order/loaders/demand.loader';
 import type { AppStore } from 'store';
+import { accessIds, authenticatedStore } from 'test/access-fixtures';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // T19 — the Demand destination's route loader (DoD "a test proves a loader
 // refused by a missing CUSTOMER_ORDERS:WATCH issues zero requests"). Colocated

@@ -1,8 +1,7 @@
 import { screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
-
 import { PurchaseDraftLineConditionSummary } from 'modules/purchase-draft/components/closed-purchase-draft-line/components/PurchaseDraftLineConditionSummary';
 import { renderWithProviders } from 'test/render';
+import { describe, expect, it } from 'vitest';
 
 // T17 — `Inspection/Condition Summary` (`bllT3`/`M9G5z`, design-handoff.md §
 // Component mapping): the same four figures `ConditionBlock`'s live region

@@ -1,11 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
-
-import { PurchaseDraftLinkRow } from 'modules/purchase-draft/components/PurchaseDraftLinkRow';
-
 import type { PurchaseDraftLineLinkIdentified } from '@warehouser/contracts/purchase-drafts';
 import type { PurchaseDraftLinkRowField } from 'modules/purchase-draft/components/PurchaseDraftLinkRow';
+import { PurchaseDraftLinkRow } from 'modules/purchase-draft/components/PurchaseDraftLinkRow';
+import { describe, expect, it, vi } from 'vitest';
 
 // T20 DoD: "A test proves link quantities are never adjusted client-side and
 // that overlapping links render without warning" (AC-11a).

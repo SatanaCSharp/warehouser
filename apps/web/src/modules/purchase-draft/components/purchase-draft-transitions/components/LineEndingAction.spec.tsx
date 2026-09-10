@@ -1,8 +1,10 @@
 import { screen } from '@testing-library/react';
+import type {
+  PurchaseDraftDetail,
+  PurchaseDraftLine,
+} from '@warehouser/contracts/purchase-drafts';
 import { PermissionId } from '@warehouser/shared-types/enums';
 import i18n from 'i18next';
-import { afterEach, beforeAll, describe, expect, it } from 'vitest';
-
 import { LineEndingAction } from 'modules/purchase-draft/components/purchase-draft-transitions/components/LineEndingAction';
 import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
 import { WarehousePermissionGate } from 'shared/components/WarehousePermissionGate';
@@ -12,11 +14,7 @@ import {
   stubAccessServer,
 } from 'test/access-fixtures';
 import { renderInEnteredWarehouse } from 'test/render';
-
-import type {
-  PurchaseDraftDetail,
-  PurchaseDraftLine,
-} from '@warehouser/contracts/purchase-drafts';
+import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 // T24/ADR 0002 — the component that decides **which** ending a line is offered,
 // and whether it is offered at all.

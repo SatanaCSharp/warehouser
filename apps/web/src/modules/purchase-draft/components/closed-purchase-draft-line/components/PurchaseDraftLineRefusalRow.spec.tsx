@@ -1,19 +1,17 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { PurchaseDraftLineRejection } from '@warehouser/contracts/purchase-drafts';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { describe, expect, it, vi } from 'vitest';
-
 import { PurchaseDraftLineRefusalRow } from 'modules/purchase-draft/components/closed-purchase-draft-line/components/PurchaseDraftLineRefusalRow';
 import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
+import type { AppStore } from 'store';
 import {
   accessIds,
   authenticatedStore,
   stubAccessServer,
 } from 'test/access-fixtures';
 import { renderInEnteredWarehouse } from 'test/render';
-
-import type { PurchaseDraftLineRejection } from '@warehouser/contracts/purchase-drafts';
-import type { AppStore } from 'store';
+import { describe, expect, it, vi } from 'vitest';
 
 // T17 — `Inspection/Refusal Read Row` (`n4Ue8`/`Jm3OQ`): the read-only account
 // of one Rejection on a closed line, read by an actor holding

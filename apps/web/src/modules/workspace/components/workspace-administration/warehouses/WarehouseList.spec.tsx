@@ -1,14 +1,12 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { useState } from 'react';
-import { describe, expect, it } from 'vitest';
-
+import type { Warehouse } from '@warehouser/contracts/workspaces';
 import { WarehouseList } from 'modules/workspace/components/workspace-administration/warehouses/WarehouseList';
+import type { ReactElement } from 'react';
+import { useState } from 'react';
 import { makeStore } from 'store';
 import { renderWithProviders } from 'test/render';
-
-import type { Warehouse } from '@warehouser/contracts/workspaces';
-import type { ReactElement } from 'react';
+import { describe, expect, it } from 'vitest';
 
 /**
  * The cases `sad.md` §5.4 assigns to `WarehouseList`: the "the Warehouse list

@@ -1,7 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-
 import { alertApiFailure } from 'shared/alerts/api-feedback';
 import { apiErrorMiddleware } from 'store/middleware/api-error.middleware';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('shared/alerts/api-feedback', () => ({
   alertApiFailure: vi.fn(),

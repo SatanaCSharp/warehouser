@@ -1,23 +1,21 @@
 import { RouterProvider } from '@tanstack/react-router';
 import { act, render, screen } from '@testing-library/react';
-import { Provider } from 'react-redux';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { loadAccessSurface } from 'modules/access/loaders/access-surface.loader';
 import { accessRoute } from 'modules/access/route';
+import { Provider } from 'react-redux';
+import type { AppRouter } from 'router';
 import { createAppRouter } from 'router';
 import { RouteErrorState } from 'shared/components/RouteErrorState';
 import { RoutePendingState } from 'shared/components/RoutePendingState';
 import { ROUTES } from 'shared/constants/routes';
+import type { AppStore } from 'store';
 import { makeStore } from 'store';
 import {
   stubWarehouseSession,
   warehouseMemberships,
   warehouseSessionIds,
 } from 'test/workspace-fixtures';
-
-import type { AppRouter } from 'router';
-import type { AppStore } from 'store';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const NON_DISCLOSING_REFUSAL = "This address isn't available to you";
 // `common.json` `shell.landing.pendingLabel` — the copy `RoutePendingState`

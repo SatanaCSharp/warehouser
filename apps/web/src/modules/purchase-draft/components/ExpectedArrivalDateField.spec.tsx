@@ -1,8 +1,6 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { ExpectedArrivalDateField } from 'modules/purchase-draft/components/ExpectedArrivalDateField';
 import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
 import {
@@ -11,6 +9,7 @@ import {
   stubAccessServer,
 } from 'test/access-fixtures';
 import { renderInEnteredWarehouse } from 'test/render';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // AC-10 — "states an Expected Arrival Date **or leaves it unstated** because
 // they have not yet spoken to the supplier", and AC-15 freezes it with the rest

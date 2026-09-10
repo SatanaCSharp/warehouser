@@ -1,8 +1,6 @@
-import { describe, expect, it } from 'vitest';
-
-import { itemNamingState } from 'modules/item/utils/item-naming';
-
 import type { Item } from '@warehouser/contracts/items';
+import { itemNamingState } from 'modules/item/utils/item-naming';
+import { describe, expect, it } from 'vitest';
 
 // T18 — AC-06c's projection, resolved to the one name every sentence about
 // naming is keyed by. The precedence is a table rather than a chain

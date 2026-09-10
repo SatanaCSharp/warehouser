@@ -1,6 +1,5 @@
-import { CustomerCard } from 'modules/customer/components/customer-directory/components/customers/CustomerCard';
-
 import type { Customer } from '@warehouser/contracts/customers';
+import { CustomerCard } from 'modules/customer/components/customer-directory/components/customers/CustomerCard';
 import type { ReactElement } from 'react';
 
 export type CustomerCardListProps = {

@@ -1,23 +1,21 @@
 import { Alert } from '@heroui/react';
-import { useState } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
-import { useTranslation } from 'react-i18next';
-
+import type { PurchaseDraftLine } from '@warehouser/contracts/purchase-drafts';
 import { EndingRefusalAlert } from 'modules/purchase-draft/components/purchase-draft-transitions/components/line-ending-dialog/components/EndingRefusalAlert';
 import { FinalityAcknowledgementAlert } from 'modules/purchase-draft/components/purchase-draft-transitions/components/line-ending-dialog/components/FinalityAcknowledgementAlert';
 import { LineEndingFieldset } from 'modules/purchase-draft/components/purchase-draft-transitions/components/line-ending-dialog/components/LineEndingFieldset';
+import type { LineEndingDraft } from 'modules/purchase-draft/components/purchase-draft-transitions/components/LineEndingAction';
+import type { LineEndingForm } from 'modules/purchase-draft/utils/line-ending-form';
 import {
   lineEndingFormDefaults,
   quantityOf,
 } from 'modules/purchase-draft/utils/line-ending-form';
+import type { ReactElement } from 'react';
+import { useState } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { Conditional } from 'shared/components/Conditional';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
-
-import type { PurchaseDraftLine } from '@warehouser/contracts/purchase-drafts';
-import type { LineEndingDraft } from 'modules/purchase-draft/components/purchase-draft-transitions/components/LineEndingAction';
-import type { LineEndingForm } from 'modules/purchase-draft/utils/line-ending-form';
-import type { ReactElement } from 'react';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import type { FormParse } from 'shared/utils/form-parse';
 
 /** What the boundary refused the ending with, kept whole for the alert. */

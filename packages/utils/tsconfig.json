@@ -5,7 +5,14 @@
     "declaration": true,
     "rootDir": "src",
     "paths": { "*": ["./src/*"] },
-    "outDir": "dist"
+    "outDir": "dist",
+    // Stated rather than left to TypeScript's automatic `@types` discovery. `tsc` finds
+    // `node_modules/@types/node` on its own here, but `oxlint --type-aware` runs its checks through
+    // `oxlint-tsgolint`, whose discovery does not follow pnpm's symlinked `@types` directory — so
+    // without this line the type-aware pass sees `setTimeout`/`__dirname`/`node:fs` as `error`
+    // types and every `no-unsafe-*` rule fires on them. `@types/node` is this package's only
+    // ambient type dependency, so naming it changes nothing for `tsc`.
+    "types": ["node"]
   },
   "include": ["src/**/*.ts"]
 }

@@ -1,7 +1,6 @@
-import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
-
 import type { DemandLine } from '@warehouser/contracts/customer-orders';
 import type { ReactElement } from 'react';
+import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
 
 export type DemandOnHandCellProps = { line: DemandLine };
 

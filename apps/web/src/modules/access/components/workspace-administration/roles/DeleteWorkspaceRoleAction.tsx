@@ -1,16 +1,14 @@
 import { Button, Modal } from '@heroui/react';
+import type { WorkspaceRole } from '@warehouser/contracts/workspaces';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import { useTranslation } from 'react-i18next';
-
 import { useDeleteWorkspaceRoleMutation } from 'modules/access/api/workspace-roles-api';
 import { DeleteWorkspaceRoleDialog } from 'modules/access/components/workspace-administration/roles/DeleteWorkspaceRoleDialog';
+import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { Conditional } from 'shared/components/Conditional';
 import { TriggeredDialog } from 'shared/components/TriggeredDialog';
 import { WorkspacePermissionGate } from 'shared/components/WorkspacePermissionGate';
-
-import type { WorkspaceRole } from '@warehouser/contracts/workspaces';
-import type { ReactElement } from 'react';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 type DeleteWorkspaceRoleActionProps = {
   replacements: WorkspaceRole[];

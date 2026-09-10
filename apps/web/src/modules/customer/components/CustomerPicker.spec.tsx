@@ -1,15 +1,13 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
-
-import { CustomerPicker } from 'modules/customer/components/CustomerPicker';
-import { selectHeroOption } from 'test/hero-select';
-import { renderWithProviders } from 'test/render';
-
 import type {
   Customer,
   CustomerDeliveryAddress,
 } from '@warehouser/contracts/customers';
+import { CustomerPicker } from 'modules/customer/components/CustomerPicker';
+import { selectHeroOption } from 'test/hero-select';
+import { renderWithProviders } from 'test/render';
+import { describe, expect, it, vi } from 'vitest';
 
 // delivery-addresses T21 — the Customer picker on `modules/customer`'s
 // declared public surface, which `modules/customer-order` and

@@ -182,10 +182,13 @@ describe('ReadPurchaseDraftQuery — the condition account’s four shapes (AC-2
     expect(condition).toHaveProperty('rejections');
     // AC-21/AC-23a — the account carries the current wording, resolved from the catalogue rather
     // than the bare identifier the repository names the Rejection with.
-    expect(
-      (condition?.rejections as Record<string, unknown>[])[0]
-        .rejectionReasonLabel,
-    ).toBe('Damaged in transit');
+    const rejections = condition?.rejections as
+      Record<string, unknown>[] | undefined;
+
+    expect(rejections?.[0]).toHaveProperty(
+      'rejectionReasonLabel',
+      'Damaged in transit',
+    );
   });
 
   it('withholds the cause but keeps identity for an actor holding CUSTOMERS:WATCH alone (cause only withheld)', async () => {

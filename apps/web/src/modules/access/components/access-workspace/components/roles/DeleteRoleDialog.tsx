@@ -1,13 +1,11 @@
+import type { AccessRole } from 'modules/access/types/access.types';
+import type { ReactElement } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { Conditional } from 'shared/components/Conditional';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormSelectField } from 'shared/components/FormSelectField';
-
-import type { AccessRole } from 'modules/access/types/access.types';
-import type { ReactElement } from 'react';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 type DeleteRoleDialogProps = {
   role: AccessRole;

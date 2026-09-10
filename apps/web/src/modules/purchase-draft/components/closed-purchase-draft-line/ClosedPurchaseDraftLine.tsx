@@ -1,17 +1,4 @@
 import { Chip } from '@heroui/react';
-import { useTranslation } from 'react-i18next';
-
-import { useAmendPurchaseDraftLineRejectionMutation } from 'modules/purchase-draft/api/purchase-draft-api';
-import { AmendRefusalDialog } from 'modules/purchase-draft/components/closed-purchase-draft-line/components/AmendRefusalDialog';
-import { ConditionOnArrivalSection } from 'modules/purchase-draft/components/closed-purchase-draft-line/components/ConditionOnArrivalSection';
-import { PurchaseDraftLineDestination } from 'modules/purchase-draft/components/purchase-draft-line-delivery/components/PurchaseDraftLineDestination';
-import { PurchaseDraftLineLinks } from 'modules/purchase-draft/components/purchase-draft-line-links/PurchaseDraftLineLinks';
-import { ActionDialogHost } from 'shared/components/ActionDialogHost';
-import { Conditional } from 'shared/components/Conditional';
-import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
-import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
-import { useActionDialog } from 'shared/hooks/state/useActionDialog';
-
 import type {
   DeliveryMode,
   LineCondition,
@@ -20,8 +7,19 @@ import type {
   PurchaseDraftLineRejection,
   RejectionAmend,
 } from '@warehouser/contracts/purchase-drafts';
+import { useAmendPurchaseDraftLineRejectionMutation } from 'modules/purchase-draft/api/purchase-draft-api';
+import { AmendRefusalDialog } from 'modules/purchase-draft/components/closed-purchase-draft-line/components/AmendRefusalDialog';
+import { ConditionOnArrivalSection } from 'modules/purchase-draft/components/closed-purchase-draft-line/components/ConditionOnArrivalSection';
+import { PurchaseDraftLineDestination } from 'modules/purchase-draft/components/purchase-draft-line-delivery/components/PurchaseDraftLineDestination';
+import { PurchaseDraftLineLinks } from 'modules/purchase-draft/components/purchase-draft-line-links/PurchaseDraftLineLinks';
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import { ActionDialogHost } from 'shared/components/ActionDialogHost';
+import { Conditional } from 'shared/components/Conditional';
+import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
+import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
+import { useActionDialog } from 'shared/hooks/state/useActionDialog';
 
 export type ClosedPurchaseDraftLineProps = {
   /** Which line of the draft this is, as the frames number them from 1. */

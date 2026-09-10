@@ -1,8 +1,6 @@
-import { useTranslation } from 'react-i18next';
-
-import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
-
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
 
 export type PurchaseDraftLineConditionSummaryProps = {
   accepted: number;

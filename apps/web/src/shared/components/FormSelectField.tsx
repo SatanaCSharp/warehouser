@@ -1,8 +1,6 @@
 import { Description, FieldError, Label, ListBox, Select } from '@heroui/react';
-
-import { Conditional } from 'shared/components/Conditional';
-
 import type { ComponentProps, ReactElement, ReactNode } from 'react';
+import { Conditional } from 'shared/components/Conditional';
 
 export type SelectOption = { id: string; label: string };
 

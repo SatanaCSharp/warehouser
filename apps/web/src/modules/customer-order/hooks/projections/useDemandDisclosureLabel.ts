@@ -1,6 +1,5 @@
-import { useTranslation } from 'react-i18next';
-
 import type { DemandLine } from '@warehouser/contracts/customer-orders';
+import { useTranslation } from 'react-i18next';
 
 /** Names the disclosure of one Demand Line, in whichever state it is in. */
 export type DemandDisclosureLabel = (

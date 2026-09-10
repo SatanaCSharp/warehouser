@@ -87,7 +87,7 @@ const FEATURE_MODULES = readdirSync(sourceRoot, { withFileTypes: true })
 const isModulePrivate = (target: string): boolean =>
   /\/domain\/errors\//u.test(target) ||
   /\/domain\/predicates\//u.test(target) ||
-  /\.predicates$/u.test(target) ||
+  target.endsWith('.predicates') ||
   /\/rest\/dtos\//u.test(target);
 
 /**

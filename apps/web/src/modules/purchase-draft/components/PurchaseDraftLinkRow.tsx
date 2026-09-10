@@ -1,19 +1,17 @@
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-
-import { DriftSignal } from 'modules/purchase-draft/components/DriftSignal';
-import { PurchaseDraftLinkIdentity } from 'modules/purchase-draft/components/PurchaseDraftLinkIdentity';
-import { useLinkDriftChips } from 'modules/purchase-draft/hooks/projections/useLinkDriftChips';
-import { Conditional } from 'shared/components/Conditional';
-import { FormTextField } from 'shared/components/FormTextField';
-import { ROW_ENTER } from 'shared/constants/motion';
-import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
-
 import type {
   DeliveryMode,
   PurchaseDraftLineLink,
 } from '@warehouser/contracts/purchase-drafts';
+import { DriftSignal } from 'modules/purchase-draft/components/DriftSignal';
+import { PurchaseDraftLinkIdentity } from 'modules/purchase-draft/components/PurchaseDraftLinkIdentity';
+import { useLinkDriftChips } from 'modules/purchase-draft/hooks/projections/useLinkDriftChips';
 import type { ChangeEvent, ReactElement, ReactNode } from 'react';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Conditional } from 'shared/components/Conditional';
+import { FormTextField } from 'shared/components/FormTextField';
+import { ROW_ENTER } from 'shared/constants/motion';
+import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
 
 /**
  * The one part of the row that differs between the jobs below: what the

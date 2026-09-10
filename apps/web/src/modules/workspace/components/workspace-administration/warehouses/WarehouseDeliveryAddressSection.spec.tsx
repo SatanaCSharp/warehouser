@@ -1,10 +1,11 @@
 import { QueryStatus } from '@reduxjs/toolkit/query';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { Warehouse } from '@warehouser/contracts/workspaces';
+import type { WorkspacePermissionId as WorkspacePermissionIdType } from '@warehouser/shared-types/enums';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { WarehouseDeliveryAddressSection } from 'modules/workspace/components/workspace-administration/warehouses/WarehouseDeliveryAddressSection';
+import type { AppStore } from 'store';
 import { renderWithProviders } from 'test/render';
 import {
   authenticatedWorkspaceStore,
@@ -13,10 +14,7 @@ import {
   warehouseIds,
   workspaceWarehouses,
 } from 'test/workspace-fixtures';
-
-import type { Warehouse } from '@warehouser/contracts/workspaces';
-import type { WorkspacePermissionId as WorkspacePermissionIdType } from '@warehouser/shared-types/enums';
-import type { AppStore } from 'store';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 /**
  * T11/AC-10 — the Warehouse's own Delivery Address section of the Workspace

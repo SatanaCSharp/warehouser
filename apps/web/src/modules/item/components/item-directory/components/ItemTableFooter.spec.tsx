@@ -1,11 +1,9 @@
 import { screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
-
+import type { Item } from '@warehouser/contracts/items';
 import { ItemTableFooter } from 'modules/item/components/item-directory/components/ItemTableFooter';
 import { QUANTITY_GROUP_SEPARATOR } from 'shared/utils/number-format';
 import { renderWithProviders } from 'test/render';
-
-import type { Item } from '@warehouser/contracts/items';
+import { describe, expect, it } from 'vitest';
 
 // T18 — the Items table's footer row (frame `XIvAZ`, on design-handoff.md's
 // must-preserve list). DoD: the counts read as the frames draw them at the

@@ -1,13 +1,11 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ErrorCode } from '@warehouser/shared-types/enums';
-import { describe, expect, it, vi } from 'vitest';
-
 import { ReadyPurchaseDraftDialog } from 'modules/purchase-draft/components/purchase-draft-transitions/components/ReadyPurchaseDraftDialog';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { DialogHost } from 'shared/components/DialogHost';
 import { renderWithProviders } from 'test/render';
-
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import { describe, expect, it, vi } from 'vitest';
 
 // T21 — freezing a draft is irreversible and validates nothing, so it is a
 // `ConfirmAlertDialog` rather than a form (`docs/system/guides/web-dialogs.md`

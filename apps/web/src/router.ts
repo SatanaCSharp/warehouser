@@ -3,7 +3,6 @@ import {
   createRouter,
   Router,
 } from '@tanstack/react-router';
-
 import { accessRoute } from 'modules/access/route';
 import { loginRoute } from 'modules/auth/login/route';
 import { signUpRoute } from 'modules/auth/sign-up/route';
@@ -20,9 +19,8 @@ import {
   warehouseCatchAllRoute,
 } from 'routes/catch-all.route';
 import { warehouseRoute } from 'routes/warehouse.route';
-import { store } from 'store';
-
 import type { AppStore } from 'store';
+import { store } from 'store';
 
 // T6 / CH-03 — `accessRoute` is a child of the Warehouse layout, not a root
 // child: every Warehouse-scoped surface is addressed within the Warehouse it

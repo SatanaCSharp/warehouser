@@ -1,11 +1,10 @@
 import { useListAccessPermissionsQuery } from 'modules/access/api/access-api';
 import { useAccessScope } from 'modules/access/hooks/projections/useAccessScope';
+import type { AccessPermission } from 'modules/access/types/access.types';
+import type { AccessDataset } from 'modules/access/utils/access-dataset';
 import { toAccessDataset } from 'modules/access/utils/access-dataset';
 import { rolesTabPermissions } from 'modules/access/utils/access-permission-sets';
 import { useHasPermission } from 'shared/hooks/queries/usePermissions';
-
-import type { AccessPermission } from 'modules/access/types/access.types';
-import type { AccessDataset } from 'modules/access/utils/access-dataset';
 
 /**
  * The Permission catalogue every Role form grants from, read by the Permissions

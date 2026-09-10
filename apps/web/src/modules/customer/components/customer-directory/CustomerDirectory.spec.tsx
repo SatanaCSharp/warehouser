@@ -1,21 +1,19 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { Customer, CustomerDetail } from '@warehouser/contracts/customers';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { describe, expect, it } from 'vitest';
-
 import { customerApi } from 'modules/customer/api/customer-api';
 import { CustomerDirectory } from 'modules/customer/components/customer-directory/CustomerDirectory';
 import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
 import { ARCHIVED_WAREHOUSE_REASON_ID } from 'shared/hooks/projections/useArchivedWarehouse';
+import type { AppStore } from 'store';
 import {
   accessIds,
   authenticatedStore,
   stubAccessServer,
 } from 'test/access-fixtures';
 import { renderInEnteredWarehouse } from 'test/render';
-
-import type { Customer, CustomerDetail } from '@warehouser/contracts/customers';
-import type { AppStore } from 'store';
+import { describe, expect, it } from 'vitest';
 
 // delivery-addresses T21 — the Customers destination's list owner, composing
 // `Delivery/Customer Card` (`r80F1`), `Delivery/Address Row` (`LdZmY`),

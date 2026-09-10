@@ -1,11 +1,9 @@
 import { Outlet, useMatch, useRouterState } from '@tanstack/react-router';
-
+import type { WarehouseEntryVerdict } from 'guards/warehouse-entry.guard';
 import { useRecordWarehouseEntry } from 'modules/warehouse/hooks/effects/useRecordWarehouseEntry';
+import type { ReactElement } from 'react';
 import { WarehouseEntryRefusal } from 'shared/components/WarehouseEntryRefusal';
 import { ROUTES } from 'shared/constants/routes';
-
-import type { WarehouseEntryVerdict } from 'guards/warehouse-entry.guard';
-import type { ReactElement } from 'react';
 
 // T8 / CR-AC-09 — the entry-record write must never run around a refusal, and
 // must not run around a read-only entry either: CR-AC-17 requires an archived

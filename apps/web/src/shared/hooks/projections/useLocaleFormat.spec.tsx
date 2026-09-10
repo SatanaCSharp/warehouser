@@ -1,11 +1,9 @@
 import { I18nProvider } from '@react-aria/i18n';
 import { renderHook } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
-
+import type { ReactElement, ReactNode } from 'react';
 import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
 import { QUANTITY_GROUP_SEPARATOR } from 'shared/utils/number-format';
-
-import type { ReactElement, ReactNode } from 'react';
+import { describe, expect, it } from 'vitest';
 
 const inLocale =
   (locale: string) =>

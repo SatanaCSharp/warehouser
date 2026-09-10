@@ -1,10 +1,8 @@
 import { PermissionId } from '@warehouser/shared-types/enums';
-
-import { DirectDestinationPickers } from 'modules/purchase-draft/components/purchase-draft-line-delivery/components/direct-destination-fields/components/DirectDestinationPickers';
-import { WarehousePermissionGate } from 'shared/components/WarehousePermissionGate';
-
 import type { DirectDestinationPickersProps } from 'modules/purchase-draft/components/purchase-draft-line-delivery/components/direct-destination-fields/components/DirectDestinationPickers';
+import { DirectDestinationPickers } from 'modules/purchase-draft/components/purchase-draft-line-delivery/components/direct-destination-fields/components/DirectDestinationPickers';
 import type { ReactNode } from 'react';
+import { WarehousePermissionGate } from 'shared/components/WarehousePermissionGate';
 
 /**
  * The gate around `DirectDestinationPickers`. It is separate so the Customers

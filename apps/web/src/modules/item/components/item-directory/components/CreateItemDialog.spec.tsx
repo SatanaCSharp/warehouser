@@ -1,13 +1,11 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
-
+import type { Item, ItemCreate } from '@warehouser/contracts/items';
 import { CreateItemDialog } from 'modules/item/components/item-directory/components/CreateItemDialog';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { DialogHost } from 'shared/components/DialogHost';
 import { renderWithProviders } from 'test/render';
-
-import type { Item, ItemCreate } from '@warehouser/contracts/items';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import { describe, expect, it, vi } from 'vitest';
 
 // T18 — creates an Item (AC-06, frame `s5EPi` "Add an item"). DoD: the dialog
 // carries its lede, a helper under every field and the "starts active with

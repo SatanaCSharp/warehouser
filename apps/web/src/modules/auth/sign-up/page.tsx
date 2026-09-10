@@ -1,17 +1,15 @@
 import { Card } from '@heroui/react';
 import { useNavigate } from '@tanstack/react-router';
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-
 import { useSignUpMutation } from 'modules/auth/api/auth-api';
 import { SignUpForm } from 'modules/auth/sign-up/components/SignUpForm';
+import type { SignUpFormValues } from 'modules/auth/sign-up/schemas/sign-up-form.schema';
 import { authBecameAuthenticated } from 'modules/auth/store/auth.slice';
+import type { ReactElement } from 'react';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { isApiFailure } from 'shared/api/client/api-client';
 import { ROUTES } from 'shared/constants/routes';
 import { useAppDispatch } from 'store/hooks';
-
-import type { SignUpFormValues } from 'modules/auth/sign-up/schemas/sign-up-form.schema';
-import type { ReactElement } from 'react';
 
 export const SignUpPage = (): ReactElement => {
   const { t } = useTranslation('sign-up');

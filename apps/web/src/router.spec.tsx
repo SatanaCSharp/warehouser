@@ -6,19 +6,17 @@ import { RouterProvider } from '@tanstack/react-router';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
+import type { WarehouseEntryVerdict } from 'guards/warehouse-entry.guard';
 import remove from 'lodash/remove';
 import { Provider } from 'react-redux';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
+import type { AppRouter } from 'router';
 import { createAppRouter } from 'router';
 import { workspaceContextApi } from 'shared/api/workspace/workspace-context-api';
 import { ROUTE_SEGMENTS, ROUTES } from 'shared/constants/routes';
-import { makeStore } from 'store';
-
-import type { WarehouseEntryVerdict } from 'guards/warehouse-entry.guard';
-import type { AppRouter } from 'router';
 import type { AppStore } from 'store';
+import { makeStore } from 'store';
 import type { Mock } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const toast = vi.hoisted(() => {
   const fn = vi.fn(() => 'pending-key');

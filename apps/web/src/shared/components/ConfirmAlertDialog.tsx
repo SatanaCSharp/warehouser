@@ -1,11 +1,9 @@
 import { AlertDialog, Button } from '@heroui/react';
+import type { ComponentProps, ReactElement, ReactNode } from 'react';
 import { useState } from 'react';
-
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { mutationOutcome } from 'shared/api/client/mutation-outcome';
 import { useCloseDialog } from 'shared/hooks/effects/useCloseDialog';
-
-import type { ComponentProps, ReactElement, ReactNode } from 'react';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 type ConfirmAlertDialogProps = {
   cancelLabel: string;

@@ -1,19 +1,17 @@
-import { Controller, useForm } from 'react-hook-form';
-import { useTranslation } from 'react-i18next';
-
+import type { Warehouse } from '@warehouser/contracts/workspaces';
 import { selectCurrentUser } from 'modules/auth/store/auth.selectors';
 import {
   useAssignWarehouseMembershipMutation,
   useListAssignableWarehouseRolesQuery,
 } from 'modules/workspace/api/warehouse-api';
+import type { ReactElement } from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { useListWorkspaceUsersQuery } from 'shared/api/workspace/workspace-users-api';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormSelectField } from 'shared/components/FormSelectField';
 import { useAppSelector } from 'store/hooks';
-
-import type { Warehouse } from '@warehouser/contracts/workspaces';
-import type { ReactElement } from 'react';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 type GiveWarehouseAccessDialogProps = {
   warehouse: Warehouse;

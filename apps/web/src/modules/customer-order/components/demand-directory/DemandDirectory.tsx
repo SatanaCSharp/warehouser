@@ -1,6 +1,10 @@
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-
+import type {
+  CustomerOrder,
+  CustomerOrderAmend,
+  CustomerOrderCancellation,
+  CustomerOrderRedirect,
+  DemandLine,
+} from '@warehouser/contracts/customer-orders';
 import {
   useAmendCustomerOrderMutation,
   useCancelCustomerOrderMutation,
@@ -17,21 +21,15 @@ import { RecordDemandAction } from 'modules/customer-order/components/demand-dir
 import { RedirectCustomerOrderDialog } from 'modules/customer-order/components/demand-directory/components/RedirectCustomerOrderDialog';
 import { useCustomerOrderNaming } from 'modules/customer-order/hooks/projections/useCustomerOrderNaming';
 import { matchesDemandQuery } from 'modules/customer-order/utils/demand-search';
+import type { ReactElement } from 'react';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { ActionDialogHost } from 'shared/components/ActionDialogHost';
 import { ArchivedWarehouseChip } from 'shared/components/ArchivedWarehouseChip';
 import { ArchivedWarehouseNotice } from 'shared/components/ArchivedWarehouseNotice';
 import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
 import { useActionDialog } from 'shared/hooks/state/useActionDialog';
-
-import type {
-  CustomerOrder,
-  CustomerOrderAmend,
-  CustomerOrderCancellation,
-  CustomerOrderRedirect,
-  DemandLine,
-} from '@warehouser/contracts/customer-orders';
-import type { ReactElement } from 'react';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 /** Which per-Customer-Order dialog a sub-row opens. */
 type CustomerOrderDialogKind = 'amend' | 'cancel' | 'redirect';

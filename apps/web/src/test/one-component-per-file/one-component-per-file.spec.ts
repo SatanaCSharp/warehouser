@@ -46,7 +46,7 @@ const SRC_DIRECTORY = posix.dirname(
 const componentFiles = (): string[] =>
   globSync('**/*.tsx', { cwd: SRC_DIRECTORY })
     .map((entry) => entry.split('\\').join('/'))
-    .filter((entry) => !/\.spec\.tsx$/u.test(entry))
+    .filter((entry) => !entry.endsWith('.spec.tsx'))
     .sort();
 
 /** A source with its comments removed, so prose can neither fail nor excuse. */

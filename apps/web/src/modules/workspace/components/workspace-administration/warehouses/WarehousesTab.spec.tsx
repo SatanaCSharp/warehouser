@@ -9,12 +9,13 @@ import {
 } from '@tanstack/react-router';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { ContextWarehouse } from '@warehouser/contracts/workspaces';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import { Provider } from 'react-redux';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { WarehousesTab } from 'modules/workspace/components/workspace-administration/warehouses/WarehousesTab';
+import type { ReactElement } from 'react';
+import { Provider } from 'react-redux';
 import { ROUTES } from 'shared/constants/routes';
+import type { AppStore } from 'store';
 import { selectHeroOption } from 'test/hero-select';
 import { renderWithProviders } from 'test/render';
 import {
@@ -26,10 +27,7 @@ import {
   warehouseIds,
   workspaceIds,
 } from 'test/workspace-fixtures';
-
-import type { ContextWarehouse } from '@warehouser/contracts/workspaces';
-import type { ReactElement } from 'react';
-import type { AppStore } from 'store';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // `alertWorkspaceAction` drives the success/pending toast through this single
 // seam (`web-error-handling.md` §2, §4) — mocking it here, as

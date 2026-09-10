@@ -1,10 +1,8 @@
-import { useTranslation } from 'react-i18next';
-
 import { PurchaseDraftDetailPane } from 'modules/purchase-draft/components/PurchaseDraftDetailPane';
 import { usePurchaseDraft } from 'modules/purchase-draft/hooks/queries/usePurchaseDraft';
-import { DatasetSkeleton } from 'shared/components/DatasetSkeleton';
-
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import { DatasetSkeleton } from 'shared/components/DatasetSkeleton';
 
 /** What the detail column shows, most significant state first. */
 type DetailState = 'unselected' | 'failed' | 'pending' | 'ready';

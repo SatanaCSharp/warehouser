@@ -389,7 +389,7 @@ const constructsAnEntity = (
   const inspect = (node: Node): void => {
     if (
       Node.isNewExpression(node) &&
-      /Entity$/u.test(node.getExpression().getText())
+      node.getExpression().getText().endsWith('Entity')
     ) {
       constructs = true;
       fed ||= readsAParameter(node, parameters);
@@ -400,7 +400,7 @@ const constructsAnEntity = (
     if (Node.isCallExpression(node) && calleeName(node) === 'create') {
       const [target] = node.getArguments();
 
-      if (target !== undefined && /Entity$/u.test(target.getText())) {
+      if (target !== undefined && target.getText().endsWith('Entity')) {
         constructs = true;
         fed ||= node
           .getArguments()
@@ -462,7 +462,7 @@ const patternOf = (
   }
 
   if (Node.isNewExpression(expression)) {
-    return /Entity$/u.test(expression.getExpression().getText()) &&
+    return expression.getExpression().getText().endsWith('Entity') &&
       readsAParameter(expression, parameters)
       ? 'entity-construction'
       : undefined;

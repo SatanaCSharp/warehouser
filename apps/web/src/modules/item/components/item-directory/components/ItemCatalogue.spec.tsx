@@ -1,8 +1,7 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { Item } from '@warehouser/contracts/items';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { describe, expect, it, vi } from 'vitest';
-
 import { ItemCatalogue } from 'modules/item/components/item-directory/components/ItemCatalogue';
 import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
 import {
@@ -11,8 +10,7 @@ import {
   stubAccessServer,
 } from 'test/access-fixtures';
 import { renderInEnteredWarehouse } from 'test/render';
-
-import type { Item } from '@warehouser/contracts/items';
+import { describe, expect, it, vi } from 'vitest';
 
 // T18 — the Items collection and the states that displace it (frames `XIvAZ`,
 // `VHU6r`, and `hWFRW` tile `Sv9md`). DoD: the destination is searchable at

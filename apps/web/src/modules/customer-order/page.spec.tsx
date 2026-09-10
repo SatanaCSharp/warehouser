@@ -1,12 +1,11 @@
 import { screen } from '@testing-library/react';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { customerOrderApi } from 'modules/customer-order/api/customer-order-api';
 import { CustomerOrderPage } from 'modules/customer-order/page';
 import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
 import { accessIds, authenticatedStore } from 'test/access-fixtures';
 import { renderInEnteredWarehouse } from 'test/render';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // T19 — DoD: "the destination ... the denial surfaces no customer name,
 // quantity or Item" (AC-05) and "a permitted actor whose read failed reaches

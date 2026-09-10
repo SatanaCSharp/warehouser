@@ -1,9 +1,7 @@
+import type { Middleware } from '@reduxjs/toolkit';
 import { isRejectedWithValue } from '@reduxjs/toolkit';
-
 import { alertApiFailure } from 'shared/alerts/api-feedback';
 import { isApiFailure } from 'shared/api/client/api-client';
-
-import type { Middleware } from '@reduxjs/toolkit';
 
 // T8 / CR-AC-09 — the entry-record write (`setActiveWarehouse`, issued by
 // `modules/warehouse/hooks/effects/useRecordWarehouseEntry`) only records where the

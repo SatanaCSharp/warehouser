@@ -1,7 +1,6 @@
+import type { BaseQueryFn, FetchArgs } from '@reduxjs/toolkit/query';
 import { createApi } from '@reduxjs/toolkit/query/react';
 import { errorResponseSchema } from '@warehouser/contracts/auth';
-
-import type { BaseQueryFn, FetchArgs } from '@reduxjs/toolkit/query';
 import type { ZodType } from 'zod';
 
 export type ApiFailure = {

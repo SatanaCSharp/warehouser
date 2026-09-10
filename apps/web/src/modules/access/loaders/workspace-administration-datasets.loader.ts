@@ -1,10 +1,8 @@
+import type { WorkspacePermissionId } from '@warehouser/shared-types/enums';
 import { WorkspacePermissionId as WorkspacePermissionIdValue } from '@warehouser/shared-types/enums';
-
 import { workspaceMembersApi } from 'modules/access/api/workspace-members-api';
 import { workspaceRolesApi } from 'modules/access/api/workspace-roles-api';
 import { hasWorkspacePermission } from 'shared/hooks/queries/useWorkspacePermissions';
-
-import type { WorkspacePermissionId } from '@warehouser/shared-types/enums';
 import type { AppStore } from 'store';
 
 export type WorkspaceAdministrationAccessDatasetsInput = {

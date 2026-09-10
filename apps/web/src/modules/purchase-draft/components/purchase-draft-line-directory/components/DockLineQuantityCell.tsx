@@ -1,7 +1,6 @@
-import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
-
 import type { PurchaseDraftLine } from '@warehouser/contracts/purchase-drafts';
 import type { ReactElement } from 'react';
+import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
 
 export type DockLineQuantityCellProps = {
   line: PurchaseDraftLine;

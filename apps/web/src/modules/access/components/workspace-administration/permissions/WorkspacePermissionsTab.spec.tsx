@@ -4,8 +4,6 @@ import { fileURLToPath } from 'node:url';
 
 import { screen, waitFor, within } from '@testing-library/react';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { WorkspacePermissionsTab } from 'modules/access/components/workspace-administration/permissions/WorkspacePermissionsTab';
 import { renderWithProviders } from 'test/render';
 import {
@@ -13,6 +11,7 @@ import {
   namedWorkspaceContext,
   stubWorkspaceServer,
 } from 'test/workspace-fixtures';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const TAB_SOURCE = posix.join(
   posix.dirname(fileURLToPath(import.meta.url)),

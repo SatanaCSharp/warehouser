@@ -1,5 +1,4 @@
-import { useState } from 'react';
-
+import type { RoleWrite } from '@warehouser/contracts/access';
 import {
   useDeleteAccessRoleMutation,
   useUpdateAccessRoleMutation,
@@ -8,13 +7,12 @@ import { DeleteRoleDialog } from 'modules/access/components/access-workspace/com
 import { RoleEditor } from 'modules/access/components/access-workspace/components/roles/RoleEditor';
 import { RoleList } from 'modules/access/components/access-workspace/components/roles/RoleList';
 import { useAccessScope } from 'modules/access/hooks/projections/useAccessScope';
-import { ActionDialogHost } from 'shared/components/ActionDialogHost';
-import { useActionDialog } from 'shared/hooks/state/useActionDialog';
-
-import type { RoleWrite } from '@warehouser/contracts/access';
 import type { AccessRole } from 'modules/access/types/access.types';
 import type { ReactElement } from 'react';
+import { useState } from 'react';
 import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import { ActionDialogHost } from 'shared/components/ActionDialogHost';
+import { useActionDialog } from 'shared/hooks/state/useActionDialog';
 
 type RoleDirectoryProps = {
   roles: AccessRole[];

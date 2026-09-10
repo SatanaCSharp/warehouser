@@ -1,21 +1,19 @@
 import { Button } from '@heroui/react';
+import type { RoleWrite } from '@warehouser/contracts/access';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { Controller } from 'react-hook-form';
-import { useTranslation } from 'react-i18next';
-
 import { PermissionFieldset } from 'modules/access/components/access-workspace/components/roles/PermissionFieldset';
 import { useRoleForm } from 'modules/access/hooks/forms/useRoleForm';
 import { useAccessScope } from 'modules/access/hooks/projections/useAccessScope';
 import { useAccessPermissions } from 'modules/access/hooks/queries/useAccessPermissions';
+import type { AccessRole } from 'modules/access/types/access.types';
+import type { ReactElement } from 'react';
+import { Controller } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { Conditional } from 'shared/components/Conditional';
 import { FormTextField } from 'shared/components/FormTextField';
 import { WarehousePermissionGate } from 'shared/components/WarehousePermissionGate';
 import { useHasPermission } from 'shared/hooks/queries/usePermissions';
-
-import type { RoleWrite } from '@warehouser/contracts/access';
-import type { AccessRole } from 'modules/access/types/access.types';
-import type { ReactElement } from 'react';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 type RoleEditorProps = {
   role: AccessRole;

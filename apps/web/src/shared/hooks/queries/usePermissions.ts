@@ -1,8 +1,7 @@
-import { useGetCurrentAccessQuery } from 'shared/api/access/access-permissions-api';
-import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
-
 import type { AccessProjection } from '@warehouser/contracts/access';
 import type { PermissionId } from '@warehouser/shared-types/enums';
+import { useGetCurrentAccessQuery } from 'shared/api/access/access-permissions-api';
+import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
 
 export type PermissionMatch = 'all' | 'any';
 

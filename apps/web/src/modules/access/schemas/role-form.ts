@@ -1,6 +1,5 @@
-import { roleWriteSchema } from '@warehouser/contracts/access';
-
 import type { RoleWrite } from '@warehouser/contracts/access';
+import { roleWriteSchema } from '@warehouser/contracts/access';
 import type { FormParseResult } from 'shared/utils/form-parse';
 
 export type RoleNameValidationError = 'characters' | 'length' | 'required';

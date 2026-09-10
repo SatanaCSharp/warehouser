@@ -1,8 +1,7 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { Item } from '@warehouser/contracts/items';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { describe, expect, it, vi } from 'vitest';
-
 import { ItemTable } from 'modules/item/components/item-directory/components/ItemTable';
 import { QUANTITY_GROUP_SEPARATOR } from 'shared/utils/number-format';
 import {
@@ -11,8 +10,7 @@ import {
   stubAccessServer,
 } from 'test/access-fixtures';
 import { renderInEnteredWarehouse } from 'test/render';
-
-import type { Item } from '@warehouser/contracts/items';
+import { describe, expect, it, vi } from 'vitest';
 
 // T18 — the Items destination's desktop surface (design-handoff.md
 // `Ordering/Item Row` `xEIH0`, frame `XIvAZ`). DoD: "A component test proves

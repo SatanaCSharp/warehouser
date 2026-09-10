@@ -1,0 +1,24 @@
+{
+  "$schema": "../../node_modules/oxlint/configuration_schema.json",
+
+  // Present so that `pnpm --filter @warehouser/contracts lint` — which runs with the cwd inside
+  // this package — finds a configuration at all; oxlint reads its config from the working
+  // directory. Everything of substance is in the root file this extends.
+  //
+  // `extends` merges `rules`, `plugins` and `overrides` only, so the four fields below are restated
+  // rather than inherited. `"plugins": []` means "exactly the root's plugin list": omitting the key
+  // would re-add oxlint's defaults on top of it. `jsPlugins` is not an extendable field either, so
+  // the two surviving ESLint plugins are named again here or their rules would be unknown.
+  "extends": ["../../.oxlintrc.json"],
+  "plugins": [],
+  "jsPlugins": [
+    "eslint-plugin-no-relative-import-paths",
+    "eslint-plugin-simple-import-sort"
+  ],
+  "env": { "node": true, "es2022": true },
+
+  // `dist/` and `node_modules/` are already covered by `.gitignore`. The tooling configs listed
+  // here sit outside `tsconfig.json`'s `include` ("src/**/*.ts"), so the type-aware pass has no
+  // program for them — the same reason the ESLint config ignored them.
+  "ignorePatterns": ["vitest.config.ts"]
+}

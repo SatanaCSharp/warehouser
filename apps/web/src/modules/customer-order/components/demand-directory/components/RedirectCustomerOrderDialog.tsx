@@ -1,21 +1,19 @@
 import { Alert } from '@heroui/react';
-import { useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
-import { useTranslation } from 'react-i18next';
-
+import type {
+  CustomerOrder,
+  CustomerOrderRedirect,
+} from '@warehouser/contracts/customer-orders';
 import { CustomerDeliveryAddressPicker } from 'modules/customer/components/CustomerDeliveryAddressPicker';
 import { useCustomers } from 'modules/customer/hooks/queries/useCustomers';
 import { CustomerOrderRefusalAlert } from 'modules/customer-order/components/demand-directory/components/CustomerOrderRefusalAlert';
 import { useCustomerOrderNaming } from 'modules/customer-order/hooks/projections/useCustomerOrderNaming';
 import { customerOrderIdentity } from 'modules/customer-order/utils/customer-order-identity';
-import { FormModalDialog } from 'shared/components/FormModalDialog';
-
-import type {
-  CustomerOrder,
-  CustomerOrderRedirect,
-} from '@warehouser/contracts/customer-orders';
 import type { ReactElement } from 'react';
+import { useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import { FormModalDialog } from 'shared/components/FormModalDialog';
 
 type RedirectCustomerOrderDialogProps = {
   order: CustomerOrder;

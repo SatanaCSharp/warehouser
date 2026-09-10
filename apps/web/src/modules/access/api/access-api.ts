@@ -1,22 +1,3 @@
-import {
-  managerTransferResultSchema,
-  memberMutationResultSchema,
-  memberPageSchema,
-  permissionPageSchema,
-  roleMutationResultSchema,
-  rolePageSchema,
-} from '@warehouser/contracts/access';
-import {
-  memberConfirmationSchema,
-  memberEmailSchema,
-  memberSchema,
-} from '@warehouser/contracts/users';
-import { ErrorCode } from '@warehouser/shared-types/enums';
-
-import { api } from 'shared/api/client/api-client';
-import { warehousePath } from 'shared/api/warehouse/warehouse-path';
-import { fieldErrorsForCode } from 'shared/utils/field-errors';
-
 import type { TagDescription } from '@reduxjs/toolkit/query';
 import type {
   ManagerTransfer,
@@ -28,6 +9,14 @@ import type {
   RolePage,
   RoleWrite,
 } from '@warehouser/contracts/access';
+import {
+  managerTransferResultSchema,
+  memberMutationResultSchema,
+  memberPageSchema,
+  permissionPageSchema,
+  roleMutationResultSchema,
+  rolePageSchema,
+} from '@warehouser/contracts/access';
 import type {
   CreateMemberInput,
   EmailChangeInput,
@@ -36,6 +25,15 @@ import type {
   MemberEmail,
   PasswordChangeInput,
 } from '@warehouser/contracts/users';
+import {
+  memberConfirmationSchema,
+  memberEmailSchema,
+  memberSchema,
+} from '@warehouser/contracts/users';
+import { ErrorCode } from '@warehouser/shared-types/enums';
+import { api } from 'shared/api/client/api-client';
+import { warehousePath } from 'shared/api/warehouse/warehouse-path';
+import { fieldErrorsForCode } from 'shared/utils/field-errors';
 
 type Role = RolePage['items'][number];
 type Member = MemberPage['items'][number];

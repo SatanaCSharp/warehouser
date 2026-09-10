@@ -1,10 +1,8 @@
-import { useTranslation } from 'react-i18next';
-
-import { itemNamingState } from 'modules/item/utils/item-naming';
-import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
-
 import type { Item } from '@warehouser/contracts/items';
 import type { ItemNamingState } from 'modules/item/utils/item-naming';
+import { itemNamingState } from 'modules/item/utils/item-naming';
+import { useTranslation } from 'react-i18next';
+import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
 
 export type ItemNaming = {
   /** Which sentence to reach for; the key suffix of every naming copy group. */

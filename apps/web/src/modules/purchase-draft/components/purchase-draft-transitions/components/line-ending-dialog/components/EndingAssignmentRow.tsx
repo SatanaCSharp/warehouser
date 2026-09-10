@@ -1,20 +1,18 @@
-import { useTranslation } from 'react-i18next';
-
+import type {
+  DeliveryMode,
+  PurchaseDraftLineLink,
+} from '@warehouser/contracts/purchase-drafts';
 import { DriftSignal } from 'modules/purchase-draft/components/DriftSignal';
 import { PurchaseDraftLinkIdentity } from 'modules/purchase-draft/components/PurchaseDraftLinkIdentity';
 import { PurchaseDraftLinkRow } from 'modules/purchase-draft/components/PurchaseDraftLinkRow';
 import { useLinkDriftChips } from 'modules/purchase-draft/hooks/projections/useLinkDriftChips';
 import { useLinkNaming } from 'modules/purchase-draft/hooks/projections/useLinkNaming';
 import { isAssignableLink } from 'modules/purchase-draft/utils/line-ending-form';
+import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Conditional } from 'shared/components/Conditional';
 import { FormTextField } from 'shared/components/FormTextField';
 import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
-
-import type {
-  DeliveryMode,
-  PurchaseDraftLineLink,
-} from '@warehouser/contracts/purchase-drafts';
-import type { ReactElement } from 'react';
 
 export type EndingAssignmentRowProps = {
   /**

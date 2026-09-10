@@ -1,13 +1,11 @@
+import type { PermissionId as PermissionIdValue } from '@warehouser/shared-types/enums';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { describe, expect, it } from 'vitest';
-
 import {
   membersReadPermissions,
   rolesReadPermissions,
   rolesTabPermissions,
 } from 'modules/access/utils/access-permission-sets';
-
-import type { PermissionId as PermissionIdValue } from '@warehouser/shared-types/enums';
+import { describe, expect, it } from 'vitest';
 
 // RED for T2 / CR-RG-02 — the loaders become a second place a Permission
 // decides a request, so each set is declared once and both the hook and the

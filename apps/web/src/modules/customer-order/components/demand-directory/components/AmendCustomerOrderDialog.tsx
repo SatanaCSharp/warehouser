@@ -1,21 +1,19 @@
 import { Alert } from '@heroui/react';
-import { useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
-import { useTranslation } from 'react-i18next';
-
-import { CustomerOrderRefusalAlert } from 'modules/customer-order/components/demand-directory/components/CustomerOrderRefusalAlert';
-import { useCustomerOrderNaming } from 'modules/customer-order/hooks/projections/useCustomerOrderNaming';
-import { FormDateField } from 'shared/components/FormDateField';
-import { FormModalDialog } from 'shared/components/FormModalDialog';
-import { FormTextField } from 'shared/components/FormTextField';
-import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
-
 import type {
   CustomerOrder,
   CustomerOrderAmend,
 } from '@warehouser/contracts/customer-orders';
+import { CustomerOrderRefusalAlert } from 'modules/customer-order/components/demand-directory/components/CustomerOrderRefusalAlert';
+import { useCustomerOrderNaming } from 'modules/customer-order/hooks/projections/useCustomerOrderNaming';
 import type { ReactElement } from 'react';
+import { useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import { FormDateField } from 'shared/components/FormDateField';
+import { FormModalDialog } from 'shared/components/FormModalDialog';
+import { FormTextField } from 'shared/components/FormTextField';
+import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
 import type { FormParseResult } from 'shared/utils/form-parse';
 
 type AmendCustomerOrderDialogProps = {

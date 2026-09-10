@@ -1,11 +1,9 @@
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { useTranslation } from 'react-i18next';
-
 import { DemandDirectory } from 'modules/customer-order/components/demand-directory/DemandDirectory';
 import { useDemand } from 'modules/customer-order/hooks/queries/useDemand';
-import { useCurrentPermissions } from 'shared/hooks/queries/usePermissions';
-
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useCurrentPermissions } from 'shared/hooks/queries/usePermissions';
 
 /**
  * The Demand destination (T19, design-handoff.md `G6jhw`/`SjdPo`). The route

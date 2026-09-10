@@ -1,5 +1,3 @@
-import { describe, expect, it } from 'vitest';
-
 import {
   selectAuthStatus,
   selectCurrentUser,
@@ -10,6 +8,7 @@ import {
   authBecameAuthenticated,
 } from 'modules/auth/store/auth.slice';
 import { makeStore } from 'store';
+import { describe, expect, it } from 'vitest';
 
 const user = { id: '00000000-0000-4000-8000-000000000001' };
 

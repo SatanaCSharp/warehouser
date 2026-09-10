@@ -1,12 +1,10 @@
+import type { WorkspaceRole } from '@warehouser/contracts/workspaces';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-
 import { useListWorkspaceRolesQuery } from 'modules/access/api/workspace-roles-api';
 import {
   hasWorkspacePermission,
   useCurrentWorkspaceContext,
 } from 'shared/hooks/queries/useWorkspacePermissions';
-
-import type { WorkspaceRole } from '@warehouser/contracts/workspaces';
 
 /**
  * CH-09 — `isReady` is removed (CR-AC-09). The Workspace route's loader awaits

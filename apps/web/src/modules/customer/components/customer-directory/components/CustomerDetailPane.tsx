@@ -1,17 +1,15 @@
 import { Button, Card, Separator } from '@heroui/react';
-import { useTranslation } from 'react-i18next';
-
+import type { Customer } from '@warehouser/contracts/customers';
 import { CustomerAddressBook } from 'modules/customer/components/customer-directory/components/addresses/CustomerAddressBook';
 import { CustomerAwaitingList } from 'modules/customer/components/customer-directory/components/awaiting/CustomerAwaitingList';
 import { CustomerDetailHeader } from 'modules/customer/components/customer-directory/components/customers/CustomerDetailHeader';
 import { useCustomerDetail } from 'modules/customer/hooks/queries/useCustomerDetail';
+import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Conditional } from 'shared/components/Conditional';
 import { DatasetSkeleton } from 'shared/components/DatasetSkeleton';
 import { useContentTransition } from 'shared/hooks/effects/useContentTransition';
 import { ChevronLeftIcon } from 'shared/icons';
-
-import type { Customer } from '@warehouser/contracts/customers';
-import type { ReactElement } from 'react';
 
 export type CustomerDetailPaneProps = {
   /** The opened Customer, or nothing while the list is all that is on screen. */

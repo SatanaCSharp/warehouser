@@ -1,8 +1,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { PurchaseDraftLineIdentified } from '@warehouser/contracts/purchase-drafts';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { PurchaseDraftLineLinks } from 'modules/purchase-draft/components/purchase-draft-line-links/PurchaseDraftLineLinks';
 import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
 import {
@@ -11,8 +10,7 @@ import {
   stubAccessServer,
 } from 'test/access-fixtures';
 import { renderInEnteredWarehouse } from 'test/render';
-
-import type { PurchaseDraftLineIdentified } from '@warehouser/contracts/purchase-drafts';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // AC-10 / AC-10a / AC-11a — the `SERVES` section (frame `yGhkK`) and its frozen
 // counterpart `SERVED, AS FROZEN` (frame `F0SpRx`): who a line is for, how much

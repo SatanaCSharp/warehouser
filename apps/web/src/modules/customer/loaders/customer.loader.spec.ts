@@ -3,14 +3,12 @@ import { posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { customerApi } from 'modules/customer/api/customer-api';
-import { loadCustomers } from 'modules/customer/loaders/customer.loader';
-import { accessIds, authenticatedStore } from 'test/access-fixtures';
-
 import type { CustomerLoaderContext } from 'modules/customer/loaders/customer.loader';
+import { loadCustomers } from 'modules/customer/loaders/customer.loader';
 import type { AppStore } from 'store';
+import { accessIds, authenticatedStore } from 'test/access-fixtures';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // delivery-addresses T21 — the Customers destination's route loader (DoD "its
 // loader dispatches nothing without `CUSTOMERS:WATCH`", AC-09). Colocated with

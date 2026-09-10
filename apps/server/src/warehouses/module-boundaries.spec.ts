@@ -143,7 +143,7 @@ const foreignModuleTarget = (
 const isModulePrivate = (target: string): boolean =>
   /\/domain\/errors\//u.test(target) ||
   /\/domain\/predicates\//u.test(target) ||
-  /\.predicates$/u.test(target) ||
+  target.endsWith('.predicates') ||
   /\/rest\/dtos\//u.test(target);
 
 /** The provider names a module's `usecases/usecase.module.ts` lists in its `exports` array. */

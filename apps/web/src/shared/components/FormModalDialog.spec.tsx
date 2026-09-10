@@ -1,15 +1,13 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { ReactElement } from 'react';
 import { useForm } from 'react-hook-form';
-import { describe, expect, it, vi } from 'vitest';
-
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { DialogHost } from 'shared/components/DialogHost';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormTextField } from 'shared/components/FormTextField';
-
-import type { ReactElement } from 'react';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import type { FormParseResult } from 'shared/utils/form-parse';
+import { describe, expect, it, vi } from 'vitest';
 
 // The submit sequence `docs/system/guides/web-dialogs.md` §2 assigns to this
 // component rather than to each dialog: validate, explain a rejected field

@@ -1,7 +1,6 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
-
 import { DemandPendingState } from 'modules/customer-order/components/DemandPendingState';
+import { describe, expect, it } from 'vitest';
 
 // Frame `hWFRW` tile `EZn9c` — the Demand destination waits behind a skeleton
 // shaped like its own table, announced as the dataset that is arriving rather

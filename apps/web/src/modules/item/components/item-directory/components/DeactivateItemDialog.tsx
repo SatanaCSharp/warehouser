@@ -1,13 +1,11 @@
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-
+import type { Item } from '@warehouser/contracts/items';
 import { ItemRefusalAlert } from 'modules/item/components/item-directory/components/ItemRefusalAlert';
 import { useItemNaming } from 'modules/item/hooks/projections/useItemNaming';
-import { ConfirmAlertDialog } from 'shared/components/ConfirmAlertDialog';
-
-import type { Item } from '@warehouser/contracts/items';
 import type { ReactElement } from 'react';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import { ConfirmAlertDialog } from 'shared/components/ConfirmAlertDialog';
 
 type DeactivateItemDialogProps = {
   item: Item;

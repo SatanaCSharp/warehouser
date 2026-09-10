@@ -1,9 +1,7 @@
 import { useRouterState } from '@tanstack/react-router';
-
+import type { WorkspaceContext } from '@warehouser/contracts/workspaces';
 import { ROUTES } from 'shared/constants/routes';
 import { useCurrentWorkspaceContext } from 'shared/hooks/queries/useWorkspacePermissions';
-
-import type { WorkspaceContext } from '@warehouser/contracts/workspaces';
 
 // T12 / CR-AC-05, amended by `global-loader/sad.md` §4.6 and §11 — the
 // non-optional `WorkspaceContext` is **route-scoped**, not contract-wide.

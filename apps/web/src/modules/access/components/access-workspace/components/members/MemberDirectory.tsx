@@ -1,3 +1,7 @@
+import type {
+  EmailChangeInput,
+  PasswordChangeInput,
+} from '@warehouser/contracts/users';
 import {
   useChangeMemberEmailMutation,
   useChangeMemberPasswordMutation,
@@ -9,18 +13,13 @@ import { MemberList } from 'modules/access/components/access-workspace/component
 import { ResetPasswordDialog } from 'modules/access/components/access-workspace/components/members/ResetPasswordDialog';
 import { useAccessScope } from 'modules/access/hooks/projections/useAccessScope';
 import { useAccessRoles } from 'modules/access/hooks/queries/useAccessRoles';
+import type { AccessMember } from 'modules/access/types/access.types';
 import { selectCurrentUser } from 'modules/auth/store/auth.selectors';
+import type { ReactElement } from 'react';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { ActionDialogHost } from 'shared/components/ActionDialogHost';
 import { useActionDialog } from 'shared/hooks/state/useActionDialog';
 import { useAppSelector } from 'store/hooks';
-
-import type {
-  EmailChangeInput,
-  PasswordChangeInput,
-} from '@warehouser/contracts/users';
-import type { AccessMember } from 'modules/access/types/access.types';
-import type { ReactElement } from 'react';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 type MemberDirectoryProps = {
   members: AccessMember[];

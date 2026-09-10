@@ -1,20 +1,18 @@
 import { renderHook, waitFor } from '@testing-library/react';
+import type { WorkspaceContext } from '@warehouser/contracts/workspaces';
+import type { PermissionId } from '@warehouser/shared-types/enums';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
+import type { ReactElement, ReactNode } from 'react';
 import { Provider } from 'react-redux';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
+import type { CurrentWorkspaceContext } from 'shared/hooks/queries/useWorkspacePermissions';
 import {
   hasWorkspacePermission,
   useCurrentWorkspaceContext,
   useHasWorkspacePermission,
 } from 'shared/hooks/queries/useWorkspacePermissions';
-import { makeStore } from 'store';
-
-import type { WorkspaceContext } from '@warehouser/contracts/workspaces';
-import type { PermissionId } from '@warehouser/shared-types/enums';
-import type { ReactElement, ReactNode } from 'react';
-import type { CurrentWorkspaceContext } from 'shared/hooks/queries/useWorkspacePermissions';
 import type { AppStore } from 'store';
+import { makeStore } from 'store';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const ownWorkspaceContext: WorkspaceContext = {
   workspace: {

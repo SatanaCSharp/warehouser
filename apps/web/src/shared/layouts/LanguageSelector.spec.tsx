@@ -1,13 +1,12 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import i18n from 'i18n';
 import {
   LanguageSelector,
   resolveBaseLanguage,
 } from 'shared/layouts/LanguageSelector';
 import { renderWithProviders } from 'test/render';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 describe('resolveBaseLanguage', () => {
   it('resolves a region variant to its base language', () => {

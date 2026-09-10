@@ -1,13 +1,11 @@
 import { redirect } from '@tanstack/react-router';
-
+import type { RouterContext } from 'routes/__root.route';
 import { workspaceContextApi } from 'shared/api/workspace/workspace-context-api';
 import { ROUTES } from 'shared/constants/routes';
 import {
   hasWorkspacePermission,
   workspaceAdministrationPermissionIds,
 } from 'shared/hooks/queries/useWorkspacePermissions';
-
-import type { RouterContext } from 'routes/__root.route';
 
 // AC-30 — route visibility is advisory UI behavior, never the server
 // authorization boundary (design-handoff.md §Implementation constraints).

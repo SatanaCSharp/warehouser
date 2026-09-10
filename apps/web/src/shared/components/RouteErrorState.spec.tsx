@@ -1,7 +1,6 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
-
 import { RouteErrorState } from 'shared/components/RouteErrorState';
+import { describe, expect, it, vi } from 'vitest';
 
 // What the retry control actually DOES is asserted where it is observable —
 // `modules/home/route.spec.tsx` fails the Workspace-context read once,

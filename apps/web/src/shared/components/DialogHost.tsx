@@ -1,8 +1,7 @@
-import { useState } from 'react';
-import { OverlayTriggerStateContext } from 'react-aria-components';
-
 import type { ReactElement, ReactNode } from 'react';
+import { useState } from 'react';
 import type { OverlayTriggerState } from 'react-aria-components';
+import { OverlayTriggerStateContext } from 'react-aria-components';
 
 type DialogHostProps = {
   /** The dialog to host. It is open from the moment this mounts. */

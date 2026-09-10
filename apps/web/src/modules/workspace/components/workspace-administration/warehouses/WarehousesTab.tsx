@@ -1,21 +1,19 @@
+import type { WorkspaceUser } from '@warehouser/contracts/workspaces';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
 import countBy from 'lodash/countBy';
 import flatMap from 'lodash/flatMap';
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-
 import { useListWorkspaceWarehousesQuery } from 'modules/workspace/api/warehouse-api';
 import { AddWarehouseAction } from 'modules/workspace/components/workspace-administration/warehouses/AddWarehouseAction';
 import { WarehouseDetailPane } from 'modules/workspace/components/workspace-administration/warehouses/WarehouseDetailPane';
 import { WarehouseList } from 'modules/workspace/components/workspace-administration/warehouses/WarehouseList';
+import type { ReactElement } from 'react';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useListWorkspaceUsersQuery } from 'shared/api/workspace/workspace-users-api';
 import {
   hasWorkspacePermission,
   useCurrentWorkspaceContext,
 } from 'shared/hooks/queries/useWorkspacePermissions';
-
-import type { WorkspaceUser } from '@warehouser/contracts/workspaces';
-import type { ReactElement } from 'react';
 
 const peopleCountsByWarehouse = (
   users: WorkspaceUser[],

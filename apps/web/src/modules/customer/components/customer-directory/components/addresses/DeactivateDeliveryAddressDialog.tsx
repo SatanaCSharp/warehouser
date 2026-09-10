@@ -1,14 +1,12 @@
 import { Alert } from '@heroui/react';
+import type { CustomerDeliveryAddress } from '@warehouser/contracts/customers';
+import { CustomerRefusalAlert } from 'modules/customer/components/customer-directory/components/CustomerRefusalAlert';
+import type { ReactElement } from 'react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-
-import { CustomerRefusalAlert } from 'modules/customer/components/customer-directory/components/CustomerRefusalAlert';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { Conditional } from 'shared/components/Conditional';
 import { ConfirmAlertDialog } from 'shared/components/ConfirmAlertDialog';
-
-import type { CustomerDeliveryAddress } from '@warehouser/contracts/customers';
-import type { ReactElement } from 'react';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 export type DeactivateDeliveryAddressDialogProps = {
   address: CustomerDeliveryAddress;

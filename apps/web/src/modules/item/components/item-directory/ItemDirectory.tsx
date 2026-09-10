@@ -1,3 +1,8 @@
+import type {
+  Item,
+  ItemUpdate,
+  OnHandAdjustmentCreate,
+} from '@warehouser/contracts/items';
 import {
   useAdjustItemOnHandQuantityMutation,
   useDeactivateItemMutation,
@@ -8,17 +13,11 @@ import { CorrectItemDialog } from 'modules/item/components/item-directory/compon
 import { DeactivateItemDialog } from 'modules/item/components/item-directory/components/DeactivateItemDialog';
 import { ItemCatalogue } from 'modules/item/components/item-directory/components/ItemCatalogue';
 import { useItems } from 'modules/item/hooks/queries/useItems';
+import type { ReactElement } from 'react';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { ActionDialogHost } from 'shared/components/ActionDialogHost';
 import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
 import { useActionDialog } from 'shared/hooks/state/useActionDialog';
-
-import type {
-  Item,
-  ItemUpdate,
-  OnHandAdjustmentCreate,
-} from '@warehouser/contracts/items';
-import type { ReactElement } from 'react';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 /** Which per-Item dialog a row opens. */
 type ItemDialogKind = 'adjustOnHand' | 'correct' | 'deactivate';

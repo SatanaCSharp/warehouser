@@ -4,9 +4,12 @@ import { fileURLToPath } from 'node:url';
 
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type {
+  PackagingType,
+  PurchaseDraftLine,
+  PurchaseDraftLineRejection,
+} from '@warehouser/contracts/purchase-drafts';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { describe, expect, it } from 'vitest';
-
 import { ClosedPurchaseDraftLine } from 'modules/purchase-draft/components/closed-purchase-draft-line/ClosedPurchaseDraftLine';
 import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
 import {
@@ -15,12 +18,7 @@ import {
   stubAccessServer,
 } from 'test/access-fixtures';
 import { renderInEnteredWarehouse } from 'test/render';
-
-import type {
-  PackagingType,
-  PurchaseDraftLine,
-  PurchaseDraftLineRejection,
-} from '@warehouser/contracts/purchase-drafts';
+import { describe, expect, it } from 'vitest';
 
 // T17 — `Inspection/Closed Line` (`FYfEa`, design-handoff.md § Component
 // mapping), derived from the shipped `Delivery/Draft Line` (`jnl1h`,

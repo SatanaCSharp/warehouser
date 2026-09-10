@@ -1,10 +1,8 @@
-import { useTranslation } from 'react-i18next';
-
 import { usePermissionLabel } from 'modules/access/hooks/projections/usePermissionLabel';
 import { useAccessPermissions } from 'modules/access/hooks/queries/useAccessPermissions';
-import { DatasetCard } from 'shared/components/DatasetCard';
-
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import { DatasetCard } from 'shared/components/DatasetCard';
 
 /** The read-only Permission catalogue every Role grants from. */
 export const PermissionsTab = (): ReactElement => {

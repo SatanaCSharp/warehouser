@@ -1,11 +1,10 @@
-import { describe, expect, it } from 'vitest';
-
 import {
   disablingReasonKey,
   lineDisablingReason,
   lineRefusalReasonId,
   refusesWrites,
 } from 'modules/purchase-draft/utils/write-refusal';
+import { describe, expect, it } from 'vitest';
 
 // AC-15, AC-22 and AC-23 all require a refused control to stay visible and
 // disabled **with its reason stated**. This file pins the one place that

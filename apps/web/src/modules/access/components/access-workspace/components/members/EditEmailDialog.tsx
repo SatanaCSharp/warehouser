@@ -1,14 +1,12 @@
-import { useForm } from 'react-hook-form';
-import { useTranslation } from 'react-i18next';
-
-import { parseEmailChangeForm } from 'modules/access/schemas/email-change-form';
-import { FormModalDialog } from 'shared/components/FormModalDialog';
-import { FormTextField } from 'shared/components/FormTextField';
-
 import type { EmailChangeInput } from '@warehouser/contracts/users';
+import { parseEmailChangeForm } from 'modules/access/schemas/email-change-form';
 import type { AccessMember } from 'modules/access/types/access.types';
 import type { ReactElement } from 'react';
+import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import { FormModalDialog } from 'shared/components/FormModalDialog';
+import { FormTextField } from 'shared/components/FormTextField';
 import type { FormParseResult } from 'shared/utils/form-parse';
 
 type EditEmailDialogProps = {

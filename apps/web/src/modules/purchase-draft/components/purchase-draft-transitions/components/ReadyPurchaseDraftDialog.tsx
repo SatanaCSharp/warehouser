@@ -1,13 +1,11 @@
 import { Alert } from '@heroui/react';
 import { ErrorCode } from '@warehouser/shared-types/enums';
+import type { ReactElement } from 'react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { Conditional } from 'shared/components/Conditional';
 import { ConfirmAlertDialog } from 'shared/components/ConfirmAlertDialog';
-
-import type { ReactElement } from 'react';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 // AC-16a — the one refusal this dialog explains with copy of its own; every
 // other code reads the shared `transitions.ready.refusal` sentence

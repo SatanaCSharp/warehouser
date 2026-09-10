@@ -1,15 +1,13 @@
 import { Tabs } from '@heroui/react';
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-
+import type { Customer } from '@warehouser/contracts/customers';
 import { CustomerDetailPane } from 'modules/customer/components/customer-directory/components/CustomerDetailPane';
 import { CustomerCatalogue } from 'modules/customer/components/customer-directory/components/customers/CustomerCatalogue';
 import { CustomerToolbar } from 'modules/customer/components/customer-directory/components/customers/CustomerToolbar';
 import { useCustomers } from 'modules/customer/hooks/queries/useCustomers';
-import { Conditional } from 'shared/components/Conditional';
-
-import type { Customer } from '@warehouser/contracts/customers';
 import type { ReactElement } from 'react';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Conditional } from 'shared/components/Conditional';
 
 /** The two tabs the customers filter offers (`Hh6Al`); order never changes. */
 const TAB_KEYS = ['active', 'inactive'] as const;

@@ -1,5 +1,4 @@
 import { ToastQueue } from '@heroui/react';
-
 import type { ReactNode } from 'react';
 
 /**

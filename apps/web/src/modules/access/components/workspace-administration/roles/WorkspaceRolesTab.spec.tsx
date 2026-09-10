@@ -5,8 +5,6 @@ import { fileURLToPath } from 'node:url';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { WorkspaceRolesTab } from 'modules/access/components/workspace-administration/roles/WorkspaceRolesTab';
 import { selectHeroOption } from 'test/hero-select';
 import { renderWithProviders } from 'test/render';
@@ -17,6 +15,7 @@ import {
   workspaceRoleIds,
   workspaceRoles,
 } from 'test/workspace-fixtures';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // `alertWorkspaceAction` drives the success/pending toast through this single
 // seam (`web-error-handling.md` §2, §4) — mocking it here, as

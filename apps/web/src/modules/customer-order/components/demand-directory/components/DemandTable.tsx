@@ -1,7 +1,9 @@
+import type { Selection } from '@heroui/react';
 import { Table } from '@heroui/react';
-import { useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-
+import type {
+  CustomerOrder,
+  DemandLine,
+} from '@warehouser/contracts/customer-orders';
 import { CoverageChips } from 'modules/customer-order/components/demand-directory/components/CoverageChips';
 import { CustomerOrderActionsMenu } from 'modules/customer-order/components/demand-directory/components/CustomerOrderActionsMenu';
 import { CustomerOrderIdentityCell } from 'modules/customer-order/components/demand-directory/components/CustomerOrderIdentityCell';
@@ -13,17 +15,13 @@ import { DemandItemCell } from 'modules/customer-order/components/demand-directo
 import { DemandNeededByCell } from 'modules/customer-order/components/demand-directory/components/DemandNeededByCell';
 import { DemandOnHandCell } from 'modules/customer-order/components/demand-directory/components/DemandOnHandCell';
 import { DemandOutstandingCell } from 'modules/customer-order/components/demand-directory/components/DemandOutstandingCell';
+import type { CustomerOrderActionHandlers } from 'modules/customer-order/hooks/projections/useCustomerOrderActions';
 import { useCustomerOrderNaming } from 'modules/customer-order/hooks/projections/useCustomerOrderNaming';
 import { useUnfulfilledCustomerOrdersByItem } from 'modules/customer-order/hooks/queries/useUnfulfilledCustomerOrdersByItem';
-import { CornerDownRightIcon } from 'shared/icons';
-
-import type { Selection } from '@heroui/react';
-import type {
-  CustomerOrder,
-  DemandLine,
-} from '@warehouser/contracts/customer-orders';
-import type { CustomerOrderActionHandlers } from 'modules/customer-order/hooks/projections/useCustomerOrderActions';
 import type { ReactElement } from 'react';
+import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { CornerDownRightIcon } from 'shared/icons';
 
 /**
  * One Customer Order sub-row, carrying the name any sentence about it uses.

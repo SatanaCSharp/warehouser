@@ -1,8 +1,6 @@
 import { Button } from '@heroui/react';
-
-import { ChevronLeftIcon, ChevronRightIcon } from 'shared/icons';
-
 import type { ReactElement } from 'react';
+import { ChevronLeftIcon, ChevronRightIcon } from 'shared/icons';
 
 export type SidebarCollapseToggleProps = {
   isCollapsed: boolean;

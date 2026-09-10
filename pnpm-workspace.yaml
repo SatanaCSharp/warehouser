@@ -31,6 +31,14 @@ packageExtensions:
 peerDependencyRules:
   allowedVersions:
     "nestjs-zod>@nestjs/common": "^12.0.0"
+  # `eslint-plugin-simple-import-sort` and `eslint-plugin-no-relative-import-paths` peer-depend on
+  # `eslint`, and `eslint` is no longer installed: oxlint loads both through its `jsPlugins` bridge,
+  # which implements the ESLint v9 rule API itself and passes each rule the context object it
+  # expects. Neither plugin imports anything from `eslint` at runtime — they are pure AST visitors —
+  # so the peer is genuinely unused rather than merely unsatisfied. Recording that here keeps the
+  # install quiet without pulling the whole linter back in to satisfy a declaration.
+  ignoreMissing:
+    - eslint
 
 overrides:
   "@types/node": "catalog:"
@@ -120,24 +128,19 @@ catalog:
   "@vitejs/plugin-react": ^4.7.0
   vite: ^6.4.3
 
-  # ESLint core
-  "@eslint/js": ^9.39.5
-  "@typescript-eslint/eslint-plugin": ^8.63.0
-  "@typescript-eslint/parser": ^8.63.0
-  eslint: ^9.39.5
-  typescript-eslint: ^8.63.0
+  # Linting. oxlint replaces ESLint entirely; Prettier remains the formatter and runs separately.
+  # Pinned exactly rather than caret-ranged: the `jsPlugins` bridge the two surviving ESLint plugins
+  # below run through is documented as alpha and explicitly outside semver, so a patch bump can move
+  # it. `oxlint-tsgolint` is the separate Go binary that runs the type-aware rules; it is versioned
+  # against TypeScript's own line (7.x) rather than oxlint's, and embeds its own typescript-go
+  # engine — it needs no `typescript` package of its own, which is why this repo stays on 5.9.3.
+  oxlint: 1.82.0
+  oxlint-tsgolint: ^7.0.2001
 
-  # ESLint plugins
-  eslint-config-prettier: ^10.1.8
-  eslint-import-resolver-typescript: ^3.10.1
-  eslint-plugin-import: ^2.32.0
-  eslint-plugin-jsx-a11y: ^6.10.2
+  # The two ESLint plugins that survive as oxlint `jsPlugins`, because oxlint implements no
+  # equivalent: `no-relative-import-paths` is what makes the ~4000 bare `shared/...` specifiers the
+  # convention (oxlint's `import/no-relative-parent-imports` bans only `../`, has no `rootDir` and
+  # no fixer), and `simple-import-sort` is the only import orderer either app has now that
+  # `import/order` — which oxlint also lacks — is retired.
   eslint-plugin-no-relative-import-paths: ^1.6.1
-  eslint-plugin-prettier: ^5.5.6
-  eslint-plugin-react: ^7.37.5
-  eslint-plugin-react-hooks: ^7.1.1
   eslint-plugin-simple-import-sort: ^12.1.1
-  eslint-plugin-unused-imports: ^4.4.1
-
-  # ESLint types
-  "@types/eslint-plugin-jsx-a11y": ^6.10.1

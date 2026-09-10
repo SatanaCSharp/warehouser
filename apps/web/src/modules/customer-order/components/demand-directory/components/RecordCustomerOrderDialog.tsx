@@ -1,19 +1,17 @@
+import type { CustomerOrderCreate } from '@warehouser/contracts/customer-orders';
+import { CustomerOrderRefusalAlert } from 'modules/customer-order/components/demand-directory/components/CustomerOrderRefusalAlert';
+import { RecordCustomerOrderCustomerFields } from 'modules/customer-order/components/demand-directory/components/record-customer-order-customer-fields/RecordCustomerOrderCustomerFields';
+import type { RecordCustomerOrderForm } from 'modules/customer-order/utils/record-customer-order-form';
+import { ItemPicker } from 'modules/item/components/ItemPicker';
+import { useItems } from 'modules/item/hooks/queries/useItems';
+import type { ReactElement } from 'react';
 import { useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-
-import { CustomerOrderRefusalAlert } from 'modules/customer-order/components/demand-directory/components/CustomerOrderRefusalAlert';
-import { RecordCustomerOrderCustomerFields } from 'modules/customer-order/components/demand-directory/components/record-customer-order-customer-fields/RecordCustomerOrderCustomerFields';
-import { ItemPicker } from 'modules/item/components/ItemPicker';
-import { useItems } from 'modules/item/hooks/queries/useItems';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { FormDateField } from 'shared/components/FormDateField';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormTextField } from 'shared/components/FormTextField';
-
-import type { CustomerOrderCreate } from '@warehouser/contracts/customer-orders';
-import type { RecordCustomerOrderForm } from 'modules/customer-order/utils/record-customer-order-form';
-import type { ReactElement } from 'react';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 type RecordCustomerOrderDialogProps = {
   /** Pre-selects the Item when opened from a Demand Line's own action. */

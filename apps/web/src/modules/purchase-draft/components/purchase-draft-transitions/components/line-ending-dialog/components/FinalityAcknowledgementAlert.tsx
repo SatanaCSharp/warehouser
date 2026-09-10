@@ -1,10 +1,9 @@
 import { Alert, Checkbox } from '@heroui/react';
+import type { ReactElement } from 'react';
 import { useId } from 'react';
+import type { Path, UseFormReturn } from 'react-hook-form';
 import { Controller } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-
-import type { ReactElement } from 'react';
-import type { Path, UseFormReturn } from 'react-hook-form';
 
 /**
  * The finality acknowledgement's own form fragment (T16, design-handoff.md

@@ -1,19 +1,17 @@
 import { Button } from '@heroui/react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link as RouterLink } from '@tanstack/react-router';
-import { useForm } from 'react-hook-form';
-import { useTranslation } from 'react-i18next';
-
 import {
   signUpFormSchema,
   type SignUpFormValues,
 } from 'modules/auth/sign-up/schemas/sign-up-form.schema';
+import type { FormEvent, ReactElement } from 'react';
+import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import { Conditional } from 'shared/components/Conditional';
 import { FormTextField } from 'shared/components/FormTextField';
 import { PasswordInput } from 'shared/components/PasswordInput';
 import { ROUTES } from 'shared/constants/routes';
-
-import type { FormEvent, ReactElement } from 'react';
 
 type Props = {
   emailError?: string;

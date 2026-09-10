@@ -1,7 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { useCollapsedSidebar } from 'shared/hooks/state/useCollapsedSidebar';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const STORAGE_KEY = 'warehouser.sidebar.collapsed';
 

@@ -5,13 +5,12 @@ import { fileURLToPath } from 'node:url';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { accessApi } from 'modules/access/api/access-api';
 import { MembersTab } from 'modules/access/components/access-workspace/components/members/MembersTab';
 import { loadAccessSurface } from 'modules/access/loaders/access-surface.loader';
 import { authBecameAnonymous } from 'modules/auth/store/auth.slice';
 import { api } from 'shared/api/client/api-client';
+import type { AppStore } from 'store';
 import {
   accessIds,
   accessMembers,
@@ -22,8 +21,7 @@ import {
 } from 'test/access-fixtures';
 import { selectHeroOption } from 'test/hero-select';
 import { renderInEnteredWarehouse } from 'test/render';
-
-import type { AppStore } from 'store';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const changeMemberEmail = vi.hoisted(() => vi.fn());
 const changeMemberPassword = vi.hoisted(() => vi.fn());

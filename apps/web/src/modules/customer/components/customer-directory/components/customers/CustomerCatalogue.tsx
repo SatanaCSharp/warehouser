@@ -1,12 +1,10 @@
-import { useTranslation } from 'react-i18next';
-
+import type { Customer } from '@warehouser/contracts/customers';
 import { CustomerCardList } from 'modules/customer/components/customer-directory/components/customers/CustomerCardList';
 import { RecordCustomerAction } from 'modules/customer/components/customer-directory/components/customers/RecordCustomerAction';
+import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 import { DatasetEmptyState } from 'shared/components/DatasetEmptyState';
 import { ContactIcon } from 'shared/icons';
-
-import type { Customer } from '@warehouser/contracts/customers';
-import type { ReactElement } from 'react';
 
 export type CustomerCatalogueProps = {
   customers: Customer[];

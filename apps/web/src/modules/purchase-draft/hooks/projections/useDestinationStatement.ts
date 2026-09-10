@@ -1,9 +1,8 @@
-import { useTranslation } from 'react-i18next';
-
 import type {
   DeliveryMode,
   PurchaseDraftLine,
 } from '@warehouser/contracts/purchase-drafts';
+import { useTranslation } from 'react-i18next';
 
 /** One destination, stated identically wherever a line says where its goods go. */
 export type DestinationStatement = {

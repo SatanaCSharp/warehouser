@@ -1,10 +1,11 @@
 import { Button, Chip, Dropdown, Label } from '@heroui/react';
+import type { WorkspaceMember } from '@warehouser/contracts/workspaces';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import { useTranslation } from 'react-i18next';
-
 import { ChangeWorkspaceRoleDialog } from 'modules/access/components/workspace-administration/members/ChangeWorkspaceRoleDialog';
 import { RemoveWorkspaceMemberDialog } from 'modules/access/components/workspace-administration/members/RemoveWorkspaceMemberDialog';
 import { TransferWorkspaceOwnershipDialog } from 'modules/access/components/workspace-administration/members/TransferWorkspaceOwnershipDialog';
+import type { Key, ReactElement, ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActionDialogHost } from 'shared/components/ActionDialogHost';
 import { Conditional } from 'shared/components/Conditional';
 import { ROW_ENTER } from 'shared/constants/motion';
@@ -16,9 +17,6 @@ import {
   ShieldIcon,
   TrashIcon,
 } from 'shared/icons';
-
-import type { WorkspaceMember } from '@warehouser/contracts/workspaces';
-import type { Key, ReactElement, ReactNode } from 'react';
 
 type WorkspaceMemberRowProps = {
   member: WorkspaceMember;

@@ -1,13 +1,11 @@
 import { render, screen } from '@testing-library/react';
+import type { WorkspaceContext } from '@warehouser/contracts/workspaces';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
+import type { ReactElement } from 'react';
 import { Provider } from 'react-redux';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { useWorkspacePermittedItems } from 'shared/hooks/projections/useWorkspacePermittedItems';
 import { makeStore } from 'store';
-
-import type { WorkspaceContext } from '@warehouser/contracts/workspaces';
-import type { ReactElement } from 'react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 type Action = { id: string; permission: WorkspacePermissionId };
 

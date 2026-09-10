@@ -7,19 +7,17 @@ import {
 } from '@tanstack/react-router';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Provider } from 'react-redux';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
-import { authBecameAuthenticated } from 'modules/auth/store/auth.slice';
-import { ROUTES } from 'shared/constants/routes';
-import { RootLayout } from 'shared/layouts/RootLayout';
-import { makeStore } from 'store';
-
 import type { AccessProjection } from '@warehouser/contracts/access';
 import type { WorkspaceContext } from '@warehouser/contracts/workspaces';
 import type { WarehouseEntryVerdict } from 'guards/warehouse-entry.guard';
+import { authBecameAuthenticated } from 'modules/auth/store/auth.slice';
 import type { ReactElement } from 'react';
+import { Provider } from 'react-redux';
+import { ROUTES } from 'shared/constants/routes';
+import { RootLayout } from 'shared/layouts/RootLayout';
 import type { AppStore } from 'store';
+import { makeStore } from 'store';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 type TestContext = { store: AppStore };
 

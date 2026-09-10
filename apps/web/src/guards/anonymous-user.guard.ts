@@ -1,10 +1,8 @@
 import { redirect } from '@tanstack/react-router';
-
 import { initializeSession } from 'modules/auth/session/session';
 import { selectIsAuthenticated } from 'modules/auth/store/auth.selectors';
-import { ROUTES } from 'shared/constants/routes';
-
 import type { RouterContext } from 'routes/__root.route';
+import { ROUTES } from 'shared/constants/routes';
 
 export const requireAnonymous = async ({
   store,

@@ -1,7 +1,6 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
-
 import { DriftSignal } from 'modules/purchase-draft/components/DriftSignal';
+import { describe, expect, it } from 'vitest';
 
 // T20 DoD: "A test proves the Drift Signal is icon plus text and never
 // colour alone" (AC-16, AC-16a).

@@ -1,10 +1,8 @@
-import { useTranslation } from 'react-i18next';
-
 import { RecordDemandAction } from 'modules/customer-order/components/demand-directory/components/RecordDemandAction';
+import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 import { DatasetEmptyState } from 'shared/components/DatasetEmptyState';
 import { ClipboardListIcon } from 'shared/icons';
-
-import type { ReactElement } from 'react';
 
 /**
  * What the Demand destination paints when no customer is waiting for anything

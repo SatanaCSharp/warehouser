@@ -1,12 +1,10 @@
-import { useTranslation } from 'react-i18next';
-
+import type { CustomerDetail } from '@warehouser/contracts/customers';
 import { CustomerAwaitingCard } from 'modules/customer/components/customer-directory/components/awaiting/CustomerAwaitingCard';
 import { CustomerAwaitingTable } from 'modules/customer/components/customer-directory/components/awaiting/CustomerAwaitingTable';
+import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 import { DatasetEmptyState } from 'shared/components/DatasetEmptyState';
 import { PackageCheckIcon } from 'shared/icons';
-
-import type { CustomerDetail } from '@warehouser/contracts/customers';
-import type { ReactElement } from 'react';
 
 export type CustomerAwaitingListProps = {
   detail: CustomerDetail;

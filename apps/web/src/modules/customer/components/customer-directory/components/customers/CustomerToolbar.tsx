@@ -1,10 +1,8 @@
 import { Toolbar } from '@heroui/react';
-import { useTranslation } from 'react-i18next';
-
 import { CustomerSearchField } from 'modules/customer/components/customer-directory/components/customers/CustomerSearchField';
 import { RecordCustomerAction } from 'modules/customer/components/customer-directory/components/customers/RecordCustomerAction';
-
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export type CustomerToolbarProps = {
   query: string;

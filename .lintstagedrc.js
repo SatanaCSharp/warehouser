@@ -3,186 +3,48 @@
 /**
  * Lint-Staged Configuration for Monorepo
  *
- * This configuration ensures that ESLint runs with the nearest (local) config
- * for each staged file, respecting package-specific rules and overrides.
+ * The 200 lines this file used to be existed to work around ESLint: it grouped staged files by
+ * their nearest `eslint.config.*`, asked ESLint's Node API which of them were ignored, then `cd`-ed
+ * into each package and shelled out to `npx eslint` twice. oxlint needs none of it. It resolves the
+ * nearest `.oxlintrc.json` for every path it is given itself, applies that config's
+ * `ignorePatterns` (and `.gitignore`) itself, and is fast enough that the two passes cost less than
+ * the grouping did.
  *
- * How it works:
- * 1. Groups staged files by their nearest package directory
- * 2. Dynamically filters files using ESLint's ignore patterns from config
- * 3. Runs ESLint from each package directory with its local config
- * 4. Auto-fixes issues where possible
- * 5. Validates no warnings/errors remain (fails commit if any exist)
- * 6. Applies Prettier formatting after linting
+ * What still matters, and is preserved exactly:
  *
- * Benefits:
- * - Only staged files are processed (memory efficient)
- * - ESLint config is the single source of truth for ignore patterns
- * - Each package uses its own ESLint rules (respects local configs)
- * - Automatic fixes are applied and re-staged
- * - Clean separation: linting per package, formatting globally
- * - Zero tolerance: Any remaining warnings or errors will fail the commit
- *
- * Performance:
- * - Time Complexity: O(n*m) where n=files, m=directory depth
- * - Space Complexity: O(n) for grouping files
- * - Optimized with early exits and minimal file system operations
+ * 1. **Only staged files are linted.** oxlint is fast enough to lint the whole tree, but doing that
+ *    would let an unrelated pre-existing violation somewhere else block an unrelated commit — a
+ *    change in what the gate means, not just in how it runs. The filenames are passed through.
+ * 2. **`--max-warnings=0`.** The commit gate is stricter than `pnpm lint`: `apps/*` tolerate
+ *    warnings in their own `lint` script, but nothing warning-level may enter a commit.
+ * 3. **Fix, then check, then format.** oxlint `--fix` applies only its safe fixes (never
+ *    `--fix-suggestions` or `--fix-dangerously`), the second pass fails the commit on whatever is
+ *    left, and Prettier — still the only formatter — runs last so the linter never fights it.
+ *    lint-staged re-stages the rewritten files.
+ * 4. **`--type-aware`.** The type-aware rules are the reason `no-floating-promises` and the
+ *    `no-unsafe-*` family exist in this gate at all; a run without the flag silently skips them.
+ *    It is passed on the command line rather than set in a config because `options.typeAware` is
+ *    root-config-only and every package config becomes the root config for a run inside it.
  */
-
-const path = require('path');
-const fs = require('fs');
-const { ESLint } = require('eslint');
 
 /**
- * Finds the nearest directory containing an ESLint config file
- * @param {string} filePath - Absolute or relative path to the file being linted
- * @returns {string|null} - Absolute path to the package directory or null
+ * @param {string[]} filenames
+ * @returns {string}
  */
-const findNearestEslintConfig = (filePath) => {
-  const absolutePath = path.isAbsolute(filePath)
-      ? filePath
-      : path.join(process.cwd(), filePath);
-
-  let currentDir = path.dirname(absolutePath);
-  const root = process.cwd();
-
-  while (currentDir.startsWith(root)) {
-    const hasEslintConfig =
-        fs.existsSync(path.join(currentDir, 'eslint.config.mjs')) ||
-        fs.existsSync(path.join(currentDir, 'eslint.config.js'));
-
-    const hasPackageJson = fs.existsSync(
-        path.join(currentDir, 'package.json'),
-    );
-
-    // Found a package with its own ESLint config
-    if (hasEslintConfig && hasPackageJson) {
-      return currentDir;
-    }
-
-    const parentDir = path.dirname(currentDir);
-    // Reached filesystem root without finding config
-    if (parentDir === currentDir) {
-      break;
-    }
-    currentDir = parentDir;
-  }
-
-  return null;
-};
-
-/**
- * Groups files by their nearest ESLint config directory
- * @param {string[]} files - Array of staged file paths (absolute)
- * @returns {Map<string, string[]>} - Map of package directory to relative file paths
- */
-const groupFilesByPackage = (files) => {
-  const packageGroups = new Map();
-
-  files.forEach((file) => {
-    const packageDir = findNearestEslintConfig(file);
-
-    if (packageDir) {
-      // Convert to relative path from package directory for cleaner output
-      const relativePath = path.relative(packageDir, file);
-
-      if (!packageGroups.has(packageDir)) {
-        packageGroups.set(packageDir, []);
-      }
-      packageGroups.get(packageDir).push(relativePath);
-    }
-  });
-
-  return packageGroups;
-};
-
-/**
- * Filters files based on ESLint ignore patterns from the config
- * @param {string[]} files - Array of file paths (relative to packageDir)
- * @param {string} packageDir - Absolute path to package directory
- * @returns {Promise<string[]>} - Filtered array of files not ignored by ESLint
- */
-const filterIgnoredFiles = async (files, packageDir) => {
-  try {
-    // Create ESLint instance with config from the package directory
-    const eslint = new ESLint({ cwd: packageDir });
-
-    // Convert relative paths to absolute for ESLint API
-    const absoluteFiles = files.map((f) => path.join(packageDir, f));
-
-    // Check which files are ignored
-    const results = await Promise.all(
-        absoluteFiles.map(async (filePath) => ({
-          filePath,
-          isIgnored: await eslint.isPathIgnored(filePath),
-        }))
-    );
-
-    // Filter out ignored files and convert back to relative paths
-    const filteredFiles = results
-        .filter(({ isIgnored }) => !isIgnored)
-        .map(({ filePath }) => path.relative(packageDir, filePath));
-
-    return filteredFiles;
-  } catch (error) {
-    // If ESLint fails to load config, log warning and return all files
-    console.warn(
-        `⚠️  Failed to load ESLint config in ${packageDir}: ${error.message}`
-    );
-    return files;
-  }
-};
-
-/**
- * Generates ESLint commands for each package group
- * Uses shell subcommands to ensure proper error handling
- * @param {string[]} filenames - Array of absolute staged file paths
- * @returns {Promise<string[]>} - Array of shell commands to execute
- */
-const generateEslintCommands = async (filenames) => {
-  if (filenames.length === 0) {
-    return [];
-  }
-
-  const packageGroups = groupFilesByPackage(filenames);
-  const commands = [];
-
-  for (const [packageDir, files] of packageGroups.entries()) {
-    // Filter out files that are ignored by ESLint config
-    const filteredFiles = await filterIgnoredFiles(files, packageDir);
-
-    if (filteredFiles.length === 0) {
-      // All files in this package are ignored, skip
-      continue;
-    }
-
-    // Escape file paths for shell execution
-    const filesArg = filteredFiles.map((f) => `"${f}"`).join(' ');
-
-    // Combined command: fix, then check with exit on error
-    // Wrap in sh -c to ensure proper shell execution
-    const command =
-        `sh -c 'cd "${packageDir}" && ` +
-        `npx eslint ${filesArg} --fix && ` +
-        `npx eslint ${filesArg} --max-warnings=0 || ` +
-        `(echo "\\n  ❌ ESLint failed in ${packageDir}\\nFiles: ${filteredFiles.join(', ')}\\n" >&2 && exit 1)'`;
-
-    commands.push(command);
-  }
-
-  return commands;
-};
+const quoted = (filenames) => filenames.map((f) => `"${f}"`).join(' ');
 
 /**
  * @type {import('lint-staged').Config}
  */
 module.exports = {
-  // Lint JavaScript/TypeScript files with their nearest ESLint config
-  '*.{js,jsx,ts,tsx}': async (filenames) => {
-    const eslintCommands = await generateEslintCommands(filenames);
-    const prettierCommand = `prettier --write ${filenames.map((f) => `"${f}"`).join(' ')}`;
-
-    return [...eslintCommands, prettierCommand];
-  },
+  // Lint staged JavaScript/TypeScript with the nearest `.oxlintrc.json`, then format.
+  // `--no-error-on-unmatched-pattern` covers the case where every staged file is ignored by a
+  // config (a tooling file, a generated one): an empty selection is not a failed commit.
+  '*.{js,jsx,ts,tsx,mjs,cjs}': (filenames) => [
+    `pnpm exec oxlint --type-aware --fix --no-error-on-unmatched-pattern ${quoted(filenames)}`,
+    `pnpm exec oxlint --type-aware --max-warnings=0 --no-error-on-unmatched-pattern ${quoted(filenames)}`,
+    `prettier --write ${quoted(filenames)}`,
+  ],
 
   // The architectural tier asserts the shape of the whole apps/server source tree — where mappers
   // live, how they are written — so it is not a per-file check: any staged server source file can
@@ -195,6 +57,6 @@ module.exports = {
 
   // Format other files with Prettier only
   '*.{json,css,md}': (filenames) => {
-    return `prettier --write ${filenames.map((f) => `"${f}"`).join(' ')}`;
+    return `prettier --write ${quoted(filenames)}`;
   },
 };

@@ -1,13 +1,3 @@
-import {
-  customerDetailSchema,
-  customerSchema,
-} from '@warehouser/contracts/customers';
-import { ErrorCode } from '@warehouser/shared-types/enums';
-import { z } from 'zod';
-
-import { api } from 'shared/api/client/api-client';
-import { fieldErrorsForCode } from 'shared/utils/field-errors';
-
 import type {
   Customer,
   CustomerCreate,
@@ -16,7 +6,15 @@ import type {
   CustomerDetail,
   CustomerUpdate,
 } from '@warehouser/contracts/customers';
+import {
+  customerDetailSchema,
+  customerSchema,
+} from '@warehouser/contracts/customers';
+import { ErrorCode } from '@warehouser/shared-types/enums';
 import type { ApiFailure } from 'shared/api/client/api-client';
+import { api } from 'shared/api/client/api-client';
+import { fieldErrorsForCode } from 'shared/utils/field-errors';
+import { z } from 'zod';
 
 const customersPath = (warehouseId: string): string =>
   `/api/v1/warehouses/${warehouseId}/customers`;

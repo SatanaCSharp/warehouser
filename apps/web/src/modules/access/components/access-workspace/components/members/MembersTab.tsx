@@ -1,13 +1,11 @@
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { useTranslation } from 'react-i18next';
-
 import { CreateMemberAction } from 'modules/access/components/access-workspace/components/members/CreateMemberAction';
 import { MemberDirectory } from 'modules/access/components/access-workspace/components/members/MemberDirectory';
 import { MembersDatasetCard } from 'modules/access/components/access-workspace/components/members/MembersDatasetCard';
 import { useAccessMembers } from 'modules/access/hooks/queries/useAccessMembers';
-import { useHasPermission } from 'shared/hooks/queries/usePermissions';
-
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useHasPermission } from 'shared/hooks/queries/usePermissions';
 
 /**
  * Members tab body. Reading Members is enough for the administration list — it

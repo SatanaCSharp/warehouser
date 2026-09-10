@@ -2,9 +2,8 @@ import { readFileSync } from 'node:fs';
 import { posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import type { WorkspacePermissionId as WorkspacePermissionIdValue } from '@warehouser/shared-types/enums';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { workspaceMembersApi } from 'modules/access/api/workspace-members-api';
 import { workspaceRolesApi } from 'modules/access/api/workspace-roles-api';
 import { loadWorkspaceAdministrationAccessDatasets } from 'modules/access/loaders/workspace-administration-datasets.loader';
@@ -14,8 +13,7 @@ import {
   namedWorkspaceContext,
   stubWorkspaceServer,
 } from 'test/workspace-fixtures';
-
-import type { WorkspacePermissionId as WorkspacePermissionIdValue } from '@warehouser/shared-types/enums';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const LOADER_SOURCE = posix.join(
   posix.dirname(fileURLToPath(import.meta.url)),

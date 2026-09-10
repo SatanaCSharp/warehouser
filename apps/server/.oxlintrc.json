@@ -1,0 +1,58 @@
+{
+  "$schema": "../../node_modules/oxlint/configuration_schema.json",
+
+  // The successor to `packages/eslint-config-service`. It was a package because ESLint's `extends`
+  // could resolve one; oxlint's cannot — `extends` takes file paths only — so the service layer's
+  // ten NestJS relaxations live here, next to the only application that ever used them.
+  //
+  // `extends` merges `rules`, `plugins` and `overrides` only, so `env`, `ignorePatterns` and
+  // `jsPlugins` are restated rather than inherited. `"plugins": []` means "exactly the root's
+  // plugin list": omitting the key would re-add oxlint's defaults on top of it.
+  "extends": ["../../.oxlintrc.json"],
+  "plugins": [],
+  "jsPlugins": [
+    "eslint-plugin-no-relative-import-paths",
+    "eslint-plugin-simple-import-sort"
+  ],
+  "env": { "node": true, "es2022": true },
+
+  // `dist/` and `node_modules/` are already covered by `.gitignore`. The `vitest.*.ts` configs sit
+  // outside `tsconfig.json`'s `include` ("src/**/*", "migrations/**/*"), so the type-aware pass has
+  // no program for them — the same reason the ESLint config ignored them.
+  "ignorePatterns": ["vitest.*.ts"],
+
+  "rules": {
+    // NestJS-specific relaxations, ported one for one from `eslint-config-service/index.js`.
+    "typescript/no-explicit-any": "off", // Common in NestJS decorators and dependency injection
+    // `no-floating-promises` is `correctness` in oxlint — i.e. an error by default — where the
+    // service config had it at `warn`. Restating it keeps the severity this application actually
+    // runs at; without this line every un-awaited promise in `apps/server` would become fatal.
+    "typescript/no-floating-promises": "warn", // Warn about unhandled promises
+    "typescript/no-unsafe-argument": "warn", // Warn about unsafe arguments
+    "typescript/no-unsafe-assignment": "warn", // Warn about unsafe assignments
+    "typescript/no-unsafe-call": "warn", // Warn about unsafe calls
+    "typescript/no-unsafe-member-access": "warn", // Warn about unsafe member access
+    "typescript/no-unsafe-return": "warn", // Warn about unsafe returns
+    "typescript/explicit-function-return-type": "off", // NestJS decorators make this verbose
+    "typescript/explicit-module-boundary-types": "off", // NestJS uses implicit types often
+    // Kept for the record even though it is redundant: oxlint files `no-undef` under `nursery`,
+    // which the root config leaves off. TypeScript handles this better than the linter does.
+    "eslint/no-undef": "off"
+  },
+
+  "overrides": [
+    {
+      // A spec asserts against values a test double produced, so the type of what it received is
+      // the thing under test rather than a defect. `unbound-method` is the load-bearing entry:
+      // oxlint files it under `correctness`, so it is on by default and this `off` is what keeps
+      // `expect(repository.save).toHaveBeenCalled()` from failing every server suite.
+      "files": ["src/**/*.spec.ts"],
+      "rules": {
+        "typescript/no-unsafe-assignment": "off",
+        "typescript/no-unsafe-member-access": "off",
+        "typescript/no-unsafe-call": "off",
+        "typescript/unbound-method": "off"
+      }
+    }
+  ]
+}

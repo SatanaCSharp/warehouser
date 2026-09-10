@@ -1,10 +1,8 @@
 import { Button } from '@heroui/react';
-
-import { useDemandDisclosureLabel } from 'modules/customer-order/hooks/projections/useDemandDisclosureLabel';
-import { ChevronDownIcon, ChevronUpIcon } from 'shared/icons';
-
 import type { DemandLine } from '@warehouser/contracts/customer-orders';
+import { useDemandDisclosureLabel } from 'modules/customer-order/hooks/projections/useDemandDisclosureLabel';
 import type { ReactElement } from 'react';
+import { ChevronDownIcon, ChevronUpIcon } from 'shared/icons';
 
 export type DemandDisclosureButtonProps = {
   isExpanded: boolean;

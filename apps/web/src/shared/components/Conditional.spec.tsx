@@ -1,7 +1,6 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
-
 import { Conditional } from 'shared/components/Conditional';
+import { describe, expect, it } from 'vitest';
 
 describe('Conditional', () => {
   it('renders its children when the gate is truthy', () => {

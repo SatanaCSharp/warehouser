@@ -1,8 +1,6 @@
-import { useTranslation } from 'react-i18next';
-
-import { DatasetSkeleton } from 'shared/components/DatasetSkeleton';
-
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import { DatasetSkeleton } from 'shared/components/DatasetSkeleton';
 
 /** The card list's shape: a reference, a state chip, and the line under them. */
 const CARD_BARS = ['45%', '25%'] as const;

@@ -1,13 +1,11 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
-
+import type { Item, ItemUpdate } from '@warehouser/contracts/items';
 import { CorrectItemDialog } from 'modules/item/components/item-directory/components/CorrectItemDialog';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { DialogHost } from 'shared/components/DialogHost';
 import { renderWithProviders } from 'test/render';
-
-import type { Item, ItemUpdate } from '@warehouser/contracts/items';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import { describe, expect, it, vi } from 'vitest';
 
 // T18 — corrects an Item's SKU, description or unit of measure independently
 // (AC-06b, AC-06c). DoD: BOTH halves of AC-06c are reachable — an Item nothing

@@ -1,13 +1,11 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
-
+import type { EmailChangeInput } from '@warehouser/contracts/users';
 import { EditEmailDialog } from 'modules/access/components/access-workspace/components/members/EditEmailDialog';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { DialogHost } from 'shared/components/DialogHost';
 import { renderWithProviders } from 'test/render';
-
-import type { EmailChangeInput } from '@warehouser/contracts/users';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import { describe, expect, it, vi } from 'vitest';
 
 const targetMember = {
   userId: '00000000-0000-4000-8000-000000000021',

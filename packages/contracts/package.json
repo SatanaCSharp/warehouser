@@ -44,8 +44,8 @@
   },
   "scripts": {
     "build": "tsc && tsc-alias",
-    "lint": "eslint 'src/**/*.ts' --max-warnings=0",
-    "lint:fix": "eslint 'src/**/*.ts' --max-warnings=0 --fix",
+    "lint": "oxlint --type-aware --max-warnings=0 src",
+    "lint:fix": "oxlint --type-aware --fix src && oxlint --type-aware --max-warnings=0 src",
     "test": "vitest run"
   },
   "dependencies": {
@@ -54,9 +54,7 @@
   },
   "devDependencies": {
     "@types/node": "catalog:",
-    "@warehouser/eslint-config-base": "workspace:*",
     "@warehouser/tsconfig": "workspace:*",
-    "eslint": "catalog:",
     "tsc-alias": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",

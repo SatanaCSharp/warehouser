@@ -1,10 +1,8 @@
-import { useTranslation } from 'react-i18next';
-
-import { DemandDisclosureButton } from 'modules/customer-order/components/demand-directory/components/DemandDisclosureButton';
-import { Conditional } from 'shared/components/Conditional';
-
 import type { DemandLine } from '@warehouser/contracts/customer-orders';
+import { DemandDisclosureButton } from 'modules/customer-order/components/demand-directory/components/DemandDisclosureButton';
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Conditional } from 'shared/components/Conditional';
 
 export type DemandItemCellProps = {
   /** Whether the row has Customer Orders to expand into. */

@@ -1,14 +1,12 @@
+import type { NameWorkspaceFormValues } from 'modules/workspace/schemas/name-workspace-form.schema';
+import { nameWorkspaceFormSchema } from 'modules/workspace/schemas/name-workspace-form.schema';
+import type { ReactElement } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-
-import { nameWorkspaceFormSchema } from 'modules/workspace/schemas/name-workspace-form.schema';
 import { useRenameWorkspaceMutation } from 'shared/api/workspace/workspace-context-api';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormTextField } from 'shared/components/FormTextField';
 import { parseWithSchema } from 'shared/utils/form-parse';
-
-import type { NameWorkspaceFormValues } from 'modules/workspace/schemas/name-workspace-form.schema';
-import type { ReactElement } from 'react';
 
 type NameWorkspaceDialogProps = {
   currentName: string | null;

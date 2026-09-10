@@ -1,3 +1,4 @@
+import type { AnyRouter } from '@tanstack/react-router';
 import {
   createMemoryHistory,
   createRootRouteWithContext,
@@ -7,10 +8,12 @@ import {
   RouterProvider,
 } from '@tanstack/react-router';
 import { act, render, screen, waitFor } from '@testing-library/react';
+import type { AccessProjection } from '@warehouser/contracts/access';
+import type { WorkspacePermissionId } from '@warehouser/shared-types/enums';
 import { PermissionId } from '@warehouser/shared-types/enums';
+import type { WarehouseEntryVerdict } from 'guards/warehouse-entry.guard';
+import type { ReactElement } from 'react';
 import { Provider } from 'react-redux';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { workspaceContextApi } from 'shared/api/workspace/workspace-context-api';
 import { ROUTES } from 'shared/constants/routes';
 import {
@@ -18,14 +21,9 @@ import {
   useCurrentPermissions,
   useHasPermission,
 } from 'shared/hooks/queries/usePermissions';
-import { makeStore } from 'store';
-
-import type { AnyRouter } from '@tanstack/react-router';
-import type { AccessProjection } from '@warehouser/contracts/access';
-import type { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import type { WarehouseEntryVerdict } from 'guards/warehouse-entry.guard';
-import type { ReactElement } from 'react';
 import type { AppStore } from 'store';
+import { makeStore } from 'store';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const warehouseId = '00000000-0000-4000-8000-000000000010';
 const otherWarehouseId = '00000000-0000-4000-8000-000000000014';

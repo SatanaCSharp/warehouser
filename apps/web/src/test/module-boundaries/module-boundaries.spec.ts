@@ -2,14 +2,13 @@ import { existsSync, globSync, readdirSync, readFileSync } from 'node:fs';
 import { posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { describe, expect, it } from 'vitest';
-
 import {
   ADMINISTRATION_SLICE_FILES,
   MODULE_SURFACE,
   WAREHOUSE_MODULE_MANIFEST,
   WORKSPACE_MODULE_MANIFEST,
 } from 'test/module-boundaries/module-surface';
+import { describe, expect, it } from 'vitest';
 
 // The first import-boundary enforcement `apps/web` has ever had
 // (modules-level-refactor CH-W5). It encodes the rule stated in

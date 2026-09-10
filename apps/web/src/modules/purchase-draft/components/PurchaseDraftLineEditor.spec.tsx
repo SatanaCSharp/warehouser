@@ -1,10 +1,14 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { Item } from '@warehouser/contracts/items';
+import type {
+  PackagingType,
+  PurchaseDraftLine,
+} from '@warehouser/contracts/purchase-drafts';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
 import { itemApi } from 'modules/item/api/item-api';
 import { PurchaseDraftLineEditor } from 'modules/purchase-draft/components/PurchaseDraftLineEditor';
+import type { ReactElement } from 'react';
 import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
 import {
   ARCHIVED_WAREHOUSE_REASON_ID,
@@ -16,13 +20,7 @@ import {
   stubAccessServer,
 } from 'test/access-fixtures';
 import { renderInEnteredWarehouse } from 'test/render';
-
-import type { Item } from '@warehouser/contracts/items';
-import type {
-  PackagingType,
-  PurchaseDraftLine,
-} from '@warehouser/contracts/purchase-drafts';
-import type { ReactElement } from 'react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // T20 DoD:
 // - "A test proves a frozen line uses the HeroUI disabled field treatment

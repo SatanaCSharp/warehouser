@@ -1,13 +1,11 @@
 import { Card } from '@heroui/react';
-import { useTranslation } from 'react-i18next';
-
+import type { CustomerAwaitingOrder } from '@warehouser/contracts/customers';
 import { CustomerAwaitingDestination } from 'modules/customer/components/customer-directory/components/awaiting/CustomerAwaitingDestination';
 import { CustomerAwaitingItem } from 'modules/customer/components/customer-directory/components/awaiting/CustomerAwaitingItem';
 import { CustomerAwaitingNeededBy } from 'modules/customer/components/customer-directory/components/awaiting/CustomerAwaitingNeededBy';
 import { CustomerAwaitingQuantity } from 'modules/customer/components/customer-directory/components/awaiting/CustomerAwaitingQuantity';
-
-import type { CustomerAwaitingOrder } from '@warehouser/contracts/customers';
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export type CustomerAwaitingCardProps = {
   order: CustomerAwaitingOrder;

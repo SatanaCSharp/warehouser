@@ -1,13 +1,3 @@
-import {
-  customerOrderSchema,
-  demandLineSchema,
-} from '@warehouser/contracts/customer-orders';
-import { ErrorCode } from '@warehouser/shared-types/enums';
-import { z } from 'zod';
-
-import { api } from 'shared/api/client/api-client';
-import { fieldErrorsForCode } from 'shared/utils/field-errors';
-
 import type {
   CustomerOrder,
   CustomerOrderAmend,
@@ -17,6 +7,14 @@ import type {
   CustomerOrderRedirect,
   DemandLine,
 } from '@warehouser/contracts/customer-orders';
+import {
+  customerOrderSchema,
+  demandLineSchema,
+} from '@warehouser/contracts/customer-orders';
+import { ErrorCode } from '@warehouser/shared-types/enums';
+import { api } from 'shared/api/client/api-client';
+import { fieldErrorsForCode } from 'shared/utils/field-errors';
+import { z } from 'zod';
 
 const demandPath = (warehouseId: string): string =>
   `/api/v1/warehouses/${warehouseId}/demand`;

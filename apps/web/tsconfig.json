@@ -6,7 +6,15 @@
     "jsx": "react-jsx",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "noEmit": true,
-    "paths": { "*": ["./src/*"] }
+    "paths": { "*": ["./src/*"] },
+    // Stated rather than left to TypeScript's automatic `@types` discovery, and listing exactly
+    // what that discovery already finds here (`apps/web/node_modules/@types`). `tsc` resolves them
+    // on its own, but `oxlint --type-aware` runs its checks through `oxlint-tsgolint`, whose
+    // discovery does not follow pnpm's symlinked `@types` directories — without this line the
+    // type-aware pass loses `@types/node` and reports 137 spurious diagnostics (`node:fs` unknown,
+    // then every value derived from it degraded to an `error` type and flagged by `no-unsafe-*`).
+    // `typeRoots` does not fix it; only naming the packages does.
+    "types": ["node", "react", "react-dom", "lodash"]
   },
   "references": [
     { "path": "../../packages/contracts" },

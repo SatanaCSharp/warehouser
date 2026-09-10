@@ -1,6 +1,5 @@
-import { ItemCard } from 'modules/item/components/item-directory/components/ItemCard';
-
 import type { Item } from '@warehouser/contracts/items';
+import { ItemCard } from 'modules/item/components/item-directory/components/ItemCard';
 import type { ItemActionHandlers } from 'modules/item/hooks/projections/useItemActions';
 import type { ReactElement } from 'react';
 

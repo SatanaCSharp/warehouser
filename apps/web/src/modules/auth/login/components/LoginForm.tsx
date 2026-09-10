@@ -1,16 +1,14 @@
 import { Button } from '@heroui/react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import { useTranslation } from 'react-i18next';
-
 import {
   loginFormSchema,
   type LoginFormValues,
 } from 'modules/auth/login/schemas/login-form.schema';
+import type { FormEvent, ReactElement } from 'react';
+import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import { FormTextField } from 'shared/components/FormTextField';
 import { PasswordInput } from 'shared/components/PasswordInput';
-
-import type { FormEvent, ReactElement } from 'react';
 
 type Props = {
   onSubmit: (values: LoginFormValues) => void | Promise<void>;

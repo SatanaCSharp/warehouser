@@ -1,7 +1,6 @@
-import { useTranslation } from 'react-i18next';
-
 import type { DemandLine } from '@warehouser/contracts/customer-orders';
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export type DemandFooterSummaryProps = {
   /** The Demand Lines currently presented, after any search filter. */

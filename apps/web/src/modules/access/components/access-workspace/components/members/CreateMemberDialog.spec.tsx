@@ -1,15 +1,13 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
-
+import type { RolePage } from '@warehouser/contracts/access';
+import type { CreateMemberInput } from '@warehouser/contracts/users';
 import { CreateMemberDialog } from 'modules/access/components/access-workspace/components/members/CreateMemberDialog';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { DialogHost } from 'shared/components/DialogHost';
 import { selectHeroOption } from 'test/hero-select';
 import { renderWithProviders } from 'test/render';
-
-import type { RolePage } from '@warehouser/contracts/access';
-import type { CreateMemberInput } from '@warehouser/contracts/users';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import { describe, expect, it, vi } from 'vitest';
 
 const pickerRoleId = '00000000-0000-4000-8000-000000000012';
 const auditorRoleId = '00000000-0000-4000-8000-000000000013';

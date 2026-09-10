@@ -1,9 +1,8 @@
 import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
-
 import { SignUpForm } from 'modules/auth/sign-up/components/SignUpForm';
 import { renderWithProviders } from 'test/render';
+import { describe, expect, it, vi } from 'vitest';
 
 describe('SignUpForm', () => {
   it('focuses the first invalid field and explains both corrections', async () => {

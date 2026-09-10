@@ -1,8 +1,6 @@
 import { Description, Label, TextArea, TextField } from '@heroui/react';
-
-import { Conditional } from 'shared/components/Conditional';
-
 import type { ChangeEvent, ReactElement, ReactNode } from 'react';
+import { Conditional } from 'shared/components/Conditional';
 
 export type ValueAddingNoteFieldProps = {
   /**

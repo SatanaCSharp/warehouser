@@ -6,18 +6,16 @@ import {
   RouterProvider,
 } from '@tanstack/react-router';
 import { render, screen, waitFor } from '@testing-library/react';
+import type { WorkspaceContext } from '@warehouser/contracts/workspaces';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
 import { Provider } from 'react-redux';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { ROUTES } from 'shared/constants/routes';
 import { SidebarNavList } from 'shared/layouts/sidebar/components/SidebarNavList';
 import { WorkspaceNavEntries } from 'shared/layouts/sidebar/components/WorkspaceNavEntries';
+import type { AppStore } from 'store';
 import { makeStore } from 'store';
 import { namedWorkspaceContext } from 'test/workspace-fixtures';
-
-import type { WorkspaceContext } from '@warehouser/contracts/workspaces';
-import type { AppStore } from 'store';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // The Workspace view's entry set. `Sidebar` selects it from the entered
 // context; what this file owns is which entries that set contains and what

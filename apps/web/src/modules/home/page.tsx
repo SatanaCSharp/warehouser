@@ -1,6 +1,5 @@
-import { useTranslation } from 'react-i18next';
-
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 
 // T4, T7 / CR-AC-18 — `/` stops being a dashboard. It is now the landing
 // resolver (`guards/landing.guard.ts`), so this block renders only for an

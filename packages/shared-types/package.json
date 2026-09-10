@@ -25,14 +25,12 @@
   "scripts": {
     "build": "tsc && tsc-alias",
     "start:dev": "tsc && (concurrently \"tsc -w\" \"tsc-alias -w\")",
-    "lint": "eslint 'src/**/*.ts' --max-warnings=0",
-    "lint:fix": "eslint 'src/**/*.ts' --max-warnings=0 --fix",
+    "lint": "oxlint --type-aware --max-warnings=0 src",
+    "lint:fix": "oxlint --type-aware --fix src && oxlint --type-aware --max-warnings=0 src",
     "test": "vitest run"
   },
   "devDependencies": {
-    "@warehouser/eslint-config-base": "workspace:*",
     "@warehouser/tsconfig": "workspace:*",
-    "eslint": "catalog:",
     "tsc-alias": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",

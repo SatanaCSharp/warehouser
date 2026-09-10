@@ -1,11 +1,9 @@
+import type { PurchaseDraftDetail } from '@warehouser/contracts/purchase-drafts';
 import mapValues from 'lodash/mapValues';
-import { useTranslation } from 'react-i18next';
-
 import { useLinkNaming } from 'modules/purchase-draft/hooks/projections/useLinkNaming';
 import { describeLinkDrift } from 'modules/purchase-draft/utils/link-drift';
+import { useTranslation } from 'react-i18next';
 import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
-
-import type { PurchaseDraftDetail } from '@warehouser/contracts/purchase-drafts';
 
 export type DriftBullet = { key: string; text: string };
 

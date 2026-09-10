@@ -1,5 +1,4 @@
 import { createRoute, lazyRouteComponent } from '@tanstack/react-router';
-
 import { requireAuth } from 'guards/auth.guard';
 import { resolveLandingContext } from 'guards/landing.guard';
 import { rootRoute } from 'routes/__root.route';

@@ -1,14 +1,12 @@
+import { useCreateWarehouseMutation } from 'modules/workspace/api/warehouse-api';
+import type { WarehouseNameFormValues } from 'modules/workspace/schemas/warehouse-name-form.schema';
+import { warehouseNameFormSchema } from 'modules/workspace/schemas/warehouse-name-form.schema';
+import type { ReactElement } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-
-import { useCreateWarehouseMutation } from 'modules/workspace/api/warehouse-api';
-import { warehouseNameFormSchema } from 'modules/workspace/schemas/warehouse-name-form.schema';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormTextField } from 'shared/components/FormTextField';
 import { parseWithSchema } from 'shared/utils/form-parse';
-
-import type { WarehouseNameFormValues } from 'modules/workspace/schemas/warehouse-name-form.schema';
-import type { ReactElement } from 'react';
 
 /** AC-08 — the browser pre-check the dialog runs before the request leaves. */
 const parse = parseWithSchema(warehouseNameFormSchema);

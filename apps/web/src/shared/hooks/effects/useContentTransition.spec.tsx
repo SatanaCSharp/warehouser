@@ -1,9 +1,7 @@
 import { render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
-import { useContentTransition } from 'shared/hooks/effects/useContentTransition';
-
 import type { ReactElement } from 'react';
+import { useContentTransition } from 'shared/hooks/effects/useContentTransition';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 /**
  * jsdom implements no Web Animations API (`src/test/setup.ts` says so where it

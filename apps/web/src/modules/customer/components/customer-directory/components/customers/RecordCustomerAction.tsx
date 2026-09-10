@@ -1,18 +1,16 @@
 import { Button, Modal } from '@heroui/react';
+import type { CustomerCreate } from '@warehouser/contracts/customers';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { useTranslation } from 'react-i18next';
-
 import { useRecordCustomerMutation } from 'modules/customer/api/customer-api';
 import { RecordCustomerDialog } from 'modules/customer/components/customer-directory/components/customers/RecordCustomerDialog';
+import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { TriggeredDialog } from 'shared/components/TriggeredDialog';
 import { WarehousePermissionGate } from 'shared/components/WarehousePermissionGate';
 import { useArchivedWarehouse } from 'shared/hooks/projections/useArchivedWarehouse';
 import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
 import { PlusIcon } from 'shared/icons';
-
-import type { CustomerCreate } from '@warehouser/contracts/customers';
-import type { ReactElement } from 'react';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 /**
  * The Record Customer workflow, whole: its gate, the trigger, the dialog it

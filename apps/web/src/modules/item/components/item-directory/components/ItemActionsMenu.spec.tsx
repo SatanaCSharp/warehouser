@@ -1,8 +1,7 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { Item } from '@warehouser/contracts/items';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { describe, expect, it, vi } from 'vitest';
-
 import { ItemActionsMenu } from 'modules/item/components/item-directory/components/ItemActionsMenu';
 import {
   accessIds,
@@ -10,8 +9,7 @@ import {
   stubAccessServer,
 } from 'test/access-fixtures';
 import { renderInEnteredWarehouse } from 'test/render';
-
-import type { Item } from '@warehouser/contracts/items';
+import { describe, expect, it, vi } from 'vitest';
 
 // F14 — reactivation used to be assembled by `ItemDirectory` and handed down
 // through the table's row renderer. A React Aria collection caches a row's

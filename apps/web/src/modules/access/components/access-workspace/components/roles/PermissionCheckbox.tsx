@@ -1,11 +1,9 @@
 import { Checkbox } from '@heroui/react';
-import { useTranslation } from 'react-i18next';
-
 import { usePermissionLabel } from 'modules/access/hooks/projections/usePermissionLabel';
-import { Conditional } from 'shared/components/Conditional';
-
 import type { AccessPermission } from 'modules/access/types/access.types';
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Conditional } from 'shared/components/Conditional';
 
 type PermissionCheckboxProps = {
   isDisabled: boolean;

@@ -1,5 +1,4 @@
 import { createRoute, lazyRouteComponent } from '@tanstack/react-router';
-
 import { PurchaseDraftPendingState } from 'modules/purchase-draft/components/PurchaseDraftPendingState';
 import { loadPurchaseDrafts } from 'modules/purchase-draft/loaders/purchase-draft.loader';
 import { warehouseRoute } from 'routes/warehouse.route';

@@ -1,11 +1,9 @@
 import { Card, Chip } from '@heroui/react';
-import { useTranslation } from 'react-i18next';
-
-import { Conditional } from 'shared/components/Conditional';
-import { ROW_ENTER } from 'shared/constants/motion';
-
 import type { Customer } from '@warehouser/contracts/customers';
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Conditional } from 'shared/components/Conditional';
+import { ROW_ENTER } from 'shared/constants/motion';
 
 export type CustomerCardProps = {
   customer: Customer;

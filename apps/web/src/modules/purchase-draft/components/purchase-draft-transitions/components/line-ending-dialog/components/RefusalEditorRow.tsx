@@ -1,17 +1,15 @@
 import { Button } from '@heroui/react';
 import { maxProseLength } from '@warehouser/contracts/purchase-drafts';
+import type { ConditionBlockForm } from 'modules/purchase-draft/components/purchase-draft-transitions/components/line-ending-dialog/components/ConditionBlock';
+import type { ReactElement } from 'react';
+import type { Control, Path, UseFormRegister } from 'react-hook-form';
 import { Controller } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-
+import type { SelectOption } from 'shared/components/FormSelectField';
 import { FormSelectField } from 'shared/components/FormSelectField';
 import { FormTextAreaField } from 'shared/components/FormTextAreaField';
 import { FormTextField } from 'shared/components/FormTextField';
 import { XIcon } from 'shared/icons/XIcon';
-
-import type { ConditionBlockForm } from 'modules/purchase-draft/components/purchase-draft-transitions/components/line-ending-dialog/components/ConditionBlock';
-import type { ReactElement } from 'react';
-import type { Control, Path, UseFormRegister } from 'react-hook-form';
-import type { SelectOption } from 'shared/components/FormSelectField';
 
 /**
  * One refusal editor row's own narrow contract — the fragment of

@@ -1,18 +1,5 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ErrorCode, PermissionId } from '@warehouser/shared-types/enums';
-import omit from 'lodash/omit';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
-import { PurchaseDraftLineDelivery } from 'modules/purchase-draft/components/purchase-draft-line-delivery/PurchaseDraftLineDelivery';
-import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
-import {
-  accessIds,
-  authenticatedStore,
-  stubAccessServer,
-} from 'test/access-fixtures';
-import { renderInEnteredWarehouse } from 'test/render';
-
 import type { Customer } from '@warehouser/contracts/customers';
 import type {
   PurchaseDraftLine,
@@ -20,7 +7,18 @@ import type {
   PurchaseDraftLineRedacted,
   PurchaseDraftLineUpdate,
 } from '@warehouser/contracts/purchase-drafts';
+import { ErrorCode, PermissionId } from '@warehouser/shared-types/enums';
+import omit from 'lodash/omit';
+import { PurchaseDraftLineDelivery } from 'modules/purchase-draft/components/purchase-draft-line-delivery/PurchaseDraftLineDelivery';
+import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
 import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import {
+  accessIds,
+  authenticatedStore,
+  stubAccessServer,
+} from 'test/access-fixtures';
+import { renderInEnteredWarehouse } from 'test/render';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // T23 — the `DELIVERY` block of `Delivery/Draft Line` (`jnl1h`), serving the
 // editable **and** the frozen line (AC-13, AC-14, AC-17, AC-09a, AC-23).

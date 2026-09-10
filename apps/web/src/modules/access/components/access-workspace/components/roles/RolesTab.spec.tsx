@@ -5,10 +5,9 @@ import { fileURLToPath } from 'node:url';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { RolesTab } from 'modules/access/components/access-workspace/components/roles/RolesTab';
 import { loadAccessSurface } from 'modules/access/loaders/access-surface.loader';
+import type { AppStore } from 'store';
 import {
   accessIds,
   authenticatedStore,
@@ -17,8 +16,7 @@ import {
 } from 'test/access-fixtures';
 import { selectHeroOption } from 'test/hero-select';
 import { renderInEnteredWarehouse } from 'test/render';
-
-import type { AppStore } from 'store';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const assignMemberRole = vi.hoisted(() => vi.fn());
 const createRole = vi.hoisted(() => vi.fn());

@@ -1,4 +1,5 @@
 import { RouterProvider } from '@tanstack/react-router';
+import type { RenderResult } from '@testing-library/react';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
@@ -6,13 +7,13 @@ import {
   WorkspacePermissionId,
 } from '@warehouser/shared-types/enums';
 import { Provider } from 'react-redux';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
+import type { AppRouter } from 'router';
 import { createAppRouter } from 'router';
 import { warehouseRoute } from 'routes/warehouse.route';
 import { warehousePath } from 'shared/api/warehouse/warehouse-path';
 import { workspaceContextApi } from 'shared/api/workspace/workspace-context-api';
 import { ROUTES } from 'shared/constants/routes';
+import type { AppStore } from 'store';
 import { makeStore } from 'store';
 import {
   stubWarehouseSession,
@@ -20,10 +21,7 @@ import {
   warehouseSessionIds,
   workspaceIds,
 } from 'test/workspace-fixtures';
-
-import type { RenderResult } from '@testing-library/react';
-import type { AppRouter } from 'router';
-import type { AppStore } from 'store';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // T14 — the cross-cutting route-integration cases none of the per-task suites
 // owns. Each drives the REAL assembled route tree through

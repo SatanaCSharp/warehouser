@@ -1,8 +1,12 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type {
+  PurchaseDraftDetail,
+  PurchaseDraftLine,
+  PurchaseDraftLineArrival,
+  PurchaseDraftLineDirectDelivery,
+} from '@warehouser/contracts/purchase-drafts';
 import { ErrorCode, PermissionId } from '@warehouser/shared-types/enums';
-import { describe, expect, it, vi } from 'vitest';
-
 import { purchaseDraftApi } from 'modules/purchase-draft/api/purchase-draft-api';
 import { LineEndingDialog } from 'modules/purchase-draft/components/purchase-draft-transitions/components/line-ending-dialog/LineEndingDialog';
 import {
@@ -10,20 +14,14 @@ import {
   parseLineDirectDeliveryForm,
 } from 'modules/purchase-draft/utils/line-ending-form';
 import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { DialogHost } from 'shared/components/DialogHost';
+import type { AppStore } from 'store';
 import { accessIds, authenticatedStore } from 'test/access-fixtures';
 import { selectHeroOption } from 'test/hero-select';
 import { renderInEnteredWarehouse } from 'test/render';
-
-import type {
-  PurchaseDraftDetail,
-  PurchaseDraftLine,
-  PurchaseDraftLineArrival,
-  PurchaseDraftLineDirectDelivery,
-} from '@warehouser/contracts/purchase-drafts';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
-import type { AppStore } from 'store';
 import type { Mock } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 /**
  * T15 — `ConditionBlock` gates its `Refuse some of this` control on

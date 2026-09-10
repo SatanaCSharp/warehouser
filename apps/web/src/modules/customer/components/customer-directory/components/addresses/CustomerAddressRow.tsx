@@ -1,13 +1,11 @@
 import { Chip } from '@heroui/react';
-import { useTranslation } from 'react-i18next';
-
-import { CustomerAddressActionsMenu } from 'modules/customer/components/customer-directory/components/addresses/CustomerAddressActionsMenu';
-import { Conditional } from 'shared/components/Conditional';
-import { ROW_ENTER } from 'shared/constants/motion';
-
 import type { CustomerDeliveryAddress } from '@warehouser/contracts/customers';
+import { CustomerAddressActionsMenu } from 'modules/customer/components/customer-directory/components/addresses/CustomerAddressActionsMenu';
 import type { DeliveryAddressActionHandlers } from 'modules/customer/hooks/projections/useDeliveryAddressActions';
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Conditional } from 'shared/components/Conditional';
+import { ROW_ENTER } from 'shared/constants/motion';
 
 export type CustomerAddressRowProps = DeliveryAddressActionHandlers & {
   address: CustomerDeliveryAddress;

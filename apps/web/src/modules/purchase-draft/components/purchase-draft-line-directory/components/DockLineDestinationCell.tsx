@@ -1,12 +1,10 @@
-import { useTranslation } from 'react-i18next';
-
+import type { PurchaseDraftLine } from '@warehouser/contracts/purchase-drafts';
 import { DriftSignal } from 'modules/purchase-draft/components/DriftSignal';
 import { useDestinationStatement } from 'modules/purchase-draft/hooks/projections/useDestinationStatement';
+import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Conditional } from 'shared/components/Conditional';
 import { MapPinIcon } from 'shared/icons';
-
-import type { PurchaseDraftLine } from '@warehouser/contracts/purchase-drafts';
-import type { ReactElement } from 'react';
 
 export type DockLineDestinationCellProps = {
   line: PurchaseDraftLine;

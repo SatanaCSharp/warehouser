@@ -1,8 +1,7 @@
 import { Alert, Button } from '@heroui/react';
+import type { PurchaseDraftLine } from '@warehouser/contracts/purchase-drafts';
 import { PermissionId } from '@warehouser/shared-types/enums';
 import sumBy from 'lodash/sumBy';
-import { useTranslation } from 'react-i18next';
-
 import {
   useRemovePurchaseDraftLineLinkMutation,
   useRevisePurchaseDraftLineLinkMutation,
@@ -14,6 +13,8 @@ import {
   lineDisablingReason,
   refusesWrites,
 } from 'modules/purchase-draft/utils/write-refusal';
+import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Conditional } from 'shared/components/Conditional';
 import { WarehousePermissionGate } from 'shared/components/WarehousePermissionGate';
 import { useArchivedWarehouse } from 'shared/hooks/projections/useArchivedWarehouse';
@@ -21,9 +22,6 @@ import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehous
 import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
 import { useHasPermission } from 'shared/hooks/queries/usePermissions';
 import { XIcon } from 'shared/icons';
-
-import type { PurchaseDraftLine } from '@warehouser/contracts/purchase-drafts';
-import type { ReactElement } from 'react';
 
 export type PurchaseDraftLineLinksProps = {
   /** Which line of the draft this is, as the frames number them from 1. */

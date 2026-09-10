@@ -1,8 +1,7 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
 import { makeStore } from 'store';
 import { accessIds, accessPath } from 'test/access-fixtures';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // The Warehouse capability projection is read per Warehouse, never per
 // Workspace: AC-05 makes a member's authority that of the membership held in

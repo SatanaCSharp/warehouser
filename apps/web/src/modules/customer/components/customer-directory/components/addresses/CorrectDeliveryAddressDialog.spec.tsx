@@ -1,17 +1,15 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ErrorCode } from '@warehouser/shared-types/enums';
-import { describe, expect, it, vi } from 'vitest';
-
-import { CorrectDeliveryAddressDialog } from 'modules/customer/components/customer-directory/components/addresses/CorrectDeliveryAddressDialog';
-import { DialogHost } from 'shared/components/DialogHost';
-import { renderWithProviders } from 'test/render';
-
 import type {
   CustomerDeliveryAddress,
   CustomerDeliveryAddressUpdate,
 } from '@warehouser/contracts/customers';
+import { ErrorCode } from '@warehouser/shared-types/enums';
+import { CorrectDeliveryAddressDialog } from 'modules/customer/components/customer-directory/components/addresses/CorrectDeliveryAddressDialog';
 import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import { DialogHost } from 'shared/components/DialogHost';
+import { renderWithProviders } from 'test/render';
+import { describe, expect, it, vi } from 'vitest';
 
 // delivery-addresses R8 — AC-16/AC-17, "the correction submitted and shown".
 // Never opened by any prior spec.

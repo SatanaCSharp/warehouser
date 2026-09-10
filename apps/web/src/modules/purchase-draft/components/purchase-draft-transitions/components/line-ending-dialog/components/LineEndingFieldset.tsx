@@ -1,22 +1,20 @@
-import { useWatch } from 'react-hook-form';
-import { useTranslation } from 'react-i18next';
-
+import type { PurchaseDraftLine } from '@warehouser/contracts/purchase-drafts';
 import { ConditionBlock } from 'modules/purchase-draft/components/purchase-draft-transitions/components/line-ending-dialog/components/ConditionBlock';
 import { ConformanceBlock } from 'modules/purchase-draft/components/purchase-draft-transitions/components/line-ending-dialog/components/ConformanceBlock';
 import { EndingAssignmentRow } from 'modules/purchase-draft/components/purchase-draft-transitions/components/line-ending-dialog/components/EndingAssignmentRow';
 import { useLinkNaming } from 'modules/purchase-draft/hooks/projections/useLinkNaming';
+import type { LineEndingForm } from 'modules/purchase-draft/utils/line-ending-form';
 import {
   isAssignableLink,
   quantityOf,
 } from 'modules/purchase-draft/utils/line-ending-form';
+import type { ReactElement } from 'react';
+import type { UseFormReturn } from 'react-hook-form';
+import { useWatch } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import { Conditional } from 'shared/components/Conditional';
 import { FormTextField } from 'shared/components/FormTextField';
 import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
-
-import type { PurchaseDraftLine } from '@warehouser/contracts/purchase-drafts';
-import type { LineEndingForm } from 'modules/purchase-draft/utils/line-ending-form';
-import type { ReactElement } from 'react';
-import type { UseFormReturn } from 'react-hook-form';
 
 export type LineEndingFieldsetProps = {
   form: UseFormReturn<LineEndingForm>;

@@ -1,21 +1,19 @@
 import { Alert, Chip } from '@heroui/react';
-import { useTranslation } from 'react-i18next';
-
+import type {
+  PurchaseDraftDetail,
+  PurchaseDraftState,
+} from '@warehouser/contracts/purchase-drafts';
 import { ExpectedArrivalDateField } from 'modules/purchase-draft/components/ExpectedArrivalDateField';
 import { PurchaseDraftTransitions } from 'modules/purchase-draft/components/purchase-draft-transitions/PurchaseDraftTransitions';
 import { PurchaseDraftDriftAlert } from 'modules/purchase-draft/components/PurchaseDraftDriftAlert';
 import { PurchaseDraftLineList } from 'modules/purchase-draft/components/PurchaseDraftLineList';
 import { useMinuteTimestamp } from 'modules/purchase-draft/hooks/projections/useMinuteTimestamp';
 import { usePurchaseDraftAttribution } from 'modules/purchase-draft/hooks/projections/usePurchaseDraftAttribution';
+import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Conditional } from 'shared/components/Conditional';
 import { useContentTransition } from 'shared/hooks/effects/useContentTransition';
 import { LockIcon } from 'shared/icons';
-
-import type {
-  PurchaseDraftDetail,
-  PurchaseDraftState,
-} from '@warehouser/contracts/purchase-drafts';
-import type { ReactElement } from 'react';
 
 export type PurchaseDraftDetailPaneProps = {
   draft: PurchaseDraftDetail;

@@ -1,14 +1,12 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { PurchaseDraftClosure } from '@warehouser/contracts/purchase-drafts';
 import { ErrorCode } from '@warehouser/shared-types/enums';
-import { describe, expect, it, vi } from 'vitest';
-
 import { ClosePurchaseDraftDialog } from 'modules/purchase-draft/components/purchase-draft-transitions/components/ClosePurchaseDraftDialog';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { DialogHost } from 'shared/components/DialogHost';
 import { renderWithProviders } from 'test/render';
-
-import type { PurchaseDraftClosure } from '@warehouser/contracts/purchase-drafts';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import { describe, expect, it, vi } from 'vitest';
 
 // T21 — closing a frozen draft states a reason, so something is filled in and
 // it is a `FormModalDialog` rather than a confirmation

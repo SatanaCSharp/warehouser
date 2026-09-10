@@ -1,5 +1,4 @@
 import { Skeleton } from '@heroui/react';
-
 import type { ReactElement } from 'react';
 
 export type DatasetSkeletonProps = {

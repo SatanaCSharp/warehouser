@@ -1,11 +1,9 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
-
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { ConfirmAlertDialog } from 'shared/components/ConfirmAlertDialog';
 import { DialogHost } from 'shared/components/DialogHost';
-
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import { describe, expect, it, vi } from 'vitest';
 
 // The confirm sequence `docs/system/guides/web-dialogs.md` §4 assigns to this
 // component rather than to each confirmation: run the request, close only on

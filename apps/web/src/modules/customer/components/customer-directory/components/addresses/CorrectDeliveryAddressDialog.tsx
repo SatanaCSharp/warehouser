@@ -1,18 +1,16 @@
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { useTranslation } from 'react-i18next';
-
-import { CustomerRefusalAlert } from 'modules/customer/components/customer-directory/components/CustomerRefusalAlert';
-import { FormModalDialog } from 'shared/components/FormModalDialog';
-import { FormTextAreaField } from 'shared/components/FormTextAreaField';
-
 import type {
   CustomerDeliveryAddress,
   CustomerDeliveryAddressUpdate,
 } from '@warehouser/contracts/customers';
+import { CustomerRefusalAlert } from 'modules/customer/components/customer-directory/components/CustomerRefusalAlert';
 import type { ReactElement } from 'react';
+import { useState } from 'react';
 import type { Path } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import { FormModalDialog } from 'shared/components/FormModalDialog';
+import { FormTextAreaField } from 'shared/components/FormTextAreaField';
 
 type CorrectDeliveryAddressForm = {
   addressText: string;

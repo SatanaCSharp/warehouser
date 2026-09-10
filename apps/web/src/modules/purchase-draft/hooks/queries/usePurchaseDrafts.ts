@@ -1,7 +1,6 @@
+import type { PurchaseDraftSummary } from '@warehouser/contracts/purchase-drafts';
 import { useListPurchaseDraftsQuery } from 'modules/purchase-draft/api/purchase-draft-api';
 import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
-
-import type { PurchaseDraftSummary } from '@warehouser/contracts/purchase-drafts';
 
 /**
  * The Warehouse's Purchase Draft summaries, loaded for whoever asks (T20).

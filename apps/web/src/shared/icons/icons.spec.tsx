@@ -1,7 +1,6 @@
 import { render } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
-
 import * as Icons from 'shared/icons';
+import { describe, expect, it } from 'vitest';
 
 /**
  * The workspaces design handoff (`docs/features/workspaces/design-handoff.md`

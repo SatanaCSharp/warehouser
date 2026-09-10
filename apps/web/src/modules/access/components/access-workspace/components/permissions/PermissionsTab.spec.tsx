@@ -4,8 +4,6 @@ import { fileURLToPath } from 'node:url';
 
 import { screen } from '@testing-library/react';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { PermissionsTab } from 'modules/access/components/access-workspace/components/permissions/PermissionsTab';
 import {
   accessIds,
@@ -14,6 +12,7 @@ import {
   stubAccessServer,
 } from 'test/access-fixtures';
 import { renderInEnteredWarehouse } from 'test/render';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // `new URL('./x', import.meta.url)` is rewritten by Vite into an asset URL, so
 // the subject is resolved from this spec's own directory instead.

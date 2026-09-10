@@ -26,7 +26,8 @@ Every commit runs the repository's Git hooks. Never bypass them: no `--no-verify
 `git commit` or `git push`, no `HUSKY=0`/`HUSKY_SKIP_HOOKS`, no `--no-verify`-equivalent
 environment variable, no `core.hooksPath` override, and no editing, renaming, or removing anything
 under `.husky/` to get a commit through. `.husky/pre-commit` runs `lint-staged`
-(`eslint <staged files> --max-warnings=0`, which fails on warnings that `pnpm lint` tolerates, plus
+(`oxlint --type-aware --max-warnings=0 <staged files>`, which fails on warnings that `pnpm lint`
+tolerates in `apps/*`, plus
 `pnpm --filter @warehouser/server test:architectural` whenever any `apps/server/src/**/*.ts` file is
 staged) and `.husky/commit-msg` runs `commitlint`; both are part of the gate, not an obstacle to it.
 

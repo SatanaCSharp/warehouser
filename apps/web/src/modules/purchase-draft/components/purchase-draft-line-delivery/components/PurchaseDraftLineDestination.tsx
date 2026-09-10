@@ -1,16 +1,14 @@
 import { Description, InputGroup, Label, TextField } from '@heroui/react';
-import compact from 'lodash/compact';
-import { useTranslation } from 'react-i18next';
-
-import { useDestinationStatement } from 'modules/purchase-draft/hooks/projections/useDestinationStatement';
-import { Conditional } from 'shared/components/Conditional';
-import { MapPinIcon } from 'shared/icons';
-
 import type {
   DeliveryMode,
   PurchaseDraftLine,
 } from '@warehouser/contracts/purchase-drafts';
+import compact from 'lodash/compact';
+import { useDestinationStatement } from 'modules/purchase-draft/hooks/projections/useDestinationStatement';
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Conditional } from 'shared/components/Conditional';
+import { MapPinIcon } from 'shared/icons';
 
 export type PurchaseDraftLineDestinationProps = {
   /**

@@ -1,17 +1,15 @@
 import { Button, Modal } from '@heroui/react';
+import type { CustomerOrderCreate } from '@warehouser/contracts/customer-orders';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { useTranslation } from 'react-i18next';
-
 import { useRecordCustomerOrderMutation } from 'modules/customer-order/api/customer-order-api';
 import { RecordCustomerOrderDialog } from 'modules/customer-order/components/demand-directory/components/RecordCustomerOrderDialog';
+import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { TriggeredDialog } from 'shared/components/TriggeredDialog';
 import { WarehousePermissionGate } from 'shared/components/WarehousePermissionGate';
 import { useArchivedWarehouse } from 'shared/hooks/projections/useArchivedWarehouse';
 import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
-
-import type { CustomerOrderCreate } from '@warehouser/contracts/customer-orders';
-import type { ReactElement } from 'react';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 /**
  * The Record demand workflow, whole: its gate, the trigger, the dialog it

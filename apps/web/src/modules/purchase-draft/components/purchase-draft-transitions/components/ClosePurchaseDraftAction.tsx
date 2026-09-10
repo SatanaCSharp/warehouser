@@ -1,20 +1,18 @@
 import { Button, Modal } from '@heroui/react';
-import { PermissionId } from '@warehouser/shared-types/enums';
-import { useTranslation } from 'react-i18next';
-
-import { useClosePurchaseDraftMutation } from 'modules/purchase-draft/api/purchase-draft-api';
-import { ClosePurchaseDraftDialog } from 'modules/purchase-draft/components/purchase-draft-transitions/components/ClosePurchaseDraftDialog';
-import { TriggeredDialog } from 'shared/components/TriggeredDialog';
-import { WarehousePermissionGate } from 'shared/components/WarehousePermissionGate';
-import { useArchivedWarehouse } from 'shared/hooks/projections/useArchivedWarehouse';
-import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
-
 import type {
   PurchaseDraftClosure,
   PurchaseDraftDetail,
 } from '@warehouser/contracts/purchase-drafts';
+import { PermissionId } from '@warehouser/shared-types/enums';
+import { useClosePurchaseDraftMutation } from 'modules/purchase-draft/api/purchase-draft-api';
+import { ClosePurchaseDraftDialog } from 'modules/purchase-draft/components/purchase-draft-transitions/components/ClosePurchaseDraftDialog';
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import { TriggeredDialog } from 'shared/components/TriggeredDialog';
+import { WarehousePermissionGate } from 'shared/components/WarehousePermissionGate';
+import { useArchivedWarehouse } from 'shared/hooks/projections/useArchivedWarehouse';
+import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
 
 export type ClosePurchaseDraftActionProps = {
   draft: PurchaseDraftDetail;

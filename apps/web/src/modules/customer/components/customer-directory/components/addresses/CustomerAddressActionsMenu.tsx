@@ -1,17 +1,15 @@
 import { Button, Dropdown, Label } from '@heroui/react';
-import { useTranslation } from 'react-i18next';
-
+import type { CustomerDeliveryAddress } from '@warehouser/contracts/customers';
 import {
   useReactivateCustomerDeliveryAddressMutation,
   useSetMainCustomerDeliveryAddressMutation,
 } from 'modules/customer/api/customer-api';
+import type { DeliveryAddressActionHandlers } from 'modules/customer/hooks/projections/useDeliveryAddressActions';
 import { useDeliveryAddressActions } from 'modules/customer/hooks/projections/useDeliveryAddressActions';
+import type { Key, ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
 import { KebabIcon } from 'shared/icons';
-
-import type { CustomerDeliveryAddress } from '@warehouser/contracts/customers';
-import type { DeliveryAddressActionHandlers } from 'modules/customer/hooks/projections/useDeliveryAddressActions';
-import type { Key, ReactNode } from 'react';
 
 export type CustomerAddressActionsMenuProps = DeliveryAddressActionHandlers & {
   address: CustomerDeliveryAddress;

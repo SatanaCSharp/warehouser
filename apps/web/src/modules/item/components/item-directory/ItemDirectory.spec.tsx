@@ -8,25 +8,23 @@ import {
 } from '@tanstack/react-router';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { Item } from '@warehouser/contracts/items';
 import { PermissionId } from '@warehouser/shared-types/enums';
+import type { WarehouseEntryVerdict } from 'guards/warehouse-entry.guard';
 import i18n from 'i18next';
-import { Provider } from 'react-redux';
-import { afterEach, beforeAll, describe, expect, it } from 'vitest';
-
 import { itemApi } from 'modules/item/api/item-api';
 import { ItemDirectory } from 'modules/item/components/item-directory/ItemDirectory';
+import { Provider } from 'react-redux';
 import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
 import { ROUTES } from 'shared/constants/routes';
+import type { AppStore } from 'store';
 import {
   accessIds,
   authenticatedStore,
   stubAccessServer,
 } from 'test/access-fixtures';
 import { renderInEnteredWarehouse } from 'test/render';
-
-import type { Item } from '@warehouser/contracts/items';
-import type { WarehouseEntryVerdict } from 'guards/warehouse-entry.guard';
-import type { AppStore } from 'store';
+import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 // T18 — the Items destination's list owner, composing `Ordering/Item Row`
 // (`xEIH0`, desktop `XIvAZ`) and `Item Card Mobile` (`QSHsy`, mobile `VHU6r`).

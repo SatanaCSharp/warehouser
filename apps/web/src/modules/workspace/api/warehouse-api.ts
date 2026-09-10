@@ -1,16 +1,3 @@
-import {
-  assignableWarehouseRoleSchema,
-  warehouseDeliveryAddressSchema,
-  warehouseMembershipSchema,
-  warehouseSchema,
-} from '@warehouser/contracts/workspaces';
-import { z } from 'zod';
-
-import { warehouseDeliveryAddressValidationKey } from 'modules/workspace/utils/warehouse-delivery-address-validation';
-import { warehouseNameValidationKey } from 'modules/workspace/utils/warehouse-name-validation';
-import { api } from 'shared/api/client/api-client';
-import { workspaceUsersApi } from 'shared/api/workspace/workspace-users-api';
-
 import type {
   AssignableWarehouseRole,
   Warehouse,
@@ -21,6 +8,17 @@ import type {
   WarehouseMembershipAssignment,
   WarehouseWrite,
 } from '@warehouser/contracts/workspaces';
+import {
+  assignableWarehouseRoleSchema,
+  warehouseDeliveryAddressSchema,
+  warehouseMembershipSchema,
+  warehouseSchema,
+} from '@warehouser/contracts/workspaces';
+import { warehouseDeliveryAddressValidationKey } from 'modules/workspace/utils/warehouse-delivery-address-validation';
+import { warehouseNameValidationKey } from 'modules/workspace/utils/warehouse-name-validation';
+import { api } from 'shared/api/client/api-client';
+import { workspaceUsersApi } from 'shared/api/workspace/workspace-users-api';
+import { z } from 'zod';
 
 const WAREHOUSES_PATH = '/api/v1/workspace/warehouses';
 

@@ -5,11 +5,11 @@ import {
   Outlet,
   useRouterState,
 } from '@tanstack/react-router';
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-
 import { SignOutButton } from 'modules/auth/sign-out/components/SignOutButton';
 import { selectIsAuthenticated } from 'modules/auth/store/auth.selectors';
+import type { ReactElement } from 'react';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Conditional } from 'shared/components/Conditional';
 import { ROUTES } from 'shared/constants/routes';
 import { useEnteredContext } from 'shared/hooks/projections/useEnteredContext';
@@ -20,8 +20,6 @@ import { RoutedContent } from 'shared/layouts/RoutedContent';
 import { Sidebar } from 'shared/layouts/sidebar/Sidebar';
 import { WarehouseSwitcher } from 'shared/layouts/WarehouseSwitcher';
 import { useAppSelector } from 'store/hooks';
-
-import type { ReactElement } from 'react';
 
 export const RootLayout = (): ReactElement => {
   const { t } = useTranslation('common');

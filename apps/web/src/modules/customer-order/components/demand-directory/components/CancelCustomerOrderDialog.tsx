@@ -1,18 +1,16 @@
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { useTranslation } from 'react-i18next';
-
-import { CustomerOrderRefusalAlert } from 'modules/customer-order/components/demand-directory/components/CustomerOrderRefusalAlert';
-import { useCustomerOrderNaming } from 'modules/customer-order/hooks/projections/useCustomerOrderNaming';
-import { FormModalDialog } from 'shared/components/FormModalDialog';
-import { FormTextField } from 'shared/components/FormTextField';
-
 import type {
   CustomerOrder,
   CustomerOrderCancellation,
 } from '@warehouser/contracts/customer-orders';
+import { CustomerOrderRefusalAlert } from 'modules/customer-order/components/demand-directory/components/CustomerOrderRefusalAlert';
+import { useCustomerOrderNaming } from 'modules/customer-order/hooks/projections/useCustomerOrderNaming';
 import type { ReactElement } from 'react';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import { FormModalDialog } from 'shared/components/FormModalDialog';
+import { FormTextField } from 'shared/components/FormTextField';
 
 type CancelCustomerOrderDialogProps = {
   order: CustomerOrder;

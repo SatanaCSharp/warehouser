@@ -1,9 +1,8 @@
+import type { DemandLine } from '@warehouser/contracts/customer-orders';
 import { DemandCard } from 'modules/customer-order/components/demand-directory/components/DemandCard';
+import type { CustomerOrderActionHandlers } from 'modules/customer-order/hooks/projections/useCustomerOrderActions';
 import { useDemandDisclosureLabel } from 'modules/customer-order/hooks/projections/useDemandDisclosureLabel';
 import { useUnfulfilledCustomerOrdersByItem } from 'modules/customer-order/hooks/queries/useUnfulfilledCustomerOrdersByItem';
-
-import type { DemandLine } from '@warehouser/contracts/customer-orders';
-import type { CustomerOrderActionHandlers } from 'modules/customer-order/hooks/projections/useCustomerOrderActions';
 import type { ReactElement } from 'react';
 
 export type DemandCardListProps = CustomerOrderActionHandlers & {

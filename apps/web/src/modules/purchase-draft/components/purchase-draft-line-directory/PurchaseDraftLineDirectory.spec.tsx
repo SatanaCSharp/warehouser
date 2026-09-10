@@ -1,8 +1,11 @@
 import { screen, waitFor, within } from '@testing-library/react';
+import type {
+  PurchaseDraftLineIdentified,
+  PurchaseDraftLineListEntry,
+  PurchaseDraftLineRedacted,
+} from '@warehouser/contracts/purchase-drafts';
 import { PermissionId } from '@warehouser/shared-types/enums';
 import omit from 'lodash/omit';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { PurchaseDraftLineDirectory } from 'modules/purchase-draft/components/purchase-draft-line-directory/PurchaseDraftLineDirectory';
 import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
 import {
@@ -11,12 +14,7 @@ import {
   stubAccessServer,
 } from 'test/access-fixtures';
 import { renderInEnteredWarehouse } from 'test/render';
-
-import type {
-  PurchaseDraftLineIdentified,
-  PurchaseDraftLineListEntry,
-  PurchaseDraftLineRedacted,
-} from '@warehouser/contracts/purchase-drafts';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // T23 / AC-22 — "the system separates the lines landing at that Warehouse's own
 // Delivery Address from the lines shipping Direct to Customer, listing each

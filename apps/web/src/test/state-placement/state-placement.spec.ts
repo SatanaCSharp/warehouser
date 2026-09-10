@@ -2,9 +2,8 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { describe, expect, it } from 'vitest';
-
 import { makeStore } from 'store';
+import { describe, expect, it } from 'vitest';
 
 // CR-AC-06 (refactor-warehouse-components): the state-placement guard. The
 // request moves twenty-two files between modules, and its §3 non-goal is that

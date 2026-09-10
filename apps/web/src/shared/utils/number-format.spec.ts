@@ -1,9 +1,8 @@
-import { describe, expect, it } from 'vitest';
-
 import {
   formatQuantity,
   QUANTITY_GROUP_SEPARATOR,
 } from 'shared/utils/number-format';
+import { describe, expect, it } from 'vitest';
 
 describe('formatQuantity', () => {
   it('groups thousands with a no-break space, as the frames draw it', () => {

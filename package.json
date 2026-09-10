@@ -13,13 +13,18 @@
     "test:users-release": "node --test tests/users/*.spec.mjs",
     "test:workspaces-release": "node --test tests/workspaces/*.spec.mjs",
     "clean": "turbo run clean",
-    "prepare": "husky"
+    "prepare": "husky",
+    "lint:all": "oxlint --type-aware ."
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.1",
     "@commitlint/config-conventional": "^21.2.0",
+    "eslint-plugin-no-relative-import-paths": "catalog:",
+    "eslint-plugin-simple-import-sort": "catalog:",
     "husky": "^9.1.7",
     "lint-staged": "^17.0.8",
+    "oxlint": "catalog:",
+    "oxlint-tsgolint": "catalog:",
     "prettier": "^3.9.5",
     "turbo": "catalog:",
     "typescript": "catalog:"

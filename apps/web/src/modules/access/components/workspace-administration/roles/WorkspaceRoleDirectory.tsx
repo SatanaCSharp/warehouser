@@ -1,10 +1,8 @@
-import { useState } from 'react';
-
+import type { WorkspaceRole } from '@warehouser/contracts/workspaces';
 import { WorkspaceRoleEditor } from 'modules/access/components/workspace-administration/roles/WorkspaceRoleEditor';
 import { WorkspaceRoleList } from 'modules/access/components/workspace-administration/roles/WorkspaceRoleList';
-
-import type { WorkspaceRole } from '@warehouser/contracts/workspaces';
 import type { ReactElement } from 'react';
+import { useState } from 'react';
 
 type WorkspaceRoleDirectoryProps = {
   roles: WorkspaceRole[];

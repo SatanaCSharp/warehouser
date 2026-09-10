@@ -1,3 +1,4 @@
+import type { AnyRouter } from '@tanstack/react-router';
 import {
   createMemoryHistory,
   createRootRouteWithContext,
@@ -7,17 +8,14 @@ import {
   RouterProvider,
 } from '@tanstack/react-router';
 import { render, screen } from '@testing-library/react';
-import { Provider } from 'react-redux';
-import { describe, expect, it } from 'vitest';
-
-import { ROUTES } from 'shared/constants/routes';
-import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
-import { makeStore } from 'store';
-
-import type { AnyRouter } from '@tanstack/react-router';
 import type { WarehouseEntryVerdict } from 'guards/warehouse-entry.guard';
 import type { ReactElement } from 'react';
+import { Provider } from 'react-redux';
+import { ROUTES } from 'shared/constants/routes';
+import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
 import type { AppStore } from 'store';
+import { makeStore } from 'store';
+import { describe, expect, it } from 'vitest';
 
 // T4 — `useEnteredWarehouse` is the single non-throwing reader of the entry
 // verdict `guards/warehouse-entry.guard.ts` publishes into the Warehouse

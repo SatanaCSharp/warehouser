@@ -1,5 +1,8 @@
 import { Card } from '@heroui/react';
-
+import type {
+  CustomerDetail,
+  CustomerUpdate,
+} from '@warehouser/contracts/customers';
 import {
   useCorrectCustomerNameMutation,
   useDeactivateCustomerMutation,
@@ -7,16 +10,11 @@ import {
 import { CorrectCustomerDialog } from 'modules/customer/components/customer-directory/components/customers/CorrectCustomerDialog';
 import { CustomerActionsMenu } from 'modules/customer/components/customer-directory/components/customers/CustomerActionsMenu';
 import { DeactivateCustomerDialog } from 'modules/customer/components/customer-directory/components/customers/DeactivateCustomerDialog';
+import type { ReactElement } from 'react';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { ActionDialogHost } from 'shared/components/ActionDialogHost';
 import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
 import { useActionDialog } from 'shared/hooks/state/useActionDialog';
-
-import type {
-  CustomerDetail,
-  CustomerUpdate,
-} from '@warehouser/contracts/customers';
-import type { ReactElement } from 'react';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 /** Which per-Customer dialog the detail header's kebab opens. */
 type CustomerDialogKind = 'correct' | 'deactivate';

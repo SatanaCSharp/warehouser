@@ -1,8 +1,6 @@
-import { describe, expect, it } from 'vitest';
-
 import { workspaceRoleNameValidationKey } from 'modules/access/utils/workspace-role-name-validation';
-
 import type { ApiFailure } from 'shared/api/client/api-client';
+import { describe, expect, it } from 'vitest';
 
 // RED for T61/AC-08, AC-15a (review S1-12) — every name rejection is produced
 // by one shared value object, and all three server commands map its

@@ -1,19 +1,17 @@
+import type { CustomerOrder } from '@warehouser/contracts/customer-orders';
+import type { PurchaseDraftLineLinkCreate } from '@warehouser/contracts/purchase-drafts';
 import { ErrorCode } from '@warehouser/shared-types/enums';
-import { useState } from 'react';
-import { Controller, useForm, useWatch } from 'react-hook-form';
-import { useTranslation } from 'react-i18next';
-
 import { CustomerOrderPicker } from 'modules/customer-order/components/CustomerOrderPicker';
 import { AddressDisagreementAlert } from 'modules/purchase-draft/components/purchase-draft-line-links/components/AddressDisagreementAlert';
 import { PurchaseDraftRefusalAlert } from 'modules/purchase-draft/components/PurchaseDraftRefusalAlert';
+import type { ReactElement } from 'react';
+import { useState } from 'react';
+import { Controller, useForm, useWatch } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { Conditional } from 'shared/components/Conditional';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormTextField } from 'shared/components/FormTextField';
-
-import type { CustomerOrder } from '@warehouser/contracts/customer-orders';
-import type { PurchaseDraftLineLinkCreate } from '@warehouser/contracts/purchase-drafts';
-import type { ReactElement } from 'react';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 export type LinkCustomerOrderDialogProps = {
   /** The Unfulfilled Customer Orders of this line's Item, and only those (AC-04, AC-11). */

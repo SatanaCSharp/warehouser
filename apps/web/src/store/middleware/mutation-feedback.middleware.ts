@@ -1,11 +1,9 @@
+import type { Middleware } from '@reduxjs/toolkit';
 import { isFulfilled, isPending, isRejected } from '@reduxjs/toolkit';
-
 import i18n from 'i18n';
+import type { MutationFeedback } from 'shared/alerts/mutation-actions';
 import { MUTATION_FEEDBACK } from 'shared/alerts/mutation-actions';
 import { toast } from 'shared/alerts/toast';
-
-import type { Middleware } from '@reduxjs/toolkit';
-import type { MutationFeedback } from 'shared/alerts/mutation-actions';
 
 type MutationLifecycleMeta = {
   arg: { endpointName?: string; originalArgs?: unknown; type?: string };

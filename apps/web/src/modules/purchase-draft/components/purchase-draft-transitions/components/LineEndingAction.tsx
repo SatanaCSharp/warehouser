@@ -1,7 +1,13 @@
 import { Button, Chip, Modal } from '@heroui/react';
+import type {
+  EndingKind,
+  PurchaseDraftDetail,
+  PurchaseDraftLine,
+  PurchaseDraftLineArrival,
+  PurchaseDraftLineDirectDelivery,
+  PurchaseDraftLineEnding,
+} from '@warehouser/contracts/purchase-drafts';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { useTranslation } from 'react-i18next';
-
 import {
   useRecordPurchaseDraftLineArrivalMutation,
   useRecordPurchaseDraftLineDirectDeliveryMutation,
@@ -11,23 +17,15 @@ import {
   parseLineArrivalForm,
   parseLineDirectDeliveryForm,
 } from 'modules/purchase-draft/utils/line-ending-form';
+import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { Conditional } from 'shared/components/Conditional';
 import { TriggeredDialog } from 'shared/components/TriggeredDialog';
 import { WarehousePermissionGate } from 'shared/components/WarehousePermissionGate';
 import { useArchivedWarehouse } from 'shared/hooks/projections/useArchivedWarehouse';
 import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
 import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
-
-import type {
-  EndingKind,
-  PurchaseDraftDetail,
-  PurchaseDraftLine,
-  PurchaseDraftLineArrival,
-  PurchaseDraftLineDirectDelivery,
-  PurchaseDraftLineEnding,
-} from '@warehouser/contracts/purchase-drafts';
-import type { ReactElement } from 'react';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 /**
  * What an ending act needs to know about the draft it belongs to — its

@@ -1,22 +1,20 @@
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-
-import { DeliveryModeField } from 'modules/purchase-draft/components/purchase-draft-line-delivery/components/DeliveryModeField';
-import { DirectDestinationFields } from 'modules/purchase-draft/components/purchase-draft-line-delivery/components/direct-destination-fields/DirectDestinationFields';
-import { PurchaseDraftLineDeliveryRefusalAlert } from 'modules/purchase-draft/components/purchase-draft-line-delivery/components/PurchaseDraftLineDeliveryRefusalAlert';
-import { PurchaseDraftLineDestination } from 'modules/purchase-draft/components/purchase-draft-line-delivery/components/PurchaseDraftLineDestination';
-import { disagreeingDeliveryLinks } from 'modules/purchase-draft/utils/delivery-disagreement';
-import { mutationOutcome } from 'shared/api/client/mutation-outcome';
-import { Conditional } from 'shared/components/Conditional';
-
 import type {
   DeliveryMode,
   PurchaseDraftLine,
   PurchaseDraftLineUpdate,
 } from '@warehouser/contracts/purchase-drafts';
+import { DeliveryModeField } from 'modules/purchase-draft/components/purchase-draft-line-delivery/components/DeliveryModeField';
+import { DirectDestinationFields } from 'modules/purchase-draft/components/purchase-draft-line-delivery/components/direct-destination-fields/DirectDestinationFields';
+import { PurchaseDraftLineDeliveryRefusalAlert } from 'modules/purchase-draft/components/purchase-draft-line-delivery/components/PurchaseDraftLineDeliveryRefusalAlert';
+import { PurchaseDraftLineDestination } from 'modules/purchase-draft/components/purchase-draft-line-delivery/components/PurchaseDraftLineDestination';
 import type { DisagreeingDeliveryLink } from 'modules/purchase-draft/utils/delivery-disagreement';
+import { disagreeingDeliveryLinks } from 'modules/purchase-draft/utils/delivery-disagreement';
 import type { ReactElement } from 'react';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import { mutationOutcome } from 'shared/api/client/mutation-outcome';
+import { Conditional } from 'shared/components/Conditional';
 
 export type PurchaseDraftLineDeliveryProps = {
   isDisabled: boolean;

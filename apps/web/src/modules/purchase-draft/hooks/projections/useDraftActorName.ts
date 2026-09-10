@@ -1,6 +1,5 @@
-import { useTranslation } from 'react-i18next';
-
 import { selectCurrentUser } from 'modules/auth/store/auth.selectors';
+import { useTranslation } from 'react-i18next';
 import { useAppSelector } from 'store/hooks';
 
 /**

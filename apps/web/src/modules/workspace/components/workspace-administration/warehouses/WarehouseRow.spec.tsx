@@ -7,17 +7,15 @@ import {
   RouterProvider,
 } from '@tanstack/react-router';
 import { render, screen, within } from '@testing-library/react';
+import type { Warehouse } from '@warehouser/contracts/workspaces';
+import { WarehouseRow } from 'modules/workspace/components/workspace-administration/warehouses/WarehouseRow';
+import type { ReactElement } from 'react';
 import { useState } from 'react';
 import { Provider } from 'react-redux';
-import { describe, expect, it } from 'vitest';
-
-import { WarehouseRow } from 'modules/workspace/components/workspace-administration/warehouses/WarehouseRow';
 import { ROUTES } from 'shared/constants/routes';
-import { makeStore } from 'store';
-
-import type { Warehouse } from '@warehouser/contracts/workspaces';
-import type { ReactElement } from 'react';
 import type { AppStore } from 'store';
+import { makeStore } from 'store';
+import { describe, expect, it } from 'vitest';
 
 /**
  * The four row-scoped Enter cases `sad.md` §5.4 assigns to `WarehouseRow`
