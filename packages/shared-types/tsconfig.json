@@ -4,7 +4,7 @@
     "composite": true,
     "declaration": true,
     "rootDir": "src",
-    "baseUrl": "src",
+    "paths": { "*": ["./src/*"] },
     "outDir": "dist"
   },
   "include": ["src/**/*.ts"]

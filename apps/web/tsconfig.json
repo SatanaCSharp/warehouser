@@ -6,7 +6,7 @@
     "jsx": "react-jsx",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "noEmit": true,
-    "baseUrl": "./src"
+    "paths": { "*": ["./src/*"] }
   },
   "references": [
     { "path": "../../packages/contracts" },
