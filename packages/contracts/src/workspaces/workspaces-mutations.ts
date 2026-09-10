@@ -2,7 +2,7 @@ import { workspacePermissionIdSchema } from 'workspaces/workspaces-projections';
 import { z } from 'zod';
 
 export const activeWarehouseWriteSchema = z.strictObject({
-  warehouseId: z.string().uuid(),
+  warehouseId: z.uuid(),
 });
 
 // The name schemas deliberately carry no lower bound. openapi.yaml documents
@@ -35,22 +35,22 @@ export const workspaceRoleWriteSchema = z.strictObject({
 // defined, rather than worked around at the controller.
 export const workspaceRoleDeletionSchema = z
   .strictObject({
-    replacementWorkspaceRoleId: z.string().uuid().optional(),
+    replacementWorkspaceRoleId: z.uuid().optional(),
   })
   .default({});
 
 export const workspaceRoleAssignmentSchema = z.strictObject({
-  workspaceRoleId: z.string().uuid(),
+  workspaceRoleId: z.uuid(),
 });
 
 export const workspaceMemberAddSchema = z.strictObject({
-  userId: z.string().uuid(),
-  workspaceRoleId: z.string().uuid(),
+  userId: z.uuid(),
+  workspaceRoleId: z.uuid(),
 });
 
 export const workspaceOwnerTransferSchema = z.strictObject({
-  recipientUserId: z.string().uuid(),
-  formerOwnerWorkspaceRoleId: z.string().uuid(),
+  recipientUserId: z.uuid(),
+  formerOwnerWorkspaceRoleId: z.uuid(),
 });
 
 export const warehouseWriteSchema = z.strictObject({
@@ -77,8 +77,8 @@ export const warehouseDeliveryAddressWriteSchema = z.strictObject({
 });
 
 export const warehouseMembershipAssignmentSchema = z.strictObject({
-  userId: z.string().uuid(),
-  roleId: z.string().uuid(),
+  userId: z.uuid(),
+  roleId: z.uuid(),
 });
 
 export type ActiveWarehouseWrite = z.infer<typeof activeWarehouseWriteSchema>;

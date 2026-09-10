@@ -20,11 +20,14 @@ export class ReadItemCatalogueEntryQuery {
     currentUser: AccessCurrentUser,
     itemId: string,
   ): Promise<ItemCatalogueEntryRead | null> {
-    const [row] =
+    // `.at(0)` rather than `const [row] =`: with `noUncheckedIndexedAccess` off, destructuring
+    // types the element as present and the `null` branch below reads as dead code.
+    const row = (
       await this.itemCatalogueRepository.findItemsWithOnHandAndLatestReason(
         currentUser.warehouseId,
         { itemId },
-      );
+      )
+    ).at(0);
 
     return row ? toItemCatalogueEntry(row) : null;
   }

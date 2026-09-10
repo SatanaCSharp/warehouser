@@ -3,10 +3,8 @@ import { ErrorCode, PermissionId } from '@warehouser/shared-types/enums';
 import { CreateRoleCommand } from 'access/usecases/commands/create-role.command';
 import { UpdateRoleCommand } from 'access/usecases/commands/update-role.command';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
-import {
-  TRANSACTIONAL_KEY,
-  type TransactionalMetadata,
-} from 'shared/decorators/transactional.decorator';
+import type { TransactionalMetadata } from 'shared/decorators/transactional.decorator';
+import { TRANSACTIONAL_KEY } from 'shared/decorators/transactional.decorator';
 import { RoleLifecycleRepository } from 'shared/domain/repositories/role-lifecycle.repository';
 import { describe, expect, it, vi } from 'vitest';
 

@@ -142,7 +142,9 @@ if (typeof window.matchMedia !== 'function') {
         matches: false,
         media: query,
         onchange: null,
+        // eslint-disable-next-line typescript/no-deprecated -- deprecated on purpose. `MediaQueryList` still declares both, so a stub that omits them does not satisfy the interface; the deprecation belongs to the API being mocked, not to this mock.
         addListener: () => {},
+        // eslint-disable-next-line typescript/no-deprecated -- see `addListener` above.
         removeListener: () => {},
         addEventListener: () => {},
         removeEventListener: () => {},

@@ -4,7 +4,7 @@ import type {
   WarehouseDeliveryAddress,
 } from '@warehouser/contracts/workspaces';
 import { useSetWarehouseDeliveryAddressMutation } from 'modules/workspace/api/warehouse-api';
-import type { FormEvent, ReactElement } from 'react';
+import type { ReactElement, SubmitEvent } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { mutationOutcome } from 'shared/api/client/mutation-outcome';
@@ -86,7 +86,7 @@ export const WarehouseDeliveryAddressForm = ({
 
   // `handleSubmit` returns a promise the DOM handler must not; discarding it
   // here keeps the rejection with React Hook Form, which already owns it.
-  const onSubmitForm = (event: FormEvent<HTMLFormElement>): void =>
+  const onSubmitForm = (event: SubmitEvent<HTMLFormElement>): void =>
     void handleSubmit(submit)(event);
 
   // Cancel abandons the correction rather than the address: the fields go back

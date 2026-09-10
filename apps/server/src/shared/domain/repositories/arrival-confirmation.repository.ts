@@ -3,16 +3,14 @@ import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { getEntityManager } from 'shared/database/db-transaction-context.service';
 import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
-import {
-  type PurchaseDraftLineDeliveryMode,
-  type PurchaseDraftLineEndingKind,
-  PurchaseDraftLineEntity,
-  type PurchaseDraftLinePreReceiptConformance,
+import type {
+  PurchaseDraftLineDeliveryMode,
+  PurchaseDraftLineEndingKind,
+  PurchaseDraftLinePreReceiptConformance,
 } from 'shared/domain/entities/purchase-draft-line.entity';
-import {
-  PurchaseDraftLineRejectionEntity,
-  type PurchaseDraftLineRejectionSource,
-} from 'shared/domain/entities/purchase-draft-line-rejection.entity';
+import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity';
+import type { PurchaseDraftLineRejectionSource } from 'shared/domain/entities/purchase-draft-line-rejection.entity';
+import { PurchaseDraftLineRejectionEntity } from 'shared/domain/entities/purchase-draft-line-rejection.entity';
 import { DataSource, IsNull } from 'typeorm';
 
 export interface LockedPurchaseDraftForArrival {

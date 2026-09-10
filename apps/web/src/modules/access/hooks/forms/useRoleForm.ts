@@ -1,7 +1,7 @@
 import type { RoleWrite } from '@warehouser/contracts/access';
 import type { RoleFormValues } from 'modules/access/schemas/role-form';
 import { parseRoleFormValues } from 'modules/access/schemas/role-form';
-import type { FormEvent } from 'react';
+import type { SubmitEvent } from 'react';
 import type {
   Control,
   FieldErrors,
@@ -26,7 +26,7 @@ type RoleFormSession = {
   register: UseFormRegister<RoleFormValues>;
   /** Returns the fields to the Role they were seeded from, discarding edits. */
   reset: UseFormReset<RoleFormValues>;
-  submit: (event: FormEvent<HTMLFormElement>) => Promise<void>;
+  submit: (event: SubmitEvent<HTMLFormElement>) => Promise<void>;
 };
 
 /**

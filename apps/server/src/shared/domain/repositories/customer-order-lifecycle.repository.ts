@@ -235,16 +235,20 @@ export class CustomerOrderLifecycleRepository {
       .setLock('pessimistic_write')
       .getRawAndEntities();
 
-    const [order] = found.entities;
+    // `.at(0)` rather than `const [order] =`: with `noUncheckedIndexedAccess` off, destructuring
+    // types the element as present and the not-found branch below reads as dead code.
+    const order = found.entities.at(0);
     if (order === undefined) {
       return null;
     }
 
     // PostgreSQL returns `SUM` over `bigint` as a string, so the figure is normalized here rather
     // than left for every caller to remember.
-    const [rawRow] = found.raw as Array<{
-      allocatedQuantity: string | number;
-    }>;
+    const rawRow = (
+      found.raw as Array<{
+        allocatedQuantity: string | number;
+      }>
+    ).at(0);
 
     return {
       order,

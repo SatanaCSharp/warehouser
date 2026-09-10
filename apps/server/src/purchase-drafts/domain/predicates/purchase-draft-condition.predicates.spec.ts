@@ -8,6 +8,7 @@
 // The catalogue is an **argument** here and never a lookup a predicate performs: `requiresDescription`
 // is data (data-model.md §`rejection_reasons`), so a predicate that read it would need I/O and a
 // predicate that hard-coded `unfit_other` would pass every test written today.
+import type { RejectionReasonCatalogueEntry } from 'purchase-drafts/domain/predicates/purchase-draft-condition.predicates';
 import {
   conditionOnlyWhereSomethingReceived,
   dispositionMayBeRecorded,
@@ -24,7 +25,6 @@ import {
   metAgreesWithRefusals,
   notApplicableOnlyOnUninstructedLine,
   refusalsWithinPresented,
-  type RejectionReasonCatalogueEntry,
   satisfiesDescriptionRequirement,
   sourceMatchesDeliveryMode,
   totalRefusedQuantity,

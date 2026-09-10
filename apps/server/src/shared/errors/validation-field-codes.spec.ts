@@ -8,10 +8,10 @@ import { z } from 'zod';
 // floor and a ceiling, a calendar date, an identifier, and a nested line array
 // (`packages/contracts/src/customer-orders/customer-orders-mutations.ts`).
 const schema = z.strictObject({
-  itemId: z.string().uuid(),
+  itemId: z.uuid(),
   customerName: z.string().min(1),
   quantity: z.number().int().min(1).max(999),
-  neededBy: z.string().date(),
+  neededBy: z.iso.date(),
   lines: z
     .array(z.strictObject({ quantity: z.number().int().min(1) }))
     .optional(),

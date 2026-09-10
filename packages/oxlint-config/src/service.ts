@@ -30,6 +30,32 @@ export const serviceConfig: OxlintConfig = mergeOxlintConfig(baseConfig, {
     // Kept for the record even though it is redundant: oxlint files `no-undef` under `nursery`,
     // which the baseline leaves off. TypeScript handles this better than the linter does.
     'eslint/no-undef': 'off',
+
+    // ---- `typescript/consistent-type-imports` is OFF here, and this is a correctness decision
+    // rather than a preference.
+    //
+    // `apps/server/tsconfig.json` extends `@warehouser/tsconfig/tsconfig.node.json`, which sets
+    // `emitDecoratorMetadata: true` — that is what NestJS dependency injection and TypeORM's column
+    // inference both read. Under it, a constructor parameter's type annotation is emitted into
+    // `design:paramtypes` as a *runtime value*, so the import that names it is a value import even
+    // though nothing else in the file uses it as one.
+    //
+    // The rule cannot see that. Measured on this tree it reports 324 production sites in
+    // `apps/server/src`, and they include the DI parameters themselves — e.g.
+    // `auth/usecases/commands/register.command.ts` lines 17 and 21, which are
+    // `AuthRegistrationService` and `AuthenticationRepository`, both injected. Taking its fix would
+    // rewrite them to `import type`, erase the metadata, and produce
+    // `Nest can't resolve dependencies of the RegisterCommand (?, …)` at boot.
+    //
+    // Nothing in the gate would catch that. `tsc` stays green, because the types are unchanged, and
+    // the unit suites construct these classes directly (`new RegisterCommand(repo, …)`) rather than
+    // through the container — so only an integration run or an actual boot would fail.
+    //
+    // The rule stays on for `apps/web` and `packages/*`: `apps/web/tsconfig.json` extends
+    // `tsconfig.base.json`, which does not set `emitDecoratorMetadata`, and the packages inherit it
+    // but contain no decorators. Restore this when either the rule learns about decorator metadata
+    // or `apps/server` stops relying on it.
+    'typescript/consistent-type-imports': 'off',
   },
 
   overrides: [

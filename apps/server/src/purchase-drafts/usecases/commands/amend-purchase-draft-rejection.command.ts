@@ -6,16 +6,12 @@ import {
   purchaseDraftUnknownDispositionError,
 } from 'purchase-drafts/domain/errors/purchase-draft.errors';
 import { isOfferedDisposition } from 'purchase-drafts/domain/predicates/purchase-draft-condition.predicates';
-import {
-  REJECTION_DISPOSITIONS,
-  type RejectionDisposition,
-} from 'purchase-drafts/domain/value-objects/line-condition';
+import type { RejectionDisposition } from 'purchase-drafts/domain/value-objects/line-condition';
+import { REJECTION_DISPOSITIONS } from 'purchase-drafts/domain/value-objects/line-condition';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
-import {
-  type AmendRejectionInput,
-  PurchaseDraftRejectionRepository,
-} from 'shared/domain/repositories/purchase-draft-rejection.repository';
+import type { AmendRejectionInput } from 'shared/domain/repositories/purchase-draft-rejection.repository';
+import { PurchaseDraftRejectionRepository } from 'shared/domain/repositories/purchase-draft-rejection.repository';
 
 export interface AmendRejectionCommandRuntime {
   readonly now: () => Date;
@@ -120,10 +116,7 @@ export class AmendPurchaseDraftRejectionCommand {
     return {
       id: rejectionId,
       description: input.description ?? null,
-      disposition:
-        input.disposition !== undefined
-          ? input.disposition
-          : locked.disposition,
+      disposition: input.disposition ?? locked.disposition,
       amendedByUserId: currentUser.userId,
       amendedAt,
     };

@@ -130,8 +130,8 @@ export const lineCustomerDestinationSchema = z.strictObject({
   // The live reference. It stays populated on a frozen line — it is what the by-line read and the
   // ownership check use — but nothing reads it as the frozen statement (data-model.md
   // `purchase_draft_lines`).
-  customerDeliveryAddressId: z.string().uuid(),
-  customerId: z.string().uuid(),
+  customerDeliveryAddressId: z.uuid(),
+  customerId: z.uuid(),
   // Read live from the Customer record while the draft is in `draft`, and the name captured at
   // Ready for Ordering afterwards — captured together with the address text and the access notes,
   // so the whole frozen destination reads as one statement made at one moment.
@@ -146,7 +146,7 @@ export const lineCustomerDestinationSchema = z.strictObject({
 // never drift in a field that is not the redaction itself.
 const demandSnapshotEntryCommonShape = {
   capturedQuantity: z.number().int().min(1),
-  capturedNeededBy: z.string().date(),
+  capturedNeededBy: z.iso.date(),
   capturedState: customerOrderStateSchema,
 };
 
@@ -160,7 +160,7 @@ export const demandSnapshotEntryIdentifiedSchema = z
     // question "is this order going to a different Delivery Address than the one frozen for it".
     // Comparing the text instead would report drift when a member merely corrects a typo in an
     // address that was never redirected (CONTEXT.md "Address Drift").
-    capturedDeliveryAddressId: z.string().uuid().nullable(),
+    capturedDeliveryAddressId: z.uuid().nullable(),
     // **The frozen statement** — the address text as it read at the freeze, which is what AC-18
     // shows the member. The text is what is shown; the identifier is what decides whether there is
     // anything to show, so neither can be dropped without losing one of the two.
@@ -191,7 +191,7 @@ export const demandSnapshotEntryRedactedSchema = z.strictObject(
 // carries no destination.
 const linkedCustomerOrderStateCommonShape = {
   quantity: z.number().int().min(1),
-  neededBy: z.string().date(),
+  neededBy: z.iso.date(),
   state: customerOrderStateSchema,
   outstandingQuantity: z.number().int().nonnegative(),
   // openapi.yaml `lastChangedAt` — when this Customer Order last moved, which is the half of the
@@ -199,7 +199,7 @@ const linkedCustomerOrderStateCommonShape = {
   // every drift statement (`Cancelled on 24 Aug`, `Raised to 1 000 on 25 Aug`). `null` for an order
   // that has not been changed since it was recorded — it has no such moment, and a projection that
   // reported its creation time instead would date a change that never happened.
-  lastChangedAt: z.string().datetime().nullable(),
+  lastChangedAt: z.iso.datetime().nullable(),
 };
 
 // openapi.yaml `LinkedCustomerOrderStateIdentified` — the linked Customer Order as it stands at the
@@ -224,16 +224,16 @@ export const linkedCustomerOrderStateRedactedSchema = z.strictObject(
 // customer when the line ended. It carries no customer identity of its own, so it has one form.
 export const arrivalAllocationSchema = z.strictObject({
   allocatedQuantity: z.number().int().min(1),
-  allocatedByUserId: z.string().uuid(),
-  createdAt: z.string().datetime(),
+  allocatedByUserId: z.uuid(),
+  createdAt: z.iso.datetime(),
 });
 
 // What a link carries whatever the actor may read (AC-09a). `driftSignals` is here rather than in
 // the identified half deliberately: **that** an address drift exists is a fact about the draft, not
 // customer identity, and withholding it would tell an entitled member less than AC-18a promises.
 const purchaseDraftLineLinkCommonShape = {
-  id: z.string().uuid(),
-  customerOrderId: z.string().uuid(),
+  id: z.uuid(),
+  customerOrderId: z.uuid(),
   statedQuantity: z.number().int().min(1),
   driftSignals: z.array(driftSignalKindSchema),
   allocation: arrivalAllocationSchema.nullable(),
@@ -328,7 +328,7 @@ export const preReceiptConformanceSchema = z.strictObject({
 // refused, with its Rejection Record: the cause `REJECTIONS:WATCH` gates (AC-21). Strict, so an
 // unknown property — including a leaked `supplierName` — is refused rather than passed through.
 export const purchaseDraftLineRejectionSchema = z.strictObject({
-  id: z.string().uuid(),
+  id: z.uuid(),
   rejectionReasonId: rejectionReasonIdSchema,
   // The catalogue's current wording, joined in on this read — the Reason is never reworded, so this
   // is always the wording the member stated (AC-23a).
@@ -337,10 +337,10 @@ export const purchaseDraftLineRejectionSchema = z.strictObject({
   source: rejectionSourceSchema,
   description: storedProseSchema.nullable(),
   disposition: rejectionDispositionSchema,
-  raisedByUserId: z.string().uuid(),
-  raisedAt: z.string().datetime(),
-  amendedByUserId: z.string().uuid().nullable(),
-  amendedAt: z.string().datetime().nullable(),
+  raisedByUserId: z.uuid(),
+  raisedAt: z.iso.datetime(),
+  amendedByUserId: z.uuid().nullable(),
+  amendedAt: z.iso.datetime().nullable(),
 });
 
 // openapi.yaml `LineConditionWithCause` — the whole condition account, read by an actor holding
@@ -389,14 +389,14 @@ export const lineConditionSchema = z.union([
 export const purchaseDraftLineEndingSchema = z.strictObject({
   kind: endingKindSchema,
   quantity: z.number().int().nonnegative(),
-  recordedByUserId: z.string().uuid(),
-  recordedAt: z.string().datetime(),
+  recordedByUserId: z.uuid(),
+  recordedAt: z.iso.datetime(),
   condition: lineConditionSchema.nullable(),
 });
 
 const purchaseDraftLineCommonShape = {
-  id: z.string().uuid(),
-  itemId: z.string().uuid(),
+  id: z.uuid(),
+  itemId: z.uuid(),
   itemSku: z.string().min(1),
   itemDescription: z.string().min(1),
   unitOfMeasure: unitOfMeasureSchema,
@@ -442,7 +442,7 @@ export const purchaseDraftLineSchema = z.union([
 
 // openapi.yaml `PurchaseDraftSummary` — the list projection.
 export const purchaseDraftSummarySchema = z.strictObject({
-  id: z.string().uuid(),
+  id: z.uuid(),
   // openapi.yaml `reference` — the human name of the draft (`PD-0143`), minted by the database and
   // never absent, because every card, detail header and dialog title names the draft by it rather
   // than by its identifier (design frames `yGhkK.png`, `s5EPi.png`). Not pattern-checked: the
@@ -450,7 +450,7 @@ export const purchaseDraftSummarySchema = z.strictObject({
   // not need a contract change.
   reference: z.string().min(1),
   state: purchaseDraftStateSchema,
-  expectedArrivalDate: z.string().date().nullable(),
+  expectedArrivalDate: z.iso.date().nullable(),
   lineCount: z.number().int().nonnegative(),
   // Whether any of this draft's Demand Snapshot rows differs in value from the Customer Order it
   // names now — and, since this feature, also raised by an address disagreement of **either**
@@ -469,16 +469,16 @@ export const purchaseDraftSummarySchema = z.strictObject({
   // `PurchaseDraftSummary`, spec.md §6.1 "Customer disclosure through a count").
   hasDirectToCustomerAddressDrift: z.boolean(),
   closureReason: z.string().nullable(),
-  createdByUserId: z.string().uuid(),
-  createdAt: z.string().datetime(),
-  readiedByUserId: z.string().uuid().nullable(),
-  readiedAt: z.string().datetime().nullable(),
-  closedByUserId: z.string().uuid().nullable(),
-  closedAt: z.string().datetime().nullable(),
-  arrivalConfirmedByUserId: z.string().uuid().nullable(),
-  arrivalConfirmedAt: z.string().datetime().nullable(),
-  discardedByUserId: z.string().uuid().nullable(),
-  discardedAt: z.string().datetime().nullable(),
+  createdByUserId: z.uuid(),
+  createdAt: z.iso.datetime(),
+  readiedByUserId: z.uuid().nullable(),
+  readiedAt: z.iso.datetime().nullable(),
+  closedByUserId: z.uuid().nullable(),
+  closedAt: z.iso.datetime().nullable(),
+  arrivalConfirmedByUserId: z.uuid().nullable(),
+  arrivalConfirmedAt: z.iso.datetime().nullable(),
+  discardedByUserId: z.uuid().nullable(),
+  discardedAt: z.iso.datetime().nullable(),
 });
 
 // openapi.yaml `PurchaseDraftDetail` — the summary plus the draft's contents.
@@ -507,10 +507,10 @@ export const rejectionReasonSchema = z.strictObject({
 // belongs to so the view reads without a second request. Each line of a draft holding both modes
 // appears in whichever half **its own** `deliveryMode` places it (AC-22).
 export const purchaseDraftLineListEntrySchema = z.strictObject({
-  purchaseDraftId: z.string().uuid(),
+  purchaseDraftId: z.uuid(),
   purchaseDraftReference: z.string().min(1),
   purchaseDraftState: purchaseDraftStateSchema,
-  expectedArrivalDate: z.string().date().nullable(),
+  expectedArrivalDate: z.iso.date().nullable(),
   line: purchaseDraftLineSchema,
 });
 

@@ -1,6 +1,6 @@
+import type { MappingPattern } from 'test/architectural/mapping-patterns';
 import {
   findMappingDeclarations,
-  type MappingPattern,
   serverMappingDeclarations,
 } from 'test/architectural/mapping-patterns';
 import { Project } from 'ts-morph';

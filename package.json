@@ -15,7 +15,7 @@
     "test:workspaces-release": "node --test tests/workspaces/*.spec.mjs",
     "clean": "turbo run clean",
     "prepare": "husky",
-    "lint:all": "oxlint --type-aware ."
+    "lint:all": "oxlint --type-aware --max-warnings=0 ."
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.1",

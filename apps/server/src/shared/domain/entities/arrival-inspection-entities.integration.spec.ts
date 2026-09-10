@@ -16,11 +16,8 @@ import {
   buildWarehouse,
   buildWorkspace,
 } from 'test/factories/entity-factories';
-import {
-  type EntityTarget,
-  type ObjectLiteral,
-  QueryFailedError,
-} from 'typeorm';
+import type { EntityTarget, ObjectLiteral } from 'typeorm';
+import { QueryFailedError } from 'typeorm';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 /**

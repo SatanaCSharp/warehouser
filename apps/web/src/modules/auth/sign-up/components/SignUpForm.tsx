@@ -1,11 +1,9 @@
 import { Button } from '@heroui/react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link as RouterLink } from '@tanstack/react-router';
-import {
-  signUpFormSchema,
-  type SignUpFormValues,
-} from 'modules/auth/sign-up/schemas/sign-up-form.schema';
-import type { FormEvent, ReactElement } from 'react';
+import type { SignUpFormValues } from 'modules/auth/sign-up/schemas/sign-up-form.schema';
+import { signUpFormSchema } from 'modules/auth/sign-up/schemas/sign-up-form.schema';
+import type { ReactElement, SubmitEvent } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Conditional } from 'shared/components/Conditional';
@@ -35,7 +33,7 @@ export const SignUpForm = ({ emailError, onSubmit }: Props): ReactElement => {
 
   // `handleSubmit` returns a promise the DOM handler must not; discarding it
   // here keeps the rejection with React Hook Form, which already owns it.
-  const onSubmitForm = (event: FormEvent<HTMLFormElement>): void =>
+  const onSubmitForm = (event: SubmitEvent<HTMLFormElement>): void =>
     void handleSubmit(onSubmit)(event);
 
   return (

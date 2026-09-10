@@ -8,14 +8,12 @@ import { WorkspaceMembershipEntity } from 'shared/domain/entities/workspace-memb
 import { WorkspacePermissionEntity } from 'shared/domain/entities/workspace-permission.entity';
 import { WorkspaceRoleEntity } from 'shared/domain/entities/workspace-role.entity';
 import { WorkspaceRolePermissionEntity } from 'shared/domain/entities/workspace-role-permission.entity';
+import type { WorkspaceProvisioningInput } from 'shared/domain/repositories/workspace-provisioning.repository';
 // `WorkspaceProvisioningRepository` does not exist yet (T12): this import is
 // the RED for AC-01 — the implementer creates it per
 // `docs/system/guides/creating-a-server-repository.md`, mirroring
 // `AccessProvisioningRepository`'s shape.
-import {
-  type WorkspaceProvisioningInput,
-  WorkspaceProvisioningRepository,
-} from 'shared/domain/repositories/workspace-provisioning.repository';
+import { WorkspaceProvisioningRepository } from 'shared/domain/repositories/workspace-provisioning.repository';
 import {
   buildWorkspace,
   buildWorkspacePermission,

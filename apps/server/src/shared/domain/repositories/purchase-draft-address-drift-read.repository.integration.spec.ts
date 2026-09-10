@@ -533,7 +533,7 @@ const driftFlagsOf = async (
     warehouseId,
     'with_cause',
   );
-  const [summary] = await repository.listDrafts(warehouseId);
+  const summary = (await repository.listDrafts(warehouseId)).at(0);
 
   return {
     openedDriftSignal: detail?.hasDriftSignal,
@@ -610,7 +610,7 @@ const registerFreshnessTests = (): void => {
       findLink(detail, viaLinkId)?.current.deliveryAddress?.deliveryAddressId,
     ).toBe(addressBId);
 
-    const [summary] = await repository.listDrafts(warehouseId);
+    const summary = (await repository.listDrafts(warehouseId)).at(0);
     expect(summary?.hasDriftSignal).toBe(true);
     expect(summary?.hasDirectToCustomerAddressDrift).toBe(false);
   });

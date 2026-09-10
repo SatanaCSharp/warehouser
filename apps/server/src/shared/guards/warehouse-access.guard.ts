@@ -1,8 +1,5 @@
-import {
-  type CanActivate,
-  type ExecutionContext,
-  Injectable,
-} from '@nestjs/common';
+import type { CanActivate, ExecutionContext } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { PermissionId } from '@warehouser/shared-types/enums';
 import { accessCurrentUser } from 'shared/access/access-current-user';
@@ -40,16 +37,18 @@ export class WarehouseAccessGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<WarehouseAccessRequest>();
-    const permissionIds = this.reflector.getAllAndOverride<PermissionId[]>(
-      REQUIRED_PERMISSION_KEY,
-      [context.getHandler(), context.getClass()],
-    );
+    // `getAllAndOverride` is typed to return `TResult`, but returns `undefined` when no target
+    // carries the metadata key — an undecorated handler. The `| undefined` restores that case to
+    // the type so the checks below stay real checks rather than dead code.
+    const permissionIds = this.reflector.getAllAndOverride<
+      PermissionId[] | undefined
+    >(REQUIRED_PERMISSION_KEY, [context.getHandler(), context.getClass()]);
     // Read only, never enforced: `@ObservedPermission` declares Permissions the projection wants
     // resolved. Nothing below consults the resolved set to decide admission, so a handler that
     // declares only observed Permissions is denied by the very next condition, exactly as an
     // undecorated handler is (AC-09a, ADR 0001).
     const observedPermissionIds =
-      this.reflector.getAllAndOverride<PermissionId[]>(
+      this.reflector.getAllAndOverride<PermissionId[] | undefined>(
         OBSERVED_PERMISSION_KEY,
         [context.getHandler(), context.getClass()],
       ) ?? [];
@@ -69,7 +68,7 @@ export class WarehouseAccessGuard implements CanActivate {
     }
 
     const archived = current.archivedAt !== null;
-    const readTolerant = this.reflector.getAllAndOverride<boolean>(
+    const readTolerant = this.reflector.getAllAndOverride<boolean | undefined>(
       READ_TOLERANT_KEY,
       [context.getHandler(), context.getClass()],
     );

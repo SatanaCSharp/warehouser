@@ -9,11 +9,11 @@ import type {
   DeliveryMode,
   EndingKind,
 } from 'purchase-drafts/domain/value-objects/delivery-mode';
-import {
-  PreReceiptConformanceVerdict,
-  type RejectionDisposition,
-  type RejectionSource,
+import type {
+  RejectionDisposition,
+  RejectionSource,
 } from 'purchase-drafts/domain/value-objects/line-condition';
+import { PreReceiptConformanceVerdict } from 'purchase-drafts/domain/value-objects/line-condition';
 
 // AC-11 — one non-enumerating outcome for an Item or a Customer Order of another Warehouse and for
 // one that does not exist, naming the same-Warehouse rule. openapi.yaml

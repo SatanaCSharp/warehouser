@@ -22,13 +22,13 @@ import { PurchaseDraftLineRejectionEntity } from 'shared/domain/entities/purchas
 import { UserEntity } from 'shared/domain/entities/user.entity';
 import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
 import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
-import {
-  ArrivalConfirmationRepository,
-  type LockPurchaseDraftLineForEndingResult,
-  type RecordLineEndingConditionInput,
-  type RecordLineEndingInput,
-  type RecordLineEndingResult,
+import type {
+  LockPurchaseDraftLineForEndingResult,
+  RecordLineEndingConditionInput,
+  RecordLineEndingInput,
+  RecordLineEndingResult,
 } from 'shared/domain/repositories/arrival-confirmation.repository';
+import { ArrivalConfirmationRepository } from 'shared/domain/repositories/arrival-confirmation.repository';
 import {
   buildWarehouse,
   buildWorkspace,

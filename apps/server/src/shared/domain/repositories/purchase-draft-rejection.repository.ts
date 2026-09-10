@@ -1,9 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { getEntityManager } from 'shared/database/db-transaction-context.service';
-import {
-  type PurchaseDraftLineRejectionDisposition,
-  PurchaseDraftLineRejectionEntity,
-} from 'shared/domain/entities/purchase-draft-line-rejection.entity';
+import type { PurchaseDraftLineRejectionDisposition } from 'shared/domain/entities/purchase-draft-line-rejection.entity';
+import { PurchaseDraftLineRejectionEntity } from 'shared/domain/entities/purchase-draft-line-rejection.entity';
 import { DataSource } from 'typeorm';
 
 // What §6.4 decides the amendment under, and nothing more: the line and Warehouse the Rejection

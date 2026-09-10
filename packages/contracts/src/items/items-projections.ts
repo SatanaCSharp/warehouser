@@ -12,19 +12,19 @@ export const itemLatestAdjustmentSchema = z.strictObject({
   // (design frame `XIvAZ.png`; design-handoff.md calls that line part of the contract). The id is
   // what `onHandAdjustmentSchema` already discloses on the write path, so this adds no new fact —
   // it puts the fact the read path was missing beside the two it already carried.
-  adjustedByUserId: z.string().uuid(),
-  adjustedAt: z.string().datetime(),
+  adjustedByUserId: z.uuid(),
+  adjustedAt: z.iso.datetime(),
 });
 
 // openapi.yaml `Item` — a distinct good the Warehouse can be asked for, identified by a SKU unique
 // within that Warehouse (AC-06, AC-07, AC-07a).
 export const itemSchema = z.strictObject({
-  id: z.string().uuid(),
+  id: z.uuid(),
   sku: z.string().min(1),
   description: z.string().min(1),
   unitOfMeasure: unitOfMeasureSchema,
   onHandQuantity: z.number().int().nonnegative(),
-  deactivatedAt: z.string().datetime().nullable(),
+  deactivatedAt: z.iso.datetime().nullable(),
   // AC-06c — what names this Item, and therefore whether its SKU is still correctable. Both counts
   // are taken over **every** Customer Order and **every** Purchase Draft Line carrying the Item's
   // id, whatever state that order or that draft is in: that is the same rule the server enforces
@@ -35,18 +35,18 @@ export const itemSchema = z.strictObject({
   namingCustomerOrderCount: z.number().int().nonnegative(),
   namingPurchaseDraftLineCount: z.number().int().nonnegative(),
   latestAdjustment: itemLatestAdjustmentSchema.nullable(),
-  createdAt: z.string().datetime(),
+  createdAt: z.iso.datetime(),
 });
 
 // openapi.yaml `OnHandAdjustment` — one immutable row of the append-only adjustment history
 // (AC-08).
 export const onHandAdjustmentSchema = z.strictObject({
-  id: z.string().uuid(),
-  itemId: z.string().uuid(),
+  id: z.uuid(),
+  itemId: z.uuid(),
   countedQuantity: z.number().int().nonnegative(),
   reason: z.string().min(1),
-  adjustedByUserId: z.string().uuid(),
-  createdAt: z.string().datetime(),
+  adjustedByUserId: z.uuid(),
+  createdAt: z.iso.datetime(),
 });
 
 export type ItemLatestAdjustment = z.infer<typeof itemLatestAdjustmentSchema>;

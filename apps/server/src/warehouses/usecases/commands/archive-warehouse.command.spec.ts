@@ -1,10 +1,8 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
 import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
-import {
-  TRANSACTIONAL_KEY,
-  type TransactionalMetadata,
-} from 'shared/decorators/transactional.decorator';
+import type { TransactionalMetadata } from 'shared/decorators/transactional.decorator';
+import { TRANSACTIONAL_KEY } from 'shared/decorators/transactional.decorator';
 import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
 import { repositoryDouble } from 'test/doubles/repository-double';
 import { describe, expect, it, vi } from 'vitest';

@@ -81,7 +81,7 @@ export interface PurchaseDraftLineEndingWithCondition {
 // once per line. Endings withholding the cause, and endings with no Condition Split at all, name
 // no Rejection and contribute nothing.
 export const rejectionReasonIdsOf = (
-  endings: ReadonlyArray<PurchaseDraftLineEndingRead | null>,
+  endings: ReadonlyArray<PurchaseDraftLineEndingRead | null | undefined>,
 ): string[] =>
   uniq(
     endings.flatMap((ending) =>
@@ -163,7 +163,7 @@ export const conditionOf = (
 // nested. `null` passes straight through: a line with no ending at all has no condition to build
 // either.
 export const withCondition = (
-  ending: PurchaseDraftLineEndingRead | null,
+  ending: PurchaseDraftLineEndingRead | null | undefined,
   rejectionReasonLabels: ReadonlyMap<string, string>,
 ): PurchaseDraftLineEndingWithCondition | null =>
   ending === null || ending === undefined

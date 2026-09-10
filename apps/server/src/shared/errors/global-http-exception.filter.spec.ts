@@ -1,4 +1,5 @@
-import { type ArgumentsHost, BadRequestException } from '@nestjs/common';
+import type { ArgumentsHost } from '@nestjs/common';
+import { BadRequestException } from '@nestjs/common';
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import {
   ApplicationError,
@@ -225,10 +226,10 @@ describe('GlobalHttpExceptionFilter on a Zod request-validation refusal', () => 
   // whole-number quantity with a floor, and a calendar date — so the envelope
   // asserted here is the one `POST .../customer-orders` returns (AC-02).
   const customerOrderCreate = z.strictObject({
-    itemId: z.string().uuid(),
+    itemId: z.uuid(),
     customerName: z.string().min(1),
     quantity: z.number().int().min(1),
-    neededBy: z.string().date(),
+    neededBy: z.iso.date(),
   });
 
   const refuse = (body: unknown): unknown => {

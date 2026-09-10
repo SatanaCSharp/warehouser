@@ -22,25 +22,25 @@ const passwordSchema = z.string().superRefine((password, context) => {
 export const createMemberInputSchema = z.strictObject({
   email: emailSchema,
   password: passwordSchema,
-  roleId: z.string().uuid(),
+  roleId: z.uuid(),
 });
 export const memberSchema = z.strictObject({
-  userId: z.string().uuid(),
+  userId: z.uuid(),
   email: emailSchema,
-  roleId: z.string().uuid(),
+  roleId: z.uuid(),
 });
 export const emailChangeInputSchema = z.strictObject({
   email: emailSchema,
 });
 export const memberEmailSchema = z.strictObject({
-  userId: z.string().uuid(),
+  userId: z.uuid(),
   email: emailSchema,
 });
 export const passwordChangeInputSchema = z.strictObject({
   password: passwordSchema,
 });
 export const memberConfirmationSchema = z.strictObject({
-  userId: z.string().uuid(),
+  userId: z.uuid(),
 });
 
 export type CreateMemberInput = z.infer<typeof createMemberInputSchema>;

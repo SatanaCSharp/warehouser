@@ -574,10 +574,12 @@ const describeProseBounds = (): void => {
       const description = cyrillicOfLength(1000);
       const rejectionId = await insertRejection(seeded, line, { description });
 
-      const [stored] = await queryRows<{ readonly description: string }>(
-        'SELECT description FROM purchase_draft_line_rejections WHERE id = $1',
-        [rejectionId],
-      );
+      const stored = (
+        await queryRows<{ readonly description: string }>(
+          'SELECT description FROM purchase_draft_line_rejections WHERE id = $1',
+          [rejectionId],
+        )
+      ).at(0);
 
       expect(stored?.description).toEqual(description);
     });
@@ -607,12 +609,14 @@ const describeProseBounds = (): void => {
         conformanceNote: note,
       });
 
-      const [stored] = await queryRows<{
-        readonly pre_receipt_conformance_note: string;
-      }>(
-        'SELECT pre_receipt_conformance_note FROM purchase_draft_lines WHERE id = $1',
-        [line.id],
-      );
+      const stored = (
+        await queryRows<{
+          readonly pre_receipt_conformance_note: string;
+        }>(
+          'SELECT pre_receipt_conformance_note FROM purchase_draft_lines WHERE id = $1',
+          [line.id],
+        )
+      ).at(0);
 
       expect(stored?.pre_receipt_conformance_note).toEqual(note);
     });

@@ -1,10 +1,8 @@
 import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import { DiscoveryService, MetadataScanner, Reflector } from '@nestjs/core';
 import { DbTransactionService } from 'shared/database/db-transaction.service';
-import {
-  TRANSACTIONAL_KEY,
-  type TransactionalMetadata,
-} from 'shared/decorators/transactional.decorator';
+import type { TransactionalMetadata } from 'shared/decorators/transactional.decorator';
+import { TRANSACTIONAL_KEY } from 'shared/decorators/transactional.decorator';
 
 type ProviderInstance = Record<string, unknown>;
 type ProviderMethod = (...arguments_: unknown[]) => unknown;
@@ -34,13 +32,14 @@ export class TransactionExecutor implements OnApplicationBootstrap {
       return;
     }
 
-    this.metadataScanner.scanFromPrototype(
-      candidate,
+    // `getAllMethodNames` replaces the deprecated `scanFromPrototype`. It walks the same prototype
+    // chain with the same filtering (own properties, no accessors, no constructor, functions only)
+    // and stops at `Object.prototype`; it returns the names instead of mapping a callback over them.
+    for (const methodName of this.metadataScanner.getAllMethodNames(
       prototype,
-      (methodName) => {
-        this.wrapTransactionalMethod(candidate, methodName);
-      },
-    );
+    )) {
+      this.wrapTransactionalMethod(candidate, methodName);
+    }
   }
 
   private wrapTransactionalMethod(
@@ -53,7 +52,10 @@ export class TransactionExecutor implements OnApplicationBootstrap {
     }
     const originalMethod = candidate as ProviderMethod;
 
-    const metadata = this.reflector.get<TransactionalMetadata>(
+    // `Reflector.get` is typed to return `TResult`, but returns `undefined` for a method that
+    // carries no `@Transactional` metadata — which is most of them. The `| undefined` restores
+    // that case to the type so the early return below stays reachable.
+    const metadata = this.reflector.get<TransactionalMetadata | undefined>(
       TRANSACTIONAL_KEY,
       originalMethod,
     );

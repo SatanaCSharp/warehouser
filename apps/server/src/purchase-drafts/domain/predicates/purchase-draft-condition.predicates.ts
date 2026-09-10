@@ -5,12 +5,12 @@ import keys from 'lodash/keys.js';
 import pickBy from 'lodash/pickBy.js';
 import sum from 'lodash/sum.js';
 import uniq from 'lodash/uniq.js';
-import { type DeliveryMode } from 'purchase-drafts/domain/value-objects/delivery-mode';
+import type { DeliveryMode } from 'purchase-drafts/domain/value-objects/delivery-mode';
+import type { RejectionSource } from 'purchase-drafts/domain/value-objects/line-condition';
 import {
   PreReceiptConformanceVerdict,
   REJECTION_DISPOSITIONS,
   RejectionDisposition,
-  type RejectionSource,
   requiredSourceFor,
 } from 'purchase-drafts/domain/value-objects/line-condition';
 

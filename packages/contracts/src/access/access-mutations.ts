@@ -47,19 +47,19 @@ export const roleWriteSchema = z.strictObject({
   permissionIds: uniquePermissionIdsSchema,
 });
 export const roleDeletionSchema = z.strictObject({
-  replacementRoleId: z.string().uuid().nullable(),
+  replacementRoleId: z.uuid().nullable(),
 });
 export const roleAssignmentSchema = z.strictObject({
-  roleId: z.string().uuid(),
+  roleId: z.uuid(),
 });
 export const managerTransferSchema = z.strictObject({
-  recipientUserId: z.string().uuid(),
-  formerManagerRoleId: z.string().uuid(),
+  recipientUserId: z.uuid(),
+  formerManagerRoleId: z.uuid(),
 });
 export const managerTransferResultSchema = z.strictObject({
-  managerUserId: z.string().uuid(),
-  formerManagerUserId: z.string().uuid(),
-  formerManagerRoleId: z.string().uuid(),
+  managerUserId: z.uuid(),
+  formerManagerUserId: z.uuid(),
+  formerManagerRoleId: z.uuid(),
 });
 
 export {

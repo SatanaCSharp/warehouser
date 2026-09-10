@@ -5,10 +5,8 @@ import {
   mapperLayerFor,
   valueImportersOf,
 } from 'test/architectural/mapper-placement';
-import {
-  type MappingDeclaration,
-  serverMappingDeclarations,
-} from 'test/architectural/mapping-patterns';
+import type { MappingDeclaration } from 'test/architectural/mapping-patterns';
+import { serverMappingDeclarations } from 'test/architectural/mapping-patterns';
 import {
   productionSourceFiles,
   serverPath,

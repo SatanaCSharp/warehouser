@@ -1,10 +1,5 @@
-import {
-  type ArgumentsHost,
-  Catch,
-  type ExceptionFilter,
-  HttpException,
-  Logger,
-} from '@nestjs/common';
+import type { ArgumentsHost, ExceptionFilter } from '@nestjs/common';
+import { Catch, HttpException, Logger } from '@nestjs/common';
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import {
   ApplicationError,
@@ -12,10 +7,8 @@ import {
   SystemError,
 } from '@warehouser/shared-types/errors';
 import { redactSensitiveValues } from 'shared/errors/sensitive-value-redactor';
-import {
-  type ValidatedRequestPayloads,
-  validationFieldCodes,
-} from 'shared/errors/validation-field-codes';
+import type { ValidatedRequestPayloads } from 'shared/errors/validation-field-codes';
+import { validationFieldCodes } from 'shared/errors/validation-field-codes';
 
 interface SafeErrorEnvelope {
   readonly code: string;
@@ -31,8 +24,11 @@ interface ErrorMapping {
 
 type ExceptionLogger = Pick<Logger, 'error' | 'warn'>;
 
+// The value is `| undefined` because the index signature is `string`: a code with no entry here
+// resolves to nothing at runtime, which is precisely the case `internalError` covers in
+// `mapException`. Stating it keeps that fallback a real branch.
 export const applicationErrors: Readonly<
-  Record<string, Omit<ErrorMapping, 'severity'>>
+  Record<string, Omit<ErrorMapping, 'severity'> | undefined>
 > = {
   [ErrorCode.ACCESS_DENIED]: {
     status: 403,
@@ -573,7 +569,7 @@ export const applicationErrors: Readonly<
 };
 
 export const systemErrors: Readonly<
-  Record<string, Omit<ErrorMapping, 'severity'>>
+  Record<string, Omit<ErrorMapping, 'severity'> | undefined>
 > = {
   [ErrorCode.ACCESS_ROLE_DELETION_UNAVAILABLE]: {
     status: 503,

@@ -1,4 +1,5 @@
-import { type AuthRuntime, authRuntime } from 'auth/domain/auth-runtime';
+import type { AuthRuntime } from 'auth/domain/auth-runtime';
+import { authRuntime } from 'auth/domain/auth-runtime';
 import { digestSessionSecret } from 'auth/domain/security/session-secret';
 import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
 

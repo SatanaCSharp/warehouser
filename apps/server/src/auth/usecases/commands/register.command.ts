@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 
 import { assert } from '@warehouser/utils/asserts';
-import { type AuthRuntime, authRuntime } from 'auth/domain/auth-runtime';
+import type { AuthRuntime } from 'auth/domain/auth-runtime';
+import { authRuntime } from 'auth/domain/auth-runtime';
 import { Account } from 'auth/domain/entities/account';
 import { Session } from 'auth/domain/entities/session';
 import { User } from 'auth/domain/entities/user';
@@ -10,10 +11,8 @@ import {
   AuthInvalidInputError,
   AuthRegistrationUnavailableError,
 } from 'auth/domain/errors/auth.errors';
-import {
-  type GeneratedSessionSecret,
-  generateSessionSecret,
-} from 'auth/domain/security/session-secret';
+import type { GeneratedSessionSecret } from 'auth/domain/security/session-secret';
+import { generateSessionSecret } from 'auth/domain/security/session-secret';
 import { AuthRegistrationService } from 'auth/domain/services/auth-registration.service';
 import { SessionId } from 'auth/domain/value-objects/identity-id';
 import { SessionDigest } from 'auth/domain/value-objects/session-digest';

@@ -1,8 +1,5 @@
-import {
-  createMemoryHistory,
-  createRouter,
-  Router,
-} from '@tanstack/react-router';
+import type { Router } from '@tanstack/react-router';
+import { createMemoryHistory, createRouter } from '@tanstack/react-router';
 import { accessRoute } from 'modules/access/route';
 import { loginRoute } from 'modules/auth/login/route';
 import { signUpRoute } from 'modules/auth/sign-up/route';

@@ -1,7 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, sep } from 'node:path';
 
-import { Project, type SourceFile } from 'ts-morph';
+import type { SourceFile } from 'ts-morph';
+import { Project } from 'ts-morph';
 
 /** The `apps/server` directory, found by walking up from this file until the package manifest that
  * names the server appears. Resolved rather than hard-coded relative to `import.meta.dirname` so the specs

@@ -19,14 +19,22 @@ export const uiConfig: OxlintConfig = mergeOxlintConfig(baseConfig, {
   // too — oxlint has no `react-hooks/` prefix, so `rules-of-hooks` and `exhaustive-deps` are named
   // `react/…` below. `jsx-a11y` covers both `jsx-a11y` and `jsx-a11y-x`; `import` covers `import`
   // and `import-x`.
+  //
+  // `import`, `promise` and `vitest` are in the baseline now and are repeated here because the
+  // merge REPLACES this field rather than unioning it — dropping one of them would silently switch
+  // that plugin off for `apps/web` alone. `react-perf` is this layer's own addition; its four rules
+  // are all `perf`, so the plugin costs nothing until they are named below.
   plugins: [
     'eslint',
     'typescript',
     'unicorn',
     'oxc',
+    'import',
+    'promise',
+    'vitest',
     'react',
     'jsx-a11y',
-    'import',
+    'react-perf',
   ],
 
   env: { browser: true },
@@ -97,6 +105,19 @@ export const uiConfig: OxlintConfig = mergeOxlintConfig(baseConfig, {
     'react/no-children-prop': 'warn',
     'react/no-danger-with-children': 'error',
     'react/no-unstable-nested-components': 'warn',
+    // ---- Added after the ESLint migration.
+    //
+    // `only-export-components` is the successor to `react-refresh/only-export-components`, and it
+    // is a Vite concern rather than a React one: a module that exports both a component and a plain
+    // helper cannot be hot-replaced, so every edit to it does a full reload and discards the local
+    // state the developer was in the middle of reproducing. One finding —
+    // `shared/layouts/LanguageSelector.tsx`, which exports `resolveBaseLanguage` beside the
+    // component. `warn` because splitting the file is a judgement call, not a defect.
+    'react/only-export-components': 'warn',
+    // A context `value={{ a, b }}` allocates a new object on every parent render and so re-renders
+    // every consumer, unconditionally. It is invisible in review and it is the single most common
+    // way a React context turns into a performance problem. Zero findings today.
+    'react/jsx-no-constructed-context-values': 'warn',
     // LOST: `react/no-deprecated`. oxlint implements no blanket "this React API is deprecated"
     // rule; these five are the narrower checks it does have, and between them they cover the
     // legacy-API half of what the old rule caught. The lifecycle half — `componentWillMount` and
@@ -132,6 +153,60 @@ export const uiConfig: OxlintConfig = mergeOxlintConfig(baseConfig, {
     // remembered across a refetch. See the comment at the effect and
     // docs/change-requests/workspace-warehouse/spec.md CR-RG-03.
     'react/set-state-in-effect': 'off',
+
+    // ---- `typescript/no-unnecessary-condition` is OFF for this application. The baseline runs it
+    // (`apps/server` and `packages/*` are clean under it), but in `apps/web` it is unsound, and the
+    // reason is one compiler option rather than any of the individual findings.
+    //
+    // `noUncheckedIndexedAccess` is not enabled anywhere in this repository, so indexing an array
+    // or a record yields `T` rather than `T | undefined`. The rule believes that type. This
+    // application does not — it guards index access, correctly — so the rule reads every one of
+    // those guards as dead code and would have them deleted.
+    //
+    // All eight findings left after the honest ones were fixed are that same false positive, and
+    // every one of them is load-bearing at runtime:
+    //
+    //   - `RoleDirectory` / `WorkspaceRoleDirectory` / `WarehousesTab`: `roles.find(…) ?? roles[0]`
+    //     is `undefined` when the list is empty, so `!selectedRole ? null : …` is what keeps an
+    //     empty Workspace from rendering an editor over nothing.
+    //   - `PurchaseDraftRefusalAlert`: `codes[code]` is `undefined` for a code the map does not
+    //     carry, and `validationKey === undefined` is the unknown-code fallback sentence.
+    //   - `test/setup.ts`: `localeResponses[path]` is `undefined` for a path no fixture answers,
+    //     and the ternary that check guards is the 404 branch the mock exists to serve.
+    //   - `loader-permission-parity.spec.ts`: `NAMED_SETS[trimmed]` is the lookup-miss guard.
+    //   - `module-boundaries.spec.ts`: already annotated `readonly string[] | undefined` by hand;
+    //     the rule reads the `as Record<…>` cast beside it instead of the annotation.
+    //   - `readiness-removal.spec.ts`: a named capture group that did not participate is
+    //     `undefined`, which `RegExpExecArray['groups']` does not express.
+    //
+    // Taking the rule's advice at any of those sites injects a crash. Revisit if
+    // `noUncheckedIndexedAccess` is ever turned on — at that point the rule becomes sound here and
+    // this entry should go.
+    'typescript/no-unnecessary-condition': 'off',
+
+    // ---- react-perf. The plugin is listed above so that turning these on is a one-word change,
+    // but all four are OFF, and the measurement is why.
+    //
+    // The idea is the prop-level counterpart to `jsx-no-constructed-context-values`: an object,
+    // array, function or element written inline as a prop is a new identity on every render, which
+    // defeats `React.memo` on the child. In this application that describes ordinary, correct code.
+    // Measured on `apps/web/src`: 168 `jsx-no-new-function-as-prop`, 56 `jsx-no-new-array-as-prop`,
+    // 43 `jsx-no-new-object-as-prop`, 31 `jsx-no-jsx-as-prop` — 298 findings.
+    //
+    // They are not a backlog. The dominant shape is React Hook Form's own API —
+    // `<Controller render={({ field, fieldState }) => …} />`, which cannot be written any other way
+    // — followed by every inline `onPress`/`onChange` handler in the tree. Nothing here is memoised
+    // on the receiving side, so hoisting them would add `useCallback` noise for no measured gain.
+    //
+    // The cost of leaving them at `warn` is not cosmetic: `.husky/pre-commit` runs
+    // `oxlint --type-aware --max-warnings=0` on staged files, so 298 warnings spread across the
+    // component tree would make most of `apps/web` uncommittable.
+    //
+    // Turn them on per-directory, if ever, around components that are actually memoised.
+    'react-perf/jsx-no-jsx-as-prop': 'off',
+    'react-perf/jsx-no-new-array-as-prop': 'off',
+    'react-perf/jsx-no-new-function-as-prop': 'off',
+    'react-perf/jsx-no-new-object-as-prop': 'off',
 
     // ---- jsx-a11y. All 33 rules map one for one, but oxlint files every one of them under
     //      `correctness`, so enabling the plugin would make them all errors. This application runs

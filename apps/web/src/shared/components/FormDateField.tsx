@@ -14,7 +14,7 @@ import { Conditional } from 'shared/components/Conditional';
 
 /**
  * The `YYYY-MM-DD` shape every date-valued contract field carries
- * (`z.string().date()`), and the only one `parseDate` accepts. A value that
+ * (`z.iso.date()`), and the only one `parseDate` accepts. A value that
  * isn't one — the empty string a blank field holds, or anything a server sent
  * in another shape — resolves to "no date" rather than throwing inside render.
  */

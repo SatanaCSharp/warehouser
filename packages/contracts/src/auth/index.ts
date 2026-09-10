@@ -75,7 +75,7 @@ export const registrationInputSchema = authCredentialsSchema.extend({
 
 export const userSchema = z
   .object({
-    id: z.string().uuid(),
+    id: z.uuid(),
   })
   .strict();
 
@@ -87,8 +87,8 @@ export const authenticatedUserSchema = z
 
 export const accessProjectionSchema = z
   .object({
-    warehouseId: z.string().uuid(),
-    roleId: z.string().uuid(),
+    warehouseId: z.uuid(),
+    roleId: z.uuid(),
     roleKind: z.enum(['custom', 'warehouse_manager']),
     permissionIds: z.array(
       z
@@ -101,7 +101,7 @@ export const accessProjectionSchema = z
     // (AC-12, AC-12a). Always `null` at registration — the Warehouse was
     // created by the same outcome — but the field is required, so the shell
     // reads one shape wherever the projection comes from.
-    archivedAt: z.string().datetime().nullable(),
+    archivedAt: z.iso.datetime().nullable(),
   })
   .strict();
 
@@ -116,7 +116,7 @@ export const registrationResultSchema = z
     access: accessProjectionSchema,
     // AC-03b — the sole Warehouse membership registration creates is the
     // effective selection with no one choosing, so this is never absent.
-    effectiveWarehouseId: z.string().uuid(),
+    effectiveWarehouseId: z.uuid(),
   })
   .strict();
 

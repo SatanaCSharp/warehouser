@@ -13,11 +13,8 @@ import type {
   AuthenticatedUser,
   RegistrationResult,
 } from '@warehouser/contracts/auth';
-import {
-  AuthCookie,
-  type AuthCookieResponse,
-  readSessionCookie,
-} from 'auth/rest/auth-cookie';
+import type { AuthCookieResponse } from 'auth/rest/auth-cookie';
+import { AuthCookie, readSessionCookie } from 'auth/rest/auth-cookie';
 import { AuthCredentialsDto } from 'auth/rest/dtos/auth-credentials.dto';
 import { RegistrationDto } from 'auth/rest/dtos/registration.dto';
 import { RegisterCommand } from 'auth/usecases/commands/register.command';

@@ -25,6 +25,7 @@ import { join } from 'node:path';
 
 import { ErrorCode, PermissionId } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
+import type { EndingConditionSubmission } from 'purchase-drafts/domain/services/arrival-inspection.service';
 import {
   ArrivalInspectionService,
   assertConditionSplit,
@@ -32,7 +33,6 @@ import {
   assertRejectionCapability,
   deriveAcceptedQuantity,
   deriveRejectedQuantity,
-  type EndingConditionSubmission,
 } from 'purchase-drafts/domain/services/arrival-inspection.service';
 import { DeliveryMode } from 'purchase-drafts/domain/value-objects/delivery-mode';
 import {

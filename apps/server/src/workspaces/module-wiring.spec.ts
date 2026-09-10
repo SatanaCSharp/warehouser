@@ -11,11 +11,18 @@ import { WorkspacesUsecaseModule } from 'workspaces/usecases/usecase.module';
 
 type Constructor = new (...args: never[]) => unknown;
 
+// `Reflect.getMetadata` resolves to `undefined` for a key no decorator wrote, and
+// `design:paramtypes` can hold `undefined` entries for a parameter whose type erased to nothing.
+// Both are stated so the guards that handle them stay guards.
 const metadata = (key: string, target: unknown): Constructor[] =>
-  (Reflect.getMetadata(key, target as object) as Constructor[]) ?? [];
+  (Reflect.getMetadata(key, target as object) as Constructor[] | undefined) ??
+  [];
 
-const dependenciesOf = (provider: Constructor): Constructor[] =>
-  (Reflect.getMetadata('design:paramtypes', provider) as Constructor[]) ?? [];
+const dependenciesOf = (
+  provider: Constructor,
+): Array<Constructor | undefined> =>
+  (Reflect.getMetadata('design:paramtypes', provider) as
+    Array<Constructor | undefined> | undefined) ?? [];
 
 // A dependency Nest cannot resolve only surfaces when the application boots,
 // which needs a database this tier does not have. This suite proves the same

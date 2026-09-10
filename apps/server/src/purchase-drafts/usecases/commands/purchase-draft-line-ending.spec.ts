@@ -7,10 +7,8 @@ import type { EndingAllocationInput } from 'purchase-drafts/usecases/commands/co
 import { ConfirmPurchaseDraftLineArrivalCommand } from 'purchase-drafts/usecases/commands/confirm-purchase-draft-line-arrival.command';
 import { RecordPurchaseDraftLineDeliveryCommand } from 'purchase-drafts/usecases/commands/record-purchase-draft-line-delivery.command';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
-import {
-  TRANSACTIONAL_KEY,
-  type TransactionalMetadata,
-} from 'shared/decorators/transactional.decorator';
+import type { TransactionalMetadata } from 'shared/decorators/transactional.decorator';
+import { TRANSACTIONAL_KEY } from 'shared/decorators/transactional.decorator';
 import type { RejectionReasonEntity } from 'shared/domain/entities/rejection-reason.entity';
 import type {
   ArrivalConfirmationRepository,

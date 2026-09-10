@@ -43,7 +43,25 @@ export const baseConfig: OxlintConfig = {
   // more plugins (`apps/web`) states the whole list, and one that wants exactly these states
   // nothing. Under `extends` this had to be `plugins: []` in every child, because oxlint unions a
   // declared list with the parent's and re-adds its own defaults when the key is absent.
-  plugins: ['eslint', 'typescript', 'unicorn', 'oxc'],
+  //
+  // `import`, `promise` and `vitest` are the three added after the migration. All three used to be
+  // reachable only from `apps/web` (`import`) or from nowhere at all, which meant `apps/server` —
+  // the half of the repository with a DI graph and the larger test suite — ran neither the
+  // cycle check nor any test-framework rule. Each one's rule severities are set below; a plugin
+  // turns its whole `correctness` surface into errors, so the ones that misread this repository's
+  // idioms are named `off` there rather than left to fire.
+  //
+  // `plugins` is REPLACED, never unioned, by `mergeOxlintConfig` — so `./ui.ts`, which states its
+  // own list, has to repeat all seven of these. It does.
+  plugins: [
+    'eslint',
+    'typescript',
+    'unicorn',
+    'oxc',
+    'import',
+    'promise',
+    'vitest',
+  ],
 
   // Two ESLint plugins survive the migration because oxlint implements nothing equivalent.
   //
@@ -257,6 +275,142 @@ export const baseConfig: OxlintConfig = {
     'prefer-template': 'warn',
     'preserve-caught-error': 'warn',
     'require-unicode-regexp': 'warn',
+
+    // ======================================================================================
+    // Added after the ESLint migration. Everything above this line is a rule the ESLint
+    // config also ran; everything below is new, and each entry records what it was measured
+    // at on this tree when it was adopted.
+    // ======================================================================================
+
+    // ---- ESM and string hygiene. Both measured at zero findings repository-wide, so they are
+    // regression guards rather than cleanups.
+    //
+    // `prefer-node-protocol` matters because `apps/server` is ESM now: a bare `'crypto'` resolves
+    // to the builtin only by the resolver's own precedence and loses to a userland package of that
+    // name if one ever enters the graph. All ~40 builtin imports already write `node:`.
+    'unicorn/prefer-node-protocol': 'error',
+    // A `'${x}'` in single quotes is not interpolated, and Prettier's `singleQuote: true` plus the
+    // volume of i18n message strings here is exactly the shape that produces one.
+    'no-template-curly-in-string': 'warn',
+
+    // ---- Type-aware additions. These run only under `--type-aware`, which every `lint` script in
+    // the repository passes.
+    //
+    // `no-deprecated` is the one with live findings: 146 in `packages/contracts` (Zod v3 APIs that
+    // v4 deprecated), 8 in `apps/web` (`React.FormEvent`, which React's own types now say does not
+    // exist, and `ZodTypeAny`), 5 in `apps/server` (including `scanFromPrototype`, a Nest API that
+    // will not survive the next major). NOTE: `packages/*` lint with `--max-warnings=0`, so this is
+    // fatal in `packages/contracts` until that migration is done — see the note in
+    // `packages/contracts/oxlint.config.ts`.
+    'typescript/no-deprecated': 'warn',
+    // Reports conditions that provably cannot change the outcome — which is where dead defensive
+    // code and genuinely wrong narrowing both hide. Several findings here are
+    // "the types have no overlap", which is a defect rather than a nit. 24 in `apps/server`,
+    // 48 in `apps/web`, 2 in `packages/contracts`. oxlint files it under `nursery`; it is named
+    // explicitly, which enables it regardless of the category being off.
+    'typescript/no-unnecessary-condition': 'warn',
+    // `||` on a `number` or a `string` swallows `0` and `''` — in a warehouse domain that is a
+    // quantity of zero silently becoming a default. 1 finding.
+    'typescript/prefer-nullish-coalescing': 'warn',
+
+    // ---- Type-only imports. `separate-type-imports` (the default fix style) is deliberate: it
+    // produces the top-level `import type { … }` form, which is what the 446 existing type imports
+    // in `apps/server` already use and what `import/consistent-type-specifier-style` below also
+    // wants. The two rules would fight if this were `inline-type-imports`.
+    //
+    // `disallowTypeAnnotations` defaults to `true`, which bans `typeof import('…')` in a type
+    // position. That form is not optional in a Vitest module mock: `vi.mock` is hoisted above the
+    // import block, so the factory types its own `importOriginal<typeof import('…')>()` inline —
+    // a top-level import of the module being mocked would both defeat the hoist and be the very
+    // thing the mock replaces. Ten spec files across `apps/web` do this, all correctly.
+    //
+    // TURNED OFF FOR `apps/server` in `./service.ts` — see the reasoning there. It is a runtime
+    // hazard under `emitDecoratorMetadata`, not a style preference.
+    'typescript/consistent-type-imports': [
+      'error',
+      {
+        prefer: 'type-imports',
+        fixStyle: 'separate-type-imports',
+        disallowTypeAnnotations: false,
+      },
+    ],
+
+    // ---- import. The plugin now runs everywhere rather than only in `apps/web`.
+    //
+    // `no-cycle` is the reason: in a NestJS application a circular import is the classic cause of
+    // an `undefined` provider at injection time, and the failure surfaces far from the cycle.
+    // `apps/server` is the half of the repository that has a DI graph and it had no cycle check at
+    // all. Measured at zero cycles in every package, so it is a guard rather than a cleanup.
+    // `apps/web` already ran it at `warn`; `./ui.ts` keeps that severity.
+    'import/no-cycle': 'error',
+    'import/no-duplicates': 'warn',
+    'import/consistent-type-specifier-style': 'warn',
+
+    // ---- promise. Thirteen of the plugin's sixteen rules are on and all thirteen are at zero
+    // findings across `apps/*` and `packages/*` — this codebase is uniformly async/await, so they
+    // are guards rather than cleanups. `no-callback-in-promise` and `no-new-statics` are
+    // `correctness` and come on with the plugin itself; the rest are named because their categories
+    // are off.
+    'promise/always-return': 'warn',
+    'promise/catch-or-return': 'warn',
+    'promise/no-multiple-resolved': 'warn',
+    'promise/no-nesting': 'warn',
+    'promise/no-promise-in-callback': 'warn',
+    'promise/no-return-in-finally': 'warn',
+    'promise/no-return-wrap': 'warn',
+    'promise/param-names': 'warn',
+    'promise/prefer-catch': 'warn',
+    'promise/spec-only': 'warn',
+    'promise/valid-params': 'warn',
+
+    // The three that are OFF, and what each one actually found here. All three are `style`: they
+    // express a preference for async/await over the promise primitives, and every finding on this
+    // tree is at a site where the primitive is the correct tool and `await` is not available.
+    //
+    // `avoid-new` — 37 findings, all of them the one thing `new Promise` exists for: adapting a
+    // callback-only API. `shared/domain/security/password-hashing.ts` wraps node's `scrypt`,
+    // `packages/utils/src/async/sleep.ts` wraps `setTimeout`, and `apps/web`'s `router.spec.tsx`
+    // builds test deferreds.
+    'promise/avoid-new': 'off',
+    // `prefer-await-to-callbacks` — 20 findings, and they are the same executors `avoid-new` flags
+    // plus `shared/database/db-transaction.service.ts`, whose *own* public API takes a callback
+    // (`runInTransaction(cb)`). There is nothing to await.
+    'promise/prefer-await-to-callbacks': 'off',
+    // `prefer-await-to-then` — 21 findings at module top level in non-async modules, where `await`
+    // is not reachable: `apps/web/src/i18n.ts` does
+    // `void i18nReady.then(() => syncDocumentLanguage(…))` as a side effect of loading the module.
+    'promise/prefer-await-to-then': 'off',
+
+    // ---- vitest. The plugin is on for its `correctness` tier, which is where the rules worth
+    // having live: `no-focused-tests` in particular closes the largest blind spot in the previous
+    // setup — a committed `it.only` reduced a spec file to one test and the gate still reported
+    // green. It, `no-disabled-tests`, `no-standalone-expect`, `hoisted-apis-on-top`,
+    // `no-conditional-tests`, `prefer-snapshot-hint`, `require-awaited-expect-poll` and
+    // `require-local-test-context-for-concurrent-snapshots` are all at zero findings and stay on.
+    //
+    // The six below are `correctness` too, so they arrive as errors, and every one of them misreads
+    // an idiom this repository uses on purpose. Each is named with what it actually found.
+    //
+    // `require-mock-type-parameters`: 335 findings in `apps/server` and 209 in `apps/web`. Noise,
+    // and the reason this plugin must be adopted rule-by-rule rather than wholesale.
+    'vitest/require-mock-type-parameters': 'off',
+    // `require-to-throw-message`: 23 findings. The suites here assert on the error *object*
+    // (`rejects.toMatchObject({ code })`), which is stronger than a message substring.
+    'vitest/require-to-throw-message': 'off',
+    // `expect-expect` and `valid-describe-callback` share one root cause: the integration suites
+    // pass a named function as the block body — `it('… (AC-11)', verifyCreateRenameArchiveRestore)`
+    // and `describe('… (AC-33)', registerMembersTests)` — and neither rule follows the identifier.
+    // 14 and 7 findings respectively, all false.
+    'vitest/expect-expect': 'off',
+    'vitest/valid-describe-callback': 'off',
+    // `valid-title`: 2 findings, both `describe(DbTransactionService.name, …)`. A computed title
+    // that tracks the class it covers is better than a literal that can drift from it.
+    'vitest/valid-title': 'off',
+    // `no-conditional-expect`: 3 findings, all deliberate. `rename-workspace.command.integration.
+    // spec.ts` loops over invalid names inside a try/catch that throws `expected rejection did not
+    // occur` in the try, so the assertions cannot be skipped; `home/route.spec.tsx` swallows a
+    // `waitFor` rejection on purpose to test the *unresolved* window and asserts after it.
+    'vitest/no-conditional-expect': 'off',
   },
 
   overrides: [

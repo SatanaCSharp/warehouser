@@ -1,8 +1,5 @@
-import {
-  type CanActivate,
-  type ExecutionContext,
-  Injectable,
-} from '@nestjs/common';
+import type { CanActivate, ExecutionContext } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { WorkspacePermissionId } from '@warehouser/shared-types/enums';
 import { workspaceDeniedError } from 'shared/access/access-denial.errors';
@@ -24,8 +21,11 @@ export class WorkspaceAccessGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<WorkspaceAccessRequest>();
+    // `getAllAndOverride` is typed to return `TResult`, but returns `undefined` when no target
+    // carries the metadata key — an undecorated handler. The `| undefined` restores that case to
+    // the type so the check below stays a real check rather than dead code.
     const permissionIds = this.reflector.getAllAndOverride<
-      WorkspacePermissionId[]
+      WorkspacePermissionId[] | undefined
     >(REQUIRED_WORKSPACE_PERMISSION_KEY, [
       context.getHandler(),
       context.getClass(),

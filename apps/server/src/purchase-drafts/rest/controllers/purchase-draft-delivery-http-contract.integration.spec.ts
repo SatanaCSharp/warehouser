@@ -563,8 +563,9 @@ describe('purchase-drafts delivery HTTP contract', () => {
 
       expect(status).toBe(200);
       expect(purchaseDraftDetailSchema.safeParse(body).success).toBe(true);
-      const line = (body as { lines: { customerDestination: unknown }[] })
-        .lines[0];
+      const line = (
+        body as { lines: { customerDestination: unknown }[] }
+      ).lines.at(0);
       expect(line?.customerDestination).toEqual({
         customerDeliveryAddressId: addressId,
         customerId,

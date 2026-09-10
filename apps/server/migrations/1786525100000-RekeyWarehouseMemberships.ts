@@ -1,10 +1,5 @@
-import {
-  type MigrationInterface,
-  type QueryRunner,
-  TableColumn,
-  TableForeignKey,
-  TableIndex,
-} from 'typeorm';
+import type { MigrationInterface, QueryRunner } from 'typeorm';
+import { TableColumn, TableForeignKey, TableIndex } from 'typeorm';
 
 // The membership key changes from (User) to (User, Warehouse), which no existing row can be
 // migrated into or out of automatically. spec.md §1 (fourth boundary) authorizes the rebuild;

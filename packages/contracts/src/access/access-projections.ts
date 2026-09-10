@@ -7,16 +7,16 @@ export const permissionIdSchema = z
 const roleKindSchema = z.enum(['custom', 'warehouse_manager']);
 
 export const accessProjectionSchema = z.strictObject({
-  warehouseId: z.string().uuid(),
-  roleId: z.string().uuid(),
+  warehouseId: z.uuid(),
+  roleId: z.uuid(),
   roleKind: roleKindSchema,
   permissionIds: z.array(permissionIdSchema),
   // Marks the named Warehouse as archived so an archived-tolerant read (AC-12a) can present that
   // state, rather than the read silently looking identical to a live Warehouse.
-  archivedAt: z.string().datetime().nullable(),
+  archivedAt: z.iso.datetime().nullable(),
 });
 export const roleSchema = z.strictObject({
-  id: z.string().uuid(),
+  id: z.uuid(),
   name: z.string().min(1).max(100),
   kind: roleKindSchema,
   permissionIds: z.array(permissionIdSchema),
@@ -28,10 +28,10 @@ export const permissionSchema = z.strictObject({
   kind: z.enum(['assignable', 'reserved']),
 });
 export const memberSchema = z.strictObject({
-  userId: z.string().uuid(),
-  roleId: z.string().uuid(),
+  userId: z.uuid(),
+  roleId: z.uuid(),
   roleKind: roleKindSchema,
-  email: z.string().email().max(254).optional(),
+  email: z.email().max(254).optional(),
 });
 
 const pageShape = {

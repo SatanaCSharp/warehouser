@@ -7,6 +7,7 @@ import { UserEntity } from 'shared/domain/entities/user.entity';
 import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
 import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
 import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
+import type { InitialAccessPersistenceInput } from 'shared/domain/repositories/access-provisioning.repository';
 // `AccessProvisioningRepository` exists today, but its old shape inserts a
 // `warehouses` row itself and its `managerMembership` input carries no
 // `workspaceId` (T12/sad.md §4: Warehouse-row creation moves out of
@@ -14,10 +15,7 @@ import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 // and learns the owning Workspace only by reading the Warehouse it is
 // handed). This spec is written against the *target* shape, so it is RED
 // against the current production type until the implementer reshapes it.
-import {
-  AccessProvisioningRepository,
-  type InitialAccessPersistenceInput,
-} from 'shared/domain/repositories/access-provisioning.repository';
+import { AccessProvisioningRepository } from 'shared/domain/repositories/access-provisioning.repository';
 import {
   buildWarehouse,
   buildWorkspace,

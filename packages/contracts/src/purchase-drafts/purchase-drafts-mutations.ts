@@ -19,7 +19,7 @@ import { z } from 'zod';
 // openapi.yaml `PurchaseDraftLineLinkCreate` — a link states how much of the line is intended for a
 // Customer Order (AC-10, AC-11a).
 export const purchaseDraftLineLinkCreateSchema = z.strictObject({
-  customerOrderId: z.string().uuid(),
+  customerOrderId: z.uuid(),
   statedQuantity: z.number().int().min(1),
 });
 
@@ -43,7 +43,7 @@ const maxAllocationsPerEndingLine = 50;
 // openapi.yaml `PurchaseDraftLineCreate` — one Item, quantity, optional Pre-receipt Requirement and
 // optional links (AC-10, AC-11, AC-12, AC-13).
 export const purchaseDraftLineCreateSchema = z.strictObject({
-  itemId: z.string().uuid(),
+  itemId: z.uuid(),
   orderedQuantity: z.number().int().min(1),
   packagingTypeId: packagingTypeIdSchema.nullable().optional(),
   valueAddingNote: z.string().min(1).nullable().optional(),
@@ -66,7 +66,7 @@ export const purchaseDraftLineCreateSchema = z.strictObject({
 // no frozen draft at all.
 export const purchaseDraftLineUpdateSchema = z
   .strictObject({
-    itemId: z.string().uuid().optional(),
+    itemId: z.uuid().optional(),
     orderedQuantity: z.number().int().min(1).optional(),
     packagingTypeId: packagingTypeIdSchema.nullable().optional(),
     valueAddingNote: z.string().min(1).nullable().optional(),
@@ -76,10 +76,11 @@ export const purchaseDraftLineUpdateSchema = z
     // identifier this property could hold, so naming it here is structurally impossible; AC-14's
     // refusal is about the member's submitted intent and is bound to this field, and is decided by
     // the command rather than here.
-    customerDeliveryAddressId: z.string().uuid().nullable().optional(),
+    customerDeliveryAddressId: z.uuid().nullable().optional(),
   })
   // See `rejectionAmendSchema`: a present-but-`undefined` property must not satisfy "at least one".
   .refine(
+    // eslint-disable-next-line typescript/no-unnecessary-condition -- the comparison is load-bearing at runtime and only looks redundant to the type checker: `Object.values` widens away the `| undefined` that each optional property carries, so the rule concludes the operands cannot overlap. The comment above says why the check has to stay.
     (value) => Object.values(value).some((field) => field !== undefined),
     {
       message: 'At least one Purchase Draft Line field must be present',
@@ -114,14 +115,14 @@ export const purchaseDraftLineUpdateSchema = z
 
 // openapi.yaml `PurchaseDraftCreate` — state, attribution and time are not inputs (AC-10, AC-10a).
 export const purchaseDraftCreateSchema = z.strictObject({
-  expectedArrivalDate: z.string().date().nullable().optional(),
+  expectedArrivalDate: z.iso.date().nullable().optional(),
   lines: z.array(purchaseDraftLineCreateSchema).max(maxDraftLines),
 });
 
 // openapi.yaml `PurchaseDraftRevise` — the one draft-level field a member may still change while the
 // draft is in the Draft state; `null` clears it.
 export const purchaseDraftReviseSchema = z.strictObject({
-  expectedArrivalDate: z.string().date().nullable(),
+  expectedArrivalDate: z.iso.date().nullable(),
 });
 
 // `GET .../purchase-drafts` query parameters (openapi.yaml `listPurchaseDrafts`) — `state` narrows
@@ -142,7 +143,7 @@ export const purchaseDraftLineListQuerySchema = z.strictObject({
 // it (AC-18), which is what makes "an Allocation names a Customer Order its line is actually linked
 // to" provable by the reference itself rather than re-checked in application code.
 export const endingAllocationCreateSchema = z.strictObject({
-  purchaseDraftLineLinkId: z.string().uuid(),
+  purchaseDraftLineLinkId: z.uuid(),
   allocatedQuantity: z.number().int().min(1),
 });
 
@@ -255,6 +256,7 @@ export const rejectionAmendSchema = z
   // property from the parsed data, so `{ description: undefined }` would validate here and 400 at
   // the server. openapi.yaml `minProperties: 1` means a field with a value.
   .refine(
+    // eslint-disable-next-line typescript/no-unnecessary-condition -- see the identical directive on `lineAmendSchema` above: `Object.values` widens away each optional property's `| undefined`, so the type checker cannot see the case the comment above describes.
     (value) => Object.values(value).some((field) => field !== undefined),
     {
       message: 'At least one Rejection amendment field must be present',
@@ -265,11 +267,11 @@ export const rejectionAmendSchema = z
 // Rejection: the Reason, quantity and Source are deliberately absent, because those are the cause
 // `REJECTIONS:WATCH` gates, and `REJECTIONS:UPDATE` does not imply it (T13).
 export const rejectionAmendmentSchema = z.strictObject({
-  id: z.string().uuid(),
+  id: z.uuid(),
   description: storedProseSchema.nullable(),
   disposition: rejectionDispositionSchema,
-  amendedByUserId: z.string().uuid(),
-  amendedAt: z.string().datetime(),
+  amendedByUserId: z.uuid(),
+  amendedAt: z.iso.datetime(),
 });
 
 // openapi.yaml `PurchaseDraftLineArrival` — what arrived at the dock on **one Via Warehouse line**

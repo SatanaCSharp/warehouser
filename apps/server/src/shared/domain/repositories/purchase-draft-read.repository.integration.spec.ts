@@ -524,7 +524,7 @@ const registerReadDraftDriftDataTests = (): void => {
     });
     // AC-16 — `lastChangedAt` is what dates the drift statement the frame draws ("Cancelled on
     // 24 Aug", `F0SpRx.png`). It travels as UTC ISO 8601 with a `Z`, not with the session's own
-    // offset, because `z.string().datetime()` admits nothing else.
+    // offset, because `z.iso.datetime()` admits nothing else.
     expect(cancelledLink?.current).toEqual({
       quantity: 10,
       neededBy: '2026-09-30',
@@ -1034,7 +1034,7 @@ const registerExpectedArrivalDateTests = (): void => {
   // so without the SQL cast the driver decodes it into a JS `Date`: against node-postgres that is
   // midnight in the server's own timezone, and at UTC+2 `2026-09-25` leaves the API as
   // `"2026-09-24T22:00:00.000Z"` — the wrong calendar day *and* the wrong shape, which
-  // `purchaseDraftSummarySchema`'s `z.string().date()` refuses. Because the list endpoint validates
+  // `purchaseDraftSummarySchema`'s `z.iso.date()` refuses. Because the list endpoint validates
   // the whole array, one such draft blanks the entire screen.
   //
   // What this test actually pins is the *shape*: `typeof === 'string'`, on both reads. It runs on

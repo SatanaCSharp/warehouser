@@ -369,7 +369,7 @@ interface LineListEntryRawRow<TLine> {
 // `getRawMany`/`getRawOne`, which bypass the entity's `@Column('date')` mapping: the pg driver
 // hands back a JS `Date` built at midnight in the *server's* timezone, which serializes as the
 // previous calendar day anywhere east of UTC (`2026-09-25` leaves as `2026-09-24T22:00:00.000Z` at
-// UTC+2) and is refused by the contract's `z.string().date()`. Casting in SQL keeps the
+// UTC+2) and is refused by the contract's `z.iso.date()`. Casting in SQL keeps the
 // Warehouse-neutral calendar day the column actually holds, whatever the server's clock is set to
 // — the idiom `consolidated-demand.repository.ts` already uses for `MIN(demand.neededBy)::text`.
 // The parentheses are load-bearing: TypeORM only rewrites `alias.property` when it is terminated by
@@ -380,7 +380,7 @@ const EXPECTED_ARRIVAL_DATE_SELECT = '(draft.expectedArrivalDate)::text';
 // Every `timestamptz` this file embeds as text inside `json_build_object` has to be rendered here
 // rather than left to the pg driver: inside the JSON builder the value never reaches the driver's
 // Date decoding, and PostgreSQL renders it with the session's own UTC offset
-// (`2026-09-04T15:09:25.589+00:00`), which `z.string().datetime()` refuses — it accepts the `Z`
+// (`2026-09-04T15:09:25.589+00:00`), which `z.iso.datetime()` refuses — it accepts the `Z`
 // form alone. A timestamp that travels as a plain column is decoded and serialized by the driver
 // and needs none of this.
 //

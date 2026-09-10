@@ -398,7 +398,7 @@ const constructsAnEntity = (
     }
 
     if (Node.isCallExpression(node) && calleeName(node) === 'create') {
-      const [target] = node.getArguments();
+      const target = node.getArguments().at(0);
 
       if (target !== undefined && target.getText().endsWith('Entity')) {
         constructs = true;
@@ -432,6 +432,11 @@ const constructsAnEntity = (
     inspect(node);
   });
 
+  // Both flags are set only from inside `inspect`, and TypeScript's control-flow analysis does
+  // not follow assignments made in a nested function back to the outer scope: it still holds
+  // `constructs` at its initializer's `false` here. The `inspect(body)` call and the
+  // `forEachDescendant` pass above are what set them.
+  // eslint-disable-next-line typescript/no-unnecessary-condition -- see the note above
   return constructs && fed;
 };
 

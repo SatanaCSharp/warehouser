@@ -5,10 +5,10 @@ import {
   workspaceRoleNameConflictError,
 } from 'access/domain/errors/workspace-access.errors';
 import { isProtectedWorkspaceOwnerRoleKind } from 'access/domain/predicates/workspace-authority.predicates';
+import type { WorkspaceRoleWriteProjection } from 'access/usecases/commands/create-workspace-role.command';
 import {
   assertAssignableWorkspacePermissions,
   validateWorkspaceRoleName,
-  type WorkspaceRoleWriteProjection,
 } from 'access/usecases/commands/create-workspace-role.command';
 import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';

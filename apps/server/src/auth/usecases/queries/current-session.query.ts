@@ -1,4 +1,5 @@
-import { type AuthRuntime, authRuntime } from 'auth/domain/auth-runtime';
+import type { AuthRuntime } from 'auth/domain/auth-runtime';
+import { authRuntime } from 'auth/domain/auth-runtime';
 import { toAuthenticatedCurrentUser } from 'auth/domain/mappers/authenticated-current-user.mapper';
 import { toSession } from 'auth/domain/mappers/session.mapper';
 import { digestSessionSecret } from 'auth/domain/security/session-secret';

@@ -1,6 +1,5 @@
+import type { MigrationInterface, QueryRunner } from 'typeorm';
 import {
-  type MigrationInterface,
-  type QueryRunner,
   Table,
   TableCheck,
   TableForeignKey,

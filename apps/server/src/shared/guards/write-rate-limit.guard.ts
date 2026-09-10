@@ -1,8 +1,5 @@
-import {
-  type CanActivate,
-  type ExecutionContext,
-  Injectable,
-} from '@nestjs/common';
+import type { CanActivate, ExecutionContext } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
@@ -35,7 +32,7 @@ export class WriteRateLimitGuard implements CanActivate {
   ) {}
 
   canActivate(context: ExecutionContext): Promise<boolean> {
-    const limited = this.reflector.getAllAndOverride<boolean>(
+    const limited = this.reflector.getAllAndOverride<boolean | undefined>(
       WRITE_RATE_LIMITED_KEY,
       [context.getHandler(), context.getClass()],
     );

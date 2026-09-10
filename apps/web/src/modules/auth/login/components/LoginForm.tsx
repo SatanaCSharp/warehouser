@@ -1,10 +1,8 @@
 import { Button } from '@heroui/react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import {
-  loginFormSchema,
-  type LoginFormValues,
-} from 'modules/auth/login/schemas/login-form.schema';
-import type { FormEvent, ReactElement } from 'react';
+import type { LoginFormValues } from 'modules/auth/login/schemas/login-form.schema';
+import { loginFormSchema } from 'modules/auth/login/schemas/login-form.schema';
+import type { ReactElement, SubmitEvent } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { FormTextField } from 'shared/components/FormTextField';
@@ -28,7 +26,7 @@ export const LoginForm = ({ onSubmit }: Props): ReactElement => {
 
   // `handleSubmit` returns a promise the DOM handler must not; discarding it
   // here keeps the rejection with React Hook Form, which already owns it.
-  const onSubmitForm = (event: FormEvent<HTMLFormElement>): void =>
+  const onSubmitForm = (event: SubmitEvent<HTMLFormElement>): void =>
     void handleSubmit(onSubmit)(event);
 
   return (

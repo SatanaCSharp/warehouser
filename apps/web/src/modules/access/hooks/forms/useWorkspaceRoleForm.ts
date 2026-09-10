@@ -1,7 +1,7 @@
 import type { WorkspaceRoleWrite } from '@warehouser/contracts/workspaces';
 import type { WorkspaceRoleFormValues } from 'modules/access/schemas/workspace-role-form.schema';
 import { workspaceRoleFormSchema } from 'modules/access/schemas/workspace-role-form.schema';
-import type { FormEvent } from 'react';
+import type { SubmitEvent } from 'react';
 import type {
   Control,
   FieldErrors,
@@ -27,7 +27,7 @@ type WorkspaceRoleFormSession = {
   register: UseFormRegister<WorkspaceRoleFormValues>;
   /** Returns the fields to the Role they were seeded from, discarding edits. */
   reset: UseFormReset<WorkspaceRoleFormValues>;
-  submit: (event: FormEvent<HTMLFormElement>) => Promise<void>;
+  submit: (event: SubmitEvent<HTMLFormElement>) => Promise<void>;
 };
 
 /** AC-15a — the browser pre-check that runs before the request leaves. */
