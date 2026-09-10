@@ -27,25 +27,25 @@ import {
   RoleAssignmentDto,
   RoleDeletionDto,
   RoleWriteDto,
-} from 'access/rest/dtos/access-mutation.dto';
+} from 'access/rest/dtos/access-mutation.dto.js';
 import {
   PermissionPaginationDto,
   UuidPaginationDto,
-} from 'access/rest/dtos/access-pagination.dto';
-import { AssignMemberRoleCommand } from 'access/usecases/commands/assign-member-role.command';
-import { CreateRoleCommand } from 'access/usecases/commands/create-role.command';
-import { DeleteRoleCommand } from 'access/usecases/commands/delete-role.command';
-import { TransferWarehouseManagerCommand } from 'access/usecases/commands/transfer-warehouse-manager.command';
-import { UpdateRoleCommand } from 'access/usecases/commands/update-role.command';
-import { ListAccessMembersQuery } from 'access/usecases/queries/list-access-members.query';
-import { ListAccessPermissionsQuery } from 'access/usecases/queries/list-access-permissions.query';
-import { ListAccessRolesQuery } from 'access/usecases/queries/list-access-roles.query';
-import { ReadCurrentAccessQuery } from 'access/usecases/queries/read-current-access.query';
-import type { WarehouseAccessRequest } from 'shared/access/access-request';
-import { ArchivedTolerantRead } from 'shared/access/archived-tolerant-read.decorator';
-import { RequiredPermission } from 'shared/decorators/required-permission.decorator';
-import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
-import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
+} from 'access/rest/dtos/access-pagination.dto.js';
+import { AssignMemberRoleCommand } from 'access/usecases/commands/assign-member-role.command.js';
+import { CreateRoleCommand } from 'access/usecases/commands/create-role.command.js';
+import { DeleteRoleCommand } from 'access/usecases/commands/delete-role.command.js';
+import { TransferWarehouseManagerCommand } from 'access/usecases/commands/transfer-warehouse-manager.command.js';
+import { UpdateRoleCommand } from 'access/usecases/commands/update-role.command.js';
+import { ListAccessMembersQuery } from 'access/usecases/queries/list-access-members.query.js';
+import { ListAccessPermissionsQuery } from 'access/usecases/queries/list-access-permissions.query.js';
+import { ListAccessRolesQuery } from 'access/usecases/queries/list-access-roles.query.js';
+import { ReadCurrentAccessQuery } from 'access/usecases/queries/read-current-access.query.js';
+import type { WarehouseAccessRequest } from 'shared/access/access-request.js';
+import { ArchivedTolerantRead } from 'shared/access/archived-tolerant-read.decorator.js';
+import { RequiredPermission } from 'shared/decorators/required-permission.decorator.js';
+import { SessionAuthGuard } from 'shared/guards/session-auth.guard.js';
+import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard.js';
 
 type RoleResult = RolePage['items'][number];
 type MemberResult = MemberPage['items'][number];

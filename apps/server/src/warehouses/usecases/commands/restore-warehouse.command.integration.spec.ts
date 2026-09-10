@@ -1,22 +1,22 @@
 import { randomUUID } from 'node:crypto';
 
 import { ErrorCode } from '@warehouser/shared-types/enums';
-import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
-import dataSource from 'shared/database/data-source';
-import { DbTransactionService } from 'shared/database/db-transaction.service';
-import { DbTransactionContext } from 'shared/database/db-transaction-context.service';
-import { AccountEntity } from 'shared/domain/entities/account.entity';
-import { RoleEntity } from 'shared/domain/entities/role.entity';
-import { UserEntity } from 'shared/domain/entities/user.entity';
-import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
-import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
-import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
+import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user.js';
+import dataSource from 'shared/database/data-source.js';
+import { DbTransactionService } from 'shared/database/db-transaction.service.js';
+import { DbTransactionContext } from 'shared/database/db-transaction-context.service.js';
+import { AccountEntity } from 'shared/domain/entities/account.entity.js';
+import { RoleEntity } from 'shared/domain/entities/role.entity.js';
+import { UserEntity } from 'shared/domain/entities/user.entity.js';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity.js';
+import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity.js';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
+import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository.js';
 import {
   buildWarehouse,
   buildWarehouseMembership,
   buildWorkspace,
-} from 'test/factories/entity-factories';
+} from 'test/factories/entity-factories.js';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 // `RestoreWarehouseCommand` does not exist yet (T21) — this is the RED for
 // AC-10, AC-11's restore half, and AC-13's restore half. Per the task card
@@ -29,7 +29,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 // Restoring never re-counts non-archived Warehouses — AC-11a only bounds
 // archiving — and this command must never consult archived state as an
 // authorization input.
-import { RestoreWarehouseCommand } from 'warehouses/usecases/commands/restore-warehouse.command';
+import { RestoreWarehouseCommand } from 'warehouses/usecases/commands/restore-warehouse.command.js';
 
 const now = new Date('2026-08-12T12:00:00.000Z');
 

@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { getEntityManager } from 'shared/database/db-transaction-context.service';
-import { AccountEntity } from 'shared/domain/entities/account.entity';
-import { PermissionEntity } from 'shared/domain/entities/permission.entity';
-import { RoleEntity } from 'shared/domain/entities/role.entity';
-import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
-import { paginationBuilder } from 'shared/pagination/pagination-builder';
+import { getEntityManager } from 'shared/database/db-transaction-context.service.js';
+import { AccountEntity } from 'shared/domain/entities/account.entity.js';
+import { PermissionEntity } from 'shared/domain/entities/permission.entity.js';
+import { RoleEntity } from 'shared/domain/entities/role.entity.js';
+import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity.js';
+import { paginationBuilder } from 'shared/pagination/pagination-builder.js';
 import { DataSource } from 'typeorm';
 
 export interface AccessRoleRead {

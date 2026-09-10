@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { getEntityManager } from 'shared/database/db-transaction-context.service';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
-import { WorkspaceMembershipEntity } from 'shared/domain/entities/workspace-membership.entity';
+import { getEntityManager } from 'shared/database/db-transaction-context.service.js';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
+import { WorkspaceMembershipEntity } from 'shared/domain/entities/workspace-membership.entity.js';
 import { DataSource, In } from 'typeorm';
 
 export interface WorkspaceOwnerTransferInput {

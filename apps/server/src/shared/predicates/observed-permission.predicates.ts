@@ -1,5 +1,5 @@
 import { PermissionId } from '@warehouser/shared-types/enums';
-import includes from 'lodash/includes';
+import includes from 'lodash/includes.js';
 
 // AC-09a / ADR 0001 — whether a projection this actor is served may carry customer identity. The
 // input is the **granted** subset of the Permissions the handler declared with

@@ -1,15 +1,15 @@
 import { randomUUID } from 'node:crypto';
 
 import { ErrorCode } from '@warehouser/shared-types/enums';
-import dataSource from 'shared/database/data-source';
-import { DbTransactionService } from 'shared/database/db-transaction.service';
-import { DbTransactionContext } from 'shared/database/db-transaction-context.service';
-import { AccountEntity } from 'shared/domain/entities/account.entity';
-import { RoleEntity } from 'shared/domain/entities/role.entity';
-import { UserEntity } from 'shared/domain/entities/user.entity';
-import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
-import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
+import dataSource from 'shared/database/data-source.js';
+import { DbTransactionService } from 'shared/database/db-transaction.service.js';
+import { DbTransactionContext } from 'shared/database/db-transaction-context.service.js';
+import { AccountEntity } from 'shared/domain/entities/account.entity.js';
+import { RoleEntity } from 'shared/domain/entities/role.entity.js';
+import { UserEntity } from 'shared/domain/entities/user.entity.js';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity.js';
+import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity.js';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
 // `ActiveWarehouseSelectionRepository` does not exist yet either — this is
 // the RED step for T23's write half. Per sad.md §6.8 and data-model.md
 // ("Constraints deliberately not expressed in the schema" — "The Active
@@ -24,12 +24,12 @@ import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 // a named `workspace.warehouse_archived` error
 // (ErrorCode.WORKSPACE_WAREHOUSE_ARCHIVED, matching the same contract's
 // 409), leaving the stored selection untouched in both cases (AC-04).
-import { ActiveWarehouseSelectionRepository } from 'shared/domain/repositories/active-warehouse-selection.repository';
+import { ActiveWarehouseSelectionRepository } from 'shared/domain/repositories/active-warehouse-selection.repository.js';
 import {
   buildWarehouse,
   buildWarehouseMembership,
   buildWorkspace,
-} from 'test/factories/entity-factories';
+} from 'test/factories/entity-factories.js';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 // `SetActiveWarehouseCommand` does not exist yet — this is the RED step for
 // T23. This route is session-authenticated and declares no Workspace or
@@ -40,7 +40,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 // session/device, so it is what "survives a new session" means here — there
 // is no cookie/session-claim copy to go stale (spec.md §6.1 "Stale
 // selection").
-import { SetActiveWarehouseCommand } from 'workspaces/usecases/commands/set-active-warehouse.command';
+import { SetActiveWarehouseCommand } from 'workspaces/usecases/commands/set-active-warehouse.command.js';
 
 const now = new Date('2026-08-12T12:00:00.000Z');
 

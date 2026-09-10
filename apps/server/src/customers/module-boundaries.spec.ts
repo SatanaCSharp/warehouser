@@ -11,14 +11,14 @@ import { describe, expect, it } from 'vitest';
 // reads the *specifier* each production file imports, which is the rule as stated: a domain mapper
 // may name a shared TypeORM persistence entity by type — `customer-orders`' mapper already does —
 // while the domain itself imports no framework symbol of its own.
-const moduleDirectory = __dirname;
+const moduleDirectory = import.meta.dirname;
 const domainDirectory = join(moduleDirectory, 'domain');
 const usecaseModulePath = join(
   moduleDirectory,
   'usecases',
   'usecase.module.ts',
 );
-const sourceRoot = join(__dirname, '..');
+const sourceRoot = join(import.meta.dirname, '..');
 
 // The module list is exactly the directories directly under `src/`
 // (adr/14-08-2026-domain-owned-flat-modules.md §Flatness), read from disk so a module added later
@@ -90,6 +90,14 @@ const isModulePrivate = (target: string): boolean =>
   /\.predicates$/u.test(target) ||
   /\/rest\/dtos\//u.test(target);
 
+/**
+ * A specifier reduced to the module path the rules below are about. Every intra-application import
+ * carries the `.js` extension Node's ESM resolver requires; that is a spelling of the resolver's
+ * rules, not of the boundary, so it is dropped before a target is classified. Failure messages
+ * still quote the specifier as written.
+ */
+const moduleTarget = (target: string): string => target.replace(/\.js$/u, '');
+
 // The module a specifier reaches into, when that is a sibling of this one. Mirrors
 // `warehouses/module-boundaries.spec.ts`'s `foreignModuleTarget`.
 const foreignModuleTarget = (specifier: string): string | undefined => {
@@ -97,7 +105,7 @@ const foreignModuleTarget = (specifier: string): string | undefined => {
     return undefined;
   }
 
-  const target = specifier.replace(/^(?:\.\.\/)+/u, '');
+  const target = moduleTarget(specifier.replace(/^(?:\.\.\/)+/u, ''));
   const [head] = target.split('/');
 
   return FEATURE_MODULES.includes(head) && head !== MODULE_NAME
@@ -368,7 +376,7 @@ describe('customers module boundaries', () => {
         {
           path: 'customers/domain/mappers/customer-awaiting-order.mapper.ts',
           source:
-            "import { DemandAllocationService } from 'customer-orders/domain/services/demand-allocation.service';",
+            "import { DemandAllocationService } from 'customer-orders/domain/services/demand-allocation.service.js';",
         },
       ]),
     ).toHaveLength(1);
@@ -380,8 +388,8 @@ describe('customers module boundaries', () => {
         {
           path: 'customers/rest/rest.module.ts',
           source: [
-            "import { AuthModule } from 'auth/auth.module';",
-            "import { CustomerOrdersModule } from 'customer-orders';",
+            "import { AuthModule } from 'auth/auth.module.js';",
+            "import { CustomerOrdersModule } from 'customer-orders/index.js';",
           ].join('\n'),
         },
       ]),
@@ -393,18 +401,18 @@ describe('customers module boundaries', () => {
   it("rejects a fixture reaching into another module's internals", () => {
     expect(
       foreignModuleTarget(
-        'customer-orders/domain/errors/customer-order.errors',
+        'customer-orders/domain/errors/customer-order.errors.js',
       ),
     ).toBe('customer-orders/domain/errors/customer-order.errors');
     expect(
-      isModulePrivate('customer-orders/domain/errors/customer-order.errors'),
+      isModulePrivate('customer-orders/domain/errors/customer-order.errors.js'),
     ).toBe(true);
     expect(isModulePrivate('customer-orders')).toBe(false);
     expect(
       foreignModuleTarget('@warehouser/contracts/customers'),
     ).toBeUndefined();
     expect(
-      foreignModuleTarget('shared/domain/entities/customer.entity'),
+      foreignModuleTarget('shared/domain/entities/customer.entity.js'),
     ).toBeUndefined();
   });
 

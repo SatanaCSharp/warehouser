@@ -16,14 +16,14 @@ import type {
   WarehouseMembership,
 } from '@warehouser/contracts/workspaces';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import { WarehouseMembershipAssignmentDto } from 'access/rest/dtos/warehouse-membership-mutation.dto';
-import { AssignWarehouseMembershipCommand } from 'access/usecases/commands/assign-warehouse-membership.command';
-import { RevokeWarehouseMembershipCommand } from 'access/usecases/commands/revoke-warehouse-membership.command';
-import { ListAssignableWarehouseRolesQuery } from 'access/usecases/queries/list-assignable-warehouse-roles.query';
-import type { WorkspaceAccessRequest } from 'shared/access/access-request';
-import { RequiredWorkspacePermission } from 'shared/decorators/required-workspace-permission.decorator';
-import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
-import { WorkspaceAccessGuard } from 'shared/guards/workspace-access.guard';
+import { WarehouseMembershipAssignmentDto } from 'access/rest/dtos/warehouse-membership-mutation.dto.js';
+import { AssignWarehouseMembershipCommand } from 'access/usecases/commands/assign-warehouse-membership.command.js';
+import { RevokeWarehouseMembershipCommand } from 'access/usecases/commands/revoke-warehouse-membership.command.js';
+import { ListAssignableWarehouseRolesQuery } from 'access/usecases/queries/list-assignable-warehouse-roles.query.js';
+import type { WorkspaceAccessRequest } from 'shared/access/access-request.js';
+import { RequiredWorkspacePermission } from 'shared/decorators/required-workspace-permission.decorator.js';
+import { SessionAuthGuard } from 'shared/guards/session-auth.guard.js';
+import { WorkspaceAccessGuard } from 'shared/guards/workspace-access.guard.js';
 
 /** Every route whose subject is a membership **edge** into a Warehouse — granting or revoking a
  * Warehouse Role, which is Access, not the Warehouse record (CH-S3, ADR 14-08-2026 §Ownership).

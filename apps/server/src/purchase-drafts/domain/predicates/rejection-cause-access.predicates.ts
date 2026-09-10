@@ -1,5 +1,5 @@
 import { PermissionId } from '@warehouser/shared-types/enums';
-import includes from 'lodash/includes';
+import includes from 'lodash/includes.js';
 
 // AC-21/AC-22 — whether the condition account this actor is served may carry a Rejection's cause:
 // its Reason, description, Source and Disposition. The input is the **granted** subset of the

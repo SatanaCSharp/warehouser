@@ -1,6 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { ZodValidationException, ZodValidationPipe } from 'nestjs-zod';
-import { validationFieldCodes } from 'shared/errors/validation-field-codes';
+import { validationFieldCodes } from 'shared/errors/validation-field-codes.js';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 

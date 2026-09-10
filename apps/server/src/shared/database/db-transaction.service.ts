@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { DbTransactionContext } from 'shared/database/db-transaction-context.service';
+import { DbTransactionContext } from 'shared/database/db-transaction-context.service.js';
 import { DataSource, EntityManager } from 'typeorm';
-import type { IsolationLevel } from 'typeorm/driver/types/IsolationLevel';
+import type { IsolationLevel } from 'typeorm/driver/types/IsolationLevel.js';
 
 export interface TransactionOptions {
   readonly propagation?: boolean;

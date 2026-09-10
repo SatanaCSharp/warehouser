@@ -4,8 +4,8 @@
 // optional `state` filter through, and returns the repository's `hasDriftSignal`-carrying rows
 // unchanged — the repository already derives which drafts carry a Drift Signal (test-plan.md
 // "read from the projection the destination already fetches").
-import { ListPurchaseDraftsQuery } from 'purchase-drafts/usecases/queries/list-purchase-drafts.query';
-import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { ListPurchaseDraftsQuery } from 'purchase-drafts/usecases/queries/list-purchase-drafts.query.js';
+import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
 import { describe, expect, it, vi } from 'vitest';
 
 const warehouseId = '00000000-0000-4000-8000-000000000001';

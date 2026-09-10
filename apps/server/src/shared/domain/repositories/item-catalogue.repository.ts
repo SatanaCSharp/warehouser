@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { getEntityManager } from 'shared/database/db-transaction-context.service';
-import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
-import { ItemEntity } from 'shared/domain/entities/item.entity';
-import { ItemStockAdjustmentEntity } from 'shared/domain/entities/item-stock-adjustment.entity';
-import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity';
+import { getEntityManager } from 'shared/database/db-transaction-context.service.js';
+import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity.js';
+import { ItemEntity } from 'shared/domain/entities/item.entity.js';
+import { ItemStockAdjustmentEntity } from 'shared/domain/entities/item-stock-adjustment.entity.js';
+import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity.js';
 import { DataSource, EntityManager } from 'typeorm';
 
 export interface CreateItemPersistenceInput {

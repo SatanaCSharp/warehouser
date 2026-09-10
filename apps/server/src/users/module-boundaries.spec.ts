@@ -9,8 +9,8 @@ import { describe, expect, it } from 'vitest';
 // scan style (`readdirSync`/`readFileSync` + regex) rather than a runtime
 // dependency-graph tool, since no such tool exists in this repo yet.
 
-const usersDirectory = __dirname;
-const appModulePath = join(__dirname, '../app.module.ts');
+const usersDirectory = import.meta.dirname;
+const appModulePath = join(import.meta.dirname, '../app.module.ts');
 
 // CR-AC-08: "`apps/server/src/users/**` production code imports nothing from
 // `access`, `auth`, `warehouses` or `workspaces`". The first two were already
@@ -67,7 +67,7 @@ describe('users module boundaries', () => {
   it.each(FORBIDDEN_MODULES)(
     'rejects a users file that imports from %s/',
     (featureModule) => {
-      const offending = `import { something } from '${featureModule}/domain/errors/some.errors';`;
+      const offending = `import { something } from '${featureModule}/domain/errors/some.errors.js';`;
 
       expect(offending).toMatch(forbiddenImportPattern(featureModule));
     },
@@ -76,7 +76,7 @@ describe('users module boundaries', () => {
   it('registers UsersModule in AppModule', () => {
     const appModuleSource = readFileSync(appModulePath, 'utf8');
     expect(appModuleSource).toMatch(
-      /import\s*\{[^}]*\bUsersModule\b[^}]*\}\s*from\s*['"]users['"]|from\s*['"]users\/users\.module['"]/u,
+      /import\s*\{[^}]*\bUsersModule\b[^}]*\}\s*from\s*['"]users\/index\.js['"]|from\s*['"]users\/users\.module\.js['"]/u,
     );
     expect(appModuleSource).toMatch(/imports:\s*\[[^\]]*\bUsersModule\b/su);
   });

@@ -1,16 +1,16 @@
 import { Injectable } from '@nestjs/common';
-import { getEntityManager } from 'shared/database/db-transaction-context.service';
-import { ArrivalAllocationEntity } from 'shared/domain/entities/arrival-allocation.entity';
-import { CustomerEntity } from 'shared/domain/entities/customer.entity';
-import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
-import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
-import { DemandSnapshotEntryEntity } from 'shared/domain/entities/demand-snapshot-entry.entity';
-import { ItemEntity } from 'shared/domain/entities/item.entity';
-import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
-import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity';
-import { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity';
-import { PurchaseDraftLineRejectionEntity } from 'shared/domain/entities/purchase-draft-line-rejection.entity';
-import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
+import { getEntityManager } from 'shared/database/db-transaction-context.service.js';
+import { ArrivalAllocationEntity } from 'shared/domain/entities/arrival-allocation.entity.js';
+import { CustomerEntity } from 'shared/domain/entities/customer.entity.js';
+import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity.js';
+import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity.js';
+import { DemandSnapshotEntryEntity } from 'shared/domain/entities/demand-snapshot-entry.entity.js';
+import { ItemEntity } from 'shared/domain/entities/item.entity.js';
+import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity.js';
+import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity.js';
+import { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity.js';
+import { PurchaseDraftLineRejectionEntity } from 'shared/domain/entities/purchase-draft-line-rejection.entity.js';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity.js';
 import {
   DataSource,
   EntityManager,

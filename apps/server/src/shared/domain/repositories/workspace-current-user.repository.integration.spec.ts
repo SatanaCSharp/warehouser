@@ -1,22 +1,22 @@
-import dataSource from 'shared/database/data-source';
-import { AccountEntity } from 'shared/domain/entities/account.entity';
-import { UserEntity } from 'shared/domain/entities/user.entity';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
-import { WorkspaceMembershipEntity } from 'shared/domain/entities/workspace-membership.entity';
-import { WorkspacePermissionEntity } from 'shared/domain/entities/workspace-permission.entity';
-import { WorkspaceRoleEntity } from 'shared/domain/entities/workspace-role.entity';
-import { WorkspaceRolePermissionEntity } from 'shared/domain/entities/workspace-role-permission.entity';
+import dataSource from 'shared/database/data-source.js';
+import { AccountEntity } from 'shared/domain/entities/account.entity.js';
+import { UserEntity } from 'shared/domain/entities/user.entity.js';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
+import { WorkspaceMembershipEntity } from 'shared/domain/entities/workspace-membership.entity.js';
+import { WorkspacePermissionEntity } from 'shared/domain/entities/workspace-permission.entity.js';
+import { WorkspaceRoleEntity } from 'shared/domain/entities/workspace-role.entity.js';
+import { WorkspaceRolePermissionEntity } from 'shared/domain/entities/workspace-role-permission.entity.js';
 // The repository under test does not exist yet — this is the RED step. The
 // implementer creates it in the same location, exposing exactly this shape
 // (data-model.md "Repository boundaries"):
 //   WorkspaceCurrentUserRepository.resolveRequiredWorkspacePermission(userId, workspacePermissionId)
-import { WorkspaceCurrentUserRepository } from 'shared/domain/repositories/workspace-current-user.repository';
+import { WorkspaceCurrentUserRepository } from 'shared/domain/repositories/workspace-current-user.repository.js';
 import {
   buildWorkspace,
   buildWorkspaceMembership,
   buildWorkspacePermission,
   buildWorkspaceRole,
-} from 'test/factories/entity-factories';
+} from 'test/factories/entity-factories.js';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 const now = new Date('2026-08-12T12:00:00.000Z');

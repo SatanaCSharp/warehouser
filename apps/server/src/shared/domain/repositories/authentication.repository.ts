@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { getEntityManager } from 'shared/database/db-transaction-context.service';
-import { AccountEntity } from 'shared/domain/entities/account.entity';
-import { SessionEntity } from 'shared/domain/entities/session.entity';
-import { UserEntity } from 'shared/domain/entities/user.entity';
+import { getEntityManager } from 'shared/database/db-transaction-context.service.js';
+import { AccountEntity } from 'shared/domain/entities/account.entity.js';
+import { SessionEntity } from 'shared/domain/entities/session.entity.js';
+import { UserEntity } from 'shared/domain/entities/user.entity.js';
 import { DataSource, DeepPartial, IsNull, MoreThan } from 'typeorm';
 
 export interface RegistrationPersistenceInput {

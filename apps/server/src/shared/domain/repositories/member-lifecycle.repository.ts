@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { getEntityManager } from 'shared/database/db-transaction-context.service';
-import { RolePermissionEntity } from 'shared/domain/entities/role-permission.entity';
-import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
-import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
+import { getEntityManager } from 'shared/database/db-transaction-context.service.js';
+import { RolePermissionEntity } from 'shared/domain/entities/role-permission.entity.js';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity.js';
+import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity.js';
 import { DataSource } from 'typeorm';
 
 export interface MembershipWrite {

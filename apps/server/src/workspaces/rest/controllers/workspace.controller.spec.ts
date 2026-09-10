@@ -10,14 +10,14 @@ import {
   PATH_METADATA,
 } from '@nestjs/common/constants';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import type { WorkspaceAccessRequest } from 'shared/access/access-request';
-import { REQUIRED_WORKSPACE_PERMISSION_KEY } from 'shared/decorators/required-workspace-permission.decorator';
-import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
+import type { WorkspaceAccessRequest } from 'shared/access/access-request.js';
+import { REQUIRED_WORKSPACE_PERMISSION_KEY } from 'shared/decorators/required-workspace-permission.decorator.js';
+import { SessionAuthGuard } from 'shared/guards/session-auth.guard.js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { WorkspaceController } from 'workspaces/rest/controllers/workspace.controller';
-import type { RenameWorkspaceCommand } from 'workspaces/usecases/commands/rename-workspace.command';
-import type { SetActiveWarehouseCommand } from 'workspaces/usecases/commands/set-active-warehouse.command';
-import type { ReadWorkspaceContextQuery } from 'workspaces/usecases/queries/read-workspace-context.query';
+import { WorkspaceController } from 'workspaces/rest/controllers/workspace.controller.js';
+import type { RenameWorkspaceCommand } from 'workspaces/usecases/commands/rename-workspace.command.js';
+import type { SetActiveWarehouseCommand } from 'workspaces/usecases/commands/set-active-warehouse.command.js';
+import type { ReadWorkspaceContextQuery } from 'workspaces/usecases/queries/read-workspace-context.query.js';
 
 const id = (suffix: number): string =>
   `00000000-0000-4000-8000-${suffix.toString().padStart(12, '0')}`;
@@ -209,7 +209,7 @@ describe('WorkspaceController', () => {
   // only use cases, never a repository, a domain service or persistence.
   it('reaches use cases only, never a repository, service or persistence', () => {
     const source = readFileSync(
-      join(__dirname, 'workspace.controller.ts'),
+      join(import.meta.dirname, 'workspace.controller.ts'),
       'utf8',
     );
 

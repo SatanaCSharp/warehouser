@@ -1,18 +1,19 @@
 import { Injectable, Optional } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
-import { customerTargetUnavailableError } from 'customers/domain/errors/customer.errors';
-import type { Customer } from 'customers/domain/mappers/customer.mapper';
-import { toCustomer } from 'customers/domain/mappers/customer.mapper';
+import { customerTargetUnavailableError } from 'customers/domain/errors/customer.errors.js';
+import type { Customer } from 'customers/domain/mappers/customer.mapper.js';
+import { toCustomer } from 'customers/domain/mappers/customer.mapper.js';
 import {
   assertCustomerWriteApplied,
   CustomerAddressBookService,
-} from 'customers/domain/services/customer-address-book.service';
-import { AccessNotes } from 'customers/domain/value-objects/access-notes';
-import { DeliveryAddressText } from 'customers/domain/value-objects/delivery-address-text';
-import { find, map } from 'lodash';
-import type { AccessCurrentUser } from 'shared/access/access-current-user';
-import { Transactional } from 'shared/decorators/transactional.decorator';
-import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository';
+} from 'customers/domain/services/customer-address-book.service.js';
+import { AccessNotes } from 'customers/domain/value-objects/access-notes.js';
+import { DeliveryAddressText } from 'customers/domain/value-objects/delivery-address-text.js';
+import find from 'lodash/find.js';
+import map from 'lodash/map.js';
+import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
+import { Transactional } from 'shared/decorators/transactional.decorator.js';
+import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository.js';
 
 export interface CorrectCustomerDeliveryAddressRuntime {
   readonly now: () => Date;

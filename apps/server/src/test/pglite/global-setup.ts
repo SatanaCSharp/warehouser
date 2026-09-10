@@ -26,7 +26,7 @@ import { DataSource } from 'typeorm';
 import { getPGliteInstance, PGliteDriver } from 'typeorm-pglite';
 import type { TestProject } from 'vitest/node';
 
-import { PGLITE_TEMPLATE_KEY } from './runtime';
+import { PGLITE_TEMPLATE_KEY } from './runtime.js';
 
 let directory: string | undefined;
 
@@ -36,7 +36,20 @@ export const setup = async (project: TestProject): Promise<void> => {
   const template = new DataSource({
     type: 'postgres',
     driver: new PGliteDriver().driver,
-    migrations: [join(process.cwd(), 'migrations/*.ts')],
+    // Anchored to this file rather than to `process.cwd()`, so the tier does
+    // not quietly migrate nothing when it is run from the repository root.
+    //
+    // Still the `.ts` sources, not `dist/`: requiring a build before
+    // `test:integration` would be worse. TypeORM loads a glob's matches
+    // itself, and because `apps/server` is an ES module it does so with a
+    // dynamic `import()` — so these files are read by Node's type stripping,
+    // not by the SWC transform the specs get. That holds while a migration is
+    // plain classes and `import ... from 'typeorm'`, which is all TypeORM
+    // generates; a migration that reached for an `enum`, a `namespace` or a
+    // constructor parameter property would fail to load here. The failure is
+    // loud — an unmigrated template means every spec in the tier fails on a
+    // missing relation.
+    migrations: [join(import.meta.dirname, '../../../migrations/*.ts')],
     synchronize: false,
   });
 

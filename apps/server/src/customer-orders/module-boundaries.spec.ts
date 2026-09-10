@@ -13,8 +13,8 @@ import { describe, expect, it } from 'vitest';
 // `readFileSync` + regex), narrowed to the two rules this task's DoD actually names rather than
 // reproducing that spec's full generality — `on-hand-write-boundary.spec.ts` sets the precedent for
 // a narrower, task-scoped boundary spec of this shape.
-const moduleDirectory = __dirname;
-const sourceRoot = join(__dirname, '..');
+const moduleDirectory = import.meta.dirname;
+const sourceRoot = join(import.meta.dirname, '..');
 const usecaseModulePath = join(
   moduleDirectory,
   'usecases',

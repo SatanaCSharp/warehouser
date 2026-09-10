@@ -1,5 +1,5 @@
 import { assert } from '@warehouser/utils/asserts';
-import { isSupportedPassword } from 'shared/domain/security/is-supported-password';
+import { isSupportedPassword } from 'shared/domain/security/is-supported-password.js';
 
 export class Password {
   private constructor(readonly value: string) {}

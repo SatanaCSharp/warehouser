@@ -1,10 +1,10 @@
 // `ListWorkspacePermissionsQuery` does not exist yet — this is the RED step
 // for T15: the system Workspace Permission catalogue under
 // `WORKSPACE_ROLES:WATCH` (AC-32).
-import { ListWorkspacePermissionsQuery } from 'access/usecases/queries/list-workspace-permissions.query';
-import dataSource from 'shared/database/data-source';
-import { WorkspaceReadRepository } from 'shared/domain/repositories/workspace-read.repository';
-import { persistWorkspaceGraph } from 'test/factories/entity-factories';
+import { ListWorkspacePermissionsQuery } from 'access/usecases/queries/list-workspace-permissions.query.js';
+import dataSource from 'shared/database/data-source.js';
+import { WorkspaceReadRepository } from 'shared/domain/repositories/workspace-read.repository.js';
+import { persistWorkspaceGraph } from 'test/factories/entity-factories.js';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 describe('ListWorkspacePermissionsQuery', () => {

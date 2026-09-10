@@ -4,16 +4,16 @@ import {
   WorkspacePermissionId,
 } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
-import { MAX_PROSE_LENGTH } from 'purchase-drafts/domain/predicates/purchase-draft-condition.predicates';
+import { MAX_PROSE_LENGTH } from 'purchase-drafts/domain/predicates/purchase-draft-condition.predicates.js';
 import type {
   DeliveryMode,
   EndingKind,
-} from 'purchase-drafts/domain/value-objects/delivery-mode';
+} from 'purchase-drafts/domain/value-objects/delivery-mode.js';
 import {
   PreReceiptConformanceVerdict,
   type RejectionDisposition,
   type RejectionSource,
-} from 'purchase-drafts/domain/value-objects/line-condition';
+} from 'purchase-drafts/domain/value-objects/line-condition.js';
 
 // AC-11 — one non-enumerating outcome for an Item or a Customer Order of another Warehouse and for
 // one that does not exist, naming the same-Warehouse rule. openapi.yaml

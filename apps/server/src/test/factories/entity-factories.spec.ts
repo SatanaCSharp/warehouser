@@ -3,7 +3,7 @@ import {
   sessionEntityFactory,
   userEntityFactory,
   warehouseMembershipEntityFactory,
-} from 'test/factories/entity-factories';
+} from 'test/factories/entity-factories.js';
 import { describe, expect, it } from 'vitest';
 
 const UUID_V4_PATTERN =

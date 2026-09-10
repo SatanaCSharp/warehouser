@@ -1,6 +1,6 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { describe, expect, it } from 'vitest';
-import { workspaceLastUnarchivedWarehouseError } from 'warehouses/domain/errors/warehouse.errors';
+import { workspaceLastUnarchivedWarehouseError } from 'warehouses/domain/errors/warehouse.errors.js';
 
 // The Warehouse-record cases split out of
 // `access/domain/errors/workspace-access.errors.spec.ts` when the Warehouse

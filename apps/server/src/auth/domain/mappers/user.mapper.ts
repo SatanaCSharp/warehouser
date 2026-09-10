@@ -1,5 +1,5 @@
-import { User } from 'auth/domain/entities/user';
-import { UserEntity } from 'shared/domain/entities/user.entity';
+import { User } from 'auth/domain/entities/user.js';
+import { UserEntity } from 'shared/domain/entities/user.entity.js';
 
 export const toUserEntity = (
   user: User,

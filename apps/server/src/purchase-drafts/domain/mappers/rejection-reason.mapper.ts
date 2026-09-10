@@ -1,4 +1,4 @@
-import type { RejectionReasonEntity } from 'shared/domain/entities/rejection-reason.entity';
+import type { RejectionReasonEntity } from 'shared/domain/entities/rejection-reason.entity.js';
 
 /**
  * AC-06/AC-07 — one Rejection Reason as this feature serves it: what the member picks from, and

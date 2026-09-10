@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { getEntityManager } from 'shared/database/db-transaction-context.service';
-import { RejectionReasonEntity } from 'shared/domain/entities/rejection-reason.entity';
+import { getEntityManager } from 'shared/database/db-transaction-context.service.js';
+import { RejectionReasonEntity } from 'shared/domain/entities/rejection-reason.entity.js';
 import { DataSource, In } from 'typeorm';
 
 // AC-06/AC-07 — the Rejection Reason catalogue is system-wide, extend-only and migration-seeded

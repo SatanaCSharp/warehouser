@@ -1,23 +1,23 @@
 import { randomUUID } from 'node:crypto';
 
-import dataSource from 'shared/database/data-source';
-import { DbTransactionService } from 'shared/database/db-transaction.service';
-import { DbTransactionContext } from 'shared/database/db-transaction-context.service';
-import { AccountEntity } from 'shared/domain/entities/account.entity';
-import { CustomerEntity } from 'shared/domain/entities/customer.entity';
-import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
-import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
-import { ItemEntity } from 'shared/domain/entities/item.entity';
-import type { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
-import { PurchaseDraftEntity as PurchaseDraftEntityClass } from 'shared/domain/entities/purchase-draft.entity';
+import dataSource from 'shared/database/data-source.js';
+import { DbTransactionService } from 'shared/database/db-transaction.service.js';
+import { DbTransactionContext } from 'shared/database/db-transaction-context.service.js';
+import { AccountEntity } from 'shared/domain/entities/account.entity.js';
+import { CustomerEntity } from 'shared/domain/entities/customer.entity.js';
+import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity.js';
+import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity.js';
+import { ItemEntity } from 'shared/domain/entities/item.entity.js';
+import type { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity.js';
+import { PurchaseDraftEntity as PurchaseDraftEntityClass } from 'shared/domain/entities/purchase-draft.entity.js';
 import type {
   PurchaseDraftLineDeliveryMode,
   PurchaseDraftLineEntity,
-} from 'shared/domain/entities/purchase-draft-line.entity';
-import type { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity';
-import { UserEntity } from 'shared/domain/entities/user.entity';
-import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
+} from 'shared/domain/entities/purchase-draft-line.entity.js';
+import type { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity.js';
+import { UserEntity } from 'shared/domain/entities/user.entity.js';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity.js';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
 // `PurchaseDraftAssemblyRepository` does not exist yet (T12) — this is the RED for the
 // state-guarded assembly write path `data-model.md` "Concurrency, locks and transactions" and
 // `sad.md` §6.6 require: every write resolves the draft **only in the `draft` state**
@@ -29,12 +29,12 @@ import type {
   AssemblyWriteOutcome,
   LineDestinationRead,
   LinkedOrderDestination,
-} from 'shared/domain/repositories/purchase-draft-assembly.repository';
-import { PurchaseDraftAssemblyRepository } from 'shared/domain/repositories/purchase-draft-assembly.repository';
+} from 'shared/domain/repositories/purchase-draft-assembly.repository.js';
+import { PurchaseDraftAssemblyRepository } from 'shared/domain/repositories/purchase-draft-assembly.repository.js';
 import {
   buildWarehouse,
   buildWorkspace,
-} from 'test/factories/entity-factories';
+} from 'test/factories/entity-factories.js';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 const now = new Date('2026-08-26T10:00:00.000Z');

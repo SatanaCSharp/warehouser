@@ -10,8 +10,8 @@
 // `shared/domain/repositories/purchase-draft-freeze.repository.integration.spec.ts`.
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
-import { ClosePurchaseDraftCommand } from 'purchase-drafts/usecases/commands/close-purchase-draft.command';
-import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { ClosePurchaseDraftCommand } from 'purchase-drafts/usecases/commands/close-purchase-draft.command.js';
+import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
 import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>

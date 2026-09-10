@@ -12,11 +12,11 @@ import {
   EndingKind,
   endingKindFor,
   NEW_LINE_DELIVERY_MODE,
-} from 'purchase-drafts/domain/value-objects/delivery-mode';
+} from 'purchase-drafts/domain/value-objects/delivery-mode.js';
 import type {
   PurchaseDraftLineDeliveryMode,
   PurchaseDraftLineEndingKind,
-} from 'shared/domain/entities/purchase-draft-line.entity';
+} from 'shared/domain/entities/purchase-draft-line.entity.js';
 import { describe, expect, it } from 'vitest';
 
 describe('Delivery Mode', () => {

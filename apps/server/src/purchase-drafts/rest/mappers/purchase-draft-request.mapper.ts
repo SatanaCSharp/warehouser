@@ -2,9 +2,9 @@ import type {
   PurchaseDraftLineArrival,
   PurchaseDraftLineUpdate,
 } from '@warehouser/contracts/purchase-drafts';
-import type { EndingPreReceiptConformanceInput } from 'purchase-drafts/domain/mappers/purchase-draft-line-ending.mapper';
-import type { ReviseLineInput } from 'purchase-drafts/usecases/commands/revise-purchase-draft-line.command';
-import type { RecordLineEndingRejectionInput } from 'shared/domain/repositories/arrival-confirmation.repository';
+import type { EndingPreReceiptConformanceInput } from 'purchase-drafts/domain/mappers/purchase-draft-line-ending.mapper.js';
+import type { ReviseLineInput } from 'purchase-drafts/usecases/commands/revise-purchase-draft-line.command.js';
+import type { RecordLineEndingRejectionInput } from 'shared/domain/repositories/arrival-confirmation.repository.js';
 
 // Wire shape -> use-case input. `server-architecture.md` §REST assigns this translation to the REST
 // layer, which is why these three live here rather than under `domain/mappers/`: the 2026-09-09

@@ -6,27 +6,27 @@ import {
   WorkspacePermissionId,
 } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
-import { WorkspaceAccessController } from 'access/rest/controllers/workspace-access.controller';
-import type { AddWorkspaceMemberCommand } from 'access/usecases/commands/add-workspace-member.command';
-import type { AssignWorkspaceRoleCommand } from 'access/usecases/commands/assign-workspace-role.command';
-import type { CreateWorkspaceRoleCommand } from 'access/usecases/commands/create-workspace-role.command';
-import type { DeleteWorkspaceRoleCommand } from 'access/usecases/commands/delete-workspace-role.command';
-import type { RemoveWorkspaceMemberCommand } from 'access/usecases/commands/remove-workspace-member.command';
-import type { TransferWorkspaceOwnerCommand } from 'access/usecases/commands/transfer-workspace-owner.command';
-import type { UpdateWorkspaceRoleCommand } from 'access/usecases/commands/update-workspace-role.command';
-import type { ListWorkspaceMembersQuery } from 'access/usecases/queries/list-workspace-members.query';
-import type { ListWorkspacePermissionsQuery } from 'access/usecases/queries/list-workspace-permissions.query';
-import type { ListWorkspaceRolesQuery } from 'access/usecases/queries/list-workspace-roles.query';
-import type { ListWorkspaceUsersQuery } from 'access/usecases/queries/list-workspace-users.query';
-import type { WorkspaceAccessRequest } from 'shared/access/access-request';
-import { REQUIRED_PERMISSION_KEY } from 'shared/decorators/required-permission.decorator';
-import { REQUIRED_WORKSPACE_PERMISSION_KEY } from 'shared/decorators/required-workspace-permission.decorator';
+import { WorkspaceAccessController } from 'access/rest/controllers/workspace-access.controller.js';
+import type { AddWorkspaceMemberCommand } from 'access/usecases/commands/add-workspace-member.command.js';
+import type { AssignWorkspaceRoleCommand } from 'access/usecases/commands/assign-workspace-role.command.js';
+import type { CreateWorkspaceRoleCommand } from 'access/usecases/commands/create-workspace-role.command.js';
+import type { DeleteWorkspaceRoleCommand } from 'access/usecases/commands/delete-workspace-role.command.js';
+import type { RemoveWorkspaceMemberCommand } from 'access/usecases/commands/remove-workspace-member.command.js';
+import type { TransferWorkspaceOwnerCommand } from 'access/usecases/commands/transfer-workspace-owner.command.js';
+import type { UpdateWorkspaceRoleCommand } from 'access/usecases/commands/update-workspace-role.command.js';
+import type { ListWorkspaceMembersQuery } from 'access/usecases/queries/list-workspace-members.query.js';
+import type { ListWorkspacePermissionsQuery } from 'access/usecases/queries/list-workspace-permissions.query.js';
+import type { ListWorkspaceRolesQuery } from 'access/usecases/queries/list-workspace-roles.query.js';
+import type { ListWorkspaceUsersQuery } from 'access/usecases/queries/list-workspace-users.query.js';
+import type { WorkspaceAccessRequest } from 'shared/access/access-request.js';
+import { REQUIRED_PERMISSION_KEY } from 'shared/decorators/required-permission.decorator.js';
+import { REQUIRED_WORKSPACE_PERMISSION_KEY } from 'shared/decorators/required-workspace-permission.decorator.js';
 import type {
   WorkspaceRoleWithPermissionsRead,
   WorkspaceUserWithWarehousesRead,
-} from 'shared/domain/repositories/workspace-read.repository';
-import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
-import { WorkspaceAccessGuard } from 'shared/guards/workspace-access.guard';
+} from 'shared/domain/repositories/workspace-read.repository.js';
+import { SessionAuthGuard } from 'shared/guards/session-auth.guard.js';
+import { WorkspaceAccessGuard } from 'shared/guards/workspace-access.guard.js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const id = (suffix: number): string =>

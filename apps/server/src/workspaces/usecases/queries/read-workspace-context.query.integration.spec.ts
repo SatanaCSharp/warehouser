@@ -1,12 +1,12 @@
 import { randomUUID } from 'node:crypto';
 
-import dataSource from 'shared/database/data-source';
-import { AccountEntity } from 'shared/domain/entities/account.entity';
-import { RoleEntity } from 'shared/domain/entities/role.entity';
-import { UserEntity } from 'shared/domain/entities/user.entity';
-import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
-import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
+import dataSource from 'shared/database/data-source.js';
+import { AccountEntity } from 'shared/domain/entities/account.entity.js';
+import { RoleEntity } from 'shared/domain/entities/role.entity.js';
+import { UserEntity } from 'shared/domain/entities/user.entity.js';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity.js';
+import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity.js';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
 // `WorkspaceReadRepository.readActorContext` does not exist yet — this is
 // the other RED half of T23. Per sad.md §6.8, the implementer adds one
 // cohesive read to the Workspace feature's existing read repository:
@@ -26,15 +26,15 @@ import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 // derivation is business logic, not persistence) — the stored value while
 // it is still a live, non-archived membership; otherwise the sole
 // membership when exactly one exists; otherwise `null` (AC-03, AC-03b).
-import { WorkspaceReadRepository } from 'shared/domain/repositories/workspace-read.repository';
+import { WorkspaceReadRepository } from 'shared/domain/repositories/workspace-read.repository.js';
 import {
   buildWarehouse,
   buildWarehouseMembership,
   buildWorkspace,
   persistWorkspaceGraph,
-} from 'test/factories/entity-factories';
+} from 'test/factories/entity-factories.js';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { ReadWorkspaceContextQuery } from 'workspaces/usecases/queries/read-workspace-context.query';
+import { ReadWorkspaceContextQuery } from 'workspaces/usecases/queries/read-workspace-context.query.js';
 
 const now = new Date('2026-08-12T12:00:00.000Z');
 

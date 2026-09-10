@@ -3,18 +3,18 @@ import { assert, assertDefined } from '@warehouser/utils/asserts';
 import {
   workspaceProtectedRoleError,
   workspaceRoleNameConflictError,
-} from 'access/domain/errors/workspace-access.errors';
-import { isProtectedWorkspaceOwnerRoleKind } from 'access/domain/predicates/workspace-authority.predicates';
+} from 'access/domain/errors/workspace-access.errors.js';
+import { isProtectedWorkspaceOwnerRoleKind } from 'access/domain/predicates/workspace-authority.predicates.js';
 import {
   assertAssignableWorkspacePermissions,
   validateWorkspaceRoleName,
   type WorkspaceRoleWriteProjection,
-} from 'access/usecases/commands/create-workspace-role.command';
-import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
-import { Transactional } from 'shared/decorators/transactional.decorator';
-import { WorkspaceReadRepository } from 'shared/domain/repositories/workspace-read.repository';
-import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository';
-import { workspaceTargetUnavailableError } from 'shared/errors/cross-module.errors';
+} from 'access/usecases/commands/create-workspace-role.command.js';
+import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user.js';
+import { Transactional } from 'shared/decorators/transactional.decorator.js';
+import { WorkspaceReadRepository } from 'shared/domain/repositories/workspace-read.repository.js';
+import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository.js';
+import { workspaceTargetUnavailableError } from 'shared/errors/cross-module.errors.js';
 
 export interface UpdateWorkspaceRoleInput {
   readonly roleId: string;

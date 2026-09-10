@@ -5,7 +5,7 @@
 import {
   isCountedQuantity,
   isStatedReason,
-} from 'items/domain/predicates/on-hand-adjustment.predicates';
+} from 'items/domain/predicates/on-hand-adjustment.predicates.js';
 import { describe, expect, it } from 'vitest';
 
 describe('on-hand adjustment predicates', () => {

@@ -1,14 +1,14 @@
 import { Injectable, Optional } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
-import { customerOrderInvalidDeliveryAddressError } from 'customer-orders/domain/errors/customer-order.errors';
-import type { CustomerOrder } from 'customer-orders/domain/mappers/customer-order.mapper';
-import { toCustomerOrder } from 'customer-orders/domain/mappers/customer-order.mapper';
-import { isRedirectableCustomerOrder } from 'customer-orders/domain/predicates/customer-order.predicates';
-import { CustomerOrderDestinationService } from 'customer-orders/domain/services/customer-order-destination.service';
-import { CustomerOrderLifecycleService } from 'customer-orders/domain/services/customer-order-lifecycle.service';
-import type { AccessCurrentUser } from 'shared/access/access-current-user';
-import { Transactional } from 'shared/decorators/transactional.decorator';
-import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository';
+import { customerOrderInvalidDeliveryAddressError } from 'customer-orders/domain/errors/customer-order.errors.js';
+import type { CustomerOrder } from 'customer-orders/domain/mappers/customer-order.mapper.js';
+import { toCustomerOrder } from 'customer-orders/domain/mappers/customer-order.mapper.js';
+import { isRedirectableCustomerOrder } from 'customer-orders/domain/predicates/customer-order.predicates.js';
+import { CustomerOrderDestinationService } from 'customer-orders/domain/services/customer-order-destination.service.js';
+import { CustomerOrderLifecycleService } from 'customer-orders/domain/services/customer-order-lifecycle.service.js';
+import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
+import { Transactional } from 'shared/decorators/transactional.decorator.js';
+import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository.js';
 
 export interface RedirectCustomerOrderRuntime {
   readonly now: () => Date;

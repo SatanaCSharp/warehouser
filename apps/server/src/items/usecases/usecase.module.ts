@@ -1,15 +1,15 @@
 import { Module } from '@nestjs/common';
-import { AdjustItemOnHandCommand } from 'items/usecases/commands/adjust-item-on-hand.command';
-import { CorrectItemCommand } from 'items/usecases/commands/correct-item.command';
-import { CreateItemCommand } from 'items/usecases/commands/create-item.command';
-import { DeactivateItemCommand } from 'items/usecases/commands/deactivate-item.command';
-import { ReactivateItemCommand } from 'items/usecases/commands/reactivate-item.command';
-import { ListActiveItemsForPickerQuery } from 'items/usecases/queries/list-active-items-for-picker.query';
-import { ListItemCatalogueQuery } from 'items/usecases/queries/list-item-catalogue.query';
-import { ListWarehouseItemsQuery } from 'items/usecases/queries/list-warehouse-items.query';
-import { ReadItemCatalogueEntryQuery } from 'items/usecases/queries/read-item-catalogue-entry.query';
-import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
-import { ItemStockAdjustmentRepository } from 'shared/domain/repositories/item-stock-adjustment.repository';
+import { AdjustItemOnHandCommand } from 'items/usecases/commands/adjust-item-on-hand.command.js';
+import { CorrectItemCommand } from 'items/usecases/commands/correct-item.command.js';
+import { CreateItemCommand } from 'items/usecases/commands/create-item.command.js';
+import { DeactivateItemCommand } from 'items/usecases/commands/deactivate-item.command.js';
+import { ReactivateItemCommand } from 'items/usecases/commands/reactivate-item.command.js';
+import { ListActiveItemsForPickerQuery } from 'items/usecases/queries/list-active-items-for-picker.query.js';
+import { ListItemCatalogueQuery } from 'items/usecases/queries/list-item-catalogue.query.js';
+import { ListWarehouseItemsQuery } from 'items/usecases/queries/list-warehouse-items.query.js';
+import { ReadItemCatalogueEntryQuery } from 'items/usecases/queries/read-item-catalogue-entry.query.js';
+import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository.js';
+import { ItemStockAdjustmentRepository } from 'shared/domain/repositories/item-stock-adjustment.repository.js';
 
 const itemCommands = [
   CreateItemCommand,

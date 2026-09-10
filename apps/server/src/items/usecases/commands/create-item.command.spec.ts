@@ -6,11 +6,11 @@
 // `warehouses/usecases/commands/create-warehouse.command.spec.ts`'s repository-double idiom.
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
-import { CreateItemCommand } from 'items/usecases/commands/create-item.command';
-import type { AccessCurrentUser } from 'shared/access/access-current-user';
-import { ItemEntity } from 'shared/domain/entities/item.entity';
-import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
-import { repositoryDouble } from 'test/doubles/repository-double';
+import { CreateItemCommand } from 'items/usecases/commands/create-item.command.js';
+import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
+import { ItemEntity } from 'shared/domain/entities/item.entity.js';
+import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository.js';
+import { repositoryDouble } from 'test/doubles/repository-double.js';
 import { describe, expect, it, vi } from 'vitest';
 
 const warehouseOneId = '00000000-0000-4000-8000-000000000001';

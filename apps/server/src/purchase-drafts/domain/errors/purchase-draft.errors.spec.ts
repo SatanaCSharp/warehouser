@@ -45,17 +45,17 @@ import {
   sourceMismatchViolation,
   unknownRejectionReasonViolation,
   verdictOnUninstructedLineViolation,
-} from 'purchase-drafts/domain/errors/purchase-draft.errors';
+} from 'purchase-drafts/domain/errors/purchase-draft.errors.js';
 import {
   DeliveryMode,
   EndingKind,
-} from 'purchase-drafts/domain/value-objects/delivery-mode';
+} from 'purchase-drafts/domain/value-objects/delivery-mode.js';
 import {
   PreReceiptConformanceVerdict,
   REJECTION_DISPOSITIONS,
   RejectionDisposition,
   RejectionSource,
-} from 'purchase-drafts/domain/value-objects/line-condition';
+} from 'purchase-drafts/domain/value-objects/line-condition.js';
 import { describe, expect, it } from 'vitest';
 
 describe('purchase-draft domain error factories', () => {

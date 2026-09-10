@@ -1,7 +1,7 @@
 import type { NestExpressApplication } from '@nestjs/platform-express';
-import type { HttpPlatformConfig } from 'shared/config/http-platform.config';
-import { OriginPolicy } from 'shared/config/origin-policy';
-import { GlobalHttpExceptionFilter } from 'shared/errors/global-http-exception.filter';
+import type { HttpPlatformConfig } from 'shared/config/http-platform.config.js';
+import { OriginPolicy } from 'shared/config/origin-policy.js';
+import { GlobalHttpExceptionFilter } from 'shared/errors/global-http-exception.filter.js';
 
 interface OriginRequest {
   readonly method: string;

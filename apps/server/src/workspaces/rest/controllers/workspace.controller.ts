@@ -13,17 +13,17 @@ import type {
   WorkspaceContext,
 } from '@warehouser/contracts/workspaces';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import type { WorkspaceAccessRequest } from 'shared/access/access-request';
-import { RequiredWorkspacePermission } from 'shared/decorators/required-workspace-permission.decorator';
-import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
-import { WorkspaceAccessGuard } from 'shared/guards/workspace-access.guard';
+import type { WorkspaceAccessRequest } from 'shared/access/access-request.js';
+import { RequiredWorkspacePermission } from 'shared/decorators/required-workspace-permission.decorator.js';
+import { SessionAuthGuard } from 'shared/guards/session-auth.guard.js';
+import { WorkspaceAccessGuard } from 'shared/guards/workspace-access.guard.js';
 import {
   ActiveWarehouseWriteDto,
   WorkspaceRenameDto,
-} from 'workspaces/rest/dtos/workspace-mutation.dto';
-import { RenameWorkspaceCommand } from 'workspaces/usecases/commands/rename-workspace.command';
-import { SetActiveWarehouseCommand } from 'workspaces/usecases/commands/set-active-warehouse.command';
-import { ReadWorkspaceContextQuery } from 'workspaces/usecases/queries/read-workspace-context.query';
+} from 'workspaces/rest/dtos/workspace-mutation.dto.js';
+import { RenameWorkspaceCommand } from 'workspaces/usecases/commands/rename-workspace.command.js';
+import { SetActiveWarehouseCommand } from 'workspaces/usecases/commands/set-active-warehouse.command.js';
+import { ReadWorkspaceContextQuery } from 'workspaces/usecases/queries/read-workspace-context.query.js';
 
 /** Every route whose subject is the Workspace itself. Workspace-scoped routes carry **no**
  * Workspace identifier: the guard derives the actor's Workspace from the session, so no handler

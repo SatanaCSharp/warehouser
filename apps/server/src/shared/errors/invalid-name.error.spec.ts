@@ -1,10 +1,10 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { AssertionError } from '@warehouser/shared-types/errors';
-import { AccessName } from 'shared/domain/value-objects/access-name';
+import { AccessName } from 'shared/domain/value-objects/access-name.js';
 import {
   validatedName,
   workspaceInvalidNameError,
-} from 'shared/errors/invalid-name.error';
+} from 'shared/errors/invalid-name.error.js';
 import { describe, expect, it } from 'vitest';
 
 // AC-08 / AC-15a / AC-29a are one rule set: Warehouse, Workspace Role and

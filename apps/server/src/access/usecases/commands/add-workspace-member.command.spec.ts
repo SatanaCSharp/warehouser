@@ -8,8 +8,8 @@ import { ApplicationError } from '@warehouser/shared-types/errors';
 // where contracts/openapi.yaml documents 404 `workspace.target_unavailable`.
 // AC-34 also requires the cross-Workspace Role to be indistinguishable from a
 // missing one, which a persistence failure cannot promise.
-import { AddWorkspaceMemberCommand } from 'access/usecases/commands/add-workspace-member.command';
-import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
+import { AddWorkspaceMemberCommand } from 'access/usecases/commands/add-workspace-member.command.js';
+import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user.js';
 import { describe, expect, it, vi } from 'vitest';
 
 const workspaceId = '00000000-0000-4000-8000-000000000001';

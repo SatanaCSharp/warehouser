@@ -26,8 +26,8 @@ import { describe, expect, it } from 'vitest';
 // would additionally perturb the file-inventory counts this spec and others assert.
 
 const MODULE_NAME = 'warehouses';
-const moduleDirectory = __dirname;
-const sourceRoot = join(__dirname, '..');
+const moduleDirectory = import.meta.dirname;
+const sourceRoot = join(import.meta.dirname, '..');
 const appModulePath = join(sourceRoot, 'app.module.ts');
 
 // The module list is exactly the directories directly under `src/`
@@ -94,6 +94,14 @@ const collectTsFiles = (directory: string): string[] =>
   });
 
 /**
+ * A specifier reduced to the module path the rules below are about. Every intra-application import
+ * carries the `.js` extension Node's ESM resolver requires; that is a spelling of the resolver's
+ * rules, not of the boundary, so it is dropped before a target is classified. Failure messages
+ * still quote the specifier as written.
+ */
+const moduleTarget = (target: string): string => target.replace(/\.js$/u, '');
+
+/**
  * The module-qualified target of `specifier` when it resolves into a *foreign* feature module,
  * otherwise `undefined`.
  *
@@ -124,10 +132,11 @@ const foreignModuleTarget = (
     target = specifier;
   }
 
-  const [head] = target.split('/');
+  const normalized = moduleTarget(target);
+  const [head] = normalized.split('/');
 
   return FEATURE_MODULES.includes(head) && head !== MODULE_NAME
-    ? target
+    ? normalized
     : undefined;
 };
 
@@ -316,7 +325,7 @@ describe('warehouses module boundaries', () => {
     const appModuleSource = readFileSync(appModulePath, 'utf8');
 
     expect(appModuleSource).toMatch(
-      /import\s*\{[^}]*\bWarehousesRestModule\b[^}]*\}\s*from\s*['"]warehouses['"]/u,
+      /import\s*\{[^}]*\bWarehousesRestModule\b[^}]*\}\s*from\s*['"]warehouses\/index\.js['"]/u,
     );
     // `[\s\S]*?` rather than `[^\]]*`: the imports array legitimately contains nested arrays
     // (`inject: [ConfigService]`), so a negated-`]` scan stops before reaching this module.
@@ -341,7 +350,7 @@ describe('warehouses module boundaries', () => {
   it('rejects an import of a sibling error factory, naming the file and the rule', () => {
     const [violation, ...rest] = findBoundaryViolations(
       fixture(
-        "import { workspaceReplacementRoleRequiredError } from 'access/domain/errors/workspace-access.errors';",
+        "import { workspaceReplacementRoleRequiredError } from 'access/domain/errors/workspace-access.errors.js';",
       ),
     );
 
@@ -350,7 +359,7 @@ describe('warehouses module boundaries', () => {
       'warehouses/usecases/commands/create-warehouse.command.ts',
     );
     expect(violation).toContain(
-      "'access/domain/errors/workspace-access.errors'",
+      "'access/domain/errors/workspace-access.errors.js'",
     );
     expect(violation).toContain('module-private');
     expect(violation).toContain('adding-a-server-module.md §8');
@@ -359,7 +368,7 @@ describe('warehouses module boundaries', () => {
   it('rejects an import of a sibling domain predicate, naming the file and the rule', () => {
     const [violation, ...rest] = findBoundaryViolations(
       fixture(
-        "import { isProtectedWorkspaceOwnerRoleKind } from 'access/domain/predicates/workspace-authority.predicates';",
+        "import { isProtectedWorkspaceOwnerRoleKind } from 'access/domain/predicates/workspace-authority.predicates.js';",
       ),
     );
 
@@ -368,7 +377,7 @@ describe('warehouses module boundaries', () => {
       'warehouses/usecases/commands/create-warehouse.command.ts',
     );
     expect(violation).toContain(
-      "'access/domain/predicates/workspace-authority.predicates'",
+      "'access/domain/predicates/workspace-authority.predicates.js'",
     );
     expect(violation).toContain('module-private');
   });
@@ -376,7 +385,7 @@ describe('warehouses module boundaries', () => {
   it('rejects an import of a sibling DTO, naming the file and the rule', () => {
     const [violation, ...rest] = findBoundaryViolations(
       fixture(
-        "import { WarehouseMembershipAssignmentDto } from 'access/rest/dtos/warehouse-membership-mutation.dto';",
+        "import { WarehouseMembershipAssignmentDto } from 'access/rest/dtos/warehouse-membership-mutation.dto.js';",
       ),
     );
 
@@ -385,7 +394,7 @@ describe('warehouses module boundaries', () => {
       'warehouses/usecases/commands/create-warehouse.command.ts',
     );
     expect(violation).toContain(
-      "'access/rest/dtos/warehouse-membership-mutation.dto'",
+      "'access/rest/dtos/warehouse-membership-mutation.dto.js'",
     );
     expect(violation).toContain('module-private');
   });
@@ -393,13 +402,13 @@ describe('warehouses module boundaries', () => {
   it('rejects a relative traversal into a sibling module', () => {
     const [violation, ...rest] = findBoundaryViolations(
       fixture(
-        "import { membershipRequiredError } from '../../../access/domain/errors/access.errors';",
+        "import { membershipRequiredError } from '../../../access/domain/errors/access.errors.js';",
       ),
     );
 
     expect(rest).toEqual([]);
     expect(violation).toContain(
-      "'../../../access/domain/errors/access.errors'",
+      "'../../../access/domain/errors/access.errors.js'",
     );
     expect(violation).toContain('module-private');
   });
@@ -407,13 +416,13 @@ describe('warehouses module boundaries', () => {
   it('rejects a deep use-case import of a provider the sibling does not export', () => {
     const [violation, ...rest] = findBoundaryViolations(
       fixture(
-        "import { RoleDeletionService } from 'access/domain/services/role-deletion.service';",
+        "import { RoleDeletionService } from 'access/domain/services/role-deletion.service.js';",
       ),
     );
 
     expect(rest).toEqual([]);
     expect(violation).toContain(
-      "'access/domain/services/role-deletion.service'",
+      "'access/domain/services/role-deletion.service.js'",
     );
     expect(violation).toContain('not public surface');
   });
@@ -425,7 +434,7 @@ describe('warehouses module boundaries', () => {
     expect(
       findBoundaryViolations(
         fixture(
-          "import { ProvisionInitialAccessCommand } from 'access/usecases/commands/provision-initial-access.command';",
+          "import { ProvisionInitialAccessCommand } from 'access/usecases/commands/provision-initial-access.command.js';",
         ),
       ),
     ).toEqual([]);

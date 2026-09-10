@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import type { ItemCatalogueEntryRead } from 'items/domain/mappers/item-catalogue-entry.mapper';
-import { toItemCatalogueEntry } from 'items/domain/mappers/item-catalogue-entry.mapper';
-import type { AccessCurrentUser } from 'shared/access/access-current-user';
-import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
+import type { ItemCatalogueEntryRead } from 'items/domain/mappers/item-catalogue-entry.mapper.js';
+import { toItemCatalogueEntry } from 'items/domain/mappers/item-catalogue-entry.mapper.js';
+import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
+import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository.js';
 
 export interface ListItemCatalogueOptions {
   /** AC-06a — the picker read: only Items that are not deactivated. Omitted returns every Item,

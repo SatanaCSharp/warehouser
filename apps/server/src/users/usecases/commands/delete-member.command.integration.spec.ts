@@ -1,21 +1,21 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 
 import { ErrorCode } from '@warehouser/shared-types/enums';
-import type { AccessCurrentUser } from 'shared/access/access-current-user';
-import dataSource from 'shared/database/data-source';
-import { DbTransactionService } from 'shared/database/db-transaction.service';
-import { DbTransactionContext } from 'shared/database/db-transaction-context.service';
-import { AccountEntity } from 'shared/domain/entities/account.entity';
-import { PermissionEntity } from 'shared/domain/entities/permission.entity';
-import { RoleEntity } from 'shared/domain/entities/role.entity';
-import { RolePermissionEntity } from 'shared/domain/entities/role-permission.entity';
-import { SessionEntity } from 'shared/domain/entities/session.entity';
-import { UserEntity } from 'shared/domain/entities/user.entity';
-import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
-import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
-import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
-import { MemberLifecycleRepository } from 'shared/domain/repositories/member-lifecycle.repository';
+import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
+import dataSource from 'shared/database/data-source.js';
+import { DbTransactionService } from 'shared/database/db-transaction.service.js';
+import { DbTransactionContext } from 'shared/database/db-transaction-context.service.js';
+import { AccountEntity } from 'shared/domain/entities/account.entity.js';
+import { PermissionEntity } from 'shared/domain/entities/permission.entity.js';
+import { RoleEntity } from 'shared/domain/entities/role.entity.js';
+import { RolePermissionEntity } from 'shared/domain/entities/role-permission.entity.js';
+import { SessionEntity } from 'shared/domain/entities/session.entity.js';
+import { UserEntity } from 'shared/domain/entities/user.entity.js';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity.js';
+import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity.js';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
+import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository.js';
+import { MemberLifecycleRepository } from 'shared/domain/repositories/member-lifecycle.repository.js';
 // Does not exist yet — this is the RED step for T12. Per data-model.md's
 // deletion-sequencing section and sad.md §6.4/§4, DeleteMemberCommand is
 // expected to accept the caller's `AccessCurrentUser` plus
@@ -26,7 +26,7 @@ import { MemberLifecycleRepository } from 'shared/domain/repositories/member-lif
 // transaction delete the Warehouse Membership row, hard-delete the target's
 // Sessions, and delete the target's Account+User pair — in that exact
 // order — returning the deleted member's id.
-import { DeleteMemberCommand } from 'users/usecases/commands/delete-member.command';
+import { DeleteMemberCommand } from 'users/usecases/commands/delete-member.command.js';
 import {
   afterAll,
   afterEach,

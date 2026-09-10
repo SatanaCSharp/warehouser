@@ -1,21 +1,21 @@
 import { randomUUID } from 'node:crypto';
 
-import dataSource from 'shared/database/data-source';
-import { AccountEntity } from 'shared/domain/entities/account.entity';
-import { CustomerEntity } from 'shared/domain/entities/customer.entity';
-import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
-import { ItemEntity } from 'shared/domain/entities/item.entity';
-import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
-import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity';
-import { PurchaseDraftLineRejectionEntity } from 'shared/domain/entities/purchase-draft-line-rejection.entity';
-import { RejectionReasonEntity } from 'shared/domain/entities/rejection-reason.entity';
-import { UserEntity } from 'shared/domain/entities/user.entity';
-import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
+import dataSource from 'shared/database/data-source.js';
+import { AccountEntity } from 'shared/domain/entities/account.entity.js';
+import { CustomerEntity } from 'shared/domain/entities/customer.entity.js';
+import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity.js';
+import { ItemEntity } from 'shared/domain/entities/item.entity.js';
+import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity.js';
+import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity.js';
+import { PurchaseDraftLineRejectionEntity } from 'shared/domain/entities/purchase-draft-line-rejection.entity.js';
+import { RejectionReasonEntity } from 'shared/domain/entities/rejection-reason.entity.js';
+import { UserEntity } from 'shared/domain/entities/user.entity.js';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity.js';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
 import {
   buildWarehouse,
   buildWorkspace,
-} from 'test/factories/entity-factories';
+} from 'test/factories/entity-factories.js';
 import {
   type EntityTarget,
   type ObjectLiteral,

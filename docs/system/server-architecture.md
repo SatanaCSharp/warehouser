@@ -77,6 +77,32 @@ A module is named for the business entity or cohesive business capability it own
 the owning module until it is genuinely reused. `shared/` is for pure fabrications and stable
 cross-module abstractions, not miscellaneous code or business behavior with an unclear owner.
 
+## Module system and import specifiers
+
+`apps/server` is an ES module (`"type": "module"`). Two consequences apply to every import you
+write, and neither is optional — Node's ESM resolver performs no extension search and no directory
+resolution:
+
+- **Every intra-application specifier carries `.js`**, naming the compiled file rather than the
+  `.ts` source it is written in: `import { X } from 'shared/domain/entities/x.entity.js'`. The
+  bare `shared/...`, `warehouses/...` prefix is unchanged — `compilerOptions.paths` in
+  `apps/server/tsconfig.json` maps `*` to `./src/*`, and TypeScript maps the `.js` back to the
+  `.ts` when it type-checks.
+- **A module barrel is imported as `<module>/index.js`**, never as the bare directory name:
+  `import { WarehousesRestModule } from 'warehouses/index.js'`.
+
+The same applies to a deep subpath of a package that publishes no `exports` map for it —
+`lodash/uniq.js`, `typeorm/driver/types/IsolationLevel.js`. `lodash` is imported one function per
+default import for that reason: its CommonJS root has no named exports an ESM importer can bind.
+
+Use `import.meta.dirname` / `import.meta.filename`; `__dirname` and `__filename` do not exist.
+
+The build is `tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json`. `tsc` emits the
+specifiers unchanged and `tsc-alias` rewrites the `paths` ones into relative paths, which is what
+makes `dist/` loadable. The Nest CLI is deliberately not a dependency: its `paths` transformer
+strips the extension off every specifier it rewrites, producing output Node cannot load
+(nest-cli#3545). `pnpm dev` runs the TypeScript entrypoint directly with `tsx watch`.
+
 ## Layer responsibilities
 
 ### Domain
@@ -425,6 +451,13 @@ Both build on the single driver in `test/pglite/pglite-driver.ts`. Mapping _both
 second is what `AppModule` uses, so without it an HTTP contract spec would seed its fixtures into
 PGlite while the application under test read from a real PostgreSQL server, and every
 authenticated request would come back 401.
+
+An alias that stops matching is the one failure this tier cannot report by failing: the production
+modules load, the suite dials `DATABASE_HOST`, and it still passes. So the swap is asserted rather
+than assumed — `test/pglite/alias-guard.setup.ts` runs as `setupFiles` and refuses to start a test
+file unless both aliased modules resolve to something carrying the PGlite driver. Neither check
+opens a connection, so a mismatched `find` pattern is caught before the first byte reaches a
+socket. Change either specifier and the guard, not the database, is what you hear from.
 
 The driver is deliberately in-process rather than reached over `pglite-socket`. Routing statements
 through the socket's query queue hits open upstream defects around transactions and error

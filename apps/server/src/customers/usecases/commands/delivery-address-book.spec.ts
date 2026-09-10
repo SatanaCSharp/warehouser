@@ -20,18 +20,22 @@ import {
   ApplicationError,
   AssertionError,
 } from '@warehouser/shared-types/errors';
-import { hasExactlyOneMainActiveDeliveryAddress } from 'customers/domain/predicates/customer.predicates';
-import { CustomerAddressBookService } from 'customers/domain/services/customer-address-book.service';
-import { AddCustomerDeliveryAddressCommand } from 'customers/usecases/commands/add-customer-delivery-address.command';
-import { CorrectCustomerDeliveryAddressCommand } from 'customers/usecases/commands/correct-customer-delivery-address.command';
-import { DeactivateCustomerDeliveryAddressCommand } from 'customers/usecases/commands/deactivate-customer-delivery-address.command';
-import { ReactivateCustomerDeliveryAddressCommand } from 'customers/usecases/commands/reactivate-customer-delivery-address.command';
-import { SetMainCustomerDeliveryAddressCommand } from 'customers/usecases/commands/set-main-customer-delivery-address.command';
-import { filter, find, forEach, map, orderBy } from 'lodash';
-import type { AccessCurrentUser } from 'shared/access/access-current-user';
-import type { CustomerEntity } from 'shared/domain/entities/customer.entity';
-import type { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
-import type { ReviseDeliveryAddressPersistenceInput } from 'shared/domain/repositories/customer-address-book.repository';
+import { hasExactlyOneMainActiveDeliveryAddress } from 'customers/domain/predicates/customer.predicates.js';
+import { CustomerAddressBookService } from 'customers/domain/services/customer-address-book.service.js';
+import { AddCustomerDeliveryAddressCommand } from 'customers/usecases/commands/add-customer-delivery-address.command.js';
+import { CorrectCustomerDeliveryAddressCommand } from 'customers/usecases/commands/correct-customer-delivery-address.command.js';
+import { DeactivateCustomerDeliveryAddressCommand } from 'customers/usecases/commands/deactivate-customer-delivery-address.command.js';
+import { ReactivateCustomerDeliveryAddressCommand } from 'customers/usecases/commands/reactivate-customer-delivery-address.command.js';
+import { SetMainCustomerDeliveryAddressCommand } from 'customers/usecases/commands/set-main-customer-delivery-address.command.js';
+import filter from 'lodash/filter.js';
+import find from 'lodash/find.js';
+import forEach from 'lodash/forEach.js';
+import map from 'lodash/map.js';
+import orderBy from 'lodash/orderBy.js';
+import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
+import type { CustomerEntity } from 'shared/domain/entities/customer.entity.js';
+import type { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity.js';
+import type { ReviseDeliveryAddressPersistenceInput } from 'shared/domain/repositories/customer-address-book.repository.js';
 import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>

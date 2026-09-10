@@ -41,14 +41,21 @@ overrides:
 
 catalog:
   # TypeScript & build
-  tsc-alias: ^1.9.0
+  # 1.9.4 or newer: earlier releases drop a bare `"*"` `paths` key on the floor
+  # (`buildAliasTrie` skipped any alias whose prefix was empty), so `apps/server`'s emitted
+  # `shared/...` specifiers were left unrewritten and the built output did not load.
+  tsc-alias: ^1.9.4
   turbo: ^2.10.4
   typescript: ^5.9.3
+  # `apps/server` is ESM and builds with `tsc` + `tsc-alias`, so there is no bundler-backed watch
+  # mode to lean on. `tsx` runs the TypeScript entrypoint directly and restarts it on change — the
+  # maintained replacement for `nest start --watch`, whose tsconfig-paths hook cannot emit loadable
+  # ESM.
+  tsx: ^4.23.13
 
   # Testing
   "@types/node": ^24.13.3
   "@testing-library/dom": ^10.4.1
-  ts-node: ^10.9.2
   vitest: ^5.0.0
   "@vitest/coverage-v8": ^5.0.0
   # NestJS DI needs `emitDecoratorMetadata`, which esbuild (Vite's default
@@ -59,10 +66,11 @@ catalog:
   # specifiers against the server's tsconfig.
   vite-tsconfig-paths: ^6.1.1
 
-  # NestJS. Every v12 package publishes as ESM (`"type": "module"`); this app stays CommonJS and
-  # reaches them through Node's `require(esm)`, which the migration guide supports and which
-  # `"module": "NodeNext"` in `@warehouser/tsconfig` is what makes type-check.
-  "@nestjs/cli": ^12.0.0
+  # NestJS. Every v12 package publishes as ESM (`"type": "module"`), and so does `apps/server`, so
+  # they are reached by a plain `import`. The Nest CLI is deliberately absent: its tsconfig-paths
+  # transformer strips the extension off every alias it rewrites, producing specifiers Node's ESM
+  # resolver cannot load (nest-cli#3545), and the repo has no `nest-cli.json`, so the CLI
+  # contributed nothing else. `apps/server` builds with `tsc` + `tsc-alias` instead.
   "@nestjs/common": ^12.0.1
   "@nestjs/bullmq": ^12.0.0
   "@nestjs/config": ^12.0.0

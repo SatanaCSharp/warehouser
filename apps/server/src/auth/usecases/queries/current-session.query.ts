@@ -1,9 +1,9 @@
-import { type AuthRuntime, authRuntime } from 'auth/domain/auth-runtime';
-import { toAuthenticatedCurrentUser } from 'auth/domain/mappers/authenticated-current-user.mapper';
-import { toSession } from 'auth/domain/mappers/session.mapper';
-import { digestSessionSecret } from 'auth/domain/security/session-secret';
-import { UserId } from 'auth/domain/value-objects/identity-id';
-import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
+import { type AuthRuntime, authRuntime } from 'auth/domain/auth-runtime.js';
+import { toAuthenticatedCurrentUser } from 'auth/domain/mappers/authenticated-current-user.mapper.js';
+import { toSession } from 'auth/domain/mappers/session.mapper.js';
+import { digestSessionSecret } from 'auth/domain/security/session-secret.js';
+import { UserId } from 'auth/domain/value-objects/identity-id.js';
+import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository.js';
 
 export class CurrentSessionQuery {
   constructor(

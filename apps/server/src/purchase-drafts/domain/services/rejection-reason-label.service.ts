@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { rejectionReasonIdsOf } from 'purchase-drafts/domain/mappers/line-condition.mapper';
-import type { PurchaseDraftLineEndingRead } from 'shared/domain/repositories/purchase-draft-read.repository';
-import { RejectionReasonCatalogueRepository } from 'shared/domain/repositories/rejection-reason-catalogue.repository';
+import { rejectionReasonIdsOf } from 'purchase-drafts/domain/mappers/line-condition.mapper.js';
+import type { PurchaseDraftLineEndingRead } from 'shared/domain/repositories/purchase-draft-read.repository.js';
+import { RejectionReasonCatalogueRepository } from 'shared/domain/repositories/rejection-reason-catalogue.repository.js';
 
 /**
  * AC-23a — the Rejection Reason wording a read serves beside each refusal, resolved **once per

@@ -2,13 +2,13 @@ import {
   ErrorCode,
   WorkspacePermissionId,
 } from '@warehouser/shared-types/enums';
-import { workspaceCurrentUser } from 'shared/access/workspace-current-user';
-import dataSource from 'shared/database/data-source';
-import { DbTransactionService } from 'shared/database/db-transaction.service';
-import { DbTransactionContext } from 'shared/database/db-transaction-context.service';
-import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
-import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
+import { workspaceCurrentUser } from 'shared/access/workspace-current-user.js';
+import dataSource from 'shared/database/data-source.js';
+import { DbTransactionService } from 'shared/database/db-transaction.service.js';
+import { DbTransactionContext } from 'shared/database/db-transaction-context.service.js';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity.js';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
+import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository.js';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 // This command does not exist yet — this is the RED step for T20. Expected
 // to accept the caller's `WorkspaceCurrentUser` plus
@@ -16,7 +16,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 // `principal.workspaceId` itself (not only the transport guard), store the
 // trimmed/un-normalized name via `WarehouseLifecycleRepository`, and run
 // inside its own `@Transactional()` boundary (sad.md §6.4a).
-import { RenameWarehouseCommand } from 'warehouses/usecases/commands/rename-warehouse.command';
+import { RenameWarehouseCommand } from 'warehouses/usecases/commands/rename-warehouse.command.js';
 
 const now = new Date('2026-08-12T12:00:00.000Z');
 

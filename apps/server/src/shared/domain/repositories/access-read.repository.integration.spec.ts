@@ -1,12 +1,12 @@
-import dataSource from 'shared/database/data-source';
-import { AccountEntity } from 'shared/domain/entities/account.entity';
-import { RoleEntity } from 'shared/domain/entities/role.entity';
-import { RolePermissionEntity } from 'shared/domain/entities/role-permission.entity';
-import { UserEntity } from 'shared/domain/entities/user.entity';
-import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
-import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
-import { AccessReadRepository } from 'shared/domain/repositories/access-read.repository';
+import dataSource from 'shared/database/data-source.js';
+import { AccountEntity } from 'shared/domain/entities/account.entity.js';
+import { RoleEntity } from 'shared/domain/entities/role.entity.js';
+import { RolePermissionEntity } from 'shared/domain/entities/role-permission.entity.js';
+import { UserEntity } from 'shared/domain/entities/user.entity.js';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity.js';
+import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity.js';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
+import { AccessReadRepository } from 'shared/domain/repositories/access-read.repository.js';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 const now = new Date('2026-08-06T12:00:00.000Z');

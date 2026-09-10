@@ -2,10 +2,10 @@ import { randomUUID } from 'node:crypto';
 
 import { Injectable, Optional } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
-import { itemSkuTakenError } from 'items/domain/errors/item.errors';
-import type { AccessCurrentUser } from 'shared/access/access-current-user';
-import { Transactional } from 'shared/decorators/transactional.decorator';
-import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
+import { itemSkuTakenError } from 'items/domain/errors/item.errors.js';
+import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
+import { Transactional } from 'shared/decorators/transactional.decorator.js';
+import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository.js';
 
 export interface CreateItemRuntime {
   readonly itemId: () => string;

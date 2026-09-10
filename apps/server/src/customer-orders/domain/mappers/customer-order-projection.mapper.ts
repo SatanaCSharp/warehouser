@@ -1,8 +1,8 @@
-import type { CustomerOrderState } from 'shared/domain/entities/customer-order.entity';
+import type { CustomerOrderState } from 'shared/domain/entities/customer-order.entity.js';
 import type {
   IdentifiedCustomerOrderRead,
   RedactedCustomerOrderRead,
-} from 'shared/domain/repositories/customer-order-lifecycle.repository';
+} from 'shared/domain/repositories/customer-order-lifecycle.repository.js';
 
 // The Customer Order as the application boundary projects it — openapi.yaml `CustomerOrder`, in its
 // two deliberately modelled forms (AC-09a, ADR 0001).

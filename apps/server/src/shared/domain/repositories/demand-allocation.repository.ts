@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { getEntityManager } from 'shared/database/db-transaction-context.service';
-import { ArrivalAllocationEntity } from 'shared/domain/entities/arrival-allocation.entity';
-import type { CustomerOrderState } from 'shared/domain/entities/customer-order.entity';
-import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
-import { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity';
+import { getEntityManager } from 'shared/database/db-transaction-context.service.js';
+import { ArrivalAllocationEntity } from 'shared/domain/entities/arrival-allocation.entity.js';
+import type { CustomerOrderState } from 'shared/domain/entities/customer-order.entity.js';
+import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity.js';
+import { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity.js';
 import { DataSource, In } from 'typeorm';
 
 export interface LockedCustomerOrderForLink {

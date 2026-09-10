@@ -1,19 +1,19 @@
 import { Module } from '@nestjs/common';
-import { CustomerAddressBookService } from 'customers/domain/services/customer-address-book.service';
-import { AddCustomerDeliveryAddressCommand } from 'customers/usecases/commands/add-customer-delivery-address.command';
-import { CorrectCustomerDeliveryAddressCommand } from 'customers/usecases/commands/correct-customer-delivery-address.command';
-import { CorrectCustomerNameCommand } from 'customers/usecases/commands/correct-customer-name.command';
-import { DeactivateCustomerCommand } from 'customers/usecases/commands/deactivate-customer.command';
-import { DeactivateCustomerDeliveryAddressCommand } from 'customers/usecases/commands/deactivate-customer-delivery-address.command';
-import { ReactivateCustomerCommand } from 'customers/usecases/commands/reactivate-customer.command';
-import { ReactivateCustomerDeliveryAddressCommand } from 'customers/usecases/commands/reactivate-customer-delivery-address.command';
-import { RecordCustomerCommand } from 'customers/usecases/commands/record-customer.command';
-import { SetMainCustomerDeliveryAddressCommand } from 'customers/usecases/commands/set-main-customer-delivery-address.command';
-import { ListCustomersQuery } from 'customers/usecases/queries/list-customers.query';
-import { ReadCustomerQuery } from 'customers/usecases/queries/read-customer.query';
-import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository';
-import { CustomerAwaitingDemandRepository } from 'shared/domain/repositories/customer-awaiting-demand.repository';
-import { CustomerDirectoryRepository } from 'shared/domain/repositories/customer-directory.repository';
+import { CustomerAddressBookService } from 'customers/domain/services/customer-address-book.service.js';
+import { AddCustomerDeliveryAddressCommand } from 'customers/usecases/commands/add-customer-delivery-address.command.js';
+import { CorrectCustomerDeliveryAddressCommand } from 'customers/usecases/commands/correct-customer-delivery-address.command.js';
+import { CorrectCustomerNameCommand } from 'customers/usecases/commands/correct-customer-name.command.js';
+import { DeactivateCustomerCommand } from 'customers/usecases/commands/deactivate-customer.command.js';
+import { DeactivateCustomerDeliveryAddressCommand } from 'customers/usecases/commands/deactivate-customer-delivery-address.command.js';
+import { ReactivateCustomerCommand } from 'customers/usecases/commands/reactivate-customer.command.js';
+import { ReactivateCustomerDeliveryAddressCommand } from 'customers/usecases/commands/reactivate-customer-delivery-address.command.js';
+import { RecordCustomerCommand } from 'customers/usecases/commands/record-customer.command.js';
+import { SetMainCustomerDeliveryAddressCommand } from 'customers/usecases/commands/set-main-customer-delivery-address.command.js';
+import { ListCustomersQuery } from 'customers/usecases/queries/list-customers.query.js';
+import { ReadCustomerQuery } from 'customers/usecases/queries/read-customer.query.js';
+import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository.js';
+import { CustomerAwaitingDemandRepository } from 'shared/domain/repositories/customer-awaiting-demand.repository.js';
+import { CustomerDirectoryRepository } from 'shared/domain/repositories/customer-directory.repository.js';
 
 // AC-01/AC-03b/AC-04/AC-05/AC-06/AC-06a/AC-06b/AC-07 — the Customer's own lifecycle and its
 // Delivery Address book: each command owns the rules of its transition and its own

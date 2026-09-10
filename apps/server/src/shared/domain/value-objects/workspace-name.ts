@@ -1,4 +1,4 @@
-import { AccessName } from 'shared/domain/value-objects/access-name';
+import { AccessName } from 'shared/domain/value-objects/access-name.js';
 
 /**
  * A Workspace's name, which — unlike a Warehouse or Role name — has a legitimate

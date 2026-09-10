@@ -1,7 +1,7 @@
 import {
   productionSourceFiles,
   serverPath,
-} from 'test/architectural/server-project';
+} from 'test/architectural/server-project.js';
 import type { SourceFile } from 'ts-morph';
 
 /** The two directories a mapping may be declared in, per `server-architecture.md`:

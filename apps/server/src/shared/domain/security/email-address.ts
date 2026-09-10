@@ -2,7 +2,7 @@ import { assert } from '@warehouser/utils/asserts';
 import {
   isSupportedEmail,
   normalizeEmail,
-} from 'shared/domain/security/is-supported-email';
+} from 'shared/domain/security/is-supported-email.js';
 
 export class EmailAddress {
   private constructor(readonly value: string) {}

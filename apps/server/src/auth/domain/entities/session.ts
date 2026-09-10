@@ -1,6 +1,6 @@
 import { assert } from '@warehouser/utils/asserts';
-import { AccountId, SessionId } from 'auth/domain/value-objects/identity-id';
-import { SessionDigest } from 'auth/domain/value-objects/session-digest';
+import { AccountId, SessionId } from 'auth/domain/value-objects/identity-id.js';
+import { SessionDigest } from 'auth/domain/value-objects/session-digest.js';
 
 const SESSION_LIFETIME_MS = 30 * 24 * 60 * 60 * 1_000;
 

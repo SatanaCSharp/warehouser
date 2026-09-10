@@ -8,8 +8,8 @@
 // linkable-demand read a draft line's Customer Order picker issues"). Coverage is informational —
 // AC-20 requires demand already linked by another draft to still be offered here, so this query
 // never excludes an order for already carrying a link.
-import { ListLinkableCustomerOrdersForItemQuery } from 'customer-orders/usecases/queries/list-linkable-customer-orders-for-item.query';
-import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { ListLinkableCustomerOrdersForItemQuery } from 'customer-orders/usecases/queries/list-linkable-customer-orders-for-item.query.js';
+import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
 import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>

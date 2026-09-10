@@ -3,9 +3,9 @@ import type {
   PermissionPage,
   PermissionPagination,
 } from '@warehouser/contracts/access';
-import type { AccessCurrentUser } from 'shared/access/access-current-user';
-import { AccessReadRepository } from 'shared/domain/repositories/access-read.repository';
-import { paginatablePage } from 'shared/pagination/paginatable-page';
+import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
+import { AccessReadRepository } from 'shared/domain/repositories/access-read.repository.js';
+import { paginatablePage } from 'shared/pagination/paginatable-page.js';
 
 @Injectable()
 export class ListAccessPermissionsQuery {

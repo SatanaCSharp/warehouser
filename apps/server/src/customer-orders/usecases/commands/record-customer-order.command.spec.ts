@@ -5,13 +5,13 @@
 // (server-architecture.md §Use cases).
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
-import { CustomerOrderDestinationService } from 'customer-orders/domain/services/customer-order-destination.service';
-import { RecordCustomerOrderCommand } from 'customer-orders/usecases/commands/record-customer-order.command';
-import type { AccessCurrentUser } from 'shared/access/access-current-user';
-import type { CustomerEntity } from 'shared/domain/entities/customer.entity';
-import type { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
-import type { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
-import { CustomerDirectoryRepository } from 'shared/domain/repositories/customer-directory.repository';
+import { CustomerOrderDestinationService } from 'customer-orders/domain/services/customer-order-destination.service.js';
+import { RecordCustomerOrderCommand } from 'customer-orders/usecases/commands/record-customer-order.command.js';
+import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
+import type { CustomerEntity } from 'shared/domain/entities/customer.entity.js';
+import type { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity.js';
+import type { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity.js';
+import { CustomerDirectoryRepository } from 'shared/domain/repositories/customer-directory.repository.js';
 import type { Mock } from 'vitest';
 import { describe, expect, it, vi } from 'vitest';
 

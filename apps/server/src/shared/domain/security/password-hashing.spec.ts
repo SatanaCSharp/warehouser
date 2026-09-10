@@ -1,7 +1,7 @@
 import {
   hashPassword,
   verifyPassword,
-} from 'shared/domain/security/password-hashing';
+} from 'shared/domain/security/password-hashing.js';
 import { describe, expect, it } from 'vitest';
 
 const testParameters = {

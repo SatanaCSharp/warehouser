@@ -1,11 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
-import { isEmpty, keyBy, map } from 'lodash';
+import isEmpty from 'lodash/isEmpty.js';
+import keyBy from 'lodash/keyBy.js';
+import map from 'lodash/map.js';
 import type {
   ConditionSplitViolation,
   EndingConditionInputViolation,
   PreReceiptConformanceViolation,
-} from 'purchase-drafts/domain/errors/purchase-draft.errors';
+} from 'purchase-drafts/domain/errors/purchase-draft.errors.js';
 import {
   conditionOnNothingReceivedViolation,
   descriptionEmptyViolation,
@@ -29,8 +31,8 @@ import {
   unknownRejectionReasonViolation,
   verdictOnUninstructedLineViolation,
   verdictRequiredWithRejectionsViolation,
-} from 'purchase-drafts/domain/errors/purchase-draft.errors';
-import type { RejectionReasonCatalogueEntry } from 'purchase-drafts/domain/predicates/purchase-draft-condition.predicates';
+} from 'purchase-drafts/domain/errors/purchase-draft.errors.js';
+import type { RejectionReasonCatalogueEntry } from 'purchase-drafts/domain/predicates/purchase-draft-condition.predicates.js';
 import {
   conditionOnlyWhereSomethingReceived,
   duplicatedRejectionReasonIds,
@@ -49,18 +51,18 @@ import {
   satisfiesDescriptionRequirement,
   sourceMatchesDeliveryMode,
   totalRefusedQuantity,
-} from 'purchase-drafts/domain/predicates/purchase-draft-condition.predicates';
-import { raisesRejections } from 'purchase-drafts/domain/predicates/rejection-cause-access.predicates';
+} from 'purchase-drafts/domain/predicates/purchase-draft-condition.predicates.js';
+import { raisesRejections } from 'purchase-drafts/domain/predicates/rejection-cause-access.predicates.js';
 import {
   PreReceiptConformanceVerdict,
   requiredSourceFor,
-} from 'purchase-drafts/domain/value-objects/line-condition';
-import type { AccessCurrentUser } from 'shared/access/access-current-user';
+} from 'purchase-drafts/domain/value-objects/line-condition.js';
+import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
 import type {
   LockedPurchaseDraftLineForEnding,
   RecordLineEndingRejectionInput,
-} from 'shared/domain/repositories/arrival-confirmation.repository';
-import { RejectionReasonCatalogueRepository } from 'shared/domain/repositories/rejection-reason-catalogue.repository';
+} from 'shared/domain/repositories/arrival-confirmation.repository.js';
+import { RejectionReasonCatalogueRepository } from 'shared/domain/repositories/rejection-reason-catalogue.repository.js';
 
 // The rules **both** ending commands enforce (sad.md §5, §6.1 steps 4–8, §6.2 step 3). Two callers
 // is this repository's extraction trigger, and neither command may state these refusals itself: a

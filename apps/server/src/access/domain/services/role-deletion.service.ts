@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { Maybe } from '@warehouser/shared-types/utils';
 import { assert, assertDefined } from '@warehouser/utils/asserts';
-import { replacementRequiredError } from 'access/domain/errors/access.errors';
-import { RoleLifecycleRepository } from 'shared/domain/repositories/role-lifecycle.repository';
+import { replacementRequiredError } from 'access/domain/errors/access.errors.js';
+import { RoleLifecycleRepository } from 'shared/domain/repositories/role-lifecycle.repository.js';
 
 @Injectable()
 export class RoleDeletionService {

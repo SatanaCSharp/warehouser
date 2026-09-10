@@ -2,18 +2,18 @@ import { randomUUID } from 'node:crypto';
 
 import { Injectable, Optional } from '@nestjs/common';
 import { assertFail } from '@warehouser/utils/asserts';
-import find from 'lodash/find';
+import find from 'lodash/find.js';
 import {
   purchaseDraftDeliveryAddressDisagreementError,
   purchaseDraftLinkDeliveryAddressDisagreementError,
-} from 'purchase-drafts/domain/errors/purchase-draft.errors';
+} from 'purchase-drafts/domain/errors/purchase-draft.errors.js';
 import {
   assertApplied,
   PurchaseDraftAssemblyService,
-} from 'purchase-drafts/domain/services/purchase-draft-assembly.service';
-import type { AccessCurrentUser } from 'shared/access/access-current-user';
-import { Transactional } from 'shared/decorators/transactional.decorator';
-import { PurchaseDraftAssemblyRepository } from 'shared/domain/repositories/purchase-draft-assembly.repository';
+} from 'purchase-drafts/domain/services/purchase-draft-assembly.service.js';
+import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
+import { Transactional } from 'shared/decorators/transactional.decorator.js';
+import { PurchaseDraftAssemblyRepository } from 'shared/domain/repositories/purchase-draft-assembly.repository.js';
 
 export interface AddLinkInput {
   readonly customerOrderId: string;

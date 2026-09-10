@@ -1,4 +1,4 @@
-import type { WorkspaceRoleEntityKind } from 'shared/domain/entities/workspace-role.entity';
+import type { WorkspaceRoleEntityKind } from 'shared/domain/entities/workspace-role.entity.js';
 import { Column, Entity, PrimaryColumn } from 'typeorm';
 
 @Entity({ name: 'workspace_memberships' })

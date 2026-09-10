@@ -1,12 +1,12 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
+import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user.js';
 import {
   TRANSACTIONAL_KEY,
   type TransactionalMetadata,
-} from 'shared/decorators/transactional.decorator';
-import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
-import { repositoryDouble } from 'test/doubles/repository-double';
+} from 'shared/decorators/transactional.decorator.js';
+import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository.js';
+import { repositoryDouble } from 'test/doubles/repository-double.js';
 import { describe, expect, it, vi } from 'vitest';
 // RED for T20 — the command does not exist yet. This unit spec covers AC-08
 // only (spec.md §5): name validation must reject before the Warehouse is
@@ -16,7 +16,7 @@ import { describe, expect, it, vi } from 'vitest';
 // missing target) are covered at integration level per test-plan.md's
 // chosen level for those rows, since proving Workspace ownership needs a
 // real target row to be absent or present.
-import { RenameWarehouseCommand } from 'warehouses/usecases/commands/rename-warehouse.command';
+import { RenameWarehouseCommand } from 'warehouses/usecases/commands/rename-warehouse.command.js';
 
 const workspaceId = '00000000-0000-4000-8000-000000000001';
 const actorId = '00000000-0000-4000-8000-000000000002';

@@ -2,11 +2,11 @@ import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
 // `ListWorkspaceMembersQuery` does not exist yet — this is the RED step for
 // T15: Workspace Members with their Workspace Role assignments under
 // `WORKSPACE_MEMBERS:WATCH` (AC-33).
-import { ListWorkspaceMembersQuery } from 'access/usecases/queries/list-workspace-members.query';
-import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
-import dataSource from 'shared/database/data-source';
-import { WorkspaceReadRepository } from 'shared/domain/repositories/workspace-read.repository';
-import { persistWorkspaceGraph } from 'test/factories/entity-factories';
+import { ListWorkspaceMembersQuery } from 'access/usecases/queries/list-workspace-members.query.js';
+import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user.js';
+import dataSource from 'shared/database/data-source.js';
+import { WorkspaceReadRepository } from 'shared/domain/repositories/workspace-read.repository.js';
+import { persistWorkspaceGraph } from 'test/factories/entity-factories.js';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 describe('ListWorkspaceMembersQuery', () => {

@@ -1,7 +1,7 @@
 import {
   digestSessionSecret,
   generateSessionSecret,
-} from 'auth/domain/security/session-secret';
+} from 'auth/domain/security/session-secret.js';
 import { describe, expect, it } from 'vitest';
 
 describe('session secret security', () => {

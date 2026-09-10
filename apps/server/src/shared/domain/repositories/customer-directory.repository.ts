@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { zipWith } from 'lodash';
-import { getEntityManager } from 'shared/database/db-transaction-context.service';
-import { CustomerEntity } from 'shared/domain/entities/customer.entity';
-import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
+import zipWith from 'lodash/zipWith.js';
+import { getEntityManager } from 'shared/database/db-transaction-context.service.js';
+import { CustomerEntity } from 'shared/domain/entities/customer.entity.js';
+import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity.js';
 import { DataSource, IsNull, Not } from 'typeorm';
 
 // openapi.yaml `Customer` — one directory row: the Customer as it stands, which of its addresses is

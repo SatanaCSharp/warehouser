@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { getEntityManager } from 'shared/database/db-transaction-context.service';
-import { ItemEntity } from 'shared/domain/entities/item.entity';
-import { ItemStockAdjustmentEntity } from 'shared/domain/entities/item-stock-adjustment.entity';
+import { getEntityManager } from 'shared/database/db-transaction-context.service.js';
+import { ItemEntity } from 'shared/domain/entities/item.entity.js';
+import { ItemStockAdjustmentEntity } from 'shared/domain/entities/item-stock-adjustment.entity.js';
 import { DataSource } from 'typeorm';
 
 export interface RecordOnHandAdjustmentInput {

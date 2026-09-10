@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { toCustomer } from 'customers/domain/mappers/customer.mapper';
-import type { CustomerDetail } from 'customers/domain/mappers/customer-awaiting-order.mapper';
-import { toCustomerAwaitingOrder } from 'customers/domain/mappers/customer-awaiting-order.mapper';
-import { CustomerAddressBookService } from 'customers/domain/services/customer-address-book.service';
-import { map } from 'lodash';
-import type { AccessCurrentUser } from 'shared/access/access-current-user';
-import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository';
-import { CustomerAwaitingDemandRepository } from 'shared/domain/repositories/customer-awaiting-demand.repository';
+import { toCustomer } from 'customers/domain/mappers/customer.mapper.js';
+import type { CustomerDetail } from 'customers/domain/mappers/customer-awaiting-order.mapper.js';
+import { toCustomerAwaitingOrder } from 'customers/domain/mappers/customer-awaiting-order.mapper.js';
+import { CustomerAddressBookService } from 'customers/domain/services/customer-address-book.service.js';
+import map from 'lodash/map.js';
+import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
+import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository.js';
+import { CustomerAwaitingDemandRepository } from 'shared/domain/repositories/customer-awaiting-demand.repository.js';
 
 // `GET /api/v1/warehouses/{warehouseId}/customers/{customerId}` (openapi.yaml `readCustomer`) —
 // the Customer, its Delivery Addresses, and every **Unfulfilled** Customer Order of that Customer

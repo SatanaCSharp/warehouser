@@ -1,24 +1,24 @@
 import { randomUUID } from 'node:crypto';
 
-import dataSource from 'shared/database/data-source';
-import { AccountEntity } from 'shared/domain/entities/account.entity';
-import { CustomerEntity } from 'shared/domain/entities/customer.entity';
-import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
-import type { CustomerOrderState } from 'shared/domain/entities/customer-order.entity';
-import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
-import { ItemEntity } from 'shared/domain/entities/item.entity';
-import { UserEntity } from 'shared/domain/entities/user.entity';
-import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
+import dataSource from 'shared/database/data-source.js';
+import { AccountEntity } from 'shared/domain/entities/account.entity.js';
+import { CustomerEntity } from 'shared/domain/entities/customer.entity.js';
+import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity.js';
+import type { CustomerOrderState } from 'shared/domain/entities/customer-order.entity.js';
+import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity.js';
+import { ItemEntity } from 'shared/domain/entities/item.entity.js';
+import { UserEntity } from 'shared/domain/entities/user.entity.js';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity.js';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
 // `CustomerAwaitingDemandRepository` does not exist yet (T7) — this is the RED for `sad.md` §6.6
 // step 6: "every Unfulfilled Customer Order of that Customer with its Item, Outstanding Quantity,
 // needed-by date and destination, omitting Fulfilled and cancelled orders (AC-08)".
-import { CustomerAwaitingDemandRepository } from 'shared/domain/repositories/customer-awaiting-demand.repository';
+import { CustomerAwaitingDemandRepository } from 'shared/domain/repositories/customer-awaiting-demand.repository.js';
 import {
   buildWarehouse,
   buildWorkspace,
-} from 'test/factories/entity-factories';
-import { PostgresQueryRunner } from 'typeorm/driver/postgres/PostgresQueryRunner';
+} from 'test/factories/entity-factories.js';
+import { PostgresQueryRunner } from 'typeorm/driver/postgres/PostgresQueryRunner.js';
 import {
   afterAll,
   afterEach,

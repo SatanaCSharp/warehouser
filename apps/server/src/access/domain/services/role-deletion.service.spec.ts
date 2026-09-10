@@ -1,6 +1,6 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
-import { RoleDeletionService } from 'access/domain/services/role-deletion.service';
-import { RoleLifecycleRepository } from 'shared/domain/repositories/role-lifecycle.repository';
+import { RoleDeletionService } from 'access/domain/services/role-deletion.service.js';
+import { RoleLifecycleRepository } from 'shared/domain/repositories/role-lifecycle.repository.js';
 import { describe, expect, it, vi } from 'vitest';
 
 const warehouseId = '00000000-0000-4000-8000-000000000001';

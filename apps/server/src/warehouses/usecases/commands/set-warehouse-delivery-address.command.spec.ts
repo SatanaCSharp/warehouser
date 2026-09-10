@@ -2,15 +2,15 @@ import {
   ErrorCode,
   WorkspacePermissionId,
 } from '@warehouser/shared-types/enums';
-import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
+import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user.js';
 import {
   TRANSACTIONAL_KEY,
   type TransactionalMetadata,
-} from 'shared/decorators/transactional.decorator';
-import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
-import { repositoryDouble } from 'test/doubles/repository-double';
+} from 'shared/decorators/transactional.decorator.js';
+import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository.js';
+import { repositoryDouble } from 'test/doubles/repository-double.js';
 import { describe, expect, it, vi } from 'vitest';
-import { SetWarehouseDeliveryAddressCommand } from 'warehouses/usecases/commands/set-warehouse-delivery-address.command';
+import { SetWarehouseDeliveryAddressCommand } from 'warehouses/usecases/commands/set-warehouse-delivery-address.command.js';
 
 // T11/AC-10 — the Warehouse's own Delivery Address is recorded and corrected
 // in place. The subject of the operation is the Warehouse *record*, so the

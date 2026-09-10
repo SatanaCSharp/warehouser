@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
+import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user.js';
 import {
   WorkspaceReadRepository,
   WorkspaceUserWithWarehousesRead,
-} from 'shared/domain/repositories/workspace-read.repository';
+} from 'shared/domain/repositories/workspace-read.repository.js';
 
 // AC-33 — every User of the actor's own Workspace, Workspace Member or not,
 // with the Warehouses each belongs to (never a Warehouse Role), under

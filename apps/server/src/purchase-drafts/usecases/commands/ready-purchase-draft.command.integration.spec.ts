@@ -2,36 +2,36 @@ import { randomUUID } from 'node:crypto';
 
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
-import { PurchaseDraftAssemblyService } from 'purchase-drafts/domain/services/purchase-draft-assembly.service';
-import { AddPurchaseDraftLineCommand } from 'purchase-drafts/usecases/commands/add-purchase-draft-line.command';
-import { ReadyPurchaseDraftCommand } from 'purchase-drafts/usecases/commands/ready-purchase-draft.command';
-import { RevisePurchaseDraftLineCommand } from 'purchase-drafts/usecases/commands/revise-purchase-draft-line.command';
-import type { AccessCurrentUser } from 'shared/access/access-current-user';
-import dataSource from 'shared/database/data-source';
-import { DbTransactionService } from 'shared/database/db-transaction.service';
-import { DbTransactionContext } from 'shared/database/db-transaction-context.service';
-import { AccountEntity } from 'shared/domain/entities/account.entity';
-import { CustomerEntity } from 'shared/domain/entities/customer.entity';
-import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
-import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
-import { DemandSnapshotEntryEntity } from 'shared/domain/entities/demand-snapshot-entry.entity';
-import { ItemEntity } from 'shared/domain/entities/item.entity';
-import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
-import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity';
-import { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity';
-import { UserEntity } from 'shared/domain/entities/user.entity';
-import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
-import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository';
-import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository';
-import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
-import { PackagingTypeCatalogueRepository } from 'shared/domain/repositories/packaging-type-catalogue.repository';
-import { PurchaseDraftAssemblyRepository } from 'shared/domain/repositories/purchase-draft-assembly.repository';
-import { PurchaseDraftFreezeRepository } from 'shared/domain/repositories/purchase-draft-freeze.repository';
+import { PurchaseDraftAssemblyService } from 'purchase-drafts/domain/services/purchase-draft-assembly.service.js';
+import { AddPurchaseDraftLineCommand } from 'purchase-drafts/usecases/commands/add-purchase-draft-line.command.js';
+import { ReadyPurchaseDraftCommand } from 'purchase-drafts/usecases/commands/ready-purchase-draft.command.js';
+import { RevisePurchaseDraftLineCommand } from 'purchase-drafts/usecases/commands/revise-purchase-draft-line.command.js';
+import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
+import dataSource from 'shared/database/data-source.js';
+import { DbTransactionService } from 'shared/database/db-transaction.service.js';
+import { DbTransactionContext } from 'shared/database/db-transaction-context.service.js';
+import { AccountEntity } from 'shared/domain/entities/account.entity.js';
+import { CustomerEntity } from 'shared/domain/entities/customer.entity.js';
+import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity.js';
+import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity.js';
+import { DemandSnapshotEntryEntity } from 'shared/domain/entities/demand-snapshot-entry.entity.js';
+import { ItemEntity } from 'shared/domain/entities/item.entity.js';
+import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity.js';
+import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity.js';
+import { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity.js';
+import { UserEntity } from 'shared/domain/entities/user.entity.js';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity.js';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
+import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository.js';
+import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository.js';
+import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository.js';
+import { PackagingTypeCatalogueRepository } from 'shared/domain/repositories/packaging-type-catalogue.repository.js';
+import { PurchaseDraftAssemblyRepository } from 'shared/domain/repositories/purchase-draft-assembly.repository.js';
+import { PurchaseDraftFreezeRepository } from 'shared/domain/repositories/purchase-draft-freeze.repository.js';
 import {
   buildWarehouse,
   buildWorkspace,
-} from 'test/factories/entity-factories';
+} from 'test/factories/entity-factories.js';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 // T16 — the freeze of the delivery statement, proven against a real schema because **capturing by

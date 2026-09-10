@@ -1,5 +1,5 @@
 import { ApplicationError } from '@warehouser/shared-types/errors';
-import { CustomerName } from 'customers/domain/value-objects/customer-name';
+import { CustomerName } from 'customers/domain/value-objects/customer-name.js';
 import { describe, expect, it } from 'vitest';
 
 describe('CustomerName', () => {

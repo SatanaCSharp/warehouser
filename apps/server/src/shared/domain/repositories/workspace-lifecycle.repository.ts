@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { getEntityManager } from 'shared/database/db-transaction-context.service';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
+import { getEntityManager } from 'shared/database/db-transaction-context.service.js';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
 import { DataSource } from 'typeorm';
 
 // Mirrors `WarehouseLifecycleRepository` one level up (data-model.md

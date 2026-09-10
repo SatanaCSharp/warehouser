@@ -14,9 +14,9 @@ import { ErrorCode } from '@warehouser/shared-types/enums';
 //     exactly as the access precedent's "only Role" case does);
 //   - otherwise move every affected Workspace Member to the replacement in
 //     one repository call (AC-17).
-import { WorkspaceRoleDeletionService } from 'access/domain/services/workspace-role-deletion.service';
-import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository';
-import { repositoryDouble } from 'test/doubles/repository-double';
+import { WorkspaceRoleDeletionService } from 'access/domain/services/workspace-role-deletion.service.js';
+import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository.js';
+import { repositoryDouble } from 'test/doubles/repository-double.js';
 import { describe, expect, it, vi } from 'vitest';
 
 const workspaceId = '00000000-0000-4000-8000-000000000001';

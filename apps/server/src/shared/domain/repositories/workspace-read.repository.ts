@@ -1,14 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { getEntityManager } from 'shared/database/db-transaction-context.service';
-import { AccountEntity } from 'shared/domain/entities/account.entity';
-import { UserEntity } from 'shared/domain/entities/user.entity';
-import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
-import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
-import { WorkspaceMembershipEntity } from 'shared/domain/entities/workspace-membership.entity';
-import { WorkspacePermissionEntity } from 'shared/domain/entities/workspace-permission.entity';
-import { WorkspaceRoleEntity } from 'shared/domain/entities/workspace-role.entity';
-import { WorkspaceRolePermissionEntity } from 'shared/domain/entities/workspace-role-permission.entity';
+import { getEntityManager } from 'shared/database/db-transaction-context.service.js';
+import { AccountEntity } from 'shared/domain/entities/account.entity.js';
+import { UserEntity } from 'shared/domain/entities/user.entity.js';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity.js';
+import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity.js';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
+import { WorkspaceMembershipEntity } from 'shared/domain/entities/workspace-membership.entity.js';
+import { WorkspacePermissionEntity } from 'shared/domain/entities/workspace-permission.entity.js';
+import { WorkspaceRoleEntity } from 'shared/domain/entities/workspace-role.entity.js';
+import { WorkspaceRolePermissionEntity } from 'shared/domain/entities/workspace-role-permission.entity.js';
 import { DataSource } from 'typeorm';
 
 export interface WorkspaceIdentityRead {

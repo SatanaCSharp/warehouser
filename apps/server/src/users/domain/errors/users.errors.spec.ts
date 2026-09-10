@@ -6,7 +6,7 @@ import {
   permissionExceededError,
   reservedRoleSelectionError,
   selfActionDeniedError,
-} from 'users/domain/errors/users.errors';
+} from 'users/domain/errors/users.errors.js';
 import { describe, expect, it } from 'vitest';
 
 describe('users domain error factories', () => {

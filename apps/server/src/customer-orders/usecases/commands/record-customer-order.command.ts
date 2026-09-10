@@ -8,24 +8,24 @@ import {
   customerOrderInvalidDeliveryAddressError,
   customerOrderInvalidInputError,
   customerOrderItemUnavailableError,
-} from 'customer-orders/domain/errors/customer-order.errors';
-import type { CustomerOrder } from 'customer-orders/domain/mappers/customer-order.mapper';
-import { toCustomerOrder } from 'customer-orders/domain/mappers/customer-order.mapper';
+} from 'customer-orders/domain/errors/customer-order.errors.js';
+import type { CustomerOrder } from 'customer-orders/domain/mappers/customer-order.mapper.js';
+import { toCustomerOrder } from 'customer-orders/domain/mappers/customer-order.mapper.js';
 import {
   isAvailableDestinationRecord,
   isCustomerName,
   isDemandQuantity,
   isRecordOfWarehouse,
   namesExactlyOneCustomerIdentity,
-} from 'customer-orders/domain/predicates/customer-order.predicates';
-import { CustomerOrderDestinationService } from 'customer-orders/domain/services/customer-order-destination.service';
-import { assertNeededByStillAhead } from 'customer-orders/domain/services/customer-order-lifecycle.service';
-import type { AccessCurrentUser } from 'shared/access/access-current-user';
-import { Transactional } from 'shared/decorators/transactional.decorator';
-import { CustomerDirectoryRepository } from 'shared/domain/repositories/customer-directory.repository';
-import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository';
-import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
-import { isSelectableItem } from 'shared/predicates/item-availability.predicates';
+} from 'customer-orders/domain/predicates/customer-order.predicates.js';
+import { CustomerOrderDestinationService } from 'customer-orders/domain/services/customer-order-destination.service.js';
+import { assertNeededByStillAhead } from 'customer-orders/domain/services/customer-order-lifecycle.service.js';
+import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
+import { Transactional } from 'shared/decorators/transactional.decorator.js';
+import { CustomerDirectoryRepository } from 'shared/domain/repositories/customer-directory.repository.js';
+import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository.js';
+import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository.js';
+import { isSelectableItem } from 'shared/predicates/item-availability.predicates.js';
 
 export interface RecordCustomerOrderRuntime {
   readonly customerOrderId: () => string;

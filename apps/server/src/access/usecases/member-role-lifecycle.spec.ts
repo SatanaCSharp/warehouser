@@ -1,13 +1,13 @@
 import { ErrorCode, PermissionId } from '@warehouser/shared-types/enums';
-import { RoleDeletionService } from 'access/domain/services/role-deletion.service';
-import { AssignMemberRoleCommand } from 'access/usecases/commands/assign-member-role.command';
-import { DeleteRoleCommand } from 'access/usecases/commands/delete-role.command';
-import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { RoleDeletionService } from 'access/domain/services/role-deletion.service.js';
+import { AssignMemberRoleCommand } from 'access/usecases/commands/assign-member-role.command.js';
+import { DeleteRoleCommand } from 'access/usecases/commands/delete-role.command.js';
+import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
 import {
   TRANSACTIONAL_KEY,
   type TransactionalMetadata,
-} from 'shared/decorators/transactional.decorator';
-import { RoleLifecycleRepository } from 'shared/domain/repositories/role-lifecycle.repository';
+} from 'shared/decorators/transactional.decorator.js';
+import { RoleLifecycleRepository } from 'shared/domain/repositories/role-lifecycle.repository.js';
 import { describe, expect, it, vi } from 'vitest';
 
 const warehouseId = '00000000-0000-4000-8000-000000000001';

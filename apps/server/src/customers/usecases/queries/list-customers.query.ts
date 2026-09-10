@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import type { Customer } from 'customers/domain/mappers/customer.mapper';
-import { toCustomer } from 'customers/domain/mappers/customer.mapper';
-import { groupBy, map } from 'lodash';
-import type { AccessCurrentUser } from 'shared/access/access-current-user';
-import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository';
-import type { ListCustomersFilter } from 'shared/domain/repositories/customer-directory.repository';
-import { CustomerDirectoryRepository } from 'shared/domain/repositories/customer-directory.repository';
+import type { Customer } from 'customers/domain/mappers/customer.mapper.js';
+import { toCustomer } from 'customers/domain/mappers/customer.mapper.js';
+import groupBy from 'lodash/groupBy.js';
+import map from 'lodash/map.js';
+import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
+import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository.js';
+import type { ListCustomersFilter } from 'shared/domain/repositories/customer-directory.repository.js';
+import { CustomerDirectoryRepository } from 'shared/domain/repositories/customer-directory.repository.js';
 
 // `GET /api/v1/warehouses/{warehouseId}/customers` (openapi.yaml `listCustomers`) — every Customer
 // of the acting Warehouse ordered by name, each with its Delivery Addresses and which of them is

@@ -1,21 +1,21 @@
-import dataSource from 'shared/database/data-source';
-import type { RejectionReasonEntity } from 'shared/domain/entities/rejection-reason.entity';
+import dataSource from 'shared/database/data-source.js';
+import type { RejectionReasonEntity } from 'shared/domain/entities/rejection-reason.entity.js';
 // `RejectionReasonCatalogueRepository` does not exist yet (T4) — this is the RED for AC-06/AC-07's
 // persistence half. `data-model.md` § "Repository boundaries" asks for "the
 // `PackagingTypeCatalogueRepository` shape with one method more": the catalogue listed whole, taking
 // no Warehouse scope, and a **stated set** of identifiers resolved against it "in one read, rather
 // than a read per identifier", each resolved row carrying `requires_description` so AC-07 is decided
 // against the flag rather than against `unfit_other` by name (`sad.md` §4).
-import { RejectionReasonCatalogueRepository } from 'shared/domain/repositories/rejection-reason-catalogue.repository';
+import { RejectionReasonCatalogueRepository } from 'shared/domain/repositories/rejection-reason-catalogue.repository.js';
 // `PostgresQueryRunner.prototype.query` is the one method every TypeORM access path — raw
 // `manager.query`, `repository.find`, and `QueryBuilder` alike — ultimately calls to reach
 // PostgreSQL. Spying on it, rather than on a higher-level TypeORM API, counts actual round trips
 // regardless of which API the implementer picks, which is what proves "one read" rather than merely
 // "one repository method call" (`item-catalogue.repository.integration.spec.ts`'s idiom).
-import { PostgresQueryRunner } from 'typeorm/driver/postgres/PostgresQueryRunner';
+import { PostgresQueryRunner } from 'typeorm/driver/postgres/PostgresQueryRunner.js';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
-import { initialRejectionReasons } from '../../../../migrations/1786800000000-CreateArrivalInspectionSchema';
+import { initialRejectionReasons } from '../../../../migrations/1786800000000-CreateArrivalInspectionSchema.js';
 
 // The shape this RED expects the implementer to expose. Cast through it because the module does not
 // exist yet, exactly as `packaging-type-catalogue.repository.integration.spec.ts` did for T12.

@@ -1,6 +1,6 @@
-import { type AuthRuntime, authRuntime } from 'auth/domain/auth-runtime';
-import { digestSessionSecret } from 'auth/domain/security/session-secret';
-import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
+import { type AuthRuntime, authRuntime } from 'auth/domain/auth-runtime.js';
+import { digestSessionSecret } from 'auth/domain/security/session-secret.js';
+import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository.js';
 
 export class SignOutCommand {
   constructor(

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import type { RejectionReasonCatalogueItem } from 'purchase-drafts/domain/mappers/rejection-reason.mapper';
-import { toRejectionReasonCatalogueItem } from 'purchase-drafts/domain/mappers/rejection-reason.mapper';
-import { RejectionReasonCatalogueRepository } from 'shared/domain/repositories/rejection-reason-catalogue.repository';
+import type { RejectionReasonCatalogueItem } from 'purchase-drafts/domain/mappers/rejection-reason.mapper.js';
+import { toRejectionReasonCatalogueItem } from 'purchase-drafts/domain/mappers/rejection-reason.mapper.js';
+import { RejectionReasonCatalogueRepository } from 'shared/domain/repositories/rejection-reason-catalogue.repository.js';
 
 // AC-06/AC-07 — the Rejection Reason catalogue, served at `/rejection-reasons` (openapi.yaml). The
 // same catalogue an ending's Rejections are validated against, so the member picks from exactly

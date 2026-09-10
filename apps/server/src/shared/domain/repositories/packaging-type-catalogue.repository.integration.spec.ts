@@ -1,15 +1,15 @@
-import dataSource from 'shared/database/data-source';
-import type { PackagingTypeEntity } from 'shared/domain/entities/packaging-type.entity';
+import dataSource from 'shared/database/data-source.js';
+import type { PackagingTypeEntity } from 'shared/domain/entities/packaging-type.entity.js';
 // `PackagingTypeCatalogueRepository` does not exist yet (T12) — this is the RED for AC-13's
 // happy-path half: the four entries `1786600000000-CreateOrderingSchema.ts` seeds
 // (`initialPackagingTypes`) are readable as the system-managed, migration-only catalogue
 // `CONTEXT.md` §Invariants describes. The four ids are read from the migration itself, per
 // `restore-catalogues.setup.ts`'s existing precedent, so this test cannot drift from what is
 // actually seeded.
-import { PackagingTypeCatalogueRepository } from 'shared/domain/repositories/packaging-type-catalogue.repository';
+import { PackagingTypeCatalogueRepository } from 'shared/domain/repositories/packaging-type-catalogue.repository.js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { initialPackagingTypes } from '../../../../migrations/1786600000000-CreateOrderingSchema';
+import { initialPackagingTypes } from '../../../../migrations/1786600000000-CreateOrderingSchema.js';
 
 interface PackagingTypeCatalogueRepositoryContract {
   listPackagingTypes(): Promise<PackagingTypeEntity[]>;

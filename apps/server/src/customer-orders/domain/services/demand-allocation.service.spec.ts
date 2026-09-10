@@ -20,8 +20,8 @@
 // (sad.md §8, data-model.md "Concurrency, locks and transactions").
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
-import { DemandAllocationService } from 'customer-orders/domain/services/demand-allocation.service';
-import type { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
+import { DemandAllocationService } from 'customer-orders/domain/services/demand-allocation.service.js';
+import type { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity.js';
 import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>

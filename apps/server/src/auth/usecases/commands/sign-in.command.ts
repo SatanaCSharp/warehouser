@@ -1,27 +1,27 @@
 import { assert } from '@warehouser/utils/asserts';
-import { type AuthRuntime, authRuntime } from 'auth/domain/auth-runtime';
-import { Session } from 'auth/domain/entities/session';
+import { type AuthRuntime, authRuntime } from 'auth/domain/auth-runtime.js';
+import { Session } from 'auth/domain/entities/session.js';
 import {
   AuthInvalidCredentialsError,
   AuthInvalidInputError,
-} from 'auth/domain/errors/auth.errors';
-import { toAccount } from 'auth/domain/mappers/account.mapper';
-import { toSessionEntity } from 'auth/domain/mappers/session.mapper';
+} from 'auth/domain/errors/auth.errors.js';
+import { toAccount } from 'auth/domain/mappers/account.mapper.js';
+import { toSessionEntity } from 'auth/domain/mappers/session.mapper.js';
 import {
   type GeneratedSessionSecret,
   generateSessionSecret,
-} from 'auth/domain/security/session-secret';
-import { SessionId } from 'auth/domain/value-objects/identity-id';
-import { SessionDigest } from 'auth/domain/value-objects/session-digest';
-import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
-import { EmailAddress } from 'shared/domain/security/email-address';
-import { isSupportedEmail } from 'shared/domain/security/is-supported-email';
-import { isSupportedPassword } from 'shared/domain/security/is-supported-password';
-import { Password } from 'shared/domain/security/password';
+} from 'auth/domain/security/session-secret.js';
+import { SessionId } from 'auth/domain/value-objects/identity-id.js';
+import { SessionDigest } from 'auth/domain/value-objects/session-digest.js';
+import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository.js';
+import { EmailAddress } from 'shared/domain/security/email-address.js';
+import { isSupportedEmail } from 'shared/domain/security/is-supported-email.js';
+import { isSupportedPassword } from 'shared/domain/security/is-supported-password.js';
+import { Password } from 'shared/domain/security/password.js';
 import {
   dummyVerifyPassword,
   verifyPassword,
-} from 'shared/domain/security/password-hashing';
+} from 'shared/domain/security/password-hashing.js';
 
 export interface SignedInSession {
   readonly userId: string;

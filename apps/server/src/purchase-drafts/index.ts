@@ -1,1 +1,1 @@
-export { PurchaseDraftsModule } from './purchase-drafts.module';
+export { PurchaseDraftsModule } from './purchase-drafts.module.js';

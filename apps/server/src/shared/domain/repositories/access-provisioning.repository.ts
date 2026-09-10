@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { getEntityManager } from 'shared/database/db-transaction-context.service';
-import { PermissionEntity } from 'shared/domain/entities/permission.entity';
-import type { RoleEntityKind } from 'shared/domain/entities/role.entity';
-import { RoleEntity } from 'shared/domain/entities/role.entity';
-import { RolePermissionEntity } from 'shared/domain/entities/role-permission.entity';
-import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
-import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
+import { getEntityManager } from 'shared/database/db-transaction-context.service.js';
+import { PermissionEntity } from 'shared/domain/entities/permission.entity.js';
+import type { RoleEntityKind } from 'shared/domain/entities/role.entity.js';
+import { RoleEntity } from 'shared/domain/entities/role.entity.js';
+import { RolePermissionEntity } from 'shared/domain/entities/role-permission.entity.js';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity.js';
+import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity.js';
 import { DataSource, In } from 'typeorm';
 
 export interface RolePersistenceInput {

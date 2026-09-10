@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { Injectable } from '@nestjs/common';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { AccessProvisioningRepository } from 'shared/domain/repositories/access-provisioning.repository';
+import { AccessProvisioningRepository } from 'shared/domain/repositories/access-provisioning.repository.js';
 
 // The protected Warehouse Manager Role is granted the whole Permission catalogue, so this list is
 // derived from `PermissionId` rather than restated. A hand-maintained copy silently kept the set a

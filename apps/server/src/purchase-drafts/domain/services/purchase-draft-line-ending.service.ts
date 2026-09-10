@@ -4,14 +4,14 @@ import {
   purchaseDraftEndingModeMismatchError,
   purchaseDraftInvalidStateError,
   purchaseDraftTargetUnavailableError,
-} from 'purchase-drafts/domain/errors/purchase-draft.errors';
+} from 'purchase-drafts/domain/errors/purchase-draft.errors.js';
 import {
   endingMatchesDeliveryMode,
   hasEndingRecorded,
-} from 'purchase-drafts/domain/predicates/purchase-draft-delivery.predicates';
-import { isReadyForOrderingDraft } from 'purchase-drafts/domain/predicates/purchase-draft-freeze.predicates';
-import type { EndingKind } from 'purchase-drafts/domain/value-objects/delivery-mode';
-import type { LockPurchaseDraftLineForEndingResult } from 'shared/domain/repositories/arrival-confirmation.repository';
+} from 'purchase-drafts/domain/predicates/purchase-draft-delivery.predicates.js';
+import { isReadyForOrderingDraft } from 'purchase-drafts/domain/predicates/purchase-draft-freeze.predicates.js';
+import type { EndingKind } from 'purchase-drafts/domain/value-objects/delivery-mode.js';
+import type { LockPurchaseDraftLineForEndingResult } from 'shared/domain/repositories/arrival-confirmation.repository.js';
 
 // T17/ADR 0002 — the rules a per-line ending must satisfy before anything is written, stated once
 // for the two commands that own the two halves.

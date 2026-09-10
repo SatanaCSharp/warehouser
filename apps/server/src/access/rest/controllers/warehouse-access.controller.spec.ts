@@ -6,11 +6,11 @@ import {
   WorkspacePermissionId,
 } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
-import { WarehouseAccessController } from 'access/rest/controllers/warehouse-access.controller';
-import type { AssignWarehouseMembershipCommand } from 'access/usecases/commands/assign-warehouse-membership.command';
-import type { RevokeWarehouseMembershipCommand } from 'access/usecases/commands/revoke-warehouse-membership.command';
-import type { ListAssignableWarehouseRolesQuery } from 'access/usecases/queries/list-assignable-warehouse-roles.query';
-import type { WorkspaceAccessRequest } from 'shared/access/access-request';
+import { WarehouseAccessController } from 'access/rest/controllers/warehouse-access.controller.js';
+import type { AssignWarehouseMembershipCommand } from 'access/usecases/commands/assign-warehouse-membership.command.js';
+import type { RevokeWarehouseMembershipCommand } from 'access/usecases/commands/revoke-warehouse-membership.command.js';
+import type { ListAssignableWarehouseRolesQuery } from 'access/usecases/queries/list-assignable-warehouse-roles.query.js';
+import type { WorkspaceAccessRequest } from 'shared/access/access-request.js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const id = (suffix: number): string =>

@@ -12,21 +12,21 @@ import {
 } from '@nestjs/common/constants';
 import { warehouseSchema } from '@warehouser/contracts/workspaces';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import type { WorkspaceAccessRequest } from 'shared/access/access-request';
-import { REQUIRED_PERMISSION_KEY } from 'shared/decorators/required-permission.decorator';
-import { REQUIRED_WORKSPACE_PERMISSION_KEY } from 'shared/decorators/required-workspace-permission.decorator';
-import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
-import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
-import { WorkspaceAccessGuard } from 'shared/guards/workspace-access.guard';
+import type { WorkspaceAccessRequest } from 'shared/access/access-request.js';
+import { REQUIRED_PERMISSION_KEY } from 'shared/decorators/required-permission.decorator.js';
+import { REQUIRED_WORKSPACE_PERMISSION_KEY } from 'shared/decorators/required-workspace-permission.decorator.js';
+import { SessionAuthGuard } from 'shared/guards/session-auth.guard.js';
+import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard.js';
+import { WorkspaceAccessGuard } from 'shared/guards/workspace-access.guard.js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { WarehouseController } from 'warehouses/rest/controllers/warehouse.controller';
-import type { ArchiveWarehouseCommand } from 'warehouses/usecases/commands/archive-warehouse.command';
-import type { CreateWarehouseCommand } from 'warehouses/usecases/commands/create-warehouse.command';
-import type { RenameWarehouseCommand } from 'warehouses/usecases/commands/rename-warehouse.command';
-import type { RestoreWarehouseCommand } from 'warehouses/usecases/commands/restore-warehouse.command';
-import type { SetWarehouseDeliveryAddressCommand } from 'warehouses/usecases/commands/set-warehouse-delivery-address.command';
-import type { ListWorkspaceWarehousesQuery } from 'warehouses/usecases/queries/list-workspace-warehouses.query';
-import type { ReadWarehouseDeliveryAddressQuery } from 'warehouses/usecases/queries/read-warehouse-delivery-address.query';
+import { WarehouseController } from 'warehouses/rest/controllers/warehouse.controller.js';
+import type { ArchiveWarehouseCommand } from 'warehouses/usecases/commands/archive-warehouse.command.js';
+import type { CreateWarehouseCommand } from 'warehouses/usecases/commands/create-warehouse.command.js';
+import type { RenameWarehouseCommand } from 'warehouses/usecases/commands/rename-warehouse.command.js';
+import type { RestoreWarehouseCommand } from 'warehouses/usecases/commands/restore-warehouse.command.js';
+import type { SetWarehouseDeliveryAddressCommand } from 'warehouses/usecases/commands/set-warehouse-delivery-address.command.js';
+import type { ListWorkspaceWarehousesQuery } from 'warehouses/usecases/queries/list-workspace-warehouses.query.js';
+import type { ReadWarehouseDeliveryAddressQuery } from 'warehouses/usecases/queries/read-warehouse-delivery-address.query.js';
 
 const id = (suffix: number): string =>
   `00000000-0000-4000-8000-${suffix.toString().padStart(12, '0')}`;
@@ -454,9 +454,9 @@ describe('WarehouseController', () => {
   // modules, and never imports the sibling module.
   it('reaches use cases only, never a repository, service or persistence', () => {
     const sources = [
-      join(__dirname, 'warehouse.controller.ts'),
+      join(import.meta.dirname, 'warehouse.controller.ts'),
       join(
-        __dirname,
+        import.meta.dirname,
         '..',
         '..',
         '..',

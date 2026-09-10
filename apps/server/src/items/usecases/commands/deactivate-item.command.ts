@@ -1,10 +1,10 @@
 import { Injectable, Optional } from '@nestjs/common';
 import { assert, assertDefined } from '@warehouser/utils/asserts';
-import { itemTargetUnavailableError } from 'items/domain/errors/item.errors';
-import { canDeactivateItem } from 'items/domain/predicates/item-catalogue.predicates';
-import type { AccessCurrentUser } from 'shared/access/access-current-user';
-import { Transactional } from 'shared/decorators/transactional.decorator';
-import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
+import { itemTargetUnavailableError } from 'items/domain/errors/item.errors.js';
+import { canDeactivateItem } from 'items/domain/predicates/item-catalogue.predicates.js';
+import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
+import { Transactional } from 'shared/decorators/transactional.decorator.js';
+import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository.js';
 
 export interface DeactivateItemRuntime {
   readonly now: () => Date;

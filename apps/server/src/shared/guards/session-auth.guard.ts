@@ -4,8 +4,8 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { readSessionCookie } from 'auth/rest/auth-cookie';
-import { CurrentSessionQuery } from 'auth/usecases/queries/current-session.query';
+import { readSessionCookie } from 'auth/rest/auth-cookie.js';
+import { CurrentSessionQuery } from 'auth/usecases/queries/current-session.query.js';
 
 export interface AuthenticatedRequest {
   readonly headers: Readonly<{ cookie?: string }>;

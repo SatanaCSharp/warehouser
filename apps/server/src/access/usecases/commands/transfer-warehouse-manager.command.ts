@@ -5,10 +5,10 @@ import {
   concurrentAccessChangeError,
   invalidManagerTransferError,
   targetUnavailableError,
-} from 'access/domain/errors/access.errors';
-import type { AccessCurrentUser } from 'shared/access/access-current-user';
-import { Transactional } from 'shared/decorators/transactional.decorator';
-import { ManagerTransferRepository } from 'shared/domain/repositories/manager-transfer.repository';
+} from 'access/domain/errors/access.errors.js';
+import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
+import { Transactional } from 'shared/decorators/transactional.decorator.js';
+import { ManagerTransferRepository } from 'shared/domain/repositories/manager-transfer.repository.js';
 
 export interface TransferWarehouseManagerInput {
   readonly recipientId: string;

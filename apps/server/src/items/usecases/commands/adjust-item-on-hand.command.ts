@@ -6,15 +6,15 @@ import {
   itemAdjustmentReasonRequiredError,
   itemInvalidOnHandQuantityError,
   itemTargetUnavailableError,
-} from 'items/domain/errors/item.errors';
+} from 'items/domain/errors/item.errors.js';
 import {
   isCountedQuantity,
   isStatedReason,
-} from 'items/domain/predicates/on-hand-adjustment.predicates';
-import type { AccessCurrentUser } from 'shared/access/access-current-user';
-import { Transactional } from 'shared/decorators/transactional.decorator';
-import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
-import { ItemStockAdjustmentRepository } from 'shared/domain/repositories/item-stock-adjustment.repository';
+} from 'items/domain/predicates/on-hand-adjustment.predicates.js';
+import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
+import { Transactional } from 'shared/decorators/transactional.decorator.js';
+import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository.js';
+import { ItemStockAdjustmentRepository } from 'shared/domain/repositories/item-stock-adjustment.repository.js';
 
 export interface AdjustItemOnHandRuntime {
   readonly adjustmentId: () => string;

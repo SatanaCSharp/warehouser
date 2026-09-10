@@ -12,7 +12,7 @@ import {
   isItemActive,
   isSkuCorrectable,
   isValidSku,
-} from 'items/domain/predicates/item-catalogue.predicates';
+} from 'items/domain/predicates/item-catalogue.predicates.js';
 import { describe, expect, it } from 'vitest';
 
 describe('isValidSku', () => {

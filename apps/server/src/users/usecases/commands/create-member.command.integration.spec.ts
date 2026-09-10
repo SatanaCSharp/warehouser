@@ -1,30 +1,30 @@
 import { randomUUID } from 'node:crypto';
 
 import { ErrorCode } from '@warehouser/shared-types/enums';
-import { SignInCommand } from 'auth/usecases/commands/sign-in.command';
-import { accessCurrentUser } from 'shared/access/access-current-user';
-import dataSource from 'shared/database/data-source';
-import { DbTransactionService } from 'shared/database/db-transaction.service';
-import { DbTransactionContext } from 'shared/database/db-transaction-context.service';
-import { AccountEntity } from 'shared/domain/entities/account.entity';
-import { PermissionEntity } from 'shared/domain/entities/permission.entity';
-import { RoleEntity } from 'shared/domain/entities/role.entity';
-import { RolePermissionEntity } from 'shared/domain/entities/role-permission.entity';
-import { UserEntity } from 'shared/domain/entities/user.entity';
-import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
-import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
-import { AccessCurrentUserRepository } from 'shared/domain/repositories/access-current-user.repository';
-import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
-import { MemberLifecycleRepository } from 'shared/domain/repositories/member-lifecycle.repository';
-import { RoleLifecycleRepository } from 'shared/domain/repositories/role-lifecycle.repository';
-import { hashPassword } from 'shared/domain/security/password-hashing';
+import { SignInCommand } from 'auth/usecases/commands/sign-in.command.js';
+import { accessCurrentUser } from 'shared/access/access-current-user.js';
+import dataSource from 'shared/database/data-source.js';
+import { DbTransactionService } from 'shared/database/db-transaction.service.js';
+import { DbTransactionContext } from 'shared/database/db-transaction-context.service.js';
+import { AccountEntity } from 'shared/domain/entities/account.entity.js';
+import { PermissionEntity } from 'shared/domain/entities/permission.entity.js';
+import { RoleEntity } from 'shared/domain/entities/role.entity.js';
+import { RolePermissionEntity } from 'shared/domain/entities/role-permission.entity.js';
+import { UserEntity } from 'shared/domain/entities/user.entity.js';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity.js';
+import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity.js';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
+import { AccessCurrentUserRepository } from 'shared/domain/repositories/access-current-user.repository.js';
+import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository.js';
+import { MemberLifecycleRepository } from 'shared/domain/repositories/member-lifecycle.repository.js';
+import { RoleLifecycleRepository } from 'shared/domain/repositories/role-lifecycle.repository.js';
+import { hashPassword } from 'shared/domain/security/password-hashing.js';
 // This command does not exist yet — this is the RED step for T9. The command
 // is expected to accept the caller's `AccessCurrentUser` plus creation input
 // (email, password, roleId) and return the new member's id/email/roleId on
 // success, following the same constructor-injection + `@Transactional()`
 // idiom as `TransferWarehouseManagerCommand`/`DeleteRoleCommand`.
-import { CreateMemberCommand } from 'users/usecases/commands/create-member.command';
+import { CreateMemberCommand } from 'users/usecases/commands/create-member.command.js';
 import {
   afterAll,
   afterEach,

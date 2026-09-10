@@ -21,23 +21,23 @@ import {
   CustomerOrderCreateDto,
   CustomerOrderListQueryDto,
   CustomerOrderRedirectDto,
-} from 'customer-orders/rest/dtos/customer-order-mutation.dto';
-import { toCustomerOrderResponse } from 'customer-orders/rest/mappers/customer-order-response.mapper';
-import { AmendCustomerOrderCommand } from 'customer-orders/usecases/commands/amend-customer-order.command';
-import { CancelCustomerOrderCommand } from 'customer-orders/usecases/commands/cancel-customer-order.command';
-import { RecordCustomerOrderCommand } from 'customer-orders/usecases/commands/record-customer-order.command';
-import { RedirectCustomerOrderCommand } from 'customer-orders/usecases/commands/redirect-customer-order.command';
-import { ListCustomerOrdersQuery } from 'customer-orders/usecases/queries/list-customer-orders.query';
-import { ReadCustomerOrderQuery } from 'customer-orders/usecases/queries/read-customer-order.query';
-import { map } from 'lodash';
-import type { WarehouseAccessRequest } from 'shared/access/access-request';
-import { ArchivedTolerantRead } from 'shared/access/archived-tolerant-read.decorator';
-import { ObservedPermission } from 'shared/decorators/observed-permission.decorator';
-import { RequiredPermission } from 'shared/decorators/required-permission.decorator';
-import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
-import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
-import { WriteRateLimitGuard } from 'shared/guards/write-rate-limit.guard';
-import { WriteRateLimited } from 'shared/guards/write-rate-limited.decorator';
+} from 'customer-orders/rest/dtos/customer-order-mutation.dto.js';
+import { toCustomerOrderResponse } from 'customer-orders/rest/mappers/customer-order-response.mapper.js';
+import { AmendCustomerOrderCommand } from 'customer-orders/usecases/commands/amend-customer-order.command.js';
+import { CancelCustomerOrderCommand } from 'customer-orders/usecases/commands/cancel-customer-order.command.js';
+import { RecordCustomerOrderCommand } from 'customer-orders/usecases/commands/record-customer-order.command.js';
+import { RedirectCustomerOrderCommand } from 'customer-orders/usecases/commands/redirect-customer-order.command.js';
+import { ListCustomerOrdersQuery } from 'customer-orders/usecases/queries/list-customer-orders.query.js';
+import { ReadCustomerOrderQuery } from 'customer-orders/usecases/queries/read-customer-order.query.js';
+import map from 'lodash/map.js';
+import type { WarehouseAccessRequest } from 'shared/access/access-request.js';
+import { ArchivedTolerantRead } from 'shared/access/archived-tolerant-read.decorator.js';
+import { ObservedPermission } from 'shared/decorators/observed-permission.decorator.js';
+import { RequiredPermission } from 'shared/decorators/required-permission.decorator.js';
+import { SessionAuthGuard } from 'shared/guards/session-auth.guard.js';
+import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard.js';
+import { WriteRateLimitGuard } from 'shared/guards/write-rate-limit.guard.js';
+import { WriteRateLimited } from 'shared/guards/write-rate-limited.decorator.js';
 
 /** Every route whose subject is a Customer Order — the record of a named customer waiting for one
  * Item (contracts/openapi.yaml `/customer-orders*`, sad.md §7). Each handler declares exactly one

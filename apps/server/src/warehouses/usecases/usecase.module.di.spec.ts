@@ -1,24 +1,24 @@
 import { Global, Module } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { AccessCurrentUserRepository } from 'shared/domain/repositories/access-current-user.repository';
-import { AccessProvisioningRepository } from 'shared/domain/repositories/access-provisioning.repository';
-import { AccessReadRepository } from 'shared/domain/repositories/access-read.repository';
-import { ManagerTransferRepository } from 'shared/domain/repositories/manager-transfer.repository';
-import { RoleLifecycleRepository } from 'shared/domain/repositories/role-lifecycle.repository';
-import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
-import { WarehouseMembershipAssignmentRepository } from 'shared/domain/repositories/warehouse-membership-assignment.repository';
-import { WorkspaceCurrentUserRepository } from 'shared/domain/repositories/workspace-current-user.repository';
-import { WorkspaceMembershipRepository } from 'shared/domain/repositories/workspace-membership.repository';
-import { WorkspaceOwnerTransferRepository } from 'shared/domain/repositories/workspace-owner-transfer.repository';
-import { WorkspaceReadRepository } from 'shared/domain/repositories/workspace-read.repository';
-import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository';
+import { AccessCurrentUserRepository } from 'shared/domain/repositories/access-current-user.repository.js';
+import { AccessProvisioningRepository } from 'shared/domain/repositories/access-provisioning.repository.js';
+import { AccessReadRepository } from 'shared/domain/repositories/access-read.repository.js';
+import { ManagerTransferRepository } from 'shared/domain/repositories/manager-transfer.repository.js';
+import { RoleLifecycleRepository } from 'shared/domain/repositories/role-lifecycle.repository.js';
+import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository.js';
+import { WarehouseMembershipAssignmentRepository } from 'shared/domain/repositories/warehouse-membership-assignment.repository.js';
+import { WorkspaceCurrentUserRepository } from 'shared/domain/repositories/workspace-current-user.repository.js';
+import { WorkspaceMembershipRepository } from 'shared/domain/repositories/workspace-membership.repository.js';
+import { WorkspaceOwnerTransferRepository } from 'shared/domain/repositories/workspace-owner-transfer.repository.js';
+import { WorkspaceReadRepository } from 'shared/domain/repositories/workspace-read.repository.js';
+import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository.js';
 import { describe, expect, it } from 'vitest';
-import { ArchiveWarehouseCommand } from 'warehouses/usecases/commands/archive-warehouse.command';
-import { CreateWarehouseCommand } from 'warehouses/usecases/commands/create-warehouse.command';
-import { RenameWarehouseCommand } from 'warehouses/usecases/commands/rename-warehouse.command';
-import { RestoreWarehouseCommand } from 'warehouses/usecases/commands/restore-warehouse.command';
-import { ListWorkspaceWarehousesQuery } from 'warehouses/usecases/queries/list-workspace-warehouses.query';
-import { WarehousesUsecaseModule } from 'warehouses/usecases/usecase.module';
+import { ArchiveWarehouseCommand } from 'warehouses/usecases/commands/archive-warehouse.command.js';
+import { CreateWarehouseCommand } from 'warehouses/usecases/commands/create-warehouse.command.js';
+import { RenameWarehouseCommand } from 'warehouses/usecases/commands/rename-warehouse.command.js';
+import { RestoreWarehouseCommand } from 'warehouses/usecases/commands/restore-warehouse.command.js';
+import { ListWorkspaceWarehousesQuery } from 'warehouses/usecases/queries/list-workspace-warehouses.query.js';
+import { WarehousesUsecaseModule } from 'warehouses/usecases/usecase.module.js';
 
 // Doubles for every `shared/domain/repositories/*` token the real
 // `WarehousesUsecaseModule` graph reaches — its own

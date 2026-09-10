@@ -1,11 +1,11 @@
 import { Controller, Get, UseGuards } from '@nestjs/common';
 import type { RejectionReason } from '@warehouser/contracts/purchase-drafts';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { ListRejectionReasonsQuery } from 'purchase-drafts/usecases/queries/list-rejection-reasons.query';
-import { ArchivedTolerantRead } from 'shared/access/archived-tolerant-read.decorator';
-import { RequiredPermission } from 'shared/decorators/required-permission.decorator';
-import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
-import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
+import { ListRejectionReasonsQuery } from 'purchase-drafts/usecases/queries/list-rejection-reasons.query.js';
+import { ArchivedTolerantRead } from 'shared/access/archived-tolerant-read.decorator.js';
+import { RequiredPermission } from 'shared/decorators/required-permission.decorator.js';
+import { SessionAuthGuard } from 'shared/guards/session-auth.guard.js';
+import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard.js';
 
 /** The Rejection Reason catalogue (contracts/openapi.yaml `/rejection-reasons`, sad.md §7). Served
  * at its own segment — not nested under `/purchase-drafts` — so no literal segment competes with a

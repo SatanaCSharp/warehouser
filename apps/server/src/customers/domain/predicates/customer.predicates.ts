@@ -1,4 +1,5 @@
-import { filter, some } from 'lodash';
+import filter from 'lodash/filter.js';
+import some from 'lodash/some.js';
 
 // Pure predicates for Customer identity and the Delivery Address book (server-error-handling.md
 // §1). No NestJS, HTTP or TypeORM import here — `customers/domain/errors/customer.errors.ts` holds

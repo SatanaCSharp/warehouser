@@ -1,17 +1,17 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { SystemError } from '@warehouser/shared-types/errors';
-import { AuthRuntime } from 'auth/domain/auth-runtime';
-import { Account } from 'auth/domain/entities/account';
-import { Session } from 'auth/domain/entities/session';
-import { toAccountEntity } from 'auth/domain/mappers/account.mapper';
-import { toSessionEntity } from 'auth/domain/mappers/session.mapper';
-import { GeneratedSessionSecret } from 'auth/domain/security/session-secret';
-import { SessionId } from 'auth/domain/value-objects/identity-id';
-import { SessionDigest } from 'auth/domain/value-objects/session-digest';
-import { SignInCommand } from 'auth/usecases/commands/sign-in.command';
-import { SignOutCommand } from 'auth/usecases/commands/sign-out.command';
-import { CurrentSessionQuery } from 'auth/usecases/queries/current-session.query';
-import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
+import { AuthRuntime } from 'auth/domain/auth-runtime.js';
+import { Account } from 'auth/domain/entities/account.js';
+import { Session } from 'auth/domain/entities/session.js';
+import { toAccountEntity } from 'auth/domain/mappers/account.mapper.js';
+import { toSessionEntity } from 'auth/domain/mappers/session.mapper.js';
+import { GeneratedSessionSecret } from 'auth/domain/security/session-secret.js';
+import { SessionId } from 'auth/domain/value-objects/identity-id.js';
+import { SessionDigest } from 'auth/domain/value-objects/session-digest.js';
+import { SignInCommand } from 'auth/usecases/commands/sign-in.command.js';
+import { SignOutCommand } from 'auth/usecases/commands/sign-out.command.js';
+import { CurrentSessionQuery } from 'auth/usecases/queries/current-session.query.js';
+import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository.js';
 import { describe, expect, it, vi } from 'vitest';
 
 const account = Account.create({

@@ -3,9 +3,12 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-const repositoryDirectory = __dirname;
-const commandDirectory = join(__dirname, '../../../access/usecases/commands');
-const sourceRoot = join(__dirname, '../../..');
+const repositoryDirectory = import.meta.dirname;
+const commandDirectory = join(
+  import.meta.dirname,
+  '../../../access/usecases/commands',
+);
+const sourceRoot = join(import.meta.dirname, '../../..');
 
 // Not a module: `shared/` holds the pure fabrications and `test/` the reusable test support
 // (server-architecture.md §"Source structure").

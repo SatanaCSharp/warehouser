@@ -14,17 +14,17 @@ import { ApplicationError } from '@warehouser/shared-types/errors';
 // Warehouse of another Workspace — an empty `200 []` is a different outcome
 // and cannot be told apart from an own Warehouse that simply has no custom
 // Role yet (T51 / review S1-02).
-import { ListAssignableWarehouseRolesQuery } from 'access/usecases/queries/list-assignable-warehouse-roles.query';
-import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
-import dataSource from 'shared/database/data-source';
-import { RoleEntity } from 'shared/domain/entities/role.entity';
-import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
-import { WarehouseMembershipAssignmentRepository } from 'shared/domain/repositories/warehouse-membership-assignment.repository';
+import { ListAssignableWarehouseRolesQuery } from 'access/usecases/queries/list-assignable-warehouse-roles.query.js';
+import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user.js';
+import dataSource from 'shared/database/data-source.js';
+import { RoleEntity } from 'shared/domain/entities/role.entity.js';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity.js';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
+import { WarehouseMembershipAssignmentRepository } from 'shared/domain/repositories/warehouse-membership-assignment.repository.js';
 import {
   buildWarehouse,
   buildWorkspace,
-} from 'test/factories/entity-factories';
+} from 'test/factories/entity-factories.js';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 const now = new Date('2026-08-12T12:00:00.000Z');

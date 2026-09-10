@@ -1,9 +1,9 @@
-import { isEmpty } from 'lodash';
-import type { EndingConditionSubmission } from 'purchase-drafts/domain/services/arrival-inspection.service';
+import isEmpty from 'lodash/isEmpty.js';
+import type { EndingConditionSubmission } from 'purchase-drafts/domain/services/arrival-inspection.service.js';
 import type {
   RecordLineEndingConditionInput,
   RecordLineEndingRejectionInput,
-} from 'shared/domain/repositories/arrival-confirmation.repository';
+} from 'shared/domain/repositories/arrival-confirmation.repository.js';
 
 // T10 (post-review) — mappings, not rules (`adding-a-server-module.md` §4, `server-architecture.md`
 // §"Mappings between shared persistence entities and feature-owned domain objects"): each function

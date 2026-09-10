@@ -4,11 +4,11 @@ import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
 // to, under `WORKSPACE_MEMBERS:WATCH` (AC-33), so the candidates that
 // Workspace membership and Warehouse-membership assignment act on can be
 // found — narrowed to `warehouseIds` only, never a Warehouse Role.
-import { ListWorkspaceUsersQuery } from 'access/usecases/queries/list-workspace-users.query';
-import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
-import dataSource from 'shared/database/data-source';
-import { WorkspaceReadRepository } from 'shared/domain/repositories/workspace-read.repository';
-import { persistWorkspaceGraph } from 'test/factories/entity-factories';
+import { ListWorkspaceUsersQuery } from 'access/usecases/queries/list-workspace-users.query.js';
+import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user.js';
+import dataSource from 'shared/database/data-source.js';
+import { WorkspaceReadRepository } from 'shared/domain/repositories/workspace-read.repository.js';
+import { persistWorkspaceGraph } from 'test/factories/entity-factories.js';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 describe('ListWorkspaceUsersQuery', () => {

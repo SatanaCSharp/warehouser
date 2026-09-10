@@ -7,14 +7,14 @@ import {
   PATH_METADATA,
 } from '@nestjs/common/constants';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { CustomerOrdersController } from 'customer-orders/rest/controllers/customer-orders.controller';
-import { READ_TOLERANT_KEY } from 'shared/access/archived-tolerant-read.decorator';
-import { OBSERVED_PERMISSION_KEY } from 'shared/decorators/observed-permission.decorator';
-import { REQUIRED_PERMISSION_KEY } from 'shared/decorators/required-permission.decorator';
-import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
-import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
-import { WriteRateLimitGuard } from 'shared/guards/write-rate-limit.guard';
-import { WRITE_RATE_LIMITED_KEY } from 'shared/guards/write-rate-limited.decorator';
+import { CustomerOrdersController } from 'customer-orders/rest/controllers/customer-orders.controller.js';
+import { READ_TOLERANT_KEY } from 'shared/access/archived-tolerant-read.decorator.js';
+import { OBSERVED_PERMISSION_KEY } from 'shared/decorators/observed-permission.decorator.js';
+import { REQUIRED_PERMISSION_KEY } from 'shared/decorators/required-permission.decorator.js';
+import { SessionAuthGuard } from 'shared/guards/session-auth.guard.js';
+import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard.js';
+import { WriteRateLimitGuard } from 'shared/guards/write-rate-limit.guard.js';
+import { WRITE_RATE_LIMITED_KEY } from 'shared/guards/write-rate-limited.decorator.js';
 import { describe, expect, it } from 'vitest';
 
 // T11 — the guard and metadata proof `customer-orders-http-contract.integration.spec.ts` cannot

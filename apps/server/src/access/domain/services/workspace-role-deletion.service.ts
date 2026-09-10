@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { Maybe } from '@warehouser/shared-types/utils';
 import { assert, assertDefined } from '@warehouser/utils/asserts';
-import { workspaceReplacementRoleRequiredError } from 'access/domain/errors/workspace-access.errors';
-import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository';
+import { workspaceReplacementRoleRequiredError } from 'access/domain/errors/workspace-access.errors.js';
+import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository.js';
 
 // Mirrors `access/domain/services/role-deletion.service.ts` one level up
 // (sad.md §6.7): moves every assignment of `sourceRoleId` to a validated

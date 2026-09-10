@@ -2,11 +2,11 @@ import { ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ErrorCode, PermissionId } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
-import type { AccessCurrentUser } from 'shared/access/access-current-user';
-import { OBSERVED_PERMISSION_KEY } from 'shared/decorators/observed-permission.decorator';
-import { REQUIRED_PERMISSION_KEY } from 'shared/decorators/required-permission.decorator';
-import type { AccessCurrentUserRepository } from 'shared/domain/repositories/access-current-user.repository';
-import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
+import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
+import { OBSERVED_PERMISSION_KEY } from 'shared/decorators/observed-permission.decorator.js';
+import { REQUIRED_PERMISSION_KEY } from 'shared/decorators/required-permission.decorator.js';
+import type { AccessCurrentUserRepository } from 'shared/domain/repositories/access-current-user.repository.js';
+import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard.js';
 import type { Mock } from 'vitest';
 import { describe, expect, it, vi } from 'vitest';
 

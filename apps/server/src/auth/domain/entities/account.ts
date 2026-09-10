@@ -1,6 +1,6 @@
-import { AccountId, UserId } from 'auth/domain/value-objects/identity-id';
-import { EmailAddress } from 'shared/domain/security/email-address';
-import { PasswordCredential } from 'shared/domain/security/password-hashing';
+import { AccountId, UserId } from 'auth/domain/value-objects/identity-id.js';
+import { EmailAddress } from 'shared/domain/security/email-address.js';
+import { PasswordCredential } from 'shared/domain/security/password-hashing.js';
 
 export interface CreateAccount {
   readonly id: string;

@@ -6,28 +6,28 @@ import {
   customerDetailSchema,
   customerSchema,
 } from '@warehouser/contracts/customers';
-import { AppModule } from 'app.module';
-import { digestSessionSecret } from 'auth/domain/security/session-secret';
-import { AUTH_SESSION_COOKIE } from 'auth/rest/auth-cookie';
+import { AppModule } from 'app.module.js';
+import { digestSessionSecret } from 'auth/domain/security/session-secret.js';
+import { AUTH_SESSION_COOKIE } from 'auth/rest/auth-cookie.js';
 import { ZodValidationPipe } from 'nestjs-zod';
-import dataSource from 'shared/database/data-source';
-import { AccountEntity } from 'shared/domain/entities/account.entity';
-import { CustomerEntity } from 'shared/domain/entities/customer.entity';
-import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
-import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
-import { ItemEntity } from 'shared/domain/entities/item.entity';
-import { PermissionEntity } from 'shared/domain/entities/permission.entity';
-import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
-import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity';
-import { RoleEntity } from 'shared/domain/entities/role.entity';
-import { RolePermissionEntity } from 'shared/domain/entities/role-permission.entity';
-import { SessionEntity } from 'shared/domain/entities/session.entity';
-import { UserEntity } from 'shared/domain/entities/user.entity';
-import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
-import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
-import { PurchaseDraftReadRepository } from 'shared/domain/repositories/purchase-draft-read.repository';
-import { GlobalHttpExceptionFilter } from 'shared/errors/global-http-exception.filter';
+import dataSource from 'shared/database/data-source.js';
+import { AccountEntity } from 'shared/domain/entities/account.entity.js';
+import { CustomerEntity } from 'shared/domain/entities/customer.entity.js';
+import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity.js';
+import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity.js';
+import { ItemEntity } from 'shared/domain/entities/item.entity.js';
+import { PermissionEntity } from 'shared/domain/entities/permission.entity.js';
+import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity.js';
+import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity.js';
+import { RoleEntity } from 'shared/domain/entities/role.entity.js';
+import { RolePermissionEntity } from 'shared/domain/entities/role-permission.entity.js';
+import { SessionEntity } from 'shared/domain/entities/session.entity.js';
+import { UserEntity } from 'shared/domain/entities/user.entity.js';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity.js';
+import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity.js';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
+import { PurchaseDraftReadRepository } from 'shared/domain/repositories/purchase-draft-read.repository.js';
+import { GlobalHttpExceptionFilter } from 'shared/errors/global-http-exception.filter.js';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 // T10 — the `/api/v1/warehouses/{warehouseId}/customers*` HTTP contract of

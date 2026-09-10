@@ -1,5 +1,5 @@
-import { Account } from 'auth/domain/entities/account';
-import { AccountId, UserId } from 'auth/domain/value-objects/identity-id';
+import { Account } from 'auth/domain/entities/account.js';
+import { AccountId, UserId } from 'auth/domain/value-objects/identity-id.js';
 
 export class User {
   private constructor(

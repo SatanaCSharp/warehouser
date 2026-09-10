@@ -5,11 +5,11 @@
 // about a stub that was told to return nothing.
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
-import { CustomerAddressBookService } from 'customers/domain/services/customer-address-book.service';
-import { RecordCustomerCommand } from 'customers/usecases/commands/record-customer.command';
-import { find } from 'lodash';
-import type { AccessCurrentUser } from 'shared/access/access-current-user';
-import type { CustomerEntity } from 'shared/domain/entities/customer.entity';
+import { CustomerAddressBookService } from 'customers/domain/services/customer-address-book.service.js';
+import { RecordCustomerCommand } from 'customers/usecases/commands/record-customer.command.js';
+import find from 'lodash/find.js';
+import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
+import type { CustomerEntity } from 'shared/domain/entities/customer.entity.js';
 import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>

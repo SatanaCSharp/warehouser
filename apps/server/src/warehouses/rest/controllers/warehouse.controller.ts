@@ -17,22 +17,22 @@ import type {
   WarehouseDeliveryAddress,
 } from '@warehouser/contracts/workspaces';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import type { WorkspaceAccessRequest } from 'shared/access/access-request';
-import { RequiredWorkspacePermission } from 'shared/decorators/required-workspace-permission.decorator';
-import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
-import { WorkspaceAccessGuard } from 'shared/guards/workspace-access.guard';
+import type { WorkspaceAccessRequest } from 'shared/access/access-request.js';
+import { RequiredWorkspacePermission } from 'shared/decorators/required-workspace-permission.decorator.js';
+import { SessionAuthGuard } from 'shared/guards/session-auth.guard.js';
+import { WorkspaceAccessGuard } from 'shared/guards/workspace-access.guard.js';
 import {
   WarehouseArchivalDto,
   WarehouseDeliveryAddressDto,
   WarehouseWriteDto,
-} from 'warehouses/rest/dtos/warehouse-mutation.dto';
-import { ArchiveWarehouseCommand } from 'warehouses/usecases/commands/archive-warehouse.command';
-import { CreateWarehouseCommand } from 'warehouses/usecases/commands/create-warehouse.command';
-import { RenameWarehouseCommand } from 'warehouses/usecases/commands/rename-warehouse.command';
-import { RestoreWarehouseCommand } from 'warehouses/usecases/commands/restore-warehouse.command';
-import { SetWarehouseDeliveryAddressCommand } from 'warehouses/usecases/commands/set-warehouse-delivery-address.command';
-import { ListWorkspaceWarehousesQuery } from 'warehouses/usecases/queries/list-workspace-warehouses.query';
-import { ReadWarehouseDeliveryAddressQuery } from 'warehouses/usecases/queries/read-warehouse-delivery-address.query';
+} from 'warehouses/rest/dtos/warehouse-mutation.dto.js';
+import { ArchiveWarehouseCommand } from 'warehouses/usecases/commands/archive-warehouse.command.js';
+import { CreateWarehouseCommand } from 'warehouses/usecases/commands/create-warehouse.command.js';
+import { RenameWarehouseCommand } from 'warehouses/usecases/commands/rename-warehouse.command.js';
+import { RestoreWarehouseCommand } from 'warehouses/usecases/commands/restore-warehouse.command.js';
+import { SetWarehouseDeliveryAddressCommand } from 'warehouses/usecases/commands/set-warehouse-delivery-address.command.js';
+import { ListWorkspaceWarehousesQuery } from 'warehouses/usecases/queries/list-workspace-warehouses.query.js';
+import { ReadWarehouseDeliveryAddressQuery } from 'warehouses/usecases/queries/read-warehouse-delivery-address.query.js';
 
 /** Every route whose subject is the Warehouse **record** itself — never a resource a Warehouse
  * owns, and never a membership edge into it, which is Access and lives on `access`'s

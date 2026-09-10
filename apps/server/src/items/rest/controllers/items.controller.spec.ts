@@ -2,20 +2,20 @@ import 'reflect-metadata';
 
 import { GUARDS_METADATA, PATH_METADATA } from '@nestjs/common/constants';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { ItemsController } from 'items/rest/controllers/items.controller';
-import type { AdjustItemOnHandCommand } from 'items/usecases/commands/adjust-item-on-hand.command';
-import type { CorrectItemCommand } from 'items/usecases/commands/correct-item.command';
-import type { CreateItemCommand } from 'items/usecases/commands/create-item.command';
-import type { DeactivateItemCommand } from 'items/usecases/commands/deactivate-item.command';
-import type { ReactivateItemCommand } from 'items/usecases/commands/reactivate-item.command';
-import type { ListItemCatalogueQuery } from 'items/usecases/queries/list-item-catalogue.query';
-import type { ReadItemCatalogueEntryQuery } from 'items/usecases/queries/read-item-catalogue-entry.query';
-import { READ_TOLERANT_KEY } from 'shared/access/archived-tolerant-read.decorator';
-import { REQUIRED_PERMISSION_KEY } from 'shared/decorators/required-permission.decorator';
-import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
-import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
-import { WriteRateLimitGuard } from 'shared/guards/write-rate-limit.guard';
-import { WRITE_RATE_LIMITED_KEY } from 'shared/guards/write-rate-limited.decorator';
+import { ItemsController } from 'items/rest/controllers/items.controller.js';
+import type { AdjustItemOnHandCommand } from 'items/usecases/commands/adjust-item-on-hand.command.js';
+import type { CorrectItemCommand } from 'items/usecases/commands/correct-item.command.js';
+import type { CreateItemCommand } from 'items/usecases/commands/create-item.command.js';
+import type { DeactivateItemCommand } from 'items/usecases/commands/deactivate-item.command.js';
+import type { ReactivateItemCommand } from 'items/usecases/commands/reactivate-item.command.js';
+import type { ListItemCatalogueQuery } from 'items/usecases/queries/list-item-catalogue.query.js';
+import type { ReadItemCatalogueEntryQuery } from 'items/usecases/queries/read-item-catalogue-entry.query.js';
+import { READ_TOLERANT_KEY } from 'shared/access/archived-tolerant-read.decorator.js';
+import { REQUIRED_PERMISSION_KEY } from 'shared/decorators/required-permission.decorator.js';
+import { SessionAuthGuard } from 'shared/guards/session-auth.guard.js';
+import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard.js';
+import { WriteRateLimitGuard } from 'shared/guards/write-rate-limit.guard.js';
+import { WRITE_RATE_LIMITED_KEY } from 'shared/guards/write-rate-limited.decorator.js';
 import { describe, expect, it, vi } from 'vitest';
 
 // T7 — the guard/metadata proof `items-http-contract.integration.spec.ts` does not itself exercise

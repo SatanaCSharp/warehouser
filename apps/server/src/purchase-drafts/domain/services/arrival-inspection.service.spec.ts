@@ -33,18 +33,18 @@ import {
   deriveAcceptedQuantity,
   deriveRejectedQuantity,
   type EndingConditionSubmission,
-} from 'purchase-drafts/domain/services/arrival-inspection.service';
-import { DeliveryMode } from 'purchase-drafts/domain/value-objects/delivery-mode';
+} from 'purchase-drafts/domain/services/arrival-inspection.service.js';
+import { DeliveryMode } from 'purchase-drafts/domain/value-objects/delivery-mode.js';
 import {
   PreReceiptConformanceVerdict,
   RejectionSource,
-} from 'purchase-drafts/domain/value-objects/line-condition';
-import type { AccessCurrentUser } from 'shared/access/access-current-user';
-import type { RejectionReasonEntity } from 'shared/domain/entities/rejection-reason.entity';
+} from 'purchase-drafts/domain/value-objects/line-condition.js';
+import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
+import type { RejectionReasonEntity } from 'shared/domain/entities/rejection-reason.entity.js';
 import type {
   LockedPurchaseDraftLineForEnding,
   RecordLineEndingRejectionInput,
-} from 'shared/domain/repositories/arrival-confirmation.repository';
+} from 'shared/domain/repositories/arrival-confirmation.repository.js';
 import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>
@@ -1002,7 +1002,7 @@ describe('the shape of the shared rules', () => {
   // the source, which is where the modifier lives.
   it('keeps the condition orchestration as the service’s only public method', () => {
     const declaration = readFileSync(
-      join(__dirname, 'arrival-inspection.service.ts'),
+      join(import.meta.dirname, 'arrival-inspection.service.ts'),
       'utf8',
     );
 
@@ -1048,7 +1048,10 @@ const sourceFilesUnder = (directory: string): readonly string[] =>
 // pinned over the source instead, in the same way the shared refusals below are.
 describe('the Source correspondence is stated once', () => {
   const serviceSource = (): string =>
-    readFileSync(join(__dirname, 'arrival-inspection.service.ts'), 'utf8');
+    readFileSync(
+      join(import.meta.dirname, 'arrival-inspection.service.ts'),
+      'utf8',
+    );
 
   it('names requiredSourceFor rather than re-branching the Delivery Mode', () => {
     expect(serviceSource()).toContain('requiredSourceFor');
@@ -1068,7 +1071,7 @@ describe('the ending rules live in one place', () => {
   it.each(SHARED_REFUSALS)(
     'raises %s from the shared module alone, never from a command',
     (refusalName) => {
-      const featureRoot = join(__dirname, '..', '..');
+      const featureRoot = join(import.meta.dirname, '..', '..');
       const raisingFiles = sourceFilesUnder(featureRoot)
         .filter(
           (path) => !path.endsWith(join('errors', 'purchase-draft.errors.ts')),
@@ -1076,7 +1079,7 @@ describe('the ending rules live in one place', () => {
         .filter((path) => readFileSync(path, 'utf8').includes(refusalName));
 
       expect(raisingFiles).toEqual([
-        join(__dirname, 'arrival-inspection.service.ts'),
+        join(import.meta.dirname, 'arrival-inspection.service.ts'),
       ]);
     },
   );

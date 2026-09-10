@@ -4,11 +4,11 @@ import { assert, assertDefined } from '@warehouser/utils/asserts';
 import {
   replacementRequiredError,
   roleUnavailableError,
-} from 'access/domain/errors/access.errors';
-import { RoleDeletionService } from 'access/domain/services/role-deletion.service';
-import type { AccessCurrentUser } from 'shared/access/access-current-user';
-import { Transactional } from 'shared/decorators/transactional.decorator';
-import { RoleLifecycleRepository } from 'shared/domain/repositories/role-lifecycle.repository';
+} from 'access/domain/errors/access.errors.js';
+import { RoleDeletionService } from 'access/domain/services/role-deletion.service.js';
+import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
+import { Transactional } from 'shared/decorators/transactional.decorator.js';
+import { RoleLifecycleRepository } from 'shared/domain/repositories/role-lifecycle.repository.js';
 
 export interface DeleteRoleInput {
   readonly roleId: string;

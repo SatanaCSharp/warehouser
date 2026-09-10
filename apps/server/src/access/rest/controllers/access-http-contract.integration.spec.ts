@@ -2,21 +2,21 @@ import { randomUUID } from 'node:crypto';
 
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { AppModule } from 'app.module';
-import { digestSessionSecret } from 'auth/domain/security/session-secret';
-import { AUTH_SESSION_COOKIE } from 'auth/rest/auth-cookie';
+import { AppModule } from 'app.module.js';
+import { digestSessionSecret } from 'auth/domain/security/session-secret.js';
+import { AUTH_SESSION_COOKIE } from 'auth/rest/auth-cookie.js';
 import { ZodValidationPipe } from 'nestjs-zod';
-import dataSource from 'shared/database/data-source';
-import { AccountEntity } from 'shared/domain/entities/account.entity';
-import { PermissionEntity } from 'shared/domain/entities/permission.entity';
-import { RoleEntity } from 'shared/domain/entities/role.entity';
-import { RolePermissionEntity } from 'shared/domain/entities/role-permission.entity';
-import { SessionEntity } from 'shared/domain/entities/session.entity';
-import { UserEntity } from 'shared/domain/entities/user.entity';
-import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
-import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
-import { GlobalHttpExceptionFilter } from 'shared/errors/global-http-exception.filter';
+import dataSource from 'shared/database/data-source.js';
+import { AccountEntity } from 'shared/domain/entities/account.entity.js';
+import { PermissionEntity } from 'shared/domain/entities/permission.entity.js';
+import { RoleEntity } from 'shared/domain/entities/role.entity.js';
+import { RolePermissionEntity } from 'shared/domain/entities/role-permission.entity.js';
+import { SessionEntity } from 'shared/domain/entities/session.entity.js';
+import { UserEntity } from 'shared/domain/entities/user.entity.js';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity.js';
+import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity.js';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
+import { GlobalHttpExceptionFilter } from 'shared/errors/global-http-exception.filter.js';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 // Fixed clock. `chk_warehouses_archival_order` rejects `archivedAt < createdAt`, so every seeded

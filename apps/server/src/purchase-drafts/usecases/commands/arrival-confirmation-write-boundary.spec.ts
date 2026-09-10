@@ -23,10 +23,10 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { difference } from 'lodash';
+import difference from 'lodash/difference.js';
 import { describe, expect, it } from 'vitest';
 
-const sourceRoot = join(__dirname, '../../..');
+const sourceRoot = join(import.meta.dirname, '../../..');
 
 const read = (path: string): string =>
   readFileSync(join(sourceRoot, path), 'utf8');

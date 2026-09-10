@@ -1,7 +1,7 @@
 import { ForbiddenException } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
-import { configureHttpPlatform } from 'shared/config/http-platform.bootstrap';
-import { GlobalHttpExceptionFilter } from 'shared/errors/global-http-exception.filter';
+import { configureHttpPlatform } from 'shared/config/http-platform.bootstrap.js';
+import { GlobalHttpExceptionFilter } from 'shared/errors/global-http-exception.filter.js';
 import type { Mock } from 'vitest';
 import { describe, expect, it, vi } from 'vitest';
 

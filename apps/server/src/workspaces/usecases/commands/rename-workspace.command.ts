@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
-import { Transactional } from 'shared/decorators/transactional.decorator';
-import { WorkspaceLifecycleRepository } from 'shared/domain/repositories/workspace-lifecycle.repository';
-import { WorkspaceName } from 'shared/domain/value-objects/workspace-name';
-import { validatedName } from 'shared/errors/invalid-name.error';
+import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user.js';
+import { Transactional } from 'shared/decorators/transactional.decorator.js';
+import { WorkspaceLifecycleRepository } from 'shared/domain/repositories/workspace-lifecycle.repository.js';
+import { WorkspaceName } from 'shared/domain/value-objects/workspace-name.js';
+import { validatedName } from 'shared/errors/invalid-name.error.js';
 
 export interface RenameWorkspaceInput {
   readonly name: string;

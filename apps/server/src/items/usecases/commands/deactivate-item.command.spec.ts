@@ -8,10 +8,10 @@
 // Customer Order and Purchase Draft Line that already names the Item stays readable and counting
 // exactly as before" holds by construction of the repository boundary the command is given.
 import { ApplicationError } from '@warehouser/shared-types/errors';
-import { DeactivateItemCommand } from 'items/usecases/commands/deactivate-item.command';
-import type { AccessCurrentUser } from 'shared/access/access-current-user';
-import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
-import { repositoryDouble } from 'test/doubles/repository-double';
+import { DeactivateItemCommand } from 'items/usecases/commands/deactivate-item.command.js';
+import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
+import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository.js';
+import { repositoryDouble } from 'test/doubles/repository-double.js';
 import { describe, expect, it, vi } from 'vitest';
 
 const warehouseId = '00000000-0000-4000-8000-000000000001';

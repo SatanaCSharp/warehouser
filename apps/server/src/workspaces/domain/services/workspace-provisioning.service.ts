@@ -3,9 +3,9 @@ import { randomUUID } from 'node:crypto';
 import {
   type InitialAccessProjection,
   ProvisionInitialAccessCommand,
-} from 'access/usecases/commands/provision-initial-access.command';
-import { WorkspaceProvisioningRepository } from 'shared/domain/repositories/workspace-provisioning.repository';
-import { AccessName } from 'shared/domain/value-objects/access-name';
+} from 'access/usecases/commands/provision-initial-access.command.js';
+import { WorkspaceProvisioningRepository } from 'shared/domain/repositories/workspace-provisioning.repository.js';
+import { AccessName } from 'shared/domain/value-objects/access-name.js';
 
 // spec.md §1 (second paragraph): the full initial Workspace Owner Workspace
 // Permission set, granted to the protected Workspace Owner Role at

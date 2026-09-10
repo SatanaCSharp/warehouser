@@ -1,24 +1,24 @@
 import { randomUUID } from 'node:crypto';
 
-import dataSource from 'shared/database/data-source';
-import { DbTransactionService } from 'shared/database/db-transaction.service';
-import { DbTransactionContext } from 'shared/database/db-transaction-context.service';
-import { AccountEntity } from 'shared/domain/entities/account.entity';
-import { CustomerEntity } from 'shared/domain/entities/customer.entity';
-import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
-import { UserEntity } from 'shared/domain/entities/user.entity';
-import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
+import dataSource from 'shared/database/data-source.js';
+import { DbTransactionService } from 'shared/database/db-transaction.service.js';
+import { DbTransactionContext } from 'shared/database/db-transaction-context.service.js';
+import { AccountEntity } from 'shared/domain/entities/account.entity.js';
+import { CustomerEntity } from 'shared/domain/entities/customer.entity.js';
+import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity.js';
+import { UserEntity } from 'shared/domain/entities/user.entity.js';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity.js';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
 // `CustomerDirectoryRepository` does not exist yet (T7) — this is the RED for the Customer-row
 // half of `data-model.md` § "Repository boundaries": "answers name availability **and** returns the
 // Customer list with each Customer's active-address count in one read, rather than exposing a
 // table-shaped read per relation that every caller must combine".
-import { CustomerDirectoryRepository } from 'shared/domain/repositories/customer-directory.repository';
+import { CustomerDirectoryRepository } from 'shared/domain/repositories/customer-directory.repository.js';
 import {
   buildWarehouse,
   buildWorkspace,
-} from 'test/factories/entity-factories';
-import { PostgresQueryRunner } from 'typeorm/driver/postgres/PostgresQueryRunner';
+} from 'test/factories/entity-factories.js';
+import { PostgresQueryRunner } from 'typeorm/driver/postgres/PostgresQueryRunner.js';
 import {
   afterAll,
   afterEach,

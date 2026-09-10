@@ -2,9 +2,9 @@ import { ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
-import { WriteRateLimitCounter } from 'shared/guards/write-rate-limit.counter';
-import { WriteRateLimitGuard } from 'shared/guards/write-rate-limit.guard';
-import { WRITE_RATE_LIMITED_KEY } from 'shared/guards/write-rate-limited.decorator';
+import { WriteRateLimitCounter } from 'shared/guards/write-rate-limit.counter.js';
+import { WriteRateLimitGuard } from 'shared/guards/write-rate-limit.guard.js';
+import { WRITE_RATE_LIMITED_KEY } from 'shared/guards/write-rate-limited.decorator.js';
 import { describe, expect, it, vi } from 'vitest';
 
 // ADR 0003 / spec.md §6.1 "Draft and demand spam": recording demand, creating drafts and adjusting

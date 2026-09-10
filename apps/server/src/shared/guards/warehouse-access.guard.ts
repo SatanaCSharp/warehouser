@@ -5,16 +5,16 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { PermissionId } from '@warehouser/shared-types/enums';
-import { accessCurrentUser } from 'shared/access/access-current-user';
+import { accessCurrentUser } from 'shared/access/access-current-user.js';
 import {
   accessDeniedError,
   warehouseArchivedError,
-} from 'shared/access/access-denial.errors';
-import type { WarehouseAccessRequest } from 'shared/access/access-request';
-import { READ_TOLERANT_KEY } from 'shared/access/archived-tolerant-read.decorator';
-import { OBSERVED_PERMISSION_KEY } from 'shared/decorators/observed-permission.decorator';
-import { REQUIRED_PERMISSION_KEY } from 'shared/decorators/required-permission.decorator';
-import { AccessCurrentUserRepository } from 'shared/domain/repositories/access-current-user.repository';
+} from 'shared/access/access-denial.errors.js';
+import type { WarehouseAccessRequest } from 'shared/access/access-request.js';
+import { READ_TOLERANT_KEY } from 'shared/access/archived-tolerant-read.decorator.js';
+import { OBSERVED_PERMISSION_KEY } from 'shared/decorators/observed-permission.decorator.js';
+import { REQUIRED_PERMISSION_KEY } from 'shared/decorators/required-permission.decorator.js';
+import { AccessCurrentUserRepository } from 'shared/domain/repositories/access-current-user.repository.js';
 
 /** Reads the single Warehouse identifier the request unambiguously names. The route's
  * `warehouseId` param is authoritative; a body-supplied `warehouseId` that disagrees with it makes

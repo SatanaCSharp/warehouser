@@ -12,9 +12,9 @@ import { defineConfig } from 'vitest/config';
  * that metadata every Nest constructor injection resolves to `undefined`.
  *
  * `vite-tsconfig-paths` is the replacement for Jest's `moduleDirectories`: it
- * prepends `compilerOptions.baseUrl` (`./src`) to every bare import, which is
- * how the ~3000 `shared/...` / `warehouses/...` specifiers across the suite
- * resolve.
+ * applies `compilerOptions.paths` (`*` -> `./src/*`), which is how the ~3000
+ * `shared/....js` / `warehouses/....js` specifiers across the suite resolve —
+ * including their `.js` extension, which it maps back to the `.ts` source.
  *
  * Nothing here sets `include`, `exclude` or `setupFiles`: `mergeConfig`
  * concatenates arrays, so a shared entry would silently accumulate duplicates

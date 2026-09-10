@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import type { AccessCurrentUser } from 'shared/access/access-current-user';
-import type { ConsolidatedDemandLineRead } from 'shared/domain/repositories/consolidated-demand.repository';
-import { ConsolidatedDemandRepository } from 'shared/domain/repositories/consolidated-demand.repository';
+import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
+import type { ConsolidatedDemandLineRead } from 'shared/domain/repositories/consolidated-demand.repository.js';
+import { ConsolidatedDemandRepository } from 'shared/domain/repositories/consolidated-demand.repository.js';
 
 // AC-04/AC-20 — `sad.md` §6.5 step 5, "returns the Demand Lines whole, nothing paged". This use
 // case is a thin adapter: it scopes the read to the acting Warehouse and passes the repository's

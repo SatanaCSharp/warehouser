@@ -8,12 +8,12 @@ import { randomUUID } from 'node:crypto';
 
 import { ErrorCode, PermissionId } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
-import { DemandAllocationService } from 'customer-orders/domain/services/demand-allocation.service';
-import { ArrivalInspectionService } from 'purchase-drafts/domain/services/arrival-inspection.service';
+import { DemandAllocationService } from 'customer-orders/domain/services/demand-allocation.service.js';
+import { ArrivalInspectionService } from 'purchase-drafts/domain/services/arrival-inspection.service.js';
 // The application boundary (ADR 0002 "Decision outcome").
-import { ConfirmPurchaseDraftLineArrivalCommand } from 'purchase-drafts/usecases/commands/confirm-purchase-draft-line-arrival.command';
-import { RecordPurchaseDraftLineDeliveryCommand } from 'purchase-drafts/usecases/commands/record-purchase-draft-line-delivery.command';
-import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { ConfirmPurchaseDraftLineArrivalCommand } from 'purchase-drafts/usecases/commands/confirm-purchase-draft-line-arrival.command.js';
+import { RecordPurchaseDraftLineDeliveryCommand } from 'purchase-drafts/usecases/commands/record-purchase-draft-line-delivery.command.js';
+import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
 // T17/ADR 0002 — the whole-draft arrival is withdrawn and replaced by **two per-line endings**
 // whose kind is a routing fact. Each places its whole act on one `@Transactional()` boundary in
 // `purchase-drafts`: it reads the draft row and then the named line, writes that line's ending,
@@ -29,30 +29,30 @@ import type { AccessCurrentUser } from 'shared/access/access-current-user';
 // This suite exercises the real repositories and the real `DemandAllocationService` against a real
 // database, per `sad.md` §10 "Command integration": a double cannot prove atomicity, a genuine
 // concurrent race, or that no Item's On-hand Quantity moves.
-import dataSource from 'shared/database/data-source';
-import { DbTransactionService } from 'shared/database/db-transaction.service';
-import { DbTransactionContext } from 'shared/database/db-transaction-context.service';
-import { AccountEntity } from 'shared/domain/entities/account.entity';
-import { ArrivalAllocationEntity } from 'shared/domain/entities/arrival-allocation.entity';
-import { CustomerEntity } from 'shared/domain/entities/customer.entity';
-import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
-import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
-import { ItemEntity } from 'shared/domain/entities/item.entity';
-import type { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
-import { PurchaseDraftEntity as PurchaseDraftEntityClass } from 'shared/domain/entities/purchase-draft.entity';
-import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity';
-import { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity';
-import { PurchaseDraftLineRejectionEntity } from 'shared/domain/entities/purchase-draft-line-rejection.entity';
-import { UserEntity } from 'shared/domain/entities/user.entity';
-import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
-import { ArrivalConfirmationRepository } from 'shared/domain/repositories/arrival-confirmation.repository';
-import { DemandAllocationRepository } from 'shared/domain/repositories/demand-allocation.repository';
-import { RejectionReasonCatalogueRepository } from 'shared/domain/repositories/rejection-reason-catalogue.repository';
+import dataSource from 'shared/database/data-source.js';
+import { DbTransactionService } from 'shared/database/db-transaction.service.js';
+import { DbTransactionContext } from 'shared/database/db-transaction-context.service.js';
+import { AccountEntity } from 'shared/domain/entities/account.entity.js';
+import { ArrivalAllocationEntity } from 'shared/domain/entities/arrival-allocation.entity.js';
+import { CustomerEntity } from 'shared/domain/entities/customer.entity.js';
+import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity.js';
+import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity.js';
+import { ItemEntity } from 'shared/domain/entities/item.entity.js';
+import type { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity.js';
+import { PurchaseDraftEntity as PurchaseDraftEntityClass } from 'shared/domain/entities/purchase-draft.entity.js';
+import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity.js';
+import { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity.js';
+import { PurchaseDraftLineRejectionEntity } from 'shared/domain/entities/purchase-draft-line-rejection.entity.js';
+import { UserEntity } from 'shared/domain/entities/user.entity.js';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity.js';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
+import { ArrivalConfirmationRepository } from 'shared/domain/repositories/arrival-confirmation.repository.js';
+import { DemandAllocationRepository } from 'shared/domain/repositories/demand-allocation.repository.js';
+import { RejectionReasonCatalogueRepository } from 'shared/domain/repositories/rejection-reason-catalogue.repository.js';
 import {
   buildWarehouse,
   buildWorkspace,
-} from 'test/factories/entity-factories';
+} from 'test/factories/entity-factories.js';
 import {
   afterAll,
   afterEach,

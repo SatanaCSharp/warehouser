@@ -6,14 +6,14 @@ import {
   workspaceProtectedRoleError,
   workspaceReplacementRoleRequiredError,
   workspaceRoleAssignmentRequiredError,
-} from 'access/domain/errors/workspace-access.errors';
-import { isProtectedWorkspaceOwnerRoleKind } from 'access/domain/predicates/workspace-authority.predicates';
-import { WorkspaceRoleDeletionService } from 'access/domain/services/workspace-role-deletion.service';
-import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
-import { Transactional } from 'shared/decorators/transactional.decorator';
-import { WorkspaceCurrentUserRepository } from 'shared/domain/repositories/workspace-current-user.repository';
-import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository';
-import { workspaceTargetUnavailableError } from 'shared/errors/cross-module.errors';
+} from 'access/domain/errors/workspace-access.errors.js';
+import { isProtectedWorkspaceOwnerRoleKind } from 'access/domain/predicates/workspace-authority.predicates.js';
+import { WorkspaceRoleDeletionService } from 'access/domain/services/workspace-role-deletion.service.js';
+import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user.js';
+import { Transactional } from 'shared/decorators/transactional.decorator.js';
+import { WorkspaceCurrentUserRepository } from 'shared/domain/repositories/workspace-current-user.repository.js';
+import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository.js';
+import { workspaceTargetUnavailableError } from 'shared/errors/cross-module.errors.js';
 
 export interface DeleteWorkspaceRoleInput {
   readonly roleId: string;

@@ -1,6 +1,6 @@
 import { assert } from '@warehouser/utils/asserts';
-import { customerInvalidInputError } from 'customers/domain/errors/customer.errors';
-import { isCustomerName } from 'customers/domain/predicates/customer.predicates';
+import { customerInvalidInputError } from 'customers/domain/errors/customer.errors.js';
+import { isCustomerName } from 'customers/domain/predicates/customer.predicates.js';
 
 /**
  * A Customer's name: unique within its Warehouse across active and Inactive Customers alike, and

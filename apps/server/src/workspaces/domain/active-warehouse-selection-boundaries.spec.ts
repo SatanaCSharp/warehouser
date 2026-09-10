@@ -14,7 +14,7 @@ import { describe, expect, it } from 'vitest';
 // a source scan rather than a DB-backed integration suite, since this is a
 // static architectural guarantee, not a runtime one.
 
-const serverSourceDirectory = join(__dirname, '..', '..');
+const serverSourceDirectory = join(import.meta.dirname, '..', '..');
 
 const guardsDirectory = join(serverSourceDirectory, 'shared', 'guards');
 

@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import {
   WorkspacePermissionCatalogueRead,
   WorkspaceReadRepository,
-} from 'shared/domain/repositories/workspace-read.repository';
+} from 'shared/domain/repositories/workspace-read.repository.js';
 
 // AC-32 — the system Workspace Permission catalogue, under
 // `WORKSPACE_ROLES:WATCH`. The catalogue is not per-Workspace, so this query

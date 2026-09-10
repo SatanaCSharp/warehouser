@@ -1,13 +1,13 @@
 import 'reflect-metadata';
 
 import { MODULE_METADATA } from '@nestjs/common/constants';
-import { AccessUsecaseModule } from 'access/usecases/usecase.module';
-import { AppModule } from 'app.module';
-import { DomainModule } from 'shared/domain/domain.module';
+import { AccessUsecaseModule } from 'access/usecases/usecase.module.js';
+import { AppModule } from 'app.module.js';
+import { DomainModule } from 'shared/domain/domain.module.js';
 import { describe, expect, it } from 'vitest';
-import { WorkspacesRestModule } from 'workspaces';
-import { WorkspaceController } from 'workspaces/rest/controllers/workspace.controller';
-import { WorkspacesUsecaseModule } from 'workspaces/usecases/usecase.module';
+import { WorkspacesRestModule } from 'workspaces/index.js';
+import { WorkspaceController } from 'workspaces/rest/controllers/workspace.controller.js';
+import { WorkspacesUsecaseModule } from 'workspaces/usecases/usecase.module.js';
 
 type Constructor = new (...args: never[]) => unknown;
 

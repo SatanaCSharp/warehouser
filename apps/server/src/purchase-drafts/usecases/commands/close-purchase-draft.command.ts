@@ -4,11 +4,11 @@ import {
   purchaseDraftConcurrentChangeError,
   purchaseDraftInvalidStateError,
   purchaseDraftTargetUnavailableError,
-} from 'purchase-drafts/domain/errors/purchase-draft.errors';
-import { isReadyForOrderingDraft } from 'purchase-drafts/domain/predicates/purchase-draft-freeze.predicates';
-import type { AccessCurrentUser } from 'shared/access/access-current-user';
-import { Transactional } from 'shared/decorators/transactional.decorator';
-import { PurchaseDraftFreezeRepository } from 'shared/domain/repositories/purchase-draft-freeze.repository';
+} from 'purchase-drafts/domain/errors/purchase-draft.errors.js';
+import { isReadyForOrderingDraft } from 'purchase-drafts/domain/predicates/purchase-draft-freeze.predicates.js';
+import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
+import { Transactional } from 'shared/decorators/transactional.decorator.js';
+import { PurchaseDraftFreezeRepository } from 'shared/domain/repositories/purchase-draft-freeze.repository.js';
 
 export interface ClosePurchaseDraftRuntime {
   readonly now: () => Date;

@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
-import { AuthModule } from 'auth/auth.module';
-import { WorkspaceAccessGuard } from 'shared/guards/workspace-access.guard';
-import { WarehouseController } from 'warehouses/rest/controllers/warehouse.controller';
-import { WarehousesUsecaseModule } from 'warehouses/usecases/usecase.module';
+import { AuthModule } from 'auth/auth.module.js';
+import { WorkspaceAccessGuard } from 'shared/guards/workspace-access.guard.js';
+import { WarehouseController } from 'warehouses/rest/controllers/warehouse.controller.js';
+import { WarehousesUsecaseModule } from 'warehouses/usecases/usecase.module.js';
 
 // `AuthModule` supplies `SessionAuthGuard`'s dependencies; `WorkspaceAccessGuard`
 // is shared transport infrastructure from `shared/guards/` and is only

@@ -1,9 +1,9 @@
 import {
   toCustomer,
   toCustomerDeliveryAddress,
-} from 'customers/domain/mappers/customer.mapper';
-import { CustomerEntity } from 'shared/domain/entities/customer.entity';
-import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
+} from 'customers/domain/mappers/customer.mapper.js';
+import { CustomerEntity } from 'shared/domain/entities/customer.entity.js';
+import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity.js';
 import { describe, expect, it } from 'vitest';
 
 const customerEntity = (

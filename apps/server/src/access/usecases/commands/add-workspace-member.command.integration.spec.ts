@@ -19,21 +19,21 @@ import {
 // candidate and an existing one indistinguishably fail (AC-34) — verified
 // below by asserting both surface the identical `WORKSPACE_TARGET_UNAVAILABLE`
 // shape.
-import { AddWorkspaceMemberCommand } from 'access/usecases/commands/add-workspace-member.command';
-import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
-import dataSource from 'shared/database/data-source';
-import { DbTransactionService } from 'shared/database/db-transaction.service';
-import { DbTransactionContext } from 'shared/database/db-transaction-context.service';
-import { AccountEntity } from 'shared/domain/entities/account.entity';
-import { UserEntity } from 'shared/domain/entities/user.entity';
-import { WorkspaceMembershipEntity } from 'shared/domain/entities/workspace-membership.entity';
-import { WorkspaceRoleEntity } from 'shared/domain/entities/workspace-role.entity';
-import { WorkspaceMembershipRepository } from 'shared/domain/repositories/workspace-membership.repository';
-import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository';
+import { AddWorkspaceMemberCommand } from 'access/usecases/commands/add-workspace-member.command.js';
+import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user.js';
+import dataSource from 'shared/database/data-source.js';
+import { DbTransactionService } from 'shared/database/db-transaction.service.js';
+import { DbTransactionContext } from 'shared/database/db-transaction-context.service.js';
+import { AccountEntity } from 'shared/domain/entities/account.entity.js';
+import { UserEntity } from 'shared/domain/entities/user.entity.js';
+import { WorkspaceMembershipEntity } from 'shared/domain/entities/workspace-membership.entity.js';
+import { WorkspaceRoleEntity } from 'shared/domain/entities/workspace-role.entity.js';
+import { WorkspaceMembershipRepository } from 'shared/domain/repositories/workspace-membership.repository.js';
+import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository.js';
 import {
   buildWorkspaceRole,
   persistWorkspaceGraph,
-} from 'test/factories/entity-factories';
+} from 'test/factories/entity-factories.js';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 const now = new Date('2026-08-12T12:00:00.000Z');

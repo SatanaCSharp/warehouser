@@ -1,6 +1,6 @@
 import { UnauthorizedException } from '@nestjs/common';
-import { CurrentSessionQuery } from 'auth/usecases/queries/current-session.query';
-import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
+import { CurrentSessionQuery } from 'auth/usecases/queries/current-session.query.js';
+import { SessionAuthGuard } from 'shared/guards/session-auth.guard.js';
 import { describe, expect, it, vi } from 'vitest';
 
 const request = (cookie?: string) => ({

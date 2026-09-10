@@ -15,7 +15,14 @@ const pglite = (module: string): string =>
  * the production DataSource and the production Nest TypeORM options for
  * PGlite-backed ones, so no production file knows this tier exists. Vite's
  * alias resolver runs ahead of every plugin `resolveId` hook, so these two
- * entries win over `vite-tsconfig-paths`' baseUrl resolution.
+ * entries win over `vite-tsconfig-paths`' path resolution.
+ *
+ * The `find` patterns accept the specifier with or without its `.js`
+ * extension. Production code writes the extension — the server is an ES module
+ * — but an anchored pattern that silently stops matching is this tier's one
+ * quiet failure: the real DataSource loads and the suite runs against a
+ * developer's own database, green. `setupFiles` therefore asserts the swap
+ * took, rather than trusting these two regexes to keep matching.
  *
  * Note PGlite runs Postgres in single-user mode — one backend, one query at a
  * time. A spec that needs two backends racing each other cannot be expressed
@@ -28,11 +35,11 @@ export default mergeConfig(
     resolve: {
       alias: [
         {
-          find: /^shared\/database\/data-source$/,
+          find: /^shared\/database\/data-source(?:\.js)?$/,
           replacement: pglite('pglite-data-source.ts'),
         },
         {
-          find: /^shared\/database\/typeorm\.options$/,
+          find: /^shared\/database\/typeorm\.options(?:\.js)?$/,
           replacement: pglite('pglite-typeorm.options.ts'),
         },
       ],
@@ -44,6 +51,9 @@ export default mergeConfig(
       // other.
       include: ['src/**/*.integration.spec.ts'],
       exclude: ['**/node_modules/**', '**/dist/**'],
+      // Refuses to run the tier at all when the `resolve.alias` swap above is
+      // not in effect; see the file's own comment.
+      setupFiles: ['./src/test/pglite/alias-guard.setup.ts'],
       // One file exporting both `setup` and `teardown`; it hands the migrated
       // template dump to the workers through `provide`/`inject`.
       globalSetup: ['./src/test/pglite/global-setup.ts'],

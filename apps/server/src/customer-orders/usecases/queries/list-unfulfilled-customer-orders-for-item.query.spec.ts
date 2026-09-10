@@ -4,8 +4,8 @@
 // sub-rows of the Demand destination (sad.md §5 `customer-orders/usecases`). Served by
 // `GET /api/v1/warehouses/{warehouseId}/customer-orders?itemId=…&state=unfulfilled`
 // (openapi.yaml ~line 386), which T11 exposes and depends on this query existing to call.
-import { ListUnfulfilledCustomerOrdersForItemQuery } from 'customer-orders/usecases/queries/list-unfulfilled-customer-orders-for-item.query';
-import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { ListUnfulfilledCustomerOrdersForItemQuery } from 'customer-orders/usecases/queries/list-unfulfilled-customer-orders-for-item.query.js';
+import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
 import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>

@@ -1,6 +1,6 @@
 import { assert } from '@warehouser/utils/asserts';
-import { customerInvalidInputError } from 'customers/domain/errors/customer.errors';
-import { isAccessNotes } from 'customers/domain/predicates/customer.predicates';
+import { customerInvalidInputError } from 'customers/domain/errors/customer.errors.js';
+import { isAccessNotes } from 'customers/domain/predicates/customer.predicates.js';
 
 /**
  * What a driver needs to get in — gate codes, opening hours, delivery windows (CONTEXT.md

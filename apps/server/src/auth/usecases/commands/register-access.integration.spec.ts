@@ -1,12 +1,12 @@
-import { ProvisionInitialAccessCommand } from 'access/usecases/commands/provision-initial-access.command';
-import { AuthRegistrationService } from 'auth/domain/services/auth-registration.service';
-import { RegisterCommand } from 'auth/usecases/commands/register.command';
-import dataSource from 'shared/database/data-source';
-import { DbTransactionService } from 'shared/database/db-transaction.service';
-import { DbTransactionContext } from 'shared/database/db-transaction-context.service';
-import { AccessProvisioningRepository } from 'shared/domain/repositories/access-provisioning.repository';
-import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
-import { WorkspaceProvisioningRepository } from 'shared/domain/repositories/workspace-provisioning.repository';
+import { ProvisionInitialAccessCommand } from 'access/usecases/commands/provision-initial-access.command.js';
+import { AuthRegistrationService } from 'auth/domain/services/auth-registration.service.js';
+import { RegisterCommand } from 'auth/usecases/commands/register.command.js';
+import dataSource from 'shared/database/data-source.js';
+import { DbTransactionService } from 'shared/database/db-transaction.service.js';
+import { DbTransactionContext } from 'shared/database/db-transaction-context.service.js';
+import { AccessProvisioningRepository } from 'shared/domain/repositories/access-provisioning.repository.js';
+import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository.js';
+import { WorkspaceProvisioningRepository } from 'shared/domain/repositories/workspace-provisioning.repository.js';
 import {
   afterAll,
   afterEach,
@@ -25,7 +25,7 @@ import {
 // then the first Warehouse — delegating that Warehouse's protected Manager
 // Role and membership to `access`'s `ProvisionInitialAccessCommand` by
 // passing only a `warehouseId` and a `userId` (never a Workspace concept).
-import { WorkspaceProvisioningService } from 'workspaces/domain/services/workspace-provisioning.service';
+import { WorkspaceProvisioningService } from 'workspaces/domain/services/workspace-provisioning.service.js';
 
 const identityId = '00000000-0000-4000-8000-000000000001';
 const sessionId = '00000000-0000-4000-8000-000000000002';

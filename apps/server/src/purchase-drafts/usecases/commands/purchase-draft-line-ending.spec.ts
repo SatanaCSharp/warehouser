@@ -1,22 +1,22 @@
 import { ErrorCode, PermissionId } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
-import { DemandAllocationService } from 'customer-orders/domain/services/demand-allocation.service';
-import type { EndingPreReceiptConformanceInput } from 'purchase-drafts/domain/mappers/purchase-draft-line-ending.mapper';
-import { ArrivalInspectionService } from 'purchase-drafts/domain/services/arrival-inspection.service';
-import type { EndingAllocationInput } from 'purchase-drafts/usecases/commands/confirm-purchase-draft-line-arrival.command';
-import { ConfirmPurchaseDraftLineArrivalCommand } from 'purchase-drafts/usecases/commands/confirm-purchase-draft-line-arrival.command';
-import { RecordPurchaseDraftLineDeliveryCommand } from 'purchase-drafts/usecases/commands/record-purchase-draft-line-delivery.command';
-import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { DemandAllocationService } from 'customer-orders/domain/services/demand-allocation.service.js';
+import type { EndingPreReceiptConformanceInput } from 'purchase-drafts/domain/mappers/purchase-draft-line-ending.mapper.js';
+import { ArrivalInspectionService } from 'purchase-drafts/domain/services/arrival-inspection.service.js';
+import type { EndingAllocationInput } from 'purchase-drafts/usecases/commands/confirm-purchase-draft-line-arrival.command.js';
+import { ConfirmPurchaseDraftLineArrivalCommand } from 'purchase-drafts/usecases/commands/confirm-purchase-draft-line-arrival.command.js';
+import { RecordPurchaseDraftLineDeliveryCommand } from 'purchase-drafts/usecases/commands/record-purchase-draft-line-delivery.command.js';
+import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
 import {
   TRANSACTIONAL_KEY,
   type TransactionalMetadata,
-} from 'shared/decorators/transactional.decorator';
-import type { RejectionReasonEntity } from 'shared/domain/entities/rejection-reason.entity';
+} from 'shared/decorators/transactional.decorator.js';
+import type { RejectionReasonEntity } from 'shared/domain/entities/rejection-reason.entity.js';
 import type {
   ArrivalConfirmationRepository,
   LockPurchaseDraftLineForEndingResult,
   RecordLineEndingRejectionInput,
-} from 'shared/domain/repositories/arrival-confirmation.repository';
+} from 'shared/domain/repositories/arrival-confirmation.repository.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // T17/ADR 0002 — the whole-draft arrival is replaced by two per-line endings whose **kind is a

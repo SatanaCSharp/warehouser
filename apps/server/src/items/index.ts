@@ -1,1 +1,1 @@
-export { ItemsModule } from './items.module';
+export { ItemsModule } from './items.module.js';

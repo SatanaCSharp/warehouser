@@ -3,7 +3,7 @@ import { ApplicationError } from '@warehouser/shared-types/errors';
 import type {
   CustomerNameHolder,
   DeliveryAddressState,
-} from 'customers/domain/predicates/customer.predicates';
+} from 'customers/domain/predicates/customer.predicates.js';
 import {
   assertCustomerNameAvailable,
   assertCustomerOfWarehouse,
@@ -13,8 +13,8 @@ import {
   CustomerAddressBookService,
   customerHoldingName,
   nextMainDeliveryAddress,
-} from 'customers/domain/services/customer-address-book.service';
-import type { CustomerEntity } from 'shared/domain/entities/customer.entity';
+} from 'customers/domain/services/customer-address-book.service.js';
+import type { CustomerEntity } from 'shared/domain/entities/customer.entity.js';
 import { describe, expect, it, vi } from 'vitest';
 
 const holder = (

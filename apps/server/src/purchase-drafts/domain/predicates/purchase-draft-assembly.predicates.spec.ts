@@ -7,7 +7,7 @@ import {
   isKnownPackagingType,
   isOrderedQuantity,
   isStatedQuantity,
-} from 'purchase-drafts/domain/predicates/purchase-draft-assembly.predicates';
+} from 'purchase-drafts/domain/predicates/purchase-draft-assembly.predicates.js';
 import { describe, expect, it } from 'vitest';
 
 describe('isOrderedQuantity — data-model.md purchase_draft_lines.ordered_quantity `> 0`', () => {

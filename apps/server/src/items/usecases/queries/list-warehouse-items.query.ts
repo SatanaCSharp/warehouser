@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import type { AccessCurrentUser } from 'shared/access/access-current-user';
-import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
+import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
+import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository.js';
 
 export interface WarehouseItemRead {
   readonly id: string;

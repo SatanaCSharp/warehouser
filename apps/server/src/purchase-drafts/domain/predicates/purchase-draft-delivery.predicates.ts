@@ -2,7 +2,7 @@ import {
   type DeliveryMode,
   type EndingKind,
   endingKindFor,
-} from 'purchase-drafts/domain/value-objects/delivery-mode';
+} from 'purchase-drafts/domain/value-objects/delivery-mode.js';
 
 // Pure predicates for a line's destination, its ending and the draft's closure
 // (server-error-handling.md §1). No NestJS, HTTP or TypeORM import here — see

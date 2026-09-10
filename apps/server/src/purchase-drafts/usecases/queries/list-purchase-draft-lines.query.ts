@@ -1,16 +1,16 @@
 import { Injectable } from '@nestjs/common';
-import { withCondition } from 'purchase-drafts/domain/mappers/line-condition.mapper';
-import { readsRejectionCause } from 'purchase-drafts/domain/predicates/rejection-cause-access.predicates';
-import { RejectionReasonLabelService } from 'purchase-drafts/domain/services/rejection-reason-label.service';
-import { withDriftSignals } from 'purchase-drafts/usecases/queries/drift-signals';
-import type { PurchaseDraftLineWithDrift } from 'purchase-drafts/usecases/queries/read-purchase-draft.query';
-import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { withCondition } from 'purchase-drafts/domain/mappers/line-condition.mapper.js';
+import { readsRejectionCause } from 'purchase-drafts/domain/predicates/rejection-cause-access.predicates.js';
+import { RejectionReasonLabelService } from 'purchase-drafts/domain/services/rejection-reason-label.service.js';
+import { withDriftSignals } from 'purchase-drafts/usecases/queries/drift-signals.js';
+import type { PurchaseDraftLineWithDrift } from 'purchase-drafts/usecases/queries/read-purchase-draft.query.js';
+import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
 import type {
   PurchaseDraftLineFilters,
   PurchaseDraftLineListEntryRedactedRead,
-} from 'shared/domain/repositories/purchase-draft-read.repository';
-import { PurchaseDraftReadRepository } from 'shared/domain/repositories/purchase-draft-read.repository';
-import { readsCustomerIdentity } from 'shared/predicates/observed-permission.predicates';
+} from 'shared/domain/repositories/purchase-draft-read.repository.js';
+import { PurchaseDraftReadRepository } from 'shared/domain/repositories/purchase-draft-read.repository.js';
+import { readsCustomerIdentity } from 'shared/predicates/observed-permission.predicates.js';
 
 // openapi.yaml `PurchaseDraftLineListEntry`, with every link's `driftSignals` derived and its line
 // in whichever of the two forms the observed Permission selected (AC-09a, AC-22).

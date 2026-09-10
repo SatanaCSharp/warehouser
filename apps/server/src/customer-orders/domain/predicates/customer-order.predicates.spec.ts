@@ -15,7 +15,7 @@ import {
   isRecordOfWarehouse,
   isRedirectableCustomerOrder,
   namesExactlyOneCustomerIdentity,
-} from 'customer-orders/domain/predicates/customer-order.predicates';
+} from 'customer-orders/domain/predicates/customer-order.predicates.js';
 import { describe, expect, it } from 'vitest';
 
 describe('customer order predicates', () => {

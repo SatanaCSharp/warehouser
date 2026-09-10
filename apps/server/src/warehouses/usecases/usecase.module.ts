@@ -1,14 +1,14 @@
 import { Module } from '@nestjs/common';
-import { ProvisionInitialAccessCommand } from 'access/usecases/commands/provision-initial-access.command';
-import { AccessUsecaseModule } from 'access/usecases/usecase.module';
-import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
-import { ArchiveWarehouseCommand } from 'warehouses/usecases/commands/archive-warehouse.command';
-import { CreateWarehouseCommand } from 'warehouses/usecases/commands/create-warehouse.command';
-import { RenameWarehouseCommand } from 'warehouses/usecases/commands/rename-warehouse.command';
-import { RestoreWarehouseCommand } from 'warehouses/usecases/commands/restore-warehouse.command';
-import { SetWarehouseDeliveryAddressCommand } from 'warehouses/usecases/commands/set-warehouse-delivery-address.command';
-import { ListWorkspaceWarehousesQuery } from 'warehouses/usecases/queries/list-workspace-warehouses.query';
-import { ReadWarehouseDeliveryAddressQuery } from 'warehouses/usecases/queries/read-warehouse-delivery-address.query';
+import { ProvisionInitialAccessCommand } from 'access/usecases/commands/provision-initial-access.command.js';
+import { AccessUsecaseModule } from 'access/usecases/usecase.module.js';
+import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository.js';
+import { ArchiveWarehouseCommand } from 'warehouses/usecases/commands/archive-warehouse.command.js';
+import { CreateWarehouseCommand } from 'warehouses/usecases/commands/create-warehouse.command.js';
+import { RenameWarehouseCommand } from 'warehouses/usecases/commands/rename-warehouse.command.js';
+import { RestoreWarehouseCommand } from 'warehouses/usecases/commands/restore-warehouse.command.js';
+import { SetWarehouseDeliveryAddressCommand } from 'warehouses/usecases/commands/set-warehouse-delivery-address.command.js';
+import { ListWorkspaceWarehousesQuery } from 'warehouses/usecases/queries/list-workspace-warehouses.query.js';
+import { ReadWarehouseDeliveryAddressQuery } from 'warehouses/usecases/queries/read-warehouse-delivery-address.query.js';
 
 const warehouseCommands = [
   RenameWarehouseCommand,

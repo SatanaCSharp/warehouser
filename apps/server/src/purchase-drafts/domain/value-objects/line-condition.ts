@@ -8,7 +8,7 @@
 // object must not import a concrete persistence model. `delivery-mode.ts` re-declares its two
 // literals for the same reason, and `line-condition.spec.ts` asserts the agreement with each column
 // in both directions so drift breaks a build rather than a request.
-import { DeliveryMode } from 'purchase-drafts/domain/value-objects/delivery-mode';
+import { DeliveryMode } from 'purchase-drafts/domain/value-objects/delivery-mode.js';
 
 // `chk_purchase_draft_line_rejections_source` — a refusal on goods that reached our own dock was
 // Inspected; only directly delivered goods carry a customer's report (AC-24, AC-25).

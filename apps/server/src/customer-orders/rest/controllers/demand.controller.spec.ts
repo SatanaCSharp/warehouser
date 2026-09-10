@@ -7,13 +7,13 @@ import {
   PATH_METADATA,
 } from '@nestjs/common/constants';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { DemandController } from 'customer-orders/rest/controllers/demand.controller';
-import { READ_TOLERANT_KEY } from 'shared/access/archived-tolerant-read.decorator';
-import { OBSERVED_PERMISSION_KEY } from 'shared/decorators/observed-permission.decorator';
-import { REQUIRED_PERMISSION_KEY } from 'shared/decorators/required-permission.decorator';
-import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
-import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
-import { WRITE_RATE_LIMITED_KEY } from 'shared/guards/write-rate-limited.decorator';
+import { DemandController } from 'customer-orders/rest/controllers/demand.controller.js';
+import { READ_TOLERANT_KEY } from 'shared/access/archived-tolerant-read.decorator.js';
+import { OBSERVED_PERMISSION_KEY } from 'shared/decorators/observed-permission.decorator.js';
+import { REQUIRED_PERMISSION_KEY } from 'shared/decorators/required-permission.decorator.js';
+import { SessionAuthGuard } from 'shared/guards/session-auth.guard.js';
+import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard.js';
+import { WRITE_RATE_LIMITED_KEY } from 'shared/guards/write-rate-limited.decorator.js';
 import { describe, expect, it, vi } from 'vitest';
 
 // T11 — the transport-adapter metadata of the consolidated demand read, in the reflection idiom

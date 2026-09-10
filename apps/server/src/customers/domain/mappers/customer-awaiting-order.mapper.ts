@@ -1,5 +1,5 @@
-import type { Customer } from 'customers/domain/mappers/customer.mapper';
-import type { AwaitingCustomerOrderRead } from 'shared/domain/repositories/customer-awaiting-demand.repository';
+import type { Customer } from 'customers/domain/mappers/customer.mapper.js';
+import type { AwaitingCustomerOrderRead } from 'shared/domain/repositories/customer-awaiting-demand.repository.js';
 
 // Where one Customer Order's goods are going — openapi.yaml `CustomerOrderDestination`. `isMain`
 // and `deactivatedAt` report *why* it is this address (sad.md §6.6 step 6): the Customer's current

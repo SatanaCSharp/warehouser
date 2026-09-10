@@ -2,7 +2,7 @@ import {
   CreateMemberDto,
   EmailChangeDto,
   PasswordChangeDto,
-} from 'users/rest/dtos/users-mutation.dto';
+} from 'users/rest/dtos/users-mutation.dto.js';
 import { describe, expect, it } from 'vitest';
 
 // DoD (T13): "each endpoint validates the shared Zod schema and returns `400`

@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { RejectionReasonLabelService } from 'purchase-drafts/domain/services/rejection-reason-label.service';
+import { RejectionReasonLabelService } from 'purchase-drafts/domain/services/rejection-reason-label.service.js';
 // T18 — AC-11b/AC-18/AC-18a/AC-22 against `PurchaseDraftReadRepository`. Address Drift is a
 // **value comparison** between the Delivery Address captured in the Demand Snapshot and the
 // address the Customer Order names now: nothing about it is stored and no job repairs one, which
@@ -12,31 +12,31 @@ import { RejectionReasonLabelService } from 'purchase-drafts/domain/services/rej
 // A file of its own rather than more blocks on
 // `purchase-draft-read.repository.integration.spec.ts`: that file already sits near the 1000-line
 // budget, and these scenarios need Customers and Delivery Addresses that none of its own do.
-import { ReadPurchaseDraftQuery } from 'purchase-drafts/usecases/queries/read-purchase-draft.query';
-import dataSource from 'shared/database/data-source';
-import { AccountEntity } from 'shared/domain/entities/account.entity';
-import { CustomerEntity } from 'shared/domain/entities/customer.entity';
-import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
-import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
-import { DemandSnapshotEntryEntity } from 'shared/domain/entities/demand-snapshot-entry.entity';
-import { ItemEntity } from 'shared/domain/entities/item.entity';
-import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
-import type { PurchaseDraftLineDeliveryMode } from 'shared/domain/entities/purchase-draft-line.entity';
-import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity';
-import { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity';
-import { UserEntity } from 'shared/domain/entities/user.entity';
-import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
-import { PurchaseDraftReadRepository } from 'shared/domain/repositories/purchase-draft-read.repository';
+import { ReadPurchaseDraftQuery } from 'purchase-drafts/usecases/queries/read-purchase-draft.query.js';
+import dataSource from 'shared/database/data-source.js';
+import { AccountEntity } from 'shared/domain/entities/account.entity.js';
+import { CustomerEntity } from 'shared/domain/entities/customer.entity.js';
+import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity.js';
+import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity.js';
+import { DemandSnapshotEntryEntity } from 'shared/domain/entities/demand-snapshot-entry.entity.js';
+import { ItemEntity } from 'shared/domain/entities/item.entity.js';
+import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity.js';
+import type { PurchaseDraftLineDeliveryMode } from 'shared/domain/entities/purchase-draft-line.entity.js';
+import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity.js';
+import { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity.js';
+import { UserEntity } from 'shared/domain/entities/user.entity.js';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity.js';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
+import { PurchaseDraftReadRepository } from 'shared/domain/repositories/purchase-draft-read.repository.js';
 import {
   buildWarehouse,
   buildWorkspace,
-} from 'test/factories/entity-factories';
+} from 'test/factories/entity-factories.js';
 // `PostgresQueryRunner.prototype.query` is the one method every TypeORM access path ultimately
 // calls to reach PostgreSQL. Spying on it proves actual round trips, so an N+1 implementation
 // returning identical figures still fails — the idiom
 // `consolidated-demand.repository.integration.spec.ts` (T10) establishes.
-import { PostgresQueryRunner } from 'typeorm/driver/postgres/PostgresQueryRunner';
+import { PostgresQueryRunner } from 'typeorm/driver/postgres/PostgresQueryRunner.js';
 import {
   afterAll,
   afterEach,

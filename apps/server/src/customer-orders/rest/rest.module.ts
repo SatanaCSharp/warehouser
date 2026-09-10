@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
-import { AuthModule } from 'auth/auth.module';
-import { CustomerOrdersController } from 'customer-orders/rest/controllers/customer-orders.controller';
-import { DemandController } from 'customer-orders/rest/controllers/demand.controller';
-import { CustomerOrdersUsecaseModule } from 'customer-orders/usecases/usecase.module';
-import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
+import { AuthModule } from 'auth/auth.module.js';
+import { CustomerOrdersController } from 'customer-orders/rest/controllers/customer-orders.controller.js';
+import { DemandController } from 'customer-orders/rest/controllers/demand.controller.js';
+import { CustomerOrdersUsecaseModule } from 'customer-orders/usecases/usecase.module.js';
+import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard.js';
 
 // Two controllers, one module: `/demand` and `/customer-orders` are separate URL prefixes served by
 // the module that owns the entity behind both, because a Demand Line is derived from Customer

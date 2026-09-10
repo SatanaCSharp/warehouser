@@ -1,10 +1,10 @@
 import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import { DiscoveryService, MetadataScanner, Reflector } from '@nestjs/core';
-import { DbTransactionService } from 'shared/database/db-transaction.service';
+import { DbTransactionService } from 'shared/database/db-transaction.service.js';
 import {
   TRANSACTIONAL_KEY,
   type TransactionalMetadata,
-} from 'shared/decorators/transactional.decorator';
+} from 'shared/decorators/transactional.decorator.js';
 
 type ProviderInstance = Record<string, unknown>;
 type ProviderMethod = (...arguments_: unknown[]) => unknown;

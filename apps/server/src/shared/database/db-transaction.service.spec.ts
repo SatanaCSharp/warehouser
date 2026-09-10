@@ -1,5 +1,5 @@
-import { DbTransactionService } from 'shared/database/db-transaction.service';
-import { DbTransactionContext } from 'shared/database/db-transaction-context.service';
+import { DbTransactionService } from 'shared/database/db-transaction.service.js';
+import { DbTransactionContext } from 'shared/database/db-transaction-context.service.js';
 import type { DataSource, EntityManager, QueryRunner } from 'typeorm';
 import { describe, expect, it, vi } from 'vitest';
 

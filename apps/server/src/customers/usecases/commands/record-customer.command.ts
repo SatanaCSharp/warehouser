@@ -1,15 +1,15 @@
 import { randomUUID } from 'node:crypto';
 
 import { Injectable, Optional } from '@nestjs/common';
-import type { Customer } from 'customers/domain/mappers/customer.mapper';
-import { toCustomer } from 'customers/domain/mappers/customer.mapper';
-import { CustomerAddressBookService } from 'customers/domain/services/customer-address-book.service';
-import { AccessNotes } from 'customers/domain/value-objects/access-notes';
-import { CustomerName } from 'customers/domain/value-objects/customer-name';
-import { DeliveryAddressText } from 'customers/domain/value-objects/delivery-address-text';
-import type { AccessCurrentUser } from 'shared/access/access-current-user';
-import { Transactional } from 'shared/decorators/transactional.decorator';
-import { CustomerDirectoryRepository } from 'shared/domain/repositories/customer-directory.repository';
+import type { Customer } from 'customers/domain/mappers/customer.mapper.js';
+import { toCustomer } from 'customers/domain/mappers/customer.mapper.js';
+import { CustomerAddressBookService } from 'customers/domain/services/customer-address-book.service.js';
+import { AccessNotes } from 'customers/domain/value-objects/access-notes.js';
+import { CustomerName } from 'customers/domain/value-objects/customer-name.js';
+import { DeliveryAddressText } from 'customers/domain/value-objects/delivery-address-text.js';
+import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
+import { Transactional } from 'shared/decorators/transactional.decorator.js';
+import { CustomerDirectoryRepository } from 'shared/domain/repositories/customer-directory.repository.js';
 
 export interface RecordCustomerRuntime {
   readonly customerId: () => string;

@@ -2,9 +2,9 @@ import type { Customer, CustomerDetail } from '@warehouser/contracts/customers';
 import type {
   Customer as CustomerRead,
   CustomerDeliveryAddress as CustomerDeliveryAddressRead,
-} from 'customers/domain/mappers/customer.mapper';
-import type { CustomerDetail as CustomerDetailRead } from 'customers/domain/mappers/customer-awaiting-order.mapper';
-import { map } from 'lodash';
+} from 'customers/domain/mappers/customer.mapper.js';
+import type { CustomerDetail as CustomerDetailRead } from 'customers/domain/mappers/customer-awaiting-order.mapper.js';
+import map from 'lodash/map.js';
 
 // The application boundary returns instants as `Date`; openapi.yaml carries them as date-times.
 // Both `customers` controllers return the same Customer projection, so the conversion is one

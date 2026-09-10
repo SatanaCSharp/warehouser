@@ -1,14 +1,14 @@
 import { Module } from '@nestjs/common';
-import { ProvisionInitialAccessCommand } from 'access/usecases/commands/provision-initial-access.command';
-import { AccessUsecaseModule } from 'access/usecases/usecase.module';
-import { AuthRegistrationService } from 'auth/domain/services/auth-registration.service';
-import { RegisterCommand } from 'auth/usecases/commands/register.command';
-import { SignInCommand } from 'auth/usecases/commands/sign-in.command';
-import { SignOutCommand } from 'auth/usecases/commands/sign-out.command';
-import { CurrentSessionQuery } from 'auth/usecases/queries/current-session.query';
-import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
-import { WorkspaceProvisioningRepository } from 'shared/domain/repositories/workspace-provisioning.repository';
-import { WorkspaceProvisioningService } from 'workspaces/domain/services/workspace-provisioning.service';
+import { ProvisionInitialAccessCommand } from 'access/usecases/commands/provision-initial-access.command.js';
+import { AccessUsecaseModule } from 'access/usecases/usecase.module.js';
+import { AuthRegistrationService } from 'auth/domain/services/auth-registration.service.js';
+import { RegisterCommand } from 'auth/usecases/commands/register.command.js';
+import { SignInCommand } from 'auth/usecases/commands/sign-in.command.js';
+import { SignOutCommand } from 'auth/usecases/commands/sign-out.command.js';
+import { CurrentSessionQuery } from 'auth/usecases/queries/current-session.query.js';
+import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository.js';
+import { WorkspaceProvisioningRepository } from 'shared/domain/repositories/workspace-provisioning.repository.js';
+import { WorkspaceProvisioningService } from 'workspaces/domain/services/workspace-provisioning.service.js';
 
 @Module({
   imports: [AccessUsecaseModule],

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { getEntityManager } from 'shared/database/db-transaction-context.service';
-import { PackagingTypeEntity } from 'shared/domain/entities/packaging-type.entity';
+import { getEntityManager } from 'shared/database/db-transaction-context.service.js';
+import { PackagingTypeEntity } from 'shared/domain/entities/packaging-type.entity.js';
 import { DataSource } from 'typeorm';
 
 // AC-13 — the Packaging Type catalogue is system-managed and migration-seeded

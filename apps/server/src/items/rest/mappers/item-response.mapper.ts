@@ -1,5 +1,5 @@
 import type { Item } from '@warehouser/contracts/items';
-import type { ItemCatalogueEntryRead } from 'items/domain/mappers/item-catalogue-entry.mapper';
+import type { ItemCatalogueEntryRead } from 'items/domain/mappers/item-catalogue-entry.mapper.js';
 
 // The catalogue entry as the application boundary returns it -> openapi.yaml `Item`. The boundary
 // hands instants back as `Date`; the contract carries them as date-times, and converting them is

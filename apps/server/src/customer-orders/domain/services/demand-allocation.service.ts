@@ -1,14 +1,14 @@
 import { Injectable, Optional } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
-import type { AllocationBoundViolation } from 'customer-orders/domain/errors/demand-allocation.errors';
-import { demandAllocationOutOfBoundsError } from 'customer-orders/domain/errors/demand-allocation.errors';
-import { uniq } from 'lodash';
+import type { AllocationBoundViolation } from 'customer-orders/domain/errors/demand-allocation.errors.js';
+import { demandAllocationOutOfBoundsError } from 'customer-orders/domain/errors/demand-allocation.errors.js';
+import uniq from 'lodash/uniq.js';
 import type {
   CustomerOrderEntity,
   CustomerOrderState,
-} from 'shared/domain/entities/customer-order.entity';
-import type { CustomerOrderAllocationUpdate } from 'shared/domain/repositories/demand-allocation.repository';
-import { DemandAllocationRepository } from 'shared/domain/repositories/demand-allocation.repository';
+} from 'shared/domain/entities/customer-order.entity.js';
+import type { CustomerOrderAllocationUpdate } from 'shared/domain/repositories/demand-allocation.repository.js';
+import { DemandAllocationRepository } from 'shared/domain/repositories/demand-allocation.repository.js';
 
 // T10/sad.md §4, §8 "Naming" — narrowed from the presented figure to the derived Accepted Quantity
 // a caller has already computed (`ArrivalInspectionService.deriveAcceptedQuantity`, T8). This service

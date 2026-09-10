@@ -4,10 +4,10 @@ import { dirname, join, relative, sep } from 'node:path';
 import { Project, type SourceFile } from 'ts-morph';
 
 /** The `apps/server` directory, found by walking up from this file until the package manifest that
- * names the server appears. Resolved rather than hard-coded relative to `__dirname` so the specs
+ * names the server appears. Resolved rather than hard-coded relative to `import.meta.dirname` so the specs
  * keep working from `src/` under the test runner and from `dist/` if they are ever compiled. */
 const findServerRoot = (): string => {
-  let directory = __dirname;
+  let directory = import.meta.dirname;
 
   for (;;) {
     const manifest = join(directory, 'package.json');
@@ -23,7 +23,9 @@ const findServerRoot = (): string => {
     const parent = dirname(directory);
 
     if (parent === directory) {
-      throw new Error(`apps/server root not found above ${__dirname}`);
+      throw new Error(
+        `apps/server root not found above ${import.meta.dirname}`,
+      );
     }
 
     directory = parent;

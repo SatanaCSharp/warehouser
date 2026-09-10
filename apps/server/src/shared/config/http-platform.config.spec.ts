@@ -1,4 +1,4 @@
-import { readHttpPlatformConfig } from 'shared/config/http-platform.config';
+import { readHttpPlatformConfig } from 'shared/config/http-platform.config.js';
 import { describe, expect, it } from 'vitest';
 
 describe('readHttpPlatformConfig', () => {

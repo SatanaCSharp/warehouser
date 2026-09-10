@@ -5,10 +5,10 @@
 // write path that creates adjustment rows is T6/T7. The repository-level efficiency proof (one
 // query, no N+1 across Items) lives in `item-catalogue.repository.integration.spec.ts`; this spec
 // is the thin use-case adapter scoping the read to the acting Warehouse.
-import { ListWarehouseItemsQuery } from 'items/usecases/queries/list-warehouse-items.query';
-import type { AccessCurrentUser } from 'shared/access/access-current-user';
-import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
-import { repositoryDouble } from 'test/doubles/repository-double';
+import { ListWarehouseItemsQuery } from 'items/usecases/queries/list-warehouse-items.query.js';
+import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
+import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository.js';
+import { repositoryDouble } from 'test/doubles/repository-double.js';
 import { describe, expect, it, vi } from 'vitest';
 
 const warehouseId = '00000000-0000-4000-8000-000000000001';

@@ -2,7 +2,7 @@ import {
   findMappingDeclarations,
   type MappingPattern,
   serverMappingDeclarations,
-} from 'test/architectural/mapping-patterns';
+} from 'test/architectural/mapping-patterns.js';
 import { Project } from 'ts-morph';
 import { describe, expect, it } from 'vitest';
 
@@ -62,7 +62,7 @@ describe('mapping detection', () => {
     expect(
       patternsOf(
         `
-        import { map } from 'lodash';
+        import map from 'lodash/map.js';
         interface LineRead { id: string; }
         export const toLines = (lines: readonly LineRead[]) =>
           map(lines, (line) => ({ id: line.id }));

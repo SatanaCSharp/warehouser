@@ -1,21 +1,21 @@
 import { Injectable } from '@nestjs/common';
-import type { PurchaseDraftLineEndingWithCondition } from 'purchase-drafts/domain/mappers/line-condition.mapper';
-import { withCondition } from 'purchase-drafts/domain/mappers/line-condition.mapper';
-import { readsRejectionCause } from 'purchase-drafts/domain/predicates/rejection-cause-access.predicates';
-import { RejectionReasonLabelService } from 'purchase-drafts/domain/services/rejection-reason-label.service';
+import type { PurchaseDraftLineEndingWithCondition } from 'purchase-drafts/domain/mappers/line-condition.mapper.js';
+import { withCondition } from 'purchase-drafts/domain/mappers/line-condition.mapper.js';
+import { readsRejectionCause } from 'purchase-drafts/domain/predicates/rejection-cause-access.predicates.js';
+import { RejectionReasonLabelService } from 'purchase-drafts/domain/services/rejection-reason-label.service.js';
 import type {
   PurchaseDraftLineLinkIdentifiedWithDrift,
   PurchaseDraftLineLinkRedactedWithDrift,
-} from 'purchase-drafts/usecases/queries/drift-signals';
-import { withDriftSignals } from 'purchase-drafts/usecases/queries/drift-signals';
-import type { AccessCurrentUser } from 'shared/access/access-current-user';
+} from 'purchase-drafts/usecases/queries/drift-signals.js';
+import { withDriftSignals } from 'purchase-drafts/usecases/queries/drift-signals.js';
+import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
 import type {
   PurchaseDraftLineIdentifiedRead,
   PurchaseDraftLineRedactedRead,
   PurchaseDraftSummaryRead,
-} from 'shared/domain/repositories/purchase-draft-read.repository';
-import { PurchaseDraftReadRepository } from 'shared/domain/repositories/purchase-draft-read.repository';
-import { readsCustomerIdentity } from 'shared/predicates/observed-permission.predicates';
+} from 'shared/domain/repositories/purchase-draft-read.repository.js';
+import { PurchaseDraftReadRepository } from 'shared/domain/repositories/purchase-draft-read.repository.js';
+import { readsCustomerIdentity } from 'shared/predicates/observed-permission.predicates.js';
 
 // openapi.yaml `PurchaseDraftLineRedacted` with every link's `driftSignals` derived — what an actor
 // **without** the observed `CUSTOMERS:WATCH` is served. It has no `customerDestination` property at

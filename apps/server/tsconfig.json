@@ -2,6 +2,11 @@
   "extends": "@warehouser/tsconfig/tsconfig.node.json",
   "compilerOptions": {
     "outDir": "./dist",
+    // Stated rather than inferred: `include` spans `src/` and `migrations/`, so the emitted tree is
+    // `dist/src/` + `dist/migrations/` either way — but `tsc-alias` refuses to run without an
+    // explicit `rootDir` when there is no `baseUrl`, and the build depends on it to rewrite the
+    // `paths` specifiers into relative ones.
+    "rootDir": ".",
     "paths": { "*": ["./src/*"] },
     "skipLibCheck": true
   },

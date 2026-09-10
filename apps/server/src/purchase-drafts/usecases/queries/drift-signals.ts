@@ -4,7 +4,7 @@ import type {
   LinkedCustomerOrderStateRedactedRead,
   PurchaseDraftLineLinkIdentifiedRead,
   PurchaseDraftLineLinkRedactedRead,
-} from 'shared/domain/repositories/purchase-draft-read.repository';
+} from 'shared/domain/repositories/purchase-draft-read.repository.js';
 
 // openapi.yaml `DriftSignalKind`.
 export type DriftSignalKind =

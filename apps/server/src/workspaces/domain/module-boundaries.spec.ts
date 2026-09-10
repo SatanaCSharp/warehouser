@@ -11,7 +11,7 @@ import { describe, expect, it } from 'vitest';
 // architecture check separately; this is the narrower, domain-local assertion
 // the task card asks for.
 
-const domainDirectory = __dirname;
+const domainDirectory = import.meta.dirname;
 
 const collectTsFiles = (directory: string): string[] =>
   readdirSync(directory).flatMap((entry) => {

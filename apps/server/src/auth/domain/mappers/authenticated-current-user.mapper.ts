@@ -1,4 +1,4 @@
-import { UserId } from 'auth/domain/value-objects/identity-id';
+import { UserId } from 'auth/domain/value-objects/identity-id.js';
 
 export interface AuthenticatedCurrentUser {
   readonly userId: string;

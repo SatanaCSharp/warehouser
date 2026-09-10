@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { assert, assertDefined } from '@warehouser/utils/asserts';
-import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
-import { Transactional } from 'shared/decorators/transactional.decorator';
-import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
-import { workspaceTargetUnavailableError } from 'shared/errors/cross-module.errors';
+import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user.js';
+import { Transactional } from 'shared/decorators/transactional.decorator.js';
+import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository.js';
+import { workspaceTargetUnavailableError } from 'shared/errors/cross-module.errors.js';
 
 export interface RestoreWarehouseInput {
   readonly warehouseId: string;

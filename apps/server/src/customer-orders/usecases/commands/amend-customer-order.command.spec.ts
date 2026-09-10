@@ -5,10 +5,10 @@
 // `customer-order-lifecycle.integration.spec.ts`.
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
-import { CustomerOrderLifecycleService } from 'customer-orders/domain/services/customer-order-lifecycle.service';
-import { AmendCustomerOrderCommand } from 'customer-orders/usecases/commands/amend-customer-order.command';
-import type { AccessCurrentUser } from 'shared/access/access-current-user';
-import type { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
+import { CustomerOrderLifecycleService } from 'customer-orders/domain/services/customer-order-lifecycle.service.js';
+import { AmendCustomerOrderCommand } from 'customer-orders/usecases/commands/amend-customer-order.command.js';
+import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
+import type { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity.js';
 import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>

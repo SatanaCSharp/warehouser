@@ -1,4 +1,4 @@
-import type { CustomerOrderState } from 'shared/domain/entities/customer-order.entity';
+import type { CustomerOrderState } from 'shared/domain/entities/customer-order.entity.js';
 
 // Pure predicates for the Customer Order lifecycle (server-error-handling.md §1). No NestJS, HTTP
 // or TypeORM import here — see `customer-orders/domain/errors/customer-order.errors.ts` for the

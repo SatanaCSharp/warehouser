@@ -1,7 +1,7 @@
 import {
   productionSourceFiles,
   serverPath,
-} from 'test/architectural/server-project';
+} from 'test/architectural/server-project.js';
 import type { Expression, ObjectLiteralExpression, SourceFile } from 'ts-morph';
 import { Node, SyntaxKind } from 'ts-morph';
 

@@ -12,33 +12,33 @@ import { randomUUID } from 'node:crypto';
 // budget, and these scenarios need the Rejection Reason catalogue and ended lines that none of its
 // own do — the same reason `purchase-draft-address-drift-read.repository.integration.spec.ts`
 // exists.
-import dataSource from 'shared/database/data-source';
-import { AccountEntity } from 'shared/domain/entities/account.entity';
-import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
-import { DemandSnapshotEntryEntity } from 'shared/domain/entities/demand-snapshot-entry.entity';
-import { ItemEntity } from 'shared/domain/entities/item.entity';
-import { PackagingTypeEntity } from 'shared/domain/entities/packaging-type.entity';
-import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
-import type { PurchaseDraftLinePreReceiptConformance } from 'shared/domain/entities/purchase-draft-line.entity';
-import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity';
-import { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity';
-import { PurchaseDraftLineRejectionEntity } from 'shared/domain/entities/purchase-draft-line-rejection.entity';
-import { RejectionReasonEntity } from 'shared/domain/entities/rejection-reason.entity';
-import { UserEntity } from 'shared/domain/entities/user.entity';
-import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
-import { PurchaseDraftReadRepository } from 'shared/domain/repositories/purchase-draft-read.repository';
+import dataSource from 'shared/database/data-source.js';
+import { AccountEntity } from 'shared/domain/entities/account.entity.js';
+import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity.js';
+import { DemandSnapshotEntryEntity } from 'shared/domain/entities/demand-snapshot-entry.entity.js';
+import { ItemEntity } from 'shared/domain/entities/item.entity.js';
+import { PackagingTypeEntity } from 'shared/domain/entities/packaging-type.entity.js';
+import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity.js';
+import type { PurchaseDraftLinePreReceiptConformance } from 'shared/domain/entities/purchase-draft-line.entity.js';
+import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity.js';
+import { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity.js';
+import { PurchaseDraftLineRejectionEntity } from 'shared/domain/entities/purchase-draft-line-rejection.entity.js';
+import { RejectionReasonEntity } from 'shared/domain/entities/rejection-reason.entity.js';
+import { UserEntity } from 'shared/domain/entities/user.entity.js';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity.js';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
+import { PurchaseDraftReadRepository } from 'shared/domain/repositories/purchase-draft-read.repository.js';
 import {
   buildWarehouse,
   buildWorkspace,
-} from 'test/factories/entity-factories';
+} from 'test/factories/entity-factories.js';
 import type { Logger } from 'typeorm';
 // `PostgresQueryRunner.prototype.query` is the one method every TypeORM access path ultimately
 // calls to reach PostgreSQL. Spying on it proves actual round trips, so a second query fetching the
 // Rejections still fails even though it returns identical figures — the idiom
 // `consolidated-demand.repository.integration.spec.ts` (T10) establishes and
 // `purchase-draft-address-drift-read.repository.integration.spec.ts` (T18) reuses.
-import { PostgresQueryRunner } from 'typeorm/driver/postgres/PostgresQueryRunner';
+import { PostgresQueryRunner } from 'typeorm/driver/postgres/PostgresQueryRunner.js';
 import {
   afterAll,
   afterEach,

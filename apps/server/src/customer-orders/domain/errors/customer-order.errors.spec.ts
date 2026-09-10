@@ -16,7 +16,7 @@ import {
   customerOrderNeededByInPastError,
   customerOrderQuantityBelowAllocatedError,
   customerOrderTargetUnavailableError,
-} from 'customer-orders/domain/errors/customer-order.errors';
+} from 'customer-orders/domain/errors/customer-order.errors.js';
 import { describe, expect, it } from 'vitest';
 
 describe('customer order domain error factories', () => {

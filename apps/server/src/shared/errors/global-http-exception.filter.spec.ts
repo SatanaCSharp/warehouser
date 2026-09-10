@@ -10,7 +10,7 @@ import {
   applicationErrors,
   GlobalHttpExceptionFilter,
   systemErrors,
-} from 'shared/errors/global-http-exception.filter';
+} from 'shared/errors/global-http-exception.filter.js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 

@@ -17,13 +17,13 @@ import {
   AuthCookie,
   type AuthCookieResponse,
   readSessionCookie,
-} from 'auth/rest/auth-cookie';
-import { AuthCredentialsDto } from 'auth/rest/dtos/auth-credentials.dto';
-import { RegistrationDto } from 'auth/rest/dtos/registration.dto';
-import { RegisterCommand } from 'auth/usecases/commands/register.command';
-import { SignInCommand } from 'auth/usecases/commands/sign-in.command';
-import { SignOutCommand } from 'auth/usecases/commands/sign-out.command';
-import { CurrentSessionQuery } from 'auth/usecases/queries/current-session.query';
+} from 'auth/rest/auth-cookie.js';
+import { AuthCredentialsDto } from 'auth/rest/dtos/auth-credentials.dto.js';
+import { RegistrationDto } from 'auth/rest/dtos/registration.dto.js';
+import { RegisterCommand } from 'auth/usecases/commands/register.command.js';
+import { SignInCommand } from 'auth/usecases/commands/sign-in.command.js';
+import { SignOutCommand } from 'auth/usecases/commands/sign-out.command.js';
+import { CurrentSessionQuery } from 'auth/usecases/queries/current-session.query.js';
 
 interface AuthResponse extends AuthCookieResponse {
   status(code: number): AuthResponse;

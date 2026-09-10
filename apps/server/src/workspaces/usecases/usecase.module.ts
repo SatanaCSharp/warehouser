@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
-import { ProvisionInitialAccessCommand } from 'access/usecases/commands/provision-initial-access.command';
-import { AccessUsecaseModule } from 'access/usecases/usecase.module';
-import { WorkspaceProvisioningRepository } from 'shared/domain/repositories/workspace-provisioning.repository';
-import { WorkspaceProvisioningService } from 'workspaces/domain/services/workspace-provisioning.service';
-import { RenameWorkspaceCommand } from 'workspaces/usecases/commands/rename-workspace.command';
-import { SetActiveWarehouseCommand } from 'workspaces/usecases/commands/set-active-warehouse.command';
-import { ReadWorkspaceContextQuery } from 'workspaces/usecases/queries/read-workspace-context.query';
+import { ProvisionInitialAccessCommand } from 'access/usecases/commands/provision-initial-access.command.js';
+import { AccessUsecaseModule } from 'access/usecases/usecase.module.js';
+import { WorkspaceProvisioningRepository } from 'shared/domain/repositories/workspace-provisioning.repository.js';
+import { WorkspaceProvisioningService } from 'workspaces/domain/services/workspace-provisioning.service.js';
+import { RenameWorkspaceCommand } from 'workspaces/usecases/commands/rename-workspace.command.js';
+import { SetActiveWarehouseCommand } from 'workspaces/usecases/commands/set-active-warehouse.command.js';
+import { ReadWorkspaceContextQuery } from 'workspaces/usecases/queries/read-workspace-context.query.js';
 
 // The Workspace record and the member's position within it. The role, member,
 // owner-transfer and Warehouse-membership use cases this module used to carry
