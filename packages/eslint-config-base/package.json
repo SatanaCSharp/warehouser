@@ -22,6 +22,7 @@
     "eslint-plugin-prettier": "catalog:",
     "eslint-plugin-simple-import-sort": "catalog:",
     "eslint-plugin-unused-imports": "catalog:",
+    "typescript": "catalog:",
     "typescript-eslint": "catalog:"
   }
 }

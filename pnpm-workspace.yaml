@@ -15,6 +15,23 @@ packageExtensions:
     peerDependencies:
       "@internationalized/date": "^3.12.3"
 
+# `nestjs-zod@5.5.0` was published a month before NestJS 12 shipped, so its peer range still stops at
+# `@nestjs/common ^11` even though nothing it uses changed in v12: it imports only stable public
+# `@nestjs/common` API, never `@nestjs/core` (it reaches the reflector through the
+# `Inject('Reflector')` string token, which `@nestjs/core@12` still registers), does not extend Nest's
+# `ValidationPipe`, and reads `ArgumentMetadata` structurally rather than by name. Accepting v12 for
+# this one edge records that judgement instead of leaving a standing install warning; drop the rule
+# once upstream widens the range, or once the dependency is replaced by Nest 12's own
+# `@Body({ schema })` + `StandardSchemaValidationPipe`.
+#
+# This is deliberately a `peerDependencyRules` entry and not a `packageExtensions` one: pnpm merges an
+# extension as `{ ...extension[field], ...manifest[field] }`, so a package's own declaration always
+# wins and an extension can only add a peer the package never declared (which is what the
+# `@heroui/react` entry above does). It cannot widen a range the package already states.
+peerDependencyRules:
+  allowedVersions:
+    "nestjs-zod>@nestjs/common": "^12.0.0"
+
 overrides:
   "@types/node": "catalog:"
   "brace-expansion@1.1.15": "1.1.16"
@@ -42,21 +59,25 @@ catalog:
   # specifiers against the server's tsconfig.
   vite-tsconfig-paths: ^6.1.1
 
-  # NestJS
-  "@nestjs/cli": ^11.0.24
-  "@nestjs/common": ^11.1.28
-  "@nestjs/bullmq": ^11.0.4
-  "@nestjs/config": ^4.0.4
-  "@nestjs/core": ^11.1.28
-  "@nestjs/jwt": ^11.0.2
-  "@nestjs/typeorm": ^11.0.0
-  "@nestjs/passport": ^11.0.5
-  "@nestjs/platform-express": ^11.1.28
-  "@nestjs/testing": ^11.1.28
+  # NestJS. Every v12 package publishes as ESM (`"type": "module"`); this app stays CommonJS and
+  # reaches them through Node's `require(esm)`, which the migration guide supports and which
+  # `"module": "NodeNext"` in `@warehouser/tsconfig` is what makes type-check.
+  "@nestjs/cli": ^12.0.0
+  "@nestjs/common": ^12.0.1
+  "@nestjs/bullmq": ^12.0.0
+  "@nestjs/config": ^12.0.0
+  "@nestjs/core": ^12.0.1
+  "@nestjs/jwt": ^12.0.1
+  "@nestjs/typeorm": ^12.0.1
+  "@nestjs/passport": ^12.0.0
+  "@nestjs/platform-express": ^12.0.1
+  "@nestjs/testing": ^12.0.1
 
   # Server runtime
   bullmq: ^5.81.1
-  nestjs-pino: ^4.6.1
+  # v5 is the first release whose `@nestjs/{common,core}` peers accept ^12; its `pino`/`pino-http`
+  # peers (^10 / ^11) are already satisfied by the two entries below, so this bump cascades nowhere.
+  nestjs-pino: ^5.1.0
   pg: ^8.16.3
   pino: ^10.3.1
   pino-http: ^11.0.0
@@ -69,7 +90,7 @@ catalog:
   typeorm: ^0.3.27
 
   # Contracts / validation
-  nestjs-zod: ^5.4.0
+  nestjs-zod: ^5.5.0
   zod: ^4.4.3
 
   # Server types

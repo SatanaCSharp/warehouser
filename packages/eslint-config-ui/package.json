@@ -14,12 +14,13 @@
     "access": "public"
   },
   "devDependencies": {
-    "@warehouser/eslint-config-base": "workspace:*",
     "@types/eslint-plugin-jsx-a11y": "catalog:",
+    "@warehouser/eslint-config-base": "workspace:*",
     "eslint-import-resolver-typescript": "catalog:",
     "eslint-plugin-import": "catalog:",
     "eslint-plugin-jsx-a11y": "catalog:",
     "eslint-plugin-react": "catalog:",
-    "eslint-plugin-react-hooks": "catalog:"
+    "eslint-plugin-react-hooks": "catalog:",
+    "typescript": "catalog:"
   }
 }
