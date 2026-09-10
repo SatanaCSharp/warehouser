@@ -7,6 +7,7 @@ import {
 } from 'shared/decorators/transactional.decorator';
 import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
 import { repositoryDouble } from 'test/doubles/repository-double';
+import { describe, expect, it, vi } from 'vitest';
 import { ArchiveWarehouseCommand } from 'warehouses/usecases/commands/archive-warehouse.command';
 
 const workspaceId = '00000000-0000-4000-8000-000000000001';
@@ -23,14 +24,14 @@ const currentUser = (): WorkspaceCurrentUser => ({
 
 const warehouseLifecycleRepositoryDouble = () =>
   repositoryDouble<WarehouseLifecycleRepository>()({
-    lockWorkspaceAndCountNonArchivedWarehouses: jest.fn().mockResolvedValue(2),
-    lockWarehouse: jest.fn().mockResolvedValue({
+    lockWorkspaceAndCountNonArchivedWarehouses: vi.fn().mockResolvedValue(2),
+    lockWarehouse: vi.fn().mockResolvedValue({
       id: warehouseId,
       workspaceId,
       name: 'Test Warehouse North',
       archivedAt: null,
     }),
-    setArchivedAt: jest.fn().mockResolvedValue(undefined),
+    setArchivedAt: vi.fn().mockResolvedValue(undefined),
   });
 
 describe('ArchiveWarehouseCommand', () => {

@@ -18,6 +18,7 @@ import { makeStore } from 'store';
 import type { WarehouseEntryVerdict } from 'guards/warehouse-entry.guard';
 import type { AppRouter } from 'router';
 import type { AppStore } from 'store';
+import type { Mock } from 'vitest';
 
 const toast = vi.hoisted(() => {
   const fn = vi.fn(() => 'pending-key');
@@ -70,7 +71,10 @@ const membershipsIn = (
 // of the datasets the access cases below are about, so answer it out of band
 // and let each of them keep its own ordered request script.
 const withWorkspaceContext = (
-  requestScript: ReturnType<typeof vi.fn>,
+  // `Mock` rather than `ReturnType<typeof vi.fn>`: since Vitest 4 `vi.fn` is
+  // generic over `Procedure | Constructable`, so `ReturnType` instantiates it
+  // at that union and the resulting type is no longer callable.
+  requestScript: Mock,
   workspacePermissionIds: readonly WorkspacePermissionId[] = [],
   effectiveWarehouseId: string | null = null,
   warehouses: readonly Record<string, unknown>[] = [],

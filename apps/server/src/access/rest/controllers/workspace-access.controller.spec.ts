@@ -27,6 +27,7 @@ import type {
 } from 'shared/domain/repositories/workspace-read.repository';
 import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
 import { WorkspaceAccessGuard } from 'shared/guards/workspace-access.guard';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const id = (suffix: number): string =>
   `00000000-0000-4000-8000-${suffix.toString().padStart(12, '0')}`;
@@ -65,37 +66,37 @@ const method = (name: keyof WorkspaceAccessController): object =>
 // eslint-disable-next-line max-lines-per-function, max-statements -- one suite per controller, with one use-case double per route
 describe('WorkspaceAccessController', () => {
   const listRoles = {
-    execute: jest.fn(),
+    execute: vi.fn(),
   } as unknown as ListWorkspaceRolesQuery;
   const listPermissions = {
-    execute: jest.fn(),
+    execute: vi.fn(),
   } as unknown as ListWorkspacePermissionsQuery;
   const listMembers = {
-    execute: jest.fn(),
+    execute: vi.fn(),
   } as unknown as ListWorkspaceMembersQuery;
   const listUsers = {
-    execute: jest.fn(),
+    execute: vi.fn(),
   } as unknown as ListWorkspaceUsersQuery;
   const createRole = {
-    execute: jest.fn(),
+    execute: vi.fn(),
   } as unknown as CreateWorkspaceRoleCommand;
   const updateRole = {
-    execute: jest.fn(),
+    execute: vi.fn(),
   } as unknown as UpdateWorkspaceRoleCommand;
   const deleteRole = {
-    execute: jest.fn(),
+    execute: vi.fn(),
   } as unknown as DeleteWorkspaceRoleCommand;
   const addMember = {
-    execute: jest.fn(),
+    execute: vi.fn(),
   } as unknown as AddWorkspaceMemberCommand;
   const removeMember = {
-    execute: jest.fn(),
+    execute: vi.fn(),
   } as unknown as RemoveWorkspaceMemberCommand;
   const assignRole = {
-    execute: jest.fn(),
+    execute: vi.fn(),
   } as unknown as AssignWorkspaceRoleCommand;
   const transferOwner = {
-    execute: jest.fn(),
+    execute: vi.fn(),
   } as unknown as TransferWorkspaceOwnerCommand;
 
   const controller = new WorkspaceAccessController(
@@ -112,7 +113,7 @@ describe('WorkspaceAccessController', () => {
     transferOwner,
   );
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => vi.clearAllMocks());
 
   // sad.md §8 class 1 — every protected handler declares a Workspace
   // Permission and is resolved by the Workspace guard.
@@ -167,7 +168,7 @@ describe('WorkspaceAccessController', () => {
   ] as const)(
     '%s scopes its query to the guard-derived Workspace principal',
     async (name, query, permissionId) => {
-      jest.mocked(query.execute).mockResolvedValue([]);
+      vi.mocked(query.execute).mockResolvedValue([]);
 
       await expect(controller[name](request(permissionId))).resolves.toEqual(
         [],
@@ -179,7 +180,7 @@ describe('WorkspaceAccessController', () => {
   );
 
   it('returns the Workspace Roles of the actor Workspace', async () => {
-    jest.mocked(listRoles.execute).mockResolvedValue([
+    vi.mocked(listRoles.execute).mockResolvedValue([
       {
         id: roleId,
         workspaceId,
@@ -224,7 +225,7 @@ describe('WorkspaceAccessController', () => {
         assignedMemberCount: 3,
       },
     ];
-    jest.mocked(listRoles.execute).mockResolvedValue(rolesFromQuery);
+    vi.mocked(listRoles.execute).mockResolvedValue(rolesFromQuery);
 
     const result = await controller.listRoles(
       request(WorkspacePermissionId.WORKSPACE_ROLES_WATCH),
@@ -249,7 +250,7 @@ describe('WorkspaceAccessController', () => {
       permissionIds: [],
       assignedMemberCount: 2,
     };
-    jest.mocked(updateRole.execute).mockResolvedValue(updatedRole);
+    vi.mocked(updateRole.execute).mockResolvedValue(updatedRole);
 
     const result = await controller.updateRole(
       roleId,
@@ -261,7 +262,7 @@ describe('WorkspaceAccessController', () => {
   });
 
   it('returns the system Workspace Permission catalogue whole', async () => {
-    jest.mocked(listPermissions.execute).mockResolvedValue([
+    vi.mocked(listPermissions.execute).mockResolvedValue([
       {
         id: WorkspacePermissionId.WORKSPACE_OWNER_ROLE_REASSIGN,
         label: 'Transfer Workspace Owner',
@@ -280,7 +281,7 @@ describe('WorkspaceAccessController', () => {
   });
 
   it('returns the Workspace Members with their Workspace Role assignment', async () => {
-    jest.mocked(listMembers.execute).mockResolvedValue([
+    vi.mocked(listMembers.execute).mockResolvedValue([
       {
         userId: id(4),
         workspaceRoleId: roleId,
@@ -305,7 +306,7 @@ describe('WorkspaceAccessController', () => {
   });
 
   it('returns the Users of the Workspace with the Warehouses each belongs to', async () => {
-    jest.mocked(listUsers.execute).mockResolvedValue([
+    vi.mocked(listUsers.execute).mockResolvedValue([
       {
         userId: id(4),
         warehouseIds: [id(10)],
@@ -342,7 +343,7 @@ describe('WorkspaceAccessController', () => {
   // Workspace Members themselves; the email identifies exactly those Users and
   // widens nothing — in particular it carries no Warehouse Role.
   it('carries the identifying email of a Workspace Member (T46)', async () => {
-    jest.mocked(listMembers.execute).mockResolvedValue([
+    vi.mocked(listMembers.execute).mockResolvedValue([
       {
         userId: id(4),
         workspaceRoleId: roleId,
@@ -371,7 +372,7 @@ describe('WorkspaceAccessController', () => {
   // membership assignment act on can be found". The response still carries no
   // Warehouse Role.
   it('carries the identifying email of a Workspace User (T46)', async () => {
-    jest.mocked(listUsers.execute).mockResolvedValue([
+    vi.mocked(listUsers.execute).mockResolvedValue([
       {
         userId: id(4),
         warehouseIds: [id(10)],
@@ -411,7 +412,7 @@ describe('WorkspaceAccessController', () => {
         email: 'candidate@example.test',
       },
     ];
-    jest.mocked(listUsers.execute).mockResolvedValue(usersFromQuery);
+    vi.mocked(listUsers.execute).mockResolvedValue(usersFromQuery);
 
     const result = await controller.listUsers(
       request(WorkspacePermissionId.WORKSPACE_MEMBERS_WATCH),
@@ -422,7 +423,7 @@ describe('WorkspaceAccessController', () => {
   });
 
   it('completes a created Workspace Role with its provable kind and member count', async () => {
-    jest.mocked(createRole.execute).mockResolvedValue({
+    vi.mocked(createRole.execute).mockResolvedValue({
       id: roleId,
       name: 'Site Administrator',
       permissionIds: [WorkspacePermissionId.WAREHOUSES_WATCH],
@@ -454,7 +455,7 @@ describe('WorkspaceAccessController', () => {
   });
 
   it('passes the Workspace Role identifier of the path to the update command', async () => {
-    jest.mocked(updateRole.execute).mockResolvedValue({
+    vi.mocked(updateRole.execute).mockResolvedValue({
       id: roleId,
       name: 'Site Administrator',
       permissionIds: [],
@@ -481,7 +482,7 @@ describe('WorkspaceAccessController', () => {
   });
 
   it('forwards the optional replacement Workspace Role of a deletion', async () => {
-    jest.mocked(deleteRole.execute).mockResolvedValue({ id: roleId });
+    vi.mocked(deleteRole.execute).mockResolvedValue({ id: roleId });
 
     await expect(
       controller.deleteRole(
@@ -506,9 +507,10 @@ describe('WorkspaceAccessController', () => {
   });
 
   it('completes an added Workspace Member with its provable Workspace Role kind', async () => {
-    jest
-      .mocked(addMember.execute)
-      .mockResolvedValue({ userId: id(4), workspaceRoleId: roleId });
+    vi.mocked(addMember.execute).mockResolvedValue({
+      userId: id(4),
+      workspaceRoleId: roleId,
+    });
 
     await expect(
       controller.addMember(
@@ -527,7 +529,7 @@ describe('WorkspaceAccessController', () => {
   });
 
   it('delegates Workspace membership removal and returns no content', async () => {
-    jest.mocked(removeMember.execute).mockResolvedValue({ userId: id(4) });
+    vi.mocked(removeMember.execute).mockResolvedValue({ userId: id(4) });
 
     await expect(
       controller.removeMember(
@@ -542,9 +544,10 @@ describe('WorkspaceAccessController', () => {
   });
 
   it('delegates a Workspace Role reassignment for the path User', async () => {
-    jest
-      .mocked(assignRole.execute)
-      .mockResolvedValue({ userId: id(4), workspaceRoleId: roleId });
+    vi.mocked(assignRole.execute).mockResolvedValue({
+      userId: id(4),
+      workspaceRoleId: roleId,
+    });
 
     await expect(
       controller.assignMemberRole(
@@ -564,7 +567,7 @@ describe('WorkspaceAccessController', () => {
   });
 
   it('reports the Owner transfer outcome from the actor and the command', async () => {
-    jest.mocked(transferOwner.execute).mockResolvedValue({ ownerId: id(4) });
+    vi.mocked(transferOwner.execute).mockResolvedValue({ ownerId: id(4) });
 
     await expect(
       controller.transferOwner(
@@ -649,7 +652,7 @@ describe('WorkspaceAccessController', () => {
       const failure = new ApplicationError(
         ErrorCode.WORKSPACE_TARGET_UNAVAILABLE,
       );
-      jest.mocked(usecase.execute).mockRejectedValue(failure);
+      vi.mocked(usecase.execute).mockRejectedValue(failure);
 
       await expect(invoke()).rejects.toBe(failure);
     },

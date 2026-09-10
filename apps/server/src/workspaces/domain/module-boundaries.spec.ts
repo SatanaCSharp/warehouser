@@ -1,6 +1,8 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { describe, expect, it } from 'vitest';
+
 // T4 DoD: "`apps/server/src/workspaces/domain/` has zero NestJS, HTTP and
 // TypeORM imports" and "`workspaces` imports no `access` domain internals".
 // Mirrors `users/module-boundaries.spec.ts`'s static-source-scan style
@@ -47,7 +49,7 @@ describe('workspaces/domain module boundaries', () => {
   // The rule is unchanged; only its shape is. The error factories and
   // predicates this scanned moved to `access` with the Access capability they
   // serve (CH-S2), leaving `workspaces/domain/` with services alone — and
-  // Jest's `it.each` fails outright on an empty table. Reporting the offending
+  // the runner's `it.each` fails outright on an empty table. Reporting the offending
   // files as a list keeps the rule intact, keeps the failure message naming the
   // file (CR-AC-12), and matches how
   // `tests/access/authorization-coverage.spec.mjs` states the same constraint.

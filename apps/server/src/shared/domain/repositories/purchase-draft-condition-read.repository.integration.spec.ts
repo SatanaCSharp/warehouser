@@ -39,6 +39,15 @@ import type { Logger } from 'typeorm';
 // `consolidated-demand.repository.integration.spec.ts` (T10) establishes and
 // `purchase-draft-address-drift-read.repository.integration.spec.ts` (T18) reuses.
 import { PostgresQueryRunner } from 'typeorm/driver/postgres/PostgresQueryRunner';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 
 const now = new Date('2026-08-26T10:00:00.000Z');
 // When the ending was recorded, and therefore when each Rejection on it was raised
@@ -164,7 +173,7 @@ const repository = new PurchaseDraftReadRepository(
 const withQueryCount = async <T>(
   run: () => Promise<T>,
 ): Promise<{ result: T; queryCount: number }> => {
-  const spy = jest.spyOn(PostgresQueryRunner.prototype, 'query');
+  const spy = vi.spyOn(PostgresQueryRunner.prototype, 'query');
   const before = spy.mock.calls.length;
   const result = await run();
   const queryCount = spy.mock.calls.length - before;

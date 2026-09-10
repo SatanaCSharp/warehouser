@@ -22,6 +22,7 @@ import {
   warehouseMembershipEntityFactory,
 } from 'test/factories/entity-factories';
 import { ChangeMemberPasswordCommand } from 'users/usecases/commands/change-member-password.command';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 const now = new Date('2026-08-06T12:00:00.000Z');
 

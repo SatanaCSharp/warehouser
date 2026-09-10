@@ -13,6 +13,7 @@ import {
   isSkuCorrectable,
   isValidSku,
 } from 'items/domain/predicates/item-catalogue.predicates';
+import { describe, expect, it } from 'vitest';
 
 describe('isValidSku', () => {
   // data-model.md `items.sku` — `chk_items_sku_stored_trimmed`: non-empty after trimming.

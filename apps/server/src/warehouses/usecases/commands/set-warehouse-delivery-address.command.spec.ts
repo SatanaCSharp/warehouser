@@ -9,6 +9,7 @@ import {
 } from 'shared/decorators/transactional.decorator';
 import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
 import { repositoryDouble } from 'test/doubles/repository-double';
+import { describe, expect, it, vi } from 'vitest';
 import { SetWarehouseDeliveryAddressCommand } from 'warehouses/usecases/commands/set-warehouse-delivery-address.command';
 
 // T11/AC-10 — the Warehouse's own Delivery Address is recorded and corrected
@@ -32,13 +33,13 @@ const currentUser = (): WorkspaceCurrentUser => ({
 
 const warehouseLifecycleRepositoryDouble = () =>
   repositoryDouble<WarehouseLifecycleRepository>()({
-    createWarehouse: jest.fn().mockResolvedValue(undefined),
-    renameWarehouse: jest.fn().mockResolvedValue(undefined),
-    setArchivedAt: jest.fn().mockResolvedValue(undefined),
-    setDeliveryAddress: jest.fn().mockResolvedValue(undefined),
-    findWarehouse: jest.fn().mockResolvedValue(null),
-    lockWorkspaceAndCountNonArchivedWarehouses: jest.fn().mockResolvedValue(1),
-    lockWarehouse: jest.fn().mockResolvedValue({
+    createWarehouse: vi.fn().mockResolvedValue(undefined),
+    renameWarehouse: vi.fn().mockResolvedValue(undefined),
+    setArchivedAt: vi.fn().mockResolvedValue(undefined),
+    setDeliveryAddress: vi.fn().mockResolvedValue(undefined),
+    findWarehouse: vi.fn().mockResolvedValue(null),
+    lockWorkspaceAndCountNonArchivedWarehouses: vi.fn().mockResolvedValue(1),
+    lockWarehouse: vi.fn().mockResolvedValue({
       id: warehouseId,
       workspaceId,
       name: 'Test Warehouse North',
@@ -120,7 +121,7 @@ describe('SetWarehouseDeliveryAddressCommand', () => {
 
   it('AC-10: a Warehouse of another Workspace is refused exactly like a missing one', async () => {
     const warehouseLifecycleRepository = warehouseLifecycleRepositoryDouble();
-    warehouseLifecycleRepository.lockWarehouse = jest.fn().mockResolvedValue({
+    warehouseLifecycleRepository.lockWarehouse = vi.fn().mockResolvedValue({
       id: warehouseId,
       workspaceId: '00000000-0000-4000-8000-0000000000ff',
       name: 'Test Warehouse North',

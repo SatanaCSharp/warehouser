@@ -16,6 +16,7 @@ import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
 import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
 import { WriteRateLimitGuard } from 'shared/guards/write-rate-limit.guard';
 import { WRITE_RATE_LIMITED_KEY } from 'shared/guards/write-rate-limited.decorator';
+import { describe, expect, it, vi } from 'vitest';
 
 // T7 — the guard/metadata proof `items-http-contract.integration.spec.ts` does not itself exercise
 // (permission uniqueness, archived tolerance and rate-limit declaration are transport-adapter
@@ -29,25 +30,25 @@ const method = (name: keyof ItemsController): object =>
 
 describe('ItemsController', () => {
   const listItemCatalogueQuery = {
-    execute: jest.fn(),
+    execute: vi.fn(),
   } as unknown as ListItemCatalogueQuery;
   const readItemCatalogueEntryQuery = {
-    execute: jest.fn(),
+    execute: vi.fn(),
   } as unknown as ReadItemCatalogueEntryQuery;
   const createItemCommand = {
-    execute: jest.fn(),
+    execute: vi.fn(),
   } as unknown as CreateItemCommand;
   const correctItemCommand = {
-    execute: jest.fn(),
+    execute: vi.fn(),
   } as unknown as CorrectItemCommand;
   const deactivateItemCommand = {
-    execute: jest.fn(),
+    execute: vi.fn(),
   } as unknown as DeactivateItemCommand;
   const reactivateItemCommand = {
-    execute: jest.fn(),
+    execute: vi.fn(),
   } as unknown as ReactivateItemCommand;
   const adjustItemOnHandCommand = {
-    execute: jest.fn(),
+    execute: vi.fn(),
   } as unknown as AdjustItemOnHandCommand;
 
   new ItemsController(

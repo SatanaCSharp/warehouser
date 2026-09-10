@@ -1,6 +1,8 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { describe, expect, it } from 'vitest';
+
 // T13 — the executable form of the coordinator's ruling: "purchase-drafts currently has no
 // usecases/ at all, so T16's REST surface would have nothing to call" — the declared public
 // surface must be asserted rather than assumed, following

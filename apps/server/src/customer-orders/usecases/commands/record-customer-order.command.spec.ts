@@ -12,6 +12,8 @@ import type { CustomerEntity } from 'shared/domain/entities/customer.entity';
 import type { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
 import type { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
 import { CustomerDirectoryRepository } from 'shared/domain/repositories/customer-directory.repository';
+import type { Mock } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>
   `00000000-0000-4000-8000-${suffix.padStart(12, '0')}`;
@@ -73,10 +75,10 @@ const itemCatalogueRepositoryDouble = (
     warehouseId: string;
     deactivatedAt: Date | null;
   } | null = { id: itemId, warehouseId, deactivatedAt: null },
-) => ({ findById: jest.fn().mockResolvedValue(item) });
+) => ({ findById: vi.fn().mockResolvedValue(item) });
 
 const lifecycleRepositoryDouble = () => ({
-  createCustomerOrder: jest
+  createCustomerOrder: vi
     .fn()
     .mockImplementation(
       (input: {
@@ -147,16 +149,16 @@ const addressBook: CustomerDeliveryAddressEntity[] = [
 // a lookup-by-name or a write added later is caught by the same case.
 const customerDirectoryRepositoryDouble = (
   customer: CustomerEntity | null = storedCustomer(),
-): Record<string, jest.Mock> => {
+): Record<string, Mock> => {
   const double = Object.fromEntries(
     Object.getOwnPropertyNames(CustomerDirectoryRepository.prototype)
       .filter((method) => method !== 'constructor')
-      .map((method) => [method, jest.fn().mockResolvedValue(undefined)]),
-  ) as Record<string, jest.Mock>;
+      .map((method) => [method, vi.fn().mockResolvedValue(undefined)]),
+  ) as Record<string, Mock>;
 
   // Models the repository's own Warehouse scoping: a Customer of another Warehouse resolves to
   // nothing exactly as a missing one does (AC-12).
-  double.findCustomer = jest
+  double.findCustomer = vi
     .fn()
     .mockImplementation((id: string, warehouse: string) =>
       Promise.resolve(
@@ -174,7 +176,7 @@ const customerDirectoryRepositoryDouble = (
 const addressBookRepositoryDouble = (
   addresses: CustomerDeliveryAddressEntity[] = addressBook,
 ) => ({
-  listDeliveryAddresses: jest
+  listDeliveryAddresses: vi
     .fn()
     .mockImplementation((owner: string) =>
       Promise.resolve(addresses.filter((row) => row.customerId === owner)),
@@ -188,7 +190,7 @@ const commandWith = (
   > = itemCatalogueRepositoryDouble(),
   customerDirectoryRepository: Record<
     string,
-    jest.Mock
+    Mock
   > = customerDirectoryRepositoryDouble(),
   customerAddressBookRepository: ReturnType<
     typeof addressBookRepositoryDouble
@@ -567,9 +569,7 @@ describe('RecordCustomerOrderCommand destination (AC-11, AC-11a, AC-11c, AC-12, 
     );
     const missing = customerDirectoryRepositoryDouble(null);
 
-    const attemptWith = (
-      directory: Record<string, jest.Mock>,
-    ): Promise<unknown> =>
+    const attemptWith = (directory: Record<string, Mock>): Promise<unknown> =>
       commandWith(
         lifecycleRepositoryDouble(),
         itemCatalogueRepositoryDouble(),

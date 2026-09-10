@@ -30,6 +30,15 @@ import {
 // PostgreSQL. Spying on it proves actual round trips, i.e. "one query" and not merely "one
 // repository method call" — the idiom `item-catalogue.repository.integration.spec.ts` establishes.
 import { PostgresQueryRunner } from 'typeorm/driver/postgres/PostgresQueryRunner';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 
 const now = new Date('2026-08-26T10:00:00.000Z');
 
@@ -79,7 +88,7 @@ const repository = new ConsolidatedDemandRepository(
 const withQueryCount = async <T>(
   run: () => Promise<T>,
 ): Promise<{ result: T; queryCount: number }> => {
-  const spy = jest.spyOn(PostgresQueryRunner.prototype, 'query');
+  const spy = vi.spyOn(PostgresQueryRunner.prototype, 'query');
   const before = spy.mock.calls.length;
   const result = await run();
   const queryCount = spy.mock.calls.length - before;

@@ -6,6 +6,7 @@ import {
   itemSchema,
   onHandAdjustmentSchema,
 } from 'items';
+import { describe, expect, it } from 'vitest';
 
 // The shared `items` contract subpath (contracts/openapi.yaml `Item`, `ItemLatestAdjustment`,
 // `OnHandAdjustment`). Mirrors `customer-orders-contracts.spec.ts`: schemas are imported through

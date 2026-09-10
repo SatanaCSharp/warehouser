@@ -22,6 +22,7 @@ import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
 import { DemandAllocationService } from 'customer-orders/domain/services/demand-allocation.service';
 import type { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
+import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>
   `00000000-0000-4000-8000-${suffix.padStart(12, '0')}`;
@@ -68,8 +69,8 @@ const demandAllocationRepositoryDouble = (
     order: CustomerOrderEntity;
   }>,
 ) => ({
-  lockCustomerOrdersForLinks: jest.fn().mockResolvedValue(locked),
-  applyAllocations: jest
+  lockCustomerOrdersForLinks: vi.fn().mockResolvedValue(locked),
+  applyAllocations: vi
     .fn()
     .mockImplementation((input: { orderUpdates: Array<{ id: string }> }) =>
       Promise.resolve(

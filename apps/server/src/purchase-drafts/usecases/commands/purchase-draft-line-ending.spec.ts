@@ -17,6 +17,7 @@ import type {
   LockPurchaseDraftLineForEndingResult,
   RecordLineEndingRejectionInput,
 } from 'shared/domain/repositories/arrival-confirmation.repository';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // T17/ADR 0002 — the whole-draft arrival is replaced by two per-line endings whose **kind is a
 // routing fact**. These are the rules that decision buys, asserted at the use-case boundary rather
@@ -101,8 +102,8 @@ const A_CATALOGUE: readonly RejectionReasonEntity[] = [
 const catalogueRepositoryDouble = (
   catalogue: readonly RejectionReasonEntity[] = A_CATALOGUE,
 ) => ({
-  listRejectionReasons: jest.fn().mockResolvedValue(catalogue),
-  resolveRejectionReasons: jest.fn().mockResolvedValue(catalogue),
+  listRejectionReasons: vi.fn().mockResolvedValue(catalogue),
+  resolveRejectionReasons: vi.fn().mockResolvedValue(catalogue),
 });
 
 const arrivalInspectionServiceWith = (
@@ -142,13 +143,13 @@ const repositoryReturning = (
   },
 ): ArrivalConfirmationRepository =>
   ({
-    lockDraftLineForEnding: jest.fn().mockResolvedValue(locked),
-    recordLineEnding: jest.fn().mockResolvedValue(recorded),
+    lockDraftLineForEnding: vi.fn().mockResolvedValue(locked),
+    recordLineEnding: vi.fn().mockResolvedValue(recorded),
   }) as unknown as ArrivalConfirmationRepository;
 
 const neverAllocates = (): DemandAllocationService =>
   ({
-    allocate: jest.fn(),
+    allocate: vi.fn(),
   }) as unknown as DemandAllocationService;
 
 const codeOf = async (run: Promise<unknown>): Promise<string> => {
@@ -162,7 +163,7 @@ const codeOf = async (run: Promise<unknown>): Promise<string> => {
 
 describe('per-line endings replace the whole-draft arrival (T17)', () => {
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   // Both halves carry their own boundary: the ending, its Allocations and the closure are one
@@ -384,7 +385,7 @@ describe('per-line endings replace the whole-draft arrival (T17)', () => {
 // max-lines-per-function budget — every `it` below is unchanged from the one block this used to be.
 describe('T10 — the condition half of a line ending', () => {
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('AC-01a/AC-01b — the refusing capability is demanded by the payload, not the operation', () => {
@@ -571,7 +572,7 @@ describe('T10 — the condition half of a line ending', () => {
 // capability, the Condition Split (and the catalogue check it shares), then the Pre-receipt
 // Conformance run in that fixed order. `assertEndingCondition` now calls each as a same-file
 // binding of `ArrivalInspectionService` (moved there per the review — server-architecture.md
-// §117-120), which a cross-module `jest.mock` can no longer intercept; the order proof itself lives
+// §117-120), which a cross-module `vi.mock` can no longer intercept; the order proof itself lives
 // in `arrival-inspection.service.spec.ts`, proved by outcome (which of two colliding rules'
 // refusals is returned) rather than by spying.
 
@@ -579,7 +580,7 @@ describe('T10 — the condition half of a line ending', () => {
 // ending, and the accepted figure reaching the demand delegation.
 describe('T10 — the condition half of a line ending (nothing received, accepted figure)', () => {
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('AC-04a — a line where nothing was received carries neither judgement', () => {
@@ -699,7 +700,7 @@ describe('T10 — the condition half of a line ending (nothing received, accepte
 // half's mirrored Source rule (AC-24/AC-25).
 describe('T10 — the condition half of a line ending (direct-delivery Source mirror)', () => {
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('AC-24/AC-25 — the direct-delivery ending mirrors the Source rule', () => {
@@ -834,8 +835,8 @@ describe('T10 — DemandAllocationService narrows to the derived Accepted Quanti
       order: ReturnType<typeof orderRow>;
     }>,
   ) => ({
-    lockCustomerOrdersForLinks: jest.fn().mockResolvedValue(locked),
-    applyAllocations: jest.fn().mockResolvedValue([]),
+    lockCustomerOrdersForLinks: vi.fn().mockResolvedValue(locked),
+    applyAllocations: vi.fn().mockResolvedValue([]),
   });
 
   it('refuses an assignment exceeding the derived Accepted Quantity, naming both figures (AC-11)', async () => {

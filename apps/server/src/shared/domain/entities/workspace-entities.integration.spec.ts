@@ -19,6 +19,7 @@ import {
   persistWorkspaceGraph,
 } from 'test/factories/entity-factories';
 import { QueryFailedError } from 'typeorm';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 const now = new Date('2026-08-12T12:00:00.000Z');
 

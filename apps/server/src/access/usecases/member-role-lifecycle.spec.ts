@@ -8,6 +8,7 @@ import {
   type TransactionalMetadata,
 } from 'shared/decorators/transactional.decorator';
 import { RoleLifecycleRepository } from 'shared/domain/repositories/role-lifecycle.repository';
+import { describe, expect, it, vi } from 'vitest';
 
 const warehouseId = '00000000-0000-4000-8000-000000000001';
 const sourceRoleId = '00000000-0000-4000-8000-000000000002';
@@ -27,21 +28,21 @@ const currentUser = (
 });
 
 const repositoryDouble = () => ({
-  findMemberRole: jest.fn().mockResolvedValue({ roleKind: 'custom' }),
-  findCustomRole: jest.fn().mockResolvedValue({
+  findMemberRole: vi.fn().mockResolvedValue({ roleKind: 'custom' }),
+  findCustomRole: vi.fn().mockResolvedValue({
     id: replacementRoleId,
     kind: 'custom',
   }),
-  updateMemberRole: jest.fn().mockResolvedValue(true),
-  lockWarehouse: jest.fn().mockResolvedValue({ id: warehouseId }),
-  lockCustomRole: jest
+  updateMemberRole: vi.fn().mockResolvedValue(true),
+  lockWarehouse: vi.fn().mockResolvedValue({ id: warehouseId }),
+  lockCustomRole: vi
     .fn()
     .mockImplementation((_warehouseId: string, id: string) =>
       Promise.resolve({ id }),
     ),
-  countRoleMembers: jest.fn().mockResolvedValue(0),
-  replaceRoleAssignments: jest.fn().mockResolvedValue(undefined),
-  removeCustomRole: jest.fn().mockResolvedValue(undefined),
+  countRoleMembers: vi.fn().mockResolvedValue(0),
+  replaceRoleAssignments: vi.fn().mockResolvedValue(undefined),
+  removeCustomRole: vi.fn().mockResolvedValue(undefined),
 });
 
 const deleteRoleCommand = (repository: ReturnType<typeof repositoryDouble>) => {

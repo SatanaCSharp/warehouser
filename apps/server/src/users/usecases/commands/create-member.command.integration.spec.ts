@@ -25,6 +25,15 @@ import { hashPassword } from 'shared/domain/security/password-hashing';
 // success, following the same constructor-injection + `@Transactional()`
 // idiom as `TransferWarehouseManagerCommand`/`DeleteRoleCommand`.
 import { CreateMemberCommand } from 'users/usecases/commands/create-member.command';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from 'vitest';
 
 const now = new Date('2026-08-06T12:00:00.000Z');
 

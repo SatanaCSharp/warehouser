@@ -1,6 +1,8 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { describe, expect, it } from 'vitest';
+
 // T6 — the executable form of the DoD's purity rule: "`customers/domain` imports no NestJS, HTTP or
 // TypeORM symbol", and of sad.md §10's hard rule that `customers` never imports `purchase-drafts`.
 //

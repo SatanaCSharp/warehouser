@@ -4,6 +4,7 @@ import { DiscoveryService, MetadataScanner, Reflector } from '@nestjs/core';
 import { DbTransactionService } from 'shared/database/db-transaction.service';
 import { TransactionExecutor } from 'shared/database/transaction-executor.service';
 import { Transactional } from 'shared/decorators/transactional.decorator';
+import { describe, expect, it, vi } from 'vitest';
 
 describe(TransactionExecutor.name, () => {
   it('wraps decorated provider methods in a transaction', async () => {
@@ -17,7 +18,7 @@ describe(TransactionExecutor.name, () => {
     }
 
     const service = new ExampleService();
-    const executeInTransaction = jest.fn(
+    const executeInTransaction = vi.fn(
       async (
         _options: unknown,
         callback: () => Promise<unknown>,
@@ -67,7 +68,7 @@ describe(TransactionExecutor.name, () => {
       new MetadataScanner(),
       new Reflector(),
       {
-        executeInTransaction: jest.fn(),
+        executeInTransaction: vi.fn(),
       } as unknown as DbTransactionService,
     );
 

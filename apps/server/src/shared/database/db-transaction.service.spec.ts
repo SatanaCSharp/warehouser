@@ -1,15 +1,16 @@
 import { DbTransactionService } from 'shared/database/db-transaction.service';
 import { DbTransactionContext } from 'shared/database/db-transaction-context.service';
 import type { DataSource, EntityManager, QueryRunner } from 'typeorm';
+import { describe, expect, it, vi } from 'vitest';
 
 const createQueryRunner = (manager: EntityManager): QueryRunner =>
   ({
     manager,
-    connect: jest.fn().mockResolvedValue(undefined),
-    startTransaction: jest.fn().mockResolvedValue(undefined),
-    commitTransaction: jest.fn().mockResolvedValue(undefined),
-    rollbackTransaction: jest.fn().mockResolvedValue(undefined),
-    release: jest.fn().mockResolvedValue(undefined),
+    connect: vi.fn().mockResolvedValue(undefined),
+    startTransaction: vi.fn().mockResolvedValue(undefined),
+    commitTransaction: vi.fn().mockResolvedValue(undefined),
+    rollbackTransaction: vi.fn().mockResolvedValue(undefined),
+    release: vi.fn().mockResolvedValue(undefined),
   }) as unknown as QueryRunner;
 
 describe(DbTransactionService.name, () => {

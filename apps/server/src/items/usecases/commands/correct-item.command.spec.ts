@@ -8,6 +8,7 @@ import { CorrectItemCommand } from 'items/usecases/commands/correct-item.command
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
 import { repositoryDouble } from 'test/doubles/repository-double';
+import { describe, expect, it, vi } from 'vitest';
 
 const warehouseId = '00000000-0000-4000-8000-000000000001';
 const actorId = '00000000-0000-4000-8000-000000000002';
@@ -32,11 +33,11 @@ const itemCatalogueRepositoryDouble = (
   },
 ) =>
   repositoryDouble<ItemCatalogueRepository>()({
-    findById: jest.fn().mockResolvedValue(item),
-    isNamedByDemandOrDraft: jest.fn().mockResolvedValue(isNamed),
-    findBySku: jest.fn().mockResolvedValue(null),
-    updateSku: jest.fn().mockResolvedValue(undefined),
-    updateItemDetails: jest.fn().mockResolvedValue(undefined),
+    findById: vi.fn().mockResolvedValue(item),
+    isNamedByDemandOrDraft: vi.fn().mockResolvedValue(isNamed),
+    findBySku: vi.fn().mockResolvedValue(null),
+    updateSku: vi.fn().mockResolvedValue(undefined),
+    updateItemDetails: vi.fn().mockResolvedValue(undefined),
   });
 
 describe('CorrectItemCommand', () => {
@@ -64,7 +65,7 @@ describe('CorrectItemCommand', () => {
   it('refuses a missing Item the same way', async () => {
     const itemCatalogueRepository = {
       ...itemCatalogueRepositoryDouble(false),
-      findById: jest.fn().mockResolvedValue(null),
+      findById: vi.fn().mockResolvedValue(null),
     };
     const command = new CorrectItemCommand(itemCatalogueRepository as never);
 

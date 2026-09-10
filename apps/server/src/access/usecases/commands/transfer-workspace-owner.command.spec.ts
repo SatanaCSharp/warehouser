@@ -5,6 +5,7 @@ import {
 import { ApplicationError } from '@warehouser/shared-types/errors';
 import { TransferWorkspaceOwnerCommand } from 'access/usecases/commands/transfer-workspace-owner.command';
 import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
+import { describe, expect, it, vi } from 'vitest';
 
 const workspaceId = '00000000-0000-4000-8000-000000000001';
 const ownerId = '00000000-0000-4000-8000-000000000002';
@@ -21,15 +22,15 @@ const currentUser = (): WorkspaceCurrentUser => ({
 });
 
 const ownerTransferDouble = () => ({
-  transfer: jest.fn().mockResolvedValue(true),
+  transfer: vi.fn().mockResolvedValue(true),
 });
 
 const membershipDouble = () => ({
-  findMembershipWorkspaceId: jest.fn().mockResolvedValue(workspaceId),
+  findMembershipWorkspaceId: vi.fn().mockResolvedValue(workspaceId),
 });
 
 const roleLifecycleDouble = () => ({
-  findCustomRole: jest
+  findCustomRole: vi
     .fn()
     .mockResolvedValue({ id: replacementRoleId, workspaceId, kind: 'custom' }),
 });

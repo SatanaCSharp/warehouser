@@ -53,6 +53,15 @@ import {
   buildWarehouse,
   buildWorkspace,
 } from 'test/factories/entity-factories';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 
 const now = new Date('2026-08-26T10:00:00.000Z');
 const later = new Date('2026-08-26T12:00:00.000Z');
@@ -581,7 +590,7 @@ describe('per-line endings (T17, ADR 0002)', () => {
 
     const injectedFailure = new Error('injected mid-way failure');
     const failingDemand = {
-      allocate: jest.fn().mockRejectedValue(injectedFailure),
+      allocate: vi.fn().mockRejectedValue(injectedFailure),
     };
 
     const rejection = transactions.executeInTransaction({}, () =>
@@ -924,7 +933,7 @@ describe('per-line endings (T17, ADR 0002)', () => {
 
     const injectedFailure = new Error('injected mid-way failure');
     const failingDemand = {
-      allocate: jest.fn().mockRejectedValue(injectedFailure),
+      allocate: vi.fn().mockRejectedValue(injectedFailure),
     };
 
     const rejection = transactions.executeInTransaction({}, () =>

@@ -27,6 +27,15 @@ import {
 // to the database regardless of which of those APIs the implementer chooses, which is what proves
 // "one query" rather than merely "one repository method call".
 import { PostgresQueryRunner } from 'typeorm/driver/postgres/PostgresQueryRunner';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 
 const now = new Date('2026-08-25T12:00:00.000Z');
 
@@ -218,7 +227,7 @@ const registerIsNamedByDemandOrDraftTests = (): void => {
     const withQueryCount = async <T>(
       run: () => Promise<T>,
     ): Promise<{ result: T; queryCount: number }> => {
-      const spy = jest.spyOn(PostgresQueryRunner.prototype, 'query');
+      const spy = vi.spyOn(PostgresQueryRunner.prototype, 'query');
       const before = spy.mock.calls.length;
       const result = await run();
       const queryCount = spy.mock.calls.length - before;
@@ -651,7 +660,7 @@ const registerItemsWithOnHandAndLatestReasonTests = (): void => {
     const withQueryCount = async <T>(
       run: () => Promise<T>,
     ): Promise<{ result: T; queryCount: number }> => {
-      const spy = jest.spyOn(PostgresQueryRunner.prototype, 'query');
+      const spy = vi.spyOn(PostgresQueryRunner.prototype, 'query');
       const before = spy.mock.calls.length;
       const result = await run();
       const queryCount = spy.mock.calls.length - before;

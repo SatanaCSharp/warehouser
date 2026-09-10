@@ -11,6 +11,7 @@ import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
 import { DiscardPurchaseDraftCommand } from 'purchase-drafts/usecases/commands/discard-purchase-draft.command';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>
   `00000000-0000-4000-8000-${suffix.padStart(12, '0')}`;
@@ -39,8 +40,8 @@ const commandWith = ({
   header?: { warehouseId: string; state: string } | null;
 } = {}) => {
   const closureRepository = {
-    findDraftHeader: jest.fn().mockResolvedValue(header),
-    discard: jest.fn().mockResolvedValue(discarded),
+    findDraftHeader: vi.fn().mockResolvedValue(header),
+    discard: vi.fn().mockResolvedValue(discarded),
   };
   const command = new DiscardPurchaseDraftCommand(closureRepository as never, {
     now: () => now,

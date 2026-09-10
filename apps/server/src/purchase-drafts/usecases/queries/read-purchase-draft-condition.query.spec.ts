@@ -12,6 +12,7 @@ import { PermissionId } from '@warehouser/shared-types/enums';
 import { RejectionReasonLabelService } from 'purchase-drafts/domain/services/rejection-reason-label.service';
 import { ReadPurchaseDraftQuery } from 'purchase-drafts/usecases/queries/read-purchase-draft.query';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { describe, expect, it, vi } from 'vitest';
 
 const warehouseId = '00000000-0000-4000-8000-000000000001';
 const actorId = '00000000-0000-4000-8000-000000000002';
@@ -118,7 +119,7 @@ const draftDetailWith = (ending: unknown) => ({
 // use case must choose that argument from `REJECTIONS:WATCH`, since the repository will not choose
 // it for them.
 const repositoryDouble = () => ({
-  readIdentifiedDraft: jest
+  readIdentifiedDraft: vi
     .fn()
     .mockImplementation((_id: string, _warehouseId: string, cause?: string) =>
       Promise.resolve(
@@ -127,7 +128,7 @@ const repositoryDouble = () => ({
         ),
       ),
     ),
-  readRedactedDraft: jest
+  readRedactedDraft: vi
     .fn()
     .mockImplementation((_id: string, _warehouseId: string, cause?: string) =>
       Promise.resolve(
@@ -143,7 +144,7 @@ const repositoryDouble = () => ({
 // resolved `rejectionReasonLabel` can only pass if the query actually joined it in rather than
 // echoing the identifier back.
 const catalogueDouble = () => ({
-  resolveRejectionReasons: jest.fn().mockResolvedValue([
+  resolveRejectionReasons: vi.fn().mockResolvedValue([
     {
       id: 'damaged_in_transit',
       label: 'Damaged in transit',

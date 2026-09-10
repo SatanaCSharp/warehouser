@@ -15,6 +15,7 @@ import { WorkspaceOwnerTransferRepository } from 'shared/domain/repositories/wor
 import { WorkspaceProvisioningRepository } from 'shared/domain/repositories/workspace-provisioning.repository';
 import { WorkspaceReadRepository } from 'shared/domain/repositories/workspace-read.repository';
 import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository';
+import { describe, expect, it } from 'vitest';
 import { WorkspaceProvisioningService } from 'workspaces/domain/services/workspace-provisioning.service';
 import { RenameWorkspaceCommand } from 'workspaces/usecases/commands/rename-workspace.command';
 import { SetActiveWarehouseCommand } from 'workspaces/usecases/commands/set-active-warehouse.command';

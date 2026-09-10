@@ -7,6 +7,7 @@ import type { PackagingTypeEntity } from 'shared/domain/entities/packaging-type.
 // `restore-catalogues.setup.ts`'s existing precedent, so this test cannot drift from what is
 // actually seeded.
 import { PackagingTypeCatalogueRepository } from 'shared/domain/repositories/packaging-type-catalogue.repository';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { initialPackagingTypes } from '../../../../migrations/1786600000000-CreateOrderingSchema';
 

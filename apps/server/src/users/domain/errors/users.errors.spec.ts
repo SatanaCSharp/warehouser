@@ -7,6 +7,7 @@ import {
   reservedRoleSelectionError,
   selfActionDeniedError,
 } from 'users/domain/errors/users.errors';
+import { describe, expect, it } from 'vitest';
 
 describe('users domain error factories', () => {
   // AC-11 / AC-18 (self-action)

@@ -10,6 +10,7 @@ import { RecordCustomerCommand } from 'customers/usecases/commands/record-custom
 import { find } from 'lodash';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import type { CustomerEntity } from 'shared/domain/entities/customer.entity';
+import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>
   `00000000-0000-4000-8000-${suffix.padStart(12, '0')}`;
@@ -48,13 +49,13 @@ const storedCustomer = (
 });
 
 const directoryRepositoryDouble = (rows: readonly CustomerEntity[] = []) => ({
-  findCustomer: jest.fn((id: string, inWarehouseId: string) =>
+  findCustomer: vi.fn((id: string, inWarehouseId: string) =>
     Promise.resolve(
       find(rows, (row) => row.id === id && row.warehouseId === inWarehouseId) ??
         null,
     ),
   ),
-  findCustomerByName: jest.fn((inWarehouseId: string, name: string) =>
+  findCustomerByName: vi.fn((inWarehouseId: string, name: string) =>
     Promise.resolve(
       find(
         rows,
@@ -62,7 +63,7 @@ const directoryRepositoryDouble = (rows: readonly CustomerEntity[] = []) => ({
       ) ?? null,
     ),
   ),
-  recordCustomer: jest.fn((input: { customer: CustomerEntity }) =>
+  recordCustomer: vi.fn((input: { customer: CustomerEntity }) =>
     Promise.resolve(input.customer),
   ),
 });

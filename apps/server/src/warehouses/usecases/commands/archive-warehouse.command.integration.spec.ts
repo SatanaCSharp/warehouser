@@ -17,6 +17,7 @@ import {
   buildWarehouseMembership,
   buildWorkspace,
 } from 'test/factories/entity-factories';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 // `ArchiveWarehouseCommand` does not exist yet (T21) — this is the RED for
 // AC-10, AC-11, AC-11a and AC-13's archiving half. Per the task card and
 // sad.md §6.5/data-model.md "Repository boundaries and locking", the

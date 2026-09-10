@@ -37,6 +37,15 @@ import {
 // returning identical figures still fails — the idiom
 // `consolidated-demand.repository.integration.spec.ts` (T10) establishes.
 import { PostgresQueryRunner } from 'typeorm/driver/postgres/PostgresQueryRunner';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 
 const now = new Date('2026-08-26T10:00:00.000Z');
 const movedAt = new Date('2026-08-28T09:15:00.000Z');
@@ -53,7 +62,7 @@ const repository = new PurchaseDraftReadRepository(dataSource);
 const withQueryCount = async <T>(
   run: () => Promise<T>,
 ): Promise<{ result: T; queryCount: number }> => {
-  const spy = jest.spyOn(PostgresQueryRunner.prototype, 'query');
+  const spy = vi.spyOn(PostgresQueryRunner.prototype, 'query');
   const before = spy.mock.calls.length;
   const result = await run();
   const queryCount = spy.mock.calls.length - before;
@@ -638,7 +647,7 @@ const registerFreshnessTests = (): void => {
     const query = new ReadPurchaseDraftQuery(
       repository,
       new RejectionReasonLabelService({
-        resolveRejectionReasons: jest.fn().mockResolvedValue([]),
+        resolveRejectionReasons: vi.fn().mockResolvedValue([]),
       } as never),
     );
     const derived = await query.execute({ warehouseId } as never, draftId);

@@ -25,6 +25,7 @@ import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import type { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
 import type { PurchaseDraftLineDeliveryMode } from 'shared/domain/entities/purchase-draft-line.entity';
 import type { AssemblyWriteOutcome } from 'shared/domain/repositories/purchase-draft-assembly.repository';
+import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>
   `00000000-0000-4000-8000-${suffix.padStart(12, '0')}`;
@@ -87,7 +88,7 @@ const itemCatalogueRepositoryDouble = (
     warehouseId,
     deactivatedAt: null,
   },
-) => ({ findById: jest.fn().mockResolvedValue(item) });
+) => ({ findById: vi.fn().mockResolvedValue(item) });
 
 const customerOrderLifecycleRepositoryDouble = (
   locked: {
@@ -104,11 +105,11 @@ const customerOrderLifecycleRepositoryDouble = (
     },
   },
 ) => ({
-  lockOrderWithAllocatedTotal: jest.fn().mockResolvedValue(locked),
+  lockOrderWithAllocatedTotal: vi.fn().mockResolvedValue(locked),
 });
 
 const packagingTypeCatalogueRepositoryDouble = () => ({
-  listPackagingTypes: jest
+  listPackagingTypes: vi
     .fn()
     .mockResolvedValue(catalogueIds.map((id) => ({ id, label: id }))),
 });
@@ -127,28 +128,28 @@ const assemblyRepositoryDouble = (
     }[];
   } = {},
 ) => ({
-  findLineDestination: jest
+  findLineDestination: vi
     .fn()
     .mockResolvedValue(
       delivery.lineDestination === undefined
         ? { deliveryMode: 'via_warehouse', customerDeliveryAddressId: null }
         : delivery.lineDestination,
     ),
-  findLinkedOrderDestinations: jest
+  findLinkedOrderDestinations: vi
     .fn()
     .mockResolvedValue(delivery.linkedOrders ?? []),
-  createDraft: jest
+  createDraft: vi
     .fn()
     .mockImplementation((input: { id: string }) =>
       Promise.resolve(storedDraft({ id: input.id })),
     ),
-  updateDraft: jest.fn().mockResolvedValue(outcome),
-  addLine: jest.fn().mockResolvedValue(outcome),
-  updateLine: jest.fn().mockResolvedValue(outcome),
-  removeLine: jest.fn().mockResolvedValue(outcome),
-  addLink: jest.fn().mockResolvedValue(outcome),
-  updateLink: jest.fn().mockResolvedValue(outcome),
-  removeLink: jest.fn().mockResolvedValue(outcome),
+  updateDraft: vi.fn().mockResolvedValue(outcome),
+  addLine: vi.fn().mockResolvedValue(outcome),
+  updateLine: vi.fn().mockResolvedValue(outcome),
+  removeLine: vi.fn().mockResolvedValue(outcome),
+  addLink: vi.fn().mockResolvedValue(outcome),
+  updateLink: vi.fn().mockResolvedValue(outcome),
+  removeLink: vi.fn().mockResolvedValue(outcome),
 });
 
 // Every command is built from the same doubles, exactly as Nest builds it from the same providers.
@@ -202,7 +203,7 @@ const commandsWith = ({
       // destination, so it answers with an active address of this Warehouse and is never reached;
       // the rule itself is proved in `purchase-draft-line-delivery.spec.ts`.
       {
-        findWarehouseDeliveryAddress: jest
+        findWarehouseDeliveryAddress: vi
           .fn()
           .mockResolvedValue({ deactivatedAt: null }),
       } as never,

@@ -1,6 +1,7 @@
 import type { TestingModule } from '@nestjs/testing';
 import { WriteRateLimitCounter } from 'shared/guards/write-rate-limit.counter';
 import { WriteRateLimitGuard } from 'shared/guards/write-rate-limit.guard';
+import { expect } from 'vitest';
 
 interface ContainerModule {
   readonly injectables?: Map<unknown, { instance?: unknown }>;

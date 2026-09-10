@@ -12,6 +12,7 @@ import { WorkspaceMembershipRepository } from 'shared/domain/repositories/worksp
 import { WorkspaceOwnerTransferRepository } from 'shared/domain/repositories/workspace-owner-transfer.repository';
 import { WorkspaceReadRepository } from 'shared/domain/repositories/workspace-read.repository';
 import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository';
+import { describe, expect, it } from 'vitest';
 import { ArchiveWarehouseCommand } from 'warehouses/usecases/commands/archive-warehouse.command';
 import { CreateWarehouseCommand } from 'warehouses/usecases/commands/create-warehouse.command';
 import { RenameWarehouseCommand } from 'warehouses/usecases/commands/rename-warehouse.command';

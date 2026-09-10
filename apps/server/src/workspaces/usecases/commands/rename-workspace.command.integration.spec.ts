@@ -11,6 +11,7 @@ import {
   buildWorkspace,
   persistWorkspaceGraph,
 } from 'test/factories/entity-factories';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 // `RenameWorkspaceCommand` does not exist yet — this is the RED step for
 // T15. The implementer creates it at this path per sad.md §6.2a and
 // workspace-identity-and-reads.md, coordinating `WorkspaceLifecycleRepository`

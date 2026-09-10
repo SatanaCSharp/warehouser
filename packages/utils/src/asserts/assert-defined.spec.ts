@@ -1,5 +1,6 @@
 import { AssertionError } from '@warehouser/shared-types/errors';
 import { assertDefined } from 'asserts/assert-defined';
+import { describe, expect, it } from 'vitest';
 
 describe('assertDefined', () => {
   it('does not throw when value is defined', () => {

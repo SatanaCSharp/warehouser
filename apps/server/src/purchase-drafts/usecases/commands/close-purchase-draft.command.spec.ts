@@ -12,6 +12,7 @@ import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
 import { ClosePurchaseDraftCommand } from 'purchase-drafts/usecases/commands/close-purchase-draft.command';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>
   `00000000-0000-4000-8000-${suffix.padStart(12, '0')}`;
@@ -45,8 +46,8 @@ const commandWith = ({
   closed?: boolean;
 } = {}) => {
   const closureRepository = {
-    findDraftHeader: jest.fn().mockResolvedValue(header),
-    close: jest.fn().mockResolvedValue(closed),
+    findDraftHeader: vi.fn().mockResolvedValue(header),
+    close: vi.fn().mockResolvedValue(closed),
   };
   const command = new ClosePurchaseDraftCommand(closureRepository as never, {
     now: () => now,

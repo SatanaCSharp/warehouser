@@ -23,6 +23,7 @@ import {
   rejectionCreateSchema,
   rejectionReasonSchema,
 } from 'purchase-drafts';
+import { describe, expect, it } from 'vitest';
 
 // T16 — the shared `purchase-drafts` contract subpath (contracts/openapi.yaml `/purchase-drafts*`
 // and `/packaging-types` schemas). Mirrors `customer-orders-contracts.spec.ts`: schemas are

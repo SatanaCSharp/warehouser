@@ -375,7 +375,7 @@ for reusable test support:
 
 - `factories/` builds valid entities and value objects with overridable fields;
 - `fixtures/` contains stable profiling and scenario data;
-- `expects/` contains custom Jest matchers and assertion helpers;
+- `expects/` contains custom Vitest matchers and assertion helpers;
 - `mocks/` contains HTTP request and infrastructure test doubles.
 
 Test domain rules without NestJS. Test use cases with controlled repository doubles. Test REST
@@ -395,8 +395,8 @@ pnpm --filter @warehouser/server build
 ### Running the integration tier
 
 Integration specs are named `*.integration.spec.ts`. The suffix is what separates the two
-commands: `jest.config.cjs` excludes it by path, so the unit tier above never touches a database,
-and `jest.pglite.config.cjs` opts it back in. Naming a spec that way is the whole opt-in — there
+commands: `vitest.config.ts` excludes it by path, so the unit tier above never touches a database,
+and `vitest.pglite.config.ts` opts it back in. Naming a spec that way is the whole opt-in — there
 is no environment flag to remember, and an integration spec cannot be run against a developer's
 own database by accident. To run them:
 
@@ -412,8 +412,9 @@ which is what makes a database _per test file_ affordable.
 That per-file isolation is why nothing has to coordinate cleanup across suites: a suite cannot
 corrupt a database no other suite shares.
 
-Specs are not aware of any of it. `jest.pglite.config.cjs` uses `moduleNameMapper` to swap two
-production modules for PGlite-backed equivalents:
+Specs are not aware of any of it. `vitest.pglite.config.ts` uses `resolve.alias` to swap two
+production modules for PGlite-backed equivalents. Vite resolves aliases ahead of every plugin, so
+these two entries win over the `paths` resolution that finds every other `shared/...` specifier:
 
 | Production module                 | Replaced by                             |
 | --------------------------------- | --------------------------------------- |
@@ -432,9 +433,10 @@ aggregates returning no rows at all, and suites hanging — non-deterministicall
 
 Two consequences of the in-process driver are worth knowing:
 
-- The tier runs under `NODE_OPTIONS=--experimental-vm-modules` (already in the `test:integration`
-  script). PGlite loads its WebAssembly through a dynamic `import()`, which Jest's VM context
-  refuses without that flag.
+- Each test file leaves a PGlite WebAssembly heap behind that nothing releases, and the forks pool
+  reuses a worker process across files, so the heaps accumulate. `vitest.pglite.config.ts` caps the
+  tier at `maxWorkers: '50%'` for that reason — these specs are bound by PGlite's single-threaded
+  WebAssembly, not by core count, so the cap costs no wall time.
 - `pglite-driver.ts` re-registers a `bigint` parser so `count(*)` yields a string, as
   `node-postgres` does. Without it a spec asserting `{ count: '1' }` sees `{ count: 1 }` and fails
   for a reason unrelated to what it tests.
@@ -467,7 +469,7 @@ proving anything, which is worse than not having them.
 Specs named `*.architectural.spec.ts` assert the shape of the source tree rather than what it
 computes. They live in `src/test/architectural/`, parse every production file with
 [ts-morph](https://ts-morph.com), and — like the integration tier — are excluded from
-`jest.config.cjs` by path and opted back in by their own config, because parsing the whole tree
+`vitest.config.ts` by path and opted back in by their own config, because parsing the whole tree
 costs seconds where a unit spec costs milliseconds:
 
 ```sh

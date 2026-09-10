@@ -9,6 +9,7 @@ import { find, map } from 'lodash';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import type { CustomerEntity } from 'shared/domain/entities/customer.entity';
 import type { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
+import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>
   `00000000-0000-4000-8000-${suffix.padStart(12, '0')}`;
@@ -74,14 +75,14 @@ const storedAddresses = (): CustomerDeliveryAddressEntity[] => [
 const directoryRepositoryDouble = (
   rows: CustomerEntity[] = [storedCustomer()],
 ) => ({
-  findCustomer: jest.fn((id: string, inWarehouseId: string) =>
+  findCustomer: vi.fn((id: string, inWarehouseId: string) =>
     Promise.resolve(
       find(rows, (row) => row.id === id && row.warehouseId === inWarehouseId) ??
         null,
     ),
   ),
-  findCustomerByName: jest.fn().mockResolvedValue(null),
-  setCustomerDeactivation: jest.fn(
+  findCustomerByName: vi.fn().mockResolvedValue(null),
+  setCustomerDeactivation: vi.fn(
     (id: string, inWarehouseId: string, nextDeactivatedAt: Date | null) => {
       const row = find(
         rows,
@@ -103,13 +104,13 @@ const directoryRepositoryDouble = (
 const addressBookRepositoryDouble = (
   addresses: CustomerDeliveryAddressEntity[] = storedAddresses(),
 ) => ({
-  listDeliveryAddresses: jest.fn().mockResolvedValue(addresses),
-  lockDeliveryAddresses: jest.fn().mockResolvedValue(addresses),
-  addDeliveryAddress: jest.fn(),
-  reviseDeliveryAddress: jest.fn(),
-  setMainDeliveryAddress: jest.fn(),
-  deactivateDeliveryAddress: jest.fn(),
-  reactivateDeliveryAddress: jest.fn(),
+  listDeliveryAddresses: vi.fn().mockResolvedValue(addresses),
+  lockDeliveryAddresses: vi.fn().mockResolvedValue(addresses),
+  addDeliveryAddress: vi.fn(),
+  reviseDeliveryAddress: vi.fn(),
+  setMainDeliveryAddress: vi.fn(),
+  deactivateDeliveryAddress: vi.fn(),
+  reactivateDeliveryAddress: vi.fn(),
 });
 
 const commandWith = (

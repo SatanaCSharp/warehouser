@@ -1,6 +1,8 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { describe, expect, it } from 'vitest';
+
 // T13 DoD: "users imports no `access/*` or `auth/*` feature-owned file" and
 // "`UsersModule` is registered in `AppModule`". This mirrors
 // `shared/domain/repositories/repository-boundaries.spec.ts`'s static-source-

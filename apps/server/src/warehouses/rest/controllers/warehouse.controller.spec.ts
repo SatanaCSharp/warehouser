@@ -18,6 +18,7 @@ import { REQUIRED_WORKSPACE_PERMISSION_KEY } from 'shared/decorators/required-wo
 import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
 import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
 import { WorkspaceAccessGuard } from 'shared/guards/workspace-access.guard';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { WarehouseController } from 'warehouses/rest/controllers/warehouse.controller';
 import type { ArchiveWarehouseCommand } from 'warehouses/usecases/commands/archive-warehouse.command';
 import type { CreateWarehouseCommand } from 'warehouses/usecases/commands/create-warehouse.command';
@@ -63,27 +64,27 @@ const method = (name: keyof WarehouseController): object =>
 // eslint-disable-next-line max-lines-per-function -- one suite per controller, with one use-case double per route
 describe('WarehouseController', () => {
   const listWarehouses = {
-    execute: jest.fn(),
+    execute: vi.fn(),
   } as unknown as ListWorkspaceWarehousesQuery;
   const createWarehouse = {
-    execute: jest.fn(),
+    execute: vi.fn(),
   } as unknown as CreateWarehouseCommand;
   const renameWarehouse = {
-    execute: jest.fn(),
+    execute: vi.fn(),
   } as unknown as RenameWarehouseCommand;
   const archiveWarehouse = {
-    execute: jest.fn(),
+    execute: vi.fn(),
   } as unknown as ArchiveWarehouseCommand;
   const restoreWarehouse = {
-    execute: jest.fn(),
+    execute: vi.fn(),
   } as unknown as RestoreWarehouseCommand;
   // T11/AC-10 — the Warehouse's own Delivery Address, the fifth and sixth
   // routes whose subject is the Warehouse record.
   const readWarehouseDeliveryAddress = {
-    execute: jest.fn(),
+    execute: vi.fn(),
   } as unknown as ReadWarehouseDeliveryAddressQuery;
   const setWarehouseDeliveryAddress = {
-    execute: jest.fn(),
+    execute: vi.fn(),
   } as unknown as SetWarehouseDeliveryAddressCommand;
 
   const controller = new WarehouseController(
@@ -96,7 +97,7 @@ describe('WarehouseController', () => {
     setWarehouseDeliveryAddress,
   );
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => vi.clearAllMocks());
 
   it('exposes every path of openapi.yaml under one Workspace-scoped prefix', () => {
     expect(Reflect.getMetadata(PATH_METADATA, WarehouseController)).toBe(
@@ -199,7 +200,7 @@ describe('WarehouseController', () => {
   );
 
   it('lists the Workspace Warehouses with their archived state', async () => {
-    jest.mocked(listWarehouses.execute).mockResolvedValue([
+    vi.mocked(listWarehouses.execute).mockResolvedValue([
       { id: warehouseId, name: 'Test Warehouse North', archivedAt: null },
       {
         id: id(11),
@@ -226,7 +227,7 @@ describe('WarehouseController', () => {
   });
 
   it('creates a Warehouse under WAREHOUSES:CREATE and returns 201', async () => {
-    jest.mocked(createWarehouse.execute).mockResolvedValue({
+    vi.mocked(createWarehouse.execute).mockResolvedValue({
       id: warehouseId,
       name: 'Test Warehouse North',
       archivedAt: null,
@@ -252,7 +253,7 @@ describe('WarehouseController', () => {
   });
 
   it('passes the path Warehouse identifier to the rename command', async () => {
-    jest.mocked(renameWarehouse.execute).mockResolvedValue({
+    vi.mocked(renameWarehouse.execute).mockResolvedValue({
       id: warehouseId,
       name: 'Renamed Warehouse',
       archivedAt: null,
@@ -278,7 +279,7 @@ describe('WarehouseController', () => {
   // previously narrowed its return type to `Pick<Warehouse, 'id' | 'name'>`
   // and dropped `archivedAt`, which fails that validation at runtime.
   it('AC-11: returns the full Warehouse body, satisfying the same warehouseSchema the web client validates against', async () => {
-    jest.mocked(renameWarehouse.execute).mockResolvedValue({
+    vi.mocked(renameWarehouse.execute).mockResolvedValue({
       id: warehouseId,
       name: 'Renamed Warehouse',
       archivedAt: null,
@@ -299,7 +300,7 @@ describe('WarehouseController', () => {
   });
 
   it('archives a Warehouse when `archived: true` is submitted (AC-11)', async () => {
-    jest.mocked(archiveWarehouse.execute).mockResolvedValue({
+    vi.mocked(archiveWarehouse.execute).mockResolvedValue({
       id: warehouseId,
       name: 'Test Warehouse North',
       archivedAt: new Date('2026-08-01T09:00:00.000Z'),
@@ -319,7 +320,7 @@ describe('WarehouseController', () => {
   });
 
   it('restores a Warehouse when `archived: false` is submitted (AC-11)', async () => {
-    jest.mocked(restoreWarehouse.execute).mockResolvedValue({
+    vi.mocked(restoreWarehouse.execute).mockResolvedValue({
       id: warehouseId,
       name: 'Test Warehouse North',
       archivedAt: null,
@@ -354,7 +355,7 @@ describe('WarehouseController', () => {
       'archiving',
       true,
       (): void => {
-        jest.mocked(archiveWarehouse.execute).mockResolvedValue({
+        vi.mocked(archiveWarehouse.execute).mockResolvedValue({
           id: warehouseId,
           name: 'Test Warehouse North',
           archivedAt: new Date('2026-08-01T09:00:00.000Z'),
@@ -367,7 +368,7 @@ describe('WarehouseController', () => {
       'restoring',
       false,
       (): void => {
-        jest.mocked(restoreWarehouse.execute).mockResolvedValue({
+        vi.mocked(restoreWarehouse.execute).mockResolvedValue({
           id: warehouseId,
           name: 'Test Warehouse North',
           archivedAt: null,
@@ -428,7 +429,7 @@ describe('WarehouseController', () => {
     '%s propagates an infrastructure failure unchanged',
     async (_name, invoke, usecase) => {
       const failure = new Error('connection terminated');
-      jest.mocked(usecase.execute).mockRejectedValue(failure);
+      vi.mocked(usecase.execute).mockRejectedValue(failure);
 
       await expect(invoke()).rejects.toBe(failure);
     },

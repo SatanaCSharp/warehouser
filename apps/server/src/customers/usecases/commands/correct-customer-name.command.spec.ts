@@ -10,6 +10,7 @@ import { find } from 'lodash';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import type { CustomerEntity } from 'shared/domain/entities/customer.entity';
 import type { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
+import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>
   `00000000-0000-4000-8000-${suffix.padStart(12, '0')}`;
@@ -60,13 +61,13 @@ const storedAddress = (): CustomerDeliveryAddressEntity => ({
 const directoryRepositoryDouble = (
   rows: readonly CustomerEntity[] = [storedCustomer()],
 ) => ({
-  findCustomer: jest.fn((id: string, inWarehouseId: string) =>
+  findCustomer: vi.fn((id: string, inWarehouseId: string) =>
     Promise.resolve(
       find(rows, (row) => row.id === id && row.warehouseId === inWarehouseId) ??
         null,
     ),
   ),
-  findCustomerByName: jest.fn((inWarehouseId: string, name: string) =>
+  findCustomerByName: vi.fn((inWarehouseId: string, name: string) =>
     Promise.resolve(
       find(
         rows,
@@ -74,17 +75,17 @@ const directoryRepositoryDouble = (
       ) ?? null,
     ),
   ),
-  correctCustomerName: jest.fn().mockResolvedValue('applied'),
+  correctCustomerName: vi.fn().mockResolvedValue('applied'),
 });
 
 const addressBookRepositoryDouble = () => ({
-  listDeliveryAddresses: jest.fn().mockResolvedValue([storedAddress()]),
-  lockDeliveryAddresses: jest.fn().mockResolvedValue([storedAddress()]),
-  addDeliveryAddress: jest.fn(),
-  reviseDeliveryAddress: jest.fn(),
-  setMainDeliveryAddress: jest.fn(),
-  deactivateDeliveryAddress: jest.fn(),
-  reactivateDeliveryAddress: jest.fn(),
+  listDeliveryAddresses: vi.fn().mockResolvedValue([storedAddress()]),
+  lockDeliveryAddresses: vi.fn().mockResolvedValue([storedAddress()]),
+  addDeliveryAddress: vi.fn(),
+  reviseDeliveryAddress: vi.fn(),
+  setMainDeliveryAddress: vi.fn(),
+  deactivateDeliveryAddress: vi.fn(),
+  reactivateDeliveryAddress: vi.fn(),
 });
 
 const commandWith = (

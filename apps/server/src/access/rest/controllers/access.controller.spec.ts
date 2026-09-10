@@ -21,6 +21,7 @@ import { READ_TOLERANT_KEY } from 'shared/access/archived-tolerant-read.decorato
 import { REQUIRED_PERMISSION_KEY } from 'shared/decorators/required-permission.decorator';
 import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
 import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const id = (suffix: number): string =>
   `00000000-0000-4000-8000-${suffix.toString().padStart(12, '0')}`;
@@ -42,18 +43,18 @@ const method = (name: keyof AccessController): object =>
     ?.value as object;
 
 describe('AccessController', () => {
-  const current = { execute: jest.fn() } as unknown as ReadCurrentAccessQuery;
-  const roles = { execute: jest.fn() } as unknown as ListAccessRolesQuery;
+  const current = { execute: vi.fn() } as unknown as ReadCurrentAccessQuery;
+  const roles = { execute: vi.fn() } as unknown as ListAccessRolesQuery;
   const permissions = {
-    execute: jest.fn(),
+    execute: vi.fn(),
   } as unknown as ListAccessPermissionsQuery;
-  const members = { execute: jest.fn() } as unknown as ListAccessMembersQuery;
-  const create = { execute: jest.fn() } as unknown as CreateRoleCommand;
-  const update = { execute: jest.fn() } as unknown as UpdateRoleCommand;
-  const assign = { execute: jest.fn() } as unknown as AssignMemberRoleCommand;
-  const remove = { execute: jest.fn() } as unknown as DeleteRoleCommand;
+  const members = { execute: vi.fn() } as unknown as ListAccessMembersQuery;
+  const create = { execute: vi.fn() } as unknown as CreateRoleCommand;
+  const update = { execute: vi.fn() } as unknown as UpdateRoleCommand;
+  const assign = { execute: vi.fn() } as unknown as AssignMemberRoleCommand;
+  const remove = { execute: vi.fn() } as unknown as DeleteRoleCommand;
   const transfer = {
-    execute: jest.fn(),
+    execute: vi.fn(),
   } as unknown as TransferWarehouseManagerCommand;
   const controller = new AccessController(
     current,
@@ -67,7 +68,7 @@ describe('AccessController', () => {
     transfer,
   );
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => vi.clearAllMocks());
 
   it('groups access reads and mutations on one controller', () => {
     expect(AccessController.prototype.readCurrent).toBeDefined();
@@ -75,10 +76,8 @@ describe('AccessController', () => {
   });
 
   it('delegates Role create and update with safe complete projections', async () => {
-    jest
-      .mocked(create.execute)
-      .mockResolvedValue({ id: id(4), name: 'Picker' });
-    jest.mocked(update.execute).mockResolvedValue({ id: id(4), name: 'Lead' });
+    vi.mocked(create.execute).mockResolvedValue({ id: id(4), name: 'Picker' });
+    vi.mocked(update.execute).mockResolvedValue({ id: id(4), name: 'Lead' });
 
     await expect(
       controller.createRole(request(PermissionId.ROLES_CREATE), {
@@ -101,7 +100,7 @@ describe('AccessController', () => {
   ] as const)(
     '%s scopes its query to the guard-derived Warehouse',
     async (handlerName, query, permission) => {
-      jest.mocked(query.execute).mockResolvedValue({
+      vi.mocked(query.execute).mockResolvedValue({
         items: [],
         hasNext: false,
         hasPrev: false,
@@ -144,7 +143,7 @@ describe('AccessController', () => {
   });
 
   it('reads the actor projection of the Warehouse named in the path, declaring no Warehouse Permission (AC-05, OQ-2)', async () => {
-    jest.mocked(current.execute).mockResolvedValue({
+    vi.mocked(current.execute).mockResolvedValue({
       warehouseId: id(2),
       roleId: id(3),
       roleKind: 'custom',
@@ -187,7 +186,7 @@ describe('AccessController', () => {
   );
 
   it('transfers the Manager Role of the guard-derived Warehouse and names both affected members (AC-36)', async () => {
-    jest.mocked(transfer.execute).mockResolvedValue({ managerId: id(5) });
+    vi.mocked(transfer.execute).mockResolvedValue({ managerId: id(5) });
 
     await expect(
       controller.transferManager(

@@ -8,6 +8,7 @@ import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
 import { AdjustItemOnHandCommand } from 'items/usecases/commands/adjust-item-on-hand.command';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>
   `00000000-0000-4000-8000-${suffix.padStart(12, '0')}`;
@@ -38,11 +39,11 @@ const itemCatalogueRepositoryDouble = (
     deactivatedAt: Date | null;
   } | null = { id: itemId, warehouseId, deactivatedAt: null },
 ) => ({
-  findById: jest.fn().mockResolvedValue(item),
+  findById: vi.fn().mockResolvedValue(item),
 });
 
 const itemStockAdjustmentRepositoryDouble = () => ({
-  recordAdjustment: jest.fn().mockResolvedValue(undefined),
+  recordAdjustment: vi.fn().mockResolvedValue(undefined),
 });
 
 const commandWith = (

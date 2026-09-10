@@ -1,4 +1,5 @@
 import { isDefined, isEmpty, isNull, isProd, isUndefined } from 'predicates';
+import { describe, expect, it } from 'vitest';
 
 describe('predicates', () => {
   describe('isDefined', () => {

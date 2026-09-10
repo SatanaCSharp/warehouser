@@ -13,6 +13,7 @@ import {
   DeliveryMode,
   EndingKind,
 } from 'purchase-drafts/domain/value-objects/delivery-mode';
+import { describe, expect, it } from 'vitest';
 
 const AN_ADDRESS_ID = '00000000-0000-4000-8000-000000000301';
 const AN_ENDING_TIME = new Date('2026-09-18T10:00:00.000Z');

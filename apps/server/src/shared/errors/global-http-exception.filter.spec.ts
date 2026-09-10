@@ -11,6 +11,7 @@ import {
   GlobalHttpExceptionFilter,
   systemErrors,
 } from 'shared/errors/global-http-exception.filter';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 
 const createHost = (
@@ -19,8 +20,8 @@ const createHost = (
     password: 'secret-password',
   },
 ) => {
-  const status = jest.fn().mockReturnThis();
-  const json = jest.fn();
+  const status = vi.fn().mockReturnThis();
+  const json = vi.fn();
   const request = {
     headers: {
       cookie: 'warehouser_session=opaque-secret',
@@ -41,10 +42,10 @@ const createHost = (
 };
 
 describe('GlobalHttpExceptionFilter', () => {
-  const logger = { error: jest.fn(), warn: jest.fn() };
+  const logger = { error: vi.fn(), warn: vi.fn() };
   const filter = new GlobalHttpExceptionFilter(logger);
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => vi.clearAllMocks());
 
   it.each([
     [
@@ -216,8 +217,8 @@ describe('GlobalHttpExceptionFilter', () => {
 
 describe('GlobalHttpExceptionFilter on a Zod request-validation refusal', () => {
   const filter = new GlobalHttpExceptionFilter({
-    error: jest.fn(),
-    warn: jest.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
   });
 
   // The shape a recorded demand arrives in — an identifier, a customer name, a

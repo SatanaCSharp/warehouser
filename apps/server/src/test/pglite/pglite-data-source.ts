@@ -1,19 +1,20 @@
 /* eslint-disable no-relative-import-paths/no-relative-import-paths --
- * `jest.pglite.config.cjs` maps this module over `shared/database/data-source`
- * through `moduleNameMapper`, which resolves the mapped path itself. Keeping
+ * `vitest.pglite.config.ts` maps this module over `shared/database/data-source`
+ * through `resolve.alias`, which resolves the aliased path itself. Keeping
  * this file's own imports relative avoids depending on that resolution twice.
  */
 /**
  * The database every spec in the PGlite tier talks to.
  *
- * `jest.pglite.config.cjs` maps this module over
+ * `vitest.pglite.config.ts` maps this module over
  * `shared/database/data-source`, so specs keep importing the production
  * singleton by its usual path and transparently get an in-process PGlite
  * instead of a PostgreSQL connection. Production code is untouched: it never
  * learns that a test database exists.
  *
- * Jest gives every test file a fresh module registry, so each file evaluates
- * this module once and gets a database of its own, restored from the template
+ * Vitest gives every test file a fresh module registry (`isolate: true`), so
+ * each file evaluates this module once and gets a database of its own,
+ * restored from the template
  * `global-setup` migrated. That is what removes the whole class of
  * cross-file interference the PostgreSQL tier has to manage by hand with
  * `TRUNCATE ... CASCADE` and `restore-catalogues.setup.ts`.
@@ -26,17 +27,17 @@
  */
 import 'reflect-metadata';
 
-import { join } from 'node:path';
-
 import { DataSource } from 'typeorm';
 
+import { entities } from '../../shared/database/entities';
 import { pgliteDriver } from './pglite-driver';
-
-const sourceDirectory = join(process.cwd(), 'src');
 
 export default new DataSource({
   type: 'postgres',
   driver: pgliteDriver,
-  entities: [join(sourceDirectory, '**/*.entity.ts')],
+  // The static list, not a `**/*.entity.ts` glob: TypeORM is externalized to
+  // Node here, so a glob would have it `require()` the `.ts` files itself,
+  // outside the SWC transform, and Node's type stripping rejects decorators.
+  entities,
   synchronize: false,
 });

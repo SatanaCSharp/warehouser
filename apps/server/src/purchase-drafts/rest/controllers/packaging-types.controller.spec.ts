@@ -12,6 +12,7 @@ import { READ_TOLERANT_KEY } from 'shared/access/archived-tolerant-read.decorato
 import { REQUIRED_PERMISSION_KEY } from 'shared/decorators/required-permission.decorator';
 import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
 import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
+import { describe, expect, it } from 'vitest';
 
 // T16 §What — "Serve the Packaging Type catalogue at `/packaging-types` so no literal segment
 // competes with a `{purchaseDraftId}` parameter" (openapi.yaml `listPackagingTypes`, sad.md §7).

@@ -8,6 +8,7 @@
 // unchanged — `sad.md` §6.5 step 5, "returns the Demand Lines whole, nothing paged".
 import { ReadConsolidatedDemandQuery } from 'customer-orders/usecases/queries/read-consolidated-demand.query';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { describe, expect, it, vi } from 'vitest';
 
 const warehouseId = '00000000-0000-4000-8000-000000000001';
 const actorId = '00000000-0000-4000-8000-000000000002';
@@ -49,7 +50,7 @@ const demandLines = [
 ];
 
 const consolidatedDemandRepositoryDouble = () => ({
-  readConsolidatedDemand: jest.fn().mockResolvedValue(demandLines),
+  readConsolidatedDemand: vi.fn().mockResolvedValue(demandLines),
 });
 
 describe('ReadConsolidatedDemandQuery', () => {

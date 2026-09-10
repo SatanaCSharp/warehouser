@@ -11,6 +11,7 @@ import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { ItemEntity } from 'shared/domain/entities/item.entity';
 import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
 import { repositoryDouble } from 'test/doubles/repository-double';
+import { describe, expect, it, vi } from 'vitest';
 
 const warehouseOneId = '00000000-0000-4000-8000-000000000001';
 const warehouseTwoId = '00000000-0000-4000-8000-000000000002';
@@ -32,8 +33,8 @@ const currentUserOf = (warehouseId: string): AccessCurrentUser => ({
 // another Warehouse is never consulted and stands as an unrelated Item).
 const itemCatalogueRepositoryDouble = () =>
   repositoryDouble<ItemCatalogueRepository>()({
-    createItem: jest.fn().mockResolvedValue(undefined),
-    findBySku: jest.fn((warehouseId: string, sku: string) =>
+    createItem: vi.fn().mockResolvedValue(undefined),
+    findBySku: vi.fn((warehouseId: string, sku: string) =>
       Promise.resolve(
         warehouseId === warehouseOneId && sku === 'TEST-SKU-0001'
           ? // Projected to the three fields the command reads off the hit; the

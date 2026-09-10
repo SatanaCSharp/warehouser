@@ -6,6 +6,7 @@
 // "read from the projection the destination already fetches").
 import { ListPurchaseDraftsQuery } from 'purchase-drafts/usecases/queries/list-purchase-drafts.query';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { describe, expect, it, vi } from 'vitest';
 
 const warehouseId = '00000000-0000-4000-8000-000000000001';
 const actorId = '00000000-0000-4000-8000-000000000002';
@@ -63,7 +64,7 @@ const draftSummaries = [
 ];
 
 const purchaseDraftReadRepositoryDouble = () => ({
-  listDrafts: jest.fn().mockResolvedValue(draftSummaries),
+  listDrafts: vi.fn().mockResolvedValue(draftSummaries),
 });
 
 describe('ListPurchaseDraftsQuery', () => {

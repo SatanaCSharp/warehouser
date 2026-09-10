@@ -6,6 +6,7 @@ import {
   type TransactionalMetadata,
 } from 'shared/decorators/transactional.decorator';
 import type { IsolationLevel } from 'typeorm/driver/types/IsolationLevel';
+import { describe, expect, it } from 'vitest';
 
 const getTransactionalMetadata = (
   target: object,

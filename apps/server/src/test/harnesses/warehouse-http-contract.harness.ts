@@ -21,6 +21,7 @@ import { WorkspacePermissionEntity } from 'shared/domain/entities/workspace-perm
 import { WorkspaceRoleEntity } from 'shared/domain/entities/workspace-role.entity';
 import { WorkspaceRolePermissionEntity } from 'shared/domain/entities/workspace-role-permission.entity';
 import { GlobalHttpExceptionFilter } from 'shared/errors/global-http-exception.filter';
+import { afterAll, afterEach, beforeAll } from 'vitest';
 
 export const now = new Date('2026-08-12T12:00:00.000Z');
 

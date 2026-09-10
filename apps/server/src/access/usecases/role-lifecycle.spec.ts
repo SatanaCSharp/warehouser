@@ -8,6 +8,7 @@ import {
   type TransactionalMetadata,
 } from 'shared/decorators/transactional.decorator';
 import { RoleLifecycleRepository } from 'shared/domain/repositories/role-lifecycle.repository';
+import { describe, expect, it, vi } from 'vitest';
 
 const warehouseId = '00000000-0000-4000-8000-000000000001';
 const roleId = '00000000-0000-4000-8000-000000000002';
@@ -26,17 +27,17 @@ const currentUser = (
 });
 
 const repositoryDouble = () => ({
-  createCustomRole: jest.fn().mockResolvedValue(undefined),
-  findAssignablePermissions: jest
+  createCustomRole: vi.fn().mockResolvedValue(undefined),
+  findAssignablePermissions: vi
     .fn()
     .mockImplementation((permissionIds: readonly string[]) =>
       Promise.resolve(permissionIds.map((id) => ({ id }))),
     ),
-  lockWarehouse: jest.fn().mockResolvedValue({ id: warehouseId }),
-  lockCustomRole: jest.fn().mockResolvedValue({ id: roleId, kind: 'custom' }),
-  findRoleByName: jest.fn().mockResolvedValue(null),
-  updateCustomRole: jest.fn().mockResolvedValue(undefined),
-  replaceCustomRolePermissions: jest.fn().mockResolvedValue(undefined),
+  lockWarehouse: vi.fn().mockResolvedValue({ id: warehouseId }),
+  lockCustomRole: vi.fn().mockResolvedValue({ id: roleId, kind: 'custom' }),
+  findRoleByName: vi.fn().mockResolvedValue(null),
+  updateCustomRole: vi.fn().mockResolvedValue(undefined),
+  replaceCustomRolePermissions: vi.fn().mockResolvedValue(undefined),
 });
 
 describe('custom Role lifecycle commands', () => {

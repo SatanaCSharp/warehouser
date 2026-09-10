@@ -29,6 +29,15 @@ import {
 // and the text below describe the statements actually issued rather than the API chosen to issue
 // them.
 import { PostgresQueryRunner } from 'typeorm/driver/postgres/PostgresQueryRunner';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 
 const now = new Date('2026-09-07T09:00:00.000Z');
 const raisedAt = new Date('2026-09-07T10:00:00.000Z');
@@ -245,7 +254,7 @@ const amendInTransaction = (
 const captureStatements = async <T>(
   operation: () => Promise<T>,
 ): Promise<{ result: T; statements: string[] }> => {
-  const spy = jest.spyOn(PostgresQueryRunner.prototype, 'query');
+  const spy = vi.spyOn(PostgresQueryRunner.prototype, 'query');
   const before = spy.mock.calls.length;
   const result = await operation();
   const statements = spy.mock.calls
@@ -269,7 +278,7 @@ const explainLockStatement = async (
   rejectionId: string,
   warehouseId: string,
 ): Promise<string> => {
-  const spy = jest.spyOn(PostgresQueryRunner.prototype, 'query');
+  const spy = vi.spyOn(PostgresQueryRunner.prototype, 'query');
   const before = spy.mock.calls.length;
   await lockInTransaction(rejectionId, warehouseId);
   const call = spy.mock.calls

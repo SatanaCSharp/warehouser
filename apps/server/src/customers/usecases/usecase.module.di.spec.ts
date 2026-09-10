@@ -14,6 +14,7 @@ import { ListCustomersQuery } from 'customers/usecases/queries/list-customers.qu
 import { ReadCustomerQuery } from 'customers/usecases/queries/read-customer.query';
 import { CustomersUsecaseModule } from 'customers/usecases/usecase.module';
 import { DataSource } from 'typeorm';
+import { describe, expect, it } from 'vitest';
 
 // `CustomersUsecaseModule` declares its own repositories as local providers rather than reaching
 // them from the `@Global()` `DomainModule`, exactly as `customer-orders` and `purchase-drafts` do.

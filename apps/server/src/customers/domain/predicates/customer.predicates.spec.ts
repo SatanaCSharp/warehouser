@@ -9,6 +9,7 @@ import {
   isDeliveryAddressText,
   isMainDeliveryAddressOf,
 } from 'customers/domain/predicates/customer.predicates';
+import { describe, expect, it } from 'vitest';
 
 const address = (
   overrides: Partial<DeliveryAddressState> = {},

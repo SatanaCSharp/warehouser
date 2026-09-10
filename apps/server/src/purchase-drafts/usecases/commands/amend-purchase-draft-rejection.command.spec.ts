@@ -27,6 +27,7 @@ import {
   type TransactionalMetadata,
 } from 'shared/decorators/transactional.decorator';
 import type { LockedPurchaseDraftLineRejection } from 'shared/domain/repositories/purchase-draft-rejection.repository';
+import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>
   `00000000-0000-4000-8000-${suffix.padStart(12, '0')}`;
@@ -69,8 +70,8 @@ const commandWith = ({
   // guard — is a `TypeError`, which is how "the precondition is the Rejection, not the draft's
   // state" is enforced rather than merely asserted.
   const rejectionRepository = {
-    lockRejectionForAmendment: jest.fn().mockResolvedValue(locked),
-    amendRejection: jest.fn().mockResolvedValue({ affected }),
+    lockRejectionForAmendment: vi.fn().mockResolvedValue(locked),
+    amendRejection: vi.fn().mockResolvedValue({ affected }),
   };
   const command = new AmendPurchaseDraftRejectionCommand(
     rejectionRepository as never,

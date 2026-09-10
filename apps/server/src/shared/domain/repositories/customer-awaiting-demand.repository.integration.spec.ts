@@ -19,6 +19,15 @@ import {
   buildWorkspace,
 } from 'test/factories/entity-factories';
 import { PostgresQueryRunner } from 'typeorm/driver/postgres/PostgresQueryRunner';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 
 const now = new Date('2026-09-03T09:00:00.000Z');
 const later = new Date('2026-09-03T12:00:00.000Z');
@@ -222,7 +231,7 @@ describe('CustomerAwaitingDemandRepository', () => {
       deliveryAddressId: secondAddressId,
     });
 
-    const spy = jest.spyOn(PostgresQueryRunner.prototype, 'query');
+    const spy = vi.spyOn(PostgresQueryRunner.prototype, 'query');
     const before = spy.mock.calls.length;
     const awaiting = await repository.readAwaitingCustomerOrders(
       seeded.customerId,

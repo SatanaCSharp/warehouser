@@ -7,6 +7,15 @@ import { DbTransactionContext } from 'shared/database/db-transaction-context.ser
 import { AccessProvisioningRepository } from 'shared/domain/repositories/access-provisioning.repository';
 import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
 import { WorkspaceProvisioningRepository } from 'shared/domain/repositories/workspace-provisioning.repository';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 // `WorkspaceProvisioningService` does not exist yet (T14): this import is the
 // RED for AC-01/AC-02. sad.md §6.1/§4: `RegisterCommand` stops calling
 // `ProvisionInitialAccessCommand` directly and instead calls this
@@ -215,7 +224,7 @@ describe('RegisterCommand workspace provisioning transaction', () => {
 
   it('rolls identity and session back when Workspace provisioning fails', async () => {
     const unavailableProvisioning = {
-      provisionRegistration: jest
+      provisionRegistration: vi
         .fn()
         .mockRejectedValue(new Error('workspace provisioning unavailable')),
     } as unknown as WorkspaceProvisioningService;

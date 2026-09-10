@@ -11,6 +11,7 @@ import type { AssignWarehouseMembershipCommand } from 'access/usecases/commands/
 import type { RevokeWarehouseMembershipCommand } from 'access/usecases/commands/revoke-warehouse-membership.command';
 import type { ListAssignableWarehouseRolesQuery } from 'access/usecases/queries/list-assignable-warehouse-roles.query';
 import type { WorkspaceAccessRequest } from 'shared/access/access-request';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const id = (suffix: number): string =>
   `00000000-0000-4000-8000-${suffix.toString().padStart(12, '0')}`;
@@ -47,13 +48,13 @@ const method = (name: keyof WarehouseAccessController): object =>
 // `tests/refactor/route-table.spec.mjs` (CR-AC-11).
 describe('WarehouseAccessController', () => {
   const listAssignableRoles = {
-    execute: jest.fn(),
+    execute: vi.fn(),
   } as unknown as ListAssignableWarehouseRolesQuery;
   const assignMembership = {
-    execute: jest.fn(),
+    execute: vi.fn(),
   } as unknown as AssignWarehouseMembershipCommand;
   const revokeMembership = {
-    execute: jest.fn(),
+    execute: vi.fn(),
   } as unknown as RevokeWarehouseMembershipCommand;
 
   const controller = new WarehouseAccessController(
@@ -62,10 +63,10 @@ describe('WarehouseAccessController', () => {
     revokeMembership,
   );
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => vi.clearAllMocks());
 
   it('returns only identifiers and names of assignable Roles (AC-23a)', async () => {
-    jest.mocked(listAssignableRoles.execute).mockResolvedValue([
+    vi.mocked(listAssignableRoles.execute).mockResolvedValue([
       { id: id(22), name: 'Picker' },
       { id: id(23), name: 'Site Supervisor' },
     ]);
@@ -86,7 +87,7 @@ describe('WarehouseAccessController', () => {
   });
 
   it('assigns a Warehouse membership and returns 201 (AC-23)', async () => {
-    jest.mocked(assignMembership.execute).mockResolvedValue({
+    vi.mocked(assignMembership.execute).mockResolvedValue({
       userId: id(4),
       warehouseId,
       roleId: id(22),
@@ -115,9 +116,10 @@ describe('WarehouseAccessController', () => {
   });
 
   it('revokes a Warehouse membership and returns no content (AC-25b)', async () => {
-    jest
-      .mocked(revokeMembership.execute)
-      .mockResolvedValue({ userId: id(4), warehouseId });
+    vi.mocked(revokeMembership.execute).mockResolvedValue({
+      userId: id(4),
+      warehouseId,
+    });
 
     await expect(
       controller.revokeMembership(
@@ -174,7 +176,7 @@ describe('WarehouseAccessController', () => {
       const failure = new ApplicationError(
         ErrorCode.WORKSPACE_TARGET_UNAVAILABLE,
       );
-      jest.mocked(usecase.execute).mockRejectedValue(failure);
+      vi.mocked(usecase.execute).mockRejectedValue(failure);
 
       await expect(invoke()).rejects.toBe(failure);
     },

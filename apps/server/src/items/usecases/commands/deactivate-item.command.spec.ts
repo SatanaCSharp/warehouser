@@ -12,6 +12,7 @@ import { DeactivateItemCommand } from 'items/usecases/commands/deactivate-item.c
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
 import { repositoryDouble } from 'test/doubles/repository-double';
+import { describe, expect, it, vi } from 'vitest';
 
 const warehouseId = '00000000-0000-4000-8000-000000000001';
 const actorId = '00000000-0000-4000-8000-000000000002';
@@ -33,8 +34,8 @@ const itemCatalogueRepositoryDouble = (
   item: { id: string; warehouseId: string; deactivatedAt: Date | null } | null,
 ) =>
   repositoryDouble<ItemCatalogueRepository>()({
-    findById: jest.fn().mockResolvedValue(item),
-    setDeactivatedAt: jest.fn().mockResolvedValue(undefined),
+    findById: vi.fn().mockResolvedValue(item),
+    setDeactivatedAt: vi.fn().mockResolvedValue(undefined),
   });
 
 describe('DeactivateItemCommand', () => {

@@ -1,4 +1,5 @@
 import { stringToEnumValue } from 'type-guards';
+import { describe, expect, it } from 'vitest';
 
 enum TestEnum {
   FOO = 'FOO',

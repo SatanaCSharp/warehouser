@@ -27,6 +27,15 @@ import {
   buildWorkspace,
 } from 'test/factories/entity-factories';
 import { PostgresQueryRunner } from 'typeorm/driver/postgres/PostgresQueryRunner';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 
 const now = new Date('2026-08-26T10:00:00.000Z');
 const later = new Date('2026-08-26T12:00:00.000Z');
@@ -384,7 +393,7 @@ describe('CustomerOrderLifecycleRepository', () => {
     await seedAllocation(seeded, customerOrderId, 30);
     await seedAllocation(seeded, customerOrderId, 50);
 
-    const spy = jest.spyOn(PostgresQueryRunner.prototype, 'query');
+    const spy = vi.spyOn(PostgresQueryRunner.prototype, 'query');
     const before = spy.mock.calls.length;
     const locked = await transactions.executeInTransaction({}, () =>
       repository.lockOrderWithAllocatedTotal(
@@ -559,7 +568,7 @@ describe('CustomerOrderLifecycleRepository', () => {
       customerName: null,
     });
 
-    const spy = jest.spyOn(PostgresQueryRunner.prototype, 'query');
+    const spy = vi.spyOn(PostgresQueryRunner.prototype, 'query');
     const before = spy.mock.calls.length;
 
     const redirected = await transactions.executeInTransaction({}, () =>

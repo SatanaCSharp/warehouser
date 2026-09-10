@@ -1,5 +1,6 @@
 import { AssertionError } from '@warehouser/shared-types/errors';
 import { assertFail } from 'asserts/assert-fail';
+import { describe, expect, it } from 'vitest';
 
 describe('assertFail', () => {
   it('throws AssertionError with default message', () => {

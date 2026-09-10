@@ -2,6 +2,7 @@ import { ErrorCode, PermissionId } from '@warehouser/shared-types/enums';
 import { TransferWarehouseManagerCommand } from 'access/usecases/commands/transfer-warehouse-manager.command';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { ManagerTransferRepository } from 'shared/domain/repositories/manager-transfer.repository';
+import { describe, expect, it, vi } from 'vitest';
 
 const warehouseId = '00000000-0000-4000-8000-000000000001';
 const managerId = '00000000-0000-4000-8000-000000000002';
@@ -23,15 +24,15 @@ const currentUser = (
 });
 
 const repositoryDouble = () => ({
-  lockWarehouse: jest.fn().mockResolvedValue({ id: warehouseId }),
-  lockReplacementRole: jest.fn().mockResolvedValue({
+  lockWarehouse: vi.fn().mockResolvedValue({ id: warehouseId }),
+  lockReplacementRole: vi.fn().mockResolvedValue({
     id: replacementRoleId,
   }),
-  lockMembers: jest.fn().mockResolvedValue([
+  lockMembers: vi.fn().mockResolvedValue([
     { userId: managerId, roleId: managerRoleId, roleKind: 'warehouse_manager' },
     { userId: recipientId, roleId: replacementRoleId, roleKind: 'custom' },
   ]),
-  assignRole: jest.fn().mockResolvedValue(true),
+  assignRole: vi.fn().mockResolvedValue(true),
 });
 describe('TransferWarehouseManagerCommand', () => {
   it('commits recipient promotion and former-manager reassignment together', async () => {

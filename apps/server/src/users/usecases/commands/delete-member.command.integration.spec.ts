@@ -27,6 +27,15 @@ import { MemberLifecycleRepository } from 'shared/domain/repositories/member-lif
 // Sessions, and delete the target's Account+User pair — in that exact
 // order — returning the deleted member's id.
 import { DeleteMemberCommand } from 'users/usecases/commands/delete-member.command';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 
 const now = new Date('2026-08-06T12:00:00.000Z');
 
@@ -278,7 +287,7 @@ describe('DeleteMemberCommand', () => {
     // Record persistence call order to prove the exact data-model.md
     // sequence: membership -> sessions -> users/accounts.
     const callOrder: string[] = [];
-    const deleteMembershipSpy = jest
+    const deleteMembershipSpy = vi
       .spyOn(memberLifecycleRepository, 'deleteMembership')
       .mockImplementation(async (warehouseId, userId) => {
         callOrder.push('deleteMembership');
@@ -288,7 +297,7 @@ describe('DeleteMemberCommand', () => {
           userId,
         );
       });
-    const deleteSessionsSpy = jest
+    const deleteSessionsSpy = vi
       .spyOn(authenticationRepository, 'deleteSessionsByAccountId')
       .mockImplementation(async (accountId) => {
         callOrder.push('deleteSessionsByAccountId');
@@ -297,7 +306,7 @@ describe('DeleteMemberCommand', () => {
           accountId,
         );
       });
-    const deleteIdentitySpy = jest
+    const deleteIdentitySpy = vi
       .spyOn(authenticationRepository, 'deleteIdentity')
       .mockImplementation(async (identityId) => {
         callOrder.push('deleteIdentity');

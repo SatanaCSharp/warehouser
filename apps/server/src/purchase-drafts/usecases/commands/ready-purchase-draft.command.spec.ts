@@ -14,6 +14,7 @@ import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
 import { ReadyPurchaseDraftCommand } from 'purchase-drafts/usecases/commands/ready-purchase-draft.command';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>
   `00000000-0000-4000-8000-${suffix.padStart(12, '0')}`;
@@ -61,7 +62,7 @@ const directLine: LineDouble = {
 // Only the single method each collaborator actually calls; the doubles are cast at the
 // construction site rather than the production type being widened to admit them.
 const assemblyRepositoryDouble = (lines: readonly LineDouble[]) => ({
-  findLines: jest.fn().mockResolvedValue(lines),
+  findLines: vi.fn().mockResolvedValue(lines),
 });
 
 // AC-15a — T15's shared `findDisagreeingLinks`, which the freeze is the third caller of. The
@@ -69,7 +70,7 @@ const assemblyRepositoryDouble = (lines: readonly LineDouble[]) => ({
 const assemblyServiceDouble = (
   disagreementsByLine: Readonly<Record<string, readonly unknown[]>>,
 ) => ({
-  findDisagreeingLinks: jest
+  findDisagreeingLinks: vi
     .fn()
     .mockImplementation((_scope: unknown, purchaseDraftLineId: string) =>
       Promise.resolve(disagreementsByLine[purchaseDraftLineId] ?? []),
@@ -91,8 +92,8 @@ const freezeRepositoryDouble = ({
   header: DraftHeader | null;
   frozen: boolean;
 }) => ({
-  findDraftHeader: jest.fn().mockResolvedValue(header),
-  freeze: jest.fn().mockResolvedValue(frozen),
+  findDraftHeader: vi.fn().mockResolvedValue(header),
+  freeze: vi.fn().mockResolvedValue(frozen),
 });
 
 const commandWith = ({

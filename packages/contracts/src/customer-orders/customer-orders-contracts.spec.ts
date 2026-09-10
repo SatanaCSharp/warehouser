@@ -13,6 +13,7 @@ import {
   demandCoverageSchema,
   demandLineSchema,
 } from 'customer-orders';
+import { describe, expect, it } from 'vitest';
 
 // T11 — the shared `customer-orders` contract subpath (contracts/openapi.yaml `CustomerOrder`,
 // `CustomerOrderCreate`, `CustomerOrderAmend`, `CustomerOrderCancellation`, `DemandLine`,

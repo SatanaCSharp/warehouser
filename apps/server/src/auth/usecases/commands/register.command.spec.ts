@@ -7,6 +7,7 @@ import {
 import { RegisterCommand } from 'auth/usecases/commands/register.command';
 import { AccountEntity } from 'shared/domain/entities/account.entity';
 import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
+import { describe, expect, it, vi } from 'vitest';
 import { WorkspaceProvisioningService } from 'workspaces/domain/services/workspace-provisioning.service';
 
 const identityId = '00000000-0000-4000-8000-000000000001';
@@ -35,7 +36,7 @@ const createRepositoryFake = (): RepositoryFake => ({
 });
 
 const createHashFake = () => {
-  const hash = jest.fn(() =>
+  const hash = vi.fn(() =>
     Promise.resolve({
       algorithm: 'scrypt',
       hash: 'hash',
@@ -54,7 +55,7 @@ const setup = () => {
   const repository = createRepositoryFake();
   const hash = createHashFake();
   const provisioning = {
-    provisionRegistration: jest.fn().mockResolvedValue({
+    provisionRegistration: vi.fn().mockResolvedValue({
       workspace: { id: '00000000-0000-4000-8000-000000000005', name: null },
       workspacePermissionIds: ['WORKSPACE:RENAME'],
       access: {

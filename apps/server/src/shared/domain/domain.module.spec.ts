@@ -31,6 +31,7 @@ import { AccessReadRepository } from 'shared/domain/repositories/access-read.rep
 import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
 import { ManagerTransferRepository } from 'shared/domain/repositories/manager-transfer.repository';
 import { RoleLifecycleRepository } from 'shared/domain/repositories/role-lifecycle.repository';
+import { describe, expect, it } from 'vitest';
 
 describe('DomainModule', () => {
   it('registers every shared entity with TypeORM', () => {

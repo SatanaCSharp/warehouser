@@ -6,6 +6,7 @@ import { CustomerOrderLifecycleService } from 'customer-orders/domain/services/c
 import { CancelCustomerOrderCommand } from 'customer-orders/usecases/commands/cancel-customer-order.command';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import type { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
+import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>
   `00000000-0000-4000-8000-${suffix.padStart(12, '0')}`;
@@ -55,8 +56,8 @@ const lifecycleRepositoryDouble = (
     allocatedQuantity: 0,
   },
 ) => ({
-  lockOrderWithAllocatedTotal: jest.fn().mockResolvedValue(locked),
-  cancelCustomerOrder: jest.fn().mockResolvedValue(storedOrder()),
+  lockOrderWithAllocatedTotal: vi.fn().mockResolvedValue(locked),
+  cancelCustomerOrder: vi.fn().mockResolvedValue(storedOrder()),
 });
 
 // Built over a real `CustomerOrderLifecycleService`, not a double of it: the service holds only the

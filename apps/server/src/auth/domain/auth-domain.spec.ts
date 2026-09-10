@@ -8,6 +8,7 @@ import {
   UserId,
 } from 'auth/domain/value-objects/identity-id';
 import { SessionDigest } from 'auth/domain/value-objects/session-digest';
+import { describe, expect, it } from 'vitest';
 
 describe('auth domain', () => {
   it('requires Account and User to share one identity', () => {

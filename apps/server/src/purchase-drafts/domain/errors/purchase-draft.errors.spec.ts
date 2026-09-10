@@ -56,6 +56,7 @@ import {
   RejectionDisposition,
   RejectionSource,
 } from 'purchase-drafts/domain/value-objects/line-condition';
+import { describe, expect, it } from 'vitest';
 
 describe('purchase-draft domain error factories', () => {
   // AC-11 — one non-enumerating outcome for an Item or a Customer Order of another Warehouse and

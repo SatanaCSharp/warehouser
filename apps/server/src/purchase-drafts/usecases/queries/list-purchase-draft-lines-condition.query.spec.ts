@@ -6,6 +6,7 @@ import { PermissionId } from '@warehouser/shared-types/enums';
 import { RejectionReasonLabelService } from 'purchase-drafts/domain/services/rejection-reason-label.service';
 import { ListPurchaseDraftLinesQuery } from 'purchase-drafts/usecases/queries/list-purchase-draft-lines.query';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { describe, expect, it, vi } from 'vitest';
 
 const warehouseId = '00000000-0000-4000-8000-000000000001';
 const actorId = '00000000-0000-4000-8000-000000000002';
@@ -86,7 +87,7 @@ const entryWith = (ending: unknown) => ({
 });
 
 const repositoryDouble = () => ({
-  listIdentifiedLines: jest
+  listIdentifiedLines: vi
     .fn()
     .mockImplementation(
       (_warehouseId: string, _filters?: unknown, cause?: string) =>
@@ -96,7 +97,7 @@ const repositoryDouble = () => ({
           ),
         ]),
     ),
-  listRedactedLines: jest
+  listRedactedLines: vi
     .fn()
     .mockImplementation(
       (_warehouseId: string, _filters?: unknown, cause?: string) =>
@@ -112,7 +113,7 @@ const repositoryDouble = () => ({
 // differs from the fixture's `rejectionReasonId`, so an assertion on `rejectionReasonLabel` can only
 // pass if the query actually resolved it.
 const catalogueDouble = () => ({
-  resolveRejectionReasons: jest.fn().mockResolvedValue([
+  resolveRejectionReasons: vi.fn().mockResolvedValue([
     {
       id: 'damaged_in_transit',
       label: 'Damaged in transit',

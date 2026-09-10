@@ -87,5 +87,9 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
+    // Since Vitest 4 the default `exclude` covers only `node_modules` and
+    // `.git`, so a built `dist/**/*.spec.js` would be collected as a test file
+    // the moment `vite build` emits one.
+    exclude: ['**/node_modules/**', '**/dist/**'],
   },
 });

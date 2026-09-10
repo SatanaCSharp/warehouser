@@ -4,6 +4,7 @@ import {
   serverMappingDeclarations,
 } from 'test/architectural/mapping-patterns';
 import { Project } from 'ts-morph';
+import { describe, expect, it } from 'vitest';
 
 /** The control on `mapper-placement.architectural.spec.ts`.
  *

@@ -9,6 +9,7 @@ import { ListWarehouseItemsQuery } from 'items/usecases/queries/list-warehouse-i
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
 import { repositoryDouble } from 'test/doubles/repository-double';
+import { describe, expect, it, vi } from 'vitest';
 
 const warehouseId = '00000000-0000-4000-8000-000000000001';
 const actorId = '00000000-0000-4000-8000-000000000002';
@@ -25,7 +26,7 @@ const currentUser: AccessCurrentUser = {
 
 const itemCatalogueRepositoryDouble = () =>
   repositoryDouble<ItemCatalogueRepository>()({
-    findItemsWithOnHandAndLatestReason: jest.fn().mockResolvedValue([
+    findItemsWithOnHandAndLatestReason: vi.fn().mockResolvedValue([
       {
         id: 'item-1',
         warehouseId,

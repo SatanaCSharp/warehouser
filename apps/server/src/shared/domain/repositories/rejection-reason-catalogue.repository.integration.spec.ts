@@ -13,6 +13,7 @@ import { RejectionReasonCatalogueRepository } from 'shared/domain/repositories/r
 // regardless of which API the implementer picks, which is what proves "one read" rather than merely
 // "one repository method call" (`item-catalogue.repository.integration.spec.ts`'s idiom).
 import { PostgresQueryRunner } from 'typeorm/driver/postgres/PostgresQueryRunner';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { initialRejectionReasons } from '../../../../migrations/1786800000000-CreateArrivalInspectionSchema';
 
@@ -35,7 +36,7 @@ const seededIdsAscending = [...seededIds].sort();
 const withQueryCount = async <T>(
   run: () => Promise<T>,
 ): Promise<{ result: T; queryCount: number }> => {
-  const spy = jest.spyOn(PostgresQueryRunner.prototype, 'query');
+  const spy = vi.spyOn(PostgresQueryRunner.prototype, 'query');
   const before = spy.mock.calls.length;
   const result = await run();
   const queryCount = spy.mock.calls.length - before;

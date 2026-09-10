@@ -17,6 +17,7 @@ import {
   customerOrderQuantityBelowAllocatedError,
   customerOrderTargetUnavailableError,
 } from 'customer-orders/domain/errors/customer-order.errors';
+import { describe, expect, it } from 'vitest';
 
 describe('customer order domain error factories', () => {
   // AC-02 — openapi.yaml `invalidQuantityOrName` example:

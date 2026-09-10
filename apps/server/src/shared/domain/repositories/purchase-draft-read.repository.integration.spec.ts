@@ -41,6 +41,15 @@ import {
 // calls to reach PostgreSQL. Spying on it proves actual round trips — the idiom
 // `consolidated-demand.repository.integration.spec.ts` (T10) establishes.
 import { PostgresQueryRunner } from 'typeorm/driver/postgres/PostgresQueryRunner';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 
 const now = new Date('2026-08-26T10:00:00.000Z');
 // When a seeded Customer Order moved, for the scenarios that move one. Later than `now`, which is
@@ -155,7 +164,7 @@ const identifiedActor = (warehouseId: string) =>
 const withQueryCount = async <T>(
   run: () => Promise<T>,
 ): Promise<{ result: T; queryCount: number }> => {
-  const spy = jest.spyOn(PostgresQueryRunner.prototype, 'query');
+  const spy = vi.spyOn(PostgresQueryRunner.prototype, 'query');
   const before = spy.mock.calls.length;
   const result = await run();
   const queryCount = spy.mock.calls.length - before;
@@ -1118,7 +1127,7 @@ const registerReferenceTests = (): void => {
 
 // Neither test below touches a Rejection, so this double never needs to resolve one.
 const emptyRejectionReasonCatalogue = () => ({
-  resolveRejectionReasons: jest.fn().mockResolvedValue([]),
+  resolveRejectionReasons: vi.fn().mockResolvedValue([]),
 });
 
 const registerHasDriftSignalInvariantTests = (): void => {

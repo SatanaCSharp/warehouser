@@ -20,6 +20,7 @@ import type {
   PurchaseDraftLineRejectionDisposition,
   PurchaseDraftLineRejectionSource,
 } from 'shared/domain/entities/purchase-draft-line-rejection.entity';
+import { describe, expect, it } from 'vitest';
 
 describe('the line condition value domains', () => {
   // `chk_purchase_draft_line_rejections_source` — a refusal on goods that reached our own dock was

@@ -1,6 +1,8 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { describe, expect, it } from 'vitest';
+
 // T23 DoD: "nothing in this task is ever consulted by a guard or another use
 // case for an authorization decision." The Active Warehouse selection is
 // presentation state (spec.md §6.1 "Stale selection"; sad.md §6.8): no guard

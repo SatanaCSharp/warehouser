@@ -14,6 +14,7 @@ import { REQUIRED_PERMISSION_KEY } from 'shared/decorators/required-permission.d
 import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
 import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
 import { WRITE_RATE_LIMITED_KEY } from 'shared/guards/write-rate-limited.decorator';
+import { describe, expect, it, vi } from 'vitest';
 
 // T11 — the transport-adapter metadata of the consolidated demand read, in the reflection idiom
 // `items.controller.spec.ts` established. The demand read gets its own controller because its path
@@ -96,7 +97,7 @@ describe('DemandController', () => {
       customerCount: 3,
     };
     const controller = new DemandController({
-      execute: jest.fn().mockResolvedValue([leakyLine]),
+      execute: vi.fn().mockResolvedValue([leakyLine]),
     } as never);
 
     const response = await controller.readConsolidatedDemand({

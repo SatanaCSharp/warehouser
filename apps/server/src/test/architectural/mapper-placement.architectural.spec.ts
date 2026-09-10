@@ -13,6 +13,7 @@ import {
   productionSourceFiles,
   serverPath,
 } from 'test/architectural/server-project';
+import { describe, expect, it } from 'vitest';
 
 /** Where a mapping is allowed to be declared, checked against the whole `apps/server` source tree.
  *

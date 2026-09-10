@@ -2,6 +2,7 @@ import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
 import { DeleteWorkspaceRoleCommand } from 'access/usecases/commands/delete-workspace-role.command';
 import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
+import { describe, expect, it, vi } from 'vitest';
 
 const workspaceId = '00000000-0000-4000-8000-000000000001';
 const actorId = '00000000-0000-4000-8000-000000000002';
@@ -17,19 +18,19 @@ const currentUser = (): WorkspaceCurrentUser => ({
 });
 
 const roleLifecycleDouble = () => ({
-  lockRoleById: jest
+  lockRoleById: vi
     .fn()
     .mockResolvedValue({ id: roleId, workspaceId, kind: 'custom' }),
-  countRoleMembers: jest.fn().mockResolvedValue(0),
-  removeCustomRole: jest.fn().mockResolvedValue(undefined),
+  countRoleMembers: vi.fn().mockResolvedValue(0),
+  removeCustomRole: vi.fn().mockResolvedValue(undefined),
 });
 
 const deletionServiceDouble = () => ({
-  replaceAssignments: jest.fn().mockResolvedValue(undefined),
+  replaceAssignments: vi.fn().mockResolvedValue(undefined),
 });
 
 const currentUserRepositoryDouble = () => ({
-  resolveRequiredWorkspacePermission: jest
+  resolveRequiredWorkspacePermission: vi
     .fn()
     .mockResolvedValue({ granted: true }),
 });

@@ -7,6 +7,7 @@ import {
 } from 'shared/decorators/transactional.decorator';
 import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
 import { repositoryDouble } from 'test/doubles/repository-double';
+import { describe, expect, it, vi } from 'vitest';
 // RED for T20 — the command does not exist yet. This unit spec covers AC-08
 // only (spec.md §5): name validation must reject before the Warehouse is
 // touched, matching the `AccessName`-first idiom already used by
@@ -34,11 +35,11 @@ const currentUser = (): WorkspaceCurrentUser => ({
 
 const warehouseLifecycleRepositoryDouble = () =>
   repositoryDouble<WarehouseLifecycleRepository>()({
-    createWarehouse: jest.fn().mockResolvedValue(undefined),
-    renameWarehouse: jest.fn().mockResolvedValue(undefined),
-    setArchivedAt: jest.fn().mockResolvedValue(undefined),
-    lockWorkspaceAndCountNonArchivedWarehouses: jest.fn().mockResolvedValue(1),
-    lockWarehouse: jest.fn().mockResolvedValue({
+    createWarehouse: vi.fn().mockResolvedValue(undefined),
+    renameWarehouse: vi.fn().mockResolvedValue(undefined),
+    setArchivedAt: vi.fn().mockResolvedValue(undefined),
+    lockWorkspaceAndCountNonArchivedWarehouses: vi.fn().mockResolvedValue(1),
+    lockWarehouse: vi.fn().mockResolvedValue({
       id: warehouseId,
       workspaceId,
       name: 'Test Warehouse North',

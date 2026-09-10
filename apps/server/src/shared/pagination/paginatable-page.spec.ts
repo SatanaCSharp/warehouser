@@ -1,4 +1,5 @@
 import { paginatablePage } from 'shared/pagination/paginatable-page';
+import { describe, expect, it } from 'vitest';
 
 describe('paginatablePage', () => {
   it('returns a bounded page and derives the next cursor from the last item', () => {

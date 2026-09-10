@@ -12,6 +12,7 @@ import { SignInCommand } from 'auth/usecases/commands/sign-in.command';
 import { SignOutCommand } from 'auth/usecases/commands/sign-out.command';
 import { CurrentSessionQuery } from 'auth/usecases/queries/current-session.query';
 import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
+import { describe, expect, it, vi } from 'vitest';
 
 const account = Account.create({
   id: '00000000-0000-4000-8000-000000000001',
@@ -25,7 +26,7 @@ const account = Account.create({
 
 const runtime = {
   now: () => new Date('2026-07-25T10:00:00.000Z'),
-  identityId: jest.fn(),
+  identityId: vi.fn(),
   sessionId: () => '00000000-0000-4000-8000-000000000002',
 } as AuthRuntime;
 
@@ -45,9 +46,9 @@ describe('auth session use cases', () => {
     const command = new SignInCommand(
       {
         findAccountByNormalizedEmail: () => Promise.resolve(null),
-        createSession: jest.fn(),
+        createSession: vi.fn(),
       } as unknown as AuthenticationRepository,
-      jest.fn(),
+      vi.fn(),
       () => {
         dummyVerified = true;
         return Promise.resolve();
@@ -65,12 +66,12 @@ describe('auth session use cases', () => {
   it('establishes a durable session only after valid credentials', async () => {
     const repository = {
       findAccountByNormalizedEmail: () => Promise.resolve(accountEntity),
-      createSession: jest.fn().mockResolvedValue(undefined),
+      createSession: vi.fn().mockResolvedValue(undefined),
     };
     const command = new SignInCommand(
       repository as unknown as AuthenticationRepository,
       () => Promise.resolve(true),
-      jest.fn(),
+      vi.fn(),
       generateSecret,
       runtime,
     );
@@ -97,7 +98,7 @@ describe('auth session use cases', () => {
           ),
       } as unknown as AuthenticationRepository,
       () => Promise.resolve(true),
-      jest.fn(),
+      vi.fn(),
       generateSecret,
       runtime,
     );
@@ -109,7 +110,7 @@ describe('auth session use cases', () => {
 
   it('restores identity only and signs out idempotently', async () => {
     const repository = {
-      findValidSessionByDigest: jest.fn().mockResolvedValue({
+      findValidSessionByDigest: vi.fn().mockResolvedValue({
         ...toSessionEntity(
           Session.establish({
             id: SessionId.create('00000000-0000-4000-8000-000000000002'),
@@ -119,7 +120,7 @@ describe('auth session use cases', () => {
           }),
         ),
       }),
-      revokeSessionByDigest: jest.fn().mockResolvedValue(false),
+      revokeSessionByDigest: vi.fn().mockResolvedValue(false),
     } as unknown as AuthenticationRepository;
 
     await expect(
@@ -131,7 +132,7 @@ describe('auth session use cases', () => {
       new SignOutCommand(repository, digestSecret, runtime).execute('secret'),
     ).resolves.toBeUndefined();
 
-    repository.revokeSessionByDigest = jest
+    repository.revokeSessionByDigest = vi
       .fn()
       .mockRejectedValue(
         new SystemError(ErrorCode.AUTH_SIGN_OUT_UNAVAILABLE, new Error('db')),

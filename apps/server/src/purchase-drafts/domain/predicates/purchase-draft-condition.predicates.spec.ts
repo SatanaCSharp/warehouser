@@ -35,6 +35,7 @@ import {
   RejectionDisposition,
   RejectionSource,
 } from 'purchase-drafts/domain/value-objects/line-condition';
+import { describe, expect, it } from 'vitest';
 
 // A catalogue **fabricated for this spec**, never the seeded one. AC-07's rule is the flag, so the
 // prose-requiring Reason here is deliberately not `unfit_other` and the Reason named `unfit_other`

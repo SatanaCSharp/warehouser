@@ -1,4 +1,5 @@
 import { readHttpPlatformConfig } from 'shared/config/http-platform.config';
+import { describe, expect, it } from 'vitest';
 
 describe('readHttpPlatformConfig', () => {
   it('accepts an explicit comma-separated application-origin allowlist', () => {

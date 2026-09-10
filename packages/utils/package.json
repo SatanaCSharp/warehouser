@@ -31,23 +31,23 @@
     "start:dev": "tsc && (concurrently \"tsc -w\" \"tsc-alias -w\")",
     "lint": "eslint 'src/**/*.ts' --max-warnings=0",
     "lint:fix": "eslint 'src/**/*.ts' --max-warnings=0 --fix",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:cov": "jest --coverage"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:cov": "vitest run --coverage"
   },
   "dependencies": {
     "@warehouser/shared-types": "workspace:*"
   },
   "devDependencies": {
-    "@warehouser/eslint-config-base": "workspace:*",
-    "@warehouser/jest-config-preset": "workspace:*",
-    "@warehouser/tsconfig": "workspace:*",
-    "@types/jest": "catalog:",
     "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "@warehouser/eslint-config-base": "workspace:*",
+    "@warehouser/tsconfig": "workspace:*",
     "eslint": "catalog:",
-    "jest": "catalog:",
-    "ts-jest": "catalog:",
     "tsc-alias": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vite-tsconfig-paths": "catalog:",
+    "vitest": "catalog:"
   }
 }

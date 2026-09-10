@@ -5,7 +5,7 @@ import { Project, type SourceFile } from 'ts-morph';
 
 /** The `apps/server` directory, found by walking up from this file until the package manifest that
  * names the server appears. Resolved rather than hard-coded relative to `__dirname` so the specs
- * keep working from `src/` under ts-jest and from `dist/` if they are ever compiled. */
+ * keep working from `src/` under the test runner and from `dist/` if they are ever compiled. */
 const findServerRoot = (): string => {
   let directory = __dirname;
 
@@ -34,7 +34,7 @@ export const serverRoot = findServerRoot();
 
 let project: Project | undefined;
 
-/** One ts-morph program over the server's own `tsconfig.json`, built once per Jest module registry
+/** One ts-morph program over the server's own `tsconfig.json`, built once per module registry
  * and shared by every architectural spec: parsing the source tree twice costs seconds for nothing. */
 export const serverProject = (): Project => {
   project ??= new Project({

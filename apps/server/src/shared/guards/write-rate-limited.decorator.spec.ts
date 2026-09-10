@@ -3,6 +3,7 @@ import {
   WRITE_RATE_LIMITED_KEY,
   WriteRateLimited,
 } from 'shared/guards/write-rate-limited.decorator';
+import { describe, expect, it } from 'vitest';
 
 // ADR 0003 / sad §5 `shared/guards/write-rate-limit.guard.ts`: mutating handlers opt in to the
 // per-member write rate limit by declaring `@WriteRateLimited()`. This proves the decorator sets

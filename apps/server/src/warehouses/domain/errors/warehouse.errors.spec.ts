@@ -1,4 +1,5 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
+import { describe, expect, it } from 'vitest';
 import { workspaceLastUnarchivedWarehouseError } from 'warehouses/domain/errors/warehouse.errors';
 
 // The Warehouse-record cases split out of

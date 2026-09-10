@@ -1,6 +1,8 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 
+import { describe, expect, it } from 'vitest';
+
 // T13 (CH-S6) — the executable form of CR-AC-05, CR-AC-08 and CR-AC-12 for the `warehouses`
 // module. It mirrors `users/module-boundaries.spec.ts`'s static-source-scan style
 // (`readdirSync`/`readFileSync` + regex) rather than a runtime dependency-graph tool, since no such

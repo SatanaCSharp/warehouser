@@ -7,6 +7,8 @@ import { OBSERVED_PERMISSION_KEY } from 'shared/decorators/observed-permission.d
 import { REQUIRED_PERMISSION_KEY } from 'shared/decorators/required-permission.decorator';
 import type { AccessCurrentUserRepository } from 'shared/domain/repositories/access-current-user.repository';
 import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
+import type { Mock } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 // This rework covers ADR 0001 / sad §6.3: every Warehouse-scoped request names its Warehouse in the
 // route path, the guard resolves the (User, Warehouse) membership and Permission for exactly that
@@ -51,7 +53,7 @@ const contextFor = (request: Record<string, unknown>): ExecutionContext =>
  * guard that reads the wrong key observes nothing — proving each guard reads only its own key. */
 const reflectorReturning = (key: string, value: unknown): Reflector =>
   ({
-    getAllAndOverride: jest.fn((requestedKey: string) =>
+    getAllAndOverride: vi.fn((requestedKey: string) =>
       requestedKey === key ? value : undefined,
     ),
   }) as unknown as Reflector;
@@ -60,7 +62,7 @@ const reflectorReturning = (key: string, value: unknown): Reflector =>
  * distinguish the declared Permission from the declared read-tolerance. */
 const reflectorForArchivedScenario = (readTolerant: boolean): Reflector =>
   ({
-    getAllAndOverride: jest.fn((key: string) => {
+    getAllAndOverride: vi.fn((key: string) => {
       if (key === REQUIRED_PERMISSION_KEY) {
         return [permissionId];
       }
@@ -85,7 +87,7 @@ const reflectorForDeclaration = (declaration: {
   readTolerant?: boolean;
 }): Reflector =>
   ({
-    getAllAndOverride: jest.fn((key: string) => {
+    getAllAndOverride: vi.fn((key: string) => {
       if (key === REQUIRED_PERMISSION_KEY) {
         return declaration.required;
       }
@@ -123,7 +125,7 @@ const requestWithGuardedSelection = (
 
 const guardWith = (
   reflector: Reflector,
-  resolveRequiredPermission: jest.Mock,
+  resolveRequiredPermission: Mock,
 ): WarehouseAccessGuard =>
   new WarehouseAccessGuard(reflector, {
     resolveRequiredPermission,
@@ -132,7 +134,7 @@ const guardWith = (
 const describeSessionCompositionAndOwnMetadataKey = (): void => {
   describe('session composition, own metadata key and a safe principal', () => {
     it('resolves the (User, Warehouse) pair named by the route and attaches a frozen principal with no client-supplied value', async () => {
-      const resolveRequiredPermission = jest
+      const resolveRequiredPermission = vi
         .fn()
         .mockResolvedValue(grantedResult);
       const reflector = reflectorReturning(REQUIRED_PERMISSION_KEY, [
@@ -177,7 +179,7 @@ const describeSessionCompositionAndOwnMetadataKey = (): void => {
     });
 
     it('reads only its own required-permission metadata key, never the Workspace guard key', async () => {
-      const resolveRequiredPermission = jest
+      const resolveRequiredPermission = vi
         .fn()
         .mockResolvedValue(grantedResult);
       // Only the *other* guard's key resolves to something; this guard's own key resolves to
@@ -204,7 +206,7 @@ const describeSessionCompositionAndOwnMetadataKey = (): void => {
 const describeAc03aUnnamedWarehouse = (): void => {
   describe('AC-03a — a request naming no Warehouse is refused, never defaulted', () => {
     it('denies a Warehouse-scoped request with no warehouseId route parameter without consulting the repository', async () => {
-      const resolveRequiredPermission = jest
+      const resolveRequiredPermission = vi
         .fn()
         .mockResolvedValue(grantedResult);
       const reflector = reflectorReturning(REQUIRED_PERMISSION_KEY, [
@@ -223,7 +225,7 @@ const describeAc03aUnnamedWarehouse = (): void => {
     });
 
     it('denies a request whose path and body name two different Warehouses, as ambiguous as naming none', async () => {
-      const resolveRequiredPermission = jest
+      const resolveRequiredPermission = vi
         .fn()
         .mockResolvedValue(grantedResult);
       const reflector = reflectorReturning(REQUIRED_PERMISSION_KEY, [
@@ -248,7 +250,7 @@ const describeAc03aUnnamedWarehouse = (): void => {
 const describeAc04NoMembership = (): void => {
   describe('AC-04 — no membership in the named Warehouse', () => {
     it('denies without disclosing the Warehouse and leaves no access data attached', async () => {
-      const resolveRequiredPermission = jest.fn().mockResolvedValue(null);
+      const resolveRequiredPermission = vi.fn().mockResolvedValue(null);
       const reflector = reflectorReturning(REQUIRED_PERMISSION_KEY, [
         permissionId,
       ]);
@@ -270,7 +272,7 @@ const describeAc04NoMembership = (): void => {
 const describeAc05AuthorityPerWarehouse = (): void => {
   describe('AC-05 — a Permission held only through another Warehouse denies here', () => {
     it('denies when the membership in this Warehouse exists but its Role lacks the declared Permission', async () => {
-      const resolveRequiredPermission = jest.fn().mockResolvedValue({
+      const resolveRequiredPermission = vi.fn().mockResolvedValue({
         ...grantedResult,
         granted: false,
       });
@@ -295,7 +297,7 @@ const describeAc05AuthorityPerWarehouse = (): void => {
 const describeAc12AndAc12aArchivedWarehouse = (): void => {
   describe('AC-12 / AC-12a — archived Warehouse denies mutation, permits declared-tolerant reads', () => {
     it('denies a mutating handler over an archived Warehouse by default', async () => {
-      const resolveRequiredPermission = jest.fn().mockResolvedValue({
+      const resolveRequiredPermission = vi.fn().mockResolvedValue({
         ...grantedResult,
         archivedAt: new Date('2026-01-01T00:00:00.000Z'),
       });
@@ -316,7 +318,7 @@ const describeAc12AndAc12aArchivedWarehouse = (): void => {
     });
 
     it('allows a handler that explicitly declares read tolerance and marks the principal archived', async () => {
-      const resolveRequiredPermission = jest.fn().mockResolvedValue({
+      const resolveRequiredPermission = vi.fn().mockResolvedValue({
         ...grantedResult,
         archivedAt: new Date('2026-01-01T00:00:00.000Z'),
       });
@@ -337,7 +339,7 @@ const describeAc12AndAc12aArchivedWarehouse = (): void => {
 const describeAc31RuntimeHalf = (): void => {
   describe('AC-31 (runtime half) — a Workspace Permission declared here resolves nothing', () => {
     it('denies and never calls the repository when no Warehouse Permission is declared on the handler', async () => {
-      const resolveRequiredPermission = jest
+      const resolveRequiredPermission = vi
         .fn()
         .mockResolvedValue(grantedResult);
       // Nothing is registered under this guard's own key, simulating a handler that mistakenly
@@ -367,7 +369,7 @@ const describeAc30IndistinguishableDenial = (): void => {
 
       const guardForUnnamedWarehouse = guardWith(
         reflector,
-        jest.fn().mockResolvedValue(grantedResult),
+        vi.fn().mockResolvedValue(grantedResult),
       );
       const unnamedRequest = requestWithGuardedSelection({ params: {} });
       let unnamedError: ApplicationError | undefined;
@@ -379,7 +381,7 @@ const describeAc30IndistinguishableDenial = (): void => {
 
       const guardForNoMembership = guardWith(
         reflector,
-        jest.fn().mockResolvedValue(null),
+        vi.fn().mockResolvedValue(null),
       );
       const noMembershipRequest = requestWithGuardedSelection({
         params: { warehouseId },
@@ -405,7 +407,7 @@ const describeAc30IndistinguishableDenial = (): void => {
 const describeAc09aObservedPermissions = (): void => {
   describe('AC-09a — an observed Permission annotates the principal and never decides admission', () => {
     it('resolves the observed Permissions in the same membership read as the required one', async () => {
-      const resolveRequiredPermission = jest
+      const resolveRequiredPermission = vi
         .fn()
         .mockResolvedValue(grantedResult);
       const guard = guardWith(
@@ -429,7 +431,7 @@ const describeAc09aObservedPermissions = (): void => {
     });
 
     it('admits the request and leaves the principal without an observed Permission that is not granted', async () => {
-      const resolveRequiredPermission = jest.fn().mockResolvedValue({
+      const resolveRequiredPermission = vi.fn().mockResolvedValue({
         ...grantedResult,
         observedPermissionIds: [],
       });
@@ -447,7 +449,7 @@ const describeAc09aObservedPermissions = (): void => {
     });
 
     it('carries exactly the granted subset of what the handler declared, and nothing else', async () => {
-      const resolveRequiredPermission = jest.fn().mockResolvedValue({
+      const resolveRequiredPermission = vi.fn().mockResolvedValue({
         ...grantedResult,
         observedPermissionIds: [observedPermissionId],
       });
@@ -476,7 +478,7 @@ const describeAc09aObservedPermissions = (): void => {
     });
 
     it('leaves the observed set empty when the handler declares none', async () => {
-      const resolveRequiredPermission = jest
+      const resolveRequiredPermission = vi
         .fn()
         .mockResolvedValue(grantedResult);
       const guard = guardWith(
@@ -503,7 +505,7 @@ const describeAc09aObservedPermissions = (): void => {
 const describeAc09aObservedPermissionsNeverAdmit = (): void => {
   describe('AC-09a — an observed Permission never admits a request the required one would refuse', () => {
     it('still denies when the required Permission is not granted, however many observed ones are', async () => {
-      const resolveRequiredPermission = jest.fn().mockResolvedValue({
+      const resolveRequiredPermission = vi.fn().mockResolvedValue({
         ...grantedResult,
         granted: false,
         observedPermissionIds: [observedPermissionId],
@@ -526,7 +528,7 @@ const describeAc09aObservedPermissionsNeverAdmit = (): void => {
     });
 
     it('never lets the same Permission observed on a handler substitute for the required grant', async () => {
-      const resolveRequiredPermission = jest.fn().mockResolvedValue({
+      const resolveRequiredPermission = vi.fn().mockResolvedValue({
         ...grantedResult,
         granted: false,
         observedPermissionIds: [permissionId],
@@ -549,7 +551,7 @@ const describeAc09aObservedPermissionsNeverAdmit = (): void => {
     });
 
     it('denies a handler that declares only observed Permissions and no required one, resolving nothing', async () => {
-      const resolveRequiredPermission = jest
+      const resolveRequiredPermission = vi
         .fn()
         .mockResolvedValue(grantedResult);
       const guard = guardWith(
@@ -568,7 +570,7 @@ const describeAc09aObservedPermissionsNeverAdmit = (): void => {
     });
 
     it('refuses an ambiguous warehouseId exactly as before, resolving nothing, observed or otherwise', async () => {
-      const resolveRequiredPermission = jest
+      const resolveRequiredPermission = vi
         .fn()
         .mockResolvedValue(grantedResult);
       const guard = guardWith(
@@ -592,7 +594,7 @@ const describeAc09aObservedPermissionsNeverAdmit = (): void => {
     });
 
     it('keeps archived handling unchanged: an archived Warehouse still refuses a handler that is not read-tolerant', async () => {
-      const resolveRequiredPermission = jest.fn().mockResolvedValue({
+      const resolveRequiredPermission = vi.fn().mockResolvedValue({
         ...grantedResult,
         observedPermissionIds: [observedPermissionId],
         archivedAt: new Date('2026-01-01T00:00:00.000Z'),
@@ -616,7 +618,7 @@ const describeAc09aObservedPermissionsNeverAdmit = (): void => {
     });
 
     it('keeps archived handling unchanged: a read-tolerant handler is served and still carries its observed set', async () => {
-      const resolveRequiredPermission = jest.fn().mockResolvedValue({
+      const resolveRequiredPermission = vi.fn().mockResolvedValue({
         ...grantedResult,
         observedPermissionIds: [observedPermissionId],
         archivedAt: new Date('2026-01-01T00:00:00.000Z'),

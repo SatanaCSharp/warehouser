@@ -21,6 +21,7 @@ import { ListRejectionReasonsQuery } from 'purchase-drafts/usecases/queries/list
 import { ReadPurchaseDraftQuery } from 'purchase-drafts/usecases/queries/read-purchase-draft.query';
 import { PurchaseDraftsUsecaseModule } from 'purchase-drafts/usecases/usecase.module';
 import { DataSource } from 'typeorm';
+import { describe, expect, it } from 'vitest';
 
 // Unlike `warehouses`/`workspaces`, `PurchaseDraftsUsecaseModule` declares its own repositories
 // as local providers rather than reaching them from the `@Global()` `DomainModule`

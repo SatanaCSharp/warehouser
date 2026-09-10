@@ -10,6 +10,7 @@ import { ApplicationError } from '@warehouser/shared-types/errors';
 // missing one, which a persistence failure cannot promise.
 import { AddWorkspaceMemberCommand } from 'access/usecases/commands/add-workspace-member.command';
 import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
+import { describe, expect, it, vi } from 'vitest';
 
 const workspaceId = '00000000-0000-4000-8000-000000000001';
 const otherWorkspaceId = '00000000-0000-4000-8000-000000000009';
@@ -42,7 +43,7 @@ const roles = [
 // a nonexistent Role and the protected Owner Role all resolve to `null` here
 // exactly as they do in the database.
 const roleLifecycleDouble = () => ({
-  findCustomRole: jest.fn((scopedWorkspaceId: string, roleId: string) =>
+  findCustomRole: vi.fn((scopedWorkspaceId: string, roleId: string) =>
     Promise.resolve(
       roles.find(
         (role) =>
@@ -55,15 +56,15 @@ const roleLifecycleDouble = () => ({
 });
 
 const membershipDouble = () => ({
-  findUserWorkspaceId: jest.fn().mockResolvedValue(workspaceId),
-  lockMembership: jest.fn().mockResolvedValue(null),
-  lockOwnerMembership: jest.fn().mockResolvedValue({
+  findUserWorkspaceId: vi.fn().mockResolvedValue(workspaceId),
+  lockMembership: vi.fn().mockResolvedValue(null),
+  lockOwnerMembership: vi.fn().mockResolvedValue({
     userId: actorId,
     workspaceId,
     workspaceRoleId: ownerRoleId,
   }),
-  hasWarehouseMembershipInWorkspace: jest.fn().mockResolvedValue(true),
-  addMembership: jest.fn().mockResolvedValue(undefined),
+  hasWarehouseMembershipInWorkspace: vi.fn().mockResolvedValue(true),
+  addMembership: vi.fn().mockResolvedValue(undefined),
 });
 
 const build = (

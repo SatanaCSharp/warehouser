@@ -1,4 +1,5 @@
 import { redactSensitiveValues } from 'shared/errors/sensitive-value-redactor';
+import { describe, expect, it } from 'vitest';
 
 describe('redactSensitiveValues', () => {
   it('removes credentials, cookies, digests, hashes, and raw emails recursively', () => {

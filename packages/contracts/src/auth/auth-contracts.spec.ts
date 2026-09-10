@@ -5,6 +5,7 @@ import {
   registrationInputSchema,
   registrationResultSchema,
 } from 'auth';
+import { describe, expect, it } from 'vitest';
 
 describe('auth contracts', () => {
   it('normalizes email and preserves the password exactly', () => {

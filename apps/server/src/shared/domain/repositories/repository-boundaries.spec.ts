@@ -1,6 +1,8 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { describe, expect, it } from 'vitest';
+
 const repositoryDirectory = __dirname;
 const commandDirectory = join(__dirname, '../../../access/usecases/commands');
 const sourceRoot = join(__dirname, '../../..');

@@ -32,6 +32,7 @@ import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import type { CustomerEntity } from 'shared/domain/entities/customer.entity';
 import type { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
 import type { ReviseDeliveryAddressPersistenceInput } from 'shared/domain/repositories/customer-address-book.repository';
+import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>
   `00000000-0000-4000-8000-${suffix.padStart(12, '0')}`;
@@ -121,16 +122,16 @@ const threeActiveAddresses = (): CustomerDeliveryAddressEntity[] => [
 const directoryRepositoryDouble = (
   rows: readonly CustomerEntity[] = [storedCustomer()],
 ) => ({
-  findCustomer: jest.fn((id: string, inWarehouseId: string) =>
+  findCustomer: vi.fn((id: string, inWarehouseId: string) =>
     Promise.resolve(
       find(rows, (row) => row.id === id && row.warehouseId === inWarehouseId) ??
         null,
     ),
   ),
-  findCustomerByName: jest.fn(),
-  correctCustomerName: jest.fn(),
-  setCustomerDeactivation: jest.fn(),
-  recordCustomer: jest.fn(),
+  findCustomerByName: vi.fn(),
+  correctCustomerName: vi.fn(),
+  setCustomerDeactivation: vi.fn(),
+  recordCustomer: vi.fn(),
 });
 
 // Each write below carries the *same* condition the real statement carries, so zero affected rows
@@ -142,7 +143,7 @@ const addressBookRepositoryDouble = (
 ) => ({
   rows,
   // openapi.yaml `Customer.deliveryAddresses` — creation order, identifier breaking a tie.
-  listDeliveryAddresses: jest.fn((id: string) =>
+  listDeliveryAddresses: vi.fn((id: string) =>
     Promise.resolve(
       orderBy(
         filter(rows, (row) => row.customerId === id),
@@ -153,7 +154,7 @@ const addressBookRepositoryDouble = (
   ),
   // sad.md §6.3 step 4 — the locking read, in the ascending-identifier lock order data-model.md
   // fixes for `customers`. Inactive rows are locked too, which is why they are not filtered out.
-  lockDeliveryAddresses: jest.fn((id: string) =>
+  lockDeliveryAddresses: vi.fn((id: string) =>
     Promise.resolve(
       orderBy(
         filter(rows, (row) => row.customerId === id),
@@ -162,12 +163,12 @@ const addressBookRepositoryDouble = (
       ),
     ),
   ),
-  addDeliveryAddress: jest.fn((address: CustomerDeliveryAddressEntity) => {
+  addDeliveryAddress: vi.fn((address: CustomerDeliveryAddressEntity) => {
     rows.push(address);
 
     return Promise.resolve(address);
   }),
-  reviseDeliveryAddress: jest.fn(
+  reviseDeliveryAddress: vi.fn(
     (
       addressId: string,
       ofCustomerId: string,
@@ -190,7 +191,7 @@ const addressBookRepositoryDouble = (
       return Promise.resolve('applied');
     },
   ),
-  setMainDeliveryAddress: jest.fn(
+  setMainDeliveryAddress: vi.fn(
     (addressId: string, ofCustomerId: string, changedAt: Date) => {
       const target = find(
         rows,
@@ -223,7 +224,7 @@ const addressBookRepositoryDouble = (
       return Promise.resolve('applied');
     },
   ),
-  deactivateDeliveryAddress: jest.fn(
+  deactivateDeliveryAddress: vi.fn(
     (addressId: string, ofCustomerId: string, deactivatedAt: Date) => {
       const row = find(
         rows,
@@ -245,7 +246,7 @@ const addressBookRepositoryDouble = (
       return Promise.resolve('applied');
     },
   ),
-  reactivateDeliveryAddress: jest.fn(
+  reactivateDeliveryAddress: vi.fn(
     (addressId: string, ofCustomerId: string, reactivatedAt: Date) => {
       const row = find(
         rows,

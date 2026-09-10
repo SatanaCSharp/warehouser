@@ -17,6 +17,15 @@ import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-memb
 import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 import { AccessProvisioningRepository } from 'shared/domain/repositories/access-provisioning.repository';
 import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from 'vitest';
 // This command does not exist yet — this is the RED step for T20. Expected
 // to accept the caller's `WorkspaceCurrentUser` plus `{ name }`, create the
 // Warehouse in `principal.workspaceId`, delegate its protected Warehouse

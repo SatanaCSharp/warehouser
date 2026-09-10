@@ -16,3 +16,6 @@ coverage/
 docs/local
 # heroui-agents-md
 .heroui-docs/
+
+# Incremental TypeScript build state — machine-local, never reviewable.
+*.tsbuildinfo

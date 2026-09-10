@@ -2,6 +2,7 @@ import {
   digestSessionSecret,
   generateSessionSecret,
 } from 'auth/domain/security/session-secret';
+import { describe, expect, it } from 'vitest';
 
 describe('session secret security', () => {
   it('generates unique opaque secrets and stores only their digest', () => {

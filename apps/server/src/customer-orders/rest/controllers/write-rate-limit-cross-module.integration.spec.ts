@@ -20,6 +20,7 @@ import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 import { GlobalHttpExceptionFilter } from 'shared/errors/global-http-exception.filter';
 import { WriteRateLimitCounter } from 'shared/guards/write-rate-limit.counter';
 import { expectPinnedCounterOnEveryRouteGuard } from 'test/expects/write-rate-limit-wiring';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 // ADR 0003 — "60 recorded changes per minute **per member**", not per member per REST module.
 //

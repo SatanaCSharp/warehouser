@@ -32,6 +32,7 @@ import {
   buildWarehouse,
   buildWorkspace,
 } from 'test/factories/entity-factories';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 // T16 — the freeze of the delivery statement, proven against a real schema because **capturing by
 // value is a database-level fact**: a double cannot fail the way a live reference would. The whole

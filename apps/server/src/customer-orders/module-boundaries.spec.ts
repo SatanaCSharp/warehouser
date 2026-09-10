@@ -1,6 +1,8 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { describe, expect, it } from 'vitest';
+
 // T9 — the executable form of the DoD's last bullet: "an architecture check proves the service is
 // reachable only through the module's declared public surface, and that customer-orders does not
 // import purchase-drafts". `customer-orders/usecases/usecase.module.ts` does not exist yet, so this

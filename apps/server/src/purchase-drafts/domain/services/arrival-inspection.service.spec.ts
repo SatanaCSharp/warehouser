@@ -45,6 +45,7 @@ import type {
   LockedPurchaseDraftLineForEnding,
   RecordLineEndingRejectionInput,
 } from 'shared/domain/repositories/arrival-confirmation.repository';
+import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>
   `00000000-0000-4000-8000-${suffix.padStart(12, '0')}`;
@@ -84,10 +85,8 @@ const OFFERED_REASON_IDS = A_FABRICATED_CATALOGUE.map((entry) => entry.id);
 // performs them: an implementation that listed the catalogue for AC-06 and then resolved the stated
 // identifiers again for AC-07's flags would cost two.
 const catalogueRepositoryDouble = () => ({
-  listRejectionReasons: jest
-    .fn()
-    .mockResolvedValue([...A_FABRICATED_CATALOGUE]),
-  resolveRejectionReasons: jest
+  listRejectionReasons: vi.fn().mockResolvedValue([...A_FABRICATED_CATALOGUE]),
+  resolveRejectionReasons: vi
     .fn()
     .mockResolvedValue([...A_FABRICATED_CATALOGUE]),
 });
@@ -840,7 +839,7 @@ describe('ArrivalInspectionService.assertEndingCondition — the payload shape o
 // then the Condition Split (and the catalogue check it shares), then the Pre-receipt Conformance —
 // never a different order, because each later rule is judged only once the more fundamental one has
 // passed. Proved by outcome rather than by spying on the module's own functions: `assertEndingCondition`
-// now calls them as same-file bindings, which a cross-module `jest.mock` cannot intercept. Each case
+// now calls them as same-file bindings, which a cross-module `vi.mock` cannot intercept. Each case
 // below states a submission breaking **two** rules at once and asserts which one's code is
 // returned, which is only possible if the rules run in the stated order.
 describe('ArrivalInspectionService.assertEndingCondition — the rules run in the documented order (sad.md §6.1 steps 4-6, post-review)', () => {

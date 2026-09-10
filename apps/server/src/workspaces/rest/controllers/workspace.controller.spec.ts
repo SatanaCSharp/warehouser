@@ -13,6 +13,7 @@ import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
 import type { WorkspaceAccessRequest } from 'shared/access/access-request';
 import { REQUIRED_WORKSPACE_PERMISSION_KEY } from 'shared/decorators/required-workspace-permission.decorator';
 import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { WorkspaceController } from 'workspaces/rest/controllers/workspace.controller';
 import type { RenameWorkspaceCommand } from 'workspaces/usecases/commands/rename-workspace.command';
 import type { SetActiveWarehouseCommand } from 'workspaces/usecases/commands/set-active-warehouse.command';
@@ -56,11 +57,11 @@ const method = (name: keyof WorkspaceController): object =>
 // shrank to the handlers that stayed (CR-RG-01).
 describe('WorkspaceController', () => {
   const context = {
-    execute: jest.fn(),
+    execute: vi.fn(),
   } as unknown as ReadWorkspaceContextQuery;
-  const rename = { execute: jest.fn() } as unknown as RenameWorkspaceCommand;
+  const rename = { execute: vi.fn() } as unknown as RenameWorkspaceCommand;
   const setActiveWarehouse = {
-    execute: jest.fn(),
+    execute: vi.fn(),
   } as unknown as SetActiveWarehouseCommand;
 
   const controller = new WorkspaceController(
@@ -69,7 +70,7 @@ describe('WorkspaceController', () => {
     setActiveWarehouse,
   );
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => vi.clearAllMocks());
 
   it('exposes every Workspace-scoped path of openapi.yaml under one prefix', () => {
     expect(Reflect.getMetadata(PATH_METADATA, WorkspaceController)).toBe(
@@ -112,7 +113,7 @@ describe('WorkspaceController', () => {
   // AC-30 — the empty projection a User who is no Workspace Member at all
   // receives is what makes the web omit every Workspace control.
   it('answers the actor context for a User who is no Workspace Member', async () => {
-    jest.mocked(context.execute).mockResolvedValue({
+    vi.mocked(context.execute).mockResolvedValue({
       workspace: { id: workspaceId, name: 'Test Workspace' },
       workspacePermissionIds: [],
       warehouses: [
@@ -147,7 +148,7 @@ describe('WorkspaceController', () => {
   });
 
   it('renders the archived state of a context Warehouse as a contract timestamp', async () => {
-    jest.mocked(context.execute).mockResolvedValue({
+    vi.mocked(context.execute).mockResolvedValue({
       workspace: { id: workspaceId, name: null },
       workspacePermissionIds: [WorkspacePermissionId.WAREHOUSES_WATCH],
       warehouses: [
@@ -172,9 +173,9 @@ describe('WorkspaceController', () => {
   });
 
   it('delegates the selection to the command that proves the membership', async () => {
-    jest
-      .mocked(setActiveWarehouse.execute)
-      .mockResolvedValue({ effectiveWarehouseId: id(10) });
+    vi.mocked(setActiveWarehouse.execute).mockResolvedValue({
+      effectiveWarehouseId: id(10),
+    });
 
     await expect(
       controller.setActiveWarehouse(sessionOnlyRequest(), {
@@ -187,9 +188,10 @@ describe('WorkspaceController', () => {
   });
 
   it('delegates the Workspace rename and returns the renamed Workspace', async () => {
-    jest
-      .mocked(rename.execute)
-      .mockResolvedValue({ id: workspaceId, name: 'Test Workspace' });
+    vi.mocked(rename.execute).mockResolvedValue({
+      id: workspaceId,
+      name: 'Test Workspace',
+    });
 
     await expect(
       controller.renameWorkspace(

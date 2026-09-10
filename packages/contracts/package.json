@@ -46,22 +46,21 @@
     "build": "tsc && tsc-alias",
     "lint": "eslint 'src/**/*.ts' --max-warnings=0",
     "lint:fix": "eslint 'src/**/*.ts' --max-warnings=0 --fix",
-    "test": "jest"
+    "test": "vitest run"
   },
   "dependencies": {
     "@warehouser/shared-types": "workspace:*",
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@warehouser/eslint-config-base": "workspace:*",
-    "@warehouser/jest-config-preset": "workspace:*",
-    "@warehouser/tsconfig": "workspace:*",
-    "@types/jest": "catalog:",
     "@types/node": "catalog:",
+    "@warehouser/eslint-config-base": "workspace:*",
+    "@warehouser/tsconfig": "workspace:*",
     "eslint": "catalog:",
-    "jest": "catalog:",
-    "ts-jest": "catalog:",
     "tsc-alias": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vite-tsconfig-paths": "catalog:",
+    "vitest": "catalog:"
   }
 }

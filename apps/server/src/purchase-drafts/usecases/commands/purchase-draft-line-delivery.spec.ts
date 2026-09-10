@@ -16,6 +16,7 @@ import { RevisePurchaseDraftLineCommand } from 'purchase-drafts/usecases/command
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import type { PurchaseDraftLineDeliveryMode } from 'shared/domain/entities/purchase-draft-line.entity';
 import type { AssemblyWriteOutcome } from 'shared/domain/repositories/purchase-draft-assembly.repository';
+import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>
   `00000000-0000-4000-8000-${suffix.padStart(12, '0')}`;
@@ -60,19 +61,19 @@ const assemblyRepositoryDouble = (
     outcome?: AssemblyWriteOutcome;
   } = {},
 ) => ({
-  addLine: jest.fn().mockResolvedValue(delivery.outcome ?? 'applied'),
-  updateLine: jest.fn().mockResolvedValue(delivery.outcome ?? 'applied'),
-  addLink: jest.fn().mockResolvedValue(delivery.outcome ?? 'applied'),
-  updateLink: jest.fn().mockResolvedValue(delivery.outcome ?? 'applied'),
-  removeLink: jest.fn().mockResolvedValue(delivery.outcome ?? 'applied'),
-  findLineDestination: jest
+  addLine: vi.fn().mockResolvedValue(delivery.outcome ?? 'applied'),
+  updateLine: vi.fn().mockResolvedValue(delivery.outcome ?? 'applied'),
+  addLink: vi.fn().mockResolvedValue(delivery.outcome ?? 'applied'),
+  updateLink: vi.fn().mockResolvedValue(delivery.outcome ?? 'applied'),
+  removeLink: vi.fn().mockResolvedValue(delivery.outcome ?? 'applied'),
+  findLineDestination: vi
     .fn()
     .mockResolvedValue(
       delivery.lineDestination === undefined
         ? { deliveryMode: 'via_warehouse', customerDeliveryAddressId: null }
         : delivery.lineDestination,
     ),
-  findLinkedOrderDestinations: jest
+  findLinkedOrderDestinations: vi
     .fn()
     .mockResolvedValue(delivery.linkedOrders ?? []),
 });
@@ -84,7 +85,7 @@ const customerOrderLifecycleRepositoryDouble = (
     warehouseId,
   },
 ) => ({
-  lockOrderWithAllocatedTotal: jest
+  lockOrderWithAllocatedTotal: vi
     .fn()
     .mockResolvedValue({ order: { ...order, customerDeliveryAddressId } }),
 });
@@ -96,7 +97,7 @@ const customerOrderLifecycleRepositoryDouble = (
 const addressBookDouble = (
   address: { deactivatedAt: Date | null } | null = { deactivatedAt: null },
 ) => ({
-  findWarehouseDeliveryAddress: jest.fn().mockResolvedValue(address),
+  findWarehouseDeliveryAddress: vi.fn().mockResolvedValue(address),
 });
 
 // Every command is built from the same doubles, exactly as Nest builds it from the same providers,
@@ -115,12 +116,12 @@ const commandsWith = ({
 } = {}) => {
   const assemblyService = new PurchaseDraftAssemblyService(
     {
-      findById: jest
+      findById: vi
         .fn()
         .mockResolvedValue({ id: itemId, warehouseId, deactivatedAt: null }),
     } as never,
     customerOrderLifecycleRepository as never,
-    { listPackagingTypes: jest.fn().mockResolvedValue([]) } as never,
+    { listPackagingTypes: vi.fn().mockResolvedValue([]) } as never,
     assemblyRepository as never,
   );
 
