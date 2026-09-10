@@ -16,14 +16,14 @@ import {
 import type { Customer, CustomerDetail } from '@warehouser/contracts/customers';
 import { PermissionId } from '@warehouser/shared-types/enums';
 import {
-  toCustomerDetailResponse,
-  toCustomerResponse,
-} from 'customers/rest/customer-response';
-import {
   CustomerCreateDto,
   CustomerListQueryDto,
   CustomerUpdateDto,
 } from 'customers/rest/dtos/customer-mutation.dto';
+import {
+  toCustomerDetailResponse,
+  toCustomerResponse,
+} from 'customers/rest/mappers/customer-response.mapper';
 import { CorrectCustomerNameCommand } from 'customers/usecases/commands/correct-customer-name.command';
 import { DeactivateCustomerCommand } from 'customers/usecases/commands/deactivate-customer.command';
 import { ReactivateCustomerCommand } from 'customers/usecases/commands/reactivate-customer.command';

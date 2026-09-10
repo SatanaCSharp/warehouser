@@ -41,7 +41,7 @@ import {
 import {
   toDetailResponse,
   toSummaryResponse,
-} from 'purchase-drafts/rest/purchase-draft-response';
+} from 'purchase-drafts/rest/mappers/purchase-draft-response.mapper';
 import { AddPurchaseDraftLineCommand } from 'purchase-drafts/usecases/commands/add-purchase-draft-line.command';
 import { AddPurchaseDraftLineLinkCommand } from 'purchase-drafts/usecases/commands/add-purchase-draft-line-link.command';
 import { AmendPurchaseDraftRejectionCommand } from 'purchase-drafts/usecases/commands/amend-purchase-draft-rejection.command';

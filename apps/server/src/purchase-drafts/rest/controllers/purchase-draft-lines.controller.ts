@@ -3,7 +3,7 @@ import type { PurchaseDraftLineListEntry } from '@warehouser/contracts/purchase-
 import { PermissionId } from '@warehouser/shared-types/enums';
 import { map } from 'lodash';
 import { PurchaseDraftLineListQueryDto } from 'purchase-drafts/rest/dtos/purchase-draft-mutation.dto';
-import { toLineListEntryResponse } from 'purchase-drafts/rest/purchase-draft-response';
+import { toLineListEntryResponse } from 'purchase-drafts/rest/mappers/purchase-draft-response.mapper';
 import { ListPurchaseDraftLinesQuery } from 'purchase-drafts/usecases/queries/list-purchase-draft-lines.query';
 import type { WarehouseAccessRequest } from 'shared/access/access-request';
 import { ArchivedTolerantRead } from 'shared/access/archived-tolerant-read.decorator';

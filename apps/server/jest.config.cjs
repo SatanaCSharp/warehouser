@@ -11,5 +11,11 @@ module.exports = {
   // environment flag, so they cannot be run against a developer's own database
   // by accident — only `jest.pglite.config.cjs`, which provisions a database
   // per test file, opts them back in.
-  testPathIgnorePatterns: ['/node_modules/', '\\.integration\\.spec\\.ts$'],
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '\\.integration\\.spec\\.ts$',
+    // The architectural tier parses the whole source tree with ts-morph; `jest.architectural.config.cjs`
+    // runs it under its own command rather than making every unit run pay for it.
+    '\\.architectural\\.spec\\.ts$',
+  ],
 };

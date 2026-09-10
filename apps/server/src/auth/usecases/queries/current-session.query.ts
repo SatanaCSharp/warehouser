@@ -1,5 +1,5 @@
 import { type AuthRuntime, authRuntime } from 'auth/domain/auth-runtime';
-import { toAuthenticatedCurrentUser } from 'auth/domain/authenticated-current-user';
+import { toAuthenticatedCurrentUser } from 'auth/domain/mappers/authenticated-current-user.mapper';
 import { toSession } from 'auth/domain/mappers/session.mapper';
 import { digestSessionSecret } from 'auth/domain/security/session-secret';
 import { UserId } from 'auth/domain/value-objects/identity-id';

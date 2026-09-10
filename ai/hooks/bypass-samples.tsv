@@ -1,0 +1,28 @@
+# Fixture for deny-git-hook-bypass.sh: <expected>\t<command line>.
+# `expected` is `deny` when the guard must refuse the command and `allow` when it must not.
+# Verify with:  ai/hooks/check-bypass-samples.sh
+#
+# The `allow` rows are the point of the file: a guard that refuses a plain commit, or a `grep` that
+# merely mentions a flag, would be turned off within a day.
+deny	git commit --no-verify -m "x"
+deny	git commit -n -m "x"
+deny	git commit -m "x" -n
+deny	git commit --no-verify --amend
+deny	HUSKY=0 git commit -m "x"
+deny	HUSKY_SKIP_HOOKS=1 git commit -m "x"
+deny	git -c core.hooksPath=/dev/null commit -m "x"
+deny	git config core.hooksPath /dev/null
+deny	git push --no-verify
+deny	git merge --no-verify feature
+deny	git rebase --continue --no-verify
+deny	cd apps/server && git commit --no-verify -m "x"
+allow	git commit -m "feat(server): add the architectural tier"
+allow	git add -A && git commit -m "chore: sync"
+allow	git commit --amend -m "fix: wording"
+allow	git commit --amend --no-edit
+allow	echo -n hello && git commit -m "chore: x"
+allow	git log -n 5 --oneline
+allow	git status --short
+allow	git push origin HEAD
+allow	grep -rn -- "--no-verify" ai
+allow	pnpm --filter @warehouser/server test:architectural

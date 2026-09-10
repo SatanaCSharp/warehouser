@@ -9,8 +9,8 @@ import type {
 // (server-architecture.md § "Layer responsibilities → Domain": "Mappings between shared persistence
 // entities and feature-owned domain objects belong in `<feature-name>/domain/mappers/`"). Assembling
 // the contract's `PurchaseDraftLineEnding`/`LineCondition` out of these is the REST boundary's job
-// and lives in `purchase-drafts/rest/purchase-draft-response.ts`, beside every other `to*Response`
-// (server-architecture.md § REST). Field names and semantics are deliberately the contract's, so
+// and lives in `purchase-drafts/rest/mappers/purchase-draft-response.mapper.ts`, beside every
+// other `to*Response` (server-architecture.md § REST). Field names and semantics are deliberately the contract's, so
 // the translation at the boundary is a rename-free one; the domain owning the type is what keeps
 // the wire shape from being built inward.
 
@@ -99,7 +99,7 @@ export const rejectionReasonIdsOf = (
 // `fk_purchase_draft_line_rejections_reason`, so the catalogue always has a row for it; the map
 // this is handed is built from exactly the identifiers `rejectionReasonIdsOf` collected.
 //
-// Every property is **named rather than spread** — `purchase-draft-response.ts`'s rule for this
+// Every property is **named rather than spread** — `purchase-draft-response.mapper.ts`'s rule for this
 // same feature applies here too: `PurchaseDraftLineRejectionRead` is confidential-adjacent
 // (`api-sync-report.md` records `warehouse_id`, `delivery_mode` and `updated_at` as columns
 // deliberately given no field), and nothing on the server `safeParse`s an outgoing response. A

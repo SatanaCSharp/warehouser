@@ -23,7 +23,7 @@ import { RejectionReasonLabelService } from 'purchase-drafts/domain/services/rej
 import {
   toDetailResponse,
   toLineListEntryResponse,
-} from 'purchase-drafts/rest/purchase-draft-response';
+} from 'purchase-drafts/rest/mappers/purchase-draft-response.mapper';
 import { ListPurchaseDraftLinesQuery } from 'purchase-drafts/usecases/queries/list-purchase-draft-lines.query';
 import { ReadPurchaseDraftQuery } from 'purchase-drafts/usecases/queries/read-purchase-draft.query';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';

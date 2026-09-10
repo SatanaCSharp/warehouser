@@ -254,7 +254,7 @@ describe('purchase-drafts domain independence (T7)', () => {
   // condition account a read serves, and it must produce the **feature-owned** form. It once
   // imported `LineCondition`, `PurchaseDraftLineRejection` and `PreReceiptConformance` and returned
   // them, which put the wire shape two layers inward; the contract shapes are assembled in
-  // `rest/purchase-draft-response.ts` now.
+  // `rest/mappers/purchase-draft-response.mapper.ts` now.
   it('builds the condition account without reaching for a contract response shape', () => {
     expect(
       importedSpecifiers(
