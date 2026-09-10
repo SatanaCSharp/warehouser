@@ -1,6 +1,6 @@
-import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
-import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user.js';
-import type { AuthenticatedRequest } from 'shared/guards/session-auth.guard.js';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
+import type { AuthenticatedRequest } from 'shared/guards/session-auth.guard';
 
 export interface WarehouseAccessRequest extends AuthenticatedRequest {
   access?: AccessCurrentUser;

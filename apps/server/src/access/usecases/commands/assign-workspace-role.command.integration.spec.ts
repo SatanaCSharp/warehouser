@@ -13,20 +13,20 @@ import {
 // (`workspaceOwnerTransferRequiredError`, AC-22), and otherwise call
 // `WorkspaceMembershipRepository.reassignMembership`, touching no Warehouse
 // membership or Role (AC-19b).
-import { AssignWorkspaceRoleCommand } from 'access/usecases/commands/assign-workspace-role.command.js';
-import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user.js';
-import dataSource from 'shared/database/data-source.js';
-import { DbTransactionService } from 'shared/database/db-transaction.service.js';
-import { DbTransactionContext } from 'shared/database/db-transaction-context.service.js';
-import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity.js';
-import { WorkspaceMembershipEntity } from 'shared/domain/entities/workspace-membership.entity.js';
-import { WorkspaceRoleEntity } from 'shared/domain/entities/workspace-role.entity.js';
-import { WorkspaceMembershipRepository } from 'shared/domain/repositories/workspace-membership.repository.js';
-import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository.js';
+import { AssignWorkspaceRoleCommand } from 'access/usecases/commands/assign-workspace-role.command';
+import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
+import dataSource from 'shared/database/data-source';
+import { DbTransactionService } from 'shared/database/db-transaction.service';
+import { DbTransactionContext } from 'shared/database/db-transaction-context.service';
+import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
+import { WorkspaceMembershipEntity } from 'shared/domain/entities/workspace-membership.entity';
+import { WorkspaceRoleEntity } from 'shared/domain/entities/workspace-role.entity';
+import { WorkspaceMembershipRepository } from 'shared/domain/repositories/workspace-membership.repository';
+import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository';
 import {
   buildWorkspaceRole,
   persistWorkspaceGraph,
-} from 'test/factories/entity-factories.js';
+} from 'test/factories/entity-factories';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 interface AssignWorkspaceRoleInput {

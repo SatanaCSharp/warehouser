@@ -1,13 +1,13 @@
 import { Test } from '@nestjs/testing';
 import { ErrorCode, PermissionId } from '@warehouser/shared-types/enums';
-import { CreateRoleCommand } from 'access/usecases/commands/create-role.command.js';
-import { UpdateRoleCommand } from 'access/usecases/commands/update-role.command.js';
-import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
+import { CreateRoleCommand } from 'access/usecases/commands/create-role.command';
+import { UpdateRoleCommand } from 'access/usecases/commands/update-role.command';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import {
   TRANSACTIONAL_KEY,
   type TransactionalMetadata,
-} from 'shared/decorators/transactional.decorator.js';
-import { RoleLifecycleRepository } from 'shared/domain/repositories/role-lifecycle.repository.js';
+} from 'shared/decorators/transactional.decorator';
+import { RoleLifecycleRepository } from 'shared/domain/repositories/role-lifecycle.repository';
 import { describe, expect, it, vi } from 'vitest';
 
 const warehouseId = '00000000-0000-4000-8000-000000000001';

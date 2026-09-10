@@ -5,25 +5,25 @@ import {
   customerLastActiveDeliveryAddressError,
   customerNameTakenError,
   customerTargetUnavailableError,
-} from 'customers/domain/errors/customer.errors.js';
+} from 'customers/domain/errors/customer.errors';
 import type {
   CustomerNameHolder,
   DeliveryAddressState,
-} from 'customers/domain/predicates/customer.predicates.js';
+} from 'customers/domain/predicates/customer.predicates';
 import {
   canDeactivateDeliveryAddress,
   isActiveDeliveryAddress,
   isDeliveryAddressOfCustomer,
   isMainDeliveryAddressOf,
-} from 'customers/domain/predicates/customer.predicates.js';
+} from 'customers/domain/predicates/customer.predicates';
 import compact from 'lodash/compact.js';
 import filter from 'lodash/filter.js';
 import find from 'lodash/find.js';
 import orderBy from 'lodash/orderBy.js';
-import type { CustomerEntity } from 'shared/domain/entities/customer.entity.js';
-import type { DeliveryAddressWriteOutcome } from 'shared/domain/repositories/customer-address-book.repository.js';
-import type { CustomerWriteOutcome } from 'shared/domain/repositories/customer-directory.repository.js';
-import { CustomerDirectoryRepository } from 'shared/domain/repositories/customer-directory.repository.js';
+import type { CustomerEntity } from 'shared/domain/entities/customer.entity';
+import type { DeliveryAddressWriteOutcome } from 'shared/domain/repositories/customer-address-book.repository';
+import type { CustomerWriteOutcome } from 'shared/domain/repositories/customer-directory.repository';
+import { CustomerDirectoryRepository } from 'shared/domain/repositories/customer-directory.repository';
 
 // The Customer identity and Delivery Address book rules that more than one command needs
 // (sad.md §5, `customers/domain/services`), in two layers.

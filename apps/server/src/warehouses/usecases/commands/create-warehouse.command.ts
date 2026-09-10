@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto';
 
 import { Injectable, Optional } from '@nestjs/common';
-import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user.js';
-import { Transactional } from 'shared/decorators/transactional.decorator.js';
-import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository.js';
-import { AccessName } from 'shared/domain/value-objects/access-name.js';
-import { validatedName } from 'shared/errors/invalid-name.error.js';
+import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
+import { Transactional } from 'shared/decorators/transactional.decorator';
+import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
+import { AccessName } from 'shared/domain/value-objects/access-name';
+import { validatedName } from 'shared/errors/invalid-name.error';
 
 // Trims, validates and returns a storable Warehouse name via the shared
 // `AccessName` value object (AC-08). Preserves submitted Unicode without

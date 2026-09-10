@@ -1,5 +1,5 @@
-import type { PermissionEntityKind } from 'shared/domain/entities/permission.entity.js';
-import type { RoleEntityKind } from 'shared/domain/entities/role.entity.js';
+import type { PermissionEntityKind } from 'shared/domain/entities/permission.entity';
+import type { RoleEntityKind } from 'shared/domain/entities/role.entity';
 import { Column, Entity, PrimaryColumn } from 'typeorm';
 
 @Entity({ name: 'role_permissions' })

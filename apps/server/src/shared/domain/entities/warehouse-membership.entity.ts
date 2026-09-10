@@ -1,4 +1,4 @@
-import type { RoleEntityKind } from 'shared/domain/entities/role.entity.js';
+import type { RoleEntityKind } from 'shared/domain/entities/role.entity';
 import { Column, Entity, PrimaryColumn } from 'typeorm';
 
 @Entity({ name: 'warehouse_memberships' })

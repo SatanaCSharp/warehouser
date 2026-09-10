@@ -5,8 +5,8 @@ import { randomUUID } from 'node:crypto';
 // openapi.yaml `PurchaseDraftSummary`/`PurchaseDraftLineLink`/`DemandSnapshotEntry`/
 // `LinkedCustomerOrderState`/`ArrivalAllocation`).
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { RejectionReasonLabelService } from 'purchase-drafts/domain/services/rejection-reason-label.service.js';
-import { ReadPurchaseDraftQuery } from 'purchase-drafts/usecases/queries/read-purchase-draft.query.js';
+import { RejectionReasonLabelService } from 'purchase-drafts/domain/services/rejection-reason-label.service';
+import { ReadPurchaseDraftQuery } from 'purchase-drafts/usecases/queries/read-purchase-draft.query';
 // `PurchaseDraftReadRepository` does not exist yet (T14) — this is the RED for the read that joins
 // the Demand Snapshot against the Customer Orders as they stand now, in one purpose-built query per
 // method (sad.md §4 "Derived on read, one query, never materialized"; sad.md §6.8;
@@ -19,24 +19,24 @@ import { ReadPurchaseDraftQuery } from 'purchase-drafts/usecases/queries/read-pu
 // draft (whichever route closed it) is still readable, that no read writes anything, and that
 // `hasDriftSignal` on the list distinguishes drafts whose snapshot rows still match their demand
 // from those that do not (AC-16, AC-16a, AC-21a).
-import dataSource from 'shared/database/data-source.js';
-import { AccountEntity } from 'shared/domain/entities/account.entity.js';
-import { ArrivalAllocationEntity } from 'shared/domain/entities/arrival-allocation.entity.js';
-import type { CustomerOrderState } from 'shared/domain/entities/customer-order.entity.js';
-import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity.js';
-import { DemandSnapshotEntryEntity } from 'shared/domain/entities/demand-snapshot-entry.entity.js';
-import { ItemEntity } from 'shared/domain/entities/item.entity.js';
-import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity.js';
-import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity.js';
-import { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity.js';
-import { UserEntity } from 'shared/domain/entities/user.entity.js';
-import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity.js';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
-import { PurchaseDraftReadRepository } from 'shared/domain/repositories/purchase-draft-read.repository.js';
+import dataSource from 'shared/database/data-source';
+import { AccountEntity } from 'shared/domain/entities/account.entity';
+import { ArrivalAllocationEntity } from 'shared/domain/entities/arrival-allocation.entity';
+import type { CustomerOrderState } from 'shared/domain/entities/customer-order.entity';
+import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
+import { DemandSnapshotEntryEntity } from 'shared/domain/entities/demand-snapshot-entry.entity';
+import { ItemEntity } from 'shared/domain/entities/item.entity';
+import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
+import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity';
+import { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity';
+import { UserEntity } from 'shared/domain/entities/user.entity';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
+import { PurchaseDraftReadRepository } from 'shared/domain/repositories/purchase-draft-read.repository';
 import {
   buildWarehouse,
   buildWorkspace,
-} from 'test/factories/entity-factories.js';
+} from 'test/factories/entity-factories';
 // `PostgresQueryRunner.prototype.query` is the one method every TypeORM access path ultimately
 // calls to reach PostgreSQL. Spying on it proves actual round trips — the idiom
 // `consolidated-demand.repository.integration.spec.ts` (T10) establishes.

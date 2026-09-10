@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { CustomersRestModule } from 'customers/rest/rest.module.js';
-import { CustomersUsecaseModule } from 'customers/usecases/usecase.module.js';
+import { CustomersRestModule } from 'customers/rest/rest.module';
+import { CustomersUsecaseModule } from 'customers/usecases/usecase.module';
 
 // The one file `app.module.ts` imports for this feature, mirroring `customer-orders.module.ts` and
 // `items.module.ts`: the use-case module and the REST module that serves it.

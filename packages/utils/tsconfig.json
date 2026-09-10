@@ -14,5 +14,15 @@
     // ambient type dependency, so naming it changes nothing for `tsc`.
     "types": ["node"]
   },
+  // What lets this package's source stay extensionless while its output is loadable ESM. Node's
+  // ESM resolver does no extension search and no directory resolution, so `dist/` must name
+  // `./assert.js` and `../predicates/index.js` outright — but `moduleResolution: "Bundler"` in the
+  // shared base config lets `tsc` accept the bare `asserts/assert` and `predicates` the source
+  // actually writes. `tsc-alias` closes the gap: it already rewrites the `paths` aliases into
+  // relative specifiers, and `resolveFullPaths` has it append the extension too, resolved against
+  // the emitted tree rather than guessed — a directory becomes `/index.js`, and a non-relative
+  // specifier is left alone, which is why a real dependency subpath (`lodash/uniq.js`) still has
+  // to carry its own extension in the source.
+  "tsc-alias": { "resolveFullPaths": true },
   "include": ["src/**/*.ts"]
 }

@@ -7,11 +7,11 @@ import {
   PATH_METADATA,
 } from '@nestjs/common/constants';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { PackagingTypesController } from 'purchase-drafts/rest/controllers/packaging-types.controller.js';
-import { READ_TOLERANT_KEY } from 'shared/access/archived-tolerant-read.decorator.js';
-import { REQUIRED_PERMISSION_KEY } from 'shared/decorators/required-permission.decorator.js';
-import { SessionAuthGuard } from 'shared/guards/session-auth.guard.js';
-import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard.js';
+import { PackagingTypesController } from 'purchase-drafts/rest/controllers/packaging-types.controller';
+import { READ_TOLERANT_KEY } from 'shared/access/archived-tolerant-read.decorator';
+import { REQUIRED_PERMISSION_KEY } from 'shared/decorators/required-permission.decorator';
+import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
+import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
 import { describe, expect, it } from 'vitest';
 
 // T16 §What — "Serve the Packaging Type catalogue at `/packaging-types` so no literal segment

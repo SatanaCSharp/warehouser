@@ -4,18 +4,18 @@ import {
   purchaseDraftDispositionNotReversibleError,
   purchaseDraftTargetUnavailableError,
   purchaseDraftUnknownDispositionError,
-} from 'purchase-drafts/domain/errors/purchase-draft.errors.js';
-import { isOfferedDisposition } from 'purchase-drafts/domain/predicates/purchase-draft-condition.predicates.js';
+} from 'purchase-drafts/domain/errors/purchase-draft.errors';
+import { isOfferedDisposition } from 'purchase-drafts/domain/predicates/purchase-draft-condition.predicates';
 import {
   REJECTION_DISPOSITIONS,
   type RejectionDisposition,
-} from 'purchase-drafts/domain/value-objects/line-condition.js';
-import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
-import { Transactional } from 'shared/decorators/transactional.decorator.js';
+} from 'purchase-drafts/domain/value-objects/line-condition';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { Transactional } from 'shared/decorators/transactional.decorator';
 import {
   type AmendRejectionInput,
   PurchaseDraftRejectionRepository,
-} from 'shared/domain/repositories/purchase-draft-rejection.repository.js';
+} from 'shared/domain/repositories/purchase-draft-rejection.repository';
 
 export interface AmendRejectionCommandRuntime {
   readonly now: () => Date;

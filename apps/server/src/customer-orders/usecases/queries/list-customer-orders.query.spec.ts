@@ -1,6 +1,6 @@
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { ListCustomerOrdersQuery } from 'customer-orders/usecases/queries/list-customer-orders.query.js';
-import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
+import { ListCustomerOrdersQuery } from 'customer-orders/usecases/queries/list-customer-orders.query';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { describe, expect, it, vi } from 'vitest';
 
 // T13 — the redaction of the Customer Order projection, on both sides of the observed

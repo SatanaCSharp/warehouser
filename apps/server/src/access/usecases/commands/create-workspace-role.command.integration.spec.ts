@@ -12,19 +12,19 @@ import {
 // ids against `WorkspaceReadRepository.listWorkspacePermissionCatalogue()`
 // (assignable-only, AC-18), mirroring `access/usecases/commands/create-role.command.ts`'s
 // shape at the Workspace authority level (sad.md §6.7).
-import { CreateWorkspaceRoleCommand } from 'access/usecases/commands/create-workspace-role.command.js';
-import { workspaceCurrentUser } from 'shared/access/workspace-current-user.js';
-import dataSource from 'shared/database/data-source.js';
-import { DbTransactionService } from 'shared/database/db-transaction.service.js';
-import { DbTransactionContext } from 'shared/database/db-transaction-context.service.js';
-import { WorkspaceRoleEntity } from 'shared/domain/entities/workspace-role.entity.js';
-import { WorkspaceRolePermissionEntity } from 'shared/domain/entities/workspace-role-permission.entity.js';
-import { WorkspaceReadRepository } from 'shared/domain/repositories/workspace-read.repository.js';
-import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository.js';
+import { CreateWorkspaceRoleCommand } from 'access/usecases/commands/create-workspace-role.command';
+import { workspaceCurrentUser } from 'shared/access/workspace-current-user';
+import dataSource from 'shared/database/data-source';
+import { DbTransactionService } from 'shared/database/db-transaction.service';
+import { DbTransactionContext } from 'shared/database/db-transaction-context.service';
+import { WorkspaceRoleEntity } from 'shared/domain/entities/workspace-role.entity';
+import { WorkspaceRolePermissionEntity } from 'shared/domain/entities/workspace-role-permission.entity';
+import { WorkspaceReadRepository } from 'shared/domain/repositories/workspace-read.repository';
+import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository';
 import {
   buildWorkspaceRole,
   persistWorkspaceGraph,
-} from 'test/factories/entity-factories.js';
+} from 'test/factories/entity-factories';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 // Same grapheme composed (U+00E9) vs. decomposed (e + U+0301) — storing must

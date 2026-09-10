@@ -5,10 +5,10 @@
 // `item-catalogue.repository.integration.spec.ts`), and reactivating an already-active Item is
 // refused via `canReactivateItem`.
 import { ApplicationError } from '@warehouser/shared-types/errors';
-import { ReactivateItemCommand } from 'items/usecases/commands/reactivate-item.command.js';
-import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
-import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository.js';
-import { repositoryDouble } from 'test/doubles/repository-double.js';
+import { ReactivateItemCommand } from 'items/usecases/commands/reactivate-item.command';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
+import { repositoryDouble } from 'test/doubles/repository-double';
 import { describe, expect, it, vi } from 'vitest';
 
 const warehouseId = '00000000-0000-4000-8000-000000000001';

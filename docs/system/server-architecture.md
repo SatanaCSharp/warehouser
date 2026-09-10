@@ -79,29 +79,50 @@ cross-module abstractions, not miscellaneous code or business behavior with an u
 
 ## Module system and import specifiers
 
-`apps/server` is an ES module (`"type": "module"`). Two consequences apply to every import you
-write, and neither is optional — Node's ESM resolver performs no extension search and no directory
-resolution:
+`apps/server` is an ES module (`"type": "module"`), as is every other workspace package and the
+repository root. Node's ESM resolver performs no extension search and no directory resolution, so
+what it loads has to name each file outright: `dist/` carries `./x.entity.js` and
+`warehouses/index.js`, never the extensionless or bare-directory form.
 
-- **Every intra-application specifier carries `.js`**, naming the compiled file rather than the
-  `.ts` source it is written in: `import { X } from 'shared/domain/entities/x.entity.js'`. The
-  bare `shared/...`, `warehouses/...` prefix is unchanged — `compilerOptions.paths` in
-  `apps/server/tsconfig.json` maps `*` to `./src/*`, and TypeScript maps the `.js` back to the
-  `.ts` when it type-checks.
-- **A module barrel is imported as `<module>/index.js`**, never as the bare directory name:
-  `import { WarehousesRestModule } from 'warehouses/index.js'`.
+Source is not written that way, and does not have to be. `packages/tsconfig/tsconfig.base.json`
+sets `"moduleResolution": "Bundler"`, under which `tsc` accepts the extensionless specifier —
+relative (`./create-user.schema`) as well as the `paths`-mapped bare ones this application uses
+(`shared/domain/entities/x.entity`, and a module barrel as plain `warehouses`). The extension is
+supplied on emit instead: `apps/server/tsconfig.json` and every buildable package's `tsconfig.json`
+declare `"tsc-alias": { "resolveFullPaths": true }` at the top level, and `tsc-alias` — which
+already rewrites the `paths` aliases into relative specifiers — resolves each one against the
+emitted `dist/` tree and appends what it actually finds there, `./x` becoming `./x.js` and a
+directory becoming `<dir>/index.js`. So imports read exactly as they did before the ESM conversion
+while the output satisfies Node.
 
-The same applies to a deep subpath of a package that publishes no `exports` map for it —
-`lodash/uniq.js`, `typeorm/driver/types/IsolationLevel.js`. `lodash` is imported one function per
-default import for that reason: its CommonJS root has no named exports an ESM importer can bind.
+The tradeoff this buys is worth stating plainly, because it has already bitten this repository
+twice. `tsc` no longer type-checks Node's resolution rules, and `tsc-alias` does not fail a build
+over a specifier it cannot resolve — it leaves that one unrewritten and exits 0. So a broken
+specifier survives a green build and surfaces only when something loads the output. For
+`packages/*` that happens in the normal gate, because both applications import them through their
+`exports` map and therefore run against `dist/`. For `apps/server` nothing in the gate loads `dist/`
+— its own tiers run from source through Vitest — so after a change to the build, the paths mapping
+or this option, load the built tree before trusting it:
+
+```sh
+pnpm --filter @warehouser/server build
+node -e "import('./apps/server/dist/src/app.module.js')"
+```
+
+The one specifier that still carries its extension in source is a deep subpath of a real
+dependency — `lodash/uniq.js`, `typeorm/driver/types/IsolationLevel.js`. `tsc-alias` rewrites only
+relative specifiers and `paths` aliases; a package subpath is deliberately out of its reach, so
+nothing would append the extension for you there. `lodash` is imported one function per default
+import for a related reason: its CommonJS root has no named exports an ESM importer can bind.
 
 Use `import.meta.dirname` / `import.meta.filename`; `__dirname` and `__filename` do not exist.
 
 The build is `tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json`. `tsc` emits the
-specifiers unchanged and `tsc-alias` rewrites the `paths` ones into relative paths, which is what
-makes `dist/` loadable. The Nest CLI is deliberately not a dependency: its `paths` transformer
-strips the extension off every specifier it rewrites, producing output Node cannot load
-(nest-cli#3545). `pnpm dev` runs the TypeScript entrypoint directly with `tsx watch`.
+specifiers unchanged and `tsc-alias` performs both rewrites — `paths` alias to relative path, and
+`resolveFullPaths` to the extension — which is what makes `dist/` loadable. The Nest CLI is
+deliberately not a dependency: its `paths` transformer strips the extension off every specifier it
+rewrites, producing output Node cannot load (nest-cli#3545). `pnpm dev` runs the TypeScript
+entrypoint directly with `tsx watch`.
 
 ## Layer responsibilities
 
@@ -327,9 +348,9 @@ Each feature owns a `UsecaseModule` and may own a `RestModule` and `HandlerModul
 barrel exports only modules that exist and are required by a runtime:
 
 ```ts
-export { InventoryUsecaseModule } from './usecases/usecase.module.js';
-export { InventoryRestModule } from './rest/rest.module.js';
-export { InventoryHandlerModule } from './handlers/handler.module.js';
+export { InventoryUsecaseModule } from './usecases/usecase.module';
+export { InventoryRestModule } from './rest/rest.module';
+export { InventoryHandlerModule } from './handlers/handler.module';
 ```
 
 If the feature has no BullMQ consumers, do not create or export a handler module. Apply the same

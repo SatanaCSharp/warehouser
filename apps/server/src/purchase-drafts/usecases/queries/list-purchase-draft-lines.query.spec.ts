@@ -11,9 +11,9 @@
 // `warehouseDestination` in full to a member who holds no `CUSTOMERS:WATCH` at all: the Warehouse's
 // own address is the operator's premises data, not customer identity (AC-09a, AC-10, sad.md §7).
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { RejectionReasonLabelService } from 'purchase-drafts/domain/services/rejection-reason-label.service.js';
-import { ListPurchaseDraftLinesQuery } from 'purchase-drafts/usecases/queries/list-purchase-draft-lines.query.js';
-import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
+import { RejectionReasonLabelService } from 'purchase-drafts/domain/services/rejection-reason-label.service';
+import { ListPurchaseDraftLinesQuery } from 'purchase-drafts/usecases/queries/list-purchase-draft-lines.query';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { describe, expect, it, vi } from 'vitest';
 
 const warehouseId = '00000000-0000-4000-8000-000000000001';

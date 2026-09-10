@@ -1,14 +1,14 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
-import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user.js';
+import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
 import {
   TRANSACTIONAL_KEY,
   type TransactionalMetadata,
-} from 'shared/decorators/transactional.decorator.js';
-import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository.js';
-import { repositoryDouble } from 'test/doubles/repository-double.js';
+} from 'shared/decorators/transactional.decorator';
+import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
+import { repositoryDouble } from 'test/doubles/repository-double';
 import { describe, expect, it, vi } from 'vitest';
-import { ArchiveWarehouseCommand } from 'warehouses/usecases/commands/archive-warehouse.command.js';
+import { ArchiveWarehouseCommand } from 'warehouses/usecases/commands/archive-warehouse.command';
 
 const workspaceId = '00000000-0000-4000-8000-000000000001';
 const actorId = '00000000-0000-4000-8000-000000000002';

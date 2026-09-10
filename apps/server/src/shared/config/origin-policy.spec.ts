@@ -1,5 +1,5 @@
 import { ForbiddenException } from '@nestjs/common';
-import { OriginPolicy } from 'shared/config/origin-policy.js';
+import { OriginPolicy } from 'shared/config/origin-policy';
 import { describe, expect, it, vi } from 'vitest';
 
 describe('OriginPolicy', () => {

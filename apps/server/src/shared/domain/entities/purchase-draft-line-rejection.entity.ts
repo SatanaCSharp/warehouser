@@ -1,4 +1,4 @@
-import { type PurchaseDraftLineDeliveryMode } from 'shared/domain/entities/purchase-draft-line.entity.js';
+import { type PurchaseDraftLineDeliveryMode } from 'shared/domain/entities/purchase-draft-line.entity';
 import { Column, Entity, PrimaryColumn } from 'typeorm';
 
 // `chk_purchase_draft_line_rejections_source` — where the refusal came from. A refusal on goods that

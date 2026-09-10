@@ -3,15 +3,15 @@ import { assert, assertDefined } from '@warehouser/utils/asserts';
 import {
   workspaceManagerTransferRequiredError,
   workspaceSelfActionDeniedError,
-} from 'access/domain/errors/workspace-access.errors.js';
+} from 'access/domain/errors/workspace-access.errors';
 import {
   isMembershipSelfTarget,
   isProtectedWarehouseManagerRoleKind,
-} from 'access/domain/predicates/workspace-authority.predicates.js';
-import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user.js';
-import { Transactional } from 'shared/decorators/transactional.decorator.js';
-import { WarehouseMembershipAssignmentRepository } from 'shared/domain/repositories/warehouse-membership-assignment.repository.js';
-import { workspaceTargetUnavailableError } from 'shared/errors/cross-module.errors.js';
+} from 'access/domain/predicates/workspace-authority.predicates';
+import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
+import { Transactional } from 'shared/decorators/transactional.decorator';
+import { WarehouseMembershipAssignmentRepository } from 'shared/domain/repositories/warehouse-membership-assignment.repository';
+import { workspaceTargetUnavailableError } from 'shared/errors/cross-module.errors';
 
 export interface RevokeWarehouseMembershipInput {
   readonly targetUserId: string;

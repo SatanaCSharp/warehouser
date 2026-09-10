@@ -3,7 +3,7 @@ import { assertDefined } from '@warehouser/utils/asserts';
 import {
   WorkspaceActorWarehouseRead,
   WorkspaceReadRepository,
-} from 'shared/domain/repositories/workspace-read.repository.js';
+} from 'shared/domain/repositories/workspace-read.repository';
 
 export interface WorkspaceContextWarehouse {
   readonly warehouseId: string;

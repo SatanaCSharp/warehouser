@@ -8,44 +8,47 @@ export default defineConfig({
   resolve: {
     alias: {
       '@warehouser/contracts/access': path.resolve(
-        __dirname,
+        import.meta.dirname,
         '../../packages/contracts/src/access/index.ts',
       ),
       '@warehouser/contracts/auth': path.resolve(
-        __dirname,
+        import.meta.dirname,
         '../../packages/contracts/src/auth/index.ts',
       ),
       '@warehouser/contracts/customer-orders': path.resolve(
-        __dirname,
+        import.meta.dirname,
         '../../packages/contracts/src/customer-orders/index.ts',
       ),
       '@warehouser/contracts/customers': path.resolve(
-        __dirname,
+        import.meta.dirname,
         '../../packages/contracts/src/customers/index.ts',
       ),
       '@warehouser/contracts/items': path.resolve(
-        __dirname,
+        import.meta.dirname,
         '../../packages/contracts/src/items/index.ts',
       ),
       '@warehouser/contracts/purchase-drafts': path.resolve(
-        __dirname,
+        import.meta.dirname,
         '../../packages/contracts/src/purchase-drafts/index.ts',
       ),
       '@warehouser/contracts/users': path.resolve(
-        __dirname,
+        import.meta.dirname,
         '../../packages/contracts/src/users/index.ts',
       ),
       '@warehouser/contracts/workspaces': path.resolve(
-        __dirname,
+        import.meta.dirname,
         '../../packages/contracts/src/workspaces/index.ts',
       ),
       '@warehouser/shared-types/enums': path.resolve(
-        __dirname,
+        import.meta.dirname,
         '../../packages/shared-types/src/enums/index.ts',
       ),
-      access: path.resolve(__dirname, '../../packages/contracts/src/access'),
+      access: path.resolve(
+        import.meta.dirname,
+        '../../packages/contracts/src/access',
+      ),
       'customer-orders': path.resolve(
-        __dirname,
+        import.meta.dirname,
         '../../packages/contracts/src/customer-orders',
       ),
       // `packages/contracts/tsconfig.json` sets `baseUrl: src`, so a contracts module importing
@@ -54,28 +57,31 @@ export default defineConfig({
       // to the compiled CommonJS `dist`, whose `__exportStar` re-exports rollup cannot statically
       // analyse, and only `vite build` fails while every test tier stays green.
       customers: path.resolve(
-        __dirname,
+        import.meta.dirname,
         '../../packages/contracts/src/customers',
       ),
-      items: path.resolve(__dirname, '../../packages/contracts/src/items'),
+      items: path.resolve(
+        import.meta.dirname,
+        '../../packages/contracts/src/items',
+      ),
       'purchase-drafts': path.resolve(
-        __dirname,
+        import.meta.dirname,
         '../../packages/contracts/src/purchase-drafts',
       ),
       workspaces: path.resolve(
-        __dirname,
+        import.meta.dirname,
         '../../packages/contracts/src/workspaces',
       ),
-      src: path.resolve(__dirname, './src'),
-      App: path.resolve(__dirname, './src/App.tsx'),
-      i18n: path.resolve(__dirname, './src/i18n.ts'),
-      guards: path.resolve(__dirname, './src/guards'),
-      modules: path.resolve(__dirname, './src/modules'),
-      router: path.resolve(__dirname, './src/router.ts'),
-      routes: path.resolve(__dirname, './src/routes'),
-      shared: path.resolve(__dirname, './src/shared'),
-      store: path.resolve(__dirname, './src/store'),
-      test: path.resolve(__dirname, './src/test'),
+      src: path.resolve(import.meta.dirname, './src'),
+      App: path.resolve(import.meta.dirname, './src/App.tsx'),
+      i18n: path.resolve(import.meta.dirname, './src/i18n.ts'),
+      guards: path.resolve(import.meta.dirname, './src/guards'),
+      modules: path.resolve(import.meta.dirname, './src/modules'),
+      router: path.resolve(import.meta.dirname, './src/router.ts'),
+      routes: path.resolve(import.meta.dirname, './src/routes'),
+      shared: path.resolve(import.meta.dirname, './src/shared'),
+      store: path.resolve(import.meta.dirname, './src/store'),
+      test: path.resolve(import.meta.dirname, './src/test'),
     },
   },
   server: {

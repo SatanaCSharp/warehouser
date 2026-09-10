@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { getEntityManager } from 'shared/database/db-transaction-context.service.js';
-import { RoleEntity } from 'shared/domain/entities/role.entity.js';
-import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity.js';
-import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity.js';
+import { getEntityManager } from 'shared/database/db-transaction-context.service';
+import { RoleEntity } from 'shared/domain/entities/role.entity';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
+import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
 import { DataSource, In } from 'typeorm';
 
 @Injectable()

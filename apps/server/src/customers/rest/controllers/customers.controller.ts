@@ -19,25 +19,25 @@ import {
   CustomerCreateDto,
   CustomerListQueryDto,
   CustomerUpdateDto,
-} from 'customers/rest/dtos/customer-mutation.dto.js';
+} from 'customers/rest/dtos/customer-mutation.dto';
 import {
   toCustomerDetailResponse,
   toCustomerResponse,
-} from 'customers/rest/mappers/customer-response.mapper.js';
-import { CorrectCustomerNameCommand } from 'customers/usecases/commands/correct-customer-name.command.js';
-import { DeactivateCustomerCommand } from 'customers/usecases/commands/deactivate-customer.command.js';
-import { ReactivateCustomerCommand } from 'customers/usecases/commands/reactivate-customer.command.js';
-import { RecordCustomerCommand } from 'customers/usecases/commands/record-customer.command.js';
-import { ListCustomersQuery } from 'customers/usecases/queries/list-customers.query.js';
-import { ReadCustomerQuery } from 'customers/usecases/queries/read-customer.query.js';
+} from 'customers/rest/mappers/customer-response.mapper';
+import { CorrectCustomerNameCommand } from 'customers/usecases/commands/correct-customer-name.command';
+import { DeactivateCustomerCommand } from 'customers/usecases/commands/deactivate-customer.command';
+import { ReactivateCustomerCommand } from 'customers/usecases/commands/reactivate-customer.command';
+import { RecordCustomerCommand } from 'customers/usecases/commands/record-customer.command';
+import { ListCustomersQuery } from 'customers/usecases/queries/list-customers.query';
+import { ReadCustomerQuery } from 'customers/usecases/queries/read-customer.query';
 import map from 'lodash/map.js';
-import type { WarehouseAccessRequest } from 'shared/access/access-request.js';
-import { ArchivedTolerantRead } from 'shared/access/archived-tolerant-read.decorator.js';
-import { RequiredPermission } from 'shared/decorators/required-permission.decorator.js';
-import { SessionAuthGuard } from 'shared/guards/session-auth.guard.js';
-import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard.js';
-import { WriteRateLimitGuard } from 'shared/guards/write-rate-limit.guard.js';
-import { WriteRateLimited } from 'shared/guards/write-rate-limited.decorator.js';
+import type { WarehouseAccessRequest } from 'shared/access/access-request';
+import { ArchivedTolerantRead } from 'shared/access/archived-tolerant-read.decorator';
+import { RequiredPermission } from 'shared/decorators/required-permission.decorator';
+import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
+import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
+import { WriteRateLimitGuard } from 'shared/guards/write-rate-limit.guard';
+import { WriteRateLimited } from 'shared/guards/write-rate-limited.decorator';
 
 /** Every route whose subject is a Customer — the record demand and directly-shipped lines both name
  * (contracts/openapi.yaml `/customers*`, sad.md §7). Each handler declares exactly one

@@ -7,7 +7,7 @@ import {
   isDiscardableDraft,
   isEmptyDraft,
   isReadyForOrderingDraft,
-} from 'purchase-drafts/domain/predicates/purchase-draft-freeze.predicates.js';
+} from 'purchase-drafts/domain/predicates/purchase-draft-freeze.predicates';
 import { describe, expect, it } from 'vitest';
 
 describe('purchase-draft freeze/closure/discard predicates', () => {

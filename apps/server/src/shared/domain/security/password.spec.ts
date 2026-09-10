@@ -1,5 +1,5 @@
 import { AssertionError } from '@warehouser/shared-types/errors';
-import { Password } from 'shared/domain/security/password.js';
+import { Password } from 'shared/domain/security/password';
 import { describe, expect, it } from 'vitest';
 
 describe('Password', () => {

@@ -17,19 +17,19 @@ import type {
   MemberEmail,
 } from '@warehouser/contracts/users';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import type { WarehouseAccessRequest } from 'shared/access/access-request.js';
-import { RequiredPermission } from 'shared/decorators/required-permission.decorator.js';
-import { SessionAuthGuard } from 'shared/guards/session-auth.guard.js';
-import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard.js';
+import type { WarehouseAccessRequest } from 'shared/access/access-request';
+import { RequiredPermission } from 'shared/decorators/required-permission.decorator';
+import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
+import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
 import {
   CreateMemberDto,
   EmailChangeDto,
   PasswordChangeDto,
-} from 'users/rest/dtos/users-mutation.dto.js';
-import { ChangeMemberEmailCommand } from 'users/usecases/commands/change-member-email.command.js';
-import { ChangeMemberPasswordCommand } from 'users/usecases/commands/change-member-password.command.js';
-import { CreateMemberCommand } from 'users/usecases/commands/create-member.command.js';
-import { DeleteMemberCommand } from 'users/usecases/commands/delete-member.command.js';
+} from 'users/rest/dtos/users-mutation.dto';
+import { ChangeMemberEmailCommand } from 'users/usecases/commands/change-member-email.command';
+import { ChangeMemberPasswordCommand } from 'users/usecases/commands/change-member-password.command';
+import { CreateMemberCommand } from 'users/usecases/commands/create-member.command';
+import { DeleteMemberCommand } from 'users/usecases/commands/delete-member.command';
 
 @Controller('api/v1/warehouses/:warehouseId/users')
 export class UsersController {

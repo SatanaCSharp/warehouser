@@ -111,7 +111,10 @@ describe('purchase-drafts contracts', () => {
   describe('the module is exposed as a package subpath', () => {
     it('declares ./purchase-drafts in the contract package exports', () => {
       const packageJson = JSON.parse(
-        readFileSync(join(__dirname, '..', '..', 'package.json'), 'utf8'),
+        readFileSync(
+          join(import.meta.dirname, '..', '..', 'package.json'),
+          'utf8',
+        ),
       ) as { exports: Record<string, unknown> };
 
       expect(packageJson.exports['./purchase-drafts']).toEqual({

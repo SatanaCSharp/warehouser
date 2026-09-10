@@ -1,0 +1,48 @@
+{
+  "name": "@warehouser/oxlint-config",
+  "version": "1.0.0",
+  "description": "Shared oxlint configuration: the repository baseline plus the NestJS and React layers.",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.14.0"
+  },
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./base": {
+      "types": "./src/base.ts",
+      "default": "./src/base.ts"
+    },
+    "./merge": {
+      "types": "./src/merge.ts",
+      "default": "./src/merge.ts"
+    },
+    "./service": {
+      "types": "./src/service.ts",
+      "default": "./src/service.ts"
+    },
+    "./ui": {
+      "types": "./src/ui.ts",
+      "default": "./src/ui.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "lint": "oxlint --type-aware --max-warnings=0 src",
+    "lint:fix": "oxlint --type-aware --fix src && oxlint --type-aware --max-warnings=0 src"
+  },
+  "devDependencies": {
+    "@warehouser/tsconfig": "workspace:*",
+    "oxlint": "catalog:",
+    "typescript": "catalog:"
+  }
+}

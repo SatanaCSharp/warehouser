@@ -1,6 +1,6 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
-import type { CustomerOrderState } from 'shared/domain/entities/customer-order.entity.js';
+import type { CustomerOrderState } from 'shared/domain/entities/customer-order.entity';
 
 // AC-18 — the three bounds Arrival Confirmation's demand effect enforces, matched exactly to
 // openapi.yaml `ArrivalConfirmationConflict` `boundsFailed`'s `details.violations` shape so the

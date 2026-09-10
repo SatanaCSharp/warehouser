@@ -1,7 +1,7 @@
 import find from 'lodash/find.js';
 import map from 'lodash/map.js';
-import type { CustomerEntity } from 'shared/domain/entities/customer.entity.js';
-import type { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity.js';
+import type { CustomerEntity } from 'shared/domain/entities/customer.entity';
+import type { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
 
 // A Customer's Delivery Address as the application boundary returns it — openapi.yaml
 // `CustomerDeliveryAddress`. It carries no `warehouseId`: the Warehouse is the request's, never a

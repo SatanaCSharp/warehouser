@@ -1,13 +1,13 @@
 import { Controller, Get, Req, UseGuards } from '@nestjs/common';
 import type { DemandLine } from '@warehouser/contracts/customer-orders';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { ReadConsolidatedDemandQuery } from 'customer-orders/usecases/queries/read-consolidated-demand.query.js';
-import type { WarehouseAccessRequest } from 'shared/access/access-request.js';
-import { ArchivedTolerantRead } from 'shared/access/archived-tolerant-read.decorator.js';
-import { ObservedPermission } from 'shared/decorators/observed-permission.decorator.js';
-import { RequiredPermission } from 'shared/decorators/required-permission.decorator.js';
-import { SessionAuthGuard } from 'shared/guards/session-auth.guard.js';
-import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard.js';
+import { ReadConsolidatedDemandQuery } from 'customer-orders/usecases/queries/read-consolidated-demand.query';
+import type { WarehouseAccessRequest } from 'shared/access/access-request';
+import { ArchivedTolerantRead } from 'shared/access/archived-tolerant-read.decorator';
+import { ObservedPermission } from 'shared/decorators/observed-permission.decorator';
+import { RequiredPermission } from 'shared/decorators/required-permission.decorator';
+import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
+import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
 
 /** The consolidated demand of one Warehouse (contracts/openapi.yaml
  * `/api/v1/warehouses/{warehouseId}/demand`, AC-04, AC-05, AC-23).

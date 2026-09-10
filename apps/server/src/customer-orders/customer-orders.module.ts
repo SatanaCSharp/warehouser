@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { CustomerOrdersRestModule } from 'customer-orders/rest/rest.module.js';
-import { CustomerOrdersUsecaseModule } from 'customer-orders/usecases/usecase.module.js';
+import { CustomerOrdersRestModule } from 'customer-orders/rest/rest.module';
+import { CustomerOrdersUsecaseModule } from 'customer-orders/usecases/usecase.module';
 
 // Combines `customer-orders`' application API and its REST adapter, mirroring `items.module.ts` —
 // the one file `app.module.ts` imports for this feature. `CustomerOrdersUsecaseModule` is

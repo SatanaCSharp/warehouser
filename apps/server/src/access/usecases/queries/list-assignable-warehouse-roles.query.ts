@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
-import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user.js';
+import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
 import {
   AssignableRoleProjection,
   WarehouseMembershipAssignmentRepository,
-} from 'shared/domain/repositories/warehouse-membership-assignment.repository.js';
-import { workspaceTargetUnavailableError } from 'shared/errors/cross-module.errors.js';
+} from 'shared/domain/repositories/warehouse-membership-assignment.repository';
+import { workspaceTargetUnavailableError } from 'shared/errors/cross-module.errors';
 
 export interface ListAssignableWarehouseRolesInput {
   readonly warehouseId: string;

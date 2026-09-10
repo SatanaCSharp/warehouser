@@ -2,10 +2,10 @@
 // server-architecture.md §Testing, so no database is involved: what these cases assert is that a
 // refused write is **never attempted**.
 import { ErrorCode } from '@warehouser/shared-types/enums';
-import { CustomerOrderLifecycleService } from 'customer-orders/domain/services/customer-order-lifecycle.service.js';
-import { CancelCustomerOrderCommand } from 'customer-orders/usecases/commands/cancel-customer-order.command.js';
-import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
-import type { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity.js';
+import { CustomerOrderLifecycleService } from 'customer-orders/domain/services/customer-order-lifecycle.service';
+import { CancelCustomerOrderCommand } from 'customer-orders/usecases/commands/cancel-customer-order.command';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import type { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
 import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>

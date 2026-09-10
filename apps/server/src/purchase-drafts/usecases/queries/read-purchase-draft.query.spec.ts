@@ -17,9 +17,9 @@
 // that the boolean becomes the named signal, and that the two projection forms are chosen by the
 // observed Permission and never by the surface.
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { RejectionReasonLabelService } from 'purchase-drafts/domain/services/rejection-reason-label.service.js';
-import { ReadPurchaseDraftQuery } from 'purchase-drafts/usecases/queries/read-purchase-draft.query.js';
-import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
+import { RejectionReasonLabelService } from 'purchase-drafts/domain/services/rejection-reason-label.service';
+import { ReadPurchaseDraftQuery } from 'purchase-drafts/usecases/queries/read-purchase-draft.query';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { describe, expect, it, vi } from 'vitest';
 
 const warehouseId = '00000000-0000-4000-8000-000000000001';

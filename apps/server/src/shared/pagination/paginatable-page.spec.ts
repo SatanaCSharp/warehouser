@@ -1,4 +1,4 @@
-import { paginatablePage } from 'shared/pagination/paginatable-page.js';
+import { paginatablePage } from 'shared/pagination/paginatable-page';
 import { describe, expect, it } from 'vitest';
 
 describe('paginatablePage', () => {

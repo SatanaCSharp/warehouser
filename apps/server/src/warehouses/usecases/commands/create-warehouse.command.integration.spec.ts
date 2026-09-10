@@ -4,19 +4,19 @@ import {
   ErrorCode,
   WorkspacePermissionId,
 } from '@warehouser/shared-types/enums';
-import { ProvisionInitialAccessCommand } from 'access/usecases/commands/provision-initial-access.command.js';
-import { workspaceCurrentUser } from 'shared/access/workspace-current-user.js';
-import dataSource from 'shared/database/data-source.js';
-import { DbTransactionService } from 'shared/database/db-transaction.service.js';
-import { DbTransactionContext } from 'shared/database/db-transaction-context.service.js';
-import { AccountEntity } from 'shared/domain/entities/account.entity.js';
-import { RoleEntity } from 'shared/domain/entities/role.entity.js';
-import { UserEntity } from 'shared/domain/entities/user.entity.js';
-import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity.js';
-import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity.js';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
-import { AccessProvisioningRepository } from 'shared/domain/repositories/access-provisioning.repository.js';
-import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository.js';
+import { ProvisionInitialAccessCommand } from 'access/usecases/commands/provision-initial-access.command';
+import { workspaceCurrentUser } from 'shared/access/workspace-current-user';
+import dataSource from 'shared/database/data-source';
+import { DbTransactionService } from 'shared/database/db-transaction.service';
+import { DbTransactionContext } from 'shared/database/db-transaction-context.service';
+import { AccountEntity } from 'shared/domain/entities/account.entity';
+import { RoleEntity } from 'shared/domain/entities/role.entity';
+import { UserEntity } from 'shared/domain/entities/user.entity';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
+import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
+import { AccessProvisioningRepository } from 'shared/domain/repositories/access-provisioning.repository';
+import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
 import {
   afterAll,
   afterEach,
@@ -32,7 +32,7 @@ import {
 // Manager Role and the creator's membership to `access`'s
 // `ProvisionInitialAccessCommand` (T12), and run inside its own
 // `@Transactional()` boundary (sad.md §6.4).
-import { CreateWarehouseCommand } from 'warehouses/usecases/commands/create-warehouse.command.js';
+import { CreateWarehouseCommand } from 'warehouses/usecases/commands/create-warehouse.command';
 
 const now = new Date('2026-08-12T12:00:00.000Z');
 

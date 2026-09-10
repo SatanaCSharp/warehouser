@@ -1,7 +1,7 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
-import { DeleteWorkspaceRoleCommand } from 'access/usecases/commands/delete-workspace-role.command.js';
-import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user.js';
+import { DeleteWorkspaceRoleCommand } from 'access/usecases/commands/delete-workspace-role.command';
+import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
 import { describe, expect, it, vi } from 'vitest';
 
 const workspaceId = '00000000-0000-4000-8000-000000000001';

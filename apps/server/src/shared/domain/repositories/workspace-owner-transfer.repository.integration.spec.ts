@@ -1,11 +1,11 @@
-import dataSource from 'shared/database/data-source.js';
-import { DbTransactionService } from 'shared/database/db-transaction.service.js';
-import { DbTransactionContext } from 'shared/database/db-transaction-context.service.js';
-import { AccountEntity } from 'shared/domain/entities/account.entity.js';
-import { UserEntity } from 'shared/domain/entities/user.entity.js';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
-import { WorkspaceMembershipEntity } from 'shared/domain/entities/workspace-membership.entity.js';
-import { WorkspaceRoleEntity } from 'shared/domain/entities/workspace-role.entity.js';
+import dataSource from 'shared/database/data-source';
+import { DbTransactionService } from 'shared/database/db-transaction.service';
+import { DbTransactionContext } from 'shared/database/db-transaction-context.service';
+import { AccountEntity } from 'shared/domain/entities/account.entity';
+import { UserEntity } from 'shared/domain/entities/user.entity';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
+import { WorkspaceMembershipEntity } from 'shared/domain/entities/workspace-membership.entity';
+import { WorkspaceRoleEntity } from 'shared/domain/entities/workspace-role.entity';
 // `WorkspaceOwnerTransferRepository` does not exist yet (T10) — this is the
 // RED for AC-26. The implementer creates it per
 // docs/system/guides/creating-a-server-repository.md (data-model.md
@@ -13,11 +13,11 @@ import { WorkspaceRoleEntity } from 'shared/domain/entities/workspace-role.entit
 // `workspaces` row, then both membership rows in `user_id` order, rechecks
 // their composite Role relations, and updates both assignments in one
 // statement, exactly as `ManagerTransferRepository` does one level down.
-import { WorkspaceOwnerTransferRepository } from 'shared/domain/repositories/workspace-owner-transfer.repository.js';
+import { WorkspaceOwnerTransferRepository } from 'shared/domain/repositories/workspace-owner-transfer.repository';
 import {
   buildWorkspace,
   buildWorkspaceRole,
-} from 'test/factories/entity-factories.js';
+} from 'test/factories/entity-factories';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 const now = new Date('2026-08-12T12:00:00.000Z');

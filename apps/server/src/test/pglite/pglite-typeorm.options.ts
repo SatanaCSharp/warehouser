@@ -19,7 +19,7 @@
  */
 import type { TypeOrmModuleOptions } from '@nestjs/typeorm';
 
-import { pgliteDriver } from './pglite-driver.js';
+import { pgliteDriver } from './pglite-driver';
 
 export const createTypeOrmOptions = (): TypeOrmModuleOptions => ({
   type: 'postgres',

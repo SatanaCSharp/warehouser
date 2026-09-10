@@ -3,8 +3,8 @@ import type {
   CustomerOrderProjection,
   IdentifiedCustomerOrder,
   RedactedCustomerOrder,
-} from 'customer-orders/domain/mappers/customer-order-projection.mapper.js';
-import { identifiesCustomer } from 'customer-orders/domain/mappers/customer-order-projection.mapper.js';
+} from 'customer-orders/domain/mappers/customer-order-projection.mapper';
+import { identifiesCustomer } from 'customer-orders/domain/mappers/customer-order-projection.mapper';
 
 // openapi.yaml `CustomerOrder` — the transport form of the projection, in the two shapes the
 // contract models as `oneOf` (AC-09a, ADR 0001).

@@ -1,22 +1,22 @@
 import { Module } from '@nestjs/common';
-import { CustomerOrderDestinationService } from 'customer-orders/domain/services/customer-order-destination.service.js';
-import { CustomerOrderLifecycleService } from 'customer-orders/domain/services/customer-order-lifecycle.service.js';
-import { DemandAllocationService } from 'customer-orders/domain/services/demand-allocation.service.js';
-import { AmendCustomerOrderCommand } from 'customer-orders/usecases/commands/amend-customer-order.command.js';
-import { CancelCustomerOrderCommand } from 'customer-orders/usecases/commands/cancel-customer-order.command.js';
-import { RecordCustomerOrderCommand } from 'customer-orders/usecases/commands/record-customer-order.command.js';
-import { RedirectCustomerOrderCommand } from 'customer-orders/usecases/commands/redirect-customer-order.command.js';
-import { ListCustomerOrdersQuery } from 'customer-orders/usecases/queries/list-customer-orders.query.js';
-import { ListLinkableCustomerOrdersForItemQuery } from 'customer-orders/usecases/queries/list-linkable-customer-orders-for-item.query.js';
-import { ListUnfulfilledCustomerOrdersForItemQuery } from 'customer-orders/usecases/queries/list-unfulfilled-customer-orders-for-item.query.js';
-import { ReadConsolidatedDemandQuery } from 'customer-orders/usecases/queries/read-consolidated-demand.query.js';
-import { ReadCustomerOrderQuery } from 'customer-orders/usecases/queries/read-customer-order.query.js';
-import { ConsolidatedDemandRepository } from 'shared/domain/repositories/consolidated-demand.repository.js';
-import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository.js';
-import { CustomerDirectoryRepository } from 'shared/domain/repositories/customer-directory.repository.js';
-import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository.js';
-import { DemandAllocationRepository } from 'shared/domain/repositories/demand-allocation.repository.js';
-import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository.js';
+import { CustomerOrderDestinationService } from 'customer-orders/domain/services/customer-order-destination.service';
+import { CustomerOrderLifecycleService } from 'customer-orders/domain/services/customer-order-lifecycle.service';
+import { DemandAllocationService } from 'customer-orders/domain/services/demand-allocation.service';
+import { AmendCustomerOrderCommand } from 'customer-orders/usecases/commands/amend-customer-order.command';
+import { CancelCustomerOrderCommand } from 'customer-orders/usecases/commands/cancel-customer-order.command';
+import { RecordCustomerOrderCommand } from 'customer-orders/usecases/commands/record-customer-order.command';
+import { RedirectCustomerOrderCommand } from 'customer-orders/usecases/commands/redirect-customer-order.command';
+import { ListCustomerOrdersQuery } from 'customer-orders/usecases/queries/list-customer-orders.query';
+import { ListLinkableCustomerOrdersForItemQuery } from 'customer-orders/usecases/queries/list-linkable-customer-orders-for-item.query';
+import { ListUnfulfilledCustomerOrdersForItemQuery } from 'customer-orders/usecases/queries/list-unfulfilled-customer-orders-for-item.query';
+import { ReadConsolidatedDemandQuery } from 'customer-orders/usecases/queries/read-consolidated-demand.query';
+import { ReadCustomerOrderQuery } from 'customer-orders/usecases/queries/read-customer-order.query';
+import { ConsolidatedDemandRepository } from 'shared/domain/repositories/consolidated-demand.repository';
+import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository';
+import { CustomerDirectoryRepository } from 'shared/domain/repositories/customer-directory.repository';
+import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository';
+import { DemandAllocationRepository } from 'shared/domain/repositories/demand-allocation.repository';
+import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
 
 // AC-01/AC-19/AC-19a — each command owns the rules of its own transition and its own transaction
 // boundary; the one locking read the amendment and the cancellation share lives in

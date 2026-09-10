@@ -1,11 +1,11 @@
 import { Controller, Get, UseGuards } from '@nestjs/common';
 import type { PackagingType } from '@warehouser/contracts/purchase-drafts';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { ListPackagingTypesQuery } from 'purchase-drafts/usecases/queries/list-packaging-types.query.js';
-import { ArchivedTolerantRead } from 'shared/access/archived-tolerant-read.decorator.js';
-import { RequiredPermission } from 'shared/decorators/required-permission.decorator.js';
-import { SessionAuthGuard } from 'shared/guards/session-auth.guard.js';
-import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard.js';
+import { ListPackagingTypesQuery } from 'purchase-drafts/usecases/queries/list-packaging-types.query';
+import { ArchivedTolerantRead } from 'shared/access/archived-tolerant-read.decorator';
+import { RequiredPermission } from 'shared/decorators/required-permission.decorator';
+import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
+import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
 
 /** The Packaging Type catalogue (contracts/openapi.yaml `/packaging-types`, sad.md §7). Served at
  * its own segment — not nested under `/purchase-drafts` — so no literal segment competes with a

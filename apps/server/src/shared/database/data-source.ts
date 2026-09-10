@@ -25,7 +25,7 @@ import 'reflect-metadata';
 
 import { join } from 'node:path';
 
-import { entities } from 'shared/database/entities.js';
+import { entities } from 'shared/database/entities';
 import { DataSource } from 'typeorm';
 
 const databasePort = Number.parseInt(process.env.DATABASE_PORT ?? '5432', 10);

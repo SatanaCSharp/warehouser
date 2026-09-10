@@ -6,7 +6,7 @@ import {
   customerLastActiveDeliveryAddressError,
   customerNameTakenError,
   customerTargetUnavailableError,
-} from 'customers/domain/errors/customer.errors.js';
+} from 'customers/domain/errors/customer.errors';
 import { describe, expect, it } from 'vitest';
 
 describe('customers error factories', () => {

@@ -6,8 +6,8 @@
 // `consolidated-demand.repository.integration.spec.ts`; this use-case spec is the thin adapter
 // that scopes the read to the acting Warehouse and passes the repository's Demand Lines through
 // unchanged — `sad.md` §6.5 step 5, "returns the Demand Lines whole, nothing paged".
-import { ReadConsolidatedDemandQuery } from 'customer-orders/usecases/queries/read-consolidated-demand.query.js';
-import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
+import { ReadConsolidatedDemandQuery } from 'customer-orders/usecases/queries/read-consolidated-demand.query';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { describe, expect, it, vi } from 'vitest';
 
 const warehouseId = '00000000-0000-4000-8000-000000000001';

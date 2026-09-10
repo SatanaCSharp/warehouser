@@ -1,16 +1,16 @@
 import { randomUUID } from 'node:crypto';
 
-import dataSource from 'shared/database/data-source.js';
-import { AccountEntity } from 'shared/domain/entities/account.entity.js';
-import type { CustomerOrderState } from 'shared/domain/entities/customer-order.entity.js';
-import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity.js';
-import { ItemEntity } from 'shared/domain/entities/item.entity.js';
-import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity.js';
-import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity.js';
-import { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity.js';
-import { UserEntity } from 'shared/domain/entities/user.entity.js';
-import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity.js';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
+import dataSource from 'shared/database/data-source';
+import { AccountEntity } from 'shared/domain/entities/account.entity';
+import type { CustomerOrderState } from 'shared/domain/entities/customer-order.entity';
+import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
+import { ItemEntity } from 'shared/domain/entities/item.entity';
+import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
+import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity';
+import { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity';
+import { UserEntity } from 'shared/domain/entities/user.entity';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 // `ConsolidatedDemandRepository` does not exist yet (T10) — this is the RED for the demand
 // read data-model.md "The non-fan-out requirement" and sad.md §6.5 describe: **one** query that
 // groups Unfulfilled Customer Orders by Item into total Outstanding Quantity and earliest
@@ -20,11 +20,11 @@ import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
 // per Customer Order) combined **without fan-out** (AC-04, AC-17a, AC-20, AC-21a). The response
 // shape is `openapi.yaml` `components.schemas.DemandLine` / `DemandCoverage`, the source of truth
 // this RED asserts against rather than an inferred shape.
-import { ConsolidatedDemandRepository } from 'shared/domain/repositories/consolidated-demand.repository.js';
+import { ConsolidatedDemandRepository } from 'shared/domain/repositories/consolidated-demand.repository';
 import {
   buildWarehouse,
   buildWorkspace,
-} from 'test/factories/entity-factories.js';
+} from 'test/factories/entity-factories';
 // `PostgresQueryRunner.prototype.query` is the one method every TypeORM access path — raw
 // `manager.query`, `repository.find`, and `QueryBuilder` alike — ultimately calls to reach
 // PostgreSQL. Spying on it proves actual round trips, i.e. "one query" and not merely "one

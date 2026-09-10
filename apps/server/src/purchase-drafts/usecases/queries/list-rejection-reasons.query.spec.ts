@@ -5,7 +5,7 @@
 //
 // `purchase-drafts/usecases/queries/list-rejection-reasons.query.ts` does not exist yet, so this
 // import fails to resolve (GOOD red).
-import { ListRejectionReasonsQuery } from 'purchase-drafts/usecases/queries/list-rejection-reasons.query.js';
+import { ListRejectionReasonsQuery } from 'purchase-drafts/usecases/queries/list-rejection-reasons.query';
 import { describe, expect, it, vi } from 'vitest';
 
 const aReasonRow = (overrides: Partial<Record<string, unknown>> = {}) => ({

@@ -7,5 +7,14 @@
     "paths": { "*": ["./src/*"] },
     "outDir": "dist"
   },
+  // What lets this package's source stay extensionless while its output is loadable ESM. Node's
+  // ESM resolver does no extension search and no directory resolution, so `dist/` must name
+  // `./error-code.js` and `../enums/index.js` outright — but `moduleResolution: "Bundler"` in the
+  // shared base config lets `tsc` accept the bare `enums/error-code` the source actually writes.
+  // `tsc-alias` closes the gap: it already rewrites the `paths` aliases into relative specifiers,
+  // and `resolveFullPaths` has it append the extension too, resolved against the emitted tree
+  // rather than guessed — a directory becomes `/index.js`, and a non-relative specifier is left
+  // alone, so a real dependency subpath would still have to carry its own extension in the source.
+  "tsc-alias": { "resolveFullPaths": true },
   "include": ["src/**/*.ts"]
 }

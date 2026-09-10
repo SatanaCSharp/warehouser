@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
-import { AuthModule } from 'auth/auth.module.js';
-import { ItemsController } from 'items/rest/controllers/items.controller.js';
-import { ItemsUsecaseModule } from 'items/usecases/usecase.module.js';
-import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard.js';
+import { AuthModule } from 'auth/auth.module';
+import { ItemsController } from 'items/rest/controllers/items.controller';
+import { ItemsUsecaseModule } from 'items/usecases/usecase.module';
+import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
 
 // `AuthModule` supplies `SessionAuthGuard`'s dependencies; `WarehouseAccessGuard` is shared
 // transport infrastructure from `shared/guards/` and is only registered here so Nest can

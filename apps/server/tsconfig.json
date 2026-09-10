@@ -10,6 +10,17 @@
     "paths": { "*": ["./src/*"] },
     "skipLibCheck": true
   },
+  // What lets this application's source stay extensionless while `dist/` is loadable ESM. Node's
+  // ESM resolver does no extension search and no directory resolution, so the emitted files must
+  // name `./x.entity.js` and `warehouses/index.js` outright — but `moduleResolution: "Bundler"` in
+  // the shared base config lets `tsc` accept the bare `shared/...` specifiers the ~3000 imports
+  // here actually write. `tsc-alias` closes the gap: it already rewrites those `paths` aliases into
+  // relative specifiers, and `resolveFullPaths` has it append the extension too, resolved against
+  // the emitted tree rather than guessed — a directory becomes `/index.js`.
+  //
+  // It skips non-relative specifiers, which is why a deep subpath of a real dependency still has to
+  // carry its own extension in the source: `lodash/uniq.js`, `typeorm/driver/types/IsolationLevel.js`.
+  "tsc-alias": { "resolveFullPaths": true },
   "include": ["src/**/*", "migrations/**/*"],
   "exclude": ["./dist*"]
 }

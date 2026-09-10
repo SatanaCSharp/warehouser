@@ -1,5 +1,5 @@
 import { AssertionError } from '@warehouser/shared-types/errors';
-import { AccessName } from 'shared/domain/value-objects/access-name.js';
+import { AccessName } from 'shared/domain/value-objects/access-name';
 import { describe, expect, it } from 'vitest';
 
 // Built from code points rather than written as literals: a combining mark, a

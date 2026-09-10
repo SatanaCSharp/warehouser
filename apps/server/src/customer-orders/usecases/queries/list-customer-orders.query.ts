@@ -1,14 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import type { CustomerOrderProjection } from 'customer-orders/domain/mappers/customer-order-projection.mapper.js';
+import type { CustomerOrderProjection } from 'customer-orders/domain/mappers/customer-order-projection.mapper';
 import {
   toIdentifiedCustomerOrder,
   toRedactedCustomerOrder,
-} from 'customer-orders/domain/mappers/customer-order-projection.mapper.js';
+} from 'customer-orders/domain/mappers/customer-order-projection.mapper';
 import map from 'lodash/map.js';
-import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
-import type { ListCustomerOrdersFilter } from 'shared/domain/repositories/customer-order-lifecycle.repository.js';
-import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository.js';
-import { readsCustomerIdentity } from 'shared/predicates/observed-permission.predicates.js';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import type { ListCustomerOrdersFilter } from 'shared/domain/repositories/customer-order-lifecycle.repository';
+import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository';
+import { readsCustomerIdentity } from 'shared/predicates/observed-permission.predicates';
 
 // `GET /api/v1/warehouses/{warehouseId}/customer-orders` (openapi.yaml `listCustomerOrders`) — the
 // Warehouse's Customer Orders, optionally narrowed to one Item and/or one lifecycle state. Both

@@ -4,18 +4,18 @@ import { assert } from '@warehouser/utils/asserts';
 import {
   workspaceConcurrentChangeError,
   workspaceReplacementRoleRequiredError,
-} from 'access/domain/errors/workspace-access.errors.js';
+} from 'access/domain/errors/workspace-access.errors';
 import {
   hasAvailableCustomWorkspaceRole,
   isMembershipSelfTarget,
-} from 'access/domain/predicates/workspace-authority.predicates.js';
-import { workspaceDeniedError } from 'shared/access/access-denial.errors.js';
-import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user.js';
-import { Transactional } from 'shared/decorators/transactional.decorator.js';
-import { WorkspaceMembershipRepository } from 'shared/domain/repositories/workspace-membership.repository.js';
-import { WorkspaceOwnerTransferRepository } from 'shared/domain/repositories/workspace-owner-transfer.repository.js';
-import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository.js';
-import { workspaceTargetUnavailableError } from 'shared/errors/cross-module.errors.js';
+} from 'access/domain/predicates/workspace-authority.predicates';
+import { workspaceDeniedError } from 'shared/access/access-denial.errors';
+import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
+import { Transactional } from 'shared/decorators/transactional.decorator';
+import { WorkspaceMembershipRepository } from 'shared/domain/repositories/workspace-membership.repository';
+import { WorkspaceOwnerTransferRepository } from 'shared/domain/repositories/workspace-owner-transfer.repository';
+import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository';
+import { workspaceTargetUnavailableError } from 'shared/errors/cross-module.errors';
 
 export interface TransferWorkspaceOwnerInput {
   readonly recipientUserId: string;

@@ -1,14 +1,14 @@
 import { randomUUID } from 'node:crypto';
 
-import dataSource from 'shared/database/data-source.js';
-import { AccountEntity } from 'shared/domain/entities/account.entity.js';
-import { UserEntity } from 'shared/domain/entities/user.entity.js';
-import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity.js';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
+import dataSource from 'shared/database/data-source';
+import { AccountEntity } from 'shared/domain/entities/account.entity';
+import { UserEntity } from 'shared/domain/entities/user.entity';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 import {
   buildWarehouse,
   buildWorkspace,
-} from 'test/factories/entity-factories.js';
+} from 'test/factories/entity-factories';
 import { QueryFailedError } from 'typeorm';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 

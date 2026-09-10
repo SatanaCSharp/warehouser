@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import { getEntityManager } from 'shared/database/db-transaction-context.service.js';
-import { CustomerEntity } from 'shared/domain/entities/customer.entity.js';
-import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity.js';
-import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity.js';
-import { DemandSnapshotEntryEntity } from 'shared/domain/entities/demand-snapshot-entry.entity.js';
-import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity.js';
-import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity.js';
-import { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity.js';
-import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity.js';
+import { getEntityManager } from 'shared/database/db-transaction-context.service';
+import { CustomerEntity } from 'shared/domain/entities/customer.entity';
+import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
+import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
+import { DemandSnapshotEntryEntity } from 'shared/domain/entities/demand-snapshot-entry.entity';
+import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
+import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity';
+import { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
 import { DataSource } from 'typeorm';
 
 export interface PurchaseDraftHeaderRead {

@@ -3,16 +3,16 @@
 // draft's closure (server-error-handling.md §1: "Receive all required values as arguments",
 // "Return `boolean`", "Do not mutate state, perform I/O, log, or throw"). Each is asserted with a
 // named error factory by the command that owns the write; this spec proves the condition alone.
-import { isDraftMutable } from 'purchase-drafts/domain/predicates/purchase-draft-assembly.predicates.js';
+import { isDraftMutable } from 'purchase-drafts/domain/predicates/purchase-draft-assembly.predicates';
 import {
   directLineNamesACustomerAddress,
   endingMatchesDeliveryMode,
   hasEndingRecorded,
-} from 'purchase-drafts/domain/predicates/purchase-draft-delivery.predicates.js';
+} from 'purchase-drafts/domain/predicates/purchase-draft-delivery.predicates';
 import {
   DeliveryMode,
   EndingKind,
-} from 'purchase-drafts/domain/value-objects/delivery-mode.js';
+} from 'purchase-drafts/domain/value-objects/delivery-mode';
 import { describe, expect, it } from 'vitest';
 
 const AN_ADDRESS_ID = '00000000-0000-4000-8000-000000000301';

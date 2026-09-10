@@ -1,10 +1,10 @@
-import dataSource from 'shared/database/data-source.js';
-import { AccountEntity } from 'shared/domain/entities/account.entity.js';
-import { RoleEntity } from 'shared/domain/entities/role.entity.js';
-import { UserEntity } from 'shared/domain/entities/user.entity.js';
-import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity.js';
-import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity.js';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
+import dataSource from 'shared/database/data-source';
+import { AccountEntity } from 'shared/domain/entities/account.entity';
+import { RoleEntity } from 'shared/domain/entities/role.entity';
+import { UserEntity } from 'shared/domain/entities/user.entity';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
+import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 // `WarehouseLifecycleRepository` does not exist yet (T11) — this is the RED
 // for AC-11a and the archive/restore half of AC-11. The implementer creates
 // it per docs/system/guides/creating-a-server-repository.md (data-model.md
@@ -15,11 +15,11 @@ import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
 // NULL`, so no phantom from a concurrent create or archive can be seen. Do
 // not add a trigger or check constraint for this rule
 // (data-model.md "Constraints deliberately not expressed in the schema").
-import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository.js';
+import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
 import {
   buildWarehouseMembership,
   buildWorkspace,
-} from 'test/factories/entity-factories.js';
+} from 'test/factories/entity-factories';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 const now = new Date('2026-08-12T12:00:00.000Z');

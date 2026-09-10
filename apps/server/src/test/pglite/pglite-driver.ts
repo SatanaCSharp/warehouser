@@ -28,7 +28,7 @@ import { types } from '@electric-sql/pglite';
 import { PGliteDriver } from 'typeorm-pglite';
 import { inject } from 'vitest';
 
-import { PGLITE_TEMPLATE_KEY } from './runtime.js';
+import { PGLITE_TEMPLATE_KEY } from './runtime';
 
 const templatePath = inject(PGLITE_TEMPLATE_KEY);
 

@@ -6,8 +6,8 @@
 // **nothing is written at all**.
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
-import { AdjustItemOnHandCommand } from 'items/usecases/commands/adjust-item-on-hand.command.js';
-import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
+import { AdjustItemOnHandCommand } from 'items/usecases/commands/adjust-item-on-hand.command';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>

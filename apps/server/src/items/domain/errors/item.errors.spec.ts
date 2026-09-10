@@ -10,7 +10,7 @@ import {
   itemSkuFixedError,
   itemSkuTakenError,
   itemTargetUnavailableError,
-} from 'items/domain/errors/item.errors.js';
+} from 'items/domain/errors/item.errors';
 import { describe, expect, it } from 'vitest';
 
 describe('item domain error factories', () => {

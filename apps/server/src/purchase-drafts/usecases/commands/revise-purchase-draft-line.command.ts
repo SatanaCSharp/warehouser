@@ -6,22 +6,22 @@ import {
   purchaseDraftInvalidDeliveryDestinationError,
   purchaseDraftLineDeliveryAddressInactiveError,
   purchaseDraftLineDeliveryAddressUnavailableError,
-} from 'purchase-drafts/domain/errors/purchase-draft.errors.js';
+} from 'purchase-drafts/domain/errors/purchase-draft.errors';
 import {
   directLineNamesACustomerAddress,
   isLineDestinationActive,
-} from 'purchase-drafts/domain/predicates/purchase-draft-delivery.predicates.js';
-import type { LineDeliveryDestination } from 'purchase-drafts/domain/services/purchase-draft-assembly.service.js';
+} from 'purchase-drafts/domain/predicates/purchase-draft-delivery.predicates';
+import type { LineDeliveryDestination } from 'purchase-drafts/domain/services/purchase-draft-assembly.service';
 import {
   assertApplied,
   pickStated,
   PurchaseDraftAssemblyService,
-} from 'purchase-drafts/domain/services/purchase-draft-assembly.service.js';
-import { DeliveryMode } from 'purchase-drafts/domain/value-objects/delivery-mode.js';
-import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
-import { Transactional } from 'shared/decorators/transactional.decorator.js';
-import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository.js';
-import { PurchaseDraftAssemblyRepository } from 'shared/domain/repositories/purchase-draft-assembly.repository.js';
+} from 'purchase-drafts/domain/services/purchase-draft-assembly.service';
+import { DeliveryMode } from 'purchase-drafts/domain/value-objects/delivery-mode';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { Transactional } from 'shared/decorators/transactional.decorator';
+import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository';
+import { PurchaseDraftAssemblyRepository } from 'shared/domain/repositories/purchase-draft-assembly.repository';
 
 /** Only the halves the member actually stated. An absent key leaves that half as it was; an
  * explicit `null` clears it (openapi.yaml `PurchaseDraftLineUpdate`), which is why this cannot

@@ -1,12 +1,12 @@
-import dataSource from 'shared/database/data-source.js';
-import { AccountEntity } from 'shared/domain/entities/account.entity.js';
-import { RoleEntity } from 'shared/domain/entities/role.entity.js';
-import { SessionEntity } from 'shared/domain/entities/session.entity.js';
-import { UserEntity } from 'shared/domain/entities/user.entity.js';
-import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity.js';
-import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity.js';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
-import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository.js';
+import dataSource from 'shared/database/data-source';
+import { AccountEntity } from 'shared/domain/entities/account.entity';
+import { RoleEntity } from 'shared/domain/entities/role.entity';
+import { SessionEntity } from 'shared/domain/entities/session.entity';
+import { UserEntity } from 'shared/domain/entities/user.entity';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
+import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
+import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
 import type { DeepPartial } from 'typeorm';
 import {
   afterAll,

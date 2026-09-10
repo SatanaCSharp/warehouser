@@ -26,7 +26,7 @@ import { DataSource } from 'typeorm';
 import { getPGliteInstance, PGliteDriver } from 'typeorm-pglite';
 import type { TestProject } from 'vitest/node';
 
-import { PGLITE_TEMPLATE_KEY } from './runtime.js';
+import { PGLITE_TEMPLATE_KEY } from './runtime';
 
 let directory: string | undefined;
 

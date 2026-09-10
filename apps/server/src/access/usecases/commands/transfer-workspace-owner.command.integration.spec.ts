@@ -18,27 +18,27 @@ import {
 // reassignment happen in one statement inside one transaction so the two
 // halves can never half-apply (spec.md §6.1 names owner-transfer split-brain
 // as an abuse case).
-import { TransferWorkspaceOwnerCommand } from 'access/usecases/commands/transfer-workspace-owner.command.js';
-import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user.js';
-import dataSource from 'shared/database/data-source.js';
-import { DbTransactionService } from 'shared/database/db-transaction.service.js';
-import { DbTransactionContext } from 'shared/database/db-transaction-context.service.js';
-import { AccountEntity } from 'shared/domain/entities/account.entity.js';
-import { UserEntity } from 'shared/domain/entities/user.entity.js';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
-import { WorkspaceMembershipEntity } from 'shared/domain/entities/workspace-membership.entity.js';
-import { WorkspaceRoleEntity } from 'shared/domain/entities/workspace-role.entity.js';
-import { WorkspaceRolePermissionEntity } from 'shared/domain/entities/workspace-role-permission.entity.js';
-import { WorkspaceMembershipRepository } from 'shared/domain/repositories/workspace-membership.repository.js';
+import { TransferWorkspaceOwnerCommand } from 'access/usecases/commands/transfer-workspace-owner.command';
+import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
+import dataSource from 'shared/database/data-source';
+import { DbTransactionService } from 'shared/database/db-transaction.service';
+import { DbTransactionContext } from 'shared/database/db-transaction-context.service';
+import { AccountEntity } from 'shared/domain/entities/account.entity';
+import { UserEntity } from 'shared/domain/entities/user.entity';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
+import { WorkspaceMembershipEntity } from 'shared/domain/entities/workspace-membership.entity';
+import { WorkspaceRoleEntity } from 'shared/domain/entities/workspace-role.entity';
+import { WorkspaceRolePermissionEntity } from 'shared/domain/entities/workspace-role-permission.entity';
+import { WorkspaceMembershipRepository } from 'shared/domain/repositories/workspace-membership.repository';
 // `WorkspaceOwnerTransferRepository` already exists (T10) — see
 // workspace-owner-transfer.repository.integration.spec.ts for its own RED.
-import { WorkspaceOwnerTransferRepository } from 'shared/domain/repositories/workspace-owner-transfer.repository.js';
-import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository.js';
+import { WorkspaceOwnerTransferRepository } from 'shared/domain/repositories/workspace-owner-transfer.repository';
+import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository';
 import {
   buildWorkspace,
   buildWorkspaceMembership,
   buildWorkspaceRole,
-} from 'test/factories/entity-factories.js';
+} from 'test/factories/entity-factories';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 const now = new Date('2026-08-12T12:00:00.000Z');

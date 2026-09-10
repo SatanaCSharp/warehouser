@@ -6,11 +6,11 @@ import {
   invalidRoleError,
   roleNameConflictError,
   roleUnavailableError,
-} from 'access/domain/errors/access.errors.js';
-import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
-import { Transactional } from 'shared/decorators/transactional.decorator.js';
-import { RoleLifecycleRepository } from 'shared/domain/repositories/role-lifecycle.repository.js';
-import { AccessName } from 'shared/domain/value-objects/access-name.js';
+} from 'access/domain/errors/access.errors';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { Transactional } from 'shared/decorators/transactional.decorator';
+import { RoleLifecycleRepository } from 'shared/domain/repositories/role-lifecycle.repository';
+import { AccessName } from 'shared/domain/value-objects/access-name';
 
 export interface CreateRoleRuntime {
   readonly roleId: () => string;

@@ -6,10 +6,10 @@ import {
 import { Reflector } from '@nestjs/core';
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
-import { accessDeniedError } from 'shared/access/access-denial.errors.js';
-import type { WarehouseAccessRequest } from 'shared/access/access-request.js';
-import { WriteRateLimitCounter } from 'shared/guards/write-rate-limit.counter.js';
-import { WRITE_RATE_LIMITED_KEY } from 'shared/guards/write-rate-limited.decorator.js';
+import { accessDeniedError } from 'shared/access/access-denial.errors';
+import type { WarehouseAccessRequest } from 'shared/access/access-request';
+import { WriteRateLimitCounter } from 'shared/guards/write-rate-limit.counter';
+import { WRITE_RATE_LIMITED_KEY } from 'shared/guards/write-rate-limited.decorator';
 
 /** Raised when a member's recorded changes exceed the window's allowance. Carries no details: the
  * non-disclosure requirement (`spec.md` §6.1) means the refusal must reveal nothing member-,

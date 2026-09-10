@@ -1,26 +1,26 @@
 import { randomUUID } from 'node:crypto';
 
-import dataSource from 'shared/database/data-source.js';
-import { AccountEntity } from 'shared/domain/entities/account.entity.js';
-import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity.js';
-import { ItemEntity } from 'shared/domain/entities/item.entity.js';
-import { ItemStockAdjustmentEntity } from 'shared/domain/entities/item-stock-adjustment.entity.js';
-import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity.js';
-import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity.js';
-import { UserEntity } from 'shared/domain/entities/user.entity.js';
-import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity.js';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
+import dataSource from 'shared/database/data-source';
+import { AccountEntity } from 'shared/domain/entities/account.entity';
+import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
+import { ItemEntity } from 'shared/domain/entities/item.entity';
+import { ItemStockAdjustmentEntity } from 'shared/domain/entities/item-stock-adjustment.entity';
+import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
+import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity';
+import { UserEntity } from 'shared/domain/entities/user.entity';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 // `ItemCatalogueRepository` does not exist yet (T5) — this is the RED for AC-06/AC-06b/AC-06c/
 // AC-06d/AC-07/AC-07a's persistence half. data-model.md "Repository boundaries" and
 // tasks/item-catalogue-domain.md require it to answer "is this Item already named by any Customer
 // Order **or** any Purchase Draft Line" in **one** query across both tables, per
 // creating-a-server-repository.md ("Prefer one purpose-built query over retrieving records
 // separately and joining or filtering them in application memory").
-import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository.js';
+import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
 import {
   buildWarehouse,
   buildWorkspace,
-} from 'test/factories/entity-factories.js';
+} from 'test/factories/entity-factories';
 // `PostgresQueryRunner.prototype.query` is the one method every TypeORM access path — raw
 // `manager.query`, `repository.find`, and `QueryBuilder` alike — ultimately calls to reach
 // PostgreSQL. Spying on it, rather than on any higher-level TypeORM API, counts actual round trips

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import type { PackagingTypeEntity } from 'shared/domain/entities/packaging-type.entity.js';
-import { PackagingTypeCatalogueRepository } from 'shared/domain/repositories/packaging-type-catalogue.repository.js';
+import type { PackagingTypeEntity } from 'shared/domain/entities/packaging-type.entity';
+import { PackagingTypeCatalogueRepository } from 'shared/domain/repositories/packaging-type-catalogue.repository';
 
 // AC-13 — the Packaging Type catalogue, served at `/packaging-types` (openapi.yaml). The same
 // catalogue `PurchaseDraftAssemblyService` refuses an unknown type against, so the member picks

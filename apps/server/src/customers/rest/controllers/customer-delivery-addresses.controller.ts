@@ -17,19 +17,19 @@ import { PermissionId } from '@warehouser/shared-types/enums';
 import {
   CustomerDeliveryAddressCreateDto,
   CustomerDeliveryAddressUpdateDto,
-} from 'customers/rest/dtos/customer-mutation.dto.js';
-import { toCustomerResponse } from 'customers/rest/mappers/customer-response.mapper.js';
-import { AddCustomerDeliveryAddressCommand } from 'customers/usecases/commands/add-customer-delivery-address.command.js';
-import { CorrectCustomerDeliveryAddressCommand } from 'customers/usecases/commands/correct-customer-delivery-address.command.js';
-import { DeactivateCustomerDeliveryAddressCommand } from 'customers/usecases/commands/deactivate-customer-delivery-address.command.js';
-import { ReactivateCustomerDeliveryAddressCommand } from 'customers/usecases/commands/reactivate-customer-delivery-address.command.js';
-import { SetMainCustomerDeliveryAddressCommand } from 'customers/usecases/commands/set-main-customer-delivery-address.command.js';
-import type { WarehouseAccessRequest } from 'shared/access/access-request.js';
-import { RequiredPermission } from 'shared/decorators/required-permission.decorator.js';
-import { SessionAuthGuard } from 'shared/guards/session-auth.guard.js';
-import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard.js';
-import { WriteRateLimitGuard } from 'shared/guards/write-rate-limit.guard.js';
-import { WriteRateLimited } from 'shared/guards/write-rate-limited.decorator.js';
+} from 'customers/rest/dtos/customer-mutation.dto';
+import { toCustomerResponse } from 'customers/rest/mappers/customer-response.mapper';
+import { AddCustomerDeliveryAddressCommand } from 'customers/usecases/commands/add-customer-delivery-address.command';
+import { CorrectCustomerDeliveryAddressCommand } from 'customers/usecases/commands/correct-customer-delivery-address.command';
+import { DeactivateCustomerDeliveryAddressCommand } from 'customers/usecases/commands/deactivate-customer-delivery-address.command';
+import { ReactivateCustomerDeliveryAddressCommand } from 'customers/usecases/commands/reactivate-customer-delivery-address.command';
+import { SetMainCustomerDeliveryAddressCommand } from 'customers/usecases/commands/set-main-customer-delivery-address.command';
+import type { WarehouseAccessRequest } from 'shared/access/access-request';
+import { RequiredPermission } from 'shared/decorators/required-permission.decorator';
+import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
+import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
+import { WriteRateLimitGuard } from 'shared/guards/write-rate-limit.guard';
+import { WriteRateLimited } from 'shared/guards/write-rate-limited.decorator';
 
 /** One Customer's Delivery Address book (contracts/openapi.yaml
  * `/customers/{customerId}/delivery-addresses*`). Every handler here mutates, so none tolerates an

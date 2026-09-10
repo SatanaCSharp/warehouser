@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DbTransactionContext } from 'shared/database/db-transaction-context.service.js';
+import { DbTransactionContext } from 'shared/database/db-transaction-context.service';
 import { DataSource, EntityManager } from 'typeorm';
 import type { IsolationLevel } from 'typeorm/driver/types/IsolationLevel.js';
 

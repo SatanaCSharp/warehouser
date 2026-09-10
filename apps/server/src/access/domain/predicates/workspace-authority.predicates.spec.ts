@@ -11,7 +11,7 @@ import {
   isReservedWorkspaceOwnerReassignPermission,
   isReservedWorkspacePermissionKind,
   keepsAtLeastOneNonArchivedWarehouse,
-} from 'access/domain/predicates/workspace-authority.predicates.js';
+} from 'access/domain/predicates/workspace-authority.predicates';
 import { describe, expect, it } from 'vitest';
 
 // T4 — these predicates and the module they live in do not exist yet. Importing

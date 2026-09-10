@@ -2,11 +2,11 @@ import 'reflect-metadata';
 
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
-import { AppModule } from 'app.module.js';
+import { AppModule } from 'app.module';
 import { Logger } from 'nestjs-pino';
 import { ZodValidationPipe } from 'nestjs-zod';
-import { configureHttpPlatform } from 'shared/config/http-platform.bootstrap.js';
-import { readHttpPlatformConfig } from 'shared/config/http-platform.config.js';
+import { configureHttpPlatform } from 'shared/config/http-platform.bootstrap';
+import { readHttpPlatformConfig } from 'shared/config/http-platform.config';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {

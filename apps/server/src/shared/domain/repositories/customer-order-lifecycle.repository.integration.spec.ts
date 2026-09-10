@@ -1,31 +1,31 @@
 import { randomUUID } from 'node:crypto';
 
-import dataSource from 'shared/database/data-source.js';
-import { DbTransactionService } from 'shared/database/db-transaction.service.js';
-import { DbTransactionContext } from 'shared/database/db-transaction-context.service.js';
-import { AccountEntity } from 'shared/domain/entities/account.entity.js';
-import { ArrivalAllocationEntity } from 'shared/domain/entities/arrival-allocation.entity.js';
-import { CustomerEntity } from 'shared/domain/entities/customer.entity.js';
-import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity.js';
-import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity.js';
-import { ItemEntity } from 'shared/domain/entities/item.entity.js';
-import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity.js';
-import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity.js';
-import { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity.js';
-import { UserEntity } from 'shared/domain/entities/user.entity.js';
-import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity.js';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
+import dataSource from 'shared/database/data-source';
+import { DbTransactionService } from 'shared/database/db-transaction.service';
+import { DbTransactionContext } from 'shared/database/db-transaction-context.service';
+import { AccountEntity } from 'shared/domain/entities/account.entity';
+import { ArrivalAllocationEntity } from 'shared/domain/entities/arrival-allocation.entity';
+import { CustomerEntity } from 'shared/domain/entities/customer.entity';
+import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
+import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
+import { ItemEntity } from 'shared/domain/entities/item.entity';
+import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
+import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity';
+import { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity';
+import { UserEntity } from 'shared/domain/entities/user.entity';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 // `CustomerOrderLifecycleRepository` does not exist yet (T8) — this is the RED for the locked
 // allocated-total read `sad.md` §6.10 requires: "locks the Customer Order and reads the total
 // already allocated to it **in the same transaction**". Both halves are asserted here, because
 // either one alone leaves AC-19b's floor decidable against a stale value:
 //   - the total must be the SUM across every Allocation made to the order, not one of them;
 //   - the read must actually take the row lock, so a concurrent amendment waits for it.
-import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository.js';
+import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository';
 import {
   buildWarehouse,
   buildWorkspace,
-} from 'test/factories/entity-factories.js';
+} from 'test/factories/entity-factories';
 import { PostgresQueryRunner } from 'typeorm/driver/postgres/PostgresQueryRunner.js';
 import {
   afterAll,

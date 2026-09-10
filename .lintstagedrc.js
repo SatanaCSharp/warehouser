@@ -6,7 +6,7 @@
  * The 200 lines this file used to be existed to work around ESLint: it grouped staged files by
  * their nearest `eslint.config.*`, asked ESLint's Node API which of them were ignored, then `cd`-ed
  * into each package and shelled out to `npx eslint` twice. oxlint needs none of it. It resolves the
- * nearest `.oxlintrc.json` for every path it is given itself, applies that config's
+ * nearest `oxlint.config.ts` for every path it is given itself, applies that config's
  * `ignorePatterns` (and `.gitignore`) itself, and is fast enough that the two passes cost less than
  * the grouping did.
  *
@@ -36,8 +36,8 @@ const quoted = (filenames) => filenames.map((f) => `"${f}"`).join(' ');
 /**
  * @type {import('lint-staged').Config}
  */
-module.exports = {
-  // Lint staged JavaScript/TypeScript with the nearest `.oxlintrc.json`, then format.
+export default {
+  // Lint staged JavaScript/TypeScript with the nearest `oxlint.config.ts`, then format.
   // `--no-error-on-unmatched-pattern` covers the case where every staged file is ignored by a
   // config (a tooling file, a generated one): an empty selection is not a failed commit.
   '*.{js,jsx,ts,tsx,mjs,cjs}': (filenames) => [

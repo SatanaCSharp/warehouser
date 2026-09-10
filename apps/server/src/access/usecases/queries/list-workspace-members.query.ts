@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user.js';
+import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
 import {
   WorkspaceMemberRead,
   WorkspaceReadRepository,
-} from 'shared/domain/repositories/workspace-read.repository.js';
+} from 'shared/domain/repositories/workspace-read.repository';
 
 // AC-33 — the Workspace Members of the actor's own Workspace with their
 // Workspace Role assignment, under `WORKSPACE_MEMBERS:WATCH`. Ownership is

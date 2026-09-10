@@ -25,10 +25,10 @@
  * worker that will run it, so it checks the same module registry the specs get.
  */
 import type { ConfigService } from '@nestjs/config';
-import dataSource from 'shared/database/data-source.js';
-import { createTypeOrmOptions } from 'shared/database/typeorm.options.js';
+import dataSource from 'shared/database/data-source';
+import { createTypeOrmOptions } from 'shared/database/typeorm.options';
 
-import { pgliteDriver } from './pglite-driver.js';
+import { pgliteDriver } from './pglite-driver';
 
 const REMEDY =
   'check the `resolve.alias` entries in vitest.pglite.config.ts — their `find` patterns must match the specifier production code actually writes, extension included. Refusing to run: without the swap this tier talks to a real database.';

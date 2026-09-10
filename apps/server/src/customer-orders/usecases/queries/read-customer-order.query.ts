@@ -1,14 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { assertDefined } from '@warehouser/utils/asserts';
-import type { CustomerOrderProjection } from 'customer-orders/domain/mappers/customer-order-projection.mapper.js';
+import type { CustomerOrderProjection } from 'customer-orders/domain/mappers/customer-order-projection.mapper';
 import {
   toIdentifiedCustomerOrder,
   toRedactedCustomerOrder,
-} from 'customer-orders/domain/mappers/customer-order-projection.mapper.js';
+} from 'customer-orders/domain/mappers/customer-order-projection.mapper';
 import first from 'lodash/first.js';
-import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
-import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository.js';
-import { readsCustomerIdentity } from 'shared/predicates/observed-permission.predicates.js';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository';
+import { readsCustomerIdentity } from 'shared/predicates/observed-permission.predicates';
 
 // The projection every Customer Order **mutation** answers with — openapi.yaml
 // `recordCustomerOrder` 201, `amendCustomerOrder` 200, `redirectCustomerOrder` 200 and the

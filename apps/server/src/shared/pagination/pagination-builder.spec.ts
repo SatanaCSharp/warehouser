@@ -1,4 +1,4 @@
-import { paginationBuilder } from 'shared/pagination/pagination-builder.js';
+import { paginationBuilder } from 'shared/pagination/pagination-builder';
 import type { ObjectLiteral, SelectQueryBuilder } from 'typeorm';
 import { describe, expect, it, vi } from 'vitest';
 

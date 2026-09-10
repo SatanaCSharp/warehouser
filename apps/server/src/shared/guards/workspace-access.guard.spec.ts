@@ -2,10 +2,10 @@ import { ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
-import { REQUIRED_WORKSPACE_PERMISSION_KEY } from 'shared/decorators/required-workspace-permission.decorator.js';
-import { WorkspaceCurrentUserRepository } from 'shared/domain/repositories/workspace-current-user.repository.js';
-import { WorkspaceAccessGuard } from 'shared/guards/workspace-access.guard.js';
-import { repositoryDouble } from 'test/doubles/repository-double.js';
+import { REQUIRED_WORKSPACE_PERMISSION_KEY } from 'shared/decorators/required-workspace-permission.decorator';
+import { WorkspaceCurrentUserRepository } from 'shared/domain/repositories/workspace-current-user.repository';
+import { WorkspaceAccessGuard } from 'shared/guards/workspace-access.guard';
+import { repositoryDouble } from 'test/doubles/repository-double';
 import type { Mock } from 'vitest';
 import { describe, expect, it, vi } from 'vitest';
 

@@ -3,10 +3,10 @@ import { assert } from '@warehouser/utils/asserts';
 import {
   purchaseDraftDiscardUnavailableError,
   purchaseDraftTargetUnavailableError,
-} from 'purchase-drafts/domain/errors/purchase-draft.errors.js';
-import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
-import { Transactional } from 'shared/decorators/transactional.decorator.js';
-import { PurchaseDraftFreezeRepository } from 'shared/domain/repositories/purchase-draft-freeze.repository.js';
+} from 'purchase-drafts/domain/errors/purchase-draft.errors';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { Transactional } from 'shared/decorators/transactional.decorator';
+import { PurchaseDraftFreezeRepository } from 'shared/domain/repositories/purchase-draft-freeze.repository';
 
 export interface DiscardPurchaseDraftRuntime {
   readonly now: () => Date;

@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { Account } from 'auth/domain/entities/account.js';
-import { Session } from 'auth/domain/entities/session.js';
-import { User } from 'auth/domain/entities/user.js';
-import { toAccountEntity } from 'auth/domain/mappers/account.mapper.js';
-import { toSessionEntity } from 'auth/domain/mappers/session.mapper.js';
-import { toUserEntity } from 'auth/domain/mappers/user.mapper.js';
-import { Transactional } from 'shared/decorators/transactional.decorator.js';
-import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository.js';
+import { Account } from 'auth/domain/entities/account';
+import { Session } from 'auth/domain/entities/session';
+import { User } from 'auth/domain/entities/user';
+import { toAccountEntity } from 'auth/domain/mappers/account.mapper';
+import { toSessionEntity } from 'auth/domain/mappers/session.mapper';
+import { toUserEntity } from 'auth/domain/mappers/user.mapper';
+import { Transactional } from 'shared/decorators/transactional.decorator';
+import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
 
 export interface RegisteredIdentity {
   readonly account: Account;

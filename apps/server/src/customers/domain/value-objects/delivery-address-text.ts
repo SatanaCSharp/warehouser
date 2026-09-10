@@ -1,7 +1,7 @@
 import { assert } from '@warehouser/utils/asserts';
-import type { CustomerInputField } from 'customers/domain/errors/customer.errors.js';
-import { customerInvalidInputError } from 'customers/domain/errors/customer.errors.js';
-import { isDeliveryAddressText } from 'customers/domain/predicates/customer.predicates.js';
+import type { CustomerInputField } from 'customers/domain/errors/customer.errors';
+import { customerInvalidInputError } from 'customers/domain/errors/customer.errors';
+import { isDeliveryAddressText } from 'customers/domain/predicates/customer.predicates';
 
 /**
  * Where goods are sent, as **text a member types** (CONTEXT.md "Delivery Address"). It is never

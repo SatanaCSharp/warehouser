@@ -27,22 +27,22 @@ import {
   WorkspaceRoleAssignmentDto,
   WorkspaceRoleDeletionDto,
   WorkspaceRoleWriteDto,
-} from 'access/rest/dtos/workspace-access-mutation.dto.js';
-import { AddWorkspaceMemberCommand } from 'access/usecases/commands/add-workspace-member.command.js';
-import { AssignWorkspaceRoleCommand } from 'access/usecases/commands/assign-workspace-role.command.js';
-import { CreateWorkspaceRoleCommand } from 'access/usecases/commands/create-workspace-role.command.js';
-import { DeleteWorkspaceRoleCommand } from 'access/usecases/commands/delete-workspace-role.command.js';
-import { RemoveWorkspaceMemberCommand } from 'access/usecases/commands/remove-workspace-member.command.js';
-import { TransferWorkspaceOwnerCommand } from 'access/usecases/commands/transfer-workspace-owner.command.js';
-import { UpdateWorkspaceRoleCommand } from 'access/usecases/commands/update-workspace-role.command.js';
-import { ListWorkspaceMembersQuery } from 'access/usecases/queries/list-workspace-members.query.js';
-import { ListWorkspacePermissionsQuery } from 'access/usecases/queries/list-workspace-permissions.query.js';
-import { ListWorkspaceRolesQuery } from 'access/usecases/queries/list-workspace-roles.query.js';
-import { ListWorkspaceUsersQuery } from 'access/usecases/queries/list-workspace-users.query.js';
-import type { WorkspaceAccessRequest } from 'shared/access/access-request.js';
-import { RequiredWorkspacePermission } from 'shared/decorators/required-workspace-permission.decorator.js';
-import { SessionAuthGuard } from 'shared/guards/session-auth.guard.js';
-import { WorkspaceAccessGuard } from 'shared/guards/workspace-access.guard.js';
+} from 'access/rest/dtos/workspace-access-mutation.dto';
+import { AddWorkspaceMemberCommand } from 'access/usecases/commands/add-workspace-member.command';
+import { AssignWorkspaceRoleCommand } from 'access/usecases/commands/assign-workspace-role.command';
+import { CreateWorkspaceRoleCommand } from 'access/usecases/commands/create-workspace-role.command';
+import { DeleteWorkspaceRoleCommand } from 'access/usecases/commands/delete-workspace-role.command';
+import { RemoveWorkspaceMemberCommand } from 'access/usecases/commands/remove-workspace-member.command';
+import { TransferWorkspaceOwnerCommand } from 'access/usecases/commands/transfer-workspace-owner.command';
+import { UpdateWorkspaceRoleCommand } from 'access/usecases/commands/update-workspace-role.command';
+import { ListWorkspaceMembersQuery } from 'access/usecases/queries/list-workspace-members.query';
+import { ListWorkspacePermissionsQuery } from 'access/usecases/queries/list-workspace-permissions.query';
+import { ListWorkspaceRolesQuery } from 'access/usecases/queries/list-workspace-roles.query';
+import { ListWorkspaceUsersQuery } from 'access/usecases/queries/list-workspace-users.query';
+import type { WorkspaceAccessRequest } from 'shared/access/access-request';
+import { RequiredWorkspacePermission } from 'shared/decorators/required-workspace-permission.decorator';
+import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
+import { WorkspaceAccessGuard } from 'shared/guards/workspace-access.guard';
 
 /** The Workspace-scoped half of Access — Workspace Roles, the Workspace
  * Permission catalogue, Workspace Members, the Users membership assignment acts

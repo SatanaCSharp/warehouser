@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
-import { customerOrderInvalidDeliveryAddressError } from 'customer-orders/domain/errors/customer-order.errors.js';
-import { isAvailableDestinationRecord } from 'customer-orders/domain/predicates/customer-order.predicates.js';
+import { customerOrderInvalidDeliveryAddressError } from 'customer-orders/domain/errors/customer-order.errors';
+import { isAvailableDestinationRecord } from 'customer-orders/domain/predicates/customer-order.predicates';
 import find from 'lodash/find.js';
-import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository.js';
+import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository';
 
 // AC-11/AC-11c — the address resolved for a Customer Order is one the Customer holds and one a
 // member may still choose. A missing address, an address of another Customer and an Inactive one

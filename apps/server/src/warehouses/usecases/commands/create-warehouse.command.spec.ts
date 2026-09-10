@@ -1,12 +1,12 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user.js';
+import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
 import {
   TRANSACTIONAL_KEY,
   type TransactionalMetadata,
-} from 'shared/decorators/transactional.decorator.js';
-import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository.js';
-import { repositoryDouble } from 'test/doubles/repository-double.js';
+} from 'shared/decorators/transactional.decorator';
+import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
+import { repositoryDouble } from 'test/doubles/repository-double';
 import { describe, expect, it, vi } from 'vitest';
 // RED for T20 — neither command exists yet. This unit spec covers AC-08 only
 // (spec.md §5): name validation must reject before any persistence is
@@ -15,7 +15,7 @@ import { describe, expect, it, vi } from 'vitest';
 // atomic-creation (AC-06/AC-07) and cross-Workspace (AC-10 — n/a to create)
 // behaviour is covered at integration level per test-plan.md's chosen level
 // for those rows.
-import { CreateWarehouseCommand } from 'warehouses/usecases/commands/create-warehouse.command.js';
+import { CreateWarehouseCommand } from 'warehouses/usecases/commands/create-warehouse.command';
 
 const workspaceId = '00000000-0000-4000-8000-000000000001';
 const actorId = '00000000-0000-4000-8000-000000000002';

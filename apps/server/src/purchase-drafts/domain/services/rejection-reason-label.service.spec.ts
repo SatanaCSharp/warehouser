@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { RejectionReasonLabelService } from 'purchase-drafts/domain/services/rejection-reason-label.service.js';
+import { RejectionReasonLabelService } from 'purchase-drafts/domain/services/rejection-reason-label.service';
 import type { Mock } from 'vitest';
 import { describe, expect, it, vi } from 'vitest';
 

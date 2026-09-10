@@ -8,7 +8,7 @@ import {
   workspaceRoleNameConflictError,
   workspaceSelfActionDeniedError,
   workspaceSystemManagedPermissionError,
-} from 'access/domain/errors/workspace-access.errors.js';
+} from 'access/domain/errors/workspace-access.errors';
 import { describe, expect, it } from 'vitest';
 
 // T4 — neither this error-factory module nor the `ErrorCode.WORKSPACE_*` entries

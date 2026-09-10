@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
-import type { PurchaseDraftSummaryRead } from 'shared/domain/repositories/purchase-draft-read.repository.js';
-import { PurchaseDraftReadRepository } from 'shared/domain/repositories/purchase-draft-read.repository.js';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import type { PurchaseDraftSummaryRead } from 'shared/domain/repositories/purchase-draft-read.repository';
+import { PurchaseDraftReadRepository } from 'shared/domain/repositories/purchase-draft-read.repository';
 
 // AC-16a — the application boundary of listing the acting Warehouse's Purchase Drafts, each
 // already carrying the repository-derived `hasDriftSignal` (server-architecture.md §Dependency

@@ -1,12 +1,12 @@
 import { randomUUID } from 'node:crypto';
 
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import dataSource from 'shared/database/data-source.js';
-import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity.js';
+import dataSource from 'shared/database/data-source';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
 import {
   now,
   setupWarehouseHttpContractHarness,
-} from 'test/harnesses/warehouse-http-contract.harness.js';
+} from 'test/harnesses/warehouse-http-contract.harness';
 import { describe, expect, it } from 'vitest';
 
 // T25 DoD — the Warehouse-record half of the `/api/v1/workspace/warehouses*`

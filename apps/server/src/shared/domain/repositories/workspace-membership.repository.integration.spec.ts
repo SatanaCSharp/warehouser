@@ -1,23 +1,23 @@
-import dataSource from 'shared/database/data-source.js';
-import { DbTransactionService } from 'shared/database/db-transaction.service.js';
-import { DbTransactionContext } from 'shared/database/db-transaction-context.service.js';
-import { AccountEntity } from 'shared/domain/entities/account.entity.js';
-import { UserEntity } from 'shared/domain/entities/user.entity.js';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
-import { WorkspaceMembershipEntity } from 'shared/domain/entities/workspace-membership.entity.js';
-import type { WorkspaceRoleEntityKind } from 'shared/domain/entities/workspace-role.entity.js';
-import { WorkspaceRoleEntity } from 'shared/domain/entities/workspace-role.entity.js';
+import dataSource from 'shared/database/data-source';
+import { DbTransactionService } from 'shared/database/db-transaction.service';
+import { DbTransactionContext } from 'shared/database/db-transaction-context.service';
+import { AccountEntity } from 'shared/domain/entities/account.entity';
+import { UserEntity } from 'shared/domain/entities/user.entity';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
+import { WorkspaceMembershipEntity } from 'shared/domain/entities/workspace-membership.entity';
+import type { WorkspaceRoleEntityKind } from 'shared/domain/entities/workspace-role.entity';
+import { WorkspaceRoleEntity } from 'shared/domain/entities/workspace-role.entity';
 // `WorkspaceMembershipRepository` does not exist yet (T10) — this is the RED
 // for AC-19b. The implementer creates it per
 // docs/system/guides/creating-a-server-repository.md (data-model.md
 // "Repository boundaries, transactions and locking"): add, remove and
 // reassign a Workspace membership, plus the locking reads for the current
 // Owner and the target.
-import { WorkspaceMembershipRepository } from 'shared/domain/repositories/workspace-membership.repository.js';
+import { WorkspaceMembershipRepository } from 'shared/domain/repositories/workspace-membership.repository';
 import {
   buildWorkspace,
   buildWorkspaceRole,
-} from 'test/factories/entity-factories.js';
+} from 'test/factories/entity-factories';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 const now = new Date('2026-08-12T12:00:00.000Z');

@@ -7,19 +7,19 @@
 // server-architecture.md §Domain forbids a domain value object importing a concrete persistence
 // model, which is the same reason `delivery-mode.ts` re-declares its two literals. The type-level
 // assignments below are what prove the two agree — a spec may import the persistence type freely.
-import { DeliveryMode } from 'purchase-drafts/domain/value-objects/delivery-mode.js';
+import { DeliveryMode } from 'purchase-drafts/domain/value-objects/delivery-mode';
 import {
   PreReceiptConformanceVerdict,
   REJECTION_DISPOSITIONS,
   RejectionDisposition,
   RejectionSource,
   requiredSourceFor,
-} from 'purchase-drafts/domain/value-objects/line-condition.js';
-import type { PurchaseDraftLinePreReceiptConformance } from 'shared/domain/entities/purchase-draft-line.entity.js';
+} from 'purchase-drafts/domain/value-objects/line-condition';
+import type { PurchaseDraftLinePreReceiptConformance } from 'shared/domain/entities/purchase-draft-line.entity';
 import type {
   PurchaseDraftLineRejectionDisposition,
   PurchaseDraftLineRejectionSource,
-} from 'shared/domain/entities/purchase-draft-line-rejection.entity.js';
+} from 'shared/domain/entities/purchase-draft-line-rejection.entity';
 import { describe, expect, it } from 'vitest';
 
 describe('the line condition value domains', () => {

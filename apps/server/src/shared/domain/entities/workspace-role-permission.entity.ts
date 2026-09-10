@@ -1,5 +1,5 @@
-import type { WorkspacePermissionEntityKind } from 'shared/domain/entities/workspace-permission.entity.js';
-import type { WorkspaceRoleEntityKind } from 'shared/domain/entities/workspace-role.entity.js';
+import type { WorkspacePermissionEntityKind } from 'shared/domain/entities/workspace-permission.entity';
+import type { WorkspaceRoleEntityKind } from 'shared/domain/entities/workspace-role.entity';
 import { Column, Entity, PrimaryColumn } from 'typeorm';
 
 @Entity({ name: 'workspace_role_permissions' })

@@ -20,22 +20,22 @@ import {
 // exact collaborator below (`WarehouseMembershipAssignmentRepository`) is
 // this RED step's proposed wiring — the implementer may extend it with
 // additional lock/read methods as the command needs.
-import { RevokeWarehouseMembershipCommand } from 'access/usecases/commands/revoke-warehouse-membership.command.js';
-import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user.js';
-import dataSource from 'shared/database/data-source.js';
-import { DbTransactionService } from 'shared/database/db-transaction.service.js';
-import { DbTransactionContext } from 'shared/database/db-transaction-context.service.js';
-import { AccountEntity } from 'shared/domain/entities/account.entity.js';
-import { RoleEntity } from 'shared/domain/entities/role.entity.js';
-import { UserEntity } from 'shared/domain/entities/user.entity.js';
-import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity.js';
-import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity.js';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
-import { WarehouseMembershipAssignmentRepository } from 'shared/domain/repositories/warehouse-membership-assignment.repository.js';
+import { RevokeWarehouseMembershipCommand } from 'access/usecases/commands/revoke-warehouse-membership.command';
+import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
+import dataSource from 'shared/database/data-source';
+import { DbTransactionService } from 'shared/database/db-transaction.service';
+import { DbTransactionContext } from 'shared/database/db-transaction-context.service';
+import { AccountEntity } from 'shared/domain/entities/account.entity';
+import { RoleEntity } from 'shared/domain/entities/role.entity';
+import { UserEntity } from 'shared/domain/entities/user.entity';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
+import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
+import { WarehouseMembershipAssignmentRepository } from 'shared/domain/repositories/warehouse-membership-assignment.repository';
 import {
   buildWarehouse,
   buildWorkspace,
-} from 'test/factories/entity-factories.js';
+} from 'test/factories/entity-factories';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 const now = new Date('2026-08-12T12:00:00.000Z');

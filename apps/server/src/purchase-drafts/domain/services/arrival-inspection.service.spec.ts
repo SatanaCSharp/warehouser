@@ -33,18 +33,18 @@ import {
   deriveAcceptedQuantity,
   deriveRejectedQuantity,
   type EndingConditionSubmission,
-} from 'purchase-drafts/domain/services/arrival-inspection.service.js';
-import { DeliveryMode } from 'purchase-drafts/domain/value-objects/delivery-mode.js';
+} from 'purchase-drafts/domain/services/arrival-inspection.service';
+import { DeliveryMode } from 'purchase-drafts/domain/value-objects/delivery-mode';
 import {
   PreReceiptConformanceVerdict,
   RejectionSource,
-} from 'purchase-drafts/domain/value-objects/line-condition.js';
-import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
-import type { RejectionReasonEntity } from 'shared/domain/entities/rejection-reason.entity.js';
+} from 'purchase-drafts/domain/value-objects/line-condition';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import type { RejectionReasonEntity } from 'shared/domain/entities/rejection-reason.entity';
 import type {
   LockedPurchaseDraftLineForEnding,
   RecordLineEndingRejectionInput,
-} from 'shared/domain/repositories/arrival-confirmation.repository.js';
+} from 'shared/domain/repositories/arrival-confirmation.repository';
 import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>

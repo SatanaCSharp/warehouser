@@ -2,7 +2,7 @@ import uniq from 'lodash/uniq.js';
 import type {
   PurchaseDraftLineEndingRead,
   PurchaseDraftLineRejectionRead,
-} from 'shared/domain/repositories/purchase-draft-read.repository.js';
+} from 'shared/domain/repositories/purchase-draft-read.repository';
 
 // The types below are **feature-owned**, not transport shapes. This is a `domain/mappers/` file, so
 // what it produces is the ending as this feature's application boundary knows it

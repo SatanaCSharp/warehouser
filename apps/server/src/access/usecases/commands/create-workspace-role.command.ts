@@ -5,19 +5,19 @@ import { assert } from '@warehouser/utils/asserts';
 import {
   workspaceRoleNameConflictError,
   workspaceSystemManagedPermissionError,
-} from 'access/domain/errors/workspace-access.errors.js';
+} from 'access/domain/errors/workspace-access.errors';
 import {
   isKnownWorkspacePermission,
   isReservedWorkspaceOwnerReassignPermission,
   isReservedWorkspacePermissionKind,
-} from 'access/domain/predicates/workspace-authority.predicates.js';
-import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user.js';
-import { Transactional } from 'shared/decorators/transactional.decorator.js';
-import { WorkspaceReadRepository } from 'shared/domain/repositories/workspace-read.repository.js';
-import type { WorkspacePermissionGrant } from 'shared/domain/repositories/workspace-role-lifecycle.repository.js';
-import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository.js';
-import { AccessName } from 'shared/domain/value-objects/access-name.js';
-import { validatedName } from 'shared/errors/invalid-name.error.js';
+} from 'access/domain/predicates/workspace-authority.predicates';
+import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
+import { Transactional } from 'shared/decorators/transactional.decorator';
+import { WorkspaceReadRepository } from 'shared/domain/repositories/workspace-read.repository';
+import type { WorkspacePermissionGrant } from 'shared/domain/repositories/workspace-role-lifecycle.repository';
+import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository';
+import { AccessName } from 'shared/domain/value-objects/access-name';
+import { validatedName } from 'shared/errors/invalid-name.error';
 
 // Trims, validates and returns a storable Workspace Role name via the shared
 // `AccessName` value object (AC-15a). Preserves submitted Unicode without

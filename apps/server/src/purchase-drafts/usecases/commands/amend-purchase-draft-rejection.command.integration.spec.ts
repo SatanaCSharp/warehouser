@@ -1,30 +1,30 @@
 import { randomUUID } from 'node:crypto';
 
 import { ErrorCode } from '@warehouser/shared-types/enums';
-import { AmendPurchaseDraftRejectionCommand } from 'purchase-drafts/usecases/commands/amend-purchase-draft-rejection.command.js';
-import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
-import dataSource from 'shared/database/data-source.js';
-import { DbTransactionService } from 'shared/database/db-transaction.service.js';
-import { DbTransactionContext } from 'shared/database/db-transaction-context.service.js';
-import { AccountEntity } from 'shared/domain/entities/account.entity.js';
-import { ArrivalAllocationEntity } from 'shared/domain/entities/arrival-allocation.entity.js';
-import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity.js';
-import { ItemEntity } from 'shared/domain/entities/item.entity.js';
-import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity.js';
-import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity.js';
-import { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity.js';
+import { AmendPurchaseDraftRejectionCommand } from 'purchase-drafts/usecases/commands/amend-purchase-draft-rejection.command';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import dataSource from 'shared/database/data-source';
+import { DbTransactionService } from 'shared/database/db-transaction.service';
+import { DbTransactionContext } from 'shared/database/db-transaction-context.service';
+import { AccountEntity } from 'shared/domain/entities/account.entity';
+import { ArrivalAllocationEntity } from 'shared/domain/entities/arrival-allocation.entity';
+import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
+import { ItemEntity } from 'shared/domain/entities/item.entity';
+import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
+import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity';
+import { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity';
 import {
   type PurchaseDraftLineRejectionDisposition,
   PurchaseDraftLineRejectionEntity,
-} from 'shared/domain/entities/purchase-draft-line-rejection.entity.js';
-import { UserEntity } from 'shared/domain/entities/user.entity.js';
-import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity.js';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
-import { PurchaseDraftRejectionRepository } from 'shared/domain/repositories/purchase-draft-rejection.repository.js';
+} from 'shared/domain/entities/purchase-draft-line-rejection.entity';
+import { UserEntity } from 'shared/domain/entities/user.entity';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
+import { PurchaseDraftRejectionRepository } from 'shared/domain/repositories/purchase-draft-rejection.repository';
 import {
   buildWarehouse,
   buildWorkspace,
-} from 'test/factories/entity-factories.js';
+} from 'test/factories/entity-factories';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 // T11/AC-18 — **the first write this product aims at a Closed draft** (sad.md §6.4, and the notes of

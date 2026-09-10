@@ -3,7 +3,7 @@ import {
   isProtectedManagerTarget,
   isReservedManagerRoleSelection,
   isSelfAction,
-} from 'users/domain/predicates/member-lifecycle.predicates.js';
+} from 'users/domain/predicates/member-lifecycle.predicates';
 import { describe, expect, it } from 'vitest';
 
 const actorId = '00000000-0000-4000-8000-000000000001';

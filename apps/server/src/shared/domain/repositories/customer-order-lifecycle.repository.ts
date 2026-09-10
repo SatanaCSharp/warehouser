@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { getEntityManager } from 'shared/database/db-transaction-context.service.js';
-import { ArrivalAllocationEntity } from 'shared/domain/entities/arrival-allocation.entity.js';
-import { CustomerEntity } from 'shared/domain/entities/customer.entity.js';
-import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity.js';
-import type { CustomerOrderState } from 'shared/domain/entities/customer-order.entity.js';
-import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity.js';
+import { getEntityManager } from 'shared/database/db-transaction-context.service';
+import { ArrivalAllocationEntity } from 'shared/domain/entities/arrival-allocation.entity';
+import { CustomerEntity } from 'shared/domain/entities/customer.entity';
+import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
+import type { CustomerOrderState } from 'shared/domain/entities/customer-order.entity';
+import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
 import type { EntityManager, SelectQueryBuilder } from 'typeorm';
 import { DataSource } from 'typeorm';
 

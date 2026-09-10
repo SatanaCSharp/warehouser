@@ -1,0 +1,11 @@
+{
+  "extends": "@warehouser/tsconfig/tsconfig.base.json",
+  "compilerOptions": {
+    // This package is never compiled. Node type-strips its `.ts` sources on load, which is what
+    // lets a lint run reach the shared configuration without a build step ahead of it — so the
+    // only job this file has is to give `oxlint --type-aware` a program for `src`.
+    "noEmit": true,
+    "lib": ["es2021", "ES2022.Array", "ES2023.array"]
+  },
+  "include": ["src/**/*.ts"]
+}

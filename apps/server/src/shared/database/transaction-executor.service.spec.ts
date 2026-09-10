@@ -1,9 +1,9 @@
 import 'reflect-metadata';
 
 import { DiscoveryService, MetadataScanner, Reflector } from '@nestjs/core';
-import { DbTransactionService } from 'shared/database/db-transaction.service.js';
-import { TransactionExecutor } from 'shared/database/transaction-executor.service.js';
-import { Transactional } from 'shared/decorators/transactional.decorator.js';
+import { DbTransactionService } from 'shared/database/db-transaction.service';
+import { TransactionExecutor } from 'shared/database/transaction-executor.service';
+import { Transactional } from 'shared/decorators/transactional.decorator';
 import { describe, expect, it, vi } from 'vitest';
 
 describe(TransactionExecutor.name, () => {

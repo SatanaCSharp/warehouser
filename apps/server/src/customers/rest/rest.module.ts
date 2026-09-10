@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
-import { AuthModule } from 'auth/auth.module.js';
-import { CustomerDeliveryAddressesController } from 'customers/rest/controllers/customer-delivery-addresses.controller.js';
-import { CustomersController } from 'customers/rest/controllers/customers.controller.js';
-import { CustomersUsecaseModule } from 'customers/usecases/usecase.module.js';
-import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard.js';
+import { AuthModule } from 'auth/auth.module';
+import { CustomerDeliveryAddressesController } from 'customers/rest/controllers/customer-delivery-addresses.controller';
+import { CustomersController } from 'customers/rest/controllers/customers.controller';
+import { CustomersUsecaseModule } from 'customers/usecases/usecase.module';
+import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
 
 // Two controllers, one module: `/customers` and `/customers/:customerId/delivery-addresses` are
 // separate URL prefixes served by the module that owns the entity behind both, because a Delivery

@@ -17,19 +17,19 @@ import type {
   LineConformanceVerdict,
   LineRejection,
   PurchaseDraftLineEndingWithCondition,
-} from 'purchase-drafts/domain/mappers/line-condition.mapper.js';
+} from 'purchase-drafts/domain/mappers/line-condition.mapper';
 import type {
   PurchaseDraftLineLinkIdentifiedWithDrift,
   PurchaseDraftLineLinkRedactedWithDrift,
-} from 'purchase-drafts/usecases/queries/drift-signals.js';
-import type { PurchaseDraftLineListEntryWithDrift } from 'purchase-drafts/usecases/queries/list-purchase-draft-lines.query.js';
+} from 'purchase-drafts/usecases/queries/drift-signals';
+import type { PurchaseDraftLineListEntryWithDrift } from 'purchase-drafts/usecases/queries/list-purchase-draft-lines.query';
 import type {
   PurchaseDraftDetailWithDrift,
   PurchaseDraftLineIdentifiedWithDrift,
   PurchaseDraftLineWithDrift,
-} from 'purchase-drafts/usecases/queries/read-purchase-draft.query.js';
-import { identifiesCustomer } from 'purchase-drafts/usecases/queries/read-purchase-draft.query.js';
-import type { PurchaseDraftSummaryRead } from 'shared/domain/repositories/purchase-draft-read.repository.js';
+} from 'purchase-drafts/usecases/queries/read-purchase-draft.query';
+import { identifiesCustomer } from 'purchase-drafts/usecases/queries/read-purchase-draft.query';
+import type { PurchaseDraftSummaryRead } from 'shared/domain/repositories/purchase-draft-read.repository';
 
 // openapi.yaml `PurchaseDraftSummary`/`PurchaseDraftDetail`/`PurchaseDraftLineListEntry` — the
 // transport form of the three purchase-draft projections, each in the shapes AC-09a models as

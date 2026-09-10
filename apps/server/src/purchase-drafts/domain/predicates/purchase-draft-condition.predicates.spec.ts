@@ -28,13 +28,13 @@ import {
   satisfiesDescriptionRequirement,
   sourceMatchesDeliveryMode,
   totalRefusedQuantity,
-} from 'purchase-drafts/domain/predicates/purchase-draft-condition.predicates.js';
-import { DeliveryMode } from 'purchase-drafts/domain/value-objects/delivery-mode.js';
+} from 'purchase-drafts/domain/predicates/purchase-draft-condition.predicates';
+import { DeliveryMode } from 'purchase-drafts/domain/value-objects/delivery-mode';
 import {
   PreReceiptConformanceVerdict,
   RejectionDisposition,
   RejectionSource,
-} from 'purchase-drafts/domain/value-objects/line-condition.js';
+} from 'purchase-drafts/domain/value-objects/line-condition';
 import { describe, expect, it } from 'vitest';
 
 // A catalogue **fabricated for this spec**, never the seeded one. AC-07's rule is the flag, so the

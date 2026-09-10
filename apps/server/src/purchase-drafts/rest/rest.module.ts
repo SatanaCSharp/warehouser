@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
-import { AuthModule } from 'auth/auth.module.js';
-import { PackagingTypesController } from 'purchase-drafts/rest/controllers/packaging-types.controller.js';
-import { PurchaseDraftLinesController } from 'purchase-drafts/rest/controllers/purchase-draft-lines.controller.js';
-import { PurchaseDraftsController } from 'purchase-drafts/rest/controllers/purchase-drafts.controller.js';
-import { RejectionReasonsController } from 'purchase-drafts/rest/controllers/rejection-reasons.controller.js';
-import { PurchaseDraftsUsecaseModule } from 'purchase-drafts/usecases/usecase.module.js';
-import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard.js';
+import { AuthModule } from 'auth/auth.module';
+import { PackagingTypesController } from 'purchase-drafts/rest/controllers/packaging-types.controller';
+import { PurchaseDraftLinesController } from 'purchase-drafts/rest/controllers/purchase-draft-lines.controller';
+import { PurchaseDraftsController } from 'purchase-drafts/rest/controllers/purchase-drafts.controller';
+import { RejectionReasonsController } from 'purchase-drafts/rest/controllers/rejection-reasons.controller';
+import { PurchaseDraftsUsecaseModule } from 'purchase-drafts/usecases/usecase.module';
+import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
 
 // Four controllers, one module: `/packaging-types`, `/purchase-drafts`, `/purchase-draft-lines` and
 // `/rejection-reasons` are separate URL prefixes served by the module that owns the entity behind

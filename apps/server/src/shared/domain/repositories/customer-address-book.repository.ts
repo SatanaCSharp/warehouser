@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { getEntityManager } from 'shared/database/db-transaction-context.service.js';
-import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity.js';
+import { getEntityManager } from 'shared/database/db-transaction-context.service';
+import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
 import { DataSource, IsNull, Not } from 'typeorm';
 
 export interface ReviseDeliveryAddressPersistenceInput {

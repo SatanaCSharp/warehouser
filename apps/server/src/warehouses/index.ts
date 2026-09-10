@@ -1,2 +1,2 @@
-export { WarehousesRestModule } from './rest/rest.module.js';
-export { WarehousesUsecaseModule } from './usecases/usecase.module.js';
+export { WarehousesRestModule } from './rest/rest.module';
+export { WarehousesUsecaseModule } from './usecases/usecase.module';

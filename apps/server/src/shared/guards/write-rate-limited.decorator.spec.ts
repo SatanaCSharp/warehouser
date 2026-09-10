@@ -2,7 +2,7 @@ import { Reflector } from '@nestjs/core';
 import {
   WRITE_RATE_LIMITED_KEY,
   WriteRateLimited,
-} from 'shared/guards/write-rate-limited.decorator.js';
+} from 'shared/guards/write-rate-limited.decorator';
 import { describe, expect, it } from 'vitest';
 
 // ADR 0003 / sad §5 `shared/guards/write-rate-limit.guard.ts`: mutating handlers opt in to the

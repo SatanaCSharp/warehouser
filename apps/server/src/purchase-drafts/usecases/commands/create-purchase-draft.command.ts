@@ -1,15 +1,15 @@
 import { randomUUID } from 'node:crypto';
 
 import { Injectable, Optional } from '@nestjs/common';
-import { PurchaseDraftAssemblyService } from 'purchase-drafts/domain/services/purchase-draft-assembly.service.js';
-import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
-import { Transactional } from 'shared/decorators/transactional.decorator.js';
-import type { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity.js';
+import { PurchaseDraftAssemblyService } from 'purchase-drafts/domain/services/purchase-draft-assembly.service';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { Transactional } from 'shared/decorators/transactional.decorator';
+import type { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
 import type {
   CreateDraftLineLinkPersistenceInput,
   CreateDraftLinePersistenceInput,
-} from 'shared/domain/repositories/purchase-draft-assembly.repository.js';
-import { PurchaseDraftAssemblyRepository } from 'shared/domain/repositories/purchase-draft-assembly.repository.js';
+} from 'shared/domain/repositories/purchase-draft-assembly.repository';
+import { PurchaseDraftAssemblyRepository } from 'shared/domain/repositories/purchase-draft-assembly.repository';
 
 export interface CreateDraftLineLinkInput {
   readonly customerOrderId: string;

@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { assert, assertDefined } from '@warehouser/utils/asserts';
-import { Transactional } from 'shared/decorators/transactional.decorator.js';
-import { ActiveWarehouseSelectionRepository } from 'shared/domain/repositories/active-warehouse-selection.repository.js';
+import { Transactional } from 'shared/decorators/transactional.decorator';
+import { ActiveWarehouseSelectionRepository } from 'shared/domain/repositories/active-warehouse-selection.repository';
 import {
   workspaceTargetUnavailableError,
   workspaceWarehouseArchivedError,
-} from 'shared/errors/cross-module.errors.js';
+} from 'shared/errors/cross-module.errors';
 
 export interface SetActiveWarehouseInput {
   readonly warehouseId: string;

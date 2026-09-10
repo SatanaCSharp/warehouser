@@ -1,33 +1,33 @@
 import { randomUUID } from 'node:crypto';
 
 import { assert } from '@warehouser/utils/asserts';
-import { type AuthRuntime, authRuntime } from 'auth/domain/auth-runtime.js';
-import { Account } from 'auth/domain/entities/account.js';
-import { Session } from 'auth/domain/entities/session.js';
-import { User } from 'auth/domain/entities/user.js';
+import { type AuthRuntime, authRuntime } from 'auth/domain/auth-runtime';
+import { Account } from 'auth/domain/entities/account';
+import { Session } from 'auth/domain/entities/session';
+import { User } from 'auth/domain/entities/user';
 import {
   AuthEmailAlreadyRegisteredError,
   AuthInvalidInputError,
   AuthRegistrationUnavailableError,
-} from 'auth/domain/errors/auth.errors.js';
+} from 'auth/domain/errors/auth.errors';
 import {
   type GeneratedSessionSecret,
   generateSessionSecret,
-} from 'auth/domain/security/session-secret.js';
-import { AuthRegistrationService } from 'auth/domain/services/auth-registration.service.js';
-import { SessionId } from 'auth/domain/value-objects/identity-id.js';
-import { SessionDigest } from 'auth/domain/value-objects/session-digest.js';
-import { Transactional } from 'shared/decorators/transactional.decorator.js';
-import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository.js';
-import { EmailAddress } from 'shared/domain/security/email-address.js';
-import { isSupportedEmail } from 'shared/domain/security/is-supported-email.js';
-import { isSupportedPassword } from 'shared/domain/security/is-supported-password.js';
-import { Password } from 'shared/domain/security/password.js';
-import { hashPassword } from 'shared/domain/security/password-hashing.js';
+} from 'auth/domain/security/session-secret';
+import { AuthRegistrationService } from 'auth/domain/services/auth-registration.service';
+import { SessionId } from 'auth/domain/value-objects/identity-id';
+import { SessionDigest } from 'auth/domain/value-objects/session-digest';
+import { Transactional } from 'shared/decorators/transactional.decorator';
+import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
+import { EmailAddress } from 'shared/domain/security/email-address';
+import { isSupportedEmail } from 'shared/domain/security/is-supported-email';
+import { isSupportedPassword } from 'shared/domain/security/is-supported-password';
+import { Password } from 'shared/domain/security/password';
+import { hashPassword } from 'shared/domain/security/password-hashing';
 import type {
   ProvisionRegistrationResult,
   WorkspaceProvisioningService,
-} from 'workspaces/domain/services/workspace-provisioning.service.js';
+} from 'workspaces/domain/services/workspace-provisioning.service';
 
 export interface RegisterInput {
   readonly email: string;

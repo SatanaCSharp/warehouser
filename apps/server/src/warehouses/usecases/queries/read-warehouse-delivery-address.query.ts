@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { assert, assertDefined } from '@warehouser/utils/asserts';
-import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user.js';
-import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository.js';
-import { workspaceTargetUnavailableError } from 'shared/errors/cross-module.errors.js';
+import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
+import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
+import { workspaceTargetUnavailableError } from 'shared/errors/cross-module.errors';
 
 export interface WarehouseDeliveryAddressRead {
   readonly warehouseId: string;

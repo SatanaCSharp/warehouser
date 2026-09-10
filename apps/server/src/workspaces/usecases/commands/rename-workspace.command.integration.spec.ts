@@ -2,22 +2,22 @@ import {
   ErrorCode,
   WorkspacePermissionId,
 } from '@warehouser/shared-types/enums';
-import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user.js';
-import dataSource from 'shared/database/data-source.js';
-import { DbTransactionContext } from 'shared/database/db-transaction-context.service.js';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
-import { WorkspaceLifecycleRepository } from 'shared/domain/repositories/workspace-lifecycle.repository.js';
+import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
+import dataSource from 'shared/database/data-source';
+import { DbTransactionContext } from 'shared/database/db-transaction-context.service';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
+import { WorkspaceLifecycleRepository } from 'shared/domain/repositories/workspace-lifecycle.repository';
 import {
   buildWorkspace,
   persistWorkspaceGraph,
-} from 'test/factories/entity-factories.js';
+} from 'test/factories/entity-factories';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 // `RenameWorkspaceCommand` does not exist yet — this is the RED step for
 // T15. The implementer creates it at this path per sad.md §6.2a and
 // workspace-identity-and-reads.md, coordinating `WorkspaceLifecycleRepository`
 // (mirroring `WarehouseLifecycleRepository` per data-model.md "Repository
 // boundaries") to record the trimmed, non-normalized name.
-import { RenameWorkspaceCommand } from 'workspaces/usecases/commands/rename-workspace.command.js';
+import { RenameWorkspaceCommand } from 'workspaces/usecases/commands/rename-workspace.command';
 
 describe('RenameWorkspaceCommand', () => {
   // Registers the transaction storage `getEntityManager` reads, so the

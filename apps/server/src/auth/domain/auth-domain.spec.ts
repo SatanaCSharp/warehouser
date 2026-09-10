@@ -1,13 +1,13 @@
-import { Account } from 'auth/domain/entities/account.js';
-import { Session } from 'auth/domain/entities/session.js';
-import { User } from 'auth/domain/entities/user.js';
-import { toAuthenticatedCurrentUser } from 'auth/domain/mappers/authenticated-current-user.mapper.js';
+import { Account } from 'auth/domain/entities/account';
+import { Session } from 'auth/domain/entities/session';
+import { User } from 'auth/domain/entities/user';
+import { toAuthenticatedCurrentUser } from 'auth/domain/mappers/authenticated-current-user.mapper';
 import {
   AccountId,
   SessionId,
   UserId,
-} from 'auth/domain/value-objects/identity-id.js';
-import { SessionDigest } from 'auth/domain/value-objects/session-digest.js';
+} from 'auth/domain/value-objects/identity-id';
+import { SessionDigest } from 'auth/domain/value-objects/session-digest';
 import { describe, expect, it } from 'vitest';
 
 describe('auth domain', () => {

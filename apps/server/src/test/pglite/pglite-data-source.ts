@@ -29,8 +29,8 @@ import 'reflect-metadata';
 
 import { DataSource } from 'typeorm';
 
-import { entities } from '../../shared/database/entities.js';
-import { pgliteDriver } from './pglite-driver.js';
+import { entities } from '../../shared/database/entities';
+import { pgliteDriver } from './pglite-driver';
 
 export default new DataSource({
   type: 'postgres',

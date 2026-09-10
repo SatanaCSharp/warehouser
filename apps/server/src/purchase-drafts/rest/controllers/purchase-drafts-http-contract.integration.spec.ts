@@ -10,24 +10,24 @@ import {
   purchaseDraftDetailSchema,
   purchaseDraftSummarySchema,
 } from '@warehouser/contracts/purchase-drafts';
-import { AppModule } from 'app.module.js';
-import { digestSessionSecret } from 'auth/domain/security/session-secret.js';
-import { AUTH_SESSION_COOKIE } from 'auth/rest/auth-cookie.js';
+import { AppModule } from 'app.module';
+import { digestSessionSecret } from 'auth/domain/security/session-secret';
+import { AUTH_SESSION_COOKIE } from 'auth/rest/auth-cookie';
 import { ZodValidationPipe } from 'nestjs-zod';
-import dataSource from 'shared/database/data-source.js';
-import { AccountEntity } from 'shared/domain/entities/account.entity.js';
-import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity.js';
-import { ItemEntity } from 'shared/domain/entities/item.entity.js';
-import { PackagingTypeEntity } from 'shared/domain/entities/packaging-type.entity.js';
-import { PermissionEntity } from 'shared/domain/entities/permission.entity.js';
-import { RoleEntity } from 'shared/domain/entities/role.entity.js';
-import { RolePermissionEntity } from 'shared/domain/entities/role-permission.entity.js';
-import { SessionEntity } from 'shared/domain/entities/session.entity.js';
-import { UserEntity } from 'shared/domain/entities/user.entity.js';
-import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity.js';
-import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity.js';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
-import { GlobalHttpExceptionFilter } from 'shared/errors/global-http-exception.filter.js';
+import dataSource from 'shared/database/data-source';
+import { AccountEntity } from 'shared/domain/entities/account.entity';
+import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
+import { ItemEntity } from 'shared/domain/entities/item.entity';
+import { PackagingTypeEntity } from 'shared/domain/entities/packaging-type.entity';
+import { PermissionEntity } from 'shared/domain/entities/permission.entity';
+import { RoleEntity } from 'shared/domain/entities/role.entity';
+import { RolePermissionEntity } from 'shared/domain/entities/role-permission.entity';
+import { SessionEntity } from 'shared/domain/entities/session.entity';
+import { UserEntity } from 'shared/domain/entities/user.entity';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
+import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
+import { GlobalHttpExceptionFilter } from 'shared/errors/global-http-exception.filter';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 // Fixed clock for every seeded row, mirroring `customer-orders-http-contract.integration.spec.ts`:

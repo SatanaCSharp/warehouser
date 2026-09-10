@@ -1,7 +1,7 @@
 import { Global, Module } from '@nestjs/common';
-import { AuthRestModule } from 'auth/rest/rest.module.js';
-import { AuthUsecaseModule } from 'auth/usecases/usecase.module.js';
-import { SessionAuthGuard } from 'shared/guards/session-auth.guard.js';
+import { AuthRestModule } from 'auth/rest/rest.module';
+import { AuthUsecaseModule } from 'auth/usecases/usecase.module';
+import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
 
 // Global: `SessionAuthGuard` (owned by `shared/guards/`) depends on
 // `CurrentSessionQuery`, which is `auth`-owned. Marking `AuthModule` global

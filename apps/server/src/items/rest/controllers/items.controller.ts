@@ -20,22 +20,22 @@ import {
   ItemListQueryDto,
   ItemUpdateDto,
   OnHandAdjustmentCreateDto,
-} from 'items/rest/dtos/item-mutation.dto.js';
-import { toItemResponse } from 'items/rest/mappers/item-response.mapper.js';
-import { AdjustItemOnHandCommand } from 'items/usecases/commands/adjust-item-on-hand.command.js';
-import { CorrectItemCommand } from 'items/usecases/commands/correct-item.command.js';
-import { CreateItemCommand } from 'items/usecases/commands/create-item.command.js';
-import { DeactivateItemCommand } from 'items/usecases/commands/deactivate-item.command.js';
-import { ReactivateItemCommand } from 'items/usecases/commands/reactivate-item.command.js';
-import { ListItemCatalogueQuery } from 'items/usecases/queries/list-item-catalogue.query.js';
-import { ReadItemCatalogueEntryQuery } from 'items/usecases/queries/read-item-catalogue-entry.query.js';
-import type { WarehouseAccessRequest } from 'shared/access/access-request.js';
-import { ArchivedTolerantRead } from 'shared/access/archived-tolerant-read.decorator.js';
-import { RequiredPermission } from 'shared/decorators/required-permission.decorator.js';
-import { SessionAuthGuard } from 'shared/guards/session-auth.guard.js';
-import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard.js';
-import { WriteRateLimitGuard } from 'shared/guards/write-rate-limit.guard.js';
-import { WriteRateLimited } from 'shared/guards/write-rate-limited.decorator.js';
+} from 'items/rest/dtos/item-mutation.dto';
+import { toItemResponse } from 'items/rest/mappers/item-response.mapper';
+import { AdjustItemOnHandCommand } from 'items/usecases/commands/adjust-item-on-hand.command';
+import { CorrectItemCommand } from 'items/usecases/commands/correct-item.command';
+import { CreateItemCommand } from 'items/usecases/commands/create-item.command';
+import { DeactivateItemCommand } from 'items/usecases/commands/deactivate-item.command';
+import { ReactivateItemCommand } from 'items/usecases/commands/reactivate-item.command';
+import { ListItemCatalogueQuery } from 'items/usecases/queries/list-item-catalogue.query';
+import { ReadItemCatalogueEntryQuery } from 'items/usecases/queries/read-item-catalogue-entry.query';
+import type { WarehouseAccessRequest } from 'shared/access/access-request';
+import { ArchivedTolerantRead } from 'shared/access/archived-tolerant-read.decorator';
+import { RequiredPermission } from 'shared/decorators/required-permission.decorator';
+import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
+import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
+import { WriteRateLimitGuard } from 'shared/guards/write-rate-limit.guard';
+import { WriteRateLimited } from 'shared/guards/write-rate-limited.decorator';
 
 /** Every route whose subject is the Warehouse's Item catalogue — SKU rules, activation and
  * On-hand Quantity (contracts/openapi.yaml `items`, sad.md §5 `items/usecases`). Every handler

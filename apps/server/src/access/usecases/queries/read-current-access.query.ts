@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import type { AccessProjection } from '@warehouser/contracts/access';
 import { assertDefined } from '@warehouser/utils/asserts';
-import { membershipRequiredError } from 'access/domain/errors/access.errors.js';
-import { AccessCurrentUserRepository } from 'shared/domain/repositories/access-current-user.repository.js';
+import { membershipRequiredError } from 'access/domain/errors/access.errors';
+import { AccessCurrentUserRepository } from 'shared/domain/repositories/access-current-user.repository';
 
 @Injectable()
 export class ReadCurrentAccessQuery {

@@ -1,23 +1,23 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
-import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
-import dataSource from 'shared/database/data-source.js';
-import { DbTransactionService } from 'shared/database/db-transaction.service.js';
-import { DbTransactionContext } from 'shared/database/db-transaction-context.service.js';
-import { AccountEntity } from 'shared/domain/entities/account.entity.js';
-import { PermissionEntity } from 'shared/domain/entities/permission.entity.js';
-import { RoleEntity } from 'shared/domain/entities/role.entity.js';
-import { RolePermissionEntity } from 'shared/domain/entities/role-permission.entity.js';
-import { SessionEntity } from 'shared/domain/entities/session.entity.js';
-import { UserEntity } from 'shared/domain/entities/user.entity.js';
-import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity.js';
-import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity.js';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
-import { AccessCurrentUserRepository } from 'shared/domain/repositories/access-current-user.repository.js';
-import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository.js';
-import { MemberLifecycleRepository } from 'shared/domain/repositories/member-lifecycle.repository.js';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import dataSource from 'shared/database/data-source';
+import { DbTransactionService } from 'shared/database/db-transaction.service';
+import { DbTransactionContext } from 'shared/database/db-transaction-context.service';
+import { AccountEntity } from 'shared/domain/entities/account.entity';
+import { PermissionEntity } from 'shared/domain/entities/permission.entity';
+import { RoleEntity } from 'shared/domain/entities/role.entity';
+import { RolePermissionEntity } from 'shared/domain/entities/role-permission.entity';
+import { SessionEntity } from 'shared/domain/entities/session.entity';
+import { UserEntity } from 'shared/domain/entities/user.entity';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
+import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
+import { AccessCurrentUserRepository } from 'shared/domain/repositories/access-current-user.repository';
+import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
+import { MemberLifecycleRepository } from 'shared/domain/repositories/member-lifecycle.repository';
 // Does not exist yet — this is the RED step for T10. ChangeMemberEmailCommand
 // must be implemented by the implementer at this path.
-import { ChangeMemberEmailCommand } from 'users/usecases/commands/change-member-email.command.js';
+import { ChangeMemberEmailCommand } from 'users/usecases/commands/change-member-email.command';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 const now = new Date('2026-08-06T12:00:00.000Z');

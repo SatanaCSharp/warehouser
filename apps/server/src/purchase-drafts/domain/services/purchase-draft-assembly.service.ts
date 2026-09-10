@@ -1,25 +1,25 @@
 import { Injectable } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
 import uniq from 'lodash/uniq.js';
-import type { DisagreeingDeliveryLink } from 'purchase-drafts/domain/errors/purchase-draft.errors.js';
+import type { DisagreeingDeliveryLink } from 'purchase-drafts/domain/errors/purchase-draft.errors';
 import {
   purchaseDraftFrozenError,
   purchaseDraftTargetUnavailableError,
   purchaseDraftUnknownPackagingTypeError,
-} from 'purchase-drafts/domain/errors/purchase-draft.errors.js';
-import { isKnownPackagingType } from 'purchase-drafts/domain/predicates/purchase-draft-assembly.predicates.js';
-import { DeliveryMode } from 'purchase-drafts/domain/value-objects/delivery-mode.js';
-import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
-import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository.js';
-import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository.js';
-import { PackagingTypeCatalogueRepository } from 'shared/domain/repositories/packaging-type-catalogue.repository.js';
+} from 'purchase-drafts/domain/errors/purchase-draft.errors';
+import { isKnownPackagingType } from 'purchase-drafts/domain/predicates/purchase-draft-assembly.predicates';
+import { DeliveryMode } from 'purchase-drafts/domain/value-objects/delivery-mode';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository';
+import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
+import { PackagingTypeCatalogueRepository } from 'shared/domain/repositories/packaging-type-catalogue.repository';
 import type {
   AssemblyWriteOutcome,
   LinkedOrderDestination,
   PurchaseDraftWriteScope,
-} from 'shared/domain/repositories/purchase-draft-assembly.repository.js';
-import { PurchaseDraftAssemblyRepository } from 'shared/domain/repositories/purchase-draft-assembly.repository.js';
-import { isSelectableItem } from 'shared/predicates/item-availability.predicates.js';
+} from 'shared/domain/repositories/purchase-draft-assembly.repository';
+import { PurchaseDraftAssemblyRepository } from 'shared/domain/repositories/purchase-draft-assembly.repository';
+import { isSelectableItem } from 'shared/predicates/item-availability.predicates';
 
 // The two ways a guarded assembly write can affect no row, mapped to the two refusals openapi.yaml
 // documents for these routes: 409 `PurchaseDraftWriteConflict` when the draft is no longer in the

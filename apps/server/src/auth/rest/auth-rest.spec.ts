@@ -1,10 +1,10 @@
 import { HttpStatus } from '@nestjs/common';
-import { AUTH_SESSION_COOKIE, AuthCookie } from 'auth/rest/auth-cookie.js';
-import { AuthController } from 'auth/rest/controllers/auth.controller.js';
-import { RegisterCommand } from 'auth/usecases/commands/register.command.js';
-import { SignInCommand } from 'auth/usecases/commands/sign-in.command.js';
-import { SignOutCommand } from 'auth/usecases/commands/sign-out.command.js';
-import { CurrentSessionQuery } from 'auth/usecases/queries/current-session.query.js';
+import { AUTH_SESSION_COOKIE, AuthCookie } from 'auth/rest/auth-cookie';
+import { AuthController } from 'auth/rest/controllers/auth.controller';
+import { RegisterCommand } from 'auth/usecases/commands/register.command';
+import { SignInCommand } from 'auth/usecases/commands/sign-in.command';
+import { SignOutCommand } from 'auth/usecases/commands/sign-out.command';
+import { CurrentSessionQuery } from 'auth/usecases/queries/current-session.query';
 import { describe, expect, it, vi } from 'vitest';
 
 const userId = '00000000-0000-4000-8000-000000000001';

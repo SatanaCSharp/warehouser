@@ -4,11 +4,11 @@ import {
   itemSkuFixedError,
   itemSkuTakenError,
   itemTargetUnavailableError,
-} from 'items/domain/errors/item.errors.js';
-import { isSkuCorrectable } from 'items/domain/predicates/item-catalogue.predicates.js';
-import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
-import { Transactional } from 'shared/decorators/transactional.decorator.js';
-import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository.js';
+} from 'items/domain/errors/item.errors';
+import { isSkuCorrectable } from 'items/domain/predicates/item-catalogue.predicates';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { Transactional } from 'shared/decorators/transactional.decorator';
+import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
 
 export interface CorrectItemInput {
   readonly sku?: string;

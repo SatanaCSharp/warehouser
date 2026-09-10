@@ -5,11 +5,11 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import { workspaceDeniedError } from 'shared/access/access-denial.errors.js';
-import type { WorkspaceAccessRequest } from 'shared/access/access-request.js';
-import { workspaceCurrentUser } from 'shared/access/workspace-current-user.js';
-import { REQUIRED_WORKSPACE_PERMISSION_KEY } from 'shared/decorators/required-workspace-permission.decorator.js';
-import { WorkspaceCurrentUserRepository } from 'shared/domain/repositories/workspace-current-user.repository.js';
+import { workspaceDeniedError } from 'shared/access/access-denial.errors';
+import type { WorkspaceAccessRequest } from 'shared/access/access-request';
+import { workspaceCurrentUser } from 'shared/access/workspace-current-user';
+import { REQUIRED_WORKSPACE_PERMISSION_KEY } from 'shared/decorators/required-workspace-permission.decorator';
+import { WorkspaceCurrentUserRepository } from 'shared/domain/repositories/workspace-current-user.repository';
 
 /** Composes after `SessionAuthGuard`. A User belongs to exactly one Workspace and never selects
  * it, so this guard reads no target identifier from the request at all — it derives the actor's

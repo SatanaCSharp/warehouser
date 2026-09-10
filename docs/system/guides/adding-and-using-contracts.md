@@ -51,6 +51,16 @@ export type { CreateUserDto } from './create-user.schema';
 Compare with `packages/utils/src/asserts/index.ts`, which re-exports each
 file in `asserts/` the same way.
 
+`packages/contracts` is an ES module (`"type": "module"`), as every package
+here is, and the specifier stays extensionless all the same. Node's ESM
+resolver would need `./create-user.schema.js`, but nothing writes that by
+hand: `moduleResolution: "Bundler"` lets `tsc` accept the extensionless
+form — the bare `paths`-mapped `items/items-projections` included — and the
+package's `"tsc-alias": { "resolveFullPaths": true }` appends the extension
+when `dist/` is emitted. See
+[Module system and import specifiers](../server-architecture.md#module-system-and-import-specifiers)
+for the whole arrangement.
+
 ## 3. Expose the module via `package.json`
 
 Add a subpath export for the module in `packages/contracts/package.json`,

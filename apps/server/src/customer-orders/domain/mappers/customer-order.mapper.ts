@@ -1,7 +1,7 @@
 import type {
   CustomerOrderEntity,
   CustomerOrderState,
-} from 'shared/domain/entities/customer-order.entity.js';
+} from 'shared/domain/entities/customer-order.entity';
 
 // The Customer Order as the application boundary returns it — openapi.yaml `CustomerOrder`. It
 // carries no `warehouseId`: the Warehouse is the request's, never a field the caller reads back.

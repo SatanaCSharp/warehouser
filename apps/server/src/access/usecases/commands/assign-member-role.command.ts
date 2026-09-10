@@ -3,9 +3,9 @@ import { assert, assertDefined } from '@warehouser/utils/asserts';
 import {
   managerTransferRequiredError,
   targetUnavailableError,
-} from 'access/domain/errors/access.errors.js';
-import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
-import { RoleLifecycleRepository } from 'shared/domain/repositories/role-lifecycle.repository.js';
+} from 'access/domain/errors/access.errors';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { RoleLifecycleRepository } from 'shared/domain/repositories/role-lifecycle.repository';
 
 export interface AssignMemberRoleInput {
   readonly memberId: string;

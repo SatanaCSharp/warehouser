@@ -2,15 +2,15 @@ import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
 import type { PurchaseDraftLineListEntry } from '@warehouser/contracts/purchase-drafts';
 import { PermissionId } from '@warehouser/shared-types/enums';
 import map from 'lodash/map.js';
-import { PurchaseDraftLineListQueryDto } from 'purchase-drafts/rest/dtos/purchase-draft-mutation.dto.js';
-import { toLineListEntryResponse } from 'purchase-drafts/rest/mappers/purchase-draft-response.mapper.js';
-import { ListPurchaseDraftLinesQuery } from 'purchase-drafts/usecases/queries/list-purchase-draft-lines.query.js';
-import type { WarehouseAccessRequest } from 'shared/access/access-request.js';
-import { ArchivedTolerantRead } from 'shared/access/archived-tolerant-read.decorator.js';
-import { ObservedPermission } from 'shared/decorators/observed-permission.decorator.js';
-import { RequiredPermission } from 'shared/decorators/required-permission.decorator.js';
-import { SessionAuthGuard } from 'shared/guards/session-auth.guard.js';
-import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard.js';
+import { PurchaseDraftLineListQueryDto } from 'purchase-drafts/rest/dtos/purchase-draft-mutation.dto';
+import { toLineListEntryResponse } from 'purchase-drafts/rest/mappers/purchase-draft-response.mapper';
+import { ListPurchaseDraftLinesQuery } from 'purchase-drafts/usecases/queries/list-purchase-draft-lines.query';
+import type { WarehouseAccessRequest } from 'shared/access/access-request';
+import { ArchivedTolerantRead } from 'shared/access/archived-tolerant-read.decorator';
+import { ObservedPermission } from 'shared/decorators/observed-permission.decorator';
+import { RequiredPermission } from 'shared/decorators/required-permission.decorator';
+import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
+import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
 
 /** AC-22 — the by-line read: every line of the acting Warehouse's drafts, each carrying the draft
  * it belongs to and **its own** Delivery Mode, so a member preparing the dock sees only the goods

@@ -3,17 +3,17 @@ import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
 // T15. The implementer creates it in this location per sad.md §5
 // ("workspaces/usecases/queries ... Workspace Roles ... under
 // WORKSPACE_ROLES:WATCH") over the existing `WorkspaceReadRepository`.
-import { ListWorkspaceRolesQuery } from 'access/usecases/queries/list-workspace-roles.query.js';
-import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user.js';
-import dataSource from 'shared/database/data-source.js';
-import { WorkspacePermissionEntity } from 'shared/domain/entities/workspace-permission.entity.js';
-import { WorkspaceRoleEntity } from 'shared/domain/entities/workspace-role.entity.js';
-import { WorkspaceRolePermissionEntity } from 'shared/domain/entities/workspace-role-permission.entity.js';
-import { WorkspaceReadRepository } from 'shared/domain/repositories/workspace-read.repository.js';
+import { ListWorkspaceRolesQuery } from 'access/usecases/queries/list-workspace-roles.query';
+import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
+import dataSource from 'shared/database/data-source';
+import { WorkspacePermissionEntity } from 'shared/domain/entities/workspace-permission.entity';
+import { WorkspaceRoleEntity } from 'shared/domain/entities/workspace-role.entity';
+import { WorkspaceRolePermissionEntity } from 'shared/domain/entities/workspace-role-permission.entity';
+import { WorkspaceReadRepository } from 'shared/domain/repositories/workspace-read.repository';
 import {
   buildWorkspaceRole,
   persistWorkspaceGraph,
-} from 'test/factories/entity-factories.js';
+} from 'test/factories/entity-factories';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 describe('ListWorkspaceRolesQuery', () => {

@@ -1,4 +1,4 @@
-import type { DeliveryAddressState } from 'customers/domain/predicates/customer.predicates.js';
+import type { DeliveryAddressState } from 'customers/domain/predicates/customer.predicates';
 import {
   canDeactivateDeliveryAddress,
   hasExactlyOneMainActiveDeliveryAddress,
@@ -8,7 +8,7 @@ import {
   isDeliveryAddressOfCustomer,
   isDeliveryAddressText,
   isMainDeliveryAddressOf,
-} from 'customers/domain/predicates/customer.predicates.js';
+} from 'customers/domain/predicates/customer.predicates';
 import { describe, expect, it } from 'vitest';
 
 const address = (

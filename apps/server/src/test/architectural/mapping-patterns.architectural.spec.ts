@@ -2,7 +2,7 @@ import {
   findMappingDeclarations,
   type MappingPattern,
   serverMappingDeclarations,
-} from 'test/architectural/mapping-patterns.js';
+} from 'test/architectural/mapping-patterns';
 import { Project } from 'ts-morph';
 import { describe, expect, it } from 'vitest';
 

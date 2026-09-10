@@ -1,5 +1,5 @@
-import { Account } from 'auth/domain/entities/account.js';
-import { AccountEntity } from 'shared/domain/entities/account.entity.js';
+import { Account } from 'auth/domain/entities/account';
+import { AccountEntity } from 'shared/domain/entities/account.entity';
 
 export const toAccount = (entity: AccountEntity): Account =>
   Account.create({

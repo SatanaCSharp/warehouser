@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { getEntityManager } from 'shared/database/db-transaction-context.service.js';
-import { UserEntity } from 'shared/domain/entities/user.entity.js';
-import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity.js';
-import { WorkspaceMembershipEntity } from 'shared/domain/entities/workspace-membership.entity.js';
-import type { WorkspaceRoleEntityKind } from 'shared/domain/entities/workspace-role.entity.js';
+import { getEntityManager } from 'shared/database/db-transaction-context.service';
+import { UserEntity } from 'shared/domain/entities/user.entity';
+import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
+import { WorkspaceMembershipEntity } from 'shared/domain/entities/workspace-membership.entity';
+import type { WorkspaceRoleEntityKind } from 'shared/domain/entities/workspace-role.entity';
 import { DataSource } from 'typeorm';
 
 export interface WorkspaceMembershipWrite {

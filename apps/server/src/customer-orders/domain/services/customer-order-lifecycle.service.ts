@@ -5,15 +5,15 @@ import {
   customerOrderInvalidStateError,
   customerOrderNeededByInPastError,
   customerOrderTargetUnavailableError,
-} from 'customer-orders/domain/errors/customer-order.errors.js';
+} from 'customer-orders/domain/errors/customer-order.errors';
 import {
   isCalendarDate,
   isNeededByStillAhead,
-} from 'customer-orders/domain/predicates/customer-order.predicates.js';
-import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
-import type { CustomerOrderState } from 'shared/domain/entities/customer-order.entity.js';
-import type { LockedCustomerOrderRead } from 'shared/domain/repositories/customer-order-lifecycle.repository.js';
-import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository.js';
+} from 'customer-orders/domain/predicates/customer-order.predicates';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import type { CustomerOrderState } from 'shared/domain/entities/customer-order.entity';
+import type { LockedCustomerOrderRead } from 'shared/domain/repositories/customer-order-lifecycle.repository';
+import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository';
 
 // `customer_orders.needed_by` is a calendar date, so "has this date passed" is answered against a
 // calendar date too. UTC is the reference: the product has no per-Warehouse time zone yet, and a

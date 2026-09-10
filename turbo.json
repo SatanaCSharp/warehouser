@@ -1,10 +1,12 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
-  // Every package's `.oxlintrc.json` `extends` the root one, and a package's own file list — which
-  // is what turbo hashes by default — cannot see it. Without this, editing the shared lint baseline
-  // would leave every `lint` task reporting a cache hit against the old rules.
-  "globalDependencies": [".oxlintrc.json"],
+  // Every package's `oxlint.config.ts` calls into `@warehouser/oxlint-config`, and a package's own
+  // file list — which is what turbo hashes by default — cannot see it. The shared package has no
+  // `build` task either, so `lint`'s `dependsOn: ["^build"]` does not reach it. Without these two
+  // entries, editing the shared lint baseline would leave every `lint` task reporting a cache hit
+  // against the old rules.
+  "globalDependencies": ["oxlint.config.ts", "packages/oxlint-config/src/**"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
@@ -12,7 +14,7 @@
     },
     // `^build` is still required: the type-aware pass reads dependencies' emitted `.d.ts` files.
     // `inputs` is deliberately left at turbo's default (everything git-tracked in the package), so
-    // a change to a package's own `.oxlintrc.json`, `tsconfig.json` or `package.json` invalidates
+    // a change to a package's own `oxlint.config.ts`, `tsconfig.json` or `package.json` invalidates
     // its lint cache without anyone having to remember to list it.
     "lint": {
       "dependsOn": ["^build"],

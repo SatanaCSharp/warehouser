@@ -1,6 +1,6 @@
 import type { TestingModule } from '@nestjs/testing';
-import { WriteRateLimitCounter } from 'shared/guards/write-rate-limit.counter.js';
-import { WriteRateLimitGuard } from 'shared/guards/write-rate-limit.guard.js';
+import { WriteRateLimitCounter } from 'shared/guards/write-rate-limit.counter';
+import { WriteRateLimitGuard } from 'shared/guards/write-rate-limit.guard';
 import { expect } from 'vitest';
 
 interface ContainerModule {

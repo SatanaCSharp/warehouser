@@ -7,12 +7,12 @@ import {
   PATH_METADATA,
 } from '@nestjs/common/constants';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { RejectionReasonsController } from 'purchase-drafts/rest/controllers/rejection-reasons.controller.js';
-import { READ_TOLERANT_KEY } from 'shared/access/archived-tolerant-read.decorator.js';
-import { REQUIRED_PERMISSION_KEY } from 'shared/decorators/required-permission.decorator.js';
-import { SessionAuthGuard } from 'shared/guards/session-auth.guard.js';
-import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard.js';
-import { WRITE_RATE_LIMITED_KEY } from 'shared/guards/write-rate-limited.decorator.js';
+import { RejectionReasonsController } from 'purchase-drafts/rest/controllers/rejection-reasons.controller';
+import { READ_TOLERANT_KEY } from 'shared/access/archived-tolerant-read.decorator';
+import { REQUIRED_PERMISSION_KEY } from 'shared/decorators/required-permission.decorator';
+import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
+import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
+import { WRITE_RATE_LIMITED_KEY } from 'shared/guards/write-rate-limited.decorator';
 import { describe, expect, it } from 'vitest';
 
 // T13 §What/sad.md §7 — the Rejection Reason catalogue, served at its own top-level segment so no

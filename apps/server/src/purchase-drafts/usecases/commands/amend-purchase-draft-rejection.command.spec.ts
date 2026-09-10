@@ -16,17 +16,17 @@
 // the amendment returns.
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
-import { REJECTION_DISPOSITIONS } from 'purchase-drafts/domain/value-objects/line-condition.js';
+import { REJECTION_DISPOSITIONS } from 'purchase-drafts/domain/value-objects/line-condition';
 import {
   AmendPurchaseDraftRejectionCommand,
   type AmendRejectionCommandInput,
-} from 'purchase-drafts/usecases/commands/amend-purchase-draft-rejection.command.js';
-import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
+} from 'purchase-drafts/usecases/commands/amend-purchase-draft-rejection.command';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import {
   TRANSACTIONAL_KEY,
   type TransactionalMetadata,
-} from 'shared/decorators/transactional.decorator.js';
-import type { LockedPurchaseDraftLineRejection } from 'shared/domain/repositories/purchase-draft-rejection.repository.js';
+} from 'shared/decorators/transactional.decorator';
+import type { LockedPurchaseDraftLineRejection } from 'shared/domain/repositories/purchase-draft-rejection.repository';
 import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>

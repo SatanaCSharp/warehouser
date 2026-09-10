@@ -12,19 +12,19 @@ import {
 // current Owner (`workspaceOwnerTransferRequiredError`, AC-21a), and
 // otherwise call `WorkspaceMembershipRepository.removeMembership`, touching
 // no Warehouse membership or Role (AC-19a).
-import { RemoveWorkspaceMemberCommand } from 'access/usecases/commands/remove-workspace-member.command.js';
-import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user.js';
-import dataSource from 'shared/database/data-source.js';
-import { DbTransactionService } from 'shared/database/db-transaction.service.js';
-import { DbTransactionContext } from 'shared/database/db-transaction-context.service.js';
-import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity.js';
-import { WorkspaceMembershipEntity } from 'shared/domain/entities/workspace-membership.entity.js';
-import { WorkspaceRoleEntity } from 'shared/domain/entities/workspace-role.entity.js';
-import { WorkspaceMembershipRepository } from 'shared/domain/repositories/workspace-membership.repository.js';
+import { RemoveWorkspaceMemberCommand } from 'access/usecases/commands/remove-workspace-member.command';
+import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
+import dataSource from 'shared/database/data-source';
+import { DbTransactionService } from 'shared/database/db-transaction.service';
+import { DbTransactionContext } from 'shared/database/db-transaction-context.service';
+import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
+import { WorkspaceMembershipEntity } from 'shared/domain/entities/workspace-membership.entity';
+import { WorkspaceRoleEntity } from 'shared/domain/entities/workspace-role.entity';
+import { WorkspaceMembershipRepository } from 'shared/domain/repositories/workspace-membership.repository';
 import {
   buildWorkspaceRole,
   persistWorkspaceGraph,
-} from 'test/factories/entity-factories.js';
+} from 'test/factories/entity-factories';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 interface RemoveWorkspaceMemberInput {

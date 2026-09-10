@@ -1,6 +1,6 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
-import { ReadCurrentAccessQuery } from 'access/usecases/queries/read-current-access.query.js';
-import { AccessCurrentUserRepository } from 'shared/domain/repositories/access-current-user.repository.js';
+import { ReadCurrentAccessQuery } from 'access/usecases/queries/read-current-access.query';
+import { AccessCurrentUserRepository } from 'shared/domain/repositories/access-current-user.repository';
 import { describe, expect, it, vi } from 'vitest';
 
 const userId = '00000000-0000-4000-8000-000000000001';

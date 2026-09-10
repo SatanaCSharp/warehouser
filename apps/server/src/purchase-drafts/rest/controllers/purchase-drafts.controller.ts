@@ -32,42 +32,42 @@ import {
   PurchaseDraftListQueryDto,
   PurchaseDraftReviseDto,
   RejectionAmendDto,
-} from 'purchase-drafts/rest/dtos/purchase-draft-mutation.dto.js';
+} from 'purchase-drafts/rest/dtos/purchase-draft-mutation.dto';
 import {
   toEndingPreReceiptConformanceInput,
   toEndingRejectionInputs,
   toReviseLineInput,
-} from 'purchase-drafts/rest/mappers/purchase-draft-request.mapper.js';
+} from 'purchase-drafts/rest/mappers/purchase-draft-request.mapper';
 import {
   toDetailResponse,
   toSummaryResponse,
-} from 'purchase-drafts/rest/mappers/purchase-draft-response.mapper.js';
-import { AddPurchaseDraftLineCommand } from 'purchase-drafts/usecases/commands/add-purchase-draft-line.command.js';
-import { AddPurchaseDraftLineLinkCommand } from 'purchase-drafts/usecases/commands/add-purchase-draft-line-link.command.js';
-import { AmendPurchaseDraftRejectionCommand } from 'purchase-drafts/usecases/commands/amend-purchase-draft-rejection.command.js';
-import { ClosePurchaseDraftCommand } from 'purchase-drafts/usecases/commands/close-purchase-draft.command.js';
-import type { ConfirmPurchaseDraftLineArrivalInput } from 'purchase-drafts/usecases/commands/confirm-purchase-draft-line-arrival.command.js';
-import { ConfirmPurchaseDraftLineArrivalCommand } from 'purchase-drafts/usecases/commands/confirm-purchase-draft-line-arrival.command.js';
-import { CreatePurchaseDraftCommand } from 'purchase-drafts/usecases/commands/create-purchase-draft.command.js';
-import { DiscardPurchaseDraftCommand } from 'purchase-drafts/usecases/commands/discard-purchase-draft.command.js';
-import { ReadyPurchaseDraftCommand } from 'purchase-drafts/usecases/commands/ready-purchase-draft.command.js';
-import type { RecordPurchaseDraftLineDeliveryInput } from 'purchase-drafts/usecases/commands/record-purchase-draft-line-delivery.command.js';
-import { RecordPurchaseDraftLineDeliveryCommand } from 'purchase-drafts/usecases/commands/record-purchase-draft-line-delivery.command.js';
-import { RemovePurchaseDraftLineCommand } from 'purchase-drafts/usecases/commands/remove-purchase-draft-line.command.js';
-import { RemovePurchaseDraftLineLinkCommand } from 'purchase-drafts/usecases/commands/remove-purchase-draft-line-link.command.js';
-import { RevisePurchaseDraftCommand } from 'purchase-drafts/usecases/commands/revise-purchase-draft.command.js';
-import { RevisePurchaseDraftLineCommand } from 'purchase-drafts/usecases/commands/revise-purchase-draft-line.command.js';
-import { RevisePurchaseDraftLineLinkCommand } from 'purchase-drafts/usecases/commands/revise-purchase-draft-line-link.command.js';
-import { ListPurchaseDraftsQuery } from 'purchase-drafts/usecases/queries/list-purchase-drafts.query.js';
-import { ReadPurchaseDraftQuery } from 'purchase-drafts/usecases/queries/read-purchase-draft.query.js';
-import type { WarehouseAccessRequest } from 'shared/access/access-request.js';
-import { ArchivedTolerantRead } from 'shared/access/archived-tolerant-read.decorator.js';
-import { ObservedPermission } from 'shared/decorators/observed-permission.decorator.js';
-import { RequiredPermission } from 'shared/decorators/required-permission.decorator.js';
-import { SessionAuthGuard } from 'shared/guards/session-auth.guard.js';
-import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard.js';
-import { WriteRateLimitGuard } from 'shared/guards/write-rate-limit.guard.js';
-import { WriteRateLimited } from 'shared/guards/write-rate-limited.decorator.js';
+} from 'purchase-drafts/rest/mappers/purchase-draft-response.mapper';
+import { AddPurchaseDraftLineCommand } from 'purchase-drafts/usecases/commands/add-purchase-draft-line.command';
+import { AddPurchaseDraftLineLinkCommand } from 'purchase-drafts/usecases/commands/add-purchase-draft-line-link.command';
+import { AmendPurchaseDraftRejectionCommand } from 'purchase-drafts/usecases/commands/amend-purchase-draft-rejection.command';
+import { ClosePurchaseDraftCommand } from 'purchase-drafts/usecases/commands/close-purchase-draft.command';
+import type { ConfirmPurchaseDraftLineArrivalInput } from 'purchase-drafts/usecases/commands/confirm-purchase-draft-line-arrival.command';
+import { ConfirmPurchaseDraftLineArrivalCommand } from 'purchase-drafts/usecases/commands/confirm-purchase-draft-line-arrival.command';
+import { CreatePurchaseDraftCommand } from 'purchase-drafts/usecases/commands/create-purchase-draft.command';
+import { DiscardPurchaseDraftCommand } from 'purchase-drafts/usecases/commands/discard-purchase-draft.command';
+import { ReadyPurchaseDraftCommand } from 'purchase-drafts/usecases/commands/ready-purchase-draft.command';
+import type { RecordPurchaseDraftLineDeliveryInput } from 'purchase-drafts/usecases/commands/record-purchase-draft-line-delivery.command';
+import { RecordPurchaseDraftLineDeliveryCommand } from 'purchase-drafts/usecases/commands/record-purchase-draft-line-delivery.command';
+import { RemovePurchaseDraftLineCommand } from 'purchase-drafts/usecases/commands/remove-purchase-draft-line.command';
+import { RemovePurchaseDraftLineLinkCommand } from 'purchase-drafts/usecases/commands/remove-purchase-draft-line-link.command';
+import { RevisePurchaseDraftCommand } from 'purchase-drafts/usecases/commands/revise-purchase-draft.command';
+import { RevisePurchaseDraftLineCommand } from 'purchase-drafts/usecases/commands/revise-purchase-draft-line.command';
+import { RevisePurchaseDraftLineLinkCommand } from 'purchase-drafts/usecases/commands/revise-purchase-draft-line-link.command';
+import { ListPurchaseDraftsQuery } from 'purchase-drafts/usecases/queries/list-purchase-drafts.query';
+import { ReadPurchaseDraftQuery } from 'purchase-drafts/usecases/queries/read-purchase-draft.query';
+import type { WarehouseAccessRequest } from 'shared/access/access-request';
+import { ArchivedTolerantRead } from 'shared/access/archived-tolerant-read.decorator';
+import { ObservedPermission } from 'shared/decorators/observed-permission.decorator';
+import { RequiredPermission } from 'shared/decorators/required-permission.decorator';
+import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
+import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
+import { WriteRateLimitGuard } from 'shared/guards/write-rate-limit.guard';
+import { WriteRateLimited } from 'shared/guards/write-rate-limited.decorator';
 
 /** Every route whose subject is a Purchase Draft — its assembly, its freeze, its Drift Signals,
  * Arrival Confirmation, closure and discard (contracts/openapi.yaml `/purchase-drafts*`, sad.md

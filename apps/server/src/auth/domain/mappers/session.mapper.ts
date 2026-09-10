@@ -1,7 +1,7 @@
-import { Session } from 'auth/domain/entities/session.js';
-import { AccountId, SessionId } from 'auth/domain/value-objects/identity-id.js';
-import { SessionDigest } from 'auth/domain/value-objects/session-digest.js';
-import { SessionEntity } from 'shared/domain/entities/session.entity.js';
+import { Session } from 'auth/domain/entities/session';
+import { AccountId, SessionId } from 'auth/domain/value-objects/identity-id';
+import { SessionDigest } from 'auth/domain/value-objects/session-digest';
+import { SessionEntity } from 'shared/domain/entities/session.entity';
 
 export const toSession = (entity: SessionEntity): Session =>
   Session.restore({

@@ -82,7 +82,10 @@ describe('customer-orders contracts', () => {
     // there is no root export, so an unexposed module is unreachable from both applications.
     it('declares ./customer-orders in the contract package exports', () => {
       const packageJson = JSON.parse(
-        readFileSync(join(__dirname, '..', '..', 'package.json'), 'utf8'),
+        readFileSync(
+          join(import.meta.dirname, '..', '..', 'package.json'),
+          'utf8',
+        ),
       ) as { exports: Record<string, unknown> };
 
       expect(packageJson.exports['./customer-orders']).toEqual({

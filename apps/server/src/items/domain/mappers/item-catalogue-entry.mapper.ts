@@ -1,4 +1,4 @@
-import type { ItemWithOnHandAndLatestReasonRead } from 'shared/domain/repositories/item-catalogue.repository.js';
+import type { ItemWithOnHandAndLatestReasonRead } from 'shared/domain/repositories/item-catalogue.repository';
 
 export interface ItemLatestAdjustmentRead {
   readonly countedQuantity: number;

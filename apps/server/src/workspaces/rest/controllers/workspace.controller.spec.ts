@@ -10,14 +10,14 @@ import {
   PATH_METADATA,
 } from '@nestjs/common/constants';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import type { WorkspaceAccessRequest } from 'shared/access/access-request.js';
-import { REQUIRED_WORKSPACE_PERMISSION_KEY } from 'shared/decorators/required-workspace-permission.decorator.js';
-import { SessionAuthGuard } from 'shared/guards/session-auth.guard.js';
+import type { WorkspaceAccessRequest } from 'shared/access/access-request';
+import { REQUIRED_WORKSPACE_PERMISSION_KEY } from 'shared/decorators/required-workspace-permission.decorator';
+import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { WorkspaceController } from 'workspaces/rest/controllers/workspace.controller.js';
-import type { RenameWorkspaceCommand } from 'workspaces/usecases/commands/rename-workspace.command.js';
-import type { SetActiveWarehouseCommand } from 'workspaces/usecases/commands/set-active-warehouse.command.js';
-import type { ReadWorkspaceContextQuery } from 'workspaces/usecases/queries/read-workspace-context.query.js';
+import { WorkspaceController } from 'workspaces/rest/controllers/workspace.controller';
+import type { RenameWorkspaceCommand } from 'workspaces/usecases/commands/rename-workspace.command';
+import type { SetActiveWarehouseCommand } from 'workspaces/usecases/commands/set-active-warehouse.command';
+import type { ReadWorkspaceContextQuery } from 'workspaces/usecases/queries/read-workspace-context.query';
 
 const id = (suffix: number): string =>
   `00000000-0000-4000-8000-${suffix.toString().padStart(12, '0')}`;

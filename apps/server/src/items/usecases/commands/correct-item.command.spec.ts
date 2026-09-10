@@ -4,10 +4,10 @@
 // one unused in that Warehouse, and description/Unit of Measure corrections are always accepted.
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
-import { CorrectItemCommand } from 'items/usecases/commands/correct-item.command.js';
-import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
-import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository.js';
-import { repositoryDouble } from 'test/doubles/repository-double.js';
+import { CorrectItemCommand } from 'items/usecases/commands/correct-item.command';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
+import { repositoryDouble } from 'test/doubles/repository-double';
 import { describe, expect, it, vi } from 'vitest';
 
 const warehouseId = '00000000-0000-4000-8000-000000000001';

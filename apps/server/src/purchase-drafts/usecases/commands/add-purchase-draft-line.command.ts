@@ -4,11 +4,11 @@ import { Injectable, Optional } from '@nestjs/common';
 import {
   assertApplied,
   PurchaseDraftAssemblyService,
-} from 'purchase-drafts/domain/services/purchase-draft-assembly.service.js';
-import { NEW_LINE_DELIVERY_MODE } from 'purchase-drafts/domain/value-objects/delivery-mode.js';
-import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
-import { Transactional } from 'shared/decorators/transactional.decorator.js';
-import { PurchaseDraftAssemblyRepository } from 'shared/domain/repositories/purchase-draft-assembly.repository.js';
+} from 'purchase-drafts/domain/services/purchase-draft-assembly.service';
+import { NEW_LINE_DELIVERY_MODE } from 'purchase-drafts/domain/value-objects/delivery-mode';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { Transactional } from 'shared/decorators/transactional.decorator';
+import { PurchaseDraftAssemblyRepository } from 'shared/domain/repositories/purchase-draft-assembly.repository';
 
 export interface AddLineInput {
   readonly itemId: string;

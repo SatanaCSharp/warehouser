@@ -170,6 +170,9 @@ importers:
       '@commitlint/config-conventional':
         specifier: ^21.2.0
         version: 21.2.0
+      '@warehouser/oxlint-config':
+        specifier: workspace:*
+        version: link:packages/oxlint-config
       eslint-plugin-no-relative-import-paths:
         specifier: 'catalog:'
         version: 1.6.1
@@ -300,6 +303,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 5.0.0(vitest@5.0.0)
+      '@warehouser/oxlint-config':
+        specifier: workspace:*
+        version: link:../../packages/oxlint-config
       '@warehouser/tsconfig':
         specifier: workspace:*
         version: link:../../packages/tsconfig
@@ -436,6 +442,9 @@ importers:
       '@vitejs/plugin-react':
         specifier: 'catalog:'
         version: 4.7.0(vite@6.4.3(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.13)(yaml@2.9.0))
+      '@warehouser/oxlint-config':
+        specifier: workspace:*
+        version: link:../../packages/oxlint-config
       '@warehouser/tsconfig':
         specifier: workspace:*
         version: link:../../packages/tsconfig
@@ -467,6 +476,9 @@ importers:
       '@types/node':
         specifier: ^24.13.3
         version: 24.13.3
+      '@warehouser/oxlint-config':
+        specifier: workspace:*
+        version: link:../oxlint-config
       '@warehouser/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
@@ -486,8 +498,23 @@ importers:
         specifier: 'catalog:'
         version: 5.0.0(@types/node@24.13.3)(@vitest/coverage-v8@5.0.0)(jsdom@29.1.1)(vite@6.4.3(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.13)(yaml@2.9.0))
 
+  packages/oxlint-config:
+    devDependencies:
+      '@warehouser/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+      oxlint:
+        specifier: 'catalog:'
+        version: 1.82.0(oxlint-tsgolint@7.0.2001)
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+
   packages/shared-types:
     devDependencies:
+      '@warehouser/oxlint-config':
+        specifier: workspace:*
+        version: link:../oxlint-config
       '@warehouser/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
@@ -521,6 +548,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 5.0.0(vitest@5.0.0)
+      '@warehouser/oxlint-config':
+        specifier: workspace:*
+        version: link:../oxlint-config
       '@warehouser/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig

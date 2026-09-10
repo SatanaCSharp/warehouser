@@ -1,7 +1,7 @@
 import {
   productionSourceFiles,
   serverPath,
-} from 'test/architectural/server-project.js';
+} from 'test/architectural/server-project';
 import { SyntaxKind } from 'ts-morph';
 import { describe, expect, it } from 'vitest';
 

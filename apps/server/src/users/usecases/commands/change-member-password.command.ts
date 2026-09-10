@@ -2,24 +2,24 @@ import { Injectable } from '@nestjs/common';
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
 import { assert, assertDefined } from '@warehouser/utils/asserts';
-import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
-import { Transactional } from 'shared/decorators/transactional.decorator.js';
-import { AccessCurrentUserRepository } from 'shared/domain/repositories/access-current-user.repository.js';
-import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository.js';
-import { MemberLifecycleRepository } from 'shared/domain/repositories/member-lifecycle.repository.js';
-import { isSupportedPassword } from 'shared/domain/security/is-supported-password.js';
-import { hashPassword } from 'shared/domain/security/password-hashing.js';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { Transactional } from 'shared/decorators/transactional.decorator';
+import { AccessCurrentUserRepository } from 'shared/domain/repositories/access-current-user.repository';
+import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
+import { MemberLifecycleRepository } from 'shared/domain/repositories/member-lifecycle.repository';
+import { isSupportedPassword } from 'shared/domain/security/is-supported-password';
+import { hashPassword } from 'shared/domain/security/password-hashing';
 import {
   invalidInputError,
   managerRoleProtectedError,
   permissionExceededError,
   selfActionDeniedError,
-} from 'users/domain/errors/users.errors.js';
+} from 'users/domain/errors/users.errors';
 import {
   exceedsActorPermissions,
   isProtectedManagerTarget,
   isSelfAction,
-} from 'users/domain/predicates/member-lifecycle.predicates.js';
+} from 'users/domain/predicates/member-lifecycle.predicates';
 
 export interface ChangeMemberPasswordInput {
   readonly targetUserId: string;

@@ -1,6 +1,6 @@
 import { Injectable, Optional } from '@nestjs/common';
 import { assert, assertFail } from '@warehouser/utils/asserts';
-import type { DisagreeingDeliveryLink } from 'purchase-drafts/domain/errors/purchase-draft.errors.js';
+import type { DisagreeingDeliveryLink } from 'purchase-drafts/domain/errors/purchase-draft.errors';
 import {
   purchaseDraftConcurrentChangeError,
   purchaseDraftDeliveryAddressDisagreementError,
@@ -8,17 +8,17 @@ import {
   purchaseDraftInvalidStateError,
   purchaseDraftTargetUnavailableError,
   purchaseDraftWarehouseDeliveryAddressRequiredError,
-} from 'purchase-drafts/domain/errors/purchase-draft.errors.js';
+} from 'purchase-drafts/domain/errors/purchase-draft.errors';
 import {
   isDiscardableDraft,
   isEmptyDraft,
-} from 'purchase-drafts/domain/predicates/purchase-draft-freeze.predicates.js';
-import { PurchaseDraftAssemblyService } from 'purchase-drafts/domain/services/purchase-draft-assembly.service.js';
-import { DeliveryMode } from 'purchase-drafts/domain/value-objects/delivery-mode.js';
-import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
-import { Transactional } from 'shared/decorators/transactional.decorator.js';
-import { PurchaseDraftAssemblyRepository } from 'shared/domain/repositories/purchase-draft-assembly.repository.js';
-import { PurchaseDraftFreezeRepository } from 'shared/domain/repositories/purchase-draft-freeze.repository.js';
+} from 'purchase-drafts/domain/predicates/purchase-draft-freeze.predicates';
+import { PurchaseDraftAssemblyService } from 'purchase-drafts/domain/services/purchase-draft-assembly.service';
+import { DeliveryMode } from 'purchase-drafts/domain/value-objects/delivery-mode';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { Transactional } from 'shared/decorators/transactional.decorator';
+import { PurchaseDraftAssemblyRepository } from 'shared/domain/repositories/purchase-draft-assembly.repository';
+import { PurchaseDraftFreezeRepository } from 'shared/domain/repositories/purchase-draft-freeze.repository';
 
 /** Where one line's goods travel, as the freeze reads it off the line. */
 interface FreezableLine {

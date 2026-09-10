@@ -1,15 +1,15 @@
 import { Injectable, Optional } from '@nestjs/common';
-import type { Customer } from 'customers/domain/mappers/customer.mapper.js';
-import { toCustomer } from 'customers/domain/mappers/customer.mapper.js';
+import type { Customer } from 'customers/domain/mappers/customer.mapper';
+import { toCustomer } from 'customers/domain/mappers/customer.mapper';
 import {
   assertCustomerWriteApplied,
   assertDeliveryAddressUsable,
   CustomerAddressBookService,
-} from 'customers/domain/services/customer-address-book.service.js';
+} from 'customers/domain/services/customer-address-book.service';
 import find from 'lodash/find.js';
-import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
-import { Transactional } from 'shared/decorators/transactional.decorator.js';
-import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository.js';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { Transactional } from 'shared/decorators/transactional.decorator';
+import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository';
 
 export interface SetMainCustomerDeliveryAddressRuntime {
   readonly now: () => Date;

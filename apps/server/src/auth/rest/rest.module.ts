@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { AuthCookie } from 'auth/rest/auth-cookie.js';
-import { AuthController } from 'auth/rest/controllers/auth.controller.js';
-import { AuthUsecaseModule } from 'auth/usecases/usecase.module.js';
+import { AuthCookie } from 'auth/rest/auth-cookie';
+import { AuthController } from 'auth/rest/controllers/auth.controller';
+import { AuthUsecaseModule } from 'auth/usecases/usecase.module';
 
 @Module({
   imports: [AuthUsecaseModule],

@@ -1,29 +1,29 @@
 import { randomUUID } from 'node:crypto';
 
-import dataSource from 'shared/database/data-source.js';
-import { DbTransactionService } from 'shared/database/db-transaction.service.js';
-import { DbTransactionContext } from 'shared/database/db-transaction-context.service.js';
-import { AccountEntity } from 'shared/domain/entities/account.entity.js';
-import { ItemEntity } from 'shared/domain/entities/item.entity.js';
-import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity.js';
-import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity.js';
+import dataSource from 'shared/database/data-source';
+import { DbTransactionService } from 'shared/database/db-transaction.service';
+import { DbTransactionContext } from 'shared/database/db-transaction-context.service';
+import { AccountEntity } from 'shared/domain/entities/account.entity';
+import { ItemEntity } from 'shared/domain/entities/item.entity';
+import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
+import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity';
 import {
   type PurchaseDraftLineRejectionDisposition,
   PurchaseDraftLineRejectionEntity,
-} from 'shared/domain/entities/purchase-draft-line-rejection.entity.js';
-import { UserEntity } from 'shared/domain/entities/user.entity.js';
-import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity.js';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
+} from 'shared/domain/entities/purchase-draft-line-rejection.entity';
+import { UserEntity } from 'shared/domain/entities/user.entity';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 // `PurchaseDraftRejectionRepository` does not exist yet (T4) — this is the RED for `sad.md` §6.4's
 // persistence half. `data-model.md` § "Repository boundaries": it "resolves one Rejection in the
 // acting Warehouse under lock **and** applies the amendment as one conditional update whose
 // predicate excludes a return to Undecided. The two cannot be separated by another transaction,
 // which is the whole point; a zero-row result is the typed refusal AC-18a needs."
-import { PurchaseDraftRejectionRepository } from 'shared/domain/repositories/purchase-draft-rejection.repository.js';
+import { PurchaseDraftRejectionRepository } from 'shared/domain/repositories/purchase-draft-rejection.repository';
 import {
   buildWarehouse,
   buildWorkspace,
-} from 'test/factories/entity-factories.js';
+} from 'test/factories/entity-factories';
 // Spied at the PostgreSQL round-trip level, as `arrival-confirmation.repository.integration.spec.ts`
 // does: it is the one method every TypeORM access path reaches the database through, so the count
 // and the text below describe the statements actually issued rather than the API chosen to issue

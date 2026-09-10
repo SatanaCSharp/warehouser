@@ -1,16 +1,16 @@
 import { randomUUID } from 'node:crypto';
 
-import { Account } from 'auth/domain/entities/account.js';
-import { Session } from 'auth/domain/entities/session.js';
-import { User } from 'auth/domain/entities/user.js';
-import { AuthRegistrationService } from 'auth/domain/services/auth-registration.service.js';
-import { SessionId } from 'auth/domain/value-objects/identity-id.js';
-import { SessionDigest } from 'auth/domain/value-objects/session-digest.js';
-import dataSource from 'shared/database/data-source.js';
-import { DbTransactionService } from 'shared/database/db-transaction.service.js';
-import { DbTransactionContext } from 'shared/database/db-transaction-context.service.js';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
-import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository.js';
+import { Account } from 'auth/domain/entities/account';
+import { Session } from 'auth/domain/entities/session';
+import { User } from 'auth/domain/entities/user';
+import { AuthRegistrationService } from 'auth/domain/services/auth-registration.service';
+import { SessionId } from 'auth/domain/value-objects/identity-id';
+import { SessionDigest } from 'auth/domain/value-objects/session-digest';
+import dataSource from 'shared/database/data-source';
+import { DbTransactionService } from 'shared/database/db-transaction.service';
+import { DbTransactionContext } from 'shared/database/db-transaction-context.service';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
+import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
 import type { EntityManager } from 'typeorm';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 

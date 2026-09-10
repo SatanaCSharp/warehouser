@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import type { ItemCatalogueEntryRead } from 'items/domain/mappers/item-catalogue-entry.mapper.js';
-import { toItemCatalogueEntry } from 'items/domain/mappers/item-catalogue-entry.mapper.js';
-import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
-import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository.js';
+import type { ItemCatalogueEntryRead } from 'items/domain/mappers/item-catalogue-entry.mapper';
+import { toItemCatalogueEntry } from 'items/domain/mappers/item-catalogue-entry.mapper';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
 
 // Confirms the full `Item` projection openapi.yaml documents for one Item of the acting
 // Warehouse, read fresh after a mutating command has committed (mirrors

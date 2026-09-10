@@ -4,7 +4,7 @@
   "description": "",
   "license": "MIT",
   "author": "",
-  "type": "commonjs",
+  "type": "module",
   "engines": {
     "node": ">=24.14.0"
   },
@@ -54,6 +54,7 @@
   },
   "devDependencies": {
     "@types/node": "catalog:",
+    "@warehouser/oxlint-config": "workspace:*",
     "@warehouser/tsconfig": "workspace:*",
     "tsc-alias": "catalog:",
     "typescript": "catalog:",

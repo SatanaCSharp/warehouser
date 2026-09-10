@@ -7,32 +7,32 @@ import { ApplicationError } from '@warehouser/shared-types/errors';
 // against the values the member composed against". Here the three lifecycle commands, their real
 // repositories and a real transaction run together, so what is proven is that the refused amendment
 // leaves the stored row **exactly** as it was — not merely that a double was not called.
-import { CustomerOrderDestinationService } from 'customer-orders/domain/services/customer-order-destination.service.js';
-import { CustomerOrderLifecycleService } from 'customer-orders/domain/services/customer-order-lifecycle.service.js';
-import { AmendCustomerOrderCommand } from 'customer-orders/usecases/commands/amend-customer-order.command.js';
-import { CancelCustomerOrderCommand } from 'customer-orders/usecases/commands/cancel-customer-order.command.js';
-import { RecordCustomerOrderCommand } from 'customer-orders/usecases/commands/record-customer-order.command.js';
-import dataSource from 'shared/database/data-source.js';
-import { DbTransactionService } from 'shared/database/db-transaction.service.js';
-import { DbTransactionContext } from 'shared/database/db-transaction-context.service.js';
-import { AccountEntity } from 'shared/domain/entities/account.entity.js';
-import { ArrivalAllocationEntity } from 'shared/domain/entities/arrival-allocation.entity.js';
-import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity.js';
-import { ItemEntity } from 'shared/domain/entities/item.entity.js';
-import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity.js';
-import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity.js';
-import { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity.js';
-import { UserEntity } from 'shared/domain/entities/user.entity.js';
-import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity.js';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
-import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository.js';
-import { CustomerDirectoryRepository } from 'shared/domain/repositories/customer-directory.repository.js';
-import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository.js';
-import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository.js';
+import { CustomerOrderDestinationService } from 'customer-orders/domain/services/customer-order-destination.service';
+import { CustomerOrderLifecycleService } from 'customer-orders/domain/services/customer-order-lifecycle.service';
+import { AmendCustomerOrderCommand } from 'customer-orders/usecases/commands/amend-customer-order.command';
+import { CancelCustomerOrderCommand } from 'customer-orders/usecases/commands/cancel-customer-order.command';
+import { RecordCustomerOrderCommand } from 'customer-orders/usecases/commands/record-customer-order.command';
+import dataSource from 'shared/database/data-source';
+import { DbTransactionService } from 'shared/database/db-transaction.service';
+import { DbTransactionContext } from 'shared/database/db-transaction-context.service';
+import { AccountEntity } from 'shared/domain/entities/account.entity';
+import { ArrivalAllocationEntity } from 'shared/domain/entities/arrival-allocation.entity';
+import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
+import { ItemEntity } from 'shared/domain/entities/item.entity';
+import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
+import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity';
+import { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity';
+import { UserEntity } from 'shared/domain/entities/user.entity';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
+import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository';
+import { CustomerDirectoryRepository } from 'shared/domain/repositories/customer-directory.repository';
+import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository';
+import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
 import {
   buildWarehouse,
   buildWorkspace,
-} from 'test/factories/entity-factories.js';
+} from 'test/factories/entity-factories';
 import {
   afterAll,
   afterEach,

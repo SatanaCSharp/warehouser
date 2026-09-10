@@ -11,11 +11,11 @@ import {
   AssertionError,
   SystemError,
 } from '@warehouser/shared-types/errors';
-import { redactSensitiveValues } from 'shared/errors/sensitive-value-redactor.js';
+import { redactSensitiveValues } from 'shared/errors/sensitive-value-redactor';
 import {
   type ValidatedRequestPayloads,
   validationFieldCodes,
-} from 'shared/errors/validation-field-codes.js';
+} from 'shared/errors/validation-field-codes';
 
 interface SafeErrorEnvelope {
   readonly code: string;

@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import type { CustomerOrder } from 'customer-orders/domain/mappers/customer-order.mapper.js';
-import { toCustomerOrder } from 'customer-orders/domain/mappers/customer-order.mapper.js';
-import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
-import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository.js';
+import type { CustomerOrder } from 'customer-orders/domain/mappers/customer-order.mapper';
+import { toCustomerOrder } from 'customer-orders/domain/mappers/customer-order.mapper';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository';
 
 // `GET /api/v1/warehouses/{warehouseId}/customer-orders?itemId=…&state=unfulfilled` — the Unfulfilled
 // Customer Orders a Purchase Draft line linking to this Item may name (sad.md §6.6 step 1). AC-20

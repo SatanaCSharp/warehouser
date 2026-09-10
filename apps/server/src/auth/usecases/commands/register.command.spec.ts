@@ -1,14 +1,14 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
-import { GeneratedSessionSecret } from 'auth/domain/security/session-secret.js';
+import { GeneratedSessionSecret } from 'auth/domain/security/session-secret';
 import {
   AuthRegistrationService,
   RegisteredIdentity,
-} from 'auth/domain/services/auth-registration.service.js';
-import { RegisterCommand } from 'auth/usecases/commands/register.command.js';
-import { AccountEntity } from 'shared/domain/entities/account.entity.js';
-import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository.js';
+} from 'auth/domain/services/auth-registration.service';
+import { RegisterCommand } from 'auth/usecases/commands/register.command';
+import { AccountEntity } from 'shared/domain/entities/account.entity';
+import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
 import { describe, expect, it, vi } from 'vitest';
-import { WorkspaceProvisioningService } from 'workspaces/domain/services/workspace-provisioning.service.js';
+import { WorkspaceProvisioningService } from 'workspaces/domain/services/workspace-provisioning.service';
 
 const identityId = '00000000-0000-4000-8000-000000000001';
 const sessionId = '00000000-0000-4000-8000-000000000002';

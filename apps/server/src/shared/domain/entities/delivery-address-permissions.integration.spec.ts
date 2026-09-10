@@ -2,7 +2,7 @@ import {
   PermissionId,
   WorkspacePermissionId,
 } from '@warehouser/shared-types/enums';
-import dataSource from 'shared/database/data-source.js';
+import dataSource from 'shared/database/data-source';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 /**

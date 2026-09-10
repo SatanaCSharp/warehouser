@@ -5,14 +5,14 @@ import keys from 'lodash/keys.js';
 import pickBy from 'lodash/pickBy.js';
 import sum from 'lodash/sum.js';
 import uniq from 'lodash/uniq.js';
-import { type DeliveryMode } from 'purchase-drafts/domain/value-objects/delivery-mode.js';
+import { type DeliveryMode } from 'purchase-drafts/domain/value-objects/delivery-mode';
 import {
   PreReceiptConformanceVerdict,
   REJECTION_DISPOSITIONS,
   RejectionDisposition,
   type RejectionSource,
   requiredSourceFor,
-} from 'purchase-drafts/domain/value-objects/line-condition.js';
+} from 'purchase-drafts/domain/value-objects/line-condition';
 
 // Pure predicates for a line's Condition Split, its Pre-receipt Conformance and a Rejection's
 // Disposition (server-error-handling.md §1): every value arrives as an argument, nothing is

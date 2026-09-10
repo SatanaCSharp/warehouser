@@ -1,2 +1,2 @@
-export { AccessRestModule } from './rest/rest.module.js';
-export { AccessUsecaseModule } from './usecases/usecase.module.js';
+export { AccessRestModule } from './rest/rest.module';
+export { AccessUsecaseModule } from './usecases/usecase.module';

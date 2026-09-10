@@ -3,26 +3,26 @@ import { randomUUID } from 'node:crypto';
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import { AppModule } from 'app.module.js';
-import { digestSessionSecret } from 'auth/domain/security/session-secret.js';
-import { AUTH_SESSION_COOKIE } from 'auth/rest/auth-cookie.js';
+import { AppModule } from 'app.module';
+import { digestSessionSecret } from 'auth/domain/security/session-secret';
+import { AUTH_SESSION_COOKIE } from 'auth/rest/auth-cookie';
 import { ZodValidationPipe } from 'nestjs-zod';
-import dataSource from 'shared/database/data-source.js';
-import { AccountEntity } from 'shared/domain/entities/account.entity.js';
-import { SessionEntity } from 'shared/domain/entities/session.entity.js';
-import { UserEntity } from 'shared/domain/entities/user.entity.js';
-import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity.js';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
-import { WorkspaceMembershipEntity } from 'shared/domain/entities/workspace-membership.entity.js';
-import { WorkspacePermissionEntity } from 'shared/domain/entities/workspace-permission.entity.js';
-import { WorkspaceRoleEntity } from 'shared/domain/entities/workspace-role.entity.js';
-import { WorkspaceRolePermissionEntity } from 'shared/domain/entities/workspace-role-permission.entity.js';
-import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository.js';
-import { GlobalHttpExceptionFilter } from 'shared/errors/global-http-exception.filter.js';
+import dataSource from 'shared/database/data-source';
+import { AccountEntity } from 'shared/domain/entities/account.entity';
+import { SessionEntity } from 'shared/domain/entities/session.entity';
+import { UserEntity } from 'shared/domain/entities/user.entity';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
+import { WorkspaceMembershipEntity } from 'shared/domain/entities/workspace-membership.entity';
+import { WorkspacePermissionEntity } from 'shared/domain/entities/workspace-permission.entity';
+import { WorkspaceRoleEntity } from 'shared/domain/entities/workspace-role.entity';
+import { WorkspaceRolePermissionEntity } from 'shared/domain/entities/workspace-role-permission.entity';
+import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
+import { GlobalHttpExceptionFilter } from 'shared/errors/global-http-exception.filter';
 import {
   now,
   setupWarehouseHttpContractHarness,
-} from 'test/harnesses/warehouse-http-contract.harness.js';
+} from 'test/harnesses/warehouse-http-contract.harness';
 import { afterEach, describe, expect, it } from 'vitest';
 
 // T25 DoD — the membership-edge half of the `/api/v1/workspace/warehouses*`

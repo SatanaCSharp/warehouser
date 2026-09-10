@@ -6,21 +6,21 @@ import {
   PATH_METADATA,
 } from '@nestjs/common/constants';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { AccessController } from 'access/rest/controllers/access.controller.js';
-import type { AssignMemberRoleCommand } from 'access/usecases/commands/assign-member-role.command.js';
-import type { CreateRoleCommand } from 'access/usecases/commands/create-role.command.js';
-import type { DeleteRoleCommand } from 'access/usecases/commands/delete-role.command.js';
-import type { TransferWarehouseManagerCommand } from 'access/usecases/commands/transfer-warehouse-manager.command.js';
-import type { UpdateRoleCommand } from 'access/usecases/commands/update-role.command.js';
-import type { ListAccessMembersQuery } from 'access/usecases/queries/list-access-members.query.js';
-import type { ListAccessPermissionsQuery } from 'access/usecases/queries/list-access-permissions.query.js';
-import type { ListAccessRolesQuery } from 'access/usecases/queries/list-access-roles.query.js';
-import type { ReadCurrentAccessQuery } from 'access/usecases/queries/read-current-access.query.js';
-import type { WarehouseAccessRequest } from 'shared/access/access-request.js';
-import { READ_TOLERANT_KEY } from 'shared/access/archived-tolerant-read.decorator.js';
-import { REQUIRED_PERMISSION_KEY } from 'shared/decorators/required-permission.decorator.js';
-import { SessionAuthGuard } from 'shared/guards/session-auth.guard.js';
-import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard.js';
+import { AccessController } from 'access/rest/controllers/access.controller';
+import type { AssignMemberRoleCommand } from 'access/usecases/commands/assign-member-role.command';
+import type { CreateRoleCommand } from 'access/usecases/commands/create-role.command';
+import type { DeleteRoleCommand } from 'access/usecases/commands/delete-role.command';
+import type { TransferWarehouseManagerCommand } from 'access/usecases/commands/transfer-warehouse-manager.command';
+import type { UpdateRoleCommand } from 'access/usecases/commands/update-role.command';
+import type { ListAccessMembersQuery } from 'access/usecases/queries/list-access-members.query';
+import type { ListAccessPermissionsQuery } from 'access/usecases/queries/list-access-permissions.query';
+import type { ListAccessRolesQuery } from 'access/usecases/queries/list-access-roles.query';
+import type { ReadCurrentAccessQuery } from 'access/usecases/queries/read-current-access.query';
+import type { WarehouseAccessRequest } from 'shared/access/access-request';
+import { READ_TOLERANT_KEY } from 'shared/access/archived-tolerant-read.decorator';
+import { REQUIRED_PERMISSION_KEY } from 'shared/decorators/required-permission.decorator';
+import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
+import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const id = (suffix: number): string =>

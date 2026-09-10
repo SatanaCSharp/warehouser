@@ -1,24 +1,24 @@
 import { randomUUID } from 'node:crypto';
 
-import dataSource from 'shared/database/data-source.js';
-import { DbTransactionService } from 'shared/database/db-transaction.service.js';
-import { DbTransactionContext } from 'shared/database/db-transaction-context.service.js';
-import { AccountEntity } from 'shared/domain/entities/account.entity.js';
-import { ItemEntity } from 'shared/domain/entities/item.entity.js';
-import { ItemStockAdjustmentEntity } from 'shared/domain/entities/item-stock-adjustment.entity.js';
-import { UserEntity } from 'shared/domain/entities/user.entity.js';
-import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity.js';
-import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity.js';
+import dataSource from 'shared/database/data-source';
+import { DbTransactionService } from 'shared/database/db-transaction.service';
+import { DbTransactionContext } from 'shared/database/db-transaction-context.service';
+import { AccountEntity } from 'shared/domain/entities/account.entity';
+import { ItemEntity } from 'shared/domain/entities/item.entity';
+import { ItemStockAdjustmentEntity } from 'shared/domain/entities/item-stock-adjustment.entity';
+import { UserEntity } from 'shared/domain/entities/user.entity';
+import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
+import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 // `ItemStockAdjustmentRepository` does not exist yet (T6) — this is the RED for AC-08's
 // persistence half and for the atomicity `sad.md` §6.3 requires: "the Item's new On-hand Quantity
 // **and** an adjustment row carrying the count, the reason, the acting member and the time ...
 // the pair is atomic". Atomicity is a property of the pair being ONE repository operation inside
 // the caller's transaction, which is exactly what a mid-way failure has to prove.
-import { ItemStockAdjustmentRepository } from 'shared/domain/repositories/item-stock-adjustment.repository.js';
+import { ItemStockAdjustmentRepository } from 'shared/domain/repositories/item-stock-adjustment.repository';
 import {
   buildWarehouse,
   buildWorkspace,
-} from 'test/factories/entity-factories.js';
+} from 'test/factories/entity-factories';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 const now = new Date('2026-08-26T09:45:00.000Z');

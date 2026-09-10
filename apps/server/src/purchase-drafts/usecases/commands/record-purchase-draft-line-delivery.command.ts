@@ -1,28 +1,28 @@
 import { Injectable, Optional } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
-import { DemandAllocationService } from 'customer-orders/domain/services/demand-allocation.service.js';
-import { purchaseDraftConcurrentChangeError } from 'purchase-drafts/domain/errors/purchase-draft.errors.js';
-import type { EndingPreReceiptConformanceInput } from 'purchase-drafts/domain/mappers/purchase-draft-line-ending.mapper.js';
+import { DemandAllocationService } from 'customer-orders/domain/services/demand-allocation.service';
+import { purchaseDraftConcurrentChangeError } from 'purchase-drafts/domain/errors/purchase-draft.errors';
+import type { EndingPreReceiptConformanceInput } from 'purchase-drafts/domain/mappers/purchase-draft-line-ending.mapper';
 import {
   buildEndingConditionInput,
   toEndingConditionSubmission,
-} from 'purchase-drafts/domain/mappers/purchase-draft-line-ending.mapper.js';
+} from 'purchase-drafts/domain/mappers/purchase-draft-line-ending.mapper';
 import {
   ArrivalInspectionService,
   deriveAcceptedQuantity,
   deriveRejectedQuantity,
-} from 'purchase-drafts/domain/services/arrival-inspection.service.js';
-import { assertAdmitsEnding } from 'purchase-drafts/domain/services/purchase-draft-line-ending.service.js';
-import { EndingKind } from 'purchase-drafts/domain/value-objects/delivery-mode.js';
+} from 'purchase-drafts/domain/services/arrival-inspection.service';
+import { assertAdmitsEnding } from 'purchase-drafts/domain/services/purchase-draft-line-ending.service';
+import { EndingKind } from 'purchase-drafts/domain/value-objects/delivery-mode';
 import type {
   EndingAllocationInput,
   PurchaseDraftLineEnded,
   PurchaseDraftLineEndingRuntime,
-} from 'purchase-drafts/usecases/commands/confirm-purchase-draft-line-arrival.command.js';
-import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
-import { Transactional } from 'shared/decorators/transactional.decorator.js';
-import type { RecordLineEndingRejectionInput } from 'shared/domain/repositories/arrival-confirmation.repository.js';
-import { ArrivalConfirmationRepository } from 'shared/domain/repositories/arrival-confirmation.repository.js';
+} from 'purchase-drafts/usecases/commands/confirm-purchase-draft-line-arrival.command';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { Transactional } from 'shared/decorators/transactional.decorator';
+import type { RecordLineEndingRejectionInput } from 'shared/domain/repositories/arrival-confirmation.repository';
+import { ArrivalConfirmationRepository } from 'shared/domain/repositories/arrival-confirmation.repository';
 
 // T13 — re-narrowed from T10's `unknown`, for the same reason and to the same shapes
 // `ConfirmPurchaseDraftLineArrivalInput`'s are: the REST boundary now parses a request body against

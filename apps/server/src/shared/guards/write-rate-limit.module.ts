@@ -1,5 +1,5 @@
 import { Global, Module } from '@nestjs/common';
-import { WriteRateLimitCounter } from 'shared/guards/write-rate-limit.counter.js';
+import { WriteRateLimitCounter } from 'shared/guards/write-rate-limit.counter';
 
 /** Provides the one `WriteRateLimitCounter` every `WriteRateLimitGuard` instance counts into.
  *

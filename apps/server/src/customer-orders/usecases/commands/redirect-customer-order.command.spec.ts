@@ -10,12 +10,12 @@
 // real service").
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
-import { CustomerOrderDestinationService } from 'customer-orders/domain/services/customer-order-destination.service.js';
-import { CustomerOrderLifecycleService } from 'customer-orders/domain/services/customer-order-lifecycle.service.js';
-import { RedirectCustomerOrderCommand } from 'customer-orders/usecases/commands/redirect-customer-order.command.js';
-import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
-import type { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity.js';
-import type { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity.js';
+import { CustomerOrderDestinationService } from 'customer-orders/domain/services/customer-order-destination.service';
+import { CustomerOrderLifecycleService } from 'customer-orders/domain/services/customer-order-lifecycle.service';
+import { RedirectCustomerOrderCommand } from 'customer-orders/usecases/commands/redirect-customer-order.command';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import type { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
+import type { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
 import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>

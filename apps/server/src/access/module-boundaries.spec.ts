@@ -71,6 +71,16 @@ const LAYER_DIRECTORIES = ['domain', 'usecases', 'rest', 'handlers'];
 // a module").
 const LEAF_LAYERS = ['domain', 'usecases'];
 
+// The AppModule registration `AccessRestModule` must arrive through: the bare directory (what source
+// writes under `moduleResolution: "Bundler"`), `/index`, or the `/index.js` the build emits and
+// pre-Bundler source carried. All three name the barrel; a deep path such as
+// `access/rest/rest.module` does not, and the teeth case below holds the line. Tolerating
+// all three rather than flipping to the newest is the same call `vitest.pglite.config.ts` makes
+// for its `resolve.alias` entries: an anchored pattern that quietly stops matching turns a guard
+// into a green no-op.
+const BARREL_REGISTRATION =
+  /import\s*\{[^}]*\bAccessRestModule\b[^}]*\}\s*from\s*['"]access(?:\/index(?:\.js)?)?['"]/u;
+
 const MODULE_PRIVATE_RULE =
   "module-private — another module's error factories, domain predicates and DTOs are reached only through an exported use-case module (adding-a-server-module.md §8, CR-AC-08)";
 
@@ -81,6 +91,19 @@ const LEAF_RULE =
   'a feature-module dependency in access/domain or access/usecases — the access use-case layer imports no feature module and stays the leaf of the graph (CR-AC-09, CR-AC-06)';
 
 const toPosix = (value: string): string => value.split(sep).join('/');
+
+/**
+ * The same import in both spellings the analyzer must classify. Source is extensionless today and
+ * the emitted tree carries `.js`, so a teeth check pinned to one spelling is how a guard goes
+ * quiet: it keeps passing on the form it names while the other silently stops being recognised,
+ * and the suite reports green over a rule that no longer holds for half the specifiers in the
+ * repository. The PGlite tier's `resolve.alias` entries tolerate both for the same reason
+ * (vitest.pglite.config.ts).
+ */
+const bothSpellings = (specifier: string): string[] => [
+  specifier,
+  `${specifier}.js`,
+];
 
 const collectTsFiles = (directory: string): string[] =>
   readdirSync(directory).flatMap((entry) => {
@@ -99,10 +122,13 @@ const collectTsFiles = (directory: string): string[] =>
   });
 
 /**
- * A specifier reduced to the module path the rules below are about. Every intra-application import
- * carries the `.js` extension Node's ESM resolver requires; that is a spelling of the resolver's
- * rules, not of the boundary, so it is dropped before a target is classified. Failure messages
- * still quote the specifier as written.
+ * A specifier reduced to the module path the rules below are about. An intra-application import
+ * may or may not carry a `.js` extension: source is written extensionless under
+ * `moduleResolution: "Bundler"` and `tsc-alias` appends the extension at build time, and a file
+ * written before that switch still spells it out. Either way the extension is a spelling of the
+ * resolver's rules, not of the boundary, so it is dropped before a target is classified — a
+ * classifier that recognised only one spelling would stop seeing half the import graph without
+ * failing anything. Failure messages still quote the specifier as written.
  */
 const moduleTarget = (target: string): string => target.replace(/\.js$/u, '');
 
@@ -313,14 +339,22 @@ const findLeafViolations = (sources: ScannedSource[]): string[] =>
       ),
     );
 
-describe('access module boundaries', () => {
-  const productionSources: ScannedSource[] = collectTsFiles(
-    moduleDirectory,
-  ).map((absolutePath) => ({
+const productionSources: ScannedSource[] = collectTsFiles(moduleDirectory).map(
+  (absolutePath) => ({
     filePath: toPosix(relative(sourceRoot, absolutePath)),
     source: readFileSync(absolutePath, 'utf8'),
-  }));
+  }),
+);
 
+/** The one file every teeth case pretends to be: a use case, where the reach would be tempting. */
+const fixture = (source: string): ScannedSource[] => [
+  {
+    filePath: 'access/usecases/commands/assign-workspace-role.command.ts',
+    source,
+  },
+];
+
+describe('access module boundaries', () => {
   it('discovers at least one production source file under access/', () => {
     // Guards against the scan silently passing over an empty or misnamed directory.
     expect(productionSources.length).toBeGreaterThan(0);
@@ -380,9 +414,7 @@ describe('access module boundaries', () => {
   it('registers AccessRestModule in AppModule through the module barrel', () => {
     const appModuleSource = readFileSync(appModulePath, 'utf8');
 
-    expect(appModuleSource).toMatch(
-      /import\s*\{[^}]*\bAccessRestModule\b[^}]*\}\s*from\s*['"]access\/index\.js['"]/u,
-    );
+    expect(appModuleSource).toMatch(BARREL_REGISTRATION);
     // `[\s\S]*?` rather than `[^\]]*`: the imports array legitimately contains nested arrays
     // (`inject: [ConfigService]`), so a negated-`]` scan stops before reaching this module.
     expect(appModuleSource).toMatch(
@@ -394,122 +426,182 @@ describe('access module boundaries', () => {
   // Teeth. A boundary that cannot fail is not a boundary (CR-AC-12): each case below feeds the
   // analyzer a deliberate violation and asserts the message names both the offending file and the
   // rule it breaks.
+  //
+  // Every case runs in both spellings (`bothSpellings`). A violation is a violation whether or not
+  // the offender wrote `.js`, and a teeth check that names only one spelling stops testing the
+  // other the moment the convention moves — which is precisely what happened when the tree went
+  // extensionless: these fixtures were rewritten by the codemod and half the coverage left with
+  // them, silently.
   // ---------------------------------------------------------------------------------------------
 
-  const fixture = (source: string): ScannedSource[] => [
-    {
-      filePath: 'access/usecases/commands/assign-workspace-role.command.ts',
-      source,
+  it.each(bothSpellings('workspaces/domain/errors/workspace.errors'))(
+    "rejects an import of a sibling error factory ('%s'), naming the file and the rule",
+    (specifier: string) => {
+      const [violation, ...rest] = findBoundaryViolations(
+        fixture(
+          `import { workspaceWarehouseArchivedError } from '${specifier}';`,
+        ),
+      );
+
+      expect(rest).toEqual([]);
+      expect(violation).toContain(
+        'access/usecases/commands/assign-workspace-role.command.ts',
+      );
+      expect(violation).toContain(`'${specifier}'`);
+      expect(violation).toContain('module-private');
+      expect(violation).toContain('adding-a-server-module.md §8');
     },
-  ];
+  );
 
-  it('rejects an import of a sibling error factory, naming the file and the rule', () => {
-    const [violation, ...rest] = findBoundaryViolations(
-      fixture(
-        "import { workspaceWarehouseArchivedError } from 'workspaces/domain/errors/workspace.errors.js';",
-      ),
-    );
+  it.each(bothSpellings('users/domain/predicates/member-lifecycle.predicates'))(
+    "rejects an import of a sibling domain predicate ('%s'), naming the file and the rule",
+    (specifier: string) => {
+      const [violation, ...rest] = findBoundaryViolations(
+        fixture(`import { isMemberOfWarehouse } from '${specifier}';`),
+      );
 
-    expect(rest).toEqual([]);
-    expect(violation).toContain(
-      'access/usecases/commands/assign-workspace-role.command.ts',
+      expect(rest).toEqual([]);
+      expect(violation).toContain(
+        'access/usecases/commands/assign-workspace-role.command.ts',
+      );
+      expect(violation).toContain(`'${specifier}'`);
+      expect(violation).toContain('module-private');
+    },
+  );
+
+  it.each(bothSpellings('warehouses/rest/dtos/warehouse-mutation.dto'))(
+    "rejects an import of a sibling DTO ('%s'), naming the file and the rule",
+    (specifier: string) => {
+      const [violation, ...rest] = findBoundaryViolations(
+        fixture(`import { WarehouseMutationDto } from '${specifier}';`),
+      );
+
+      expect(rest).toEqual([]);
+      expect(violation).toContain(
+        'access/usecases/commands/assign-workspace-role.command.ts',
+      );
+      expect(violation).toContain(`'${specifier}'`);
+      expect(violation).toContain('module-private');
+    },
+  );
+
+  it.each(bothSpellings('../../../workspaces/domain/errors/workspace.errors'))(
+    "rejects a relative traversal into a sibling module ('%s')",
+    (specifier: string) => {
+      const [violation, ...rest] = findBoundaryViolations(
+        fixture(
+          `import { workspaceWarehouseArchivedError } from '${specifier}';`,
+        ),
+      );
+
+      expect(rest).toEqual([]);
+      expect(violation).toContain(`'${specifier}'`);
+      expect(violation).toContain('module-private');
+    },
+  );
+
+  it.each(
+    bothSpellings('workspaces/domain/services/workspace-provisioning.service'),
+  )(
+    "rejects a deep import of a sibling domain service ('%s')",
+    (specifier: string) => {
+      const [violation, ...rest] = findBoundaryViolations(
+        fixture(`import { WorkspaceProvisioningService } from '${specifier}';`),
+      );
+
+      expect(rest).toEqual([]);
+      expect(violation).toContain(`'${specifier}'`);
+      expect(violation).toContain('not public surface');
+    },
+  );
+
+  // Both spellings *and* the bare barrel: the leaf rule forbids every feature-module dependency
+  // regardless of how deep the specifier reaches, so `'warehouses'` must fail here even though it
+  // is the one form `findBoundaryViolations` waves through as public surface.
+  it.each([
+    ...bothSpellings('warehouses/usecases/usecase.module'),
+    'warehouses',
+  ])(
+    "rejects a feature-module dependency reaching the access use-case layer ('%s')",
+    (specifier: string) => {
+      const [violation, ...rest] = findLeafViolations(
+        fixture(`import { WarehousesUsecaseModule } from '${specifier}';`),
+      );
+
+      expect(rest).toEqual([]);
+      expect(violation).toContain(
+        'access/usecases/commands/assign-workspace-role.command.ts',
+      );
+      expect(violation).toContain('stays the leaf of the graph');
+    },
+  );
+
+  it.each([
+    'access/rest/rest.module',
+    'access/rest/rest.module.js',
+    'access/index/nested',
+  ])('refuses %s as a barrel registration', (specifier: string) => {
+    expect(`import { AccessRestModule } from '${specifier}';`).not.toMatch(
+      BARREL_REGISTRATION,
     );
-    expect(violation).toContain(
-      "'workspaces/domain/errors/workspace.errors.js'",
-    );
-    expect(violation).toContain('module-private');
-    expect(violation).toContain('adding-a-server-module.md §8');
   });
 
-  it('rejects an import of a sibling domain predicate, naming the file and the rule', () => {
-    const [violation, ...rest] = findBoundaryViolations(
-      fixture(
-        "import { isMemberOfWarehouse } from 'users/domain/predicates/member-lifecycle.predicates.js';",
-      ),
-    );
-
-    expect(rest).toEqual([]);
-    expect(violation).toContain(
-      'access/usecases/commands/assign-workspace-role.command.ts',
-    );
-    expect(violation).toContain(
-      "'users/domain/predicates/member-lifecycle.predicates.js'",
-    );
-    expect(violation).toContain('module-private');
-  });
-
-  it('rejects an import of a sibling DTO, naming the file and the rule', () => {
-    const [violation, ...rest] = findBoundaryViolations(
-      fixture(
-        "import { WarehouseMutationDto } from 'warehouses/rest/dtos/warehouse-mutation.dto.js';",
-      ),
-    );
-
-    expect(rest).toEqual([]);
-    expect(violation).toContain(
-      'access/usecases/commands/assign-workspace-role.command.ts',
-    );
-    expect(violation).toContain(
-      "'warehouses/rest/dtos/warehouse-mutation.dto.js'",
-    );
-    expect(violation).toContain('module-private');
-  });
-
-  it('rejects a relative traversal into a sibling module', () => {
-    const [violation, ...rest] = findBoundaryViolations(
-      fixture(
-        "import { workspaceWarehouseArchivedError } from '../../../workspaces/domain/errors/workspace.errors.js';",
-      ),
-    );
-
-    expect(rest).toEqual([]);
-    expect(violation).toContain(
-      "'../../../workspaces/domain/errors/workspace.errors.js'",
-    );
-    expect(violation).toContain('module-private');
-  });
-
-  it('rejects a deep import of a sibling domain service', () => {
-    const [violation, ...rest] = findBoundaryViolations(
-      fixture(
-        "import { WorkspaceProvisioningService } from 'workspaces/domain/services/workspace-provisioning.service.js';",
-      ),
-    );
-
-    expect(rest).toEqual([]);
-    expect(violation).toContain(
-      "'workspaces/domain/services/workspace-provisioning.service.js'",
-    );
-    expect(violation).toContain('not public surface');
-  });
-
-  it('rejects a feature-module dependency reaching the access use-case layer', () => {
-    const [violation, ...rest] = findLeafViolations(
-      fixture(
-        "import { WarehousesUsecaseModule } from 'warehouses/usecases/usecase.module.js';",
-      ),
-    );
-
-    expect(rest).toEqual([]);
-    expect(violation).toContain(
-      'access/usecases/commands/assign-workspace-role.command.ts',
-    );
-    expect(violation).toContain('stays the leaf of the graph');
-  });
+  it.each(['access', 'access/index', 'access/index.js'])(
+    'accepts %s as a barrel registration',
+    (specifier: string) => {
+      expect(`import { AccessRestModule } from '${specifier}';`).toMatch(
+        BARREL_REGISTRATION,
+      );
+    },
+  );
 
   // The two cases below pin the rule's admitted forms, so a later tightening cannot silently make
   // the scan pass by forbidding everything (a rule that rejects legal code is as broken as one that
   // accepts illegal code).
-  it('admits the exported auth module a transport adapter registers guards from', () => {
-    expect(
-      findBoundaryViolations([
-        {
-          filePath: 'access/rest/rest.module.ts',
-          source: "import { AuthModule } from 'auth/auth.module.js';",
-        },
-      ]),
-    ).toEqual([]);
-  });
+  it.each(bothSpellings('auth/auth.module'))(
+    "admits the exported auth module a transport adapter registers guards from ('%s')",
+    (specifier: string) => {
+      expect(
+        findBoundaryViolations([
+          {
+            filePath: 'access/rest/rest.module.ts',
+            source: `import { AuthModule } from '${specifier}';`,
+          },
+        ]),
+      ).toEqual([]);
+    },
+  );
+
+  // The barrel is the canonical legal spelling, and it now has three forms. Pinning only one would
+  // leave `isPublicSurface` free to stop recognising the others without any case noticing — and a
+  // deep path into the same module must still fail, or "barrel" would mean nothing.
+  it.each(['warehouses', 'warehouses/index', 'warehouses/index.js'])(
+    "admits a sibling module barrel ('%s')",
+    (specifier: string) => {
+      expect(
+        findBoundaryViolations([
+          {
+            filePath: 'access/rest/rest.module.ts',
+            source: `import { WarehousesRestModule } from '${specifier}';`,
+          },
+        ]),
+      ).toEqual([]);
+    },
+  );
+
+  it.each(bothSpellings('warehouses/rest/controllers/warehouse.controller'))(
+    "refuses a deep path into the same sibling ('%s')",
+    (specifier: string) => {
+      expect(
+        findBoundaryViolations([
+          {
+            filePath: 'access/rest/rest.module.ts',
+            source: `import { WarehouseController } from '${specifier}';`,
+          },
+        ]),
+      ).toHaveLength(1);
+    },
+  );
 
   it('admits a published contracts subpath named for another module', () => {
     expect(

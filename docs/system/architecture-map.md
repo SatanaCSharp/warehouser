@@ -17,6 +17,12 @@ The web development server proxies `/api` requests to the server on port 3001. S
 response shapes flow through `packages/contracts`; application-local validation stays with its
 owning application.
 
+Every container is an ES module (`"type": "module"`), and so is the repository root. Import
+specifiers stay extensionless in source all the same; the `.js` Node's ESM resolver insists on is
+appended when the package is built — see
+[Module system and import specifiers](server-architecture.md#module-system-and-import-specifiers),
+which states the arrangement once for the whole repository.
+
 ## Web application
 
 `apps/web/src/main.tsx` mounts the provider chain. `router.ts` assembles manually declared routes

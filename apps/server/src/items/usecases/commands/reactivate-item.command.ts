@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { assert, assertDefined } from '@warehouser/utils/asserts';
-import { itemTargetUnavailableError } from 'items/domain/errors/item.errors.js';
-import { canReactivateItem } from 'items/domain/predicates/item-catalogue.predicates.js';
-import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
-import { Transactional } from 'shared/decorators/transactional.decorator.js';
-import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository.js';
+import { itemTargetUnavailableError } from 'items/domain/errors/item.errors';
+import { canReactivateItem } from 'items/domain/predicates/item-catalogue.predicates';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { Transactional } from 'shared/decorators/transactional.decorator';
+import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
 
 // AC-06d — the same operation inverted: reactivates a deactivated Item of the acting Warehouse by
 // clearing `deactivatedAt`, which is exactly the condition `findActiveItemsForPicker` filters on.

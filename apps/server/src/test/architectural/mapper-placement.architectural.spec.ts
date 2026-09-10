@@ -4,15 +4,15 @@ import {
   mapperDirectoryLayer,
   mapperLayerFor,
   valueImportersOf,
-} from 'test/architectural/mapper-placement.js';
+} from 'test/architectural/mapper-placement';
 import {
   type MappingDeclaration,
   serverMappingDeclarations,
-} from 'test/architectural/mapping-patterns.js';
+} from 'test/architectural/mapping-patterns';
 import {
   productionSourceFiles,
   serverPath,
-} from 'test/architectural/server-project.js';
+} from 'test/architectural/server-project';
 import { describe, expect, it } from 'vitest';
 
 /** Where a mapping is allowed to be declared, checked against the whole `apps/server` source tree.

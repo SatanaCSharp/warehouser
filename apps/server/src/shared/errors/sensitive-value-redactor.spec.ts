@@ -1,4 +1,4 @@
-import { redactSensitiveValues } from 'shared/errors/sensitive-value-redactor.js';
+import { redactSensitiveValues } from 'shared/errors/sensitive-value-redactor';
 import { describe, expect, it } from 'vitest';
 
 describe('redactSensitiveValues', () => {

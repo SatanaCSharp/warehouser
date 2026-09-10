@@ -3,13 +3,13 @@
 // §Testing.
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
-import { CustomerAddressBookService } from 'customers/domain/services/customer-address-book.service.js';
-import { ReactivateCustomerCommand } from 'customers/usecases/commands/reactivate-customer.command.js';
+import { CustomerAddressBookService } from 'customers/domain/services/customer-address-book.service';
+import { ReactivateCustomerCommand } from 'customers/usecases/commands/reactivate-customer.command';
 import find from 'lodash/find.js';
 import map from 'lodash/map.js';
-import type { AccessCurrentUser } from 'shared/access/access-current-user.js';
-import type { CustomerEntity } from 'shared/domain/entities/customer.entity.js';
-import type { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity.js';
+import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import type { CustomerEntity } from 'shared/domain/entities/customer.entity';
+import type { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
 import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>

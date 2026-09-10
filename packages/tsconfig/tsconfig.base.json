@@ -1,8 +1,21 @@
 {
   "compilerOptions": {
     "target": "es2021",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    // Every consumer of this base is `"type": "module"` and its output is loaded by Node directly,
+    // so `module` has to emit ESM. `moduleResolution` is the deliberate part: `"NodeNext"` would
+    // reproduce Node's own resolver inside `tsc` and therefore demand an explicit `.js` on every
+    // relative and `paths`-mapped specifier — TS2835 and TS2307 respectively — pushing ~3000
+    // extensions into source files that name `.ts` on disk. `"Bundler"` accepts the extensionless
+    // form instead, and `tsc-alias`'s `resolveFullPaths` supplies the real extension on emit, so
+    // `dist/` still satisfies Node. See any package's own `tsconfig.json` for that half.
+    //
+    // The tradeoff this records: `tsc` no longer type-checks Node's resolution rules, and neither
+    // does `tsc-alias`, which leaves a specifier it cannot resolve unrewritten and still exits 0.
+    // A broken specifier therefore survives a green build and shows up only when something loads
+    // the output — for `packages/*` that is the normal gate, since both applications import them
+    // through their `exports` map and so run against `dist/`.
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
