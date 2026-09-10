@@ -68,6 +68,25 @@ const AMEND_CUSTOMER_ORDER_ACTIONS: Record<`${boolean}-${boolean}`, string> = {
   'false-false': 'amendCustomerOrder',
 };
 
+/**
+ * Which half of a Rejection committed, so the toast states what actually
+ * changed rather than only that something did. `rejectionAmendSchema` refuses
+ * an amendment naming neither field, so the fourth key is unreachable; it is
+ * answered anyway to keep the lookup total rather than leaving an `if` chain to
+ * decide (`writing-web-components.md` §6).
+ *
+ * Every name here needs copy in **both** the `pending` and `success`
+ * namespaces: `mutationFeedbackMiddleware` resolves the in-flight description
+ * through this same `action`, so a name with no `pending` entry would show the
+ * member a raw key while the request runs.
+ */
+const AMEND_REJECTION_ACTIONS: Record<`${boolean}-${boolean}`, string> = {
+  'true-true': 'amendPurchaseDraftLineRejectionBoth',
+  'true-false': 'amendPurchaseDraftLineRejectionDescription',
+  'false-true': 'amendPurchaseDraftLineRejectionDisposition',
+  'false-false': 'amendPurchaseDraftLineRejection',
+};
+
 /** What an Item's toast names it by, in the order the frames draw it. */
 type ItemNamingArgs = { sku: string; description: string };
 
@@ -304,4 +323,34 @@ export const MUTATION_FEEDBACK: Record<string, MutationFeedback> = {
     describe: ({ input }) => ({ reason: input.closureReason }),
   }),
   discardPurchaseDraft: feedback({ scope: 'purchase-draft' }),
+  // T19/design-handoff.md `NLEI2` — the invisible consequence is that the
+  // correction is attributed to the member who made it, together with when.
+  // The Disposition is translated here, in the presentation adapter, rather
+  // than in the component that triggers the mutation
+  // (`guides/adding-and-maintaining-web-localization.md` "React and non-React
+  // usage").
+  //
+  // Both fields are optional on `rejectionAmendSchema`, and
+  // `AmendRefusalDialog.parse` sends only the ones that actually changed
+  // (AC-18b), so which sentence is written is decided from the argument rather
+  // than assumed — interpolating an absent Disposition would put a raw
+  // translation key in front of the member.
+  amendPurchaseDraftLineRejection: feedback<{
+    input: { description?: string; disposition?: string };
+  }>({
+    scope: 'purchase-draft',
+    action: ({ input }) =>
+      AMEND_REJECTION_ACTIONS[
+        `${input.description !== undefined}-${input.disposition !== undefined}`
+      ],
+    describe: ({ input }) =>
+      input.disposition === undefined
+        ? {}
+        : {
+            disposition: i18n.t(
+              `closedLine.refusalRow.disposition.${input.disposition}`,
+              { ns: 'purchase-draft' },
+            ),
+          },
+  }),
 };

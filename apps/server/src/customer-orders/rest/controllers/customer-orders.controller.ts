@@ -15,7 +15,6 @@ import {
 } from '@nestjs/common';
 import type { CustomerOrder } from '@warehouser/contracts/customer-orders';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { toCustomerOrderResponse } from 'customer-orders/rest/customer-order-response';
 import {
   CustomerOrderAmendDto,
   CustomerOrderCancellationDto,
@@ -23,6 +22,7 @@ import {
   CustomerOrderListQueryDto,
   CustomerOrderRedirectDto,
 } from 'customer-orders/rest/dtos/customer-order-mutation.dto';
+import { toCustomerOrderResponse } from 'customer-orders/rest/mappers/customer-order-response.mapper';
 import { AmendCustomerOrderCommand } from 'customer-orders/usecases/commands/amend-customer-order.command';
 import { CancelCustomerOrderCommand } from 'customer-orders/usecases/commands/cancel-customer-order.command';
 import { RecordCustomerOrderCommand } from 'customer-orders/usecases/commands/record-customer-order.command';

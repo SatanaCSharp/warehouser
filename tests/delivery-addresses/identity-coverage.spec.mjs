@@ -258,10 +258,16 @@ test('a handler with an unresolved return type is reported rather than skipped',
 // The current verdict, pinned so a future change to the parser or the controller tree cannot
 // silently widen or narrow what "unresolved" means without this failing: every handler this
 // feature's controllers declare parses to a resolvable return type today.
+//
+// Bumped 76 -> 78 (T14, 2026-09-08 review): `purchase-drafts` T13 added the amendment route
+// (`amendPurchaseDraftLineRejection`) and the Rejection Reasons catalogue route
+// (`listRejectionReasons`), both correctly excluded from every other assertion in this file
+// because neither carries customer identity — this count tracks the *parsed* surface, not the
+// identity-bearing one, so it moves whenever any handler is added or removed anywhere in scope.
 test('every handler in the real controller tree resolves to a return type', () => {
   const handlers = allHandlers(controllerFiles());
 
-  assert.equal(handlers.length, 76, `expected 76 parsed handlers, got ${handlers.length}`);
+  assert.equal(handlers.length, 78, `expected 78 parsed handlers, got ${handlers.length}`);
   assert.equal(
     handlers.filter((handler) => handler.responseType === null).length,
     0,

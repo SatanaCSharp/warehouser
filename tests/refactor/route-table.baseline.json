@@ -484,6 +484,17 @@
     "dto": "PurchaseDraftLineLinkUpdateDto"
   },
   {
+    "method": "PATCH",
+    "path": "/api/v1/warehouses/:warehouseId/purchase-drafts/:purchaseDraftId/lines/:purchaseDraftLineId/rejections/:rejectionId",
+    "guards": [
+      "SessionAuthGuard",
+      "WarehouseAccessGuard",
+      "WriteRateLimitGuard"
+    ],
+    "permission": "RequiredPermission(PermissionId.REJECTIONS_UPDATE)",
+    "dto": "RejectionAmendDto"
+  },
+  {
     "method": "POST",
     "path": "/api/v1/warehouses/:warehouseId/purchase-drafts/:purchaseDraftId/readiness",
     "guards": [
@@ -492,6 +503,13 @@
       "WriteRateLimitGuard"
     ],
     "permission": "RequiredPermission(PermissionId.PURCHASE_DRAFTS_READY)",
+    "dto": null
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/warehouses/:warehouseId/rejection-reasons",
+    "guards": ["SessionAuthGuard", "WarehouseAccessGuard"],
+    "permission": "RequiredPermission(PermissionId.PURCHASE_DRAFTS_WATCH)",
     "dto": null
   },
   {

@@ -188,3 +188,88 @@ describe('PurchaseDraftLineList', () => {
     );
   });
 });
+
+// 2026-09-08 frontend review: ClosedPurchaseDraftLine had no production
+// importer. The closed read surface AC-21/AC-22/AC-23 describe existed, was
+// specced, and was reachable from nothing — every closed draft still rendered
+// the editor row. These cases are what make the wiring real rather than
+// asserted in isolation.
+describe('a closed draft reads rather than edits', () => {
+  const closedDraft: PurchaseDraftDetail = {
+    ...draft,
+    state: 'closed',
+    closedByUserId: accessIds.actingUser,
+    closedAt: '2026-08-20T09:00:00.000Z',
+    lines: [
+      {
+        ...draft.lines[0],
+        ending: {
+          kind: 'arrival',
+          quantity: 400,
+          recordedByUserId: accessIds.actingUser,
+          recordedAt: '2026-08-20T08:00:00.000Z',
+          condition: {
+            acceptedQuantity: 380,
+            rejectedQuantity: 20,
+            preReceiptConformance: { verdict: 'met', note: null },
+            rejections: [],
+          },
+        },
+      },
+    ] as PurchaseDraftDetail['lines'],
+  };
+
+  const renderDraft = (subject: PurchaseDraftDetail): void => {
+    const permissionIds = Object.values(PermissionId);
+    stubAccessServer({ permissionIds });
+    const store = authenticatedStore();
+    void store.dispatch(
+      accessPermissionsApi.util.upsertQueryData(
+        'getCurrentAccess',
+        accessIds.warehouse,
+        {
+          warehouseId: accessIds.warehouse,
+          roleId: accessIds.managerRole,
+          roleKind: 'warehouse_manager',
+          permissionIds: [...permissionIds],
+          archivedAt: null,
+        },
+      ),
+    );
+    void store.dispatch(
+      purchaseDraftApi.util.upsertQueryData(
+        'listPackagingTypes',
+        accessIds.warehouse,
+        [{ id: 'cartons', label: 'Cartons' }],
+      ),
+    );
+
+    renderInEnteredWarehouse(
+      <PurchaseDraftLineList draft={subject} isFrozen />,
+      store,
+    );
+  };
+
+  it('renders the closed line\u2019s condition account', async () => {
+    renderDraft(closedDraft);
+
+    expect(await screen.findByText('CONDITION ON ARRIVAL')).toBeInTheDocument();
+  });
+
+  it('states the accepted figure the closed read derives', async () => {
+    renderDraft(closedDraft);
+
+    await screen.findByText('CONDITION ON ARRIVAL');
+
+    expect(screen.getByText('380')).toBeInTheDocument();
+  });
+
+  it('still renders the editor row while the draft is open \u2014 the control that proves the branch', async () => {
+    renderDraft(draft);
+
+    expect((await screen.findAllByText(/WH-100420/u)).length).toBeGreaterThan(
+      0,
+    );
+    expect(screen.queryByText('CONDITION ON ARRIVAL')).not.toBeInTheDocument();
+  });
+});

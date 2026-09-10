@@ -14,11 +14,11 @@ import {
 } from '@nestjs/common';
 import type { Customer } from '@warehouser/contracts/customers';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { toCustomerResponse } from 'customers/rest/customer-response';
 import {
   CustomerDeliveryAddressCreateDto,
   CustomerDeliveryAddressUpdateDto,
 } from 'customers/rest/dtos/customer-mutation.dto';
+import { toCustomerResponse } from 'customers/rest/mappers/customer-response.mapper';
 import { AddCustomerDeliveryAddressCommand } from 'customers/usecases/commands/add-customer-delivery-address.command';
 import { CorrectCustomerDeliveryAddressCommand } from 'customers/usecases/commands/correct-customer-delivery-address.command';
 import { DeactivateCustomerDeliveryAddressCommand } from 'customers/usecases/commands/deactivate-customer-delivery-address.command';

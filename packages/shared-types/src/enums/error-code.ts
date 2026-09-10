@@ -94,6 +94,14 @@ export const ErrorCode = {
   PURCHASE_DRAFTS_ENDING_ALREADY_RECORDED:
     'purchase_drafts.ending_already_recorded',
   PURCHASE_DRAFTS_ENDING_MODE_MISMATCH: 'purchase_drafts.ending_mode_mismatch',
+  PURCHASE_DRAFTS_REJECTION_CAPABILITY_REQUIRED:
+    'purchase_drafts.rejection_capability_required',
+  PURCHASE_DRAFTS_CONDITION_SPLIT_INVALID:
+    'purchase_drafts.condition_split_invalid',
+  PURCHASE_DRAFTS_PRE_RECEIPT_CONFORMANCE_INVALID:
+    'purchase_drafts.pre_receipt_conformance_invalid',
+  PURCHASE_DRAFTS_DISPOSITION_NOT_REVERSIBLE:
+    'purchase_drafts.disposition_not_reversible',
 } as const;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

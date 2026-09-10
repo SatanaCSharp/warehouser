@@ -1,0 +1,332 @@
+{
+  "slug": "arrival-inspection",
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "Promote the arrival-inspection schema migration: two relations, ten seeded Reasons, two conformance columns and their thirteen checks",
+      "layer": "migration",
+      "deps": [],
+      "acs": [
+        "AC-03",
+        "AC-04a",
+        "AC-09",
+        "AC-13",
+        "AC-14",
+        "AC-15b",
+        "AC-17",
+        "AC-17a",
+        "AC-19",
+        "AC-24",
+        "AC-25"
+      ],
+      "dod": "The staged migration is promoted to apps/server/migrations/1786800000000-CreateArrivalInspectionSchema.ts, applies and reverts cleanly against a development database already holding purchase_draft_lines rows with recorded endings, those pre-existing rows read NULL in both conformance columns and are refused by nothing, and repository integration tests assert the one-Rejection-per-Reason-per-line unique constraint, the source/delivery-mode check in both directions, the Not-applicable-only-on-an-uninstructed-line check, the conformance-requires-an-ending check, and both prose bounds at exactly 1 000 and 1 001 Cyrillic characters.",
+      "files_hint": [
+        "docs/features/arrival-inspection/migrations/01-create-arrival-inspection-schema.ts",
+        "apps/server/migrations/"
+      ]
+    },
+    {
+      "id": "T2",
+      "title": "Promote the Permission grant migration and add the three PermissionId members with every arrival-inspection ErrorCode",
+      "layer": "migration",
+      "deps": ["T1"],
+      "acs": ["AC-01a", "AC-20", "AC-22", "AC-26"],
+      "dod": "The staged migration is promoted to apps/server/migrations/1786800100000-GrantArrivalInspectionPermissions.ts, applies and reverts cleanly, idempotently inserts REJECTIONS:CREATE, REJECTIONS:WATCH and REJECTIONS:UPDATE as assignable Warehouse Permissions and grants all three to every protected warehouse_manager Role that already exists, and packages/shared-types exports the three PermissionId members plus every purchase_drafts.* ErrorCode this feature names, with the shipped ordering and delivery-addresses suites still green.",
+      "files_hint": [
+        "docs/features/arrival-inspection/migrations/02-grant-arrival-inspection-permissions.ts",
+        "apps/server/migrations/",
+        "packages/shared-types/src/enums/permission-id.ts",
+        "packages/shared-types/src/enums/error-code.ts"
+      ]
+    },
+    {
+      "id": "T3",
+      "title": "Add the two new shared persistence entities and give PurchaseDraftLineEntity its two conformance columns",
+      "layer": "infra",
+      "deps": ["T1"],
+      "acs": ["AC-05", "AC-13", "AC-15", "AC-18", "AC-24"],
+      "dod": "RejectionReasonEntity and PurchaseDraftLineRejectionEntity map to the migrated relations, the rejection entity carries the warehouse_id and delivery_mode its composite reference needs, PurchaseDraftLineEntity carries pre_receipt_conformance and pre_receipt_conformance_note, DomainModule resolves all three, and an integration test round-trips a row of each new entity and of the changed one.",
+      "files_hint": [
+        "apps/server/src/shared/domain/entities/",
+        "apps/server/src/shared/domain/domain.module.ts"
+      ]
+    },
+    {
+      "id": "T4",
+      "title": "Add the Rejection Reason catalogue repository and the Rejection repository with its conditional amendment update",
+      "layer": "infra",
+      "deps": ["T3"],
+      "acs": ["AC-06", "AC-07", "AC-18", "AC-18a", "AC-18b", "AC-26"],
+      "dod": "RejectionReasonCatalogueRepository lists the catalogue whole and resolves a stated set of identifiers in one read; PurchaseDraftRejectionRepository resolves one Rejection in the acting Warehouse under lock and applies the amendment as a single conditional update whose predicate excludes a return to Undecided; integration tests prove the set resolve issues one statement, a foreign-Warehouse identifier resolves to no row, and an amendment aimed back at Undecided affects zero rows; neither repository has a private method or imports a feature module.",
+      "files_hint": [
+        "apps/server/src/shared/domain/repositories/rejection-reason-catalogue.repository.ts",
+        "apps/server/src/shared/domain/repositories/purchase-draft-rejection.repository.ts",
+        "apps/server/src/shared/domain/repositories/repository-boundaries.spec.ts"
+      ]
+    },
+    {
+      "id": "T5",
+      "title": "Extend ArrivalConfirmationRepository: widen the locked-line projection by exactly two frozen columns and write the conformance and every Rejection with the ending",
+      "layer": "infra",
+      "deps": ["T3"],
+      "acs": ["AC-01", "AC-04", "AC-08", "AC-15", "AC-17", "AC-17a"],
+      "dod": "lockDraftLineForEnding projects packaging_type_id and value_adding_note in addition to what it projects today and still does not project ordered_quantity; recordLineEnding writes the ending quantity, the Pre-receipt Conformance and one row per stated Reason in the same statement set, keeping its existing recorded/closed answers and the fixed lock order extended by the refusal rows; an integration test proves a failure raised after the ending row leaves no Rejection behind.",
+      "files_hint": [
+        "apps/server/src/shared/domain/repositories/arrival-confirmation.repository.ts",
+        "apps/server/src/shared/domain/repositories/arrival-confirmation.repository.integration.spec.ts"
+      ]
+    },
+    {
+      "id": "T6",
+      "title": "Extend PurchaseDraftReadRepository so each line carries its Rejections, its conformance and the derived Accepted and Rejected Quantities in one query",
+      "layer": "infra",
+      "deps": ["T3"],
+      "acs": ["AC-21", "AC-22", "AC-23", "AC-23a"],
+      "dod": "The drift and by-line reads carry each line's Rejections with their Reason identifier, description, Source and Disposition, its Pre-receipt Conformance, and the Accepted and Rejected Quantities derived inside the correlated per-line aggregation the read already builds rather than in a second query; an integration test proves a line whose ending predates this release returns NULL conformance with no Rejections and an Accepted Quantity equal to its ending quantity; an EXPLAIN assertion proves the Rejection fetch uses the line/reason index.",
+      "files_hint": [
+        "apps/server/src/shared/domain/repositories/purchase-draft-read.repository.ts",
+        "apps/server/src/shared/domain/repositories/purchase-draft-read.repository.integration.spec.ts"
+      ]
+    },
+    {
+      "id": "T7",
+      "title": "Add the Condition Split and Pre-receipt Conformance predicates and every named error factory to the purchase-drafts domain",
+      "layer": "domain",
+      "deps": ["T2"],
+      "acs": [
+        "AC-02",
+        "AC-03",
+        "AC-04a",
+        "AC-06",
+        "AC-07",
+        "AC-09",
+        "AC-14",
+        "AC-15b",
+        "AC-16",
+        "AC-17",
+        "AC-17a",
+        "AC-19",
+        "AC-25"
+      ],
+      "dod": "Pure predicates decide each rule in isolation — a refused quantity that is not a whole number of at least one, refusals totalling more than what was presented, a Reason repeated on one line, the description requirement read from the catalogue's requiresDescription flag, a Source disagreeing with the line's Delivery Mode in both directions, Met beside a packaging or value-adding-note refusal, Not applicable on an instructed line and Met/Not met on an uninstructed one, a nothing-received line carrying either judgement, both 1 000-character bounds, and a Disposition aimed back at Undecided — each error factory maps to a stable ErrorCode with the unknown-Reason refusal carrying the catalogue it may offer, and no file in domain/ imports NestJS, HTTP or TypeORM.",
+      "files_hint": [
+        "apps/server/src/purchase-drafts/domain/predicates/",
+        "apps/server/src/purchase-drafts/domain/errors/purchase-draft.errors.ts",
+        "apps/server/src/purchase-drafts/domain/errors/purchase-draft.errors.spec.ts"
+      ]
+    },
+    {
+      "id": "T8",
+      "title": "Add ArrivalInspectionService with the catalogue assertion, and the four module-level functions both ending commands share",
+      "layer": "domain",
+      "deps": ["T4", "T7"],
+      "acs": [
+        "AC-01a",
+        "AC-02",
+        "AC-06",
+        "AC-07",
+        "AC-09",
+        "AC-16",
+        "AC-17",
+        "AC-17a"
+      ],
+      "dod": "The injectable service asserts every stated Reason against the catalogue in one read per ending and refuses an unknown Reason with the available Reasons named; the Condition Split assertion, the Pre-receipt Conformance assertion, the Rejection-capability assertion and the Accepted-Quantity derivation are module-level functions beside it taking no collaborator; unit tests prove each assertion collects every violation of its own rule set before refusing rather than short-circuiting on the first, and prove the derivation for a line with no refusals and a line refused entirely; the service is registered on UsecaseModule and not exported.",
+      "files_hint": [
+        "apps/server/src/purchase-drafts/domain/services/arrival-inspection.service.ts",
+        "apps/server/src/purchase-drafts/usecases/usecase.module.ts",
+        "apps/server/src/purchase-drafts/usecases/usecase.module.di.spec.ts"
+      ]
+    },
+    {
+      "id": "T9",
+      "title": "Extend @warehouser/contracts/purchase-drafts with the condition payload, the amendment request and the Rejection Reason schema",
+      "layer": "ports",
+      "deps": [],
+      "acs": ["AC-03", "AC-14", "AC-15b", "AC-19", "AC-24"],
+      "dod": "Both ending request schemas gain rejections (quantity, Reason identifier, Source, optional description) and preReceiptConformance (verdict, optional note), a new amendment request schema carries the description and the Disposition, and a Rejection Reason schema carries the identifier, label and requiresDescription; every schema stays z.strictObject so an unknown property fails validation; no derived figure, count or attribution is accepted as input; contract specs prove the character bounds and the value domains; no new contracts subpath is created and pnpm --filter @warehouser/web build stays green.",
+      "files_hint": [
+        "packages/contracts/src/purchase-drafts/purchase-drafts-mutations.ts",
+        "packages/contracts/src/purchase-drafts/index.ts",
+        "packages/contracts/src/purchase-drafts/purchase-drafts-contracts.spec.ts"
+      ]
+    },
+    {
+      "id": "T10",
+      "title": "Give both ending commands the condition half of the ending and narrow the Allocation bound to the derived Accepted Quantity",
+      "layer": "app",
+      "deps": ["T5", "T8", "T9"],
+      "acs": [
+        "AC-01",
+        "AC-01a",
+        "AC-01b",
+        "AC-02",
+        "AC-04",
+        "AC-04a",
+        "AC-05",
+        "AC-08",
+        "AC-10",
+        "AC-11",
+        "AC-12",
+        "AC-13",
+        "AC-15",
+        "AC-15a",
+        "AC-24",
+        "AC-25"
+      ],
+      "dod": "ConfirmPurchaseDraftLineArrivalCommand and RecordPurchaseDraftLineDeliveryCommand run lock, assertAdmitsEnding, the Rejection-capability assertion, the Condition Split and conformance assertions, the writes and then the demand delegation inside their existing single @Transactional() boundary; DemandAllocationService's line-wide bound takes assignableQuantity and refuses with allocations_exceed_accepted_quantity carrying the accepted and rejected figures; unit tests prove the capability refusal fires on a Rejection-carrying submission and is unreachable on a refusal-free one, that the accepted rather than the presented figure reaches the delegation, and that a nothing-received ending runs neither condition assertion; an integration test proves an ending writes its quantity, conformance, every Rejection, every Allocation and every resulting Outstanding Quantity together or not at all under an injected mid-way failure.",
+      "files_hint": [
+        "apps/server/src/purchase-drafts/usecases/commands/confirm-purchase-draft-line-arrival.command.ts",
+        "apps/server/src/purchase-drafts/usecases/commands/record-purchase-draft-line-delivery.command.ts",
+        "apps/server/src/purchase-drafts/usecases/commands/purchase-draft-line-ending.spec.ts",
+        "apps/server/src/purchase-drafts/usecases/commands/purchase-draft-line-ending.integration.spec.ts",
+        "apps/server/src/customer-orders/domain/services/demand-allocation.service.ts"
+      ]
+    },
+    {
+      "id": "T11",
+      "title": "Add AmendPurchaseDraftRejectionCommand, the first write this product aims at a Closed draft",
+      "layer": "app",
+      "deps": ["T4", "T7", "T9"],
+      "acs": ["AC-18", "AC-18a", "AC-18b", "AC-19", "AC-20", "AC-26"],
+      "dod": "The command resolves one Rejection in the acting Warehouse under lock, writes the new description and/or Disposition with the acting member and the time, and touches no quantity, Reason, Source or line; its state precondition is the Rejection and never the draft's state; unit tests prove the return-to-Undecided refusal, the unknown-Disposition refusal, a correction between two decisions succeeding, and attribution written on every amendment; an integration test amends a Rejection on a Closed draft and asserts nothing else on that draft moved.",
+      "files_hint": [
+        "apps/server/src/purchase-drafts/usecases/commands/amend-purchase-draft-rejection.command.ts",
+        "apps/server/src/purchase-drafts/usecases/usecase.module.ts"
+      ]
+    },
+    {
+      "id": "T12",
+      "title": "Build the four-shape condition projection and the Rejection Reason catalogue query",
+      "layer": "app",
+      "deps": ["T6", "T9"],
+      "acs": ["AC-06", "AC-21", "AC-22", "AC-23", "AC-23a"],
+      "dod": "ReadPurchaseDraftQuery and ListPurchaseDraftLinesQuery choose one of four line shapes from observedPermissionIds — cause and identity, cause only, identity only, neither — building each by not selecting the withheld columns; the two cause-withheld shapes omit the rejections array as a property and carry one total refused figure with no count, badge or placeholder; the contracts line projection models all four; ListRejectionReasonsQuery serves the catalogue whole taking no Warehouse scope; one redaction test per shape proves the withheld property is absent rather than empty or null and that everything the actor may read is unchanged; a line whose ending predates this release renders its absent case.",
+      "files_hint": [
+        "apps/server/src/purchase-drafts/usecases/queries/read-purchase-draft.query.ts",
+        "apps/server/src/purchase-drafts/usecases/queries/list-purchase-draft-lines.query.ts",
+        "apps/server/src/purchase-drafts/usecases/queries/list-rejection-reasons.query.ts",
+        "packages/contracts/src/purchase-drafts/purchase-drafts-projections.ts"
+      ]
+    },
+    {
+      "id": "T13",
+      "title": "Serve the REST surface: the two extended ending routes, the amendment route, the Rejection Reasons controller and the regenerated route-table baseline",
+      "layer": "ports",
+      "deps": ["T10", "T11", "T12"],
+      "acs": ["AC-01a", "AC-06", "AC-20", "AC-21", "AC-22", "AC-26"],
+      "dod": "The two ending routes accept the condition payload and declare @ObservedPermission(REJECTIONS:CREATE, CUSTOMERS:WATCH) beside their unchanged @RequiredPermission(PURCHASE_DRAFTS:RECEIVE); the two read routes add REJECTIONS:WATCH to their observed list; a new rate-limited PATCH .../rejections/{rejectionId} route requires REJECTIONS:UPDATE; a new RejectionReasonsController serves GET /api/v1/warehouses/{warehouseId}/rejection-reasons read-only and archived-tolerant under PURCHASE_DRAFTS:WATCH with no mutation handler; DTOs stay createZodDto adapters redefining nothing; contract integration tests prove every endpoint denies without its Permission, permits with it, discloses no existence in any denial, refuses an unknown property, and denies every mutation on an archived Warehouse while every read succeeds on one; tests/refactor/route-table.baseline.json is regenerated deliberately, gaining exactly two rows and losing none.",
+      "files_hint": [
+        "apps/server/src/purchase-drafts/rest/controllers/",
+        "apps/server/src/purchase-drafts/rest/dtos/",
+        "apps/server/src/purchase-drafts/rest/purchase-draft-response.ts",
+        "apps/server/src/purchase-drafts/rest/rest.module.ts",
+        "tests/refactor/route-table.baseline.json"
+      ]
+    },
+    {
+      "id": "T14",
+      "title": "Add the three architecture checks that make the condition guarantees mechanical rather than remembered",
+      "layer": "tests",
+      "deps": ["T13"],
+      "acs": ["AC-01a", "AC-22", "AC-23a"],
+      "dod": "An architecture check fails when an ending route whose request schema carries a rejections property does not declare @ObservedPermission(REJECTIONS:CREATE), and when a read whose response schema can carry a Rejection's cause does not declare @ObservedPermission(REJECTIONS:WATCH); a second check fails when any migration updates or deletes a rejection_reasons row; a third check fails when the locked-line projection in arrival-confirmation.repository.ts selects ordered_quantity; each check is proven by a deliberately non-conforming fixture rather than only by the conforming corpus, and each asserts its corpus is non-empty.",
+      "files_hint": [
+        "apps/server/src/purchase-drafts/module-boundaries.spec.ts",
+        "apps/server/src/shared/domain/repositories/repository-boundaries.spec.ts",
+        "tests/refactor/"
+      ]
+    },
+    {
+      "id": "T15",
+      "title": "Build the always-present condition block: the refuse control, the refusal editor rows and the condition summary live region",
+      "layer": "ui",
+      "deps": ["T13"],
+      "acs": ["AC-01", "AC-01a", "AC-01b", "AC-05", "AC-08", "AC-13", "AC-24"],
+      "dod": "LineEndingFieldset renders the condition block between the presented quantity and the assignments on every line where something was received, never collapsed and with no disclosure, opening at presented · 0 refused · presented accepted; the Refuse some of this control is permanently visible, neutral-toned and absent — not disabled — without REJECTIONS:CREATE via WarehousePermissionGate; each refusal row carries quantity, Reason from the catalogue read, description and a remove control naming its subject; the Source is rendered as a chip derived from the line's Delivery Mode and is never a field; the condition summary is a role=status aria-live=polite region carrying four labelled figures whose accepted figure is derived and never typed; circle-x, package-x and clipboard-check are hand-rolled into shared/icons following the existing pattern; en/uk keys are added with the locale baseline regenerated in its existing key order; the approved 1440 and 390 layouts render as frames W6TARi cell H0jcSr and kejd2.",
+      "files_hint": [
+        "apps/web/src/modules/purchase-draft/components/purchase-draft-transitions/components/line-ending-dialog/",
+        "apps/web/src/modules/purchase-draft/api/purchase-draft-api.ts",
+        "apps/web/src/shared/icons/",
+        "apps/web/public/locales/",
+        "apps/web/src/test/locale-baseline.json"
+      ]
+    },
+    {
+      "id": "T16",
+      "title": "Build the conformance block with its un-defaulted radiogroup and the direct-delivery finality acknowledgement",
+      "layer": "ui",
+      "deps": ["T15"],
+      "acs": ["AC-04a", "AC-15", "AC-15a", "AC-17", "AC-17a"],
+      "dod": "The conformance block renders the frozen-instruction read-out then a real radiogroup named \"Did the supplier follow your instruction?\" with no default selection, the note field appearing only under Not met, and the option the line cannot take rendered aria-disabled with its reason exposed once for the group; submission is blocked until the judgement is answered on an instructed line; both blocks are absent on a nothing-received line; the direct-delivery ending renders the required finality checkbox with its consequence stated and its description associated, disabling the primary action until it is ticked, and introduces no timer, no window and no time-driven state; verdict rendering is a total Record<State, ReactElement> lookup; en/uk keys are added with the locale baseline regenerated; the approved frames W6TARi cells Q1Fnj and S9PcQ and the 390 layout render as drawn.",
+      "files_hint": [
+        "apps/web/src/modules/purchase-draft/components/purchase-draft-transitions/components/line-ending-dialog/",
+        "apps/web/public/locales/",
+        "apps/web/src/test/locale-baseline.json"
+      ]
+    },
+    {
+      "id": "T17",
+      "title": "Render the closed line's condition account in all four shapes, with the withheld shape leaving no trace",
+      "layer": "ui",
+      "deps": ["T13"],
+      "acs": ["AC-21", "AC-22", "AC-23", "AC-23a"],
+      "dod": "The closed line renders ordered, presented, accepted and refused with each refusal beside its Reason, description, Source chip and Disposition chip; the Packaging Type shown is the one frozen on the line and a Reason reads as recorded after a catalogue extension; the cause-withheld shape renders one total refused figure and no placeholder, hidden chip, count or greyed row, and a test asserts the rendered output for that shape contains nothing that distinguishes it from a line with a single unexplained refusal; one test per shape covers all four; a line whose ending predates this release renders its absent case; the read-only refusal row and the condition summary live unnested in modules/purchase-draft/components/ because both the detail pane and the by-line view consume them; en/uk keys are added with the locale baseline regenerated; frames MaRvu and aqFhl render as approved.",
+      "files_hint": [
+        "apps/web/src/modules/purchase-draft/components/",
+        "apps/web/src/modules/purchase-draft/components/purchase-draft-line-directory/",
+        "apps/web/public/locales/",
+        "apps/web/src/test/locale-baseline.json"
+      ]
+    },
+    {
+      "id": "T18",
+      "title": "Add the amend-refusal dialog, opened from the read row under REJECTIONS:UPDATE",
+      "layer": "ui",
+      "deps": ["T17"],
+      "acs": ["AC-18", "AC-18a", "AC-18b", "AC-19", "AC-20"],
+      "dod": "The dialog is a FormModalDialog opened through useActionDialog and ActionDialogHost with the closed-line surface's own Kind union, taking no onClose and keeping no isOpen; it validates a description and a Disposition through the generated mutation hook; the row menu offers nothing without REJECTIONS:UPDATE and Undecided is absent from the list — not shown disabled — once a Disposition is decided; the kebab carries an accessible name identifying its refusal; the amendment refreshes the closed draft that carries it through the RTK Query tag; en/uk keys are added with the locale baseline regenerated; frame W6TARi cell Ue4xn renders as approved at both viewports.",
+      "files_hint": [
+        "apps/web/src/modules/purchase-draft/components/",
+        "apps/web/src/modules/purchase-draft/api/purchase-draft-api.ts",
+        "apps/web/public/locales/",
+        "apps/web/src/test/locale-baseline.json"
+      ]
+    },
+    {
+      "id": "T19",
+      "title": "Explain every new refusal in EndingRefusalAlert and register the three success toasts with their invisible consequence",
+      "layer": "ui",
+      "deps": ["T15", "T16", "T18"],
+      "acs": [
+        "AC-02",
+        "AC-06",
+        "AC-07",
+        "AC-09",
+        "AC-11",
+        "AC-12",
+        "AC-14",
+        "AC-16",
+        "AC-25"
+      ],
+      "dod": "EndingRefusalAlert stays the one place a refused submission is explained and covers every new refusal code, each naming the rule it broke and stating that nothing of the submission was recorded, with the member's figures left in front of them; an over-assignment flags the assignment field that overshoots rather than the refusal and states the shortfall in words; shared/alerts/mutation-actions.ts registers success copy for the ending, the self-closing draft and the amendment, each naming its invisible consequence; every message survives localization with en/uk parity and the locale baseline regenerated; a test covers one alert per refusal code drawn on frame N4IoNS.",
+      "files_hint": [
+        "apps/web/src/modules/purchase-draft/components/purchase-draft-transitions/components/line-ending-dialog/components/EndingRefusalAlert.tsx",
+        "apps/web/src/shared/alerts/mutation-actions.ts",
+        "apps/web/public/locales/",
+        "apps/web/src/test/locale-baseline.json"
+      ]
+    },
+    {
+      "id": "T20",
+      "title": "Promote the narrowing-only observed-Permission rule into docs/system in this same change",
+      "layer": "docs",
+      "deps": ["T10"],
+      "acs": ["AC-01a"],
+      "dod": "docs/system/guides/server-request-authorization.md states the narrowing-only rule in its three affected sections — the resolved-grant set may be read inside a command to narrow what an already-admitted request may do, never to widen anything, and WarehouseAccessGuard.canActivate still never consults it — so a conforming ending command is no longer classifiable as a violation; docs/system/server-index.md is updated in the same change; the change is routed through /system-docs and cites ADR 0001.",
+      "files_hint": [
+        "docs/system/guides/server-request-authorization.md",
+        "docs/system/server-index.md"
+      ]
+    }
+  ]
+}

@@ -5,10 +5,18 @@ import type { CustomerOrderState } from 'shared/domain/entities/customer-order.e
 // AC-18 — the three bounds Arrival Confirmation's demand effect enforces, matched exactly to
 // openapi.yaml `ArrivalConfirmationConflict` `boundsFailed`'s `details.violations` shape so the
 // member is told which assignment is refused and why.
-export interface AllocationsExceedReceivedQuantityViolation {
+//
+// T10/AC-11/sad.md §4 — the line-wide bound narrows from the presented figure to the derived
+// Accepted Quantity, so the violation carries both: what was presented (`receivedQuantity`,
+// re-derived here as `acceptedQuantity + rejectedQuantity` rather than accepted as caller input),
+// what was refused of it (`rejectedQuantity`) and what remained (`acceptedQuantity`) — the two
+// figures openapi.yaml `allocationExceedsAccepted` names.
+export interface AllocationsExceedAcceptedQuantityViolation {
   readonly purchaseDraftLineId: string;
-  readonly rule: 'allocations_exceed_received_quantity';
+  readonly rule: 'allocations_exceed_accepted_quantity';
   readonly receivedQuantity: number;
+  readonly rejectedQuantity: number;
+  readonly acceptedQuantity: number;
   readonly allocatedQuantity: number;
 }
 
@@ -33,7 +41,7 @@ export interface CustomerOrderNotUnfulfilledViolation {
 }
 
 export type AllocationBoundViolation =
-  | AllocationsExceedReceivedQuantityViolation
+  | AllocationsExceedAcceptedQuantityViolation
   | ExceedsOutstandingQuantityViolation
   | CustomerOrderNotUnfulfilledViolation;
 

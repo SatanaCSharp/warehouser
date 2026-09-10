@@ -57,7 +57,11 @@
     "recordPurchaseDraftLineArrival": "Recording what arrived…",
     "recordPurchaseDraftLineDirectDelivery": "Recording the delivery…",
     "closePurchaseDraft": "Closing the purchase draft…",
-    "discardPurchaseDraft": "Discarding the purchase draft…"
+    "discardPurchaseDraft": "Discarding the purchase draft…",
+    "amendPurchaseDraftLineRejection": "Updating the refusal…",
+    "amendPurchaseDraftLineRejectionBoth": "Updating the refusal…",
+    "amendPurchaseDraftLineRejectionDescription": "Updating the refusal…",
+    "amendPurchaseDraftLineRejectionDisposition": "Updating the refusal…"
   },
   "customer": {
     "recordCustomer": "Recording the customer…",

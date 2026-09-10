@@ -44,6 +44,10 @@ const draftsUrl = `/api/v1/warehouses/${warehouseId}/purchase-drafts`;
 // allocates against exactly those, so the two endings can make that read stale
 // (ADR 02-08-2026 §Decision).
 const customersUrl = `/api/v1/warehouses/${warehouseId}/customers`;
+// T15 — the Rejection Reason catalogue is system-managed reference data, seeded by migration and
+// never written by any of the twelve mutations below (contracts/openapi.yaml), so it is the
+// negative case every row of this matrix now also proves: nothing here moves it.
+const rejectionReasonsUrl = `/api/v1/warehouses/${warehouseId}/rejection-reasons`;
 
 const summary: PurchaseDraftSummary = {
   id: purchaseDraftId,
@@ -274,7 +278,12 @@ const stubServer = (): ((url: string) => number) => {
   const fetchMock = vi.fn(
     (input: Request | string | URL, init?: RequestInit) => {
       const url = String(input instanceof Request ? input.url : input);
-      if (url === demandUrl || url === itemsUrl || url === customersUrl) {
+      if (
+        url === demandUrl ||
+        url === itemsUrl ||
+        url === customersUrl ||
+        url === rejectionReasonsUrl
+      ) {
         return Promise.resolve(Response.json([]));
       }
       if (url.startsWith(draftsUrl)) {
@@ -324,11 +333,15 @@ describe('purchaseDraftApi tag invalidation', () => {
       const customers = store.dispatch(
         customerApi.endpoints.listCustomers.initiate(warehouseId),
       );
-      await Promise.all([demand, items, customers]);
+      const rejectionReasons = store.dispatch(
+        purchaseDraftApi.endpoints.listRejectionReasons.initiate(warehouseId),
+      );
+      await Promise.all([demand, items, customers, rejectionReasons]);
 
       expect(countOf(demandUrl)).toBe(1);
       expect(countOf(itemsUrl)).toBe(1);
       expect(countOf(customersUrl)).toBe(1);
+      expect(countOf(rejectionReasonsUrl)).toBe(1);
 
       await MUTATIONS[name](store);
       // RTK Query's tag invalidation refetches on the next tick.
@@ -337,10 +350,86 @@ describe('purchaseDraftApi tag invalidation', () => {
       expect(countOf(demandUrl)).toBe(affected.demand ? 2 : 1);
       expect(countOf(itemsUrl)).toBe(affected.items ? 2 : 1);
       expect(countOf(customersUrl)).toBe(affected.customers ? 2 : 1);
+      // The catalogue is written by no mutation this feature adds, so it never refetches.
+      expect(countOf(rejectionReasonsUrl)).toBe(1);
 
       demand.unsubscribe();
       items.unsubscribe();
       customers.unsubscribe();
+      rejectionReasons.unsubscribe();
     },
   );
+});
+
+// T18 — the amendment route is a sub-resource of the line
+// (`amendPurchaseDraftLineRejection`), and it moves no quantity, Reason,
+// Source or line: `Demand` and `Items` key off a link or a line's Item,
+// neither of which this endpoint ever writes, so it invalidates
+// `PurchaseDrafts` and nothing else. This is what the task doc's "the
+// amendment refreshes the closed draft that carries it through the RTK
+// Query tag" means proven, extending the invalidation-matrix pattern above
+// to an endpoint this feature adds rather than one that already existed.
+describe('purchaseDraftApi — amendPurchaseDraftLineRejection invalidates PurchaseDrafts (T18)', () => {
+  const rejectionId = '00000000-0000-4000-8000-000000001001';
+  const amendmentUrl = `${draftsUrl}/${purchaseDraftId}/lines/${purchaseDraftLineId}/rejections/${rejectionId}`;
+  const draftUrl = `${draftsUrl}/${purchaseDraftId}`;
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('refetches the closed draft the read row belongs to, so the amendment shows without a manual refetch', async () => {
+    const fetchMock = vi.fn((input: Request | string | URL) => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (url === amendmentUrl) {
+        return Promise.resolve(
+          Response.json({
+            id: rejectionId,
+            description: 'Outer coil crushed; three runs severed.',
+            disposition: 'held_for_return',
+            amendedByUserId: accessIds.actingUser,
+            amendedAt: '2026-09-08T09:00:00.000Z',
+          }),
+        );
+      }
+      if (url === draftUrl) {
+        return Promise.resolve(Response.json(detail));
+      }
+      return Promise.resolve(Response.json({}, { status: 404 }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const countOf = (url: string): number =>
+      fetchMock.mock.calls.filter(
+        ([input]) =>
+          String(input instanceof Request ? input.url : input) === url,
+      ).length;
+
+    const store = makeStore();
+    const draft = store.dispatch(
+      purchaseDraftApi.endpoints.getPurchaseDraft.initiate({
+        warehouseId,
+        purchaseDraftId,
+      }),
+    );
+    await draft;
+    expect(countOf(draftUrl)).toBe(1);
+
+    await store
+      .dispatch(
+        purchaseDraftApi.endpoints.amendPurchaseDraftLineRejection.initiate({
+          warehouseId,
+          purchaseDraftId,
+          purchaseDraftLineId,
+          rejectionId,
+          input: { disposition: 'held_for_return' },
+        }),
+      )
+      .unwrap();
+    // RTK Query's tag invalidation refetches on the next tick.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(countOf(draftUrl)).toBe(2);
+
+    draft.unsubscribe();
+  });
 });

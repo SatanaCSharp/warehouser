@@ -247,7 +247,6 @@
         "unknown": "The ending was not recorded.",
         "bounds": {
           "title": "That assignment cannot be recorded",
-          "exceedsReceived": "Line {{line}} — you assigned {{assigned}} across its customers, but recorded {{received}} as arrived.",
           "exceedsOutstanding": "{{customer}} — you assigned {{assigned}}, but they are waiting for {{outstanding}}.",
           "cancelled": "{{customer}} — cancelled, so nothing can be assigned to it.",
           "cancelled_dated": "{{customer}} — cancelled on {{on}}, so nothing can be assigned to it.",
@@ -255,8 +254,37 @@
           "fulfilled_dated": "{{customer}} — already fulfilled on {{on}}, so nothing can be assigned to it.",
           "unavailable": "{{customer}} — no longer waiting for anything, so nothing can be assigned to it.",
           "unavailable_dated": "{{customer}} — no longer waiting for anything since {{on}}, so nothing can be assigned to it.",
+          "exceedsAccepted": "Line {{line}} — you presented {{received}} and refused {{rejected}}, so {{accepted}} can be assigned. You have assigned {{allocated}}. Only accepted goods may be assigned.",
           "checkedAgain": "Each bound is checked again at the moment the confirmation is recorded, not when you started filling it in.",
           "back": "Back to the form"
+        },
+        "conditionSplit": {
+          "title": "This ending cannot be recorded as submitted",
+          "rejectionsExceedReceived": "No more can be refused than was presented — you refused {{rejected}}, but only presented {{received}}.",
+          "unknownReason": "\"{{reason}}\" is not a Reason this catalogue offers. It offers: {{available}}. The list is maintained by the team, not by members.",
+          "descriptionRequired": "\"{{reason}}\" always needs a description — say what was wrong, in your own words.",
+          "duplicateReason": "\"{{reason}}\" is refused twice on this line. One refusal per reason — combine the quantities into one.",
+          "sourceMismatch": "These goods came to your own dock, so a refusal for \"{{reason}}\" needs the inspected source, not the customer's report.",
+          "sourceMismatchCustomerReported": "These goods went straight to the customer, so a refusal for \"{{reason}}\" carries the customer's report, not an inspection at your dock.",
+          "verdictRequired": "You refused {{rejected}}, so this line also needs a judgement of the supplier's instruction — a refusal is only recorded alongside one. Judge the instruction, or withdraw the refusal."
+        },
+        "conformance": {
+          "title": "This judgement of the supplier's instruction cannot be recorded as submitted",
+          "metContradictsRejection": "Met contradicts the refusal for \"{{reason}}\" — a refusal for that reason is the instruction not being met.",
+          "notApplicableOnInstructedLine": "Not applicable contradicts the instruction frozen on this line — a line given an instruction must be judged Met or Not met.",
+          "verdictOnUninstructedLine": "Nothing was frozen on this line to judge, so the only judgement available is Not applicable."
+        },
+        "invalidInput": {
+          "title": "The request is invalid",
+          "quantityOutOfRange": "The refused quantity must be a whole number of at least one.",
+          "descriptionTooLong": "A description cannot be longer than {{maxLength}} characters.",
+          "descriptionEmpty": "A description cannot be empty.",
+          "descriptionNotTrimmed": "A description cannot start or end with a space.",
+          "noteTooLong": "The judgement's note cannot be longer than {{maxLength}} characters.",
+          "noteEmpty": "The judgement's note cannot be empty.",
+          "noteNotTrimmed": "The judgement's note cannot start or end with a space.",
+          "noteNotAdmittedByVerdict": "A note is only recorded beside a Not met judgement.",
+          "conditionOnNothingReceived": "Nothing was received on this line, so no condition or judgement can be recorded against it."
         }
       },
       "arrival": {
@@ -278,6 +306,52 @@
         "summary": "{{stated}} delivered · {{assigned}} assigned · {{unassigned}} left unassigned.",
         "submit": "Record the delivery",
         "atomicity": "The quantity delivered, every assignment, and the resulting outstanding quantity of each customer are recorded together — or none of them is. No on-hand quantity moves: these goods went straight to the customer and were never in the transit zone to be counted."
+      },
+      "condition": {
+        "heading": {
+          "arrival": "CONDITION",
+          "directDelivery": "CONDITION, AS THE CUSTOMER REPORTED IT"
+        },
+        "sourceInspected": "Inspected at your dock",
+        "sourceCustomerReported": "Reported by the customer",
+        "refuseButton": "Refuse some of this",
+        "summaryFigures": {
+          "ordered": "ORDERED",
+          "presented": "PRESENTED",
+          "delivered": "DELIVERED",
+          "refused": "REFUSED",
+          "accepted": "ACCEPTED"
+        },
+        "summaryLabel": "Condition summary for {{sku}}",
+        "quantityLabel": "Quantity refused",
+        "reasonLabel": "Reason",
+        "reasonPlaceholder": "Choose a reason",
+        "descriptionLabel": "Describe what was wrong",
+        "descriptionBound": "Up to 1 000 characters.",
+        "removeRefusal": "Remove the refusal of {{quantity}} {{reason}}",
+        "footnote": {
+          "arrival": "Accepted is what remains — you never type it, so it can never disagree with the refusals above. One refusal per reason. The Source above names where every refusal on this line was recorded from — this line came to your own dock.",
+          "directDelivery": "Accepted is what remains — you never type it. The Source above names who told you about every refusal on this line: these goods never came to your dock, so nobody here could have found the problem themselves."
+        }
+      },
+      "conformance": {
+        "heading": "Did the supplier follow your instruction?",
+        "packagingType": "Packaging type — {{packagingType}}",
+        "valueAddingNote": "Value-adding note — “{{note}}”",
+        "options": {
+          "met": "Met",
+          "not_met": "Not met",
+          "not_applicable": "Not applicable"
+        },
+        "noteLabel": "What was wrong with it",
+        "noteDescription": "Required when the instruction was not met. Up to 1 000 characters.",
+        "notApplicableWithheld": "This line was frozen carrying an instruction, so it can only be judged as honoured or not honoured — the judgement does not apply to a line frozen with none.",
+        "judgementWithheld": "This line was frozen with no instruction, so it can only record that the judgement does not apply."
+      },
+      "finality": {
+        "title": "This ending is final — has the customer told you what arrived?",
+        "description": "This ending is final. Once recorded, nothing here reminds you to revisit it — you alone judge when the customer's account is settled. Nothing is lost by waiting.",
+        "checkboxLabel": "The customer has told me what arrived."
       },
       "recorded": {
         "arrival": "Arrived {{formatted}} · {{on}}",
@@ -380,5 +454,43 @@
     "loading": "Loading purchase draft lines",
     "error": "We couldn't read the lines of this warehouse's purchase drafts.",
     "addressDrift": "A linked order has been redirected to another delivery address."
+  },
+  "closedLine": {
+    "conditionHeading": {
+      "arrival": "CONDITION ON ARRIVAL",
+      "direct_delivery": "CONDITION ON ARRIVAL"
+    },
+    "refusalRow": {
+      "disposition": {
+        "undecided": "Undecided",
+        "refused_at_delivery": "Refused at delivery",
+        "held_for_return": "Held for return",
+        "scrapped_on_site": "Scrapped on site"
+      },
+      "actionsFor": "Actions for the refusal of {{quantity}} {{reason}}",
+      "menu": {
+        "amend": "Amend this refusal"
+      }
+    },
+    "conformance": {
+      "verdict": {
+        "met": "Supplier's instruction — Met",
+        "not_met": "Supplier's instruction — Not met",
+        "not_applicable": "Supplier's instruction — Not applicable"
+      },
+      "explanation": {
+        "met": "The supplier followed the packaging and labelling instruction frozen on this line.",
+        "notApplicable": "This line was frozen carrying no packaging or labelling instruction to judge."
+      }
+    },
+    "amendDialog": {
+      "title": "Amend this refusal",
+      "cancel": "Cancel",
+      "submit": "Save",
+      "descriptionLabel": "Description",
+      "descriptionRequired": "Description is required",
+      "dispositionLabel": "Disposition",
+      "dispositionUnavailable": "Choose one of the Dispositions this Warehouse offers: {{dispositions}}."
+    }
   }
 }

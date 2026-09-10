@@ -1,11 +1,16 @@
 import { Alert } from '@heroui/react';
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import { EndingRefusalAlert } from 'modules/purchase-draft/components/purchase-draft-transitions/components/line-ending-dialog/components/EndingRefusalAlert';
+import { FinalityAcknowledgementAlert } from 'modules/purchase-draft/components/purchase-draft-transitions/components/line-ending-dialog/components/FinalityAcknowledgementAlert';
 import { LineEndingFieldset } from 'modules/purchase-draft/components/purchase-draft-transitions/components/line-ending-dialog/components/LineEndingFieldset';
-import { lineEndingFormDefaults } from 'modules/purchase-draft/utils/line-ending-form';
+import {
+  lineEndingFormDefaults,
+  quantityOf,
+} from 'modules/purchase-draft/utils/line-ending-form';
+import { Conditional } from 'shared/components/Conditional';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 
 import type { PurchaseDraftLine } from '@warehouser/contracts/purchase-drafts';
@@ -67,6 +72,21 @@ export const LineEndingDialog = <TInput,>({
   const { t: translate } = useTranslation('validation');
   const [refusal, setRefusal] = useState<EndingRefusal>();
   const form = useForm({ defaultValues: lineEndingFormDefaults(line) });
+  const values = useWatch({ control: form.control });
+
+  // AC-15/AC-17a — the primary action stays unavailable until the judgement is
+  // answered, but only on a line where something was received: a line where
+  // nothing was does not render the conformance block at all (AC-04a), and
+  // never had a judgement to answer. AC-17a's sibling rule on the
+  // direct-delivery half (sad.md §6.2, spec §8 ninth question): the finality
+  // acknowledgement gates the primary action independently, on every
+  // direct-delivery ending regardless of what was received.
+  const isConformanceAnswered =
+    quantityOf(values.quantity) <= 0 ||
+    values.preReceiptConformance?.verdict !== '';
+  const isAcknowledged =
+    kind !== 'directDelivery' || Boolean(values.finalityAcknowledged);
+  const isSubmitDisabled = !isConformanceAnswered || !isAcknowledged;
 
   // The refusal's own envelope is kept beside its code: AC-18's bounds travel in
   // it, and the alert names each one rather than restating a sentence covering
@@ -98,6 +118,7 @@ export const LineEndingDialog = <TInput,>({
       cancelLabel={t('transitions.lineEnding.cancel')}
       submitLabel={t(`transitions.lineEnding.${kind}.submit`)}
       form={form}
+      isSubmitDisabled={isSubmitDisabled}
       parse={parse}
       scroll="inside"
       size="wide"
@@ -150,6 +171,15 @@ export const LineEndingDialog = <TInput,>({
           </Alert.Description>
         </Alert.Content>
       </Alert>
+      {/*
+        T16, design-handoff.md `S9PcQ` — direct-delivery ending only, above the
+        footer: the member alone judges when this line's account is settled,
+        so the ending states before submission that it is final and requires
+        an explicit acknowledgement (sad.md §6.2, spec §8 ninth question).
+      */}
+      <Conditional when={kind === 'directDelivery'}>
+        <FinalityAcknowledgementAlert form={form} />
+      </Conditional>
     </FormModalDialog>
   );
 };

@@ -14,6 +14,8 @@ import { PermissionEntity } from 'shared/domain/entities/permission.entity';
 import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
 import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity';
 import { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity';
+import { PurchaseDraftLineRejectionEntity } from 'shared/domain/entities/purchase-draft-line-rejection.entity';
+import { RejectionReasonEntity } from 'shared/domain/entities/rejection-reason.entity';
 import { RoleEntity } from 'shared/domain/entities/role.entity';
 import { RolePermissionEntity } from 'shared/domain/entities/role-permission.entity';
 import { SessionEntity } from 'shared/domain/entities/session.entity';
@@ -57,6 +59,8 @@ const domainEntities = [
   PurchaseDraftEntity,
   PurchaseDraftLineEntity,
   PurchaseDraftLineLinkEntity,
+  PurchaseDraftLineRejectionEntity,
+  RejectionReasonEntity,
   RolePermissionEntity,
   RoleEntity,
   SessionEntity,

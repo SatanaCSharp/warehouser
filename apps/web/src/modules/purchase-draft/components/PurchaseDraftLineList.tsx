@@ -5,6 +5,7 @@ import {
   useRevisePurchaseDraftLineMutation,
 } from 'modules/purchase-draft/api/purchase-draft-api';
 import { AddPurchaseDraftLineAction } from 'modules/purchase-draft/components/AddPurchaseDraftLineAction';
+import { ClosedPurchaseDraftLine } from 'modules/purchase-draft/components/closed-purchase-draft-line/ClosedPurchaseDraftLine';
 import { LineEndingAction } from 'modules/purchase-draft/components/purchase-draft-transitions/components/LineEndingAction';
 import { PurchaseDraftLineEditor } from 'modules/purchase-draft/components/PurchaseDraftLineEditor';
 import { usePackagingTypes } from 'modules/purchase-draft/hooks/queries/usePackagingTypes';
@@ -60,17 +61,24 @@ export const PurchaseDraftLineList = ({
     });
   };
 
-  return (
-    <section className="mt-6">
-      <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border pb-2">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
-          {t('detail.linesHeading')}
-        </h3>
-        <p className="text-sm text-muted">{t('detail.linesCaption')}</p>
-      </div>
-
-      <ul className="mt-4 flex flex-col gap-4">
-        {draft.lines.map((line, index) => (
+  // A closed draft is read, not edited: its lines carry an ending and the
+  // condition account recorded with it (AC-21, AC-22, AC-23), and none of them
+  // offers a write. Which row a line takes is decided once for the whole list
+  // because it is a property of the draft, not of the line — so this resolves
+  // the rows to a value before the return rather than branching between
+  // elements inside the map (`writing-web-conditional-components.md` §2).
+  const lineRows =
+    draft.state === 'closed'
+      ? draft.lines.map((line, index) => (
+          <ClosedPurchaseDraftLine
+            key={line.id}
+            index={index + 1}
+            line={line}
+            packagingTypes={packagingTypes}
+            purchaseDraftId={draft.id}
+          />
+        ))
+      : draft.lines.map((line, index) => (
           <PurchaseDraftLineEditor
             key={line.id}
             // AC-19 — the action decides for itself whether this draft's
@@ -85,8 +93,18 @@ export const PurchaseDraftLineList = ({
             onRemoveLine={onRemoveLine(line.id)}
             onReviseLine={onReviseLine(line.id)}
           />
-        ))}
-      </ul>
+        ));
+
+  return (
+    <section className="mt-6">
+      <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border pb-2">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
+          {t('detail.linesHeading')}
+        </h3>
+        <p className="text-sm text-muted">{t('detail.linesCaption')}</p>
+      </div>
+
+      <ul className="mt-4 flex flex-col gap-4">{lineRows}</ul>
 
       {/* A frozen draft records what the supplier was told, so it is never
           given a line after the fact (AC-15). */}

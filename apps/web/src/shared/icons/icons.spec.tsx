@@ -61,6 +61,17 @@ const REQUIRED_ICONS: Record<string, keyof typeof Icons> = {
   // here for the same reason as the rest: the icon is required by a shipped
   // control, and its absence must fail rather than pass silently.
   'chevron-right': 'ChevronRightIcon',
+  // arrival-inspection T15 (design-handoff.md §Icons) — the three Lucide
+  // glyphs the condition block adds that `shared/icons/` does not already
+  // export: the refusal control (`package-x`), a refusal row's remove control
+  // and the withdrawn-refusal state (`circle-x`), and the Pre-receipt
+  // Conformance judgement (`clipboard-check`). None of the three is
+  // load-bearing on its own — each accompanies text carrying the same
+  // meaning — but a missing export would still silently degrade every place
+  // that names it.
+  'circle-x': 'CircleXIcon',
+  'package-x': 'PackageXIcon',
+  'clipboard-check': 'ClipboardCheckIcon',
 };
 
 describe('shared/icons', () => {

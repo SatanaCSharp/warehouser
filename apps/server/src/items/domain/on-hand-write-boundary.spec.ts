@@ -47,9 +47,12 @@ const collectProductionSources = (
 // - `item-catalogue-entry.mapper.ts` (T7) assembles the persistence row `item-catalogue.repository.ts`
 //   already reads into the `Item` projection openapi.yaml documents; it forwards the figure, it
 //   never computes or writes it.
-// - `items.controller.ts` (T7) is the REST handler that serializes the figure into the `Item` HTTP
-//   response body and passes a submitted `countedQuantity` straight through to
-//   `AdjustItemOnHandCommand`, without deriving or writing it itself.
+// - `item-response.mapper.ts` (T7) is the REST translation that serializes the figure into the
+//   `Item` HTTP response body. It held this line while it was written inside `items.controller.ts`;
+//   the architectural mapper-placement gate moved it to `rest/mappers/`, where every `to*Response`
+//   belongs, and the figure travelled with it. The controller no longer names the figure at all: it
+//   passes a submitted `countedQuantity` straight through to `AdjustItemOnHandCommand`, which is a
+//   different field.
 // - `demand.controller.ts` (T11) is the REST handler that serializes the figure into each
 //   `DemandLine` of the consolidated demand response (AC-04, "that Item's current On-hand
 //   Quantity"). It names the field only to forward what `consolidated-demand.repository.ts` already
@@ -63,7 +66,7 @@ const ALLOWED_TO_NAME_THE_FIGURE = [
   'customer-orders/rest/controllers/demand.controller.ts',
   'items/domain/mappers/item-catalogue-entry.mapper.ts',
   'items/domain/predicates/on-hand-adjustment.predicates.ts',
-  'items/rest/controllers/items.controller.ts',
+  'items/rest/mappers/item-response.mapper.ts',
   'items/usecases/commands/create-item.command.ts',
   'items/usecases/queries/list-warehouse-items.query.ts',
   'shared/domain/entities/item.entity.ts',

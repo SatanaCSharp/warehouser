@@ -67,6 +67,43 @@ export const deliveryModeSchema = z.enum([
 // on the write side rather than a submitted value (ADR 0002).
 export const endingKindSchema = z.enum(['arrival', 'direct_delivery']);
 
+// ---- arrival-inspection: catalogue-shaped schemas the projection union needs ---------------------
+//
+// Moved here from `purchase-drafts-mutations.ts` (T12 prerequisite): the projection union this file
+// adds needs `rejectionSourceSchema`/`rejectionDispositionSchema` for `PurchaseDraftLineRejection`,
+// and `purchase-drafts-mutations.ts` already imports catalogue-shaped schemas *from* this file
+// (`packagingTypeIdSchema`, `purchaseDraftStateSchema`, `deliveryModeSchema`) rather than the other
+// way — mirroring that direction here is what keeps this a one-way import rather than a cycle over
+// top-level `z.enum(...)` initialisation.
+
+// openapi.yaml `RejectionReasonId` — pattern-checked rather than enumerated, exactly as
+// `packagingTypeIdSchema` is and for the same reason: the catalogue is *data*, seeded and extended
+// by a migration (`rejection_reasons.id VARCHAR(32)`). Freezing today's ten Reasons into the schema
+// would make the eleventh a contract change and a client release; the Reason a request names is
+// validated by the **server** against the catalogue row it already reads (AC-06, sad.md §7).
+export const rejectionReasonIdSchema = z
+  .string()
+  .max(32)
+  .regex(/^[a-z][a-z0-9_]*$/u);
+
+// openapi.yaml `RejectionSource` — who found the problem. It **is** an input even though the
+// server could derive it from the line's Delivery Mode: AC-25's refusal is otherwise unreachable,
+// because a value that cannot be expressed cannot be refused. Whether the submitted Source agrees
+// with the mode is proved by the server against the line locked in the transaction, never here
+// (AC-24, AC-25; contracts/api-sync-report.md § Finding 1).
+export const rejectionSourceSchema = z.enum(['inspected', 'customer_reported']);
+
+// openapi.yaml `RejectionDisposition` — what the Warehouse decided became of the refused goods
+// (AC-19). `undecided` stays a legal *request* value: its refusal is conditional on the **stored**
+// state — a decided Disposition never returns to undecided — which the command asserts against the
+// locked row rather than this schema (AC-18a).
+export const rejectionDispositionSchema = z.enum([
+  'undecided',
+  'refused_at_delivery',
+  'held_for_return',
+  'scrapped_on_site',
+]);
+
 // openapi.yaml `LineWarehouseDestination` — where a **Via Warehouse** line's goods travel: the
 // Warehouse's own Delivery Address. The operator's own premises data, so it is readable by any
 // member holding `PURCHASE_DRAFTS:WATCH` in that Warehouse and is **never** gated on
@@ -242,6 +279,100 @@ export const purchaseDraftLineLinkSchema = z.union([
   purchaseDraftLineLinkRedactedSchema,
 ]);
 
+// openapi.yaml `PreReceiptConformanceVerdict` — the three verdicts a supplier's frozen instruction
+// may be judged with (AC-15, AC-15a).
+export const preReceiptConformanceVerdictSchema = z.enum([
+  'met',
+  'not_met',
+  'not_applicable',
+]);
+
+// openapi.yaml `PreReceiptConformance` — the supplier's frozen instruction judged, recorded once
+// with the ending and never afterwards. Read under `PURCHASE_DRAFTS:WATCH` alone, never gated on
+// `REJECTIONS:WATCH`: it is a judgement about the instruction, not a Rejection's cause, and it
+// survives unchanged in the cause-withheld shape (AC-22, sad.md §4).
+/**
+ * Upper bound on every piece of member-written prose this feature stores, counted in **code
+ * points** rather than `String.length`'s UTF-16 code units. PostgreSQL's `char_length` counts
+ * characters, so the two agree across the BMP and diverge above it: one astral character costs two
+ * code units, and a `.max()` on `length` would refuse at half the stated bound a column would have
+ * stored.
+ *
+ * It lives here, on the read side, because it describes a **stored** value. The write side imports
+ * it and adds its own `.trim()`. Restating the number on either side is what let the read schemas
+ * drift to a `.max(1000)` that would have refused prose the server had just accepted — surfacing to
+ * the member as `api.unexpected`, since a response-schema failure is what `api-client.ts` reports.
+ */
+export const maxProseLength = 1000;
+
+/**
+ * Prose as the store holds it: bounded in code points and non-empty, with **no** `.trim()`
+ * transform. A response schema must not rewrite what a mutation just recorded — the write side is
+ * what enforces trimming.
+ */
+export const storedProseSchema = z
+  .string()
+  .min(1)
+  .refine((value) => [...value].length <= maxProseLength, {
+    message: `Must be at most ${String(maxProseLength)} characters`,
+  });
+
+export const preReceiptConformanceSchema = z.strictObject({
+  verdict: preReceiptConformanceVerdictSchema,
+  // Non-null only under `not_met`; `null` under `met` and `not_applicable`
+  // (`chk_purchase_draft_lines_conformance_note_shape`).
+  note: storedProseSchema.nullable(),
+});
+
+// openapi.yaml `PurchaseDraftLineRejection` — one quantity of a line's arrival the Warehouse
+// refused, with its Rejection Record: the cause `REJECTIONS:WATCH` gates (AC-21). Strict, so an
+// unknown property — including a leaked `supplierName` — is refused rather than passed through.
+export const purchaseDraftLineRejectionSchema = z.strictObject({
+  id: z.string().uuid(),
+  rejectionReasonId: rejectionReasonIdSchema,
+  // The catalogue's current wording, joined in on this read — the Reason is never reworded, so this
+  // is always the wording the member stated (AC-23a).
+  rejectionReasonLabel: z.string().min(1).max(100),
+  quantity: z.number().int().min(1),
+  source: rejectionSourceSchema,
+  description: storedProseSchema.nullable(),
+  disposition: rejectionDispositionSchema,
+  raisedByUserId: z.string().uuid(),
+  raisedAt: z.string().datetime(),
+  amendedByUserId: z.string().uuid().nullable(),
+  amendedAt: z.string().datetime().nullable(),
+});
+
+// openapi.yaml `LineConditionWithCause` — the whole condition account, read by an actor holding
+// `REJECTIONS:WATCH`: every refused quantity beside its Reason, description, Source and
+// Disposition, with ordered, presented, accepted and rejected (AC-21).
+export const lineConditionWithCauseSchema = z.strictObject({
+  acceptedQuantity: z.number().int().nonnegative(),
+  rejectedQuantity: z.number().int().nonnegative(),
+  preReceiptConformance: preReceiptConformanceSchema,
+  rejections: z.array(purchaseDraftLineRejectionSchema),
+});
+
+// openapi.yaml `LineConditionCauseWithheld` — the same condition read by an actor **without**
+// `REJECTIONS:WATCH`: ordered, presented, accepted and the **one** total refused figure. Strict and
+// carrying no `rejections` property at all — not an empty array and not `null` — so a leak of that
+// property is a contract violation on the way out rather than a rendering artefact (AC-22,
+// sad.md §10 "Redaction unit", spec.md §6.1).
+export const lineConditionCauseWithheldSchema = z.strictObject({
+  acceptedQuantity: z.number().int().nonnegative(),
+  rejectedQuantity: z.number().int().nonnegative(),
+  preReceiptConformance: preReceiptConformanceSchema,
+});
+
+// openapi.yaml `LineCondition` — `oneOf` the two forms above. Crossed with the identity `oneOf` on
+// the line itself, this is what gives the line its **four** legal shapes (sad.md §6.3). The
+// cause-bearing form is tried first only for error quality; the two are disjoint because the
+// withheld form is strict and admits no `rejections` property at all.
+export const lineConditionSchema = z.union([
+  lineConditionWithCauseSchema,
+  lineConditionCauseWithheldSchema,
+]);
+
 // What a line carries whatever the actor may read. `warehouseDestination` is deliberately part of
 // it: the Warehouse's own address and access notes are the operator's premises data, read under
 // `PURCHASE_DRAFTS:WATCH` alone and never withheld (AC-10, sad.md §7).
@@ -252,11 +383,15 @@ export const purchaseDraftLineLinkSchema = z.union([
 // The quantity is deliberately unbounded above — what arrived, or what the customer said arrived, is
 // bounded neither above nor below by what was ordered — and `0` is a real ending, recording that
 // nothing came or nothing was delivered, rather than the absence of one.
+//
+// `condition` is `null` in exactly two cases that read alike: nothing was received, or the ending
+// predates this release and was never backfilled (AC-04a, spec.md §8 tenth question).
 export const purchaseDraftLineEndingSchema = z.strictObject({
   kind: endingKindSchema,
   quantity: z.number().int().nonnegative(),
   recordedByUserId: z.string().uuid(),
   recordedAt: z.string().datetime(),
+  condition: lineConditionSchema.nullable(),
 });
 
 const purchaseDraftLineCommonShape = {
@@ -351,6 +486,23 @@ export const purchaseDraftDetailSchema = purchaseDraftSummarySchema.extend({
   lines: z.array(purchaseDraftLineSchema),
 });
 
+// openapi.yaml `RejectionReason` — one entry of the system-managed catalogue, workspace-wide
+// reference data taking no Warehouse scope exactly as `packagingTypeSchema` does (AC-06). Moved
+// here from `purchase-drafts-mutations.ts` alongside `rejectionReasonIdSchema` (T12 prerequisite).
+export const rejectionReasonSchema = z.strictObject({
+  id: rejectionReasonIdSchema,
+  // The catalogue's own wording, bounded as `rejection_reasons.label` is. Server data rather than
+  // translated client copy: the team extends the catalogue, so a new Reason must not require a
+  // client release. Never reworded, which is what lets a Rejection *name* its Reason rather than
+  // freeze a copy of it — the exact opposite of `packagingTypeId` (AC-23).
+  label: z.string().min(1).max(100),
+  // Whether a Rejection naming this Reason must carry prose; `true` on `unfit_other` alone today.
+  // Catalogue data rather than a hard-coded identifier: a hard-coded `unfit_other` would pass every
+  // test written today and would make the next prose-requiring Reason a code change and a release
+  // rather than one migration row (AC-07).
+  requiresDescription: z.boolean(),
+});
+
 // openapi.yaml `PurchaseDraftLineListEntry` — one line of the by-line read, carrying the draft it
 // belongs to so the view reads without a second request. Each line of a draft holding both modes
 // appears in whichever half **its own** `deliveryMode` places it (AC-22).
@@ -409,3 +561,21 @@ export type PurchaseDraftLineListEntry = z.infer<
 >;
 export type PurchaseDraftSummary = z.infer<typeof purchaseDraftSummarySchema>;
 export type PurchaseDraftDetail = z.infer<typeof purchaseDraftDetailSchema>;
+export type RejectionReasonId = z.infer<typeof rejectionReasonIdSchema>;
+export type RejectionSource = z.infer<typeof rejectionSourceSchema>;
+export type RejectionDisposition = z.infer<typeof rejectionDispositionSchema>;
+export type RejectionReason = z.infer<typeof rejectionReasonSchema>;
+export type PreReceiptConformanceVerdict = z.infer<
+  typeof preReceiptConformanceVerdictSchema
+>;
+export type PreReceiptConformance = z.infer<typeof preReceiptConformanceSchema>;
+export type PurchaseDraftLineRejection = z.infer<
+  typeof purchaseDraftLineRejectionSchema
+>;
+export type LineConditionWithCause = z.infer<
+  typeof lineConditionWithCauseSchema
+>;
+export type LineConditionCauseWithheld = z.infer<
+  typeof lineConditionCauseWithheldSchema
+>;
+export type LineCondition = z.infer<typeof lineConditionSchema>;

@@ -15,13 +15,13 @@ import {
 } from '@nestjs/common';
 import type { Item, OnHandAdjustment } from '@warehouser/contracts/items';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import type { ItemCatalogueEntryRead } from 'items/domain/mappers/item-catalogue-entry.mapper';
 import {
   ItemCreateDto,
   ItemListQueryDto,
   ItemUpdateDto,
   OnHandAdjustmentCreateDto,
 } from 'items/rest/dtos/item-mutation.dto';
+import { toItemResponse } from 'items/rest/mappers/item-response.mapper';
 import { AdjustItemOnHandCommand } from 'items/usecases/commands/adjust-item-on-hand.command';
 import { CorrectItemCommand } from 'items/usecases/commands/correct-item.command';
 import { CreateItemCommand } from 'items/usecases/commands/create-item.command';
@@ -36,26 +36,6 @@ import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
 import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
 import { WriteRateLimitGuard } from 'shared/guards/write-rate-limit.guard';
 import { WriteRateLimited } from 'shared/guards/write-rate-limited.decorator';
-
-const toItemResponse = (entry: ItemCatalogueEntryRead): Item => ({
-  id: entry.id,
-  sku: entry.sku,
-  description: entry.description,
-  unitOfMeasure: entry.unitOfMeasure,
-  onHandQuantity: entry.onHandQuantity,
-  deactivatedAt: entry.deactivatedAt?.toISOString() ?? null,
-  namingCustomerOrderCount: entry.namingCustomerOrderCount,
-  namingPurchaseDraftLineCount: entry.namingPurchaseDraftLineCount,
-  latestAdjustment: entry.latestAdjustment
-    ? {
-        countedQuantity: entry.latestAdjustment.countedQuantity,
-        reason: entry.latestAdjustment.reason,
-        adjustedByUserId: entry.latestAdjustment.adjustedByUserId,
-        adjustedAt: entry.latestAdjustment.adjustedAt.toISOString(),
-      }
-    : null,
-  createdAt: entry.createdAt.toISOString(),
-});
 
 /** Every route whose subject is the Warehouse's Item catalogue — SKU rules, activation and
  * On-hand Quantity (contracts/openapi.yaml `items`, sad.md §5 `items/usecases`). Every handler

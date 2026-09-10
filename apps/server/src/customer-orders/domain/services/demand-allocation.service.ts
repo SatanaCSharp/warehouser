@@ -10,9 +10,14 @@ import type {
 import type { CustomerOrderAllocationUpdate } from 'shared/domain/repositories/demand-allocation.repository';
 import { DemandAllocationRepository } from 'shared/domain/repositories/demand-allocation.repository';
 
+// T10/sad.md §4, §8 "Naming" — narrowed from the presented figure to the derived Accepted Quantity
+// a caller has already computed (`ArrivalInspectionService.deriveAcceptedQuantity`, T8). This service
+// never derives it itself: `assignableQuantity` is the bound, and `rejectedQuantity` rides beside it
+// only so a refusal can name both figures (AC-11) without a second read.
 export interface DemandAllocationLineInput {
   readonly purchaseDraftLineId: string;
-  readonly receivedQuantity: number;
+  readonly assignableQuantity: number;
+  readonly rejectedQuantity: number;
   readonly allocations: readonly DemandAllocationLineAssignment[];
 }
 
@@ -35,10 +40,10 @@ const defaultDemandAllocationRuntime: DemandAllocationRuntime = {
 // AC-18's three bounds (server-error-handling.md §1 — pure, domain-named predicates). Each is used
 // once, by `collectViolations` below, so each stays next to that one implementation rather than in
 // a shared predicates module.
-const exceedsReceivedQuantity = (
+const exceedsAssignableQuantity = (
   allocatedQuantity: number,
-  receivedQuantity: number,
-): boolean => allocatedQuantity > receivedQuantity;
+  assignableQuantity: number,
+): boolean => allocatedQuantity > assignableQuantity;
 
 const exceedsOutstandingQuantity = (
   allocatedQuantity: number,
@@ -191,11 +196,15 @@ export class DemandAllocationService {
         (sum, allocation) => sum + allocation.allocatedQuantity,
         0,
       );
-      if (exceedsReceivedQuantity(allocatedQuantity, line.receivedQuantity)) {
+      if (
+        exceedsAssignableQuantity(allocatedQuantity, line.assignableQuantity)
+      ) {
         violations.push({
           purchaseDraftLineId: line.purchaseDraftLineId,
-          rule: 'allocations_exceed_received_quantity',
-          receivedQuantity: line.receivedQuantity,
+          rule: 'allocations_exceed_accepted_quantity',
+          receivedQuantity: line.assignableQuantity + line.rejectedQuantity,
+          rejectedQuantity: line.rejectedQuantity,
+          acceptedQuantity: line.assignableQuantity,
           allocatedQuantity,
         });
       }

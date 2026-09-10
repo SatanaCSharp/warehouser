@@ -16,6 +16,8 @@ export const OBSERVED_PERMISSION_KEY = 'access.observed-permission';
  * the resolved set, so an ungranted observed Permission cannot deny, and a granted one cannot
  * admit. A handler declaring only observed Permissions and no `@RequiredPermission` is denied
  * exactly as an undecorated handler is. The worst a mistake here can produce is a surface that
- * withholds data from someone entitled to it — never a disclosure. */
+ * withholds data from someone entitled to it, or a command that wrongly refuses a write someone was
+ * entitled to make — never a disclosure or an admission the required Permission alone did not
+ * already grant (server-request-authorization.md § "Why an observed Permission cannot deny"). */
 export const ObservedPermission = (...permissionIds: PermissionId[]) =>
   SetMetadata(OBSERVED_PERMISSION_KEY, permissionIds);

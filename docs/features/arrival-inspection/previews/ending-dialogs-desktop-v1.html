@@ -1,0 +1,462 @@
+<!doctype html>
+<!--
+  Preview evidence - design-ui skill. Review artifact only; never an implementation source.
+
+  Frame:         Arrival Inspection / Ending Dialogs / Desktop / v1
+  Design source: docs/mockups/app.pen
+  Node ID:       W6TARi
+  Viewport:      review board 1600×2729
+  States:        dock arrival ending, direct-delivery ending, amend a refusal, assignment conflict after a late refusal
+-->
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Arrival inspection · Ending dialogs</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style type="text/tailwindcss">
+      @theme inline {
+        --color-background: var(--background);
+        --color-background-secondary: var(--background-secondary);
+        --color-foreground: var(--foreground);
+        --color-muted: var(--muted);
+
+        --color-surface: var(--surface);
+        --color-surface-foreground: var(--surface-foreground);
+        --color-surface-secondary: var(--surface-secondary);
+        --color-surface-tertiary: var(--surface-tertiary);
+        --color-overlay: var(--overlay);
+        --color-overlay-foreground: var(--overlay-foreground);
+
+        --color-accent: var(--accent);
+        --color-accent-foreground: var(--accent-foreground);
+        --color-accent-soft: var(--accent-soft);
+        --color-accent-soft-foreground: var(--accent-soft-foreground);
+
+        --color-default: var(--default);
+        --color-default-foreground: var(--default-foreground);
+        --color-default-soft-foreground: var(--default-soft-foreground);
+        --color-success: var(--success);
+        --color-success-foreground: var(--success-foreground);
+        --color-success-soft: var(--success-soft);
+        --color-success-soft-foreground: var(--success-soft-foreground);
+        --color-warning: var(--warning);
+        --color-warning-foreground: var(--warning-foreground);
+        --color-warning-soft: var(--warning-soft);
+        --color-warning-soft-foreground: var(--warning-soft-foreground);
+        --color-danger: var(--danger);
+        --color-danger-foreground: var(--danger-foreground);
+        --color-danger-soft: var(--danger-soft);
+        --color-danger-soft-foreground: var(--danger-soft-foreground);
+
+        --color-border: var(--border);
+        --color-separator: var(--separator);
+        --color-focus: var(--focus);
+        --color-link: var(--link);
+
+        --color-field: var(--field-background);
+        --color-field-foreground: var(--field-foreground);
+        --color-field-placeholder: var(--field-placeholder);
+        --color-field-border: var(--field-border);
+
+        --radius-field: var(--field-radius);
+        --shadow-surface: var(--surface-shadow);
+        --shadow-overlay: var(--overlay-shadow);
+      }
+
+      :root,
+      [data-theme='light'] {
+        color-scheme: light;
+
+        --white: oklch(100% 0 0);
+        --snow: oklch(0.9911 0 0);
+        --eclipse: oklch(0.2103 0.0059 285.89);
+
+        --radius: 0.5rem;
+        --field-radius: calc(var(--radius) * 1.5);
+
+        --background: oklch(0.9702 0 0);
+        --foreground: var(--eclipse);
+        --muted: oklch(0.5517 0.0138 285.94);
+
+        --surface: var(--white);
+        --surface-foreground: var(--foreground);
+        --surface-secondary: oklch(0.9524 0.0013 286.37);
+        --surface-tertiary: oklch(0.9373 0.0013 286.37);
+        --overlay: var(--white);
+        --overlay-foreground: var(--foreground);
+
+        --accent: oklch(0.6204 0.195 253.83);
+        --accent-foreground: var(--snow);
+        --default: oklch(94% 0.001 286.375);
+        --default-foreground: var(--eclipse);
+
+        --success: oklch(0.7329 0.1935 150.81);
+        --success-foreground: var(--eclipse);
+        --warning: oklch(0.7819 0.1585 72.33);
+        --warning-foreground: var(--eclipse);
+        --danger: oklch(0.6532 0.2328 25.74);
+        --danger-foreground: var(--snow);
+
+        --field-background: var(--white);
+        --field-foreground: var(--eclipse);
+        --field-placeholder: var(--muted);
+        --field-border: transparent;
+
+        --border: oklch(90% 0.004 286.32);
+        --separator: oklch(92% 0.004 286.32);
+        --focus: var(--accent);
+        --link: var(--foreground);
+
+        --background-secondary: color-mix(
+          in oklab,
+          var(--background) 96%,
+          var(--foreground) 4%
+        );
+        --accent-soft: color-mix(in oklab, var(--accent) 15%, transparent);
+        --accent-soft-foreground: color-mix(
+          in oklab,
+          var(--accent) 70%,
+          var(--foreground) 30%
+        );
+        --default-soft-foreground: var(--default-foreground);
+        --success-soft: color-mix(in oklab, var(--success) 15%, transparent);
+        --success-soft-foreground: color-mix(
+          in oklab,
+          var(--success) 80%,
+          var(--foreground) 60%
+        );
+        --warning-soft: color-mix(in oklab, var(--warning) 15%, transparent);
+        --warning-soft-foreground: color-mix(
+          in oklab,
+          var(--warning) 80%,
+          var(--foreground) 70%
+        );
+        --danger-soft: color-mix(in oklab, var(--danger) 15%, transparent);
+        --danger-soft-foreground: color-mix(
+          in oklab,
+          var(--danger) 70%,
+          var(--foreground) 40%
+        );
+
+        --surface-shadow:
+          0 2px 4px 0 rgba(0, 0, 0, 0.04), 0 1px 2px 0 rgba(0, 0, 0, 0.06),
+          0 0 1px 0 rgba(0, 0, 0, 0.06);
+        --overlay-shadow:
+          0 2px 8px 0 rgba(0, 0, 0, 0.06), 0 -6px 12px 0 rgba(0, 0, 0, 0.03),
+          0 14px 28px 0 rgba(0, 0, 0, 0.08);
+      }
+
+      [data-theme='dark'] {
+        color-scheme: dark;
+
+        --background: oklch(12% 0.005 285.823);
+        --foreground: var(--snow);
+        --muted: oklch(70.5% 0.015 286.067);
+
+        --surface: oklch(0.2103 0.0059 285.89);
+        --surface-foreground: var(--foreground);
+        --surface-secondary: oklch(0.257 0.0037 286.14);
+        --surface-tertiary: oklch(0.2721 0.0024 247.91);
+        --overlay: oklch(0.2103 0.0059 285.89);
+        --overlay-foreground: var(--foreground);
+
+        --default: oklch(27.4% 0.006 286.033);
+        --default-foreground: var(--snow);
+        --warning: oklch(0.8203 0.1388 76.34);
+        --danger: oklch(0.594 0.1967 24.63);
+
+        --field-background: oklch(0.2103 0.0059 285.89);
+        --field-foreground: var(--foreground);
+
+        --border: oklch(28% 0.006 286.033);
+        --separator: oklch(25% 0.006 286.033);
+
+        --accent-soft: color-mix(in oklab, var(--accent) 12%, transparent);
+        --accent-soft-foreground: color-mix(
+          in oklab,
+          var(--accent) 80%,
+          var(--foreground) 30%
+        );
+        --default-soft-foreground: var(--default-foreground);
+        --danger-soft-foreground: color-mix(
+          in oklab,
+          var(--danger) 80%,
+          var(--foreground) 30%
+        );
+        --warning-soft-foreground: color-mix(
+          in oklab,
+          var(--warning) 80%,
+          var(--foreground) 30%
+        );
+        --success-soft-foreground: color-mix(
+          in oklab,
+          var(--success) 80%,
+          var(--foreground) 30%
+        );
+
+        --surface-shadow: 0 0 0 0 transparent inset;
+        --overlay-shadow: 0 0 1px 0 rgba(255, 255, 255, 0.3) inset;
+      }
+
+    </style>
+  </head>
+
+  <body class="bg-background text-foreground min-h-screen antialiased">
+    <main class="mx-auto w-[1600px]">
+<div class="flex min-h-full flex-col gap-8 bg-background p-12">
+  <div class="flex flex-col gap-1.5">
+    <h1 class="text-2xl font-semibold tracking-tight text-foreground">Arrival inspection &#183; ending dialogs</h1>
+    <p class="max-w-[1400px] text-sm leading-relaxed text-muted">A review board, not a viewport. Both ending modals render at their true 720px width inside the desktop and mobile shells; the amend dialog at 440px. Condition is stated before assignment, so the assignable figure is known while the member assigns it (spec &#167;8).</p>
+  </div>
+  <div class="flex items-start gap-6">
+    <div class="flex w-[720px] shrink-0 flex-col gap-3 self-start"><p class="shrink-0 text-[11px] font-semibold tracking-[0.07em] text-muted ">RECORD AN ARRIVAL AT YOUR DOCK · AC-01 / AC-05 / AC-08 / AC-15 / AC-10</p><div class="flex w-full flex-col gap-5 rounded-3xl bg-overlay p-6 shadow-overlay">
+  <div class="flex flex-col gap-1">
+    <h2 class="text-lg leading-snug font-semibold tracking-tight text-foreground">Record what arrived on line 1</h2>
+    <p class="text-sm leading-relaxed text-muted">One line&#8217;s ending, recorded once: what the supplier presented, how much of it you refuse and why, and whether they followed the instruction you froze. Line 1 of PD-0142 came to Am Kai 7, 21079 Hamburg &#8212; your dock.</p>
+  </div>
+  <div class="flex flex-col gap-4">
+    <div class="flex w-full gap-3 rounded-2xl bg-accent-soft p-3.5">
+  <span class="mt-px shrink-0 text-accent-soft-foreground"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></span>
+  <div class="flex min-w-0 flex-col gap-0.5">
+    <p class="text-sm font-semibold text-foreground">This ends line 1 only, and its condition with it</p>
+    <p class="text-[13px] leading-relaxed text-muted">Line 2 ships direct to a customer and keeps its own ending. Nothing here can be refused, reworded or re-judged afterwards — only a refusal’s description and what became of the goods stay amendable.</p>
+  </div>
+</div>
+    <label class="flex w-[260px] flex-col gap-1.5"><span class="text-sm font-medium text-foreground">Presented by the supplier</span>
+  <span class="flex items-center gap-2 h-9 rounded-field border border-border bg-field px-3 text-field-foreground"><span class="min-w-0 flex-1 text-sm leading-snug">1 200</span></span>
+  <span class="text-xs leading-snug text-muted">1 200 was ordered. Count everything the supplier stood behind — including what you are about to refuse, and what a sealed unit declared but did not hold.</span></label>
+    <div class="flex w-full flex-col gap-3 rounded-2xl border border-border bg-surface p-4">
+  <div class="flex w-full flex-wrap items-center gap-2.5">
+    <p class="shrink-0 text-[11px] font-semibold tracking-[0.07em] text-muted ">CONDITION</p>
+    <span class="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-default px-2.5 py-[3px] text-xs font-medium text-default-foreground"><span class="size-1.5 rounded-full bg-current opacity-70"></span>Inspected at your dock</span>
+    <span class="flex-1"></span>
+    <button type="button" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-field font-medium bg-default text-default-foreground h-9 px-4 text-sm h-8"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/><path d="m17 13 5 5"/><path d="m22 13-5 5"/></svg>Refuse some of this</button>
+  </div>
+  <div class="flex w-full items-center rounded-2xl border border-border bg-surface-secondary px-4 py-3"><div class="flex flex-1 flex-col gap-[3px]"><span class="text-[11px] font-semibold tracking-[0.07em] text-muted">ORDERED</span><span class="text-xl font-semibold tracking-tight text-muted">1 200</span></div><div class="flex flex-1 flex-col gap-[3px]"><span class="text-[11px] font-semibold tracking-[0.07em] text-muted">PRESENTED</span><span class="text-xl font-semibold tracking-tight text-foreground">1 200</span></div><div class="flex flex-1 flex-col gap-[3px]"><span class="text-[11px] font-semibold tracking-[0.07em] text-muted">REFUSED</span><span class="text-xl font-semibold tracking-tight text-danger">8</span></div><div class="flex flex-1 flex-col gap-[3px]"><span class="text-[11px] font-semibold tracking-[0.07em] text-muted">ACCEPTED</span><span class="text-xl font-semibold tracking-tight text-foreground">1 192</span></div></div>
+  <div class="flex w-full flex-col gap-2.5">
+    <div class="flex w-full flex-col gap-2.5 rounded-2xl border border-border bg-surface p-3">
+  <div class="flex w-full items-end gap-2.5">
+    <label class="flex w-[110px] flex-col gap-1.5"><span class="text-sm font-medium text-foreground">Refused</span>
+  <span class="flex items-center gap-2 h-9 rounded-field border border-border bg-field px-3 text-field-foreground"><span class="min-w-0 flex-1 text-sm leading-snug">5</span></span></label>
+    <label class="flex flex-1 flex-col gap-1.5"><span class="text-sm font-medium text-foreground">Reason</span>
+  <span class="flex items-center gap-2 h-9 rounded-field border border-border bg-field px-3 text-field-foreground"><span class="min-w-0 flex-1 text-sm leading-snug">Damaged by packing</span><span class="shrink-0 text-muted"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span></span></label>
+    <span class="mb-0 inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-default text-default-foreground"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span>
+  </div>
+  <label class="flex w-full flex-col gap-1.5"><span class="text-sm font-medium text-foreground">What was wrong</span>
+  <span class="flex items-start gap-2 py-2.5 min-h-[56px] rounded-field border border-border bg-field px-3 text-field-foreground"><span class="min-w-0 flex-1 text-sm leading-snug">Five drums stacked three high against the note; two split at the seam.</span></span>
+  <span class="text-xs leading-snug text-muted">Shown to anyone who may read this refusal. Required for “Unfit — other”. Up to 1 000 characters.</span></label>
+</div>
+    <div class="flex w-full flex-col gap-2.5 rounded-2xl border border-border bg-surface p-3">
+  <div class="flex w-full items-end gap-2.5">
+    <label class="flex w-[110px] flex-col gap-1.5"><span class="text-sm font-medium text-foreground">Refused</span>
+  <span class="flex items-center gap-2 h-9 rounded-field border border-border bg-field px-3 text-field-foreground"><span class="min-w-0 flex-1 text-sm leading-snug">3</span></span></label>
+    <label class="flex flex-1 flex-col gap-1.5"><span class="text-sm font-medium text-foreground">Reason</span>
+  <span class="flex items-center gap-2 h-9 rounded-field border border-border bg-field px-3 text-field-foreground"><span class="min-w-0 flex-1 text-sm leading-snug">Packaging not as instructed</span><span class="shrink-0 text-muted"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span></span></label>
+    <span class="mb-0 inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-default text-default-foreground"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span>
+  </div>
+  <label class="flex w-full flex-col gap-1.5"><span class="text-sm font-medium text-foreground">What was wrong</span>
+  <span class="flex items-start gap-2 py-2.5 min-h-[56px] rounded-field border border-border bg-field px-3 text-field-foreground"><span class="min-w-0 flex-1 text-sm leading-snug">Loose in the trailer, no pallet and no customer barcode.</span></span>
+  <span class="text-xs leading-snug text-muted">Shown to anyone who may read this refusal. Required for “Unfit — other”. Up to 1 000 characters.</span></label>
+</div>
+  </div>
+  <p class="text-xs leading-relaxed text-muted ">Accepted is what remains — you never type it, so it can never disagree with the refusals above. One refusal per reason. Every refusal on this line is recorded as inspected at your dock, because that is where the goods came.</p>
+</div>
+    <div class="flex w-full flex-col gap-3 rounded-2xl border border-border bg-surface p-4">
+  <p class="shrink-0 text-[11px] font-semibold tracking-[0.07em] text-muted ">DID THE SUPPLIER FOLLOW YOUR INSTRUCTION?</p>
+  <div class="flex w-full items-start gap-2.5 rounded-2xl bg-surface-secondary px-3 py-2.5">
+    <span class="mt-0.5 shrink-0 text-muted"><svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+    <div class="flex min-w-0 flex-col gap-0.5">
+      <p class="text-[13px] font-semibold text-foreground">Packaging type — Pallet, shrink-wrapped</p>
+      <p class="text-xs leading-relaxed text-muted">Value-adding note — “Shrink-wrap each pallet and apply the customer barcode to the outer face.”</p>
+    </div>
+  </div>
+  <div class="flex flex-wrap items-center gap-7" role="radiogroup" aria-label="Did the supplier follow your instruction?">
+    <span class="inline-flex items-center gap-2.5"><span><span class="size-5 shrink-0 rounded-full border border-border bg-field"></span></span><span class="text-sm text-foreground">Met</span></span><span class="inline-flex items-center gap-2.5"><span><span class="grid size-5 shrink-0 place-items-center rounded-full bg-accent"><span class="size-[7px] rounded-full bg-accent-foreground"></span></span></span><span class="text-sm font-semibold text-foreground">Not met</span></span><span class="inline-flex items-center gap-2.5 opacity-45"><span><span class="size-5 shrink-0 rounded-full border border-border bg-field"></span></span><span class="text-sm text-foreground">Not applicable</span></span>
+  </div>
+  <label class="flex w-full flex-col gap-1.5"><span class="text-sm font-medium text-foreground">What was wrong with it</span>
+  <span class="flex items-start gap-2 py-2.5 min-h-[56px] rounded-field border border-border bg-field px-3 text-field-foreground"><span class="min-w-0 flex-1 text-sm leading-snug">Delivered loose, not on pallets, and no customer barcode on any carton. Wrap was applied to the outer stack only.</span></span>
+  <span class="text-xs leading-snug text-muted">Required when the instruction was not met. Up to 1 000 characters.</span></label>
+  <p class="text-xs leading-relaxed text-muted ">This line was frozen carrying an instruction, so it is judged Met or Not met — “Not applicable” belongs only to a line that was given neither. Nothing is pre-selected: the fastest way through this form still needs you to look.</p>
+</div>
+    <div class="flex w-full flex-col gap-2.5">
+  <p class="shrink-0 text-[11px] font-semibold tracking-[0.07em] text-muted ">ASSIGN WHAT YOU ACCEPTED · 1 192 AVAILABLE</p>
+  <ul class="flex w-full flex-col gap-2.5"><li class="flex w-full items-center gap-3 rounded-2xl bg-surface-secondary px-3.5 py-2.5">
+  <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+    <p class="text-sm font-semibold text-foreground">Nordwind Logistik GmbH</p>
+    <p class="text-xs leading-relaxed text-muted">Unfulfilled · 1 000 outstanding · needed by 2 Sep 2026 · going to Hafenstraße 14, Hamburg</p>
+  </div>
+  <label class="flex w-[150px] flex-col gap-1.5"><span class="text-sm font-medium text-foreground">Assign to them</span>
+  <span class="flex items-center gap-2 h-9 rounded-field border border-border bg-field px-3 text-field-foreground"><span class="min-w-0 flex-1 text-sm leading-snug">812</span></span></label>
+  <span class="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-muted"><svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span>
+</li><li class="flex w-full items-center gap-3 rounded-2xl bg-surface-secondary px-3.5 py-2.5">
+  <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+    <p class="text-sm font-semibold text-foreground">Sudhafen Handel KG</p>
+    <p class="text-xs leading-relaxed text-muted">Unfulfilled · 380 outstanding · needed by 11 Sep 2026 · going to Kaimauer 5, Rostock</p>
+  </div>
+  <label class="flex w-[150px] flex-col gap-1.5"><span class="text-sm font-medium text-foreground">Assign to them</span>
+  <span class="flex items-center gap-2 h-9 rounded-field border border-border bg-field px-3 text-field-foreground"><span class="min-w-0 flex-1 text-sm leading-snug">380</span></span></label>
+  <span class="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-muted"><svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span>
+</li></ul>
+  <p role="status" aria-live="polite" class="text-sm leading-relaxed text-muted">1 192 accepted · 1 192 assigned · 0 left unassigned. Assigning 380 fulfils Sudhafen Handel KG. The eight you refused stay on Nordwind Logistik GmbH’s consolidated demand, to be re-ordered.</p>
+</div>
+    <div class="flex w-full gap-3 rounded-2xl bg-default p-3.5">
+  <span class="mt-px shrink-0 text-default-soft-foreground"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></span>
+  <div class="flex min-w-0 flex-col gap-0.5">
+    <p class="text-sm font-semibold text-foreground">On-hand quantity does not move, and neither does refused demand</p>
+    <p class="text-[13px] leading-relaxed text-muted">An arrival records that goods reached the transit zone. What you refuse is never assigned, so the customer waiting for it keeps waiting — nobody is told, and no replacement is ordered for you.</p>
+  </div>
+</div>
+  </div>
+  <div class="flex justify-end gap-3"><button type="button" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-field font-medium bg-default text-default-foreground h-9 px-4 text-sm ">Cancel</button><button type="button" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-field font-medium bg-accent text-accent-foreground h-9 px-4 text-sm ">Record arrival</button></div>
+</div></div>
+    <div class="flex w-[720px] shrink-0 flex-col gap-3 self-start"><p class="shrink-0 text-[11px] font-semibold tracking-[0.07em] text-muted ">RECORD WHAT THE CUSTOMER RECEIVED · AC-24 / AC-15a / AC-04 / AC-25</p><div class="flex w-full flex-col gap-5 rounded-3xl bg-overlay p-6 shadow-overlay">
+  <div class="flex flex-col gap-1">
+    <h2 class="text-lg leading-snug font-semibold tracking-tight text-foreground">Record what the customer received on line 2</h2>
+    <p class="text-sm leading-relaxed text-muted">Line 2 of PD-0142 went straight from the supplier to Sudhafen Handel KG at Kaimauer 5, 18055 Rostock. You never saw these goods, so everything below is what the customer told you &#8212; recorded once, and final.</p>
+  </div>
+  <div class="flex flex-col gap-4">
+    <div class="flex w-full gap-3 rounded-2xl bg-accent-soft p-3.5">
+  <span class="mt-px shrink-0 text-accent-soft-foreground"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></span>
+  <div class="flex min-w-0 flex-col gap-0.5">
+    <p class="text-sm font-semibold text-foreground">This ends line 2 only, and its condition with it</p>
+    <p class="text-[13px] leading-relaxed text-muted">Line 1 came to your own dock and keeps its own ending. Once this is recorded nothing can be refused on line 2 — not tomorrow, not when the carton is opened.</p>
+  </div>
+</div>
+    <label class="flex w-[260px] flex-col gap-1.5"><span class="text-sm font-medium text-foreground">Delivered to the customer</span>
+  <span class="flex items-center gap-2 h-9 rounded-field border border-border bg-field px-3 text-field-foreground"><span class="min-w-0 flex-1 text-sm leading-snug">500</span></span>
+  <span class="text-xs leading-snug text-muted">500 was ordered on this line. Record what the customer’s own account says the supplier delivered, including anything they are refusing.</span></label>
+    <div class="flex w-full flex-col gap-3 rounded-2xl border border-border bg-surface p-4">
+  <div class="flex w-full flex-wrap items-center gap-2.5">
+    <p class="shrink-0 text-[11px] font-semibold tracking-[0.07em] text-muted ">CONDITION, AS THE CUSTOMER REPORTED IT</p>
+    <span class="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-default px-2.5 py-[3px] text-xs font-medium text-default-foreground"><span class="size-1.5 rounded-full bg-current opacity-70"></span>Reported by the customer</span>
+    <span class="flex-1"></span>
+    <button type="button" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-field font-medium bg-default text-default-foreground h-9 px-4 text-sm h-8"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/><path d="m17 13 5 5"/><path d="m22 13-5 5"/></svg>Refuse some of this</button>
+  </div>
+  <div class="flex w-full items-center rounded-2xl border border-border bg-surface-secondary px-4 py-3"><div class="flex flex-1 flex-col gap-[3px]"><span class="text-[11px] font-semibold tracking-[0.07em] text-muted">ORDERED</span><span class="text-xl font-semibold tracking-tight text-muted">500</span></div><div class="flex flex-1 flex-col gap-[3px]"><span class="text-[11px] font-semibold tracking-[0.07em] text-muted">DELIVERED</span><span class="text-xl font-semibold tracking-tight text-foreground">500</span></div><div class="flex flex-1 flex-col gap-[3px]"><span class="text-[11px] font-semibold tracking-[0.07em] text-muted">REFUSED</span><span class="text-xl font-semibold tracking-tight text-danger">12</span></div><div class="flex flex-1 flex-col gap-[3px]"><span class="text-[11px] font-semibold tracking-[0.07em] text-muted">ACCEPTED</span><span class="text-xl font-semibold tracking-tight text-foreground">488</span></div></div>
+  <div class="flex w-full flex-col gap-2.5 rounded-2xl border border-border bg-surface p-3">
+  <div class="flex w-full items-end gap-2.5">
+    <label class="flex w-[110px] flex-col gap-1.5"><span class="text-sm font-medium text-foreground">Refused</span>
+  <span class="flex items-center gap-2 h-9 rounded-field border border-border bg-field px-3 text-field-foreground"><span class="min-w-0 flex-1 text-sm leading-snug">12</span></span></label>
+    <label class="flex flex-1 flex-col gap-1.5"><span class="text-sm font-medium text-foreground">Reason</span>
+  <span class="flex items-center gap-2 h-9 rounded-field border border-border bg-field px-3 text-field-foreground"><span class="min-w-0 flex-1 text-sm leading-snug">Damaged in transit</span><span class="shrink-0 text-muted"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span></span></label>
+    <span class="mb-0 inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-default text-default-foreground"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span>
+  </div>
+  <label class="flex w-full flex-col gap-1.5"><span class="text-sm font-medium text-foreground">What was wrong</span>
+  <span class="flex items-start gap-2 py-2.5 min-h-[56px] rounded-field border border-border bg-field px-3 text-field-foreground"><span class="min-w-0 flex-1 text-sm leading-snug">Customer reports two cartons crushed under the tail lift; they photographed them and refused those twelve on the spot.</span></span>
+  <span class="text-xs leading-snug text-muted">Shown to anyone who may read this refusal. Required for “Unfit — other”. Up to 1 000 characters.</span></label>
+</div>
+  <p class="text-xs leading-relaxed text-muted ">Accepted is what remains — you never type it. Every refusal on this line is recorded as reported by the customer, because nobody here ever saw these goods; a refusal you inspected yourself is not available on a line that never came to your dock.</p>
+</div>
+    <div class="flex w-full flex-col gap-3 rounded-2xl border border-border bg-surface p-4">
+  <p class="shrink-0 text-[11px] font-semibold tracking-[0.07em] text-muted ">DID THE SUPPLIER FOLLOW YOUR INSTRUCTION?</p>
+  <div class="flex w-full items-start gap-2.5 rounded-2xl bg-surface-secondary px-3 py-2.5">
+    <span class="mt-0.5 shrink-0 text-muted"><svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+    <div class="flex min-w-0 flex-col gap-0.5">
+      <p class="text-[13px] font-semibold text-foreground">Packaging type — Carton, palletized</p>
+      <p class="text-xs leading-relaxed text-muted">Value-adding note — “Label every carton with the customer’s own reference before dispatch.”</p>
+    </div>
+  </div>
+  <div class="flex flex-wrap items-center gap-7" role="radiogroup" aria-label="Did the supplier follow your instruction?">
+    <span class="inline-flex items-center gap-2.5"><span><span class="grid size-5 shrink-0 place-items-center rounded-full bg-accent"><span class="size-[7px] rounded-full bg-accent-foreground"></span></span></span><span class="text-sm font-semibold text-foreground">Met</span></span><span class="inline-flex items-center gap-2.5"><span><span class="size-5 shrink-0 rounded-full border border-border bg-field"></span></span><span class="text-sm text-foreground">Not met</span></span><span class="inline-flex items-center gap-2.5 opacity-45"><span><span class="size-5 shrink-0 rounded-full border border-border bg-field"></span></span><span class="text-sm text-foreground">Not applicable</span></span>
+  </div>
+  
+  <p class="text-xs leading-relaxed text-muted ">This line was frozen carrying an instruction, so it is judged Met or Not met. The customer confirmed the cartons were labelled, so this is Met even though twelve of them arrived crushed — how goods were packed and how they travelled are two different judgements.</p>
+</div>
+    <div class="flex w-full flex-col gap-2.5">
+  <p class="shrink-0 text-[11px] font-semibold tracking-[0.07em] text-muted ">ASSIGN WHAT THE CUSTOMER KEPT · 488 AVAILABLE</p>
+  <ul class="flex w-full flex-col gap-2.5"><li class="flex w-full items-center gap-3 rounded-2xl bg-surface-secondary px-3.5 py-2.5">
+  <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+    <p class="text-sm font-semibold text-foreground">Sudhafen Handel KG</p>
+    <p class="text-xs leading-relaxed text-muted">Unfulfilled · 500 outstanding · needed by 11 Sep 2026 · going to Kaimauer 5, Rostock</p>
+  </div>
+  <label class="flex w-[150px] flex-col gap-1.5"><span class="text-sm font-medium text-foreground">Assign to them</span>
+  <span class="flex items-center gap-2 h-9 rounded-field border border-border bg-field px-3 text-field-foreground"><span class="min-w-0 flex-1 text-sm leading-snug">488</span></span></label>
+  <span class="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-muted"><svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span>
+</li></ul>
+  <p role="status" aria-live="polite" class="text-sm leading-relaxed text-muted">488 delivered and kept · 488 assigned · 0 left unassigned. Sudhafen Handel KG was waiting for 500 and stays waiting for 12.</p>
+</div>
+    <div class="flex w-full gap-3 rounded-2xl bg-default p-3.5">
+  <span class="mt-px shrink-0 text-default-soft-foreground"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></span>
+  <div class="flex min-w-0 flex-col gap-0.5">
+    <p class="text-sm font-semibold text-foreground">Nothing moved through your warehouse, and the refused twelve are still owed</p>
+    <p class="text-[13px] leading-relaxed text-muted">These goods never entered your building, so no on-hand quantity changes. The twelve stay on Sudhafen Handel KG’s consolidated demand until somebody orders them again — nobody is told and nothing is re-ordered for you.</p>
+  </div>
+</div>
+    <div class="flex w-full gap-3 rounded-2xl bg-warning-soft p-3.5">
+      <span class="mt-px shrink-0 text-warning-soft-foreground"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span>
+      <div class="flex min-w-0 flex-col gap-2">
+        <p class="text-sm font-semibold text-foreground">This ending is final &#8212; has the customer reported on these goods?</p>
+        <p class="text-[13px] leading-relaxed text-muted">A line&#8217;s ending is recorded once. If they telephone tomorrow with damage there is nowhere here to record it, and no reporting window will remind you &#8212; you alone judge when their account is settled. Nothing is lost by waiting.</p>
+        <span class="inline-flex items-center gap-2.5"><span class="grid size-5 shrink-0 place-items-center rounded-md bg-accent text-accent-foreground"><svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span><span class="text-sm font-medium text-foreground">The customer has told me what arrived.</span></span>
+      </div>
+    </div>
+  </div>
+  <div class="flex justify-end gap-3"><button type="button" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-field font-medium bg-default text-default-foreground h-9 px-4 text-sm ">Cancel</button><button type="button" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-field font-medium bg-accent text-accent-foreground h-9 px-4 text-sm ">Record delivery</button></div>
+</div></div>
+  </div>
+  <div class="flex items-start gap-6">
+    <div class="flex w-[440px] shrink-0 flex-col gap-3 self-start"><p class="shrink-0 text-[11px] font-semibold tracking-[0.07em] text-muted ">AMEND A REFUSAL · AC-18 / AC-18a / AC-18b / AC-19</p><div class="flex w-full flex-col gap-5 rounded-3xl bg-overlay p-6 shadow-overlay">
+  <div class="flex flex-col gap-1">
+    <h2 class="text-lg leading-snug font-semibold tracking-tight text-foreground">Amend this refusal</h2>
+    <p class="text-sm leading-relaxed text-muted">Correct what you wrote, and record what became of the goods.</p>
+  </div>
+  <div class="flex flex-col gap-4">
+    <div class="flex w-full flex-col gap-1.5 rounded-2xl bg-surface-secondary px-3.5 py-3">
+      <div class="flex items-center gap-2"><span class="shrink-0 text-muted"><svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><p class="text-[13px] font-semibold text-foreground">8 refused &#183; Damaged by packing</p></div>
+      <p class="text-xs leading-relaxed text-muted">Inspected at your dock &#183; line 1 of PD-0142 &#183; raised by Iryna Kovalenko, 26 Aug 2026 at 14:31. The quantity, the reason, where it came from and the line it belongs to cannot be changed.</p>
+    </div>
+    <label class="flex w-full flex-col gap-1.5"><span class="text-sm font-medium text-foreground">What became of the goods</span>
+  <span class="flex items-center gap-2 h-9 rounded-field border border-border bg-field px-3 text-field-foreground"><span class="min-w-0 flex-1 text-sm leading-snug">Held for return</span><span class="shrink-0 text-muted"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span></span>
+  <span class="text-xs leading-snug text-muted">Undecided, Refused at delivery, Held for return or Scrapped on site. Once you decide, you can correct it to another decision — never back to Undecided.</span></label>
+    <label class="flex w-full flex-col gap-1.5"><span class="text-sm font-medium text-foreground">What was wrong</span>
+  <span class="flex items-start gap-2 py-2.5 min-h-[76px] rounded-field border border-border bg-field px-3 text-field-foreground"><span class="min-w-0 flex-1 text-sm leading-snug">Five drums stacked three high against the note; two split at the seam. Supplier’s transport manager called 27 Aug and accepted the return.</span></span>
+  <span class="text-xs leading-snug text-muted">Up to 1 000 characters.</span></label>
+    <div class="flex w-full gap-3 rounded-2xl bg-default p-3.5">
+  <span class="mt-px shrink-0 text-default-soft-foreground"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></span>
+  <div class="flex min-w-0 flex-col gap-0.5">
+    <p class="text-sm font-semibold text-foreground">Both changes are attributed</p>
+    <p class="text-[13px] leading-relaxed text-muted">Your name and the time are recorded against this refusal every time either field changes. Nothing else about it moves.</p>
+  </div>
+</div>
+  </div>
+  <div class="flex justify-end gap-3"><button type="button" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-field font-medium bg-default text-default-foreground h-9 px-4 text-sm ">Cancel</button><button type="button" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-field font-medium bg-accent text-accent-foreground h-9 px-4 text-sm ">Save changes</button></div>
+</div></div>
+    <div class="flex w-[720px] shrink-0 flex-col gap-3 self-start"><p class="shrink-0 text-[11px] font-semibold tracking-[0.07em] text-muted ">REFUSING AFTER YOU HAVE ALREADY ASSIGNED · spec §8 · fragment of the same modal</p><div class="flex w-full flex-col gap-4 rounded-3xl bg-overlay p-6 shadow-overlay">
+  <div class="flex w-full items-center rounded-2xl border border-border bg-surface-secondary px-4 py-3"><div class="flex flex-1 flex-col gap-[3px]"><span class="text-[11px] font-semibold tracking-[0.07em] text-muted">ORDERED</span><span class="text-xl font-semibold tracking-tight text-muted">1 200</span></div><div class="flex flex-1 flex-col gap-[3px]"><span class="text-[11px] font-semibold tracking-[0.07em] text-muted">PRESENTED</span><span class="text-xl font-semibold tracking-tight text-foreground">1 200</span></div><div class="flex flex-1 flex-col gap-[3px]"><span class="text-[11px] font-semibold tracking-[0.07em] text-muted">REFUSED</span><span class="text-xl font-semibold tracking-tight text-danger">8</span></div><div class="flex flex-1 flex-col gap-[3px]"><span class="text-[11px] font-semibold tracking-[0.07em] text-muted">ACCEPTED</span><span class="text-xl font-semibold tracking-tight text-foreground">1 192</span></div></div>
+  <div class="flex w-full gap-3 rounded-2xl bg-warning-soft p-3.5">
+  <span class="mt-px shrink-0 text-warning-soft-foreground"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span>
+  <div class="flex min-w-0 flex-col gap-0.5">
+    <p class="text-sm font-semibold text-foreground">You have assigned more than you accepted</p>
+    <p class="text-[13px] leading-relaxed text-muted">You accepted 1 192 and have assigned 1 200. Take 8 off one of the orders below — your figures are kept exactly as you typed them, and withdrawing the refusal is not the cheapest way out of this.</p>
+  </div>
+</div>
+  <div class="flex w-full flex-col gap-2.5">
+  <p class="shrink-0 text-[11px] font-semibold tracking-[0.07em] text-muted ">ASSIGN WHAT YOU ACCEPTED · 1 192 AVAILABLE · 1 200 ASSIGNED</p>
+  <ul class="flex w-full flex-col gap-2.5"><li class="flex w-full items-center gap-3 rounded-2xl bg-surface-secondary px-3.5 py-2.5">
+  <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+    <p class="text-sm font-semibold text-foreground">Nordwind Logistik GmbH</p>
+    <p class="text-xs leading-relaxed text-muted">Unfulfilled · 1 000 outstanding · needed by 2 Sep 2026 · going to Hafenstraße 14, Hamburg</p>
+  </div>
+  <label class="flex w-[150px] flex-col gap-1.5"><span class="text-sm font-medium text-foreground">Assign to them</span>
+  <span class="flex items-center gap-2 h-9 rounded-field border border-danger bg-field px-3 text-field-foreground"><span class="min-w-0 flex-1 text-sm leading-snug">820</span></span>
+  <span class="text-xs leading-snug text-danger">8 too many — you accepted 1 192 in total.</span></label>
+  <span class="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-muted"><svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span>
+</li><li class="flex w-full items-center gap-3 rounded-2xl bg-surface-secondary px-3.5 py-2.5">
+  <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+    <p class="text-sm font-semibold text-foreground">Sudhafen Handel KG</p>
+    <p class="text-xs leading-relaxed text-muted">Unfulfilled · 380 outstanding · needed by 11 Sep 2026 · going to Kaimauer 5, Rostock</p>
+  </div>
+  <label class="flex w-[150px] flex-col gap-1.5"><span class="text-sm font-medium text-foreground">Assign to them</span>
+  <span class="flex items-center gap-2 h-9 rounded-field border border-border bg-field px-3 text-field-foreground"><span class="min-w-0 flex-1 text-sm leading-snug">380</span></span></label>
+  <span class="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-muted"><svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span>
+</li></ul>
+  <p role="status" aria-live="polite" class="text-sm leading-relaxed text-danger">1 192 accepted · 1 200 assigned · 8 over. Nothing has been sent yet and nothing has been cleared.</p>
+</div>
+  <p class="text-xs leading-relaxed text-muted ">The refusal is not what is flagged — the assignment is, and only the field that overshoots. Refusals are stated before assignments precisely so this is rare; when it happens the recovery is to redistribute, not to un-refuse the goods.</p>
+</div></div>
+  </div>
+</div>
+    </main>
+  </body>
+</html>

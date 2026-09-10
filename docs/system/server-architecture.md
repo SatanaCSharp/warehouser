@@ -98,7 +98,9 @@ and persistence-oriented values only.
 Mappings between shared persistence entities and feature-owned domain objects belong in
 `<feature-name>/domain/mappers/`. A feature use case or domain service invokes mappings such as
 `toSession` and `toSessionEntity` above the repository boundary; repositories never perform
-feature/domain mapping.
+feature/domain mapping. The REST layer's own translation — the wire shape a controller returns or
+accepts — belongs in `<feature-name>/rest/mappers/` for the same reason. Neither may be written
+into the file that uses it; the architectural tier below enforces both.
 
 ### Services
 
@@ -386,6 +388,7 @@ Before completing server work, run:
 ```sh
 pnpm --filter @warehouser/server lint
 pnpm --filter @warehouser/server test
+pnpm --filter @warehouser/server test:architectural
 pnpm --filter @warehouser/server build
 ```
 
@@ -458,3 +461,39 @@ along with the load smokes, which asserted p95 latency and throughput that only 
 against the server the application actually runs on. Do not add specs of either kind back without
 reintroducing a real-PostgreSQL tier to run them in — in this suite they would pass without
 proving anything, which is worse than not having them.
+
+### Running the architectural tier
+
+Specs named `*.architectural.spec.ts` assert the shape of the source tree rather than what it
+computes. They live in `src/test/architectural/`, parse every production file with
+[ts-morph](https://ts-morph.com), and — like the integration tier — are excluded from
+`jest.config.cjs` by path and opted back in by their own config, because parsing the whole tree
+costs seconds where a unit spec costs milliseconds:
+
+```sh
+pnpm --filter @warehouser/server test:architectural
+```
+
+What the tier holds today is mapper placement. `mapping-patterns.ts` recognizes a mapping by the
+shapes this repository writes them in — an object literal read off the parameters, a `map` over a
+collection, a persistence row constructed field by field or through `manager.create`, fields handed
+to a domain factory, a conversion that branches or delegates, and a function declared to return a
+published contract — and `mapper-placement.architectural.spec.ts` then requires every one of them
+to sit in `<module>/domain/mappers/` or `<module>/rest/mappers/`, in the layer that calls it, in a
+file named `*.mapper.ts`, and never in the file that uses it.
+
+Two exclusions are deliberate. `src/shared/` is server-wide infrastructure with no feature
+`domain/` or `rest/` layer: a repository that shapes its own raw rows next to the query producing
+them is following [Creating a server repository](guides/creating-a-server-repository.md), not
+breaking this rule. And an anonymous callback is not a _separate_ mapper — a use case composing its
+own result inline is the use case, while a **named** conversion beside its one caller is the thing
+this gate refuses, because the next feature that needs the same translation cannot see it and ends
+up with a second copy that then disagrees.
+
+A detector nobody checks is worse than no gate: a placement assertion over a detector that
+recognizes nothing passes cleanly while a response mapper sits in a controller. So
+`mapping-patterns.architectural.spec.ts` is the control on it — each pattern is exercised on a
+fixture, each near-miss (a predicate, a value object's factory, a use case's `execute`, a driver-
+result classification) is asserted _not_ to match, and the real tree is asserted to still contain
+the mappings we know are in it. When you add a mapping in a shape the detector cannot see, add the
+shape to both files.

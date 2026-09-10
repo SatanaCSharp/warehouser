@@ -1,0 +1,330 @@
+<!doctype html>
+<!--
+  Preview evidence - design-ui skill. Review artifact only; never an implementation source.
+
+  Frame:         Arrival Inspection / Required States / Desktop / v1
+  Design source: docs/mockups/app.pen
+  Node ID:       N4IoNS
+  Viewport:      review board 1500×2130
+  States:        authorization, domain-invariant, cross-context and success states across AC-01a…AC-26
+-->
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Arrival inspection · Required states</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style type="text/tailwindcss">
+      @theme inline {
+        --color-background: var(--background);
+        --color-background-secondary: var(--background-secondary);
+        --color-foreground: var(--foreground);
+        --color-muted: var(--muted);
+
+        --color-surface: var(--surface);
+        --color-surface-foreground: var(--surface-foreground);
+        --color-surface-secondary: var(--surface-secondary);
+        --color-surface-tertiary: var(--surface-tertiary);
+        --color-overlay: var(--overlay);
+        --color-overlay-foreground: var(--overlay-foreground);
+
+        --color-accent: var(--accent);
+        --color-accent-foreground: var(--accent-foreground);
+        --color-accent-soft: var(--accent-soft);
+        --color-accent-soft-foreground: var(--accent-soft-foreground);
+
+        --color-default: var(--default);
+        --color-default-foreground: var(--default-foreground);
+        --color-default-soft-foreground: var(--default-soft-foreground);
+        --color-success: var(--success);
+        --color-success-foreground: var(--success-foreground);
+        --color-success-soft: var(--success-soft);
+        --color-success-soft-foreground: var(--success-soft-foreground);
+        --color-warning: var(--warning);
+        --color-warning-foreground: var(--warning-foreground);
+        --color-warning-soft: var(--warning-soft);
+        --color-warning-soft-foreground: var(--warning-soft-foreground);
+        --color-danger: var(--danger);
+        --color-danger-foreground: var(--danger-foreground);
+        --color-danger-soft: var(--danger-soft);
+        --color-danger-soft-foreground: var(--danger-soft-foreground);
+
+        --color-border: var(--border);
+        --color-separator: var(--separator);
+        --color-focus: var(--focus);
+        --color-link: var(--link);
+
+        --color-field: var(--field-background);
+        --color-field-foreground: var(--field-foreground);
+        --color-field-placeholder: var(--field-placeholder);
+        --color-field-border: var(--field-border);
+
+        --radius-field: var(--field-radius);
+        --shadow-surface: var(--surface-shadow);
+        --shadow-overlay: var(--overlay-shadow);
+      }
+
+      :root,
+      [data-theme='light'] {
+        color-scheme: light;
+
+        --white: oklch(100% 0 0);
+        --snow: oklch(0.9911 0 0);
+        --eclipse: oklch(0.2103 0.0059 285.89);
+
+        --radius: 0.5rem;
+        --field-radius: calc(var(--radius) * 1.5);
+
+        --background: oklch(0.9702 0 0);
+        --foreground: var(--eclipse);
+        --muted: oklch(0.5517 0.0138 285.94);
+
+        --surface: var(--white);
+        --surface-foreground: var(--foreground);
+        --surface-secondary: oklch(0.9524 0.0013 286.37);
+        --surface-tertiary: oklch(0.9373 0.0013 286.37);
+        --overlay: var(--white);
+        --overlay-foreground: var(--foreground);
+
+        --accent: oklch(0.6204 0.195 253.83);
+        --accent-foreground: var(--snow);
+        --default: oklch(94% 0.001 286.375);
+        --default-foreground: var(--eclipse);
+
+        --success: oklch(0.7329 0.1935 150.81);
+        --success-foreground: var(--eclipse);
+        --warning: oklch(0.7819 0.1585 72.33);
+        --warning-foreground: var(--eclipse);
+        --danger: oklch(0.6532 0.2328 25.74);
+        --danger-foreground: var(--snow);
+
+        --field-background: var(--white);
+        --field-foreground: var(--eclipse);
+        --field-placeholder: var(--muted);
+        --field-border: transparent;
+
+        --border: oklch(90% 0.004 286.32);
+        --separator: oklch(92% 0.004 286.32);
+        --focus: var(--accent);
+        --link: var(--foreground);
+
+        --background-secondary: color-mix(
+          in oklab,
+          var(--background) 96%,
+          var(--foreground) 4%
+        );
+        --accent-soft: color-mix(in oklab, var(--accent) 15%, transparent);
+        --accent-soft-foreground: color-mix(
+          in oklab,
+          var(--accent) 70%,
+          var(--foreground) 30%
+        );
+        --default-soft-foreground: var(--default-foreground);
+        --success-soft: color-mix(in oklab, var(--success) 15%, transparent);
+        --success-soft-foreground: color-mix(
+          in oklab,
+          var(--success) 80%,
+          var(--foreground) 60%
+        );
+        --warning-soft: color-mix(in oklab, var(--warning) 15%, transparent);
+        --warning-soft-foreground: color-mix(
+          in oklab,
+          var(--warning) 80%,
+          var(--foreground) 70%
+        );
+        --danger-soft: color-mix(in oklab, var(--danger) 15%, transparent);
+        --danger-soft-foreground: color-mix(
+          in oklab,
+          var(--danger) 70%,
+          var(--foreground) 40%
+        );
+
+        --surface-shadow:
+          0 2px 4px 0 rgba(0, 0, 0, 0.04), 0 1px 2px 0 rgba(0, 0, 0, 0.06),
+          0 0 1px 0 rgba(0, 0, 0, 0.06);
+        --overlay-shadow:
+          0 2px 8px 0 rgba(0, 0, 0, 0.06), 0 -6px 12px 0 rgba(0, 0, 0, 0.03),
+          0 14px 28px 0 rgba(0, 0, 0, 0.08);
+      }
+
+      [data-theme='dark'] {
+        color-scheme: dark;
+
+        --background: oklch(12% 0.005 285.823);
+        --foreground: var(--snow);
+        --muted: oklch(70.5% 0.015 286.067);
+
+        --surface: oklch(0.2103 0.0059 285.89);
+        --surface-foreground: var(--foreground);
+        --surface-secondary: oklch(0.257 0.0037 286.14);
+        --surface-tertiary: oklch(0.2721 0.0024 247.91);
+        --overlay: oklch(0.2103 0.0059 285.89);
+        --overlay-foreground: var(--foreground);
+
+        --default: oklch(27.4% 0.006 286.033);
+        --default-foreground: var(--snow);
+        --warning: oklch(0.8203 0.1388 76.34);
+        --danger: oklch(0.594 0.1967 24.63);
+
+        --field-background: oklch(0.2103 0.0059 285.89);
+        --field-foreground: var(--foreground);
+
+        --border: oklch(28% 0.006 286.033);
+        --separator: oklch(25% 0.006 286.033);
+
+        --accent-soft: color-mix(in oklab, var(--accent) 12%, transparent);
+        --accent-soft-foreground: color-mix(
+          in oklab,
+          var(--accent) 80%,
+          var(--foreground) 30%
+        );
+        --default-soft-foreground: var(--default-foreground);
+        --danger-soft-foreground: color-mix(
+          in oklab,
+          var(--danger) 80%,
+          var(--foreground) 30%
+        );
+        --warning-soft-foreground: color-mix(
+          in oklab,
+          var(--warning) 80%,
+          var(--foreground) 30%
+        );
+        --success-soft-foreground: color-mix(
+          in oklab,
+          var(--success) 80%,
+          var(--foreground) 30%
+        );
+
+        --surface-shadow: 0 0 0 0 transparent inset;
+        --overlay-shadow: 0 0 1px 0 rgba(255, 255, 255, 0.3) inset;
+      }
+
+    </style>
+  </head>
+
+  <body class="bg-background text-foreground min-h-screen antialiased">
+    <main class="mx-auto w-[1500px]">
+<div class="flex min-h-full flex-col gap-7 bg-background p-12">
+  <div class="flex flex-col gap-1.5">
+    <h1 class="text-2xl font-semibold tracking-tight text-foreground">Arrival inspection &#183; required states</h1>
+    <p class="max-w-[1400px] text-sm leading-relaxed text-muted">Every state the specification requires and the happy path does not show. Each tile names its acceptance criteria. A refusal the server makes is explained where the decision was taken, names the rule it broke, and states that nothing of the submission was recorded &#8212; the member&#8217;s figures stay in front of them.</p>
+  </div>
+  <div class="flex items-start gap-6"><div class="flex w-[440px] shrink-0 flex-col gap-3 self-start rounded-2xl border border-border bg-surface p-4"><p class="shrink-0 text-[11px] font-semibold tracking-[0.07em] text-muted ">NO REJECTIONS:CREATE · AC-01a / AC-01b</p><div class="flex w-full gap-3 rounded-2xl bg-default p-3.5">
+  <span class="mt-px shrink-0 text-default-soft-foreground"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+  <div class="flex min-w-0 flex-col gap-0.5">
+    <p class="text-sm font-semibold text-foreground">“Refuse some of this” is absent, not disabled</p>
+    <p class="text-[13px] leading-relaxed text-muted">A member holding PURCHASE_DRAFTS:RECEIVE without REJECTIONS:CREATE sees no way to refuse anything. The control is gone, the condition summary shows presented and accepted as the same figure, and nothing hints at a capability they do not hold.</p>
+  </div>
+</div><div class="flex w-full gap-3 rounded-2xl bg-success-soft p-3.5">
+  <span class="mt-px shrink-0 text-success-soft-foreground"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg></span>
+  <div class="flex min-w-0 flex-col gap-0.5">
+    <p class="text-sm font-semibold text-foreground">An ending that refuses nothing still records</p>
+    <p class="text-[13px] leading-relaxed text-muted">They record the ending as before. The second Permission is demanded by a refusal being present in what is written, never by the act of recording an ending.</p>
+  </div>
+</div><p class="text-xs leading-relaxed text-muted ">If they somehow submit a refusal anyway — a stale form, a direct call — the server declines it, says refusing goods needs a capability they do not hold, and records no part of the ending.</p></div><div class="flex w-[440px] shrink-0 flex-col gap-3 self-start rounded-2xl border border-border bg-surface p-4"><p class="shrink-0 text-[11px] font-semibold tracking-[0.07em] text-muted ">MORE REFUSED THAN PRESENTED · AC-02 / AC-03</p><div class="flex w-full gap-3 rounded-2xl bg-danger-soft p-3.5">
+  <span class="mt-px shrink-0 text-danger-soft-foreground"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg></span>
+  <div class="flex min-w-0 flex-col gap-0.5">
+    <p class="text-sm font-semibold text-foreground">Nothing was recorded</p>
+    <p class="text-[13px] leading-relaxed text-muted">You refused 105 of the 100 you presented. No more can be refused than was presented. The line’s ending, its condition, its judgement and its assignments were all left unwritten.</p>
+  </div>
+</div><p class="text-xs leading-relaxed text-muted ">The same refusal covers a quantity that is not a whole number of at least one (AC-03), stated against the field that carries it. Your figures stay where you typed them; nothing is cleared and nothing is half-saved.</p></div><div class="flex w-[440px] shrink-0 flex-col gap-3 self-start rounded-2xl border border-border bg-surface p-4"><p class="shrink-0 text-[11px] font-semibold tracking-[0.07em] text-muted ">TWO REFUSALS, ONE REASON · AC-09</p><div class="flex w-full gap-3 rounded-2xl bg-danger-soft p-3.5">
+  <span class="mt-px shrink-0 text-danger-soft-foreground"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg></span>
+  <div class="flex min-w-0 flex-col gap-0.5">
+    <p class="text-sm font-semibold text-foreground">One line carries one refusal per reason</p>
+    <p class="text-[13px] leading-relaxed text-muted">You have refused 5 as damaged in transit and added 3 more for the same reason. The quantities for a reason belong together — make it one refusal of 8.</p>
+  </div>
+</div><p class="text-xs leading-relaxed text-muted ">Caught before submission and re-checked by the server. The second row is flagged, not the first, and neither is removed for you.</p></div></div><div class="flex items-start gap-6"><div class="flex w-[440px] shrink-0 flex-col gap-3 self-start rounded-2xl border border-border bg-surface p-4"><p class="shrink-0 text-[11px] font-semibold tracking-[0.07em] text-muted ">“UNFIT — OTHER” NEEDS WORDS · AC-07 / AC-06</p><div class="flex w-full gap-3 rounded-2xl bg-danger-soft p-3.5">
+  <span class="mt-px shrink-0 text-danger-soft-foreground"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg></span>
+  <div class="flex min-w-0 flex-col gap-0.5">
+    <p class="text-sm font-semibold text-foreground">This reason always needs a description</p>
+    <p class="text-[13px] leading-relaxed text-muted">“Unfit — other” is the catalogue admitting it does not have your case. Say what was wrong, in your own words, so the team can decide whether the catalogue should.</p>
+  </div>
+</div><p class="text-xs leading-relaxed text-muted ">A reason outside the catalogue is refused the same way, listing what is available and saying the list is maintained by the team rather than by members (AC-06). Members cannot add, rename or retire a reason, and no reason ever changes wording beneath a refusal already recorded.</p></div><div class="flex w-[440px] shrink-0 flex-col gap-3 self-start rounded-2xl border border-border bg-surface p-4"><p class="shrink-0 text-[11px] font-semibold tracking-[0.07em] text-muted ">CONFORMANCE CONTRADICTS A REFUSAL · AC-16</p><div class="flex w-full gap-3 rounded-2xl bg-danger-soft p-3.5">
+  <span class="mt-px shrink-0 text-danger-soft-foreground"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg></span>
+  <div class="flex min-w-0 flex-col gap-0.5">
+    <p class="text-sm font-semibold text-foreground">These two statements contradict each other</p>
+    <p class="text-[13px] leading-relaxed text-muted">You refused 3 as packaging not as instructed and recorded that the instruction was met. A refusal for that reason is the instruction not being met.</p>
+  </div>
+</div><p class="text-xs leading-relaxed text-muted ">Both halves are named, so it is your choice which to change — withdraw the refusal, or judge the instruction Not met. The surface never resolves it for you.</p></div><div class="flex w-[440px] shrink-0 flex-col gap-3 self-start rounded-2xl border border-border bg-surface p-4"><p class="shrink-0 text-[11px] font-semibold tracking-[0.07em] text-muted ">A LINE WITH NO INSTRUCTION · AC-17 / AC-17a</p><div class="flex w-full gap-3 rounded-2xl bg-default p-3.5">
+  <span class="mt-px shrink-0 text-default-soft-foreground"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></span>
+  <div class="flex min-w-0 flex-col gap-0.5">
+    <p class="text-sm font-semibold text-foreground">Nothing was frozen on this line to judge</p>
+    <p class="text-[13px] leading-relaxed text-muted">Line 3 was ordered without a packaging type and without a value-adding note, so the only judgement available is “Not applicable”. Met and Not met are not offered.</p>
+  </div>
+</div><p class="text-xs leading-relaxed text-muted ">The mirror case is refused: a line that was given an instruction cannot record “Not applicable”. It must be judged Met or Not met, and the judgement covers both halves of the instruction together — a line whose packaging was honoured and whose note was not is Not met, with your note naming which failed (AC-15a).</p></div></div><div class="flex items-start gap-6"><div class="flex w-[440px] shrink-0 flex-col gap-3 self-start rounded-2xl border border-border bg-surface p-4"><p class="shrink-0 text-[11px] font-semibold tracking-[0.07em] text-muted ">NOTHING ARRIVED · AC-04a</p><div class="flex w-full gap-3 rounded-2xl bg-default p-3.5">
+  <span class="mt-px shrink-0 text-default-soft-foreground"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/><path d="m17 13 5 5"/><path d="m22 13-5 5"/></svg></span>
+  <div class="flex min-w-0 flex-col gap-0.5">
+    <p class="text-sm font-semibold text-foreground">Nothing to judge, so nothing is asked</p>
+    <p class="text-[13px] leading-relaxed text-muted">You recorded that nothing was received on line 3. The condition block and the supplier’s-instruction block are both absent — a line where nothing came records no condition split and no conformance.</p>
+  </div>
+</div><p class="text-xs leading-relaxed text-muted ">This is an ending like any other: recorded once, and the line cannot be revisited. It is excluded from every adoption reading, so a warehouse cannot look diligent by recording empty arrivals.</p></div><div class="flex w-[440px] shrink-0 flex-col gap-3 self-start rounded-2xl border border-border bg-surface p-4"><p class="shrink-0 text-[11px] font-semibold tracking-[0.07em] text-muted ">ENDING ALREADY RECORDED · AC-04</p><div class="flex w-full gap-3 rounded-2xl bg-danger-soft p-3.5">
+  <span class="mt-px shrink-0 text-danger-soft-foreground"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg></span>
+  <div class="flex min-w-0 flex-col gap-0.5">
+    <p class="text-sm font-semibold text-foreground">This line already has an ending</p>
+    <p class="text-[13px] leading-relaxed text-muted">Marek Dubois recorded it on 26 Aug 2026 at 09:14, accepting 1 192 of 1 200. A line’s ending, including its condition, is recorded once and cannot be revisited.</p>
+  </div>
+</div><p class="text-xs leading-relaxed text-muted ">The likeliest cause is two people at one dock. It is also the wall a member hits when damage turns up two days later — this release has nowhere to put that, and says so rather than pretending otherwise.</p></div><div class="flex w-[440px] shrink-0 flex-col gap-3 self-start rounded-2xl border border-border bg-surface p-4"><p class="shrink-0 text-[11px] font-semibold tracking-[0.07em] text-muted ">WRONG SOURCE FOR THIS LINE · AC-25</p><div class="flex w-full gap-3 rounded-2xl bg-danger-soft p-3.5">
+  <span class="mt-px shrink-0 text-danger-soft-foreground"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg></span>
+  <div class="flex min-w-0 flex-col gap-0.5">
+    <p class="text-sm font-semibold text-foreground">These goods came to your own dock</p>
+    <p class="text-[13px] leading-relaxed text-muted">A refusal on goods arriving here carries the inspected source. Only goods that went straight from the supplier to the customer carry a customer’s report.</p>
+  </div>
+</div><p class="text-xs leading-relaxed text-muted ">Unreachable through the surface — the source follows the line’s delivery mode and is never a field. It is refused anyway, because the surface is not the authorization boundary.</p></div></div><div class="flex items-start gap-6"><div class="flex w-[440px] shrink-0 flex-col gap-3 self-start rounded-2xl border border-border bg-surface p-4"><p class="shrink-0 text-[11px] font-semibold tracking-[0.07em] text-muted ">REFUSAL DETAIL WITHHELD · AC-22</p><p class="text-xs leading-relaxed text-muted ">A member holding PURCHASE_DRAFTS:WATCH but not REJECTIONS:WATCH, reading the same closed line as the approved frame:</p><div class="flex w-full items-center rounded-2xl border border-border bg-surface-secondary px-4 py-3"><div class="flex flex-1 flex-col gap-[3px]"><span class="text-[11px] font-semibold tracking-[0.07em] text-muted">ORDERED</span><span class="text-xl font-semibold tracking-tight text-muted">1 200</span></div><div class="flex flex-1 flex-col gap-[3px]"><span class="text-[11px] font-semibold tracking-[0.07em] text-muted">PRESENTED</span><span class="text-xl font-semibold tracking-tight text-foreground">1 200</span></div><div class="flex flex-1 flex-col gap-[3px]"><span class="text-[11px] font-semibold tracking-[0.07em] text-muted">REFUSED</span><span class="text-xl font-semibold tracking-tight text-danger">8</span></div><div class="flex flex-1 flex-col gap-[3px]"><span class="text-[11px] font-semibold tracking-[0.07em] text-muted">ACCEPTED</span><span class="text-xl font-semibold tracking-tight text-foreground">1 192</span></div></div><p class="text-xs leading-relaxed text-muted ">Ordered, presented, accepted and one total refused figure. Every reason, description and disposition is withheld, and so is the fact that the 8 divide into two separate refusals. Nothing says anything was withheld — there is no “hidden” chip, no count, no greyed row, because a placeholder is itself a disclosure that can be probed.</p><p class="text-xs leading-relaxed text-muted ">That a refusal happened stays visible: presented and accepted differ, and they always will. The protection is over the cause of a refusal, never over the fact of one.</p></div><div class="flex w-[440px] shrink-0 flex-col gap-3 self-start rounded-2xl border border-border bg-surface p-4"><p class="shrink-0 text-[11px] font-semibold tracking-[0.07em] text-muted ">ANOTHER WAREHOUSE'S REFUSAL · AC-26</p><div class="flex w-full gap-3 rounded-2xl bg-danger-soft p-3.5">
+  <span class="mt-px shrink-0 text-danger-soft-foreground"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg></span>
+  <div class="flex min-w-0 flex-col gap-0.5">
+    <p class="text-sm font-semibold text-foreground">Not found in Central DC</p>
+    <p class="text-[13px] leading-relaxed text-muted">Nothing here belongs to the warehouse you are acting in.</p>
+  </div>
+</div><p class="text-xs leading-relaxed text-muted ">The wording is the same whether the refusal exists in another warehouse, exists nowhere, or belongs to a warehouse where this member holds a membership and the matching Permission. A member acting in one warehouse learns nothing about another, including across the warehouses of one workspace.</p></div><div class="flex w-[440px] shrink-0 flex-col gap-3 self-start rounded-2xl border border-border bg-surface p-4"><p class="shrink-0 text-[11px] font-semibold tracking-[0.07em] text-muted ">CANNOT AMEND · AC-20 / AC-18a</p><div class="flex w-full gap-3 rounded-2xl bg-default p-3.5">
+  <span class="mt-px shrink-0 text-default-soft-foreground"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+  <div class="flex min-w-0 flex-col gap-0.5">
+    <p class="text-sm font-semibold text-foreground">Amending a refusal needs a capability you do not hold</p>
+    <p class="text-[13px] leading-relaxed text-muted">A member with REJECTIONS:WATCH but not REJECTIONS:UPDATE reads every reason, description and disposition, and the row’s menu offers nothing. The disposition is left exactly as it was.</p>
+  </div>
+</div><div class="flex w-full gap-3 rounded-2xl bg-warning-soft p-3.5">
+  <span class="mt-px shrink-0 text-warning-soft-foreground"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span>
+  <div class="flex min-w-0 flex-col gap-0.5">
+    <p class="text-sm font-semibold text-foreground">A decision cannot be undone, only corrected</p>
+    <p class="text-[13px] leading-relaxed text-muted">Once a disposition has been recorded, “Undecided” is absent from the list. Held for return, Refused at delivery and Scrapped on site remain available to each other, and each change records you and the time.</p>
+  </div>
+</div></div></div><div class="flex items-start gap-6"><div class="flex w-[440px] shrink-0 flex-col gap-3 self-start rounded-2xl border border-border bg-surface p-4"><p class="shrink-0 text-[11px] font-semibold tracking-[0.07em] text-muted ">ASSIGNED MORE THAN ACCEPTED · AC-11 / AC-12</p><div class="flex w-full gap-3 rounded-2xl bg-danger-soft p-3.5">
+  <span class="mt-px shrink-0 text-danger-soft-foreground"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg></span>
+  <div class="flex min-w-0 flex-col gap-0.5">
+    <p class="text-sm font-semibold text-foreground">Only accepted goods may be assigned</p>
+    <p class="text-[13px] leading-relaxed text-muted">You presented 100 and refused 8, so 92 can be assigned. You have assigned 100. Nothing of this ending was recorded.</p>
+  </div>
+</div><p class="text-xs leading-relaxed text-muted ">The bound narrowed here: it used to be everything that arrived, and it is now everything you kept. Because accepted is derived rather than typed, no member can raise it by editing a figure — the only way to assign more is to have refused less, which is recorded and attributable.</p><div class="flex w-full gap-3 rounded-2xl bg-danger-soft p-3.5">
+  <span class="mt-px shrink-0 text-danger-soft-foreground"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg></span>
+  <div class="flex min-w-0 flex-col gap-0.5">
+    <p class="text-sm font-semibold text-foreground">That order is no longer waiting for anything</p>
+    <p class="text-[13px] leading-relaxed text-muted">Sudhafen Handel KG cancelled the order this line served on 27 Aug. Nothing of the ending was recorded (AC-12).</p>
+  </div>
+</div></div><div class="flex w-[440px] shrink-0 flex-col gap-3 self-start rounded-2xl border border-border bg-surface p-4"><p class="shrink-0 text-[11px] font-semibold tracking-[0.07em] text-muted ">THE CATALOGUE GREW LATER · AC-23a / AC-23</p><div class="flex w-full gap-3 rounded-2xl bg-default p-3.5">
+  <span class="mt-px shrink-0 text-default-soft-foreground"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></span>
+  <div class="flex min-w-0 flex-col gap-0.5">
+    <p class="text-sm font-semibold text-foreground">A closed draft always reads as it was recorded</p>
+    <p class="text-[13px] leading-relaxed text-muted">Two reasons were added to the catalogue in September. This refusal, raised in August, still names “Damaged by packing” in the same words — the catalogue is extended only, never reworded and never retired, so nothing changes beneath a recorded refusal.</p>
+  </div>
+</div><p class="text-xs leading-relaxed text-muted ">The packaging type frozen on the line behaves the same way but for a different reason: it was copied onto the line when the draft was made ready, so a later catalogue entry cannot reach it (AC-23).</p></div><div class="flex w-[440px] shrink-0 flex-col gap-3 self-start rounded-2xl border border-border bg-surface p-4"><p class="shrink-0 text-[11px] font-semibold tracking-[0.07em] text-muted ">SUCCESS · WHAT ACTUALLY COMMITTED</p><div class="flex w-full gap-3 rounded-2xl bg-success-soft p-3.5">
+  <span class="mt-px shrink-0 text-success-soft-foreground"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg></span>
+  <div class="flex min-w-0 flex-col gap-0.5">
+    <p class="text-sm font-semibold text-foreground">Line 1 ended — 1 192 accepted, 8 refused</p>
+    <p class="text-[13px] leading-relaxed text-muted">Assigned 812 to Nordwind Logistik GmbH and 380 to Sudhafen Handel KG, which is now fulfilled. The 8 you refused reduced nobody’s demand.</p>
+  </div>
+</div><div class="flex w-full gap-3 rounded-2xl bg-success-soft p-3.5">
+  <span class="mt-px shrink-0 text-success-soft-foreground"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg></span>
+  <div class="flex min-w-0 flex-col gap-0.5">
+    <p class="text-sm font-semibold text-foreground">PD-0142 closed — every line has an ending</p>
+    <p class="text-[13px] leading-relaxed text-muted">The draft closed itself on its last line. Its condition is now part of the record and cannot be revisited.</p>
+  </div>
+</div><div class="flex w-full gap-3 rounded-2xl bg-success-soft p-3.5">
+  <span class="mt-px shrink-0 text-success-soft-foreground"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg></span>
+  <div class="flex min-w-0 flex-col gap-0.5">
+    <p class="text-sm font-semibold text-foreground">Refusal updated — held for return</p>
+    <p class="text-[13px] leading-relaxed text-muted">Recorded against you at 27 Aug 2026, 11:02. No quantity, reason or source changed.</p>
+  </div>
+</div><p class="text-xs leading-relaxed text-muted ">Every success states the consequence a member could not otherwise see: that refused demand stayed outstanding, that a draft closed itself, that an amendment is attributed.</p></div></div>
+</div>
+    </main>
+  </body>
+</html>

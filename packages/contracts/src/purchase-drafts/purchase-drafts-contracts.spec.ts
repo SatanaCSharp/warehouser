@@ -6,6 +6,7 @@ import {
   linkedCustomerOrderStateRedactedSchema,
   packagingTypeIdSchema,
   packagingTypeSchema,
+  preReceiptConformanceCreateSchema,
   purchaseDraftClosureSchema,
   purchaseDraftCreateSchema,
   purchaseDraftDetailSchema,
@@ -18,6 +19,9 @@ import {
   purchaseDraftReviseSchema,
   purchaseDraftStateSchema,
   purchaseDraftSummarySchema,
+  rejectionAmendSchema,
+  rejectionCreateSchema,
+  rejectionReasonSchema,
 } from 'purchase-drafts';
 
 // T16 — the shared `purchase-drafts` contract subpath (contracts/openapi.yaml `/purchase-drafts*`
@@ -556,6 +560,521 @@ describe('purchase-drafts contracts', () => {
             [field]: value,
           }).success,
         ).toBe(false);
+      },
+    );
+  });
+
+  // ---- T9 / arrival-inspection: the condition a line's ending is recorded with ------------------
+  //
+  // openapi.yaml `RejectionCreate`, `PreReceiptConformanceCreate`, `RejectionAmend`,
+  // `RejectionReason` and the two ending payloads they extend. Every one of them is a
+  // `strictObject`, which is what makes the Accepted Quantity, the Rejected Quantity, any count,
+  // the raising member and the time unsubmittable rather than silently discarded (sad.md §7).
+
+  // The bound is one thousand *characters*, `char_length` and not `octet_length`, so a Ukrainian
+  // description must not be refused at five hundred for costing two bytes each (data-model.md
+  // `chk_purchase_draft_line_rejections_description_length`). Probed in Cyrillic for that reason.
+  const cyrillic = (count: number): string => 'я'.repeat(count);
+
+  const validRejection = {
+    rejectionReasonId: 'damaged_in_transit',
+    quantity: 8,
+    source: 'inspected',
+  };
+
+  describe('RejectionCreate (openapi.yaml `RejectionCreate`) — AC-03, AC-14, AC-24', () => {
+    it('accepts one refusal with its Reason, quantity, Source and optional description', () => {
+      expect(rejectionCreateSchema.parse(validRejection)).toEqual(
+        validRejection,
+      );
+      const described = {
+        ...validRejection,
+        description: 'Outer coil crushed; two runs severed.',
+      };
+      expect(rejectionCreateSchema.parse(described)).toEqual(described);
+    });
+
+    // Without this the whole file passes on a schema whose `source` is `.optional()`, and an
+    // omitted Source defaulting to the legal one makes AC-25 unreachable by a different route
+    // (api-sync-report.md § Finding 1). `rejection_reasons.id` and the quantity are `NOT NULL`
+    // columns for the same reason (data-model.md).
+    it.each(['rejectionReasonId', 'quantity', 'source'] as const)(
+      'requires %s rather than accepting its absence',
+      (property) => {
+        const withoutProperty: Record<string, unknown> = { ...validRejection };
+        delete withoutProperty[property];
+
+        expect(rejectionCreateSchema.safeParse(withoutProperty).success).toBe(
+          false,
+        );
+      },
+    );
+
+    it('refuses an unknown property rather than ignoring it', () => {
+      expect(
+        rejectionCreateSchema.safeParse({
+          ...validRejection,
+          rejectionReasonLabel: 'Damaged in transit',
+        }).success,
+      ).toBe(false);
+    });
+
+    // AC-03 — a refused quantity is a whole number of at least one.
+    it.each([
+      ['zero', 0],
+      ['negative', -1],
+      ['fractional', 1.5],
+      ['a numeric string', '8'],
+    ] as const)('refuses a %s refused quantity', (_label, quantity) => {
+      expect(
+        rejectionCreateSchema.safeParse({ ...validRejection, quantity })
+          .success,
+      ).toBe(false);
+    });
+
+    it('accepts a refused quantity of exactly one', () => {
+      expect(
+        rejectionCreateSchema.safeParse({ ...validRejection, quantity: 1 })
+          .success,
+      ).toBe(true);
+    });
+
+    // AC-14 — bounded at one thousand characters, counted as characters.
+    it.each([
+      [1000, true],
+      [1001, false],
+    ] as const)(
+      'accepts a %i-character Cyrillic description: %s',
+      (length, accepted) => {
+        expect(
+          rejectionCreateSchema.safeParse({
+            ...validRejection,
+            description: cyrillic(length),
+          }).success,
+        ).toBe(accepted);
+      },
+    );
+
+    it('refuses a description that is blank once trimmed rather than reading it as an absence', () => {
+      expect(
+        rejectionCreateSchema.safeParse({ ...validRejection, description: '' })
+          .success,
+      ).toBe(false);
+      expect(
+        rejectionCreateSchema.safeParse({
+          ...validRejection,
+          description: '   ',
+        }).success,
+      ).toBe(false);
+    });
+
+    // AC-24, AC-25 — the Source is an input the schema admits in both values; whether it agrees
+    // with the line's Delivery Mode is proved by the server against the locked line, never here.
+    it.each(['inspected', 'customer_reported'] as const)(
+      'accepts the %s Source, leaving the Delivery Mode agreement to the server',
+      (source) => {
+        expect(
+          rejectionCreateSchema.safeParse({ ...validRejection, source })
+            .success,
+        ).toBe(true);
+      },
+    );
+
+    it('refuses a Source outside the two the system records', () => {
+      expect(
+        rejectionCreateSchema.safeParse({
+          ...validRejection,
+          source: 'returned_by_customer',
+        }).success,
+      ).toBe(false);
+    });
+
+    // AC-06 — the catalogue is data, extended by a migration, so the Reason is a plain identifier
+    // checked for shape rather than an enum of today's ten. An eleventh Reason must not be a
+    // contract change and a client release.
+    it('checks the Reason identifier as a pattern rather than enumerating the catalogue', () => {
+      expect(
+        rejectionCreateSchema.safeParse({
+          ...validRejection,
+          rejectionReasonId: 'reason_from_later_migration',
+        }).success,
+      ).toBe(true);
+      expect(
+        rejectionCreateSchema.safeParse({
+          ...validRejection,
+          rejectionReasonId: 'Damaged-In-Transit',
+        }).success,
+      ).toBe(false);
+      expect(
+        rejectionCreateSchema.safeParse({
+          ...validRejection,
+          rejectionReasonId: '',
+        }).success,
+      ).toBe(false);
+      // The catalogue column is `rejection_reasons.id VARCHAR(32)`, so the pattern is bounded as
+      // well as shaped: an identifier the column could not store is a contract failure, not a
+      // truncation the server discovers later.
+      expect(
+        rejectionCreateSchema.safeParse({
+          ...validRejection,
+          rejectionReasonId: `r${'a'.repeat(31)}`,
+        }).success,
+      ).toBe(true);
+      expect(
+        rejectionCreateSchema.safeParse({
+          ...validRejection,
+          rejectionReasonId: `r${'a'.repeat(32)}`,
+        }).success,
+      ).toBe(false);
+    });
+
+    it.each([
+      ['id', id(601)],
+      ['raisedByUserId', id(1)],
+      ['createdAt', '2026-09-18T10:30:00.000Z'],
+      ['disposition', 'undecided'],
+      ['acceptedQuantity', 92],
+      ['rejectedQuantity', 8],
+    ] as const)(
+      'refuses %s — it is derived, attributed or minted, never input',
+      (field, value) => {
+        expect(
+          rejectionCreateSchema.safeParse({ ...validRejection, [field]: value })
+            .success,
+        ).toBe(false);
+      },
+    );
+  });
+
+  describe('PreReceiptConformanceCreate (openapi.yaml) — AC-15, AC-15a, AC-15b', () => {
+    it('accepts a not_met verdict with and without the member note', () => {
+      expect(
+        preReceiptConformanceCreateSchema.parse({
+          verdict: 'not_met',
+          note: 'Coils arrived uncoiled and unlabelled.',
+        }),
+      ).toEqual({
+        verdict: 'not_met',
+        note: 'Coils arrived uncoiled and unlabelled.',
+      });
+      expect(
+        preReceiptConformanceCreateSchema.parse({ verdict: 'not_met' }),
+      ).toEqual({ verdict: 'not_met' });
+    });
+
+    it.each(['met', 'not_applicable'] as const)(
+      'accepts a bare %s verdict and refuses a note beside it',
+      (verdict) => {
+        expect(preReceiptConformanceCreateSchema.parse({ verdict })).toEqual({
+          verdict,
+        });
+        expect(
+          preReceiptConformanceCreateSchema.safeParse({
+            verdict,
+            note: 'The packaging was honoured.',
+          }).success,
+        ).toBe(false);
+      },
+    );
+
+    it('refuses a verdict outside the three and an unknown property', () => {
+      expect(
+        preReceiptConformanceCreateSchema.safeParse({ verdict: 'unknown' })
+          .success,
+      ).toBe(false);
+      expect(
+        preReceiptConformanceCreateSchema.safeParse({
+          verdict: 'not_met',
+          frozenPackagingTypeId: 'cable_coil',
+        }).success,
+      ).toBe(false);
+      expect(preReceiptConformanceCreateSchema.safeParse({}).success).toBe(
+        false,
+      );
+    });
+
+    // AC-15b — the same one-thousand-character bound as the description, in characters.
+    it.each([
+      [1000, true],
+      [1001, false],
+    ] as const)(
+      'accepts a %i-character Cyrillic conformance note: %s',
+      (length, accepted) => {
+        expect(
+          preReceiptConformanceCreateSchema.safeParse({
+            verdict: 'not_met',
+            note: cyrillic(length),
+          }).success,
+        ).toBe(accepted);
+      },
+    );
+
+    it('refuses a note that is blank once trimmed', () => {
+      expect(
+        preReceiptConformanceCreateSchema.safeParse({
+          verdict: 'not_met',
+          note: '   ',
+        }).success,
+      ).toBe(false);
+    });
+  });
+
+  describe('RejectionAmend (openapi.yaml `RejectionAmend`) — AC-18b, AC-19', () => {
+    it('accepts the description, the Disposition, or both', () => {
+      expect(
+        rejectionAmendSchema.parse({ description: 'Two runs severed.' }),
+      ).toEqual({ description: 'Two runs severed.' });
+      expect(
+        rejectionAmendSchema.parse({ disposition: 'held_for_return' }),
+      ).toEqual({ disposition: 'held_for_return' });
+      expect(
+        rejectionAmendSchema.parse({
+          description: 'Two runs severed.',
+          disposition: 'scrapped_on_site',
+        }).disposition,
+      ).toBe('scrapped_on_site');
+    });
+
+    it('refuses an amendment that amends nothing, since it would still write an attribution', () => {
+      expect(rejectionAmendSchema.safeParse({}).success).toBe(false);
+      // The property present but `undefined` — what spreading form state produces — is the same
+      // empty amendment wearing a key. A key count would admit it here and the server would 400 on
+      // a payload the client had already validated, so "at least one" must mean at least one
+      // *value* (openapi.yaml `RejectionAmend.minProperties: 1`).
+      expect(
+        rejectionAmendSchema.safeParse({ description: undefined }).success,
+      ).toBe(false);
+      expect(
+        rejectionAmendSchema.safeParse({
+          description: undefined,
+          disposition: undefined,
+        }).success,
+      ).toBe(false);
+    });
+
+    // AC-19 — the four the system offers. `undecided` stays a legal request value; its refusal is
+    // conditional on the stored state, which the server decides (AC-18a).
+    it.each([
+      'undecided',
+      'refused_at_delivery',
+      'held_for_return',
+      'scrapped_on_site',
+    ] as const)('accepts the %s Disposition', (disposition) => {
+      expect(rejectionAmendSchema.safeParse({ disposition }).success).toBe(
+        true,
+      );
+    });
+
+    it.each(['quarantined', 'UNDECIDED', ''] as const)(
+      'refuses the Disposition %p, which is not one the system offers',
+      (disposition) => {
+        expect(rejectionAmendSchema.safeParse({ disposition }).success).toBe(
+          false,
+        );
+      },
+    );
+
+    it.each([
+      [1000, true],
+      [1001, false],
+    ] as const)(
+      'accepts a %i-character Cyrillic amended description: %s',
+      (length, accepted) => {
+        expect(
+          rejectionAmendSchema.safeParse({ description: cyrillic(length) })
+            .success,
+        ).toBe(accepted);
+      },
+    );
+
+    it('offers no clearing of the description — a blank or a null is a refusal, not a clear', () => {
+      expect(
+        rejectionAmendSchema.safeParse({ description: '   ' }).success,
+      ).toBe(false);
+      expect(
+        rejectionAmendSchema.safeParse({ description: null }).success,
+      ).toBe(false);
+    });
+
+    it.each([
+      ['quantity', 8],
+      ['rejectionReasonId', 'damaged_in_transit'],
+      ['source', 'inspected'],
+      ['purchaseDraftLineId', id(401)],
+      ['amendedByUserId', id(1)],
+      ['amendedAt', '2026-09-18T10:30:00.000Z'],
+    ] as const)(
+      'refuses %s — the fixed part of a Rejection and its attribution are not addressable',
+      (field, value) => {
+        expect(
+          rejectionAmendSchema.safeParse({
+            disposition: 'held_for_return',
+            [field]: value,
+          }).success,
+        ).toBe(false);
+      },
+    );
+  });
+
+  describe('RejectionReason (openapi.yaml `RejectionReason`) — AC-06, AC-07', () => {
+    const validReason = {
+      id: 'unfit_other',
+      label: 'Unfit — other',
+      requiresDescription: true,
+    };
+
+    it('accepts one catalogue entry', () => {
+      expect(rejectionReasonSchema.parse(validReason)).toEqual(validReason);
+    });
+
+    it.each(['id', 'label', 'requiresDescription'] as const)(
+      'requires %s',
+      (field) => {
+        const { [field]: removed, ...withoutField } = validReason;
+
+        expect(removed).toBeDefined();
+        expect(rejectionReasonSchema.safeParse(withoutField).success).toBe(
+          false,
+        );
+      },
+    );
+
+    it('bounds the label as the catalogue column does and refuses a blank one', () => {
+      expect(
+        rejectionReasonSchema.safeParse({
+          ...validReason,
+          label: 'x'.repeat(100),
+        }).success,
+      ).toBe(true);
+      expect(
+        rejectionReasonSchema.safeParse({
+          ...validReason,
+          label: 'x'.repeat(101),
+        }).success,
+      ).toBe(false);
+      expect(
+        rejectionReasonSchema.safeParse({ ...validReason, label: '' }).success,
+      ).toBe(false);
+    });
+
+    it('refuses an unknown property', () => {
+      expect(
+        rejectionReasonSchema.safeParse({ ...validReason, retired: false })
+          .success,
+      ).toBe(false);
+    });
+  });
+
+  describe('the two ending payloads carry the condition — AC-03, AC-14, AC-15b, AC-24', () => {
+    // Each Mode is driven with the Source it actually admits (openapi.yaml `RejectionSource`):
+    // own-dock goods are inspected, directly delivered goods are reported by the customer (AC-24).
+    // Reusing one `inspected` fixture for both would leave `customer_reported` never travelling
+    // through the direct-delivery payload, so narrowing that payload to inspected-only would break
+    // AC-24 and keep this suite green. Which of the two a line may carry is the server's assertion
+    // against the locked line's Delivery Mode (AC-25), not this schema's.
+    const endings = [
+      [
+        'arrival',
+        purchaseDraftLineArrivalSchema,
+        'receivedQuantity',
+        'inspected',
+      ],
+      [
+        'direct delivery',
+        purchaseDraftLineDirectDeliverySchema,
+        'deliveredQuantity',
+        'customer_reported',
+      ],
+    ] as const;
+
+    it.each(endings)(
+      'accepts a %s ending carrying its Condition Split and Pre-receipt Conformance',
+      (_label, schema, quantityKey, source) => {
+        const ending = {
+          [quantityKey]: 100,
+          rejections: [
+            { ...validRejection, source, description: 'Coil crushed.' },
+          ],
+          preReceiptConformance: { verdict: 'not_met', note: 'Unlabelled.' },
+          allocations: [
+            { purchaseDraftLineLinkId: id(501), allocatedQuantity: 60 },
+          ],
+        };
+
+        expect(schema.parse(ending)).toEqual(ending);
+      },
+    );
+
+    it.each(endings)(
+      'a %s ending propagates the refused quantity and description bounds',
+      (_label, schema, quantityKey, source) => {
+        // The positive control: without it every assertion below would pass on a schema that
+        // simply refuses `rejections` outright, which is exactly the shape this task replaces.
+        expect(
+          schema.safeParse({
+            [quantityKey]: 100,
+            rejections: [
+              { ...validRejection, source, description: cyrillic(1000) },
+            ],
+            preReceiptConformance: { verdict: 'not_met', note: cyrillic(1000) },
+          }).success,
+        ).toBe(true);
+        expect(
+          schema.safeParse({
+            [quantityKey]: 100,
+            rejections: [{ ...validRejection, quantity: 0 }],
+          }).success,
+        ).toBe(false);
+        expect(
+          schema.safeParse({
+            [quantityKey]: 100,
+            rejections: [{ ...validRejection, description: cyrillic(1001) }],
+          }).success,
+        ).toBe(false);
+        expect(
+          schema.safeParse({
+            [quantityKey]: 100,
+            preReceiptConformance: { verdict: 'not_met', note: cyrillic(1001) },
+          }).success,
+        ).toBe(false);
+      },
+    );
+
+    it.each(endings)(
+      'a %s ending bounds the Condition Split at fifty entries as a payload guard',
+      (_label, schema, quantityKey) => {
+        const repeat = (count: number): unknown[] =>
+          Array.from({ length: count }, () => validRejection);
+
+        expect(
+          schema.safeParse({ [quantityKey]: 100, rejections: repeat(50) })
+            .success,
+        ).toBe(true);
+        expect(
+          schema.safeParse({ [quantityKey]: 100, rejections: repeat(51) })
+            .success,
+        ).toBe(false);
+      },
+    );
+
+    it.each(endings)(
+      'a %s ending refuses every derived figure, count and attribution',
+      (_label, schema, quantityKey) => {
+        const derived = [
+          ['acceptedQuantity', 92],
+          ['rejectedQuantity', 8],
+          ['rejectionCount', 1],
+          ['endingKind', 'arrival'],
+          ['recordedByUserId', id(1)],
+          ['recordedAt', '2026-09-18T10:30:00.000Z'],
+          ['state', 'closed'],
+        ] as const;
+
+        for (const [field, value] of derived) {
+          expect(
+            schema.safeParse({ [quantityKey]: 100, [field]: value }).success,
+          ).toBe(false);
+        }
       },
     );
   });

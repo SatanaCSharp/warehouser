@@ -17,6 +17,7 @@
 // that the boolean becomes the named signal, and that the two projection forms are chosen by the
 // observed Permission and never by the surface.
 import { PermissionId } from '@warehouser/shared-types/enums';
+import { RejectionReasonLabelService } from 'purchase-drafts/domain/services/rejection-reason-label.service';
 import { ReadPurchaseDraftQuery } from 'purchase-drafts/usecases/queries/read-purchase-draft.query';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 
@@ -194,7 +195,16 @@ const firstLinkOf = (detail: { lines: { links: unknown[] }[] }) =>
     readonly driftSignals: readonly string[];
   };
 
-// eslint-disable-next-line max-lines-per-function -- one suite covering every Drift Signal and both projection forms of one read is inherently long
+// The catalogue double every instantiation below hands the query's second constructor
+// parameter — none of these cases assert on a Rejection's resolved label, so it never needs to
+// resolve anything.
+const catalogueDouble = () => ({
+  resolveRejectionReasons: jest.fn().mockResolvedValue([]),
+});
+
+// One suite covering AC-16/AC-18/AC-09a's drift, redaction and ownership cases; splitting it
+// would separate assertions that must stay next to the fixtures they read.
+// eslint-disable-next-line max-lines-per-function -- see the comment above
 describe('ReadPurchaseDraftQuery', () => {
   // AC-16 — the draft never frozen (`snapshot: null`) reports no Drift Signal for that link.
   it('reports no Drift Signal for a link that carries no snapshot', async () => {
@@ -202,7 +212,10 @@ describe('ReadPurchaseDraftQuery', () => {
       { ...baseLink, snapshot: null, current: baseCurrent },
     ]);
     const repository = purchaseDraftReadRepositoryDouble(detail);
-    const query = new ReadPurchaseDraftQuery(repository as never);
+    const query = new ReadPurchaseDraftQuery(
+      repository as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
+    );
 
     const result = await query.execute(identifiedUser, purchaseDraftId);
 
@@ -216,7 +229,10 @@ describe('ReadPurchaseDraftQuery', () => {
       { ...baseLink, snapshot: baseSnapshot, current: baseCurrent },
     ]);
     const repository = purchaseDraftReadRepositoryDouble(detail);
-    const query = new ReadPurchaseDraftQuery(repository as never);
+    const query = new ReadPurchaseDraftQuery(
+      repository as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
+    );
 
     const result = await query.execute(identifiedUser, purchaseDraftId);
 
@@ -233,7 +249,10 @@ describe('ReadPurchaseDraftQuery', () => {
       },
     ]);
     const repository = purchaseDraftReadRepositoryDouble(detail);
-    const query = new ReadPurchaseDraftQuery(repository as never);
+    const query = new ReadPurchaseDraftQuery(
+      repository as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
+    );
 
     const result = await query.execute(identifiedUser, purchaseDraftId);
 
@@ -250,7 +269,10 @@ describe('ReadPurchaseDraftQuery', () => {
       },
     ]);
     const repository = purchaseDraftReadRepositoryDouble(detail);
-    const query = new ReadPurchaseDraftQuery(repository as never);
+    const query = new ReadPurchaseDraftQuery(
+      repository as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
+    );
 
     const result = await query.execute(identifiedUser, purchaseDraftId);
 
@@ -269,7 +291,10 @@ describe('ReadPurchaseDraftQuery', () => {
       },
     ]);
     const repository = purchaseDraftReadRepositoryDouble(detail);
-    const query = new ReadPurchaseDraftQuery(repository as never);
+    const query = new ReadPurchaseDraftQuery(
+      repository as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
+    );
 
     const result = await query.execute(identifiedUser, purchaseDraftId);
 
@@ -288,7 +313,10 @@ describe('ReadPurchaseDraftQuery', () => {
       },
     ]);
     const repository = purchaseDraftReadRepositoryDouble(detail);
-    const query = new ReadPurchaseDraftQuery(repository as never);
+    const query = new ReadPurchaseDraftQuery(
+      repository as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
+    );
 
     const result = await query.execute(identifiedUser, purchaseDraftId);
 
@@ -313,7 +341,10 @@ describe('ReadPurchaseDraftQuery', () => {
       },
     ]);
     const repository = purchaseDraftReadRepositoryDouble(detail);
-    const query = new ReadPurchaseDraftQuery(repository as never);
+    const query = new ReadPurchaseDraftQuery(
+      repository as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
+    );
 
     const result = await query.execute(identifiedUser, purchaseDraftId);
 
@@ -335,7 +366,10 @@ describe('ReadPurchaseDraftQuery', () => {
       },
     ]);
     const repository = purchaseDraftReadRepositoryDouble(detail);
-    const query = new ReadPurchaseDraftQuery(repository as never);
+    const query = new ReadPurchaseDraftQuery(
+      repository as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
+    );
 
     const result = await query.execute(identifiedUser, purchaseDraftId);
 
@@ -358,7 +392,10 @@ describe('ReadPurchaseDraftQuery', () => {
       },
     ]);
     const repository = purchaseDraftReadRepositoryDouble(detail);
-    const query = new ReadPurchaseDraftQuery(repository as never);
+    const query = new ReadPurchaseDraftQuery(
+      repository as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
+    );
 
     const result = await query.execute(identifiedUser, purchaseDraftId);
 
@@ -379,7 +416,10 @@ describe('ReadPurchaseDraftQuery', () => {
       },
     ]);
     const repository = purchaseDraftReadRepositoryDouble(detail);
-    const query = new ReadPurchaseDraftQuery(repository as never);
+    const query = new ReadPurchaseDraftQuery(
+      repository as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
+    );
 
     const result = await query.execute(identifiedUser, purchaseDraftId);
 
@@ -404,7 +444,10 @@ describe('ReadPurchaseDraftQuery', () => {
       },
     ]);
     const repository = purchaseDraftReadRepositoryDouble(detail);
-    const query = new ReadPurchaseDraftQuery(repository as never);
+    const query = new ReadPurchaseDraftQuery(
+      repository as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
+    );
 
     const result = await query.execute(identifiedUser, purchaseDraftId);
 
@@ -426,7 +469,10 @@ describe('ReadPurchaseDraftQuery', () => {
       },
     ]);
     const repository = purchaseDraftReadRepositoryDouble(detail);
-    const query = new ReadPurchaseDraftQuery(repository as never);
+    const query = new ReadPurchaseDraftQuery(
+      repository as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
+    );
 
     const result = await query.execute(identifiedUser, purchaseDraftId);
 
@@ -440,13 +486,19 @@ describe('ReadPurchaseDraftQuery', () => {
       { ...baseLink, snapshot: baseSnapshot, current: baseCurrent },
     ]);
     const repository = purchaseDraftReadRepositoryDouble(detail);
-    const query = new ReadPurchaseDraftQuery(repository as never);
+    const query = new ReadPurchaseDraftQuery(
+      repository as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
+    );
 
     await query.execute(identifiedUser, purchaseDraftId);
 
     expect(repository.readIdentifiedDraft).toHaveBeenCalledWith(
       purchaseDraftId,
       warehouseId,
+      // T12/AC-22 — `identifiedUser` carries no observed `REJECTIONS:WATCH`, so the cause the
+      // condition account withholds is decided independently of the identity this test drives.
+      'cause_withheld',
     );
   });
 
@@ -469,13 +521,18 @@ describe('ReadPurchaseDraftQuery', () => {
         },
       ]),
     );
-    const query = new ReadPurchaseDraftQuery(repository as never);
+    const query = new ReadPurchaseDraftQuery(
+      repository as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
+    );
 
     const result = await query.execute(currentUser, purchaseDraftId);
 
     expect(repository.readRedactedDraft).toHaveBeenCalledWith(
       purchaseDraftId,
       warehouseId,
+      // T12/AC-22 — `currentUser` carries no observed `REJECTIONS:WATCH` either.
+      'cause_withheld',
     );
     expect(repository.readIdentifiedDraft).not.toHaveBeenCalled();
     // Redaction fails **open**, so the assertion is on the serialized shape and not only on the
@@ -510,7 +567,10 @@ describe('ReadPurchaseDraftQuery', () => {
         },
       ]),
     );
-    const query = new ReadPurchaseDraftQuery(repository as never);
+    const query = new ReadPurchaseDraftQuery(
+      repository as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
+    );
 
     const result = await query.execute(currentUser, purchaseDraftId);
 
@@ -530,7 +590,10 @@ describe('ReadPurchaseDraftQuery', () => {
         { ...redactedLink, snapshot: null, current: redactedCurrent },
       ]),
     );
-    const query = new ReadPurchaseDraftQuery(repository as never);
+    const query = new ReadPurchaseDraftQuery(
+      repository as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
+    );
 
     const result = await query.execute(currentUser, purchaseDraftId);
 
@@ -543,7 +606,10 @@ describe('ReadPurchaseDraftQuery', () => {
 
   it('returns nothing for a draft of another Warehouse in either form', async () => {
     const repository = purchaseDraftReadRepositoryDouble(null, null);
-    const query = new ReadPurchaseDraftQuery(repository as never);
+    const query = new ReadPurchaseDraftQuery(
+      repository as never,
+      new RejectionReasonLabelService(catalogueDouble() as never),
+    );
 
     await expect(
       query.execute(currentUser, purchaseDraftId),

@@ -10,6 +10,7 @@ import {
   purchaseDraftLineUpdateSchema,
   purchaseDraftListQuerySchema,
   purchaseDraftReviseSchema,
+  rejectionAmendSchema,
 } from '@warehouser/contracts/purchase-drafts';
 import { createZodDto } from 'nestjs-zod';
 
@@ -51,3 +52,4 @@ export class PurchaseDraftLineDirectDeliveryDto extends createZodDto(
 export class PurchaseDraftClosureDto extends createZodDto(
   purchaseDraftClosureSchema,
 ) {}
+export class RejectionAmendDto extends createZodDto(rejectionAmendSchema) {}

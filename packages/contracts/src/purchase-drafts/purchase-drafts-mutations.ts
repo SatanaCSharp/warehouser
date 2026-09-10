@@ -1,7 +1,12 @@
 import {
   deliveryModeSchema,
+  maxProseLength,
   packagingTypeIdSchema,
   purchaseDraftStateSchema,
+  rejectionDispositionSchema,
+  rejectionReasonIdSchema,
+  rejectionSourceSchema,
+  storedProseSchema,
 } from 'purchase-drafts/purchase-drafts-projections';
 import { z } from 'zod';
 
@@ -73,9 +78,13 @@ export const purchaseDraftLineUpdateSchema = z
     // the command rather than here.
     customerDeliveryAddressId: z.string().uuid().nullable().optional(),
   })
-  .refine((value) => Object.keys(value).length > 0, {
-    message: 'At least one Purchase Draft Line field must be present',
-  })
+  // See `rejectionAmendSchema`: a present-but-`undefined` property must not satisfy "at least one".
+  .refine(
+    (value) => Object.values(value).some((field) => field !== undefined),
+    {
+      message: 'At least one Purchase Draft Line field must be present',
+    },
+  )
   // openapi.yaml `dependentRequired: { customerDeliveryAddressId: [deliveryMode] }` — "an address
   // with no mode" is not a payload this endpoint has a meaning for. Bound to the field so the
   // refusal names it.
@@ -137,6 +146,132 @@ export const endingAllocationCreateSchema = z.strictObject({
   allocatedQuantity: z.number().int().min(1),
 });
 
+// ---- arrival-inspection: the condition a line's ending is recorded with ------------------------
+//
+// `rejectionReasonIdSchema`, `rejectionSourceSchema`, `rejectionDispositionSchema` and
+// `rejectionReasonSchema` moved to `purchase-drafts-projections.ts` (T12 prerequisite): the read
+// side's condition projection needs them too, and `purchase-drafts-mutations.ts` already imports
+// catalogue-shaped schemas *from* `purchase-drafts-projections.ts` rather than the other way, so
+// this keeps the import direction one-way instead of opening a cycle over top-level `z.enum(...)`
+// initialisation.
+
+// openapi.yaml `RejectionDescription` and `PreReceiptConformanceNote` share one shape: a member's
+// prose bounded at one thousand **characters**. `char_length`, not `octet_length` — a Ukrainian
+// description must not be refused at five hundred for costing two bytes each
+// (`chk_purchase_draft_line_rejections_description_length`, AC-14, AC-15b).
+//
+// The bound is counted in **code points**, not in `String.length`'s UTF-16 code units, because
+// PostgreSQL's `char_length` counts characters: the two agree across the BMP but diverge above it,
+// where one astral character costs two code units, so a `.max()` on `length` would refuse prose
+// at half the stated bound that the column would have stored.
+//
+// Trimmed non-empty: a blank string is a refusal rather than an absence, which is what keeps
+// "omitted or present with content" the only two states either property has (data-model.md).
+const proseSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .refine((value) => [...value].length <= maxProseLength, {
+    message: `Must be at most ${String(maxProseLength)} characters`,
+  });
+
+// Upper bound on the Condition Split of one ending, mirroring `maxAllocationsPerEndingLine`. A
+// payload guard rather than a business rule: the real bound is one entry per Reason (AC-09), proved
+// by `uq_purchase_draft_line_rejections_line_reason`. Deliberately loose, so extending the
+// catalogue never requires changing it.
+const maxRejectionsPerEndingLine = 50;
+
+// openapi.yaml `RejectionCreate` — one refusal within a line's ending, recorded **with** the ending
+// and never afterwards (AC-04). The raising member, the time, the Rejection's own identifier and
+// its Disposition are not inputs: the server attributes and mints them, and this object being
+// strict is what refuses them rather than silently discarding them.
+export const rejectionCreateSchema = z.strictObject({
+  rejectionReasonId: rejectionReasonIdSchema,
+  // A whole number of at least one (AC-03). That the sum across entries may not exceed the received
+  // figure is a cross-field rule the command asserts against the locked line (AC-02), not a bound
+  // this schema can state.
+  quantity: z.number().int().min(1),
+  source: rejectionSourceSchema,
+  // Required when the catalogue marks the named Reason `requiresDescription` — today `unfit_other`
+  // alone — and optional otherwise. That condition is the server's, asserted against the same
+  // catalogue read it makes for AC-06 rather than against a hard-coded identifier (AC-07).
+  description: proseSchema.optional(),
+});
+
+// openapi.yaml `PreReceiptConformanceNotMetCreate` — the supplier did not honour the frozen
+// instruction. One judgement covers packaging and the value-adding note both, so the note names
+// which of the two failed (AC-15, AC-15a). The note is optional: no acceptance criterion requires
+// one, and `chk_purchase_draft_lines_conformance_note_shape` asks only that it never stand without
+// a verdict.
+export const preReceiptConformanceNotMetCreateSchema = z.strictObject({
+  verdict: z.literal('not_met'),
+  note: proseSchema.optional(),
+});
+
+// openapi.yaml `PreReceiptConformanceWithoutNoteCreate` — the instruction was honoured, or the line
+// was frozen carrying none and there is nothing to judge. **Neither admits a note.**
+export const preReceiptConformanceWithoutNoteCreateSchema = z.strictObject({
+  verdict: z.enum(['met', 'not_applicable']),
+});
+
+// openapi.yaml `PreReceiptConformanceCreate` — the supplier's frozen instruction judged, submitted
+// with the ending and never afterwards.
+//
+// The note belonging **only** to `not_met` is expressed here as two arms rather than as a database
+// `CHECK`, deliberately: a `CHECK` produces an unnamed constraint violation where the server
+// error-handling guide requires a named predicate and a stable code, and no acceptance criterion
+// names a refusal for a note beside `met`. A 400 naming the property is the right refusal, so the
+// request schema is its home (data-model.md).
+//
+// Which *verdicts* are legal is not expressible here at all: it depends on what the line was frozen
+// with, which the server reads under lock (AC-17, AC-17a).
+export const preReceiptConformanceCreateSchema = z.union([
+  preReceiptConformanceNotMetCreateSchema,
+  preReceiptConformanceWithoutNoteCreateSchema,
+]);
+
+// openapi.yaml `RejectionAmend` — the description, the Disposition, or both (AC-18, AC-18b).
+//
+// **At least one must be present**: an amendment that amends nothing would still write an
+// attribution, which would make "every amendment records the acting member and the time" mean
+// something it does not.
+//
+// Nothing else about a Rejection is addressable. Its quantity, Reason, Source and line were settled
+// when the ending was recorded and there is no property for any of them here — the contract half of
+// what the repository's narrow conditional `UPDATE` enforces, since this codebase has no triggers
+// and column-level immutability would need one. The amending member and the time are attributed by
+// the server, never accepted as input.
+export const rejectionAmendSchema = z
+  .strictObject({
+    // Clearing is **not** offered, so this is optional rather than nullable: a Rejection naming a
+    // Reason the catalogue marks `requiresDescription` must always carry prose, and a nullable
+    // property here would let an amendment break an invariant the ending established. Blank after
+    // trimming is a refusal, not a clear.
+    description: proseSchema.optional(),
+    disposition: rejectionDispositionSchema.optional(),
+  })
+  // `Object.values`, not `Object.keys`: an object that still carries the key with an `undefined`
+  // value — which is what spreading form state produces — passes a key count while zod strips the
+  // property from the parsed data, so `{ description: undefined }` would validate here and 400 at
+  // the server. openapi.yaml `minProperties: 1` means a field with a value.
+  .refine(
+    (value) => Object.values(value).some((field) => field !== undefined),
+    {
+      message: 'At least one Rejection amendment field must be present',
+    },
+  );
+
+// openapi.yaml `RejectionAmendment` — the amendment as recorded. It is the amendment and not the
+// Rejection: the Reason, quantity and Source are deliberately absent, because those are the cause
+// `REJECTIONS:WATCH` gates, and `REJECTIONS:UPDATE` does not imply it (T13).
+export const rejectionAmendmentSchema = z.strictObject({
+  id: z.string().uuid(),
+  description: storedProseSchema.nullable(),
+  disposition: rejectionDispositionSchema,
+  amendedByUserId: z.string().uuid(),
+  amendedAt: z.string().datetime(),
+});
+
 // openapi.yaml `PurchaseDraftLineArrival` — what arrived at the dock on **one Via Warehouse line**
 // (AC-19). Bounded neither above nor below by `orderedQuantity`; `0` is a line where nothing
 // arrived, which is an ending rather than the absence of one.
@@ -146,6 +281,19 @@ export const endingAllocationCreateSchema = z.strictObject({
 // Attribution, the time and the draft's move to Closed are likewise derived, never inputs.
 export const purchaseDraftLineArrivalSchema = z.strictObject({
   receivedQuantity: z.number().int().nonnegative(),
+  // The Condition Split. Omitted or empty when nothing was refused — and an ending that refuses
+  // nothing needs only `PURCHASE_DRAFTS:RECEIVE`, while one carrying any entry needs
+  // `REJECTIONS:CREATE` as well, so this property's presence is what decides the required
+  // Permission set (AC-01a, AC-01b).
+  rejections: z
+    .array(rejectionCreateSchema)
+    .max(maxRejectionsPerEndingLine)
+    .optional(),
+  // Required on any line where something was received and refused on a line where nothing was
+  // (AC-04a); which verdicts are legal depends on what the line was frozen with (AC-17, AC-17a).
+  // Both are cross-field rules the command asserts against the locked line, not bounds statable
+  // here, which is why the property itself is optional.
+  preReceiptConformance: preReceiptConformanceCreateSchema.optional(),
   allocations: z
     .array(endingAllocationCreateSchema)
     .max(maxAllocationsPerEndingLine)
@@ -158,6 +306,14 @@ export const purchaseDraftLineArrivalSchema = z.strictObject({
 // counted (AC-21).
 export const purchaseDraftLineDirectDeliverySchema = z.strictObject({
   deliveredQuantity: z.number().int().nonnegative(),
+  // Identical to the arrival payload. The one rule that differs is carried by the entries
+  // themselves: every one takes `source: customer_reported`, and one claiming `inspected` is
+  // refused against the line's Delivery Mode by the server (AC-24, AC-25 mirrored).
+  rejections: z
+    .array(rejectionCreateSchema)
+    .max(maxRejectionsPerEndingLine)
+    .optional(),
+  preReceiptConformance: preReceiptConformanceCreateSchema.optional(),
   allocations: z
     .array(endingAllocationCreateSchema)
     .max(maxAllocationsPerEndingLine)
@@ -198,4 +354,10 @@ export type PurchaseDraftLineArrival = z.infer<
 export type PurchaseDraftLineDirectDelivery = z.infer<
   typeof purchaseDraftLineDirectDeliverySchema
 >;
+export type RejectionCreate = z.infer<typeof rejectionCreateSchema>;
+export type PreReceiptConformanceCreate = z.infer<
+  typeof preReceiptConformanceCreateSchema
+>;
+export type RejectionAmend = z.infer<typeof rejectionAmendSchema>;
+export type RejectionAmendment = z.infer<typeof rejectionAmendmentSchema>;
 export type PurchaseDraftClosure = z.infer<typeof purchaseDraftClosureSchema>;

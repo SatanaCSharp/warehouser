@@ -1,12 +1,19 @@
 import {
   ErrorCode,
+  PermissionId,
   WorkspacePermissionId,
 } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
+import { MAX_PROSE_LENGTH } from 'purchase-drafts/domain/predicates/purchase-draft-condition.predicates';
 import type {
   DeliveryMode,
   EndingKind,
 } from 'purchase-drafts/domain/value-objects/delivery-mode';
+import {
+  PreReceiptConformanceVerdict,
+  type RejectionDisposition,
+  type RejectionSource,
+} from 'purchase-drafts/domain/value-objects/line-condition';
 
 // AC-11 — one non-enumerating outcome for an Item or a Customer Order of another Warehouse and for
 // one that does not exist, naming the same-Warehouse rule. openapi.yaml
@@ -222,4 +229,290 @@ export const purchaseDraftEndingAlreadyRecordedError = (ending: {
     endingKind: ending.endingKind,
     endingRecordedByUserId: ending.endingRecordedByUserId,
     endingRecordedAt: ending.endingRecordedAt.toISOString(),
+  });
+
+// ---------------------------------------------------------------------------------------------
+// Arrival inspection — the Condition Split, the Pre-receipt Conformance and a Rejection's
+// Disposition (T7).
+//
+// Two surfaces, deliberately separate. A **violation** states one rule of sad.md §6.1 steps 5–6 and
+// carries that rule's own identifiers and figures; an **error** carries every violation collected in
+// one pass under one stable code. sad.md §6.1 requires the member's whole submission judged at once
+// — a member at a dock correcting one figure at a time is the failure mode the array shape exists to
+// prevent — so collecting the entries belongs to the ending command and each rule contributes one
+// entry rather than one refusal.
+//
+// No violation entry ever carries a customer name, an address or a Rejection's prose: identifiers
+// and figures only, which are meaningless to an actor who cannot already read the record
+// (spec.md §6.1, sad.md §8 security review scope).
+
+// The violation vocabulary openapi.yaml's `details.violations[]` examples fix, named per branch so
+// the error factories below state which entries they may carry instead of taking `unknown[]`. T8
+// collects them; contracts/api-sync-report.md §2 marks the vocabulary medium-confidence, and
+// `note_too_long` (AC-15b) and `condition_on_nothing_received` (AC-04a) are named here because no
+// artifact fixes them.
+export type ConditionSplitViolation = ReturnType<
+  | typeof rejectionsExceedReceivedViolation
+  | typeof unknownRejectionReasonViolation
+  | typeof descriptionRequiredViolation
+  | typeof duplicateRejectionReasonViolation
+  | typeof sourceMismatchViolation
+  | typeof verdictRequiredWithRejectionsViolation
+>;
+
+export type PreReceiptConformanceViolation = ReturnType<
+  | typeof metContradictsRejectionViolation
+  | typeof notApplicableOnInstructedLineViolation
+  | typeof verdictOnUninstructedLineViolation
+>;
+
+export type EndingConditionInputViolation = ReturnType<
+  | typeof quantityOutOfRangeViolation
+  | typeof descriptionTooLongViolation
+  | typeof descriptionEmptyViolation
+  | typeof descriptionNotTrimmedViolation
+  | typeof noteTooLongViolation
+  | typeof noteEmptyViolation
+  | typeof noteNotTrimmedViolation
+  | typeof noteNotAdmittedByVerdictViolation
+  | typeof conditionOnNothingReceivedViolation
+>;
+
+// AC-02 — the refusal names both figures. `rejectionReasonId` is `null` because the rule is about
+// the line's whole Condition Split rather than about any one refusal, which is what keeps every
+// entry in `details.violations` readable as one shape.
+export const rejectionsExceedReceivedViolation = (
+  receivedQuantity: number,
+  rejectedQuantity: number,
+) => ({
+  rule: 'rejections_exceed_received',
+  rejectionReasonId: null,
+  receivedQuantity,
+  rejectedQuantity,
+});
+
+// AC-06 — the refusal names the Reasons the catalogue **does** offer, which is the whole point of
+// the criterion: the member is told what is available and that the team maintains the list. The
+// catalogue is passed in so the entry carries whatever it held at that moment rather than a list
+// frozen into code, and it deliberately returns nothing else (sad.md §8).
+export const unknownRejectionReasonViolation = (
+  rejectionReasonId: string,
+  availableRejectionReasonIds: readonly string[],
+) => ({
+  rule: 'unknown_rejection_reason',
+  rejectionReasonId,
+  availableRejectionReasonIds,
+});
+
+// AC-07 — the entry names the Reason the catalogue marks as requiring prose, and carries no prose of
+// its own.
+export const descriptionRequiredViolation = (rejectionReasonId: string) => ({
+  rule: 'description_required',
+  rejectionReasonId,
+});
+
+// code-review-back-end-2026-09-09.md, blocking finding 4 — the entry names the refused total the
+// member must either withdraw or state a verdict beside. `rejectionReasonId` is `null` because the
+// rule is about the line's whole Condition Split rather than about any one refusal, as
+// `rejections_exceed_received` above.
+export const verdictRequiredWithRejectionsViolation = (
+  rejectedQuantity: number,
+) => ({
+  rule: 'verdict_required_with_rejections',
+  rejectionReasonId: null,
+  rejectedQuantity,
+});
+
+// AC-09 — the entry names the Reason repeated on the line.
+export const duplicateRejectionReasonViolation = (
+  rejectionReasonId: string,
+) => ({
+  rule: 'duplicate_rejection_reason',
+  rejectionReasonId,
+});
+
+// AC-25 and its mirror (sad.md §6.2) — one entry states both directions: how the line's goods
+// travelled, the Source submitted, and the Source that mode requires, so the member is told which of
+// their two statements to change.
+export const sourceMismatchViolation = (mismatch: {
+  rejectionReasonId: string;
+  deliveryMode: DeliveryMode;
+  submittedSource: RejectionSource;
+  requiredSource: RejectionSource;
+}) => ({
+  rule: 'source_mismatch',
+  rejectionReasonId: mismatch.rejectionReasonId,
+  deliveryMode: mismatch.deliveryMode,
+  submittedSource: mismatch.submittedSource,
+  requiredSource: mismatch.requiredSource,
+});
+
+// AC-16 — the entry names the verdict and the refusal that contradicts it.
+export const metContradictsRejectionViolation = (
+  rejectionReasonId: string,
+) => ({
+  rule: 'met_contradicts_rejection',
+  verdict: PreReceiptConformanceVerdict.Met,
+  rejectionReasonId,
+});
+
+// AC-17a — the entry names what the line was frozen carrying, so the member sees why Not applicable
+// was refused. The Value-adding Note is reported as **whether** there was one, never as its wording
+// (openapi.yaml `frozenValueAddingNote: true`).
+export const notApplicableOnInstructedLineViolation = (
+  frozenPackagingTypeId: string | null,
+  frozenValueAddingNote: string | null,
+) => ({
+  rule: 'not_applicable_on_instructed_line',
+  verdict: PreReceiptConformanceVerdict.NotApplicable,
+  frozenPackagingTypeId,
+  frozenValueAddingNote: frozenValueAddingNote !== null,
+});
+
+// AC-17 — the mirror: a verdict on a line frozen carrying neither, which the entry says outright
+// rather than leaving the member to infer it.
+export const verdictOnUninstructedLineViolation = (
+  verdict: PreReceiptConformanceVerdict,
+) => ({
+  rule: 'verdict_on_uninstructed_line',
+  verdict,
+  frozenPackagingTypeId: null,
+  frozenValueAddingNote: false,
+});
+
+// AC-03 — the payload's own bound, bound to the property that carried it.
+export const quantityOutOfRangeViolation = (path: string) => ({
+  rule: 'quantity_out_of_range',
+  path,
+});
+
+// AC-14 — the entry states the bound, in characters, so the member is told the limit rather than
+// only that it was passed.
+export const descriptionTooLongViolation = (path: string) => ({
+  rule: 'description_too_long',
+  path,
+  maxLength: MAX_PROSE_LENGTH,
+});
+
+// AC-14 (post-review) — `chk_purchase_draft_line_rejections_description_stored_trimmed` refuses a
+// blank-after-trim description as an unnamed 500; this is the named refusal that reaches it first.
+export const descriptionEmptyViolation = (path: string) => ({
+  rule: 'description_empty',
+  path,
+});
+
+// AC-14 (post-review) — the sibling half of the same constraint: stored untrimmed, never merely
+// blank (`description <> btrim(description)`).
+export const descriptionNotTrimmedViolation = (path: string) => ({
+  rule: 'description_not_trimmed',
+  path,
+});
+
+// AC-15b — the Conformance note's own bound. A distinct rule from AC-14's so the refusal names the
+// note rather than a description the member never wrote.
+export const noteTooLongViolation = (path: string) => ({
+  rule: 'note_too_long',
+  path,
+  maxLength: MAX_PROSE_LENGTH,
+});
+
+// AC-15b (post-review) — the note half of `chk_purchase_draft_lines_conformance_note_shape`'s
+// `note <> ''`, named before the constraint can turn a blank-after-trim note into an unnamed 500.
+export const noteEmptyViolation = (path: string) => ({
+  rule: 'note_empty',
+  path,
+});
+
+// AC-15b (post-review) — the same constraint's `note = btrim(note)` half.
+export const noteNotTrimmedViolation = (path: string) => ({
+  rule: 'note_not_trimmed',
+  path,
+});
+
+// AC-15/AC-15a (post-review) — `PreReceiptConformanceWithoutNoteCreate`
+// (`@warehouser/contracts`) admits a note only beside `not_met`; a note beside `met` or
+// `not_applicable` would otherwise persist silently rather than being refused. Named here, at the
+// payload-shape layer, because it is a property of the request rather than a judgement against the
+// frozen line — `verdict_on_uninstructed_line` and its neighbours stay `PreReceiptConformanceViolation`s
+// unaffected by this one.
+export const noteNotAdmittedByVerdictViolation = (
+  verdict: PreReceiptConformanceVerdict,
+) => ({
+  rule: 'note_not_admitted_by_verdict',
+  verdict,
+});
+
+// AC-04a — a line where nothing was received records neither judgement, and the refusal says so
+// rather than letting `chk_purchase_draft_lines_conformance_requires_ending` produce an unnamed
+// constraint violation the global filter can only report as a 500.
+export const conditionOnNothingReceivedViolation = (path: string) => ({
+  rule: 'condition_on_nothing_received',
+  path,
+});
+
+// AC-01a/ADR 0001 — a submission that refuses goods needs the refusing capability, and the refusal
+// names it so the surface can say which one. It names **no** Rejection: no Reason, description,
+// quantity or Disposition appears in a denial payload. openapi.yaml `PurchaseDraftLineEndingForbidden`
+// `rejectionCapabilityRequired` example: `details: { requiredPermissionId: "REJECTIONS:CREATE" }`.
+export const purchaseDraftRejectionCapabilityRequiredError =
+  (): ApplicationError =>
+    new ApplicationError(
+      ErrorCode.PURCHASE_DRAFTS_REJECTION_CAPABILITY_REQUIRED,
+      { requiredPermissionId: PermissionId.REJECTIONS_CREATE },
+    );
+
+// AC-02, AC-06, AC-07, AC-09, AC-25 — one code for the whole Condition Split branch, carrying every
+// violation collected in one pass together with the two figures the member is correcting
+// (openapi.yaml `conditionSplitViolations`). One code rather than one per criterion because
+// contracts/api-sync-report.md §2 maps the branch, not the rule.
+export const purchaseDraftConditionSplitInvalidError = (split: {
+  receivedQuantity: number;
+  rejectedQuantity: number;
+  violations: readonly ConditionSplitViolation[];
+}): ApplicationError =>
+  new ApplicationError(ErrorCode.PURCHASE_DRAFTS_CONDITION_SPLIT_INVALID, {
+    receivedQuantity: split.receivedQuantity,
+    rejectedQuantity: split.rejectedQuantity,
+    violations: split.violations,
+  });
+
+// AC-16, AC-17, AC-17a — the Conformance branch, judged against the same locked line. It carries the
+// violations alone: no quantity is in question (openapi.yaml `conformanceViolations`).
+export const purchaseDraftPreReceiptConformanceInvalidError = (
+  violations: readonly PreReceiptConformanceViolation[],
+): ApplicationError =>
+  new ApplicationError(
+    ErrorCode.PURCHASE_DRAFTS_PRE_RECEIPT_CONFORMANCE_INVALID,
+    { violations },
+  );
+
+// AC-03, AC-14, AC-15b, AC-04a — the payload's own bounds, refused under the reused
+// `purchase_drafts.invalid_input` rather than under either condition code, exactly as
+// contracts/api-sync-report.md §4 maps the branch (openapi.yaml `payloadShape`). Where sad.md §6.1
+// step 5 places these in the condition branches, the contract governs.
+export const purchaseDraftEndingConditionInputError = (
+  violations: readonly EndingConditionInputViolation[],
+): ApplicationError =>
+  new ApplicationError(ErrorCode.PURCHASE_DRAFTS_INVALID_INPUT, {
+    violations,
+  });
+
+// AC-19 — "the system tells the member which dispositions are available". The refusal carries the
+// offered set and nothing else (openapi.yaml `unknownDisposition`).
+export const purchaseDraftUnknownDispositionError = (
+  availableDispositions: readonly RejectionDisposition[],
+): ApplicationError =>
+  new ApplicationError(ErrorCode.PURCHASE_DRAFTS_INVALID_INPUT, {
+    availableDispositions,
+  });
+
+// AC-18a — a Disposition once decided may be corrected to another decision but never returned to
+// Undecided. `details.currentDisposition` names the decision standing so the surface can drop
+// `undecided` from the menu rather than show it disabled (sad.md §6.4 step 1). It names no Reason,
+// description or quantity (openapi.yaml `RejectionAmendmentConflict`).
+export const purchaseDraftDispositionNotReversibleError = (
+  currentDisposition: RejectionDisposition,
+): ApplicationError =>
+  new ApplicationError(ErrorCode.PURCHASE_DRAFTS_DISPOSITION_NOT_REVERSIBLE, {
+    currentDisposition,
   });

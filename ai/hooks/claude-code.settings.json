@@ -1,0 +1,24 @@
+{
+  "_comment": [
+    "Draft settings for Claude Code. `.claude/` is gitignored, so this checked-in draft is the",
+    "installable form: merge the `hooks` block below into .claude/settings.local.json (or install",
+    "it with `ai/commands/init-agent.md`). Keep any existing keys — merge, never replace.",
+    "The rule itself lives in AGENTS.md section Committing; the guard that enforces it lives in",
+    "ai/hooks/deny-git-hook-bypass.sh. This file only wires the two together for one agent."
+  ],
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PROJECT_DIR:-.}\"/ai/hooks/deny-git-hook-bypass.sh",
+            "timeout": 10,
+            "statusMessage": "Checking that Git hooks are not being skipped"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,7 +1,7 @@
-import { toAuthenticatedCurrentUser } from 'auth/domain/authenticated-current-user';
 import { Account } from 'auth/domain/entities/account';
 import { Session } from 'auth/domain/entities/session';
 import { User } from 'auth/domain/entities/user';
+import { toAuthenticatedCurrentUser } from 'auth/domain/mappers/authenticated-current-user.mapper';
 import {
   AccountId,
   SessionId,

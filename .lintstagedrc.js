@@ -184,6 +184,15 @@ module.exports = {
     return [...eslintCommands, prettierCommand];
   },
 
+  // The architectural tier asserts the shape of the whole apps/server source tree — where mappers
+  // live, how they are written — so it is not a per-file check: any staged server source file can
+  // break it, and one run covers them all. Returning a function keeps lint-staged from appending
+  // the staged filenames to the command, and lint-staged's stashing means the specs see exactly
+  // the tree being committed rather than the working copy.
+  'apps/server/src/**/*.ts': () => {
+    return 'pnpm --filter @warehouser/server test:architectural';
+  },
+
   // Format other files with Prettier only
   '*.{json,css,md}': (filenames) => {
     return `prettier --write ${filenames.map((f) => `"${f}"`).join(' ')}`;

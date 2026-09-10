@@ -44,6 +44,7 @@ type FormTextAreaFieldProps = Pick<
     ComponentPropsWithoutRef<'textarea'>,
     | 'autoComplete'
     | 'autoFocus'
+    | 'maxLength'
     | 'name'
     | 'onBlur'
     | 'onChange'
@@ -71,6 +72,7 @@ export const FormTextAreaField = forwardRef<
       isInvalid,
       isRequired,
       label,
+      maxLength,
       name,
       onBlur,
       onChange,
@@ -93,6 +95,7 @@ export const FormTextAreaField = forwardRef<
         ref={ref}
         autoComplete={autoComplete}
         autoFocus={autoFocus}
+        maxLength={maxLength}
         name={name}
         placeholder={placeholder}
         rows={rows}

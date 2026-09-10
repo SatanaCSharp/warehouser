@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 // openapi.yaml `PurchaseDraftSummary`/`PurchaseDraftLineLink`/`DemandSnapshotEntry`/
 // `LinkedCustomerOrderState`/`ArrivalAllocation`).
 import { PermissionId } from '@warehouser/shared-types/enums';
+import { RejectionReasonLabelService } from 'purchase-drafts/domain/services/rejection-reason-label.service';
 import { ReadPurchaseDraftQuery } from 'purchase-drafts/usecases/queries/read-purchase-draft.query';
 // `PurchaseDraftReadRepository` does not exist yet (T14) — this is the RED for the read that joins
 // the Demand Snapshot against the Customer Orders as they stand now, in one purpose-built query per
@@ -1115,6 +1116,11 @@ const registerReferenceTests = (): void => {
   });
 };
 
+// Neither test below touches a Rejection, so this double never needs to resolve one.
+const emptyRejectionReasonCatalogue = () => ({
+  resolveRejectionReasons: jest.fn().mockResolvedValue([]),
+});
+
 const registerHasDriftSignalInvariantTests = (): void => {
   // The list's `hasDriftSignal` and the read's per-link `driftSignals` are two views of exactly
   // the same four named conditions (openapi.yaml `DriftSignalKind`); they must never disagree,
@@ -1133,7 +1139,10 @@ const registerHasDriftSignalInvariantTests = (): void => {
     const detail = await repository.readIdentifiedDraft(draftId, warehouseId);
     expect(detail).not.toBeNull();
 
-    const query = new ReadPurchaseDraftQuery(repository as never);
+    const query = new ReadPurchaseDraftQuery(
+      repository as never,
+      new RejectionReasonLabelService(emptyRejectionReasonCatalogue() as never),
+    );
     const derived = await query.execute(identifiedActor(warehouseId), draftId);
 
     const derivedHasDriftSignal = (derived?.lines ?? []).some((line) =>
@@ -1156,7 +1165,10 @@ const registerHasDriftSignalInvariantTests = (): void => {
     const detail = await repository.readIdentifiedDraft(draftId, warehouseId);
     expect(detail).not.toBeNull();
 
-    const query = new ReadPurchaseDraftQuery(repository as never);
+    const query = new ReadPurchaseDraftQuery(
+      repository as never,
+      new RejectionReasonLabelService(emptyRejectionReasonCatalogue() as never),
+    );
     const derived = await query.execute(identifiedActor(warehouseId), draftId);
 
     const derivedHasDriftSignal = (derived?.lines ?? []).some((line) =>

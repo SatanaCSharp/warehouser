@@ -11,6 +11,12 @@ export type PurchaseDraftLineDeliveryMode =
 // line and a direct delivery to a Direct to Customer one, which the schema enforces (AC-20).
 export type PurchaseDraftLineEndingKind = 'arrival' | 'direct_delivery';
 
+// `chk_purchase_draft_lines_pre_receipt_conformance` — the three verdicts a Pre-receipt Conformance
+// admits (AC-15). Not applicable belongs only to a line frozen carrying neither a Packaging Type nor
+// a Value-adding Note (AC-17, AC-17a).
+export type PurchaseDraftLinePreReceiptConformance =
+  'met' | 'not_met' | 'not_applicable';
+
 @Entity({ name: 'purchase_draft_lines' })
 export class PurchaseDraftLineEntity {
   @PrimaryColumn('uuid')
@@ -72,6 +78,20 @@ export class PurchaseDraftLineEntity {
 
   @Column('timestamptz', { name: 'ending_recorded_at', nullable: true })
   endingRecordedAt!: Date | null;
+
+  // How the goods measured against the instruction frozen on this line (AC-15). NULL until an ending
+  // records it, NULL forever on a line where nothing was received (AC-04a), and NULL on every ending
+  // recorded before the arrival-inspection release. The note stands only beside a verdict
+  // (`chk_purchase_draft_lines_conformance_note_shape`).
+  @Column('varchar', {
+    name: 'pre_receipt_conformance',
+    length: 24,
+    nullable: true,
+  })
+  preReceiptConformance!: PurchaseDraftLinePreReceiptConformance | null;
+
+  @Column('text', { name: 'pre_receipt_conformance_note', nullable: true })
+  preReceiptConformanceNote!: string | null;
 
   @Column('timestamptz', { name: 'created_at' })
   createdAt!: Date;

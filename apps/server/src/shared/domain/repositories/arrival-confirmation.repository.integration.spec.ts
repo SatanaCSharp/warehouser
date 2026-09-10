@@ -18,12 +18,14 @@ import { ItemEntity } from 'shared/domain/entities/item.entity';
 import type { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
 import { PurchaseDraftEntity as PurchaseDraftEntityClass } from 'shared/domain/entities/purchase-draft.entity';
 import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity';
+import { PurchaseDraftLineRejectionEntity } from 'shared/domain/entities/purchase-draft-line-rejection.entity';
 import { UserEntity } from 'shared/domain/entities/user.entity';
 import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
 import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 import {
   ArrivalConfirmationRepository,
   type LockPurchaseDraftLineForEndingResult,
+  type RecordLineEndingConditionInput,
   type RecordLineEndingInput,
   type RecordLineEndingResult,
 } from 'shared/domain/repositories/arrival-confirmation.repository';
@@ -127,6 +129,10 @@ interface SeedLineOverrides {
   readonly endingQuantity?: number | null;
   readonly endingRecordedByUserId?: string | null;
   readonly endingRecordedAt?: Date | null;
+  // AC-17/AC-17a — the frozen instruction the Pre-receipt Conformance is judged against. Seeded
+  // here because the ending decides the verdict from the locked line alone.
+  readonly packagingTypeId?: string | null;
+  readonly valueAddingNote?: string | null;
 }
 
 const seedLine = async (
@@ -142,8 +148,8 @@ const seedLine = async (
     warehouseId: seeded.warehouseId,
     itemId: seeded.itemId,
     orderedQuantity,
-    packagingTypeId: null,
-    valueAddingNote: null,
+    packagingTypeId: overrides.packagingTypeId ?? null,
+    valueAddingNote: overrides.valueAddingNote ?? null,
     deliveryMode: 'via_warehouse',
     endingKind: overrides.endingKind ?? null,
     endingQuantity: overrides.endingQuantity ?? null,
@@ -160,6 +166,14 @@ const readDraft = (id: string): Promise<PurchaseDraftEntity | null> =>
 
 const readLine = (id: string): Promise<PurchaseDraftLineEntity | null> =>
   dataSource.manager.getRepository(PurchaseDraftLineEntity).findOneBy({ id });
+
+const readRejections = (
+  purchaseDraftLineId: string,
+): Promise<PurchaseDraftLineRejectionEntity[]> =>
+  dataSource.manager.getRepository(PurchaseDraftLineRejectionEntity).find({
+    where: { purchaseDraftLineId },
+    order: { rejectionReasonId: 'ASC' },
+  });
 
 const lockLineInTransaction = (
   purchaseDraftId: string,
@@ -205,6 +219,34 @@ const captureStatements = async <T>(
   return { result, statements };
 };
 
+// The columns a statement actually asks PostgreSQL for, read from its select list alone. Cutting at
+// `FROM` is what keeps a column named only in the `WHERE` clause — `purchase_draft_id`,
+// `warehouse_id` — out of the answer: the composite tuple the line is *resolved* by is not the
+// projection the caller is handed.
+const selectedColumnsOf = (statement: string): string[] => {
+  const selectList = /^SELECT\s+(?<list>[\S\s]*?)\s+FROM\s/u.exec(statement)
+    ?.groups?.list;
+
+  return [...(selectList ?? '').matchAll(/"[^"]+"\.(?:"(?<column>[^"]+)")/gu)]
+    .map((match) => match.groups?.column ?? '')
+    .sort();
+};
+
+const lineProjectionOf = (statements: string[]): string[] =>
+  selectedColumnsOf(
+    statements.find((sql) => /FROM\s+"purchase_draft_lines"/u.test(sql)) ?? '',
+  );
+
+const conditionOf = (
+  rejections: RecordLineEndingConditionInput['rejections'],
+  preReceiptConformance: RecordLineEndingConditionInput['preReceiptConformance'] = null,
+  preReceiptConformanceNote: string | null = null,
+): RecordLineEndingConditionInput => ({
+  preReceiptConformance,
+  preReceiptConformanceNote,
+  rejections,
+});
+
 // eslint-disable-next-line max-lines-per-function -- a repository integration suite covering both write methods across their success and refusal terms is inherently long
 describe('ArrivalConfirmationRepository', () => {
   beforeAll(async () => {
@@ -213,7 +255,7 @@ describe('ArrivalConfirmationRepository', () => {
 
   afterEach(async () => {
     await dataSource.query(
-      'TRUNCATE arrival_allocations, purchase_draft_demand_snapshots, purchase_draft_line_links, purchase_draft_lines, purchase_drafts, item_stock_adjustments, customer_orders, items, warehouse_memberships, roles, warehouses, workspaces, sessions, users, accounts CASCADE',
+      'TRUNCATE purchase_draft_line_rejections, arrival_allocations, purchase_draft_demand_snapshots, purchase_draft_line_links, purchase_draft_lines, purchase_drafts, item_stock_adjustments, customer_orders, items, warehouse_memberships, roles, warehouses, workspaces, sessions, users, accounts CASCADE',
     );
   });
 
@@ -329,8 +371,83 @@ describe('ArrivalConfirmationRepository', () => {
       expect(statements[0]).toMatch(/FOR UPDATE/u);
       expect(statements[0]).toMatch(/"purchase_drafts"/u);
     });
+
+    // AC-17/AC-17a/sad.md §6.1 step 3 — the Pre-receipt Conformance is decided against the
+    // Packaging Type and Value-adding Note **frozen on the line**, so both must be readable from the
+    // row the ending already locks and from nothing else. This is the whole widening: the projection
+    // gains these two and nothing more.
+    it('projects the Packaging Type and Value-adding Note the line was frozen with', async () => {
+      const seeded = await seedWarehouse();
+      const draftId = await seedDraft(seeded, 'ready_for_ordering');
+      const lineId = await seedLine(seeded, draftId, 150, {
+        packagingTypeId: 'cartons',
+        valueAddingNote: 'Label each coil with its length',
+      });
+
+      const locked = await lockLineInTransaction(
+        draftId,
+        lineId,
+        seeded.warehouseId,
+      );
+
+      expect(locked.line).toMatchObject({
+        id: lineId,
+        packagingTypeId: 'cartons',
+        valueAddingNote: 'Label each coil with its length',
+      });
+    });
+
+    // data-model.md § "Repository boundaries" — "gains `packaging_type_id` and `value_adding_note`
+    // and **nothing else**". Asserted as the whole projected column list rather than as two
+    // `toContain`s, because "nothing else" is the half that rots silently: a third column added for
+    // some later convenience passes every positive assertion in this file.
+    it('asks the store for exactly the ending columns and the two frozen ones', async () => {
+      const seeded = await seedWarehouse();
+      const draftId = await seedDraft(seeded, 'ready_for_ordering');
+      const lineId = await seedLine(seeded, draftId, 150, {
+        packagingTypeId: 'cartons',
+        valueAddingNote: 'Label each coil with its length',
+      });
+
+      const { statements } = await captureStatements(() =>
+        lockLineInTransaction(draftId, lineId, seeded.warehouseId),
+      );
+
+      expect(lineProjectionOf(statements)).toEqual([
+        'delivery_mode',
+        'ending_kind',
+        'ending_recorded_at',
+        'ending_recorded_by_user_id',
+        'id',
+        'packaging_type_id',
+        'value_adding_note',
+      ]);
+    });
+
+    // **Hard rule** (sad.md §11, spec.md §6.1, task T5) — `ordered_quantity` stays withheld. It is
+    // what keeps "Refusal as a route around the Allocation bound" a *property* of the write path
+    // rather than a check on it: AC-19 bounds the ending quantity neither above nor below the
+    // ordered figure, so a caller that could read it could derive a bound this operation does not
+    // have. A negative guarantee nothing else in this file pins — T14 adds the architecture check,
+    // this pins the behaviour.
+    it('withholds the ordered quantity from the locked line and from the statement that reads it', async () => {
+      const seeded = await seedWarehouse();
+      const draftId = await seedDraft(seeded, 'ready_for_ordering');
+      const lineId = await seedLine(seeded, draftId, 150, {
+        packagingTypeId: 'cartons',
+        valueAddingNote: 'Label each coil with its length',
+      });
+
+      const { result, statements } = await captureStatements(() =>
+        lockLineInTransaction(draftId, lineId, seeded.warehouseId),
+      );
+
+      expect(lineProjectionOf(statements)).not.toContain('ordered_quantity');
+      expect(result.line).not.toHaveProperty('orderedQuantity');
+    });
   });
 
+  // eslint-disable-next-line max-lines-per-function -- one write method covering the ending, its conformance and its refusals across their success and refusal terms is inherently long
   describe('recordLineEnding', () => {
     // AC-19 — one line's ending is written with its acting member and the time, and the draft stays
     // in Ready for Ordering while another line of it is still without one.
@@ -348,6 +465,7 @@ describe('ArrivalConfirmationRepository', () => {
         endingKind: 'arrival',
         endingRecordedByUserId: seeded.userId,
         endingRecordedAt: later,
+        condition: null,
       });
 
       expect(written).toEqual({ recorded: true, closed: false });
@@ -379,6 +497,7 @@ describe('ArrivalConfirmationRepository', () => {
         endingKind: 'arrival',
         endingRecordedByUserId: seeded.userId,
         endingRecordedAt: later,
+        condition: null,
       });
 
       const written = await recordEndingInTransaction({
@@ -389,6 +508,7 @@ describe('ArrivalConfirmationRepository', () => {
         endingKind: 'arrival',
         endingRecordedByUserId: seeded.userId,
         endingRecordedAt: evenLater,
+        condition: null,
       });
 
       expect(written).toEqual({ recorded: true, closed: true });
@@ -421,6 +541,7 @@ describe('ArrivalConfirmationRepository', () => {
         endingKind: 'arrival',
         endingRecordedByUserId: seeded.userId,
         endingRecordedAt: later,
+        condition: null,
       });
 
       expect(written).toEqual({ recorded: false, closed: false });
@@ -452,6 +573,7 @@ describe('ArrivalConfirmationRepository', () => {
         endingKind: 'arrival',
         endingRecordedByUserId: seeded.userId,
         endingRecordedAt: later,
+        condition: null,
       });
 
       expect(written).toEqual({ recorded: false, closed: false });
@@ -467,6 +589,7 @@ describe('ArrivalConfirmationRepository', () => {
         endingKind: 'arrival',
         endingRecordedByUserId: seeded.userId,
         endingRecordedAt: later,
+        condition: null,
       });
 
       expect(writtenForeign).toEqual({ recorded: false, closed: false });
@@ -496,10 +619,312 @@ describe('ArrivalConfirmationRepository', () => {
           endingKind: 'arrival',
           endingRecordedByUserId: seeded.userId,
           endingRecordedAt: later,
+          condition: null,
         });
 
         expect(written).toEqual({ recorded: true, closed: false });
         expect(await readDraft(draftId)).toEqual(before);
+      });
+    });
+
+    // AC-01/AC-08/AC-15/sad.md §6.1 step 8 — one hundred presented, five refused as damaged by
+    // packing and three as packaging not as instructed, judged against the frozen instruction, all
+    // in the one statement set the ending already had. The Rejection carries the line's Warehouse
+    // and Delivery Mode because `fk_purchase_draft_line_rejections_line` proves all three through
+    // one reference (AC-25, AC-26); it names its Reason rather than copying its wording (AC-23a);
+    // and it starts Undecided with the raising member and the time (AC-19, spec.md §6.1).
+    it('writes the ending, its conformance and one row per stated Reason', async () => {
+      const seeded = await seedWarehouse();
+      const draftId = await seedDraft(seeded, 'ready_for_ordering');
+      const lineId = await seedLine(seeded, draftId, 100, {
+        packagingTypeId: 'cartons',
+        valueAddingNote: 'Label each coil with its length',
+      });
+
+      const written = await recordEndingInTransaction({
+        purchaseDraftId: draftId,
+        purchaseDraftLineId: lineId,
+        warehouseId: seeded.warehouseId,
+        endingQuantity: 100,
+        endingKind: 'arrival',
+        endingRecordedByUserId: seeded.userId,
+        endingRecordedAt: later,
+        condition: conditionOf(
+          [
+            {
+              rejectionReasonId: 'damaged_by_packing',
+              quantity: 5,
+              source: 'inspected',
+              description: 'Cartons crushed on the top layer',
+            },
+            {
+              rejectionReasonId: 'packaging_not_as_instructed',
+              quantity: 3,
+              source: 'inspected',
+              description: null,
+            },
+          ],
+          'not_met',
+          'Coils arrived unlabelled and two cartons were the wrong type',
+        ),
+      });
+
+      expect(written).toEqual({ recorded: true, closed: true });
+      expect(await readLine(lineId)).toMatchObject({
+        endingQuantity: 100,
+        endingRecordedAt: later,
+        preReceiptConformance: 'not_met',
+        preReceiptConformanceNote:
+          'Coils arrived unlabelled and two cartons were the wrong type',
+      });
+
+      const rejections = await readRejections(lineId);
+
+      expect(rejections).toHaveLength(2);
+      expect(rejections[0]).toMatchObject({
+        purchaseDraftLineId: lineId,
+        warehouseId: seeded.warehouseId,
+        deliveryMode: 'via_warehouse',
+        rejectionReasonId: 'damaged_by_packing',
+        quantity: 5,
+        source: 'inspected',
+        description: 'Cartons crushed on the top layer',
+        disposition: 'undecided',
+        raisedByUserId: seeded.userId,
+        createdAt: later,
+        amendedByUserId: null,
+        amendedAt: null,
+      });
+      expect(rejections[1]).toMatchObject({
+        rejectionReasonId: 'packaging_not_as_instructed',
+        quantity: 3,
+        source: 'inspected',
+        description: null,
+        disposition: 'undecided',
+      });
+    });
+
+    // data-model.md § "Concurrency, locks and transactions" / sad.md §8 — the lock order is
+    // `delivery-addresses`', **extended** rather than replaced: the draft row (taken in
+    // `lockDraftLineForEnding`), then its line, then that line's refusals, then the Customer Orders.
+    // A fourth write path adopting a different order reintroduces the deadlock, so the position of
+    // the refusal rows between the line and the closure is asserted, not assumed.
+    it('writes the refusals between the line and the draft closure, in the fixed lock order', async () => {
+      const seeded = await seedWarehouse();
+      const draftId = await seedDraft(seeded, 'ready_for_ordering');
+      const lineId = await seedLine(seeded, draftId, 100);
+
+      const { statements } = await captureStatements(() =>
+        recordEndingInTransaction({
+          purchaseDraftId: draftId,
+          purchaseDraftLineId: lineId,
+          warehouseId: seeded.warehouseId,
+          endingQuantity: 100,
+          endingKind: 'arrival',
+          endingRecordedByUserId: seeded.userId,
+          endingRecordedAt: later,
+          condition: conditionOf([
+            {
+              rejectionReasonId: 'damaged_in_transit',
+              quantity: 4,
+              source: 'inspected',
+              description: null,
+            },
+          ]),
+        }),
+      );
+
+      const lineWrite = statements.findIndex((sql) =>
+        /UPDATE\s+"purchase_draft_lines"/u.test(sql),
+      );
+      const refusalWrite = statements.findIndex((sql) =>
+        /INSERT INTO\s+"purchase_draft_line_rejections"/u.test(sql),
+      );
+      const closure = statements.findIndex((sql) =>
+        /UPDATE\s+"purchase_drafts"/u.test(sql),
+      );
+
+      expect(lineWrite).toBeGreaterThanOrEqual(0);
+      expect(refusalWrite).toBeGreaterThan(lineWrite);
+      expect(closure).toBeGreaterThan(refusalWrite);
+    });
+
+    // AC-01/AC-08/spec.md §6 "Ending atomicity" — "a failure anywhere rolled the whole submission
+    // back, its refusals included". The failure is forced *after* the ending row is written, by a
+    // Rejection naming a Reason outside the catalogue: `fk_purchase_draft_line_rejections_reason`
+    // refuses it, and what must survive the rollback is **nothing** — not the ending, not the
+    // conformance, not the other refusal that was accepted before it.
+    it('leaves no ending, no conformance and no Rejection when a refusal fails mid-write', async () => {
+      const seeded = await seedWarehouse();
+      const draftId = await seedDraft(seeded, 'ready_for_ordering');
+      const lineId = await seedLine(seeded, draftId, 100, {
+        packagingTypeId: 'cartons',
+      });
+
+      await expect(
+        recordEndingInTransaction({
+          purchaseDraftId: draftId,
+          purchaseDraftLineId: lineId,
+          warehouseId: seeded.warehouseId,
+          endingQuantity: 100,
+          endingKind: 'arrival',
+          endingRecordedByUserId: seeded.userId,
+          endingRecordedAt: later,
+          condition: conditionOf(
+            [
+              {
+                rejectionReasonId: 'damaged_in_transit',
+                quantity: 5,
+                source: 'inspected',
+                description: null,
+              },
+              {
+                rejectionReasonId: 'reason_outside_the_catalogue',
+                quantity: 3,
+                source: 'inspected',
+                description: null,
+              },
+            ],
+            'not_met',
+            'Half the cartons were soaked',
+          ),
+        }),
+      ).rejects.toThrow();
+
+      expect(await readLine(lineId)).toMatchObject({
+        endingQuantity: null,
+        endingKind: null,
+        endingRecordedByUserId: null,
+        endingRecordedAt: null,
+        preReceiptConformance: null,
+        preReceiptConformanceNote: null,
+      });
+      expect(await readRejections(lineId)).toEqual([]);
+      expect(await readDraft(draftId)).toMatchObject({
+        state: 'ready_for_ordering',
+      });
+    });
+
+    // AC-04a — a line where the supplier delivered nothing at all records its ending and neither
+    // judgement. `chk_purchase_draft_lines_conformance_requires_ending` is the store's half of the
+    // same rule; this is the repository's.
+    it('writes neither a conformance nor a Rejection for a nothing-received ending', async () => {
+      const seeded = await seedWarehouse();
+      const draftId = await seedDraft(seeded, 'ready_for_ordering');
+      const lineId = await seedLine(seeded, draftId, 100, {
+        packagingTypeId: 'cartons',
+      });
+
+      const written = await recordEndingInTransaction({
+        purchaseDraftId: draftId,
+        purchaseDraftLineId: lineId,
+        warehouseId: seeded.warehouseId,
+        endingQuantity: 0,
+        endingKind: 'arrival',
+        endingRecordedByUserId: seeded.userId,
+        endingRecordedAt: later,
+        condition: null,
+      });
+
+      expect(written).toEqual({ recorded: true, closed: true });
+      expect(await readLine(lineId)).toMatchObject({
+        endingQuantity: 0,
+        endingRecordedAt: later,
+        preReceiptConformance: null,
+        preReceiptConformanceNote: null,
+      });
+      expect(await readRejections(lineId)).toEqual([]);
+    });
+
+    // AC-04 — the ending is predicated on `ending_recorded_at IS NULL`, and the refusals belong to
+    // that same predicate. A second submission against an already-ended line must add no Rejection
+    // either: an insert that ran regardless of the guard would be exactly the "further refusal
+    // against a recorded ending" AC-04 forbids, reachable without touching the line at all.
+    it('writes no Rejection against a line whose ending is already recorded', async () => {
+      const seeded = await seedWarehouse();
+      const draftId = await seedDraft(seeded, 'ready_for_ordering');
+      const lineId = await seedLine(seeded, draftId, 100, {
+        endingKind: 'arrival',
+        endingQuantity: 90,
+        endingRecordedByUserId: seeded.userId,
+        endingRecordedAt: now,
+      });
+
+      const written = await recordEndingInTransaction({
+        purchaseDraftId: draftId,
+        purchaseDraftLineId: lineId,
+        warehouseId: seeded.warehouseId,
+        endingQuantity: 100,
+        endingKind: 'arrival',
+        endingRecordedByUserId: seeded.userId,
+        endingRecordedAt: later,
+        condition: conditionOf([
+          {
+            rejectionReasonId: 'damaged_in_transit',
+            quantity: 8,
+            source: 'inspected',
+            description: null,
+          },
+        ]),
+      });
+
+      expect(written).toEqual({ recorded: false, closed: false });
+      expect(await readRejections(lineId)).toEqual([]);
+    });
+
+    // AC-17/AC-17a — the verdict is decided against the instruction frozen on the line, and the
+    // store is the final arbiter of it
+    // (`chk_purchase_draft_lines_pre_receipt_conformance_instruction`). A zero-quantity ending
+    // refuses **every** verdict, Not applicable included
+    // (`chk_purchase_draft_lines_conformance_requires_ending`), which is why a nothing-received
+    // ending must leave both columns NULL rather than record that the judgement does not apply.
+    describe.each<
+      [string, SeedLineOverrides, number, RecordLineEndingConditionInput]
+    >([
+      [
+        'not-applicable on a line frozen carrying an instruction (AC-17a)',
+        { packagingTypeId: 'cartons' },
+        100,
+        conditionOf([], 'not_applicable'),
+      ],
+      [
+        'a judgement on a line frozen carrying no instruction (AC-17)',
+        {},
+        100,
+        conditionOf([], 'met'),
+      ],
+      [
+        'any verdict beside a nothing-received ending (AC-04a)',
+        {},
+        0,
+        conditionOf([], 'not_applicable'),
+      ],
+    ])('refusing %s', (_case, overrides, endingQuantity, condition) => {
+      it('records no part of the ending', async () => {
+        const seeded = await seedWarehouse();
+        const draftId = await seedDraft(seeded, 'ready_for_ordering');
+        const lineId = await seedLine(seeded, draftId, 100, overrides);
+
+        await expect(
+          recordEndingInTransaction({
+            purchaseDraftId: draftId,
+            purchaseDraftLineId: lineId,
+            warehouseId: seeded.warehouseId,
+            endingQuantity,
+            endingKind: 'arrival',
+            endingRecordedByUserId: seeded.userId,
+            endingRecordedAt: later,
+            condition,
+          }),
+        ).rejects.toThrow();
+
+        expect(await readLine(lineId)).toMatchObject({
+          endingRecordedAt: null,
+          preReceiptConformance: null,
+        });
+        expect(await readDraft(draftId)).toMatchObject({
+          state: 'ready_for_ordering',
+        });
       });
     });
   });

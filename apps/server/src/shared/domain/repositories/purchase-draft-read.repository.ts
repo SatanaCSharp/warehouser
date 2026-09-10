@@ -9,6 +9,7 @@ import { ItemEntity } from 'shared/domain/entities/item.entity';
 import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
 import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity';
 import { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity';
+import { PurchaseDraftLineRejectionEntity } from 'shared/domain/entities/purchase-draft-line-rejection.entity';
 import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
 import {
   DataSource,
@@ -147,14 +148,93 @@ export interface LineCustomerDestinationRead {
   readonly frozen: boolean;
 }
 
-// openapi.yaml `PurchaseDraftLineEnding` — the ending as one shape rather than as the four raw
-// columns, so a caller cannot read a quantity without the attribution that makes it meaningful.
-export interface PurchaseDraftLineEndingRead {
+// openapi.yaml `PurchaseDraftLineRejection` — one quantity of a line's arrival the Warehouse
+// refused. The Reason travels as its **identifier** and nothing copies the catalogue's wording:
+// `rejection_reasons` is extended only and no entry is ever reworded, so AC-23a holds by
+// construction rather than by a frozen column, and this read joins the catalogue not at all
+// (tasks/purchase-draft-read-repository-condition.md "A Rejection carries its Reason identifier;
+// nothing copies the Reason's wording"). The response's `rejectionReasonLabel` is resolved above
+// this repository from `RejectionReasonCatalogueRepository.listRejectionReasons()`, ten rows of
+// reference data — joining it here would buy nothing and cost the per-line aggregation a join.
+//
+// `raisedAt` is the row's `created_at`, which **is** the raising time; there is no separate column
+// (data-model.md `purchase_draft_line_rejections`).
+export interface PurchaseDraftLineRejectionRead {
+  readonly id: string;
+  readonly rejectionReasonId: string;
+  readonly quantity: number;
+  readonly source: string;
+  readonly description: string | null;
+  readonly disposition: string;
+  readonly raisedByUserId: string;
+  readonly raisedAt: string;
+  readonly amendedByUserId: string | null;
+  readonly amendedAt: string | null;
+}
+
+// openapi.yaml `PreReceiptConformance` — the supplier's frozen instruction judged, recorded once
+// with the line's ending. `null` on a line where nothing was received (AC-04a) and on every ending
+// recorded before this release, which was left untouched and never backfilled (sad.md §7). It is
+// **not** gated on the cause-reading Permission: a verdict is a judgement about the supplier's
+// instruction, not a Rejection's cause, and `not_met` arises with or without a Rejection, so no
+// refusal count can be inferred from it (openapi.yaml `PreReceiptConformance`).
+export interface PreReceiptConformanceRead {
+  readonly verdict: string;
+  readonly note: string | null;
+}
+
+// openapi.yaml `PurchaseDraftLineEnding` crossed with `LineConditionCauseWithheld` — the ending as
+// one shape rather than as the raw columns, so a caller cannot read a quantity without the
+// attribution that makes it meaningful.
+//
+// The two condition figures are **derived and never stored**: `rejectedQuantity` is `SUM(quantity)`
+// over the line's Rejections and `acceptedQuantity` is `ending_quantity − COALESCE(that sum, 0)`,
+// both computed inside the correlated per-line aggregation this read already builds rather than in
+// a second query (sad.md §6.3, data-model.md § "Derived quantities: Accepted and Rejected"). Not
+// materializing them is what makes spec.md §6.1's "Refusal as a route around the Allocation bound"
+// structural: a stored column is a column some future write path can set.
+//
+// The absent case needs no branch — a pre-release ending has no Rejections, the `COALESCE` sums to
+// zero, and the Accepted Quantity equals the Received Quantity. The discriminator between "no
+// Condition Split was ever recorded" and "one was recorded and refused nothing" is
+// `preReceiptConformance` being `null`, never the empty Rejections both cases share; naming what
+// that means in the response is the use case's business decision above this repository.
+export interface PurchaseDraftLineEndingCauseWithheldRead {
   readonly kind: string;
   readonly quantity: number;
   readonly recordedByUserId: string;
   readonly recordedAt: string;
+  readonly acceptedQuantity: number;
+  readonly rejectedQuantity: number;
+  readonly preReceiptConformance: PreReceiptConformanceRead | null;
 }
+
+// openapi.yaml `LineConditionWithCause` — the same ending with every refused quantity beside its
+// Reason, description, Source and Disposition, ordered by Reason identifier (AC-21).
+export interface PurchaseDraftLineEndingWithCauseRead extends PurchaseDraftLineEndingCauseWithheldRead {
+  readonly rejections: readonly PurchaseDraftLineRejectionRead[];
+}
+
+// AC-22 — the two forms as a union rather than as one shape with an emptied array: in the withheld
+// form `rejections` is **absent as a property**, because the query does not select the columns
+// carrying it at all. TypeScript then enforces the same boundary the SQL does — a caller cannot
+// read `rejections` without first narrowing to the form that asked for it, so a withheld projection
+// cannot leak a cause it never fetched.
+export type PurchaseDraftLineEndingRead =
+  | PurchaseDraftLineEndingCauseWithheldRead
+  | PurchaseDraftLineEndingWithCauseRead;
+
+// AC-22/sad.md §6.3 — which of the two condition forms the query builds, chosen by the actor's
+// observed `REJECTIONS:WATCH` and never by the surface. Crossed with the `identified`/`redacted`
+// choice this repository already makes, it is what gives the line its **four** legal shapes; the
+// two withholdings are independent, so a member who prepares the dock reads the whole condition
+// without holding any customer-reading Permission.
+//
+// `cause_withheld` is built by **not selecting** the withheld columns — the same rule the redacted
+// identity projection follows — so a redaction failure is a missing SQL expression rather than a
+// forgotten `delete`. Nothing is fetched and then removed, and no count, badge or placeholder
+// survives to be probed (spec.md §6.1, sad.md §4).
+export type RejectionCauseProjection = 'with_cause' | 'cause_withheld';
 
 // openapi.yaml `PurchaseDraftLineRedacted`.
 export interface PurchaseDraftLineRedactedRead {
@@ -485,6 +565,48 @@ const linksSubquery = (manager: EntityManager, identified: boolean): string => {
     : query.getQuery();
 };
 
+// AC-21/data-model.md § "Derived quantities" — the line's total across every Rejection on it,
+// `SUM(quantity)` and `0` when there are none, as a **correlated** subquery on the outer `line`
+// alias rather than a join: a line's Rejections are a second one-to-many beneath a line that
+// already aggregates its links, and joined rather than correlated each would multiply the other
+// (two links and two Rejections would report a Rejected Quantity of 16 rather than 8). Correlated
+// on `line.id` it reaches `uq_purchase_draft_line_rejections_line_reason`, whose leading column is
+// the line — the index data-model.md § Indexes adds for exactly this read.
+//
+// Selected by **both** condition forms: that a refusal happened stays visible wherever presented
+// and accepted differ, because the protection is over the cause and never over the fact (AC-22).
+const rejectedQuantitySubquery = (manager: EntityManager): string =>
+  manager
+    .createQueryBuilder()
+    .select('COALESCE(SUM(rejection.quantity), 0)::int')
+    .from(PurchaseDraftLineRejectionEntity, 'rejection')
+    .where('rejection.purchaseDraftLineId = line.id')
+    .getQuery();
+
+// openapi.yaml `LineConditionWithCause.rejections` — every Rejection on the line, at most one per
+// Reason (`uq_purchase_draft_line_rejections_line_reason`), ordered by Reason identifier. Selected
+// **only** by the cause-bearing form, so the withheld query never names a Reason, a description, a
+// Disposition or an amendment at all (AC-22).
+//
+// `created_at` is projected as `raisedAt` because it **is** the raising time, and both timestamps go
+// through `utcIsoText` because they are embedded as text inside `json_build_object`.
+const rejectionsSubquery = (manager: EntityManager): string =>
+  manager
+    .createQueryBuilder()
+    .select(
+      `COALESCE(json_agg(json_build_object('id', rejection.id, 'rejectionReasonId', rejection.rejectionReasonId, 'quantity', rejection.quantity, 'source', rejection.source, 'description', rejection.description, 'disposition', rejection.disposition, 'raisedByUserId', rejection.raisedByUserId, 'raisedAt', ${utcIsoText('rejection.createdAt')}, 'amendedByUserId', rejection.amendedByUserId, 'amendedAt', ${utcIsoText('rejection.amendedAt')}) ORDER BY rejection.rejectionReasonId), '[]'::json)`,
+    )
+    .from(PurchaseDraftLineRejectionEntity, 'rejection')
+    .where('rejection.purchaseDraftLineId = line.id')
+    .getQuery();
+
+// openapi.yaml `PreReceiptConformance` — the verdict and its note as one object, built from the
+// verdict alone deciding whether there is one. `NULL` is the discriminator data-model.md § Derived
+// quantities names: it separates "no Condition Split was ever recorded" — a pre-release ending, or
+// a line where nothing was received — from "one was recorded and refused nothing", which the empty
+// Rejections both share cannot.
+const PRE_RECEIPT_CONFORMANCE_SELECT = `CASE WHEN line.preReceiptConformance IS NULL THEN NULL ELSE json_build_object('verdict', line.preReceiptConformance, 'note', line.preReceiptConformanceNote) END`;
+
 // openapi.yaml `LineWarehouseDestination` — where a Via Warehouse line's goods travel, as one
 // object rather than as the raw columns. The Warehouse's own address is read **live** while the
 // line carries no frozen statement, and the values captured at Ready for Ordering afterwards;
@@ -510,15 +632,30 @@ const CUSTOMER_DESTINATION_SELECT = `CASE WHEN line.deliveryMode <> 'direct_to_c
 //
 // `warehouseDestination` is in the common half deliberately: the Warehouse's own address and access
 // notes are the operator's premises data, read under `PURCHASE_DRAFTS:WATCH` alone (AC-10).
+//
+// `withCause` is the second, independent narrowing (AC-22): like `identified` it decides which
+// columns are **selected**, never which are filtered afterwards, so the withheld form's SQL names
+// no Reason, description, Disposition or amendment at all. The condition figures and the
+// Pre-receipt Conformance stay in the common half — the verdict is a judgement about the supplier's
+// instruction rather than a Rejection's cause, and one total refused figure is what AC-22 keeps.
+//
+// The whole condition is built here, inside the aggregation that already assembles the line's links
+// and drift, so the account and the links reach the caller in one round trip (sad.md §6.3).
 const lineJsonObject = (
   manager: EntityManager,
   identified: boolean,
+  withCause: boolean,
 ): string => {
   const customerDestination = identified
     ? `, 'customerDestination', ${CUSTOMER_DESTINATION_SELECT}`
     : '';
+  const rejectedQuantity = `(${rejectedQuantitySubquery(manager)})`;
+  const rejections = withCause
+    ? `, 'rejections', (${rejectionsSubquery(manager)})`
+    : '';
+  const condition = `'acceptedQuantity', line.endingQuantity - ${rejectedQuantity}, 'rejectedQuantity', ${rejectedQuantity}, 'preReceiptConformance', ${PRE_RECEIPT_CONFORMANCE_SELECT}${rejections}`;
 
-  return `json_build_object('id', line.id, 'itemId', line.itemId, 'itemSku', item.sku, 'itemDescription', item.description, 'unitOfMeasure', item.unitOfMeasure, 'orderedQuantity', line.orderedQuantity, 'packagingTypeId', line.packagingTypeId, 'valueAddingNote', line.valueAddingNote, 'ending', CASE WHEN line.endingRecordedAt IS NULL THEN NULL ELSE json_build_object('kind', line.endingKind, 'quantity', line.endingQuantity, 'recordedByUserId', line.endingRecordedByUserId, 'recordedAt', ${utcIsoText('line.endingRecordedAt')}) END, 'deliveryMode', line.deliveryMode, 'warehouseDestination', ${WAREHOUSE_DESTINATION_SELECT}${customerDestination}, 'links', (${linksSubquery(manager, identified)}))`;
+  return `json_build_object('id', line.id, 'itemId', line.itemId, 'itemSku', item.sku, 'itemDescription', item.description, 'unitOfMeasure', item.unitOfMeasure, 'orderedQuantity', line.orderedQuantity, 'packagingTypeId', line.packagingTypeId, 'valueAddingNote', line.valueAddingNote, 'ending', CASE WHEN line.endingRecordedAt IS NULL THEN NULL ELSE json_build_object('kind', line.endingKind, 'quantity', line.endingQuantity, 'recordedByUserId', line.endingRecordedByUserId, 'recordedAt', ${utcIsoText('line.endingRecordedAt')}, ${condition}) END, 'deliveryMode', line.deliveryMode, 'warehouseDestination', ${WAREHOUSE_DESTINATION_SELECT}${customerDestination}, 'links', (${linksSubquery(manager, identified)}))`;
 };
 
 // The joins the two destination projections above dereference, added to whichever query builds a
@@ -592,6 +729,7 @@ const readDraftRow = async <TLine>(
   purchaseDraftId: string,
   warehouseId: string,
   identified: boolean,
+  withCause: boolean,
 ): Promise<
   | (Omit<DraftDetailRawRow<TLine>, 'lines'> & {
       readonly lineCount: number;
@@ -603,7 +741,7 @@ const readDraftRow = async <TLine>(
     manager
       .createQueryBuilder()
       .select(
-        `COALESCE(json_agg(${lineJsonObject(manager, identified)} ORDER BY line.createdAt, line.id), '[]'::json)`,
+        `COALESCE(json_agg(${lineJsonObject(manager, identified, withCause)} ORDER BY line.createdAt, line.id), '[]'::json)`,
       )
       .from(PurchaseDraftLineEntity, 'line')
       .innerJoin(ItemEntity, 'item', 'item.id = line.itemId'),
@@ -640,6 +778,7 @@ const listLineRows = <TLine>(
   warehouseId: string,
   filters: PurchaseDraftLineFilters,
   identified: boolean,
+  withCause: boolean,
 ): Promise<LineListEntryRawRow<TLine>[]> => {
   let query = joinLineDestinations(
     manager
@@ -648,7 +787,7 @@ const listLineRows = <TLine>(
       .addSelect('draft.reference', 'purchaseDraftReference')
       .addSelect('draft.state', 'purchaseDraftState')
       .addSelect(EXPECTED_ARRIVAL_DATE_SELECT, 'expectedArrivalDate')
-      .addSelect(lineJsonObject(manager, identified), 'line')
+      .addSelect(lineJsonObject(manager, identified, withCause), 'line')
       .from(PurchaseDraftLineEntity, 'line')
       .innerJoin(
         PurchaseDraftEntity,
@@ -763,15 +902,24 @@ export class PurchaseDraftReadRepository {
   // Two methods rather than one with a flag, following `CustomerOrderLifecycleRepository`'s (T13)
   // precedent: the redacted read is a *different query*, and naming it separately is what makes
   // "the redacted form selects no identity column" checkable at the call site.
+  //
+  // `cause` is the second, independent narrowing (AC-22, sad.md §6.3). It stays a parameter rather
+  // than becoming four more named methods because it multiplies against `identified` rather than
+  // replacing it — the line has four legal shapes, and eight methods would name the cross product
+  // instead of the choice. It is a projection selector all the same: `cause_withheld` issues a
+  // query that names no Reason, description, Disposition or amendment at all, so the withheld form
+  // is built by not selecting those columns and never by fetching and deleting them.
   readRedactedDraft(
     purchaseDraftId: string,
     warehouseId: string,
+    cause: RejectionCauseProjection,
   ): Promise<PurchaseDraftDetailRedactedRead | null> {
     return readDraftRow<PurchaseDraftLineRedactedRead>(
       getEntityManager(this.dataSource),
       purchaseDraftId,
       warehouseId,
       false,
+      cause === 'with_cause',
     );
   }
 
@@ -781,12 +929,14 @@ export class PurchaseDraftReadRepository {
   readIdentifiedDraft(
     purchaseDraftId: string,
     warehouseId: string,
+    cause: RejectionCauseProjection,
   ): Promise<PurchaseDraftDetailIdentifiedRead | null> {
     return readDraftRow<PurchaseDraftLineIdentifiedRead>(
       getEntityManager(this.dataSource),
       purchaseDraftId,
       warehouseId,
       true,
+      cause === 'with_cause',
     );
   }
 
@@ -802,25 +952,29 @@ export class PurchaseDraftReadRepository {
   // Scoped through the **draft's** Warehouse, the same ownership the other reads use.
   listRedactedLines(
     warehouseId: string,
-    filters: PurchaseDraftLineFilters = {},
+    filters: PurchaseDraftLineFilters,
+    cause: RejectionCauseProjection,
   ): Promise<PurchaseDraftLineListEntryRedactedRead[]> {
     return listLineRows<PurchaseDraftLineRedactedRead>(
       getEntityManager(this.dataSource),
       warehouseId,
       filters,
       false,
+      cause === 'with_cause',
     );
   }
 
   listIdentifiedLines(
     warehouseId: string,
-    filters: PurchaseDraftLineFilters = {},
+    filters: PurchaseDraftLineFilters,
+    cause: RejectionCauseProjection,
   ): Promise<PurchaseDraftLineListEntryIdentifiedRead[]> {
     return listLineRows<PurchaseDraftLineIdentifiedRead>(
       getEntityManager(this.dataSource),
       warehouseId,
       filters,
       true,
+      cause === 'with_cause',
     );
   }
 }

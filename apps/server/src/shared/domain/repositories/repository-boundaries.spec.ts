@@ -24,6 +24,19 @@ describe('shared repository boundaries', () => {
     },
   );
 
+  // code-review-back-end-2026-09-09.md — a redaction selector must not be defaultable.
+  // guides/server-request-authorization.md §"Consume the observed set in the projection" requires the
+  // withheld form to be built "by **not selecting** the withheld columns", so the parameter deciding
+  // that is the whole mechanism: given a default, a caller that forgets it selects everything the
+  // Permission was meant to withhold, and forgetting fails **open**. Required, a caller must state
+  // the choice and the compiler proves every one of them did.
+  it.each(repositorySources)(
+    '$fileName gives no projection selector a default value',
+    ({ source }) => {
+      expect(source).not.toMatch(/:\s*RejectionCauseProjection\s*=/u);
+    },
+  );
+
   it.each(repositorySources)(
     '$fileName leaves exception translation outside persistence',
     ({ source }) => {

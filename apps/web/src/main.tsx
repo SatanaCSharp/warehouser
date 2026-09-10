@@ -5,6 +5,7 @@ import { Provider } from 'react-redux';
 
 import App from 'App';
 import { i18nReady } from 'i18n';
+import { toastQueue } from 'shared/alerts/toast';
 import { LocaleProvider } from 'shared/components/LocaleProvider';
 import { store } from 'store';
 
@@ -23,7 +24,12 @@ async function bootstrap(): Promise<void> {
       <Provider store={store}>
         <LocaleProvider>
           <App />
-          <Toast.Provider placement="bottom start" />
+          {/*
+            The region reads the application's own queue (`shared/alerts/toast`)
+            rather than the barrel's singleton, so every toast is raised through
+            the one seam the adapters and their specs depend on.
+          */}
+          <Toast.Provider placement="bottom start" queue={toastQueue} />
         </LocaleProvider>
       </Provider>
     </StrictMode>,
