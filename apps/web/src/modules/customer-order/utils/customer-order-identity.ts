@@ -62,23 +62,45 @@ export type CustomerOrderIdentity = {
  * neither identified shape is one the contract refuses, and reading it as
  * `withheld` withholds where it cannot be sure instead of inventing a name.
  */
+// The two identified arms, each read once as the whole shape it needs. `customer` and `destination`
+// travel together because a named-Customer order always has somewhere to go; reading them as a pair
+// is what keeps the reader below free of the narrowing.
+const namedCustomerOf = (
+  order: CustomerOrder,
+):
+  | {
+      customer: { id: string; name: string };
+      destination: CustomerOrderDestination;
+    }
+  | undefined =>
+  'customer' in order && order.customer && order.destination
+    ? { customer: order.customer, destination: order.destination }
+    : undefined;
+
+const typedCustomerNameOf = (order: CustomerOrder): string | undefined =>
+  'customerName' in order && order.customerName
+    ? order.customerName
+    : undefined;
+
 export const customerOrderIdentity = (
   order: CustomerOrder,
 ): CustomerOrderIdentity => {
-  if ('customer' in order && order.customer && order.destination) {
+  const named = namedCustomerOf(order);
+  if (named !== undefined) {
     return {
       kind: 'namedCustomer',
-      customerId: order.customer.id,
-      name: order.customer.name,
-      destination: order.destination,
+      customerId: named.customer.id,
+      name: named.customer.name,
+      destination: named.destination,
     };
   }
 
-  if ('customerName' in order && order.customerName) {
+  const typedName = typedCustomerNameOf(order);
+  if (typedName !== undefined) {
     return {
       kind: 'typedName',
       customerId: null,
-      name: order.customerName,
+      name: typedName,
       destination: null,
     };
   }

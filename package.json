@@ -13,11 +13,20 @@
     "test:access-release": "node --test tests/access/*.spec.mjs",
     "test:users-release": "node --test tests/users/*.spec.mjs",
     "test:workspaces-release": "node --test tests/workspaces/*.spec.mjs",
+    "crap": "turbo run crap --continue --output-logs=errors-only",
     "clean": "turbo run clean",
     "prepare": "husky",
-    "lint:all": "oxlint --type-aware --max-warnings=0 ."
+    "lint:all": "oxlint --type-aware --max-warnings=0 .",
+    "graph:init": "CODEGRAPH_TELEMETRY=0 codegraph init -y",
+    "graph:sync": "CODEGRAPH_TELEMETRY=0 codegraph sync",
+    "graph:status": "CODEGRAPH_TELEMETRY=0 codegraph status",
+    "graph": "CODEGRAPH_TELEMETRY=0 codegraph",
+    "snapshot": "repomix",
+    "snapshot:tree": "repomix --no-files --stdout"
   },
   "devDependencies": {
+    "@barney-media/crap-typescript": "catalog:",
+    "@colbymchenry/codegraph": "^1.6.0",
     "@commitlint/cli": "^21.2.1",
     "@commitlint/config-conventional": "^21.2.0",
     "@warehouser/oxlint-config": "workspace:*",
@@ -28,6 +37,7 @@
     "oxlint": "catalog:",
     "oxlint-tsgolint": "catalog:",
     "prettier": "^3.9.5",
+    "repomix": "^1.18.0",
     "turbo": "catalog:",
     "typescript": "catalog:"
   }

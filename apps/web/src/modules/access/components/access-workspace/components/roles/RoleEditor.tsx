@@ -43,6 +43,31 @@ type RoleEditorProps = {
  * reading it beside the fieldset costs no extra request and keeps the Roles
  * tab from threading the catalogue through the directory on its way here.
  */
+/** Two rules decide the editable surface and they stay separate: whether the actor may update Roles
+ * at all, and whether *this* Role in *this* Warehouse can be edited at all, which is record
+ * state. */
+const isRoleEditable = (
+  mayUpdate: boolean,
+  isProtected: boolean,
+  isArchived: boolean,
+): boolean => mayUpdate && !isProtected && !isArchived;
+
+/** Deleting is record state alone; the Permission is the gate around it. */
+const isRoleDeletable = (isProtected: boolean, isArchived: boolean): boolean =>
+  !isProtected && !isArchived;
+
+/** A protected Role says that it is protected rather than leaving its missing controls
+ * unexplained. */
+const subtitleOf = (
+  isProtected: boolean,
+  protectedText: string,
+  memberCountText: string,
+): string => (isProtected ? protectedText : memberCountText);
+
+const fieldMessage = (
+  error: { message?: string } | undefined,
+): string | undefined => error?.message;
+
 export const RoleEditor = ({
   role,
   onDelete,
@@ -58,7 +83,7 @@ export const RoleEditor = ({
   const { isArchived } = useAccessScope();
   const canUpdate = useHasPermission(PermissionId.ROLES_UPDATE);
   const isProtected = role.kind === 'warehouse_manager';
-  const isEditable = canUpdate && !isProtected && !isArchived;
+  const isEditable = isRoleEditable(canUpdate, isProtected, isArchived);
 
   const onDiscard = (): void => reset();
 
@@ -73,11 +98,13 @@ export const RoleEditor = ({
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">{role.name}</h2>
           <p className="mt-1 text-sm text-muted">
-            {isProtected
-              ? t('roles.protected')
-              : t('administration.roleEditor.subtitle', {
-                  count: role.assignedMemberCount,
-                })}
+            {subtitleOf(
+              isProtected,
+              t('roles.protected'),
+              t('administration.roleEditor.subtitle', {
+                count: role.assignedMemberCount,
+              }),
+            )}
           </p>
         </div>
       </div>
@@ -88,7 +115,7 @@ export const RoleEditor = ({
           isRequired
           validationBehavior="aria"
           isInvalid={Boolean(errors.name)}
-          errorMessage={errors.name?.message}
+          errorMessage={fieldMessage(errors.name)}
           defaultValue={role.name}
           isDisabled={isSubmitting}
           label={t('administration.roleEditor.name')}
@@ -120,7 +147,7 @@ export const RoleEditor = ({
       <div className="mt-6 flex flex-wrap items-center justify-between gap-2">
         <div>
           <WarehousePermissionGate permission={PermissionId.ROLES_DELETE}>
-            <Conditional when={!isProtected && !isArchived}>
+            <Conditional when={isRoleDeletable(isProtected, isArchived)}>
               <Button
                 className="bg-danger-soft text-danger-soft-foreground hover:bg-danger-soft-hover"
                 size="sm"

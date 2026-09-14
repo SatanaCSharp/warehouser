@@ -1,11 +1,7 @@
 import type { ArgumentsHost, ExceptionFilter } from '@nestjs/common';
 import { Catch, HttpException, Logger } from '@nestjs/common';
 import { ErrorCode } from '@warehouser/shared-types/enums';
-import {
-  ApplicationError,
-  AssertionError,
-  SystemError,
-} from '@warehouser/shared-types/errors';
+import { ApplicationError, SystemError } from '@warehouser/shared-types/errors';
 import { redactSensitiveValues } from 'shared/errors/sensitive-value-redactor';
 import type { ValidatedRequestPayloads } from 'shared/errors/validation-field-codes';
 import { validationFieldCodes } from 'shared/errors/validation-field-codes';
@@ -666,56 +662,69 @@ const internalError: ErrorMapping = {
   },
 };
 
+const applicationErrorMapping = (exception: ApplicationError): ErrorMapping => {
+  const mapping = applicationErrors[exception.code];
+  if (mapping === undefined) {
+    return internalError;
+  }
+
+  return {
+    ...mapping,
+    severity: 'warn',
+    envelope: {
+      ...mapping.envelope,
+      ...(exception.details === undefined
+        ? {}
+        : { details: exception.details }),
+    },
+  };
+};
+
+const systemErrorMapping = (exception: SystemError): ErrorMapping => {
+  const mapping = systemErrors[exception.code];
+
+  return mapping === undefined
+    ? internalError
+    : { ...mapping, severity: 'error' };
+};
+
+// A Zod refusal additionally names the fields it will not accept, so a dialog can mark them instead
+// of repeating one generic sentence for every distinct refusal (AC-02, AC-02a, AC-09, AC-09a,
+// AC-19b). Only the dotted path and a normalized code travel: never the value, the schema's message,
+// or the type that was expected.
+const httpExceptionMapping = (
+  exception: HttpException,
+  request: ValidatedRequestPayloads,
+): ErrorMapping => {
+  const fields = validationFieldCodes(exception, request);
+
+  return {
+    status: exception.getStatus(),
+    severity: 'warn',
+    envelope: {
+      code: 'request.invalid',
+      message: 'The request is invalid.',
+      ...(fields === undefined ? {} : { details: { fields } }),
+    },
+  };
+};
+
+// Anything this does not recognize is an internal error, and an `AssertionError` is deliberately
+// among them: a broken invariant is a defect, and a defect discloses nothing beyond 500.
 const mapException = (
   exception: unknown,
   request: ValidatedRequestPayloads,
 ): ErrorMapping => {
   if (exception instanceof ApplicationError) {
-    const mapping = applicationErrors[exception.code];
-
-    return mapping === undefined
-      ? internalError
-      : {
-          ...mapping,
-          severity: 'warn',
-          envelope: {
-            ...mapping.envelope,
-            ...(exception.details === undefined
-              ? {}
-              : { details: exception.details }),
-          },
-        };
+    return applicationErrorMapping(exception);
   }
 
   if (exception instanceof SystemError) {
-    const mapping = systemErrors[exception.code];
-
-    return mapping === undefined
-      ? internalError
-      : { ...mapping, severity: 'error' };
+    return systemErrorMapping(exception);
   }
 
   if (exception instanceof HttpException) {
-    // A Zod refusal additionally names the fields it will not accept, so a
-    // dialog can mark them instead of repeating one generic sentence for every
-    // distinct refusal (AC-02, AC-02a, AC-09, AC-09a, AC-19b). Only the dotted
-    // path and a normalized code travel: never the value, the schema's message,
-    // or the type that was expected.
-    const fields = validationFieldCodes(exception, request);
-
-    return {
-      status: exception.getStatus(),
-      severity: 'warn',
-      envelope: {
-        code: 'request.invalid',
-        message: 'The request is invalid.',
-        ...(fields === undefined ? {} : { details: { fields } }),
-      },
-    };
-  }
-
-  if (exception instanceof AssertionError) {
-    return internalError;
+    return httpExceptionMapping(exception, request);
   }
 
   return internalError;

@@ -122,6 +122,47 @@ const isIssueList = (error: unknown): error is { issues: readonly unknown[] } =>
   error !== null &&
   Array.isArray((error as { issues?: unknown }).issues);
 
+// The cap turns away *new* fields only. A field already named still runs the rank tie-break below
+// against every remaining issue, so the code it ends up carrying is the same ranked winner it would
+// carry with no cap at all — which of the five codes a field gets never depends on where the cap
+// falls.
+const isBeyondFieldCap = (
+  fields: ReadonlyMap<string, ValidationFieldCode>,
+  held: ValidationFieldCode | undefined,
+): boolean => held === undefined && fields.size >= maxFields;
+
+// A field named by several issues carries the highest-ranked of their codes, so the same field
+// refused two ways reports the same code however the issues happen to be ordered.
+const outranksHeldCode = (
+  code: ValidationFieldCode,
+  held: ValidationFieldCode | undefined,
+): boolean => held === undefined || codeRanks[code] < codeRanks[held];
+
+const recordIssue = (
+  fields: Map<string, ValidationFieldCode>,
+  candidate: unknown,
+  request: ValidatedRequestPayloads,
+): void => {
+  const issue = candidate as ZodLikeIssue;
+  const path = toSafePath(issue.path);
+  if (path === undefined) {
+    // A whole-body refusal (a cross-field `refine`, an unrecognized key) names
+    // no form field, so it stays a message-only refusal.
+    return;
+  }
+
+  const field = path.join('.');
+  const held = fields.get(field);
+  if (isBeyondFieldCap(fields, held)) {
+    return;
+  }
+
+  const code = normalizeIssue(issue, request, path);
+  if (outranksHeldCode(code, held)) {
+    fields.set(field, code);
+  }
+};
+
 // Accumulates into one `Map` it mutates, rather than spreading a fresh object per
 // issue. The spread copied the whole accumulator on every issue, which is
 // quadratic in the number of issues, and the issue count is caller-controlled: an
@@ -138,29 +179,7 @@ const collectFields = (
   const fields = new Map<string, ValidationFieldCode>();
 
   for (const candidate of issues) {
-    const issue = candidate as ZodLikeIssue;
-    const path = toSafePath(issue.path);
-    if (path === undefined) {
-      // A whole-body refusal (a cross-field `refine`, an unrecognized key) names
-      // no form field, so it stays a message-only refusal.
-      continue;
-    }
-
-    const field = path.join('.');
-    const held = fields.get(field);
-
-    // The cap turns away *new* fields only. A field already named still runs the
-    // rank tie-break below against every remaining issue, so the code it ends up
-    // carrying is the same ranked winner it would carry with no cap at all —
-    // which of the five codes a field gets never depends on where the cap falls.
-    if (held === undefined && fields.size >= maxFields) {
-      continue;
-    }
-
-    const code = normalizeIssue(issue, request, path);
-    if (held === undefined || codeRanks[code] < codeRanks[held]) {
-      fields.set(field, code);
-    }
+    recordIssue(fields, candidate, request);
   }
 
   return fields;

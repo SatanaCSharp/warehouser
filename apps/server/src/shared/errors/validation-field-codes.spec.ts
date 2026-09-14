@@ -241,4 +241,23 @@ describe('validationFieldCodes', () => {
       validationFieldCodes(new ZodValidationException('opaque'), { body: {} }),
     ).toBeUndefined();
   });
+
+  // The last branch of the normalization, and the only one no schema can reach: an issue whose
+  // `code` is not a string at all. `ZodLikeIssue` types it `unknown` deliberately — the value
+  // arrives from a third-party exception this code did not construct — so the guard is the thing
+  // that keeps a non-string from being used as an index into `issueCodes`. A field refused that way
+  // is still named; it just carries the generic code.
+  it('names a field as invalid when its issue code is not a string', () => {
+    const rejected = new ZodValidationException({
+      issues: [
+        { code: 7, path: ['quantity'] },
+        { code: undefined, path: ['customerName'] },
+      ],
+    });
+
+    expect(validationFieldCodes(rejected, { body: { quantity: 12 } })).toEqual({
+      quantity: 'invalid',
+      customerName: 'invalid',
+    });
+  });
 });

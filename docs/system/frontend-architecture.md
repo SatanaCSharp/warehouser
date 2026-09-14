@@ -288,6 +288,9 @@ pnpm --filter @warehouser/web test
 pnpm --filter @warehouser/web build
 ```
 
+The lint step is oxlint, and a warning fails it exactly as an error does — see
+[Linting with oxlint](guides/linting-with-oxlint.md) before suppressing a rule or changing one.
+
 ## UI design boundary
 
 Any feature changing a user-visible web interface must follow the Pencil workflow in the root

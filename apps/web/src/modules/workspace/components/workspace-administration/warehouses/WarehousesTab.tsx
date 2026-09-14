@@ -1,4 +1,7 @@
-import type { WorkspaceUser } from '@warehouser/contracts/workspaces';
+import type {
+  Warehouse,
+  WorkspaceUser,
+} from '@warehouser/contracts/workspaces';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
 import countBy from 'lodash/countBy';
 import flatMap from 'lodash/flatMap';
@@ -27,6 +30,54 @@ const peopleForWarehouse = (
   users.filter((user) =>
     user.warehouses.some((w) => w.warehouseId === warehouseId),
   );
+
+const isNonArchived = (warehouse: Warehouse): boolean =>
+  warehouse.archivedAt === null;
+
+/** The Warehouse the pane is opened for: the one selected, or the first the Workspace holds. */
+const selectedWarehouseOf = (
+  warehouses: Warehouse[],
+  selectedWarehouseId: string | undefined,
+): Warehouse | undefined =>
+  warehouses.find((warehouse) => warehouse.id === selectedWarehouseId) ??
+  warehouses[0];
+
+const nonArchivedCountOf = (warehouses: Warehouse[]): number =>
+  warehouses.filter(isNonArchived).length;
+
+/** AC-33 — the last Warehouse standing cannot be archived, and only the pane it is open in says so. */
+const isOnlyNonArchived = (
+  warehouse: Warehouse,
+  nonArchivedCount: number,
+): boolean => isNonArchived(warehouse) && nonArchivedCount === 1;
+
+/** Absent rather than empty when the people read was never made: an actor without the Permission is
+ * told nothing about the read, not that it found nobody. */
+const peopleCountsOf = (
+  users: WorkspaceUser[] | undefined,
+): Record<string, number> | undefined =>
+  users ? peopleCountsByWarehouse(users) : undefined;
+
+const peopleForPane = (
+  mayReadPeople: boolean,
+  users: WorkspaceUser[] | undefined,
+  warehouseId: string,
+): WorkspaceUser[] | undefined =>
+  mayReadPeople && users ? peopleForWarehouse(users, warehouseId) : undefined;
+
+/** CR-AC-13 — the same source `WarehouseSwitcher` reads, so the Enter action and the switcher can
+ * never disagree about which Warehouses the actor may enter. */
+const membershipWarehouseIdsOf = (
+  workspaceContext: { warehouses: { warehouseId: string }[] } | undefined,
+): string[] => {
+  const memberships = workspaceContext?.warehouses ?? [];
+
+  return memberships.map((warehouse) => warehouse.warehouseId);
+};
+
+/** The list is hidden behind the detail pane on a narrow viewport once a Warehouse is opened. */
+const listVisibility = (isDetailActive: boolean): string =>
+  isDetailActive ? 'hidden lg:block' : 'lg:block';
 
 /**
  * The Warehouses tab: the Workspace's Warehouse list, the selected
@@ -71,19 +122,14 @@ export const WarehousesTab = (): ReactElement => {
   >(undefined);
   const [isDetailActive, setIsDetailActive] = useState(false);
 
-  const selectedWarehouse =
-    warehouses.find((warehouse) => warehouse.id === selectedWarehouseId) ??
-    warehouses[0];
-  const nonArchivedCount = warehouses.filter(
-    (warehouse) => warehouse.archivedAt === null,
-  ).length;
-  const peopleCounts = users ? peopleCountsByWarehouse(users) : undefined;
-  // CR-AC-13 — the same source `WarehouseSwitcher` reads, so the Enter action
-  // and the switcher can never disagree about which Warehouses the actor may
-  // enter. One prop, one hop; no additional query.
-  const membershipWarehouseIds =
-    workspaceContext?.warehouses.map((warehouse) => warehouse.warehouseId) ??
-    [];
+  const selectedWarehouse = selectedWarehouseOf(
+    warehouses,
+    selectedWarehouseId,
+  );
+  const nonArchivedCount = nonArchivedCountOf(warehouses);
+  const peopleCounts = peopleCountsOf(users);
+  // One prop, one hop; no additional query.
+  const membershipWarehouseIds = membershipWarehouseIdsOf(workspaceContext);
 
   const selectWarehouse = (warehouseId: string): void => {
     setSelectedWarehouseId(warehouseId);
@@ -98,14 +144,8 @@ export const WarehousesTab = (): ReactElement => {
   const detailPane = !selectedWarehouse ? null : (
     <WarehouseDetailPane
       key={selectedWarehouse.id}
-      isOnlyNonArchived={
-        selectedWarehouse.archivedAt === null && nonArchivedCount === 1
-      }
-      people={
-        canReadPeople && users
-          ? peopleForWarehouse(users, selectedWarehouse.id)
-          : undefined
-      }
+      isOnlyNonArchived={isOnlyNonArchived(selectedWarehouse, nonArchivedCount)}
+      people={peopleForPane(canReadPeople, users, selectedWarehouse.id)}
       warehouse={selectedWarehouse}
       onBack={onBack}
     />
@@ -118,7 +158,7 @@ export const WarehousesTab = (): ReactElement => {
           <AddWarehouseAction label={t('warehouses.add.trigger')} />
         </div>
         <WarehouseList
-          className={isDetailActive ? 'hidden lg:block' : 'lg:block'}
+          className={listVisibility(isDetailActive)}
           isError={isWarehouseReadFailed}
           membershipWarehouseIds={membershipWarehouseIds}
           peopleCounts={peopleCounts}

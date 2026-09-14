@@ -15,8 +15,10 @@
  * 1. **Only staged files are linted.** oxlint is fast enough to lint the whole tree, but doing that
  *    would let an unrelated pre-existing violation somewhere else block an unrelated commit — a
  *    change in what the gate means, not just in how it runs. The filenames are passed through.
- * 2. **`--max-warnings=0`.** The commit gate is stricter than `pnpm lint`: `apps/*` tolerate
- *    warnings in their own `lint` script, but nothing warning-level may enter a commit.
+ * 2. **`--max-warnings=0`.** Nothing warning-level may enter a commit. This is the same strictness
+ *    every package's own `lint` script passes — the gate differs from `pnpm lint` in *what* it
+ *    selects (the staged paths, including files outside a package's `src`), not in how severely it
+ *    judges what it selects.
  * 3. **Fix, then check, then format.** oxlint `--fix` applies only its safe fixes (never
  *    `--fix-suggestions` or `--fix-dangerously`), the second pass fails the commit on whatever is
  *    left, and Prettier — still the only formatter — runs last so the linter never fights it.

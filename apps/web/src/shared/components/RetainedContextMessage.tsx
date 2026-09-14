@@ -30,6 +30,37 @@ import { WarehouseIcon } from 'shared/icons';
 type RememberedWarehouse = { id: string; name: string };
 type ContextWarehouse = WorkspaceContext['warehouses'][number];
 
+/** Which of the three retained messages CR-RG-03 asks for. */
+type RetainedMessageState =
+  'noSelectableWarehouse' | 'nothingChosen' | 'selectionEnded';
+
+const isSelectableWarehouse = (warehouse: ContextWarehouse): boolean =>
+  warehouse.archivedAt === null;
+
+/** CR-RG-03 — a retained message accompanies the control only while no context is entered, so an
+ * actor inside W whose CR-AC-09 write never landed never reads "nothing chosen" beside the row
+ * marked current. `kind` comes from the matched route tree, the same predicate the sidebar and the
+ * drawer toggle read, so the three can never disagree about what is entered. */
+const isMessageSuppressed = (
+  enteredContextKind: string,
+  effectiveWarehouseId: string | null,
+): boolean => enteredContextKind !== 'none' || effectiveWarehouseId !== null;
+
+/** A Warehouse whose selection ended is named first; otherwise CR-AC-18 separates the member who
+ * holds a selectable membership from the one who holds none. */
+const resolveMessageState = (
+  lastSelected: RememberedWarehouse | null,
+  warehouses: readonly ContextWarehouse[],
+): RetainedMessageState => {
+  if (lastSelected) {
+    return 'selectionEnded';
+  }
+
+  return warehouses.some(isSelectableWarehouse)
+    ? 'nothingChosen'
+    : 'noSelectableWarehouse';
+};
+
 export const RetainedContextMessage = (): ReactElement | null => {
   const { t } = useTranslation('common');
   const { workspaceContext } = useCurrentWorkspaceContext();
@@ -62,53 +93,48 @@ export const RetainedContextMessage = (): ReactElement | null => {
     return null;
   }
 
-  // CR-RG-03 — a retained message accompanies the control only while no
-  // context is entered, so an actor inside W whose CR-AC-09 write never landed
-  // never reads "nothing chosen" beside the row marked current. `kind` comes
-  // from the matched route tree, the same predicate the sidebar and the drawer
-  // toggle read, so the three can never disagree about what is entered.
   if (
-    enteredContext.kind !== 'none' ||
-    workspaceContext.effectiveWarehouseId !== null
+    isMessageSuppressed(
+      enteredContext.kind,
+      workspaceContext.effectiveWarehouseId,
+    )
   ) {
     return null;
   }
 
   const { warehouses } = workspaceContext;
 
-  if (lastSelected) {
-    const title = t('workspaceSwitcher.selectionEnded.title', {
-      name: lastSelected.name,
-    });
-    return (
-      <Alert status="accent" role="alert" aria-label={title}>
-        <Alert.Indicator />
-        <Alert.Content>
-          <Alert.Title>{title}</Alert.Title>
-          <Alert.Description>
-            {t('workspaceSwitcher.selectionEnded.description')}
-          </Alert.Description>
-        </Alert.Content>
-        <div className="flex gap-2">
-          <Button onPress={onDismiss}>
-            {t('workspaceSwitcher.selectionEnded.choose')}
-          </Button>
-          <Button variant="outline" onPress={onDismiss}>
-            {t('workspaceSwitcher.selectionEnded.dismiss')}
-          </Button>
-        </div>
-      </Alert>
-    );
-  }
-
-  // CR-AC-18 — a member holding no selectable membership is told their access
-  // is unchanged; no action is invented for them, because the grouped control
-  // above this message already lists everything they hold.
-  const hasSelectableWarehouse = warehouses.some(
-    (warehouse: ContextWarehouse) => warehouse.archivedAt === null,
+  // The message names the Warehouse it was remembering, so it is resolved here rather than built
+  // inside the lookup, which evaluates every arm (`writing-web-conditional-components.md` §2).
+  const selectionEndedTitle = t('workspaceSwitcher.selectionEnded.title', {
+    name: lastSelected?.name,
+  });
+  const selectionEnded = (
+    <Alert status="accent" role="alert" aria-label={selectionEndedTitle}>
+      <Alert.Indicator />
+      <Alert.Content>
+        <Alert.Title>{selectionEndedTitle}</Alert.Title>
+        <Alert.Description>
+          {t('workspaceSwitcher.selectionEnded.description')}
+        </Alert.Description>
+      </Alert.Content>
+      <div className="flex gap-2">
+        <Button onPress={onDismiss}>
+          {t('workspaceSwitcher.selectionEnded.choose')}
+        </Button>
+        <Button variant="outline" onPress={onDismiss}>
+          {t('workspaceSwitcher.selectionEnded.dismiss')}
+        </Button>
+      </div>
+    </Alert>
   );
-  if (!hasSelectableWarehouse) {
-    return (
+
+  const message: Record<RetainedMessageState, ReactElement> = {
+    selectionEnded,
+    // CR-AC-18 — a member holding no selectable membership is told their access is unchanged; no
+    // action is invented for them, because the grouped control above this message already lists
+    // everything they hold.
+    noSelectableWarehouse: (
       <div className="flex flex-col items-start gap-2">
         <WarehouseIcon />
         <h2 className="text-lg font-bold text-foreground">
@@ -118,18 +144,21 @@ export const RetainedContextMessage = (): ReactElement | null => {
           {t('workspaceSwitcher.unavailable.description')}
         </p>
       </div>
-    );
-  }
+    ),
+    nothingChosen: (
+      <div className="flex flex-col items-start gap-2">
+        <WarehouseIcon />
+        <h2 className="text-lg font-bold text-foreground">
+          {t('workspaceSwitcher.empty.title')}
+        </h2>
+        <p className="text-sm text-muted">
+          {t('workspaceSwitcher.empty.description', {
+            count: warehouses.length,
+          })}
+        </p>
+      </div>
+    ),
+  };
 
-  return (
-    <div className="flex flex-col items-start gap-2">
-      <WarehouseIcon />
-      <h2 className="text-lg font-bold text-foreground">
-        {t('workspaceSwitcher.empty.title')}
-      </h2>
-      <p className="text-sm text-muted">
-        {t('workspaceSwitcher.empty.description', { count: warehouses.length })}
-      </p>
-    </div>
-  );
+  return message[resolveMessageState(lastSelected, warehouses)];
 };

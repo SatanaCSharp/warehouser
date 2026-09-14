@@ -12,6 +12,21 @@ type Props = {
   onSubmit: (values: LoginFormValues) => void | Promise<void>;
 };
 
+/** The message a refused field shows: its rule translated, or — for the email — the refusal the
+ * server named, which has no rule of its own. `undefined` where the field was not refused at all. */
+const fieldMessage = (
+  error: { message?: string } | undefined,
+  translateValidation: (key: string) => string,
+  fallback?: string,
+): string | undefined =>
+  error?.message ? translateValidation(error.message) : fallback;
+
+/** One label for the button and its accessible name, so the two can never disagree. */
+const submitLabelOf = (
+  isSubmitting: boolean,
+  t: (key: string) => string,
+): string => (isSubmitting ? t('form.submitting') : t('form.submit'));
+
 export const LoginForm = ({ onSubmit }: Props): ReactElement => {
   const { t } = useTranslation('sign-in');
   const { t: translateValidation } = useTranslation('validation');
@@ -23,6 +38,8 @@ export const LoginForm = ({ onSubmit }: Props): ReactElement => {
     resolver: zodResolver(loginFormSchema),
     shouldFocusError: true,
   });
+
+  const submitLabel = submitLabelOf(isSubmitting, t);
 
   // `handleSubmit` returns a promise the DOM handler must not; discarding it
   // here keeps the rejection with React Hook Form, which already owns it.
@@ -39,11 +56,7 @@ export const LoginForm = ({ onSubmit }: Props): ReactElement => {
         autoComplete="email"
         isDisabled={isSubmitting}
         isInvalid={Boolean(errors.email)}
-        errorMessage={
-          errors.email?.message
-            ? translateValidation(errors.email.message)
-            : undefined
-        }
+        errorMessage={fieldMessage(errors.email, translateValidation)}
         {...register('email')}
       />
       <PasswordInput
@@ -53,11 +66,7 @@ export const LoginForm = ({ onSubmit }: Props): ReactElement => {
         autoComplete="current-password"
         isDisabled={isSubmitting}
         isInvalid={Boolean(errors.password)}
-        errorMessage={
-          errors.password?.message
-            ? translateValidation(errors.password.message)
-            : undefined
-        }
+        errorMessage={fieldMessage(errors.password, translateValidation)}
         hideLabel={t('form.password.hide')}
         showLabel={t('form.password.show')}
         hideText={t('form.password.hideShort')}
@@ -66,13 +75,13 @@ export const LoginForm = ({ onSubmit }: Props): ReactElement => {
       />
       <Button
         type="submit"
-        aria-label={isSubmitting ? t('form.submitting') : t('form.submit')}
+        aria-label={submitLabel}
         variant="primary"
         className="min-h-11 w-full font-semibold"
         isPending={isSubmitting}
         isDisabled={isSubmitting}
       >
-        {isSubmitting ? t('form.submitting') : t('form.submit')}
+        {submitLabel}
       </Button>
     </form>
   );

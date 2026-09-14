@@ -391,4 +391,54 @@ describe('PurchaseDraftLineDelivery', () => {
     expect(alert).toHaveTextContent(/Baltic Freight OU/u);
     expect(alert).toHaveTextContent(/your decision/iu);
   });
+
+  // AC-13 — the other half of the case above. Switching the mode alone sends nothing; naming the
+  // address is what makes the revision submittable, and `onChangeAddress` is the handler that turns
+  // the picker's choice into that write. Nothing in this file had ever reached it: every case above
+  // either switches the mode back to the dock or asserts that nothing was sent yet.
+  //
+  // Choosing the Customer first is not incidental — it is how the block works, and it clears any
+  // address already named by calling the same handler with an empty id. That early return is what
+  // stops a half-made choice being sent as a revision, so both of the handler's exits are walked
+  // here in the order a member walks them.
+  it('records the direct line once a Customer and an address have been named (AC-13)', async () => {
+    const user = userEvent.setup();
+    const onReviseLine = vi
+      .fn<(input: PurchaseDraftLineUpdate) => Promise<MutationResult>>()
+      .mockResolvedValue({ data: {} });
+    renderDelivery(viaWarehouseLine(), onReviseLine);
+
+    await user.click(
+      await screen.findByRole('radio', { name: 'Direct to customer' }),
+    );
+
+    const customerPicker = await screen.findByRole('button', {
+      name: /customer/iu,
+    });
+    await user.click(customerPicker);
+    await user.click(
+      await screen.findByRole('option', { name: /Nordwind Logistik GmbH/iu }),
+    );
+
+    // Naming the Customer alone is not a revision: the handler was called with an empty address
+    // and returned without sending anything.
+    expect(onReviseLine).not.toHaveBeenCalled();
+
+    const addressPicker = await screen.findByRole('button', {
+      name: /delivery address/iu,
+    });
+    await user.click(addressPicker);
+    await user.click(
+      await screen.findByRole('option', {
+        name: new RegExp(CUSTOMER_ADDRESS, 'iu'),
+      }),
+    );
+
+    await waitFor(() =>
+      expect(onReviseLine).toHaveBeenCalledWith({
+        deliveryMode: 'direct_to_customer',
+        customerDeliveryAddressId: ADDRESS_ID,
+      }),
+    );
+  });
 });

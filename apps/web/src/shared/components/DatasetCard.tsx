@@ -39,8 +39,11 @@ const displacingStates: readonly {
   { state: 'empty', holds: ({ empty }) => empty },
 ];
 
-const resolveCardState = (reading: DatasetCardReading): DatasetCardState =>
-  displacingStates.find(({ holds }) => holds(reading))?.state ?? 'ready';
+const resolveCardState = (reading: DatasetCardReading): DatasetCardState => {
+  const displacing = displacingStates.find(({ holds }) => holds(reading));
+
+  return displacing?.state ?? 'ready';
+};
 
 export const DatasetCard = ({
   children,

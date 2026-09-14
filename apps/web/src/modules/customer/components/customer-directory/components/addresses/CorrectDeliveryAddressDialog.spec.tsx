@@ -37,6 +37,7 @@ const hafen: CustomerDeliveryAddress = {
 
 const renderDialog = (
   result: MutationResult = { data: {} },
+  address: CustomerDeliveryAddress = hafen,
 ): {
   onClose: ReturnType<typeof vi.fn>;
   onSave: ReturnType<typeof vi.fn>;
@@ -47,7 +48,7 @@ const renderDialog = (
     .mockResolvedValue(result);
   renderWithProviders(
     <DialogHost onClose={onClose}>
-      <CorrectDeliveryAddressDialog address={hafen} onSave={onSave} />
+      <CorrectDeliveryAddressDialog address={address} onSave={onSave} />
     </DialogHost>,
   );
   return { onClose, onSave };
@@ -154,5 +155,29 @@ describe('CorrectDeliveryAddressDialog', () => {
       ),
     ).toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  // An address recorded with no access notes at all — the common case, and the one the pre-fill
+  // above never exercised because its fixture always carries notes. `accessNotes` is nullable on
+  // the record but the field is a string, so the dialog has to open on an empty field rather than
+  // on the literal "null" a missing coercion would render. The same coercion feeds the form's
+  // default value, so getting it wrong would also submit a spurious correction.
+  it('opens with an empty notes field for an address recorded without any', async () => {
+    const { onSave } = renderDialog(
+      { data: {} },
+      { ...hafen, accessNotes: null },
+    );
+
+    const notes = screen.getByRole('textbox', { name: /access notes/iu });
+    expect(notes).toHaveValue('');
+
+    await userEvent.click(screen.getByRole('button', { name: /save/iu }));
+
+    await waitFor(() =>
+      expect(onSave).toHaveBeenCalledWith({
+        addressText: 'Hafenstraße 14, 20457 Hamburg',
+        accessNotes: null,
+      }),
+    );
   });
 });

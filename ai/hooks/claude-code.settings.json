@@ -3,8 +3,11 @@
     "Draft settings for Claude Code. `.claude/` is gitignored, so this checked-in draft is the",
     "installable form: merge the `hooks` block below into .claude/settings.local.json (or install",
     "it with `ai/commands/init-agent.md`). Keep any existing keys — merge, never replace.",
-    "The rule itself lives in AGENTS.md section Committing; the guard that enforces it lives in",
-    "ai/hooks/deny-git-hook-bypass.sh. This file only wires the two together for one agent."
+    "This file holds no rule of its own; it wires repository rules to one agent's hook surface.",
+    "PreToolUse enforces AGENTS.md section Committing through ai/hooks/deny-git-hook-bypass.sh.",
+    "SessionStart and PostToolUse keep the CodeGraph index current through",
+    "ai/hooks/sync-codegraph.sh, so the exploration workflow in AGENTS.md section Exploring code",
+    "answers from the tree as it is now."
   ],
   "hooks": {
     "PreToolUse": [
@@ -16,6 +19,30 @@
             "command": "\"${CLAUDE_PROJECT_DIR:-.}\"/ai/hooks/deny-git-hook-bypass.sh",
             "timeout": 10,
             "statusMessage": "Checking that Git hooks are not being skipped"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PROJECT_DIR:-.}\"/ai/hooks/sync-codegraph.sh",
+            "timeout": 120,
+            "statusMessage": "Syncing the CodeGraph index"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PROJECT_DIR:-.}\"/ai/hooks/sync-codegraph.sh --background",
+            "timeout": 10
           }
         ]
       }

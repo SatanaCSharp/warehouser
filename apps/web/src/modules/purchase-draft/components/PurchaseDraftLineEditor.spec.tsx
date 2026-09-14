@@ -555,4 +555,44 @@ describe('PurchaseDraftLineEditor’s line head and keyboard order', () => {
     expect(precedes(destination, note)).toBe(true);
     expect(precedes(note, links)).toBe(true);
   });
+
+  // AC-12 — the Value-adding Note commits on blur, not on every keystroke, and an emptied note
+  // commits `null` rather than the empty string. Both halves matter: the field is what a member
+  // uses to say "label each carton", and clearing it has to mean the instruction is withdrawn, not
+  // that it is now an instruction saying nothing. Nothing in this file pressed the commit — every
+  // case above asserts the field's presence, its shape or whether it is disabled.
+  it.each([
+    ['Wrap on pallets before dispatch', 'Wrap on pallets before dispatch'],
+    ['', null],
+  ])(
+    'AC-12: commits the Value-adding Note on blur, sending %p as %p',
+    async (typed, committed) => {
+      const user = userEvent.setup();
+      const onReviseLine = vi.fn().mockResolvedValue({ data: {} });
+      renderEditor(
+        <PurchaseDraftLineEditor
+          index={1}
+          isFrozen={false}
+          line={line()}
+          packagingTypes={packagingTypes}
+          purchaseDraftId={accessIds.warehouse}
+          onRemoveLine={vi.fn()}
+          onReviseLine={onReviseLine}
+        />,
+      );
+
+      const note = await screen.findByLabelText('Value-adding note');
+      await user.clear(note);
+      if (typed !== '') {
+        await user.type(note, typed);
+      }
+      await user.tab();
+
+      await waitFor(() =>
+        expect(onReviseLine).toHaveBeenCalledWith({
+          valueAddingNote: committed,
+        }),
+      );
+    },
+  );
 });

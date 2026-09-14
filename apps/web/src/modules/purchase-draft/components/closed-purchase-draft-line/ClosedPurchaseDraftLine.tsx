@@ -1,6 +1,7 @@
 import { Chip } from '@heroui/react';
 import type {
   DeliveryMode,
+  EndingKind,
   LineCondition,
   PackagingType,
   PurchaseDraftLine,
@@ -37,6 +38,63 @@ const MODE_CHIP_COLOR: Record<DeliveryMode, 'default' | 'accent'> = {
   direct_to_customer: 'accent',
 };
 
+/** The Warehouse the amendment names. Outside one there is nothing to write
+ * to, and the empty string is what the mutation refuses on rather than a
+ * request aimed at nothing. */
+const enteredWarehouseId = (warehouseId: string | undefined): string =>
+  warehouseId ?? '';
+
+/** AC-23 — the Packaging Type **frozen on the line**, read out of the
+ * catalogue by the id the line itself carries, so a catalogue extended after
+ * the freeze moves nothing here. A line frozen naming no type reads as the
+ * `lineEditor.packagingTypeNone` wording its caller supplies. */
+const packagingTypeLabelOf = (
+  packagingTypes: PackagingType[],
+  packagingTypeId: PurchaseDraftLine['packagingTypeId'],
+  noneLabel: string,
+): string => {
+  const frozenType = packagingTypes.find((type) => type.id === packagingTypeId);
+
+  return frozenType?.label ?? noneLabel;
+};
+
+/** The narrowest reading of how this line ended that the condition block
+ * needs: what was found, which kind of ending found it, and how much was
+ * presented. */
+type LineEndingReading = {
+  condition: LineCondition | null;
+  kind: EndingKind;
+  presentedQuantity: number;
+};
+
+/** A line carrying no ending at all reads exactly as one whose ending predates
+ * this release: `condition: null`, so neither the condition block nor the
+ * conformance judgement renders (sad.md §7). */
+const NO_ENDING: LineEndingReading = {
+  condition: null,
+  kind: 'arrival',
+  presentedQuantity: 0,
+};
+
+const endingReadingOf = (
+  ending: PurchaseDraftLine['ending'],
+): LineEndingReading => {
+  if (ending === null) {
+    return NO_ENDING;
+  }
+
+  return {
+    condition: ending.condition,
+    kind: ending.kind,
+    presentedQuantity: ending.quantity,
+  };
+};
+
+/** Which per-refusal dialog this closed line's own rows open — this
+ * surface's own `Kind` union, shared with no other
+ * (`docs/system/guides/web-action-dialogs.md`). */
+type ClosedLineDialogKind = 'amendRefusal';
+
 /**
  * `Inspection/Closed Line` (`FYfEa`, T17): the read-only account of one
  * Purchase Draft Line on a closed draft, derived from the shipped
@@ -63,12 +121,10 @@ const MODE_CHIP_COLOR: Record<DeliveryMode, 'default' | 'accent'> = {
  * predates this release, or where nothing was received, carries
  * `ending.condition: null`; this component then renders neither the
  * condition block nor the conformance judgement.
+ *
+ * Every reading this component branches on is named by a module-level helper
+ * above, so the body below is a list of readings and the markup stays whole.
  */
-/** Which per-refusal dialog this closed line's own rows open — this
- * surface's own `Kind` union, shared with no other
- * (`docs/system/guides/web-action-dialogs.md`). */
-type ClosedLineDialogKind = 'amendRefusal';
-
 export const ClosedPurchaseDraftLine = ({
   index,
   line,
@@ -77,7 +133,7 @@ export const ClosedPurchaseDraftLine = ({
 }: ClosedPurchaseDraftLineProps): ReactElement => {
   const { t } = useTranslation('purchase-draft');
   const { quantity } = useLocaleFormat();
-  const warehouseId = useEnteredWarehouse() ?? '';
+  const warehouseId = enteredWarehouseId(useEnteredWarehouse());
   const [amendRejection] = useAmendPurchaseDraftLineRejectionMutation();
   const dialog = useActionDialog<
     ClosedLineDialogKind,
@@ -98,20 +154,22 @@ export const ClosedPurchaseDraftLine = ({
         input,
       });
 
-  const packagingTypeLabel = packagingTypes.find(
-    (type) => type.id === line.packagingTypeId,
-  )?.label;
+  const packagingTypeLabel = packagingTypeLabelOf(
+    packagingTypes,
+    line.packagingTypeId,
+    t('lineEditor.packagingTypeNone'),
+  );
 
-  const condition: LineCondition | null = line.ending?.condition ?? null;
+  const ending = endingReadingOf(line.ending);
 
   const conditionSection =
-    condition === null ? null : (
+    ending.condition === null ? null : (
       <ConditionOnArrivalSection
-        condition={condition}
-        endingKind={line.ending?.kind ?? 'arrival'}
+        condition={ending.condition}
+        endingKind={ending.kind}
         itemSku={line.itemSku}
         orderedQuantity={line.orderedQuantity}
-        presentedQuantity={line.ending?.quantity ?? 0}
+        presentedQuantity={ending.presentedQuantity}
         onAmend={onAmend}
       />
     );
@@ -159,7 +217,7 @@ export const ClosedPurchaseDraftLine = ({
             {t('lineEditor.packagingType')}
           </span>
           <span className="text-sm leading-snug text-foreground">
-            {packagingTypeLabel ?? t('lineEditor.packagingTypeNone')}
+            {packagingTypeLabel}
           </span>
         </div>
       </div>
@@ -191,12 +249,14 @@ export const ClosedPurchaseDraftLine = ({
       <ActionDialogHost
         controller={dialog}
         renderDialogs={{
-          amendRefusal: (subject) => (
-            <AmendRefusalDialog
-              rejection={subject}
-              onSave={onSaveAmend(subject)}
-            />
-          ),
+          amendRefusal: (subject) => {
+            return (
+              <AmendRefusalDialog
+                rejection={subject}
+                onSave={onSaveAmend(subject)}
+              />
+            );
+          },
         }}
       />
     </li>

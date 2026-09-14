@@ -90,6 +90,23 @@ export interface RecordLineEndingInput {
   readonly condition: RecordLineEndingConditionInput | null;
 }
 
+// The three ways a condition reaches the columns it is stored in. `null` — a nothing-received ending
+// (AC-04a), or a caller carrying no condition at all — reads exactly as a condition that judged
+// nothing and refused nothing, so each of these is read once, by name, rather than defaulted three
+// times inside the statement below.
+const statedConformance = (
+  condition: RecordLineEndingConditionInput | null,
+): PurchaseDraftLinePreReceiptConformance | null =>
+  condition?.preReceiptConformance ?? null;
+
+const statedConformanceNote = (
+  condition: RecordLineEndingConditionInput | null,
+): string | null => condition?.preReceiptConformanceNote ?? null;
+
+const statedRejections = (
+  condition: RecordLineEndingConditionInput | null,
+): readonly RecordLineEndingRejectionInput[] => condition?.rejections ?? [];
+
 // A Rejection carries the Delivery Mode of the line it refuses, so
 // `fk_purchase_draft_line_rejections_line` proves the line, its Warehouse and its Mode through one
 // reference (AC-25, AC-26). The Mode is derived rather than stated: the ending's kind already fixes
@@ -226,9 +243,8 @@ export class ArrivalConfirmationRepository {
         endingKind: input.endingKind,
         endingRecordedByUserId: input.endingRecordedByUserId,
         endingRecordedAt: input.endingRecordedAt,
-        preReceiptConformance: input.condition?.preReceiptConformance ?? null,
-        preReceiptConformanceNote:
-          input.condition?.preReceiptConformanceNote ?? null,
+        preReceiptConformance: statedConformance(input.condition),
+        preReceiptConformanceNote: statedConformanceNote(input.condition),
         updatedAt: input.endingRecordedAt,
       },
     );
@@ -241,7 +257,7 @@ export class ArrivalConfirmationRepository {
     // than to a second one of their own. Reaching them only through the guarded update above is what
     // makes "no further refusal against a recorded ending" unreachable, instead of a rule an insert
     // ordered ahead of the ending could walk around.
-    const rejections = input.condition?.rejections ?? [];
+    const rejections = statedRejections(input.condition);
 
     if (rejections.length > 0) {
       await manager.insert(

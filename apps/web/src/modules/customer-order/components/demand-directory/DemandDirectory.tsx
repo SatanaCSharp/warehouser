@@ -57,8 +57,11 @@ const displacingStates: readonly {
   { state: 'noMatches', holds: ({ matchCount }) => matchCount === 0 },
 ];
 
-const resolveListState = (reading: DemandListReading): DemandListState =>
-  displacingStates.find(({ holds }) => holds(reading))?.state ?? 'ready';
+const resolveListState = (reading: DemandListReading): DemandListState => {
+  const displacing = displacingStates.find(({ holds }) => holds(reading));
+
+  return displacing?.state ?? 'ready';
+};
 
 /**
  * The Demand destination's list owner (design-handoff.md `G6jhw` desktop /
@@ -198,24 +201,30 @@ export const DemandDirectory = ({
       <ActionDialogHost
         controller={dialog}
         renderDialogs={{
-          amend: (order) => (
-            <AmendCustomerOrderDialog
-              order={order}
-              onSave={onSaveAmendment(order)}
-            />
-          ),
-          cancel: (order) => (
-            <CancelCustomerOrderDialog
-              order={order}
-              onSave={onSaveCancellation(order)}
-            />
-          ),
-          redirect: (order) => (
-            <RedirectCustomerOrderDialog
-              order={order}
-              onSave={onSaveRedirection(order)}
-            />
-          ),
+          amend: (order) => {
+            return (
+              <AmendCustomerOrderDialog
+                order={order}
+                onSave={onSaveAmendment(order)}
+              />
+            );
+          },
+          cancel: (order) => {
+            return (
+              <CancelCustomerOrderDialog
+                order={order}
+                onSave={onSaveCancellation(order)}
+              />
+            );
+          },
+          redirect: (order) => {
+            return (
+              <RedirectCustomerOrderDialog
+                order={order}
+                onSave={onSaveRedirection(order)}
+              />
+            );
+          },
         }}
       />
     </div>

@@ -38,6 +38,25 @@ export interface AmendedRejection {
   readonly amendedAt: Date;
 }
 
+// AC-19 — an amendment that states no Disposition states nothing to judge; one that states a
+// Disposition states one the system offers.
+const dispositionOfferedOrUnstated = (
+  disposition: string | undefined,
+): disposition is RejectionDisposition | undefined =>
+  disposition === undefined || isOfferedDisposition(disposition);
+
+// What **this amendment wrote**, never what the Rejection already held: `null` means "this amendment
+// wrote no description", not "the Rejection has none".
+const amendedDescription = (description: string | undefined): string | null =>
+  description ?? null;
+
+// The Disposition is still echoed when unstated, and that is deliberate rather than an oversight —
+// see the note at the return below.
+const amendedDisposition = (
+  stated: RejectionDisposition | undefined,
+  held: RejectionDisposition,
+): RejectionDisposition => stated ?? held;
+
 // T11/AC-18/AC-18a/AC-18b/AC-19/AC-20/AC-26/sad.md §6.4 — the amendment of one recorded Rejection.
 // Its precondition is the Rejection and never the draft's state (sad.md §6.4 step 5), so the only
 // repository this command reaches for is `PurchaseDraftRejectionRepository`: no draft header, no
@@ -69,8 +88,7 @@ export class AmendPurchaseDraftRejectionCommand {
     // AC-19 — judged against the offered set before anything is written, naming those the system
     // offers.
     assert(
-      input.disposition === undefined ||
-        isOfferedDisposition(input.disposition),
+      dispositionOfferedOrUnstated(input.disposition),
       purchaseDraftUnknownDispositionError(REJECTION_DISPOSITIONS),
     );
 
@@ -115,8 +133,8 @@ export class AmendPurchaseDraftRejectionCommand {
     // it — and only it — a disclosure.
     return {
       id: rejectionId,
-      description: input.description ?? null,
-      disposition: input.disposition ?? locked.disposition,
+      description: amendedDescription(input.description),
+      disposition: amendedDisposition(input.disposition, locked.disposition),
       amendedByUserId: currentUser.userId,
       amendedAt,
     };

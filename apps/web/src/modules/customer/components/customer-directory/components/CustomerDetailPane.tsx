@@ -45,6 +45,27 @@ const DISPLACING_DETAIL_STATES: readonly {
   { state: 'pending', holds: ({ hasDetail }) => !hasDetail },
 ];
 
+/** The first state that displaces the detail, or `ready` when the detail itself is what renders. */
+const resolveDetailState = (reading: DetailReading): DetailState => {
+  const displacing = DISPLACING_DETAIL_STATES.find(({ holds }) =>
+    holds(reading),
+  );
+
+  return displacing?.state ?? 'ready';
+};
+
+const openedCustomerId = (customer: Customer | undefined): string | undefined =>
+  customer?.id;
+
+/** The pane re-enters both when another Customer is opened and when what it is showing for that
+ * Customer changes — the skeleton arriving, then the Customer replacing it. Keying on the identity
+ * alone would animate the skeleton in and then swap the real content behind it without a frame of
+ * motion, which is the jump the transition exists to remove. */
+const transitionKeyOf = (
+  customerId: string | undefined,
+  detailState: DetailState,
+): string => `${customerId ?? 'none'}:${detailState}`;
+
 /** The pane's own skeleton: an identity line, the addresses, the awaiting rows. */
 const DETAIL_BARS = ['30%', '60%', '45%'] as const;
 
@@ -77,24 +98,17 @@ export const CustomerDetailPane = ({
   onBack,
 }: CustomerDetailPaneProps): ReactElement => {
   const { t } = useTranslation('customer');
-  const { detail, isError } = useCustomerDetail(customer?.id);
+  const customerId = openedCustomerId(customer);
+  const { detail, isError } = useCustomerDetail(customerId);
 
-  const detailState =
-    DISPLACING_DETAIL_STATES.find(({ holds }) =>
-      holds({
-        hasDetail: detail !== undefined,
-        hasSelection: customer !== undefined,
-        isError,
-      }),
-    )?.state ?? 'ready';
+  const detailState = resolveDetailState({
+    hasDetail: detail !== undefined,
+    hasSelection: customer !== undefined,
+    isError,
+  });
 
-  // The pane re-enters both when another Customer is opened and when what it
-  // is showing for that Customer changes — the skeleton arriving, then the
-  // Customer replacing it. Keying on the identity alone would animate the
-  // skeleton in and then swap the real content behind it without a frame of
-  // motion, which is the jump the transition exists to remove.
   const paneRef = useContentTransition<HTMLDivElement>(
-    `${customer?.id ?? 'none'}:${detailState}`,
+    transitionKeyOf(customerId, detailState),
   );
 
   // The three blocks read the Customer they were opened for, so the element is

@@ -43,6 +43,16 @@ const defaultCreatePurchaseDraftRuntime: CreatePurchaseDraftRuntime = {
   now: () => new Date(),
 };
 
+// A field a composer left out and one it stated as `null` mean the same thing to the row: nothing
+// stated. Read through one function so every optional field below defaults identically, and so the
+// command reads as the walk over lines and links that it is.
+const statedOrNothing = <T>(value: T | null | undefined): T | null =>
+  value ?? null;
+
+const statedLinks = (
+  line: CreateDraftLineInput,
+): readonly CreateDraftLineLinkInput[] => line.links ?? [];
+
 // AC-10/AC-11/AC-11a/AC-12/AC-13 — recording a Purchase Draft in the Draft state, with the lines
 // and links it was composed with. Coverage — whether links overlap or fail to sum to their line's
 // quantity — is the member's decision and is passed through unadjusted (AC-11a). Per-line
@@ -73,7 +83,7 @@ export class CreatePurchaseDraftCommand {
       await this.assemblyService.assertItemAvailable(currentUser, line.itemId);
 
       const links: CreateDraftLineLinkPersistenceInput[] = [];
-      for (const link of line.links ?? []) {
+      for (const link of statedLinks(line)) {
         await this.assemblyService.assertCustomerOrderAvailable(
           currentUser,
           link.customerOrderId,
@@ -93,8 +103,8 @@ export class CreatePurchaseDraftCommand {
         id: this.runtime.purchaseDraftLineId(),
         itemId: line.itemId,
         orderedQuantity: line.orderedQuantity,
-        packagingTypeId: line.packagingTypeId ?? null,
-        valueAddingNote: line.valueAddingNote ?? null,
+        packagingTypeId: statedOrNothing(line.packagingTypeId),
+        valueAddingNote: statedOrNothing(line.valueAddingNote),
         links,
       });
     }
@@ -104,7 +114,7 @@ export class CreatePurchaseDraftCommand {
     return this.assemblyRepository.createDraft({
       id: this.runtime.purchaseDraftId(),
       warehouseId: currentUser.warehouseId,
-      expectedArrivalDate: input.expectedArrivalDate ?? null,
+      expectedArrivalDate: statedOrNothing(input.expectedArrivalDate),
       createdByUserId: currentUser.userId,
       createdAt,
       lines,

@@ -45,4 +45,32 @@ describe('readHttpPlatformConfig', () => {
       }),
     ).toThrow('APP_ORIGINS must contain only valid HTTP origins');
   });
+
+  // The three remaining ways a string can look like an origin without being one. Each is a distinct
+  // refusal in `isBareHttpOrigin`, and none of them is reachable through the cases above: a
+  // non-HTTP scheme parses, credentials parse, and a bare hostname does not parse at all.
+  it.each([
+    ['a non-HTTP scheme', 'ftp://app.example.test'],
+    ['embedded credentials', 'https://user:secret@app.example.test'],
+    ['an unparseable value', 'app.example.test'],
+  ])('rejects an origin carrying %s', (_case, origin) => {
+    expect(() =>
+      readHttpPlatformConfig({
+        APP_ORIGINS: origin,
+        AUTH_COOKIE_SECURE: 'false',
+      }),
+    ).toThrow('APP_ORIGINS must contain only valid HTTP origins');
+  });
+
+  it('refuses a cookie policy that is neither true nor false', () => {
+    expect(() =>
+      readHttpPlatformConfig({
+        APP_ORIGINS: 'https://app.example.test',
+        AUTH_COOKIE_SECURE: 'yes',
+      }),
+    ).toThrow('AUTH_COOKIE_SECURE must be either true or false');
+    expect(() =>
+      readHttpPlatformConfig({ APP_ORIGINS: 'https://app.example.test' }),
+    ).toThrow('AUTH_COOKIE_SECURE must be either true or false');
+  });
 });

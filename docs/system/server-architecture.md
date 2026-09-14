@@ -439,6 +439,9 @@ pnpm --filter @warehouser/server test:architectural
 pnpm --filter @warehouser/server build
 ```
 
+The lint step is oxlint, and a warning fails it exactly as an error does — see
+[Linting with oxlint](guides/linting-with-oxlint.md) before suppressing a rule or changing one.
+
 ### Running the integration tier
 
 Integration specs are named `*.integration.spec.ts`. The suffix is what separates the two

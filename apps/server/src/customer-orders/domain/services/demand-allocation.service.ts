@@ -53,17 +53,138 @@ const exceedsOutstandingQuantity = (
 const isUnfulfilled = (state: CustomerOrderState): boolean =>
   state === 'unfulfilled';
 
+/** The five values AC-18's bounds are decided against, and nothing else.
+ *
+ * Narrower than `CustomerOrderEntity` deliberately (`writing-web-components.md`'s "depend on the
+ * narrowest contract" has a server-side twin in `adding-a-server-module.md` §4): the rules below are
+ * pure functions over a locked row's figures, and naming the persistence entity in their signatures
+ * would make each one read as a mapping *between* that entity and the violation it reports — which
+ * `mapper-placement.architectural.spec.ts` then requires to live under `domain/mappers/`. It is not
+ * a mapping: it is the refusal a rule produces, and it belongs beside the rule.
+ */
+interface AssignableCustomerOrder {
+  readonly id: string;
+  readonly state: CustomerOrderState;
+  readonly outstandingQuantity: number;
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
+}
+
 // AC-18 — when the refused Customer Order last moved, so the refusal can be dated ("cancelled on
 // 24 Aug", design frame `s5EPi.png`). `updated_at` is left equal to `created_at` by the insert and
 // rewritten by every path that moves the row, so an order that has not been changed since it was
 // recorded reports nothing rather than its own creation time. A link this transaction locked no
 // order for reports nothing either — there is no row to read a moment from.
 const lastChangedAtOf = (
-  order: CustomerOrderEntity | undefined,
+  order: AssignableCustomerOrder | undefined,
 ): string | null =>
   order === undefined || order.updatedAt.getTime() <= order.createdAt.getTime()
     ? null
     : order.updatedAt.toISOString();
+
+// AC-18 — the line-wide bound. What every assignment on one line adds up to, judged against the
+// Accepted Quantity the caller derived for it.
+const allocatedQuantityOf = (line: DemandAllocationLineInput): number =>
+  line.allocations.reduce(
+    (sum, allocation) => sum + allocation.allocatedQuantity,
+    0,
+  );
+
+const lineBoundViolation = (
+  line: DemandAllocationLineInput,
+): AllocationBoundViolation | undefined => {
+  const allocatedQuantity = allocatedQuantityOf(line);
+  if (!exceedsAssignableQuantity(allocatedQuantity, line.assignableQuantity)) {
+    return undefined;
+  }
+
+  return {
+    purchaseDraftLineId: line.purchaseDraftLineId,
+    rule: 'allocations_exceed_accepted_quantity',
+    receivedQuantity: line.assignableQuantity + line.rejectedQuantity,
+    rejectedQuantity: line.rejectedQuantity,
+    acceptedQuantity: line.assignableQuantity,
+    allocatedQuantity,
+  };
+};
+
+// The order an assignment may still be measured against, or nothing. A link this transaction did not
+// lock a Customer Order for — of another Warehouse, or naming an order that no longer exists — is
+// refused the same non-enumerating way a cancelled one is, so both collapse to `undefined` here.
+const assignableOrder = (
+  order: AssignableCustomerOrder | undefined,
+): AssignableCustomerOrder | undefined =>
+  order !== undefined && isUnfulfilled(order.state) ? order : undefined;
+
+const notUnfulfilledViolation = (
+  allocation: DemandAllocationLineAssignment,
+  order: AssignableCustomerOrder | undefined,
+): AllocationBoundViolation => ({
+  purchaseDraftLineLinkId: allocation.purchaseDraftLineLinkId,
+  rule: 'customer_order_not_unfulfilled',
+  customerOrderState: order?.state ?? 'cancelled',
+  customerOrderLastChangedAt: lastChangedAtOf(order),
+});
+
+const outstandingBoundViolation = (
+  allocation: DemandAllocationLineAssignment,
+  outstandingQuantity: number,
+): AllocationBoundViolation | undefined =>
+  exceedsOutstandingQuantity(allocation.allocatedQuantity, outstandingQuantity)
+    ? {
+        purchaseDraftLineLinkId: allocation.purchaseDraftLineLinkId,
+        rule: 'exceeds_outstanding_quantity',
+        outstandingQuantity,
+        allocatedQuantity: allocation.allocatedQuantity,
+      }
+    : undefined;
+
+// One assignment judged against the balance its predecessors left, and — when it passes — the
+// balance drawn down by what it takes. A breaching assignment does not consume the remainder, so one
+// overshoot cannot cascade into false violations against the assignments that follow it.
+const judgeAssignment = (
+  allocation: DemandAllocationLineAssignment,
+  orderByLinkId: ReadonlyMap<string, AssignableCustomerOrder>,
+  remainingByOrderId: Map<string, number>,
+): AllocationBoundViolation | undefined => {
+  const order = orderByLinkId.get(allocation.purchaseDraftLineLinkId);
+  const assignable = assignableOrder(order);
+  if (assignable === undefined) {
+    return notUnfulfilledViolation(allocation, order);
+  }
+
+  const outstandingQuantity =
+    remainingByOrderId.get(assignable.id) ?? assignable.outstandingQuantity;
+  const violation = outstandingBoundViolation(allocation, outstandingQuantity);
+  if (violation !== undefined) {
+    return violation;
+  }
+
+  remainingByOrderId.set(
+    assignable.id,
+    outstandingQuantity - allocation.allocatedQuantity,
+  );
+  return undefined;
+};
+
+const assignmentViolations = (
+  line: DemandAllocationLineInput,
+  orderByLinkId: ReadonlyMap<string, AssignableCustomerOrder>,
+  remainingByOrderId: Map<string, number>,
+): AllocationBoundViolation[] => {
+  const violations: AllocationBoundViolation[] = [];
+  for (const allocation of line.allocations) {
+    const violation = judgeAssignment(
+      allocation,
+      orderByLinkId,
+      remainingByOrderId,
+    );
+    if (violation !== undefined) {
+      violations.push(violation);
+    }
+  }
+  return violations;
+};
 
 // ADR 0002 — the Customer Order side of Arrival Confirmation. Exported from `customer-orders`' own
 // use-case module so `purchase-drafts/usecases/commands/confirm-purchase-draft-arrival.command.ts`
@@ -180,8 +301,7 @@ export class DemandAllocationService {
   // the remainder that gets named, and the caller sees the balance it breached. Left unaggregated
   // the surplus reaches `applyAllocations`, drives `outstanding_quantity` negative and turns
   // `chk_customer_orders_outstanding_bounds` into an untyped failure instead of this refusal.
-  // A breaching assignment does not consume the remainder, so one overshoot cannot cascade into
-  // false violations against the assignments that follow it.
+  // `judgeAssignment` above is where that draw-down happens.
   private collectViolations(
     lines: readonly DemandAllocationLineInput[],
     orderByLinkId: ReadonlyMap<string, CustomerOrderEntity>,
@@ -192,65 +312,14 @@ export class DemandAllocationService {
     const remainingByOrderId = new Map<string, number>();
 
     for (const line of lines) {
-      const allocatedQuantity = line.allocations.reduce(
-        (sum, allocation) => sum + allocation.allocatedQuantity,
-        0,
+      const lineViolation = lineBoundViolation(line);
+      if (lineViolation !== undefined) {
+        violations.push(lineViolation);
+      }
+
+      violations.push(
+        ...assignmentViolations(line, orderByLinkId, remainingByOrderId),
       );
-      if (
-        exceedsAssignableQuantity(allocatedQuantity, line.assignableQuantity)
-      ) {
-        violations.push({
-          purchaseDraftLineId: line.purchaseDraftLineId,
-          rule: 'allocations_exceed_accepted_quantity',
-          receivedQuantity: line.assignableQuantity + line.rejectedQuantity,
-          rejectedQuantity: line.rejectedQuantity,
-          acceptedQuantity: line.assignableQuantity,
-          allocatedQuantity,
-        });
-      }
-
-      for (const allocation of line.allocations) {
-        const order = orderByLinkId.get(allocation.purchaseDraftLineLinkId);
-        // A link this transaction did not lock a Customer Order for — of another Warehouse, or
-        // naming an order that no longer exists — is refused the same non-enumerating way a
-        // cancelled one is.
-        const state = order?.state ?? 'cancelled';
-
-        if (!isUnfulfilled(state)) {
-          violations.push({
-            purchaseDraftLineLinkId: allocation.purchaseDraftLineLinkId,
-            rule: 'customer_order_not_unfulfilled',
-            customerOrderState: state,
-            customerOrderLastChangedAt: lastChangedAtOf(order),
-          });
-          continue;
-        }
-
-        const customerOrderId = order!.id;
-        const outstandingQuantity =
-          remainingByOrderId.get(customerOrderId) ??
-          order?.outstandingQuantity ??
-          0;
-        if (
-          exceedsOutstandingQuantity(
-            allocation.allocatedQuantity,
-            outstandingQuantity,
-          )
-        ) {
-          violations.push({
-            purchaseDraftLineLinkId: allocation.purchaseDraftLineLinkId,
-            rule: 'exceeds_outstanding_quantity',
-            outstandingQuantity,
-            allocatedQuantity: allocation.allocatedQuantity,
-          });
-          continue;
-        }
-
-        remainingByOrderId.set(
-          customerOrderId,
-          outstandingQuantity - allocation.allocatedQuantity,
-        );
-      }
     }
 
     return violations;

@@ -257,9 +257,206 @@ const renderViolationAlert = (
 // A lifecycle state this build does not know still gets a sentence rather than
 // no bullet at all, because the member is owed the name of every refused
 // assignment.
+/** i18next's context suffix selects the dated wording; a refusal that carries no moment reads
+ * undated rather than dated to nothing. */
+const datedContext = (moment: string | null): string | undefined =>
+  moment === null ? undefined : 'dated';
+
+/** The moment the dated wording interpolates. A refusal that carries none interpolates nothing,
+ * rather than dating the sentence to a value it never received. */
+const datedOn = (
+  moment: string | null,
+  shortTimestampDate: (value: string) => string,
+): string => (moment === null ? '' : shortTimestampDate(moment));
+
 const NOT_UNFULFILLED_KEY: Record<string, string> = {
   cancelled: 'cancelled',
   fulfilled: 'fulfilled',
+};
+
+/**
+ * Everything a bound bullet reads that only the rendering component can resolve: the translator, the
+ * two formatters, and the two lookups that turn an identifier the server sent into something the
+ * member can actually see on the draft in front of them.
+ *
+ * Passed as one argument so the builders below stay module-level pure functions. They were closures
+ * inside the component until `max-lines-per-function` said what their length already implied — a
+ * refusal's prose is not part of rendering it.
+ */
+interface BulletContext {
+  readonly customerNames: ReadonlyMap<string, string>;
+  readonly lineNumbers: ReadonlyMap<string, number>;
+  readonly quantity: (value: number) => string;
+  readonly shortTimestampDate: (value: string) => string;
+  readonly t: (key: string, options?: Record<string, unknown>) => string;
+}
+
+// AC-11 — the bound narrowed from what arrived to what was accepted, so the bullet names the
+// assignment field that overshoots (the line) and states the shortfall in words. This branch
+// replaced the received-quantity one rather than joining it: the server renamed the rule in the same
+// change (`demand-allocation.errors.ts`), and the old arm survived here for a release, parsing and
+// rendering a rule no deployed server can emit and kept green by a fabricated fixture
+// (review-2026-09-09).
+const exceedsAcceptedBullets = (
+  violation: Extract<
+    EndingBoundViolation,
+    { rule: 'allocations_exceed_accepted_quantity' }
+  >,
+  { lineNumbers, quantity, t }: BulletContext,
+): BoundBullet[] => {
+  const line = lineNumbers.get(violation.purchaseDraftLineId);
+  if (line === undefined) {
+    return [];
+  }
+
+  return [
+    {
+      key: `${violation.rule}-${violation.purchaseDraftLineId}`,
+      text: t('transitions.lineEnding.refusal.bounds.exceedsAccepted', {
+        accepted: quantity(violation.acceptedQuantity),
+        allocated: quantity(violation.allocatedQuantity),
+        line,
+        received: quantity(violation.receivedQuantity),
+        rejected: quantity(violation.rejectedQuantity),
+      }),
+    },
+  ];
+};
+
+const exceedsOutstandingBullets = (
+  violation: Extract<
+    EndingBoundViolation,
+    { rule: 'exceeds_outstanding_quantity' }
+  >,
+  customer: string,
+  key: string,
+  { quantity, t }: BulletContext,
+): BoundBullet[] => [
+  {
+    key,
+    text: t('transitions.lineEnding.refusal.bounds.exceedsOutstanding', {
+      assigned: quantity(violation.allocatedQuantity),
+      customer,
+      outstanding: quantity(violation.outstandingQuantity),
+    }),
+  },
+];
+
+// AC-18 — the frame dates the refused order's move ("Baltic Freight OÜ — cancelled on 24 Aug, so
+// nothing can be assigned to it"), and i18next's context suffix selects that wording. A link the
+// server locked no order for carries no moment and reads undated, which is the only sentence honest
+// about what the refusal actually knows.
+const notUnfulfilledBullets = (
+  violation: Extract<
+    EndingBoundViolation,
+    { rule: 'customer_order_not_unfulfilled' }
+  >,
+  customer: string,
+  key: string,
+  { shortTimestampDate, t }: BulletContext,
+): BoundBullet[] => {
+  const suffix =
+    NOT_UNFULFILLED_KEY[violation.customerOrderState] ?? 'unavailable';
+  const { customerOrderLastChangedAt: movedAt } = violation;
+
+  return [
+    {
+      key,
+      text: t(`transitions.lineEnding.refusal.bounds.${suffix}`, {
+        context: datedContext(movedAt),
+        customer,
+        on: datedOn(movedAt, shortTimestampDate),
+      }),
+    },
+  ];
+};
+
+// One bullet per bound, dropped only when the identifier names nothing on the draft in front of the
+// member — a bullet that cannot say *which* line or customer was refused says nothing the frame asks
+// it to say.
+const bulletOf = (
+  violation: EndingBoundViolation,
+  context: BulletContext,
+): BoundBullet[] => {
+  if (violation.rule === 'allocations_exceed_accepted_quantity') {
+    return exceedsAcceptedBullets(violation, context);
+  }
+
+  const key = `${violation.rule}-${violation.purchaseDraftLineLinkId}`;
+  const customer = context.customerNames.get(violation.purchaseDraftLineLinkId);
+  if (customer === undefined) {
+    return [];
+  }
+
+  if (violation.rule === 'exceeds_outstanding_quantity') {
+    return exceedsOutstandingBullets(violation, customer, key, context);
+  }
+
+  return notUnfulfilledBullets(violation, customer, key, context);
+};
+
+// The two per-line refusals carry their own small envelopes. Read defensively: a refusal whose
+// envelope this build cannot parse still gets its undated or unqualified sentence rather than no
+// sentence at all.
+
+/** The moment the ending was already recorded, or nothing when the envelope carries no moment. */
+const readRecordedAt = (details?: Record<string, unknown>): string | null => {
+  const recordedAt = details?.endingRecordedAt;
+
+  return typeof recordedAt === 'string' ? recordedAt : null;
+};
+
+// Which of the two ways a line's goods travelled, mapped to the sentence naming it. Keyed by the
+// raw envelope value through a `Map` so a mode this build does not know — or an envelope carrying
+// no mode at all — falls to `unknown` rather than being mistaken for one of the two.
+const MODE_MISMATCH_KEY = new Map<unknown, string>([
+  [
+    'via_warehouse',
+    'transitions.lineEnding.refusal.modeMismatch.via_warehouse',
+  ],
+  [
+    'direct_to_customer',
+    'transitions.lineEnding.refusal.modeMismatch.direct_to_customer',
+  ],
+]);
+
+const readModeMismatchKey = (details?: Record<string, unknown>): string =>
+  MODE_MISMATCH_KEY.get(details?.deliveryMode) ??
+  'transitions.lineEnding.refusal.modeMismatch.unknown';
+
+/** The refusal the member is reading. A code this build does not recognize is still owed a
+ * sentence, so it reads as `unknown` rather than as nothing. */
+const refusalStateOf = (code: string): EndingRefusalState =>
+  REFUSAL_STATE_BY_CODE[code] ?? 'unknown';
+
+/**
+ * A refusal with no per-bound breakdown: one sentence naming the rule, then the shared
+ * "nothing saved" line.
+ */
+const renderSentence = (t: Translate, sentence: string): ReactElement => {
+  return (
+    <Alert.Description>
+      {`${sentence} ${t('transitions.lineEnding.nothingSaved')}`}
+    </Alert.Description>
+  );
+};
+
+/** The sentence a refusal with no per-bound breakdown states on its own. */
+const renderGeneric = (t: Translate, key: EndingRefusalState): ReactElement => {
+  return renderSentence(t, t(`transitions.lineEnding.refusal.${key}`));
+};
+
+// AC-20a — "naming when and by whom", so the sentence is interpolated from the refusal's own
+// envelope rather than being the generic one.
+const alreadyRecordedSentence = (
+  t: Translate,
+  recordedAt: string | null,
+  shortTimestampDate: (value: string) => string,
+): string => {
+  return t('transitions.lineEnding.refusal.alreadyRecorded', {
+    context: datedContext(recordedAt),
+    on: datedOn(recordedAt, shortTimestampDate),
+  });
 };
 
 /**
@@ -302,78 +499,20 @@ export const EndingRefusalAlert = ({
       line.links.map((link) => [link.id, linkNaming(link)] as const),
     ),
   );
+  const bulletContext: BulletContext = {
+    customerNames,
+    lineNumbers,
+    quantity,
+    shortTimestampDate,
+    t,
+  };
 
   // One bullet per bound, dropped only when the identifier names nothing on the
   // draft in front of the member — a bullet that cannot say *which* line or
   // customer was refused says nothing the frame asks it to say.
-  const bulletOf = (violation: EndingBoundViolation): BoundBullet[] => {
-    // AC-11 — the bound narrowed from what arrived to what was accepted, so the
-    // bullet names the assignment field that overshoots (the line) and states
-    // the shortfall in words. This branch replaced the received-quantity one
-    // rather than joining it: the server renamed the rule in the same change
-    // (`demand-allocation.errors.ts`), and the old arm survived here for a
-    // release, parsing and rendering a rule no deployed server can emit and
-    // kept green by a fabricated fixture (review-2026-09-09).
-    if (violation.rule === 'allocations_exceed_accepted_quantity') {
-      const line = lineNumbers.get(violation.purchaseDraftLineId);
-
-      return line === undefined
-        ? []
-        : [
-            {
-              key: `${violation.rule}-${violation.purchaseDraftLineId}`,
-              text: t('transitions.lineEnding.refusal.bounds.exceedsAccepted', {
-                accepted: quantity(violation.acceptedQuantity),
-                allocated: quantity(violation.allocatedQuantity),
-                line,
-                received: quantity(violation.receivedQuantity),
-                rejected: quantity(violation.rejectedQuantity),
-              }),
-            },
-          ];
-    }
-
-    const key = `${violation.rule}-${violation.purchaseDraftLineLinkId}`;
-    const customer = customerNames.get(violation.purchaseDraftLineLinkId);
-    if (customer === undefined) {
-      return [];
-    }
-
-    if (violation.rule === 'exceeds_outstanding_quantity') {
-      return [
-        {
-          key,
-          text: t('transitions.lineEnding.refusal.bounds.exceedsOutstanding', {
-            assigned: quantity(violation.allocatedQuantity),
-            customer,
-            outstanding: quantity(violation.outstandingQuantity),
-          }),
-        },
-      ];
-    }
-
-    const suffix =
-      NOT_UNFULFILLED_KEY[violation.customerOrderState] ?? 'unavailable';
-    const { customerOrderLastChangedAt: movedAt } = violation;
-
-    return [
-      {
-        key,
-        text: t(`transitions.lineEnding.refusal.bounds.${suffix}`, {
-          // AC-18 — the frame dates the refused order's move ("Baltic Freight
-          // OÜ — cancelled on 24 Aug, so nothing can be assigned to it"), and
-          // i18next's context suffix selects that wording. A link the server
-          // locked no order for carries no moment and reads undated, which is
-          // the only sentence honest about what the refusal actually knows.
-          context: movedAt === null ? undefined : 'dated',
-          customer,
-          on: movedAt === null ? '' : shortTimestampDate(movedAt),
-        }),
-      },
-    ];
-  };
-
-  const bullets = endingBoundViolations(details).flatMap(bulletOf);
+  const bullets = endingBoundViolations(details).flatMap((violation) =>
+    bulletOf(violation, bulletContext),
+  );
 
   // T19 — the three refusal codes this feature adds, each dispatched through
   // its own rule table (`conditionSplitTextByRule`, `conformanceTextByRule`,
@@ -392,49 +531,21 @@ export const EndingRefusalAlert = ({
     invalidInputTextByRule(t, quantity),
   );
 
-  // The two per-line refusals carry their own small envelopes. Read defensively:
-  // a refusal whose envelope this build cannot parse still gets its undated or
-  // unqualified sentence rather than no sentence at all.
-  const recordedAt =
-    typeof details?.endingRecordedAt === 'string'
-      ? details.endingRecordedAt
-      : null;
-  const deliveryMode =
-    details?.deliveryMode === 'via_warehouse' ||
-    details?.deliveryMode === 'direct_to_customer'
-      ? details.deliveryMode
-      : null;
-
-  /** The sentence a refusal with no per-bound breakdown states on its own. */
-  const generic = (key: EndingRefusalState): ReactElement => (
-    <Alert.Description>
-      {`${t(`transitions.lineEnding.refusal.${key}`)} ${t('transitions.lineEnding.nothingSaved')}`}
-    </Alert.Description>
-  );
+  // The two per-line refusals carry their own small envelopes, read defensively above
+  // (`readRecordedAt`, `readModeMismatchKey`).
+  const recordedAt = readRecordedAt(details);
 
   const content: Record<EndingRefusalState, ReactElement> = {
     // AC-20a — "naming when and by whom", so the sentence is interpolated from
     // the refusal's own envelope rather than being the generic one.
-    alreadyRecorded: (
-      <Alert.Description>
-        {`${t('transitions.lineEnding.refusal.alreadyRecorded', {
-          on: recordedAt === null ? '' : shortTimestampDate(recordedAt),
-          context: recordedAt === null ? undefined : 'dated',
-        })} ${t('transitions.lineEnding.nothingSaved')}`}
-      </Alert.Description>
+    alreadyRecorded: renderSentence(
+      t,
+      alreadyRecordedSentence(t, recordedAt, shortTimestampDate),
     ),
     // AC-20 — "naming which of the two ways that line's goods travelled".
-    modeMismatch: (
-      <Alert.Description>
-        {`${t(
-          `transitions.lineEnding.refusal.modeMismatch.${
-            deliveryMode ?? 'unknown'
-          }`,
-        )} ${t('transitions.lineEnding.nothingSaved')}`}
-      </Alert.Description>
-    ),
-    invalidState: generic('invalidState'),
-    unknown: generic('unknown'),
+    modeMismatch: renderSentence(t, t(readModeMismatchKey(details))),
+    invalidState: renderGeneric(t, 'invalidState'),
+    unknown: renderGeneric(t, 'unknown'),
     conditionSplit: renderViolationAlert(
       t,
       onDismiss,
@@ -493,9 +604,7 @@ export const EndingRefusalAlert = ({
   return (
     <Alert role="alert" status="danger">
       <Alert.Indicator />
-      <Alert.Content>
-        {content[REFUSAL_STATE_BY_CODE[code] ?? 'unknown']}
-      </Alert.Content>
+      <Alert.Content>{content[refusalStateOf(code)]}</Alert.Content>
     </Alert>
   );
 };

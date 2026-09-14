@@ -178,4 +178,30 @@ describe('CorrectItemDialog', () => {
       /an item that nothing yet names may still have its SKU corrected/iu,
     );
   });
+
+  // The fallback of the refusal table, which the two SKU cases above never reach: a rule the
+  // dialog's own `keysByCode` does not name. `itemSku.skuFixed` and `itemSku.skuTaken` are the two
+  // it knows; anything else has to resolve through the field's own validation section rather than
+  // render the server's raw rule string at the member, which is what a missing fallback would do.
+  it("explains a refusal rule it does not know through the field's own copy", async () => {
+    const user = userEvent.setup();
+    const onSave = vi
+      .fn<(input: ItemUpdate) => Promise<MutationResult>>()
+      .mockResolvedValue({
+        error: {
+          code: 'items.invalid_input',
+          fieldErrors: { description: 'tooBig' },
+        },
+      });
+    renderDialog(anItem(), onSave);
+
+    await retype(user, /description/iu, 'A much longer description');
+    await save(user);
+
+    expect(
+      await within(dialog()).findByText(
+        'This description is longer than this warehouse accepts.',
+      ),
+    ).toBeVisible();
+  });
 });

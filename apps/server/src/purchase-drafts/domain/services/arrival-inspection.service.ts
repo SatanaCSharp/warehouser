@@ -308,6 +308,63 @@ export const assertConditionSplit = (
   );
 };
 
+// AC-04a — a condition stated against an ending that received nothing. Refused under
+// `purchase_drafts.invalid_input` rather than the conformance code
+// (contracts/api-sync-report.md §4).
+const nothingReceivedViolations = (
+  submission: EndingConditionSubmission,
+  verdict: EndingConditionSubmission['preReceiptConformance'],
+): readonly EndingConditionInputViolation[] =>
+  conditionOnlyWhereSomethingReceived(
+    submission.receivedQuantity,
+    verdict !== null || !isEmpty(submission.rejections),
+  )
+    ? []
+    : [conditionOnNothingReceivedViolation('preReceiptConformance')];
+
+// AC-15b — the note's shape (non-empty, trimmed, within bound) is measured only when it would
+// actually reach persistence beside a verdict: `buildEndingConditionInput` drops an orphaned note
+// rather than refusing it, so a note stated without a verdict is never this rule's failure mode.
+const conformanceNoteShapeViolations = (
+  verdict: EndingConditionSubmission['preReceiptConformance'],
+  note: string | null,
+): readonly EndingConditionInputViolation[] =>
+  verdict === null
+    ? []
+    : proseShapeViolationsOf(note, 'preReceiptConformance.note', {
+        empty: noteEmptyViolation,
+        notTrimmed: noteNotTrimmedViolation,
+        tooLong: noteTooLongViolation,
+      });
+
+// `PreReceiptConformanceWithoutNoteCreate` (`@warehouser/contracts`) admits a note only beside
+// Not met, so a note beside Met or Not applicable is refused here rather than persisted silently.
+const noteAdmittedByVerdictViolations = (
+  verdict: EndingConditionSubmission['preReceiptConformance'],
+  note: string | null,
+): readonly EndingConditionInputViolation[] =>
+  verdict !== null &&
+  verdict !== PreReceiptConformanceVerdict.NotMet &&
+  note !== null
+    ? [noteNotAdmittedByVerdictViolation(verdict)]
+    : [];
+
+// AC-04a and AC-15b collected together: every payload-shape bound refused under
+// `purchase_drafts.invalid_input` rather than the conformance code, all of them decidable before
+// the conformance rules run.
+const endingConditionInputViolations = (
+  submission: EndingConditionSubmission,
+): readonly EndingConditionInputViolation[] => {
+  const verdict = submission.preReceiptConformance;
+  const note = submission.preReceiptConformanceNote;
+
+  return [
+    ...nothingReceivedViolations(submission, verdict),
+    ...conformanceNoteShapeViolations(verdict, note),
+    ...noteAdmittedByVerdictViolations(verdict, note),
+  ];
+};
+
 // AC-16, AC-17, AC-17a and AC-04a. The nothing-received refusal comes first and alone because it is
 // a different branch of the contract: it refuses under `purchase_drafts.invalid_input` rather than
 // the conformance code, as contracts/api-sync-report.md §4 maps it, and reaching
@@ -318,38 +375,8 @@ export const assertPreReceiptConformance = (
   submission: EndingConditionSubmission,
 ): void => {
   const verdict = submission.preReceiptConformance;
-  const note = submission.preReceiptConformanceNote;
 
-  // AC-04a and AC-15b collected together: both are payload-shape bounds refused under
-  // `purchase_drafts.invalid_input` rather than the conformance code (contracts/api-sync-report.md
-  // §4), and both are decidable before the conformance rules below ever run. The note's shape
-  // (non-empty, trimmed, within bound) is measured only when it would actually reach persistence
-  // beside a verdict — `buildEndingConditionInput` drops an orphaned note rather than refusing it,
-  // so a note stated without one is never this rule's failure mode. `note_not_admitted_by_verdict`
-  // is the fourth: `PreReceiptConformanceWithoutNoteCreate` (`@warehouser/contracts`) admits a note
-  // only beside Not met, so a note beside Met or Not applicable is refused here rather than
-  // persisted silently.
-  const inputViolations: EndingConditionInputViolation[] = [
-    ...(conditionOnlyWhereSomethingReceived(
-      submission.receivedQuantity,
-      verdict !== null || !isEmpty(submission.rejections),
-    )
-      ? []
-      : [conditionOnNothingReceivedViolation('preReceiptConformance')]),
-    ...(verdict === null
-      ? []
-      : proseShapeViolationsOf(note, 'preReceiptConformance.note', {
-          empty: noteEmptyViolation,
-          notTrimmed: noteNotTrimmedViolation,
-          tooLong: noteTooLongViolation,
-        })),
-    ...(verdict !== null &&
-    verdict !== PreReceiptConformanceVerdict.NotMet &&
-    note !== null
-      ? [noteNotAdmittedByVerdictViolation(verdict)]
-      : []),
-  ];
-
+  const inputViolations = endingConditionInputViolations(submission);
   assert(
     isEmpty(inputViolations),
     purchaseDraftEndingConditionInputError(inputViolations),

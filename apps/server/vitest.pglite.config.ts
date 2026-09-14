@@ -72,6 +72,15 @@ export default mergeConfig(
       // the workers removes it at no cost in wall time — these specs are bound
       // by PGlite's single-threaded WebAssembly, not by core count.
       maxWorkers: '50%',
+      // Only `vitest.crap.config.ts` reads this, and it must: Vitest refuses to
+      // run two projects that share a `groupOrder` but disagree on
+      // `maxWorkers`, and it refuses by erroring *out of the run* rather than
+      // out of the process — the reporters still fire, so the CRAP adapter
+      // analyses an empty coverage report and prints a score for a suite that
+      // never executed. Ordering this tier after the default-0 unit tier both
+      // satisfies the constraint and is what we want anyway: the halved worker
+      // count above is this tier's alone and should not throttle the other.
+      sequence: { groupOrder: 1 },
       // Booting `AppModule` in `beforeAll` has exceeded a 5s hook timeout on a
       // loaded machine before.
       testTimeout: 30_000,

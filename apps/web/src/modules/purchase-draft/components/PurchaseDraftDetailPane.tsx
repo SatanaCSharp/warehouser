@@ -57,15 +57,17 @@ export const PurchaseDraftDetailPane = ({
       ? undefined
       : t('detail.frozenNote', { timestamp: minuteTimestamp(draft.readiedAt) });
 
-  const expectedArrivalField = (isFrozen: boolean): ReactElement => (
-    <div className="mt-4">
-      <ExpectedArrivalDateField
-        isFrozen={isFrozen}
-        purchaseDraftId={draft.id}
-        value={draft.expectedArrivalDate}
-      />
-    </div>
-  );
+  const expectedArrivalField = (isFrozen: boolean): ReactElement => {
+    return (
+      <div className="mt-4">
+        <ExpectedArrivalDateField
+          isFrozen={isFrozen}
+          purchaseDraftId={draft.id}
+          value={draft.expectedArrivalDate}
+        />
+      </div>
+    );
+  };
 
   const content: Record<PurchaseDraftState, ReactElement> = {
     draft: (

@@ -19,3 +19,8 @@ docs/local
 
 # Incremental TypeScript build state — machine-local, never reviewable.
 *.tsbuildinfo
+
+# Agent codebase-exploration indexes — machine-local, rebuilt from source in seconds.
+# `.codegraph/codegraph.db` is ~90 MB; repomix snapshots are generated on demand.
+.codegraph/
+repomix-output.*

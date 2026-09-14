@@ -16,6 +16,25 @@ export interface CorrectItemInput {
   readonly unitOfMeasure?: string;
 }
 
+// The three conditions this command decides for itself. Each is used once, here, so each stays next
+// to that one implementation rather than in `items/domain/predicates/` (server-error-handling.md §1).
+
+// AC-07 — a SKU is free when nothing in the acting Warehouse holds it, or when the only Item holding
+// it is the one being corrected, so re-stating an Item's own SKU is not a duplicate.
+const isSkuFree = (
+  existing: { readonly id: string } | null,
+  itemId: string,
+): boolean => existing === null || existing.id === itemId;
+
+// AC-06b — `ItemUpdate` requires only one of the two to be present (openapi.yaml).
+const correctsItemDetails = (input: CorrectItemInput): boolean =>
+  input.description !== undefined || input.unitOfMeasure !== undefined;
+
+// A field the request left out is carried forward from the row `findById` already confirmed, never
+// silently dropped.
+const correctedValue = (stated: string | undefined, current: string): string =>
+  stated ?? current;
+
 // AC-06b/AC-06c — description and Unit of Measure are always correctable. The SKU is correctable
 // only while nothing yet names the Item (`isNamedByDemandOrDraft`); once correctable, it must
 // still land on a SKU unused in the acting Warehouse, refused the same way a duplicate SKU is
@@ -51,7 +70,7 @@ export class CorrectItemCommand {
         currentUser.warehouseId,
         sku,
       );
-      assert(existing === null || existing.id === itemId, () =>
+      assert(isSkuFree(existing, itemId), () =>
         itemSkuTakenError(existing!.id, sku),
       );
 
@@ -62,10 +81,10 @@ export class CorrectItemCommand {
     // another; `ItemUpdate` requires only one to be present (openapi.yaml). The repository's
     // `updateItemDetails` writes both columns together, so a field the request left out is carried
     // forward from the row `findById` already confirmed, never silently dropped.
-    if (input.description !== undefined || input.unitOfMeasure !== undefined) {
+    if (correctsItemDetails(input)) {
       await this.itemCatalogueRepository.updateItemDetails(itemId, {
-        description: input.description ?? item.description,
-        unitOfMeasure: input.unitOfMeasure ?? item.unitOfMeasure,
+        description: correctedValue(input.description, item.description),
+        unitOfMeasure: correctedValue(input.unitOfMeasure, item.unitOfMeasure),
       });
     }
   }

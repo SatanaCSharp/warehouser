@@ -1,7 +1,9 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { CustomerOrder } from '@warehouser/contracts/customer-orders';
 import type { PurchaseDraftLineIdentified } from '@warehouser/contracts/purchase-drafts';
 import { PermissionId } from '@warehouser/shared-types/enums';
+import { customerOrderApi } from 'modules/customer-order/api/customer-order-api';
 import { PurchaseDraftLineLinks } from 'modules/purchase-draft/components/purchase-draft-line-links/PurchaseDraftLineLinks';
 import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
 import {
@@ -28,6 +30,25 @@ const FIRST_LINK_ID = '00000000-0000-4000-8000-000000000301';
 
 const linkUrl = (linkId: string): string =>
   `/api/v1/warehouses/${accessIds.warehouse}/purchase-drafts/${DRAFT_ID}/lines/${LINE_ID}/links/${linkId}`;
+
+const UNFULFILLED_ORDER_ID = '00000000-0000-4000-8000-000000000901';
+
+/** One Unfulfilled Customer Order for this line's Item, which is what the link dialog offers. */
+const unfulfilledOrder = {
+  id: UNFULFILLED_ORDER_ID,
+  itemId: '00000000-0000-4000-8000-000000000101',
+  customer: null,
+  customerName: 'Baltic Freight OU',
+  destination: null,
+  quantity: 200,
+  outstandingQuantity: 200,
+  neededBy: '2026-09-02',
+  state: 'unfulfilled',
+  recordedByUserId: accessIds.actingUser,
+  lastChangedAt: null,
+  createdAt: '2026-08-01T09:00:00.000Z',
+  updatedAt: '2026-08-01T09:00:00.000Z',
+} as unknown as CustomerOrder;
 
 const UNPERMITTED_REASON =
   'Your role does not allow purchase drafts to be changed in this warehouse, so this is shown as it stands.';
@@ -137,6 +158,7 @@ const renderLinks = (
   isFrozen: boolean,
   subject = line(),
   permissionIds: readonly PermissionId[] = Object.values(PermissionId),
+  unfulfilledOrders: CustomerOrder[] = [],
 ): Recorded[] => {
   stubAccessServer({ permissionIds });
   const recorded = recordRequests();
@@ -152,6 +174,14 @@ const renderLinks = (
         permissionIds: [...permissionIds],
         archivedAt: null,
       },
+    ),
+  );
+
+  void store.dispatch(
+    customerOrderApi.util.upsertQueryData(
+      'listCustomerOrders',
+      { warehouseId: accessIds.warehouse, query: { state: 'unfulfilled' } },
+      unfulfilledOrders,
     ),
   );
 
@@ -296,5 +326,47 @@ describe('PurchaseDraftLineLinks', () => {
         screen.queryByRole('button', { name: 'Link a customer order' }),
       ).not.toBeInTheDocument();
     });
+  });
+
+  // AC-10 — adding a further link. `LinkCustomerOrderDialog.spec.tsx` covers the dialog against a
+  // double, so the seam between it and the mutation — `LinkCustomerOrderAction`, which addresses
+  // the write at the entered Warehouse, this draft and this line — had no coverage at all. Three
+  // identifiers have to be right for the link to land on the line the member is looking at, and a
+  // wrong one would still close the dialog on success.
+  it('links a customer order to this line of this draft (AC-10)', async () => {
+    const user = userEvent.setup();
+    const recorded = renderLinks(false, line(), Object.values(PermissionId), [
+      unfulfilledOrder,
+    ]);
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Link a customer order' }),
+    );
+    const dialog = await screen.findByRole('dialog', {
+      name: /link a customer order to line 1/iu,
+    });
+    await user.click(
+      within(dialog).getByRole('button', { name: /customer order/iu }),
+    );
+    await user.click(
+      await screen.findByRole('option', { name: /Baltic Freight/iu }),
+    );
+    await user.type(within(dialog).getByLabelText('Intended for them'), '200');
+    await user.click(
+      within(dialog).getByRole('button', { name: 'Link the order' }),
+    );
+
+    await waitFor(() =>
+      expect(
+        bodiesFor(
+          recorded,
+          `/api/v1/warehouses/${accessIds.warehouse}/purchase-drafts/${DRAFT_ID}/lines/${LINE_ID}/links`,
+          'POST',
+        ),
+      ).toContainEqual({
+        customerOrderId: UNFULFILLED_ORDER_ID,
+        statedQuantity: 200,
+      }),
+    );
   });
 });

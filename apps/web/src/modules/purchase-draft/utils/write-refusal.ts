@@ -54,8 +54,13 @@ const DISABLING_REASONS: readonly {
  * destination reads its reason from here instead of restating one of the two
  * sentences itself.
  */
-export const disablingReasonKey = (refusal: WriteRefusal): string | undefined =>
-  DISABLING_REASONS.find(({ holds }) => holds(refusal))?.key;
+export const disablingReasonKey = (
+  refusal: WriteRefusal,
+): string | undefined => {
+  const disabling = DISABLING_REASONS.find(({ holds }) => holds(refusal));
+
+  return disabling?.key;
+};
 
 /**
  * The id of the element on which one Purchase Draft Line states why its

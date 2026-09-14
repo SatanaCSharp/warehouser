@@ -1,18 +1,24 @@
 # Agent hooks
 
-Repository-owned guards that a coding agent runs **before** it executes a command. Like everything
-else under `ai/`, these files are the canonical, agent-neutral source; an agent's own settings file
-is an adapter that calls them and holds no rule of its own.
+Repository-owned scripts that an agent's runtime executes around it rather than instructions the
+agent reads. Like everything else under `ai/`, these files are the canonical, agent-neutral source;
+an agent's own settings file is an adapter that calls them and holds no rule of its own.
 
-A guard here exists when an instruction in `AGENTS.md` needs to hold even when an agent is in a
-hurry, is a different agent, or has compacted the instruction out of its context. Instructions that
-an agent can simply follow do not belong here — a guard costs a process per command.
+They come in two kinds:
+
+- **Guards** run **before** a command and can refuse it — `deny-git-hook-bypass.sh`.
+- **Upkeep** runs **around** the agent's work and maintains state the agent depends on —
+  `sync-codegraph.sh`.
+
+A script here exists when something in `AGENTS.md` needs to hold even when an agent is in a hurry,
+is a different agent, or has compacted the instruction out of its context. Instructions an agent can
+simply follow do not belong here — every hook costs a process.
 
 ## `deny-git-hook-bypass.sh`
 
-Enforces `AGENTS.md` section **Committing**: every commit runs `.husky/pre-commit` (lint-staged,
-`oxlint --type-aware --max-warnings=0 <staged files>`) and `.husky/commit-msg` (commitlint). The
-guard refuses a
+Enforces `AGENTS.md` section **Committing**: every commit runs `.husky/pre-commit` (lint-staged:
+`oxlint --type-aware --fix` then `oxlint --type-aware --max-warnings=0` over the staged files, then
+`prettier --write`) and `.husky/commit-msg` (commitlint). The guard refuses a
 command that would skip them:
 
 - the bypass flags (`--no-verify`, `-n` on a commit, `--no-hooks`) on `commit`, `merge`, `rebase`,
@@ -34,21 +40,58 @@ The script itself is agent-neutral. `--check '<command>'` exits non-zero when a 
 bypass, which is the entry point for any agent, wrapper, or CI check; `--reason` prints the refusal
 text; with no argument it speaks Claude Code's PreToolUse protocol on stdin/stdout.
 
-If a hook fails, fix what it reports — a warning `pnpm lint` tolerates but lint-staged does not, a
-message commitlint refuses — or tell the user. Never commit around it.
+If a hook fails, fix what it reports — a lint warning (fatal in every run: every `lint` script and
+the hook alike pass `--max-warnings=0`), an architectural violation, a message commitlint refuses —
+or tell the user. Never commit around it.
+
+## `sync-codegraph.sh`
+
+Serves `AGENTS.md` section **Exploring code**, which requires `pnpm graph:status` to report
+`Index is up to date` before a CodeGraph answer is trusted. Rather than leaving that to an agent
+noticing, the script runs `pnpm graph:sync` at the two moments the index goes stale:
+
+- **session start** — picks up everything that moved while the agent was away: a pull, a branch
+  switch, a rebase, edits made outside the agent. ~1.3s on this repository, once per session.
+- **after each `Edit`/`Write`** — `--background`, so the edit returns in milliseconds while the
+  agent's own change is indexed before it queries the graph again.
+
+It never fails its caller. A missing index, a missing install, a sync error — all exit 0; the worst
+outcome is a stale index, which `pnpm graph:status` still reports honestly, whereas a loud failure
+would block a session or an edit. It will not run `pnpm graph:init` on its own: building the ~90 MB
+database is an explicit setup step, so with no index the session-start run prints a one-line
+reminder and stops. Concurrent runs are single-flighted through a lock directory with a coalescing
+rerun, because overlapping syncs contend for CodeGraph's own lock and can leave the stale one that
+`pnpm graph unlock` exists to repair.
+
+It goes through `pnpm graph:sync`, never `codegraph` directly — that script is what sets
+`CODEGRAPH_TELEMETRY=0`, and this repository does not add telemetry.
+
+Two gaps it does not close, both by design. Edits an agent makes through the shell rather than
+through `Edit`/`Write` do not trigger it, and neither does a pull mid-session; `pnpm graph:status`
+before trusting a graph answer remains the check. And it is deliberately **not** wired into
+`.husky/pre-commit`: the commit hook is a correctness gate, a local search index is not a
+correctness property, and paying seconds on every commit to maintain one would be the wrong cost at
+the wrong moment.
 
 ## Installing
 
-`.claude/` and other agent directories are gitignored, so each machine installs the guard itself.
+`.claude/` and other agent directories are gitignored, so each machine installs these hooks
+itself.
 `ai/commands/init-agent.md` and `ai/commands/update-agent.md` do it as part of installing an agent.
-To do it by hand for Claude Code, merge the `hooks` block from
+To do it by hand for Claude Code, merge the whole `hooks` block from
 [`claude-code.settings.json`](claude-code.settings.json) into `.claude/settings.local.json`,
-keeping the keys already there.
+keeping the keys already there. It wires all three: `PreToolUse` for the guard, `SessionStart` and
+`PostToolUse` for the index sync.
 
 For a target whose pre-command hook receives the command line as an argument or environment
 variable rather than as JSON on stdin, call `deny-git-hook-bypass.sh --check "<command>"` and let a
 non-zero exit refuse the call. For a target with no pre-command hook surface at all, the rule still
 stands in `AGENTS.md`; report that it is unenforced rather than inventing a different mechanism.
+
+`sync-codegraph.sh` needs no payload at all — it reads nothing from stdin and takes only the
+optional `--background` flag, so any session-start or post-edit hook surface can call it. A target
+with neither surface keeps the index current by running `pnpm graph:sync` by hand before it
+explores.
 
 Two things are worth knowing before you debug a surprise:
 

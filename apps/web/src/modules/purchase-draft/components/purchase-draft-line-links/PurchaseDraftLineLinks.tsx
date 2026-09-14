@@ -34,13 +34,33 @@ export type PurchaseDraftLineLinksProps = {
 /** What the note under the links says, most significant state first. */
 type LinksNoteState = 'frozen' | 'linked' | 'unlinked';
 
+/** The narrowest reading of the world that decides which note is said. */
+type LinksNoteReading = { isFrozen: boolean; linkCount: number };
+
 const NOTE_STATES: readonly {
   state: LinksNoteState;
-  holds: (reading: { isFrozen: boolean; linkCount: number }) => boolean;
+  holds: (reading: LinksNoteReading) => boolean;
 }[] = [
   { state: 'frozen', holds: ({ isFrozen }) => isFrozen },
   { state: 'linked', holds: ({ linkCount }) => linkCount > 0 },
 ];
+
+/** `unlinked` is the state nothing in the table above displaces: a line nobody is named on. */
+const noteStateOf = (reading: LinksNoteReading): LinksNoteState => {
+  const displacing = NOTE_STATES.find(({ holds }) => holds(reading));
+
+  return displacing?.state ?? 'unlinked';
+};
+
+/** The Warehouse the writes name. Outside one there is nothing to write to, and the empty string is
+ * what the mutation refuses on rather than a request aimed at nothing. */
+const enteredWarehouseId = (warehouseId: string | undefined): string =>
+  warehouseId ?? '';
+
+/** `SERVED, AS FROZEN` once the draft is frozen, `SERVES` while it can still change
+ * (frames `yGhkK`, `F0SpRx`). */
+const headingKey = (isFrozen: boolean): string =>
+  isFrozen ? 'lineLinks.frozenHeading' : 'lineLinks.heading';
 
 /**
  * The `SERVES` section of one Purchase Draft Line (frame `yGhkK`), and its
@@ -75,7 +95,7 @@ export const PurchaseDraftLineLinks = ({
   const { t } = useTranslation('purchase-draft');
   const linkNaming = useLinkNaming();
   const { quantity } = useLocaleFormat();
-  const warehouseId = useEnteredWarehouse() ?? '';
+  const warehouseId = enteredWarehouseId(useEnteredWarehouse());
   const { isArchived } = useArchivedWarehouse();
   const isPermitted = useHasPermission(PermissionId.PURCHASE_DRAFTS_UPDATE);
   const [reviseLink] = useRevisePurchaseDraftLineLinkMutation();
@@ -111,10 +131,10 @@ export const PurchaseDraftLineLinks = ({
 
   const ordered = quantity(line.orderedQuantity);
   const intended = quantity(sumBy(line.links, 'statedQuantity'));
-  const noteState =
-    NOTE_STATES.find(({ holds }) =>
-      holds({ isFrozen, linkCount: line.links.length }),
-    )?.state ?? 'unlinked';
+  const noteState = noteStateOf({
+    isFrozen,
+    linkCount: line.links.length,
+  });
 
   const note: Record<LinksNoteState, string> = {
     frozen: t('lineLinks.frozenNote', { ordered }),
@@ -125,7 +145,7 @@ export const PurchaseDraftLineLinks = ({
   return (
     <section className="mt-4">
       <h4 className="text-xs font-semibold uppercase tracking-wide text-muted">
-        {t(isFrozen ? 'lineLinks.frozenHeading' : 'lineLinks.heading')}
+        {t(headingKey(isFrozen))}
       </h4>
 
       <Conditional when={line.links.length > 0}>

@@ -18,6 +18,7 @@
     "test:integration": "vitest run --config vitest.pglite.config.ts",
     "test:architectural": "vitest run --config vitest.architectural.config.ts",
     "test:all": "pnpm test && pnpm test:architectural && pnpm test:integration",
+    "crap": "vitest run --config vitest.crap.config.ts",
     "migration:generate": "pnpm build && typeorm migration:generate -d dist/src/shared/database/data-source.js",
     "migration:run": "pnpm build && typeorm migration:run -d dist/src/shared/database/data-source.js",
     "migration:revert": "pnpm build && typeorm migration:revert -d dist/src/shared/database/data-source.js",
@@ -52,6 +53,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@barney-media/crap-typescript-vitest": "catalog:",
     "@electric-sql/pglite": "^0.5.8",
     "@nestjs/testing": "catalog:",
     "@swc/core": "catalog:",

@@ -28,7 +28,52 @@ pnpm lint
 pnpm test
 ```
 
+Linting is oxlint (Prettier remains the formatter). `pnpm lint` runs each package's own
+`oxlint --type-aware --max-warnings=0 src` through turbo; `pnpm lint:all` lints the whole tree in one
+run, and `pnpm --filter <package> lint:fix` applies oxlint's safe fixes first. See
+[Linting with oxlint](docs/system/guides/linting-with-oxlint.md).
+
 See `package.json` and the package-level manifests for additional commands.
+
+## Codebase indexes for coding agents
+
+Two root `devDependencies` let an agent find code without reading it. They are project-local: no
+global install, never pointed outside this repository, and everything they produce is git-ignored.
+
+- [CodeGraph](https://www.npmjs.com/package/@colbymchenry/codegraph) indexes every symbol and the
+  edges between them, so "where is this, who calls it, what breaks if I change it" is a database
+  query instead of a directory walk.
+- [Repomix](https://www.npmjs.com/package/repomix) packs a directory into one compressed snapshot —
+  the tree plus each file's declarations, with the bodies removed.
+
+Build the index once after cloning:
+
+```sh
+pnpm graph:init
+```
+
+That writes `.codegraph/codegraph.db` (~90 MB, git-ignored) and takes a couple of seconds — 1,394
+files, 18,565 symbols and 50,678 edges at the time of writing. Repomix needs no initialization; it
+reads `repomix.config.jsonc` at the repository root.
+
+```sh
+pnpm graph:sync      # re-index what changed; run after pulling
+pnpm graph:status    # index freshness and statistics
+pnpm graph query <symbol>            # where a symbol is defined
+pnpm graph node <symbol>             # its signature, members, callers and callees
+pnpm graph impact <symbol>           # what a change to it would reach
+pnpm snapshot <dir>                  # compressed snapshot of a directory
+pnpm snapshot:tree                   # whole-repo directory structure, ~19k tokens
+```
+
+Use them in that order — query the graph, read the exact fragment it points at, and snapshot a
+directory only when the shape of the whole area is the question. A compressed snapshot of
+`apps/server/src` costs 166,940 tokens against 897,841 for the same files packed whole.
+
+Syncing is deliberately not part of the commit hook, and CodeGraph's telemetry is forced off by the
+`graph*` scripts because this repository does not add telemetry. The full procedure, including what
+must never enter a snapshot, is in
+[Exploring the codebase with CodeGraph and Repomix](docs/system/guides/exploring-the-codebase-with-codegraph-and-repomix.md).
 
 ## AI workflow
 

@@ -8,6 +8,30 @@ import { workspaceCurrentUser } from 'shared/access/workspace-current-user';
 import { REQUIRED_WORKSPACE_PERMISSION_KEY } from 'shared/decorators/required-workspace-permission.decorator';
 import { WorkspaceCurrentUserRepository } from 'shared/domain/repositories/workspace-current-user.repository';
 
+/** The one Workspace Permission a handler declares as required. `getAllAndOverride` returns
+ * `undefined` for an undecorated handler and an empty array is the same absence, so both collapse
+ * here and are refused by the single admission check in `canActivate`. */
+const firstRequiredWorkspacePermission = (
+  permissionIds: WorkspacePermissionId[] | undefined,
+): WorkspacePermissionId | undefined => permissionIds?.[0];
+
+type ResolvedWorkspacePermission = Awaited<
+  ReturnType<
+    WorkspaceCurrentUserRepository['resolveRequiredWorkspacePermission']
+  >
+>;
+
+/** One denial for every way the Workspace membership read can come back short, so a User outside the
+ * Workspace is indistinguishable from one whose Workspace Role lacks the Permission. */
+const grantedWorkspaceMembership = (
+  current: ResolvedWorkspacePermission,
+): NonNullable<ResolvedWorkspacePermission> => {
+  if (!current?.granted) {
+    throw workspaceDeniedError();
+  }
+  return current;
+};
+
 /** Composes after `SessionAuthGuard`. A User belongs to exactly one Workspace and never selects
  * it, so this guard reads no target identifier from the request at all — it derives the actor's
  * Workspace authority entirely from the session and decides no target ownership (ADR 0001, sad
@@ -24,23 +48,22 @@ export class WorkspaceAccessGuard implements CanActivate {
     // `getAllAndOverride` is typed to return `TResult`, but returns `undefined` when no target
     // carries the metadata key — an undecorated handler. The `| undefined` restores that case to
     // the type so the check below stays a real check rather than dead code.
-    const permissionIds = this.reflector.getAllAndOverride<
-      WorkspacePermissionId[] | undefined
-    >(REQUIRED_WORKSPACE_PERMISSION_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
-    if (!request.user || !permissionIds?.length) {
+    const permissionId = firstRequiredWorkspacePermission(
+      this.reflector.getAllAndOverride<WorkspacePermissionId[] | undefined>(
+        REQUIRED_WORKSPACE_PERMISSION_KEY,
+        [context.getHandler(), context.getClass()],
+      ),
+    );
+    if (!request.user || !permissionId) {
       throw workspaceDeniedError();
     }
 
-    const current = await this.currentUsers.resolveRequiredWorkspacePermission(
-      request.user.userId,
-      permissionIds[0],
+    const current = grantedWorkspaceMembership(
+      await this.currentUsers.resolveRequiredWorkspacePermission(
+        request.user.userId,
+        permissionId,
+      ),
     );
-    if (!current?.granted) {
-      throw workspaceDeniedError();
-    }
 
     request.workspace = workspaceCurrentUser({
       userId: current.userId,

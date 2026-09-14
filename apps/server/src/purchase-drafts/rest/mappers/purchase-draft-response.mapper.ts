@@ -48,6 +48,12 @@ import type { PurchaseDraftSummaryRead } from 'shared/domain/repositories/purcha
 // a date-time. `expectedArrivalDate`, `capturedNeededBy` and `neededBy` are already calendar dates
 // and travel untouched.
 
+// The one place the summary's five optional instants become wire values. Written once rather than
+// five times so the `null` an unreached milestone reports is the same `null` in every field, and so
+// the mapper below is a list of names rather than a list of conversions.
+const toOptionalInstant = (instant: Date | null): string | null =>
+  instant?.toISOString() ?? null;
+
 export const toSummaryResponse = (
   summary: PurchaseDraftSummaryRead,
 ): PurchaseDraftSummary => ({
@@ -62,13 +68,13 @@ export const toSummaryResponse = (
   createdByUserId: summary.createdByUserId,
   createdAt: summary.createdAt.toISOString(),
   readiedByUserId: summary.readiedByUserId,
-  readiedAt: summary.readiedAt?.toISOString() ?? null,
+  readiedAt: toOptionalInstant(summary.readiedAt),
   closedByUserId: summary.closedByUserId,
-  closedAt: summary.closedAt?.toISOString() ?? null,
+  closedAt: toOptionalInstant(summary.closedAt),
   arrivalConfirmedByUserId: summary.arrivalConfirmedByUserId,
-  arrivalConfirmedAt: summary.arrivalConfirmedAt?.toISOString() ?? null,
+  arrivalConfirmedAt: toOptionalInstant(summary.arrivalConfirmedAt),
   discardedByUserId: summary.discardedByUserId,
-  discardedAt: summary.discardedAt?.toISOString() ?? null,
+  discardedAt: toOptionalInstant(summary.discardedAt),
 });
 
 // openapi.yaml `PurchaseDraftLineLinkRedacted` — `driftSignals` is here rather than in the

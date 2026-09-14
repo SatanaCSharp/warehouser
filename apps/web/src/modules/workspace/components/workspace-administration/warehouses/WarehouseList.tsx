@@ -53,8 +53,13 @@ const displacingStates: readonly {
 ];
 
 /** The first state that holds, or `ready` when the rows are what to render. */
-const resolveListState = (reading: WarehouseListReading): WarehouseListState =>
-  displacingStates.find(({ holds }) => holds(reading))?.state ?? 'ready';
+const resolveListState = (
+  reading: WarehouseListReading,
+): WarehouseListState => {
+  const displacing = displacingStates.find(({ holds }) => holds(reading));
+
+  return displacing?.state ?? 'ready';
+};
 
 /** Case-insensitive substring match on a Warehouse's name. */
 const nameContains =

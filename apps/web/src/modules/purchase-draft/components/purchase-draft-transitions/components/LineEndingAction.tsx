@@ -130,19 +130,21 @@ export const LineEndingAction = ({
   const endingTrigger = (
     kind: 'arrival' | 'directDelivery',
     dialog: ReactElement,
-  ): ReactElement => (
-    <Modal>
-      <Button
-        aria-describedby={reasonId}
-        isDisabled={isArchived}
-        size="sm"
-        variant="primary"
-      >
-        {t(`transitions.lineEnding.${kind}.trigger`)}
-      </Button>
-      <TriggeredDialog>{dialog}</TriggeredDialog>
-    </Modal>
-  );
+  ): ReactElement => {
+    return (
+      <Modal>
+        <Button
+          aria-describedby={reasonId}
+          isDisabled={isArchived}
+          size="sm"
+          variant="primary"
+        >
+          {t(`transitions.lineEnding.${kind}.trigger`)}
+        </Button>
+        <TriggeredDialog>{dialog}</TriggeredDialog>
+      </Modal>
+    );
+  };
 
   // Total by construction: every Delivery Mode names the one act it admits.
   const offer: Record<PurchaseDraftLine['deliveryMode'], ReactElement> = {

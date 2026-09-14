@@ -100,6 +100,20 @@ first, then read only the entries that cover the change you are making. Paths ar
 - [Adding and using contracts](guides/adding-and-using-contracts.md) — when a Zod schema belongs in
   `packages/contracts` versus staying local, and how to add and consume one from `apps/web`. Use for
   any request or response shape crossing the web↔server boundary.
+- [Linting with oxlint](guides/linting-with-oxlint.md) — the repository's only linter and how to
+  work with it: the four ways to run it and why `pnpm lint` and `pnpm lint:all` are different runs,
+  why `--type-aware` is never optional, where the shared configuration lives and the three silent
+  traps in changing it, how to suppress a rule (and why oxlint's rule prefixes are not ESLint's —
+  `react/rules-of-hooks`, not `react-hooks/…`), and what the linter deliberately does not own. Read
+  before changing a lint rule, adding a disable comment, or acting on a lint failure you do not
+  recognize.
+- [Exploring the codebase with CodeGraph and Repomix](guides/exploring-the-codebase-with-codegraph-and-repomix.md)
+  — how to locate code before reading it: `pnpm graph:init`/`graph:sync` to keep the symbol index
+  fresh, the query → `node` → read-the-fragment → snapshot order that keeps exploration to a line
+  range instead of a directory, the CodeGraph commands (`query`, `node`, `callers`, `impact`,
+  `affected`), Repomix snapshots and their per-run flags, why telemetry is forced off, and what must
+  never enter a snapshot (`.env*`, `.pen`, `--no-security-check`, `--no-gitignore`). Read before
+  exploring unfamiliar code, and before opening a third file hunting the same symbol.
 
 ## Decisions
 
@@ -166,3 +180,10 @@ first, then read only the entries that cover the change you are making. Paths ar
   translation resources live.
 - [Schema validation with Zod](adr/12-07-2026-schema-validation-with-zod.md) — why Zod is the single
   validation technology across the monorepo. Read before introducing another validation library.
+- [Replace ESLint with oxlint](adr/11-09-2026-oxlint-replaces-eslint.md) — **Accepted; this is the
+  decision that governs linting.** oxlint is the only linter, Prettier the only formatter; three
+  shared layers in `@warehouser/oxlint-config` replace the three ESLint config packages, composed in
+  JavaScript because oxlint's `extends` drops each rule's options. Records what was lost with it —
+  `react/no-deprecated`, `import/order`, `no-restricted-syntax` (now a spec), `max-nested-callbacks`
+  (off pending an oxlint defect) — and why two ESLint plugins still run through an alpha bridge that
+  forces an exact version pin. Read before proposing a rule change or a linter dependency bump.

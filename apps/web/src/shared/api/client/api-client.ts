@@ -31,26 +31,47 @@ type ApiExtraOptions = {
   schema?: ZodType;
 };
 
-const extractFieldErrors = (
+// A plain object of field errors, or nothing. Arrays and `null` are objects to `typeof`, and neither
+// is a field map.
+const isFieldRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+// A rejection that names one field and the rule it broke — the envelope the Workspace surfaces use —
+// carries the rule as that field's error, so the owning form can translate the rule instead of a
+// generic message.
+const namedFieldRule = (
   details: Record<string, unknown> | undefined,
+): Record<string, string> | undefined =>
+  typeof details?.field === 'string' && typeof details.rule === 'string'
+    ? { [details.field]: details.rule }
+    : undefined;
+
+// The `details.fields` map, keeping only the entries whose value is a rule string. An empty result is
+// no field errors at all rather than an empty map, so a caller never has to tell the two apart.
+const statedFieldRules = (
+  fields: Record<string, unknown>,
 ): Record<string, string> | undefined => {
-  // A rejection that names one field and the rule it broke — the envelope the
-  // Workspace surfaces use — carries the rule as that field's error, so the
-  // owning form can translate the rule instead of a generic message.
-  if (typeof details?.field === 'string' && typeof details.rule === 'string') {
-    return { [details.field]: details.rule };
-  }
-
-  const fields = details?.fields;
-  if (typeof fields !== 'object' || fields === null || Array.isArray(fields)) {
-    return undefined;
-  }
-
   const entries = Object.entries(fields).filter(
     (entry): entry is [string, string] => typeof entry[1] === 'string',
   );
 
   return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+};
+
+const extractFieldErrors = (
+  details: Record<string, unknown> | undefined,
+): Record<string, string> | undefined => {
+  const named = namedFieldRule(details);
+  if (named !== undefined) {
+    return named;
+  }
+
+  const fields = details?.fields;
+  if (!isFieldRecord(fields)) {
+    return undefined;
+  }
+
+  return statedFieldRules(fields);
 };
 
 const normalizeError = (payload: unknown): ApiFailure => {
@@ -67,6 +88,25 @@ const normalizeError = (payload: unknown): ApiFailure => {
   };
 };
 
+// `undefined` and `null` values are omitted rather than sent as the strings `"undefined"`/`"null"`,
+// so `params: { state: undefined }` is the same request as no `params` at all.
+const isSendableParam = (value: unknown): boolean =>
+  value !== undefined && value !== null;
+
+const queryStringOf = (params: NonNullable<FetchArgs['params']>): string => {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (isSendableParam(value)) {
+      search.append(key, String(value));
+    }
+  }
+
+  return search.toString();
+};
+
+const querySeparatorFor = (url: string): string =>
+  url.includes('?') ? '&' : '?';
+
 /**
  * The query string an endpoint asked for, appended to its path.
  *
@@ -77,25 +117,117 @@ const normalizeError = (payload: unknown): ApiFailure => {
  * cosmetic loss: the by-line purchase-draft read (AC-22) filters by draft
  * state on the server, so dropping `state` returned every state's lines at
  * once.
- *
- * `undefined` and `null` values are omitted rather than sent as the strings
- * `"undefined"`/`"null"`, so `params: { state: undefined }` is the same
- * request as no `params` at all.
  */
 const withParams = (url: string, params: FetchArgs['params']): string => {
   if (!params) {
     return url;
   }
 
-  const search = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined && value !== null) {
-      search.append(key, String(value));
-    }
+  const query = queryStringOf(params);
+  if (query === '') {
+    return url;
   }
 
-  const query = search.toString();
-  return query ? `${url}${url.includes('?') ? '&' : '?'}${query}` : url;
+  return `${url}${querySeparatorFor(url)}${query}`;
+};
+
+const requestOf = (args: string | FetchArgs): FetchArgs =>
+  typeof args === 'string' ? { url: args } : args;
+
+const headersFor = (request: FetchArgs): Headers => {
+  const headers = new Headers(request.headers as HeadersInit | undefined);
+  if (request.body !== undefined) {
+    headers.set('Content-Type', 'application/json');
+  }
+
+  return headers;
+};
+
+const bodyOf = (request: FetchArgs): string | undefined =>
+  request.body === undefined ? undefined : JSON.stringify(request.body);
+
+const methodOf = (request: FetchArgs): string => request.method ?? 'GET';
+
+const endpointOptionsOf = (
+  extraOptions: ApiExtraOptions | undefined,
+): ApiExtraOptions => extraOptions ?? {};
+
+// An abort is the caller's own cancellation rather than a failed request, so it stays a rejection
+// RTK Query recognizes instead of becoming an `api.network` result.
+const isAbort = (error: unknown): boolean =>
+  error instanceof DOMException && error.name === 'AbortError';
+
+type SentRequest =
+  { readonly failure: ApiFailure } | { readonly response: Response };
+
+const send = async (
+  request: FetchArgs,
+  signal: AbortSignal,
+): Promise<SentRequest> => {
+  try {
+    return {
+      response: await fetch(withParams(request.url, request.params), {
+        body: bodyOf(request),
+        credentials: 'include',
+        headers: headersFor(request),
+        method: methodOf(request),
+        signal,
+      }),
+    };
+  } catch (error) {
+    if (isAbort(error)) {
+      throw error;
+    }
+
+    return { failure: { code: 'api.network' } };
+  }
+};
+
+type ApiResult = { data: unknown } | { error: ApiFailure };
+
+// What an endpoint that declared `emptyResponse` expects a 204 to resolve to. One that declared
+// nothing gets `undefined`, which is the same answer it got before the option existed.
+const emptyResponseData = (endpointOptions: ApiExtraOptions): unknown =>
+  Object.hasOwn(endpointOptions, 'emptyResponse')
+    ? endpointOptions.emptyResponse
+    : undefined;
+
+// Either the response settled without a body to judge — a 204, or a body that is not JSON — or it
+// carries one.
+type ResponsePayload =
+  { readonly body: unknown } | { readonly settled: ApiResult };
+
+const readPayload = async (
+  response: Response,
+  endpointOptions: ApiExtraOptions,
+): Promise<ResponsePayload> => {
+  if (response.status === 204) {
+    return { settled: { data: emptyResponseData(endpointOptions) } };
+  }
+
+  try {
+    return { body: await response.json() };
+  } catch {
+    return { settled: { error: { code: 'api.unexpected' } } };
+  }
+};
+
+// An endpoint that declared a schema gets the parsed value; one that declared none gets the body as
+// it arrived.
+const validatedData = (
+  body: unknown,
+  schema: ZodType | undefined,
+): ApiResult => {
+  if (!schema) {
+    return { data: body };
+  }
+
+  const parsedData = schema.safeParse(body);
+  if (!parsedData.success) {
+    return { error: { code: 'api.unexpected' } };
+  }
+
+  return { data: parsedData.data };
 };
 
 const apiBaseQuery: BaseQueryFn<
@@ -104,61 +236,23 @@ const apiBaseQuery: BaseQueryFn<
   ApiFailure,
   ApiExtraOptions
 > = async (args, api, extraOptions) => {
-  const endpointOptions = extraOptions ?? {};
-  const request = typeof args === 'string' ? { url: args } : args;
-  const headers = new Headers(request.headers as HeadersInit | undefined);
-  if (request.body !== undefined) {
-    headers.set('Content-Type', 'application/json');
-  }
-  let response: Response;
-  try {
-    response = await fetch(withParams(request.url, request.params), {
-      body:
-        request.body === undefined ? undefined : JSON.stringify(request.body),
-      credentials: 'include',
-      headers,
-      method: request.method ?? 'GET',
-      signal: api.signal,
-    });
-  } catch (error) {
-    if (error instanceof DOMException && error.name === 'AbortError') {
-      throw error;
-    }
-    return { error: { code: 'api.network' } };
+  const endpointOptions = endpointOptionsOf(extraOptions);
+
+  const sent = await send(requestOf(args), api.signal);
+  if ('failure' in sent) {
+    return { error: sent.failure };
   }
 
-  if (
-    response.status === 204 &&
-    Object.hasOwn(endpointOptions, 'emptyResponse')
-  ) {
-    return { data: endpointOptions.emptyResponse };
+  const payload = await readPayload(sent.response, endpointOptions);
+  if ('settled' in payload) {
+    return payload.settled;
   }
 
-  if (response.status === 204) {
-    return { data: undefined };
+  if (!sent.response.ok) {
+    return { error: normalizeError(payload.body) };
   }
 
-  let data: unknown;
-  try {
-    data = await response.json();
-  } catch {
-    return { error: { code: 'api.unexpected' } };
-  }
-
-  if (!response.ok) {
-    return { error: normalizeError(data) };
-  }
-
-  if (!endpointOptions.schema) {
-    return { data };
-  }
-
-  const parsedData = endpointOptions.schema.safeParse(data);
-  if (!parsedData.success) {
-    return { error: { code: 'api.unexpected' } };
-  }
-
-  return { data: parsedData.data };
+  return validatedData(payload.body, endpointOptions.schema);
 };
 
 export const api = createApi({

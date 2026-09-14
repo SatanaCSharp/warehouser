@@ -2,6 +2,7 @@ import { Injectable, Optional } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
 import type { Customer } from 'customers/domain/mappers/customer.mapper';
 import { toCustomer } from 'customers/domain/mappers/customer.mapper';
+import type { DeliveryAddressState } from 'customers/domain/predicates/customer.predicates';
 import {
   assertDeliveryAddressDeactivatable,
   assertDeliveryAddressUsable,
@@ -22,6 +23,28 @@ const defaultDeactivateCustomerDeliveryAddressRuntime: DeactivateCustomerDeliver
   {
     now: () => new Date(),
   };
+
+// The address the member named, among the rows this transaction locked, or nothing — an address of
+// another Customer resolves to nothing and is refused exactly as a missing one is.
+const lockedDeliveryAddress = (
+  locked: readonly DeliveryAddressState[],
+  deliveryAddressId: string,
+): DeliveryAddressState | null =>
+  find(locked, (candidate) => candidate.id === deliveryAddressId) ?? null;
+
+// Which address was promoted, if any. A deactivation of a non-Main address promotes nothing.
+const promotedDeliveryAddressIdOf = (
+  successor: DeliveryAddressState | null,
+): string | null => successor?.id ?? null;
+
+// AC-06b — the promotion decided in this transaction and the Main address the read reports are the
+// same address. A deactivation that promoted nothing asserts nothing.
+const reportsThePromotedMain = (
+  promotedDeliveryAddressId: string | null,
+  reportedMainDeliveryAddressId: string | null,
+): boolean =>
+  promotedDeliveryAddressId === null ||
+  reportedMainDeliveryAddressId === promotedDeliveryAddressId;
 
 // AC-06a/AC-06b/AC-07/AC-12 — records one Delivery Address Inactive. It stops being offered
 // wherever an address is chosen, while every Customer Order and every frozen Purchase Draft Line
@@ -61,8 +84,7 @@ export class DeactivateCustomerDeliveryAddressCommand {
       await this.customerAddressBookRepository.lockDeliveryAddresses(
         customerId,
       );
-    const target =
-      find(locked, (candidate) => candidate.id === deliveryAddressId) ?? null;
+    const target = lockedDeliveryAddress(locked, deliveryAddressId);
 
     assertDeliveryAddressUsable(target, customerId);
     assertDeliveryAddressDeactivatable(deliveryAddressId, locked);
@@ -90,7 +112,7 @@ export class DeactivateCustomerDeliveryAddressCommand {
       );
     }
 
-    const promotedDeliveryAddressId = successor?.id ?? null;
+    const promotedDeliveryAddressId = promotedDeliveryAddressIdOf(successor);
 
     const deliveryAddresses =
       await this.customerAddressBookRepository.listDeliveryAddresses(
@@ -103,8 +125,10 @@ export class DeactivateCustomerDeliveryAddressCommand {
     // reports have to be the same address; anything else is a broken invariant rather than a
     // member-facing rejection (server-error-handling.md §2).
     assert(
-      promotedDeliveryAddressId === null ||
-        updated.mainDeliveryAddressId === promotedDeliveryAddressId,
+      reportsThePromotedMain(
+        promotedDeliveryAddressId,
+        updated.mainDeliveryAddressId,
+      ),
       'The promoted Main Delivery Address is not the one the address book reports',
     );
 

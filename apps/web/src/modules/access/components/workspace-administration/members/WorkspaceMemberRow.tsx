@@ -179,12 +179,12 @@ export const WorkspaceMemberRow = ({
       <ActionDialogHost
         controller={dialog}
         renderDialogs={{
-          changeRole: (subject) => (
-            <ChangeWorkspaceRoleDialog member={subject} />
-          ),
-          removeMember: (subject) => (
-            <RemoveWorkspaceMemberDialog member={subject} />
-          ),
+          changeRole: (subject) => {
+            return <ChangeWorkspaceRoleDialog member={subject} />;
+          },
+          removeMember: (subject) => {
+            return <RemoveWorkspaceMemberDialog member={subject} />;
+          },
           transferOwnership: () => <TransferWorkspaceOwnershipDialog />,
         }}
       />

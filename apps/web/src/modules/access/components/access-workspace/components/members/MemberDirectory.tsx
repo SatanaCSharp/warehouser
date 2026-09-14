@@ -92,21 +92,27 @@ export const MemberDirectory = ({
       <ActionDialogHost
         controller={dialog}
         renderDialogs={{
-          editEmail: (member) => (
-            <EditEmailDialog member={member} onSave={onSaveEmail(member)} />
-          ),
-          resetPassword: (member) => (
-            <ResetPasswordDialog
-              member={member}
-              onSave={onSavePassword(member)}
-            />
-          ),
-          deleteMember: (member) => (
-            <DeleteMemberDialog
-              member={member}
-              onDelete={onConfirmDelete(member)}
-            />
-          ),
+          editEmail: (member) => {
+            return (
+              <EditEmailDialog member={member} onSave={onSaveEmail(member)} />
+            );
+          },
+          resetPassword: (member) => {
+            return (
+              <ResetPasswordDialog
+                member={member}
+                onSave={onSavePassword(member)}
+              />
+            );
+          },
+          deleteMember: (member) => {
+            return (
+              <DeleteMemberDialog
+                member={member}
+                onDelete={onConfirmDelete(member)}
+              />
+            );
+          },
         }}
       />
     </>

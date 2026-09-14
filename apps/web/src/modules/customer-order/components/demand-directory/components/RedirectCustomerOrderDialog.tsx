@@ -3,10 +3,15 @@ import type {
   CustomerOrder,
   CustomerOrderRedirect,
 } from '@warehouser/contracts/customer-orders';
+import type {
+  Customer,
+  CustomerDeliveryAddress,
+} from '@warehouser/contracts/customers';
 import { CustomerDeliveryAddressPicker } from 'modules/customer/components/CustomerDeliveryAddressPicker';
 import { useCustomers } from 'modules/customer/hooks/queries/useCustomers';
 import { CustomerOrderRefusalAlert } from 'modules/customer-order/components/demand-directory/components/CustomerOrderRefusalAlert';
 import { useCustomerOrderNaming } from 'modules/customer-order/hooks/projections/useCustomerOrderNaming';
+import type { CustomerOrderIdentity } from 'modules/customer-order/utils/customer-order-identity';
 import { customerOrderIdentity } from 'modules/customer-order/utils/customer-order-identity';
 import type { ReactElement } from 'react';
 import { useState } from 'react';
@@ -26,6 +31,27 @@ type RedirectCustomerOrderForm = { customerDeliveryAddressId: string };
 const VALIDATION_SECTION: Record<keyof RedirectCustomerOrderForm, string> = {
   customerDeliveryAddressId: 'customerOrderDeliveryAddress',
 };
+
+/**
+ * The address book the picker is offered: that one Customer's and nothing else
+ * (AC-11c). An order whose Customer the read does not list — a redacted order,
+ * or one read before the Customers landed — offers none rather than every
+ * Customer's addresses.
+ */
+const addressesOf = (
+  customers: Customer[],
+  customerId: string | null,
+): CustomerDeliveryAddress[] => {
+  const named = customers.find((customer) => customer.id === customerId);
+
+  return named?.deliveryAddresses ?? [];
+};
+
+/** AC-06a — the form opens on the address the order is going to now, so the
+ * member sees what they are changing from; an order stating no destination
+ * opens unchosen. */
+const currentAddressIdOf = (identity: CustomerOrderIdentity): string =>
+  identity.destination?.deliveryAddressId ?? '';
 
 /**
  * Redirects one outstanding Customer Order to another **active** Delivery
@@ -60,13 +86,11 @@ export const RedirectCustomerOrderDialog = ({
   const [refusalCode, setRefusalCode] = useState<string>();
 
   const identity = customerOrderIdentity(order);
-  const addresses =
-    customers.find((customer) => customer.id === identity.customerId)
-      ?.deliveryAddresses ?? [];
+  const addresses = addressesOf(customers, identity.customerId);
 
   const form = useForm<RedirectCustomerOrderForm>({
     defaultValues: {
-      customerDeliveryAddressId: identity.destination?.deliveryAddressId ?? '',
+      customerDeliveryAddressId: currentAddressIdOf(identity),
     },
   });
   const {

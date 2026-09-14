@@ -30,6 +30,35 @@ export type LineEndingDialogProps<TInput> = {
   onSubmit: (input: TInput) => Promise<MutationResult>;
 };
 
+// AC-15/AC-17a — the primary action stays unavailable until the judgement is answered, but only on
+// a line where something was received: a line where nothing was does not render the conformance
+// block at all (AC-04a), and never had a judgement to answer.
+const isConformanceAnswered = (
+  quantity: number,
+  values: { preReceiptConformance?: { verdict?: string } },
+): boolean => quantity <= 0 || values.preReceiptConformance?.verdict !== '';
+
+// AC-17a's sibling rule on the direct-delivery half (sad.md §6.2, spec §8 ninth question): the
+// finality acknowledgement gates the primary action independently, on every direct-delivery ending
+// regardless of what was received.
+const isFinalityAcknowledged = (
+  kind: 'arrival' | 'directDelivery',
+  values: { finalityAcknowledged?: boolean },
+): boolean => kind !== 'directDelivery' || Boolean(values.finalityAcknowledged);
+
+const isSubmitRefused = (
+  conformanceAnswered: boolean,
+  finalityAcknowledged: boolean,
+): boolean => !conformanceAnswered || !finalityAcknowledged;
+
+const refusalCodeOf = (
+  refusal: EndingRefusal | undefined,
+): string | undefined => refusal?.code;
+
+const refusalDetailsOf = (
+  refusal: EndingRefusal | undefined,
+): Record<string, unknown> | undefined => refusal?.details;
+
 /**
  * The 720px per-line ending modal (design-handoff.md `s5EPi`, ADR 0002): what
  * arrived at the dock on **one** line, or what the customer received on one —
@@ -72,19 +101,10 @@ export const LineEndingDialog = <TInput,>({
   const form = useForm({ defaultValues: lineEndingFormDefaults(line) });
   const values = useWatch({ control: form.control });
 
-  // AC-15/AC-17a — the primary action stays unavailable until the judgement is
-  // answered, but only on a line where something was received: a line where
-  // nothing was does not render the conformance block at all (AC-04a), and
-  // never had a judgement to answer. AC-17a's sibling rule on the
-  // direct-delivery half (sad.md §6.2, spec §8 ninth question): the finality
-  // acknowledgement gates the primary action independently, on every
-  // direct-delivery ending regardless of what was received.
-  const isConformanceAnswered =
-    quantityOf(values.quantity) <= 0 ||
-    values.preReceiptConformance?.verdict !== '';
-  const isAcknowledged =
-    kind !== 'directDelivery' || Boolean(values.finalityAcknowledged);
-  const isSubmitDisabled = !isConformanceAnswered || !isAcknowledged;
+  const isSubmitDisabled = isSubmitRefused(
+    isConformanceAnswered(quantityOf(values.quantity), values),
+    isFinalityAcknowledged(kind, values),
+  );
 
   // The refusal's own envelope is kept beside its code: AC-18's bounds travel in
   // it, and the alert names each one rather than restating a sentence covering
@@ -125,8 +145,8 @@ export const LineEndingDialog = <TInput,>({
       onSubmit={onSubmit}
     >
       <EndingRefusalAlert
-        code={refusal?.code}
-        details={refusal?.details}
+        code={refusalCodeOf(refusal)}
+        details={refusalDetailsOf(refusal)}
         draft={draft}
         onDismiss={onDismissRefusal}
       />

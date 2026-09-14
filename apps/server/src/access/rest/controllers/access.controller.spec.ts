@@ -203,4 +203,55 @@ describe('AccessController', () => {
       { recipientId: id(5), replacementRoleId: id(6) },
     );
   });
+
+  // Role deletion, which every other handler's spec left untouched. Its whole job is to pass the
+  // replacement Role through, and the body is optional — a Role nobody holds is deleted without
+  // one, a Role with members needs somewhere to move them. Both shapes reach the same command, so
+  // the handler must not invent a replacement or drop the one it was given.
+  it('delegates Role deletion with the replacement the body names', async () => {
+    vi.mocked(remove.execute).mockResolvedValue({ id: id(10) });
+    const actor = request(PermissionId.ROLES_DELETE);
+
+    await controller.deleteRole(id(10), actor, { replacementRoleId: id(11) });
+
+    expect(remove.execute).toHaveBeenCalledWith(actor.access, {
+      roleId: id(10),
+      replacementRoleId: id(11),
+    });
+  });
+
+  it('delegates Role deletion carrying no body at all', async () => {
+    vi.mocked(remove.execute).mockResolvedValue({ id: id(10) });
+    const actor = request(PermissionId.ROLES_DELETE);
+
+    await controller.deleteRole(id(10), actor);
+
+    expect(remove.execute).toHaveBeenCalledWith(actor.access, {
+      roleId: id(10),
+      replacementRoleId: undefined,
+    });
+  });
+
+  // The Role assignment handler had no delegation spec either, and it is the one that shapes a
+  // response rather than returning nothing: the member it names comes from the command's outcome,
+  // not from the path parameter, so a command that moved a different member would be visible here.
+  it('assigns a member Role and names the member the command actually moved', async () => {
+    vi.mocked(assign.execute).mockResolvedValue({
+      memberId: id(20),
+      roleId: id(21),
+    });
+    const actor = request(PermissionId.ROLES_ASSIGN);
+
+    await expect(
+      controller.assignMemberRole(id(20), actor, { roleId: id(21) }),
+    ).resolves.toEqual({
+      userId: id(20),
+      roleId: id(21),
+      roleKind: 'custom',
+    });
+    expect(assign.execute).toHaveBeenCalledWith(actor.access, {
+      memberId: id(20),
+      roleId: id(21),
+    });
+  });
 });

@@ -157,6 +157,79 @@ const guardDraftMutable = async (
 // transactions", sad.md §6.6). It reports an outcome rather than throwing, in the spirit of
 // `ManagerTransferRepository.assignRole` and `RoleLifecycleRepository.updateMemberRole` — the typed
 // refusal is the service's job (server-error-handling.md §3). Cross-Warehouse Items and Customer
+// The three rows one composed draft becomes, each built by name rather than inside the loop that
+// writes it.
+const toDraftRow = (
+  input: CreateDraftPersistenceInput,
+): PurchaseDraftEntity => ({
+  id: input.id,
+  warehouseId: input.warehouseId,
+  state: 'draft',
+  expectedArrivalDate: input.expectedArrivalDate,
+  createdByUserId: input.createdByUserId,
+  readiedByUserId: null,
+  readiedAt: null,
+  closedByUserId: null,
+  closedAt: null,
+  closureReason: null,
+  arrivalConfirmedByUserId: null,
+  arrivalConfirmedAt: null,
+  discardedByUserId: null,
+  discardedAt: null,
+  createdAt: input.createdAt,
+  updatedAt: input.createdAt,
+});
+
+const toLineRow = (
+  input: CreateDraftPersistenceInput,
+  line: CreateDraftLinePersistenceInput,
+): PurchaseDraftLineEntity => ({
+  id: line.id,
+  purchaseDraftId: input.id,
+  warehouseId: input.warehouseId,
+  itemId: line.itemId,
+  orderedQuantity: line.orderedQuantity,
+  packagingTypeId: line.packagingTypeId ?? null,
+  valueAddingNote: line.valueAddingNote ?? null,
+  // Every line is composed Via Warehouse — the column's own default and the behaviour every
+  // line had before this release (AC-13). Setting a line's Delivery Mode and its destination
+  // arrives with T15, and the freeze and the ending with T16 and T17.
+  deliveryMode: 'via_warehouse',
+  customerDeliveryAddressId: null,
+  frozenDeliveryAddressText: null,
+  frozenAccessNotes: null,
+  frozenCustomerName: null,
+  endingQuantity: null,
+  endingKind: null,
+  endingRecordedByUserId: null,
+  endingRecordedAt: null,
+  // A composed line has no ending, so it can carry no Pre-receipt Conformance
+  // (`chk_purchase_draft_lines_conformance_requires_ending`); the ending command writes both.
+  preReceiptConformance: null,
+  preReceiptConformanceNote: null,
+  createdAt: input.createdAt,
+  updatedAt: input.createdAt,
+});
+
+const toLinkRow = (
+  input: CreateDraftPersistenceInput,
+  line: CreateDraftLinePersistenceInput,
+  link: CreateDraftLineLinkPersistenceInput,
+): PurchaseDraftLineLinkEntity => ({
+  id: link.id,
+  purchaseDraftLineId: line.id,
+  purchaseDraftId: input.id,
+  warehouseId: input.warehouseId,
+  customerOrderId: link.customerOrderId,
+  statedQuantity: link.statedQuantity,
+  createdAt: input.createdAt,
+  updatedAt: input.createdAt,
+});
+
+const statedLinks = (
+  line: CreateDraftLinePersistenceInput,
+): readonly CreateDraftLineLinkPersistenceInput[] => line.links ?? [];
+
 // Orders are additionally refused by
 // `fk_purchase_draft_lines_item`/`fk_purchase_draft_line_links_customer_order`'s composite
 // `(…, warehouse_id)` references, which this repository lets propagate rather than re-checking
@@ -173,70 +246,18 @@ export class PurchaseDraftAssemblyRepository {
   ): Promise<PurchaseDraftEntity> {
     const manager = getEntityManager(this.dataSource);
 
-    const draft: PurchaseDraftEntity = {
-      id: input.id,
-      warehouseId: input.warehouseId,
-      state: 'draft',
-      expectedArrivalDate: input.expectedArrivalDate,
-      createdByUserId: input.createdByUserId,
-      readiedByUserId: null,
-      readiedAt: null,
-      closedByUserId: null,
-      closedAt: null,
-      closureReason: null,
-      arrivalConfirmedByUserId: null,
-      arrivalConfirmedAt: null,
-      discardedByUserId: null,
-      discardedAt: null,
-      createdAt: input.createdAt,
-      updatedAt: input.createdAt,
-    };
+    const draft = toDraftRow(input);
     await manager.getRepository(PurchaseDraftEntity).insert(draft);
 
     for (const line of input.lines) {
-      const lineRow: PurchaseDraftLineEntity = {
-        id: line.id,
-        purchaseDraftId: draft.id,
-        warehouseId: input.warehouseId,
-        itemId: line.itemId,
-        orderedQuantity: line.orderedQuantity,
-        packagingTypeId: line.packagingTypeId ?? null,
-        valueAddingNote: line.valueAddingNote ?? null,
-        // Every line is composed Via Warehouse — the column's own default and the behaviour every
-        // line had before this release (AC-13). Setting a line's Delivery Mode and its destination
-        // arrives with T15, and the freeze and the ending with T16 and T17.
-        deliveryMode: 'via_warehouse',
-        customerDeliveryAddressId: null,
-        frozenDeliveryAddressText: null,
-        frozenAccessNotes: null,
-        frozenCustomerName: null,
-        endingQuantity: null,
-        endingKind: null,
-        endingRecordedByUserId: null,
-        endingRecordedAt: null,
-        // A composed line has no ending, so it can carry no Pre-receipt Conformance
-        // (`chk_purchase_draft_lines_conformance_requires_ending`); the ending command writes both.
-        preReceiptConformance: null,
-        preReceiptConformanceNote: null,
-        createdAt: input.createdAt,
-        updatedAt: input.createdAt,
-      };
-      await manager.getRepository(PurchaseDraftLineEntity).insert(lineRow);
+      await manager
+        .getRepository(PurchaseDraftLineEntity)
+        .insert(toLineRow(input, line));
 
-      for (const link of line.links ?? []) {
-        const linkRow: PurchaseDraftLineLinkEntity = {
-          id: link.id,
-          purchaseDraftLineId: line.id,
-          purchaseDraftId: draft.id,
-          warehouseId: input.warehouseId,
-          customerOrderId: link.customerOrderId,
-          statedQuantity: link.statedQuantity,
-          createdAt: input.createdAt,
-          updatedAt: input.createdAt,
-        };
+      for (const link of statedLinks(line)) {
         await manager
           .getRepository(PurchaseDraftLineLinkEntity)
-          .insert(linkRow);
+          .insert(toLinkRow(input, line, link));
       }
     }
 

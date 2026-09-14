@@ -24,7 +24,7 @@ import {
   stubAccessServer,
 } from 'test/access-fixtures';
 import { renderInEnteredWarehouse } from 'test/render';
-import { afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 // T18 — the Items destination's list owner, composing `Ordering/Item Row`
 // (`xEIH0`, desktop `XIvAZ`) and `Item Card Mobile` (`QSHsy`, mobile `VHU6r`).
@@ -308,6 +308,37 @@ describe('ItemDirectory', () => {
       expect(correct).toHaveAttribute(
         'aria-describedby',
         expect.stringContaining('archived-warehouse-reason'),
+      );
+    });
+  });
+
+  // `CreateItemAction` is the seam between the dialog — which `CreateItemDialog.spec.tsx` covers in
+  // full — and the mutation. Its whole job is to address the write at the Warehouse the member is
+  // actually in, and nothing exercised it: the dialog spec hands the action a double, and this
+  // directory spec opened the dialog but never saved from it. A write addressed at the wrong
+  // Warehouse would create the Item somewhere the member cannot see it.
+  it('addresses a created Item at the entered Warehouse', async () => {
+    const user = userEvent.setup();
+    renderDirectory();
+
+    await user.click(await screen.findByRole('button', { name: /add item/iu }));
+    const open = await screen.findByRole('dialog', { name: /add an item/iu });
+    await user.type(within(open).getByLabelText(/sku/iu), 'SKU-901');
+    await user.type(within(open).getByLabelText(/description/iu), 'New crate');
+    await user.type(within(open).getByLabelText(/counted in/iu), 'each');
+    await user.click(within(open).getByRole('button', { name: /add item/iu }));
+
+    await waitFor(() => {
+      const posted = vi
+        .mocked(globalThis.fetch)
+        .mock.calls.map(([input, init]) => ({
+          url: String(input instanceof Request ? input.url : input),
+          method: init?.method,
+        }))
+        .filter((call) => call.method === 'POST');
+
+      expect(posted.map((call) => call.url)).toContain(
+        `/api/v1/warehouses/${accessIds.warehouse}/items`,
       );
     });
   });

@@ -54,32 +54,40 @@ export type ToastOptions = {
 
 type ToastVariant = 'accent' | 'danger' | 'default' | 'success' | 'warning';
 
+const toastContent = (
+  message: ReactNode,
+  variant: ToastVariant,
+  options?: ToastOptions,
+): Parameters<typeof toastQueue.add>[0] => ({
+  description: options?.description,
+  isLoading: options?.isLoading,
+  title: message,
+  variant,
+});
+
+const statedTimeout = (options?: ToastOptions): { timeout?: number } =>
+  options?.timeout === undefined ? {} : { timeout: options.timeout };
+
+// Deferred a frame, exactly as HeroUI's own singleton defers it: `onClose` fires from inside the
+// queue's update, and a subscriber that sets state there would be doing so during a render.
+const deferred =
+  (onClose: () => void): (() => void) =>
+  (): void => {
+    requestAnimationFrame(onClose);
+  };
+
+const statedOnClose = (options?: ToastOptions): { onClose?: () => void } =>
+  options?.onClose === undefined ? {} : { onClose: deferred(options.onClose) };
+
 const raise = (
   message: ReactNode,
   variant: ToastVariant,
   options?: ToastOptions,
 ): string =>
-  toastQueue.add(
-    {
-      description: options?.description,
-      isLoading: options?.isLoading,
-      title: message,
-      variant,
-    },
-    {
-      ...(options?.timeout === undefined ? {} : { timeout: options.timeout }),
-      // Deferred a frame, exactly as HeroUI's own singleton defers it: `onClose`
-      // fires from inside the queue's update, and a subscriber that sets state
-      // there would be doing so during a render.
-      ...(options?.onClose === undefined
-        ? {}
-        : {
-            onClose: (): void => {
-              requestAnimationFrame(() => options.onClose?.());
-            },
-          }),
-    },
-  );
+  toastQueue.add(toastContent(message, variant, options), {
+    ...statedTimeout(options),
+    ...statedOnClose(options),
+  });
 
 /**
  * Raises a toast, and carries the per-variant shorthands and `close` that

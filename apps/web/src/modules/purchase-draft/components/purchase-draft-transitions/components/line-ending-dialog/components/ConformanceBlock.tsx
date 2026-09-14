@@ -1,4 +1,5 @@
 import { Radio, RadioGroup } from '@heroui/react';
+import type { PackagingType } from '@warehouser/contracts/purchase-drafts';
 import { maxProseLength } from '@warehouser/contracts/purchase-drafts';
 import { usePackagingTypes } from 'modules/purchase-draft/hooks/queries/usePackagingTypes';
 import type { ConformanceVerdict } from 'modules/purchase-draft/utils/line-ending-form';
@@ -63,6 +64,35 @@ const withheldByInstructed = (
   not_applicable: instructed,
 });
 
+/** Whether the line was frozen carrying either instruction (AC-15a) — the one
+ * reading that decides which verdicts it may be judged with (AC-17, AC-17a). */
+const isInstructed = (
+  packagingTypeId: string | null,
+  valueAddingNote: string | null,
+): boolean => Boolean(packagingTypeId) || Boolean(valueAddingNote);
+
+/**
+ * The frozen Packaging Type as the catalogue names it.
+ *
+ * The raw id is a deliberate fallback, not the intended reading: it covers only
+ * the tick before the catalogue resolves (or the rare id the catalogue no
+ * longer lists), never the steady state. `ConformanceBlock.spec.tsx` pins the
+ * resolved label — both through this prop and through the live query —
+ * precisely so this line can never regress to always falling through to the id.
+ */
+const packagingTypeLabelOf = (
+  catalogue: PackagingType[],
+  packagingTypeId: string | null,
+): string | null => {
+  const listed = catalogue.find((type) => type.id === packagingTypeId);
+
+  return listed?.label ?? packagingTypeId;
+};
+
+/** The block's own shell, plus whatever its owner added. */
+const shellClassNameOf = (className: string | undefined): string =>
+  `flex w-full flex-col gap-3 rounded-2xl border border-border bg-surface p-4 ${className ?? ''}`;
+
 /**
  * The conformance block: the frozen-instruction read-out (`lock` icon,
  * Packaging Type, Value-adding Note), a real `radiogroup` of Met / Not met /
@@ -92,30 +122,20 @@ export const ConformanceBlock = <TForm extends ConformanceBlockForm>({
   // spec exercises it by seeding the same cache the component subscribes to
   // (`writing-web-components.md` §4, `placing-web-hooks.md` §4).
   const catalogue = usePackagingTypes();
-  // The raw id is a deliberate fallback, not the intended reading: it covers
-  // only the tick before the catalogue resolves (or the rare id the catalogue
-  // no longer lists), never the steady state. `ConformanceBlock.spec.tsx`
-  // pins the resolved label — both through this prop and through the live
-  // query — precisely so this line can never regress to always falling
-  // through to the id.
-  const packagingTypeLabel =
-    catalogue.find((type) => type.id === packagingTypeId)?.label ??
-    packagingTypeId;
+  const packagingTypeLabel = packagingTypeLabelOf(catalogue, packagingTypeId);
   const verdict = useWatch({
     control,
     name: 'preReceiptConformance.verdict' as Path<TForm>,
   }) as ConformanceVerdict | undefined;
 
-  const instructed = Boolean(packagingTypeId) || Boolean(valueAddingNote);
+  const instructed = isInstructed(packagingTypeId, valueAddingNote);
   const withheld = withheldByInstructed(instructed);
   const withheldReason = instructed
     ? t('transitions.lineEnding.conformance.notApplicableWithheld')
     : t('transitions.lineEnding.conformance.judgementWithheld');
 
   return (
-    <div
-      className={`flex w-full flex-col gap-3 rounded-2xl border border-border bg-surface p-4 ${className ?? ''}`}
-    >
+    <div className={shellClassNameOf(className)}>
       {/* The heading labels this whole block — the frozen instruction panel as
           well as the verdicts — so it stays where the frame draws it and the
           group points at it with `aria-labelledby`. Putting it inside the group

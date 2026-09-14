@@ -214,6 +214,29 @@ describe('GlobalHttpExceptionFilter', () => {
 
     expect(unmapped).toEqual([]);
   });
+
+  // A thrown non-`Error`. Nothing in this application throws one, but `catch` is the last handler on
+  // the process and a dependency can throw a string, a plain object, or `undefined` — and the
+  // description it logs reads `constructor.name`, `.message` and `.stack` off whatever it is given.
+  // The guard is what keeps that read from being attempted; without it a thrown `null` would fail
+  // inside the exception filter itself, which is the one place a failure has nowhere left to go.
+  it.each([['boom'], [{ code: 'not-an-error' }], [null], [undefined], [42]])(
+    'describes a thrown non-Error as an unknown category and still responds: %p',
+    (thrown) => {
+      const { host, json, status } = createHost();
+
+      filter.catch(thrown, host);
+
+      expect(status).toHaveBeenCalledWith(500);
+      expect(json).toHaveBeenCalledWith({
+        code: 'system.internal_error',
+        message: 'An unexpected error occurred.',
+      });
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({ error: { category: 'unknown' } }),
+      );
+    },
+  );
 });
 
 describe('GlobalHttpExceptionFilter on a Zod request-validation refusal', () => {

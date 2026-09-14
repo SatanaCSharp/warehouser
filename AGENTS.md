@@ -20,16 +20,57 @@ Do not rely on remembered conventions when the index lists a document that cover
 Keep both indexes current: adding, renaming, moving, or removing a document under `docs/system`
 requires updating the corresponding index entry in the same change.
 
+## Exploring code
+
+Every code-related task starts at the index, not at the file system. Before reading source to answer
+_where is this_, _who calls it_, _what will this change break_, or _how is this area laid out_, query
+the CodeGraph symbol index; where the shape of a whole directory is the question, take a Repomix
+snapshot. The procedure — the command set, the order to apply it in, and the limits — is
+[Exploring the codebase with CodeGraph and Repomix](docs/system/guides/exploring-the-codebase-with-codegraph-and-repomix.md).
+Read it before exploring unfamiliar code.
+
+The order is query, then read a fragment, then snapshot:
+
+1. `pnpm graph query <symbol>` to locate, `pnpm graph node <symbol>` for its signature, members,
+   callers and callees. Most _where_ and _who calls it_ questions end here, with no file read.
+2. Read the file at the line the graph returned, bounded to the range you need — not the whole file.
+3. `pnpm snapshot <dir>` only when the layout of an entire area is what you actually need.
+
+This replaces glob-then-grep-then-read-whole-files as the default. A bare `Grep` over source is a
+fallback for what the graph cannot answer, not the first move: run it when the index is stale and
+cannot be synced, when the target is a string rather than a symbol, or when the file type is
+unindexed. CodeGraph indexes TypeScript, TSX, JavaScript, YAML and Python — Markdown is not indexed,
+so `docs/` is still searched with grep.
+
+Keep the index honest. `pnpm graph:status` must report `Index is up to date` before its answers are
+trusted; a stale index reports symbols at line numbers that have since moved, and it does so
+confidently. An agent with `ai/hooks/sync-codegraph.sh` installed has this mostly handled for it —
+the hook syncs at session start and after each edit the agent makes through its editing tool. Run
+`pnpm graph:sync` yourself for what the hook cannot see: a pull taken mid-session, an edit made
+through the shell, and any result that does not match the file you open. Never invoke `codegraph`
+directly — the `pnpm graph*` scripts disable its telemetry, and this repository does not add
+telemetry.
+
+These tools locate code; they do not authorize it. A symbol's existence is not permission to use it,
+and code found by `query` is not a rule — placement, layering, error handling and authorization stay
+in `docs/system`, reached through the two indexes above. Snapshots are generated artifacts: never
+commit one, and never file one as evidence in a feature directory.
+
 ## Committing
 
 Every commit runs the repository's Git hooks. Never bypass them: no `--no-verify` (or `-n`) on
 `git commit` or `git push`, no `HUSKY=0`/`HUSKY_SKIP_HOOKS`, no `--no-verify`-equivalent
 environment variable, no `core.hooksPath` override, and no editing, renaming, or removing anything
 under `.husky/` to get a commit through. `.husky/pre-commit` runs `lint-staged`
-(`oxlint --type-aware --max-warnings=0 <staged files>`, which fails on warnings that `pnpm lint`
-tolerates in `apps/*`, plus
+(`oxlint --type-aware --fix` and then `oxlint --type-aware --max-warnings=0` over the staged files,
+followed by `prettier --write`, plus
 `pnpm --filter @warehouser/server test:architectural` whenever any `apps/server/src/**/*.ts` file is
 staged) and `.husky/commit-msg` runs `commitlint`; both are part of the gate, not an obstacle to it.
+
+The lint pass is the same `--max-warnings=0` strictness every package's own `lint` script uses — a
+warning fails a commit exactly as an error does — applied to the staged paths rather than to each
+package's `src`, so it also judges files `pnpm lint` never reaches. How the linter is configured, run
+and suppressed is [Linting with oxlint](docs/system/guides/linting-with-oxlint.md).
 
 The architectural tier is the one whole-tree check in the hook: it asserts where mappers live and how
 they are written, so a single staged server file can break it and one run covers the whole commit.

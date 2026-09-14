@@ -6,15 +6,11 @@ const buildErrorMessage = (message: string, args?: unknown): string => {
   }
 
   if (typeof args !== 'object') {
-    // eslint-disable-next-line @typescript-eslint/no-base-to-string
+    // oxlint-disable-next-line typescript/no-base-to-string
     return `${message} args: ${String(args)} `;
   }
 
-  if (typeof args === 'object') {
-    return `${message} args: ${JSON.stringify(args)} `;
-  }
-
-  throw new Error('Should never reach here');
+  return `${message} args: ${JSON.stringify(args)} `;
 };
 
 export class NotImplementedError<TArgs> extends Error {

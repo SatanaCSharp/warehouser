@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { getEntityManager } from 'shared/database/db-transaction-context.service';
 import type { PurchaseDraftLineRejectionDisposition } from 'shared/domain/entities/purchase-draft-line-rejection.entity';
 import { PurchaseDraftLineRejectionEntity } from 'shared/domain/entities/purchase-draft-line-rejection.entity';
+import type { UpdateResult } from 'typeorm';
 import { DataSource } from 'typeorm';
 
 // What §6.4 decides the amendment under, and nothing more: the line and Warehouse the Rejection
@@ -37,6 +38,11 @@ export interface AmendRejectionResult {
 // T4/`sad.md` §6.4/`data-model.md` § "Repository boundaries" — the amendment of one recorded
 // Rejection: resolved in the acting Warehouse under lock, then amended by one conditional update,
 // the two inseparable within the caller's single transaction.
+// How many rows the conditional update matched. `UpdateResult.affected` is typed optional because
+// not every TypeORM driver reports it; the Postgres driver always does, so the fallback is a type
+// obligation rather than a case this repository can reach.
+const affectedRows = (result: UpdateResult): number => result.affected ?? 0;
+
 @Injectable()
 export class PurchaseDraftRejectionRepository {
   constructor(private readonly dataSource: DataSource) {}
@@ -125,6 +131,6 @@ export class PurchaseDraftRejectionRepository {
 
     const amendment = await update.execute();
 
-    return { affected: amendment.affected ?? 0 };
+    return { affected: affectedRows(amendment) };
   }
 }

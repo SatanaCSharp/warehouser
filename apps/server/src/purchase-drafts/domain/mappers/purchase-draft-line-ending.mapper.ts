@@ -21,6 +21,23 @@ export interface EndingPreReceiptConformanceInput {
   readonly note?: string | null;
 }
 
+// "Nothing stated" has three spellings at the boundary — the property absent, the object absent, and
+// the property present as `null` — and all three mean the same thing to every rule below. Reading
+// each side through its own named function is what keeps the mapper a list of fields rather than a
+// list of defaults.
+const statedVerdict = (
+  preReceiptConformance: EndingPreReceiptConformanceInput | null | undefined,
+): EndingConditionSubmission['preReceiptConformance'] =>
+  preReceiptConformance?.verdict ?? null;
+
+const statedConformanceNote = (
+  preReceiptConformance: EndingPreReceiptConformanceInput | null | undefined,
+): string | null => preReceiptConformance?.note ?? null;
+
+const statedRejections = (
+  rejections: readonly RecordLineEndingRejectionInput[] | undefined,
+): readonly RecordLineEndingRejectionInput[] => rejections ?? [];
+
 // T10 (post-review) — a caller's condition statement, already narrowed by the REST boundary to the
 // shapes both ending commands declare, folded into the one shape every rule judges. Trivial field
 // reads only: the narrowing itself now happens once, at the command's own input type (T13), so this
@@ -31,9 +48,9 @@ export const toEndingConditionSubmission = (
   preReceiptConformance: EndingPreReceiptConformanceInput | null | undefined,
 ): EndingConditionSubmission => ({
   receivedQuantity,
-  rejections: rejections ?? [],
-  preReceiptConformance: preReceiptConformance?.verdict ?? null,
-  preReceiptConformanceNote: preReceiptConformance?.note ?? null,
+  rejections: statedRejections(rejections),
+  preReceiptConformance: statedVerdict(preReceiptConformance),
+  preReceiptConformanceNote: statedConformanceNote(preReceiptConformance),
 });
 
 // T10 (post-review) — the condition half of what `recordLineEnding` persists, derived from the same

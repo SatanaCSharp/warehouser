@@ -8,8 +8,13 @@ type WorkspaceRoleDirectoryProps = {
   roles: WorkspaceRole[];
 };
 
-const defaultRoleId = (roles: WorkspaceRole[]): string | undefined =>
-  roles.find((role) => role.kind === 'custom')?.id ?? roles[0]?.id;
+const isCustomRole = (role: WorkspaceRole): boolean => role.kind === 'custom';
+
+const defaultRoleId = (roles: WorkspaceRole[]): string | undefined => {
+  const custom = roles.find(isCustomRole);
+
+  return custom?.id ?? roles[0]?.id;
+};
 
 /**
  * The Workspace Role list beside the editor for the selected Role. The

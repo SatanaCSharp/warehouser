@@ -28,6 +28,46 @@ const resolveNamedWarehouseId = (
   return paramsWarehouseId;
 };
 
+/** The one Permission a handler declares as required. `getAllAndOverride` returns `undefined` for an
+ * undecorated handler and an empty array is the same absence, so both collapse here and are refused
+ * by the single admission check in `canActivate`. */
+const firstRequiredPermission = (
+  permissionIds: PermissionId[] | undefined,
+): PermissionId | undefined => permissionIds?.[0];
+
+/** `@ObservedPermission` is optional, so an undecorated handler reads back as `undefined`; an empty
+ * declaration is the same thing and the repository takes the empty list. */
+const declaredObservedPermissions = (
+  observedPermissionIds: PermissionId[] | undefined,
+): PermissionId[] => observedPermissionIds ?? [];
+
+type ResolvedPermission = Awaited<
+  ReturnType<AccessCurrentUserRepository['resolveRequiredPermission']>
+>;
+
+/** AC-04/AC-05/AC-30 — one denial for every way the membership read can come back short, so a
+ * Warehouse the actor is not a member of is indistinguishable from one whose Role lacks the
+ * Permission. */
+const grantedMembership = (
+  current: ResolvedPermission,
+): NonNullable<ResolvedPermission> => {
+  if (!current?.granted) {
+    throw accessDeniedError();
+  }
+  return current;
+};
+
+/** AC-12/AC-12a — an archived Warehouse refuses every handler that has not declared itself tolerant
+ * of the archive. */
+const assertArchiveTolerated = (
+  archived: boolean,
+  readTolerant: boolean | undefined,
+): void => {
+  if (archived && !readTolerant) {
+    throw warehouseArchivedError();
+  }
+};
+
 @Injectable()
 export class WarehouseAccessGuard implements CanActivate {
   constructor(
@@ -37,44 +77,48 @@ export class WarehouseAccessGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<WarehouseAccessRequest>();
+    const declaredOn = [context.getHandler(), context.getClass()];
     // `getAllAndOverride` is typed to return `TResult`, but returns `undefined` when no target
     // carries the metadata key — an undecorated handler. The `| undefined` restores that case to
     // the type so the checks below stay real checks rather than dead code.
-    const permissionIds = this.reflector.getAllAndOverride<
-      PermissionId[] | undefined
-    >(REQUIRED_PERMISSION_KEY, [context.getHandler(), context.getClass()]);
+    const permissionId = firstRequiredPermission(
+      this.reflector.getAllAndOverride<PermissionId[] | undefined>(
+        REQUIRED_PERMISSION_KEY,
+        declaredOn,
+      ),
+    );
     // Read only, never enforced: `@ObservedPermission` declares Permissions the projection wants
     // resolved. Nothing below consults the resolved set to decide admission, so a handler that
     // declares only observed Permissions is denied by the very next condition, exactly as an
     // undecorated handler is (AC-09a, ADR 0001).
-    const observedPermissionIds =
+    const observedPermissionIds = declaredObservedPermissions(
       this.reflector.getAllAndOverride<PermissionId[] | undefined>(
         OBSERVED_PERMISSION_KEY,
-        [context.getHandler(), context.getClass()],
-      ) ?? [];
+        declaredOn,
+      ),
+    );
     const warehouseId = resolveNamedWarehouseId(request);
-    if (!request.user || !permissionIds?.length || !warehouseId) {
+    if (!request.user || !permissionId || !warehouseId) {
       throw accessDeniedError();
     }
 
-    const current = await this.currentUsers.resolveRequiredPermission(
-      request.user.userId,
-      warehouseId,
-      permissionIds[0],
-      observedPermissionIds,
+    const current = grantedMembership(
+      await this.currentUsers.resolveRequiredPermission(
+        request.user.userId,
+        warehouseId,
+        permissionId,
+        observedPermissionIds,
+      ),
     );
-    if (!current?.granted) {
-      throw accessDeniedError();
-    }
 
     const archived = current.archivedAt !== null;
-    const readTolerant = this.reflector.getAllAndOverride<boolean | undefined>(
-      READ_TOLERANT_KEY,
-      [context.getHandler(), context.getClass()],
+    assertArchiveTolerated(
+      archived,
+      this.reflector.getAllAndOverride<boolean | undefined>(
+        READ_TOLERANT_KEY,
+        declaredOn,
+      ),
     );
-    if (archived && !readTolerant) {
-      throw warehouseArchivedError();
-    }
 
     request.access = accessCurrentUser({
       userId: current.userId,

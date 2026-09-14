@@ -40,5 +40,8 @@ const namingStates: readonly {
   },
 ];
 
-export const itemNamingState = (item: Item): ItemNamingState =>
-  namingStates.find(({ holds }) => holds(item))?.state ?? 'none';
+export const itemNamingState = (item: Item): ItemNamingState => {
+  const naming = namingStates.find(({ holds }) => holds(item));
+
+  return naming?.state ?? 'none';
+};

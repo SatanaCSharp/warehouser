@@ -20,7 +20,22 @@
       "dependsOn": ["^build"],
       "outputs": []
     },
+    // No `outputs`: every package's `test` script is a plain `vitest run` with no coverage
+    // instrumentation, so the task writes nothing to restore. Declaring `coverage/**` here — which
+    // only the `crap` task below ever produces — made a cached `test` hit claim to have restored a
+    // directory it never wrote.
     "test": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    // The opt-in CRAP gate: each package's `crap` script is its own `vitest run` with `CRAP=1`,
+    // which is what makes its config wrap itself in the `crap-typescript` Vitest adapter. It is a
+    // task of its own rather than a flag on `test` so that the two cache independently — a plain
+    // `test` result stays valid when only the threshold moved, and a `crap` result is never served
+    // from a run that had no coverage instrumentation. `CRAP=1` is written into the script rather
+    // than read from the environment, so it is already covered by the package.json hash and needs
+    // no `env` entry here.
+    "crap": {
       "dependsOn": ["^build"],
       "outputs": ["coverage/**"]
     },

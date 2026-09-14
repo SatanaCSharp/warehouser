@@ -69,4 +69,32 @@ describe('apiErrorMiddleware', () => {
     expect(alertApiFailure).toHaveBeenCalledWith({ code: 'api.unexpected' });
     expect(next).toHaveBeenCalledWith(otherAction);
   });
+
+  // Not every rejection RTK dispatches is an RTK Query endpoint's. A plain `createAsyncThunk`
+  // rejection carries an `arg` that names no endpoint at all, and `meta.arg` can be any value the
+  // thunk was called with — a string, a number, nothing. The allowlist is a *named* exception, so
+  // an action it cannot name must fall on the alerting side rather than be silenced by an
+  // `undefined` that happens not to be in the set.
+  it.each([
+    ['an arg naming no endpoint', { unrelated: true }],
+    ['an endpoint name that is not a string', { endpointName: 42 }],
+    ['no arg at all', undefined],
+  ])('still alerts a rejection carrying %s', (_case, arg) => {
+    const next = vi.fn();
+    const action = {
+      meta: {
+        ...(arg !== undefined && { arg }),
+        rejectedWithValue: true,
+        requestId: 'request-id',
+        requestStatus: 'rejected',
+      },
+      payload: { code: 'api.unexpected' },
+      type: 'thunk/rejected',
+    };
+
+    apiErrorMiddleware({} as never)(next)(action);
+
+    expect(alertApiFailure).toHaveBeenCalledWith({ code: 'api.unexpected' });
+    expect(next).toHaveBeenCalledWith(action);
+  });
 });

@@ -1,9 +1,11 @@
 import { Button, Modal } from '@heroui/react';
+import type { CustomerOrder } from '@warehouser/contracts/customer-orders';
 import type {
   PurchaseDraftLine,
   PurchaseDraftLineLinkCreate,
 } from '@warehouser/contracts/purchase-drafts';
 import { PermissionId } from '@warehouser/shared-types/enums';
+import type { UnfulfilledCustomerOrdersByItem } from 'modules/customer-order/hooks/queries/useUnfulfilledCustomerOrdersByItem';
 import { useUnfulfilledCustomerOrdersByItem } from 'modules/customer-order/hooks/queries/useUnfulfilledCustomerOrdersByItem';
 import { useAddPurchaseDraftLineLinkMutation } from 'modules/purchase-draft/api/purchase-draft-api';
 import { LinkCustomerOrderDialog } from 'modules/purchase-draft/components/purchase-draft-line-links/components/LinkCustomerOrderDialog';
@@ -22,6 +24,39 @@ export type LinkCustomerOrderActionProps = {
   line: PurchaseDraftLine;
   purchaseDraftId: string;
 };
+
+/**
+ * Where the line's goods go, when the read is entitled to say. A redacted line
+ * declares no `customerDestination` property at all, which is what proves the
+ * redaction (AC-09a).
+ */
+type LineCustomerDestination = Extract<
+  PurchaseDraftLine,
+  { customerDestination: unknown }
+>['customerDestination'];
+
+/** The address a line's customer destination names, or `null` when it names none. */
+const customerAddressTextOf = (
+  destination: LineCustomerDestination,
+): string | null => destination?.addressText ?? null;
+
+/**
+ * AC-15 — the address this line ships to, so a refused link can name it;
+ * `null` for a Via Warehouse line, which this refusal never reaches.
+ */
+const lineDeliveryAddressTextOf = (line: PurchaseDraftLine): string | null =>
+  'customerDestination' in line
+    ? customerAddressTextOf(line.customerDestination)
+    : null;
+
+/**
+ * The Unfulfilled Customer Orders waiting for this line's Item, and none at all
+ * when nothing is waiting for it (AC-04, AC-17a).
+ */
+const customerOrdersFor = (
+  customerOrdersByItem: UnfulfilledCustomerOrdersByItem,
+  itemId: string,
+): CustomerOrder[] => customerOrdersByItem[itemId] ?? [];
 
 /**
  * The `+ Link a customer order` workflow, whole (frame `yGhkK`): its
@@ -64,12 +99,7 @@ export const LinkCustomerOrderAction = ({
   const customerOrdersByItem = useUnfulfilledCustomerOrdersByItem();
   const [addPurchaseDraftLineLink] = useAddPurchaseDraftLineLinkMutation();
   const label = t('lineLinks.addLink');
-  // AC-15 — the address this line ships to, so a refused link can name it;
-  // `null` for a Via Warehouse line, which this refusal never reaches.
-  const lineDeliveryAddressText =
-    'customerDestination' in line
-      ? (line.customerDestination?.addressText ?? null)
-      : null;
+  const lineDeliveryAddressText = lineDeliveryAddressTextOf(line);
 
   const onSave = (
     input: PurchaseDraftLineLinkCreate,
@@ -100,7 +130,10 @@ export const LinkCustomerOrderAction = ({
         </Button>
         <TriggeredDialog>
           <LinkCustomerOrderDialog
-            customerOrders={customerOrdersByItem[line.itemId] ?? []}
+            customerOrders={customerOrdersFor(
+              customerOrdersByItem,
+              line.itemId,
+            )}
             index={index}
             lineDeliveryAddressText={lineDeliveryAddressText}
             unitOfMeasure={line.unitOfMeasure}

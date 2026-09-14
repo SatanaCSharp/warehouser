@@ -66,6 +66,19 @@ const statedDestination = (
   return destination;
 };
 
+// A revision that says nothing about the destination leaves it as it was, and is not the same as one
+// that states it. Both readings are named so the command below asks each question once.
+const revisedDestination = (
+  destination: LineDeliveryDestination | undefined,
+): LineDeliveryDestination | undefined =>
+  destination === undefined ? undefined : statedDestination(destination);
+
+// The Customer address the revised line would ship to, or nothing: a revision that says nothing
+// about the destination, and one that brings the line back to the dock, both name no address.
+const revisedDeliveryAddressId = (
+  destination: LineDeliveryDestination | undefined,
+): string | null => destination?.customerDeliveryAddressId ?? null;
+
 // AC-10a/AC-11/AC-12/AC-13/AC-14/AC-15a — revising a line's Item, ordered quantity, Pre-receipt
 // Requirement or destination. The write names the acting Warehouse as well as the draft, so a line
 // of another Warehouse's draft resolves to nothing and is refused exactly as a missing one is
@@ -97,59 +110,24 @@ export class RevisePurchaseDraftLineCommand {
       changes.packagingTypeId,
     ]);
 
-    const destination =
-      changes.destination === undefined
-        ? undefined
-        : statedDestination(changes.destination);
+    const destination = revisedDestination(changes.destination);
 
-    // AC-12/sad.md §6.7 step 4 — "prove the address belongs to a Customer of the acting Warehouse
-    // and is active", **before** the write rather than by letting
-    // `fk_purchase_draft_lines_delivery_address` fire. The composite reference is the same
-    // `(id, warehouse_id)` pair, so this read decides exactly what the constraint would, and
-    // decides it with the two codes the contract declares: an address of another Warehouse, and one
-    // that does not exist, are the one non-enumerating 404; an Inactive one — which no constraint
-    // catches at all — is the documented 409. The repository is injected directly rather than
-    // through `PurchaseDraftAssemblyService`, because exactly one command asks this question and a
-    // service with one caller is a pass-through (server-architecture.md §Services).
-    //
-    // The read runs inside this command's `@Transactional()` boundary, so the address it proved
-    // available cannot be deactivated between the proof and the write by a transaction that
-    // commits in between.
-    if (
-      destination !== undefined &&
-      destination.customerDeliveryAddressId !== null
-    ) {
-      const address =
-        await this.customerAddressBookRepository.findWarehouseDeliveryAddress(
-          destination.customerDeliveryAddressId,
-          currentUser.warehouseId,
-        );
-      assert(
-        address !== null,
-        purchaseDraftLineDeliveryAddressUnavailableError(),
-      );
-      assert(
-        isLineDestinationActive(address.deactivatedAt),
-        purchaseDraftLineDeliveryAddressInactiveError(),
-      );
+    // AC-12/sad.md §6.7 step 4 — the address the line would ship to is proved available before
+    // anything is written; `assertDeliveryAddressAvailable` below is where and why.
+    const deliveryAddressId = revisedDeliveryAddressId(destination);
+    if (deliveryAddressId !== null) {
+      await this.assertDeliveryAddressAvailable(currentUser, deliveryAddressId);
     }
 
-    // AC-15a — the second of the three moments the agreement is required. The links are read
-    // against the destination the line **would** have, so a revision that would strand them is
-    // refused before anything is written: every disagreement is named and none is withdrawn,
-    // because which link to withdraw is the member's decision. A revision that says nothing about
-    // the destination, and one that brings the line back to the dock, ask nothing (AC-15b).
+    // AC-15a — the second of the three moments the agreement is required. A revision that says
+    // nothing about the destination, and one that brings the line back to the dock, ask nothing
+    // (AC-15b).
     if (destination !== undefined) {
-      const disagreeingLinks = await this.assemblyService.findDisagreeingLinks(
+      await this.assertLinksAgreeWithDestination(
         scope,
         purchaseDraftLineId,
         destination,
       );
-      if (disagreeingLinks.length > 0) {
-        assertFail(
-          purchaseDraftDeliveryAddressDisagreementError(disagreeingLinks),
-        );
-      }
     }
 
     // Only the stated halves are forwarded, so an absent key cannot be written as `null` and clear
@@ -161,5 +139,57 @@ export class RevisePurchaseDraftLineCommand {
     );
 
     assertApplied(outcome);
+  }
+
+  // AC-12/sad.md §6.7 step 4 — "prove the address belongs to a Customer of the acting Warehouse and
+  // is active", **before** the write rather than by letting
+  // `fk_purchase_draft_lines_delivery_address` fire. The composite reference is the same
+  // `(id, warehouse_id)` pair, so this read decides exactly what the constraint would, and decides
+  // it with the two codes the contract declares: an address of another Warehouse, and one that does
+  // not exist, are the one non-enumerating 404; an Inactive one — which no constraint catches at
+  // all — is the documented 409. The repository is injected directly rather than through
+  // `PurchaseDraftAssemblyService`, because exactly one command asks this question and a service
+  // with one caller is a pass-through (server-architecture.md §Services).
+  //
+  // The read runs inside the caller's `@Transactional()` boundary, so the address it proved
+  // available cannot be deactivated between the proof and the write by a transaction that commits
+  // in between.
+  private async assertDeliveryAddressAvailable(
+    currentUser: AccessCurrentUser,
+    customerDeliveryAddressId: string,
+  ): Promise<void> {
+    const address =
+      await this.customerAddressBookRepository.findWarehouseDeliveryAddress(
+        customerDeliveryAddressId,
+        currentUser.warehouseId,
+      );
+    assert(
+      address !== null,
+      purchaseDraftLineDeliveryAddressUnavailableError(),
+    );
+    assert(
+      isLineDestinationActive(address.deactivatedAt),
+      purchaseDraftLineDeliveryAddressInactiveError(),
+    );
+  }
+
+  // AC-15a — the links are read against the destination the line **would** have, so a revision that
+  // would strand them is refused before anything is written: every disagreement is named and none is
+  // withdrawn, because which link to withdraw is the member's decision.
+  private async assertLinksAgreeWithDestination(
+    scope: { purchaseDraftId: string; warehouseId: string },
+    purchaseDraftLineId: string,
+    destination: LineDeliveryDestination,
+  ): Promise<void> {
+    const disagreeingLinks = await this.assemblyService.findDisagreeingLinks(
+      scope,
+      purchaseDraftLineId,
+      destination,
+    );
+    if (disagreeingLinks.length > 0) {
+      assertFail(
+        purchaseDraftDeliveryAddressDisagreementError(disagreeingLinks),
+      );
+    }
   }
 }

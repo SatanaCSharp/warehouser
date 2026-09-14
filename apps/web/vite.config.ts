@@ -3,7 +3,7 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
 
-export default defineConfig({
+const config = defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
@@ -99,3 +99,11 @@ export default defineConfig({
     exclude: ['**/node_modules/**', '**/dist/**'],
   },
 });
+
+/**
+ * No `test.coverage` block and no CRAP wrapper here: both live in
+ * `vitest.crap.config.ts`, which imports this config and adds them. This file
+ * is also what `vite dev` and `vite build` read, and the CRAP tier needs a
+ * coverage provider those two have no use for.
+ */
+export default config;

@@ -23,6 +23,28 @@ type WarehouseDeliveryAddressFormValues = {
 };
 
 /**
+ * A recorded value that is absent seeds an empty field. Access notes are
+ * recorded as absent rather than as an empty string — the same rule `submit`
+ * applies on the way out — and the address text is nullable for the same
+ * reason.
+ */
+const textOf = (value: string | null): string => value ?? '';
+
+/**
+ * What the fields start from: what is recorded, or empty where nothing is
+ * recorded yet and this form is the first recording rather than a correction.
+ */
+const seedOf = (
+  recorded: WarehouseDeliveryAddress | undefined,
+): WarehouseDeliveryAddressFormValues =>
+  recorded === undefined
+    ? { addressText: '', accessNotes: '' }
+    : {
+        addressText: textOf(recorded.addressText),
+        accessNotes: textOf(recorded.accessNotes),
+      };
+
+/**
  * Records the Warehouse's one Delivery Address and corrects it in place
  * afterwards (AC-10). There is no clearing or deactivating control, because
  * there is no such operation: an address, once recorded, is corrected and
@@ -42,8 +64,7 @@ export const WarehouseDeliveryAddressForm = ({
   recorded,
   warehouse,
 }: WarehouseDeliveryAddressFormProps): ReactElement => {
-  const addressText = recorded?.addressText ?? '';
-  const accessNotes = recorded?.accessNotes ?? '';
+  const { addressText, accessNotes } = seedOf(recorded);
   const { t } = useTranslation('warehouse');
   const { t: translateValidation } = useTranslation('validation');
   const [setWarehouseDeliveryAddress] =

@@ -66,6 +66,13 @@ catalog:
   "@testing-library/dom": ^10.4.1
   vitest: ^5.0.0
   "@vitest/coverage-v8": ^5.0.0
+  # `apps/web` only, and only for its CRAP tier. v8 coverage is derived by mapping runtime byte
+  # ranges back through source maps, and in TSX that loses function identity: the resulting Istanbul
+  # `fnMap` carries spans the CRAP analyser cannot match a function to, so it scores the function
+  # `skipped` rather than failing it — 71 of 1019 web functions on the last v8 run, including the two
+  # most complex in the app. This provider instruments the source before it runs, so the names and
+  # spans are the real ones: 63 skips instead of 71, and no slower (51.0s vs 53.7s, measured).
+  "@vitest/coverage-istanbul": ^5.0.0
   # NestJS DI needs `emitDecoratorMetadata`, which esbuild (Vite's default
   # transform) cannot emit. The server test tiers compile with SWC instead.
   "@swc/core": ^1.16.2

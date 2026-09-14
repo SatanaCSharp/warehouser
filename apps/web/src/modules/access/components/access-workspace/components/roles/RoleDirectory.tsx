@@ -21,8 +21,13 @@ type RoleDirectoryProps = {
 /** The one dialog a Role row opens. */
 type RoleDialogKind = 'deleteRole';
 
-const defaultRoleId = (roles: AccessRole[]): string | undefined =>
-  roles.find((role) => role.kind === 'custom')?.id ?? roles[0]?.id;
+const isCustomRole = (role: AccessRole): boolean => role.kind === 'custom';
+
+const defaultRoleId = (roles: AccessRole[]): string | undefined => {
+  const custom = roles.find(isCustomRole);
+
+  return custom?.id ?? roles[0]?.id;
+};
 
 /**
  * The Role list beside the editor for the selected Role. The selection is local
@@ -89,13 +94,15 @@ export const RoleDirectory = ({ roles }: RoleDirectoryProps): ReactElement => {
       <ActionDialogHost
         controller={dialog}
         renderDialogs={{
-          deleteRole: (role) => (
-            <DeleteRoleDialog
-              role={role}
-              roles={roles.filter((candidate) => candidate.kind === 'custom')}
-              onDelete={onConfirmDeletion(role)}
-            />
-          ),
+          deleteRole: (role) => {
+            return (
+              <DeleteRoleDialog
+                role={role}
+                roles={roles.filter(isCustomRole)}
+                onDelete={onConfirmDeletion(role)}
+              />
+            );
+          },
         }}
       />
     </div>

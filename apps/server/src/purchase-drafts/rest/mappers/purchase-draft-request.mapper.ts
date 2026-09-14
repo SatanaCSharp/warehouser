@@ -22,15 +22,19 @@ import type { RecordLineEndingRejectionInput } from 'shared/domain/repositories/
 //
 // `description ?? null` is the one gap between the wire shape — `proseSchema` optional — and
 // `RecordLineEndingRejectionInput`'s own `string | null`; every other field passes through unchanged.
+const toEndingRejectionInput = (
+  rejection: NonNullable<PurchaseDraftLineArrival['rejections']>[number],
+): RecordLineEndingRejectionInput => ({
+  rejectionReasonId: rejection.rejectionReasonId,
+  quantity: rejection.quantity,
+  source: rejection.source,
+  description: rejection.description ?? null,
+});
+
 export const toEndingRejectionInputs = (
   rejections: PurchaseDraftLineArrival['rejections'],
 ): readonly RecordLineEndingRejectionInput[] | undefined =>
-  rejections?.map((rejection) => ({
-    rejectionReasonId: rejection.rejectionReasonId,
-    quantity: rejection.quantity,
-    source: rejection.source,
-    description: rejection.description ?? null,
-  }));
+  rejections?.map(toEndingRejectionInput);
 
 export const toEndingPreReceiptConformanceInput = (
   preReceiptConformance: PurchaseDraftLineArrival['preReceiptConformance'],

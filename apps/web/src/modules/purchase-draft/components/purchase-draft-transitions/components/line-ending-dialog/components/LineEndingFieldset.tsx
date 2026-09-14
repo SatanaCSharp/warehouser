@@ -1,4 +1,5 @@
 import type { PurchaseDraftLine } from '@warehouser/contracts/purchase-drafts';
+import sumBy from 'lodash/sumBy';
 import { ConditionBlock } from 'modules/purchase-draft/components/purchase-draft-transitions/components/line-ending-dialog/components/ConditionBlock';
 import { ConformanceBlock } from 'modules/purchase-draft/components/purchase-draft-transitions/components/line-ending-dialog/components/ConformanceBlock';
 import { EndingAssignmentRow } from 'modules/purchase-draft/components/purchase-draft-transitions/components/line-ending-dialog/components/EndingAssignmentRow';
@@ -9,12 +10,44 @@ import {
   quantityOf,
 } from 'modules/purchase-draft/utils/line-ending-form';
 import type { ReactElement } from 'react';
-import type { UseFormReturn } from 'react-hook-form';
+import type { FieldErrors, UseFormReturn } from 'react-hook-form';
 import { useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Conditional } from 'shared/components/Conditional';
 import { FormTextField } from 'shared/components/FormTextField';
 import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
+
+/**
+ * The live reading of the form session. Every field is optional because
+ * `useWatch` reports a form the member may not have touched yet — the narrowest
+ * shape the running total below is decided from, not the form itself.
+ */
+type LineEndingValues = {
+  allocations?: { allocatedQuantity?: string }[];
+  quantity?: string;
+};
+
+/** What the member has stated ended the line — `0` until a figure is typed. */
+const statedQuantityOf = (values: LineEndingValues | undefined): number =>
+  quantityOf(values?.quantity);
+
+/** One assignment as a whole number; a row nothing has been typed into is
+ * genuinely "assign nothing" rather than a refusal. */
+const allocatedQuantityOf = (
+  allocation: { allocatedQuantity?: string } | undefined,
+): number => quantityOf(allocation?.allocatedQuantity);
+
+/** Everything assigned so far. The positional array is totalled through Lodash
+ * rather than an empty-array fallback of its own: a form session that has not
+ * reported its rows yet totals nothing, which is the same answer without a
+ * defensive branch no caller can reach. */
+const assignedQuantityOf = (values: LineEndingValues | undefined): number =>
+  sumBy(values?.allocations, allocatedQuantityOf);
+
+/** Why the stated quantity was refused, when React Hook Form has refused it. */
+const quantityErrorOf = (
+  errors: FieldErrors<LineEndingForm>,
+): string | undefined => errors.quantity?.message;
 
 export type LineEndingFieldsetProps = {
   form: UseFormReturn<LineEndingForm>;
@@ -58,13 +91,10 @@ export const LineEndingFieldset = ({
   const values = useWatch({ control: form.control });
 
   const allocationOf = (allocationIndex: number): number =>
-    quantityOf(values?.allocations?.[allocationIndex]?.allocatedQuantity);
+    allocatedQuantityOf(values?.allocations?.[allocationIndex]);
 
-  const stated = quantityOf(values?.quantity);
-  const assigned = (values?.allocations ?? []).reduce(
-    (total, allocation) => total + quantityOf(allocation?.allocatedQuantity),
-    0,
-  );
+  const stated = statedQuantityOf(values);
+  const assigned = assignedQuantityOf(values);
 
   // AC-17a — a Customer Order assigned the whole of what it is still waiting
   // for leaves the consolidated demand, which the frame's running total says in
@@ -122,7 +152,7 @@ export const LineEndingFieldset = ({
         isDisabled={isSubmitting}
         isInvalid={Boolean(errors.quantity)}
         description={t(`transitions.lineEnding.${kind}.quantityDescription`)}
-        errorMessage={errors.quantity?.message}
+        errorMessage={quantityErrorOf(errors)}
         label={t(`transitions.lineEnding.${kind}.quantityLabel`, {
           sku: line.itemSku,
         })}

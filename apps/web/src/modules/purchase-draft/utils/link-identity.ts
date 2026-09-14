@@ -90,6 +90,16 @@ export const purchaseDraftLinkIdentity = (
  */
 export type LinkAddressComparison = { captured: string; current: string };
 
+// A link frozen against no snapshot, and a snapshot taken of an order that named no address, both
+// read as no captured address rather than as an empty one.
+const capturedAddressText = (
+  snapshot: { readonly capturedDeliveryAddressText?: string | null } | null,
+): string | null => snapshot?.capturedDeliveryAddressText ?? null;
+
+const currentAddressText = (
+  deliveryAddress: { readonly addressText: string } | null | undefined,
+): string | null => deliveryAddress?.addressText ?? null;
+
 export const linkAddressComparison = (
   link: PurchaseDraftLineLink,
 ): LinkAddressComparison | null => {
@@ -100,8 +110,8 @@ export const linkAddressComparison = (
     return null;
   }
 
-  const captured = link.snapshot?.capturedDeliveryAddressText ?? null;
-  const current = link.current.deliveryAddress?.addressText ?? null;
+  const captured = capturedAddressText(link.snapshot);
+  const current = currentAddressText(link.current.deliveryAddress);
 
   if (captured === null || current === null) {
     return null;

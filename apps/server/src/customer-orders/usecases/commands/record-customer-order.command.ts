@@ -57,6 +57,42 @@ interface CustomerOrderDestination {
   readonly customerName: string | null;
 }
 
+// The four conditions and two readings below are used by this command alone, so each stays next to
+// it rather than in `customer-orders/domain/predicates/` (server-error-handling.md §1).
+
+// Which half of `chk_customer_orders_customer_identity` the payload broke: it named neither identity,
+// or it named both.
+const customerIdentityRefusal = (
+  customerId: string | undefined,
+): 'customer_identity_exclusive' | 'customer_identity_required' =>
+  customerId === undefined
+    ? 'customer_identity_required'
+    : 'customer_identity_exclusive';
+
+// A Delivery Address belongs to a Customer, so one stated beside a typed customer name names an
+// address of nobody.
+const deliveryAddressHasCustomer = (
+  customerDeliveryAddressId: string | undefined,
+  customerId: string | undefined,
+): boolean =>
+  customerDeliveryAddressId === undefined || customerId !== undefined;
+
+// AC-02 — a typed customer name, when stated at all, is a trimmed non-empty one.
+const customerNameStatedWellOrNotAtAll = (
+  customerName: string | undefined,
+): boolean => customerName === undefined || isCustomerName(customerName);
+
+// AC-11a — stored trimmed, as `chk_customer_orders_customer_name_stored_trimmed` requires; absent
+// where the order names a Customer instead.
+const typedCustomerName = (customerName: string | undefined): string | null =>
+  customerName?.trim() ?? null;
+
+// AC-11 — the stated address, or nothing stated, which the destination service reads as "the
+// Customer's Main one".
+const statedDeliveryAddressId = (
+  customerDeliveryAddressId: string | undefined,
+): string | null => customerDeliveryAddressId ?? null;
+
 // AC-01/AC-02/AC-02a/AC-03 — recording demand (sad.md §6.4). The REST surface invokes this use
 // case, never a repository (server-architecture.md §Dependency direction), and the use case owns
 // the rules itself: every bound is checked here and refusals propagate untouched to the global
@@ -86,14 +122,14 @@ export class RecordCustomerOrderCommand {
     assert(
       namesExactlyOneCustomerIdentity(input.customerId, input.customerName),
       customerOrderCustomerIdentityError(
-        input.customerId === undefined
-          ? 'customer_identity_required'
-          : 'customer_identity_exclusive',
+        customerIdentityRefusal(input.customerId),
       ),
     );
     assert(
-      input.customerDeliveryAddressId === undefined ||
-        input.customerId !== undefined,
+      deliveryAddressHasCustomer(
+        input.customerDeliveryAddressId,
+        input.customerId,
+      ),
       customerOrderCustomerIdentityError('delivery_address_requires_customer'),
     );
 
@@ -101,7 +137,7 @@ export class RecordCustomerOrderCommand {
     // before any persistence is consulted, so "changes nothing" is a property of the flow rather
     // than of a rollback.
     assert(
-      input.customerName === undefined || isCustomerName(input.customerName),
+      customerNameStatedWellOrNotAtAll(input.customerName),
       customerOrderInvalidInputError('customerName', 'trimmed_non_empty'),
     );
     assert(
@@ -130,7 +166,7 @@ export class RecordCustomerOrderCommand {
     let destination: CustomerOrderDestination = {
       customerId: null,
       customerDeliveryAddressId: null,
-      customerName: input.customerName?.trim() ?? null,
+      customerName: typedCustomerName(input.customerName),
     };
 
     if (input.customerId !== undefined) {
@@ -159,7 +195,7 @@ export class RecordCustomerOrderCommand {
         customerDeliveryAddressId:
           await this.customerOrderDestinationService.resolveDestination(
             input.customerId,
-            input.customerDeliveryAddressId ?? null,
+            statedDeliveryAddressId(input.customerDeliveryAddressId),
           ),
         customerName: null,
       };

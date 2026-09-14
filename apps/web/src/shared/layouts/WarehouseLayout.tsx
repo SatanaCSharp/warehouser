@@ -2,6 +2,7 @@ import { Outlet, useMatch, useRouterState } from '@tanstack/react-router';
 import type { WarehouseEntryVerdict } from 'guards/warehouse-entry.guard';
 import { useRecordWarehouseEntry } from 'modules/warehouse/hooks/effects/useRecordWarehouseEntry';
 import type { ReactElement } from 'react';
+import type { WarehouseEntryRefusalReason } from 'shared/components/WarehouseEntryRefusal';
 import { WarehouseEntryRefusal } from 'shared/components/WarehouseEntryRefusal';
 import { ROUTES } from 'shared/constants/routes';
 
@@ -33,6 +34,42 @@ const READ_ONLY_REFUSED_ROUTE_IDS: readonly string[] = [
 
 type WarehouseLayoutState = 'entered' | 'read-only' | 'refused';
 
+/** The narrowest reading of the world that decides which surface the layout renders. */
+type WarehouseLayoutReading = {
+  readonly isRefusedDestination: boolean;
+  readonly status: WarehouseEntryVerdict['status'] | undefined;
+};
+
+// CR-AC-07 — the single entry-enforcement point of this change, so its default is closed. Branching
+// on `refused` would admit everything that is merely not that string — including a verdict the route
+// never published — and render the Warehouse view plus its CR-AC-09 write on the strength of an
+// absent value. Only an explicit `entered` enters and only an explicit `entered-read-only` reads;
+// anything else is refused non-disclosingly, which is also the correct answer for a state that
+// should be unreachable. The table is ordered: `entered` outranks `read-only`.
+const admittingStates: readonly {
+  state: WarehouseLayoutState;
+  holds: (reading: WarehouseLayoutReading) => boolean;
+}[] = [
+  { state: 'entered', holds: ({ status }) => status === 'entered' },
+  {
+    state: 'read-only',
+    holds: ({ status, isRefusedDestination }) =>
+      status === 'entered-read-only' && !isRefusedDestination,
+  },
+];
+
+const resolveLayoutState = (
+  reading: WarehouseLayoutReading,
+): WarehouseLayoutState => {
+  const admitting = admittingStates.find(({ holds }) => holds(reading));
+
+  return admitting?.state ?? 'refused';
+};
+
+const refusalReason = (
+  verdict: WarehouseEntryVerdict | undefined,
+): WarehouseEntryRefusalReason => verdict?.reason ?? 'not-a-member';
+
 // T4 / ADR 0001 — the Warehouse layout route's own component. It is rendered
 // only as `routes/warehouse.route.tsx`'s `component`, so `useMatch()` with no
 // `from` reads the nearest match — that route's own match — without needing
@@ -50,22 +87,10 @@ export const WarehouseLayout = (): ReactElement => {
       ),
   });
 
-  // CR-AC-07 — the single entry-enforcement point of this change, so its
-  // default is closed. Branching on `refused` would admit everything that is
-  // merely not that string — including a verdict the route never published —
-  // and render the Warehouse view plus its CR-AC-09 write on the strength of
-  // an absent value. Only an explicit `entered` enters and only an explicit
-  // `entered-read-only` reads; anything else is refused non-disclosingly,
-  // which is also the correct answer for a state that should be unreachable.
-  const resolveState = (): WarehouseLayoutState => {
-    if (verdict?.status === 'entered') {
-      return 'entered';
-    }
-    if (verdict?.status === 'entered-read-only' && !isRefusedDestination) {
-      return 'read-only';
-    }
-    return 'refused';
-  };
+  const layoutState = resolveLayoutState({
+    isRefusedDestination,
+    status: verdict?.status,
+  });
 
   const content: Record<WarehouseLayoutState, ReactElement> = {
     entered: <EnteredWarehouseOutlet />,
@@ -74,10 +99,8 @@ export const WarehouseLayout = (): ReactElement => {
     // mutating control by `shared/hooks/projections/useArchivedWarehouse`, and
     // once per destination by `shared/components/ArchivedWarehouseNotice`.
     'read-only': <Outlet />,
-    refused: (
-      <WarehouseEntryRefusal reason={verdict?.reason ?? 'not-a-member'} />
-    ),
+    refused: <WarehouseEntryRefusal reason={refusalReason(verdict)} />,
   };
 
-  return content[resolveState()];
+  return content[layoutState];
 };

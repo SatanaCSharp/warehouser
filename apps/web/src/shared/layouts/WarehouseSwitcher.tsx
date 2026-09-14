@@ -148,6 +148,57 @@ const resolveEnteredContext = (
   return { currentKey: null, Icon: LayoutGridIcon };
 };
 
+/** CR-AC-01 — the Workspace's own name, or the unnamed-Workspace placeholder the Workspace
+ * administration surface already shows for one that has none (`Qa6Z3` draws "Untitled workspace"). */
+const workspaceDisplayName = (
+  name: string | null,
+  placeholder: string,
+): string => name ?? placeholder;
+
+/** The trigger's accessible name: the context it is showing, or the no-context phrasing. */
+const triggerLabelOf = (
+  enteredName: string | undefined,
+  withContext: string,
+  withoutContext: string,
+): string => (enteredName ? withContext : withoutContext);
+
+/** The trigger's visible text — the entered context, falling back to its own label. */
+const triggerTextOf = (
+  enteredName: string | undefined,
+  switcherLabel: string,
+): string => enteredName ?? switcherLabel;
+
+/** CR-RG-02 — an actor who may not enter the Workspace is told why on the row itself, rather than
+ * being shown no row at all. */
+const noAccessExplanationOf = (
+  mayEnterWorkspace: boolean,
+  explanation: string,
+): string | undefined => (mayEnterWorkspace ? undefined : explanation);
+
+const inertRowClassName = (
+  noAccessExplanation: string | undefined,
+): string | undefined => (noAccessExplanation ? dimmedRowClassName : undefined);
+
+const noAccessTrailingLabel = (
+  noAccessExplanation: string | undefined,
+  label: string,
+): string | undefined => noAccessExplanation && label;
+
+const isArchivedWarehouse = (warehouse: ContextWarehouse): boolean =>
+  warehouse.archivedAt !== null;
+
+/** The rows the switcher offers but will not enter: the Workspace when the actor holds none of its
+ * Permissions, and every archived Warehouse. */
+const disabledKeysOf = (
+  mayEnterWorkspace: boolean,
+  warehouses: readonly ContextWarehouse[],
+): string[] => [
+  ...(mayEnterWorkspace ? [] : [WORKSPACE_ROW_KEY]),
+  ...warehouses
+    .filter(isArchivedWarehouse)
+    .map((warehouse) => warehouse.warehouseId),
+];
+
 export const WarehouseSwitcher = (): ReactElement | null => {
   const { t } = useTranslation(['common', 'workspace']);
   const { workspaceContext, workspacePermissionIds } =
@@ -165,11 +216,10 @@ export const WarehouseSwitcher = (): ReactElement | null => {
 
   const { warehouses, workspace } = workspaceContext;
 
-  // CR-AC-01 — the Workspace's own name, or the unnamed-Workspace placeholder
-  // the Workspace administration surface already shows for one that has none
-  // (`Qa6Z3` draws "Untitled workspace").
-  const workspaceName =
-    workspace.name ?? t('placeholder.name', { ns: 'workspace' });
+  const workspaceName = workspaceDisplayName(
+    workspace.name,
+    t('placeholder.name', { ns: 'workspace' }),
+  );
 
   // CR-AC-03 / CR-RG-05 — the row keys off the identical set the `/workspace`
   // route guard uses, so the switcher never offers a destination the guard
@@ -186,21 +236,19 @@ export const WarehouseSwitcher = (): ReactElement | null => {
       (warehouse) => warehouse.warehouseId === enteredWarehouseId,
     ),
   );
-  const switcherLabel = entered.name
-    ? t('shell.contextSwitcher.triggerLabel', { context: entered.name })
-    : t('shell.contextSwitcher.triggerLabelNoContext');
+  const switcherLabel = triggerLabelOf(
+    entered.name,
+    t('shell.contextSwitcher.triggerLabel', { context: entered.name }),
+    t('shell.contextSwitcher.triggerLabelNoContext'),
+  );
 
   const archivedLabel = t('shell.contextSwitcher.archivedLabel');
-  const noAccessExplanation = canEnterWorkspace
-    ? undefined
-    : t('shell.contextSwitcher.workspaceNoAccessExplanation');
+  const noAccessExplanation = noAccessExplanationOf(
+    canEnterWorkspace,
+    t('shell.contextSwitcher.workspaceNoAccessExplanation'),
+  );
 
-  const disabledKeys = [
-    ...(canEnterWorkspace ? [] : [WORKSPACE_ROW_KEY]),
-    ...warehouses
-      .filter((warehouse) => warehouse.archivedAt !== null)
-      .map((warehouse) => warehouse.warehouseId),
-  ];
+  const disabledKeys = disabledKeysOf(canEnterWorkspace, warehouses);
 
   // CR-AC-02 — choosing a row enters that context inside the existing session.
   // No credential is requested and nothing is written here.
@@ -225,7 +273,9 @@ export const WarehouseSwitcher = (): ReactElement | null => {
         <Label className="sr-only">{switcherLabel}</Label>
         <Select.Trigger className="rounded-xl">
           <entered.Icon />
-          <span className="pl-1 truncate">{entered.name ?? switcherLabel}</span>
+          <span className="pl-1 truncate">
+            {triggerTextOf(entered.name, switcherLabel)}
+          </span>
           <Select.Indicator />
         </Select.Trigger>
         {/* Modal, the React Aria default for a Select: `usePopover` derives
@@ -242,17 +292,17 @@ export const WarehouseSwitcher = (): ReactElement | null => {
               <ListBox.Item
                 id={WORKSPACE_ROW_KEY}
                 textValue={workspaceName}
-                className={noAccessExplanation ? dimmedRowClassName : undefined}
+                className={inertRowClassName(noAccessExplanation)}
               >
                 <ContextRowContent
                   description={noAccessExplanation}
                   dimmed={noAccessExplanation !== undefined}
                   Icon={Building2Icon}
                   name={workspaceName}
-                  trailingLabel={
-                    noAccessExplanation &&
-                    t('shell.contextSwitcher.noAccessLabel')
-                  }
+                  trailingLabel={noAccessTrailingLabel(
+                    noAccessExplanation,
+                    t('shell.contextSwitcher.noAccessLabel'),
+                  )}
                 />
               </ListBox.Item>
             </ListBox.Section>

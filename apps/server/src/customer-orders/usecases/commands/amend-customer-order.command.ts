@@ -33,6 +33,16 @@ export interface AmendCustomerOrderInput {
   readonly neededBy?: string;
 }
 
+// A field the amendment left out keeps the value the locked row already holds — never `null`, and
+// never the value the member composed against.
+const amendedValue = <T>(stated: T | undefined, current: T): T =>
+  stated ?? current;
+
+// AC-19 — a Fulfilled order whose quantity was raised counts as Unfulfilled again, so it returns to
+// the consolidated demand.
+const demandStateOf = (outstandingQuantity: number): CustomerOrderState =>
+  outstandingQuantity > 0 ? 'unfulfilled' : 'fulfilled';
+
 // AC-19/AC-19b — amending demand (sad.md §6.10). Every bound is re-checked against the row locked
 // in this same transaction rather than against the values the member composed against (sad.md §8),
 // which is why the amendment resolves its order through the shared locking read.
@@ -72,7 +82,7 @@ export class AmendCustomerOrderCommand {
     // AC-19b — the floor is the total already allocated to this order, read from the locked row in
     // this same transaction. Below it the change is blocked and the order is left exactly as it
     // was, because those goods sit in the Transit Zone under that customer's name.
-    const quantity = input.quantity ?? locked.order.quantity;
+    const quantity = amendedValue(input.quantity, locked.order.quantity);
     assert(
       isQuantityAtOrAboveAllocated(quantity, locked.allocatedQuantity),
       customerOrderQuantityBelowAllocatedError(
@@ -87,8 +97,7 @@ export class AmendCustomerOrderCommand {
     // case: the figure is never silently clamped (data-model.md §"Constraints the model
     // deliberately does not express").
     const outstandingQuantity = quantity - locked.allocatedQuantity;
-    const state: CustomerOrderState =
-      outstandingQuantity > 0 ? 'unfulfilled' : 'fulfilled';
+    const state = demandStateOf(outstandingQuantity);
 
     const amended =
       await this.customerOrderLifecycleRepository.amendCustomerOrder(
@@ -96,7 +105,7 @@ export class AmendCustomerOrderCommand {
         {
           quantity,
           outstandingQuantity,
-          neededBy: input.neededBy ?? locked.order.neededBy,
+          neededBy: amendedValue(input.neededBy, locked.order.neededBy),
           state,
           amendedAt,
         },
