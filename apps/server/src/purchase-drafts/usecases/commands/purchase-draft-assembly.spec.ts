@@ -25,6 +25,7 @@ import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import type { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
 import type { PurchaseDraftLineDeliveryMode } from 'shared/domain/entities/purchase-draft-line.entity';
 import type { AssemblyWriteOutcome } from 'shared/domain/repositories/purchase-draft-assembly.repository';
+import { freezeClockAt } from 'test/doubles/frozen-clock';
 import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>
@@ -182,18 +183,11 @@ const commandsWith = ({
     create: new CreatePurchaseDraftCommand(
       assemblyRepository as never,
       assemblyService,
-      {
-        purchaseDraftId: () => draftId,
-        purchaseDraftLineId: () => uuid('401'),
-        purchaseDraftLineLinkId: () => uuid('501'),
-        now: () => now,
-      },
     ),
     revise: new RevisePurchaseDraftCommand(assemblyRepository as never),
     addLine: new AddPurchaseDraftLineCommand(
       assemblyRepository as never,
       assemblyService,
-      { purchaseDraftLineId: () => uuid('401') },
     ),
     reviseLine: new RevisePurchaseDraftLineCommand(
       assemblyRepository as never,
@@ -212,7 +206,6 @@ const commandsWith = ({
     addLink: new AddPurchaseDraftLineLinkCommand(
       assemblyRepository as never,
       assemblyService,
-      { purchaseDraftLineLinkId: () => uuid('501') },
     ),
     reviseLink: new RevisePurchaseDraftLineLinkCommand(
       assemblyRepository as never,
@@ -227,6 +220,8 @@ const baseLine = {
   itemId,
   orderedQuantity: 150,
 };
+
+freezeClockAt(now);
 
 describe('CreatePurchaseDraftCommand (AC-10)', () => {
   it('records a draft in the Draft state with no Expected Arrival Date stated', async () => {

@@ -1,4 +1,4 @@
-import { Injectable, Optional } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
 import { isDefined } from '@warehouser/utils/predicates';
 import {
@@ -12,38 +12,22 @@ import {
   isDemandQuantity,
   isQuantityAtOrAboveAllocated,
 } from 'customer-orders/domain/predicates/customer-order.predicates';
-import { hasOutstandingDemand } from 'customer-orders/domain/predicates/demand-allocation.predicates';
+import {
+  amendedValue,
+  demandStateOf,
+} from 'customer-orders/domain/services/customer-order-amendment.service';
 import {
   assertNeededByStillAhead,
   CustomerOrderLifecycleService,
 } from 'customer-orders/domain/services/customer-order-lifecycle.service';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
-import type { CustomerOrderState } from 'shared/domain/entities/customer-order.entity';
 import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository';
-
-export interface AmendCustomerOrderRuntime {
-  readonly now: () => Date;
-}
-
-const defaultAmendCustomerOrderRuntime: AmendCustomerOrderRuntime = {
-  now: () => new Date(),
-};
 
 export interface AmendCustomerOrderInput {
   readonly quantity?: number;
   readonly neededBy?: string;
 }
-
-// A field the amendment left out keeps the value the locked row already holds — never `null`, and
-// never the value the member composed against.
-const amendedValue = <T>(stated: T | undefined, current: T): T =>
-  stated ?? current;
-
-// AC-19 — a Fulfilled order whose quantity was raised counts as Unfulfilled again, so it returns to
-// the consolidated demand.
-const demandStateOf = (outstandingQuantity: number): CustomerOrderState =>
-  hasOutstandingDemand(outstandingQuantity) ? 'unfulfilled' : 'fulfilled';
 
 // AC-19/AC-19b — amending demand (sad.md §6.10). Every bound is re-checked against the row locked
 // in this same transaction rather than against the values the member composed against (sad.md §8),
@@ -53,8 +37,6 @@ export class AmendCustomerOrderCommand {
   constructor(
     private readonly customerOrderLifecycleRepository: CustomerOrderLifecycleRepository,
     private readonly customerOrderLifecycleService: CustomerOrderLifecycleService,
-    @Optional()
-    private readonly amendCustomerOrderRuntime: AmendCustomerOrderRuntime = defaultAmendCustomerOrderRuntime,
   ) {}
 
   @Transactional()
@@ -63,7 +45,7 @@ export class AmendCustomerOrderCommand {
     customerOrderId: string,
     input: AmendCustomerOrderInput,
   ): Promise<CustomerOrder> {
-    const amendedAt = this.amendCustomerOrderRuntime.now();
+    const amendedAt = new Date();
 
     if (isDefined(input.quantity)) {
       assert(

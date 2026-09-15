@@ -1,25 +1,21 @@
 import { Injectable } from '@nestjs/common';
 import { assert, assertDefined, assertFail } from '@warehouser/utils/asserts';
-import { isDefined, isEmpty, isUndefined } from '@warehouser/utils/predicates';
+import { isDefined, isEmpty } from '@warehouser/utils/predicates';
 import { omit } from 'lodash-es';
 import {
   purchaseDraftDeliveryAddressDisagreementError,
-  purchaseDraftInvalidDeliveryDestinationError,
   purchaseDraftLineDeliveryAddressInactiveError,
   purchaseDraftLineDeliveryAddressUnavailableError,
 } from 'purchase-drafts/domain/errors/purchase-draft.errors';
-import {
-  directLineNamesACustomerAddress,
-  isLineDestinationActive,
-  travelsViaWarehouse,
-} from 'purchase-drafts/domain/predicates/purchase-draft-delivery.predicates';
+import { isLineDestinationActive } from 'purchase-drafts/domain/predicates/purchase-draft-delivery.predicates';
 import type { LineDeliveryDestination } from 'purchase-drafts/domain/services/purchase-draft-assembly.service';
 import {
   assertApplied,
   pickStated,
   PurchaseDraftAssemblyService,
+  revisedDeliveryAddressId,
+  revisedDestination,
 } from 'purchase-drafts/domain/services/purchase-draft-assembly.service';
-import { DeliveryMode } from 'purchase-drafts/domain/value-objects/delivery-mode';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository';
@@ -41,45 +37,6 @@ export interface ReviseLineInput {
   readonly valueAddingNote?: string | null;
   readonly destination?: LineDeliveryDestination;
 }
-
-// AC-13/AC-14 — what the member said about where the line's goods travel, as the two columns hold
-// it. Coming back to the dock clears the address with the mode, because a Via Warehouse line's
-// destination *is* the Warehouse's own and there is no identifier to keep (AC-13); going Direct to
-// Customer while naming no Customer address is the one way to say "straight to my own site", and it
-// is refused bound to the destination field (AC-14).
-const statedDestination = (
-  destination: LineDeliveryDestination,
-): LineDeliveryDestination => {
-  if (travelsViaWarehouse(destination.deliveryMode)) {
-    return {
-      deliveryMode: DeliveryMode.ViaWarehouse,
-      customerDeliveryAddressId: null,
-    };
-  }
-
-  assert(
-    directLineNamesACustomerAddress(
-      destination.deliveryMode,
-      destination.customerDeliveryAddressId,
-    ),
-    purchaseDraftInvalidDeliveryDestinationError(),
-  );
-
-  return destination;
-};
-
-// A revision that says nothing about the destination leaves it as it was, and is not the same as one
-// that states it. Both readings are named so the command below asks each question once.
-const revisedDestination = (
-  destination: LineDeliveryDestination | undefined,
-): LineDeliveryDestination | undefined =>
-  isUndefined(destination) ? undefined : statedDestination(destination);
-
-// The Customer address the revised line would ship to, or nothing: a revision that says nothing
-// about the destination, and one that brings the line back to the dock, both name no address.
-const revisedDeliveryAddressId = (
-  destination: LineDeliveryDestination | undefined,
-): string | null => destination?.customerDeliveryAddressId ?? null;
 
 // AC-10a/AC-11/AC-12/AC-13/AC-14/AC-15a — revising a line's Item, ordered quantity, Pre-receipt
 // Requirement or destination. The write names the acting Warehouse as well as the draft, so a line

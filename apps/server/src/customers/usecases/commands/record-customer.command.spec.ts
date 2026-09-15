@@ -10,6 +10,8 @@ import { RecordCustomerCommand } from 'customers/usecases/commands/record-custom
 import { find } from 'lodash-es';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import type { CustomerEntity } from 'shared/domain/entities/customer.entity';
+import { freezeClockAt } from 'test/doubles/frozen-clock';
+import { pinGeneratedUuids } from 'test/doubles/generated-uuid';
 import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>
@@ -77,11 +79,6 @@ const commandWith = (
   new RecordCustomerCommand(
     directoryRepository as never,
     new CustomerAddressBookService(directoryRepository as never),
-    {
-      customerId: () => customerId,
-      deliveryAddressId: () => deliveryAddressId,
-      now: () => now,
-    },
   );
 
 const submission = {
@@ -101,6 +98,16 @@ const refusal = async (
     },
     (error: unknown) => error as ApplicationError,
   );
+
+vi.mock('node:crypto', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:crypto')>();
+
+  return { ...actual, randomUUID: vi.fn(actual.randomUUID) };
+});
+
+pinGeneratedUuids(customerId, deliveryAddressId);
+
+freezeClockAt(now);
 
 describe('RecordCustomerCommand (AC-01, AC-02, AC-03, AC-03a)', () => {
   // AC-01 — "records the Customer in that Warehouse as active with that address as its Main

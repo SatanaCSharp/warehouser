@@ -11,6 +11,7 @@ import {
   correctsItemDetails,
   isSkuFree,
 } from 'items/domain/predicates/item-correction.predicates';
+import { correctedValue } from 'items/domain/services/item-catalogue-correction.service';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
@@ -24,11 +25,6 @@ export interface CorrectItemInput {
 
 // The three conditions this command decides for itself. Each is used once, here, so each stays next
 // to that one implementation rather than in `items/domain/predicates/` (server-error-handling.md §1).
-
-// A field the request left out is carried forward from the row `findById` already confirmed, never
-// silently dropped.
-const correctedValue = (stated: string | undefined, current: string): string =>
-  stated ?? current;
 
 // AC-06b/AC-06c — description and Unit of Measure are always correctable. The SKU is correctable
 // only while nothing yet names the Item (`isNamedByDemandOrDraft`); once correctable, it must

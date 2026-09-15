@@ -32,6 +32,8 @@ import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import type { CustomerEntity } from 'shared/domain/entities/customer.entity';
 import type { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
 import type { ReviseDeliveryAddressPersistenceInput } from 'shared/domain/repositories/customer-address-book.repository';
+import { freezeClockAt } from 'test/doubles/frozen-clock';
+import { pinGeneratedUuids } from 'test/doubles/generated-uuid';
 import { describe, expect, it, vi } from 'vitest';
 
 // AC-05 / `chk_customer_delivery_addresses_main_is_active` — exactly one **active** address of a
@@ -301,35 +303,28 @@ const bookWith = (
   const addressBook = new CustomerAddressBookService(
     directoryRepository as never,
   );
-  const clock = { now: () => now };
-
   return {
     directoryRepository,
     addressBookRepository,
     add: new AddCustomerDeliveryAddressCommand(
       addressBookRepository as never,
       addressBook,
-      { ...clock, deliveryAddressId: () => addedAddressId },
     ),
     correct: new CorrectCustomerDeliveryAddressCommand(
       addressBookRepository as never,
       addressBook,
-      clock,
     ),
     setMain: new SetMainCustomerDeliveryAddressCommand(
       addressBookRepository as never,
       addressBook,
-      clock,
     ),
     deactivate: new DeactivateCustomerDeliveryAddressCommand(
       addressBookRepository as never,
       addressBook,
-      clock,
     ),
     reactivate: new ReactivateCustomerDeliveryAddressCommand(
       addressBookRepository as never,
       addressBook,
-      clock,
     ),
   };
 };
@@ -343,6 +338,16 @@ const refusal = async (
     },
     (error: unknown) => error as ApplicationError,
   );
+
+vi.mock('node:crypto', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:crypto')>();
+
+  return { ...actual, randomUUID: vi.fn(actual.randomUUID) };
+});
+
+pinGeneratedUuids(addedAddressId);
+
+freezeClockAt(now);
 
 describe('AddCustomerDeliveryAddressCommand (AC-04, AC-05)', () => {
   // AC-04 — "records both addresses against that Customer, makes the second one Main and the first
@@ -541,7 +546,7 @@ describe('DeactivateCustomerDeliveryAddressCommand (AC-06a, AC-06b, AC-07)', () 
     );
 
     const deactivated = find(customer.deliveryAddresses, { id: mainAddressId });
-    expect(deactivated?.deactivatedAt).toBe(now);
+    expect(deactivated?.deactivatedAt).toEqual(now);
     expect(deactivated?.addressText).toBe('Test Address 1, Test City');
     expect(deactivated?.accessNotes).toBe(
       'Gate code on the intercom; deliveries 09:00-17:00',

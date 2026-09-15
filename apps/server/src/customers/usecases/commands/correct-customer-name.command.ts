@@ -1,4 +1,4 @@
-import { Injectable, Optional } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import type { Customer } from 'customers/domain/mappers/customer.mapper';
 import { toCustomer } from 'customers/domain/mappers/customer.mapper';
 import {
@@ -10,14 +10,6 @@ import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository';
 import { CustomerDirectoryRepository } from 'shared/domain/repositories/customer-directory.repository';
-
-export interface CorrectCustomerNameRuntime {
-  readonly now: () => Date;
-}
-
-const defaultCorrectCustomerNameRuntime: CorrectCustomerNameRuntime = {
-  now: () => new Date(),
-};
 
 export interface CorrectCustomerNameInput {
   readonly name: string;
@@ -33,8 +25,6 @@ export class CorrectCustomerNameCommand {
     private readonly customerDirectoryRepository: CustomerDirectoryRepository,
     private readonly customerAddressBookRepository: CustomerAddressBookRepository,
     private readonly customerAddressBookService: CustomerAddressBookService,
-    @Optional()
-    private readonly correctCustomerNameRuntime: CorrectCustomerNameRuntime = defaultCorrectCustomerNameRuntime,
   ) {}
 
   @Transactional()
@@ -61,7 +51,7 @@ export class CorrectCustomerNameCommand {
       customerId,
     );
 
-    const correctedAt = this.correctCustomerNameRuntime.now();
+    const correctedAt = new Date();
     const outcome = await this.customerDirectoryRepository.correctCustomerName(
       customerId,
       currentUser.warehouseId,

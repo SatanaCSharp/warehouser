@@ -19,6 +19,7 @@ import { UserEntity } from 'shared/domain/entities/user.entity';
 import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
 import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 import { PurchaseDraftRejectionRepository } from 'shared/domain/repositories/purchase-draft-rejection.repository';
+import { freezeClockAt } from 'test/doubles/frozen-clock';
 import {
   buildWarehouse,
   buildWorkspace,
@@ -49,7 +50,6 @@ const transactions = new DbTransactionService(dataSource, context);
 
 const command = new AmendPurchaseDraftRejectionCommand(
   new PurchaseDraftRejectionRepository(dataSource),
-  { now: () => amendedAt },
 );
 
 /** `accounts.user_id` / `users.account_id` are a deferred circular FK pair, so both land together. */
@@ -334,6 +334,8 @@ const readRejection = (
   dataSource.manager
     .getRepository(PurchaseDraftLineRejectionEntity)
     .findOneBy({ id });
+
+freezeClockAt(amendedAt);
 
 describe('AmendPurchaseDraftRejectionCommand over a Closed draft', () => {
   beforeAll(async () => {

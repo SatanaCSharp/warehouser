@@ -1,4 +1,4 @@
-import { Injectable, Optional } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import type { Customer } from 'customers/domain/mappers/customer.mapper';
 import { toCustomer } from 'customers/domain/mappers/customer.mapper';
 import {
@@ -10,14 +10,6 @@ import { Transactional } from 'shared/decorators/transactional.decorator';
 import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository';
 import { CustomerDirectoryRepository } from 'shared/domain/repositories/customer-directory.repository';
 
-export interface ReactivateCustomerRuntime {
-  readonly now: () => Date;
-}
-
-const defaultReactivateCustomerRuntime: ReactivateCustomerRuntime = {
-  now: () => new Date(),
-};
-
 // AC-06 "and lets the member make it active again" — the deactivation inverted (sad.md §6.3), and
 // the same Permission governs both directions (openapi.yaml `reactivateCustomer`). Clearing the
 // instant is the whole change: the Customer's Delivery Addresses are, once more, in whatever state
@@ -28,8 +20,6 @@ export class ReactivateCustomerCommand {
     private readonly customerDirectoryRepository: CustomerDirectoryRepository,
     private readonly customerAddressBookRepository: CustomerAddressBookRepository,
     private readonly customerAddressBookService: CustomerAddressBookService,
-    @Optional()
-    private readonly reactivateCustomerRuntime: ReactivateCustomerRuntime = defaultReactivateCustomerRuntime,
   ) {}
 
   @Transactional()
@@ -43,7 +33,7 @@ export class ReactivateCustomerCommand {
       currentUser.warehouseId,
     );
 
-    const reactivatedAt = this.reactivateCustomerRuntime.now();
+    const reactivatedAt = new Date();
     const outcome =
       await this.customerDirectoryRepository.setCustomerDeactivation(
         customerId,

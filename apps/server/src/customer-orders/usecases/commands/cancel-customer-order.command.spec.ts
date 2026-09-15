@@ -6,6 +6,7 @@ import { CustomerOrderLifecycleService } from 'customer-orders/domain/services/c
 import { CancelCustomerOrderCommand } from 'customer-orders/usecases/commands/cancel-customer-order.command';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import type { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
+import { freezeClockAt } from 'test/doubles/frozen-clock';
 import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>
@@ -69,8 +70,9 @@ const commandWith = (
   new CancelCustomerOrderCommand(
     lifecycleRepository as never,
     new CustomerOrderLifecycleService(lifecycleRepository as never),
-    { now: () => now },
   );
+
+freezeClockAt(now);
 
 describe('CancelCustomerOrderCommand (AC-19a)', () => {
   // AC-19a — the cancellation records the reason, the acting member and the time, together.

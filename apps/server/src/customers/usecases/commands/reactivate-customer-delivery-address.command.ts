@@ -1,4 +1,4 @@
-import { Injectable, Optional } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import type { Customer } from 'customers/domain/mappers/customer.mapper';
 import { toCustomer } from 'customers/domain/mappers/customer.mapper';
 import {
@@ -8,15 +8,6 @@ import {
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository';
-
-export interface ReactivateCustomerDeliveryAddressRuntime {
-  readonly now: () => Date;
-}
-
-const defaultReactivateCustomerDeliveryAddressRuntime: ReactivateCustomerDeliveryAddressRuntime =
-  {
-    now: () => new Date(),
-  };
 
 // AC-06a inverted, AC-12 — the address is offered again wherever one is chosen. It comes back as an
 // **ordinary** address, never as a second Main one, which is
@@ -31,8 +22,6 @@ export class ReactivateCustomerDeliveryAddressCommand {
   constructor(
     private readonly customerAddressBookRepository: CustomerAddressBookRepository,
     private readonly customerAddressBookService: CustomerAddressBookService,
-    @Optional()
-    private readonly reactivateCustomerDeliveryAddressRuntime: ReactivateCustomerDeliveryAddressRuntime = defaultReactivateCustomerDeliveryAddressRuntime,
   ) {}
 
   @Transactional()
@@ -48,7 +37,7 @@ export class ReactivateCustomerDeliveryAddressCommand {
       currentUser.warehouseId,
     );
 
-    const reactivatedAt = this.reactivateCustomerDeliveryAddressRuntime.now();
+    const reactivatedAt = new Date();
     const outcome =
       await this.customerAddressBookRepository.reactivateDeliveryAddress(
         deliveryAddressId,

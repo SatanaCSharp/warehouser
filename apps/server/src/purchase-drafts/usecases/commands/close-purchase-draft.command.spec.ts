@@ -12,6 +12,7 @@ import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
 import { ClosePurchaseDraftCommand } from 'purchase-drafts/usecases/commands/close-purchase-draft.command';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { freezeClockAt } from 'test/doubles/frozen-clock';
 import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>
@@ -49,11 +50,11 @@ const commandWith = ({
     findDraftHeader: vi.fn().mockResolvedValue(header),
     close: vi.fn().mockResolvedValue(closed),
   };
-  const command = new ClosePurchaseDraftCommand(closureRepository as never, {
-    now: () => now,
-  });
+  const command = new ClosePurchaseDraftCommand(closureRepository as never);
   return { command, closureRepository };
 };
+
+freezeClockAt(now);
 
 describe('ClosePurchaseDraftCommand', () => {
   // AC-21 — a frozen draft resolves for closure and the reason, member and time are recorded.

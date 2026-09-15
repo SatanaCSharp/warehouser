@@ -28,6 +28,7 @@ import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalog
 import { PackagingTypeCatalogueRepository } from 'shared/domain/repositories/packaging-type-catalogue.repository';
 import { PurchaseDraftAssemblyRepository } from 'shared/domain/repositories/purchase-draft-assembly.repository';
 import { PurchaseDraftFreezeRepository } from 'shared/domain/repositories/purchase-draft-freeze.repository';
+import { freezeClockAt } from 'test/doubles/frozen-clock';
 import {
   buildWarehouse,
   buildWorkspace,
@@ -62,7 +63,6 @@ const readyCommand = new ReadyPurchaseDraftCommand(
   freezeRepository,
   assemblyRepository,
   assemblyService,
-  { now: () => readiedAt },
 );
 const addLineCommand = new AddPurchaseDraftLineCommand(
   assemblyRepository,
@@ -321,6 +321,8 @@ const readyInTransaction = (
   transactions.executeInTransaction({}, () =>
     readyCommand.execute(currentUserFor(seeded), draftId),
   );
+
+freezeClockAt(readiedAt);
 
 // eslint-disable-next-line max-lines-per-function -- integration suite setup is inherently long
 describe('ReadyPurchaseDraftCommand freezing the delivery statement', () => {

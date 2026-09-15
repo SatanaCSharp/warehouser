@@ -14,6 +14,7 @@ import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
 import { ReadyPurchaseDraftCommand } from 'purchase-drafts/usecases/commands/ready-purchase-draft.command';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { freezeClockAt } from 'test/doubles/frozen-clock';
 import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>
@@ -118,10 +119,11 @@ const commandWith = ({
     freezeRepository as never,
     assemblyRepository as never,
     assemblyService as never,
-    { now: () => now },
   );
   return { command, assemblyRepository, freezeRepository, assemblyService };
 };
+
+freezeClockAt(now);
 
 describe('ReadyPurchaseDraftCommand', () => {
   // AC-14a — a draft holding no lines is refused before any persistence write is attempted.

@@ -4,8 +4,8 @@ import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user'
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
 import { workspaceTargetUnavailableError } from 'shared/errors/cross-module.errors';
+import { validatedAccessName } from 'shared/errors/invalid-name.error';
 import { scopedToWorkspace } from 'shared/predicates/tenancy.predicates';
-import { validateWarehouseName } from 'warehouses/usecases/commands/create-warehouse.command';
 
 export interface RenameWarehouseInput {
   readonly warehouseId: string;
@@ -36,7 +36,7 @@ export class RenameWarehouseCommand {
     currentUser: WorkspaceCurrentUser,
     input: RenameWarehouseInput,
   ): Promise<WarehouseWriteProjection> {
-    const name = validateWarehouseName(input.name);
+    const name = validatedAccessName(input.name);
 
     const warehouse = await this.warehouseLifecycleRepository.lockWarehouse(
       input.warehouseId,

@@ -1,5 +1,3 @@
-import { randomUUID } from 'node:crypto';
-
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { SignInCommand } from 'auth/usecases/commands/sign-in.command';
 import { accessCurrentUser } from 'shared/access/access-current-user';
@@ -33,6 +31,7 @@ import {
   describe,
   expect,
   it,
+  vi,
 } from 'vitest';
 
 const now = new Date('2026-08-06T12:00:00.000Z');
@@ -65,6 +64,23 @@ const USERS_DELETE = 'USERS:DELETE';
 const validEmail = 'new.member@example.test';
 const validPassword = 'a-valid-password-1';
 
+// The command hashes through `hashPassword` directly now, so the suite controls the module. The
+// default is the synthetic credential every case but the sign-in interop test wants.
+vi.mock('shared/domain/security/password-hashing', async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import('shared/domain/security/password-hashing')
+    >();
+
+  return { ...actual, hashPassword: vi.fn() };
+});
+
+const actualHashPassword = (
+  await vi.importActual<
+    typeof import('shared/domain/security/password-hashing')
+  >('shared/domain/security/password-hashing')
+).hashPassword;
+
 // eslint-disable-next-line max-lines-per-function, max-statements -- integration suite setup is inherently long
 describe('CreateMemberCommand', () => {
   const context = new DbTransactionContext(dataSource);
@@ -76,52 +92,32 @@ describe('CreateMemberCommand', () => {
   const memberLifecycleRepository = new MemberLifecycleRepository(dataSource);
   const authenticationRepository = new AuthenticationRepository(dataSource);
 
-  let newMemberId = uuid('400000000001');
-
   const createCommand = (): CreateMemberCommand =>
     new CreateMemberCommand(
       accessCurrentUserRepository,
       roleLifecycleRepository,
       memberLifecycleRepository,
       authenticationRepository,
-      () =>
-        Promise.resolve({
-          algorithm: 'scrypt',
-          hash: 'synthetic-hash',
-          parameters: { cost: 1_024 },
-        }),
-      {
-        identityId: () => newMemberId,
-        now: () => now,
-      },
     );
 
   // Fast-but-real scrypt parameters, matching the pattern already used by
-  // `shared/domain/security/password-hashing.spec.ts`'s `testParameters` —
-  // unlike the synthetic mock above (which every other test in this suite
-  // uses to stay fast and decoupled from hashing correctness), the sign-in
-  // interop test below signs in through the real, unmodified `SignInCommand`
-  // / `verifyPassword`, so the stored credential must actually correspond to
-  // the submitted password.
-  const createCommandWithRealHashing = (): CreateMemberCommand =>
-    new CreateMemberCommand(
-      accessCurrentUserRepository,
-      roleLifecycleRepository,
-      memberLifecycleRepository,
-      authenticationRepository,
-      (password: string) =>
-        hashPassword(password, {
-          cost: 1_024,
-          blockSize: 8,
-          parallelization: 1,
-          keyLength: 32,
-          maxMemory: 4 * 1024 * 1024,
-        }),
-      {
-        identityId: () => newMemberId,
-        now: () => now,
-      },
+  // `shared/domain/security/password-hashing.spec.ts`'s `testParameters`.
+  // Every other test in this suite leaves the synthetic hash in place to stay
+  // fast and decoupled from hashing correctness, but the sign-in interop test
+  // below signs in through the real, unmodified `SignInCommand` /
+  // `verifyPassword`, so the stored credential must actually correspond to the
+  // submitted password.
+  const useRealHashing = (): void => {
+    vi.mocked(hashPassword).mockImplementation((password) =>
+      actualHashPassword(password, {
+        cost: 1_024,
+        blockSize: 8,
+        parallelization: 1,
+        keyLength: 32,
+        maxMemory: 4 * 1024 * 1024,
+      }),
     );
+  };
 
   beforeAll(async () => {
     await dataSource.initialize();
@@ -138,7 +134,11 @@ describe('CreateMemberCommand', () => {
   });
 
   beforeEach(() => {
-    newMemberId = randomUUID();
+    vi.mocked(hashPassword).mockResolvedValue({
+      algorithm: 'scrypt',
+      hash: 'synthetic-hash',
+      parameters: { cost: 1_024 },
+    });
   });
 
   afterEach(async () => {
@@ -342,14 +342,13 @@ describe('CreateMemberCommand', () => {
     );
 
     expect(result).toMatchObject({
-      id: newMemberId,
       email: validEmail,
       roleId: permissiveCustomRoleId,
     });
 
     const membership = await dataSource.manager
       .getRepository(WarehouseMembershipEntity)
-      .findOneBy({ userId: newMemberId });
+      .findOneBy({ userId: result.id });
     expect(membership).toMatchObject({
       warehouseId: warehouseAId,
       workspaceId,
@@ -359,7 +358,7 @@ describe('CreateMemberCommand', () => {
 
     const sessions = await dataSource.query(
       'SELECT count(*) FROM sessions WHERE account_id = $1',
-      [newMemberId],
+      [result.id],
     );
     expect(sessions).toEqual([{ count: '0' }]);
   });
@@ -367,7 +366,7 @@ describe('CreateMemberCommand', () => {
   it('AC-24 (T27 DoD): the created member belongs to the Workspace that owns the Warehouse they were created in, and to no other', async () => {
     await seedBaseline();
 
-    await transactions.executeInTransaction({}, () =>
+    const created = await transactions.executeInTransaction({}, () =>
       createCommand().execute(actor(), {
         email: validEmail,
         password: validPassword,
@@ -377,20 +376,20 @@ describe('CreateMemberCommand', () => {
 
     const createdUser = await dataSource.manager
       .getRepository(UserEntity)
-      .findOneBy({ id: newMemberId });
+      .findOneBy({ id: created.id });
     expect(createdUser?.workspaceId).toBe(workspaceId);
     expect(createdUser?.workspaceId).not.toBe(otherWorkspaceId);
 
     const membership = await dataSource.manager
       .getRepository(WarehouseMembershipEntity)
-      .findOneBy({ userId: newMemberId, warehouseId: warehouseAId });
+      .findOneBy({ userId: created.id, warehouseId: warehouseAId });
     expect(membership?.workspaceId).toBe(workspaceId);
   });
 
   it("T27 DoD: the created member's Workspace relation survives losing every Warehouse membership (supports AC-21)", async () => {
     await seedBaseline();
 
-    await transactions.executeInTransaction({}, () =>
+    const created = await transactions.executeInTransaction({}, () =>
       createCommand().execute(actor(), {
         email: validEmail,
         password: validPassword,
@@ -400,11 +399,11 @@ describe('CreateMemberCommand', () => {
 
     await dataSource.manager
       .getRepository(WarehouseMembershipEntity)
-      .delete({ userId: newMemberId, warehouseId: warehouseAId });
+      .delete({ userId: created.id, warehouseId: warehouseAId });
 
     const remainingMemberships = await dataSource.manager
       .getRepository(WarehouseMembershipEntity)
-      .countBy({ userId: newMemberId });
+      .countBy({ userId: created.id });
     expect(remainingMemberships).toBe(0);
 
     // The Workspace relation is a plain reference set at creation time, never
@@ -412,7 +411,7 @@ describe('CreateMemberCommand', () => {
     // it must still be there with every membership gone.
     const survivingUser = await dataSource.manager
       .getRepository(UserEntity)
-      .findOneBy({ id: newMemberId });
+      .findOneBy({ id: created.id });
     expect(survivingUser?.workspaceId).toBe(workspaceId);
   });
 
@@ -650,8 +649,9 @@ describe('CreateMemberCommand', () => {
   it('DoD: a newly created member can sign in immediately with their initial email and password (US-05 / AC-12), via the existing unchanged sign-in command', async () => {
     await seedBaseline();
 
-    await transactions.executeInTransaction({}, () =>
-      createCommandWithRealHashing().execute(actor(), {
+    useRealHashing();
+    const created = await transactions.executeInTransaction({}, () =>
+      createCommand().execute(actor(), {
         email: validEmail,
         password: validPassword,
         roleId: permissiveCustomRoleId,
@@ -664,10 +664,10 @@ describe('CreateMemberCommand', () => {
       password: validPassword,
     });
 
-    expect(signedIn.userId).toBe(newMemberId);
+    expect(signedIn.userId).toBe(created.id);
 
     const access = await accessCurrentUserRepository.resolveCurrentAccess(
-      newMemberId,
+      created.id,
       warehouseAId,
     );
     expect(access).toMatchObject({

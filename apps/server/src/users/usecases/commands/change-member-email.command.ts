@@ -1,6 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { ErrorCode } from '@warehouser/shared-types/enums';
-import { ApplicationError } from '@warehouser/shared-types/errors';
 import { assert, assertDefined } from '@warehouser/utils/asserts';
 import { isDefined } from '@warehouser/utils/predicates';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
@@ -16,6 +14,7 @@ import {
   managerRoleProtectedError,
   permissionExceededError,
   selfActionDeniedError,
+  targetUnavailableError,
 } from 'users/domain/errors/users.errors';
 import {
   exceedsActorPermissions,
@@ -33,29 +32,12 @@ export interface ChangedMemberEmail {
   readonly email: string;
 }
 
-export interface ChangeMemberEmailRuntime {
-  readonly now: () => Date;
-}
-
-// AC-09's cross-Warehouse-hiding denial is the identical authorization-
-// boundary condition `access` already produces for its own administration
-// actions (sad.md §4) — this feature reuses the same stable ErrorCode rather
-// than redefining it, without importing `access`'s feature-owned error
-// factories (`users` never imports `access/*`/`auth/*`).
-const targetUnavailableError = (): ApplicationError =>
-  new ApplicationError(ErrorCode.ACCESS_TARGET_UNAVAILABLE);
-
-const defaultRuntime: ChangeMemberEmailRuntime = {
-  now: () => new Date(),
-};
-
 @Injectable()
 export class ChangeMemberEmailCommand {
   constructor(
     private readonly memberLifecycleRepository: MemberLifecycleRepository,
     private readonly accessCurrentUserRepository: AccessCurrentUserRepository,
     private readonly authenticationRepository: AuthenticationRepository,
-    private readonly runtime: ChangeMemberEmailRuntime = defaultRuntime,
   ) {}
 
   @Transactional()
@@ -117,7 +99,7 @@ export class ChangeMemberEmailCommand {
       emailAlreadyRegisteredError(),
     );
 
-    const now = this.runtime.now();
+    const now = new Date();
 
     // The target's Sessions are intentionally left untouched (AC-04) — unlike
     // a password change, an email change does not revoke active Sessions.

@@ -1,4 +1,4 @@
-import { Injectable, Optional } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
 import { DemandAllocationService } from 'customer-orders/domain/services/demand-allocation.service';
 import { purchaseDraftConcurrentChangeError } from 'purchase-drafts/domain/errors/purchase-draft.errors';
@@ -21,7 +21,6 @@ import { EndingKind } from 'purchase-drafts/domain/value-objects/delivery-mode';
 import type {
   EndingAllocationInput,
   PurchaseDraftLineEnded,
-  PurchaseDraftLineEndingRuntime,
 } from 'purchase-drafts/usecases/commands/confirm-purchase-draft-line-arrival.command';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
@@ -37,10 +36,6 @@ export interface RecordPurchaseDraftLineDeliveryInput {
   readonly preReceiptConformance?: EndingPreReceiptConformanceInput | null;
   readonly allocations: readonly EndingAllocationInput[];
 }
-
-const defaultPurchaseDraftLineEndingRuntime: PurchaseDraftLineEndingRuntime = {
-  now: () => new Date(),
-};
 
 // AC-19/AC-20/AC-20a/AC-21 — the **Direct to Customer** half of the per-line ending (ADR 0002).
 // What the customer received on one line, as the member was told it.
@@ -70,8 +65,6 @@ export class RecordPurchaseDraftLineDeliveryCommand {
     private readonly arrivalConfirmationRepository: ArrivalConfirmationRepository,
     private readonly demandAllocationService: DemandAllocationService,
     private readonly arrivalInspectionService: ArrivalInspectionService,
-    @Optional()
-    private readonly runtime: PurchaseDraftLineEndingRuntime = defaultPurchaseDraftLineEndingRuntime,
   ) {}
 
   @Transactional()
@@ -103,7 +96,7 @@ export class RecordPurchaseDraftLineDeliveryCommand {
     );
 
     const acceptedQuantity = deriveAcceptedQuantity(submission);
-    const endingRecordedAt = this.runtime.now();
+    const endingRecordedAt = new Date();
 
     const written = await this.arrivalConfirmationRepository.recordLineEnding({
       purchaseDraftId,

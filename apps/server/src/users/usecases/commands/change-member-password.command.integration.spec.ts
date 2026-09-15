@@ -15,6 +15,7 @@ import { AccessCurrentUserRepository } from 'shared/domain/repositories/access-c
 import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
 import { MemberLifecycleRepository } from 'shared/domain/repositories/member-lifecycle.repository';
 import type { PasswordCredential } from 'shared/domain/security/password-hashing';
+import { freezeClockAt } from 'test/doubles/frozen-clock';
 import {
   accountEntityFactory,
   sessionEntityFactory,
@@ -22,7 +23,15 @@ import {
   warehouseMembershipEntityFactory,
 } from 'test/factories/entity-factories';
 import { ChangeMemberPasswordCommand } from 'users/usecases/commands/change-member-password.command';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 
 const now = new Date('2026-08-06T12:00:00.000Z');
 
@@ -42,15 +51,29 @@ const actorUserId = uuid('000000000301');
 const targetUserId = uuid('000000000302');
 const otherAccountUserId = uuid('000000000303');
 
-// The credential produced by a fast, test-only hash function — kept
-// deliberately unrealistic (not scrypt) so integration tests stay fast; the
-// command must accept whatever `hashPassword` implementation it is given.
-const fakeHash = (password: string): Promise<PasswordCredential> =>
-  Promise.resolve({
-    algorithm: 'test',
-    hash: `hashed:${password}`,
-    parameters: { marker: 'test-hash' },
-  });
+// The command hashes through `hashPassword` directly, so this suite controls the module rather
+// than the constructor. The stand-in stays deliberately unrealistic (not scrypt) to keep the
+// integration tier fast; what these cases assert is which credential was stored, never how it
+// was derived.
+vi.mock('shared/domain/security/password-hashing', async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import('shared/domain/security/password-hashing')
+    >();
+
+  return {
+    ...actual,
+    hashPassword: vi.fn((password: string): Promise<PasswordCredential> =>
+      Promise.resolve({
+        algorithm: 'test',
+        hash: `hashed:${password}`,
+        parameters: { marker: 'test-hash' },
+      }),
+    ),
+  };
+});
+
+freezeClockAt(now);
 
 // eslint-disable-next-line max-lines-per-function -- integration suite setup is inherently long
 describe('ChangeMemberPasswordCommand', () => {
@@ -67,8 +90,6 @@ describe('ChangeMemberPasswordCommand', () => {
       memberLifecycleRepository,
       accessCurrentUserRepository,
       authenticationRepository,
-      fakeHash,
-      () => now,
     );
 
   beforeAll(async () => {

@@ -1,7 +1,7 @@
+import { randomUUID } from 'node:crypto';
+
 import { assert, assertDefined } from '@warehouser/utils/asserts';
 import { isDefined } from '@warehouser/utils/predicates';
-import type { AuthRuntime } from 'auth/domain/auth-runtime';
-import { authRuntime } from 'auth/domain/auth-runtime';
 import { Session } from 'auth/domain/entities/session';
 import {
   AuthInvalidCredentialsError,
@@ -9,7 +9,6 @@ import {
 } from 'auth/domain/errors/auth.errors';
 import { toAccount } from 'auth/domain/mappers/account.mapper';
 import { toSessionEntity } from 'auth/domain/mappers/session.mapper';
-import type { GeneratedSessionSecret } from 'auth/domain/security/session-secret';
 import { generateSessionSecret } from 'auth/domain/security/session-secret';
 import { SessionId } from 'auth/domain/value-objects/identity-id';
 import { SessionDigest } from 'auth/domain/value-objects/session-digest';
@@ -33,13 +32,7 @@ export interface SignedInSession {
 }
 
 export class SignInCommand {
-  constructor(
-    private readonly authentication: AuthenticationRepository,
-    private readonly verify: typeof verifyPassword = verifyPassword,
-    private readonly dummyVerify: typeof dummyVerifyPassword = dummyVerifyPassword,
-    private readonly generateSecret: () => GeneratedSessionSecret = generateSessionSecret,
-    private readonly runtime: AuthRuntime = authRuntime,
-  ) {}
+  constructor(private readonly authentication: AuthenticationRepository) {}
 
   async execute(input: {
     email: string;
@@ -55,24 +48,24 @@ export class SignInCommand {
     const accountEntity =
       await this.authentication.findAccountByNormalizedEmail(email.value);
     if (!isDefined(accountEntity)) {
-      await this.dummyVerify(password.value);
+      await dummyVerifyPassword(password.value);
     }
     assertDefined(accountEntity, AuthInvalidCredentialsError());
     const account = toAccount(accountEntity);
 
     assert(
       matchesStoredCredential(
-        await this.verify(password.value, account.credential),
+        await verifyPassword(password.value, account.credential),
       ),
       AuthInvalidCredentialsError(),
     );
 
-    const generated = this.generateSecret();
+    const generated = generateSessionSecret();
     const session = Session.establish({
-      id: SessionId.create(this.runtime.sessionId()),
+      id: SessionId.create(randomUUID()),
       accountId: account.id,
       digest: SessionDigest.create(generated.digest),
-      establishedAt: this.runtime.now(),
+      establishedAt: new Date(),
     });
     await this.authentication.createSession(toSessionEntity(session));
 

@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { Injectable, Optional } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import {
   assertApplied,
   PurchaseDraftAssemblyService,
@@ -17,14 +17,6 @@ export interface AddLineInput {
   readonly valueAddingNote?: string | null;
 }
 
-export interface AddPurchaseDraftLineRuntime {
-  readonly purchaseDraftLineId: () => string;
-}
-
-const defaultAddPurchaseDraftLineRuntime: AddPurchaseDraftLineRuntime = {
-  purchaseDraftLineId: randomUUID,
-};
-
 // AC-10a/AC-11/AC-12/AC-13 — adding a line to a draft still being assembled: check the rules that
 // are this command's to check, hand the write to the repository, and turn the outcome it reports
 // into the refusal openapi.yaml specifies for this route.
@@ -33,8 +25,6 @@ export class AddPurchaseDraftLineCommand {
   constructor(
     private readonly assemblyRepository: PurchaseDraftAssemblyRepository,
     private readonly assemblyService: PurchaseDraftAssemblyService,
-    @Optional()
-    private readonly runtime: AddPurchaseDraftLineRuntime = defaultAddPurchaseDraftLineRuntime,
   ) {}
 
   @Transactional()
@@ -49,7 +39,7 @@ export class AddPurchaseDraftLineCommand {
     ]);
 
     const outcome = await this.assemblyRepository.addLine({
-      id: this.runtime.purchaseDraftLineId(),
+      id: randomUUID(),
       purchaseDraftId,
       warehouseId: currentUser.warehouseId,
       itemId: input.itemId,

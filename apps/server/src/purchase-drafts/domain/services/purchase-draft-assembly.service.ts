@@ -10,6 +10,7 @@ import { uniq } from 'lodash-es';
 import type { DisagreeingDeliveryLink } from 'purchase-drafts/domain/errors/purchase-draft.errors';
 import {
   purchaseDraftFrozenError,
+  purchaseDraftInvalidDeliveryDestinationError,
   purchaseDraftTargetUnavailableError,
   purchaseDraftUnknownPackagingTypeError,
 } from 'purchase-drafts/domain/errors/purchase-draft.errors';
@@ -18,7 +19,11 @@ import {
   isKnownPackagingType,
   isTargetMissingOutcome,
 } from 'purchase-drafts/domain/predicates/purchase-draft-assembly.predicates';
-import { travelsDirectToCustomer } from 'purchase-drafts/domain/predicates/purchase-draft-delivery.predicates';
+import {
+  directLineNamesACustomerAddress,
+  travelsDirectToCustomer,
+  travelsViaWarehouse,
+} from 'purchase-drafts/domain/predicates/purchase-draft-delivery.predicates';
 import { DeliveryMode } from 'purchase-drafts/domain/value-objects/delivery-mode';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository';
@@ -237,3 +242,55 @@ export class PurchaseDraftAssemblyService {
     }
   }
 }
+
+// A field a composer left out and one it stated as `null` mean the same thing to the row: nothing
+// stated. Read through one function so every optional field below defaults identically, and so the
+// command reads as the walk over lines and links that it is.
+export const statedOrNothing = <T>(value: T | null | undefined): T | null =>
+  value ?? null;
+
+/** The links a composed line states, or none — a line with no `links` field and one with an empty
+ * list mean the same thing to the walk that records them. Stated structurally so the domain layer
+ * does not import the create command's input type back. */
+export const statedLinks = <T>(line: {
+  readonly links?: readonly T[];
+}): readonly T[] => line.links ?? [];
+
+// AC-13/AC-14 — what the member said about where the line's goods travel, as the two columns hold
+// it. Coming back to the dock clears the address with the mode, because a Via Warehouse line's
+// destination *is* the Warehouse's own and there is no identifier to keep (AC-13); going Direct to
+// Customer while naming no Customer address is the one way to say "straight to my own site", and it
+// is refused bound to the destination field (AC-14).
+export const statedDestination = (
+  destination: LineDeliveryDestination,
+): LineDeliveryDestination => {
+  if (travelsViaWarehouse(destination.deliveryMode)) {
+    return {
+      deliveryMode: DeliveryMode.ViaWarehouse,
+      customerDeliveryAddressId: null,
+    };
+  }
+
+  assert(
+    directLineNamesACustomerAddress(
+      destination.deliveryMode,
+      destination.customerDeliveryAddressId,
+    ),
+    purchaseDraftInvalidDeliveryDestinationError(),
+  );
+
+  return destination;
+};
+
+// A revision that says nothing about the destination leaves it as it was, and is not the same as one
+// that states it. Both readings are named so the command below asks each question once.
+export const revisedDestination = (
+  destination: LineDeliveryDestination | undefined,
+): LineDeliveryDestination | undefined =>
+  isUndefined(destination) ? undefined : statedDestination(destination);
+
+// The Customer address the revised line would ship to, or nothing: a revision that says nothing
+// about the destination, and one that brings the line back to the dock, both name no address.
+export const revisedDeliveryAddressId = (
+  destination: LineDeliveryDestination | undefined,
+): string | null => destination?.customerDeliveryAddressId ?? null;

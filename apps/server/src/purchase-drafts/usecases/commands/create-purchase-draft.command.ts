@@ -1,7 +1,11 @@
 import { randomUUID } from 'node:crypto';
 
-import { Injectable, Optional } from '@nestjs/common';
-import { PurchaseDraftAssemblyService } from 'purchase-drafts/domain/services/purchase-draft-assembly.service';
+import { Injectable } from '@nestjs/common';
+import {
+  PurchaseDraftAssemblyService,
+  statedLinks,
+  statedOrNothing,
+} from 'purchase-drafts/domain/services/purchase-draft-assembly.service';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import type { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
@@ -29,30 +33,6 @@ export interface CreateDraftInput {
   readonly lines: readonly CreateDraftLineInput[];
 }
 
-export interface CreatePurchaseDraftRuntime {
-  readonly purchaseDraftId: () => string;
-  readonly purchaseDraftLineId: () => string;
-  readonly purchaseDraftLineLinkId: () => string;
-  readonly now: () => Date;
-}
-
-const defaultCreatePurchaseDraftRuntime: CreatePurchaseDraftRuntime = {
-  purchaseDraftId: randomUUID,
-  purchaseDraftLineId: randomUUID,
-  purchaseDraftLineLinkId: randomUUID,
-  now: () => new Date(),
-};
-
-// A field a composer left out and one it stated as `null` mean the same thing to the row: nothing
-// stated. Read through one function so every optional field below defaults identically, and so the
-// command reads as the walk over lines and links that it is.
-const statedOrNothing = <T>(value: T | null | undefined): T | null =>
-  value ?? null;
-
-const statedLinks = (
-  line: CreateDraftLineInput,
-): readonly CreateDraftLineLinkInput[] => line.links ?? [];
-
 // AC-10/AC-11/AC-11a/AC-12/AC-13 — recording a Purchase Draft in the Draft state, with the lines
 // and links it was composed with. Coverage — whether links overlap or fail to sum to their line's
 // quantity — is the member's decision and is passed through unadjusted (AC-11a). Per-line
@@ -63,8 +43,6 @@ export class CreatePurchaseDraftCommand {
   constructor(
     private readonly assemblyRepository: PurchaseDraftAssemblyRepository,
     private readonly assemblyService: PurchaseDraftAssemblyService,
-    @Optional()
-    private readonly runtime: CreatePurchaseDraftRuntime = defaultCreatePurchaseDraftRuntime,
   ) {}
 
   @Transactional()
@@ -72,7 +50,7 @@ export class CreatePurchaseDraftCommand {
     currentUser: AccessCurrentUser,
     input: CreateDraftInput,
   ): Promise<PurchaseDraftEntity> {
-    const createdAt = this.runtime.now();
+    const createdAt = new Date();
 
     await this.assemblyService.assertPackagingTypesKnown(
       input.lines.map((line) => line.packagingTypeId),
@@ -92,7 +70,7 @@ export class CreatePurchaseDraftCommand {
         // AC-11a — recorded exactly as composed; nothing here reconciles it against the line, the
         // Customer Order or any other link.
         links.push({
-          id: this.runtime.purchaseDraftLineLinkId(),
+          id: randomUUID(),
           customerOrderId: link.customerOrderId,
           statedQuantity: link.statedQuantity,
         });
@@ -100,7 +78,7 @@ export class CreatePurchaseDraftCommand {
 
       // AC-12 — each line's Pre-receipt Requirement is recorded on that line alone.
       lines.push({
-        id: this.runtime.purchaseDraftLineId(),
+        id: randomUUID(),
         itemId: line.itemId,
         orderedQuantity: line.orderedQuantity,
         packagingTypeId: statedOrNothing(line.packagingTypeId),
@@ -112,7 +90,7 @@ export class CreatePurchaseDraftCommand {
     // AC-10 — the draft is recorded in the Draft state; an Expected Arrival Date may legitimately
     // be left unstated.
     return this.assemblyRepository.createDraft({
-      id: this.runtime.purchaseDraftId(),
+      id: randomUUID(),
       warehouseId: currentUser.warehouseId,
       expectedArrivalDate: statedOrNothing(input.expectedArrivalDate),
       createdByUserId: currentUser.userId,

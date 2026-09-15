@@ -6,6 +6,7 @@ import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user'
 import type { TransactionalMetadata } from 'shared/decorators/transactional.decorator';
 import { TRANSACTIONAL_KEY } from 'shared/decorators/transactional.decorator';
 import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
+import { pinGeneratedUuids } from 'test/doubles/generated-uuid';
 import { repositoryDouble } from 'test/doubles/repository-double';
 import { describe, expect, it, vi } from 'vitest';
 // RED for T20 — neither command exists yet. This unit spec covers AC-08 only
@@ -51,6 +52,14 @@ const provisionInitialAccessDouble = () => ({
   }),
 });
 
+vi.mock('node:crypto', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:crypto')>();
+
+  return { ...actual, randomUUID: vi.fn(actual.randomUUID) };
+});
+
+pinGeneratedUuids(warehouseId);
+
 describe('CreateWarehouseCommand', () => {
   it.each([
     ['empty after trimming', '   ', 'empty'],
@@ -73,7 +82,6 @@ describe('CreateWarehouseCommand', () => {
       const command = new CreateWarehouseCommand(
         warehouseLifecycleRepository,
         provisionInitialAccess,
-        { warehouseId: () => warehouseId },
       );
 
       await expect(
@@ -96,7 +104,6 @@ describe('CreateWarehouseCommand', () => {
     const command = new CreateWarehouseCommand(
       warehouseLifecycleRepository,
       provisionInitialAccess,
-      { warehouseId: () => warehouseId },
     );
 
     await expect(
@@ -138,7 +145,6 @@ describe('CreateWarehouseCommand', () => {
     const command = new CreateWarehouseCommand(
       warehouseLifecycleRepository,
       provisionInitialAccess,
-      { warehouseId: () => warehouseId },
     );
 
     await expect(
@@ -155,7 +161,6 @@ describe('CreateWarehouseCommand', () => {
     const command = new CreateWarehouseCommand(
       warehouseLifecycleRepository,
       provisionInitialAccess,
-      { warehouseId: () => warehouseId },
     );
 
     await expect(

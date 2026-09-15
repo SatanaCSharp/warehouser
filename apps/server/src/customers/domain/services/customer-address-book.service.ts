@@ -269,3 +269,16 @@ export class CustomerAddressBookService {
     assertCustomerNameAvailable(name, compact([holder]), correctedCustomerId);
   }
 }
+
+// The address the member named, among the rows this transaction locked, or nothing — an address of
+// another Customer resolves to nothing and is refused exactly as a missing one is.
+export const lockedDeliveryAddress = (
+  locked: readonly DeliveryAddressState[],
+  deliveryAddressId: string,
+): DeliveryAddressState | null =>
+  find(locked, (candidate) => candidate.id === deliveryAddressId) ?? null;
+
+// Which address was promoted, if any. A deactivation of a non-Main address promotes nothing.
+export const promotedDeliveryAddressIdOf = (
+  successor: DeliveryAddressState | null,
+): string | null => successor?.id ?? null;

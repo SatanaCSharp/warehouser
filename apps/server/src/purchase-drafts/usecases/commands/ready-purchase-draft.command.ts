@@ -1,4 +1,4 @@
-import { Injectable, Optional } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { assert, assertFail } from '@warehouser/utils/asserts';
 import { isDefined, isEmpty } from '@warehouser/utils/predicates';
 import type { DisagreeingDeliveryLink } from 'purchase-drafts/domain/errors/purchase-draft.errors';
@@ -31,14 +31,6 @@ export interface FreezableLine {
   readonly customerDeliveryAddressId: string | null;
 }
 
-export interface ReadyPurchaseDraftRuntime {
-  readonly now: () => Date;
-}
-
-const defaultReadyPurchaseDraftRuntime: ReadyPurchaseDraftRuntime = {
-  now: () => new Date(),
-};
-
 export interface FrozenPurchaseDraft {
   readonly id: string;
   readonly state: 'ready_for_ordering';
@@ -62,8 +54,6 @@ export class ReadyPurchaseDraftCommand {
     private readonly freezeRepository: PurchaseDraftFreezeRepository,
     private readonly assemblyRepository: PurchaseDraftAssemblyRepository,
     private readonly assemblyService: PurchaseDraftAssemblyService,
-    @Optional()
-    private readonly runtime: ReadyPurchaseDraftRuntime = defaultReadyPurchaseDraftRuntime,
   ) {}
 
   @Transactional()
@@ -117,7 +107,7 @@ export class ReadyPurchaseDraftCommand {
       );
     }
 
-    const readiedAt = this.runtime.now();
+    const readiedAt = new Date();
     const frozen = await this.freezeRepository.freeze({
       purchaseDraftId,
       warehouseId: currentUser.warehouseId,

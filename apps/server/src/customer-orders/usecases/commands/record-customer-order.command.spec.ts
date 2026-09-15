@@ -12,6 +12,8 @@ import type { CustomerEntity } from 'shared/domain/entities/customer.entity';
 import type { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
 import type { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
 import { CustomerDirectoryRepository } from 'shared/domain/repositories/customer-directory.repository';
+import { freezeClockAt } from 'test/doubles/frozen-clock';
+import { pinGeneratedUuids } from 'test/doubles/generated-uuid';
 import type { Mock } from 'vitest';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -201,7 +203,6 @@ const commandWith = (
     itemCatalogueRepository as never,
     customerDirectoryRepository as never,
     new CustomerOrderDestinationService(customerAddressBookRepository as never),
-    { customerOrderId: () => customerOrderId, now: () => now },
   );
 
 // Everything a refusal can tell a member, and nothing that identifies which double produced it.
@@ -230,6 +231,16 @@ const refusalOf = async (
 
   throw new Error('the record was expected to be refused');
 };
+
+vi.mock('node:crypto', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:crypto')>();
+
+  return { ...actual, randomUUID: vi.fn(actual.randomUUID) };
+});
+
+pinGeneratedUuids(customerOrderId);
+
+freezeClockAt(now);
 
 describe('RecordCustomerOrderCommand (AC-01, AC-02, AC-02a, AC-03)', () => {
   const recordInput = {

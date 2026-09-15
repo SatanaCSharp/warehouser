@@ -1,6 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { ErrorCode } from '@warehouser/shared-types/enums';
-import { ApplicationError } from '@warehouser/shared-types/errors';
 import { assert, assertDefined } from '@warehouser/utils/asserts';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
@@ -14,6 +12,7 @@ import {
   managerRoleProtectedError,
   permissionExceededError,
   selfActionDeniedError,
+  targetUnavailableError,
 } from 'users/domain/errors/users.errors';
 import {
   exceedsActorPermissions,
@@ -26,21 +25,12 @@ export interface ChangeMemberPasswordInput {
   readonly newPassword: string;
 }
 
-// AC-09/AC-16's cross-Warehouse-hiding denial reuses `access`'s stable
-// ErrorCode verbatim (spec.md §5 note; ADR-0001) — constructed directly here
-// rather than importing `access`'s feature-owned error factories (`users`
-// never imports `access/*`/`auth/*`).
-const targetUnavailableError = (): ApplicationError =>
-  new ApplicationError(ErrorCode.ACCESS_TARGET_UNAVAILABLE);
-
 @Injectable()
 export class ChangeMemberPasswordCommand {
   constructor(
     private readonly memberLifecycleRepository: MemberLifecycleRepository,
     private readonly accessCurrentUserRepository: AccessCurrentUserRepository,
     private readonly authenticationRepository: AuthenticationRepository,
-    private readonly hash: typeof hashPassword = hashPassword,
-    private readonly now: () => Date = () => new Date(),
   ) {}
 
   @Transactional()
@@ -92,8 +82,8 @@ export class ChangeMemberPasswordCommand {
       invalidInputError({ password: 'unsupported' }),
     );
 
-    const credential = await this.hash(input.newPassword);
-    const changedAt = this.now();
+    const credential = await hashPassword(input.newPassword);
+    const changedAt = new Date();
 
     await this.authenticationRepository.updateCredential(
       membership.userId,

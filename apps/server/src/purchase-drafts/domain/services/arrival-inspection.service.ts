@@ -52,6 +52,7 @@ import {
   totalRefusedQuantity,
 } from 'purchase-drafts/domain/predicates/purchase-draft-condition.predicates';
 import { raisesRejections } from 'purchase-drafts/domain/predicates/rejection-cause-access.predicates';
+import type { RejectionDisposition } from 'purchase-drafts/domain/value-objects/line-condition';
 import {
   PreReceiptConformanceVerdict,
   requiredSourceFor,
@@ -465,3 +466,16 @@ export class ArrivalInspectionService {
     assertPreReceiptConformance(line, submission);
   }
 }
+
+// What **this amendment wrote**, never what the Rejection already held: `null` means "this amendment
+// wrote no description", not "the Rejection has none".
+export const amendedDescription = (
+  description: string | undefined,
+): string | null => description ?? null;
+
+// The Disposition is still echoed when unstated, and that is deliberate rather than an oversight —
+// see the note at the return below.
+export const amendedDisposition = (
+  stated: RejectionDisposition | undefined,
+  held: RejectionDisposition,
+): RejectionDisposition => stated ?? held;

@@ -1,4 +1,4 @@
-import { Injectable, Optional } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { assert, assertDefined } from '@warehouser/utils/asserts';
 import { itemTargetUnavailableError } from 'items/domain/errors/item.errors';
 import { canDeactivateItem } from 'items/domain/predicates/item-catalogue.predicates';
@@ -6,14 +6,6 @@ import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
 import { scopedToWarehouse } from 'shared/predicates/tenancy.predicates';
-
-export interface DeactivateItemRuntime {
-  readonly now: () => Date;
-}
-
-const defaultDeactivateItemRuntime: DeactivateItemRuntime = {
-  now: () => new Date(),
-};
 
 // AC-06d — deactivates an active Item of the acting Warehouse, writing only `deactivatedAt` so its
 // SKU stays taken and every Customer Order and Purchase Draft Line naming it is untouched. A
@@ -23,8 +15,6 @@ const defaultDeactivateItemRuntime: DeactivateItemRuntime = {
 export class DeactivateItemCommand {
   constructor(
     private readonly itemCatalogueRepository: ItemCatalogueRepository,
-    @Optional()
-    private readonly deactivateItemRuntime: DeactivateItemRuntime = defaultDeactivateItemRuntime,
   ) {}
 
   @Transactional()
@@ -37,9 +27,6 @@ export class DeactivateItemCommand {
     );
     assert(canDeactivateItem(item.deactivatedAt), itemTargetUnavailableError());
 
-    await this.itemCatalogueRepository.setDeactivatedAt(
-      itemId,
-      this.deactivateItemRuntime.now(),
-    );
+    await this.itemCatalogueRepository.setDeactivatedAt(itemId, new Date());
   }
 }

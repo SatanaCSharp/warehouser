@@ -61,9 +61,7 @@ describe('PurchaseDraftsUsecaseModule Nest DI graph', () => {
     // The per-line endings are the use cases in this module whose graph leaves it: both take
     // `DemandAllocationService`, which resolves only
     // because `PurchaseDraftsUsecaseModule` imports `CustomerOrdersUsecaseModule` and that module
-    // exports it (ADR 0002). Compiling it here is what proves the cross-module edge is wired, and
-    // that the command's `@Optional()` runtime parameter — an interface, so `Object` under
-    // `emitDecoratorMetadata` — does not stop the injector resolving the rest.
+    // exports it (ADR 0002). Compiling it here is what proves the cross-module edge is wired.
     expect(
       moduleRef.get(ConfirmPurchaseDraftLineArrivalCommand),
     ).toBeInstanceOf(ConfirmPurchaseDraftLineArrivalCommand);

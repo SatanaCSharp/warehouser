@@ -27,9 +27,6 @@ import {
 // passing only a `warehouseId` and a `userId` (never a Workspace concept).
 import { WorkspaceProvisioningService } from 'workspaces/domain/services/workspace-provisioning.service';
 
-const identityId = '00000000-0000-4000-8000-000000000001';
-const sessionId = '00000000-0000-4000-8000-000000000002';
-
 // spec.md §1: the full initial Workspace Owner Workspace Permission set
 // (sixteen entries), mirrored by `openapi.yaml`'s `RegistrationResult`
 // example and seeded as catalogue data by `CreateWorkspaceAuthoritySchema`.
@@ -86,6 +83,24 @@ const zeroCounts = Object.fromEntries(
   REGISTRATION_TABLES.map((table) => [table, '0']),
 );
 
+vi.mock('shared/domain/security/password-hashing', async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import('shared/domain/security/password-hashing')
+    >();
+
+  return {
+    ...actual,
+    hashPassword: vi.fn(() =>
+      Promise.resolve({
+        algorithm: 'scrypt' as const,
+        hash: 'synthetic-hash',
+        parameters: { cost: 1_024 },
+      }),
+    ),
+  };
+});
+
 describe('RegisterCommand workspace provisioning transaction', () => {
   const context = new DbTransactionContext(dataSource);
   const transactions = new DbTransactionService(dataSource, context);
@@ -101,23 +116,7 @@ describe('RegisterCommand workspace provisioning transaction', () => {
   const createCommand = (
     provisioning: WorkspaceProvisioningService = workspaceProvisioning,
   ): RegisterCommand =>
-    new RegisterCommand(
-      authentication,
-      registrations,
-      provisioning,
-      () =>
-        Promise.resolve({
-          algorithm: 'scrypt',
-          hash: 'synthetic-hash',
-          parameters: { cost: 1_024 },
-        }),
-      () => ({ secret: 'opaque-secret', digest: Buffer.alloc(32, 1) }),
-      {
-        now: () => new Date('2026-08-04T12:00:00.000Z'),
-        identityId: () => identityId,
-        sessionId: () => sessionId,
-      },
-    );
+    new RegisterCommand(authentication, registrations, provisioning);
 
   const register = () =>
     transactions.executeInTransaction({}, () =>

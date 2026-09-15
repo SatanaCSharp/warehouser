@@ -1,4 +1,4 @@
-import { Injectable, Optional } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
 import { isDefined, isEmpty, isUndefined } from '@warehouser/utils/predicates';
 import type { AllocationBoundViolation } from 'customer-orders/domain/errors/demand-allocation.errors';
@@ -36,14 +36,6 @@ export interface DemandAllocationLineAssignment {
   readonly purchaseDraftLineLinkId: string;
   readonly allocatedQuantity: number;
 }
-
-export interface DemandAllocationRuntime {
-  readonly now: () => Date;
-}
-
-const defaultDemandAllocationRuntime: DemandAllocationRuntime = {
-  now: () => new Date(),
-};
 
 /** The five values AC-18's bounds are decided against, and nothing else.
  *
@@ -189,8 +181,6 @@ const assignmentViolations = (
 export class DemandAllocationService {
   constructor(
     private readonly demandAllocationRepository: DemandAllocationRepository,
-    @Optional()
-    private readonly demandAllocationRuntime: DemandAllocationRuntime = defaultDemandAllocationRuntime,
   ) {}
 
   // sad.md §6.9 steps 5–6 — the bounds are re-checked against the rows locked by this call, never
@@ -202,7 +192,7 @@ export class DemandAllocationService {
     actorId: string,
     lines: readonly DemandAllocationLineInput[],
   ): Promise<CustomerOrderEntity[]> {
-    const allocatedAt = this.demandAllocationRuntime.now();
+    const allocatedAt = new Date();
 
     const purchaseDraftLineLinkIds = uniq(
       lines.flatMap((line) =>

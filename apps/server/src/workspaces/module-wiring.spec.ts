@@ -76,9 +76,10 @@ describe('workspaces module wiring', () => {
   it('resolves every dependency of every registered use case', () => {
     usecaseProviders.forEach((provider) => {
       dependenciesOf(provider).forEach((dependency) => {
-        // An interface-typed constructor parameter erases to `Object`; those
-        // are the `@Optional()` runtime seams the use cases default
-        // themselves, not injection tokens.
+        // An interface-typed constructor parameter erases to `Object`, which
+        // says nothing about what it resolves to: the parameter names its own
+        // token with `@Inject`, and only compiling the graph can check it.
+        // `usecase.module.di.spec.ts` is where that happens.
         if (dependency === Object || dependency === undefined) {
           return;
         }

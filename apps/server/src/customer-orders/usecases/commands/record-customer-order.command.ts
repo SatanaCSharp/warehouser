@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 
-import { Injectable, Optional } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
-import { isDefined, isUndefined } from '@warehouser/utils/predicates';
+import { isDefined } from '@warehouser/utils/predicates';
 import {
   customerOrderCustomerIdentityError,
   customerOrderCustomerUnavailableError,
@@ -22,6 +22,11 @@ import {
   customerNameStatedWellOrNotAtAll,
   deliveryAddressHasCustomer,
 } from 'customer-orders/domain/predicates/customer-order-identity.predicates';
+import {
+  customerIdentityRefusal,
+  statedDeliveryAddressId,
+  typedCustomerName,
+} from 'customer-orders/domain/services/customer-order-composition.service';
 import { CustomerOrderDestinationService } from 'customer-orders/domain/services/customer-order-destination.service';
 import { assertNeededByStillAhead } from 'customer-orders/domain/services/customer-order-lifecycle.service';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
@@ -30,16 +35,6 @@ import { CustomerDirectoryRepository } from 'shared/domain/repositories/customer
 import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository';
 import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
 import { isSelectableItem } from 'shared/predicates/item-availability.predicates';
-
-export interface RecordCustomerOrderRuntime {
-  readonly customerOrderId: () => string;
-  readonly now: () => Date;
-}
-
-const defaultRecordCustomerOrderRuntime: RecordCustomerOrderRuntime = {
-  customerOrderId: randomUUID,
-  now: () => new Date(),
-};
 
 // `chk_customer_orders_customer_identity` at the application boundary: a Customer, optionally with
 // one of its Delivery Addresses, **or** a typed customer name — never both and never neither
@@ -64,26 +59,6 @@ interface CustomerOrderDestination {
 // The four conditions and two readings below are used by this command alone, so each stays next to
 // it rather than in `customer-orders/domain/predicates/` (server-error-handling.md §1).
 
-// Which half of `chk_customer_orders_customer_identity` the payload broke: it named neither identity,
-// or it named both.
-const customerIdentityRefusal = (
-  customerId: string | undefined,
-): 'customer_identity_exclusive' | 'customer_identity_required' =>
-  isUndefined(customerId)
-    ? 'customer_identity_required'
-    : 'customer_identity_exclusive';
-
-// AC-11a — stored trimmed, as `chk_customer_orders_customer_name_stored_trimmed` requires; absent
-// where the order names a Customer instead.
-const typedCustomerName = (customerName: string | undefined): string | null =>
-  customerName?.trim() ?? null;
-
-// AC-11 — the stated address, or nothing stated, which the destination service reads as "the
-// Customer's Main one".
-const statedDeliveryAddressId = (
-  customerDeliveryAddressId: string | undefined,
-): string | null => customerDeliveryAddressId ?? null;
-
 // AC-01/AC-02/AC-02a/AC-03 — recording demand (sad.md §6.4). The REST surface invokes this use
 // case, never a repository (server-architecture.md §Dependency direction), and the use case owns
 // the rules itself: every bound is checked here and refusals propagate untouched to the global
@@ -95,8 +70,6 @@ export class RecordCustomerOrderCommand {
     private readonly itemCatalogueRepository: ItemCatalogueRepository,
     private readonly customerDirectoryRepository: CustomerDirectoryRepository,
     private readonly customerOrderDestinationService: CustomerOrderDestinationService,
-    @Optional()
-    private readonly recordCustomerOrderRuntime: RecordCustomerOrderRuntime = defaultRecordCustomerOrderRuntime,
   ) {}
 
   @Transactional()
@@ -104,7 +77,7 @@ export class RecordCustomerOrderCommand {
     currentUser: AccessCurrentUser,
     input: RecordCustomerOrderInput,
   ): Promise<CustomerOrder> {
-    const recordedAt = this.recordCustomerOrderRuntime.now();
+    const recordedAt = new Date();
 
     // `chk_customer_orders_customer_identity` as a payload refusal — an order names a Customer, or
     // a typed customer name, never both and never neither (openapi.yaml
@@ -195,7 +168,7 @@ export class RecordCustomerOrderCommand {
     // AC-01 — Unfulfilled, waiting for everything it asked for.
     const recorded =
       await this.customerOrderLifecycleRepository.createCustomerOrder({
-        id: this.recordCustomerOrderRuntime.customerOrderId(),
+        id: randomUUID(),
         warehouseId: currentUser.warehouseId,
         itemId: input.itemId,
         customerId: destination.customerId,

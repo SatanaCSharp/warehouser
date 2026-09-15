@@ -30,6 +30,7 @@ import { UserEntity } from 'shared/domain/entities/user.entity';
 import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
 import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 import { DemandAllocationRepository } from 'shared/domain/repositories/demand-allocation.repository';
+import { freezeClockAt } from 'test/doubles/frozen-clock';
 import {
   buildWarehouse,
   buildWorkspace,
@@ -45,7 +46,6 @@ const transactions = new DbTransactionService(dataSource, context);
 
 const service = new DemandAllocationService(
   new DemandAllocationRepository(dataSource),
-  { now: () => later },
 );
 
 const seedUser = async (workspaceId: string): Promise<string> => {
@@ -280,6 +280,8 @@ const registerRefusalDetailTests = (): void => {
     });
   });
 };
+
+freezeClockAt(later);
 
 describe('DemandAllocationService', () => {
   beforeAll(async () => {

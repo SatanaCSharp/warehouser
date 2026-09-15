@@ -10,6 +10,7 @@ import { find } from 'lodash-es';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import type { CustomerEntity } from 'shared/domain/entities/customer.entity';
 import type { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
+import { freezeClockAt } from 'test/doubles/frozen-clock';
 import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>
@@ -96,7 +97,6 @@ const commandWith = (
     directoryRepository as never,
     addressBookRepository as never,
     new CustomerAddressBookService(directoryRepository as never),
-    { now: () => now },
   );
 
 const refusal = async (
@@ -108,6 +108,8 @@ const refusal = async (
     },
     (error: unknown) => error as ApplicationError,
   );
+
+freezeClockAt(now);
 
 describe('CorrectCustomerNameCommand (AC-03b, AC-03c, AC-12)', () => {
   // AC-03b — the correction rewrites the customer row and nothing else.
@@ -130,7 +132,7 @@ describe('CorrectCustomerNameCommand (AC-03b, AC-03c, AC-12)', () => {
       now,
     );
     expect(corrected.name).toBe('Test Customer North (Ltd)');
-    expect(corrected.updatedAt).toBe(now);
+    expect(corrected.updatedAt).toEqual(now);
     expect(addressBookRepository.addDeliveryAddress).not.toHaveBeenCalled();
     expect(addressBookRepository.reviseDeliveryAddress).not.toHaveBeenCalled();
     expect(addressBookRepository.setMainDeliveryAddress).not.toHaveBeenCalled();

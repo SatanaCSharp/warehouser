@@ -129,7 +129,6 @@ const commandsWith = ({
     addLine: new AddPurchaseDraftLineCommand(
       assemblyRepository as never,
       assemblyService,
-      { purchaseDraftLineId: () => lineId },
     ),
     reviseLine: new RevisePurchaseDraftLineCommand(
       assemblyRepository as never,
@@ -140,7 +139,6 @@ const commandsWith = ({
     addLink: new AddPurchaseDraftLineLinkCommand(
       assemblyRepository as never,
       assemblyService,
-      { purchaseDraftLineLinkId: () => linkId },
     ),
   };
 };

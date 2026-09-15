@@ -1,6 +1,4 @@
 import {
-  foreignDeclarationsIn,
-  isQueryClassName,
   isQueryDirectoryPath,
   isQueryModulePath,
   isSpecPath,
@@ -20,13 +18,9 @@ import { describe, expect, it } from 'vitest';
  * the module's reads will find, and a `queries/` directory holding other things is no longer a list
  * of the module's reads.
  *
- * The second rule is about the file. A use case "declares the input and result types of that
- * operation in its own file" — the class and those types, and nothing else. A mapper, a predicate, a
- * derivation, or a lookup table written into a query's file is a unit with its own reason to change
- * that no other module can see; the next read needing the same rule cannot import what it cannot
- * find, so it gets a second copy, and the two then disagree. Those belong in the feature's
- * `domain/mappers/`, `domain/predicates/` or `domain/services/`, where the rest of the tree already
- * puts them. */
+ * What a query's file may then hold — the class and the operation's input and output types, and
+ * nothing else — is the same rule a command's file obeys, so it is stated once for both in
+ * `construction-shape.architectural.spec.ts` rather than twice here. */
 
 const describeViolation = ({
   path,
@@ -60,38 +54,5 @@ describe('query placement', () => {
       );
 
     expect(strays).toEqual([]);
-  });
-
-  it('declares exactly one query class per query file', () => {
-    const wrong = serverSourceFiles()
-      .filter((file) => isQueryModulePath(serverPath(file)))
-      .flatMap((file) => {
-        const path = serverPath(file);
-        const classes = file.getClasses();
-        const names = classes.map(
-          (declaration) => declaration.getName() ?? '(anonymous)',
-        );
-
-        if (classes.length === 1 && isQueryClassName(names[0])) {
-          return [];
-        }
-
-        return [
-          classes.length === 0
-            ? `${path} declares no query class`
-            : `${path} declares ${names.join(', ')}`,
-        ];
-      });
-
-    expect(wrong).toEqual([]);
-  });
-
-  it('declares nothing but the query class and its request and response types', () => {
-    const foreign = serverSourceFiles()
-      .filter((file) => isQueryModulePath(serverPath(file)))
-      .flatMap(foreignDeclarationsIn)
-      .map(describeViolation);
-
-    expect(foreign).toEqual([]);
   });
 });

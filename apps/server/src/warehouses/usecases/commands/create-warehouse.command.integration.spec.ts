@@ -1,5 +1,3 @@
-import { randomUUID } from 'node:crypto';
-
 import {
   ErrorCode,
   WorkspacePermissionId,
@@ -17,15 +15,7 @@ import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-memb
 import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 import { AccessProvisioningRepository } from 'shared/domain/repositories/access-provisioning.repository';
 import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-} from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 // This command does not exist yet — this is the RED step for T20. Expected
 // to accept the caller's `WorkspaceCurrentUser` plus `{ name }`, create the
 // Warehouse in `principal.workspaceId`, delegate its protected Warehouse
@@ -56,13 +46,10 @@ describe('CreateWarehouseCommand', () => {
     accessProvisioningRepository,
   );
 
-  let newWarehouseId = uuid('400000000001');
-
   const createCommand = (): CreateWarehouseCommand =>
     new CreateWarehouseCommand(
       warehouseLifecycleRepository,
       provisionInitialAccess,
-      { warehouseId: () => newWarehouseId },
     );
 
   beforeAll(async () => {
@@ -73,10 +60,6 @@ describe('CreateWarehouseCommand', () => {
     await dataSource.query(
       'TRUNCATE warehouse_memberships, role_permissions, roles, warehouses, workspaces, sessions, users, accounts CASCADE',
     );
-  });
-
-  beforeEach(() => {
-    newWarehouseId = randomUUID();
   });
 
   afterEach(async () => {
@@ -171,14 +154,13 @@ describe('CreateWarehouseCommand', () => {
     );
 
     expect(result).toMatchObject({
-      id: newWarehouseId,
       name: 'Test Warehouse South',
       archivedAt: null,
     });
 
     const warehouse = await dataSource.manager
       .getRepository(WarehouseEntity)
-      .findOneBy({ id: newWarehouseId });
+      .findOneBy({ id: result.id });
     expect(warehouse).toMatchObject({
       workspaceId,
       name: 'Test Warehouse South',
@@ -187,13 +169,13 @@ describe('CreateWarehouseCommand', () => {
 
     const roles = await dataSource.manager
       .getRepository(RoleEntity)
-      .find({ where: { warehouseId: newWarehouseId } });
+      .find({ where: { warehouseId: result.id } });
     expect(roles).toHaveLength(1);
     expect(roles[0]).toMatchObject({ kind: 'warehouse_manager' });
 
     const membership = await dataSource.manager
       .getRepository(WarehouseMembershipEntity)
-      .findOneBy({ userId: actorId, warehouseId: newWarehouseId });
+      .findOneBy({ userId: actorId, warehouseId: result.id });
     expect(membership).toMatchObject({
       workspaceId,
       roleId: roles[0].id,
@@ -204,13 +186,13 @@ describe('CreateWarehouseCommand', () => {
   it('DoD/spec.md §1 third boundary: the new Warehouse holds only its protected Warehouse Manager Role — no custom Role is created', async () => {
     await seedBaseline();
 
-    await transactions.executeInTransaction({}, () =>
+    const created = await transactions.executeInTransaction({}, () =>
       createCommand().execute(actor(), { name: 'Test Warehouse South' }),
     );
 
     const customRoles = await dataSource.manager
       .getRepository(RoleEntity)
-      .countBy({ warehouseId: newWarehouseId, kind: 'custom' });
+      .countBy({ warehouseId: created.id, kind: 'custom' });
     expect(customRoles).toBe(0);
   });
 
@@ -265,7 +247,7 @@ describe('CreateWarehouseCommand', () => {
     await expect(persistedCounts()).resolves.toEqual(before);
     const warehouse = await dataSource.manager
       .getRepository(WarehouseEntity)
-      .findOneBy({ id: newWarehouseId });
+      .findOneBy({ workspaceId, name: 'Test Warehouse South' });
     expect(warehouse).toBeNull();
   });
 

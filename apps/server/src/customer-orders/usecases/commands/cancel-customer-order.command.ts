@@ -1,4 +1,4 @@
-import { Injectable, Optional } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
 import { customerOrderInvalidInputError } from 'customer-orders/domain/errors/customer-order.errors';
 import type { CustomerOrder } from 'customer-orders/domain/mappers/customer-order.mapper';
@@ -12,14 +12,6 @@ import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository';
 
-export interface CancelCustomerOrderRuntime {
-  readonly now: () => Date;
-}
-
-const defaultCancelCustomerOrderRuntime: CancelCustomerOrderRuntime = {
-  now: () => new Date(),
-};
-
 export interface CancelCustomerOrderInput {
   readonly cancellationReason: string;
 }
@@ -32,8 +24,6 @@ export class CancelCustomerOrderCommand {
   constructor(
     private readonly customerOrderLifecycleRepository: CustomerOrderLifecycleRepository,
     private readonly customerOrderLifecycleService: CustomerOrderLifecycleService,
-    @Optional()
-    private readonly cancelCustomerOrderRuntime: CancelCustomerOrderRuntime = defaultCancelCustomerOrderRuntime,
   ) {}
 
   @Transactional()
@@ -42,7 +32,7 @@ export class CancelCustomerOrderCommand {
     customerOrderId: string,
     input: CancelCustomerOrderInput,
   ): Promise<CustomerOrder> {
-    const cancelledAt = this.cancelCustomerOrderRuntime.now();
+    const cancelledAt = new Date();
 
     assert(
       isCancellationReason(input.cancellationReason),

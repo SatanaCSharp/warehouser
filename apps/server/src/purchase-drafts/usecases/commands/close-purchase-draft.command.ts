@@ -1,4 +1,4 @@
-import { Injectable, Optional } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
 import { isDefined } from '@warehouser/utils/predicates';
 import {
@@ -12,14 +12,6 @@ import { Transactional } from 'shared/decorators/transactional.decorator';
 import { PurchaseDraftFreezeRepository } from 'shared/domain/repositories/purchase-draft-freeze.repository';
 import { appliedGuardedWrite } from 'shared/predicates/persistence-write.predicates';
 import { scopedToWarehouse } from 'shared/predicates/tenancy.predicates';
-
-export interface ClosePurchaseDraftRuntime {
-  readonly now: () => Date;
-}
-
-const defaultClosePurchaseDraftRuntime: ClosePurchaseDraftRuntime = {
-  now: () => new Date(),
-};
 
 export interface CloseDraftInput {
   readonly closureReason: string;
@@ -45,8 +37,6 @@ export interface ClosedPurchaseDraft {
 export class ClosePurchaseDraftCommand {
   constructor(
     private readonly closureRepository: PurchaseDraftFreezeRepository,
-    @Optional()
-    private readonly runtime: ClosePurchaseDraftRuntime = defaultClosePurchaseDraftRuntime,
   ) {}
 
   @Transactional()
@@ -71,7 +61,7 @@ export class ClosePurchaseDraftCommand {
       purchaseDraftInvalidStateError(),
     );
 
-    const closedAt = this.runtime.now();
+    const closedAt = new Date();
     const closed = await this.closureRepository.close({
       purchaseDraftId,
       warehouseId: currentUser.warehouseId,

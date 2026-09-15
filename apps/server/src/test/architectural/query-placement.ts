@@ -3,8 +3,7 @@ import {
   serverPath,
   serverProject,
 } from 'test/architectural/server-project';
-import type { SourceFile, Statement } from 'ts-morph';
-import { SyntaxKind } from 'ts-morph';
+import type { SourceFile } from 'ts-morph';
 
 /** The one directory a query may be declared in, per `server-architecture.md` § "Use cases":
  * `queries/` return data without changing business state, and they sit beside `commands/` and
@@ -57,57 +56,3 @@ export const serverSourceFiles = (): readonly SourceFile[] =>
   serverProject()
     .getSourceFiles()
     .filter((file) => serverPath(file).startsWith('src/'));
-
-/** What a query file may declare: the query class itself, and the request and response types of the
- * operation it names — "a use case ... declares the input and result types of that operation in its
- * own file" (`server-architecture.md` § "Use cases"). Imports are how it reaches its collaborators.
- *
- * Everything else is a second thing living in the query's file. A named function, a constant, a
- * lookup table, a second class: each is a unit with its own reason to change, and none of them is
- * findable from another module that needs the same rule — which is how the second, divergent copy
- * gets written. They belong in the feature's `domain/` — `mappers/` for a conversion,
- * `predicates/` for a question about a value, `services/` for an operation with collaborators. */
-const ALLOWED_STATEMENTS: readonly SyntaxKind[] = [
-  SyntaxKind.ImportDeclaration,
-  SyntaxKind.InterfaceDeclaration,
-  SyntaxKind.TypeAliasDeclaration,
-  SyntaxKind.ClassDeclaration,
-];
-
-const describeStatement = (statement: Statement): string => {
-  const named = statement.asKind(SyntaxKind.FunctionDeclaration)?.getName();
-
-  if (named !== undefined) {
-    return `function ${named}`;
-  }
-
-  const variables = statement
-    .asKind(SyntaxKind.VariableStatement)
-    ?.getDeclarations()
-    .map((declaration) => declaration.getName());
-
-  if (variables !== undefined) {
-    return `const/let ${variables.join(', ')}`;
-  }
-
-  return statement.getKindName();
-};
-
-export interface QueryFileViolation {
-  readonly path: string;
-  readonly line: number;
-  readonly detail: string;
-}
-
-/** Declarations in `file` that are neither the query class nor a type. */
-export const foreignDeclarationsIn = (
-  file: SourceFile,
-): readonly QueryFileViolation[] =>
-  file
-    .getStatements()
-    .filter((statement) => !ALLOWED_STATEMENTS.includes(statement.getKind()))
-    .map((statement) => ({
-      path: serverPath(file),
-      line: statement.getStartLineNumber(),
-      detail: describeStatement(statement),
-    }));

@@ -78,8 +78,8 @@ class TestDomainDoubleModule {}
 // `ProvisionInitialAccessCommand`. Static wiring checks and command unit specs
 // that construct these classes with `new` never exercise Nest's actual
 // injector, so a boot-time resolution failure went undetected
-// (module-wiring.spec.ts explicitly whitelists interface-typed,
-// `Object`-erased parameters as `@Optional()` runtime seams). This spec
+// (module-wiring.spec.ts skips interface-typed, `Object`-erased parameters,
+// which name their own token with `@Inject`). This spec
 // compiles the real `WorkspacesUsecaseModule` graph through Nest's DI
 // container — the only way to observe that failure without a database.
 describe('WorkspacesUsecaseModule Nest DI graph', () => {

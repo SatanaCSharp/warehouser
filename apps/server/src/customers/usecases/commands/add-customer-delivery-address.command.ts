@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { Injectable, Optional } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import type { Customer } from 'customers/domain/mappers/customer.mapper';
 import { toCustomer } from 'customers/domain/mappers/customer.mapper';
 import { requestsMainDeliveryAddress } from 'customers/domain/predicates/delivery-address-promotion.predicates';
@@ -13,17 +13,6 @@ import { DeliveryAddressText } from 'customers/domain/value-objects/delivery-add
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository';
-
-export interface AddCustomerDeliveryAddressRuntime {
-  readonly deliveryAddressId: () => string;
-  readonly now: () => Date;
-}
-
-const defaultAddCustomerDeliveryAddressRuntime: AddCustomerDeliveryAddressRuntime =
-  {
-    deliveryAddressId: randomUUID,
-    now: () => new Date(),
-  };
 
 // openapi.yaml `CustomerDeliveryAddressCreate`. `main` is the contract's own `default: false`,
 // supplied by the request schema, so an address arrives ordinary unless the member says otherwise.
@@ -45,8 +34,6 @@ export class AddCustomerDeliveryAddressCommand {
   constructor(
     private readonly customerAddressBookRepository: CustomerAddressBookRepository,
     private readonly customerAddressBookService: CustomerAddressBookService,
-    @Optional()
-    private readonly addCustomerDeliveryAddressRuntime: AddCustomerDeliveryAddressRuntime = defaultAddCustomerDeliveryAddressRuntime,
   ) {}
 
   @Transactional()
@@ -71,9 +58,9 @@ export class AddCustomerDeliveryAddressCommand {
     );
     const accessNotes = AccessNotes.create(input.accessNotes);
 
-    const addedAt = this.addCustomerDeliveryAddressRuntime.now();
+    const addedAt = new Date();
     const address = {
-      id: this.addCustomerDeliveryAddressRuntime.deliveryAddressId(),
+      id: randomUUID(),
       customerId,
       warehouseId: currentUser.warehouseId,
       addressText: addressText.value,

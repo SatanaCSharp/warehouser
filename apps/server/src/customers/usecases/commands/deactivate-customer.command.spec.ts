@@ -10,6 +10,7 @@ import { find, map } from 'lodash-es';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import type { CustomerEntity } from 'shared/domain/entities/customer.entity';
 import type { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
+import { freezeClockAt } from 'test/doubles/frozen-clock';
 import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>
@@ -143,7 +144,6 @@ const commandWith = (
     directoryRepository as never,
     addressBookRepository as never,
     new CustomerAddressBookService(directoryRepository as never),
-    { now: () => now },
   );
 
 const refusal = async (
@@ -155,6 +155,8 @@ const refusal = async (
     },
     (error: unknown) => error as ApplicationError,
   );
+
+freezeClockAt(now);
 
 describe('DeactivateCustomerCommand (AC-06, AC-12)', () => {
   // AC-06 — "records it as Inactive … and keeps its name taken so no new Customer may reuse it".
@@ -178,7 +180,7 @@ describe('DeactivateCustomerCommand (AC-06, AC-12)', () => {
       now,
       now,
     );
-    expect(deactivated.deactivatedAt).toBe(now);
+    expect(deactivated.deactivatedAt).toEqual(now);
     // The name is untouched by the transition and still identifies this Customer.
     expect(deactivated.name).toBe('Test Customer North');
     expect(directoryRepository.correctCustomerName).not.toHaveBeenCalled();

@@ -1,4 +1,4 @@
-import { Injectable, Optional } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
 import { DemandAllocationService } from 'customer-orders/domain/services/demand-allocation.service';
 import { purchaseDraftConcurrentChangeError } from 'purchase-drafts/domain/errors/purchase-draft.errors';
@@ -48,14 +48,6 @@ export interface PurchaseDraftLineEnded {
   readonly endingRecordedAt: Date;
 }
 
-export interface PurchaseDraftLineEndingRuntime {
-  readonly now: () => Date;
-}
-
-const defaultPurchaseDraftLineEndingRuntime: PurchaseDraftLineEndingRuntime = {
-  now: () => new Date(),
-};
-
 // AC-19/AC-20/AC-20a/AC-21 — the **Via Warehouse** half of the per-line ending (ADR 0002). What
 // arrived at the dock on one line, assigned across that line's linked Customer Orders.
 //
@@ -85,8 +77,6 @@ export class ConfirmPurchaseDraftLineArrivalCommand {
     private readonly arrivalConfirmationRepository: ArrivalConfirmationRepository,
     private readonly demandAllocationService: DemandAllocationService,
     private readonly arrivalInspectionService: ArrivalInspectionService,
-    @Optional()
-    private readonly runtime: PurchaseDraftLineEndingRuntime = defaultPurchaseDraftLineEndingRuntime,
   ) {}
 
   @Transactional()
@@ -118,7 +108,7 @@ export class ConfirmPurchaseDraftLineArrivalCommand {
     );
 
     const acceptedQuantity = deriveAcceptedQuantity(submission);
-    const endingRecordedAt = this.runtime.now();
+    const endingRecordedAt = new Date();
 
     const written = await this.arrivalConfirmationRepository.recordLineEnding({
       purchaseDraftId,

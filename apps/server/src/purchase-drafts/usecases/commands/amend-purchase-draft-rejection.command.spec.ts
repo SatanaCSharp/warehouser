@@ -23,6 +23,7 @@ import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import type { TransactionalMetadata } from 'shared/decorators/transactional.decorator';
 import { TRANSACTIONAL_KEY } from 'shared/decorators/transactional.decorator';
 import type { LockedPurchaseDraftLineRejection } from 'shared/domain/repositories/purchase-draft-rejection.repository';
+import { freezeClockAt } from 'test/doubles/frozen-clock';
 import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>
@@ -71,7 +72,6 @@ const commandWith = ({
   };
   const command = new AmendPurchaseDraftRejectionCommand(
     rejectionRepository as never,
-    { now: () => now },
   );
   return { command, rejectionRepository };
 };
@@ -99,6 +99,8 @@ const WRITABLE_AMENDMENT_KEYS = [
   'rejectionId',
   'warehouseId',
 ];
+
+freezeClockAt(now);
 
 describe('AmendPurchaseDraftRejectionCommand', () => {
   // AC-18 — the decision, the acting member and the time, in one write carrying the acting

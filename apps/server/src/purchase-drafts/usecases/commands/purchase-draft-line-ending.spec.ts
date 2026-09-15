@@ -15,6 +15,7 @@ import type {
   LockPurchaseDraftLineForEndingResult,
   RecordLineEndingRejectionInput,
 } from 'shared/domain/repositories/arrival-confirmation.repository';
+import { freezeClockAt } from 'test/doubles/frozen-clock';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // T17/ADR 0002 — the whole-draft arrival is replaced by two per-line endings whose **kind is a
@@ -158,6 +159,8 @@ const codeOf = async (run: Promise<unknown>): Promise<string> => {
   }
   throw new Error('the command resolved where a refusal was expected');
 };
+
+freezeClockAt(recordedAt);
 
 describe('per-line endings replace the whole-draft arrival (T17)', () => {
   afterEach(() => {
@@ -841,9 +844,7 @@ describe('T10 — DemandAllocationService narrows to the derived Accepted Quanti
     const repository = repositoryDouble([
       { purchaseDraftLineLinkId: linkId, order: orderRow() },
     ]);
-    const service = new DemandAllocationService(repository as never, {
-      now: () => recordedAt,
-    });
+    const service = new DemandAllocationService(repository as never);
 
     // AC-11 — one hundred presented, eight refused, ninety-two accepted: `assignableQuantity` is
     // the bound the service enforces, and ninety-five exceeds it even though it stays within what
@@ -885,9 +886,7 @@ describe('T10 — DemandAllocationService narrows to the derived Accepted Quanti
         order: orderRow({ state: 'cancelled' }),
       },
     ]);
-    const service = new DemandAllocationService(repository as never, {
-      now: () => recordedAt,
-    });
+    const service = new DemandAllocationService(repository as never);
 
     const line = {
       purchaseDraftLineId: lineId,

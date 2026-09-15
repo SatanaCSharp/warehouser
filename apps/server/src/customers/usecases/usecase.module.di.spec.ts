@@ -87,8 +87,7 @@ describe('CustomersUsecaseModule Nest DI graph', () => {
 
   // sad.md §5 — the Customer lifecycle and address-book commands **are** the module's public
   // surface, and each one constructs from the providers this module declares. Compiling the graph
-  // is what catches a constructor parameter Nest cannot resolve — including the `@Optional()`
-  // runtime each command falls back to a default for.
+  // is what catches a constructor parameter Nest cannot resolve.
   it('resolves every Customer use case for a module outside customers', async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [TestDataSourceDoubleModule, OutsideCommandModule],

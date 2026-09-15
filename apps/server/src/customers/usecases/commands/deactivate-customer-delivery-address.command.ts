@@ -1,43 +1,21 @@
-import { Injectable, Optional } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
 import { isDefined } from '@warehouser/utils/predicates';
 import type { Customer } from 'customers/domain/mappers/customer.mapper';
 import { toCustomer } from 'customers/domain/mappers/customer.mapper';
-import type { DeliveryAddressState } from 'customers/domain/predicates/customer.predicates';
 import { reportsThePromotedMain } from 'customers/domain/predicates/delivery-address-promotion.predicates';
 import {
   assertDeliveryAddressDeactivatable,
   assertDeliveryAddressUsable,
   assertLockedDeliveryAddressWriteApplied,
   CustomerAddressBookService,
+  lockedDeliveryAddress,
   nextMainDeliveryAddress,
+  promotedDeliveryAddressIdOf,
 } from 'customers/domain/services/customer-address-book.service';
-import { find } from 'lodash-es';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository';
-
-export interface DeactivateCustomerDeliveryAddressRuntime {
-  readonly now: () => Date;
-}
-
-const defaultDeactivateCustomerDeliveryAddressRuntime: DeactivateCustomerDeliveryAddressRuntime =
-  {
-    now: () => new Date(),
-  };
-
-// The address the member named, among the rows this transaction locked, or nothing — an address of
-// another Customer resolves to nothing and is refused exactly as a missing one is.
-const lockedDeliveryAddress = (
-  locked: readonly DeliveryAddressState[],
-  deliveryAddressId: string,
-): DeliveryAddressState | null =>
-  find(locked, (candidate) => candidate.id === deliveryAddressId) ?? null;
-
-// Which address was promoted, if any. A deactivation of a non-Main address promotes nothing.
-const promotedDeliveryAddressIdOf = (
-  successor: DeliveryAddressState | null,
-): string | null => successor?.id ?? null;
 
 // AC-06a/AC-06b/AC-07/AC-12 — records one Delivery Address Inactive. It stops being offered
 // wherever an address is chosen, while every Customer Order and every frozen Purchase Draft Line
@@ -56,8 +34,6 @@ export class DeactivateCustomerDeliveryAddressCommand {
   constructor(
     private readonly customerAddressBookRepository: CustomerAddressBookRepository,
     private readonly customerAddressBookService: CustomerAddressBookService,
-    @Optional()
-    private readonly deactivateCustomerDeliveryAddressRuntime: DeactivateCustomerDeliveryAddressRuntime = defaultDeactivateCustomerDeliveryAddressRuntime,
   ) {}
 
   @Transactional()
@@ -71,7 +47,7 @@ export class DeactivateCustomerDeliveryAddressCommand {
       currentUser.warehouseId,
     );
 
-    const deactivatedAt = this.deactivateCustomerDeliveryAddressRuntime.now();
+    const deactivatedAt = new Date();
 
     const locked =
       await this.customerAddressBookRepository.lockDeliveryAddresses(

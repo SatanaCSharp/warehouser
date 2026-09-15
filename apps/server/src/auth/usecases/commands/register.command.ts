@@ -2,8 +2,6 @@ import { randomUUID } from 'node:crypto';
 
 import { assert } from '@warehouser/utils/asserts';
 import { isDefined } from '@warehouser/utils/predicates';
-import type { AuthRuntime } from 'auth/domain/auth-runtime';
-import { authRuntime } from 'auth/domain/auth-runtime';
 import { Account } from 'auth/domain/entities/account';
 import { Session } from 'auth/domain/entities/session';
 import { User } from 'auth/domain/entities/user';
@@ -12,7 +10,6 @@ import {
   AuthInvalidInputError,
   AuthRegistrationUnavailableError,
 } from 'auth/domain/errors/auth.errors';
-import type { GeneratedSessionSecret } from 'auth/domain/security/session-secret';
 import { generateSessionSecret } from 'auth/domain/security/session-secret';
 import { AuthRegistrationService } from 'auth/domain/services/auth-registration.service';
 import { SessionId } from 'auth/domain/value-objects/identity-id';
@@ -48,9 +45,6 @@ export class RegisterCommand {
     private readonly authentication: AuthenticationRepository,
     private readonly registrations: AuthRegistrationService,
     private readonly workspaceProvisioning: WorkspaceProvisioningService,
-    private readonly hash: typeof hashPassword = hashPassword,
-    private readonly generateSecret: () => GeneratedSessionSecret = generateSessionSecret,
-    private readonly runtime: AuthRuntime = authRuntime,
   ) {}
 
   @Transactional()
@@ -74,19 +68,19 @@ export class RegisterCommand {
       AuthEmailAlreadyRegisteredError(),
     );
 
-    const credential = await this.hash(password.value);
+    const credential = await hashPassword(password.value);
     const account = Account.create({
-      id: this.runtime.identityId(),
+      id: randomUUID(),
       email: email.value,
       credential,
     });
     const user = User.forAccount(account);
-    const generated = this.generateSecret();
+    const generated = generateSessionSecret();
     const session = Session.establish({
-      id: SessionId.create(this.runtime.sessionId()),
+      id: SessionId.create(randomUUID()),
       accountId: account.id,
       digest: SessionDigest.create(generated.digest),
-      establishedAt: this.runtime.now(),
+      establishedAt: new Date(),
     });
     // The registrant's Workspace relation is established at creation and
     // never re-derived from Warehouse memberships (spec.md §1, second

@@ -6,6 +6,7 @@ import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import type { TransactionalMetadata } from 'shared/decorators/transactional.decorator';
 import { TRANSACTIONAL_KEY } from 'shared/decorators/transactional.decorator';
 import { RoleLifecycleRepository } from 'shared/domain/repositories/role-lifecycle.repository';
+import { pinGeneratedUuids } from 'test/doubles/generated-uuid';
 import { describe, expect, it, vi } from 'vitest';
 
 const warehouseId = '00000000-0000-4000-8000-000000000001';
@@ -38,6 +39,14 @@ const repositoryDouble = () => ({
   replaceCustomRolePermissions: vi.fn().mockResolvedValue(undefined),
 });
 
+vi.mock('node:crypto', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:crypto')>();
+
+  return { ...actual, randomUUID: vi.fn(actual.randomUUID) };
+});
+
+pinGeneratedUuids(roleId);
+
 describe('custom Role lifecycle commands', () => {
   it('constructs role creation through Nest without a test-only runtime provider', async () => {
     const module = await Test.createTestingModule({
@@ -54,7 +63,6 @@ describe('custom Role lifecycle commands', () => {
     const repository = repositoryDouble();
     const command = new CreateRoleCommand(
       repository as unknown as RoleLifecycleRepository,
-      { roleId: () => roleId },
     );
 
     await expect(
@@ -132,7 +140,6 @@ describe('custom Role lifecycle commands', () => {
     }
     const command = new CreateRoleCommand(
       repository as unknown as RoleLifecycleRepository,
-      { roleId: () => roleId },
     );
 
     await expect(
@@ -190,7 +197,6 @@ describe('custom Role lifecycle commands', () => {
     const repository = repositoryDouble();
     const create = new CreateRoleCommand(
       repository as unknown as RoleLifecycleRepository,
-      { roleId: () => roleId },
     );
     const update = new UpdateRoleCommand(
       repository as unknown as RoleLifecycleRepository,
@@ -219,7 +225,6 @@ describe('custom Role lifecycle commands', () => {
       const repository = repositoryDouble();
       const command = new CreateRoleCommand(
         repository as unknown as RoleLifecycleRepository,
-        { roleId: () => roleId },
       );
 
       await expect(

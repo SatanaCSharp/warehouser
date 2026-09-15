@@ -16,6 +16,7 @@ import { RedirectCustomerOrderCommand } from 'customer-orders/usecases/commands/
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import type { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
 import type { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
+import { freezeClockAt } from 'test/doubles/frozen-clock';
 import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>
@@ -144,8 +145,9 @@ const commandWith = (
     lifecycleRepository as never,
     new CustomerOrderLifecycleService(lifecycleRepository as never),
     new CustomerOrderDestinationService(customerAddressBookRepository as never),
-    { now: () => now },
   );
+
+freezeClockAt(now);
 
 describe('RedirectCustomerOrderCommand (AC-11b, AC-11c, AC-12)', () => {
   // AC-11b — the order moves to another active address of the same Customer, and the eligibility is

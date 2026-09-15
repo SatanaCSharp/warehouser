@@ -1,4 +1,4 @@
-import { Injectable, Optional } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { assert, assertDefined } from '@warehouser/utils/asserts';
 import { isDefined } from '@warehouser/utils/predicates';
 import {
@@ -7,6 +7,10 @@ import {
   purchaseDraftUnknownDispositionError,
 } from 'purchase-drafts/domain/errors/purchase-draft.errors';
 import { dispositionOfferedOrUnstated } from 'purchase-drafts/domain/predicates/rejection-amendment.predicates';
+import {
+  amendedDescription,
+  amendedDisposition,
+} from 'purchase-drafts/domain/services/arrival-inspection.service';
 import type { RejectionDisposition } from 'purchase-drafts/domain/value-objects/line-condition';
 import { REJECTION_DISPOSITIONS } from 'purchase-drafts/domain/value-objects/line-condition';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
@@ -14,14 +18,6 @@ import { Transactional } from 'shared/decorators/transactional.decorator';
 import type { AmendRejectionInput } from 'shared/domain/repositories/purchase-draft-rejection.repository';
 import { PurchaseDraftRejectionRepository } from 'shared/domain/repositories/purchase-draft-rejection.repository';
 import { affectedAnyRow } from 'shared/predicates/persistence-write.predicates';
-
-export interface AmendRejectionCommandRuntime {
-  readonly now: () => Date;
-}
-
-const defaultAmendRejectionCommandRuntime: AmendRejectionCommandRuntime = {
-  now: () => new Date(),
-};
 
 // The wire's input is not yet the domain vocabulary: `disposition` arrives as whatever string the
 // request carried, and AC-19's refusal is exactly this command judging it against the offered set
@@ -40,18 +36,6 @@ export interface AmendedRejection {
   readonly amendedAt: Date;
 }
 
-// What **this amendment wrote**, never what the Rejection already held: `null` means "this amendment
-// wrote no description", not "the Rejection has none".
-const amendedDescription = (description: string | undefined): string | null =>
-  description ?? null;
-
-// The Disposition is still echoed when unstated, and that is deliberate rather than an oversight —
-// see the note at the return below.
-const amendedDisposition = (
-  stated: RejectionDisposition | undefined,
-  held: RejectionDisposition,
-): RejectionDisposition => stated ?? held;
-
 // T11/AC-18/AC-18a/AC-18b/AC-19/AC-20/AC-26/sad.md §6.4 — the amendment of one recorded Rejection.
 // Its precondition is the Rejection and never the draft's state (sad.md §6.4 step 5), so the only
 // repository this command reaches for is `PurchaseDraftRejectionRepository`: no draft header, no
@@ -61,8 +45,6 @@ const amendedDisposition = (
 export class AmendPurchaseDraftRejectionCommand {
   constructor(
     private readonly rejectionRepository: PurchaseDraftRejectionRepository,
-    @Optional()
-    private readonly runtime: AmendRejectionCommandRuntime = defaultAmendRejectionCommandRuntime,
   ) {}
 
   @Transactional()
@@ -87,7 +69,7 @@ export class AmendPurchaseDraftRejectionCommand {
       purchaseDraftUnknownDispositionError(REJECTION_DISPOSITIONS),
     );
 
-    const amendedAt = this.runtime.now();
+    const amendedAt = new Date();
     const amendment: AmendRejectionInput = {
       rejectionId,
       warehouseId: currentUser.warehouseId,

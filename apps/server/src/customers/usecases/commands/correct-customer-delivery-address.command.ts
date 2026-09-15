@@ -1,4 +1,4 @@
-import { Injectable, Optional } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { assertDefined } from '@warehouser/utils/asserts';
 import { isUndefined } from '@warehouser/utils/predicates';
 import { customerTargetUnavailableError } from 'customers/domain/errors/customer.errors';
@@ -15,15 +15,6 @@ import { find, map } from 'lodash-es';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository';
-
-export interface CorrectCustomerDeliveryAddressRuntime {
-  readonly now: () => Date;
-}
-
-const defaultCorrectCustomerDeliveryAddressRuntime: CorrectCustomerDeliveryAddressRuntime =
-  {
-    now: () => new Date(),
-  };
 
 // openapi.yaml `CustomerDeliveryAddressUpdate` — "both properties are optional; at least one must
 // be present. `accessNotes: null` clears them". So `undefined` is "not submitted" and keeps the
@@ -45,8 +36,6 @@ export class CorrectCustomerDeliveryAddressCommand {
   constructor(
     private readonly customerAddressBookRepository: CustomerAddressBookRepository,
     private readonly customerAddressBookService: CustomerAddressBookService,
-    @Optional()
-    private readonly correctCustomerDeliveryAddressRuntime: CorrectCustomerDeliveryAddressRuntime = defaultCorrectCustomerDeliveryAddressRuntime,
   ) {}
 
   @Transactional()
@@ -83,7 +72,7 @@ export class CorrectCustomerDeliveryAddressCommand {
       ? address.accessNotes
       : AccessNotes.create(input.accessNotes).value;
 
-    const revisedAt = this.correctCustomerDeliveryAddressRuntime.now();
+    const revisedAt = new Date();
     const outcome =
       await this.customerAddressBookRepository.reviseDeliveryAddress(
         deliveryAddressId,

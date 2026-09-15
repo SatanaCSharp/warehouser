@@ -1,4 +1,4 @@
-import { Injectable, Optional } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
 import { isDefined } from '@warehouser/utils/predicates';
 import {
@@ -10,14 +10,6 @@ import { Transactional } from 'shared/decorators/transactional.decorator';
 import { PurchaseDraftFreezeRepository } from 'shared/domain/repositories/purchase-draft-freeze.repository';
 import { appliedGuardedWrite } from 'shared/predicates/persistence-write.predicates';
 import { scopedToWarehouse } from 'shared/predicates/tenancy.predicates';
-
-export interface DiscardPurchaseDraftRuntime {
-  readonly now: () => Date;
-}
-
-const defaultDiscardPurchaseDraftRuntime: DiscardPurchaseDraftRuntime = {
-  now: () => new Date(),
-};
 
 export interface DiscardedPurchaseDraft {
   readonly id: string;
@@ -43,8 +35,6 @@ export interface DiscardedPurchaseDraft {
 export class DiscardPurchaseDraftCommand {
   constructor(
     private readonly closureRepository: PurchaseDraftFreezeRepository,
-    @Optional()
-    private readonly runtime: DiscardPurchaseDraftRuntime = defaultDiscardPurchaseDraftRuntime,
   ) {}
 
   @Transactional()
@@ -60,7 +50,7 @@ export class DiscardPurchaseDraftCommand {
       purchaseDraftTargetUnavailableError(),
     );
 
-    const discardedAt = this.runtime.now();
+    const discardedAt = new Date();
     const discarded = await this.closureRepository.discard({
       purchaseDraftId,
       warehouseId: currentUser.warehouseId,

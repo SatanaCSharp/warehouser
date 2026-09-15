@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { Injectable, Optional } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { assertFail } from '@warehouser/utils/asserts';
 import { isDefined, isEmpty, isNull } from '@warehouser/utils/predicates';
 import { find } from 'lodash-es';
@@ -21,15 +21,6 @@ export interface AddLinkInput {
   readonly statedQuantity: number;
 }
 
-export interface AddPurchaseDraftLineLinkRuntime {
-  readonly purchaseDraftLineLinkId: () => string;
-}
-
-const defaultAddPurchaseDraftLineLinkRuntime: AddPurchaseDraftLineLinkRuntime =
-  {
-    purchaseDraftLineLinkId: randomUUID,
-  };
-
 // AC-11/AC-11a/AC-15/AC-15b — linking a line to a Customer Order. The stated quantity is recorded
 // unadjusted: nothing here reconciles it against the line, the Customer Order or any other link —
 // coverage is the member's decision.
@@ -44,8 +35,6 @@ export class AddPurchaseDraftLineLinkCommand {
   constructor(
     private readonly assemblyRepository: PurchaseDraftAssemblyRepository,
     private readonly assemblyService: PurchaseDraftAssemblyService,
-    @Optional()
-    private readonly runtime: AddPurchaseDraftLineLinkRuntime = defaultAddPurchaseDraftLineLinkRuntime,
   ) {}
 
   @Transactional()
@@ -62,7 +51,7 @@ export class AddPurchaseDraftLineLinkCommand {
       input.customerOrderId,
     );
 
-    const purchaseDraftLineLinkId = this.runtime.purchaseDraftLineLinkId();
+    const purchaseDraftLineLinkId = randomUUID();
 
     // A line this draft does not hold resolves to nothing here, and the guarded write below reports
     // it as the 404 a line id that names nothing produces — so the agreement is simply not asked

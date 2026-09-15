@@ -27,3 +27,14 @@ export const invalidInputError = (
 
 export const emailAlreadyRegisteredError = (): ApplicationError =>
   new ApplicationError(ErrorCode.AUTH_EMAIL_ALREADY_REGISTERED);
+
+// AC-09/AC-16's cross-Warehouse-hiding denial and the Role-not-found case are the identical
+// authorization-boundary conditions `access` already produces for its own administration actions
+// (sad.md §4). This module reuses those stable codes rather than redefining them, and — like the
+// `auth` codes above — declares them here rather than importing `access`'s feature-owned
+// factories: `users` never imports `access/*`/`auth/*`.
+export const targetUnavailableError = (): ApplicationError =>
+  new ApplicationError(ErrorCode.ACCESS_TARGET_UNAVAILABLE);
+
+export const roleUnavailableError = (): ApplicationError =>
+  new ApplicationError(ErrorCode.ACCESS_ROLE_UNAVAILABLE);

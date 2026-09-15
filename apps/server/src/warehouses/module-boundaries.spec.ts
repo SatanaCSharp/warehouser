@@ -57,6 +57,9 @@ const DECLARED_MANIFEST = [
   // The archival branch as a named condition: `PATCH .../archived` carries one boolean and means
   // two different commands (server-error-handling.md §1).
   'domain/predicates/warehouse-archival.predicates.ts',
+  // How a Warehouse's Delivery Address fields are read into the columns that hold them — the
+  // module's rule, not the setting command's (server-architecture.md § "Layer responsibilities").
+  'domain/services/warehouse-delivery-address.service.ts',
   'index.ts',
   'rest/controllers/warehouse.controller.ts',
   'rest/dtos/warehouse-mutation.dto.ts',
