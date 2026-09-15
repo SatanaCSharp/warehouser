@@ -32,22 +32,13 @@ import {
   buildWarehouse,
   buildWorkspace,
 } from 'test/factories/entity-factories';
-import type { Logger } from 'typeorm';
-// `PostgresQueryRunner.prototype.query` is the one method every TypeORM access path ultimately
-// calls to reach PostgreSQL. Spying on it proves actual round trips, so a second query fetching the
-// Rejections still fails even though it returns identical figures — the idiom
+// Counts actual PostgreSQL round trips, so a second query fetching the Rejections still fails even
+// though it returns identical figures — the idiom
 // `consolidated-demand.repository.integration.spec.ts` (T10) establishes and
 // `purchase-draft-address-drift-read.repository.integration.spec.ts` (T18) reuses.
-import { PostgresQueryRunner } from 'typeorm/driver/postgres/PostgresQueryRunner.js';
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  describe,
-  expect,
-  it,
-  vi,
-} from 'vitest';
+import type { RecordedStatement } from 'test/pglite/query-recorder';
+import { recordQueries, withQueryCount } from 'test/pglite/query-recorder';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 const now = new Date('2026-08-26T10:00:00.000Z');
 // When the ending was recorded, and therefore when each Rejection on it was raised
@@ -170,49 +161,20 @@ const repository = new PurchaseDraftReadRepository(
   dataSource,
 ) as unknown as PurchaseDraftConditionReadContract;
 
-const withQueryCount = async <T>(
-  run: () => Promise<T>,
-): Promise<{ result: T; queryCount: number }> => {
-  const spy = vi.spyOn(PostgresQueryRunner.prototype, 'query');
-  const before = spy.mock.calls.length;
-  const result = await run();
-  const queryCount = spy.mock.calls.length - before;
-  spy.mockRestore();
-  return { result, queryCount };
-};
-
-// Captures every SQL statement TypeORM sends while installed, so the EXPLAIN test re-plans the
-// exact statement the repository issued rather than a hand-reconstructed approximation of it — the
-// idiom `workspace-read.repository.integration.spec.ts` establishes.
-class CapturingLogger implements Logger {
-  readonly statements: { sql: string; parameters: unknown[] }[] = [];
-  logQuery(query: string, parameters?: unknown[]): void {
-    this.statements.push({ sql: query, parameters: parameters ?? [] });
-  }
-  logQueryError(): void {}
-  logQuerySlow(): void {}
-  logSchemaBuild(): void {}
-  logMigration(): void {}
-  log(): void {}
-}
-
 // Runs `subject`, then re-`EXPLAIN`s the last statement it issued with `enable_seqscan` forced off,
 // so a plan that legitimately does not qualify for the target index still reports a Seq Scan
 // instead of being masked by fixture-scale cost preference.
 // The last statement `subject` sent, as it was sent. Both the EXPLAIN test and the withheld-shape
 // test read the *issued* SQL rather than a hand-reconstructed approximation of it, which is what
 // makes "the withheld query does not name these columns" a fact about the query rather than about
-// the projection someone believes it builds.
+// the projection someone believes it builds — the idiom
+// `workspace-read.repository.integration.spec.ts` establishes.
 const lastStatementOf = async (
   subject: () => Promise<unknown>,
-): Promise<{ sql: string; parameters: unknown[] }> => {
-  const originalLogger = dataSource.logger;
-  const logger = new CapturingLogger();
-  dataSource.logger = logger;
-  await subject();
-  dataSource.logger = originalLogger;
+): Promise<RecordedStatement> => {
+  const { statements } = await recordQueries(subject);
 
-  const last = logger.statements.at(-1);
+  const last = statements.at(-1);
   if (!last) {
     throw new Error('no SQL statement was captured');
   }
@@ -227,10 +189,9 @@ const explainLastQuery = async (
 
   const rows = await dataSource.transaction(async (manager) => {
     await manager.query('SET LOCAL enable_seqscan = off');
-    return manager.query<Record<string, string>[]>(
-      `EXPLAIN ${last.sql}`,
-      last.parameters,
-    );
+    return manager.query<Record<string, string>[]>(`EXPLAIN ${last.sql}`, [
+      ...last.parameters,
+    ]);
   });
   return rows.map((row) => Object.values(row)[0]).join('\n');
 };

@@ -1,3 +1,4 @@
+import { isDefined } from '@warehouser/utils/predicates';
 import type { AuthRuntime } from 'auth/domain/auth-runtime';
 import { authRuntime } from 'auth/domain/auth-runtime';
 import { digestSessionSecret } from 'auth/domain/security/session-secret';
@@ -13,7 +14,7 @@ export class SignOutCommand {
   ) {}
 
   async execute(secret?: string): Promise<void> {
-    if (!secret) {
+    if (!isDefined(secret)) {
       return;
     }
 

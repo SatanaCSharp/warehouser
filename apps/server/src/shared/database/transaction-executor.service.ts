@@ -1,8 +1,10 @@
 import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import { DiscoveryService, MetadataScanner, Reflector } from '@nestjs/core';
+import { isDefined } from '@warehouser/utils/predicates';
 import { DbTransactionService } from 'shared/database/db-transaction.service';
 import type { TransactionalMetadata } from 'shared/decorators/transactional.decorator';
 import { TRANSACTIONAL_KEY } from 'shared/decorators/transactional.decorator';
+import { isCallable } from 'shared/predicates/value-shape.predicates';
 
 type ProviderInstance = Record<string, unknown>;
 type ProviderMethod = (...arguments_: unknown[]) => unknown;
@@ -28,7 +30,7 @@ export class TransactionExecutor implements OnApplicationBootstrap {
     }
 
     const prototype = Object.getPrototypeOf(candidate) as object | null;
-    if (!prototype) {
+    if (!isDefined(prototype)) {
       return;
     }
 
@@ -47,7 +49,7 @@ export class TransactionExecutor implements OnApplicationBootstrap {
     methodName: string,
   ): void {
     const candidate = instance[methodName];
-    if (typeof candidate !== 'function') {
+    if (!isCallable(candidate)) {
       return;
     }
     const originalMethod = candidate as ProviderMethod;
@@ -59,7 +61,7 @@ export class TransactionExecutor implements OnApplicationBootstrap {
       TRANSACTIONAL_KEY,
       originalMethod,
     );
-    if (!metadata) {
+    if (!isDefined(metadata)) {
       return;
     }
 
@@ -83,6 +85,6 @@ export class TransactionExecutor implements OnApplicationBootstrap {
   }
 
   private isProviderInstance(value: unknown): value is ProviderInstance {
-    return typeof value === 'object' && value !== null;
+    return typeof value === 'object' && isDefined(value);
   }
 }

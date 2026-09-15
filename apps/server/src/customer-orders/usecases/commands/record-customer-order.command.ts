@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { Injectable, Optional } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
+import { isDefined, isUndefined } from '@warehouser/utils/predicates';
 import {
   customerOrderCustomerIdentityError,
   customerOrderCustomerUnavailableError,
@@ -13,11 +14,14 @@ import type { CustomerOrder } from 'customer-orders/domain/mappers/customer-orde
 import { toCustomerOrder } from 'customer-orders/domain/mappers/customer-order.mapper';
 import {
   isAvailableDestinationRecord,
-  isCustomerName,
   isDemandQuantity,
   isRecordOfWarehouse,
   namesExactlyOneCustomerIdentity,
 } from 'customer-orders/domain/predicates/customer-order.predicates';
+import {
+  customerNameStatedWellOrNotAtAll,
+  deliveryAddressHasCustomer,
+} from 'customer-orders/domain/predicates/customer-order-identity.predicates';
 import { CustomerOrderDestinationService } from 'customer-orders/domain/services/customer-order-destination.service';
 import { assertNeededByStillAhead } from 'customer-orders/domain/services/customer-order-lifecycle.service';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
@@ -65,22 +69,9 @@ interface CustomerOrderDestination {
 const customerIdentityRefusal = (
   customerId: string | undefined,
 ): 'customer_identity_exclusive' | 'customer_identity_required' =>
-  customerId === undefined
+  isUndefined(customerId)
     ? 'customer_identity_required'
     : 'customer_identity_exclusive';
-
-// A Delivery Address belongs to a Customer, so one stated beside a typed customer name names an
-// address of nobody.
-const deliveryAddressHasCustomer = (
-  customerDeliveryAddressId: string | undefined,
-  customerId: string | undefined,
-): boolean =>
-  customerDeliveryAddressId === undefined || customerId !== undefined;
-
-// AC-02 — a typed customer name, when stated at all, is a trimmed non-empty one.
-const customerNameStatedWellOrNotAtAll = (
-  customerName: string | undefined,
-): boolean => customerName === undefined || isCustomerName(customerName);
 
 // AC-11a — stored trimmed, as `chk_customer_orders_customer_name_stored_trimmed` requires; absent
 // where the order names a Customer instead.
@@ -169,7 +160,7 @@ export class RecordCustomerOrderCommand {
       customerName: typedCustomerName(input.customerName),
     };
 
-    if (input.customerId !== undefined) {
+    if (isDefined(input.customerId)) {
       // AC-12 — the Customer is resolved **within the acting Warehouse**, so one that exists only in
       // another Warehouse resolves to nothing and is refused exactly as a missing one is, disclosing
       // nothing about what exists elsewhere. An Inactive Customer does resolve, and is the different

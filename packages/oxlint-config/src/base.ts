@@ -346,6 +346,52 @@ export const baseConfig: OxlintConfig = {
     'import/no-duplicates': 'warn',
     'import/consistent-type-specifier-style': 'warn',
 
+    // `extensions` bans the file extension on every import this repository *writes* itself, so a
+    // specifier reads `shared/database/db-transaction` and never `./db-transaction.js` or
+    // `./db-transaction.ts`. That is not a preference: `apps/server/tsconfig.json` runs
+    // `moduleResolution: "Bundler"` precisely so the ~3000 alias specifiers there can stay
+    // extensionless, and `tsc-alias` with `resolveFullPaths` appends the extension at emit,
+    // resolved against the emitted tree rather than guessed. A hand-written extension in source
+    // therefore either survives into `dist/` unchecked or fights the rewriter. `apps/web` is
+    // bundled by Vite, which needs no extension either.
+    //
+    // The first argument is `ignorePackages`, NOT `never`, and the difference is load-bearing.
+    // `tsc-alias` rewrites relative and aliased specifiers only; it does not touch a bare package
+    // specifier, so a deep subpath into a dependency has to carry its own extension to survive
+    // Node's ESM resolver, which does no extension search. Both of this repository's cases were
+    // measured rather than assumed — `import('lodash/find')` and
+    // `import('typeorm/driver/postgres/PostgresQueryRunner')` each fail with `ERR_MODULE_NOT_FOUND`
+    // under Node 24, because lodash publishes no `exports` map and typeorm's maps `"./*.js"` to
+    // itself. `ignorePackages` exempts exactly those 45 specifiers in `apps/server/src` while still
+    // reporting a relative one.
+    //
+    // `pattern` narrows the ban to the JS/TS family for the same reason: the bare `never` form
+    // rejects every extension, including the `./index.css`, `./data.json` and `./logo.svg`
+    // specifiers `apps/web` cannot write any other way. Anything outside this list keeps the
+    // `ignorePackages` default, i.e. it must carry its extension — which is what those already do.
+    //
+    // Measured at zero findings across `apps/*` and `packages/*`, so it is a guard rather than a
+    // cleanup. Known gap in oxlint 1.82: a whole-clause `import type { X } from './x.js'` is not
+    // reported (an inline `{ type X }` is), and `checkTypeImports` does not change that. It costs
+    // nothing here — the only such specifiers in the repository are package subpaths, which this
+    // rule exempts anyway.
+    'import/extensions': [
+      'error',
+      'ignorePackages',
+      {
+        pattern: {
+          js: 'never',
+          mjs: 'never',
+          cjs: 'never',
+          jsx: 'never',
+          ts: 'never',
+          mts: 'never',
+          cts: 'never',
+          tsx: 'never',
+        },
+      },
+    ],
+
     // ---- promise. Thirteen of the plugin's sixteen rules are on and all thirteen are at zero
     // findings across `apps/*` and `packages/*` — this codebase is uniformly async/await, so they
     // are guards rather than cleanups. `no-callback-in-promise` and `no-new-statics` are

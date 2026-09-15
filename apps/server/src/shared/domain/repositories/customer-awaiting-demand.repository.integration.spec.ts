@@ -18,16 +18,8 @@ import {
   buildWarehouse,
   buildWorkspace,
 } from 'test/factories/entity-factories';
-import { PostgresQueryRunner } from 'typeorm/driver/postgres/PostgresQueryRunner.js';
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  describe,
-  expect,
-  it,
-  vi,
-} from 'vitest';
+import { withQueryCount } from 'test/pglite/query-recorder';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 const now = new Date('2026-09-03T09:00:00.000Z');
 const later = new Date('2026-09-03T12:00:00.000Z');
@@ -231,13 +223,9 @@ describe('CustomerAwaitingDemandRepository', () => {
       deliveryAddressId: secondAddressId,
     });
 
-    const spy = vi.spyOn(PostgresQueryRunner.prototype, 'query');
-    const before = spy.mock.calls.length;
-    const awaiting = await repository.readAwaitingCustomerOrders(
-      seeded.customerId,
+    const { result: awaiting, queryCount } = await withQueryCount(() =>
+      repository.readAwaitingCustomerOrders(seeded.customerId),
     );
-    const queryCount = spy.mock.calls.length - before;
-    spy.mockRestore();
 
     expect(queryCount).toBe(1);
     expect(awaiting).toEqual([

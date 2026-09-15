@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { isEmpty } from '@warehouser/utils/predicates';
 import { getEntityManager } from 'shared/database/db-transaction-context.service';
 import { PermissionEntity } from 'shared/domain/entities/permission.entity';
 import { RoleEntity } from 'shared/domain/entities/role.entity';
@@ -40,7 +41,7 @@ export class RoleLifecycleRepository {
       kind: 'custom',
     });
     const grants = permissionRows(input.id, permissions);
-    if (grants.length > 0) {
+    if (!isEmpty(grants)) {
       await manager.getRepository(RolePermissionEntity).insert(grants);
     }
   }
@@ -49,7 +50,7 @@ export class RoleLifecycleRepository {
     permissionIds: readonly string[],
   ): Promise<PermissionEntity[]> {
     const manager = getEntityManager(this.dataSource);
-    if (permissionIds.length === 0) {
+    if (isEmpty(permissionIds)) {
       return Promise.resolve([]);
     }
     return manager.getRepository(PermissionEntity).find({
@@ -81,7 +82,7 @@ export class RoleLifecycleRepository {
     await manager.getRepository(RolePermissionEntity).delete({ roleId });
     const grants = permissionRows(roleId, permissions);
 
-    if (grants.length) {
+    if (!isEmpty(grants)) {
       await manager.getRepository(RolePermissionEntity).insert(grants);
     }
   }

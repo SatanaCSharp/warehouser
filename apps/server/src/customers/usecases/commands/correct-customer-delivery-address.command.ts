@@ -1,16 +1,17 @@
 import { Injectable, Optional } from '@nestjs/common';
-import { assert } from '@warehouser/utils/asserts';
+import { assertDefined } from '@warehouser/utils/asserts';
+import { isUndefined } from '@warehouser/utils/predicates';
 import { customerTargetUnavailableError } from 'customers/domain/errors/customer.errors';
 import type { Customer } from 'customers/domain/mappers/customer.mapper';
 import { toCustomer } from 'customers/domain/mappers/customer.mapper';
+import { isAddressedDeliveryAddress } from 'customers/domain/predicates/customer.predicates';
 import {
   assertCustomerWriteApplied,
   CustomerAddressBookService,
 } from 'customers/domain/services/customer-address-book.service';
 import { AccessNotes } from 'customers/domain/value-objects/access-notes';
 import { DeliveryAddressText } from 'customers/domain/value-objects/delivery-address-text';
-import find from 'lodash/find.js';
-import map from 'lodash/map.js';
+import { find, map } from 'lodash-es';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository';
@@ -71,18 +72,16 @@ export class CorrectCustomerDeliveryAddressCommand {
       find(addresses, (candidate) => candidate.id === deliveryAddressId) ??
       null;
 
-    assert(address !== null, customerTargetUnavailableError());
+    assertDefined(address, customerTargetUnavailableError());
 
     // AC-02 — an omitted property keeps what is stored; a submitted one is decided before
     // persistence is consulted and never echoed back in a refusal (sad.md §8).
-    const addressText =
-      input.addressText === undefined
-        ? address.addressText
-        : DeliveryAddressText.create(input.addressText, 'addressText').value;
-    const accessNotes =
-      input.accessNotes === undefined
-        ? address.accessNotes
-        : AccessNotes.create(input.accessNotes).value;
+    const addressText = isUndefined(input.addressText)
+      ? address.addressText
+      : DeliveryAddressText.create(input.addressText, 'addressText').value;
+    const accessNotes = isUndefined(input.accessNotes)
+      ? address.accessNotes
+      : AccessNotes.create(input.accessNotes).value;
 
     const revisedAt = this.correctCustomerDeliveryAddressRuntime.now();
     const outcome =
@@ -99,7 +98,7 @@ export class CorrectCustomerDeliveryAddressCommand {
     return toCustomer(
       customer,
       map(addresses, (candidate) =>
-        candidate.id === deliveryAddressId
+        isAddressedDeliveryAddress(candidate, deliveryAddressId)
           ? { ...candidate, addressText, accessNotes, updatedAt: revisedAt }
           : candidate,
       ),

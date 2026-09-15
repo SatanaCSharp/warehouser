@@ -12,23 +12,23 @@ import type {
   PurchaseDraftLineRejection,
   PurchaseDraftSummary,
 } from '@warehouser/contracts/purchase-drafts';
+import { isNull } from '@warehouser/utils/predicates';
 import type {
   LineConditionAccount,
   LineConformanceVerdict,
   LineRejection,
   PurchaseDraftLineEndingWithCondition,
 } from 'purchase-drafts/domain/mappers/line-condition.mapper';
-import type {
-  PurchaseDraftLineLinkIdentifiedWithDrift,
-  PurchaseDraftLineLinkRedactedWithDrift,
-} from 'purchase-drafts/usecases/queries/drift-signals';
-import type { PurchaseDraftLineListEntryWithDrift } from 'purchase-drafts/usecases/queries/list-purchase-draft-lines.query';
+import { identifiesCustomer } from 'purchase-drafts/domain/predicates/purchase-draft-drift.predicates';
+import { accountDisclosesRejectionCause } from 'purchase-drafts/domain/predicates/rejection-cause-access.predicates';
 import type {
   PurchaseDraftDetailWithDrift,
   PurchaseDraftLineIdentifiedWithDrift,
+  PurchaseDraftLineLinkIdentifiedWithDrift,
+  PurchaseDraftLineLinkRedactedWithDrift,
   PurchaseDraftLineWithDrift,
-} from 'purchase-drafts/usecases/queries/read-purchase-draft.query';
-import { identifiesCustomer } from 'purchase-drafts/usecases/queries/read-purchase-draft.query';
+} from 'purchase-drafts/domain/projections/purchase-draft-projection';
+import type { PurchaseDraftLineListEntryWithDrift } from 'purchase-drafts/usecases/queries/list-purchase-draft-lines.query';
 import type { PurchaseDraftSummaryRead } from 'shared/domain/repositories/purchase-draft-read.repository';
 
 // openapi.yaml `PurchaseDraftSummary`/`PurchaseDraftDetail`/`PurchaseDraftLineListEntry` — the
@@ -86,15 +86,14 @@ const toRedactedLinkResponse = (
   id: link.id,
   customerOrderId: link.customerOrderId,
   statedQuantity: link.statedQuantity,
-  snapshot:
-    link.snapshot === null
-      ? null
-      : {
-          capturedQuantity: link.snapshot.capturedQuantity,
-          capturedNeededBy: link.snapshot.capturedNeededBy,
-          capturedState: link.snapshot
-            .capturedState as PurchaseDraftLineLinkRedacted['current']['state'],
-        },
+  snapshot: isNull(link.snapshot)
+    ? null
+    : {
+        capturedQuantity: link.snapshot.capturedQuantity,
+        capturedNeededBy: link.snapshot.capturedNeededBy,
+        capturedState: link.snapshot
+          .capturedState as PurchaseDraftLineLinkRedacted['current']['state'],
+      },
   current: {
     quantity: link.current.quantity,
     neededBy: link.current.neededBy,
@@ -117,18 +116,16 @@ const toIdentifiedLinkResponse = (
   ...toRedactedLinkResponse(link),
   customer: link.customer,
   customerName: link.customerName,
-  snapshot:
-    link.snapshot === null
-      ? null
-      : {
-          capturedQuantity: link.snapshot.capturedQuantity,
-          capturedNeededBy: link.snapshot.capturedNeededBy,
-          capturedState: link.snapshot
-            .capturedState as PurchaseDraftLineLinkIdentified['current']['state'],
-          capturedDeliveryAddressId: link.snapshot.capturedDeliveryAddressId,
-          capturedDeliveryAddressText:
-            link.snapshot.capturedDeliveryAddressText,
-        },
+  snapshot: isNull(link.snapshot)
+    ? null
+    : {
+        capturedQuantity: link.snapshot.capturedQuantity,
+        capturedNeededBy: link.snapshot.capturedNeededBy,
+        capturedState: link.snapshot
+          .capturedState as PurchaseDraftLineLinkIdentified['current']['state'],
+        capturedDeliveryAddressId: link.snapshot.capturedDeliveryAddressId,
+        capturedDeliveryAddressText: link.snapshot.capturedDeliveryAddressText,
+      },
   current: {
     quantity: link.current.quantity,
     neededBy: link.current.neededBy,
@@ -136,16 +133,15 @@ const toIdentifiedLinkResponse = (
       .state as PurchaseDraftLineLinkIdentified['current']['state'],
     outstandingQuantity: link.current.outstandingQuantity,
     lastChangedAt: link.current.lastChangedAt,
-    deliveryAddress:
-      link.current.deliveryAddress === null
-        ? null
-        : {
-            deliveryAddressId: link.current.deliveryAddress.deliveryAddressId,
-            addressText: link.current.deliveryAddress.addressText,
-            accessNotes: link.current.deliveryAddress.accessNotes,
-            isMain: link.current.deliveryAddress.isMain,
-            deactivatedAt: link.current.deliveryAddress.deactivatedAt,
-          },
+    deliveryAddress: isNull(link.current.deliveryAddress)
+      ? null
+      : {
+          deliveryAddressId: link.current.deliveryAddress.deliveryAddressId,
+          addressText: link.current.deliveryAddress.addressText,
+          accessNotes: link.current.deliveryAddress.accessNotes,
+          isMain: link.current.deliveryAddress.isMain,
+          deactivatedAt: link.current.deliveryAddress.deactivatedAt,
+        },
   },
 });
 
@@ -187,7 +183,7 @@ const toRejectionResponse = (
 // not `null` — so a leak of a cause the read never fetched is impossible here rather than caught
 // downstream (AC-21, AC-22, sad.md §10 "Redaction unit").
 const toConditionResponse = (condition: LineConditionAccount): LineCondition =>
-  'rejections' in condition
+  accountDisclosesRejectionCause(condition)
     ? {
         acceptedQuantity: condition.acceptedQuantity,
         rejectedQuantity: condition.rejectedQuantity,
@@ -210,17 +206,16 @@ const toConditionResponse = (condition: LineConditionAccount): LineCondition =>
 const toEndingResponse = (
   ending: PurchaseDraftLineEndingWithCondition | null,
 ): PurchaseDraftLineEnding | null =>
-  ending === null
+  isNull(ending)
     ? null
     : {
         kind: ending.kind as PurchaseDraftLineEnding['kind'],
         quantity: ending.quantity,
         recordedByUserId: ending.recordedByUserId,
         recordedAt: ending.recordedAt,
-        condition:
-          ending.condition === null
-            ? null
-            : toConditionResponse(ending.condition),
+        condition: isNull(ending.condition)
+          ? null
+          : toConditionResponse(ending.condition),
       };
 
 // openapi.yaml `PurchaseDraftLineRedacted` minus its links — everything a line carries whatever the

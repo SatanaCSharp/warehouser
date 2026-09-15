@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { isDefined } from '@warehouser/utils/predicates';
 import type { ItemCatalogueEntryRead } from 'items/domain/mappers/item-catalogue-entry.mapper';
 import { toItemCatalogueEntry } from 'items/domain/mappers/item-catalogue-entry.mapper';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
@@ -29,6 +30,6 @@ export class ReadItemCatalogueEntryQuery {
       )
     ).at(0);
 
-    return row ? toItemCatalogueEntry(row) : null;
+    return isDefined(row) ? toItemCatalogueEntry(row) : null;
   }
 }

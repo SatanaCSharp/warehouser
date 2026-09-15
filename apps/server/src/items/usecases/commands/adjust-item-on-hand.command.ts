@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { Injectable, Optional } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
+import { isDefined } from '@warehouser/utils/predicates';
 import {
   itemAdjustmentReasonRequiredError,
   itemInvalidOnHandQuantityError,
@@ -15,6 +16,7 @@ import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
 import { ItemStockAdjustmentRepository } from 'shared/domain/repositories/item-stock-adjustment.repository';
+import { scopedToWarehouse } from 'shared/predicates/tenancy.predicates';
 
 export interface AdjustItemOnHandRuntime {
   readonly adjustmentId: () => string;
@@ -73,7 +75,8 @@ export class AdjustItemOnHandCommand {
     // consulted here — unlike the operations that record a *new* reference to an Item.
     const item = await this.itemCatalogueRepository.findById(itemId);
     assert(
-      item !== null && item.warehouseId === currentUser.warehouseId,
+      isDefined(item) &&
+        scopedToWarehouse(item.warehouseId, currentUser.warehouseId),
       itemTargetUnavailableError(),
     );
 

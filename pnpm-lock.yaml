@@ -161,7 +161,6 @@ catalogs:
       version: 4.4.3
 
 overrides:
-  '@barney-media/crap-typescript-core>typescript': ^5.9.3
   '@types/node': ^24.13.3
   brace-expansion@1.1.15: 1.1.16
   brace-expansion@5.0.7: 5.0.8
@@ -258,8 +257,8 @@ importers:
       bullmq:
         specifier: 'catalog:'
         version: 5.81.1
-      lodash:
-        specifier: ^4.18.1
+      lodash-es:
+        specifier: ^4.17.21
         version: 4.18.1
       nestjs-pino:
         specifier: 'catalog:'
@@ -313,9 +312,9 @@ importers:
       '@swc/core':
         specifier: 'catalog:'
         version: 1.16.2(@swc/helpers@0.5.23)
-      '@types/lodash':
-        specifier: ^4.17.24
-        version: 4.17.24
+      '@types/lodash-es':
+        specifier: ^4.17.12
+        version: 4.17.12
       '@types/passport-jwt':
         specifier: 'catalog:'
         version: 4.0.1
@@ -2405,6 +2404,9 @@ packages:
   '@types/jsonwebtoken@9.0.10':
     resolution: {integrity: sha512-asx5hIG9Qmf/1oStypjanR7iKTv0gXQ1Ov/jfrX6kS/EO0OFni8orbmGCn0672NHR3kXHwpAwR+B368ZGN/2rA==}
 
+  '@types/lodash-es@4.17.12':
+    resolution: {integrity: sha512-0NgftHUcV4v34VhXm8QBSftKVXtbkBG3ViCjs6+eJ5a6y6Mi/jiFGPc1sC7QK+9BFhWrURE3EOggmWaSxL9OzQ==}
+
   '@types/lodash@4.17.24':
     resolution: {integrity: sha512-gIW7lQLZbue7lRSWEFql49QJJWThrTFFeIMJdp3eH4tKoxm1OvEPg02rm4wCCSHS0cL3/Fizimb35b7k8atwsQ==}
 
@@ -3533,6 +3535,9 @@ packages:
     resolution: {integrity: sha512-IXO6OCs9yg8tMKzfPZ1YmheJbZCiEsnBdcB03l0OcfK9prKnJb96siuHCr5Fl37/yo9DnKU+TLpxzTUspw9shg==}
     engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
 
+  lodash-es@4.18.1:
+    resolution: {integrity: sha512-J8xewKD/Gk22OZbhpOVSwcs60zhd95ESDwezOFuA3/099925PdHJ7OFHNTGtajL3AlZkykD32HykiMo+BIBI8A==}
+
   lodash.includes@4.3.0:
     resolution: {integrity: sha512-W3Bx6mdkRTGtlJISOvVD/lbqjTlPPUDTMnlXZFnVwi9NKJ6tiAk6LVdlhZMm17VZisqhKcgzpO5Wz91PCt5b0w==}
 
@@ -4582,6 +4587,11 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
+  typescript@6.0.3:
+    resolution: {integrity: sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw==}
+    engines: {node: '>=14.17'}
+    hasBin: true
+
   uglify-js@3.19.3:
     resolution: {integrity: sha512-v3Xu+yuwBXisp6QYTcH4UbH+xYJXqnq2m/LtQVWKWzYc1iehYnLixoQDN9FH6/j9/oybfd6W9Ghwkl8+UMKTKQ==}
     engines: {node: '>=0.8.0'}
@@ -5135,7 +5145,7 @@ snapshots:
     dependencies:
       '@toon-format/toon': 2.3.1
       fast-xml-parser: 5.11.1
-      typescript: 5.9.3
+      typescript: 6.0.3
 
   '@barney-media/crap-typescript-vitest@0.5.2(vitest@5.0.0)':
     dependencies:
@@ -6420,6 +6430,10 @@ snapshots:
       '@types/ms': 2.1.0
       '@types/node': 24.13.3
 
+  '@types/lodash-es@4.17.12':
+    dependencies:
+      '@types/lodash': 4.17.24
+
   '@types/lodash@4.17.24': {}
 
   '@types/ms@2.1.0': {}
@@ -7569,6 +7583,8 @@ snapshots:
 
   load-tsconfig@0.2.5: {}
 
+  lodash-es@4.18.1: {}
+
   lodash.includes@4.3.0: {}
 
   lodash.isboolean@3.0.3: {}
@@ -8623,6 +8639,8 @@ snapshots:
       - supports-color
 
   typescript@5.9.3: {}
+
+  typescript@6.0.3: {}
 
   uglify-js@3.19.3:
     optional: true

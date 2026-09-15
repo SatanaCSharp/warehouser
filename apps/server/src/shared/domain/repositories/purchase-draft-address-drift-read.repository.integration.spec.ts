@@ -32,11 +32,9 @@ import {
   buildWarehouse,
   buildWorkspace,
 } from 'test/factories/entity-factories';
-// `PostgresQueryRunner.prototype.query` is the one method every TypeORM access path ultimately
-// calls to reach PostgreSQL. Spying on it proves actual round trips, so an N+1 implementation
-// returning identical figures still fails — the idiom
-// `consolidated-demand.repository.integration.spec.ts` (T10) establishes.
-import { PostgresQueryRunner } from 'typeorm/driver/postgres/PostgresQueryRunner.js';
+// Counts actual PostgreSQL round trips, so an N+1 implementation returning identical figures still
+// fails — the idiom `consolidated-demand.repository.integration.spec.ts` (T10) establishes.
+import { withQueryCount } from 'test/pglite/query-recorder';
 import {
   afterAll,
   afterEach,
@@ -58,17 +56,6 @@ const WAREHOUSE_ACCESS_NOTES = 'Dock 3; deliveries 07:00-15:00';
 const CUSTOMER_NAME = 'Test Customer North';
 
 const repository = new PurchaseDraftReadRepository(dataSource);
-
-const withQueryCount = async <T>(
-  run: () => Promise<T>,
-): Promise<{ result: T; queryCount: number }> => {
-  const spy = vi.spyOn(PostgresQueryRunner.prototype, 'query');
-  const before = spy.mock.calls.length;
-  const result = await run();
-  const queryCount = spy.mock.calls.length - before;
-  spy.mockRestore();
-  return { result, queryCount };
-};
 
 const seedWorkspace = async (): Promise<string> => {
   const workspace = buildWorkspace();

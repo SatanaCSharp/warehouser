@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { assert } from '@warehouser/utils/asserts';
+import { isDefined } from '@warehouser/utils/predicates';
 import type { AuthRuntime } from 'auth/domain/auth-runtime';
 import { authRuntime } from 'auth/domain/auth-runtime';
 import { Account } from 'auth/domain/entities/account';
@@ -19,10 +20,12 @@ import { SessionDigest } from 'auth/domain/value-objects/session-digest';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
 import { EmailAddress } from 'shared/domain/security/email-address';
-import { isSupportedEmail } from 'shared/domain/security/is-supported-email';
-import { isSupportedPassword } from 'shared/domain/security/is-supported-password';
 import { Password } from 'shared/domain/security/password';
 import { hashPassword } from 'shared/domain/security/password-hashing';
+import {
+  isSupportedEmail,
+  isSupportedPassword,
+} from 'shared/predicates/credential.predicates';
 import type {
   ProvisionRegistrationResult,
   WorkspaceProvisioningService,
@@ -52,20 +55,22 @@ export class RegisterCommand {
 
   @Transactional()
   async execute(input: RegisterInput): Promise<RegisteredSession> {
-    const emailSupported = isSupportedEmail(input.email);
-    const passwordSupported = isSupportedPassword(input.password);
     assert(
-      emailSupported && passwordSupported,
+      isSupportedEmail(input.email) && isSupportedPassword(input.password),
       AuthInvalidInputError({
-        ...(!emailSupported && { email: 'unsupported' }),
-        ...(!passwordSupported && { password: 'unsupported' }),
+        ...(isSupportedEmail(input.email) ? {} : { email: 'unsupported' }),
+        ...(isSupportedPassword(input.password)
+          ? {}
+          : { password: 'unsupported' }),
       }),
     );
     const email = EmailAddress.create(input.email);
     const password = Password.create(input.password);
 
     assert(
-      !(await this.authentication.findAccountByNormalizedEmail(email.value)),
+      !isDefined(
+        await this.authentication.findAccountByNormalizedEmail(email.value),
+      ),
       AuthEmailAlreadyRegisteredError(),
     );
 

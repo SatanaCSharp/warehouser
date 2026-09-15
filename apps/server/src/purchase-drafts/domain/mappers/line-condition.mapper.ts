@@ -1,4 +1,6 @@
-import uniq from 'lodash/uniq.js';
+import { isDefined, isNull, isUndefined } from '@warehouser/utils/predicates';
+import { uniq } from 'lodash-es';
+import { readDisclosesRejectionCause } from 'purchase-drafts/domain/predicates/rejection-cause-access.predicates';
 import type {
   PurchaseDraftLineEndingRead,
   PurchaseDraftLineRejectionRead,
@@ -87,7 +89,7 @@ export const rejectionReasonIdsOf = (
     endings.flatMap((ending) =>
       // Several read-side fixtures/callers omit `ending` entirely rather than stating `null`, and
       // both mean the same thing here — nothing to resolve a Reason for.
-      ending !== null && ending !== undefined && 'rejections' in ending
+      isDefined(ending) && readDisclosesRejectionCause(ending)
         ? ending.rejections.map((rejection) => rejection.rejectionReasonId)
         : [],
     ),
@@ -134,7 +136,7 @@ export const conditionOf = (
   ending: PurchaseDraftLineEndingRead,
   rejectionReasonLabels: ReadonlyMap<string, string>,
 ): LineConditionAccount | null => {
-  if (ending.preReceiptConformance === null) {
+  if (isNull(ending.preReceiptConformance)) {
     return null;
   }
 
@@ -147,7 +149,7 @@ export const conditionOf = (
     },
   };
 
-  if (!('rejections' in ending)) {
+  if (!readDisclosesRejectionCause(ending)) {
     return withheld;
   }
 
@@ -166,7 +168,7 @@ export const withCondition = (
   ending: PurchaseDraftLineEndingRead | null | undefined,
   rejectionReasonLabels: ReadonlyMap<string, string>,
 ): PurchaseDraftLineEndingWithCondition | null =>
-  ending === null || ending === undefined
+  isNull(ending) || isUndefined(ending)
     ? null
     : {
         kind: ending.kind,

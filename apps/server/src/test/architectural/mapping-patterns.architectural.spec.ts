@@ -62,7 +62,7 @@ describe('mapping detection', () => {
     expect(
       patternsOf(
         `
-        import map from 'lodash/map.js';
+        import { map } from 'lodash-es';
         interface LineRead { id: string; }
         export const toLines = (lines: readonly LineRead[]) =>
           map(lines, (line) => ({ id: line.id }));

@@ -11,9 +11,6 @@
 import type { RejectionReasonCatalogueEntry } from 'purchase-drafts/domain/predicates/purchase-draft-condition.predicates';
 import {
   conditionOnlyWhereSomethingReceived,
-  dispositionMayBeRecorded,
-  duplicatedRejectionReasonIds,
-  hasOneRefusalPerReason,
   instructionRefusalReasonIdsAmong,
   isOfferedDisposition,
   isOfferedRejectionReason,
@@ -32,7 +29,6 @@ import {
 import { DeliveryMode } from 'purchase-drafts/domain/value-objects/delivery-mode';
 import {
   PreReceiptConformanceVerdict,
-  RejectionDisposition,
   RejectionSource,
 } from 'purchase-drafts/domain/value-objects/line-condition';
 import { describe, expect, it } from 'vitest';
@@ -94,48 +90,6 @@ describe('the Condition Split predicates', () => {
 
     it('refuses refusals totalling one more than what was presented', () => {
       expect(refusalsWithinPresented(100, 101)).toBe(false);
-    });
-  });
-
-  // AC-09 — "one line carries one refusal per reason, and the quantities for a reason belong
-  // together" (`uq_purchase_draft_line_rejections_line_reason`). The refusal names the repeated
-  // Reason, so the duplicate is found rather than merely detected.
-  describe('hasOneRefusalPerReason', () => {
-    it('admits a line refusing under two different Reasons', () => {
-      expect(
-        hasOneRefusalPerReason(['damaged_by_packing', 'damaged_in_transit']),
-      ).toBe(true);
-    });
-
-    it('admits a line carrying no refusal at all', () => {
-      expect(hasOneRefusalPerReason([])).toBe(true);
-    });
-
-    it('refuses a second refusal naming a Reason the line already carries', () => {
-      expect(
-        hasOneRefusalPerReason([
-          'damaged_in_transit',
-          'quality_defect',
-          'damaged_in_transit',
-        ]),
-      ).toBe(false);
-    });
-
-    it('names the repeated Reason once, however many times it repeats', () => {
-      expect(
-        duplicatedRejectionReasonIds([
-          'damaged_in_transit',
-          'quality_defect',
-          'damaged_in_transit',
-          'damaged_in_transit',
-        ]),
-      ).toEqual(['damaged_in_transit']);
-    });
-
-    it('names nothing when every Reason appears once', () => {
-      expect(
-        duplicatedRejectionReasonIds(['damaged_in_transit', 'quality_defect']),
-      ).toEqual([]);
     });
   });
 
@@ -335,7 +289,8 @@ describe('the Pre-receipt Conformance predicates', () => {
       expect(
         notApplicableOnlyOnUninstructedLine(
           PreReceiptConformanceVerdict.NotApplicable,
-          true,
+          'cable_coil',
+          null,
         ),
       ).toBe(false);
     });
@@ -344,7 +299,8 @@ describe('the Pre-receipt Conformance predicates', () => {
       expect(
         notApplicableOnlyOnUninstructedLine(
           PreReceiptConformanceVerdict.NotApplicable,
-          false,
+          null,
+          null,
         ),
       ).toBe(true);
     });
@@ -354,8 +310,12 @@ describe('the Pre-receipt Conformance predicates', () => {
       PreReceiptConformanceVerdict.Met,
       PreReceiptConformanceVerdict.NotMet,
     ])('never refuses the %s verdict, which is a different rule', (verdict) => {
-      expect(notApplicableOnlyOnUninstructedLine(verdict, true)).toBe(true);
-      expect(notApplicableOnlyOnUninstructedLine(verdict, false)).toBe(true);
+      expect(
+        notApplicableOnlyOnUninstructedLine(verdict, 'cable_coil', null),
+      ).toBe(true);
+      expect(notApplicableOnlyOnUninstructedLine(verdict, null, null)).toBe(
+        true,
+      );
     });
   });
 
@@ -367,7 +327,7 @@ describe('the Pre-receipt Conformance predicates', () => {
     ])(
       'refuses the %s verdict on a line frozen with no instruction',
       (verdict) => {
-        expect(judgementOnlyOnInstructedLine(verdict, false)).toBe(false);
+        expect(judgementOnlyOnInstructedLine(verdict, null, null)).toBe(false);
       },
     );
 
@@ -377,7 +337,9 @@ describe('the Pre-receipt Conformance predicates', () => {
     ])(
       'admits the %s verdict on a line frozen with an instruction',
       (verdict) => {
-        expect(judgementOnlyOnInstructedLine(verdict, true)).toBe(true);
+        expect(judgementOnlyOnInstructedLine(verdict, 'cable_coil', null)).toBe(
+          true,
+        );
       },
     );
 
@@ -385,13 +347,15 @@ describe('the Pre-receipt Conformance predicates', () => {
       expect(
         judgementOnlyOnInstructedLine(
           PreReceiptConformanceVerdict.NotApplicable,
-          false,
+          null,
+          null,
         ),
       ).toBe(true);
       expect(
         judgementOnlyOnInstructedLine(
           PreReceiptConformanceVerdict.NotApplicable,
-          true,
+          'cable_coil',
+          null,
         ),
       ).toBe(true);
     });
@@ -474,59 +438,5 @@ describe('the Disposition predicates', () => {
         expect(isOfferedDisposition(disposition)).toBe(false);
       },
     );
-  });
-
-  // AC-18a — "a disposition once decided may be corrected to another decision but never returned to
-  // undecided". The same statement as sad.md §6.4's conditional-update predicate
-  // `(disposition = 'undecided' OR :disposition <> 'undecided')`, stated in the domain so the rule
-  // exists once and can be read.
-  describe('dispositionMayBeRecorded', () => {
-    it('refuses a decided Disposition being aimed back at Undecided', () => {
-      expect(
-        dispositionMayBeRecorded(
-          RejectionDisposition.HeldForReturn,
-          RejectionDisposition.Undecided,
-        ),
-      ).toBe(false);
-    });
-
-    it('admits a decided Disposition being corrected to another decision', () => {
-      expect(
-        dispositionMayBeRecorded(
-          RejectionDisposition.HeldForReturn,
-          RejectionDisposition.ScrappedOnSite,
-        ),
-      ).toBe(true);
-    });
-
-    it('admits a still-undecided Rejection being decided', () => {
-      expect(
-        dispositionMayBeRecorded(
-          RejectionDisposition.Undecided,
-          RejectionDisposition.RefusedAtDelivery,
-        ),
-      ).toBe(true);
-    });
-
-    // Undecided onto an undecided Rejection changes nothing and is not the refusal AC-18a names —
-    // and the conditional update's first arm admits it, so the domain must too.
-    it('admits Undecided against a Rejection that is still undecided', () => {
-      expect(
-        dispositionMayBeRecorded(
-          RejectionDisposition.Undecided,
-          RejectionDisposition.Undecided,
-        ),
-      ).toBe(true);
-    });
-
-    // No decision is terminal (sad.md §6.4 step 4).
-    it('admits a correction from every decision to every other', () => {
-      expect(
-        dispositionMayBeRecorded(
-          RejectionDisposition.ScrappedOnSite,
-          RejectionDisposition.HeldForReturn,
-        ),
-      ).toBe(true);
-    });
   });
 });

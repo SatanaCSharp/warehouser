@@ -5,6 +5,11 @@ import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entit
 import type { PurchaseDraftLineDeliveryMode } from 'shared/domain/entities/purchase-draft-line.entity';
 import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity';
 import { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity';
+import {
+  affectedExactlyOneRow,
+  isWriteApplied,
+  matchedExactlyOneRow,
+} from 'shared/predicates/persistence-write.predicates';
 import { DataSource, EntityManager } from 'typeorm';
 
 export interface CreateDraftLineLinkPersistenceInput {
@@ -133,7 +138,7 @@ const guardDraftMutable = async (
     { updatedAt: touchedAt },
   );
 
-  if (guarded.affected === 1) {
+  if (affectedExactlyOneRow(guarded)) {
     return 'applied';
   }
 
@@ -145,7 +150,7 @@ const guardDraftMutable = async (
     .getRepository(PurchaseDraftEntity)
     .countBy({ id: scope.purchaseDraftId, warehouseId: scope.warehouseId });
 
-  return inWarehouse === 1 ? 'draft-frozen' : 'target-missing';
+  return matchedExactlyOneRow(inWarehouse) ? 'draft-frozen' : 'target-missing';
 };
 
 // AC-10/AC-10a/AC-11/AC-11a/AC-12/AC-15 — the assembly write path. Every guarded write's
@@ -282,7 +287,7 @@ export class PurchaseDraftAssemblyRepository {
       },
       { ...changes, updatedAt: now },
     );
-    if (updated.affected === 1) {
+    if (affectedExactlyOneRow(updated)) {
       return 'applied';
     }
 
@@ -292,7 +297,9 @@ export class PurchaseDraftAssemblyRepository {
       .getRepository(PurchaseDraftEntity)
       .countBy({ id: scope.purchaseDraftId, warehouseId: scope.warehouseId });
 
-    return inWarehouse === 1 ? 'draft-frozen' : 'target-missing';
+    return matchedExactlyOneRow(inWarehouse)
+      ? 'draft-frozen'
+      : 'target-missing';
   }
 
   async addLine(input: AddLinePersistenceInput): Promise<AssemblyWriteOutcome> {
@@ -307,7 +314,7 @@ export class PurchaseDraftAssemblyRepository {
       },
       now,
     );
-    if (guarded !== 'applied') {
+    if (!isWriteApplied(guarded)) {
       return guarded;
     }
 
@@ -337,7 +344,7 @@ export class PurchaseDraftAssemblyRepository {
     const now = new Date();
 
     const guarded = await guardDraftMutable(manager, scope, now);
-    if (guarded !== 'applied') {
+    if (!isWriteApplied(guarded)) {
       return guarded;
     }
 
@@ -350,7 +357,7 @@ export class PurchaseDraftAssemblyRepository {
       { ...changes, updatedAt: now },
     );
 
-    return updated.affected === 1 ? 'applied' : 'target-missing';
+    return affectedExactlyOneRow(updated) ? 'applied' : 'target-missing';
   }
 
   async removeLine(
@@ -361,7 +368,7 @@ export class PurchaseDraftAssemblyRepository {
     const now = new Date();
 
     const guarded = await guardDraftMutable(manager, scope, now);
-    if (guarded !== 'applied') {
+    if (!isWriteApplied(guarded)) {
       return guarded;
     }
 
@@ -373,7 +380,7 @@ export class PurchaseDraftAssemblyRepository {
         warehouseId: scope.warehouseId,
       });
 
-    return deleted.affected === 1 ? 'applied' : 'target-missing';
+    return affectedExactlyOneRow(deleted) ? 'applied' : 'target-missing';
   }
 
   async addLink(input: AddLinkPersistenceInput): Promise<AssemblyWriteOutcome> {
@@ -388,7 +395,7 @@ export class PurchaseDraftAssemblyRepository {
       },
       now,
     );
-    if (guarded !== 'applied') {
+    if (!isWriteApplied(guarded)) {
       return guarded;
     }
 
@@ -407,7 +414,7 @@ export class PurchaseDraftAssemblyRepository {
         purchaseDraftId: input.purchaseDraftId,
         warehouseId: input.warehouseId,
       });
-    if (lineOfDraft !== 1) {
+    if (!matchedExactlyOneRow(lineOfDraft)) {
       return 'target-missing';
     }
 
@@ -434,7 +441,7 @@ export class PurchaseDraftAssemblyRepository {
     const now = new Date();
 
     const guarded = await guardDraftMutable(manager, scope, now);
-    if (guarded !== 'applied') {
+    if (!isWriteApplied(guarded)) {
       return guarded;
     }
 
@@ -449,7 +456,7 @@ export class PurchaseDraftAssemblyRepository {
         { statedQuantity, updatedAt: now },
       );
 
-    return updated.affected === 1 ? 'applied' : 'target-missing';
+    return affectedExactlyOneRow(updated) ? 'applied' : 'target-missing';
   }
 
   async removeLink(
@@ -460,7 +467,7 @@ export class PurchaseDraftAssemblyRepository {
     const now = new Date();
 
     const guarded = await guardDraftMutable(manager, scope, now);
-    if (guarded !== 'applied') {
+    if (!isWriteApplied(guarded)) {
       return guarded;
     }
 
@@ -472,7 +479,7 @@ export class PurchaseDraftAssemblyRepository {
         warehouseId: scope.warehouseId,
       });
 
-    return deleted.affected === 1 ? 'applied' : 'target-missing';
+    return affectedExactlyOneRow(deleted) ? 'applied' : 'target-missing';
   }
 
   // AC-15/AC-15b — where one line's goods travel, so the caller can tell whether the agreement

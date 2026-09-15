@@ -7,6 +7,11 @@ import type { WorkspaceAccessRequest } from 'shared/access/access-request';
 import { workspaceCurrentUser } from 'shared/access/workspace-current-user';
 import { REQUIRED_WORKSPACE_PERMISSION_KEY } from 'shared/decorators/required-workspace-permission.decorator';
 import { WorkspaceCurrentUserRepository } from 'shared/domain/repositories/workspace-current-user.repository';
+import {
+  declaresRequiredPermission,
+  grantsRequiredPermission,
+  isAuthenticatedPrincipal,
+} from 'shared/predicates/access-admission.predicates';
 
 /** The one Workspace Permission a handler declares as required. `getAllAndOverride` returns
  * `undefined` for an undecorated handler and an empty array is the same absence, so both collapse
@@ -26,7 +31,7 @@ type ResolvedWorkspacePermission = Awaited<
 const grantedWorkspaceMembership = (
   current: ResolvedWorkspacePermission,
 ): NonNullable<ResolvedWorkspacePermission> => {
-  if (!current?.granted) {
+  if (!grantsRequiredPermission(current)) {
     throw workspaceDeniedError();
   }
   return current;
@@ -54,7 +59,10 @@ export class WorkspaceAccessGuard implements CanActivate {
         [context.getHandler(), context.getClass()],
       ),
     );
-    if (!request.user || !permissionId) {
+    if (
+      !isAuthenticatedPrincipal(request.user) ||
+      !declaresRequiredPermission(permissionId)
+    ) {
       throw workspaceDeniedError();
     }
 

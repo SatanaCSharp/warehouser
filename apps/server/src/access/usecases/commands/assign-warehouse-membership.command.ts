@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { assert, assertDefined } from '@warehouser/utils/asserts';
+import { isDefined } from '@warehouser/utils/predicates';
 import {
   workspaceManagerTransferRequiredError,
   workspaceMembershipExistsError,
@@ -16,6 +17,7 @@ import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehou
 import { WarehouseMembershipAssignmentRepository } from 'shared/domain/repositories/warehouse-membership-assignment.repository';
 import { WorkspaceMembershipRepository } from 'shared/domain/repositories/workspace-membership.repository';
 import { workspaceTargetUnavailableError } from 'shared/errors/cross-module.errors';
+import { scopedToWorkspace } from 'shared/predicates/tenancy.predicates';
 
 export interface AssignWarehouseMembershipInput {
   readonly targetUserId: string;
@@ -50,7 +52,7 @@ export class AssignWarehouseMembershipCommand {
         input.targetUserId,
       );
     assert(
-      targetWorkspaceId === currentUser.workspaceId,
+      scopedToWorkspace(targetWorkspaceId, currentUser.workspaceId),
       workspaceTargetUnavailableError(),
     );
 
@@ -61,7 +63,7 @@ export class AssignWarehouseMembershipCommand {
     );
     assertDefined(warehouse, workspaceTargetUnavailableError());
     assert(
-      warehouse.workspaceId === currentUser.workspaceId,
+      scopedToWorkspace(warehouse.workspaceId, currentUser.workspaceId),
       workspaceTargetUnavailableError(),
     );
 
@@ -93,7 +95,9 @@ export class AssignWarehouseMembershipCommand {
       );
     assert(
       !createsDuplicateWarehouseMembership(
-        existingMembership ? { id: existingMembership.userId } : null,
+        isDefined(existingMembership)
+          ? { id: existingMembership.userId }
+          : null,
       ),
       workspaceMembershipExistsError(),
     );

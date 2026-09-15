@@ -1,4 +1,8 @@
 import { assert } from '@warehouser/utils/asserts';
+import {
+  isWithinGraphemeBound,
+  statesAName,
+} from 'shared/predicates/access-name.predicates';
 
 const MAX_GRAPHEMES = 100;
 const UNSUPPORTED_CHARACTER = /[\p{Cc}\p{Cf}]/u;
@@ -28,9 +32,9 @@ export class AccessName {
     const value = input.trim();
     const graphemeCount = Array.from(segmenter.segment(value)).length;
 
-    assert(value.length > 0, 'Name must not be empty');
+    assert(statesAName(value), 'Name must not be empty');
     assert(
-      graphemeCount <= MAX_GRAPHEMES,
+      isWithinGraphemeBound(graphemeCount, MAX_GRAPHEMES),
       'Name must contain at most 100 user-perceived characters',
     );
     assert(

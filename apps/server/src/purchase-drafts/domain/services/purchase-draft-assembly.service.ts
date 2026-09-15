@@ -1,13 +1,24 @@
 import { Injectable } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
-import uniq from 'lodash/uniq.js';
+import {
+  isDefined,
+  isEmpty,
+  isNull,
+  isUndefined,
+} from '@warehouser/utils/predicates';
+import { uniq } from 'lodash-es';
 import type { DisagreeingDeliveryLink } from 'purchase-drafts/domain/errors/purchase-draft.errors';
 import {
   purchaseDraftFrozenError,
   purchaseDraftTargetUnavailableError,
   purchaseDraftUnknownPackagingTypeError,
 } from 'purchase-drafts/domain/errors/purchase-draft.errors';
-import { isKnownPackagingType } from 'purchase-drafts/domain/predicates/purchase-draft-assembly.predicates';
+import {
+  isDraftFrozenOutcome,
+  isKnownPackagingType,
+  isTargetMissingOutcome,
+} from 'purchase-drafts/domain/predicates/purchase-draft-assembly.predicates';
+import { travelsDirectToCustomer } from 'purchase-drafts/domain/predicates/purchase-draft-delivery.predicates';
 import { DeliveryMode } from 'purchase-drafts/domain/value-objects/delivery-mode';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository';
@@ -20,6 +31,7 @@ import type {
 } from 'shared/domain/repositories/purchase-draft-assembly.repository';
 import { PurchaseDraftAssemblyRepository } from 'shared/domain/repositories/purchase-draft-assembly.repository';
 import { isSelectableItem } from 'shared/predicates/item-availability.predicates';
+import { scopedToWarehouse } from 'shared/predicates/tenancy.predicates';
 
 // The two ways a guarded assembly write can affect no row, mapped to the two refusals openapi.yaml
 // documents for these routes: 409 `PurchaseDraftWriteConflict` when the draft is no longer in the
@@ -33,8 +45,11 @@ import { isSelectableItem } from 'shared/predicates/item-availability.predicates
 // the four commands that only map an outcome to three repositories they never touch. The service is
 // for the checks that genuinely need collaborators (server-architecture.md §Services).
 export const assertApplied = (outcome: AssemblyWriteOutcome): void => {
-  assert(outcome !== 'draft-frozen', purchaseDraftFrozenError());
-  assert(outcome !== 'target-missing', purchaseDraftTargetUnavailableError());
+  assert(!isDraftFrozenOutcome(outcome), purchaseDraftFrozenError());
+  assert(
+    !isTargetMissingOutcome(outcome),
+    purchaseDraftTargetUnavailableError(),
+  );
 };
 
 // Drops keys the member did not state, keeping an explicit `null` (which clears that half) while
@@ -43,7 +58,7 @@ export const assertApplied = (outcome: AssemblyWriteOutcome): void => {
 // `assertApplied` is.
 export const pickStated = <T extends object>(changes: T): Partial<T> =>
   Object.fromEntries(
-    Object.entries(changes).filter(([, value]) => value !== undefined),
+    Object.entries(changes).filter(([, value]) => !isUndefined(value)),
   ) as Partial<T>;
 
 /** Where the Customer Order a link names is going, as the locked row holds it. `null` is an order
@@ -67,7 +82,7 @@ export interface LineDeliveryDestination {
 const directDeliveryAddress = (
   destination: LineDeliveryDestination,
 ): string | null =>
-  destination.deliveryMode === DeliveryMode.DirectToCustomer
+  travelsDirectToCustomer(destination.deliveryMode)
     ? destination.customerDeliveryAddressId
     : null;
 
@@ -137,7 +152,7 @@ export class PurchaseDraftAssemblyService {
     prospectiveLinks: readonly LinkedOrderDestination[] = [],
   ): Promise<DisagreeingDeliveryLink[]> {
     const lineDeliveryAddressId = directDeliveryAddress(destination);
-    if (lineDeliveryAddressId === null) {
+    if (isNull(lineDeliveryAddressId)) {
       return [];
     }
 
@@ -187,7 +202,8 @@ export class PurchaseDraftAssemblyService {
         currentUser.warehouseId,
       );
     assert(
-      locked !== null && locked.order.warehouseId === currentUser.warehouseId,
+      isDefined(locked) &&
+        scopedToWarehouse(locked.order.warehouseId, currentUser.warehouseId),
       purchaseDraftTargetUnavailableError(),
     );
 
@@ -203,10 +219,10 @@ export class PurchaseDraftAssemblyService {
   ): Promise<void> {
     const requested = uniq(
       packagingTypeIds.filter(
-        (id): id is string => id !== undefined && id !== null,
+        (id): id is string => !isUndefined(id) && !isNull(id),
       ),
     );
-    if (requested.length === 0) {
+    if (isEmpty(requested)) {
       return;
     }
 

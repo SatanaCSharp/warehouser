@@ -1,4 +1,5 @@
 import { assert } from '@warehouser/utils/asserts';
+import { isSessionDigestWidth } from 'auth/domain/predicates/session.predicates';
 
 const SESSION_DIGEST_LENGTH = 32;
 
@@ -7,7 +8,7 @@ export class SessionDigest {
 
   static create(value: Uint8Array): SessionDigest {
     assert(
-      value.byteLength === SESSION_DIGEST_LENGTH,
+      isSessionDigestWidth(value.byteLength, SESSION_DIGEST_LENGTH),
       'Session digest must contain exactly 32 bytes',
     );
     return new SessionDigest(Uint8Array.from(value));

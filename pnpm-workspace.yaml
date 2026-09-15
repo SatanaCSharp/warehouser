@@ -73,6 +73,11 @@ catalog:
   # most complex in the app. This provider instruments the source before it runs, so the names and
   # spans are the real ones: 63 skips instead of 71, and no slower (51.0s vs 53.7s, measured).
   "@vitest/coverage-istanbul": ^5.0.0
+  # The CRAP gate's Vitest adapter, plus the standalone CLI the root `crap` script runs. Both are
+  # referenced as `catalog:` (by every package's devDependencies and by the root manifest
+  # respectively), so both need an entry here or `pnpm install` fails outright.
+  "@barney-media/crap-typescript": ^0.5.2
+  "@barney-media/crap-typescript-vitest": ^0.5.2
   # NestJS DI needs `emitDecoratorMetadata`, which esbuild (Vite's default
   # transform) cannot emit. The server test tiers compile with SWC instead.
   "@swc/core": ^1.16.2

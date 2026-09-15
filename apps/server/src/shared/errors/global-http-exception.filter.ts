@@ -2,9 +2,17 @@ import type { ArgumentsHost, ExceptionFilter } from '@nestjs/common';
 import { Catch, HttpException, Logger } from '@nestjs/common';
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError, SystemError } from '@warehouser/shared-types/errors';
+import { isUndefined } from '@warehouser/utils/predicates';
 import { redactSensitiveValues } from 'shared/errors/sensitive-value-redactor';
 import type { ValidatedRequestPayloads } from 'shared/errors/validation-field-codes';
 import { validationFieldCodes } from 'shared/errors/validation-field-codes';
+import {
+  isApplicationError,
+  isCodedError,
+  isError,
+  isHttpException,
+  isSystemError,
+} from 'shared/predicates/typed-error.predicates';
 
 interface SafeErrorEnvelope {
   readonly code: string;
@@ -664,7 +672,7 @@ const internalError: ErrorMapping = {
 
 const applicationErrorMapping = (exception: ApplicationError): ErrorMapping => {
   const mapping = applicationErrors[exception.code];
-  if (mapping === undefined) {
+  if (isUndefined(mapping)) {
     return internalError;
   }
 
@@ -673,9 +681,7 @@ const applicationErrorMapping = (exception: ApplicationError): ErrorMapping => {
     severity: 'warn',
     envelope: {
       ...mapping.envelope,
-      ...(exception.details === undefined
-        ? {}
-        : { details: exception.details }),
+      ...(isUndefined(exception.details) ? {} : { details: exception.details }),
     },
   };
 };
@@ -683,7 +689,7 @@ const applicationErrorMapping = (exception: ApplicationError): ErrorMapping => {
 const systemErrorMapping = (exception: SystemError): ErrorMapping => {
   const mapping = systemErrors[exception.code];
 
-  return mapping === undefined
+  return isUndefined(mapping)
     ? internalError
     : { ...mapping, severity: 'error' };
 };
@@ -704,7 +710,7 @@ const httpExceptionMapping = (
     envelope: {
       code: 'request.invalid',
       message: 'The request is invalid.',
-      ...(fields === undefined ? {} : { details: { fields } }),
+      ...(isUndefined(fields) ? {} : { details: { fields } }),
     },
   };
 };
@@ -715,15 +721,15 @@ const mapException = (
   exception: unknown,
   request: ValidatedRequestPayloads,
 ): ErrorMapping => {
-  if (exception instanceof ApplicationError) {
+  if (isApplicationError(exception)) {
     return applicationErrorMapping(exception);
   }
 
-  if (exception instanceof SystemError) {
+  if (isSystemError(exception)) {
     return systemErrorMapping(exception);
   }
 
-  if (exception instanceof HttpException) {
+  if (isHttpException(exception)) {
     return httpExceptionMapping(exception, request);
   }
 
@@ -731,19 +737,16 @@ const mapException = (
 };
 
 const describeException = (exception: unknown): unknown => {
-  if (!(exception instanceof Error)) {
+  if (!isError(exception)) {
     return { category: 'unknown' };
   }
 
   return redactSensitiveValues({
     category: exception.constructor.name,
-    code:
-      exception instanceof ApplicationError || exception instanceof SystemError
-        ? exception.code
-        : undefined,
+    code: isCodedError(exception) ? exception.code : undefined,
     message: exception.message,
     stack: exception.stack,
-    cause: exception instanceof SystemError ? exception.cause : undefined,
+    cause: isSystemError(exception) ? exception.cause : undefined,
   });
 };
 

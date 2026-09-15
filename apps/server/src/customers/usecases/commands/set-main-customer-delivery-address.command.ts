@@ -6,7 +6,7 @@ import {
   assertDeliveryAddressUsable,
   CustomerAddressBookService,
 } from 'customers/domain/services/customer-address-book.service';
-import find from 'lodash/find.js';
+import { find } from 'lodash-es';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository';

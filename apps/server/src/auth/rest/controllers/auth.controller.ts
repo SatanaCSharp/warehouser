@@ -13,6 +13,7 @@ import type {
   AuthenticatedUser,
   RegistrationResult,
 } from '@warehouser/contracts/auth';
+import { isDefined } from '@warehouser/utils/predicates';
 import type { AuthCookieResponse } from 'auth/rest/auth-cookie';
 import { AuthCookie, readSessionCookie } from 'auth/rest/auth-cookie';
 import { AuthCredentialsDto } from 'auth/rest/dtos/auth-credentials.dto';
@@ -87,8 +88,8 @@ export class AuthController {
   ): Promise<AuthenticatedUser | undefined> {
     const secret = readSessionCookie(cookieHeader);
     const currentUser = await this.currentSession.execute(secret);
-    if (!currentUser) {
-      if (secret) {
+    if (!isDefined(currentUser)) {
+      if (isDefined(secret)) {
         this.cookie.expire(response);
       }
       response.status(HttpStatus.NO_CONTENT);

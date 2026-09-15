@@ -4,6 +4,7 @@ import { Injectable } from '@nestjs/common';
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
 import { assert, assertDefined } from '@warehouser/utils/asserts';
+import { isDefined } from '@warehouser/utils/predicates';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { AccessCurrentUserRepository } from 'shared/domain/repositories/access-current-user.repository';
@@ -11,10 +12,12 @@ import { AuthenticationRepository } from 'shared/domain/repositories/authenticat
 import { MemberLifecycleRepository } from 'shared/domain/repositories/member-lifecycle.repository';
 import { RoleLifecycleRepository } from 'shared/domain/repositories/role-lifecycle.repository';
 import { EmailAddress } from 'shared/domain/security/email-address';
-import { isSupportedEmail } from 'shared/domain/security/is-supported-email';
-import { isSupportedPassword } from 'shared/domain/security/is-supported-password';
 import { Password } from 'shared/domain/security/password';
 import { hashPassword } from 'shared/domain/security/password-hashing';
+import {
+  isSupportedEmail,
+  isSupportedPassword,
+} from 'shared/predicates/credential.predicates';
 import {
   emailAlreadyRegisteredError,
   invalidInputError,
@@ -124,13 +127,13 @@ export class CreateMemberCommand {
       permissionExceededError(),
     );
 
-    const emailSupported = isSupportedEmail(input.email);
-    const passwordSupported = isSupportedPassword(input.password);
     assert(
-      emailSupported && passwordSupported,
+      isSupportedEmail(input.email) && isSupportedPassword(input.password),
       invalidInputError({
-        ...(!emailSupported && { email: 'unsupported' }),
-        ...(!passwordSupported && { password: 'unsupported' }),
+        ...(isSupportedEmail(input.email) ? {} : { email: 'unsupported' }),
+        ...(isSupportedPassword(input.password)
+          ? {}
+          : { password: 'unsupported' }),
       }),
     );
 
@@ -138,9 +141,11 @@ export class CreateMemberCommand {
     const password = Password.create(input.password);
 
     assert(
-      !(await this.authenticationRepository.findAccountByNormalizedEmail(
-        email.value,
-      )),
+      !isDefined(
+        await this.authenticationRepository.findAccountByNormalizedEmail(
+          email.value,
+        ),
+      ),
       emailAlreadyRegisteredError(),
     );
 

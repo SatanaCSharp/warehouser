@@ -1,5 +1,6 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
+import { isDefined } from '@warehouser/utils/predicates';
 
 export const selfActionDeniedError = (): ApplicationError =>
   new ApplicationError(ErrorCode.USERS_SELF_ACTION_DENIED);
@@ -21,7 +22,7 @@ export const invalidInputError = (
 ): ApplicationError =>
   new ApplicationError(
     ErrorCode.AUTH_INVALID_INPUT,
-    fields ? { fields } : undefined,
+    isDefined(fields) ? { fields } : undefined,
   );
 
 export const emailAlreadyRegisteredError = (): ApplicationError =>

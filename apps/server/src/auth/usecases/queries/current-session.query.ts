@@ -1,3 +1,4 @@
+import { isDefined } from '@warehouser/utils/predicates';
 import type { AuthRuntime } from 'auth/domain/auth-runtime';
 import { authRuntime } from 'auth/domain/auth-runtime';
 import { toAuthenticatedCurrentUser } from 'auth/domain/mappers/authenticated-current-user.mapper';
@@ -16,7 +17,7 @@ export class CurrentSessionQuery {
   ) {}
 
   async execute(secret?: string): Promise<{ userId: string } | null> {
-    if (!secret) {
+    if (!isDefined(secret)) {
       return null;
     }
 
@@ -24,7 +25,7 @@ export class CurrentSessionQuery {
       this.digestSecret(secret),
       this.runtime.now(),
     );
-    if (!sessionEntity) {
+    if (!isDefined(sessionEntity)) {
       return null;
     }
     const session = toSession(sessionEntity);

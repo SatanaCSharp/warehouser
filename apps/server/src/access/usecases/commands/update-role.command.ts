@@ -1,15 +1,19 @@
 import { Injectable } from '@nestjs/common';
 import { assert, assertDefined } from '@warehouser/utils/asserts';
+import { isNull } from '@warehouser/utils/predicates';
 import {
   invalidRoleError,
   roleNameConflictError,
   roleUnavailableError,
 } from 'access/domain/errors/access.errors';
+import {
+  isTheSameRole,
+  resolvedEverySubmittedPermission,
+} from 'access/domain/predicates/workspace-authority.predicates';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { RoleLifecycleRepository } from 'shared/domain/repositories/role-lifecycle.repository';
 import { AccessName } from 'shared/domain/value-objects/access-name';
-
 export interface UpdateRoleInput {
   readonly roleId: string;
   readonly name: string;
@@ -50,7 +54,7 @@ export class UpdateRoleCommand {
         input.permissionIds,
       );
     assert(
-      permissions.length === new Set(input.permissionIds).size,
+      resolvedEverySubmittedPermission(permissions, input.permissionIds),
       invalidRoleError(),
     );
 
@@ -59,7 +63,7 @@ export class UpdateRoleCommand {
       name,
     );
     assert(
-      matchingRole === null || matchingRole.id === role.id,
+      isNull(matchingRole) || isTheSameRole(matchingRole.id, role.id),
       roleNameConflictError(),
     );
 

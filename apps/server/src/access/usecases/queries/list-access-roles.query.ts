@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { RolePage, UuidPagination } from '@warehouser/contracts/access';
+import { isDefined } from '@warehouser/utils/predicates';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { AccessReadRepository } from 'shared/domain/repositories/access-read.repository';
 import { paginatablePage } from 'shared/pagination/paginatable-page';
@@ -21,7 +22,7 @@ export class ListAccessRolesQuery {
     const page = paginatablePage(
       rows,
       pagination.limit,
-      pagination.before !== undefined,
+      isDefined(pagination.before),
     );
 
     return {

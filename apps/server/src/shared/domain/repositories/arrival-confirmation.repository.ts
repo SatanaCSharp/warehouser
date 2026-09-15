@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { Injectable } from '@nestjs/common';
+import { isEmpty, isNull } from '@warehouser/utils/predicates';
 import { getEntityManager } from 'shared/database/db-transaction-context.service';
 import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
 import type {
@@ -11,6 +12,7 @@ import type {
 import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity';
 import type { PurchaseDraftLineRejectionSource } from 'shared/domain/entities/purchase-draft-line-rejection.entity';
 import { PurchaseDraftLineRejectionEntity } from 'shared/domain/entities/purchase-draft-line-rejection.entity';
+import { affectedExactlyOneRow } from 'shared/predicates/persistence-write.predicates';
 import { DataSource, IsNull } from 'typeorm';
 
 export interface LockedPurchaseDraftForArrival {
@@ -166,7 +168,7 @@ export class ArrivalConfirmationRepository {
       .setLock('pessimistic_write')
       .getOne();
 
-    if (draft === null) {
+    if (isNull(draft)) {
       return { draft: null, line: null };
     }
 
@@ -189,18 +191,17 @@ export class ArrivalConfirmationRepository {
         warehouseId: draft.warehouseId,
         state: draft.state,
       },
-      line:
-        line === null
-          ? null
-          : {
-              id: line.id,
-              deliveryMode: line.deliveryMode,
-              packagingTypeId: line.packagingTypeId,
-              valueAddingNote: line.valueAddingNote,
-              endingKind: line.endingKind,
-              endingRecordedByUserId: line.endingRecordedByUserId,
-              endingRecordedAt: line.endingRecordedAt,
-            },
+      line: isNull(line)
+        ? null
+        : {
+            id: line.id,
+            deliveryMode: line.deliveryMode,
+            packagingTypeId: line.packagingTypeId,
+            valueAddingNote: line.valueAddingNote,
+            endingKind: line.endingKind,
+            endingRecordedByUserId: line.endingRecordedByUserId,
+            endingRecordedAt: line.endingRecordedAt,
+          },
     };
   }
 
@@ -249,7 +250,7 @@ export class ArrivalConfirmationRepository {
       },
     );
 
-    if (ending.affected !== 1) {
+    if (!affectedExactlyOneRow(ending)) {
       return { recorded: false, closed: false };
     }
 
@@ -259,7 +260,7 @@ export class ArrivalConfirmationRepository {
     // ordered ahead of the ending could walk around.
     const rejections = statedRejections(input.condition);
 
-    if (rejections.length > 0) {
+    if (!isEmpty(rejections)) {
       await manager.insert(
         PurchaseDraftLineRejectionEntity,
         rejections.map((rejection) => ({

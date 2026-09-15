@@ -37,10 +37,9 @@ import {
   buildWarehouse,
   buildWorkspace,
 } from 'test/factories/entity-factories';
-// `PostgresQueryRunner.prototype.query` is the one method every TypeORM access path ultimately
-// calls to reach PostgreSQL. Spying on it proves actual round trips — the idiom
+// Counts actual PostgreSQL round trips — the idiom
 // `consolidated-demand.repository.integration.spec.ts` (T10) establishes.
-import { PostgresQueryRunner } from 'typeorm/driver/postgres/PostgresQueryRunner.js';
+import { withQueryCount } from 'test/pglite/query-recorder';
 import {
   afterAll,
   afterEach,
@@ -160,17 +159,6 @@ const identifiedActor = (warehouseId: string) =>
     warehouseId,
     observedPermissionIds: [PermissionId.CUSTOMERS_WATCH],
   }) as never;
-
-const withQueryCount = async <T>(
-  run: () => Promise<T>,
-): Promise<{ result: T; queryCount: number }> => {
-  const spy = vi.spyOn(PostgresQueryRunner.prototype, 'query');
-  const before = spy.mock.calls.length;
-  const result = await run();
-  const queryCount = spy.mock.calls.length - before;
-  spy.mockRestore();
-  return { result, queryCount };
-};
 
 const seedWorkspace = async (): Promise<string> => {
   const workspace = buildWorkspace();

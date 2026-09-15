@@ -7,13 +7,11 @@ import type { RejectionReasonEntity } from 'shared/domain/entities/rejection-rea
 // than a read per identifier", each resolved row carrying `requires_description` so AC-07 is decided
 // against the flag rather than against `unfit_other` by name (`sad.md` §4).
 import { RejectionReasonCatalogueRepository } from 'shared/domain/repositories/rejection-reason-catalogue.repository';
-// `PostgresQueryRunner.prototype.query` is the one method every TypeORM access path — raw
-// `manager.query`, `repository.find`, and `QueryBuilder` alike — ultimately calls to reach
-// PostgreSQL. Spying on it, rather than on a higher-level TypeORM API, counts actual round trips
-// regardless of which API the implementer picks, which is what proves "one read" rather than merely
-// "one repository method call" (`item-catalogue.repository.integration.spec.ts`'s idiom).
-import { PostgresQueryRunner } from 'typeorm/driver/postgres/PostgresQueryRunner.js';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+// Counts actual round trips rather than calls to a higher-level TypeORM API, regardless of which
+// API the implementer picks — which is what proves "one read" rather than merely "one repository
+// method call" (`item-catalogue.repository.integration.spec.ts`'s idiom).
+import { withQueryCount } from 'test/pglite/query-recorder';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { initialRejectionReasons } from '../../../../migrations/1786800000000-CreateArrivalInspectionSchema';
 
@@ -32,17 +30,6 @@ const repository = new RejectionReasonCatalogueRepository(
 
 const seededIds = initialRejectionReasons.map(([id]) => id);
 const seededIdsAscending = [...seededIds].sort();
-
-const withQueryCount = async <T>(
-  run: () => Promise<T>,
-): Promise<{ result: T; queryCount: number }> => {
-  const spy = vi.spyOn(PostgresQueryRunner.prototype, 'query');
-  const before = spy.mock.calls.length;
-  const result = await run();
-  const queryCount = spy.mock.calls.length - before;
-  spy.mockRestore();
-  return { result, queryCount };
-};
 
 const registerListTests = (): void => {
   describe('listRejectionReasons', () => {

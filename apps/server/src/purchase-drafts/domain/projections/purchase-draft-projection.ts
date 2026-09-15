@@ -1,9 +1,22 @@
+import { isNull } from '@warehouser/utils/predicates';
+import type { PurchaseDraftLineEndingWithCondition } from 'purchase-drafts/domain/mappers/line-condition.mapper';
+import type { DriftComparison } from 'purchase-drafts/domain/predicates/purchase-draft-drift.predicates';
+import {
+  addressRedirected,
+  becameCancelled,
+  becameFulfilledElsewhere,
+  neededByMoved,
+  quantityChanged,
+} from 'purchase-drafts/domain/predicates/purchase-draft-drift.predicates';
 import type {
   ArrivalAllocationRead,
   DemandSnapshotRedactedRead,
   LinkedCustomerOrderStateRedactedRead,
+  PurchaseDraftLineIdentifiedRead,
   PurchaseDraftLineLinkIdentifiedRead,
   PurchaseDraftLineLinkRedactedRead,
+  PurchaseDraftLineRedactedRead,
+  PurchaseDraftSummaryRead,
 } from 'shared/domain/repositories/purchase-draft-read.repository';
 
 // openapi.yaml `DriftSignalKind`.
@@ -28,44 +41,6 @@ export type PurchaseDraftLineLinkRedactedWithDrift =
 
 export type PurchaseDraftLineLinkIdentifiedWithDrift =
   PurchaseDraftLineLinkIdentifiedRead & WithDriftSignals;
-
-// One link's two sides of the comparison, bundled so every rule below reads the same shape and the
-// rule table can hold them all under one signature.
-interface DriftComparison {
-  readonly snapshot: DemandSnapshotRedactedRead;
-  readonly current: LinkedCustomerOrderStateRedactedRead;
-  readonly allocation: ArrivalAllocationRead | null;
-  readonly addressDrift: boolean;
-}
-
-const becameCancelled = ({ snapshot, current }: DriftComparison): boolean =>
-  current.state === 'cancelled' && snapshot.capturedState !== 'cancelled';
-
-const quantityChanged = ({ snapshot, current }: DriftComparison): boolean =>
-  current.quantity !== snapshot.capturedQuantity;
-
-const neededByMoved = ({ snapshot, current }: DriftComparison): boolean =>
-  current.neededBy !== snapshot.capturedNeededBy;
-
-// `became_fulfilled` means the linked order was Fulfilled through the arrival of a *different*
-// draft; a non-null `allocation` is this draft's own Arrival Confirmation having fulfilled it, so
-// that case is suppressed rather than named as drift.
-const becameFulfilledElsewhere = ({
-  snapshot,
-  current,
-  allocation,
-}: DriftComparison): boolean =>
-  current.state === 'fulfilled' &&
-  snapshot.capturedState !== 'fulfilled' &&
-  allocation === null;
-
-// Address Drift, already decided by the repository as a comparison of the captured **identifier**
-// rather than the captured text: correcting a typo in an address that was never redirected is not a
-// redirection and reports nothing, while redirecting the order back to the address frozen for it
-// stops the report — because there is no stored verdict to keep reporting, only the two values
-// (AC-18, AC-18a, data-model.md `purchase_draft_demand_snapshots`).
-const addressRedirected = ({ addressDrift }: DriftComparison): boolean =>
-  addressDrift;
 
 // The signals in the order a link reports them. A table rather than a chain of `if`s so that each
 // rule is one named condition that can be read — and tested — on its own, and so that adding a
@@ -95,7 +70,7 @@ export const driftSignalsOf = (
   allocation: ArrivalAllocationRead | null,
   addressDrift: boolean,
 ): DriftSignalKind[] => {
-  if (snapshot === null) {
+  if (isNull(snapshot)) {
     return [];
   }
 
@@ -125,3 +100,35 @@ export const withDriftSignals = <T extends PurchaseDraftLineLinkRedactedRead>(
     link.addressDrift,
   ),
 });
+
+// openapi.yaml `PurchaseDraftLineRedacted` with every link's `driftSignals` derived — what an actor
+// **without** the observed `CUSTOMERS:WATCH` is served. It has no `customerDestination` property at
+// all: the repository's redacted query never selected one, and TypeScript therefore gives a mapper
+// nothing to carry (AC-09a, ADR 0001).
+export type PurchaseDraftLineRedactedWithDrift = Omit<
+  PurchaseDraftLineRedactedRead,
+  'links' | 'ending'
+> & {
+  readonly links: readonly PurchaseDraftLineLinkRedactedWithDrift[];
+  readonly ending: PurchaseDraftLineEndingWithCondition | null;
+};
+
+// openapi.yaml `PurchaseDraftLineIdentified` with the same signals derived.
+export type PurchaseDraftLineIdentifiedWithDrift = Omit<
+  PurchaseDraftLineIdentifiedRead,
+  'links' | 'ending'
+> & {
+  readonly links: readonly PurchaseDraftLineLinkIdentifiedWithDrift[];
+  readonly ending: PurchaseDraftLineEndingWithCondition | null;
+};
+
+// openapi.yaml `PurchaseDraftLine` — `oneOf` the two forms, exactly as the contract models it. The
+// union is carried down to the **line** rather than to the draft, so the one discriminator sits
+// where the withheld property does and an empty draft has nothing to discriminate.
+export type PurchaseDraftLineWithDrift =
+  PurchaseDraftLineIdentifiedWithDrift | PurchaseDraftLineRedactedWithDrift;
+
+// openapi.yaml `PurchaseDraftDetail`.
+export type PurchaseDraftDetailWithDrift = PurchaseDraftSummaryRead & {
+  readonly lines: readonly PurchaseDraftLineWithDrift[];
+};

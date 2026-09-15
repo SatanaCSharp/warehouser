@@ -1,3 +1,4 @@
+import { isDefined } from '@warehouser/utils/predicates';
 import type { ObjectLiteral, SelectQueryBuilder } from 'typeorm';
 
 export const paginationBuilder = <T extends ObjectLiteral>(
@@ -6,10 +7,10 @@ export const paginationBuilder = <T extends ObjectLiteral>(
   after?: string,
   before?: string,
 ): SelectQueryBuilder<T> => {
-  if (after) {
+  if (isDefined(after)) {
     builder.andWhere(`${column} > :after`, { after });
   }
-  if (before) {
+  if (isDefined(before)) {
     builder.andWhere(`${column} < :before`, { before });
   }
   return builder;

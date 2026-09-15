@@ -1,16 +1,12 @@
 import {
   createsDuplicateWarehouseMembership,
-  endsOwnerTransferWithExactlyOneRole,
   hasAvailableCustomWorkspaceRole,
-  hasOtherCustomWorkspaceRole,
-  isExactWorkspaceRoleNameConflict,
   isKnownWorkspacePermission,
   isMembershipSelfTarget,
   isProtectedWarehouseManagerRoleKind,
   isProtectedWorkspaceOwnerRoleKind,
   isReservedWorkspaceOwnerReassignPermission,
   isReservedWorkspacePermissionKind,
-  keepsAtLeastOneNonArchivedWarehouse,
 } from 'access/domain/predicates/workspace-authority.predicates';
 import { describe, expect, it } from 'vitest';
 
@@ -77,41 +73,6 @@ describe('isKnownWorkspacePermission', () => {
   });
 });
 
-describe('isExactWorkspaceRoleNameConflict', () => {
-  // AC-15 — exact per-Workspace uniqueness; differently cased names are distinct
-  const existingNames = ['Auditor', 'Stock Clerk'];
-
-  it('is true for an exact, byte-identical name already used in the Workspace', () => {
-    expect(isExactWorkspaceRoleNameConflict(existingNames, 'Auditor')).toBe(
-      true,
-    );
-  });
-
-  it('is false for a differently cased name, which remains distinct', () => {
-    expect(isExactWorkspaceRoleNameConflict(existingNames, 'auditor')).toBe(
-      false,
-    );
-  });
-
-  it('is false for a name not used in the Workspace', () => {
-    expect(
-      isExactWorkspaceRoleNameConflict(existingNames, 'Receiving Clerk'),
-    ).toBe(false);
-  });
-});
-
-describe('hasOtherCustomWorkspaceRole', () => {
-  // AC-17c — an assigned custom Role cannot be deleted when no *other* custom
-  // Role exists in the Workspace
-  it('is true when at least one other custom Workspace Role exists', () => {
-    expect(hasOtherCustomWorkspaceRole(1)).toBe(true);
-  });
-
-  it('is false when the assigned Role is the only custom Workspace Role', () => {
-    expect(hasOtherCustomWorkspaceRole(0)).toBe(false);
-  });
-});
-
 describe('hasAvailableCustomWorkspaceRole', () => {
   // AC-26a — the outgoing Owner must end a transfer holding exactly one custom
   // Workspace Role, so at least one must exist to select
@@ -121,29 +82,6 @@ describe('hasAvailableCustomWorkspaceRole', () => {
 
   it('is false when the Workspace has no custom Workspace Role at all', () => {
     expect(hasAvailableCustomWorkspaceRole(0)).toBe(false);
-  });
-});
-
-describe('endsOwnerTransferWithExactlyOneRole', () => {
-  // AC-26a — the outgoing Owner ends the transfer holding exactly one Workspace
-  // Role, never zero and never more than one
-  it('is true when exactly one Workspace Role is selected for the outgoing Owner', () => {
-    expect(endsOwnerTransferWithExactlyOneRole(1)).toBe(true);
-  });
-
-  it('is false when no Workspace Role is selected', () => {
-    expect(endsOwnerTransferWithExactlyOneRole(0)).toBe(false);
-  });
-});
-
-describe('keepsAtLeastOneNonArchivedWarehouse', () => {
-  // AC-11a — a Workspace always keeps at least one non-archived Warehouse
-  it('is true when at least one Warehouse remains non-archived after the change', () => {
-    expect(keepsAtLeastOneNonArchivedWarehouse(1)).toBe(true);
-  });
-
-  it('is false when archiving would leave zero non-archived Warehouses', () => {
-    expect(keepsAtLeastOneNonArchivedWarehouse(0)).toBe(false);
   });
 });
 

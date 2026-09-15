@@ -1,14 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import { assert, assertDefined } from '@warehouser/utils/asserts';
+import { isDefined } from '@warehouser/utils/predicates';
 import {
   itemSkuFixedError,
   itemSkuTakenError,
   itemTargetUnavailableError,
 } from 'items/domain/errors/item.errors';
 import { isSkuCorrectable } from 'items/domain/predicates/item-catalogue.predicates';
+import {
+  correctsItemDetails,
+  isSkuFree,
+} from 'items/domain/predicates/item-correction.predicates';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
+import { scopedToWarehouse } from 'shared/predicates/tenancy.predicates';
 
 export interface CorrectItemInput {
   readonly sku?: string;
@@ -18,17 +24,6 @@ export interface CorrectItemInput {
 
 // The three conditions this command decides for itself. Each is used once, here, so each stays next
 // to that one implementation rather than in `items/domain/predicates/` (server-error-handling.md §1).
-
-// AC-07 — a SKU is free when nothing in the acting Warehouse holds it, or when the only Item holding
-// it is the one being corrected, so re-stating an Item's own SKU is not a duplicate.
-const isSkuFree = (
-  existing: { readonly id: string } | null,
-  itemId: string,
-): boolean => existing === null || existing.id === itemId;
-
-// AC-06b — `ItemUpdate` requires only one of the two to be present (openapi.yaml).
-const correctsItemDetails = (input: CorrectItemInput): boolean =>
-  input.description !== undefined || input.unitOfMeasure !== undefined;
 
 // A field the request left out is carried forward from the row `findById` already confirmed, never
 // silently dropped.
@@ -56,11 +51,11 @@ export class CorrectItemCommand {
     const item = await this.itemCatalogueRepository.findById(itemId);
     assertDefined(item, itemTargetUnavailableError());
     assert(
-      item.warehouseId === currentUser.warehouseId,
+      scopedToWarehouse(item.warehouseId, currentUser.warehouseId),
       itemTargetUnavailableError(),
     );
 
-    if (input.sku !== undefined) {
+    if (isDefined(input.sku)) {
       const isNamed =
         await this.itemCatalogueRepository.isNamedByDemandOrDraft(itemId);
       assert(isSkuCorrectable(isNamed), itemSkuFixedError());

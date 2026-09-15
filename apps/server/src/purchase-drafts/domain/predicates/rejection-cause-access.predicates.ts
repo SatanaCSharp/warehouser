@@ -1,5 +1,13 @@
 import { PermissionId } from '@warehouser/shared-types/enums';
-import includes from 'lodash/includes.js';
+import { includes } from 'lodash-es';
+import type {
+  LineConditionAccount,
+  LineConditionWithCause,
+} from 'purchase-drafts/domain/mappers/line-condition.mapper';
+import type {
+  PurchaseDraftLineEndingRead,
+  PurchaseDraftLineEndingWithCauseRead,
+} from 'shared/domain/repositories/purchase-draft-read.repository';
 
 // AC-21/AC-22 — whether the condition account this actor is served may carry a Rejection's cause:
 // its Reason, description, Source and Disposition. The input is the **granted** subset of the
@@ -29,3 +37,18 @@ export const readsRejectionCause = (
 export const raisesRejections = (
   observedPermissionIds: readonly PermissionId[],
 ): boolean => includes(observedPermissionIds, PermissionId.REJECTIONS_CREATE);
+
+// AC-21/AC-22/sad.md §10 "Redaction unit" — which of the two forms a read came back in.
+//
+// The discriminator is the **presence of the `rejections` property**, because the withheld form is
+// built by not selecting the columns that carry it: there is no flag to read, and asking for one
+// would mean constructing the very property whose absence is the redaction. Both unions are
+// discriminated the same way — the repository's read shape and the domain account it becomes — so
+// both get the question, and neither mapper spells `'rejections' in x` out again.
+export const readDisclosesRejectionCause = (
+  ending: PurchaseDraftLineEndingRead,
+): ending is PurchaseDraftLineEndingWithCauseRead => 'rejections' in ending;
+
+export const accountDisclosesRejectionCause = (
+  condition: LineConditionAccount,
+): condition is LineConditionWithCause => 'rejections' in condition;

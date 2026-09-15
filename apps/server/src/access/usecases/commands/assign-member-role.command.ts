@@ -4,8 +4,10 @@ import {
   managerTransferRequiredError,
   targetUnavailableError,
 } from 'access/domain/errors/access.errors';
+import { isProtectedWarehouseManagerRoleKind } from 'access/domain/predicates/workspace-authority.predicates';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { RoleLifecycleRepository } from 'shared/domain/repositories/role-lifecycle.repository';
+import { appliedGuardedWrite } from 'shared/predicates/persistence-write.predicates';
 
 export interface AssignMemberRoleInput {
   readonly memberId: string;
@@ -30,7 +32,7 @@ export class AssignMemberRoleCommand {
     assertDefined(membership, targetUnavailableError());
 
     assert(
-      membership.roleKind !== 'warehouse_manager',
+      !isProtectedWarehouseManagerRoleKind(membership.roleKind),
       managerTransferRequiredError(),
     );
 
@@ -47,7 +49,7 @@ export class AssignMemberRoleCommand {
       role.id,
     );
 
-    assert(assigned, targetUnavailableError());
+    assert(appliedGuardedWrite(assigned), targetUnavailableError());
 
     return input;
   }

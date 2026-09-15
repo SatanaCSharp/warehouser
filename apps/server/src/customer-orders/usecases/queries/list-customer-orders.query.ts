@@ -4,7 +4,7 @@ import {
   toIdentifiedCustomerOrder,
   toRedactedCustomerOrder,
 } from 'customer-orders/domain/mappers/customer-order-projection.mapper';
-import map from 'lodash/map.js';
+import { map } from 'lodash-es';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import type { ListCustomerOrdersFilter } from 'shared/domain/repositories/customer-order-lifecycle.repository';
 import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository';

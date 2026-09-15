@@ -54,6 +54,9 @@ const LAYER_DIRECTORIES = ['domain', 'usecases', 'rest', 'handlers'];
 // removed production file fail and name itself, rather than passing silently (CR-AC-12).
 const DECLARED_MANIFEST = [
   'domain/errors/warehouse.errors.ts',
+  // The archival branch as a named condition: `PATCH .../archived` carries one boolean and means
+  // two different commands (server-error-handling.md §1).
+  'domain/predicates/warehouse-archival.predicates.ts',
   'index.ts',
   'rest/controllers/warehouse.controller.ts',
   'rest/dtos/warehouse-mutation.dto.ts',

@@ -1,8 +1,6 @@
 import { assert } from '@warehouser/utils/asserts';
-import {
-  isSupportedEmail,
-  normalizeEmail,
-} from 'shared/domain/security/is-supported-email';
+import { normalizeEmail } from 'shared/domain/security/is-supported-email';
+import { isSupportedEmail } from 'shared/predicates/credential.predicates';
 
 export class EmailAddress {
   private constructor(readonly value: string) {}

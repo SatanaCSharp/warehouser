@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
+import { isNull } from '@warehouser/utils/predicates';
 import { customerOrderInvalidDeliveryAddressError } from 'customer-orders/domain/errors/customer-order.errors';
 import { isAvailableDestinationRecord } from 'customer-orders/domain/predicates/customer-order.predicates';
-import find from 'lodash/find.js';
+import { find } from 'lodash-es';
 import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository';
 
 // AC-11/AC-11c — the address resolved for a Customer Order is one the Customer holds and one a
@@ -62,14 +63,12 @@ export class CustomerOrderDestinationService {
         customerId,
       );
 
-    const destination =
-      statedDeliveryAddressId === null
-        ? find(
-            addresses,
-            (address) =>
-              address.isMain && isAvailableDestinationRecord(address),
-          )
-        : find(addresses, (address) => address.id === statedDeliveryAddressId);
+    const destination = isNull(statedDeliveryAddressId)
+      ? find(
+          addresses,
+          (address) => address.isMain && isAvailableDestinationRecord(address),
+        )
+      : find(addresses, (address) => address.id === statedDeliveryAddressId);
 
     assertDestinationAvailable(destination);
 

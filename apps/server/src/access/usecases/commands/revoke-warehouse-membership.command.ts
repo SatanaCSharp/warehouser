@@ -12,6 +12,7 @@ import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user'
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { WarehouseMembershipAssignmentRepository } from 'shared/domain/repositories/warehouse-membership-assignment.repository';
 import { workspaceTargetUnavailableError } from 'shared/errors/cross-module.errors';
+import { scopedToWorkspace } from 'shared/predicates/tenancy.predicates';
 
 export interface RevokeWarehouseMembershipInput {
   readonly targetUserId: string;
@@ -43,7 +44,7 @@ export class RevokeWarehouseMembershipCommand {
     // Workspace fail identically, disclosing neither.
     assertDefined(membership, workspaceTargetUnavailableError());
     assert(
-      membership.workspaceId === currentUser.workspaceId,
+      scopedToWorkspace(membership.workspaceId, currentUser.workspaceId),
       workspaceTargetUnavailableError(),
     );
 

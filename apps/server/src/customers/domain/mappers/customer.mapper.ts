@@ -1,5 +1,4 @@
-import find from 'lodash/find.js';
-import map from 'lodash/map.js';
+import { find, map } from 'lodash-es';
 import type { CustomerEntity } from 'shared/domain/entities/customer.entity';
 import type { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
 

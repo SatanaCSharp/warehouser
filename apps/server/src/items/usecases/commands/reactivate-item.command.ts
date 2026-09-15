@@ -5,6 +5,7 @@ import { canReactivateItem } from 'items/domain/predicates/item-catalogue.predic
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
+import { scopedToWarehouse } from 'shared/predicates/tenancy.predicates';
 
 // AC-06d — the same operation inverted: reactivates a deactivated Item of the acting Warehouse by
 // clearing `deactivatedAt`, which is exactly the condition `findActiveItemsForPicker` filters on.
@@ -21,7 +22,7 @@ export class ReactivateItemCommand {
     const item = await this.itemCatalogueRepository.findById(itemId);
     assertDefined(item, itemTargetUnavailableError());
     assert(
-      item.warehouseId === currentUser.warehouseId,
+      scopedToWarehouse(item.warehouseId, currentUser.warehouseId),
       itemTargetUnavailableError(),
     );
     assert(canReactivateItem(item.deactivatedAt), itemTargetUnavailableError());

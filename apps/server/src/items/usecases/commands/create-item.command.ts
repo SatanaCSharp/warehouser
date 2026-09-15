@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { Injectable, Optional } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
+import { isNull } from '@warehouser/utils/predicates';
 import { itemSkuTakenError } from 'items/domain/errors/item.errors';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
@@ -52,7 +53,7 @@ export class CreateItemCommand {
       warehouseId,
       input.sku,
     );
-    assert(existing === null, () => itemSkuTakenError(existing!.id, input.sku));
+    assert(isNull(existing), () => itemSkuTakenError(existing!.id, input.sku));
 
     const id = this.createItemRuntime.itemId();
     await this.itemCatalogueRepository.createItem({

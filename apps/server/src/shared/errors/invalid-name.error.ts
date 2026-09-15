@@ -1,8 +1,6 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
-import {
-  ApplicationError,
-  AssertionError,
-} from '@warehouser/shared-types/errors';
+import { ApplicationError } from '@warehouser/shared-types/errors';
+import { isAssertionError } from 'shared/predicates/typed-error.predicates';
 
 // Warehouse, Workspace and Workspace Role names are one value object
 // (`shared/domain/value-objects/access-name.ts`), so the mapping from its
@@ -43,7 +41,7 @@ export const validatedName = <TValue extends string | null>(
   try {
     return create();
   } catch (error) {
-    if (error instanceof AssertionError) {
+    if (isAssertionError(error)) {
       throw workspaceInvalidNameError(
         NAME_RULE_BY_ASSERTION_MESSAGE[error.message] ?? 'invalid',
       );

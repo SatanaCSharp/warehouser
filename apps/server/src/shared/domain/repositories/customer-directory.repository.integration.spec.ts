@@ -18,16 +18,8 @@ import {
   buildWarehouse,
   buildWorkspace,
 } from 'test/factories/entity-factories';
-import { PostgresQueryRunner } from 'typeorm/driver/postgres/PostgresQueryRunner.js';
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  describe,
-  expect,
-  it,
-  vi,
-} from 'vitest';
+import { countRoundTrips } from 'test/pglite/query-recorder';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 const now = new Date('2026-09-03T09:00:00.000Z');
 const later = new Date('2026-09-03T12:00:00.000Z');
@@ -164,24 +156,6 @@ const readCustomer = (id: string): Promise<CustomerEntity | null> =>
 // Counts PostgreSQL round trips, excluding the transaction's own control statements by name rather
 // than by a count, so the assertion does not drift if the transaction service changes how it opens
 // one. This is the executable form of "in one read" (data-model.md § "Repository boundaries").
-const countRoundTrips = async <T>(
-  operation: () => Promise<T>,
-): Promise<{ result: T; queryCount: number }> => {
-  const spy = vi.spyOn(PostgresQueryRunner.prototype, 'query');
-  const before = spy.mock.calls.length;
-  const result = await operation();
-  const queryCount = spy.mock.calls
-    .slice(before)
-    .map((call) => String(call[0]))
-    .filter(
-      (sql) =>
-        !/^(?:START TRANSACTION|SET TRANSACTION|COMMIT|ROLLBACK|BEGIN)/u.test(
-          sql,
-        ),
-    ).length;
-  spy.mockRestore();
-  return { result, queryCount };
-};
 
 // eslint-disable-next-line max-lines-per-function -- one suite covering one repository's whole persistence surface is inherently long, matching the other repository integration specs in this directory
 describe('CustomerDirectoryRepository', () => {

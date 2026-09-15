@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { withCondition } from 'purchase-drafts/domain/mappers/line-condition.mapper';
 import { readsRejectionCause } from 'purchase-drafts/domain/predicates/rejection-cause-access.predicates';
+import type { PurchaseDraftLineWithDrift } from 'purchase-drafts/domain/projections/purchase-draft-projection';
+import { withDriftSignals } from 'purchase-drafts/domain/projections/purchase-draft-projection';
 import { RejectionReasonLabelService } from 'purchase-drafts/domain/services/rejection-reason-label.service';
-import { withDriftSignals } from 'purchase-drafts/usecases/queries/drift-signals';
-import type { PurchaseDraftLineWithDrift } from 'purchase-drafts/usecases/queries/read-purchase-draft.query';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import type {
   PurchaseDraftLineFilters,

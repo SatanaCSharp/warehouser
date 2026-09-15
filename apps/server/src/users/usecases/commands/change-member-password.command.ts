@@ -7,8 +7,8 @@ import { Transactional } from 'shared/decorators/transactional.decorator';
 import { AccessCurrentUserRepository } from 'shared/domain/repositories/access-current-user.repository';
 import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
 import { MemberLifecycleRepository } from 'shared/domain/repositories/member-lifecycle.repository';
-import { isSupportedPassword } from 'shared/domain/security/is-supported-password';
 import { hashPassword } from 'shared/domain/security/password-hashing';
+import { isSupportedPassword } from 'shared/predicates/credential.predicates';
 import {
   invalidInputError,
   managerRoleProtectedError,

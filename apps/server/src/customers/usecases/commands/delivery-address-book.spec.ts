@@ -20,23 +20,28 @@ import {
   ApplicationError,
   AssertionError,
 } from '@warehouser/shared-types/errors';
-import { hasExactlyOneMainActiveDeliveryAddress } from 'customers/domain/predicates/customer.predicates';
+import { isNull } from '@warehouser/utils/predicates';
 import { CustomerAddressBookService } from 'customers/domain/services/customer-address-book.service';
 import { AddCustomerDeliveryAddressCommand } from 'customers/usecases/commands/add-customer-delivery-address.command';
 import { CorrectCustomerDeliveryAddressCommand } from 'customers/usecases/commands/correct-customer-delivery-address.command';
 import { DeactivateCustomerDeliveryAddressCommand } from 'customers/usecases/commands/deactivate-customer-delivery-address.command';
 import { ReactivateCustomerDeliveryAddressCommand } from 'customers/usecases/commands/reactivate-customer-delivery-address.command';
 import { SetMainCustomerDeliveryAddressCommand } from 'customers/usecases/commands/set-main-customer-delivery-address.command';
-import filter from 'lodash/filter.js';
-import find from 'lodash/find.js';
-import forEach from 'lodash/forEach.js';
-import map from 'lodash/map.js';
-import orderBy from 'lodash/orderBy.js';
+import { filter, find, forEach, map, orderBy } from 'lodash-es';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import type { CustomerEntity } from 'shared/domain/entities/customer.entity';
 import type { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
 import type { ReviseDeliveryAddressPersistenceInput } from 'shared/domain/repositories/customer-address-book.repository';
 import { describe, expect, it, vi } from 'vitest';
+
+// AC-05 / `chk_customer_delivery_addresses_main_is_active` — exactly one **active** address of a
+// Customer is its Main one at any moment. A property of the whole set rather than of any one
+// command, so it is stated here, over the rows the doubles have been mutating, rather than as a
+// production predicate no production path calls.
+const exactlyOneMainActiveAddress = (
+  rows: readonly CustomerDeliveryAddressEntity[],
+): boolean =>
+  filter(rows, (row) => row.isMain && isNull(row.deactivatedAt)).length === 1;
 
 const uuid = (suffix: string): string =>
   `00000000-0000-4000-8000-${suffix.padStart(12, '0')}`;
@@ -369,9 +374,9 @@ describe('AddCustomerDeliveryAddressCommand (AC-04, AC-05)', () => {
       find(customer.deliveryAddresses, { id: mainAddressId }),
     ).toMatchObject({ isMain: false, deactivatedAt: null });
     expect(customer.mainDeliveryAddressId).toBe(addedAddressId);
-    expect(
-      hasExactlyOneMainActiveDeliveryAddress(book.addressBookRepository.rows),
-    ).toBe(true);
+    expect(exactlyOneMainActiveAddress(book.addressBookRepository.rows)).toBe(
+      true,
+    );
   });
 
   // AC-04 — `main` defaults to false (openapi.yaml `CustomerDeliveryAddressCreate`): an address
@@ -392,9 +397,9 @@ describe('AddCustomerDeliveryAddressCommand (AC-04, AC-05)', () => {
     expect(
       book.addressBookRepository.setMainDeliveryAddress,
     ).not.toHaveBeenCalled();
-    expect(
-      hasExactlyOneMainActiveDeliveryAddress(book.addressBookRepository.rows),
-    ).toBe(true);
+    expect(exactlyOneMainActiveAddress(book.addressBookRepository.rows)).toBe(
+      true,
+    );
   });
 });
 
@@ -405,7 +410,7 @@ describe('the Customer Delivery Address book at rest (AC-05)', () => {
   it('keeps exactly one active Main Delivery Address after every address-book command', async () => {
     const book = bookWith(threeActiveAddresses());
     const atRest = (): boolean =>
-      hasExactlyOneMainActiveDeliveryAddress(book.addressBookRepository.rows);
+      exactlyOneMainActiveAddress(book.addressBookRepository.rows);
 
     await book.add.execute(currentUser, customerId, {
       addressText: 'Test Address 4, Test Hamlet',
@@ -443,9 +448,9 @@ describe('SetMainCustomerDeliveryAddressCommand (AC-04, AC-05)', () => {
 
     expect(customer.mainDeliveryAddressId).toBe(secondAddressId);
     expect(map(customer.deliveryAddresses, 'isMain')).toEqual([false, true]);
-    expect(
-      hasExactlyOneMainActiveDeliveryAddress(book.addressBookRepository.rows),
-    ).toBe(true);
+    expect(exactlyOneMainActiveAddress(book.addressBookRepository.rows)).toBe(
+      true,
+    );
   });
 
   // openapi.yaml `setMainCustomerDeliveryAddress` — "marking the address that is already Main
@@ -461,9 +466,9 @@ describe('SetMainCustomerDeliveryAddressCommand (AC-04, AC-05)', () => {
 
     expect(customer.mainDeliveryAddressId).toBe(mainAddressId);
     expect(map(customer.deliveryAddresses, 'isMain')).toEqual([true, false]);
-    expect(
-      hasExactlyOneMainActiveDeliveryAddress(book.addressBookRepository.rows),
-    ).toBe(true);
+    expect(exactlyOneMainActiveAddress(book.addressBookRepository.rows)).toBe(
+      true,
+    );
   });
 
   // `chk_customer_delivery_addresses_main_is_active` — an Inactive address is never the Main one,
@@ -513,9 +518,9 @@ describe('CorrectCustomerDeliveryAddressCommand (sad.md §4)', () => {
       isMain: true,
       updatedAt: now,
     });
-    expect(
-      hasExactlyOneMainActiveDeliveryAddress(book.addressBookRepository.rows),
-    ).toBe(true);
+    expect(exactlyOneMainActiveAddress(book.addressBookRepository.rows)).toBe(
+      true,
+    );
   });
 });
 
@@ -567,9 +572,9 @@ describe('DeactivateCustomerDeliveryAddressCommand (AC-06a, AC-06b, AC-07)', () 
     expect(
       find(customer.deliveryAddresses, { id: mainAddressId }),
     ).toMatchObject({ isMain: false, deactivatedAt: now });
-    expect(
-      hasExactlyOneMainActiveDeliveryAddress(book.addressBookRepository.rows),
-    ).toBe(true);
+    expect(exactlyOneMainActiveAddress(book.addressBookRepository.rows)).toBe(
+      true,
+    );
     // The deactivation clears `is_main` before the promotion sets it, which is what frees
     // `uq_customer_delivery_addresses_customer_main` for the successor.
     const deactivateOrder =
@@ -648,9 +653,9 @@ describe('DeactivateCustomerDeliveryAddressCommand (AC-06a, AC-06b, AC-07)', () 
     expect(
       book.addressBookRepository.deactivateDeliveryAddress,
     ).not.toHaveBeenCalled();
-    expect(
-      hasExactlyOneMainActiveDeliveryAddress(book.addressBookRepository.rows),
-    ).toBe(true);
+    expect(exactlyOneMainActiveAddress(book.addressBookRepository.rows)).toBe(
+      true,
+    );
   });
 });
 

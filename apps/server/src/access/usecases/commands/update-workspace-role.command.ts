@@ -1,10 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { assert, assertDefined } from '@warehouser/utils/asserts';
+import { isNull } from '@warehouser/utils/predicates';
 import {
   workspaceProtectedRoleError,
   workspaceRoleNameConflictError,
 } from 'access/domain/errors/workspace-access.errors';
-import { isProtectedWorkspaceOwnerRoleKind } from 'access/domain/predicates/workspace-authority.predicates';
+import {
+  isProtectedWorkspaceOwnerRoleKind,
+  isTheSameRole,
+} from 'access/domain/predicates/workspace-authority.predicates';
 import type { WorkspaceRoleWriteProjection } from 'access/usecases/commands/create-workspace-role.command';
 import {
   assertAssignableWorkspacePermissions,
@@ -64,7 +68,7 @@ export class UpdateWorkspaceRoleCommand {
         name,
       );
     assert(
-      matchingRole === null || matchingRole.id === role.id,
+      isNull(matchingRole) || isTheSameRole(matchingRole.id, role.id),
       workspaceRoleNameConflictError(),
     );
 

@@ -1,5 +1,6 @@
 import { Injectable, Optional } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
+import { isDefined } from '@warehouser/utils/predicates';
 import {
   customerOrderInvalidInputError,
   customerOrderQuantityBelowAllocatedError,
@@ -11,6 +12,7 @@ import {
   isDemandQuantity,
   isQuantityAtOrAboveAllocated,
 } from 'customer-orders/domain/predicates/customer-order.predicates';
+import { hasOutstandingDemand } from 'customer-orders/domain/predicates/demand-allocation.predicates';
 import {
   assertNeededByStillAhead,
   CustomerOrderLifecycleService,
@@ -41,7 +43,7 @@ const amendedValue = <T>(stated: T | undefined, current: T): T =>
 // AC-19 — a Fulfilled order whose quantity was raised counts as Unfulfilled again, so it returns to
 // the consolidated demand.
 const demandStateOf = (outstandingQuantity: number): CustomerOrderState =>
-  outstandingQuantity > 0 ? 'unfulfilled' : 'fulfilled';
+  hasOutstandingDemand(outstandingQuantity) ? 'unfulfilled' : 'fulfilled';
 
 // AC-19/AC-19b — amending demand (sad.md §6.10). Every bound is re-checked against the row locked
 // in this same transaction rather than against the values the member composed against (sad.md §8),
@@ -63,13 +65,13 @@ export class AmendCustomerOrderCommand {
   ): Promise<CustomerOrder> {
     const amendedAt = this.amendCustomerOrderRuntime.now();
 
-    if (input.quantity !== undefined) {
+    if (isDefined(input.quantity)) {
       assert(
         isDemandQuantity(input.quantity),
         customerOrderInvalidInputError('quantity', 'positive_integer'),
       );
     }
-    if (input.neededBy !== undefined) {
+    if (isDefined(input.neededBy)) {
       assertNeededByStillAhead(input.neededBy, amendedAt);
     }
 

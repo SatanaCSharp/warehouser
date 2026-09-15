@@ -4,6 +4,7 @@ import {
   WorkspacePermissionId,
 } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
+import { isDefined } from '@warehouser/utils/predicates';
 import { MAX_PROSE_LENGTH } from 'purchase-drafts/domain/predicates/purchase-draft-condition.predicates';
 import type {
   DeliveryMode,
@@ -366,7 +367,7 @@ export const notApplicableOnInstructedLineViolation = (
   rule: 'not_applicable_on_instructed_line',
   verdict: PreReceiptConformanceVerdict.NotApplicable,
   frozenPackagingTypeId,
-  frozenValueAddingNote: frozenValueAddingNote !== null,
+  frozenValueAddingNote: isDefined(frozenValueAddingNote),
 });
 
 // AC-17 — the mirror: a verdict on a line frozen carrying neither, which the entry says outright

@@ -2,11 +2,13 @@ import { randomUUID } from 'node:crypto';
 
 import { Injectable, Optional } from '@nestjs/common';
 import { assert, assertDefined } from '@warehouser/utils/asserts';
+import { isNull } from '@warehouser/utils/predicates';
 import {
   invalidRoleError,
   roleNameConflictError,
   roleUnavailableError,
 } from 'access/domain/errors/access.errors';
+import { resolvedEverySubmittedPermission } from 'access/domain/predicates/workspace-authority.predicates';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { RoleLifecycleRepository } from 'shared/domain/repositories/role-lifecycle.repository';
@@ -55,7 +57,7 @@ export class CreateRoleCommand {
       );
 
     assert(
-      permissions.length === new Set(input.permissionIds).size,
+      resolvedEverySubmittedPermission(permissions, input.permissionIds),
       invalidRoleError(),
     );
 
@@ -64,7 +66,7 @@ export class CreateRoleCommand {
       name,
     );
 
-    assert(matchingRole === null, roleNameConflictError());
+    assert(isNull(matchingRole), roleNameConflictError());
 
     await this.roleLifecycleRepository.createCustomRole(
       {

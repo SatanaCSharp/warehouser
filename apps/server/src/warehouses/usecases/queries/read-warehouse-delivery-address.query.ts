@@ -3,6 +3,7 @@ import { assert, assertDefined } from '@warehouser/utils/asserts';
 import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
 import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
 import { workspaceTargetUnavailableError } from 'shared/errors/cross-module.errors';
+import { scopedToWorkspace } from 'shared/predicates/tenancy.predicates';
 
 export interface WarehouseDeliveryAddressRead {
   readonly warehouseId: string;
@@ -37,7 +38,7 @@ export class ReadWarehouseDeliveryAddressQuery {
       await this.warehouseLifecycleRepository.findWarehouse(warehouseId);
     assertDefined(warehouse, workspaceTargetUnavailableError());
     assert(
-      warehouse.workspaceId === currentUser.workspaceId,
+      scopedToWorkspace(warehouse.workspaceId, currentUser.workspaceId),
       workspaceTargetUnavailableError(),
     );
 

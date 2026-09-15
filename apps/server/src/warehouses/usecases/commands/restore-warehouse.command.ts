@@ -4,6 +4,7 @@ import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user'
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
 import { workspaceTargetUnavailableError } from 'shared/errors/cross-module.errors';
+import { scopedToWorkspace } from 'shared/predicates/tenancy.predicates';
 
 export interface RestoreWarehouseInput {
   readonly warehouseId: string;
@@ -34,7 +35,7 @@ export class RestoreWarehouseCommand {
 
     assertDefined(warehouse, workspaceTargetUnavailableError());
     assert(
-      warehouse.workspaceId === currentUser.workspaceId,
+      scopedToWorkspace(warehouse.workspaceId, currentUser.workspaceId),
       workspaceTargetUnavailableError(),
     );
 

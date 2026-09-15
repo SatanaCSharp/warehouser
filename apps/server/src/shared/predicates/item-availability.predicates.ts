@@ -1,3 +1,5 @@
+import { isDefined, isNull } from '@warehouser/utils/predicates';
+
 // Pure predicates shared by more than one server feature (server-error-handling.md §1: "multiple
 // server features: `apps/server/src/shared/predicates/`"). No NestJS, HTTP or TypeORM import here —
 // each feature pairs the condition with its own named error factory.
@@ -29,6 +31,6 @@ export const isSelectableItem = (
   item: SelectableItemRead | null,
   warehouseId: string,
 ): boolean =>
-  item !== null &&
+  isDefined(item) &&
   item.warehouseId === warehouseId &&
-  item.deactivatedAt === null;
+  isNull(item.deactivatedAt);

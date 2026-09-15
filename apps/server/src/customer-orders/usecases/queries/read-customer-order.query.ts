@@ -5,7 +5,7 @@ import {
   toIdentifiedCustomerOrder,
   toRedactedCustomerOrder,
 } from 'customer-orders/domain/mappers/customer-order-projection.mapper';
-import first from 'lodash/first.js';
+import { first } from 'lodash-es';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository';
 import { readsCustomerIdentity } from 'shared/predicates/observed-permission.predicates';

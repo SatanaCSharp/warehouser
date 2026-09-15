@@ -6,7 +6,7 @@ import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
 import { CustomerAddressBookService } from 'customers/domain/services/customer-address-book.service';
 import { CorrectCustomerNameCommand } from 'customers/usecases/commands/correct-customer-name.command';
-import find from 'lodash/find.js';
+import { find } from 'lodash-es';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import type { CustomerEntity } from 'shared/domain/entities/customer.entity';
 import type { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';

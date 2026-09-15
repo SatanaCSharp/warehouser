@@ -2,12 +2,16 @@ import { Injectable } from '@nestjs/common';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
 import { Maybe } from '@warehouser/shared-types/utils';
 import { assert, assertDefined } from '@warehouser/utils/asserts';
+import { isDefined } from '@warehouser/utils/predicates';
 import {
   workspaceProtectedRoleError,
   workspaceReplacementRoleRequiredError,
   workspaceRoleAssignmentRequiredError,
 } from 'access/domain/errors/workspace-access.errors';
-import { isProtectedWorkspaceOwnerRoleKind } from 'access/domain/predicates/workspace-authority.predicates';
+import {
+  hasAssignedMembers,
+  isProtectedWorkspaceOwnerRoleKind,
+} from 'access/domain/predicates/workspace-authority.predicates';
 import { WorkspaceRoleDeletionService } from 'access/domain/services/workspace-role-deletion.service';
 import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
@@ -60,13 +64,12 @@ export class DeleteWorkspaceRoleCommand {
         currentUser.workspaceId,
         input.roleId,
       );
-    const isAssigned = assignedCount > 0;
     assert(
-      !isAssigned || Boolean(input.replacementRoleId),
+      !hasAssignedMembers(assignedCount) || isDefined(input.replacementRoleId),
       workspaceReplacementRoleRequiredError(),
     );
 
-    if (isAssigned) {
+    if (hasAssignedMembers(assignedCount)) {
       const assignPermission =
         await this.workspaceCurrentUserRepository.resolveRequiredWorkspacePermission(
           currentUser.userId,

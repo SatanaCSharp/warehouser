@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { Maybe } from '@warehouser/shared-types/utils';
 import { assert, assertDefined } from '@warehouser/utils/asserts';
+import { isDefined } from '@warehouser/utils/predicates';
 import { workspaceReplacementRoleRequiredError } from 'access/domain/errors/workspace-access.errors';
+import { isDistinctReplacementRole } from 'access/domain/predicates/workspace-authority.predicates';
 import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository';
 
 // Mirrors `access/domain/services/role-deletion.service.ts` one level up
@@ -19,12 +21,12 @@ export class WorkspaceRoleDeletionService {
     sourceRoleId: string,
     replacementRoleId?: Maybe<string>,
   ): Promise<void> {
-    if (!replacementRoleId) {
+    if (!isDefined(replacementRoleId)) {
       return;
     }
 
     assert(
-      replacementRoleId !== sourceRoleId,
+      isDistinctReplacementRole(replacementRoleId, sourceRoleId),
       workspaceReplacementRoleRequiredError(),
     );
 

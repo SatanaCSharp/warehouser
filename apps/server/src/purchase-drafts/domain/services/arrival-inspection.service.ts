@@ -1,8 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
-import isEmpty from 'lodash/isEmpty.js';
-import keyBy from 'lodash/keyBy.js';
-import map from 'lodash/map.js';
+import { isDefined, isNull } from '@warehouser/utils/predicates';
+import { isEmpty, keyBy, map } from 'lodash-es';
 import type {
   ConditionSplitViolation,
   EndingConditionInputViolation,
@@ -34,6 +33,7 @@ import {
 } from 'purchase-drafts/domain/errors/purchase-draft.errors';
 import type { RejectionReasonCatalogueEntry } from 'purchase-drafts/domain/predicates/purchase-draft-condition.predicates';
 import {
+  admitsConformanceNote,
   conditionOnlyWhereSomethingReceived,
   duplicatedRejectionReasonIds,
   instructionRefusalReasonIdsAmong,
@@ -43,7 +43,6 @@ import {
   isWholeRefusedQuantity,
   isWithinProseBound,
   judgementOnlyOnInstructedLine,
-  lineCarriesFrozenInstruction,
   metAgreesWithRefusals,
   notApplicableOnlyOnUninstructedLine,
   refusalsStateVerdict,
@@ -166,11 +165,6 @@ const conformanceViolationsOf = (
   verdict: PreReceiptConformanceVerdict,
   rejectionReasonIds: readonly string[],
 ): readonly PreReceiptConformanceViolation[] => {
-  const carriesFrozenInstruction = lineCarriesFrozenInstruction(
-    line.packagingTypeId,
-    line.valueAddingNote,
-  );
-
   const contradictedByRefusals = metAgreesWithRefusals(
     verdict,
     rejectionReasonIds,
@@ -180,7 +174,11 @@ const conformanceViolationsOf = (
 
   return [
     ...contradictedByRefusals.map(metContradictsRejectionViolation),
-    ...(notApplicableOnlyOnUninstructedLine(verdict, carriesFrozenInstruction)
+    ...(notApplicableOnlyOnUninstructedLine(
+      verdict,
+      line.packagingTypeId,
+      line.valueAddingNote,
+    )
       ? []
       : [
           notApplicableOnInstructedLineViolation(
@@ -188,7 +186,11 @@ const conformanceViolationsOf = (
             line.valueAddingNote,
           ),
         ]),
-    ...(judgementOnlyOnInstructedLine(verdict, carriesFrozenInstruction)
+    ...(judgementOnlyOnInstructedLine(
+      verdict,
+      line.packagingTypeId,
+      line.valueAddingNote,
+    )
       ? []
       : [verdictOnUninstructedLineViolation(verdict)]),
   ];
@@ -208,7 +210,7 @@ const proseShapeViolationsOf = (
     readonly tooLong: (path: string) => EndingConditionInputViolation;
   },
 ): readonly EndingConditionInputViolation[] => {
-  if (prose === null) {
+  if (isNull(prose)) {
     return [];
   }
 
@@ -292,7 +294,7 @@ export const assertConditionSplit = (
     ...sourceMismatchViolationsOf(line, submission),
     ...(refusalsStateVerdict(
       !isEmpty(submission.rejections),
-      submission.preReceiptConformance !== null,
+      isDefined(submission.preReceiptConformance),
     )
       ? []
       : [verdictRequiredWithRejectionsViolation(rejectedQuantity)]),
@@ -317,7 +319,7 @@ const nothingReceivedViolations = (
 ): readonly EndingConditionInputViolation[] =>
   conditionOnlyWhereSomethingReceived(
     submission.receivedQuantity,
-    verdict !== null || !isEmpty(submission.rejections),
+    isDefined(verdict) || !isEmpty(submission.rejections),
   )
     ? []
     : [conditionOnNothingReceivedViolation('preReceiptConformance')];
@@ -329,7 +331,7 @@ const conformanceNoteShapeViolations = (
   verdict: EndingConditionSubmission['preReceiptConformance'],
   note: string | null,
 ): readonly EndingConditionInputViolation[] =>
-  verdict === null
+  isNull(verdict)
     ? []
     : proseShapeViolationsOf(note, 'preReceiptConformance.note', {
         empty: noteEmptyViolation,
@@ -343,9 +345,7 @@ const noteAdmittedByVerdictViolations = (
   verdict: EndingConditionSubmission['preReceiptConformance'],
   note: string | null,
 ): readonly EndingConditionInputViolation[] =>
-  verdict !== null &&
-  verdict !== PreReceiptConformanceVerdict.NotMet &&
-  note !== null
+  isDefined(verdict) && !admitsConformanceNote(verdict) && isDefined(note)
     ? [noteNotAdmittedByVerdictViolation(verdict)]
     : [];
 
@@ -382,7 +382,7 @@ export const assertPreReceiptConformance = (
     purchaseDraftEndingConditionInputError(inputViolations),
   );
 
-  if (verdict === null) {
+  if (isNull(verdict)) {
     return;
   }
 

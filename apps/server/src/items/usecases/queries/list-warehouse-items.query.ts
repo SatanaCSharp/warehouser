@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { isNull } from '@warehouser/utils/predicates';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
 
@@ -32,7 +33,7 @@ export class ListWarehouseItemsQuery {
       description: row.description,
       unitOfMeasure: row.unitOfMeasure,
       onHandQuantity: row.onHandQuantity,
-      active: row.deactivatedAt === null,
+      active: isNull(row.deactivatedAt),
       latestAdjustmentReason: row.latestAdjustmentReason,
     }));
   }

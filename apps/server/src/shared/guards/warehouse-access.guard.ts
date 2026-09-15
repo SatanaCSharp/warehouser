@@ -2,6 +2,7 @@ import type { CanActivate, ExecutionContext } from '@nestjs/common';
 import { Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { PermissionId } from '@warehouser/shared-types/enums';
+import { isDefined } from '@warehouser/utils/predicates';
 import { accessCurrentUser } from 'shared/access/access-current-user';
 import {
   accessDeniedError,
@@ -12,6 +13,14 @@ import { READ_TOLERANT_KEY } from 'shared/access/archived-tolerant-read.decorato
 import { OBSERVED_PERMISSION_KEY } from 'shared/decorators/observed-permission.decorator';
 import { REQUIRED_PERMISSION_KEY } from 'shared/decorators/required-permission.decorator';
 import { AccessCurrentUserRepository } from 'shared/domain/repositories/access-current-user.repository';
+import {
+  contradictsRouteWarehouse,
+  declaresRequiredPermission,
+  grantsRequiredPermission,
+  isAuthenticatedPrincipal,
+  namesOneWarehouse,
+  refusesArchivedWarehouse,
+} from 'shared/predicates/access-admission.predicates';
 
 /** Reads the single Warehouse identifier the request unambiguously names. The route's
  * `warehouseId` param is authoritative; a body-supplied `warehouseId` that disagrees with it makes
@@ -22,7 +31,7 @@ const resolveNamedWarehouseId = (
 ): string | undefined => {
   const paramsWarehouseId = request.params?.warehouseId as string | undefined;
   const bodyWarehouseId = request.body?.warehouseId as string | undefined;
-  if (bodyWarehouseId !== undefined && bodyWarehouseId !== paramsWarehouseId) {
+  if (contradictsRouteWarehouse(bodyWarehouseId, paramsWarehouseId)) {
     return undefined;
   }
   return paramsWarehouseId;
@@ -51,7 +60,7 @@ type ResolvedPermission = Awaited<
 const grantedMembership = (
   current: ResolvedPermission,
 ): NonNullable<ResolvedPermission> => {
-  if (!current?.granted) {
+  if (!grantsRequiredPermission(current)) {
     throw accessDeniedError();
   }
   return current;
@@ -63,7 +72,7 @@ const assertArchiveTolerated = (
   archived: boolean,
   readTolerant: boolean | undefined,
 ): void => {
-  if (archived && !readTolerant) {
+  if (refusesArchivedWarehouse(archived, readTolerant)) {
     throw warehouseArchivedError();
   }
 };
@@ -98,7 +107,11 @@ export class WarehouseAccessGuard implements CanActivate {
       ),
     );
     const warehouseId = resolveNamedWarehouseId(request);
-    if (!request.user || !permissionId || !warehouseId) {
+    if (
+      !isAuthenticatedPrincipal(request.user) ||
+      !declaresRequiredPermission(permissionId) ||
+      !namesOneWarehouse(warehouseId)
+    ) {
       throw accessDeniedError();
     }
 
@@ -111,7 +124,7 @@ export class WarehouseAccessGuard implements CanActivate {
       ),
     );
 
-    const archived = current.archivedAt !== null;
+    const archived = isDefined(current.archivedAt);
     assertArchiveTolerated(
       archived,
       this.reflector.getAllAndOverride<boolean | undefined>(

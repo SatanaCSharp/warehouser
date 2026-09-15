@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { isDefined, isNull, isUndefined } from '@warehouser/utils/predicates';
 import { getEntityManager } from 'shared/database/db-transaction-context.service';
 import type { PurchaseDraftLineRejectionDisposition } from 'shared/domain/entities/purchase-draft-line-rejection.entity';
 import { PurchaseDraftLineRejectionEntity } from 'shared/domain/entities/purchase-draft-line-rejection.entity';
@@ -74,7 +75,7 @@ export class PurchaseDraftRejectionRepository {
       .setLock('pessimistic_write')
       .getOne();
 
-    if (rejection === null) {
+    if (isNull(rejection)) {
       return null;
     }
 
@@ -103,10 +104,10 @@ export class PurchaseDraftRejectionRepository {
       .createQueryBuilder()
       .update(PurchaseDraftLineRejectionEntity)
       .set({
-        ...(input.description !== undefined && {
+        ...(!isUndefined(input.description) && {
           description: input.description,
         }),
-        ...(input.disposition !== undefined && {
+        ...(isDefined(input.disposition) && {
           disposition: input.disposition,
         }),
         amendedByUserId: input.amendedByUserId,
@@ -118,7 +119,7 @@ export class PurchaseDraftRejectionRepository {
         warehouseId: input.warehouseId,
       });
 
-    if (input.disposition !== undefined) {
+    if (isDefined(input.disposition)) {
       // AC-18a — "a Disposition once decided may be corrected to another decision, but never
       // returned to undecided". The exclusion is exactly that and nothing wider: a correction
       // between two decisions matches, and only an amendment aiming `undecided` at an already

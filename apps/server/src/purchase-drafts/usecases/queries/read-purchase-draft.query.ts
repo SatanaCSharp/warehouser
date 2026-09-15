@@ -1,62 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import type { PurchaseDraftLineEndingWithCondition } from 'purchase-drafts/domain/mappers/line-condition.mapper';
+import { isNull } from '@warehouser/utils/predicates';
 import { withCondition } from 'purchase-drafts/domain/mappers/line-condition.mapper';
 import { readsRejectionCause } from 'purchase-drafts/domain/predicates/rejection-cause-access.predicates';
+import type { PurchaseDraftDetailWithDrift } from 'purchase-drafts/domain/projections/purchase-draft-projection';
+import { withDriftSignals } from 'purchase-drafts/domain/projections/purchase-draft-projection';
 import { RejectionReasonLabelService } from 'purchase-drafts/domain/services/rejection-reason-label.service';
-import type {
-  PurchaseDraftLineLinkIdentifiedWithDrift,
-  PurchaseDraftLineLinkRedactedWithDrift,
-} from 'purchase-drafts/usecases/queries/drift-signals';
-import { withDriftSignals } from 'purchase-drafts/usecases/queries/drift-signals';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
-import type {
-  PurchaseDraftLineIdentifiedRead,
-  PurchaseDraftLineRedactedRead,
-  PurchaseDraftSummaryRead,
-} from 'shared/domain/repositories/purchase-draft-read.repository';
 import { PurchaseDraftReadRepository } from 'shared/domain/repositories/purchase-draft-read.repository';
 import { readsCustomerIdentity } from 'shared/predicates/observed-permission.predicates';
-
-// openapi.yaml `PurchaseDraftLineRedacted` with every link's `driftSignals` derived — what an actor
-// **without** the observed `CUSTOMERS:WATCH` is served. It has no `customerDestination` property at
-// all: the repository's redacted query never selected one, and TypeScript therefore gives a mapper
-// nothing to carry (AC-09a, ADR 0001).
-export type PurchaseDraftLineRedactedWithDrift = Omit<
-  PurchaseDraftLineRedactedRead,
-  'links' | 'ending'
-> & {
-  readonly links: readonly PurchaseDraftLineLinkRedactedWithDrift[];
-  readonly ending: PurchaseDraftLineEndingWithCondition | null;
-};
-
-// openapi.yaml `PurchaseDraftLineIdentified` with the same signals derived.
-export type PurchaseDraftLineIdentifiedWithDrift = Omit<
-  PurchaseDraftLineIdentifiedRead,
-  'links' | 'ending'
-> & {
-  readonly links: readonly PurchaseDraftLineLinkIdentifiedWithDrift[];
-  readonly ending: PurchaseDraftLineEndingWithCondition | null;
-};
-
-// openapi.yaml `PurchaseDraftLine` — `oneOf` the two forms, exactly as the contract models it. The
-// union is carried down to the **line** rather than to the draft, so the one discriminator sits
-// where the withheld property does and an empty draft has nothing to discriminate.
-export type PurchaseDraftLineWithDrift =
-  PurchaseDraftLineIdentifiedWithDrift | PurchaseDraftLineRedactedWithDrift;
-
-// openapi.yaml `PurchaseDraftDetail`.
-export type PurchaseDraftDetailWithDrift = PurchaseDraftSummaryRead & {
-  readonly lines: readonly PurchaseDraftLineWithDrift[];
-};
-
-/** Whether this line carries the Customer destination it ships to — the one discriminator, so no
- * caller tests for a property name of its own. It **fails closed**: a line the redacted query
- * produced has no such property, and a mapper handed one can therefore only produce the redacted
- * shape (AC-09a). */
-export const identifiesCustomer = (
-  line: PurchaseDraftLineWithDrift,
-): line is PurchaseDraftLineIdentifiedWithDrift =>
-  'customerDestination' in line;
 
 // AC-16/AC-18/AC-09a — the application boundary of reading one draft with its per-link Drift
 // Signals derived (server-architecture.md §Dependency direction, §Use cases). The repository hands
@@ -102,7 +53,7 @@ export class ReadPurchaseDraftQuery {
         cause,
       );
 
-      if (redacted === null) {
+      if (isNull(redacted)) {
         return null;
       }
 
@@ -126,7 +77,7 @@ export class ReadPurchaseDraftQuery {
       cause,
     );
 
-    if (identified === null) {
+    if (isNull(identified)) {
       return null;
     }
 

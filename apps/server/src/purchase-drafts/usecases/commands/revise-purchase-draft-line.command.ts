@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { assert, assertFail } from '@warehouser/utils/asserts';
-import omit from 'lodash/omit.js';
+import { assert, assertDefined, assertFail } from '@warehouser/utils/asserts';
+import { isDefined, isEmpty, isUndefined } from '@warehouser/utils/predicates';
+import { omit } from 'lodash-es';
 import {
   purchaseDraftDeliveryAddressDisagreementError,
   purchaseDraftInvalidDeliveryDestinationError,
@@ -10,6 +11,7 @@ import {
 import {
   directLineNamesACustomerAddress,
   isLineDestinationActive,
+  travelsViaWarehouse,
 } from 'purchase-drafts/domain/predicates/purchase-draft-delivery.predicates';
 import type { LineDeliveryDestination } from 'purchase-drafts/domain/services/purchase-draft-assembly.service';
 import {
@@ -48,7 +50,7 @@ export interface ReviseLineInput {
 const statedDestination = (
   destination: LineDeliveryDestination,
 ): LineDeliveryDestination => {
-  if (destination.deliveryMode === DeliveryMode.ViaWarehouse) {
+  if (travelsViaWarehouse(destination.deliveryMode)) {
     return {
       deliveryMode: DeliveryMode.ViaWarehouse,
       customerDeliveryAddressId: null,
@@ -71,7 +73,7 @@ const statedDestination = (
 const revisedDestination = (
   destination: LineDeliveryDestination | undefined,
 ): LineDeliveryDestination | undefined =>
-  destination === undefined ? undefined : statedDestination(destination);
+  isUndefined(destination) ? undefined : statedDestination(destination);
 
 // The Customer address the revised line would ship to, or nothing: a revision that says nothing
 // about the destination, and one that brings the line back to the dock, both name no address.
@@ -100,7 +102,7 @@ export class RevisePurchaseDraftLineCommand {
   ): Promise<void> {
     const scope = { purchaseDraftId, warehouseId: currentUser.warehouseId };
 
-    if (changes.itemId !== undefined) {
+    if (isDefined(changes.itemId)) {
       await this.assemblyService.assertItemAvailable(
         currentUser,
         changes.itemId,
@@ -115,14 +117,14 @@ export class RevisePurchaseDraftLineCommand {
     // AC-12/sad.md §6.7 step 4 — the address the line would ship to is proved available before
     // anything is written; `assertDeliveryAddressAvailable` below is where and why.
     const deliveryAddressId = revisedDeliveryAddressId(destination);
-    if (deliveryAddressId !== null) {
+    if (isDefined(deliveryAddressId)) {
       await this.assertDeliveryAddressAvailable(currentUser, deliveryAddressId);
     }
 
     // AC-15a — the second of the three moments the agreement is required. A revision that says
     // nothing about the destination, and one that brings the line back to the dock, ask nothing
     // (AC-15b).
-    if (destination !== undefined) {
+    if (isDefined(destination)) {
       await this.assertLinksAgreeWithDestination(
         scope,
         purchaseDraftLineId,
@@ -163,10 +165,7 @@ export class RevisePurchaseDraftLineCommand {
         customerDeliveryAddressId,
         currentUser.warehouseId,
       );
-    assert(
-      address !== null,
-      purchaseDraftLineDeliveryAddressUnavailableError(),
-    );
+    assertDefined(address, purchaseDraftLineDeliveryAddressUnavailableError());
     assert(
       isLineDestinationActive(address.deactivatedAt),
       purchaseDraftLineDeliveryAddressInactiveError(),
@@ -186,7 +185,7 @@ export class RevisePurchaseDraftLineCommand {
       purchaseDraftLineId,
       destination,
     );
-    if (disagreeingLinks.length > 0) {
+    if (!isEmpty(disagreeingLinks)) {
       assertFail(
         purchaseDraftDeliveryAddressDisagreementError(disagreeingLinks),
       );

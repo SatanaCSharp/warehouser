@@ -1,14 +1,21 @@
 import { Injectable } from '@nestjs/common';
 import { assert, assertDefined } from '@warehouser/utils/asserts';
+import { isDefined } from '@warehouser/utils/predicates';
 import {
   accessDeniedError,
   concurrentAccessChangeError,
   invalidManagerTransferError,
   targetUnavailableError,
 } from 'access/domain/errors/access.errors';
+import {
+  isCustomRoleKind,
+  isMembershipSelfTarget,
+  isProtectedWarehouseManagerRoleKind,
+} from 'access/domain/predicates/workspace-authority.predicates';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { ManagerTransferRepository } from 'shared/domain/repositories/manager-transfer.repository';
+import { appliedGuardedWrite } from 'shared/predicates/persistence-write.predicates';
 
 export interface TransferWarehouseManagerInput {
   readonly recipientId: string;
@@ -26,9 +33,12 @@ export class TransferWarehouseManagerCommand {
     currentUser: AccessCurrentUser,
     input: TransferWarehouseManagerInput,
   ): Promise<{ readonly managerId: string }> {
-    assert(currentUser.roleKind === 'warehouse_manager', accessDeniedError());
     assert(
-      currentUser.userId !== input.recipientId,
+      isProtectedWarehouseManagerRoleKind(currentUser.roleKind),
+      accessDeniedError(),
+    );
+    assert(
+      !isMembershipSelfTarget(currentUser.userId, input.recipientId),
       invalidManagerTransferError(),
     );
 
@@ -66,8 +76,9 @@ export class TransferWarehouseManagerCommand {
     assertDefined(recipient, invalidManagerTransferError());
 
     assert(
-      current?.roleKind === 'warehouse_manager' &&
-        recipient.roleKind === 'custom',
+      isDefined(current) &&
+        isProtectedWarehouseManagerRoleKind(current.roleKind) &&
+        isCustomRoleKind(recipient.roleKind),
       concurrentAccessChangeError(),
     );
 
@@ -78,7 +89,7 @@ export class TransferWarehouseManagerCommand {
       'custom',
     );
 
-    assert(demoted, concurrentAccessChangeError());
+    assert(appliedGuardedWrite(demoted), concurrentAccessChangeError());
 
     const promoted = await this.managerTransferRepository.assignRole(
       currentUser.warehouseId,
@@ -87,7 +98,7 @@ export class TransferWarehouseManagerCommand {
       'warehouse_manager',
     );
 
-    assert(promoted, concurrentAccessChangeError());
+    assert(appliedGuardedWrite(promoted), concurrentAccessChangeError());
 
     return { managerId: input.recipientId };
   }

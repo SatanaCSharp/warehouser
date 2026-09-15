@@ -1,7 +1,9 @@
 import { purchaseDraftLineSchema } from '@warehouser/contracts/purchase-drafts';
+import type {
+  PurchaseDraftLineIdentifiedWithDrift,
+  PurchaseDraftLineLinkIdentifiedWithDrift,
+} from 'purchase-drafts/domain/projections/purchase-draft-projection';
 import { toLineResponse } from 'purchase-drafts/rest/mappers/purchase-draft-response.mapper';
-import type { PurchaseDraftLineLinkIdentifiedWithDrift } from 'purchase-drafts/usecases/queries/drift-signals';
-import type { PurchaseDraftLineIdentifiedWithDrift } from 'purchase-drafts/usecases/queries/read-purchase-draft.query';
 import { describe, expect, it } from 'vitest';
 
 // `purchase-draft-response-contract-parity.spec.ts` drives this mapper through the two read queries,

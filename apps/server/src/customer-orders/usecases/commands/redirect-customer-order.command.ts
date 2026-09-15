@@ -1,5 +1,5 @@
 import { Injectable, Optional } from '@nestjs/common';
-import { assert } from '@warehouser/utils/asserts';
+import { assertDefined } from '@warehouser/utils/asserts';
 import { customerOrderInvalidDeliveryAddressError } from 'customer-orders/domain/errors/customer-order.errors';
 import type { CustomerOrder } from 'customer-orders/domain/mappers/customer-order.mapper';
 import { toCustomerOrder } from 'customer-orders/domain/mappers/customer-order.mapper';
@@ -65,7 +65,7 @@ export class RedirectCustomerOrderCommand {
     // book it could be redirected within. It surfaces as the one refusal the redirection has for a
     // destination it cannot accept (openapi.yaml `CustomerOrderRedirectConflict`).
     const { customerId } = locked.order;
-    assert(customerId !== null, customerOrderInvalidDeliveryAddressError());
+    assertDefined(customerId, customerOrderInvalidDeliveryAddressError());
 
     // AC-11c — the address is one of that same Customer's, and active. The read is scoped to the
     // Customer the order already names, so an address of another Customer is refused exactly as a

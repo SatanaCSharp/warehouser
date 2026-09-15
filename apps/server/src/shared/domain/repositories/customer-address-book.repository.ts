@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { getEntityManager } from 'shared/database/db-transaction-context.service';
 import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
+import { reportsExactlyOneRow } from 'shared/predicates/persistence-write.predicates';
 import { DataSource, IsNull, Not } from 'typeorm';
 
 export interface ReviseDeliveryAddressPersistenceInput {
@@ -21,7 +22,7 @@ export type DeliveryAddressWriteOutcome =
 const toDeliveryAddressWriteOutcome = (
   affected: number | null | undefined,
 ): DeliveryAddressWriteOutcome =>
-  affected === 1 ? 'applied' : 'delivery-address-unavailable';
+  reportsExactlyOneRow(affected) ? 'applied' : 'delivery-address-unavailable';
 
 // AC-04/AC-05/AC-06a/AC-06b/AC-07 — one Customer's address book. It is one repository rather than a
 // table-shaped set of writes because of `lockDeliveryAddresses`: `sad.md` §6.3 step 4 requires the

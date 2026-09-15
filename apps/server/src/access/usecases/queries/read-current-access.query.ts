@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { AccessProjection } from '@warehouser/contracts/access';
 import { assertDefined } from '@warehouser/utils/asserts';
+import { isDefined } from '@warehouser/utils/predicates';
 import { membershipRequiredError } from 'access/domain/errors/access.errors';
 import { AccessCurrentUserRepository } from 'shared/domain/repositories/access-current-user.repository';
 
@@ -26,7 +27,7 @@ export class ReadCurrentAccessQuery {
       roleId: projection.roleId,
       roleKind: projection.roleKind,
       permissionIds: [...projection.permissionIds],
-      archivedAt: projection.archivedAt
+      archivedAt: isDefined(projection.archivedAt)
         ? projection.archivedAt.toISOString()
         : null,
     };

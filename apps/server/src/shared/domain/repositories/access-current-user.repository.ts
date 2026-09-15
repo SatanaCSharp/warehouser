@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import uniq from 'lodash/uniq.js';
+import { isDefined, isEmpty } from '@warehouser/utils/predicates';
+import { uniq } from 'lodash-es';
 import { getEntityManager } from 'shared/database/db-transaction-context.service';
 import { RolePermissionEntity } from 'shared/domain/entities/role-permission.entity';
 import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
@@ -50,7 +51,7 @@ export class AccessCurrentUserRepository {
     const membership = await manager
       .getRepository(WarehouseMembershipEntity)
       .findOneBy({ userId, warehouseId });
-    if (!membership) {
+    if (!isDefined(membership)) {
       return null;
     }
     const grants = await manager.getRepository(RolePermissionEntity).find({
@@ -71,7 +72,7 @@ export class AccessCurrentUserRepository {
       observedPermissionIds: observedPermissionIds.filter((candidate) =>
         grantedIds.has(candidate),
       ),
-      archivedAt: warehouse ? warehouse.archivedAt : null,
+      archivedAt: isDefined(warehouse) ? warehouse.archivedAt : null,
     };
   }
 
@@ -83,7 +84,7 @@ export class AccessCurrentUserRepository {
     const membership = await manager
       .getRepository(WarehouseMembershipEntity)
       .findOneBy({ userId });
-    if (!membership || permissionIds.length === 0) {
+    if (!isDefined(membership) || isEmpty(permissionIds)) {
       return null;
     }
     const grants = await manager.getRepository(RolePermissionEntity).find({
@@ -97,7 +98,9 @@ export class AccessCurrentUserRepository {
     const permissionId = permissionIds.find((candidate) =>
       grantedIds.has(candidate),
     );
-    return permissionId ? { ...membership, permissionId, granted: true } : null;
+    return isDefined(permissionId)
+      ? { ...membership, permissionId, granted: true }
+      : null;
   }
 
   /** Resolves the actor's own membership projection inside one named Warehouse, so the membership
@@ -119,7 +122,7 @@ export class AccessCurrentUserRepository {
       .getRepository(WarehouseMembershipEntity)
       .findOneBy({ userId, warehouseId });
 
-    if (!membership) {
+    if (!isDefined(membership)) {
       return null;
     }
 
@@ -137,7 +140,7 @@ export class AccessCurrentUserRepository {
       roleId: membership.roleId,
       roleKind: membership.roleKind,
       permissionIds: grants.map((grant) => grant.permissionId),
-      archivedAt: warehouse ? warehouse.archivedAt : null,
+      archivedAt: isDefined(warehouse) ? warehouse.archivedAt : null,
     };
   }
 }

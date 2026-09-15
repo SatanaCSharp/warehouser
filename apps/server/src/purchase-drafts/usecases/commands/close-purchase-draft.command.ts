@@ -1,5 +1,6 @@
 import { Injectable, Optional } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
+import { isDefined } from '@warehouser/utils/predicates';
 import {
   purchaseDraftConcurrentChangeError,
   purchaseDraftInvalidStateError,
@@ -9,6 +10,8 @@ import { isReadyForOrderingDraft } from 'purchase-drafts/domain/predicates/purch
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { PurchaseDraftFreezeRepository } from 'shared/domain/repositories/purchase-draft-freeze.repository';
+import { appliedGuardedWrite } from 'shared/predicates/persistence-write.predicates';
+import { scopedToWarehouse } from 'shared/predicates/tenancy.predicates';
 
 export interface ClosePurchaseDraftRuntime {
   readonly now: () => Date;
@@ -58,7 +61,8 @@ export class ClosePurchaseDraftCommand {
     const header =
       await this.closureRepository.findDraftHeader(purchaseDraftId);
     assert(
-      header !== null && header.warehouseId === currentUser.warehouseId,
+      isDefined(header) &&
+        scopedToWarehouse(header.warehouseId, currentUser.warehouseId),
       purchaseDraftTargetUnavailableError(),
     );
 
@@ -75,7 +79,7 @@ export class ClosePurchaseDraftCommand {
       closedAt,
       closureReason: input.closureReason,
     });
-    assert(closed, purchaseDraftConcurrentChangeError());
+    assert(appliedGuardedWrite(closed), purchaseDraftConcurrentChangeError());
 
     return {
       id: purchaseDraftId,

@@ -1,9 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { assertDefined } from '@warehouser/utils/asserts';
+import { isNull } from '@warehouser/utils/predicates';
 import {
   WorkspaceActorWarehouseRead,
   WorkspaceReadRepository,
 } from 'shared/domain/repositories/workspace-read.repository';
+import { holdsExactlyOne } from 'shared/predicates/collection.predicates';
+import { isSelectionStillLive } from 'workspaces/domain/predicates/active-warehouse-selection.predicates';
 
 export interface WorkspaceContextWarehouse {
   readonly warehouseId: string;
@@ -19,31 +22,6 @@ export interface WorkspaceContextResult {
   readonly warehouses: readonly WorkspaceContextWarehouse[];
   readonly effectiveWarehouseId: string | null;
 }
-
-// The stored `users.active_warehouse_id` value the repository reads is
-// never returned as-is: the *effective* selection is derived here, above
-// the repository boundary, from that raw value and the actor's live
-// Warehouse memberships (AC-03, AC-03b) — the stored value while it is
-// still a live, non-archived membership; otherwise the sole live
-// membership when exactly one exists; otherwise `null`, because the
-// system never chooses between several memberships on the member's
-// behalf. A withdrawn membership or a newly archived Warehouse therefore
-// changes the result on the very next read, with no row rewritten.
-const deriveEffectiveWarehouseId = (
-  storedActiveWarehouseId: string | null,
-  warehouses: readonly WorkspaceActorWarehouseRead[],
-): string | null => {
-  const liveWarehouses = warehouses.filter(
-    (warehouse) => warehouse.archivedAt === null,
-  );
-  const storedSelectionIsLive = liveWarehouses.some(
-    (warehouse) => warehouse.warehouseId === storedActiveWarehouseId,
-  );
-  if (storedSelectionIsLive) {
-    return storedActiveWarehouseId;
-  }
-  return liveWarehouses.length === 1 ? liveWarehouses[0].warehouseId : null;
-};
 
 // The one projection the application shell loads after authentication
 // (sad.md §6.10). Session-only: it declares no Workspace Permission
@@ -81,10 +59,34 @@ export class ReadWorkspaceContextQuery {
       workspace: { id: identity.workspaceId, name: identity.workspaceName },
       workspacePermissionIds,
       warehouses,
-      effectiveWarehouseId: deriveEffectiveWarehouseId(
+      effectiveWarehouseId: this.deriveEffectiveWarehouseId(
         identity.activeWarehouseId,
         warehouses,
       ),
     };
+  }
+
+  // The stored `users.active_warehouse_id` value the repository reads is
+  // never returned as-is: the *effective* selection is derived here, above
+  // the repository boundary, from that raw value and the actor's live
+  // Warehouse memberships (AC-03, AC-03b) — the stored value while it is
+  // still a live, non-archived membership; otherwise the sole live
+  // membership when exactly one exists; otherwise `null`, because the
+  // system never chooses between several memberships on the member's
+  // behalf. A withdrawn membership or a newly archived Warehouse therefore
+  // changes the result on the very next read, with no row rewritten.
+  private deriveEffectiveWarehouseId(
+    storedActiveWarehouseId: string | null,
+    warehouses: readonly WorkspaceActorWarehouseRead[],
+  ): string | null {
+    const liveWarehouses = warehouses.filter((warehouse) =>
+      isNull(warehouse.archivedAt),
+    );
+    if (isSelectionStillLive(liveWarehouses, storedActiveWarehouseId)) {
+      return storedActiveWarehouseId;
+    }
+    return holdsExactlyOne(liveWarehouses)
+      ? liveWarehouses[0].warehouseId
+      : null;
   }
 }

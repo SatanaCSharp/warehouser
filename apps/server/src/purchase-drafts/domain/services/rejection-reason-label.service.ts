@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { isEmpty } from '@warehouser/utils/predicates';
 import { rejectionReasonIdsOf } from 'purchase-drafts/domain/mappers/line-condition.mapper';
 import type { PurchaseDraftLineEndingRead } from 'shared/domain/repositories/purchase-draft-read.repository';
 import { RejectionReasonCatalogueRepository } from 'shared/domain/repositories/rejection-reason-catalogue.repository';
@@ -29,7 +30,7 @@ export class RejectionReasonLabelService {
   ): Promise<ReadonlyMap<string, string>> {
     const rejectionReasonIds = rejectionReasonIdsOf(endings);
 
-    if (rejectionReasonIds.length === 0) {
+    if (isEmpty(rejectionReasonIds)) {
       return new Map();
     }
 

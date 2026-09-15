@@ -1,4 +1,5 @@
 import { ForbiddenException } from '@nestjs/common';
+import { isDefined, isUndefined } from '@warehouser/utils/predicates';
 
 type CorsOriginCallback = (error: Error | null, allowed?: boolean) => void;
 
@@ -15,7 +16,7 @@ export class OriginPolicy {
     origin: string | undefined,
     callback: CorsOriginCallback,
   ): void {
-    if (origin === undefined || this.allowedOrigins.has(origin)) {
+    if (isUndefined(origin) || this.allowedOrigins.has(origin)) {
       callback(null, true);
       return;
     }
@@ -28,7 +29,7 @@ export class OriginPolicy {
       return;
     }
 
-    if (origin !== undefined && this.allowedOrigins.has(origin)) {
+    if (isDefined(origin) && this.allowedOrigins.has(origin)) {
       return;
     }
 

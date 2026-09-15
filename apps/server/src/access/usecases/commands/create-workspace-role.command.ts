@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 
 import { Injectable, Optional } from '@nestjs/common';
-import { assert } from '@warehouser/utils/asserts';
+import { assert, assertDefined } from '@warehouser/utils/asserts';
+import { isDefined, isNull } from '@warehouser/utils/predicates';
 import {
   workspaceRoleNameConflictError,
   workspaceSystemManagedPermissionError,
@@ -57,7 +58,7 @@ export const assertAssignableWorkspacePermissions = async (
     );
     const catalogueEntry = catalogueById.get(permissionId);
     assert(
-      catalogueEntry !== undefined &&
+      isDefined(catalogueEntry) &&
         !isReservedWorkspacePermissionKind(catalogueEntry.kind),
       workspaceSystemManagedPermissionError(),
     );
@@ -65,10 +66,7 @@ export const assertAssignableWorkspacePermissions = async (
 
   return uniqueIds.map((permissionId) => {
     const catalogueEntry = catalogueById.get(permissionId);
-    assert(
-      catalogueEntry !== undefined,
-      workspaceSystemManagedPermissionError(),
-    );
+    assertDefined(catalogueEntry, workspaceSystemManagedPermissionError());
     return { id: catalogueEntry.id, kind: catalogueEntry.kind };
   });
 };
@@ -126,7 +124,7 @@ export class CreateWorkspaceRoleCommand {
         currentUser.workspaceId,
         name,
       );
-    assert(matchingRole === null, workspaceRoleNameConflictError());
+    assert(isNull(matchingRole), workspaceRoleNameConflictError());
 
     await this.workspaceRoleLifecycleRepository.createCustomRole(
       { id, workspaceId: currentUser.workspaceId, name },

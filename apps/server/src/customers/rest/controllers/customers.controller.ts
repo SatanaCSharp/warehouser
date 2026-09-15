@@ -30,7 +30,7 @@ import { ReactivateCustomerCommand } from 'customers/usecases/commands/reactivat
 import { RecordCustomerCommand } from 'customers/usecases/commands/record-customer.command';
 import { ListCustomersQuery } from 'customers/usecases/queries/list-customers.query';
 import { ReadCustomerQuery } from 'customers/usecases/queries/read-customer.query';
-import map from 'lodash/map.js';
+import { map } from 'lodash-es';
 import type { WarehouseAccessRequest } from 'shared/access/access-request';
 import { ArchivedTolerantRead } from 'shared/access/archived-tolerant-read.decorator';
 import { RequiredPermission } from 'shared/decorators/required-permission.decorator';

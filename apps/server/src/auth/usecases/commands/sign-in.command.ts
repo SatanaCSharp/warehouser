@@ -1,4 +1,5 @@
-import { assert } from '@warehouser/utils/asserts';
+import { assert, assertDefined } from '@warehouser/utils/asserts';
+import { isDefined } from '@warehouser/utils/predicates';
 import type { AuthRuntime } from 'auth/domain/auth-runtime';
 import { authRuntime } from 'auth/domain/auth-runtime';
 import { Session } from 'auth/domain/entities/session';
@@ -14,13 +15,16 @@ import { SessionId } from 'auth/domain/value-objects/identity-id';
 import { SessionDigest } from 'auth/domain/value-objects/session-digest';
 import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
 import { EmailAddress } from 'shared/domain/security/email-address';
-import { isSupportedEmail } from 'shared/domain/security/is-supported-email';
-import { isSupportedPassword } from 'shared/domain/security/is-supported-password';
 import { Password } from 'shared/domain/security/password';
 import {
   dummyVerifyPassword,
   verifyPassword,
 } from 'shared/domain/security/password-hashing';
+import {
+  isSupportedEmail,
+  isSupportedPassword,
+  matchesStoredCredential,
+} from 'shared/predicates/credential.predicates';
 
 export interface SignedInSession {
   readonly userId: string;
@@ -50,14 +54,16 @@ export class SignInCommand {
 
     const accountEntity =
       await this.authentication.findAccountByNormalizedEmail(email.value);
-    if (!accountEntity) {
+    if (!isDefined(accountEntity)) {
       await this.dummyVerify(password.value);
     }
-    assert(accountEntity !== null, AuthInvalidCredentialsError());
+    assertDefined(accountEntity, AuthInvalidCredentialsError());
     const account = toAccount(accountEntity);
 
     assert(
-      await this.verify(password.value, account.credential),
+      matchesStoredCredential(
+        await this.verify(password.value, account.credential),
+      ),
       AuthInvalidCredentialsError(),
     );
 

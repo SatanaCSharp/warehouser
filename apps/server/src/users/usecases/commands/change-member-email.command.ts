@@ -2,13 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
 import { assert, assertDefined } from '@warehouser/utils/asserts';
+import { isDefined } from '@warehouser/utils/predicates';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { AccessCurrentUserRepository } from 'shared/domain/repositories/access-current-user.repository';
 import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
 import { MemberLifecycleRepository } from 'shared/domain/repositories/member-lifecycle.repository';
 import { EmailAddress } from 'shared/domain/security/email-address';
-import { isSupportedEmail } from 'shared/domain/security/is-supported-email';
+import { isSupportedEmail } from 'shared/predicates/credential.predicates';
 import {
   emailAlreadyRegisteredError,
   invalidInputError,
@@ -108,9 +109,11 @@ export class ChangeMemberEmailCommand {
     const email = EmailAddress.create(input.email);
 
     assert(
-      !(await this.authenticationRepository.findAccountByNormalizedEmail(
-        email.value,
-      )),
+      !isDefined(
+        await this.authenticationRepository.findAccountByNormalizedEmail(
+          email.value,
+        ),
+      ),
       emailAlreadyRegisteredError(),
     );
 

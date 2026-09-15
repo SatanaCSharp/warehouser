@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { Injectable, Optional } from '@nestjs/common';
 import type { Customer } from 'customers/domain/mappers/customer.mapper';
 import { toCustomer } from 'customers/domain/mappers/customer.mapper';
+import { requestsMainDeliveryAddress } from 'customers/domain/predicates/delivery-address-promotion.predicates';
 import {
   assertCustomerWriteApplied,
   CustomerAddressBookService,
@@ -85,7 +86,7 @@ export class AddCustomerDeliveryAddressCommand {
 
     await this.customerAddressBookRepository.addDeliveryAddress(address);
 
-    if (input.main) {
+    if (requestsMainDeliveryAddress(input)) {
       const outcome =
         await this.customerAddressBookRepository.setMainDeliveryAddress(
           address.id,

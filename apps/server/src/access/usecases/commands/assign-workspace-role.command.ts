@@ -1,12 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { assert, assertDefined } from '@warehouser/utils/asserts';
 import { workspaceOwnerTransferRequiredError } from 'access/domain/errors/workspace-access.errors';
+import {
+  assignsTheOwnerRole,
+  isProtectedWorkspaceOwnerRoleKind,
+} from 'access/domain/predicates/workspace-authority.predicates';
 import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { WorkspaceMembershipRepository } from 'shared/domain/repositories/workspace-membership.repository';
 import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository';
 import { workspaceTargetUnavailableError } from 'shared/errors/cross-module.errors';
-
+import { scopedToWorkspace } from 'shared/predicates/tenancy.predicates';
 export interface AssignWorkspaceRoleInput {
   readonly targetUserId: string;
   readonly workspaceRoleId: string;
@@ -36,12 +40,12 @@ export class AssignWorkspaceRoleCommand {
     // indistinguishably.
     assertDefined(membership, workspaceTargetUnavailableError());
     assert(
-      membership.workspaceId === currentUser.workspaceId,
+      scopedToWorkspace(membership.workspaceId, currentUser.workspaceId),
       workspaceTargetUnavailableError(),
     );
     // AC-22 — the current Owner is never a legal reassignment operand.
     assert(
-      membership.workspaceRoleKind !== 'workspace_owner',
+      !isProtectedWorkspaceOwnerRoleKind(membership.workspaceRoleKind),
       workspaceOwnerTransferRequiredError(),
     );
 
@@ -53,7 +57,10 @@ export class AssignWorkspaceRoleCommand {
         currentUser.workspaceId,
       );
     assert(
-      input.workspaceRoleId !== ownerMembership?.workspaceRoleId,
+      !assignsTheOwnerRole(
+        input.workspaceRoleId,
+        ownerMembership?.workspaceRoleId,
+      ),
       workspaceOwnerTransferRequiredError(),
     );
 

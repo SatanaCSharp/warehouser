@@ -1,26 +1,15 @@
+import { isEmpty } from '@warehouser/utils/predicates';
+import {
+  isBooleanDeclaration,
+  isDeclaredTrue,
+  isProductionEnvironment,
+} from 'shared/predicates/environment-flag.predicates';
+import { isHttpOrigin } from 'shared/predicates/http-origin.predicates';
+
 export interface HttpPlatformConfig {
   readonly allowedOrigins: readonly string[];
   readonly secureCookies: boolean;
 }
-
-const isHttpProtocol = (url: URL): boolean =>
-  url.protocol === 'http:' || url.protocol === 'https:';
-
-const carriesNoCredentials = (url: URL): boolean =>
-  url.username === '' && url.password === '';
-
-/** An origin and nothing else: scheme, host and port, with no path, query, fragment or userinfo —
- * `url.origin === value` is what rejects everything after the authority. */
-const isBareHttpOrigin = (url: URL, value: string): boolean =>
-  isHttpProtocol(url) && url.origin === value && carriesNoCredentials(url);
-
-const isHttpOrigin = (value: string): boolean => {
-  try {
-    return isBareHttpOrigin(new URL(value), value);
-  } catch {
-    return false;
-  }
-};
 
 const parseAllowedOrigins = (value: string | undefined): string[] =>
   value
@@ -29,7 +18,7 @@ const parseAllowedOrigins = (value: string | undefined): string[] =>
     .filter(Boolean) ?? [];
 
 const assertOriginsDeclared = (origins: readonly string[]): void => {
-  if (origins.length === 0) {
+  if (isEmpty(origins)) {
     throw new Error('APP_ORIGINS must contain at least one explicit origin');
   }
 };
@@ -44,7 +33,7 @@ const assertOriginsWellFormed = (origins: readonly string[]): void => {
 };
 
 const readCookiePolicy = (value: string | undefined): 'false' | 'true' => {
-  if (value !== 'true' && value !== 'false') {
+  if (!isBooleanDeclaration(value)) {
     throw new Error('AUTH_COOKIE_SECURE must be either true or false');
   }
   return value;
@@ -54,17 +43,20 @@ const assertProductionCookiesSecure = (
   nodeEnv: string | undefined,
   value: string,
 ): void => {
-  if (nodeEnv === 'production' && value !== 'true') {
+  if (isProductionEnvironment(nodeEnv) && !isDeclaredTrue(value)) {
     throw new Error('AUTH_COOKIE_SECURE must be true in production');
   }
 };
 
-const readSecureCookies = (
+// Returns the declared policy rather than a boolean: it reads the environment and refuses an
+// illegal or unsafe declaration, which is enforcement, not a question about a value. Turning the
+// declaration into a flag is `isSecureCookiePolicy`'s job.
+const readCookiePolicyFor = (
   environment: Readonly<Record<string, string | undefined>>,
-): boolean => {
+): 'false' | 'true' => {
   const declared = readCookiePolicy(environment.AUTH_COOKIE_SECURE);
   assertProductionCookiesSecure(environment.NODE_ENV, declared);
-  return declared === 'true';
+  return declared;
 };
 
 export const readHttpPlatformConfig = (
@@ -76,6 +68,6 @@ export const readHttpPlatformConfig = (
 
   return {
     allowedOrigins: [...new Set(allowedOrigins)],
-    secureCookies: readSecureCookies(environment),
+    secureCookies: readCookiePolicyFor(environment) === 'true',
   };
 };

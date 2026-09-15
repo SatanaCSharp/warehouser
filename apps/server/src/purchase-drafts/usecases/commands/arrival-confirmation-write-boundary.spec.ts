@@ -23,7 +23,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import difference from 'lodash/difference.js';
+import { difference } from 'lodash-es';
 import { describe, expect, it } from 'vitest';
 
 const sourceRoot = join(import.meta.dirname, '../../..');

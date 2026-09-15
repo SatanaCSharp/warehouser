@@ -2,6 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { getEntityManager } from 'shared/database/db-transaction-context.service';
 import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 import { WorkspaceMembershipEntity } from 'shared/domain/entities/workspace-membership.entity';
+import {
+  belongsToWorkspace,
+  stillHoldsOwnerSlot,
+} from 'shared/predicates/workspace-owner-transfer.predicates';
 import { DataSource, In } from 'typeorm';
 
 export interface WorkspaceOwnerTransferInput {
@@ -11,25 +15,6 @@ export interface WorkspaceOwnerTransferInput {
   readonly recipientUserId: string;
   readonly ownerRoleId: string;
 }
-
-// The two halves of the precondition, rechecked under the locks the transfer has just taken. Named
-// conditions rather than one composite expression, so a refusal is attributable to the side that
-// failed (server-error-handling.md §1).
-const stillHoldsOwnerSlot = (
-  membership: WorkspaceMembershipEntity | undefined,
-  workspaceId: string,
-  ownerRoleId: string,
-): boolean =>
-  membership !== undefined &&
-  membership.workspaceId === workspaceId &&
-  membership.workspaceRoleId === ownerRoleId &&
-  membership.workspaceRoleKind === 'workspace_owner';
-
-const belongsToWorkspace = (
-  membership: WorkspaceMembershipEntity | undefined,
-  workspaceId: string,
-): boolean =>
-  membership !== undefined && membership.workspaceId === workspaceId;
 
 @Injectable()
 export class WorkspaceOwnerTransferRepository {

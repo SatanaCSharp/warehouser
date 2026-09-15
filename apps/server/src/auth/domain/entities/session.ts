@@ -1,4 +1,6 @@
 import { assert } from '@warehouser/utils/asserts';
+import { isDefined, isNull } from '@warehouser/utils/predicates';
+import { isAtOrAfterEstablishment } from 'auth/domain/predicates/session.predicates';
 import { AccountId, SessionId } from 'auth/domain/value-objects/identity-id';
 import { SessionDigest } from 'auth/domain/value-objects/session-digest';
 
@@ -44,20 +46,20 @@ export class Session {
       input.digest,
       new Date(input.establishedAt),
       new Date(input.expiresAt),
-      input.revokedAt === null ? null : new Date(input.revokedAt),
+      isNull(input.revokedAt) ? null : new Date(input.revokedAt),
     );
   }
 
   isValid(at: Date): boolean {
-    return this.revokedAt === null && at < this.expiresAt;
+    return isNull(this.revokedAt) && at < this.expiresAt;
   }
 
   revoke(at: Date): Session {
-    if (this.revokedAt !== null) {
+    if (isDefined(this.revokedAt)) {
       return this;
     }
     assert(
-      at >= this.establishedAt,
+      isAtOrAfterEstablishment(at, this.establishedAt),
       'Session cannot be revoked before establishment',
     );
 

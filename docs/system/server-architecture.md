@@ -110,10 +110,29 @@ node -e "import('./apps/server/dist/src/app.module.js')"
 ```
 
 The one specifier that still carries its extension in source is a deep subpath of a real
-dependency — `lodash/uniq.js`, `typeorm/driver/types/IsolationLevel.js`. `tsc-alias` rewrites only
-relative specifiers and `paths` aliases; a package subpath is deliberately out of its reach, so
-nothing would append the extension for you there. `lodash` is imported one function per default
-import for a related reason: its CommonJS root has no named exports an ESM importer can bind.
+dependency — `typeorm/driver/types/IsolationLevel.js`. `tsc-alias` rewrites only relative
+specifiers and `paths` aliases; a package subpath is deliberately out of its reach, so nothing
+would append the extension for you there.
+
+That split is enforced rather than remembered. The shared lint baseline runs
+`import/extensions` as `["error", "ignorePackages", { pattern: { js: "never", ts: "never", … } }]`,
+which reports a `.js`/`.ts` extension written on a relative or `paths`-aliased specifier and leaves
+a package subpath alone — so `./x.entity.js` fails the commit and
+`typeorm/driver/types/IsolationLevel.js` does not. Do not "clean up" the extension on a package
+subpath: `import('typeorm/driver/postgres/PostgresQueryRunner')` fails with `ERR_MODULE_NOT_FOUND`
+under Node's ESM resolver, which does no extension search — typeorm's `exports` map sends
+`"./*.js"` to itself and offers no extensionless spelling. `tsc` stays green either way, and
+`apps/server`'s own gate runs from source, so only loading `dist/` would catch it.
+
+Lodash is the dependency this rule used to be written around, and it is now `lodash-es` rather than
+`lodash` precisely so that it isn't. Import it by name from the package root —
+`import { first, map } from 'lodash-es';` — never as `lodash`, and never as a subpath. The CommonJS
+`lodash` root binds no named exports an ESM importer can reach: `import { find } from 'lodash'`
+throws `SyntaxError: Named export 'find' not found` the moment Node loads the built file, and none
+of the functions this repository uses are an exception. That failure is invisible to the gate, which
+runs from source through Vitest, whose CJS interop resolves the binding that Node will not — so the
+build stays green and only `node dist/src/app.module.js` shows it. `lodash-es` ships real ESM with
+real named exports, so the root import resolves under Node, tree-shakes, and needs no extension.
 
 Use `import.meta.dirname` / `import.meta.filename`; `__dirname` and `__filename` do not exist.
 
@@ -533,8 +552,10 @@ costs seconds where a unit spec costs milliseconds:
 pnpm --filter @warehouser/server test:architectural
 ```
 
-What the tier holds today is mapper placement. `mapping-patterns.ts` recognizes a mapping by the
-shapes this repository writes them in — an object literal read off the parameters, a `map` over a
+The tier holds two rules today: mapper placement and query placement.
+
+`mapping-patterns.ts` recognizes a mapping by the shapes
+this repository writes them in — an object literal read off the parameters, a `map` over a
 collection, a persistence row constructed field by field or through `manager.create`, fields handed
 to a domain factory, a conversion that branches or delegates, and a function declared to return a
 published contract — and `mapper-placement.architectural.spec.ts` then requires every one of them
@@ -556,3 +577,60 @@ fixture, each near-miss (a predicate, a value object's factory, a use case's `ex
 result classification) is asserted _not_ to match, and the real tree is asserted to still contain
 the mappings we know are in it. When you add a mapping in a shape the detector cannot see, add the
 shape to both files.
+
+`query-placement.architectural.spec.ts` holds the read side of the use-case split described under
+"Use cases" above. A class named `*Query` must be declared in `src/<module>/usecases/queries/`, in a
+file named `*.query.ts`, one query per file — a read written anywhere else is a use case nobody
+looking for the module's reads will find. The directory holds those files and their colocated
+`*.spec.ts` and nothing else.
+
+The second half is what may sit _with_ a query. A use case "declares the input and result types of
+that operation in its own file", so a query file may contain the class, its request and response
+types, and its imports — no function, constant, lookup table, or second class. Those are units with
+their own reason to change that no other module can see, so the next read needing the same rule gets
+a second copy instead of the first one, and the two then disagree. They belong in the feature's
+`domain/` — `mappers/` for a boundary conversion, `predicates/` for a question about a value,
+`services/` for an operation with collaborators. A helper used by one query and nothing else is a
+private method of that query's class, which is where `ReadWorkspaceContextQuery` keeps its effective-
+selection derivation.
+
+`predicate-placement.architectural.spec.ts` holds the predicate rules from
+[Server error handling](guides/server-error-handling.md) § 1–2, and it is strict: there is no
+baseline and no allowed-exceptions list, so any violation anywhere in `apps/server` fails the tier.
+
+A function declared outside a class that returns `boolean` or narrows with `value is T` is a
+predicate, so it belongs in `src/<module>/domain/predicates/` or `src/shared/predicates/` — left in
+the command that asks it, it is a rule only that command can see, and the next command needing the
+same answer writes its own. An assertion signature (`asserts value is T`) is not a predicate: it
+throws instead of answering and stays with the code it guards.
+
+Four rules follow about how a condition is written.
+
+A predicate is **asked**, not read — one that nothing calls is a rule the system no longer enforces,
+and one whose answer is assigned to a variable has had the branch move away from the question.
+
+A **nullish check** goes through the shared predicates `packages/utils/src/predicates/` already
+ships — `isNull`, `isUndefined`, `isDefined` — rather than a hand-written `x === null`. The reason is
+not brevity: `isDefined` narrows `T | null | undefined` to `T` where the comparison narrows nothing
+across a call boundary.
+
+The first argument of an **`assert`** is a named condition. `assert(customerId !== null, ...)` is
+`assertDefined(customerId, ...)`, and `assert(membership.workspaceId === currentUser.workspaceId, ...)`
+is a domain rule whose name belongs in the module's `predicates/`.
+
+And every **branch** asks a predicate — `if`, `while`, `do`, `for` and the ternary alike. A condition
+written inline is a rule with no name: the reader re-derives what
+`header.archivedAt === null || header.state !== 'draft'` means every time, and the next branch
+needing the same rule restates it slightly differently. `isOpenDraft(header)` has one name, one
+definition, one test, and one place to change.
+
+A `&&` / `||` chain is judged one link at a time, so composing predicates never fails and the
+finding always points at the operand to extract: in `isOpen(draft) && line.quantity > 0` only
+`line.quantity > 0` is reported. A `switch` is not judged — it discriminates on a value rather than
+asking a question — and a nullish operand inside a branch is left to the nullish rule rather than
+reported twice.
+
+`predicate-detection.architectural.spec.ts` is the control, for the same reason `mapping-patterns` is
+the control on mapper placement — each shape is exercised on a fixture, each near-miss is asserted
+_not_ to match, and the real tree is asserted to still hold the predicates we know are in it. When
+you write a predicate or a condition in a shape the detector cannot see, add the shape to both files.

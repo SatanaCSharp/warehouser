@@ -19,7 +19,7 @@
   // the emitted tree rather than guessed — a directory becomes `/index.js`.
   //
   // It skips non-relative specifiers, which is why a deep subpath of a real dependency still has to
-  // carry its own extension in the source: `lodash/uniq.js`, `typeorm/driver/types/IsolationLevel.js`.
+  // carry its own extension in the source: `typeorm/driver/types/IsolationLevel.js`.
   "tsc-alias": { "resolveFullPaths": true },
   "include": ["src/**/*", "migrations/**/*"],
   "exclude": ["./dist*"]

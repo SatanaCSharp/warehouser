@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { assert } from '@warehouser/utils/asserts';
+import { assert, assertDefined } from '@warehouser/utils/asserts';
 import {
   customerOrderInvalidInputError,
   customerOrderInvalidStateError,
@@ -67,7 +67,7 @@ export class CustomerOrderLifecycleService {
         customerOrderId,
         currentUser.warehouseId,
       );
-    assert(locked !== null, customerOrderTargetUnavailableError());
+    assertDefined(locked, customerOrderTargetUnavailableError());
     assert(isLegalFrom(locked.order.state), customerOrderInvalidStateError());
 
     return locked;

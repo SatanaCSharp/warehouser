@@ -1,8 +1,16 @@
 import { Injectable, Optional } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
+import { isDefined, isEmpty, isUndefined } from '@warehouser/utils/predicates';
 import type { AllocationBoundViolation } from 'customer-orders/domain/errors/demand-allocation.errors';
 import { demandAllocationOutOfBoundsError } from 'customer-orders/domain/errors/demand-allocation.errors';
-import uniq from 'lodash/uniq.js';
+import {
+  exceedsAssignableQuantity,
+  exceedsOutstandingQuantity,
+  hasOutstandingDemand,
+  isUnfulfilled,
+  wasChangedAfterCreation,
+} from 'customer-orders/domain/predicates/demand-allocation.predicates';
+import { uniq } from 'lodash-es';
 import type {
   CustomerOrderEntity,
   CustomerOrderState,
@@ -37,22 +45,6 @@ const defaultDemandAllocationRuntime: DemandAllocationRuntime = {
   now: () => new Date(),
 };
 
-// AC-18's three bounds (server-error-handling.md §1 — pure, domain-named predicates). Each is used
-// once, by `collectViolations` below, so each stays next to that one implementation rather than in
-// a shared predicates module.
-const exceedsAssignableQuantity = (
-  allocatedQuantity: number,
-  assignableQuantity: number,
-): boolean => allocatedQuantity > assignableQuantity;
-
-const exceedsOutstandingQuantity = (
-  allocatedQuantity: number,
-  outstandingQuantity: number,
-): boolean => allocatedQuantity > outstandingQuantity;
-
-const isUnfulfilled = (state: CustomerOrderState): boolean =>
-  state === 'unfulfilled';
-
 /** The five values AC-18's bounds are decided against, and nothing else.
  *
  * Narrower than `CustomerOrderEntity` deliberately (`writing-web-components.md`'s "depend on the
@@ -78,7 +70,8 @@ interface AssignableCustomerOrder {
 const lastChangedAtOf = (
   order: AssignableCustomerOrder | undefined,
 ): string | null =>
-  order === undefined || order.updatedAt.getTime() <= order.createdAt.getTime()
+  isUndefined(order) ||
+  !wasChangedAfterCreation(order.createdAt, order.updatedAt)
     ? null
     : order.updatedAt.toISOString();
 
@@ -114,7 +107,7 @@ const lineBoundViolation = (
 const assignableOrder = (
   order: AssignableCustomerOrder | undefined,
 ): AssignableCustomerOrder | undefined =>
-  order !== undefined && isUnfulfilled(order.state) ? order : undefined;
+  isDefined(order) && isUnfulfilled(order.state) ? order : undefined;
 
 const notUnfulfilledViolation = (
   allocation: DemandAllocationLineAssignment,
@@ -149,14 +142,14 @@ const judgeAssignment = (
 ): AllocationBoundViolation | undefined => {
   const order = orderByLinkId.get(allocation.purchaseDraftLineLinkId);
   const assignable = assignableOrder(order);
-  if (assignable === undefined) {
+  if (isUndefined(assignable)) {
     return notUnfulfilledViolation(allocation, order);
   }
 
   const outstandingQuantity =
     remainingByOrderId.get(assignable.id) ?? assignable.outstandingQuantity;
   const violation = outstandingBoundViolation(allocation, outstandingQuantity);
-  if (violation !== undefined) {
+  if (isDefined(violation)) {
     return violation;
   }
 
@@ -179,7 +172,7 @@ const assignmentViolations = (
       orderByLinkId,
       remainingByOrderId,
     );
-    if (violation !== undefined) {
+    if (isDefined(violation)) {
       violations.push(violation);
     }
   }
@@ -232,10 +225,7 @@ export class DemandAllocationService {
     );
 
     const violations = this.collectViolations(lines, orderByLinkId);
-    assert(
-      violations.length === 0,
-      demandAllocationOutOfBoundsError(violations),
-    );
+    assert(isEmpty(violations), demandAllocationOutOfBoundsError(violations));
 
     const outstandingByOrderId = new Map(
       locked.map(({ order }) => [order.id, order.outstandingQuantity]),
@@ -275,7 +265,9 @@ export class DemandAllocationService {
         return {
           id: customerOrderId,
           outstandingQuantity,
-          state: outstandingQuantity > 0 ? 'unfulfilled' : 'fulfilled',
+          state: hasOutstandingDemand(outstandingQuantity)
+            ? 'unfulfilled'
+            : 'fulfilled',
         };
       },
     );
@@ -313,7 +305,7 @@ export class DemandAllocationService {
 
     for (const line of lines) {
       const lineViolation = lineBoundViolation(line);
-      if (lineViolation !== undefined) {
+      if (isDefined(lineViolation)) {
         violations.push(lineViolation);
       }
 

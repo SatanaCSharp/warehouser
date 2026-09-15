@@ -25,20 +25,10 @@ import {
   buildWarehouse,
   buildWorkspace,
 } from 'test/factories/entity-factories';
-// `PostgresQueryRunner.prototype.query` is the one method every TypeORM access path — raw
-// `manager.query`, `repository.find`, and `QueryBuilder` alike — ultimately calls to reach
-// PostgreSQL. Spying on it proves actual round trips, i.e. "one query" and not merely "one
-// repository method call" — the idiom `item-catalogue.repository.integration.spec.ts` establishes.
-import { PostgresQueryRunner } from 'typeorm/driver/postgres/PostgresQueryRunner.js';
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  describe,
-  expect,
-  it,
-  vi,
-} from 'vitest';
+// Counts actual PostgreSQL round trips, i.e. "one query" and not merely "one repository method
+// call" — the idiom `item-catalogue.repository.integration.spec.ts` establishes.
+import { withQueryCount } from 'test/pglite/query-recorder';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 const now = new Date('2026-08-26T10:00:00.000Z');
 
@@ -84,17 +74,6 @@ interface ConsolidatedDemandRepositoryContract {
 const repository = new ConsolidatedDemandRepository(
   dataSource,
 ) as unknown as ConsolidatedDemandRepositoryContract;
-
-const withQueryCount = async <T>(
-  run: () => Promise<T>,
-): Promise<{ result: T; queryCount: number }> => {
-  const spy = vi.spyOn(PostgresQueryRunner.prototype, 'query');
-  const before = spy.mock.calls.length;
-  const result = await run();
-  const queryCount = spy.mock.calls.length - before;
-  spy.mockRestore();
-  return { result, queryCount };
-};
 
 const seedWorkspace = async (): Promise<string> => {
   const workspace = buildWorkspace();

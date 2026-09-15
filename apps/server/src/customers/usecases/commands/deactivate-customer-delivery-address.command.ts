@@ -1,8 +1,10 @@
 import { Injectable, Optional } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
+import { isDefined } from '@warehouser/utils/predicates';
 import type { Customer } from 'customers/domain/mappers/customer.mapper';
 import { toCustomer } from 'customers/domain/mappers/customer.mapper';
 import type { DeliveryAddressState } from 'customers/domain/predicates/customer.predicates';
+import { reportsThePromotedMain } from 'customers/domain/predicates/delivery-address-promotion.predicates';
 import {
   assertDeliveryAddressDeactivatable,
   assertDeliveryAddressUsable,
@@ -10,7 +12,7 @@ import {
   CustomerAddressBookService,
   nextMainDeliveryAddress,
 } from 'customers/domain/services/customer-address-book.service';
-import find from 'lodash/find.js';
+import { find } from 'lodash-es';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository';
@@ -36,15 +38,6 @@ const lockedDeliveryAddress = (
 const promotedDeliveryAddressIdOf = (
   successor: DeliveryAddressState | null,
 ): string | null => successor?.id ?? null;
-
-// AC-06b — the promotion decided in this transaction and the Main address the read reports are the
-// same address. A deactivation that promoted nothing asserts nothing.
-const reportsThePromotedMain = (
-  promotedDeliveryAddressId: string | null,
-  reportedMainDeliveryAddressId: string | null,
-): boolean =>
-  promotedDeliveryAddressId === null ||
-  reportedMainDeliveryAddressId === promotedDeliveryAddressId;
 
 // AC-06a/AC-06b/AC-07/AC-12 — records one Delivery Address Inactive. It stops being offered
 // wherever an address is chosen, while every Customer Order and every frozen Purchase Draft Line
@@ -102,7 +95,7 @@ export class DeactivateCustomerDeliveryAddressCommand {
       ),
     );
 
-    if (successor !== null) {
+    if (isDefined(successor)) {
       assertLockedDeliveryAddressWriteApplied(
         await this.customerAddressBookRepository.setMainDeliveryAddress(
           successor.id,

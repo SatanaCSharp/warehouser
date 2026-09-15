@@ -2,7 +2,9 @@ import type {
   PurchaseDraftLineArrival,
   PurchaseDraftLineUpdate,
 } from '@warehouser/contracts/purchase-drafts';
+import { isUndefined } from '@warehouser/utils/predicates';
 import type { EndingPreReceiptConformanceInput } from 'purchase-drafts/domain/mappers/purchase-draft-line-ending.mapper';
+import { statesConformanceNote } from 'purchase-drafts/domain/predicates/purchase-draft-condition.predicates';
 import type { ReviseLineInput } from 'purchase-drafts/usecases/commands/revise-purchase-draft-line.command';
 import type { RecordLineEndingRejectionInput } from 'shared/domain/repositories/arrival-confirmation.repository';
 
@@ -39,12 +41,13 @@ export const toEndingRejectionInputs = (
 export const toEndingPreReceiptConformanceInput = (
   preReceiptConformance: PurchaseDraftLineArrival['preReceiptConformance'],
 ): EndingPreReceiptConformanceInput | null | undefined =>
-  preReceiptConformance === undefined
+  isUndefined(preReceiptConformance)
     ? undefined
     : {
         verdict: preReceiptConformance.verdict,
-        note:
-          'note' in preReceiptConformance ? preReceiptConformance.note : null,
+        note: statesConformanceNote(preReceiptConformance)
+          ? preReceiptConformance.note
+          : null,
       };
 
 // openapi.yaml `PurchaseDraftLineUpdate` -> `ReviseLineInput` — the payload's two flat destination
@@ -65,11 +68,10 @@ export const toReviseLineInput = (
   orderedQuantity: input.orderedQuantity,
   packagingTypeId: input.packagingTypeId,
   valueAddingNote: input.valueAddingNote,
-  destination:
-    input.deliveryMode === undefined
-      ? undefined
-      : {
-          deliveryMode: input.deliveryMode,
-          customerDeliveryAddressId: input.customerDeliveryAddressId ?? null,
-        },
+  destination: isUndefined(input.deliveryMode)
+    ? undefined
+    : {
+        deliveryMode: input.deliveryMode,
+        customerDeliveryAddressId: input.customerDeliveryAddressId ?? null,
+      },
 });

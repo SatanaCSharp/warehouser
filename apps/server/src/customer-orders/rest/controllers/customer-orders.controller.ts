@@ -29,7 +29,7 @@ import { RecordCustomerOrderCommand } from 'customer-orders/usecases/commands/re
 import { RedirectCustomerOrderCommand } from 'customer-orders/usecases/commands/redirect-customer-order.command';
 import { ListCustomerOrdersQuery } from 'customer-orders/usecases/queries/list-customer-orders.query';
 import { ReadCustomerOrderQuery } from 'customer-orders/usecases/queries/read-customer-order.query';
-import map from 'lodash/map.js';
+import { map } from 'lodash-es';
 import type { WarehouseAccessRequest } from 'shared/access/access-request';
 import { ArchivedTolerantRead } from 'shared/access/archived-tolerant-read.decorator';
 import { ObservedPermission } from 'shared/decorators/observed-permission.decorator';

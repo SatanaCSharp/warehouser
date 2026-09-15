@@ -1,9 +1,11 @@
 import { Injectable } from '@nestjs/common';
+import { isDefined } from '@warehouser/utils/predicates';
 import { getEntityManager } from 'shared/database/db-transaction-context.service';
 import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
 import { ItemEntity } from 'shared/domain/entities/item.entity';
 import { ItemStockAdjustmentEntity } from 'shared/domain/entities/item-stock-adjustment.entity';
 import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity';
+import { listsActiveOnly } from 'shared/predicates/persistence-read.predicates';
 import { DataSource, EntityManager } from 'typeorm';
 
 export interface CreateItemPersistenceInput {
@@ -278,10 +280,10 @@ export class ItemCatalogueRepository {
       .addSelect(`(${latestAdjustedAt})`, 'latestAdjustedAt')
       .where('item.warehouseId = :warehouseId', { warehouseId });
 
-    if (options.itemId !== undefined) {
+    if (isDefined(options.itemId)) {
       query = query.andWhere('item.id = :itemId', { itemId: options.itemId });
     }
-    if (options.activeOnly) {
+    if (listsActiveOnly(options)) {
       query = query.andWhere('item.deactivatedAt IS NULL');
     }
 

@@ -8,6 +8,10 @@ import {
   toEndingConditionSubmission,
 } from 'purchase-drafts/domain/mappers/purchase-draft-line-ending.mapper';
 import {
+  closedTheDraft,
+  recordedTheEnding,
+} from 'purchase-drafts/domain/predicates/purchase-draft-assembly.predicates';
+import {
   ArrivalInspectionService,
   deriveAcceptedQuantity,
   deriveRejectedQuantity,
@@ -23,7 +27,6 @@ import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import type { RecordLineEndingRejectionInput } from 'shared/domain/repositories/arrival-confirmation.repository';
 import { ArrivalConfirmationRepository } from 'shared/domain/repositories/arrival-confirmation.repository';
-
 // T13 — re-narrowed from T10's `unknown`, for the same reason and to the same shapes
 // `ConfirmPurchaseDraftLineArrivalInput`'s are: the REST boundary now parses a request body against
 // `@warehouser/contracts/purchase-drafts` before this command ever sees it, so `tsc` enforces the
@@ -112,7 +115,7 @@ export class RecordPurchaseDraftLineDeliveryCommand {
       endingRecordedAt,
       condition: buildEndingConditionInput(submission),
     });
-    assert(written.recorded, purchaseDraftConcurrentChangeError());
+    assert(recordedTheEnding(written), purchaseDraftConcurrentChangeError());
 
     await this.demandAllocationService.allocate(
       currentUser.warehouseId,
@@ -129,7 +132,7 @@ export class RecordPurchaseDraftLineDeliveryCommand {
 
     return {
       id: purchaseDraftId,
-      state: written.closed ? 'closed' : 'ready_for_ordering',
+      state: closedTheDraft(written) ? 'closed' : 'ready_for_ordering',
       purchaseDraftLineId,
       endingRecordedByUserId: currentUser.userId,
       endingRecordedAt,

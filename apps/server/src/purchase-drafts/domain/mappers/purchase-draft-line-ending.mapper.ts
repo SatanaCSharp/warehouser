@@ -1,4 +1,5 @@
-import isEmpty from 'lodash/isEmpty.js';
+import { isNull } from '@warehouser/utils/predicates';
+import { isEmpty } from 'lodash-es';
 import type { EndingConditionSubmission } from 'purchase-drafts/domain/services/arrival-inspection.service';
 import type {
   RecordLineEndingConditionInput,
@@ -64,13 +65,12 @@ export const toEndingConditionSubmission = (
 export const buildEndingConditionInput = (
   submission: EndingConditionSubmission,
 ): RecordLineEndingConditionInput | null =>
-  submission.preReceiptConformance === null && isEmpty(submission.rejections)
+  isNull(submission.preReceiptConformance) && isEmpty(submission.rejections)
     ? null
     : {
         preReceiptConformance: submission.preReceiptConformance,
-        preReceiptConformanceNote:
-          submission.preReceiptConformance === null
-            ? null
-            : submission.preReceiptConformanceNote,
+        preReceiptConformanceNote: isNull(submission.preReceiptConformance)
+          ? null
+          : submission.preReceiptConformanceNote,
         rejections: submission.rejections,
       };

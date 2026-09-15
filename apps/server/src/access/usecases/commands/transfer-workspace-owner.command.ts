@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
 import { assert } from '@warehouser/utils/asserts';
+import { isDefined } from '@warehouser/utils/predicates';
 import {
   workspaceConcurrentChangeError,
   workspaceReplacementRoleRequiredError,
@@ -8,6 +8,8 @@ import {
 import {
   hasAvailableCustomWorkspaceRole,
   isMembershipSelfTarget,
+  isProtectedWorkspaceOwnerRoleKind,
+  isReservedWorkspaceOwnerReassignPermission,
 } from 'access/domain/predicates/workspace-authority.predicates';
 import { workspaceDeniedError } from 'shared/access/access-denial.errors';
 import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
@@ -16,6 +18,8 @@ import { WorkspaceMembershipRepository } from 'shared/domain/repositories/worksp
 import { WorkspaceOwnerTransferRepository } from 'shared/domain/repositories/workspace-owner-transfer.repository';
 import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository';
 import { workspaceTargetUnavailableError } from 'shared/errors/cross-module.errors';
+import { appliedGuardedWrite } from 'shared/predicates/persistence-write.predicates';
+import { scopedToWorkspace } from 'shared/predicates/tenancy.predicates';
 
 export interface TransferWorkspaceOwnerInput {
   readonly recipientUserId: string;
@@ -49,9 +53,8 @@ export class TransferWorkspaceOwnerCommand {
     // AC-27 — only the current Workspace Owner holding the protected
     // `WORKSPACE_OWNER_ROLE:REASSIGN` Permission may ever transfer ownership.
     assert(
-      currentUser.workspaceRoleKind === 'workspace_owner' &&
-        currentUser.permissionId ===
-          WorkspacePermissionId.WORKSPACE_OWNER_ROLE_REASSIGN,
+      isProtectedWorkspaceOwnerRoleKind(currentUser.workspaceRoleKind) &&
+        isReservedWorkspaceOwnerReassignPermission(currentUser.permissionId),
       workspaceDeniedError(),
     );
 
@@ -71,7 +74,7 @@ export class TransferWorkspaceOwnerCommand {
         input.currentOwnerReplacementRoleId,
       );
     assert(
-      hasAvailableCustomWorkspaceRole(replacementRole ? 1 : 0),
+      hasAvailableCustomWorkspaceRole(isDefined(replacementRole) ? 1 : 0),
       workspaceReplacementRoleRequiredError(),
     );
 
@@ -104,7 +107,7 @@ export class TransferWorkspaceOwnerCommand {
         input.recipientUserId,
       );
     assert(
-      recipientWorkspaceId === currentUser.workspaceId,
+      scopedToWorkspace(recipientWorkspaceId, currentUser.workspaceId),
       workspaceTargetUnavailableError(),
     );
 
@@ -122,7 +125,7 @@ export class TransferWorkspaceOwnerCommand {
       recipientUserId: input.recipientUserId,
       ownerRoleId: currentUser.workspaceRoleId,
     });
-    assert(transferred, workspaceConcurrentChangeError());
+    assert(appliedGuardedWrite(transferred), workspaceConcurrentChangeError());
 
     return { ownerId: input.recipientUserId };
   }

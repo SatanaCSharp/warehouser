@@ -11,28 +11,8 @@ import {
   canReactivateItem,
   isItemActive,
   isSkuCorrectable,
-  isValidSku,
 } from 'items/domain/predicates/item-catalogue.predicates';
 import { describe, expect, it } from 'vitest';
-
-describe('isValidSku', () => {
-  // data-model.md `items.sku` — `chk_items_sku_stored_trimmed`: non-empty after trimming.
-  it('is true for a non-empty SKU', () => {
-    expect(isValidSku('TEST-SKU-0001')).toBe(true);
-  });
-
-  it('is true for a SKU with internal whitespace once trimmed content remains', () => {
-    expect(isValidSku('TEST SKU 0001')).toBe(true);
-  });
-
-  it('is false for an empty string', () => {
-    expect(isValidSku('')).toBe(false);
-  });
-
-  it('is false for a whitespace-only string', () => {
-    expect(isValidSku('   ')).toBe(false);
-  });
-});
 
 describe('isSkuCorrectable', () => {
   // AC-06c — a SKU stops being correctable once demand or a draft names the Item; an Item nothing

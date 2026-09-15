@@ -5,9 +5,12 @@ import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-d
 import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
 import { DemandSnapshotEntryEntity } from 'shared/domain/entities/demand-snapshot-entry.entity';
 import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
+import type { PurchaseDraftLineDeliveryMode } from 'shared/domain/entities/purchase-draft-line.entity';
 import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity';
 import { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity';
 import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
+import { affectedExactlyOneRow } from 'shared/predicates/persistence-write.predicates';
+import { rowTravelsViaWarehouse } from 'shared/predicates/purchase-draft-row.predicates';
 import { DataSource } from 'typeorm';
 
 export interface PurchaseDraftHeaderRead {
@@ -66,7 +69,7 @@ interface DemandSnapshotRawRow {
  * column that says how its goods travel. */
 interface FrozenCaptureRawRow {
   readonly lineId: string;
-  readonly deliveryMode: string;
+  readonly deliveryMode: PurchaseDraftLineDeliveryMode;
   readonly warehouseAddressText: string | null;
   readonly warehouseAccessNotes: string | null;
   readonly customerAddressText: string | null;
@@ -89,7 +92,7 @@ interface FrozenDeliveryStatement {
 const capturedDeliveryStatement = (
   row: FrozenCaptureRawRow,
 ): FrozenDeliveryStatement =>
-  row.deliveryMode === 'via_warehouse'
+  rowTravelsViaWarehouse(row.deliveryMode)
     ? {
         frozenDeliveryAddressText: row.warehouseAddressText,
         frozenAccessNotes: row.warehouseAccessNotes,
@@ -162,7 +165,7 @@ export class PurchaseDraftFreezeRepository {
       },
     );
 
-    if (guarded.affected !== 1) {
+    if (!affectedExactlyOneRow(guarded)) {
       return false;
     }
 

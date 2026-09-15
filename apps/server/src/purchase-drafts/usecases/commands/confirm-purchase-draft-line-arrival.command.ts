@@ -8,6 +8,10 @@ import {
   toEndingConditionSubmission,
 } from 'purchase-drafts/domain/mappers/purchase-draft-line-ending.mapper';
 import {
+  closedTheDraft,
+  recordedTheEnding,
+} from 'purchase-drafts/domain/predicates/purchase-draft-assembly.predicates';
+import {
   ArrivalInspectionService,
   deriveAcceptedQuantity,
   deriveRejectedQuantity,
@@ -18,7 +22,6 @@ import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import type { RecordLineEndingRejectionInput } from 'shared/domain/repositories/arrival-confirmation.repository';
 import { ArrivalConfirmationRepository } from 'shared/domain/repositories/arrival-confirmation.repository';
-
 export interface EndingAllocationInput {
   readonly purchaseDraftLineLinkId: string;
   readonly allocatedQuantity: number;
@@ -129,7 +132,7 @@ export class ConfirmPurchaseDraftLineArrivalCommand {
     });
     // A pre-read that resolved legally but whose guarded write still affected zero rows is the
     // concurrency answer, distinct from the AC-20a refusal above (server-error-handling.md §3).
-    assert(written.recorded, purchaseDraftConcurrentChangeError());
+    assert(recordedTheEnding(written), purchaseDraftConcurrentChangeError());
 
     // Delegated only after the ending is written, so the bounds AC-18 re-checks are evaluated
     // against rows this same transaction already holds. Bounded by the derived Accepted Quantity
@@ -149,7 +152,7 @@ export class ConfirmPurchaseDraftLineArrivalCommand {
 
     return {
       id: purchaseDraftId,
-      state: written.closed ? 'closed' : 'ready_for_ordering',
+      state: closedTheDraft(written) ? 'closed' : 'ready_for_ordering',
       purchaseDraftLineId,
       endingRecordedByUserId: currentUser.userId,
       endingRecordedAt,

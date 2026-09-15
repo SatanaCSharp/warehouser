@@ -33,16 +33,8 @@ import {
   buildWarehouse,
   buildWorkspace,
 } from 'test/factories/entity-factories';
-import { PostgresQueryRunner } from 'typeorm/driver/postgres/PostgresQueryRunner.js';
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  describe,
-  expect,
-  it,
-  vi,
-} from 'vitest';
+import { captureStatements } from 'test/pglite/query-recorder';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 const now = new Date('2026-08-26T10:00:00.000Z');
 const later = new Date('2026-08-26T12:00:00.000Z');
@@ -209,24 +201,6 @@ const recordEndingInTransaction = (
 // single backend, so a genuine two-connection race either self-deadlocks or lets both writers win
 // (vitest.pglite.config.ts, data-model.md § "Concurrency, locks and transactions": "PGlite cannot
 // prove any of this … the lock order and the conditional-update races are asserted by *shape*").
-const captureStatements = async <T>(
-  operation: () => Promise<T>,
-): Promise<{ result: T; statements: string[] }> => {
-  const spy = vi.spyOn(PostgresQueryRunner.prototype, 'query');
-  const before = spy.mock.calls.length;
-  const result = await operation();
-  const statements = spy.mock.calls
-    .slice(before)
-    .map((call) => String(call[0]))
-    .filter(
-      (sql) =>
-        !/^(?:START TRANSACTION|SET TRANSACTION|COMMIT|ROLLBACK|BEGIN)/u.test(
-          sql,
-        ),
-    );
-  spy.mockRestore();
-  return { result, statements };
-};
 
 // The columns a statement actually asks PostgreSQL for, read from its select list alone. Cutting at
 // `FROM` is what keeps a column named only in the `WHERE` clause — `purchase_draft_id`,
