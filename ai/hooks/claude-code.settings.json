@@ -4,7 +4,10 @@
     "installable form: merge the `hooks` block below into .claude/settings.local.json (or install",
     "it with `ai/commands/init-agent.md`). Keep any existing keys — merge, never replace.",
     "This file holds no rule of its own; it wires repository rules to one agent's hook surface.",
-    "PreToolUse enforces AGENTS.md section Committing through ai/hooks/deny-git-hook-bypass.sh.",
+    "PreToolUse enforces AGENTS.md section Committing through ai/hooks/deny-git-hook-bypass.sh,",
+    "and AGENTS.md section Writing application code through",
+    "ai/hooks/require-architecture-skill.sh, which names the governing index when a production",
+    "file under apps/web/src or apps/server/src is about to be written.",
     "SessionStart and PostToolUse keep the CodeGraph index current through",
     "ai/hooks/sync-codegraph.sh, so the exploration workflow in AGENTS.md section Exploring code",
     "answers from the tree as it is now."
@@ -19,6 +22,17 @@
             "command": "\"${CLAUDE_PROJECT_DIR:-.}\"/ai/hooks/deny-git-hook-bypass.sh",
             "timeout": 10,
             "statusMessage": "Checking that Git hooks are not being skipped"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PROJECT_DIR:-.}\"/ai/hooks/require-architecture-skill.sh",
+            "timeout": 10,
+            "statusMessage": "Checking which docs/system rules govern this file"
           }
         ]
       }

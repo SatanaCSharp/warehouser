@@ -96,7 +96,12 @@ const config = defineConfig({
     // Since Vitest 4 the default `exclude` covers only `node_modules` and
     // `.git`, so a built `dist/**/*.spec.js` would be collected as a test file
     // the moment `vite build` emits one.
-    exclude: ['**/node_modules/**', '**/dist/**'],
+    //
+    // The architectural tier is excluded by path for the same reason
+    // `apps/server` excludes its own: those specs cruise the whole module graph
+    // with dependency-cruiser and run under `pnpm test:architectural`, not in
+    // the unit run.
+    exclude: ['**/node_modules/**', '**/dist/**', '**/*.architectural.spec.ts'],
   },
 });
 

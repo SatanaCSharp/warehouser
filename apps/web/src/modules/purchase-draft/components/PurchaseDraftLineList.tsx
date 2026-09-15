@@ -8,7 +8,7 @@ import {
 } from 'modules/purchase-draft/api/purchase-draft-api';
 import { AddPurchaseDraftLineAction } from 'modules/purchase-draft/components/AddPurchaseDraftLineAction';
 import { ClosedPurchaseDraftLine } from 'modules/purchase-draft/components/closed-purchase-draft-line/ClosedPurchaseDraftLine';
-import { LineEndingAction } from 'modules/purchase-draft/components/purchase-draft-transitions/components/LineEndingAction';
+import { LineEndingAction } from 'modules/purchase-draft/components/line-ending-action/LineEndingAction';
 import { PurchaseDraftLineEditor } from 'modules/purchase-draft/components/PurchaseDraftLineEditor';
 import { usePackagingTypes } from 'modules/purchase-draft/hooks/queries/usePackagingTypes';
 import type { ReactElement } from 'react';

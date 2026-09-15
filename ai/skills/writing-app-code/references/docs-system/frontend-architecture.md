@@ -1,0 +1,305 @@
+# Frontend Architecture
+
+This document defines durable structure and ownership rules for `apps/web`. It describes the code
+that exists now and the conventions new modules must follow.
+
+## Runtime foundation
+
+The bootstrap chain is:
+
+```text
+main.tsx
+  StrictMode
+    Redux Provider
+      LocaleProvider
+        App
+          TanStack RouterProvider
+            root route
+              RootLayout
+                matched module page
+```
+
+Provider order is intentional. Components rendered by the router must have access to Redux.
+`LocaleProvider` (`shared/components/LocaleProvider.tsx`) publishes i18next's resolved language to
+React Aria's `I18nProvider`, which every HeroUI v3 component that formats or parses a value reads
+through `useLocale` — a date field's segment order and a calendar's weekday names among them.
+Without it React Aria would fall back to `navigator.language` and disagree with the language the
+rest of the page is rendered in. HeroUI v3 needs no provider of its own — its components read theme
+state from CSS variables (`styles/global.css`) rather than React context. Router guards do not use
+React hooks; the router receives the same RTK store in its context and reads it through selectors.
+
+Routes are registered manually in `src/router.ts`. Do not introduce file-route generation without
+an accepted system decision and migration plan.
+
+## Source structure
+
+```text
+apps/web/src/
+├── main.tsx                 # browser mount and application providers
+├── App.tsx                  # router provider only
+├── router.ts                # route-tree assembly and router factory
+├── routes/
+│   └── __root.route.tsx     # typed root route and application shell
+├── modules/
+│   └── <module>/            # route-owned feature slice
+│       ├── route.tsx
+│       ├── page.tsx
+│       ├── components/
+│       ├── alerts/          # module-specific user feedback adapters
+│       ├── context/         # state + handlers provider pairs; create only when drilling fails
+│       ├── hooks/           # create only when the module needs them
+│       │   ├── queries/     # reads of server state
+│       │   ├── mutations/   # writes of server state
+│       │   ├── forms/       # form sessions
+│       │   ├── projections/ # derivations over state already loaded
+│       │   ├── effects/     # hooks whose product is a browser side effect
+│       │   └── state/       # local UI state and the named transitions over it
+│       ├── loaders/         # plain route data functions; only when a route awaits data
+│       ├── utils/           # module-owned pure helpers; never hooks
+│       ├── schemas/         # browser-only validation
+│       ├── api/             # module-owned server calls/query adapters
+│       └── store/           # module-owned RTK state
+│           ├── <module>.actions.ts   # case-reducer function declarations
+│           ├── <module>.slice.ts     # createSlice, action creators, reducer export
+│           └── <module>.selectors.ts # typed reads from RootState
+├── guards/                  # plain route access functions
+├── shared/
+│   ├── alerts/              # generic alerts reused across modules
+│   ├── api/                 # shared query client, outcome normalizer, cross-module endpoints
+│   ├── components/          # reused by at least two modules
+│   ├── constants/
+│   ├── hooks/               # same six subdirectories as a module's hooks/
+│   ├── layouts/
+│   └── utils/               # generic pure helpers owned by no single entity
+├── store/
+│   ├── index.ts             # root reducer, store factory, production store, types
+│   ├── hooks.ts             # typed dispatch and selector hooks
+│   └── middleware/          # generic application-wide Redux middleware
+├── styles/                  # global.css: HeroUI import + CSS-variable theme overrides
+└── test/                    # provider renderer and global test setup
+```
+
+Keep logic inside one module until another module genuinely needs it. Promote it to `shared/` only
+when reuse exists **and no single domain entity owns it** — a generic helper
+several modules use is shared, but behavior belonging to one entity stays in that entity's module
+and is reached through the module's declared public surface instead of being promoted. A
+cross-module import of a declared page-level view is therefore not a reason to move that view into
+`shared/`; see [Domain-owned flat modules](adr/14-08-2026-domain-owned-flat-modules.md). Stable
+platform boundaries—root layout, route constants, store creation, and the shared API client—may
+start outside a feature.
+
+Alerts follow the same ownership rule. Put feedback for a feature-owned action in
+`modules/<module>/alerts/`, even when it uses a shared toast library or translation namespace.
+For example, sign-up and sign-out success alerts belong to `modules/auth/alerts/`. Use
+`shared/alerts/` only for presentation behavior that applies across feature modules, such as the
+generic normalized API-failure alert. Colocate each alert adapter's test with the adapter.
+
+Hooks and pure helpers are filed by what they do, not by which screen calls them: every `hooks/`
+directory uses the six names above, and a file that declares no hook belongs in a `utils/`
+directory instead. Follow [Placing web hooks](guides/placing-web-hooks.md) for the full rule and for
+the module-versus-shared promotion test it applies.
+
+`modules/<module>/loaders/` holds **plain route data functions** — what `guards/` is at the
+composition layer, at module scope. A loader is created only when a route awaits data, and the
+module that owns the datasets owns the loader; `route.tsx` imports it and wires it to the `loader:`
+option. Three rules come with the directory: a loader **dispatches, it does not decide access**
+(a redirect or an entry verdict stays in `guards/`); a loader **imports no page and no component**,
+because it is reachable from the router chunk and would defeat the lazy `import('./page')`
+boundary; and a destination composed from more than one module reaches the other module's datasets
+through a **contribution function on that module's declared public surface**, never past it. The
+decision and its alternatives are recorded in
+[Module-owned route loaders](../change-requests/global-loader/adr/0001-module-owned-route-loaders.md).
+
+Use Lodash for collection, object, and other data-structure operations when it provides the
+operation. Import the needed function directly so the web bundle includes only what it uses, and
+prefer it to a hand-written imperative loop or custom equivalent.
+
+## Layer responsibilities
+
+### Route
+
+`modules/<module>/route.tsx` owns only routing concerns:
+
+- parent and path;
+- lazy page import;
+- route access guard;
+- route-specific search validation, or loader wiring when the destination needs data before it
+  paints.
+
+It contains no feature JSX, form handling, RTK dispatch, or direct API calls.
+
+A route **awaits the data its destination paints**: a destination that renders a dataset declares a
+`loader` for it, so the page mounts with that data present rather than assembling itself afterwards
+(§Page). Loader wiring means the `loader:` option naming a module-owned loader function — the
+dispatches themselves live in `modules/<module>/loaders/` (§Source structure), never in this file.
+A route that renders no server data declares no loader; do not add an empty one.
+
+### Page
+
+`page.tsx` is the feature orchestrator. It composes module components and owns workflows spanning
+multiple concerns, such as submit → request → update RTK state → navigate. A page may own data when
+several children share it or the state is route-level. Data used by one component stays with that
+component or a module-local hook.
+
+Avoid absolute rules that all queries must be in pages or must be in leaf components. Use the
+narrowest owner that can coordinate the complete error, empty, and success behavior.
+
+**First-paint readiness of a destination is owned by its route, not by a component.** The route
+awaits the data its destination paints (§Route), so by the time a page or one of its components
+renders, that data is already there and there is no waiting window left for it to own. A component
+therefore declares no spinner, no skeleton, no readiness branch and no waiting copy of its own for
+data its route awaited; the one waiting affordance the application renders is the route's
+`pendingComponent`. The narrowest-owner rule above is unchanged for the other three states:
+error, empty and success stay with the narrowest component that can coordinate them, so a permitted
+actor whose read failed still reaches that component's own error arm rather than an empty surface.
+
+### Components
+
+Module components own rendering, accessible interaction, and local UI state. A self-contained form
+component owns React Hook Form field registration, client validation, and submission state, then
+passes validated values to its page through `onSubmit`. The page owns server side effects, RTK
+updates, navigation, and server-error mapping.
+
+Use HeroUI from `@heroui/react` (v3: compound components, e.g. `Card.Header`, `TextField` +
+`Label`/`FieldError`) and the semantic CSS-variable tokens applied by `styles/global.css`
+(`--accent`, `--surface`, `--muted`, `--success`, `--warning`, `--danger`, `--radius`, etc.). Those
+variables come from `@heroui/styles` via the `@heroui/react/styles` import and match the
+`HeroUI v3 · Design System` board in `docs/mockups/app.pen`; `global.css` deliberately does not
+redeclare them. To style a framework-native element such as a TanStack router `<Link>` with HeroUI's
+look, use `buttonVariants`/`linkVariants` from `@heroui/styles` rather than hand-written classes.
+There is no Warehouser UI wrapper package today, so do not invent imports from one. Promote a wrapper to `shared/components` only when it
+standardizes behavior used by multiple modules. See
+[HeroUI design principles](guides/heroui-design-principles.md) for how HeroUI's own conventions
+apply here.
+
+Conditional rendering has one form: `shared/components/Conditional`. No ternary and no `&&` chooses
+between elements in JSX; a ternary picking a value, such as a `className` or a label, is unaffected.
+See
+[Writing web conditional components](guides/writing-web-conditional-components.md), including what
+to do when the gated branch reads a value that only exists under the condition. Event handlers are
+declared and named in the component body above the `return`, and the JSX passes the reference —
+[Writing web components](guides/writing-web-components.md) §7.
+
+When a component in `components/` is the exclusive owner of other components — rendered only by it,
+by no sibling and no other module — nest the owned components one level down in a `components/`
+directory named after the owner, recursively. Follow
+[Placing web components](guides/placing-web-components.md) for the full rule, when to group owned
+components by domain instead of leaving them flat, and when a component must stay unnested because
+it has more than one consumer.
+
+## Redux Toolkit infrastructure
+
+Redux Toolkit is the single source of truth for cross-module browser state. Do not add a parallel
+React context for state already in RTK. React context is reserved for local UI state that a subtree
+shares and that has no other owner; when that case arises, follow
+[Sharing web state with context](guides/sharing-web-state-with-context.md), which splits every
+context into a state provider and a dispatch provider and places it in `modules/<module>/context/`.
+No module defines a context today.
+
+- `store/index.ts` owns the root reducer, `makeStore()`, the production `store`, and the
+  `RootState`, `AppStore`, and `AppDispatch` types.
+- Tests use `makeStore()` so state never leaks between cases.
+- Components use `useAppDispatch` and `useAppSelector` from `store/hooks.ts`, not repeatedly typed
+  raw React Redux hooks.
+- Feature-owned slices live in `modules/<module>/store/` beside the workflows that define their
+  state transitions. The root `store/` composes those reducers; it does not own feature slices.
+- `<module>.actions.ts` declares the case-reducer functions supplied to the slice's `reducers`
+  option. It does not import the created slice or export Redux action creators.
+- `<module>.slice.ts` owns the state types and initial state, calls `createSlice`, and exports the
+  generated action creators and `<module>Reducer`. The root store imports that reducer directly
+  from the slice file; do not add a separate reducer-export file.
+- `<module>.selectors.ts` exports named, typed selectors. Components and guards import selectors
+  instead of duplicating state traversal such as `state.auth.status`.
+- Dependencies flow from the slice to its case-reducer declarations. Action consumers import the
+  generated action creators from the slice; selector consumers import from the selectors file.
+- Add a slice only for state used across modules or needed globally across routes. Server-owned
+  resource data belongs to an RTK Query API slice rather than an ordinary state slice.
+- Define one shared RTK Query API slice for the Warehouser server and register its reducer and
+  middleware in `store/index.ts`. Owning feature modules add endpoints with `injectEndpoints`.
+  React workflows use generated hooks; guards and other non-React workflows dispatch the same
+  endpoint's `initiate` thunk and await `unwrap()`.
+- Route requests through the shared RTK Query base query so cookie credentials, contract validation,
+  and normalized serializable API failures remain consistent. Mutations declare tags for cached
+  queries they invalidate.
+
+The router context contains `{ store: AppStore }`. Guards call selectors against
+`store.getState()`, which always reads current state and avoids hook or closure constraints.
+
+Authentication is currently in-memory and mocked. Do not add local-storage token persistence by
+default. A production feature must decide cookie/token transport, expiry, refresh, restoration, and
+logout behavior with security consequences documented.
+
+See the accepted [RTK Query ADR](adr/02-08-2026-rtk-query-for-web-api-calls.md).
+
+## Guards and paths
+
+Access control lives at route level in plain functions under `guards/`. A guard accepts
+`RouterContext`, returns normally when access is allowed, and throws TanStack Router's redirect
+descriptor otherwise. Guards have no React imports or component rendering.
+
+All application paths are declared in `shared/constants/routes.ts`. Route definitions, guards,
+navigation calls, and links reference `ROUTES`; they do not repeat path literals.
+
+## Validation and server contracts
+
+Use Zod and the accepted repository ownership rule:
+
+- Data crossing the web/server boundary belongs in `packages/contracts` and is imported through a
+  module subpath.
+- Browser-only form state or display validation stays in
+  `modules/<module>/schemas/`.
+- Do not duplicate a server request schema locally just to customize error copy. Compose or refine
+  it when necessary, or map Zod issues at the UI boundary.
+
+See [Adding and using contracts](guides/adding-and-using-contracts.md).
+
+For API error normalization, HeroUI form errors, React-Toastify alerts, successful-action
+feedback, and i18next ownership, follow
+[Web error handling and action feedback](guides/web-error-handling.md).
+
+All user-visible copy is configured by the centralized boundary at `src/i18n.ts`. Translation
+resources are served from `public/locales/<language>/<namespace>.json`; module copy remains in a
+module-named namespace rather than being moved into the module source tree. Follow
+[Adding and maintaining web localization](guides/adding-and-maintaining-web-localization.md).
+
+## Testing
+
+Colocate component, page, hook, schema, and slice tests with their owner. Keep cross-cutting test
+setup in `src/test`. A spec never sits one level above its subject; when no single file owns the
+behaviour it goes in its own dedicated directory under `src/test/`. See
+[Placing web tests](guides/placing-web-tests.md).
+
+- Use a fresh RTK store and memory-history router per test.
+- Prefer accessible Testing Library queries by role, label, and name.
+- Add `data-testid` only when there is no stable semantic query; do not require it on every node.
+- `src/test/setup.ts` raises Testing Library's `asyncUtilTimeout` above its 1s default, because a
+  route-level spec's first `findBy*` awaits a lazily imported page and the suite runs beside the
+  other workspace tasks. Do not re-tighten it per assertion; Vitest's `testTimeout` still bounds a
+  genuinely stuck test.
+- Test guards through navigation behavior and feature stores as pure state behavior where useful.
+- Test submission orchestration at the page or route level; keep form tests focused on validation
+  and emitted values.
+
+Before completing web work, run:
+
+```sh
+pnpm --filter @warehouser/web lint
+pnpm --filter @warehouser/web test
+pnpm --filter @warehouser/web build
+```
+
+The lint step is oxlint, and a warning fails it exactly as an error does — see
+[Linting with oxlint](guides/linting-with-oxlint.md) before suppressing a rule or changing one.
+
+## UI design boundary
+
+Any feature changing a user-visible web interface must follow the Pencil workflow in the root
+README and `ai/skills/design-ui/`. The approved design controls visual and behavioral intent; this
+document controls production code ownership and architecture. A design handoff does not authorize
+bypassing modules, HeroUI tokens, RTK boundaries, contracts, tests, or accessibility conventions.
+
+Designs are composed from the `HeroUI/*` components on the `HeroUI v3 · Design System` board
+(`CdGdS`) in `docs/mockups/app.pen`, not drawn as new frames, and they bind only that board's themed
+`semantic: light | dark` variables. In code those variables are the HeroUI v3 CSS variables shipped
+by `@heroui/styles` and applied through `apps/web/src/styles/global.css`. There is no
+`apps/web/src/styles/hero.ts`.

@@ -1,0 +1,636 @@
+# Server Architecture
+
+This document defines the target structure and dependency rules for `apps/server`. The server is a
+NestJS modular monolith: it is deployed from one codebase, while entity-related modules retain
+explicit domain and application boundaries. PostgreSQL and TypeORM are the persistence baseline.
+BullMQ and Redis remain planned and must not be treated as already installed.
+
+## Runtime applications
+
+The server has two runtime entry points:
+
+```text
+main.rest.ts   -> RestAppModule   -> HTTP controllers
+main.worker.ts -> WorkerAppModule -> BullMQ job and event consumers
+```
+
+The REST and worker applications run as separate processes. They may import the same feature use
+cases, services, domain objects, and repository implementations, but each root module imports only
+the transport adapters it needs. Until the split is implemented, `main.ts` and `AppModule` remain
+the current REST bootstrap; new feature design must preserve the two-runtime target.
+
+Use BullMQ for asynchronous operations and scheduled work after BullMQ and Redis are introduced.
+Register recurring work as BullMQ schedulers/repeatable jobs and process it in the worker runtime.
+Do not introduce an independent in-process cron mechanism.
+
+## Source structure
+
+Create only directories and modules that contain behavior. Do not add empty optional layers.
+
+```text
+apps/server/src/
+├── main.rest.ts
+├── main.worker.ts
+├── rest-app.module.ts
+├── worker-app.module.ts
+├── shared/
+│   ├── shared.module.ts             # global infrastructure providers only
+│   ├── domain/
+│   │   ├── entities/                # shared TypeORM persistence entities
+│   │   └── repositories/            # specialized concrete repositories
+│   ├── guards/                       # all NestJS authentication/authorization guards
+│   ├── logger/                       # shared structured logging module
+│   ├── events/
+│   │   └── <event-name>/
+│   │       ├── <event-name>.schema.ts
+│   │       └── index.ts
+│   └── types/                        # server-wide interfaces and types
+├── test/
+│   ├── factories/
+│   ├── fixtures/
+│   ├── expects/
+│   └── mocks/
+└── <module-name>/
+    ├── domain/
+    │   ├── entities/
+    │   ├── value-objects/
+    │   ├── errors/
+    │   ├── mappers/
+    │   └── services/
+    ├── usecases/
+    │   ├── commands/
+    │   ├── queries/
+    │   ├── events/
+    │   └── usecase.module.ts
+    ├── rest/
+    │   ├── controllers/
+    │   ├── dtos/
+    │   └── rest.module.ts
+    ├── handlers/
+    │   ├── jobs.controller.ts
+    │   ├── event.controller.ts
+    │   └── handler.module.ts
+    └── index.ts
+```
+
+A module is named for the business entity or cohesive business capability it owns. Keep code in
+the owning module until it is genuinely reused. `shared/` is for pure fabrications and stable
+cross-module abstractions, not miscellaneous code or business behavior with an unclear owner.
+
+## Module system and import specifiers
+
+`apps/server` is an ES module (`"type": "module"`), as is every other workspace package and the
+repository root. Node's ESM resolver performs no extension search and no directory resolution, so
+what it loads has to name each file outright: `dist/` carries `./x.entity.js` and
+`warehouses/index.js`, never the extensionless or bare-directory form.
+
+Source is not written that way, and does not have to be. `packages/tsconfig/tsconfig.base.json`
+sets `"moduleResolution": "Bundler"`, under which `tsc` accepts the extensionless specifier —
+relative (`./create-user.schema`) as well as the `paths`-mapped bare ones this application uses
+(`shared/domain/entities/x.entity`, and a module barrel as plain `warehouses`). The extension is
+supplied on emit instead: `apps/server/tsconfig.json` and every buildable package's `tsconfig.json`
+declare `"tsc-alias": { "resolveFullPaths": true }` at the top level, and `tsc-alias` — which
+already rewrites the `paths` aliases into relative specifiers — resolves each one against the
+emitted `dist/` tree and appends what it actually finds there, `./x` becoming `./x.js` and a
+directory becoming `<dir>/index.js`. So imports read exactly as they did before the ESM conversion
+while the output satisfies Node.
+
+The tradeoff this buys is worth stating plainly, because it has already bitten this repository
+twice. `tsc` no longer type-checks Node's resolution rules, and `tsc-alias` does not fail a build
+over a specifier it cannot resolve — it leaves that one unrewritten and exits 0. So a broken
+specifier survives a green build and surfaces only when something loads the output. For
+`packages/*` that happens in the normal gate, because both applications import them through their
+`exports` map and therefore run against `dist/`. For `apps/server` nothing in the gate loads `dist/`
+— its own tiers run from source through Vitest — so after a change to the build, the paths mapping
+or this option, load the built tree before trusting it:
+
+```sh
+pnpm --filter @warehouser/server build
+node -e "import('./apps/server/dist/src/app.module.js')"
+```
+
+The one specifier that still carries its extension in source is a deep subpath of a real
+dependency — `typeorm/driver/types/IsolationLevel.js`. `tsc-alias` rewrites only relative
+specifiers and `paths` aliases; a package subpath is deliberately out of its reach, so nothing
+would append the extension for you there.
+
+That split is enforced rather than remembered. The shared lint baseline runs
+`import/extensions` as `["error", "ignorePackages", { pattern: { js: "never", ts: "never", … } }]`,
+which reports a `.js`/`.ts` extension written on a relative or `paths`-aliased specifier and leaves
+a package subpath alone — so `./x.entity.js` fails the commit and
+`typeorm/driver/types/IsolationLevel.js` does not. Do not "clean up" the extension on a package
+subpath: `import('typeorm/driver/postgres/PostgresQueryRunner')` fails with `ERR_MODULE_NOT_FOUND`
+under Node's ESM resolver, which does no extension search — typeorm's `exports` map sends
+`"./*.js"` to itself and offers no extensionless spelling. `tsc` stays green either way, and
+`apps/server`'s own gate runs from source, so only loading `dist/` would catch it.
+
+Lodash is the dependency this rule used to be written around, and it is now `lodash-es` rather than
+`lodash` precisely so that it isn't. Import it by name from the package root —
+`import { first, map } from 'lodash-es';` — never as `lodash`, and never as a subpath. The CommonJS
+`lodash` root binds no named exports an ESM importer can reach: `import { find } from 'lodash'`
+throws `SyntaxError: Named export 'find' not found` the moment Node loads the built file, and none
+of the functions this repository uses are an exception. That failure is invisible to the gate, which
+runs from source through Vitest, whose CJS interop resolves the binding that Node will not — so the
+build stays green and only `node dist/src/app.module.js` shows it. `lodash-es` ships real ESM with
+real named exports, so the root import resolves under Node, tree-shakes, and needs no extension.
+
+Use `import.meta.dirname` / `import.meta.filename`; `__dirname` and `__filename` do not exist.
+
+The build is `tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json`. `tsc` emits the
+specifiers unchanged and `tsc-alias` performs both rewrites — `paths` alias to relative path, and
+`resolveFullPaths` to the extension — which is what makes `dist/` loadable. The Nest CLI is
+deliberately not a dependency: its `paths` transformer strips the extension off every specifier it
+rewrites, producing output Node cannot load (nest-cli#3545). `pnpm dev` runs the TypeScript
+entrypoint directly with `tsx watch`.
+
+## Layer responsibilities
+
+### Domain
+
+Domain entities and value objects contain framework-independent rules and invariants. Domain
+entities and value objects must not import NestJS, HTTP adapters, BullMQ, TypeORM, or concrete
+persistence models.
+
+TypeORM persistence entities and concrete repositories are shared persistence infrastructure.
+Place entities in `shared/domain/entities/` and repositories in `shared/domain/repositories/`.
+Every repository is specialized around a cohesive persistence operation and follows
+[Creating a server repository](guides/creating-a-server-repository.md). It may operate on several
+entities when one query, database operation, or public method is more efficient. Do not use
+`BaseRepository`, generic CRUD bases, repository ports, or feature-owned persistence adapters.
+Repository classes do not contain private methods. Shared repositories must not import from or
+otherwise know about dedicated feature modules. They accept and return shared persistence entities
+and persistence-oriented values only.
+
+Mappings between shared persistence entities and feature-owned domain objects belong in
+`<feature-name>/domain/mappers/`. A feature use case or domain service invokes mappings such as
+`toSession` and `toSessionEntity` above the repository boundary; repositories never perform
+feature/domain mapping. The REST layer's own translation — the wire shape a controller returns or
+accepts — belongs in `<feature-name>/rest/mappers/` for the same reason. Neither may be written
+into the file that uses it; the architectural tier below enforces both.
+
+### Services
+
+A service is an extraction, never a default layer. A use case owns its own business rules and
+reaches concrete repositories directly; extract a service only when one of these is true:
+
+- **more than one use case needs the same operation** — the rule would otherwise be duplicated, or
+  another module must invoke it through the owning module's exported provider;
+- **the use case has grown too large to read** — a single `execute` that no longer fits in one
+  screen may delegate a cohesive part of itself to a named service.
+
+Never introduce a service that exactly one use case calls with the arguments it was handed. That
+service adds an indirection without a rule of its own and turns the use case into a pass-through;
+see "Use cases" below for the rule this violates.
+
+A shared operation that reaches a repository belongs in an injectable service, so the repository is
+injected once rather than threaded through every caller as an argument. Keep a shared helper as a
+plain exported function only when it needs no collaborator at all — a pure predicate, an assertion
+over a value, or a mapping.
+
+Services live under the owning feature's `<feature-name>/domain/services/`. They may use domain
+objects, feature mappers, and concrete repositories, and must not invoke commands, queries, event
+use cases, controllers, or handlers. A service may delegate an optimized multi-entity read or write
+to one specialized repository method instead of coordinating table-shaped repositories. A service
+that joins a caller's transaction carries no transaction boundary of its own; the complete
+operation owns exactly one.
+
+#### Worked example: a shared-check service
+
+`purchase-drafts` has eight commands that assemble a Purchase Draft — create the draft, add, revise
+and remove a line, add, revise and remove a link, revise the draft. Three checks recur across them:
+an Item must belong to the acting Warehouse, a linked Customer Order must too, and a Packaging Type
+must be one the catalogue offers. Each check reads a repository, and each is needed by more than one
+command. That is the first extraction trigger, so it becomes a service:
+
+```ts
+// purchase-drafts/domain/services/purchase-draft-assembly.service.ts
+
+// Stateless: no repository, nothing injected. It stays a module-level function so the four commands
+// that only map a write outcome are not coupled to repositories they never touch.
+export const assertApplied = (outcome: AssemblyWriteOutcome): void => {
+  assert(outcome !== 'draft-frozen', purchaseDraftFrozenError());
+  assert(outcome !== 'target-missing', purchaseDraftTargetUnavailableError());
+};
+
+@Injectable()
+export class PurchaseDraftAssemblyService {
+  constructor(
+    private readonly itemCatalogueRepository: ItemCatalogueRepository,
+    private readonly customerOrderLifecycleRepository: CustomerOrderLifecycleRepository,
+    private readonly packagingTypeCatalogueRepository: PackagingTypeCatalogueRepository,
+  ) {}
+
+  async assertItemAvailable(
+    currentUser: AccessCurrentUser,
+    itemId: string,
+  ): Promise<void> {
+    const item = await this.itemCatalogueRepository.findById(itemId);
+    assert(
+      item !== null && item.warehouseId === currentUser.warehouseId,
+      purchaseDraftTargetUnavailableError(),
+    );
+  }
+
+  // …assertCustomerOrderAvailable, assertPackagingTypesKnown
+}
+```
+
+The command keeps everything that is its own — the input type, the write, the transaction boundary
+— and calls the service only for what it shares:
+
+```ts
+// purchase-drafts/usecases/commands/add-purchase-draft-line.command.ts
+@Injectable()
+export class AddPurchaseDraftLineCommand {
+  constructor(
+    private readonly assemblyRepository: PurchaseDraftAssemblyRepository,
+    private readonly assemblyService: PurchaseDraftAssemblyService,
+  ) {}
+
+  @Transactional()
+  async execute(
+    currentUser: AccessCurrentUser,
+    purchaseDraftId: string,
+    input: AddLineInput,
+  ): Promise<void> {
+    await this.assemblyService.assertItemAvailable(currentUser, input.itemId);
+    await this.assemblyService.assertPackagingTypesKnown([
+      input.packagingTypeId,
+    ]);
+
+    const outcome = await this.assemblyRepository.addLine({/* … */});
+
+    assertApplied(outcome);
+  }
+}
+```
+
+Register the service as a provider of the feature's `UsecaseModule` and leave it out of `exports`,
+so a transport adapter still reaches the feature only through its use cases. Export it only when
+another module must call it — `customer-orders` exports `DemandAllocationService` for exactly that
+reason, and nothing else.
+
+Four properties make this an extraction rather than a pass-through, and each is worth checking
+before adding a service:
+
+- **every method has more than one caller.** A method called by one command belongs in that command.
+- **the commands still own their operations.** The service holds no `addLine`, no write, and no
+  input type; it answers questions, and the command decides what to do with the answers.
+- **the service opens no transaction.** `@Transactional()` stays on the command; the service runs
+  inside that boundary, which is what makes the locking reads it performs the command's own locks.
+- **stateless helpers stay module-level.** `assertApplied` and `pickStated` inject nothing, so
+  putting them on the class would force commands that need only them to take the whole service.
+
+Unit-test the commands over the _real_ service with repository doubles beneath it, not over a double
+of the service: the cases are about the rule being enforced, not about the call being made. See
+`purchase-drafts/usecases/commands/purchase-draft-assembly.spec.ts`.
+
+### Use cases
+
+Use cases are the application boundary and have three categories:
+
+- `commands/` perform writes, including validating an intention and enqueueing asynchronous work;
+- `queries/` return data without changing business state;
+- `events/` coordinate application behavior caused by a consumed event.
+
+A use case owns the rules of the operation it names, holds its own `@Transactional()` boundary, and
+declares the input and result types of that operation in its own file. It may coordinate services,
+domain objects, concrete repositories, shared abstractions, and other infrastructure ports. It must
+not depend on REST DTO classes, controllers, BullMQ handler classes, TypeORM entities,
+QueryBuilder, or other TypeORM APIs.
+
+**A use case must not be a pass-through.** A command whose `execute` only forwards its arguments to
+one collaborator's method holds no rule, so it is a layer without a responsibility: the rules belong
+in the command itself, next to the boundary that decides them. Two shapes are the tell — a command
+whose body is a single `return this.<something>.<method>(...)` with the arguments unchanged, and a
+service method that exactly one command calls. Correct both by moving the rules into the command and
+deleting the collaborator, keeping only what "Services" above justifies extracting.
+
+### REST
+
+REST controllers translate HTTP input into use-case input and translate results into HTTP output.
+They invoke commands or queries only. They contain no business rules and never access services,
+repositories, database models, queues, or another module's controller directly.
+
+Every REST request and response shape is defined as a Zod schema in `packages/contracts` and
+imported through a package subpath. Files in `rest/dtos/` are thin NestJS adapters created with
+`createZodDto`; they must not redefine the network shape. Follow
+[Adding and using contracts](guides/adding-and-using-contracts.md).
+
+Server predicates, typed errors, assertion factories, propagation, and global NestJS exception
+mapping follow [Server error handling](guides/server-error-handling.md).
+
+Authentication and transport-level authorization use NestJS guards from `shared/guards/`. Guards
+must not be placed inside feature modules. A handler declares the Permission it requires, and any
+Permission its projection observes, as metadata the guard reads; follow
+[Server request authorization](guides/server-request-authorization.md).
+
+### BullMQ handlers
+
+`handlers/jobs.controller.ts` consumes BullMQ jobs and invokes commands. A job payload describes a
+write intention; the handler does not implement that write itself.
+
+`handlers/event.controller.ts` consumes BullMQ-delivered events and invokes event use cases. Both
+handler types validate untrusted queue payloads before invoking a use case and contain only queue
+acknowledgement, retry, logging, and input-mapping concerns.
+
+## Dependency direction
+
+```text
+REST controllers ----\
+                      +--> commands / queries / event use cases
+BullMQ handlers ------/                 |
+                                        +--> domain services
+                                        +--> concrete repositories
+                                        +--> shared abstractions
+
+concrete repositories ---------------------> TypeORM / PostgreSQL
+```
+
+Dependencies point inward. In particular:
+
+- controllers and handlers call use cases, not repositories or business services;
+- services never call use cases;
+- domain code never depends on application, transport, queue, or persistence code;
+- persistence access stays inside specialized concrete repositories;
+- shared repositories never depend on dedicated feature modules;
+- feature mappers translate between domain and persistence models above the repository boundary;
+- modules communicate through exported use-case modules, explicit services, or events, not through
+  another module's controller or persistence implementation.
+
+Avoid circular module imports. Do not use `forwardRef()` to conceal an ownership problem; extract a
+shared abstraction or use an event when the dependency is genuinely cross-module.
+
+## NestJS modules and exports
+
+Each feature owns a `UsecaseModule` and may own a `RestModule` and `HandlerModule`. Its public
+barrel exports only modules that exist and are required by a runtime:
+
+```ts
+export { InventoryUsecaseModule } from './usecases/usecase.module';
+export { InventoryRestModule } from './rest/rest.module';
+export { InventoryHandlerModule } from './handlers/handler.module';
+```
+
+If the feature has no BullMQ consumers, do not create or export a handler module. Apply the same
+rule to REST functionality.
+
+`SharedModule` may use NestJS `@Global()` for shared infrastructure providers such as configuration,
+logging, database connections, or queue connections. Plain entities, repositories, schemas, and
+TypeScript types are shared through imports and do not need Nest registration. Global
+providers must not become a service locator or a way to hide feature dependencies.
+
+Structured application logging follows the accepted
+[Pino logging ADR](adr/27-07-2026-structured-logging-with-pino.md). Configure it in
+`shared/logger/app-logger.module.ts`; application providers inject `PinoLogger` and set their class
+name as context. The server uses these structured logs instead of telemetry; do not add telemetry
+SDKs, tracing, metrics exporters, collectors, or feature-specific telemetry abstractions. See the
+accepted [logging instead of telemetry ADR](adr/03-08-2026-structured-logging-instead-of-telemetry.md).
+
+## Events
+
+Each server-internal event has one Zod schema as its source of truth under
+`src/shared/events/<event-name>/`; infer its TypeScript type from that schema:
+
+```ts
+export const ItemCreatedEventSchema = z.object({
+  eventId: z.string().uuid(),
+  occurredAt: z.string().datetime(),
+  itemId: z.string().uuid(),
+});
+
+export type ItemCreatedEvent = z.infer<typeof ItemCreatedEventSchema>;
+```
+
+Producers and consumers import the same schema and validate at queue boundaries. Include stable
+event identity and occurrence time so consumers can implement idempotency and diagnostics. When an
+event crosses the server application boundary or is consumed by another package/application,
+promote its schema to `packages/contracts` rather than keeping it server-local.
+
+## Persistence
+
+PostgreSQL and TypeORM are current infrastructure. `AppModule` configures the connection from
+`DATABASE_HOST`, `DATABASE_PORT`, `DATABASE_USER`, `DATABASE_PASSWORD`, and `DATABASE_NAME`.
+Runtime synchronization is disabled: all schema changes use reviewed TypeORM migrations. New
+repositories must follow
+[Creating a server repository](guides/creating-a-server-repository.md): place the concrete class in
+`shared/domain/repositories/` and shape it around a cohesive persistence operation rather than a
+single entity. Prefer one optimized query, database operation, or public method when the operation
+spans several entities. Do not extend `BaseRepository`. Callers inject the concrete repository.
+The repository operates only on shared persistence types and remains independent of feature
+modules. Put domain/persistence conversion in the owning feature's `domain/mappers/` directory and
+invoke it from a use case or feature domain service. Query builders must not leak beyond
+repositories.
+
+## Shared utilities and types
+
+- Use Lodash in both server and web application code for collection, object, and other
+  data-structure transformations when it supplies the operation. Prefer a directly imported
+  Lodash function over a hand-written imperative loop or custom data-structure helper.
+- Reuse `@warehouser/utils` before adding a utility to the server.
+- Move a framework-neutral utility to `packages/utils/src` when it is or should be useful outside
+  the server; expose it through that package's established subpath pattern.
+- Put server-wide interfaces in `src/shared/types/` only when they are server-internal.
+- Put TypeScript types shared across applications in `packages/shared-types`.
+- Do not move feature business concepts to a shared location solely to shorten imports.
+
+## Testing
+
+Colocate unit and integration test files with the production code they cover. Reserve `src/test/`
+for reusable test support:
+
+- `factories/` builds valid entities and value objects with overridable fields;
+- `fixtures/` contains stable profiling and scenario data;
+- `expects/` contains custom Vitest matchers and assertion helpers;
+- `mocks/` contains HTTP request and infrastructure test doubles.
+
+Test domain rules without NestJS. Test use cases with controlled repository doubles. Test REST
+validation and mapping at the controller/application boundary. Test BullMQ
+handlers for payload validation, delegation, idempotency behavior, retry classification, and
+failure behavior once BullMQ is installed.
+
+Before completing server work, run:
+
+```sh
+pnpm --filter @warehouser/server lint
+pnpm --filter @warehouser/server test
+pnpm --filter @warehouser/server test:architectural
+pnpm --filter @warehouser/server build
+```
+
+The lint step is oxlint, and a warning fails it exactly as an error does — see
+[Linting with oxlint](guides/linting-with-oxlint.md) before suppressing a rule or changing one.
+
+### Running the integration tier
+
+Integration specs are named `*.integration.spec.ts`. The suffix is what separates the two
+commands: `vitest.config.ts` excludes it by path, so the unit tier above never touches a database,
+and `vitest.pglite.config.ts` opts it back in. Naming a spec that way is the whole opt-in — there
+is no environment flag to remember, and an integration spec cannot be run against a developer's
+own database by accident. To run them:
+
+```sh
+pnpm --filter @warehouser/server test:integration
+```
+
+No Docker, no database to create, nothing to point at. `src/test/pglite/global-setup.ts` applies
+the migrations once, dumps the result, and every test file restores its own database from that
+dump — the PGlite equivalent of `CREATE DATABASE ... TEMPLATE`. Restoring costs roughly 170 ms,
+which is what makes a database _per test file_ affordable.
+
+That per-file isolation is why nothing has to coordinate cleanup across suites: a suite cannot
+corrupt a database no other suite shares.
+
+Specs are not aware of any of it. `vitest.pglite.config.ts` uses `resolve.alias` to swap two
+production modules for PGlite-backed equivalents. Vite resolves aliases ahead of every plugin, so
+these two entries win over the `paths` resolution that finds every other `shared/...` specifier:
+
+| Production module                 | Replaced by                             |
+| --------------------------------- | --------------------------------------- |
+| `shared/database/data-source`     | `test/pglite/pglite-data-source.ts`     |
+| `shared/database/typeorm.options` | `test/pglite/pglite-typeorm.options.ts` |
+
+Both build on the single driver in `test/pglite/pglite-driver.ts`. Mapping _both_ matters: the
+second is what `AppModule` uses, so without it an HTTP contract spec would seed its fixtures into
+PGlite while the application under test read from a real PostgreSQL server, and every
+authenticated request would come back 401.
+
+An alias that stops matching is the one failure this tier cannot report by failing: the production
+modules load, the suite dials `DATABASE_HOST`, and it still passes. So the swap is asserted rather
+than assumed — `test/pglite/alias-guard.setup.ts` runs as `setupFiles` and refuses to start a test
+file unless both aliased modules resolve to something carrying the PGlite driver. Neither check
+opens a connection, so a mismatched `find` pattern is caught before the first byte reaches a
+socket. Change either specifier and the guard, not the database, is what you hear from.
+
+The driver is deliberately in-process rather than reached over `pglite-socket`. Routing statements
+through the socket's query queue hits open upstream defects around transactions and error
+recovery (electric-sql/pglite #958, #985, #1046), which show up as rolled-back rows reappearing,
+aggregates returning no rows at all, and suites hanging — non-deterministically.
+
+Two consequences of the in-process driver are worth knowing:
+
+- Each test file leaves a PGlite WebAssembly heap behind that nothing releases, and the forks pool
+  reuses a worker process across files, so the heaps accumulate. `vitest.pglite.config.ts` caps the
+  tier at `maxWorkers: '50%'` for that reason — these specs are bound by PGlite's single-threaded
+  WebAssembly, not by core count, so the cap costs no wall time.
+- `pglite-driver.ts` re-registers a `bigint` parser so `count(*)` yields a string, as
+  `node-postgres` does. Without it a spec asserting `{ count: '1' }` sees `{ count: 1 }` and fails
+  for a reason unrelated to what it tests.
+
+### What this tier cannot test
+
+PGlite is PostgreSQL compiled to WebAssembly, running in the single-user mode Postgres normally
+reserves for recovery. It is real Postgres — isolation levels, `TRUNCATE ... CASCADE` across
+several tables, deferred foreign keys and injected-failure rollbacks all behave correctly — but it
+has exactly **one backend**, so only one query executes at a time no matter how many connections
+are open. Note it is currently PostgreSQL 18, one major version ahead of the `postgres:17-alpine`
+production uses.
+
+**Concurrency is therefore out of scope for the automated suite, by decision.** A spec that needs
+two backends racing each other cannot be expressed here:
+
+- Opening a second `QueryRunner` and polling `pg_stat_activity` until the first backend is blocked
+  on a lock self-deadlocks — the second runner _is_ the first backend.
+- A race asserting "two simultaneous writes, exactly one winner" silently passes for the wrong
+  reason: PGlite serializes the two calls, so both succeed and the proof evaporates.
+
+The repository previously carried such specs against a real PostgreSQL server. They were removed
+along with the load smokes, which asserted p95 latency and throughput that only mean something
+against the server the application actually runs on. Do not add specs of either kind back without
+reintroducing a real-PostgreSQL tier to run them in — in this suite they would pass without
+proving anything, which is worse than not having them.
+
+### Running the architectural tier
+
+Specs named `*.architectural.spec.ts` assert the shape of the source tree rather than what it
+computes. They live in `src/test/architectural/`, parse every production file with
+[ts-morph](https://ts-morph.com), and — like the integration tier — are excluded from
+`vitest.config.ts` by path and opted back in by their own config, because parsing the whole tree
+costs seconds where a unit spec costs milliseconds:
+
+```sh
+pnpm --filter @warehouser/server test:architectural
+```
+
+The tier holds two rules today: mapper placement and query placement.
+
+`mapping-patterns.ts` recognizes a mapping by the shapes
+this repository writes them in — an object literal read off the parameters, a `map` over a
+collection, a persistence row constructed field by field or through `manager.create`, fields handed
+to a domain factory, a conversion that branches or delegates, and a function declared to return a
+published contract — and `mapper-placement.architectural.spec.ts` then requires every one of them
+to sit in `<module>/domain/mappers/` or `<module>/rest/mappers/`, in the layer that calls it, in a
+file named `*.mapper.ts`, and never in the file that uses it.
+
+Two exclusions are deliberate. `src/shared/` is server-wide infrastructure with no feature
+`domain/` or `rest/` layer: a repository that shapes its own raw rows next to the query producing
+them is following [Creating a server repository](guides/creating-a-server-repository.md), not
+breaking this rule. And an anonymous callback is not a _separate_ mapper — a use case composing its
+own result inline is the use case, while a **named** conversion beside its one caller is the thing
+this gate refuses, because the next feature that needs the same translation cannot see it and ends
+up with a second copy that then disagrees.
+
+A detector nobody checks is worse than no gate: a placement assertion over a detector that
+recognizes nothing passes cleanly while a response mapper sits in a controller. So
+`mapping-patterns.architectural.spec.ts` is the control on it — each pattern is exercised on a
+fixture, each near-miss (a predicate, a value object's factory, a use case's `execute`, a driver-
+result classification) is asserted _not_ to match, and the real tree is asserted to still contain
+the mappings we know are in it. When you add a mapping in a shape the detector cannot see, add the
+shape to both files.
+
+`query-placement.architectural.spec.ts` holds the read side of the use-case split described under
+"Use cases" above. A class named `*Query` must be declared in `src/<module>/usecases/queries/`, in a
+file named `*.query.ts`, one query per file — a read written anywhere else is a use case nobody
+looking for the module's reads will find. The directory holds those files and their colocated
+`*.spec.ts` and nothing else.
+
+The second half is what may sit _with_ a query. A use case "declares the input and result types of
+that operation in its own file", so a query file may contain the class, its request and response
+types, and its imports — no function, constant, lookup table, or second class. Those are units with
+their own reason to change that no other module can see, so the next read needing the same rule gets
+a second copy instead of the first one, and the two then disagree. They belong in the feature's
+`domain/` — `mappers/` for a boundary conversion, `predicates/` for a question about a value,
+`services/` for an operation with collaborators. A helper used by one query and nothing else is a
+private method of that query's class, which is where `ReadWorkspaceContextQuery` keeps its effective-
+selection derivation.
+
+`predicate-placement.architectural.spec.ts` holds the predicate rules from
+[Server error handling](guides/server-error-handling.md) § 1–2, and it is strict: there is no
+baseline and no allowed-exceptions list, so any violation anywhere in `apps/server` fails the tier.
+
+A function declared outside a class that returns `boolean` or narrows with `value is T` is a
+predicate, so it belongs in `src/<module>/domain/predicates/` or `src/shared/predicates/` — left in
+the command that asks it, it is a rule only that command can see, and the next command needing the
+same answer writes its own. An assertion signature (`asserts value is T`) is not a predicate: it
+throws instead of answering and stays with the code it guards.
+
+Four rules follow about how a condition is written.
+
+A predicate is **asked**, not read — one that nothing calls is a rule the system no longer enforces,
+and one whose answer is assigned to a variable has had the branch move away from the question.
+
+A **nullish check** goes through the shared predicates `packages/utils/src/predicates/` already
+ships — `isNull`, `isUndefined`, `isDefined` — rather than a hand-written `x === null`. The reason is
+not brevity: `isDefined` narrows `T | null | undefined` to `T` where the comparison narrows nothing
+across a call boundary.
+
+The first argument of an **`assert`** is a named condition. `assert(customerId !== null, ...)` is
+`assertDefined(customerId, ...)`, and `assert(membership.workspaceId === currentUser.workspaceId, ...)`
+is a domain rule whose name belongs in the module's `predicates/`.
+
+And every **branch** asks a predicate — `if`, `while`, `do`, `for` and the ternary alike. A condition
+written inline is a rule with no name: the reader re-derives what
+`header.archivedAt === null || header.state !== 'draft'` means every time, and the next branch
+needing the same rule restates it slightly differently. `isOpenDraft(header)` has one name, one
+definition, one test, and one place to change.
+
+A `&&` / `||` chain is judged one link at a time, so composing predicates never fails and the
+finding always points at the operand to extract: in `isOpen(draft) && line.quantity > 0` only
+`line.quantity > 0` is reported. A `switch` is not judged — it discriminates on a value rather than
+asking a question — and a nullish operand inside a branch is left to the nullish rule rather than
+reported twice.
+
+`predicate-detection.architectural.spec.ts` is the control, for the same reason `mapping-patterns` is
+the control on mapper placement — each shape is exercised on a fixture, each near-miss is asserted
+_not_ to match, and the real tree is asserted to still hold the predicates we know are in it. When
+you write a predicate or a condition in a shape the detector cannot see, add the shape to both files.

@@ -56,6 +56,38 @@ and code found by `query` is not a rule — placement, layering, error handling 
 in `docs/system`, reached through the two indexes above. Snapshots are generated artifacts: never
 commit one, and never file one as evidence in a feature directory.
 
+## Writing application code
+
+Production source under `apps/web/src` and `apps/server/src` is written with the `docs/system`
+documents that govern it **already in context** — not consulted afterwards, and never from memory.
+The skill that loads them is
+[`ai/skills/writing-app-code/SKILL.md`](ai/skills/writing-app-code/SKILL.md), and it applies to
+every such change: a feature, a refactor, a one-line fix, an edit made by hand or by `/implement`.
+Invoke it before the first edit.
+
+It is a router, not a rulebook. It reads the index for the app you are touching — `web-index.md`
+for `apps/web`, `server-index.md` for `apps/server`, **both** when the change crosses the boundary —
+selects the guides and Accepted ADRs the changed paths pull in, and has you read those in full. The
+rules stay in `docs/system`, which remains the source of truth; the skill's
+`references/docs-system/` is a byte-for-byte mirror of it, kept honest by
+`ai/skills/writing-app-code/scripts/sync-references.sh --check` and resynced by
+[`ai/commands/sync-architecture-references.md`](ai/commands/sync-architecture-references.md). A rule
+is never paraphrased into a skill, a task file, or a comment — a paraphrase forks the truth the
+moment the guide it copied is edited.
+
+Tests are out of scope here. `*.spec.ts(x)`, `apps/*/src/test/**` and `**/__tests__/**` are owned by
+`guides/placing-web-tests.md` and `server-architecture.md` §testing; read those directly.
+
+This is the write-time half of a pair. `/code-review-front-end` and `/code-review-back-end` ask the
+same question after the fact, against the same documents; running the skill first is what leaves
+them nothing to find. Sibling code is evidence of what exists, never authorization for what you
+write — where neighbouring code and a `docs/system` rule disagree, the rule wins.
+
+The rule is also served mechanically, so it holds for an agent that never read this file:
+`ai/hooks/require-architecture-skill.sh` names the governing index when a gated file is about to be
+written. It reminds rather than refuses — it can see the path, not your context — so a missing
+reminder is never evidence that the documents were read.
+
 ## Committing
 
 Every commit runs the repository's Git hooks. Never bypass them: no `--no-verify` (or `-n`) on

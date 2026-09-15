@@ -6,7 +6,7 @@ import type {
 import { DeliveryModeField } from 'modules/purchase-draft/components/purchase-draft-line-delivery/components/DeliveryModeField';
 import { DirectDestinationFields } from 'modules/purchase-draft/components/purchase-draft-line-delivery/components/direct-destination-fields/DirectDestinationFields';
 import { PurchaseDraftLineDeliveryRefusalAlert } from 'modules/purchase-draft/components/purchase-draft-line-delivery/components/PurchaseDraftLineDeliveryRefusalAlert';
-import { PurchaseDraftLineDestination } from 'modules/purchase-draft/components/purchase-draft-line-delivery/components/PurchaseDraftLineDestination';
+import { PurchaseDraftLineDestination } from 'modules/purchase-draft/components/PurchaseDraftLineDestination';
 import type { DisagreeingDeliveryLink } from 'modules/purchase-draft/utils/delivery-disagreement';
 import { disagreeingDeliveryLinks } from 'modules/purchase-draft/utils/delivery-disagreement';
 import type { ReactElement } from 'react';

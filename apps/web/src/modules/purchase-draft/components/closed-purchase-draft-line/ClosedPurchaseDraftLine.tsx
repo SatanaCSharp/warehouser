@@ -11,8 +11,8 @@ import type {
 import { useAmendPurchaseDraftLineRejectionMutation } from 'modules/purchase-draft/api/purchase-draft-api';
 import { AmendRefusalDialog } from 'modules/purchase-draft/components/closed-purchase-draft-line/components/AmendRefusalDialog';
 import { ConditionOnArrivalSection } from 'modules/purchase-draft/components/closed-purchase-draft-line/components/ConditionOnArrivalSection';
-import { PurchaseDraftLineDestination } from 'modules/purchase-draft/components/purchase-draft-line-delivery/components/PurchaseDraftLineDestination';
 import { PurchaseDraftLineLinks } from 'modules/purchase-draft/components/purchase-draft-line-links/PurchaseDraftLineLinks';
+import { PurchaseDraftLineDestination } from 'modules/purchase-draft/components/PurchaseDraftLineDestination';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { MutationResult } from 'shared/api/client/mutation-outcome';
