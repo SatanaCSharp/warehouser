@@ -60,17 +60,46 @@ reminder_for() {
   printf '%s' "This file is production source gated by AGENTS.md section \"Writing application code\". Load the ${SKILL} skill before editing it: read ${index} in full, select the governing guides and Accepted ADRs for the paths you are touching (ai/skills/${SKILL}/references/), and read those documents in full. docs/system is the source of truth - sibling code is not a rule, and neither is what you remember about this repository."
 }
 
-# One reminder per session per app. The marker lives in the run directory rather than the repository
-# so it never reaches a commit, and a lost marker only costs one extra reminder.
+# One reminder per writer per app, and never permanently.
+#
+# The marker is keyed on the session, the app, AND the agent making the call, because the agent that
+# writes the file is often not the agent that read AGENTS.md. A delegated implementer runs inside the
+# orchestrator's session: keyed on the session alone, the orchestrator's first web edit consumes the
+# only reminder and the subagent - the one with a narrow brief and no AGENTS.md in context - is
+# silenced for the rest of the run. That is precisely the agent this hook exists for.
+#
+# Not every runtime exposes an agent identifier, so the key degrades gracefully to `main` and a
+# time-to-live backstops it: suppression expires after ARCH_REMINDER_TTL seconds (default 900) so a
+# long implementation run is reminded again rather than once. The marker lives in the run directory
+# rather than the repository so it never reaches a commit, and a lost marker costs one extra
+# reminder.
+ARCH_REMINDER_TTL=${WAREHOUSER_ARCH_REMINDER_TTL:-900}
+
+# Epoch mtime of a file, on BSD (macOS) or GNU stat. Empty when neither answers.
+file_mtime() {
+  stat -f %m "$1" 2>/dev/null || stat -c %Y "$1" 2>/dev/null || printf ''
+}
+
 already_reminded() {
   session=${1:-unknown}
   app=$2
-  marker_dir="${TMPDIR:-/tmp}/warehouser-${SKILL}/${session}"
+  agent=${3:-main}
+  marker_dir="${TMPDIR:-/tmp}/warehouser-${SKILL}/${session}/${agent}"
+  marker="${marker_dir}/${app}"
 
-  [ -e "${marker_dir}/${app}" ] && return 0
+  if [ -e "$marker" ]; then
+    mtime=$(file_mtime "$marker")
+    now=$(date +%s 2>/dev/null || printf '')
+
+    # Suppress only while the marker is inside the TTL. If either clock read fails, prefer the
+    # reminder over the silence.
+    if [ -n "$mtime" ] && [ -n "$now" ] && [ "$((now - mtime))" -lt "$ARCH_REMINDER_TTL" ]; then
+      return 0
+    fi
+  fi
 
   mkdir -p "$marker_dir" 2>/dev/null || return 1
-  : >"${marker_dir}/${app}" 2>/dev/null || return 1
+  : >"$marker" 2>/dev/null || return 1
   return 1
 }
 
@@ -132,7 +161,13 @@ app=$(gated_app "$file_path")
 session=$(payload_field session "$payload" '.session_id' \
   'import json,sys; print(json.load(sys.stdin).get("session_id",""))')
 
-already_reminded "$session" "$app" && exit 0
+# Whichever subagent discriminator this runtime provides; `main` when it provides none. Sanitized
+# because it becomes a path segment.
+agent=$(payload_field agent "$payload" '(.agent_id // .agent_type // .subagent_type // "main")' \
+  'import json,sys; d=json.load(sys.stdin); print(d.get("agent_id") or d.get("agent_type") or d.get("subagent_type") or "main")')
+agent=$(printf '%s' "${agent:-main}" | tr -c 'A-Za-z0-9._-' '_')
+
+already_reminded "$session" "$app" "$agent" && exit 0
 
 reminder=$(reminder_for "$app")
 

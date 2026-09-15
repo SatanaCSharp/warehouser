@@ -5,15 +5,14 @@ reasoning-effort: high
 description: >
   Use BEFORE and WHILE writing or changing any production source file under `apps/web/src` or
   `apps/server/src` — every implementation, refactor, fix, or hand edit, whether it came from
-  `/implement`, a task, a bug report, or a direct request. Loads the architecture knowledge that
+  `/implement`, `/fix`, a task, a bug report, or a direct request. Loads the architecture that
   governs the file being written: `docs/system/web-index.md` for `apps/web`,
   `docs/system/server-index.md` for `apps/server`, both when the change crosses the boundary, and
   the guides and Accepted ADRs those indexes select for the touched paths. Triggers on "add a
   component/hook/module/route/dialog/table/slice/endpoint", "add a use case/controller/repository/
   entity/migration/guard/handler", "implement", "refactor", "fix this", "change this behavior",
-  "напиши компонент", "додай use case". Carries no rules of its own — it routes to `docs/system`,
-  which is the source of truth, and its `references/docs-system/` is a verified byte-for-byte mirror
-  of it. Does NOT apply to test files (`*.spec.ts(x)`, `src/test/`) or to documentation.
+  "напиши компонент", "додай use case". Does NOT apply to test files (`*.spec.ts(x)`, `src/test/`)
+  or to documentation.
 ---
 
 # Skill: writing-app-code
@@ -102,9 +101,17 @@ Use the changed-path selector for the app:
 - [`./references/server-manifest.md`](./references/server-manifest.md) — `apps/server/src` paths →
   documents.
 
-Both start from a **floor** that is always in the manifest, then add per-path entries. The selectors
-are a starting point, not the authority: anything the index covers and the table does not, re-derive
-from the index's own descriptions — and report the gap so the table gets fixed.
+Both start from a **floor** that is always in the manifest — the index, the app's architecture
+document, `architecture-map.md` — then add per-path entries.
+
+Accepted ADRs are selected, not read wholesale. Each entry in the index's §Decisions ends with a
+«Read before …» sentence naming what triggers it, and that sentence is the test; the manifests'
+«Which ADRs the change triggers» section states the rule and its three qualifications. Where the
+trigger is arguable, read the ADR — ambiguity resolves toward reading, and a Superseded ADR is never
+in the floor.
+
+The selectors are a starting point, not the authority: anything the index covers and the table does
+not, re-derive from the index's own descriptions — and report the gap so the table gets fixed.
 
 ### 4. Read every selected document in full
 
@@ -138,9 +145,21 @@ one. Introducing a second mechanism is an ADR-sized decision
 
 Before calling the edit done, walk every changed production file against every rule the manifest
 selected, and state for each file which documents governed it. Then run the gate for the app you
-touched — the package's own `lint` (oxlint `--type-aware --max-warnings=0`), `typecheck`/`build`,
-and `test` — plus the server's architectural tier when `apps/server/src/**/*.ts` changed, since
-`.husky/pre-commit` will run it anyway.
+touched:
+
+| App           | Gate                                                                             |
+| ------------- | -------------------------------------------------------------------------------- |
+| `apps/web`    | `pnpm --filter @warehouser/web lint` · `build` · **`test:all`**                  |
+| `apps/server` | `pnpm --filter @warehouser/server lint` · `typecheck` · `build` · **`test:all`** |
+
+`test:all`, not `test`. Each app's `test` script runs the unit tier only — `apps/web`'s
+architectural tier has its own Vitest config and `apps/server`'s adds the integration tier on top of
+that, and neither is reachable from `test`. A change that violates an architectural rule passes
+`test` and fails at the commit, which is the whole failure this step exists to prevent
+(`.husky/pre-commit` runs the server architectural tier for any staged `apps/server/src/**/*.ts`).
+
+`apps/web` has no `typecheck` script; its `build` (`tsc -p tsconfig.json && vite build`) is the type
+check.
 
 A rule you could not satisfy is a finding to report, not a silence. Say which document, which
 heading, and why.
@@ -154,8 +173,8 @@ heading, and why.
   can be named.
 - Every changed file was written against those documents, with placement decided before creation.
 - The one-permitted-mechanism rules were honoured, or a second mechanism was routed to an ADR.
-- The gate for the touched app passes: lint at `--max-warnings=0`, typecheck/build, tests, and the
-  server architectural tier when server source changed.
+- The gate for the touched app passes: `lint` at `--max-warnings=0`, `build` (plus `typecheck` on
+  the server), and **`test:all`** — the unit tier alone is not the gate.
 - Anything the documents did not cover, or covered contradictorily, is reported rather than decided
   silently.
 - Structural self-check ([`../_shared/self-check.md`](../_shared/self-check.md)): name the documents
