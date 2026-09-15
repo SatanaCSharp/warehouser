@@ -21,6 +21,7 @@ import type { WorkspaceAccessRequest } from 'shared/access/access-request';
 import { RequiredWorkspacePermission } from 'shared/decorators/required-workspace-permission.decorator';
 import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
 import { WorkspaceAccessGuard } from 'shared/guards/workspace-access.guard';
+import { requestsArchival } from 'warehouses/domain/predicates/warehouse-archival.predicates';
 import {
   WarehouseArchivalDto,
   WarehouseDeliveryAddressDto,
@@ -127,7 +128,7 @@ export class WarehouseController {
     @Req() request: WorkspaceAccessRequest,
     @Body() input: WarehouseArchivalDto,
   ): Promise<Warehouse> {
-    const warehouse = input.archived
+    const warehouse = requestsArchival(input)
       ? await this.archiveWarehouseCommand.execute(request.workspace!, {
           warehouseId,
         })

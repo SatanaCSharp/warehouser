@@ -1,10 +1,8 @@
-import { useTranslation } from 'react-i18next';
-
-import { destinationReason } from 'modules/customer/utils/awaiting-destination';
-import { MapPinIcon } from 'shared/icons';
-
 import type { CustomerOrderDestination } from '@warehouser/contracts/customers';
+import { destinationReason } from 'modules/customer/utils/awaiting-destination';
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import { MapPinIcon } from 'shared/icons';
 
 export type CustomerAwaitingDestinationProps = {
   destination: CustomerOrderDestination;

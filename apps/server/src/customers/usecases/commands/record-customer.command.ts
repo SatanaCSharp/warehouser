@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { Injectable, Optional } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import type { Customer } from 'customers/domain/mappers/customer.mapper';
 import { toCustomer } from 'customers/domain/mappers/customer.mapper';
 import { CustomerAddressBookService } from 'customers/domain/services/customer-address-book.service';
@@ -10,18 +10,6 @@ import { DeliveryAddressText } from 'customers/domain/value-objects/delivery-add
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { CustomerDirectoryRepository } from 'shared/domain/repositories/customer-directory.repository';
-
-export interface RecordCustomerRuntime {
-  readonly customerId: () => string;
-  readonly deliveryAddressId: () => string;
-  readonly now: () => Date;
-}
-
-const defaultRecordCustomerRuntime: RecordCustomerRuntime = {
-  customerId: randomUUID,
-  deliveryAddressId: randomUUID,
-  now: () => new Date(),
-};
 
 export interface RecordCustomerDeliveryAddressInput {
   readonly addressText: string;
@@ -41,8 +29,6 @@ export class RecordCustomerCommand {
   constructor(
     private readonly customerDirectoryRepository: CustomerDirectoryRepository,
     private readonly customerAddressBookService: CustomerAddressBookService,
-    @Optional()
-    private readonly recordCustomerRuntime: RecordCustomerRuntime = defaultRecordCustomerRuntime,
   ) {}
 
   @Transactional()
@@ -66,8 +52,8 @@ export class RecordCustomerCommand {
       name.value,
     );
 
-    const recordedAt = this.recordCustomerRuntime.now();
-    const customerId = this.recordCustomerRuntime.customerId();
+    const recordedAt = new Date();
+    const customerId = randomUUID();
 
     // AC-01 — active, with the recording member and the time, and its one address active and Main.
     const customer = {
@@ -80,7 +66,7 @@ export class RecordCustomerCommand {
       updatedAt: recordedAt,
     };
     const mainDeliveryAddress = {
-      id: this.recordCustomerRuntime.deliveryAddressId(),
+      id: randomUUID(),
       customerId,
       warehouseId: currentUser.warehouseId,
       addressText: addressText.value,

@@ -17,6 +17,7 @@ import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
 import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
 import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 import { GlobalHttpExceptionFilter } from 'shared/errors/global-http-exception.filter';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 // Fixed clock. `chk_warehouses_archival_order` rejects `archivedAt < createdAt`, so every seeded
 // row and every archival timestamp below is pinned to this same instant rather than the real wall

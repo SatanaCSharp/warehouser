@@ -1,9 +1,7 @@
+import type { WorkspaceMember } from '@warehouser/contracts/workspaces';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-
 import { useListWorkspaceMembersQuery } from 'modules/access/api/workspace-members-api';
 import { useHasWorkspacePermission } from 'shared/hooks/queries/useWorkspacePermissions';
-
-import type { WorkspaceMember } from '@warehouser/contracts/workspaces';
 
 /**
  * The Workspace Members with the one Workspace Role each holds. The dataset

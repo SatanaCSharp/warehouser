@@ -1,12 +1,10 @@
 import { buttonVariants } from '@heroui/styles';
 import { Link as RouterLink } from '@tanstack/react-router';
-import { useTranslation } from 'react-i18next';
-
-import { ROUTES } from 'shared/constants/routes';
-import { LogInIcon } from 'shared/icons';
-
 import type { Warehouse } from '@warehouser/contracts/workspaces';
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ROUTES } from 'shared/constants/routes';
+import { LogInIcon } from 'shared/icons';
 
 type WarehouseEnterLinkProps = {
   warehouse: Warehouse;

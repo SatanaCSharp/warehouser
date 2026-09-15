@@ -1,0 +1,610 @@
+import { Alert, Button } from '@heroui/react';
+import { ErrorCode } from '@warehouser/shared-types/enums';
+import type { LineEndingDraft } from 'modules/purchase-draft/components/line-ending-action/LineEndingAction';
+import { useLinkNaming } from 'modules/purchase-draft/hooks/projections/useLinkNaming';
+import type {
+  ConditionSplitViolation,
+  ConformanceViolation,
+  EndingBoundViolation,
+  InvalidInputViolation,
+} from 'modules/purchase-draft/utils/line-ending-form';
+import {
+  conditionSplitViolationSchema,
+  conformanceViolationSchema,
+  endingBoundViolations,
+  endingConditionViolations,
+  invalidInputViolationSchema,
+} from 'modules/purchase-draft/utils/line-ending-form';
+import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Conditional } from 'shared/components/Conditional';
+import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
+
+export type EndingRefusalAlertProps = {
+  /** The stable code of the refusal, or nothing while none has been reported. */
+  code?: string;
+  /** The refusal's own safe envelope, which carries the bounds it broke. */
+  details?: Record<string, unknown>;
+  draft: LineEndingDraft;
+  onDismiss: () => void;
+};
+
+/** One sentence naming one broken bound, keyed by the identifier it resolved. */
+type BoundBullet = { key: string; text: string };
+
+/** Which refusal the member is reading. */
+type EndingRefusalState =
+  | 'bounds'
+  | 'alreadyRecorded'
+  | 'modeMismatch'
+  | 'invalidState'
+  | 'conditionSplit'
+  | 'conformance'
+  | 'invalidInput'
+  | 'unknown';
+
+// A refusal names the rule the boundary applied; the member is told the rule,
+// never the raw code (web-error-handling.md §5). A lookup rather than a chain of
+// conditionals (`writing-web-components.md` §6).
+//
+// T17/ADR 0002 — `arrival_already_confirmed` left with the whole-draft act it
+// belonged to. The two refusals a per-line ending raises in its place are the
+// ones the approved design names: `fpRfr` (AC-20a, already recorded — when and
+// by whom) and `fssB1` (AC-20, the wrong ending for this line — which of the two
+// ways its goods travelled). Both are reachable only from a stale view, because
+// `LineEndingAction` offers neither the second ending nor the wrong one; that is
+// exactly why they still need a sentence.
+// T19 — the three refusal codes this feature adds. `condition_split_invalid` and
+// `pre_receipt_conformance_invalid` judge the Condition Split and the Conformance
+// judgement against the locked line; `invalid_input` is the payload's own shape
+// bounds (AC-02/AC-03/AC-06/AC-07/AC-09/AC-14/AC-15b/AC-16/AC-17/AC-17a/AC-25).
+const REFUSAL_STATE_BY_CODE: Record<string, EndingRefusalState> = {
+  [ErrorCode.PURCHASE_DRAFTS_ALLOCATION_OUT_OF_BOUNDS]: 'bounds',
+  [ErrorCode.PURCHASE_DRAFTS_ENDING_ALREADY_RECORDED]: 'alreadyRecorded',
+  [ErrorCode.PURCHASE_DRAFTS_ENDING_MODE_MISMATCH]: 'modeMismatch',
+  [ErrorCode.PURCHASE_DRAFTS_INVALID_STATE]: 'invalidState',
+  [ErrorCode.PURCHASE_DRAFTS_CONDITION_SPLIT_INVALID]: 'conditionSplit',
+  [ErrorCode.PURCHASE_DRAFTS_PRE_RECEIPT_CONFORMANCE_INVALID]: 'conformance',
+  [ErrorCode.PURCHASE_DRAFTS_INVALID_INPUT]: 'invalidInput',
+};
+
+/**
+ * One bullet per violation, built by the rule's own entry in the family's table.
+ * The violations arrive already parsed against the family's schema
+ * (`endingConditionViolations`), so the table is keyed by the rule union and
+ * every field it reads is typed — there is nothing left to coerce, and a rule
+ * the server adds is dropped by the schema before it reaches here.
+ */
+const bulletsFor = <TViolation extends { rule: string }>(
+  violations: TViolation[],
+  textByRule: {
+    [TRule in TViolation['rule']]: (
+      violation: Extract<TViolation, { rule: TRule }>,
+    ) => string;
+  },
+): BoundBullet[] =>
+  violations.map((violation, index) => ({
+    key: `${violation.rule}-${String(index)}`,
+    text: (
+      textByRule[violation.rule as TViolation['rule']] as (
+        entry: TViolation,
+      ) => string
+    )(violation),
+  }));
+
+/** A namespace-scoped translator, narrowed to what the T19 rule tables need. */
+type Translate = (key: string, options?: Record<string, unknown>) => string;
+/** The group-separated quantity formatter every other figure on this alert renders through. */
+type FormatQuantity = (value: number) => string;
+
+// The Source a line's Delivery Mode requires, mapped to the sentence that names
+// it. Declared as a total `Record` over the Source union so a Source added to
+// the contract cannot reach the member as a missing key.
+const SOURCE_MISMATCH_KEY: Record<
+  Extract<
+    ConditionSplitViolation,
+    { rule: 'source_mismatch' }
+  >['requiredSource'],
+  string
+> = {
+  inspected: 'transitions.lineEnding.refusal.conditionSplit.sourceMismatch',
+  customer_reported:
+    'transitions.lineEnding.refusal.conditionSplit.sourceMismatchCustomerReported',
+};
+
+// T19 — the Condition Split judged against the locked line and the catalogue
+// (AC-02, AC-06, AC-07, AC-09, AC-25). No violation ever carries a customer
+// name or the line's own prose (contracts/openapi.yaml `InvalidLineEndingConditionInput`),
+// so every sentence below reads only the identifiers and figures the server sends.
+const conditionSplitTextByRule = (
+  t: Translate,
+  quantity: FormatQuantity,
+): {
+  [TRule in ConditionSplitViolation['rule']]: (
+    violation: Extract<ConditionSplitViolation, { rule: TRule }>,
+  ) => string;
+} => ({
+  rejections_exceed_received: (violation) =>
+    t(
+      'transitions.lineEnding.refusal.conditionSplit.rejectionsExceedReceived',
+      {
+        received: quantity(violation.receivedQuantity),
+        rejected: quantity(violation.rejectedQuantity),
+      },
+    ),
+  unknown_rejection_reason: (violation) =>
+    t('transitions.lineEnding.refusal.conditionSplit.unknownReason', {
+      available: violation.availableRejectionReasonIds.join(', '),
+      reason: violation.rejectionReasonId,
+    }),
+  description_required: (violation) =>
+    t('transitions.lineEnding.refusal.conditionSplit.descriptionRequired', {
+      reason: violation.rejectionReasonId,
+    }),
+  duplicate_rejection_reason: (violation) =>
+    t('transitions.lineEnding.refusal.conditionSplit.duplicateReason', {
+      reason: violation.rejectionReasonId,
+    }),
+  // Which sentence depends on which Source the line's Delivery Mode requires:
+  // goods that came to our own dock carry the inspection, goods that went
+  // straight to the customer carry the customer's report (AC-25 and its
+  // mirror). One sentence for both directions told a Direct to Customer line
+  // the opposite of the truth (review-2026-09-09).
+  //
+  // A lookup keyed by the required Source rather than a chain, so a third
+  // Source fails to compile until it is answered (`writing-web-components.md`
+  // §6, and the totality the 2026-09-08 review required of the verdict map).
+  source_mismatch: (violation) =>
+    t(SOURCE_MISMATCH_KEY[violation.requiredSource], {
+      reason: violation.rejectionReasonId,
+    }),
+  verdict_required_with_rejections: (violation) =>
+    t('transitions.lineEnding.refusal.conditionSplit.verdictRequired', {
+      rejected: quantity(violation.rejectedQuantity),
+    }),
+});
+
+// T19 — the Conformance judgement judged against the same locked line (AC-16,
+// AC-17, AC-17a).
+const conformanceTextByRule = (
+  t: Translate,
+): {
+  [TRule in ConformanceViolation['rule']]: (
+    violation: Extract<ConformanceViolation, { rule: TRule }>,
+  ) => string;
+} => ({
+  met_contradicts_rejection: (violation) =>
+    t('transitions.lineEnding.refusal.conformance.metContradictsRejection', {
+      reason: violation.rejectionReasonId,
+    }),
+  not_applicable_on_instructed_line: () =>
+    t(
+      'transitions.lineEnding.refusal.conformance.notApplicableOnInstructedLine',
+    ),
+  verdict_on_uninstructed_line: () =>
+    t('transitions.lineEnding.refusal.conformance.verdictOnUninstructedLine'),
+});
+
+// T19 — the payload's own shape bounds (AC-03, AC-14, AC-15b, AC-04a).
+const invalidInputTextByRule = (
+  t: Translate,
+  quantity: FormatQuantity,
+): {
+  [TRule in InvalidInputViolation['rule']]: (
+    violation: Extract<InvalidInputViolation, { rule: TRule }>,
+  ) => string;
+} => ({
+  quantity_out_of_range: () =>
+    t('transitions.lineEnding.refusal.invalidInput.quantityOutOfRange'),
+  description_too_long: (violation) =>
+    t('transitions.lineEnding.refusal.invalidInput.descriptionTooLong', {
+      maxLength: quantity(violation.maxLength),
+    }),
+  description_empty: () =>
+    t('transitions.lineEnding.refusal.invalidInput.descriptionEmpty'),
+  description_not_trimmed: () =>
+    t('transitions.lineEnding.refusal.invalidInput.descriptionNotTrimmed'),
+  note_too_long: (violation) =>
+    t('transitions.lineEnding.refusal.invalidInput.noteTooLong', {
+      maxLength: quantity(violation.maxLength),
+    }),
+  note_empty: () => t('transitions.lineEnding.refusal.invalidInput.noteEmpty'),
+  note_not_trimmed: () =>
+    t('transitions.lineEnding.refusal.invalidInput.noteNotTrimmed'),
+  note_not_admitted_by_verdict: () =>
+    t('transitions.lineEnding.refusal.invalidInput.noteNotAdmittedByVerdict'),
+  condition_on_nothing_received: () =>
+    t('transitions.lineEnding.refusal.invalidInput.conditionOnNothingReceived'),
+});
+
+/**
+ * The shared shape of a T19 blocked submission (`b799Xv`, `KOuxb`, `MBCzx`,
+ * `Hy3k1`, `QS499`, `XJ5GY`, `aNXAl`): a title naming the code, the shared
+ * "nothing saved" line, one bullet per violation this build recognizes — or
+ * the generic fallback when none survived — and the same `Back to the form`
+ * control the bounds refusal already offers.
+ */
+const renderViolationAlert = (
+  t: Translate,
+  onDismiss: () => void,
+  titleKey: string,
+  ruleBullets: BoundBullet[],
+): ReactElement => (
+  <>
+    <Alert.Title>{t(titleKey)}</Alert.Title>
+    <Alert.Description>
+      <p>{t('transitions.lineEnding.nothingSaved')}</p>
+      <Conditional
+        when={ruleBullets.length > 0}
+        otherwise={
+          <p className="mt-2">{t('transitions.lineEnding.refusal.unknown')}</p>
+        }
+      >
+        <ul className="mt-2 list-disc pl-5">
+          {ruleBullets.map(({ key, text }) => (
+            <li key={key}>{text}</li>
+          ))}
+        </ul>
+      </Conditional>
+      <Button className="mt-3" size="sm" variant="ghost" onPress={onDismiss}>
+        {t('transitions.lineEnding.refusal.bounds.back')}
+      </Button>
+    </Alert.Description>
+  </>
+);
+
+// Which sentence a bound that is not the Customer Order's arithmetic reads.
+// A lifecycle state this build does not know still gets a sentence rather than
+// no bullet at all, because the member is owed the name of every refused
+// assignment.
+/** i18next's context suffix selects the dated wording; a refusal that carries no moment reads
+ * undated rather than dated to nothing. */
+const datedContext = (moment: string | null): string | undefined =>
+  moment === null ? undefined : 'dated';
+
+/** The moment the dated wording interpolates. A refusal that carries none interpolates nothing,
+ * rather than dating the sentence to a value it never received. */
+const datedOn = (
+  moment: string | null,
+  shortTimestampDate: (value: string) => string,
+): string => (moment === null ? '' : shortTimestampDate(moment));
+
+const NOT_UNFULFILLED_KEY: Record<string, string> = {
+  cancelled: 'cancelled',
+  fulfilled: 'fulfilled',
+};
+
+/**
+ * Everything a bound bullet reads that only the rendering component can resolve: the translator, the
+ * two formatters, and the two lookups that turn an identifier the server sent into something the
+ * member can actually see on the draft in front of them.
+ *
+ * Passed as one argument so the builders below stay module-level pure functions. They were closures
+ * inside the component until `max-lines-per-function` said what their length already implied — a
+ * refusal's prose is not part of rendering it.
+ */
+interface BulletContext {
+  readonly customerNames: ReadonlyMap<string, string>;
+  readonly lineNumbers: ReadonlyMap<string, number>;
+  readonly quantity: (value: number) => string;
+  readonly shortTimestampDate: (value: string) => string;
+  readonly t: (key: string, options?: Record<string, unknown>) => string;
+}
+
+// AC-11 — the bound narrowed from what arrived to what was accepted, so the bullet names the
+// assignment field that overshoots (the line) and states the shortfall in words. This branch
+// replaced the received-quantity one rather than joining it: the server renamed the rule in the same
+// change (`demand-allocation.errors.ts`), and the old arm survived here for a release, parsing and
+// rendering a rule no deployed server can emit and kept green by a fabricated fixture
+// (review-2026-09-09).
+const exceedsAcceptedBullets = (
+  violation: Extract<
+    EndingBoundViolation,
+    { rule: 'allocations_exceed_accepted_quantity' }
+  >,
+  { lineNumbers, quantity, t }: BulletContext,
+): BoundBullet[] => {
+  const line = lineNumbers.get(violation.purchaseDraftLineId);
+  if (line === undefined) {
+    return [];
+  }
+
+  return [
+    {
+      key: `${violation.rule}-${violation.purchaseDraftLineId}`,
+      text: t('transitions.lineEnding.refusal.bounds.exceedsAccepted', {
+        accepted: quantity(violation.acceptedQuantity),
+        allocated: quantity(violation.allocatedQuantity),
+        line,
+        received: quantity(violation.receivedQuantity),
+        rejected: quantity(violation.rejectedQuantity),
+      }),
+    },
+  ];
+};
+
+const exceedsOutstandingBullets = (
+  violation: Extract<
+    EndingBoundViolation,
+    { rule: 'exceeds_outstanding_quantity' }
+  >,
+  customer: string,
+  key: string,
+  { quantity, t }: BulletContext,
+): BoundBullet[] => [
+  {
+    key,
+    text: t('transitions.lineEnding.refusal.bounds.exceedsOutstanding', {
+      assigned: quantity(violation.allocatedQuantity),
+      customer,
+      outstanding: quantity(violation.outstandingQuantity),
+    }),
+  },
+];
+
+// AC-18 — the frame dates the refused order's move ("Baltic Freight OÜ — cancelled on 24 Aug, so
+// nothing can be assigned to it"), and i18next's context suffix selects that wording. A link the
+// server locked no order for carries no moment and reads undated, which is the only sentence honest
+// about what the refusal actually knows.
+const notUnfulfilledBullets = (
+  violation: Extract<
+    EndingBoundViolation,
+    { rule: 'customer_order_not_unfulfilled' }
+  >,
+  customer: string,
+  key: string,
+  { shortTimestampDate, t }: BulletContext,
+): BoundBullet[] => {
+  const suffix =
+    NOT_UNFULFILLED_KEY[violation.customerOrderState] ?? 'unavailable';
+  const { customerOrderLastChangedAt: movedAt } = violation;
+
+  return [
+    {
+      key,
+      text: t(`transitions.lineEnding.refusal.bounds.${suffix}`, {
+        context: datedContext(movedAt),
+        customer,
+        on: datedOn(movedAt, shortTimestampDate),
+      }),
+    },
+  ];
+};
+
+// One bullet per bound, dropped only when the identifier names nothing on the draft in front of the
+// member — a bullet that cannot say *which* line or customer was refused says nothing the frame asks
+// it to say.
+const bulletOf = (
+  violation: EndingBoundViolation,
+  context: BulletContext,
+): BoundBullet[] => {
+  if (violation.rule === 'allocations_exceed_accepted_quantity') {
+    return exceedsAcceptedBullets(violation, context);
+  }
+
+  const key = `${violation.rule}-${violation.purchaseDraftLineLinkId}`;
+  const customer = context.customerNames.get(violation.purchaseDraftLineLinkId);
+  if (customer === undefined) {
+    return [];
+  }
+
+  if (violation.rule === 'exceeds_outstanding_quantity') {
+    return exceedsOutstandingBullets(violation, customer, key, context);
+  }
+
+  return notUnfulfilledBullets(violation, customer, key, context);
+};
+
+// The two per-line refusals carry their own small envelopes. Read defensively: a refusal whose
+// envelope this build cannot parse still gets its undated or unqualified sentence rather than no
+// sentence at all.
+
+/** The moment the ending was already recorded, or nothing when the envelope carries no moment. */
+const readRecordedAt = (details?: Record<string, unknown>): string | null => {
+  const recordedAt = details?.endingRecordedAt;
+
+  return typeof recordedAt === 'string' ? recordedAt : null;
+};
+
+// Which of the two ways a line's goods travelled, mapped to the sentence naming it. Keyed by the
+// raw envelope value through a `Map` so a mode this build does not know — or an envelope carrying
+// no mode at all — falls to `unknown` rather than being mistaken for one of the two.
+const MODE_MISMATCH_KEY = new Map<unknown, string>([
+  [
+    'via_warehouse',
+    'transitions.lineEnding.refusal.modeMismatch.via_warehouse',
+  ],
+  [
+    'direct_to_customer',
+    'transitions.lineEnding.refusal.modeMismatch.direct_to_customer',
+  ],
+]);
+
+const readModeMismatchKey = (details?: Record<string, unknown>): string =>
+  MODE_MISMATCH_KEY.get(details?.deliveryMode) ??
+  'transitions.lineEnding.refusal.modeMismatch.unknown';
+
+/** The refusal the member is reading. A code this build does not recognize is still owed a
+ * sentence, so it reads as `unknown` rather than as nothing. */
+const refusalStateOf = (code: string): EndingRefusalState =>
+  REFUSAL_STATE_BY_CODE[code] ?? 'unknown';
+
+/**
+ * A refusal with no per-bound breakdown: one sentence naming the rule, then the shared
+ * "nothing saved" line.
+ */
+const renderSentence = (t: Translate, sentence: string): ReactElement => {
+  return (
+    <Alert.Description>
+      {`${sentence} ${t('transitions.lineEnding.nothingSaved')}`}
+    </Alert.Description>
+  );
+};
+
+/** The sentence a refusal with no per-bound breakdown states on its own. */
+const renderGeneric = (t: Translate, key: EndingRefusalState): ReactElement => {
+  return renderSentence(t, t(`transitions.lineEnding.refusal.${key}`));
+};
+
+// AC-20a — "naming when and by whom", so the sentence is interpolated from the refusal's own
+// envelope rather than being the generic one.
+const alreadyRecordedSentence = (
+  t: Translate,
+  recordedAt: string | null,
+  shortTimestampDate: (value: string) => string,
+): string => {
+  return t('transitions.lineEnding.refusal.alreadyRecorded', {
+    context: datedContext(recordedAt),
+    on: datedOn(recordedAt, shortTimestampDate),
+  });
+};
+
+/**
+ * What the Arrival Confirmation was refused for (AC-18), stated as the approved
+ * frame `s5EPi` writes it: the heading, that nothing of the confirmation was
+ * saved, **one bullet per broken bound naming it**, and the closing line saying
+ * every bound is re-checked when the confirmation is recorded rather than when
+ * the member started filling it in.
+ *
+ * The bullets are the server's own breakdown, not a guess: the domain publishes
+ * one entry per failing bound in the refusal's `details.violations`, so the only
+ * work here is resolving each identifier to the line number or customer name the
+ * member typed against. A refusal that carries no breakdown falls back to the
+ * one sentence the three bounds share, rather than inventing bounds the response
+ * does not contain.
+ *
+ * `Back to the form` dismisses the refusal and leaves every figure the member
+ * entered exactly where it was — a refused confirmation changed nothing, so
+ * there is nothing to re-enter.
+ */
+export const EndingRefusalAlert = ({
+  code,
+  details,
+  draft,
+  onDismiss,
+}: EndingRefusalAlertProps): ReactElement | null => {
+  const { t } = useTranslation('purchase-draft');
+  const linkNaming = useLinkNaming();
+  const { quantity, shortTimestampDate } = useLocaleFormat();
+
+  if (code === undefined) {
+    return null;
+  }
+
+  const lineNumbers = new Map(
+    draft.lines.map((line, index) => [line.id, index + 1]),
+  );
+  const customerNames = new Map(
+    draft.lines.flatMap((line) =>
+      line.links.map((link) => [link.id, linkNaming(link)] as const),
+    ),
+  );
+  const bulletContext: BulletContext = {
+    customerNames,
+    lineNumbers,
+    quantity,
+    shortTimestampDate,
+    t,
+  };
+
+  // One bullet per bound, dropped only when the identifier names nothing on the
+  // draft in front of the member — a bullet that cannot say *which* line or
+  // customer was refused says nothing the frame asks it to say.
+  const bullets = endingBoundViolations(details).flatMap((violation) =>
+    bulletOf(violation, bulletContext),
+  );
+
+  // T19 — the three refusal codes this feature adds, each dispatched through
+  // its own rule table (`conditionSplitTextByRule`, `conformanceTextByRule`,
+  // `invalidInputTextByRule` above) and rendered through the shared
+  // `renderViolationAlert` shape.
+  const conditionSplitBullets = bulletsFor(
+    endingConditionViolations(conditionSplitViolationSchema, details),
+    conditionSplitTextByRule(t, quantity),
+  );
+  const conformanceBullets = bulletsFor(
+    endingConditionViolations(conformanceViolationSchema, details),
+    conformanceTextByRule(t),
+  );
+  const invalidInputBullets = bulletsFor(
+    endingConditionViolations(invalidInputViolationSchema, details),
+    invalidInputTextByRule(t, quantity),
+  );
+
+  // The two per-line refusals carry their own small envelopes, read defensively above
+  // (`readRecordedAt`, `readModeMismatchKey`).
+  const recordedAt = readRecordedAt(details);
+
+  const content: Record<EndingRefusalState, ReactElement> = {
+    // AC-20a — "naming when and by whom", so the sentence is interpolated from
+    // the refusal's own envelope rather than being the generic one.
+    alreadyRecorded: renderSentence(
+      t,
+      alreadyRecordedSentence(t, recordedAt, shortTimestampDate),
+    ),
+    // AC-20 — "naming which of the two ways that line's goods travelled".
+    modeMismatch: renderSentence(t, t(readModeMismatchKey(details))),
+    invalidState: renderGeneric(t, 'invalidState'),
+    unknown: renderGeneric(t, 'unknown'),
+    conditionSplit: renderViolationAlert(
+      t,
+      onDismiss,
+      'transitions.lineEnding.refusal.conditionSplit.title',
+      conditionSplitBullets,
+    ),
+    conformance: renderViolationAlert(
+      t,
+      onDismiss,
+      'transitions.lineEnding.refusal.conformance.title',
+      conformanceBullets,
+    ),
+    invalidInput: renderViolationAlert(
+      t,
+      onDismiss,
+      'transitions.lineEnding.refusal.invalidInput.title',
+      invalidInputBullets,
+    ),
+    bounds: (
+      <>
+        <Alert.Title>
+          {t('transitions.lineEnding.refusal.bounds.title')}
+        </Alert.Title>
+        <Alert.Description>
+          <p>{t('transitions.lineEnding.nothingSaved')}</p>
+          <Conditional
+            when={bullets.length > 0}
+            otherwise={
+              <p className="mt-2">
+                {t('transitions.lineEnding.refusal.allocationOutOfBounds')}
+              </p>
+            }
+          >
+            <ul className="mt-2 list-disc pl-5">
+              {bullets.map(({ key, text }) => (
+                <li key={key}>{text}</li>
+              ))}
+            </ul>
+          </Conditional>
+          <p className="mt-2">
+            {t('transitions.lineEnding.refusal.bounds.checkedAgain')}
+          </p>
+          <Button
+            className="mt-3"
+            size="sm"
+            variant="ghost"
+            onPress={onDismiss}
+          >
+            {t('transitions.lineEnding.refusal.bounds.back')}
+          </Button>
+        </Alert.Description>
+      </>
+    ),
+  };
+
+  return (
+    <Alert role="alert" status="danger">
+      <Alert.Indicator />
+      <Alert.Content>{content[refusalStateOf(code)]}</Alert.Content>
+    </Alert>
+  );
+};

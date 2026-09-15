@@ -30,6 +30,7 @@ import {
   persistWorkspaceGraph,
 } from 'test/factories/entity-factories';
 import type { Logger } from 'typeorm';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 const now = new Date('2026-08-12T12:00:00.000Z');
 

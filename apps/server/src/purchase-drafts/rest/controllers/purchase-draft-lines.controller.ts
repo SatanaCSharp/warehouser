@@ -1,7 +1,7 @@
 import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
 import type { PurchaseDraftLineListEntry } from '@warehouser/contracts/purchase-drafts';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { map } from 'lodash';
+import { map } from 'lodash-es';
 import { PurchaseDraftLineListQueryDto } from 'purchase-drafts/rest/dtos/purchase-draft-mutation.dto';
 import { toLineListEntryResponse } from 'purchase-drafts/rest/mappers/purchase-draft-response.mapper';
 import { ListPurchaseDraftLinesQuery } from 'purchase-drafts/usecases/queries/list-purchase-draft-lines.query';

@@ -1,7 +1,6 @@
+import type { Customer } from '@warehouser/contracts/customers';
 import { useListCustomersQuery } from 'modules/customer/api/customer-api';
 import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
-
-import type { Customer } from '@warehouser/contracts/customers';
 
 /**
  * The Warehouse's Customers, loaded for whoever asks (T21). The gate the route

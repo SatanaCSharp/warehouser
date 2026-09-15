@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { Maybe } from '@warehouser/shared-types/utils';
 import { assert, assertDefined } from '@warehouser/utils/asserts';
+import { isDefined } from '@warehouser/utils/predicates';
 import { replacementRequiredError } from 'access/domain/errors/access.errors';
+import { isDistinctReplacementRole } from 'access/domain/predicates/workspace-authority.predicates';
 import { RoleLifecycleRepository } from 'shared/domain/repositories/role-lifecycle.repository';
 
 @Injectable()
@@ -15,11 +17,14 @@ export class RoleDeletionService {
     sourceRoleId: string,
     replacementRoleId?: Maybe<string>,
   ): Promise<void> {
-    if (!replacementRoleId) {
+    if (!isDefined(replacementRoleId)) {
       return;
     }
 
-    assert(replacementRoleId !== sourceRoleId, replacementRequiredError());
+    assert(
+      isDistinctReplacementRole(replacementRoleId, sourceRoleId),
+      replacementRequiredError(),
+    );
 
     const replacement = await this.roleLifecycleRepository.lockCustomRole(
       warehouseId,

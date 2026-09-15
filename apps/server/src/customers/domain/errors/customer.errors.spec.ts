@@ -7,6 +7,7 @@ import {
   customerNameTakenError,
   customerTargetUnavailableError,
 } from 'customers/domain/errors/customer.errors';
+import { describe, expect, it } from 'vitest';
 
 describe('customers error factories', () => {
   // openapi.yaml `InvalidCustomerInput` — `details: { field, rule }`, and never the submitted

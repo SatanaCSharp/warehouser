@@ -1,11 +1,9 @@
-import { useTranslation } from 'react-i18next';
-
+import type { CustomerOrder } from '@warehouser/contracts/customer-orders';
 import { useCustomerOrderNaming } from 'modules/customer-order/hooks/projections/useCustomerOrderNaming';
+import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FormSelectField } from 'shared/components/FormSelectField';
 import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
-
-import type { CustomerOrder } from '@warehouser/contracts/customer-orders';
-import type { ReactElement } from 'react';
 
 export type CustomerOrderPickerProps = {
   className?: string;

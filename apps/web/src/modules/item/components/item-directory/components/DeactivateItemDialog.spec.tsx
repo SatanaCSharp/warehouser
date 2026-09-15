@@ -1,13 +1,11 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
-
+import type { Item } from '@warehouser/contracts/items';
 import { DeactivateItemDialog } from 'modules/item/components/item-directory/components/DeactivateItemDialog';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { DialogHost } from 'shared/components/DialogHost';
 import { renderWithProviders } from 'test/render';
-
-import type { Item } from '@warehouser/contracts/items';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import { describe, expect, it, vi } from 'vitest';
 
 // T18 — deactivates an Item while keeping its history readable (AC-06d, frame
 // `s5EPi` "Deactivate an item"). Nothing here is filled in or validated, so it

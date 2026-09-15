@@ -1,20 +1,22 @@
 import { Injectable } from '@nestjs/common';
 import { assert, assertDefined } from '@warehouser/utils/asserts';
+import { isNull } from '@warehouser/utils/predicates';
 import {
   workspaceProtectedRoleError,
   workspaceRoleNameConflictError,
 } from 'access/domain/errors/workspace-access.errors';
-import { isProtectedWorkspaceOwnerRoleKind } from 'access/domain/predicates/workspace-authority.predicates';
 import {
-  assertAssignableWorkspacePermissions,
-  validateWorkspaceRoleName,
-  type WorkspaceRoleWriteProjection,
-} from 'access/usecases/commands/create-workspace-role.command';
+  isProtectedWorkspaceOwnerRoleKind,
+  isTheSameRole,
+} from 'access/domain/predicates/workspace-authority.predicates';
+import { assertAssignableWorkspacePermissions } from 'access/domain/services/workspace-role-permissions.service';
+import type { WorkspaceRoleWriteProjection } from 'access/usecases/commands/create-workspace-role.command';
 import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { WorkspaceReadRepository } from 'shared/domain/repositories/workspace-read.repository';
 import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository';
 import { workspaceTargetUnavailableError } from 'shared/errors/cross-module.errors';
+import { validatedAccessName } from 'shared/errors/invalid-name.error';
 
 export interface UpdateWorkspaceRoleInput {
   readonly roleId: string;
@@ -41,7 +43,7 @@ export class UpdateWorkspaceRoleCommand {
     currentUser: WorkspaceCurrentUser,
     input: UpdateWorkspaceRoleInput,
   ): Promise<WorkspaceRoleWriteProjection> {
-    const name = validateWorkspaceRoleName(input.name);
+    const name = validatedAccessName(input.name);
 
     const role = await this.workspaceRoleLifecycleRepository.lockRoleById(
       currentUser.workspaceId,
@@ -64,7 +66,7 @@ export class UpdateWorkspaceRoleCommand {
         name,
       );
     assert(
-      matchingRole === null || matchingRole.id === role.id,
+      isNull(matchingRole) || isTheSameRole(matchingRole.id, role.id),
       workspaceRoleNameConflictError(),
     );
 

@@ -1,5 +1,3 @@
-import { z } from 'zod';
-
 import type {
   PreReceiptConformanceCreate,
   PurchaseDraftLine,
@@ -10,6 +8,7 @@ import type {
   RejectionSource,
 } from '@warehouser/contracts/purchase-drafts';
 import type { FormParse, FormParseResult } from 'shared/utils/form-parse';
+import { z } from 'zod';
 
 /**
  * One refusal row of the condition block (T15, AC-05/AC-08). `ConditionBlock`
@@ -234,7 +233,7 @@ export type InvalidInputViolation = z.infer<typeof invalidInputViolationSchema>;
  * Nothing survives an envelope this build cannot parse, which is what lets the
  * alert fall back to its own sentence rather than render an empty list.
  */
-export const endingConditionViolations = <TSchema extends z.ZodTypeAny>(
+export const endingConditionViolations = <TSchema extends z.ZodType>(
   schema: TSchema,
   details: Record<string, unknown> | undefined,
 ): z.infer<TSchema>[] => {

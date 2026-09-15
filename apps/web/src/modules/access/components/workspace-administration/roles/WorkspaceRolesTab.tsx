@@ -1,10 +1,8 @@
-import { useTranslation } from 'react-i18next';
-
 import { CreateWorkspaceRoleAction } from 'modules/access/components/workspace-administration/roles/CreateWorkspaceRoleAction';
 import { WorkspaceRoleDirectory } from 'modules/access/components/workspace-administration/roles/WorkspaceRoleDirectory';
 import { useWorkspaceRoles } from 'modules/access/hooks/queries/useWorkspaceRoles';
-
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 
 /**
  * The Workspace roles tab: the Workspace Role list, the editor for the

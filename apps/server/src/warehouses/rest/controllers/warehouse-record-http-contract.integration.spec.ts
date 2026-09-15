@@ -7,6 +7,7 @@ import {
   now,
   setupWarehouseHttpContractHarness,
 } from 'test/harnesses/warehouse-http-contract.harness';
+import { describe, expect, it } from 'vitest';
 
 // T25 DoD — the Warehouse-record half of the `/api/v1/workspace/warehouses*`
 // HTTP contract: `GET /`, `POST /`, `PATCH /:warehouseId`,

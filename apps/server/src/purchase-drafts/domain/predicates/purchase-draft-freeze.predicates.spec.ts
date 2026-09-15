@@ -8,6 +8,7 @@ import {
   isEmptyDraft,
   isReadyForOrderingDraft,
 } from 'purchase-drafts/domain/predicates/purchase-draft-freeze.predicates';
+import { describe, expect, it } from 'vitest';
 
 describe('purchase-draft freeze/closure/discard predicates', () => {
   // AC-14a — "a draft is only ready once it says what is being ordered": readiness requires at

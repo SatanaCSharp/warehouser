@@ -1,9 +1,7 @@
 import { Button, Card, Link } from '@heroui/react';
-import { useTranslation } from 'react-i18next';
-
-import { ROUTES } from 'shared/constants/routes';
-
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ROUTES } from 'shared/constants/routes';
 
 export const DesignSystemExample = (): ReactElement => {
   const { t } = useTranslation('home');

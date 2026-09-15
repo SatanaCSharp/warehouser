@@ -1,9 +1,8 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
-
 import { LoginForm } from 'modules/auth/login/components/LoginForm';
 import { renderWithProviders } from 'test/render';
+import { describe, expect, it, vi } from 'vitest';
 
 describe('LoginForm', () => {
   it('shows validation errors and does not submit invalid input', async () => {

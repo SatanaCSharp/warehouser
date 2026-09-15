@@ -1,12 +1,10 @@
 import { Alert } from '@heroui/react';
-import { useTranslation } from 'react-i18next';
-
+import type { PurchaseDraftDetail } from '@warehouser/contracts/purchase-drafts';
 import { useDriftBullets } from 'modules/purchase-draft/hooks/projections/useDriftBullets';
 import { useMinuteTimestamp } from 'modules/purchase-draft/hooks/projections/useMinuteTimestamp';
-import { Conditional } from 'shared/components/Conditional';
-
-import type { PurchaseDraftDetail } from '@warehouser/contracts/purchase-drafts';
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Conditional } from 'shared/components/Conditional';
 
 export type PurchaseDraftDriftAlertProps = {
   draft: PurchaseDraftDetail;

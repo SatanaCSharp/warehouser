@@ -1,12 +1,10 @@
-import { useTranslation } from 'react-i18next';
-
-import { WarehousePersonRow } from 'modules/workspace/components/workspace-administration/warehouses/WarehousePersonRow';
-
 import type {
   Warehouse,
   WorkspaceUser,
 } from '@warehouser/contracts/workspaces';
+import { WarehousePersonRow } from 'modules/workspace/components/workspace-administration/warehouses/WarehousePersonRow';
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 
 type WarehousePeopleListProps = {
   people: WorkspaceUser[];

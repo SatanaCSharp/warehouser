@@ -103,10 +103,10 @@ documentation.
      existing local environment file; setup commands and generated guidance must use only the
      placeholder/development values documented in `.env.example`;
    - ensure every managed instruction block states that coding agents must not add telemetry;
-   - refresh the pre-command guards from `ai/hooks/` in the target's hook configuration: add a
-     guard the target does not yet run, repoint a hook that names a moved or renamed script, and
-     replace a hook that inlines a guard's rule with a call to the canonical script, preserving
-     unrelated hooks and hand-written settings;
+   - refresh the hooks from `ai/hooks/` in the target's hook configuration: add a hook the target
+     does not yet run, repoint a hook that names a moved or renamed script, and replace a hook that
+     inlines a script's rule with a call to the canonical script, preserving unrelated hooks and
+     hand-written settings;
    - remove destinations whose canonical sources no longer exist only when ownership is proven
      and only inside the target's generated directories or managed blocks;
    - leave unmanaged files and content outside managed blocks byte-for-byte unchanged.
@@ -130,7 +130,7 @@ documentation.
    - for Codex, every managed custom-agent file parses as TOML, contains all required fields,
      points to an existing canonical role, and has a unique `name` within its workspace or app
      scope;
-   - every installed pre-command guard resolves to an existing script under `ai/hooks/` and
+   - every installed hook resolves to an existing script under `ai/hooks/` and
      `ai/hooks/check-bypass-samples.sh` passes;
    - a second synchronization with unchanged inputs would produce no diff.
 10. Show `git status --short` and summarize added, updated, relinked, removed, unchanged,

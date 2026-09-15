@@ -1,10 +1,10 @@
 import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import { DiscoveryService, MetadataScanner, Reflector } from '@nestjs/core';
+import { isDefined } from '@warehouser/utils/predicates';
 import { DbTransactionService } from 'shared/database/db-transaction.service';
-import {
-  TRANSACTIONAL_KEY,
-  type TransactionalMetadata,
-} from 'shared/decorators/transactional.decorator';
+import type { TransactionalMetadata } from 'shared/decorators/transactional.decorator';
+import { TRANSACTIONAL_KEY } from 'shared/decorators/transactional.decorator';
+import { isCallable } from 'shared/predicates/value-shape.predicates';
 
 type ProviderInstance = Record<string, unknown>;
 type ProviderMethod = (...arguments_: unknown[]) => unknown;
@@ -30,17 +30,18 @@ export class TransactionExecutor implements OnApplicationBootstrap {
     }
 
     const prototype = Object.getPrototypeOf(candidate) as object | null;
-    if (!prototype) {
+    if (!isDefined(prototype)) {
       return;
     }
 
-    this.metadataScanner.scanFromPrototype(
-      candidate,
+    // `getAllMethodNames` replaces the deprecated `scanFromPrototype`. It walks the same prototype
+    // chain with the same filtering (own properties, no accessors, no constructor, functions only)
+    // and stops at `Object.prototype`; it returns the names instead of mapping a callback over them.
+    for (const methodName of this.metadataScanner.getAllMethodNames(
       prototype,
-      (methodName) => {
-        this.wrapTransactionalMethod(candidate, methodName);
-      },
-    );
+    )) {
+      this.wrapTransactionalMethod(candidate, methodName);
+    }
   }
 
   private wrapTransactionalMethod(
@@ -48,16 +49,19 @@ export class TransactionExecutor implements OnApplicationBootstrap {
     methodName: string,
   ): void {
     const candidate = instance[methodName];
-    if (typeof candidate !== 'function') {
+    if (!isCallable(candidate)) {
       return;
     }
     const originalMethod = candidate as ProviderMethod;
 
-    const metadata = this.reflector.get<TransactionalMetadata>(
+    // `Reflector.get` is typed to return `TResult`, but returns `undefined` for a method that
+    // carries no `@Transactional` metadata — which is most of them. The `| undefined` restores
+    // that case to the type so the early return below stays reachable.
+    const metadata = this.reflector.get<TransactionalMetadata | undefined>(
       TRANSACTIONAL_KEY,
       originalMethod,
     );
-    if (!metadata) {
+    if (!isDefined(metadata)) {
       return;
     }
 
@@ -81,6 +85,6 @@ export class TransactionExecutor implements OnApplicationBootstrap {
   }
 
   private isProviderInstance(value: unknown): value is ProviderInstance {
-    return typeof value === 'object' && value !== null;
+    return typeof value === 'object' && isDefined(value);
   }
 }

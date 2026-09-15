@@ -2,13 +2,15 @@ import { ForbiddenException } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { configureHttpPlatform } from 'shared/config/http-platform.bootstrap';
 import { GlobalHttpExceptionFilter } from 'shared/errors/global-http-exception.filter';
+import type { Mock } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 describe('configureHttpPlatform', () => {
   it('enables credentialed CORS, origin enforcement, and the safe global filter', () => {
     const app = {
-      enableCors: jest.fn(),
-      use: jest.fn(),
-      useGlobalFilters: jest.fn(),
+      enableCors: vi.fn(),
+      use: vi.fn(),
+      useGlobalFilters: vi.fn(),
     } as unknown as NestExpressApplication;
 
     configureHttpPlatform(app, {
@@ -27,7 +29,7 @@ describe('configureHttpPlatform', () => {
       expect.any(GlobalHttpExceptionFilter),
     );
 
-    const middleware = (app.use as jest.Mock).mock.calls[0]?.[0] as (
+    const middleware = (app.use as Mock).mock.calls[0]?.[0] as (
       request: {
         method: string;
         originalUrl: string;
@@ -36,8 +38,8 @@ describe('configureHttpPlatform', () => {
       response: unknown,
       next: (error?: unknown) => void,
     ) => void;
-    const authNext = jest.fn();
-    const unrelatedNext = jest.fn();
+    const authNext = vi.fn();
+    const unrelatedNext = vi.fn();
 
     middleware(
       {

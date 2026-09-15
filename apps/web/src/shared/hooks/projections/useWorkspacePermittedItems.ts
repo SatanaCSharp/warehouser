@@ -1,9 +1,8 @@
+import type { WorkspacePermissionId } from '@warehouser/shared-types/enums';
 import {
   hasWorkspacePermission,
   useCurrentWorkspaceContext,
 } from 'shared/hooks/queries/useWorkspacePermissions';
-
-import type { WorkspacePermissionId } from '@warehouser/shared-types/enums';
 
 /** What a descriptor must carry for this hook to decide whether it is offered. */
 export type WorkspacePermissionScopedItem = {

@@ -28,7 +28,116 @@ pnpm lint
 pnpm test
 ```
 
+Linting is oxlint (Prettier remains the formatter). `pnpm lint` runs each package's own
+`oxlint --type-aware --max-warnings=0 src` through turbo; `pnpm lint:all` lints the whole tree in one
+run, and `pnpm --filter <package> lint:fix` applies oxlint's safe fixes first. See
+[Linting with oxlint](docs/system/guides/linting-with-oxlint.md).
+
 See `package.json` and the package-level manifests for additional commands.
+
+## Codebase indexes for coding agents
+
+Two root `devDependencies` let an agent find code without reading it. They are project-local: no
+global install, never pointed outside this repository, and everything they produce is git-ignored.
+
+- [CodeGraph](https://www.npmjs.com/package/@colbymchenry/codegraph) indexes every symbol and the
+  edges between them, so "where is this, who calls it, what breaks if I change it" is a database
+  query instead of a directory walk.
+- [Repomix](https://www.npmjs.com/package/repomix) packs a directory into one compressed snapshot —
+  the tree plus each file's declarations, with the bodies removed.
+
+Build the index once after cloning:
+
+```sh
+pnpm graph:init
+```
+
+That writes `.codegraph/codegraph.db` (~90 MB, git-ignored) and takes a couple of seconds — 1,394
+files, 18,565 symbols and 50,678 edges at the time of writing. Repomix needs no initialization; it
+reads `repomix.config.jsonc` at the repository root.
+
+```sh
+pnpm graph:sync      # re-index what changed; run after pulling
+pnpm graph:status    # index freshness and statistics
+pnpm graph query <symbol>            # where a symbol is defined
+pnpm graph node <symbol>             # its signature, members, callers and callees
+pnpm graph impact <symbol>           # what a change to it would reach
+pnpm snapshot <dir>                  # compressed snapshot of a directory
+pnpm snapshot:tree                   # whole-repo directory structure, ~19k tokens
+```
+
+Use them in that order — query the graph, read the exact fragment it points at, and snapshot a
+directory only when the shape of the whole area is the question. A compressed snapshot of
+`apps/server/src` costs 166,940 tokens against 897,841 for the same files packed whole.
+
+Syncing is deliberately not part of the commit hook, and CodeGraph's telemetry is forced off by the
+`graph*` scripts because this repository does not add telemetry. The full procedure, including what
+must never enter a snapshot, is in
+[Exploring the codebase with CodeGraph and Repomix](docs/system/guides/exploring-the-codebase-with-codegraph-and-repomix.md).
+
+## Writing application code
+
+`docs/system` holds the durable rules for this repository — the two architecture documents, the
+guides, and the Accepted ADRs. They are the source of truth, and they are only useful if they are in
+context **before** a file is written rather than cited after it.
+
+That is what the [`writing-app-code`](ai/skills/writing-app-code/SKILL.md) skill is for. It must be
+invoked before the first edit to any production source file under `apps/web/src` or
+`apps/server/src` — a feature, a refactor, a one-line fix, an edit made by hand or produced by
+`/implement`. Tests are out of scope: `*.spec.ts(x)`, `apps/*/src/test/**`, and `**/__tests__/**`
+are owned by [`placing-web-tests.md`](docs/system/guides/placing-web-tests.md) and
+[`server-architecture.md`](docs/system/server-architecture.md) §testing.
+
+The skill is a router, not a rulebook — it deliberately restates no rule, because a paraphrase
+becomes a second and quietly wrong source of truth the moment the guide it copied is edited. What it
+does is read the index for the app being changed, select the documents the touched paths pull in,
+and put those documents in context in full:
+
+| Change touches                               | Index it reads                                               |
+| -------------------------------------------- | ------------------------------------------------------------ |
+| `apps/web/src`                               | [`docs/system/web-index.md`](docs/system/web-index.md)       |
+| `apps/server/src`                            | [`docs/system/server-index.md`](docs/system/server-index.md) |
+| Both, or `packages/contracts` reached by one | **Both indexes**, never the nearer one                       |
+
+The per-path selectors that turn "I am adding a dialog" or "I am touching `usecases/`" into a
+reading list live in the skill's references —
+[`web-manifest.md`](ai/skills/writing-app-code/references/web-manifest.md) and
+[`server-manifest.md`](ai/skills/writing-app-code/references/server-manifest.md). They are a head
+start, not the authority; where a selector and an index disagree, the index wins.
+
+Two things make the rule hold rather than merely exist. `AGENTS.md` section **Writing application
+code** states it for every agent, and `ai/hooks/require-architecture-skill.sh` names the governing
+index when a gated file is about to be written — once per session per app, as a reminder rather than
+a refusal, since a hook can see the path but not the agent's context.
+
+Running the skill first is what leaves `/code-review-front-end` and `/code-review-back-end` nothing
+to find: the same documents, asked at the two ends of the same change.
+
+### Keeping the skill's references in sync
+
+An installed skill is a materialized copy, so `ai/skills/writing-app-code/references/docs-system/`
+carries a **byte-for-byte mirror** of `docs/system`. `docs/system` stays the source of truth; the
+mirror exists only so an installed copy of the skill — in `.claude/skills/`, `.codex/skills/`, a
+worktree, or a subagent with a narrow tool set — holds the same instructions the repository does.
+Nothing under `docs-system/` is ever edited by hand; it is generated, and an edit there is reverted
+by the next sync.
+
+```sh
+ai/skills/writing-app-code/scripts/sync-references.sh --check   # verify; non-zero on any drift
+ai/skills/writing-app-code/scripts/sync-references.sh           # resync from docs/system
+```
+
+The check reports `MISSING`, `STALE`, and `ORPHAN` files against
+`references/docs-system.sha256`, which is hashed from the source documents. Run it after any change
+under `docs/system` — including the same change that updates an index, since `AGENTS.md` already
+requires an index entry to move with its document.
+
+The full procedure is the [`/sync-architecture-references`](ai/commands/sync-architecture-references.md)
+command: verify, resync the mirror, reconcile the two changed-path selectors against the updated
+index by hand (mapping a code shape onto a document is a judgment no script can extract), fix any
+stale path elsewhere in the skill, and recopy the skill into the installed agent adapters. Do not
+commit with the check failing — a stale mirror is an installed skill instructing an agent from rules
+the repository has already changed.
 
 ## AI workflow
 
@@ -145,6 +254,11 @@ not replace each other:
 | ------------------------------------------------- | --------------------------------------------------------------- | --------------------------------------------------------------- |
 | `/code-review-front-end`, `/code-review-back-end` | Does the code follow the rules this repository already decided? | `docs/system` guides, architecture documents, and Accepted ADRs |
 | `/review`                                         | Does the change do what the specification says?                 | `spec.md` acceptance criteria and the artifact chain            |
+
+Both conformance gates read the same documents the
+[`writing-app-code`](ai/skills/writing-app-code/SKILL.md) skill puts in context before the code is
+written. They are the two ends of one question, and neither replaces the other: the skill is what
+should leave these gates with nothing to find, and these gates are what prove it did.
 
 The conformance gates are app-scoped. Run `/code-review-front-end` when the diff touches `apps/web`,
 `/code-review-back-end` when it touches `apps/server`, and both when the change crosses the

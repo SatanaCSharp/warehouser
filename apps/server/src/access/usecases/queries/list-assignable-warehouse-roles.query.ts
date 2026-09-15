@@ -6,6 +6,7 @@ import {
   WarehouseMembershipAssignmentRepository,
 } from 'shared/domain/repositories/warehouse-membership-assignment.repository';
 import { workspaceTargetUnavailableError } from 'shared/errors/cross-module.errors';
+import { scopedToWorkspace } from 'shared/predicates/tenancy.predicates';
 
 export interface ListAssignableWarehouseRolesInput {
   readonly warehouseId: string;
@@ -39,7 +40,7 @@ export class ListAssignableWarehouseRolesQuery {
         input.warehouseId,
       );
     assert(
-      warehouseWorkspaceId === currentUser.workspaceId,
+      scopedToWorkspace(warehouseWorkspaceId, currentUser.workspaceId),
       workspaceTargetUnavailableError(),
     );
 

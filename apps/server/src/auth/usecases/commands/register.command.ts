@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { assert } from '@warehouser/utils/asserts';
-import { type AuthRuntime, authRuntime } from 'auth/domain/auth-runtime';
+import { isDefined } from '@warehouser/utils/predicates';
 import { Account } from 'auth/domain/entities/account';
 import { Session } from 'auth/domain/entities/session';
 import { User } from 'auth/domain/entities/user';
@@ -10,20 +10,19 @@ import {
   AuthInvalidInputError,
   AuthRegistrationUnavailableError,
 } from 'auth/domain/errors/auth.errors';
-import {
-  type GeneratedSessionSecret,
-  generateSessionSecret,
-} from 'auth/domain/security/session-secret';
+import { generateSessionSecret } from 'auth/domain/security/session-secret';
 import { AuthRegistrationService } from 'auth/domain/services/auth-registration.service';
 import { SessionId } from 'auth/domain/value-objects/identity-id';
 import { SessionDigest } from 'auth/domain/value-objects/session-digest';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
 import { EmailAddress } from 'shared/domain/security/email-address';
-import { isSupportedEmail } from 'shared/domain/security/is-supported-email';
-import { isSupportedPassword } from 'shared/domain/security/is-supported-password';
 import { Password } from 'shared/domain/security/password';
 import { hashPassword } from 'shared/domain/security/password-hashing';
+import {
+  isSupportedEmail,
+  isSupportedPassword,
+} from 'shared/predicates/credential.predicates';
 import type {
   ProvisionRegistrationResult,
   WorkspaceProvisioningService,
@@ -46,43 +45,42 @@ export class RegisterCommand {
     private readonly authentication: AuthenticationRepository,
     private readonly registrations: AuthRegistrationService,
     private readonly workspaceProvisioning: WorkspaceProvisioningService,
-    private readonly hash: typeof hashPassword = hashPassword,
-    private readonly generateSecret: () => GeneratedSessionSecret = generateSessionSecret,
-    private readonly runtime: AuthRuntime = authRuntime,
   ) {}
 
   @Transactional()
   async execute(input: RegisterInput): Promise<RegisteredSession> {
-    const emailSupported = isSupportedEmail(input.email);
-    const passwordSupported = isSupportedPassword(input.password);
     assert(
-      emailSupported && passwordSupported,
+      isSupportedEmail(input.email) && isSupportedPassword(input.password),
       AuthInvalidInputError({
-        ...(!emailSupported && { email: 'unsupported' }),
-        ...(!passwordSupported && { password: 'unsupported' }),
+        ...(isSupportedEmail(input.email) ? {} : { email: 'unsupported' }),
+        ...(isSupportedPassword(input.password)
+          ? {}
+          : { password: 'unsupported' }),
       }),
     );
     const email = EmailAddress.create(input.email);
     const password = Password.create(input.password);
 
     assert(
-      !(await this.authentication.findAccountByNormalizedEmail(email.value)),
+      !isDefined(
+        await this.authentication.findAccountByNormalizedEmail(email.value),
+      ),
       AuthEmailAlreadyRegisteredError(),
     );
 
-    const credential = await this.hash(password.value);
+    const credential = await hashPassword(password.value);
     const account = Account.create({
-      id: this.runtime.identityId(),
+      id: randomUUID(),
       email: email.value,
       credential,
     });
     const user = User.forAccount(account);
-    const generated = this.generateSecret();
+    const generated = generateSessionSecret();
     const session = Session.establish({
-      id: SessionId.create(this.runtime.sessionId()),
+      id: SessionId.create(randomUUID()),
       accountId: account.id,
       digest: SessionDigest.create(generated.digest),
-      establishedAt: this.runtime.now(),
+      establishedAt: new Date(),
     });
     // The registrant's Workspace relation is established at creation and
     // never re-derived from Warehouse memberships (spec.md §1, second

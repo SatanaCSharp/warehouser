@@ -1,13 +1,11 @@
 import { isRedirect } from '@tanstack/react-router';
+import type { WorkspaceContext } from '@warehouser/contracts/workspaces';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { resolveLandingContext } from 'guards/landing.guard';
 import { ROUTES } from 'shared/constants/routes';
-import { makeStore } from 'store';
-
-import type { WorkspaceContext } from '@warehouser/contracts/workspaces';
 import type { AppStore } from 'store';
+import { makeStore } from 'store';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const WAREHOUSE_A = '00000000-0000-4000-8000-000000000010';
 const WAREHOUSE_B = '00000000-0000-4000-8000-000000000011';

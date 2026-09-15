@@ -1,12 +1,10 @@
+import type { CustomerOrder } from '@warehouser/contracts/customer-orders';
 import { PermissionId } from '@warehouser/shared-types/enums';
 import compact from 'lodash/compact';
-import { useTranslation } from 'react-i18next';
-
 import { customerOrderIdentity } from 'modules/customer-order/utils/customer-order-identity';
+import { useTranslation } from 'react-i18next';
 import { useArchivedWarehouse } from 'shared/hooks/projections/useArchivedWarehouse';
 import { usePermittedItems } from 'shared/hooks/projections/usePermittedItems';
-
-import type { CustomerOrder } from '@warehouser/contracts/customer-orders';
 
 export type CustomerOrderAction = {
   id: 'amend' | 'redirect' | 'cancel';

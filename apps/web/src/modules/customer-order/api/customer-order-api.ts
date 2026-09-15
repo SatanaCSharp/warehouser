@@ -1,13 +1,3 @@
-import {
-  customerOrderSchema,
-  demandLineSchema,
-} from '@warehouser/contracts/customer-orders';
-import { ErrorCode } from '@warehouser/shared-types/enums';
-import { z } from 'zod';
-
-import { api } from 'shared/api/client/api-client';
-import { fieldErrorsForCode } from 'shared/utils/field-errors';
-
 import type {
   CustomerOrder,
   CustomerOrderAmend,
@@ -17,6 +7,14 @@ import type {
   CustomerOrderRedirect,
   DemandLine,
 } from '@warehouser/contracts/customer-orders';
+import {
+  customerOrderSchema,
+  demandLineSchema,
+} from '@warehouser/contracts/customer-orders';
+import { ErrorCode } from '@warehouser/shared-types/enums';
+import { api } from 'shared/api/client/api-client';
+import { fieldErrorsForCode } from 'shared/utils/field-errors';
+import { z } from 'zod';
 
 const demandPath = (warehouseId: string): string =>
   `/api/v1/warehouses/${warehouseId}/demand`;
@@ -75,21 +73,33 @@ type RedirectCustomerOrderArgs = {
  * built by hand rather than through `URLSearchParams` so undefined values are
  * omitted entirely instead of serialized as the literal string `"undefined"`.
  */
+const statedListQuery = (
+  query: CustomerOrderListQuery | undefined,
+): CustomerOrderListQuery => query ?? {};
+
+const appendStated = (
+  params: URLSearchParams,
+  key: string,
+  value: string | undefined,
+): void => {
+  if (value !== undefined) {
+    params.set(key, value);
+  }
+};
+
 const listCustomerOrdersUrl = (
   warehouseId: string,
   query?: CustomerOrderListQuery,
 ): string => {
+  const stated = statedListQuery(query);
   const params = new URLSearchParams();
-  if (query?.itemId !== undefined) {
-    params.set('itemId', query.itemId);
-  }
-  if (query?.state !== undefined) {
-    params.set('state', query.state);
-  }
+  appendStated(params, 'itemId', stated.itemId);
+  appendStated(params, 'state', stated.state);
+
+  const path = customerOrdersPath(warehouseId);
   const search = params.toString();
-  return search
-    ? `${customerOrdersPath(warehouseId)}?${search}`
-    : customerOrdersPath(warehouseId);
+
+  return search === '' ? path : `${path}?${search}`;
 };
 
 /**

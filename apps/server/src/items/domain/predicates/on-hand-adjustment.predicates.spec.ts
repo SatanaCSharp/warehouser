@@ -6,6 +6,7 @@ import {
   isCountedQuantity,
   isStatedReason,
 } from 'items/domain/predicates/on-hand-adjustment.predicates';
+import { describe, expect, it } from 'vitest';
 
 describe('on-hand adjustment predicates', () => {
   // AC-09 / data-model.md `items.on_hand_quantity` INTEGER `>= 0` — the counted figure is a whole

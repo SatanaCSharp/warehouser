@@ -2,6 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { getEntityManager } from 'shared/database/db-transaction-context.service';
 import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 import { WorkspaceMembershipEntity } from 'shared/domain/entities/workspace-membership.entity';
+import {
+  belongsToWorkspace,
+  stillHoldsOwnerSlot,
+} from 'shared/predicates/workspace-owner-transfer.predicates';
 import { DataSource, In } from 'typeorm';
 
 export interface WorkspaceOwnerTransferInput {
@@ -53,15 +57,14 @@ export class WorkspaceOwnerTransferRepository {
       (membership) => membership.userId === input.recipientUserId,
     );
 
-    const preconditionHolds =
-      currentOwnerMembership !== undefined &&
-      currentOwnerMembership.workspaceId === input.workspaceId &&
-      currentOwnerMembership.workspaceRoleId === input.ownerRoleId &&
-      currentOwnerMembership.workspaceRoleKind === 'workspace_owner' &&
-      recipientMembership !== undefined &&
-      recipientMembership.workspaceId === input.workspaceId;
-
-    if (!preconditionHolds) {
+    if (
+      !stillHoldsOwnerSlot(
+        currentOwnerMembership,
+        input.workspaceId,
+        input.ownerRoleId,
+      ) ||
+      !belongsToWorkspace(recipientMembership, input.workspaceId)
+    ) {
       return false;
     }
 

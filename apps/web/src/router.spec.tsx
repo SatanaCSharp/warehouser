@@ -6,18 +6,17 @@ import { RouterProvider } from '@tanstack/react-router';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
+import type { WarehouseEntryVerdict } from 'guards/warehouse-entry.guard';
 import remove from 'lodash/remove';
 import { Provider } from 'react-redux';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
+import type { AppRouter } from 'router';
 import { createAppRouter } from 'router';
 import { workspaceContextApi } from 'shared/api/workspace/workspace-context-api';
 import { ROUTE_SEGMENTS, ROUTES } from 'shared/constants/routes';
-import { makeStore } from 'store';
-
-import type { WarehouseEntryVerdict } from 'guards/warehouse-entry.guard';
-import type { AppRouter } from 'router';
 import type { AppStore } from 'store';
+import { makeStore } from 'store';
+import type { Mock } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const toast = vi.hoisted(() => {
   const fn = vi.fn(() => 'pending-key');
@@ -70,7 +69,10 @@ const membershipsIn = (
 // of the datasets the access cases below are about, so answer it out of band
 // and let each of them keep its own ordered request script.
 const withWorkspaceContext = (
-  requestScript: ReturnType<typeof vi.fn>,
+  // `Mock` rather than `ReturnType<typeof vi.fn>`: since Vitest 4 `vi.fn` is
+  // generic over `Procedure | Constructable`, so `ReturnType` instantiates it
+  // at that union and the resulting type is no longer callable.
+  requestScript: Mock,
   workspacePermissionIds: readonly WorkspacePermissionId[] = [],
   effectiveWarehouseId: string | null = null,
   warehouses: readonly Record<string, unknown>[] = [],

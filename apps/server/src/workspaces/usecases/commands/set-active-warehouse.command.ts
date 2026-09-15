@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { assert, assertDefined } from '@warehouser/utils/asserts';
+import { isNull } from '@warehouser/utils/predicates';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { ActiveWarehouseSelectionRepository } from 'shared/domain/repositories/active-warehouse-selection.repository';
 import {
@@ -45,7 +46,7 @@ export class SetActiveWarehouseCommand {
     assertDefined(lock, workspaceTargetUnavailableError());
     // AC-04/AC-11 — an archived Warehouse stops being selectable: deny and
     // leave the stored selection unchanged.
-    assert(lock.archivedAt === null, workspaceWarehouseArchivedError());
+    assert(isNull(lock.archivedAt), workspaceWarehouseArchivedError());
 
     await this.activeWarehouseSelectionRepository.setActiveWarehouse(
       userId,

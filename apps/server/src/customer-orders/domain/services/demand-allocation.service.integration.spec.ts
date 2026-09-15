@@ -30,10 +30,12 @@ import { UserEntity } from 'shared/domain/entities/user.entity';
 import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
 import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 import { DemandAllocationRepository } from 'shared/domain/repositories/demand-allocation.repository';
+import { freezeClockAt } from 'test/doubles/frozen-clock';
 import {
   buildWarehouse,
   buildWorkspace,
 } from 'test/factories/entity-factories';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 const now = new Date('2026-08-26T10:00:00.000Z');
 const later = new Date('2026-08-26T12:00:00.000Z');
@@ -44,7 +46,6 @@ const transactions = new DbTransactionService(dataSource, context);
 
 const service = new DemandAllocationService(
   new DemandAllocationRepository(dataSource),
-  { now: () => later },
 );
 
 const seedUser = async (workspaceId: string): Promise<string> => {
@@ -279,6 +280,8 @@ const registerRefusalDetailTests = (): void => {
     });
   });
 };
+
+freezeClockAt(later);
 
 describe('DemandAllocationService', () => {
   beforeAll(async () => {

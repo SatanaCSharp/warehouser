@@ -7,9 +7,12 @@ import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
 import { CustomerAddressBookService } from 'customers/domain/services/customer-address-book.service';
 import { RecordCustomerCommand } from 'customers/usecases/commands/record-customer.command';
-import { find } from 'lodash';
+import { find } from 'lodash-es';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import type { CustomerEntity } from 'shared/domain/entities/customer.entity';
+import { freezeClockAt } from 'test/doubles/frozen-clock';
+import { pinGeneratedUuids } from 'test/doubles/generated-uuid';
+import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>
   `00000000-0000-4000-8000-${suffix.padStart(12, '0')}`;
@@ -48,13 +51,13 @@ const storedCustomer = (
 });
 
 const directoryRepositoryDouble = (rows: readonly CustomerEntity[] = []) => ({
-  findCustomer: jest.fn((id: string, inWarehouseId: string) =>
+  findCustomer: vi.fn((id: string, inWarehouseId: string) =>
     Promise.resolve(
       find(rows, (row) => row.id === id && row.warehouseId === inWarehouseId) ??
         null,
     ),
   ),
-  findCustomerByName: jest.fn((inWarehouseId: string, name: string) =>
+  findCustomerByName: vi.fn((inWarehouseId: string, name: string) =>
     Promise.resolve(
       find(
         rows,
@@ -62,7 +65,7 @@ const directoryRepositoryDouble = (rows: readonly CustomerEntity[] = []) => ({
       ) ?? null,
     ),
   ),
-  recordCustomer: jest.fn((input: { customer: CustomerEntity }) =>
+  recordCustomer: vi.fn((input: { customer: CustomerEntity }) =>
     Promise.resolve(input.customer),
   ),
 });
@@ -76,11 +79,6 @@ const commandWith = (
   new RecordCustomerCommand(
     directoryRepository as never,
     new CustomerAddressBookService(directoryRepository as never),
-    {
-      customerId: () => customerId,
-      deliveryAddressId: () => deliveryAddressId,
-      now: () => now,
-    },
   );
 
 const submission = {
@@ -100,6 +98,16 @@ const refusal = async (
     },
     (error: unknown) => error as ApplicationError,
   );
+
+vi.mock('node:crypto', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:crypto')>();
+
+  return { ...actual, randomUUID: vi.fn(actual.randomUUID) };
+});
+
+pinGeneratedUuids(customerId, deliveryAddressId);
+
+freezeClockAt(now);
 
 describe('RecordCustomerCommand (AC-01, AC-02, AC-03, AC-03a)', () => {
   // AC-01 — "records the Customer in that Warehouse as active with that address as its Main

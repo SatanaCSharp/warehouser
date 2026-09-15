@@ -1,6 +1,10 @@
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-
+import type {
+  CustomerOrder,
+  CustomerOrderAmend,
+  CustomerOrderCancellation,
+  CustomerOrderRedirect,
+  DemandLine,
+} from '@warehouser/contracts/customer-orders';
 import {
   useAmendCustomerOrderMutation,
   useCancelCustomerOrderMutation,
@@ -17,21 +21,15 @@ import { RecordDemandAction } from 'modules/customer-order/components/demand-dir
 import { RedirectCustomerOrderDialog } from 'modules/customer-order/components/demand-directory/components/RedirectCustomerOrderDialog';
 import { useCustomerOrderNaming } from 'modules/customer-order/hooks/projections/useCustomerOrderNaming';
 import { matchesDemandQuery } from 'modules/customer-order/utils/demand-search';
+import type { ReactElement } from 'react';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { ActionDialogHost } from 'shared/components/ActionDialogHost';
 import { ArchivedWarehouseChip } from 'shared/components/ArchivedWarehouseChip';
 import { ArchivedWarehouseNotice } from 'shared/components/ArchivedWarehouseNotice';
 import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
 import { useActionDialog } from 'shared/hooks/state/useActionDialog';
-
-import type {
-  CustomerOrder,
-  CustomerOrderAmend,
-  CustomerOrderCancellation,
-  CustomerOrderRedirect,
-  DemandLine,
-} from '@warehouser/contracts/customer-orders';
-import type { ReactElement } from 'react';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 /** Which per-Customer-Order dialog a sub-row opens. */
 type CustomerOrderDialogKind = 'amend' | 'cancel' | 'redirect';
@@ -59,8 +57,11 @@ const displacingStates: readonly {
   { state: 'noMatches', holds: ({ matchCount }) => matchCount === 0 },
 ];
 
-const resolveListState = (reading: DemandListReading): DemandListState =>
-  displacingStates.find(({ holds }) => holds(reading))?.state ?? 'ready';
+const resolveListState = (reading: DemandListReading): DemandListState => {
+  const displacing = displacingStates.find(({ holds }) => holds(reading));
+
+  return displacing?.state ?? 'ready';
+};
 
 /**
  * The Demand destination's list owner (design-handoff.md `G6jhw` desktop /
@@ -200,24 +201,30 @@ export const DemandDirectory = ({
       <ActionDialogHost
         controller={dialog}
         renderDialogs={{
-          amend: (order) => (
-            <AmendCustomerOrderDialog
-              order={order}
-              onSave={onSaveAmendment(order)}
-            />
-          ),
-          cancel: (order) => (
-            <CancelCustomerOrderDialog
-              order={order}
-              onSave={onSaveCancellation(order)}
-            />
-          ),
-          redirect: (order) => (
-            <RedirectCustomerOrderDialog
-              order={order}
-              onSave={onSaveRedirection(order)}
-            />
-          ),
+          amend: (order) => {
+            return (
+              <AmendCustomerOrderDialog
+                order={order}
+                onSave={onSaveAmendment(order)}
+              />
+            );
+          },
+          cancel: (order) => {
+            return (
+              <CancelCustomerOrderDialog
+                order={order}
+                onSave={onSaveCancellation(order)}
+              />
+            );
+          },
+          redirect: (order) => {
+            return (
+              <RedirectCustomerOrderDialog
+                order={order}
+                onSave={onSaveRedirection(order)}
+              />
+            );
+          },
         }}
       />
     </div>

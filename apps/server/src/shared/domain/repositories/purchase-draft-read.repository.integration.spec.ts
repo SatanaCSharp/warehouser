@@ -37,10 +37,18 @@ import {
   buildWarehouse,
   buildWorkspace,
 } from 'test/factories/entity-factories';
-// `PostgresQueryRunner.prototype.query` is the one method every TypeORM access path ultimately
-// calls to reach PostgreSQL. Spying on it proves actual round trips — the idiom
+// Counts actual PostgreSQL round trips — the idiom
 // `consolidated-demand.repository.integration.spec.ts` (T10) establishes.
-import { PostgresQueryRunner } from 'typeorm/driver/postgres/PostgresQueryRunner';
+import { withQueryCount } from 'test/pglite/query-recorder';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 
 const now = new Date('2026-08-26T10:00:00.000Z');
 // When a seeded Customer Order moved, for the scenarios that move one. Later than `now`, which is
@@ -151,17 +159,6 @@ const identifiedActor = (warehouseId: string) =>
     warehouseId,
     observedPermissionIds: [PermissionId.CUSTOMERS_WATCH],
   }) as never;
-
-const withQueryCount = async <T>(
-  run: () => Promise<T>,
-): Promise<{ result: T; queryCount: number }> => {
-  const spy = jest.spyOn(PostgresQueryRunner.prototype, 'query');
-  const before = spy.mock.calls.length;
-  const result = await run();
-  const queryCount = spy.mock.calls.length - before;
-  spy.mockRestore();
-  return { result, queryCount };
-};
 
 const seedWorkspace = async (): Promise<string> => {
   const workspace = buildWorkspace();
@@ -515,7 +512,7 @@ const registerReadDraftDriftDataTests = (): void => {
     });
     // AC-16 — `lastChangedAt` is what dates the drift statement the frame draws ("Cancelled on
     // 24 Aug", `F0SpRx.png`). It travels as UTC ISO 8601 with a `Z`, not with the session's own
-    // offset, because `z.string().datetime()` admits nothing else.
+    // offset, because `z.iso.datetime()` admits nothing else.
     expect(cancelledLink?.current).toEqual({
       quantity: 10,
       neededBy: '2026-09-30',
@@ -1025,7 +1022,7 @@ const registerExpectedArrivalDateTests = (): void => {
   // so without the SQL cast the driver decodes it into a JS `Date`: against node-postgres that is
   // midnight in the server's own timezone, and at UTC+2 `2026-09-25` leaves the API as
   // `"2026-09-24T22:00:00.000Z"` — the wrong calendar day *and* the wrong shape, which
-  // `purchaseDraftSummarySchema`'s `z.string().date()` refuses. Because the list endpoint validates
+  // `purchaseDraftSummarySchema`'s `z.iso.date()` refuses. Because the list endpoint validates
   // the whole array, one such draft blanks the entire screen.
   //
   // What this test actually pins is the *shape*: `typeof === 'string'`, on both reads. It runs on
@@ -1118,7 +1115,7 @@ const registerReferenceTests = (): void => {
 
 // Neither test below touches a Rejection, so this double never needs to resolve one.
 const emptyRejectionReasonCatalogue = () => ({
-  resolveRejectionReasons: jest.fn().mockResolvedValue([]),
+  resolveRejectionReasons: vi.fn().mockResolvedValue([]),
 });
 
 const registerHasDriftSignalInvariantTests = (): void => {

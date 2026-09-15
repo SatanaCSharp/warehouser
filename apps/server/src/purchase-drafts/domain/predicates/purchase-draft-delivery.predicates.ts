@@ -1,8 +1,9 @@
-import {
-  type DeliveryMode,
-  type EndingKind,
-  endingKindFor,
+import { isDefined, isNull } from '@warehouser/utils/predicates';
+import type {
+  DeliveryMode,
+  EndingKind,
 } from 'purchase-drafts/domain/value-objects/delivery-mode';
+import { endingKindFor } from 'purchase-drafts/domain/value-objects/delivery-mode';
 
 // Pure predicates for a line's destination, its ending and the draft's closure
 // (server-error-handling.md §1). No NestJS, HTTP or TypeORM import here — see
@@ -27,7 +28,16 @@ export const directLineNamesACustomerAddress = (
   deliveryMode: DeliveryMode,
   customerDeliveryAddressId: string | null,
 ): boolean =>
-  deliveryMode !== 'direct_to_customer' || customerDeliveryAddressId !== null;
+  deliveryMode !== 'direct_to_customer' || isDefined(customerDeliveryAddressId);
+
+// AC-13/CONTEXT.md — the two ways a line's goods travel, asked rather than compared. Every branch
+// that shapes a destination, a captured address or a frozen statement turns on which mode the line
+// is in, and each used to spell the comparison out again; the pair below is that spelling, once.
+export const travelsViaWarehouse = (deliveryMode: DeliveryMode): boolean =>
+  deliveryMode === 'via_warehouse';
+
+export const travelsDirectToCustomer = (deliveryMode: DeliveryMode): boolean =>
+  deliveryMode === 'direct_to_customer';
 
 // AC-20 — an Arrival Confirmation belongs to a Via Warehouse line and a Direct Delivery to a Direct
 // to Customer one. Both directions refuse: a dock arrival against a directly-shipped line, and a
@@ -44,7 +54,7 @@ export const endingMatchesDeliveryMode = (
 // recorded instant alone decides whether there is an ending. The quantity cannot serve: a line where
 // nothing arrived records `0`, which is an ending, while `null` would read as none.
 export const hasEndingRecorded = (endingRecordedAt: Date | null): boolean =>
-  endingRecordedAt !== null;
+  isDefined(endingRecordedAt);
 
 // AC-12/sad.md §6.7 step 4 — "prove the address belongs to a Customer of the acting Warehouse and
 // is active". The Warehouse half is the read's own scope, which is what makes an address of another
@@ -57,4 +67,4 @@ export const hasEndingRecorded = (endingRecordedAt: Date | null): boolean =>
 // of another Warehouse exists, or hide from a member that the address they picked has been
 // withdrawn.
 export const isLineDestinationActive = (deactivatedAt: Date | null): boolean =>
-  deactivatedAt === null;
+  isNull(deactivatedAt);

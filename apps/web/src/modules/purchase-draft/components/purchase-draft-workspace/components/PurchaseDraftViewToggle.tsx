@@ -1,7 +1,6 @@
 import { Radio, RadioGroup } from '@heroui/react';
-import { useTranslation } from 'react-i18next';
-
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 
 /** The two ways of looking at the same drafts. */
 export type PurchaseDraftView = 'byDraft' | 'byLine';

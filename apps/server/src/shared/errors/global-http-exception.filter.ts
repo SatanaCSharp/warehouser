@@ -1,21 +1,18 @@
-import {
-  type ArgumentsHost,
-  Catch,
-  type ExceptionFilter,
-  HttpException,
-  Logger,
-} from '@nestjs/common';
+import type { ArgumentsHost, ExceptionFilter } from '@nestjs/common';
+import { Catch, HttpException, Logger } from '@nestjs/common';
 import { ErrorCode } from '@warehouser/shared-types/enums';
-import {
-  ApplicationError,
-  AssertionError,
-  SystemError,
-} from '@warehouser/shared-types/errors';
+import { ApplicationError, SystemError } from '@warehouser/shared-types/errors';
+import { isUndefined } from '@warehouser/utils/predicates';
 import { redactSensitiveValues } from 'shared/errors/sensitive-value-redactor';
+import type { ValidatedRequestPayloads } from 'shared/errors/validation-field-codes';
+import { validationFieldCodes } from 'shared/errors/validation-field-codes';
 import {
-  type ValidatedRequestPayloads,
-  validationFieldCodes,
-} from 'shared/errors/validation-field-codes';
+  isApplicationError,
+  isCodedError,
+  isError,
+  isHttpException,
+  isSystemError,
+} from 'shared/predicates/typed-error.predicates';
 
 interface SafeErrorEnvelope {
   readonly code: string;
@@ -31,8 +28,11 @@ interface ErrorMapping {
 
 type ExceptionLogger = Pick<Logger, 'error' | 'warn'>;
 
+// The value is `| undefined` because the index signature is `string`: a code with no entry here
+// resolves to nothing at runtime, which is precisely the case `internalError` covers in
+// `mapException`. Stating it keeps that fallback a real branch.
 export const applicationErrors: Readonly<
-  Record<string, Omit<ErrorMapping, 'severity'>>
+  Record<string, Omit<ErrorMapping, 'severity'> | undefined>
 > = {
   [ErrorCode.ACCESS_DENIED]: {
     status: 403,
@@ -573,7 +573,7 @@ export const applicationErrors: Readonly<
 };
 
 export const systemErrors: Readonly<
-  Record<string, Omit<ErrorMapping, 'severity'>>
+  Record<string, Omit<ErrorMapping, 'severity'> | undefined>
 > = {
   [ErrorCode.ACCESS_ROLE_DELETION_UNAVAILABLE]: {
     status: 503,
@@ -670,75 +670,83 @@ const internalError: ErrorMapping = {
   },
 };
 
+const applicationErrorMapping = (exception: ApplicationError): ErrorMapping => {
+  const mapping = applicationErrors[exception.code];
+  if (isUndefined(mapping)) {
+    return internalError;
+  }
+
+  return {
+    ...mapping,
+    severity: 'warn',
+    envelope: {
+      ...mapping.envelope,
+      ...(isUndefined(exception.details) ? {} : { details: exception.details }),
+    },
+  };
+};
+
+const systemErrorMapping = (exception: SystemError): ErrorMapping => {
+  const mapping = systemErrors[exception.code];
+
+  return isUndefined(mapping)
+    ? internalError
+    : { ...mapping, severity: 'error' };
+};
+
+// A Zod refusal additionally names the fields it will not accept, so a dialog can mark them instead
+// of repeating one generic sentence for every distinct refusal (AC-02, AC-02a, AC-09, AC-09a,
+// AC-19b). Only the dotted path and a normalized code travel: never the value, the schema's message,
+// or the type that was expected.
+const httpExceptionMapping = (
+  exception: HttpException,
+  request: ValidatedRequestPayloads,
+): ErrorMapping => {
+  const fields = validationFieldCodes(exception, request);
+
+  return {
+    status: exception.getStatus(),
+    severity: 'warn',
+    envelope: {
+      code: 'request.invalid',
+      message: 'The request is invalid.',
+      ...(isUndefined(fields) ? {} : { details: { fields } }),
+    },
+  };
+};
+
+// Anything this does not recognize is an internal error, and an `AssertionError` is deliberately
+// among them: a broken invariant is a defect, and a defect discloses nothing beyond 500.
 const mapException = (
   exception: unknown,
   request: ValidatedRequestPayloads,
 ): ErrorMapping => {
-  if (exception instanceof ApplicationError) {
-    const mapping = applicationErrors[exception.code];
-
-    return mapping === undefined
-      ? internalError
-      : {
-          ...mapping,
-          severity: 'warn',
-          envelope: {
-            ...mapping.envelope,
-            ...(exception.details === undefined
-              ? {}
-              : { details: exception.details }),
-          },
-        };
+  if (isApplicationError(exception)) {
+    return applicationErrorMapping(exception);
   }
 
-  if (exception instanceof SystemError) {
-    const mapping = systemErrors[exception.code];
-
-    return mapping === undefined
-      ? internalError
-      : { ...mapping, severity: 'error' };
+  if (isSystemError(exception)) {
+    return systemErrorMapping(exception);
   }
 
-  if (exception instanceof HttpException) {
-    // A Zod refusal additionally names the fields it will not accept, so a
-    // dialog can mark them instead of repeating one generic sentence for every
-    // distinct refusal (AC-02, AC-02a, AC-09, AC-09a, AC-19b). Only the dotted
-    // path and a normalized code travel: never the value, the schema's message,
-    // or the type that was expected.
-    const fields = validationFieldCodes(exception, request);
-
-    return {
-      status: exception.getStatus(),
-      severity: 'warn',
-      envelope: {
-        code: 'request.invalid',
-        message: 'The request is invalid.',
-        ...(fields === undefined ? {} : { details: { fields } }),
-      },
-    };
-  }
-
-  if (exception instanceof AssertionError) {
-    return internalError;
+  if (isHttpException(exception)) {
+    return httpExceptionMapping(exception, request);
   }
 
   return internalError;
 };
 
 const describeException = (exception: unknown): unknown => {
-  if (!(exception instanceof Error)) {
+  if (!isError(exception)) {
     return { category: 'unknown' };
   }
 
   return redactSensitiveValues({
     category: exception.constructor.name,
-    code:
-      exception instanceof ApplicationError || exception instanceof SystemError
-        ? exception.code
-        : undefined,
+    code: isCodedError(exception) ? exception.code : undefined,
     message: exception.message,
     stack: exception.stack,
-    cause: exception instanceof SystemError ? exception.cause : undefined,
+    cause: isSystemError(exception) ? exception.cause : undefined,
   });
 };
 

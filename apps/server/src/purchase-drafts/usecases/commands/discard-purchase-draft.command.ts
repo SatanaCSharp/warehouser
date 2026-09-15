@@ -1,5 +1,6 @@
-import { Injectable, Optional } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
+import { isDefined } from '@warehouser/utils/predicates';
 import {
   purchaseDraftDiscardUnavailableError,
   purchaseDraftTargetUnavailableError,
@@ -7,14 +8,8 @@ import {
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { PurchaseDraftFreezeRepository } from 'shared/domain/repositories/purchase-draft-freeze.repository';
-
-export interface DiscardPurchaseDraftRuntime {
-  readonly now: () => Date;
-}
-
-const defaultDiscardPurchaseDraftRuntime: DiscardPurchaseDraftRuntime = {
-  now: () => new Date(),
-};
+import { appliedGuardedWrite } from 'shared/predicates/persistence-write.predicates';
+import { scopedToWarehouse } from 'shared/predicates/tenancy.predicates';
 
 export interface DiscardedPurchaseDraft {
   readonly id: string;
@@ -40,8 +35,6 @@ export interface DiscardedPurchaseDraft {
 export class DiscardPurchaseDraftCommand {
   constructor(
     private readonly closureRepository: PurchaseDraftFreezeRepository,
-    @Optional()
-    private readonly runtime: DiscardPurchaseDraftRuntime = defaultDiscardPurchaseDraftRuntime,
   ) {}
 
   @Transactional()
@@ -52,18 +45,22 @@ export class DiscardPurchaseDraftCommand {
     const header =
       await this.closureRepository.findDraftHeader(purchaseDraftId);
     assert(
-      header !== null && header.warehouseId === currentUser.warehouseId,
+      isDefined(header) &&
+        scopedToWarehouse(header.warehouseId, currentUser.warehouseId),
       purchaseDraftTargetUnavailableError(),
     );
 
-    const discardedAt = this.runtime.now();
+    const discardedAt = new Date();
     const discarded = await this.closureRepository.discard({
       purchaseDraftId,
       warehouseId: currentUser.warehouseId,
       discardedByUserId: currentUser.userId,
       discardedAt,
     });
-    assert(discarded, purchaseDraftDiscardUnavailableError());
+    assert(
+      appliedGuardedWrite(discarded),
+      purchaseDraftDiscardUnavailableError(),
+    );
 
     return {
       id: purchaseDraftId,

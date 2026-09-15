@@ -1,6 +1,5 @@
-import { passwordChangeInputSchema } from '@warehouser/contracts/users';
-
 import type { PasswordChangeInput } from '@warehouser/contracts/users';
+import { passwordChangeInputSchema } from '@warehouser/contracts/users';
 
 export type PasswordChangeValidationError = { password?: 'invalid' };
 

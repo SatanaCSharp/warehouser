@@ -1,10 +1,8 @@
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { useTranslation } from 'react-i18next';
-
 import { PurchaseDraftWorkspace } from 'modules/purchase-draft/components/purchase-draft-workspace/PurchaseDraftWorkspace';
-import { useCurrentPermissions } from 'shared/hooks/queries/usePermissions';
-
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useCurrentPermissions } from 'shared/hooks/queries/usePermissions';
 
 /**
  * The Purchase drafts destination (T20, design-handoff.md

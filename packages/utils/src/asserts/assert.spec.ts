@@ -1,5 +1,6 @@
 import { AssertionError } from '@warehouser/shared-types/errors';
 import { assert } from 'asserts/assert';
+import { describe, expect, it } from 'vitest';
 
 describe('assert', () => {
   it('does not throw when condition is true', () => {

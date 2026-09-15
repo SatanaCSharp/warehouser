@@ -1,8 +1,6 @@
 import { useRouterState } from '@tanstack/react-router';
-
-import { ROUTES } from 'shared/constants/routes';
-
 import type { WarehouseEntryVerdict } from 'guards/warehouse-entry.guard';
+import { ROUTES } from 'shared/constants/routes';
 
 // T4 / ADR 0001 — the single reader of the entry verdict
 // `guards/warehouse-entry.guard.ts` publishes into the Warehouse layout

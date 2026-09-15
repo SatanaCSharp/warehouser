@@ -1,16 +1,14 @@
-import { useTranslation } from 'react-i18next';
-
-import { DockLineTable } from 'modules/purchase-draft/components/purchase-draft-line-directory/components/DockLineTable';
-import { usePurchaseDraftLines } from 'modules/purchase-draft/hooks/queries/usePurchaseDraftLines';
-import { matchesLineQuery } from 'modules/purchase-draft/utils/line-search';
-import { DatasetSkeleton } from 'shared/components/DatasetSkeleton';
-
 import type {
   DeliveryMode,
   PurchaseDraftLineListEntry,
   PurchaseDraftState,
 } from '@warehouser/contracts/purchase-drafts';
+import { DockLineTable } from 'modules/purchase-draft/components/purchase-draft-line-directory/components/DockLineTable';
+import { usePurchaseDraftLines } from 'modules/purchase-draft/hooks/queries/usePurchaseDraftLines';
+import { matchesLineQuery } from 'modules/purchase-draft/utils/line-search';
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import { DatasetSkeleton } from 'shared/components/DatasetSkeleton';
 
 export type PurchaseDraftLineDirectoryProps = {
   /** Which drafts the state tabs are currently choosing. */

@@ -1,6 +1,5 @@
-import { DialogHost } from 'shared/components/DialogHost';
-
 import type { ReactElement, ReactNode } from 'react';
+import { DialogHost } from 'shared/components/DialogHost';
 import type { ActionDialogController } from 'shared/hooks/state/useActionDialog';
 
 type ActionDialogHostProps<Kind extends string, Subject> = {

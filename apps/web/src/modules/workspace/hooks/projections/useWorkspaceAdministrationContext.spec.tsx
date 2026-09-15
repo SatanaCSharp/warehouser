@@ -1,3 +1,4 @@
+import type { ErrorComponentProps } from '@tanstack/react-router';
 import {
   createMemoryHistory,
   createRootRouteWithContext,
@@ -8,21 +9,18 @@ import {
 } from '@tanstack/react-router';
 import { render, screen } from '@testing-library/react';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import { Provider } from 'react-redux';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { useWorkspaceAdministrationContext } from 'modules/workspace/hooks/projections/useWorkspaceAdministrationContext';
+import type { ReactElement } from 'react';
+import { Provider } from 'react-redux';
 import { workspaceContextApi } from 'shared/api/workspace/workspace-context-api';
 import { ROUTES } from 'shared/constants/routes';
+import type { AppStore } from 'store';
 import {
   authenticatedWorkspaceStore,
   namedWorkspaceContext,
   stubWorkspaceServer,
 } from 'test/workspace-fixtures';
-
-import type { ErrorComponentProps } from '@tanstack/react-router';
-import type { ReactElement } from 'react';
-import type { AppStore } from 'store';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // T12 / CR-AC-05 (amended by `global-loader/sad.md` §11) — the non-optional
 // `WorkspaceContext` is route-scoped. This suite builds its own tiny route

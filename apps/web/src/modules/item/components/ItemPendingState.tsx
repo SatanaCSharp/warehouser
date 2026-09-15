@@ -1,8 +1,6 @@
-import { useTranslation } from 'react-i18next';
-
-import { DatasetSkeleton } from 'shared/components/DatasetSkeleton';
-
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import { DatasetSkeleton } from 'shared/components/DatasetSkeleton';
 
 /**
  * The Items table's column widths, so the placeholder rows have the shape of

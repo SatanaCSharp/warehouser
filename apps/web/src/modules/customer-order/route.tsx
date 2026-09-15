@@ -1,5 +1,4 @@
 import { createRoute, lazyRouteComponent } from '@tanstack/react-router';
-
 import { DemandPendingState } from 'modules/customer-order/components/DemandPendingState';
 import { loadDemand } from 'modules/customer-order/loaders/demand.loader';
 import { warehouseRoute } from 'routes/warehouse.route';

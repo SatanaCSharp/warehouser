@@ -1,8 +1,6 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { CreatePurchaseDraftAction } from 'modules/purchase-draft/components/CreatePurchaseDraftAction';
 import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
 import {
@@ -11,6 +9,7 @@ import {
   stubAccessServer,
 } from 'test/access-fixtures';
 import { renderInEnteredWarehouse } from 'test/render';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // AC-10 / AC-22 — starting a draft. Pressing "New draft" had no test anywhere
 // in the suite that the POST is actually issued, which is the defect class the

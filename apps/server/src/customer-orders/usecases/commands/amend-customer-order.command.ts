@@ -1,5 +1,6 @@
-import { Injectable, Optional } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
+import { isDefined } from '@warehouser/utils/predicates';
 import {
   customerOrderInvalidInputError,
   customerOrderQuantityBelowAllocatedError,
@@ -12,21 +13,16 @@ import {
   isQuantityAtOrAboveAllocated,
 } from 'customer-orders/domain/predicates/customer-order.predicates';
 import {
+  amendedValue,
+  demandStateOf,
+} from 'customer-orders/domain/services/customer-order-amendment.service';
+import {
   assertNeededByStillAhead,
   CustomerOrderLifecycleService,
 } from 'customer-orders/domain/services/customer-order-lifecycle.service';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
-import type { CustomerOrderState } from 'shared/domain/entities/customer-order.entity';
 import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository';
-
-export interface AmendCustomerOrderRuntime {
-  readonly now: () => Date;
-}
-
-const defaultAmendCustomerOrderRuntime: AmendCustomerOrderRuntime = {
-  now: () => new Date(),
-};
 
 export interface AmendCustomerOrderInput {
   readonly quantity?: number;
@@ -41,8 +37,6 @@ export class AmendCustomerOrderCommand {
   constructor(
     private readonly customerOrderLifecycleRepository: CustomerOrderLifecycleRepository,
     private readonly customerOrderLifecycleService: CustomerOrderLifecycleService,
-    @Optional()
-    private readonly amendCustomerOrderRuntime: AmendCustomerOrderRuntime = defaultAmendCustomerOrderRuntime,
   ) {}
 
   @Transactional()
@@ -51,15 +45,15 @@ export class AmendCustomerOrderCommand {
     customerOrderId: string,
     input: AmendCustomerOrderInput,
   ): Promise<CustomerOrder> {
-    const amendedAt = this.amendCustomerOrderRuntime.now();
+    const amendedAt = new Date();
 
-    if (input.quantity !== undefined) {
+    if (isDefined(input.quantity)) {
       assert(
         isDemandQuantity(input.quantity),
         customerOrderInvalidInputError('quantity', 'positive_integer'),
       );
     }
-    if (input.neededBy !== undefined) {
+    if (isDefined(input.neededBy)) {
       assertNeededByStillAhead(input.neededBy, amendedAt);
     }
 
@@ -72,7 +66,7 @@ export class AmendCustomerOrderCommand {
     // AC-19b — the floor is the total already allocated to this order, read from the locked row in
     // this same transaction. Below it the change is blocked and the order is left exactly as it
     // was, because those goods sit in the Transit Zone under that customer's name.
-    const quantity = input.quantity ?? locked.order.quantity;
+    const quantity = amendedValue(input.quantity, locked.order.quantity);
     assert(
       isQuantityAtOrAboveAllocated(quantity, locked.allocatedQuantity),
       customerOrderQuantityBelowAllocatedError(
@@ -87,8 +81,7 @@ export class AmendCustomerOrderCommand {
     // case: the figure is never silently clamped (data-model.md §"Constraints the model
     // deliberately does not express").
     const outstandingQuantity = quantity - locked.allocatedQuantity;
-    const state: CustomerOrderState =
-      outstandingQuantity > 0 ? 'unfulfilled' : 'fulfilled';
+    const state = demandStateOf(outstandingQuantity);
 
     const amended =
       await this.customerOrderLifecycleRepository.amendCustomerOrder(
@@ -96,7 +89,7 @@ export class AmendCustomerOrderCommand {
         {
           quantity,
           outstandingQuantity,
-          neededBy: input.neededBy ?? locked.order.neededBy,
+          neededBy: amendedValue(input.neededBy, locked.order.neededBy),
           state,
           amendedAt,
         },

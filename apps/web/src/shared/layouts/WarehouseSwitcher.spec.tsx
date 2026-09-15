@@ -13,21 +13,19 @@ import {
   waitFor,
   within,
 } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import { Provider } from 'react-redux';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
-import { ROUTES } from 'shared/constants/routes';
-import { WarehouseSwitcher } from 'shared/layouts/WarehouseSwitcher';
-import { makeStore } from 'store';
-
 import type { UserEvent } from '@testing-library/user-event';
+import userEvent from '@testing-library/user-event';
 import type { WorkspaceContext } from '@warehouser/contracts/workspaces';
 import type { WorkspacePermissionId as WorkspacePermissionIdType } from '@warehouser/shared-types/enums';
+import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
 import type { WarehouseEntryVerdict } from 'guards/warehouse-entry.guard';
 import type { ReactElement } from 'react';
+import { Provider } from 'react-redux';
+import { ROUTES } from 'shared/constants/routes';
+import { WarehouseSwitcher } from 'shared/layouts/WarehouseSwitcher';
 import type { AppStore } from 'store';
+import { makeStore } from 'store';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // T9 / change-request:workspace-warehouse — the grouped context switcher
 // (spec.md CR-AC-01–CR-AC-04, CR-RG-02, CR-RG-03; sad.md §6.3; approved frame

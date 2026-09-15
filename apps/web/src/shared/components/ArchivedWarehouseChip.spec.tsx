@@ -1,11 +1,10 @@
 import { render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-
 import { ArchivedWarehouseChip } from 'shared/components/ArchivedWarehouseChip';
 import {
   ARCHIVED_WAREHOUSE_REASON_ID,
   useArchivedWarehouse,
 } from 'shared/hooks/projections/useArchivedWarehouse';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // As in `ArchivedWarehouseNotice.spec.tsx`: the verdict read is covered by
 // `useArchivedWarehouse.spec.tsx`, so these cases stub the projection.

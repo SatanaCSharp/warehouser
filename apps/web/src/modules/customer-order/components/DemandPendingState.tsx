@@ -1,8 +1,6 @@
-import { useTranslation } from 'react-i18next';
-
-import { DatasetSkeleton } from 'shared/components/DatasetSkeleton';
-
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import { DatasetSkeleton } from 'shared/components/DatasetSkeleton';
 
 /** The demand table's five presented columns, as the skeleton's bar widths. */
 const DEMAND_COLUMNS = ['34%', '14%', '18%', '12%', '18%'] as const;

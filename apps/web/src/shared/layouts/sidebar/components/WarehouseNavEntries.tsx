@@ -1,7 +1,7 @@
 import { useRouterState } from '@tanstack/react-router';
 import { PermissionId } from '@warehouser/shared-types/enums';
+import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-
 import { Conditional } from 'shared/components/Conditional';
 import { WarehousePermissionGate } from 'shared/components/WarehousePermissionGate';
 import { ROUTES } from 'shared/constants/routes';
@@ -16,8 +16,6 @@ import {
   ShieldCheckIcon,
 } from 'shared/icons';
 import { SidebarNavItem } from 'shared/layouts/sidebar/components/SidebarNavItem';
-
-import type { ReactElement } from 'react';
 
 export type WarehouseNavEntriesProps = {
   /** Whether the list around these entries is reduced to its icon rail. */

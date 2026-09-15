@@ -4,6 +4,7 @@ import {
 } from 'customers/domain/mappers/customer.mapper';
 import { CustomerEntity } from 'shared/domain/entities/customer.entity';
 import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
+import { describe, expect, it } from 'vitest';
 
 const customerEntity = (
   overrides: Partial<CustomerEntity> = {},

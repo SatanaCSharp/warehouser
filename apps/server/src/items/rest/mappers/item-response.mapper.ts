@@ -1,4 +1,5 @@
 import type { Item } from '@warehouser/contracts/items';
+import { isDefined } from '@warehouser/utils/predicates';
 import type { ItemCatalogueEntryRead } from 'items/domain/mappers/item-catalogue-entry.mapper';
 
 // The catalogue entry as the application boundary returns it -> openapi.yaml `Item`. The boundary
@@ -19,7 +20,7 @@ export const toItemResponse = (entry: ItemCatalogueEntryRead): Item => ({
   deactivatedAt: entry.deactivatedAt?.toISOString() ?? null,
   namingCustomerOrderCount: entry.namingCustomerOrderCount,
   namingPurchaseDraftLineCount: entry.namingPurchaseDraftLineCount,
-  latestAdjustment: entry.latestAdjustment
+  latestAdjustment: isDefined(entry.latestAdjustment)
     ? {
         countedQuantity: entry.latestAdjustment.countedQuantity,
         reason: entry.latestAdjustment.reason,

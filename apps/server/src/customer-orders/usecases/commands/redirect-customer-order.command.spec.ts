@@ -16,6 +16,8 @@ import { RedirectCustomerOrderCommand } from 'customer-orders/usecases/commands/
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import type { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
 import type { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
+import { freezeClockAt } from 'test/doubles/frozen-clock';
+import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>
   `00000000-0000-4000-8000-${suffix.padStart(12, '0')}`;
@@ -103,7 +105,7 @@ const addressBook: CustomerDeliveryAddressEntity[] = [
 const addressBookRepositoryDouble = (
   addresses: CustomerDeliveryAddressEntity[] = addressBook,
 ) => ({
-  listDeliveryAddresses: jest
+  listDeliveryAddresses: vi
     .fn()
     .mockImplementation((owner: string) =>
       Promise.resolve(addresses.filter((row) => row.customerId === owner)),
@@ -115,7 +117,7 @@ const addressBookRepositoryDouble = (
 const lifecycleRepositoryDouble = (
   order: CustomerOrderEntity | null = storedOrder(),
 ) => ({
-  lockOrderWithAllocatedTotal: jest
+  lockOrderWithAllocatedTotal: vi
     .fn()
     .mockImplementation((id: string, warehouse: string) =>
       Promise.resolve(
@@ -124,7 +126,7 @@ const lifecycleRepositoryDouble = (
           : null,
       ),
     ),
-  redirectCustomerOrder: jest
+  redirectCustomerOrder: vi
     .fn()
     .mockImplementation((id: string, _customerId: string, addressId: string) =>
       Promise.resolve(
@@ -143,8 +145,9 @@ const commandWith = (
     lifecycleRepository as never,
     new CustomerOrderLifecycleService(lifecycleRepository as never),
     new CustomerOrderDestinationService(customerAddressBookRepository as never),
-    { now: () => now },
   );
+
+freezeClockAt(now);
 
 describe('RedirectCustomerOrderCommand (AC-11b, AC-11c, AC-12)', () => {
   // AC-11b — the order moves to another active address of the same Customer, and the eligibility is

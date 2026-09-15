@@ -7,6 +7,7 @@ import { WorkspacePermissionEntity } from 'shared/domain/entities/workspace-perm
 import type { WorkspaceRoleEntityKind } from 'shared/domain/entities/workspace-role.entity';
 import { WorkspaceRoleEntity } from 'shared/domain/entities/workspace-role.entity';
 import { WorkspaceRolePermissionEntity } from 'shared/domain/entities/workspace-role-permission.entity';
+import { haveSameSize } from 'shared/predicates/collection.predicates';
 import { DataSource, In } from 'typeorm';
 
 export interface WorkspacePersistenceInput {
@@ -50,7 +51,7 @@ export class WorkspaceProvisioningRepository {
         where: { id: In([...input.permissionIds]) },
         order: { id: 'ASC' },
       });
-    if (permissions.length !== input.permissionIds.length) {
+    if (!haveSameSize(permissions, input.permissionIds)) {
       throw new Error(
         'One or more required Workspace Permission identifiers are absent from the catalogue.',
       );

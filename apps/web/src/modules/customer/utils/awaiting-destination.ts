@@ -36,5 +36,8 @@ const REASONS: readonly {
  */
 export const destinationReason = (
   destination: CustomerOrderDestination,
-): DestinationReason =>
-  REASONS.find(({ holds }) => holds(destination))?.reason ?? 'stated';
+): DestinationReason => {
+  const awaiting = REASONS.find(({ holds }) => holds(destination));
+
+  return awaiting?.reason ?? 'stated';
+};

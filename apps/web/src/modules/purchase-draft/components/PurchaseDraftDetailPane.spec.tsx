@@ -1,15 +1,13 @@
 import { screen } from '@testing-library/react';
+import type { PurchaseDraftDetail } from '@warehouser/contracts/purchase-drafts';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { describe, expect, it } from 'vitest';
-
 import { purchaseDraftApi } from 'modules/purchase-draft/api/purchase-draft-api';
 import { PurchaseDraftDetailPane } from 'modules/purchase-draft/components/PurchaseDraftDetailPane';
 import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
+import type { AppStore } from 'store';
 import { accessIds, authenticatedStore } from 'test/access-fixtures';
 import { renderInEnteredWarehouse } from 'test/render';
-
-import type { PurchaseDraftDetail } from '@warehouser/contracts/purchase-drafts';
-import type { AppStore } from 'store';
+import { describe, expect, it } from 'vitest';
 
 // T20 DoD:
 // - "A test proves draft state renders through a total Record<State,

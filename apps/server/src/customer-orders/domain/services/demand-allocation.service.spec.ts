@@ -22,6 +22,8 @@ import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
 import { DemandAllocationService } from 'customer-orders/domain/services/demand-allocation.service';
 import type { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
+import { freezeClockAt } from 'test/doubles/frozen-clock';
+import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>
   `00000000-0000-4000-8000-${suffix.padStart(12, '0')}`;
@@ -68,8 +70,8 @@ const demandAllocationRepositoryDouble = (
     order: CustomerOrderEntity;
   }>,
 ) => ({
-  lockCustomerOrdersForLinks: jest.fn().mockResolvedValue(locked),
-  applyAllocations: jest
+  lockCustomerOrdersForLinks: vi.fn().mockResolvedValue(locked),
+  applyAllocations: vi
     .fn()
     .mockImplementation((input: { orderUpdates: Array<{ id: string }> }) =>
       Promise.resolve(
@@ -80,8 +82,9 @@ const demandAllocationRepositoryDouble = (
 
 const serviceWith = (
   repository: ReturnType<typeof demandAllocationRepositoryDouble>,
-): DemandAllocationService =>
-  new DemandAllocationService(repository as never, { now: () => now });
+): DemandAllocationService => new DemandAllocationService(repository as never);
+
+freezeClockAt(now);
 
 describe('DemandAllocationService — allocate (AC-18)', () => {
   // AC-18, first bound — "assigns across the linked Customer Orders of one line more than the

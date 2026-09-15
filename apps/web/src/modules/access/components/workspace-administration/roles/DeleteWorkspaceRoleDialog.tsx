@@ -1,15 +1,13 @@
+import type { WorkspaceRole } from '@warehouser/contracts/workspaces';
+import { DeleteWorkspaceRoleRefusal } from 'modules/access/components/workspace-administration/roles/DeleteWorkspaceRoleRefusal';
+import type { ReactElement } from 'react';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-
-import { DeleteWorkspaceRoleRefusal } from 'modules/access/components/workspace-administration/roles/DeleteWorkspaceRoleRefusal';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { Conditional } from 'shared/components/Conditional';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormSelectField } from 'shared/components/FormSelectField';
-
-import type { WorkspaceRole } from '@warehouser/contracts/workspaces';
-import type { ReactElement } from 'react';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 type DeleteWorkspaceRoleDialogProps = {
   replacements: WorkspaceRole[];

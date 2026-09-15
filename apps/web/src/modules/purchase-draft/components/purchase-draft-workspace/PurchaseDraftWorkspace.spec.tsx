@@ -8,26 +8,24 @@ import {
 } from '@tanstack/react-router';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { PermissionId } from '@warehouser/shared-types/enums';
-import { Provider } from 'react-redux';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
-import { itemApi } from 'modules/item/api/item-api';
-import { purchaseDraftApi } from 'modules/purchase-draft/api/purchase-draft-api';
-import { PurchaseDraftWorkspace } from 'modules/purchase-draft/components/purchase-draft-workspace/PurchaseDraftWorkspace';
-import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
-import { ROUTES } from 'shared/constants/routes';
-import { accessIds, authenticatedStore } from 'test/access-fixtures';
-import { renderInEnteredWarehouse } from 'test/render';
-
 import type { Item } from '@warehouser/contracts/items';
 import type {
   PurchaseDraftDetail,
   PurchaseDraftLine,
   PurchaseDraftSummary,
 } from '@warehouser/contracts/purchase-drafts';
+import { PermissionId } from '@warehouser/shared-types/enums';
 import type { WarehouseEntryVerdict } from 'guards/warehouse-entry.guard';
+import { itemApi } from 'modules/item/api/item-api';
+import { purchaseDraftApi } from 'modules/purchase-draft/api/purchase-draft-api';
+import { PurchaseDraftWorkspace } from 'modules/purchase-draft/components/purchase-draft-workspace/PurchaseDraftWorkspace';
+import { Provider } from 'react-redux';
+import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
+import { ROUTES } from 'shared/constants/routes';
 import type { AppStore } from 'store';
+import { accessIds, authenticatedStore } from 'test/access-fixtures';
+import { renderInEnteredWarehouse } from 'test/render';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // T20 — the Purchase drafts destination's composition root: the three tabs,
 // the list-and-detail split, and the mobile back affordance, plus AC-23's

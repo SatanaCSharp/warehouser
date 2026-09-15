@@ -1,11 +1,9 @@
 import { Chip } from '@heroui/react';
-import { useTranslation } from 'react-i18next';
-
-import { WarehouseEnterLink } from 'modules/workspace/components/workspace-administration/warehouses/WarehouseEnterLink';
-import { Conditional } from 'shared/components/Conditional';
-
 import type { Warehouse } from '@warehouser/contracts/workspaces';
+import { WarehouseEnterLink } from 'modules/workspace/components/workspace-administration/warehouses/WarehouseEnterLink';
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Conditional } from 'shared/components/Conditional';
 
 type WarehouseRowProps = {
   isSelected: boolean;

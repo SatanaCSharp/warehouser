@@ -1,6 +1,5 @@
-import compact from 'lodash/compact';
-
 import type { WorkspacePermission } from '@warehouser/contracts/workspaces';
+import compact from 'lodash/compact';
 
 export type WorkspacePermissionGroup = {
   id: string;

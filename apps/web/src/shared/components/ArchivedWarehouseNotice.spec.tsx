@@ -1,11 +1,10 @@
 import { render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-
 import { ArchivedWarehouseNotice } from 'shared/components/ArchivedWarehouseNotice';
 import {
   ARCHIVED_WAREHOUSE_REASON_ID,
   useArchivedWarehouse,
 } from 'shared/hooks/projections/useArchivedWarehouse';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // The verdict this reads is covered by `useArchivedWarehouse.spec.tsx`, which
 // renders it inside a real Warehouse match. These cases are about what the

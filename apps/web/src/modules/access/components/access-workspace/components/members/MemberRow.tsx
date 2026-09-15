@@ -1,13 +1,11 @@
 import { Button, Chip, Dropdown, Label } from '@heroui/react';
 import { PermissionId } from '@warehouser/shared-types/enums';
+import type { AccessMember } from 'modules/access/types/access.types';
+import type { Key, ReactElement, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-
 import { ROW_ENTER } from 'shared/constants/motion';
 import { usePermittedItems } from 'shared/hooks/projections/usePermittedItems';
 import { KebabIcon, KeyIcon, MailIcon, TrashIcon } from 'shared/icons';
-
-import type { AccessMember } from 'modules/access/types/access.types';
-import type { Key, ReactElement, ReactNode } from 'react';
 
 export type MemberRowProps = {
   /** The acting user, or `undefined` while the auth store has not resolved one. */

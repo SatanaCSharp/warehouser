@@ -1,9 +1,7 @@
-import { useTranslation } from 'react-i18next';
-
-import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
-
 import type { Item } from '@warehouser/contracts/items';
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
 
 export type ItemTableFooterProps = {
   items: Item[];

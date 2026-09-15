@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { Maybe } from '@warehouser/shared-types/utils';
 import { assert, assertDefined } from '@warehouser/utils/asserts';
+import { isDefined } from '@warehouser/utils/predicates';
 import {
   replacementRequiredError,
   roleUnavailableError,
 } from 'access/domain/errors/access.errors';
+import { hasAssignedMembers } from 'access/domain/predicates/workspace-authority.predicates';
 import { RoleDeletionService } from 'access/domain/services/role-deletion.service';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
@@ -43,7 +45,7 @@ export class DeleteRoleCommand {
       input.roleId,
     );
     assert(
-      assigned === 0 || Boolean(input.replacementRoleId),
+      !hasAssignedMembers(assigned) || isDefined(input.replacementRoleId),
       replacementRequiredError(),
     );
 

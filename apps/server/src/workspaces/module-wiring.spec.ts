@@ -4,17 +4,25 @@ import { MODULE_METADATA } from '@nestjs/common/constants';
 import { AccessUsecaseModule } from 'access/usecases/usecase.module';
 import { AppModule } from 'app.module';
 import { DomainModule } from 'shared/domain/domain.module';
+import { describe, expect, it } from 'vitest';
 import { WorkspacesRestModule } from 'workspaces';
 import { WorkspaceController } from 'workspaces/rest/controllers/workspace.controller';
 import { WorkspacesUsecaseModule } from 'workspaces/usecases/usecase.module';
 
 type Constructor = new (...args: never[]) => unknown;
 
+// `Reflect.getMetadata` resolves to `undefined` for a key no decorator wrote, and
+// `design:paramtypes` can hold `undefined` entries for a parameter whose type erased to nothing.
+// Both are stated so the guards that handle them stay guards.
 const metadata = (key: string, target: unknown): Constructor[] =>
-  (Reflect.getMetadata(key, target as object) as Constructor[]) ?? [];
+  (Reflect.getMetadata(key, target as object) as Constructor[] | undefined) ??
+  [];
 
-const dependenciesOf = (provider: Constructor): Constructor[] =>
-  (Reflect.getMetadata('design:paramtypes', provider) as Constructor[]) ?? [];
+const dependenciesOf = (
+  provider: Constructor,
+): Array<Constructor | undefined> =>
+  (Reflect.getMetadata('design:paramtypes', provider) as
+    Array<Constructor | undefined> | undefined) ?? [];
 
 // A dependency Nest cannot resolve only surfaces when the application boots,
 // which needs a database this tier does not have. This suite proves the same
@@ -68,9 +76,10 @@ describe('workspaces module wiring', () => {
   it('resolves every dependency of every registered use case', () => {
     usecaseProviders.forEach((provider) => {
       dependenciesOf(provider).forEach((dependency) => {
-        // An interface-typed constructor parameter erases to `Object`; those
-        // are the `@Optional()` runtime seams the use cases default
-        // themselves, not injection tokens.
+        // An interface-typed constructor parameter erases to `Object`, which
+        // says nothing about what it resolves to: the parameter names its own
+        // token with `@Inject`, and only compiling the graph can check it.
+        // `usecase.module.di.spec.ts` is where that happens.
         if (dependency === Object || dependency === undefined) {
           return;
         }

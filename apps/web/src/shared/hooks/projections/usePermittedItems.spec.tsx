@@ -1,7 +1,6 @@
 import { screen } from '@testing-library/react';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
+import type { ReactElement } from 'react';
 import { usePermittedItems } from 'shared/hooks/projections/usePermittedItems';
 import {
   accessIds,
@@ -9,8 +8,7 @@ import {
   stubAccessServer,
 } from 'test/access-fixtures';
 import { renderInEnteredWarehouse } from 'test/render';
-
-import type { ReactElement } from 'react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 type Action = { id: string; permission: readonly PermissionId[] };
 

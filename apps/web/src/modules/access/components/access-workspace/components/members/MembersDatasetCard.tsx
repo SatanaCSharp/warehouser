@@ -1,10 +1,8 @@
-import { useTranslation } from 'react-i18next';
-
-import { DatasetCard } from 'shared/components/DatasetCard';
-
 import type { AccessMember } from 'modules/access/types/access.types';
 import type { AccessDataset } from 'modules/access/utils/access-dataset';
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import { DatasetCard } from 'shared/components/DatasetCard';
 
 /** Members while the administration list cannot be shown yet, or at all. */
 export const MembersDatasetCard = ({

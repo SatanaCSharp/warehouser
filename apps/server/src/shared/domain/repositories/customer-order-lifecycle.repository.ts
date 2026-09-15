@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
+import { isDefined, isUndefined } from '@warehouser/utils/predicates';
 import { getEntityManager } from 'shared/database/db-transaction-context.service';
 import { ArrivalAllocationEntity } from 'shared/domain/entities/arrival-allocation.entity';
 import { CustomerEntity } from 'shared/domain/entities/customer.entity';
 import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
 import type { CustomerOrderState } from 'shared/domain/entities/customer-order.entity';
 import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
+import { ordersByNeededBy } from 'shared/predicates/persistence-read.predicates';
 import type { EntityManager, SelectQueryBuilder } from 'typeorm';
 import { DataSource } from 'typeorm';
 
@@ -139,7 +141,7 @@ const customerOrderProjection = (
     .addSelect('demand.updatedAt', 'updatedAt')
     .where('demand.warehouseId = :warehouseId', { warehouseId });
 
-  if (order === 'needed_by') {
+  if (ordersByNeededBy(order)) {
     queryBuilder.orderBy('demand.neededBy', 'ASC');
   }
 
@@ -147,17 +149,17 @@ const customerOrderProjection = (
     .addOrderBy('demand.createdAt', 'ASC')
     .addOrderBy('demand.id', 'ASC');
 
-  if (filter.customerOrderId !== undefined) {
+  if (isDefined(filter.customerOrderId)) {
     queryBuilder.andWhere('demand.id = :customerOrderId', {
       customerOrderId: filter.customerOrderId,
     });
   }
 
-  if (filter.itemId !== undefined) {
+  if (isDefined(filter.itemId)) {
     queryBuilder.andWhere('demand.itemId = :itemId', { itemId: filter.itemId });
   }
 
-  if (filter.state !== undefined) {
+  if (isDefined(filter.state)) {
     queryBuilder.andWhere('demand.state = :state', { state: filter.state });
   }
 
@@ -235,16 +237,20 @@ export class CustomerOrderLifecycleRepository {
       .setLock('pessimistic_write')
       .getRawAndEntities();
 
-    const [order] = found.entities;
-    if (order === undefined) {
+    // `.at(0)` rather than `const [order] =`: with `noUncheckedIndexedAccess` off, destructuring
+    // types the element as present and the not-found branch below reads as dead code.
+    const order = found.entities.at(0);
+    if (isUndefined(order)) {
       return null;
     }
 
     // PostgreSQL returns `SUM` over `bigint` as a string, so the figure is normalized here rather
     // than left for every caller to remember.
-    const [rawRow] = found.raw as Array<{
-      allocatedQuantity: string | number;
-    }>;
+    const rawRow = (
+      found.raw as Array<{
+        allocatedQuantity: string | number;
+      }>
+    ).at(0);
 
     return {
       order,
@@ -351,7 +357,7 @@ export class CustomerOrderLifecycleRepository {
       .createQueryBuilder('order')
       .where('order.warehouseId = :warehouseId', { warehouseId });
 
-    if (order === 'needed_by') {
+    if (ordersByNeededBy(order)) {
       queryBuilder.orderBy('order.neededBy', 'ASC');
     }
 
@@ -359,13 +365,13 @@ export class CustomerOrderLifecycleRepository {
       .addOrderBy('order.createdAt', 'ASC')
       .addOrderBy('order.id', 'ASC');
 
-    if (filter.itemId !== undefined) {
+    if (isDefined(filter.itemId)) {
       queryBuilder.andWhere('order.itemId = :itemId', {
         itemId: filter.itemId,
       });
     }
 
-    if (filter.state !== undefined) {
+    if (isDefined(filter.state)) {
       queryBuilder.andWhere('order.state = :state', { state: filter.state });
     }
 

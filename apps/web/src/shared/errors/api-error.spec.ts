@@ -1,6 +1,5 @@
-import { describe, expect, it } from 'vitest';
-
 import { getFieldErrors, getTranslatedApiError } from 'shared/errors/api-error';
+import { describe, expect, it } from 'vitest';
 
 describe('API error presentation', () => {
   it('maps known codes to translations instead of displaying server messages', () => {

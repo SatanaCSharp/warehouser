@@ -1,5 +1,8 @@
-import { useTranslation } from 'react-i18next';
-
+import type {
+  Customer,
+  CustomerDeliveryAddress,
+  CustomerDeliveryAddressUpdate,
+} from '@warehouser/contracts/customers';
 import {
   useCorrectCustomerDeliveryAddressMutation,
   useDeactivateCustomerDeliveryAddressMutation,
@@ -8,17 +11,12 @@ import { AddDeliveryAddressAction } from 'modules/customer/components/customer-d
 import { CorrectDeliveryAddressDialog } from 'modules/customer/components/customer-directory/components/addresses/CorrectDeliveryAddressDialog';
 import { CustomerAddressRow } from 'modules/customer/components/customer-directory/components/addresses/CustomerAddressRow';
 import { DeactivateDeliveryAddressDialog } from 'modules/customer/components/customer-directory/components/addresses/DeactivateDeliveryAddressDialog';
+import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { ActionDialogHost } from 'shared/components/ActionDialogHost';
 import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
 import { useActionDialog } from 'shared/hooks/state/useActionDialog';
-
-import type {
-  Customer,
-  CustomerDeliveryAddress,
-  CustomerDeliveryAddressUpdate,
-} from '@warehouser/contracts/customers';
-import type { ReactElement } from 'react';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 /** Which per-address dialog a row's kebab opens. */
 type AddressDialogKind = 'correct' | 'deactivate';

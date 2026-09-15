@@ -20,18 +20,30 @@ import {
   ApplicationError,
   AssertionError,
 } from '@warehouser/shared-types/errors';
-import { hasExactlyOneMainActiveDeliveryAddress } from 'customers/domain/predicates/customer.predicates';
+import { isNull } from '@warehouser/utils/predicates';
 import { CustomerAddressBookService } from 'customers/domain/services/customer-address-book.service';
 import { AddCustomerDeliveryAddressCommand } from 'customers/usecases/commands/add-customer-delivery-address.command';
 import { CorrectCustomerDeliveryAddressCommand } from 'customers/usecases/commands/correct-customer-delivery-address.command';
 import { DeactivateCustomerDeliveryAddressCommand } from 'customers/usecases/commands/deactivate-customer-delivery-address.command';
 import { ReactivateCustomerDeliveryAddressCommand } from 'customers/usecases/commands/reactivate-customer-delivery-address.command';
 import { SetMainCustomerDeliveryAddressCommand } from 'customers/usecases/commands/set-main-customer-delivery-address.command';
-import { filter, find, forEach, map, orderBy } from 'lodash';
+import { filter, find, forEach, map, orderBy } from 'lodash-es';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import type { CustomerEntity } from 'shared/domain/entities/customer.entity';
 import type { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
 import type { ReviseDeliveryAddressPersistenceInput } from 'shared/domain/repositories/customer-address-book.repository';
+import { freezeClockAt } from 'test/doubles/frozen-clock';
+import { pinGeneratedUuids } from 'test/doubles/generated-uuid';
+import { describe, expect, it, vi } from 'vitest';
+
+// AC-05 / `chk_customer_delivery_addresses_main_is_active` — exactly one **active** address of a
+// Customer is its Main one at any moment. A property of the whole set rather than of any one
+// command, so it is stated here, over the rows the doubles have been mutating, rather than as a
+// production predicate no production path calls.
+const exactlyOneMainActiveAddress = (
+  rows: readonly CustomerDeliveryAddressEntity[],
+): boolean =>
+  filter(rows, (row) => row.isMain && isNull(row.deactivatedAt)).length === 1;
 
 const uuid = (suffix: string): string =>
   `00000000-0000-4000-8000-${suffix.padStart(12, '0')}`;
@@ -121,16 +133,16 @@ const threeActiveAddresses = (): CustomerDeliveryAddressEntity[] => [
 const directoryRepositoryDouble = (
   rows: readonly CustomerEntity[] = [storedCustomer()],
 ) => ({
-  findCustomer: jest.fn((id: string, inWarehouseId: string) =>
+  findCustomer: vi.fn((id: string, inWarehouseId: string) =>
     Promise.resolve(
       find(rows, (row) => row.id === id && row.warehouseId === inWarehouseId) ??
         null,
     ),
   ),
-  findCustomerByName: jest.fn(),
-  correctCustomerName: jest.fn(),
-  setCustomerDeactivation: jest.fn(),
-  recordCustomer: jest.fn(),
+  findCustomerByName: vi.fn(),
+  correctCustomerName: vi.fn(),
+  setCustomerDeactivation: vi.fn(),
+  recordCustomer: vi.fn(),
 });
 
 // Each write below carries the *same* condition the real statement carries, so zero affected rows
@@ -142,7 +154,7 @@ const addressBookRepositoryDouble = (
 ) => ({
   rows,
   // openapi.yaml `Customer.deliveryAddresses` — creation order, identifier breaking a tie.
-  listDeliveryAddresses: jest.fn((id: string) =>
+  listDeliveryAddresses: vi.fn((id: string) =>
     Promise.resolve(
       orderBy(
         filter(rows, (row) => row.customerId === id),
@@ -153,7 +165,7 @@ const addressBookRepositoryDouble = (
   ),
   // sad.md §6.3 step 4 — the locking read, in the ascending-identifier lock order data-model.md
   // fixes for `customers`. Inactive rows are locked too, which is why they are not filtered out.
-  lockDeliveryAddresses: jest.fn((id: string) =>
+  lockDeliveryAddresses: vi.fn((id: string) =>
     Promise.resolve(
       orderBy(
         filter(rows, (row) => row.customerId === id),
@@ -162,12 +174,12 @@ const addressBookRepositoryDouble = (
       ),
     ),
   ),
-  addDeliveryAddress: jest.fn((address: CustomerDeliveryAddressEntity) => {
+  addDeliveryAddress: vi.fn((address: CustomerDeliveryAddressEntity) => {
     rows.push(address);
 
     return Promise.resolve(address);
   }),
-  reviseDeliveryAddress: jest.fn(
+  reviseDeliveryAddress: vi.fn(
     (
       addressId: string,
       ofCustomerId: string,
@@ -190,7 +202,7 @@ const addressBookRepositoryDouble = (
       return Promise.resolve('applied');
     },
   ),
-  setMainDeliveryAddress: jest.fn(
+  setMainDeliveryAddress: vi.fn(
     (addressId: string, ofCustomerId: string, changedAt: Date) => {
       const target = find(
         rows,
@@ -223,7 +235,7 @@ const addressBookRepositoryDouble = (
       return Promise.resolve('applied');
     },
   ),
-  deactivateDeliveryAddress: jest.fn(
+  deactivateDeliveryAddress: vi.fn(
     (addressId: string, ofCustomerId: string, deactivatedAt: Date) => {
       const row = find(
         rows,
@@ -245,7 +257,7 @@ const addressBookRepositoryDouble = (
       return Promise.resolve('applied');
     },
   ),
-  reactivateDeliveryAddress: jest.fn(
+  reactivateDeliveryAddress: vi.fn(
     (addressId: string, ofCustomerId: string, reactivatedAt: Date) => {
       const row = find(
         rows,
@@ -291,35 +303,28 @@ const bookWith = (
   const addressBook = new CustomerAddressBookService(
     directoryRepository as never,
   );
-  const clock = { now: () => now };
-
   return {
     directoryRepository,
     addressBookRepository,
     add: new AddCustomerDeliveryAddressCommand(
       addressBookRepository as never,
       addressBook,
-      { ...clock, deliveryAddressId: () => addedAddressId },
     ),
     correct: new CorrectCustomerDeliveryAddressCommand(
       addressBookRepository as never,
       addressBook,
-      clock,
     ),
     setMain: new SetMainCustomerDeliveryAddressCommand(
       addressBookRepository as never,
       addressBook,
-      clock,
     ),
     deactivate: new DeactivateCustomerDeliveryAddressCommand(
       addressBookRepository as never,
       addressBook,
-      clock,
     ),
     reactivate: new ReactivateCustomerDeliveryAddressCommand(
       addressBookRepository as never,
       addressBook,
-      clock,
     ),
   };
 };
@@ -333,6 +338,16 @@ const refusal = async (
     },
     (error: unknown) => error as ApplicationError,
   );
+
+vi.mock('node:crypto', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:crypto')>();
+
+  return { ...actual, randomUUID: vi.fn(actual.randomUUID) };
+});
+
+pinGeneratedUuids(addedAddressId);
+
+freezeClockAt(now);
 
 describe('AddCustomerDeliveryAddressCommand (AC-04, AC-05)', () => {
   // AC-04 — "records both addresses against that Customer, makes the second one Main and the first
@@ -364,9 +379,9 @@ describe('AddCustomerDeliveryAddressCommand (AC-04, AC-05)', () => {
       find(customer.deliveryAddresses, { id: mainAddressId }),
     ).toMatchObject({ isMain: false, deactivatedAt: null });
     expect(customer.mainDeliveryAddressId).toBe(addedAddressId);
-    expect(
-      hasExactlyOneMainActiveDeliveryAddress(book.addressBookRepository.rows),
-    ).toBe(true);
+    expect(exactlyOneMainActiveAddress(book.addressBookRepository.rows)).toBe(
+      true,
+    );
   });
 
   // AC-04 — `main` defaults to false (openapi.yaml `CustomerDeliveryAddressCreate`): an address
@@ -387,9 +402,9 @@ describe('AddCustomerDeliveryAddressCommand (AC-04, AC-05)', () => {
     expect(
       book.addressBookRepository.setMainDeliveryAddress,
     ).not.toHaveBeenCalled();
-    expect(
-      hasExactlyOneMainActiveDeliveryAddress(book.addressBookRepository.rows),
-    ).toBe(true);
+    expect(exactlyOneMainActiveAddress(book.addressBookRepository.rows)).toBe(
+      true,
+    );
   });
 });
 
@@ -400,7 +415,7 @@ describe('the Customer Delivery Address book at rest (AC-05)', () => {
   it('keeps exactly one active Main Delivery Address after every address-book command', async () => {
     const book = bookWith(threeActiveAddresses());
     const atRest = (): boolean =>
-      hasExactlyOneMainActiveDeliveryAddress(book.addressBookRepository.rows);
+      exactlyOneMainActiveAddress(book.addressBookRepository.rows);
 
     await book.add.execute(currentUser, customerId, {
       addressText: 'Test Address 4, Test Hamlet',
@@ -438,9 +453,9 @@ describe('SetMainCustomerDeliveryAddressCommand (AC-04, AC-05)', () => {
 
     expect(customer.mainDeliveryAddressId).toBe(secondAddressId);
     expect(map(customer.deliveryAddresses, 'isMain')).toEqual([false, true]);
-    expect(
-      hasExactlyOneMainActiveDeliveryAddress(book.addressBookRepository.rows),
-    ).toBe(true);
+    expect(exactlyOneMainActiveAddress(book.addressBookRepository.rows)).toBe(
+      true,
+    );
   });
 
   // openapi.yaml `setMainCustomerDeliveryAddress` — "marking the address that is already Main
@@ -456,9 +471,9 @@ describe('SetMainCustomerDeliveryAddressCommand (AC-04, AC-05)', () => {
 
     expect(customer.mainDeliveryAddressId).toBe(mainAddressId);
     expect(map(customer.deliveryAddresses, 'isMain')).toEqual([true, false]);
-    expect(
-      hasExactlyOneMainActiveDeliveryAddress(book.addressBookRepository.rows),
-    ).toBe(true);
+    expect(exactlyOneMainActiveAddress(book.addressBookRepository.rows)).toBe(
+      true,
+    );
   });
 
   // `chk_customer_delivery_addresses_main_is_active` — an Inactive address is never the Main one,
@@ -508,9 +523,9 @@ describe('CorrectCustomerDeliveryAddressCommand (sad.md §4)', () => {
       isMain: true,
       updatedAt: now,
     });
-    expect(
-      hasExactlyOneMainActiveDeliveryAddress(book.addressBookRepository.rows),
-    ).toBe(true);
+    expect(exactlyOneMainActiveAddress(book.addressBookRepository.rows)).toBe(
+      true,
+    );
   });
 });
 
@@ -531,7 +546,7 @@ describe('DeactivateCustomerDeliveryAddressCommand (AC-06a, AC-06b, AC-07)', () 
     );
 
     const deactivated = find(customer.deliveryAddresses, { id: mainAddressId });
-    expect(deactivated?.deactivatedAt).toBe(now);
+    expect(deactivated?.deactivatedAt).toEqual(now);
     expect(deactivated?.addressText).toBe('Test Address 1, Test City');
     expect(deactivated?.accessNotes).toBe(
       'Gate code on the intercom; deliveries 09:00-17:00',
@@ -562,9 +577,9 @@ describe('DeactivateCustomerDeliveryAddressCommand (AC-06a, AC-06b, AC-07)', () 
     expect(
       find(customer.deliveryAddresses, { id: mainAddressId }),
     ).toMatchObject({ isMain: false, deactivatedAt: now });
-    expect(
-      hasExactlyOneMainActiveDeliveryAddress(book.addressBookRepository.rows),
-    ).toBe(true);
+    expect(exactlyOneMainActiveAddress(book.addressBookRepository.rows)).toBe(
+      true,
+    );
     // The deactivation clears `is_main` before the promotion sets it, which is what frees
     // `uq_customer_delivery_addresses_customer_main` for the successor.
     const deactivateOrder =
@@ -643,9 +658,9 @@ describe('DeactivateCustomerDeliveryAddressCommand (AC-06a, AC-06b, AC-07)', () 
     expect(
       book.addressBookRepository.deactivateDeliveryAddress,
     ).not.toHaveBeenCalled();
-    expect(
-      hasExactlyOneMainActiveDeliveryAddress(book.addressBookRepository.rows),
-    ).toBe(true);
+    expect(exactlyOneMainActiveAddress(book.addressBookRepository.rows)).toBe(
+      true,
+    );
   });
 });
 

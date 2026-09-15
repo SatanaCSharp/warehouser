@@ -1,14 +1,12 @@
 import { Button, Modal } from '@heroui/react';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import { useTranslation } from 'react-i18next';
-
 import { CreateWorkspaceRoleDialog } from 'modules/access/components/workspace-administration/roles/CreateWorkspaceRoleDialog';
 import { useWorkspacePermissionCatalogue } from 'modules/access/hooks/queries/useWorkspacePermissionCatalogue';
+import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 import { TriggeredDialog } from 'shared/components/TriggeredDialog';
 import { WorkspacePermissionGate } from 'shared/components/WorkspacePermissionGate';
 import { PlusIcon } from 'shared/icons';
-
-import type { ReactElement } from 'react';
 
 /**
  * The create-Workspace-Role workflow, whole: its gate, its trigger and the

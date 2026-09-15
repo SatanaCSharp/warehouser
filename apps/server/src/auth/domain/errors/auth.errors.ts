@@ -1,12 +1,13 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError, SystemError } from '@warehouser/shared-types/errors';
+import { isDefined } from '@warehouser/utils/predicates';
 
 export const AuthInvalidInputError = (
   fields?: Readonly<Record<string, string>>,
 ): ApplicationError =>
   new ApplicationError(
     ErrorCode.AUTH_INVALID_INPUT,
-    fields ? { fields } : undefined,
+    isDefined(fields) ? { fields } : undefined,
   );
 
 export const AuthEmailAlreadyRegisteredError = (): ApplicationError =>

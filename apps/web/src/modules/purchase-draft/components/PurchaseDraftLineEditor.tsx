@@ -1,8 +1,11 @@
 import { Button, Chip } from '@heroui/react';
+import type {
+  DeliveryMode,
+  PackagingType,
+  PurchaseDraftLine,
+  PurchaseDraftLineUpdate,
+} from '@warehouser/contracts/purchase-drafts';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-
 import { useItems } from 'modules/item/hooks/queries/useItems';
 import { PurchaseDraftLineDelivery } from 'modules/purchase-draft/components/purchase-draft-line-delivery/PurchaseDraftLineDelivery';
 import { PurchaseDraftLineLinks } from 'modules/purchase-draft/components/purchase-draft-line-links/PurchaseDraftLineLinks';
@@ -13,6 +16,10 @@ import {
   lineRefusalReasonId,
   refusesWrites,
 } from 'modules/purchase-draft/utils/write-refusal';
+import type { ChangeEvent, ReactElement, ReactNode } from 'react';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { Conditional } from 'shared/components/Conditional';
 import { FormSelectField } from 'shared/components/FormSelectField';
 import { FormTextField } from 'shared/components/FormTextField';
@@ -21,15 +28,6 @@ import { ROW_ENTER } from 'shared/constants/motion';
 import { useArchivedWarehouse } from 'shared/hooks/projections/useArchivedWarehouse';
 import { useHasPermission } from 'shared/hooks/queries/usePermissions';
 import { LockIcon, TrashIcon } from 'shared/icons';
-
-import type {
-  DeliveryMode,
-  PackagingType,
-  PurchaseDraftLine,
-  PurchaseDraftLineUpdate,
-} from '@warehouser/contracts/purchase-drafts';
-import type { ChangeEvent, ReactElement, ReactNode } from 'react';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 export type PurchaseDraftLineEditorProps = {
   /**

@@ -17,6 +17,7 @@ import type {
   PurchaseDraftLineDeliveryMode,
   PurchaseDraftLineEndingKind,
 } from 'shared/domain/entities/purchase-draft-line.entity';
+import { describe, expect, it } from 'vitest';
 
 describe('Delivery Mode', () => {
   // CONTEXT.md — Via Warehouse and Direct to Customer are the two ways a Purchase Draft Line's

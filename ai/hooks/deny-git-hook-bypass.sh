@@ -2,8 +2,9 @@
 #
 # Canonical guard for AGENTS.md section "Committing": every commit runs the repository's Git hooks.
 #
-# `.husky/pre-commit` runs lint-staged (`eslint <staged files> --max-warnings=0`, a stricter bar
-# than `pnpm lint`, which exits 0 on warnings) and `.husky/commit-msg` runs commitlint. A commit
+# `.husky/pre-commit` runs lint-staged (`oxlint --type-aware --max-warnings=0 <staged files>`, a
+# stricter bar than `pnpm lint`, which exits 0 on warnings in `apps/*`) and `.husky/commit-msg` runs
+# commitlint. A commit
 # that skips them puts a warning-level rule violation, or a message commitlint would have refused,
 # on a branch with nothing left to catch it — so a bypass is refused here rather than discouraged.
 #
@@ -26,7 +27,7 @@ set -eu
 # `commit`, where it is git's own spelling of the flag.
 BYPASS_PATTERN='git[^;&|]*(commit|merge|rebase|cherry-pick|revert|am|push)[^;&|]*(--no-verify|--no-hooks)|git[^;&|]*commit[^;&|]*[[:space:]]-n([[:space:]]|$)|(HUSKY=0|HUSKY_SKIP_HOOKS)[^;&|]*git|git[^;&|]*core\.hooksPath'
 
-REASON='Blocked: this command skips the repository Git hooks. AGENTS.md section Committing requires every commit to run .husky/pre-commit (lint-staged, eslint --max-warnings=0) and .husky/commit-msg (commitlint). Remove the bypass flag, environment variable or hooks-path override and commit again; if a hook fails, fix what it reports or tell the user - never commit around it.'
+REASON='Blocked: this command skips the repository Git hooks. AGENTS.md section Committing requires every commit to run .husky/pre-commit (lint-staged, oxlint --max-warnings=0) and .husky/commit-msg (commitlint). Remove the bypass flag, environment variable or hooks-path override and commit again; if a hook fails, fix what it reports or tell the user - never commit around it.'
 
 bypasses_hooks() {
   printf '%s' "$1" | grep -Eq "$BYPASS_PATTERN"

@@ -1,14 +1,12 @@
 import { render, screen } from '@testing-library/react';
-import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import { Provider } from 'react-redux';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
-import { WorkspacePermissionGate } from 'shared/components/WorkspacePermissionGate';
-import { makeStore } from 'store';
-
 import type { WorkspaceContext } from '@warehouser/contracts/workspaces';
 import type { PermissionId } from '@warehouser/shared-types/enums';
+import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
+import { Provider } from 'react-redux';
 import type { WorkspacePermissionGateProps } from 'shared/components/WorkspacePermissionGate';
+import { WorkspacePermissionGate } from 'shared/components/WorkspacePermissionGate';
+import { makeStore } from 'store';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const ownWorkspaceContext: WorkspaceContext = {
   workspace: {

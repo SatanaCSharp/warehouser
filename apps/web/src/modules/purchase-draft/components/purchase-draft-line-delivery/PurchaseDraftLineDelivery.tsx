@@ -1,22 +1,20 @@
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-
-import { DeliveryModeField } from 'modules/purchase-draft/components/purchase-draft-line-delivery/components/DeliveryModeField';
-import { DirectDestinationFields } from 'modules/purchase-draft/components/purchase-draft-line-delivery/components/direct-destination-fields/DirectDestinationFields';
-import { PurchaseDraftLineDeliveryRefusalAlert } from 'modules/purchase-draft/components/purchase-draft-line-delivery/components/PurchaseDraftLineDeliveryRefusalAlert';
-import { PurchaseDraftLineDestination } from 'modules/purchase-draft/components/purchase-draft-line-delivery/components/PurchaseDraftLineDestination';
-import { disagreeingDeliveryLinks } from 'modules/purchase-draft/utils/delivery-disagreement';
-import { mutationOutcome } from 'shared/api/client/mutation-outcome';
-import { Conditional } from 'shared/components/Conditional';
-
 import type {
   DeliveryMode,
   PurchaseDraftLine,
   PurchaseDraftLineUpdate,
 } from '@warehouser/contracts/purchase-drafts';
+import { DeliveryModeField } from 'modules/purchase-draft/components/purchase-draft-line-delivery/components/DeliveryModeField';
+import { DirectDestinationFields } from 'modules/purchase-draft/components/purchase-draft-line-delivery/components/direct-destination-fields/DirectDestinationFields';
+import { PurchaseDraftLineDeliveryRefusalAlert } from 'modules/purchase-draft/components/purchase-draft-line-delivery/components/PurchaseDraftLineDeliveryRefusalAlert';
+import { PurchaseDraftLineDestination } from 'modules/purchase-draft/components/PurchaseDraftLineDestination';
 import type { DisagreeingDeliveryLink } from 'modules/purchase-draft/utils/delivery-disagreement';
+import { disagreeingDeliveryLinks } from 'modules/purchase-draft/utils/delivery-disagreement';
 import type { ReactElement } from 'react';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import { mutationOutcome } from 'shared/api/client/mutation-outcome';
+import { Conditional } from 'shared/components/Conditional';
 
 export type PurchaseDraftLineDeliveryProps = {
   isDisabled: boolean;
@@ -33,6 +31,33 @@ export type PurchaseDraftLineDeliveryProps = {
   reasonId?: string;
   onReviseLine: (input: PurchaseDraftLineUpdate) => Promise<MutationResult>;
 };
+
+/** Where the line's goods go, when the read is entitled to say. A redacted line declares no
+ * `customerDestination` property at all, which is what proves the redaction (AC-09a). */
+type LineCustomerDestination = Extract<
+  PurchaseDraftLine,
+  { customerDestination: unknown }
+>['customerDestination'];
+
+const customerDestinationOf = (
+  line: PurchaseDraftLine,
+): LineCustomerDestination | null =>
+  'customerDestination' in line ? line.customerDestination : null;
+
+/** The pickers appear only while the member is composing a direct line that can still be written. A
+ * frozen or archived line states its destination and offers no way to restate it (AC-17, AC-23). */
+const isComposingDirectDestination = (
+  chosenMode: DeliveryMode,
+  isDisabled: boolean,
+): boolean => chosenMode === 'direct_to_customer' && !isDisabled;
+
+const destinationAddressId = (
+  destination: LineCustomerDestination | null,
+): string => destination?.customerDeliveryAddressId ?? '';
+
+const destinationCustomerId = (
+  destination: LineCustomerDestination | null,
+): string => destination?.customerId ?? '';
 
 /**
  * The `DELIVERY` block of `Delivery/Draft Line` (`jnl1h`) — how this line's
@@ -97,8 +122,7 @@ export const PurchaseDraftLineDelivery = ({
     }).then(applyOutcome);
   };
 
-  const customerDestination =
-    'customerDestination' in line ? line.customerDestination : null;
+  const customerDestination = customerDestinationOf(line);
 
   return (
     <section
@@ -128,15 +152,10 @@ export const PurchaseDraftLineDelivery = ({
         </div>
       </div>
 
-      {/* The pickers appear only while the member is composing a direct line
-          that can still be written. A frozen or archived line states its
-          destination and offers no way to restate it (AC-17, AC-23). */}
-      <Conditional when={chosenMode === 'direct_to_customer' && !isDisabled}>
+      <Conditional when={isComposingDirectDestination(chosenMode, isDisabled)}>
         <DirectDestinationFields
-          customerDeliveryAddressId={
-            customerDestination?.customerDeliveryAddressId ?? ''
-          }
-          customerId={customerDestination?.customerId ?? ''}
+          customerDeliveryAddressId={destinationAddressId(customerDestination)}
+          customerId={destinationCustomerId(customerDestination)}
           isDisabled={isDisabled}
           onChangeAddress={onChangeAddress}
         />

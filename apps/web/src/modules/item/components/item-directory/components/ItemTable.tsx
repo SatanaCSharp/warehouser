@@ -1,15 +1,13 @@
 import { Table } from '@heroui/react';
-import { useTranslation } from 'react-i18next';
-
+import type { Item } from '@warehouser/contracts/items';
 import { ItemActionsMenu } from 'modules/item/components/item-directory/components/ItemActionsMenu';
 import { ItemNamingLine } from 'modules/item/components/item-directory/components/ItemNamingLine';
 import { ItemOnHand } from 'modules/item/components/item-directory/components/ItemOnHand';
 import { ItemStatusChip } from 'modules/item/components/item-directory/components/ItemStatusChip';
 import { ItemTableFooter } from 'modules/item/components/item-directory/components/ItemTableFooter';
-
-import type { Item } from '@warehouser/contracts/items';
 import type { ItemActionHandlers } from 'modules/item/hooks/projections/useItemActions';
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export type ItemTableProps = ItemActionHandlers & {
   items: Item[];

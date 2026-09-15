@@ -15,6 +15,7 @@ import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
 import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
 import { WriteRateLimitGuard } from 'shared/guards/write-rate-limit.guard';
 import { WRITE_RATE_LIMITED_KEY } from 'shared/guards/write-rate-limited.decorator';
+import { describe, expect, it } from 'vitest';
 
 // T10 — the guard and metadata proof `customers-http-contract.integration.spec.ts` cannot itself
 // make: which Permission a route declares, whether it tolerates an archived Warehouse and whether

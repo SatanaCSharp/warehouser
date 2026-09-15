@@ -1,6 +1,5 @@
-import { describe, expect, it } from 'vitest';
-
 import { resolveDemandUrgency } from 'modules/customer-order/utils/demand-urgency';
+import { describe, expect, it } from 'vitest';
 
 // The urgency chip on `EARLIEST NEEDED BY` (design frame `G6jhw`: `in 8 days`,
 // `in 17 days`, and the danger `overdue by 4 days`). What this suite pins is the

@@ -1,19 +1,17 @@
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-
-import { DriftSignal } from 'modules/purchase-draft/components/DriftSignal';
-import { PurchaseDraftLinkIdentity } from 'modules/purchase-draft/components/PurchaseDraftLinkIdentity';
-import { useLinkDriftChips } from 'modules/purchase-draft/hooks/projections/useLinkDriftChips';
-import { Conditional } from 'shared/components/Conditional';
-import { FormTextField } from 'shared/components/FormTextField';
-import { ROW_ENTER } from 'shared/constants/motion';
-import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
-
 import type {
   DeliveryMode,
   PurchaseDraftLineLink,
 } from '@warehouser/contracts/purchase-drafts';
+import { DriftSignal } from 'modules/purchase-draft/components/DriftSignal';
+import { PurchaseDraftLinkIdentity } from 'modules/purchase-draft/components/PurchaseDraftLinkIdentity';
+import { useLinkDriftChips } from 'modules/purchase-draft/hooks/projections/useLinkDriftChips';
 import type { ChangeEvent, ReactElement, ReactNode } from 'react';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Conditional } from 'shared/components/Conditional';
+import { FormTextField } from 'shared/components/FormTextField';
+import { ROW_ENTER } from 'shared/constants/motion';
+import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
 
 /**
  * The one part of the row that differs between the jobs below: what the
@@ -78,6 +76,44 @@ const DEMAND_STATES: readonly {
   { state: 'frozenUnchangedState', holds: ({ keptItsState }) => keptItsState },
 ];
 
+/** What the link was frozen against, or — for a link that carries no Demand Snapshot — what the
+ * Customer Order says now. Read one field at a time, so each default is one named reading rather
+ * than a third of an expression. */
+const capturedNeededBy = (link: PurchaseDraftLineLink): string =>
+  link.snapshot?.capturedNeededBy ?? link.current.neededBy;
+
+const capturedQuantity = (link: PurchaseDraftLineLink): number =>
+  link.snapshot?.capturedQuantity ?? link.current.outstandingQuantity;
+
+const capturedState = (
+  link: PurchaseDraftLineLink,
+): PurchaseDraftLineLink['current']['state'] =>
+  link.snapshot?.capturedState ?? link.current.state;
+
+const capturedDemandOf = (
+  link: PurchaseDraftLineLink,
+): {
+  neededBy: string;
+  quantity: number;
+  state: PurchaseDraftLineLink['current']['state'];
+} => ({
+  neededBy: capturedNeededBy(link),
+  quantity: capturedQuantity(link),
+  state: capturedState(link),
+});
+
+/** The first state that holds. A frozen link whose order has moved states falls through to
+ * `frozenChangedState`, which is the whole point of the comparison. */
+const resolveDemandState = (reading: {
+  hasSnapshot: boolean;
+  isFrozen: boolean;
+  keptItsState: boolean;
+}): DemandState => {
+  const stating = DEMAND_STATES.find(({ holds }) => holds(reading));
+
+  return stating?.state ?? 'frozenChangedState';
+};
+
 /**
  * `Ordering/Link Row` (`BSmrU`) — one Purchase Draft Line link, serving all
  * three jobs the approved design gives it: an editable draft-line link, a
@@ -132,19 +168,12 @@ export const PurchaseDraftLinkRow = ({
   };
 
   const { current, snapshot } = link;
-  const captured = {
-    neededBy: snapshot?.capturedNeededBy ?? current.neededBy,
-    quantity: snapshot?.capturedQuantity ?? current.outstandingQuantity,
-    state: snapshot?.capturedState ?? current.state,
-  };
-  const demandState =
-    DEMAND_STATES.find(({ holds }) =>
-      holds({
-        hasSnapshot: snapshot !== null,
-        isFrozen,
-        keptItsState: captured.state === current.state,
-      }),
-    )?.state ?? 'frozenChangedState';
+  const captured = capturedDemandOf(link);
+  const demandState = resolveDemandState({
+    hasSnapshot: snapshot !== null,
+    isFrozen,
+    keptItsState: captured.state === current.state,
+  });
 
   const demand: Record<DemandState, string> = {
     current: t('linkRow.current', {

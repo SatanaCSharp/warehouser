@@ -1,3 +1,4 @@
+import { isNull } from '@warehouser/utils/predicates';
 import type { CustomerOrderState } from 'shared/domain/entities/customer-order.entity';
 import type {
   IdentifiedCustomerOrderRead,
@@ -58,12 +59,6 @@ export interface IdentifiedCustomerOrder extends RedactedCustomerOrder {
 export type CustomerOrderProjection =
   IdentifiedCustomerOrder | RedactedCustomerOrder;
 
-/** Whether this projection carries customer identity — the one discriminator, so no caller tests
- * for a property name of its own. */
-export const identifiesCustomer = (
-  projection: CustomerOrderProjection,
-): projection is IdentifiedCustomerOrder => 'customer' in projection;
-
 // Every property is named explicitly rather than spread from the row. A spread satisfies the type
 // without excess-property checking, so an identity column added to the read later would travel
 // straight through this mapper into a redacted response.
@@ -89,12 +84,12 @@ export const toIdentifiedCustomerOrder = (
 ): IdentifiedCustomerOrder => ({
   ...toRedactedCustomerOrder(row),
   customer:
-    row.customerId === null || row.customerCurrentName === null
+    isNull(row.customerId) || isNull(row.customerCurrentName)
       ? null
       : { id: row.customerId, name: row.customerCurrentName },
   customerName: row.typedCustomerName,
   destination:
-    row.deliveryAddressId === null || row.addressText === null
+    isNull(row.deliveryAddressId) || isNull(row.addressText)
       ? null
       : {
           deliveryAddressId: row.deliveryAddressId,

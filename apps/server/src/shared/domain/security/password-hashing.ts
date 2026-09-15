@@ -1,5 +1,8 @@
 import { randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
 
+import { isDefined } from '@warehouser/utils/predicates';
+import { isVerifiableAlgorithm } from 'shared/predicates/credential.predicates';
+
 export interface PasswordCredential {
   readonly algorithm: string;
   readonly hash: string;
@@ -39,7 +42,7 @@ const derive = (
         maxmem: parameters.maxMemory,
       },
       (error, key) => {
-        if (error) {
+        if (isDefined(error)) {
           reject(error);
           return;
         }
@@ -74,7 +77,7 @@ export const verifyPassword = async (
   password: string,
   credential: PasswordCredential,
 ): Promise<boolean> => {
-  if (credential.algorithm !== 'scrypt') {
+  if (!isVerifiableAlgorithm(credential.algorithm)) {
     return false;
   }
 

@@ -1,4 +1,5 @@
-import { type ArgumentsHost, BadRequestException } from '@nestjs/common';
+import type { ArgumentsHost } from '@nestjs/common';
+import { BadRequestException } from '@nestjs/common';
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import {
   ApplicationError,
@@ -11,6 +12,7 @@ import {
   GlobalHttpExceptionFilter,
   systemErrors,
 } from 'shared/errors/global-http-exception.filter';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 
 const createHost = (
@@ -19,8 +21,8 @@ const createHost = (
     password: 'secret-password',
   },
 ) => {
-  const status = jest.fn().mockReturnThis();
-  const json = jest.fn();
+  const status = vi.fn().mockReturnThis();
+  const json = vi.fn();
   const request = {
     headers: {
       cookie: 'warehouser_session=opaque-secret',
@@ -41,10 +43,10 @@ const createHost = (
 };
 
 describe('GlobalHttpExceptionFilter', () => {
-  const logger = { error: jest.fn(), warn: jest.fn() };
+  const logger = { error: vi.fn(), warn: vi.fn() };
   const filter = new GlobalHttpExceptionFilter(logger);
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => vi.clearAllMocks());
 
   it.each([
     [
@@ -212,22 +214,45 @@ describe('GlobalHttpExceptionFilter', () => {
 
     expect(unmapped).toEqual([]);
   });
+
+  // A thrown non-`Error`. Nothing in this application throws one, but `catch` is the last handler on
+  // the process and a dependency can throw a string, a plain object, or `undefined` — and the
+  // description it logs reads `constructor.name`, `.message` and `.stack` off whatever it is given.
+  // The guard is what keeps that read from being attempted; without it a thrown `null` would fail
+  // inside the exception filter itself, which is the one place a failure has nowhere left to go.
+  it.each([['boom'], [{ code: 'not-an-error' }], [null], [undefined], [42]])(
+    'describes a thrown non-Error as an unknown category and still responds: %p',
+    (thrown) => {
+      const { host, json, status } = createHost();
+
+      filter.catch(thrown, host);
+
+      expect(status).toHaveBeenCalledWith(500);
+      expect(json).toHaveBeenCalledWith({
+        code: 'system.internal_error',
+        message: 'An unexpected error occurred.',
+      });
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({ error: { category: 'unknown' } }),
+      );
+    },
+  );
 });
 
 describe('GlobalHttpExceptionFilter on a Zod request-validation refusal', () => {
   const filter = new GlobalHttpExceptionFilter({
-    error: jest.fn(),
-    warn: jest.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
   });
 
   // The shape a recorded demand arrives in — an identifier, a customer name, a
   // whole-number quantity with a floor, and a calendar date — so the envelope
   // asserted here is the one `POST .../customer-orders` returns (AC-02).
   const customerOrderCreate = z.strictObject({
-    itemId: z.string().uuid(),
+    itemId: z.uuid(),
     customerName: z.string().min(1),
     quantity: z.number().int().min(1),
-    neededBy: z.string().date(),
+    neededBy: z.iso.date(),
   });
 
   const refuse = (body: unknown): unknown => {

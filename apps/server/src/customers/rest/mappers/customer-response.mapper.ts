@@ -4,7 +4,7 @@ import type {
   CustomerDeliveryAddress as CustomerDeliveryAddressRead,
 } from 'customers/domain/mappers/customer.mapper';
 import type { CustomerDetail as CustomerDetailRead } from 'customers/domain/mappers/customer-awaiting-order.mapper';
-import { map } from 'lodash';
+import { map } from 'lodash-es';
 
 // The application boundary returns instants as `Date`; openapi.yaml carries them as date-times.
 // Both `customers` controllers return the same Customer projection, so the conversion is one

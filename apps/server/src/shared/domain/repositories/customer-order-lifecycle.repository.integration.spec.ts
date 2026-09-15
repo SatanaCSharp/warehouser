@@ -26,7 +26,8 @@ import {
   buildWarehouse,
   buildWorkspace,
 } from 'test/factories/entity-factories';
-import { PostgresQueryRunner } from 'typeorm/driver/postgres/PostgresQueryRunner';
+import { countRoundTrips, recordQueries } from 'test/pglite/query-recorder';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 const now = new Date('2026-08-26T10:00:00.000Z');
 const later = new Date('2026-08-26T12:00:00.000Z');
@@ -384,28 +385,18 @@ describe('CustomerOrderLifecycleRepository', () => {
     await seedAllocation(seeded, customerOrderId, 30);
     await seedAllocation(seeded, customerOrderId, 50);
 
-    const spy = jest.spyOn(PostgresQueryRunner.prototype, 'query');
-    const before = spy.mock.calls.length;
-    const locked = await transactions.executeInTransaction({}, () =>
-      repository.lockOrderWithAllocatedTotal(
-        customerOrderId,
-        seeded.warehouseId,
-      ),
-    );
     // Counted at the PostgreSQL round-trip level, so an implementation that took the lock and then
     // summed the Allocations as a second statement would fail this even though it returned the same
     // figure. The transaction's own control statements are excluded by name rather than by a count,
     // so the assertion does not silently drift if the transaction service changes how it opens one.
-    const queryCount = spy.mock.calls
-      .slice(before)
-      .map((call) => String(call[0]))
-      .filter(
-        (sql) =>
-          !/^(?:START TRANSACTION|SET TRANSACTION|COMMIT|ROLLBACK|BEGIN)/u.test(
-            sql,
-          ),
-      ).length;
-    spy.mockRestore();
+    const { result: locked, queryCount } = await countRoundTrips(() =>
+      transactions.executeInTransaction({}, () =>
+        repository.lockOrderWithAllocatedTotal(
+          customerOrderId,
+          seeded.warehouseId,
+        ),
+      ),
+    );
 
     expect(locked).toMatchObject({
       order: expect.objectContaining({ id: customerOrderId, quantity: 100 }),
@@ -559,22 +550,17 @@ describe('CustomerOrderLifecycleRepository', () => {
       customerName: null,
     });
 
-    const spy = jest.spyOn(PostgresQueryRunner.prototype, 'query');
-    const before = spy.mock.calls.length;
-
-    const redirected = await transactions.executeInTransaction({}, () =>
-      repository.redirectCustomerOrder(
-        customerOrderId,
-        customer.customerId,
-        customer.secondAddressId,
-        later,
+    const { result: redirected, statements: issued } = await recordQueries(() =>
+      transactions.executeInTransaction({}, () =>
+        repository.redirectCustomerOrder(
+          customerOrderId,
+          customer.customerId,
+          customer.secondAddressId,
+          later,
+        ),
       ),
     );
-
-    const statements = spy.mock.calls
-      .slice(before)
-      .map(([sql]) => String(sql).toLowerCase());
-    spy.mockRestore();
+    const statements = issued.map((statement) => statement.sql.toLowerCase());
 
     expect(redirected).toMatchObject({
       id: customerOrderId,
@@ -590,6 +576,12 @@ describe('CustomerOrderLifecycleRepository', () => {
       customerDeliveryAddressId: customer.secondAddressId,
       neededBy,
     });
+    // Guards the assertion below against passing vacuously: an empty recording satisfies "no
+    // statement names purchase_draft" without the redirect having been observed at all, and this is
+    // the one converted site whose shape does not otherwise notice a recorder that captured nothing.
+    expect(
+      statements.filter((statement) => statement.includes('customer_orders')),
+    ).not.toEqual([]);
     expect(
       statements.filter((statement) => statement.includes('purchase_draft')),
     ).toEqual([]);

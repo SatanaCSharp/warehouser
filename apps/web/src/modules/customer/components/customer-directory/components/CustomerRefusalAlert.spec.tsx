@@ -1,9 +1,8 @@
 import { screen } from '@testing-library/react';
 import { ErrorCode } from '@warehouser/shared-types/enums';
-import { describe, expect, it } from 'vitest';
-
 import { CustomerRefusalAlert } from 'modules/customer/components/customer-directory/components/CustomerRefusalAlert';
 import { renderWithProviders } from 'test/render';
+import { describe, expect, it } from 'vitest';
 
 // delivery-addresses R8 — AC-07 is the load-bearing case this component's own
 // docblock names: the refusal has to name the rule **and** state the order the

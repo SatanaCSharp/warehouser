@@ -3,14 +3,12 @@ import { posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { itemApi } from 'modules/item/api/item-api';
-import { loadItems } from 'modules/item/loaders/item.loader';
-import { accessIds, authenticatedStore } from 'test/access-fixtures';
-
 import type { ItemLoaderContext } from 'modules/item/loaders/item.loader';
+import { loadItems } from 'modules/item/loaders/item.loader';
 import type { AppStore } from 'store';
+import { accessIds, authenticatedStore } from 'test/access-fixtures';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // T18 — the Items destination's route loader (DoD "a test proves a loader
 // refused by a missing ITEMS:WATCH issues zero requests"). Colocated with the

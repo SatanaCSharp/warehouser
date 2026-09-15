@@ -1,27 +1,21 @@
-import { Injectable, Optional } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
+import { isDefined } from '@warehouser/utils/predicates';
 import type { Customer } from 'customers/domain/mappers/customer.mapper';
 import { toCustomer } from 'customers/domain/mappers/customer.mapper';
+import { reportsThePromotedMain } from 'customers/domain/predicates/delivery-address-promotion.predicates';
 import {
   assertDeliveryAddressDeactivatable,
   assertDeliveryAddressUsable,
   assertLockedDeliveryAddressWriteApplied,
   CustomerAddressBookService,
+  lockedDeliveryAddress,
   nextMainDeliveryAddress,
+  promotedDeliveryAddressIdOf,
 } from 'customers/domain/services/customer-address-book.service';
-import { find } from 'lodash';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository';
-
-export interface DeactivateCustomerDeliveryAddressRuntime {
-  readonly now: () => Date;
-}
-
-const defaultDeactivateCustomerDeliveryAddressRuntime: DeactivateCustomerDeliveryAddressRuntime =
-  {
-    now: () => new Date(),
-  };
 
 // AC-06a/AC-06b/AC-07/AC-12 — records one Delivery Address Inactive. It stops being offered
 // wherever an address is chosen, while every Customer Order and every frozen Purchase Draft Line
@@ -40,8 +34,6 @@ export class DeactivateCustomerDeliveryAddressCommand {
   constructor(
     private readonly customerAddressBookRepository: CustomerAddressBookRepository,
     private readonly customerAddressBookService: CustomerAddressBookService,
-    @Optional()
-    private readonly deactivateCustomerDeliveryAddressRuntime: DeactivateCustomerDeliveryAddressRuntime = defaultDeactivateCustomerDeliveryAddressRuntime,
   ) {}
 
   @Transactional()
@@ -55,14 +47,13 @@ export class DeactivateCustomerDeliveryAddressCommand {
       currentUser.warehouseId,
     );
 
-    const deactivatedAt = this.deactivateCustomerDeliveryAddressRuntime.now();
+    const deactivatedAt = new Date();
 
     const locked =
       await this.customerAddressBookRepository.lockDeliveryAddresses(
         customerId,
       );
-    const target =
-      find(locked, (candidate) => candidate.id === deliveryAddressId) ?? null;
+    const target = lockedDeliveryAddress(locked, deliveryAddressId);
 
     assertDeliveryAddressUsable(target, customerId);
     assertDeliveryAddressDeactivatable(deliveryAddressId, locked);
@@ -80,7 +71,7 @@ export class DeactivateCustomerDeliveryAddressCommand {
       ),
     );
 
-    if (successor !== null) {
+    if (isDefined(successor)) {
       assertLockedDeliveryAddressWriteApplied(
         await this.customerAddressBookRepository.setMainDeliveryAddress(
           successor.id,
@@ -90,7 +81,7 @@ export class DeactivateCustomerDeliveryAddressCommand {
       );
     }
 
-    const promotedDeliveryAddressId = successor?.id ?? null;
+    const promotedDeliveryAddressId = promotedDeliveryAddressIdOf(successor);
 
     const deliveryAddresses =
       await this.customerAddressBookRepository.listDeliveryAddresses(
@@ -103,8 +94,10 @@ export class DeactivateCustomerDeliveryAddressCommand {
     // reports have to be the same address; anything else is a broken invariant rather than a
     // member-facing rejection (server-error-handling.md §2).
     assert(
-      promotedDeliveryAddressId === null ||
-        updated.mainDeliveryAddressId === promotedDeliveryAddressId,
+      reportsThePromotedMain(
+        promotedDeliveryAddressId,
+        updated.mainDeliveryAddressId,
+      ),
       'The promoted Main Delivery Address is not the one the address book reports',
     );
 

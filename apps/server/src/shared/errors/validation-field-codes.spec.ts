@@ -1,16 +1,17 @@
 import { BadRequestException } from '@nestjs/common';
 import { ZodValidationException, ZodValidationPipe } from 'nestjs-zod';
 import { validationFieldCodes } from 'shared/errors/validation-field-codes';
+import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
 // The shape the ordering request contracts share: a whole-number quantity with a
 // floor and a ceiling, a calendar date, an identifier, and a nested line array
 // (`packages/contracts/src/customer-orders/customer-orders-mutations.ts`).
 const schema = z.strictObject({
-  itemId: z.string().uuid(),
+  itemId: z.uuid(),
   customerName: z.string().min(1),
   quantity: z.number().int().min(1).max(999),
-  neededBy: z.string().date(),
+  neededBy: z.iso.date(),
   lines: z
     .array(z.strictObject({ quantity: z.number().int().min(1) }))
     .optional(),
@@ -239,5 +240,24 @@ describe('validationFieldCodes', () => {
     expect(
       validationFieldCodes(new ZodValidationException('opaque'), { body: {} }),
     ).toBeUndefined();
+  });
+
+  // The last branch of the normalization, and the only one no schema can reach: an issue whose
+  // `code` is not a string at all. `ZodLikeIssue` types it `unknown` deliberately — the value
+  // arrives from a third-party exception this code did not construct — so the guard is the thing
+  // that keeps a non-string from being used as an index into `issueCodes`. A field refused that way
+  // is still named; it just carries the generic code.
+  it('names a field as invalid when its issue code is not a string', () => {
+    const rejected = new ZodValidationException({
+      issues: [
+        { code: 7, path: ['quantity'] },
+        { code: undefined, path: ['customerName'] },
+      ],
+    });
+
+    expect(validationFieldCodes(rejected, { body: { quantity: 12 } })).toEqual({
+      quantity: 'invalid',
+      customerName: 'invalid',
+    });
   });
 });

@@ -25,6 +25,7 @@ import { join } from 'node:path';
 
 import { ErrorCode, PermissionId } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
+import type { EndingConditionSubmission } from 'purchase-drafts/domain/services/arrival-inspection.service';
 import {
   ArrivalInspectionService,
   assertConditionSplit,
@@ -32,7 +33,6 @@ import {
   assertRejectionCapability,
   deriveAcceptedQuantity,
   deriveRejectedQuantity,
-  type EndingConditionSubmission,
 } from 'purchase-drafts/domain/services/arrival-inspection.service';
 import { DeliveryMode } from 'purchase-drafts/domain/value-objects/delivery-mode';
 import {
@@ -45,6 +45,7 @@ import type {
   LockedPurchaseDraftLineForEnding,
   RecordLineEndingRejectionInput,
 } from 'shared/domain/repositories/arrival-confirmation.repository';
+import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>
   `00000000-0000-4000-8000-${suffix.padStart(12, '0')}`;
@@ -84,10 +85,8 @@ const OFFERED_REASON_IDS = A_FABRICATED_CATALOGUE.map((entry) => entry.id);
 // performs them: an implementation that listed the catalogue for AC-06 and then resolved the stated
 // identifiers again for AC-07's flags would cost two.
 const catalogueRepositoryDouble = () => ({
-  listRejectionReasons: jest
-    .fn()
-    .mockResolvedValue([...A_FABRICATED_CATALOGUE]),
-  resolveRejectionReasons: jest
+  listRejectionReasons: vi.fn().mockResolvedValue([...A_FABRICATED_CATALOGUE]),
+  resolveRejectionReasons: vi
     .fn()
     .mockResolvedValue([...A_FABRICATED_CATALOGUE]),
 });
@@ -840,7 +839,7 @@ describe('ArrivalInspectionService.assertEndingCondition — the payload shape o
 // then the Condition Split (and the catalogue check it shares), then the Pre-receipt Conformance —
 // never a different order, because each later rule is judged only once the more fundamental one has
 // passed. Proved by outcome rather than by spying on the module's own functions: `assertEndingCondition`
-// now calls them as same-file bindings, which a cross-module `jest.mock` cannot intercept. Each case
+// now calls them as same-file bindings, which a cross-module `vi.mock` cannot intercept. Each case
 // below states a submission breaking **two** rules at once and asserts which one's code is
 // returned, which is only possible if the rules run in the stated order.
 describe('ArrivalInspectionService.assertEndingCondition — the rules run in the documented order (sad.md §6.1 steps 4-6, post-review)', () => {
@@ -1003,7 +1002,7 @@ describe('the shape of the shared rules', () => {
   // the source, which is where the modifier lives.
   it('keeps the condition orchestration as the service’s only public method', () => {
     const declaration = readFileSync(
-      join(__dirname, 'arrival-inspection.service.ts'),
+      join(import.meta.dirname, 'arrival-inspection.service.ts'),
       'utf8',
     );
 
@@ -1049,7 +1048,10 @@ const sourceFilesUnder = (directory: string): readonly string[] =>
 // pinned over the source instead, in the same way the shared refusals below are.
 describe('the Source correspondence is stated once', () => {
   const serviceSource = (): string =>
-    readFileSync(join(__dirname, 'arrival-inspection.service.ts'), 'utf8');
+    readFileSync(
+      join(import.meta.dirname, 'arrival-inspection.service.ts'),
+      'utf8',
+    );
 
   it('names requiredSourceFor rather than re-branching the Delivery Mode', () => {
     expect(serviceSource()).toContain('requiredSourceFor');
@@ -1069,7 +1071,7 @@ describe('the ending rules live in one place', () => {
   it.each(SHARED_REFUSALS)(
     'raises %s from the shared module alone, never from a command',
     (refusalName) => {
-      const featureRoot = join(__dirname, '..', '..');
+      const featureRoot = join(import.meta.dirname, '..', '..');
       const raisingFiles = sourceFilesUnder(featureRoot)
         .filter(
           (path) => !path.endsWith(join('errors', 'purchase-draft.errors.ts')),
@@ -1077,7 +1079,7 @@ describe('the ending rules live in one place', () => {
         .filter((path) => readFileSync(path, 'utf8').includes(refusalName));
 
       expect(raisingFiles).toEqual([
-        join(__dirname, 'arrival-inspection.service.ts'),
+        join(import.meta.dirname, 'arrival-inspection.service.ts'),
       ]);
     },
   );

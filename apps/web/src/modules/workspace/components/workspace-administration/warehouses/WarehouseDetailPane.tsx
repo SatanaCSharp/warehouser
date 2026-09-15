@@ -1,20 +1,18 @@
 import { Alert, Button, Chip, Separator } from '@heroui/react';
-import { useTranslation } from 'react-i18next';
-
+import type {
+  Warehouse,
+  WorkspaceUser,
+} from '@warehouser/contracts/workspaces';
 import { GiveWarehouseAccessAction } from 'modules/workspace/components/workspace-administration/warehouses/GiveWarehouseAccessAction';
 import { WarehouseDeliveryAddressSection } from 'modules/workspace/components/workspace-administration/warehouses/WarehouseDeliveryAddressSection';
 import { WarehouseLifecycleActions } from 'modules/workspace/components/workspace-administration/warehouses/WarehouseLifecycleActions';
 import { WarehouseNameForm } from 'modules/workspace/components/workspace-administration/warehouses/WarehouseNameForm';
 import { WarehousePeopleList } from 'modules/workspace/components/workspace-administration/warehouses/WarehousePeopleList';
+import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Conditional } from 'shared/components/Conditional';
 import { useContentTransition } from 'shared/hooks/effects/useContentTransition';
 import { ChevronLeftIcon } from 'shared/icons';
-
-import type {
-  Warehouse,
-  WorkspaceUser,
-} from '@warehouser/contracts/workspaces';
-import type { ReactElement } from 'react';
 
 type WarehouseDetailPaneProps = {
   isOnlyNonArchived: boolean;

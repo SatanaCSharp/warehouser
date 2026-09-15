@@ -18,6 +18,7 @@ import { MemberLifecycleRepository } from 'shared/domain/repositories/member-lif
 // Does not exist yet — this is the RED step for T10. ChangeMemberEmailCommand
 // must be implemented by the implementer at this path.
 import { ChangeMemberEmailCommand } from 'users/usecases/commands/change-member-email.command';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 const now = new Date('2026-08-06T12:00:00.000Z');
 

@@ -1,9 +1,7 @@
-import { useTranslation } from 'react-i18next';
-
-import { MapPinIcon } from 'shared/icons';
-
 import type { CustomerOrderDestination } from '@warehouser/contracts/customers';
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import { MapPinIcon } from 'shared/icons';
 
 export type CustomerOrderDestinationLineProps = {
   /**

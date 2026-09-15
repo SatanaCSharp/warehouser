@@ -1,9 +1,13 @@
 import { QueryStatus } from '@reduxjs/toolkit/query';
 import { screen, waitFor, within } from '@testing-library/react';
+import type {
+  Warehouse,
+  WorkspaceUser,
+} from '@warehouser/contracts/workspaces';
+import type { WorkspacePermissionId as WorkspacePermissionIdType } from '@warehouser/shared-types/enums';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { WarehouseDetailPane } from 'modules/workspace/components/workspace-administration/warehouses/WarehouseDetailPane';
+import type { AppStore } from 'store';
 import { renderWithProviders } from 'test/render';
 import {
   authenticatedWorkspaceStore,
@@ -14,13 +18,7 @@ import {
   workspaceUsers,
   workspaceWarehouses,
 } from 'test/workspace-fixtures';
-
-import type {
-  Warehouse,
-  WorkspaceUser,
-} from '@warehouser/contracts/workspaces';
-import type { WorkspacePermissionId as WorkspacePermissionIdType } from '@warehouser/shared-types/enums';
-import type { AppStore } from 'store';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 /**
  * The three cases `sad.md` §5.4 assigns to `WarehousePeopleList`: the two

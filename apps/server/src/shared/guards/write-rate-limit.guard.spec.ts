@@ -5,6 +5,7 @@ import { ApplicationError } from '@warehouser/shared-types/errors';
 import { WriteRateLimitCounter } from 'shared/guards/write-rate-limit.counter';
 import { WriteRateLimitGuard } from 'shared/guards/write-rate-limit.guard';
 import { WRITE_RATE_LIMITED_KEY } from 'shared/guards/write-rate-limited.decorator';
+import { describe, expect, it, vi } from 'vitest';
 
 // ADR 0003 / spec.md §6.1 "Draft and demand spam": recording demand, creating drafts and adjusting
 // On-hand Quantity are capped at 60 recorded changes per minute per member. The guard is a
@@ -28,7 +29,7 @@ const minute = 60_000;
  * guards' specs already use so this guard is proven to read its own key. */
 const reflectorReturning = (limited: boolean | undefined): Reflector =>
   ({
-    getAllAndOverride: jest.fn((key: string) =>
+    getAllAndOverride: vi.fn((key: string) =>
       key === WRITE_RATE_LIMITED_KEY ? limited : undefined,
     ),
   }) as unknown as Reflector;
@@ -57,7 +58,7 @@ const resolvedRequest = (overrides: Record<string, unknown> = {}) => ({
 
 describe('WriteRateLimitGuard', () => {
   it('lets an undeclared handler through without counting anything', async () => {
-    const clock = jest.fn().mockReturnValue(0);
+    const clock = vi.fn().mockReturnValue(0);
     const guard = new WriteRateLimitGuard(
       reflectorReturning(undefined),
       new WriteRateLimitCounter(clock),
@@ -150,7 +151,7 @@ describe('WriteRateLimitGuard', () => {
       // order — SessionAuthGuard, then WarehouseAccessGuard, then this guard — so this guard must
       // refuse via the same non-enumerating access denial rather than ever incrementing a counter
       // for an actor authorization never approved.
-      const clock = jest.fn().mockReturnValue(0);
+      const clock = vi.fn().mockReturnValue(0);
       const guard = new WriteRateLimitGuard(
         reflectorReturning(true),
         new WriteRateLimitCounter(clock),

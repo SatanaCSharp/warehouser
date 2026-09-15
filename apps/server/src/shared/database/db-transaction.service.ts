@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { DbTransactionContext } from 'shared/database/db-transaction-context.service';
+import { propagatesTransaction } from 'shared/predicates/persistence-read.predicates';
 import { DataSource, EntityManager } from 'typeorm';
-import type { IsolationLevel } from 'typeorm/driver/types/IsolationLevel';
+import type { IsolationLevel } from 'typeorm/driver/types/IsolationLevel.js';
 
 export interface TransactionOptions {
   readonly propagation?: boolean;
@@ -19,7 +20,7 @@ export class DbTransactionService {
     options: TransactionOptions,
     callback: (manager: EntityManager) => Promise<T>,
   ): Promise<T> {
-    if (options.propagation !== false && this.context.hasActiveTransaction()) {
+    if (propagatesTransaction(options) && this.context.hasActiveTransaction()) {
       return callback(this.context.getEntityManager());
     }
 

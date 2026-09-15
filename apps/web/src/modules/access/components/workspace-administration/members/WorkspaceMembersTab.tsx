@@ -1,12 +1,10 @@
-import { useTranslation } from 'react-i18next';
-
 import { AddWorkspaceMemberAction } from 'modules/access/components/workspace-administration/members/AddWorkspaceMemberAction';
 import { WorkspaceMemberList } from 'modules/access/components/workspace-administration/members/WorkspaceMemberList';
 import { WorkspaceUserList } from 'modules/access/components/workspace-administration/members/WorkspaceUserList';
 import { useWorkspaceMembers } from 'modules/access/hooks/queries/useWorkspaceMembers';
 import { useWorkspaceUsers } from 'modules/access/hooks/queries/useWorkspaceUsers';
-
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 
 /**
  * The Workspace members tab: who administers this Workspace and in which

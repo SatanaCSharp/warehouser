@@ -1,15 +1,13 @@
-import { PermissionId } from '@warehouser/shared-types/enums';
-import { vi } from 'vitest';
-
-import { authBecameAuthenticated } from 'modules/auth/store/auth.slice';
-import { makeStore } from 'store';
-
 import type {
   MemberPage,
   PermissionPage,
   RolePage,
 } from '@warehouser/contracts/access';
+import { PermissionId } from '@warehouser/shared-types/enums';
+import { authBecameAuthenticated } from 'modules/auth/store/auth.slice';
 import type { AppStore } from 'store';
+import { makeStore } from 'store';
+import { vi } from 'vitest';
 
 export const accessIds = {
   actingUser: '00000000-0000-4000-8000-000000000003',

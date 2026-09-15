@@ -1,11 +1,9 @@
 import union from 'lodash/union';
 import without from 'lodash/without';
-import { useTranslation } from 'react-i18next';
-
 import { PermissionCheckbox } from 'modules/access/components/access-workspace/components/roles/PermissionCheckbox';
-
 import type { AccessPermission } from 'modules/access/types/access.types';
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 
 type PermissionFieldsetProps = {
   isDisabled: boolean;

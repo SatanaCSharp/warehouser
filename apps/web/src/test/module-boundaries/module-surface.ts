@@ -153,6 +153,10 @@ export const WORKSPACE_MODULE_MANIFEST = [
   'components/workspace-administration/warehouses/WarehouseLifecycleActions.tsx',
   'components/workspace-administration/warehouses/WarehouseList.spec.tsx',
   'components/workspace-administration/warehouses/WarehouseList.tsx',
+  // AC-08/AC-09 — the colocated spec for the rename form, added with Phase 1 of the CRAP
+  // coverage work. Its subject was rendered only through `WarehouseDetailPane`, so neither of
+  // its refusal paths had a test (`placing-web-tests.md` §1).
+  'components/workspace-administration/warehouses/WarehouseNameForm.spec.tsx',
   'components/workspace-administration/warehouses/WarehouseNameForm.tsx',
   'components/workspace-administration/warehouses/WarehousePeopleList.spec.tsx',
   'components/workspace-administration/warehouses/WarehousePeopleList.tsx',
@@ -189,6 +193,10 @@ export const WORKSPACE_MODULE_MANIFEST = [
   'route.tsx',
   'schemas/name-workspace-form.schema.ts',
   'schemas/warehouse-name-form.schema.ts',
+  // AC-10 — the colocated spec for the Delivery Address rule mapper, added with Phase 1 of the
+  // CRAP coverage work; its subject was the one validation-key mapper in this module with no
+  // test (`placing-web-tests.md` §1).
+  'utils/warehouse-delivery-address-validation.spec.ts',
   'utils/warehouse-delivery-address-validation.ts',
   'utils/warehouse-name-validation.spec.ts',
   'utils/warehouse-name-validation.ts',

@@ -1,3 +1,4 @@
+import type { AnyRouter } from '@tanstack/react-router';
 import {
   createMemoryHistory,
   createRootRouteWithContext,
@@ -14,25 +15,22 @@ import {
   within,
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { AccessProjection } from '@warehouser/contracts/access';
+import type { WorkspaceContext } from '@warehouser/contracts/workspaces';
 import {
   PermissionId,
   WorkspacePermissionId,
 } from '@warehouser/shared-types/enums';
-import { useState } from 'react';
-import { Provider } from 'react-redux';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
-import { ROUTES, ROUTE_SEGMENTS } from 'shared/constants/routes';
-import { Sidebar } from 'shared/layouts/sidebar/Sidebar';
-import { makeStore } from 'store';
-import { namedWorkspaceContext } from 'test/workspace-fixtures';
-
-import type { AnyRouter } from '@tanstack/react-router';
-import type { AccessProjection } from '@warehouser/contracts/access';
-import type { WorkspaceContext } from '@warehouser/contracts/workspaces';
 import type { WarehouseEntryVerdict } from 'guards/warehouse-entry.guard';
 import type { ReactElement } from 'react';
+import { useState } from 'react';
+import { Provider } from 'react-redux';
+import { ROUTE_SEGMENTS, ROUTES } from 'shared/constants/routes';
+import { Sidebar } from 'shared/layouts/sidebar/Sidebar';
 import type { AppStore } from 'store';
+import { makeStore } from 'store';
+import { namedWorkspaceContext } from 'test/workspace-fixtures';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const WAREHOUSE_ONE = '00000000-0000-4000-8000-000000000010';
 const WAREHOUSE_TWO = '00000000-0000-4000-8000-000000000012';

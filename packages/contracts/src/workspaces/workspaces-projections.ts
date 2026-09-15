@@ -11,15 +11,15 @@ const warehouseRoleKindSchema = z.enum(['custom', 'warehouse_manager']);
 const workspaceRoleKindSchema = z.enum(['custom', 'workspace_owner']);
 
 export const workspaceSchema = z.strictObject({
-  id: z.string().uuid(),
+  id: z.uuid(),
   name: z.string().min(1).max(100).nullable(),
 });
 
 export const contextWarehouseSchema = z.strictObject({
-  warehouseId: z.string().uuid(),
+  warehouseId: z.uuid(),
   name: z.string().min(1).max(100),
-  archivedAt: z.string().datetime().nullable(),
-  roleId: z.string().uuid(),
+  archivedAt: z.iso.datetime().nullable(),
+  roleId: z.uuid(),
   roleKind: warehouseRoleKindSchema,
 });
 
@@ -27,15 +27,15 @@ export const workspaceContextSchema = z.strictObject({
   workspace: workspaceSchema,
   workspacePermissionIds: z.array(workspacePermissionIdSchema),
   warehouses: z.array(contextWarehouseSchema),
-  effectiveWarehouseId: z.string().uuid().nullable(),
+  effectiveWarehouseId: z.uuid().nullable(),
 });
 
 export const activeWarehouseSelectionSchema = z.strictObject({
-  effectiveWarehouseId: z.string().uuid().nullable(),
+  effectiveWarehouseId: z.uuid().nullable(),
 });
 
 export const workspaceRoleSchema = z.strictObject({
-  id: z.string().uuid(),
+  id: z.uuid(),
   name: z.string().min(1).max(100),
   kind: workspaceRoleKindSchema,
   workspacePermissionIds: z.array(workspacePermissionIdSchema),
@@ -49,10 +49,10 @@ export const workspacePermissionSchema = z.strictObject({
 });
 
 export const workspaceMemberSchema = z.strictObject({
-  userId: z.string().uuid(),
-  workspaceRoleId: z.string().uuid(),
+  userId: z.uuid(),
+  workspaceRoleId: z.uuid(),
   workspaceRoleKind: workspaceRoleKindSchema,
-  email: z.string().email().max(254).optional(),
+  email: z.email().max(254).optional(),
 });
 
 // AC-33 — the Workspace-level Users read carries the Warehouses a User belongs
@@ -64,26 +64,26 @@ export const workspaceMemberSchema = z.strictObject({
 // Role") and design-handoff.md §"The level boundary is part of the design",
 // which forbids the Warehouse detail pane from showing a person's Role.
 export const workspaceUserWarehouseSchema = z.strictObject({
-  warehouseId: z.string().uuid(),
+  warehouseId: z.uuid(),
 });
 
 export const workspaceUserSchema = z.strictObject({
-  userId: z.string().uuid(),
-  email: z.string().email().max(254).optional(),
+  userId: z.uuid(),
+  email: z.email().max(254).optional(),
   isWorkspaceMember: z.boolean(),
   warehouses: z.array(workspaceUserWarehouseSchema),
 });
 
 export const workspaceOwnerTransferResultSchema = z.strictObject({
-  ownerUserId: z.string().uuid(),
-  formerOwnerUserId: z.string().uuid(),
-  formerOwnerWorkspaceRoleId: z.string().uuid(),
+  ownerUserId: z.uuid(),
+  formerOwnerUserId: z.uuid(),
+  formerOwnerWorkspaceRoleId: z.uuid(),
 });
 
 export const warehouseSchema = z.strictObject({
-  id: z.string().uuid(),
+  id: z.uuid(),
   name: z.string().min(1).max(100),
-  archivedAt: z.string().datetime().nullable(),
+  archivedAt: z.iso.datetime().nullable(),
 });
 
 // AC-10 — the Warehouse's one Delivery Address and its access notes: two
@@ -92,20 +92,20 @@ export const warehouseSchema = z.strictObject({
 // `null` until recorded, which is exactly the state a freeze of a Via
 // Warehouse line is refused from (AC-16a).
 export const warehouseDeliveryAddressSchema = z.strictObject({
-  warehouseId: z.string().uuid(),
+  warehouseId: z.uuid(),
   addressText: z.string().min(1).nullable(),
   accessNotes: z.string().min(1).nullable(),
 });
 
 export const assignableWarehouseRoleSchema = z.strictObject({
-  id: z.string().uuid(),
+  id: z.uuid(),
   name: z.string().min(1).max(100),
 });
 
 export const warehouseMembershipSchema = z.strictObject({
-  userId: z.string().uuid(),
-  warehouseId: z.string().uuid(),
-  roleId: z.string().uuid(),
+  userId: z.uuid(),
+  warehouseId: z.uuid(),
+  roleId: z.uuid(),
   roleKind: warehouseRoleKindSchema,
 });
 

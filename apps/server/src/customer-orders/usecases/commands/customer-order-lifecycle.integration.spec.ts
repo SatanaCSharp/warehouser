@@ -29,10 +29,12 @@ import { CustomerAddressBookRepository } from 'shared/domain/repositories/custom
 import { CustomerDirectoryRepository } from 'shared/domain/repositories/customer-directory.repository';
 import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository';
 import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
+import { freezeClockAt } from 'test/doubles/frozen-clock';
 import {
   buildWarehouse,
   buildWorkspace,
 } from 'test/factories/entity-factories';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 const now = new Date('2026-08-26T10:00:00.000Z');
 const later = new Date('2026-08-26T12:00:00.000Z');
@@ -40,8 +42,6 @@ const neededBy = '2099-01-01';
 
 const context = new DbTransactionContext(dataSource);
 const transactions = new DbTransactionService(dataSource, context);
-
-let newCustomerOrderId = randomUUID();
 
 const lifecycleRepository = new CustomerOrderLifecycleRepository(dataSource);
 
@@ -55,18 +55,15 @@ const recordCommand = new RecordCustomerOrderCommand(
   new CustomerOrderDestinationService(
     new CustomerAddressBookRepository(dataSource),
   ),
-  { customerOrderId: () => newCustomerOrderId, now: () => later },
 );
 const lifecycleService = new CustomerOrderLifecycleService(lifecycleRepository);
 const amendCommand = new AmendCustomerOrderCommand(
   lifecycleRepository,
   lifecycleService,
-  { now: () => later },
 );
 const cancelCommand = new CancelCustomerOrderCommand(
   lifecycleRepository,
   lifecycleService,
-  { now: () => later },
 );
 
 // `accounts.user_id` / `users.account_id` form a deferred circular FK pair, so both inserts must
@@ -222,13 +219,11 @@ const seedAllocation = async (
 const readOrder = (id: string): Promise<CustomerOrderEntity | null> =>
   dataSource.manager.getRepository(CustomerOrderEntity).findOneBy({ id });
 
+freezeClockAt(later);
+
 describe('the Customer Order lifecycle commands', () => {
   beforeAll(async () => {
     await dataSource.initialize();
-  });
-
-  beforeEach(() => {
-    newCustomerOrderId = randomUUID();
   });
 
   afterEach(async () => {
@@ -256,13 +251,12 @@ describe('the Customer Order lifecycle commands', () => {
     );
 
     expect(recorded).toMatchObject({
-      id: newCustomerOrderId,
       quantity: 100,
       outstandingQuantity: 100,
       state: 'unfulfilled',
       recordedByUserId: seeded.userId,
     });
-    expect(await readOrder(newCustomerOrderId)).toMatchObject({
+    expect(await readOrder(recorded.id)).toMatchObject({
       warehouseId: seeded.warehouseId,
       itemId: seeded.itemId,
       customerName: 'Test Customer North',

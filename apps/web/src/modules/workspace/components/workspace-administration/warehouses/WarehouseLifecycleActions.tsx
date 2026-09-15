@@ -1,17 +1,15 @@
 import { Alert, AlertDialog, Button, Separator } from '@heroui/react';
+import type { Warehouse } from '@warehouser/contracts/workspaces';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import { useTranslation } from 'react-i18next';
-
 import { useSetWarehouseArchivalMutation } from 'modules/workspace/api/warehouse-api';
 import { AddWarehouseAction } from 'modules/workspace/components/workspace-administration/warehouses/AddWarehouseAction';
 import { ArchiveWarehouseDialog } from 'modules/workspace/components/workspace-administration/warehouses/ArchiveWarehouseDialog';
+import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Conditional } from 'shared/components/Conditional';
 import { TriggeredDialog } from 'shared/components/TriggeredDialog';
 import { WorkspacePermissionGate } from 'shared/components/WorkspacePermissionGate';
 import { ArchiveIcon, ArrowRightLeftIcon } from 'shared/icons';
-
-import type { Warehouse } from '@warehouser/contracts/workspaces';
-import type { ReactElement } from 'react';
 
 /**
  * The archive side of the lifecycle: the confirmation dialog's trigger, the

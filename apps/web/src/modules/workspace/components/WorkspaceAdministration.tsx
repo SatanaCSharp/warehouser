@@ -1,19 +1,17 @@
 import { Chip, Tabs } from '@heroui/react';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-
 import { WorkspaceMembersTab } from 'modules/access/components/workspace-administration/members/WorkspaceMembersTab';
 import { WorkspacePermissionsTab } from 'modules/access/components/workspace-administration/permissions/WorkspacePermissionsTab';
 import { WorkspaceRolesTab } from 'modules/access/components/workspace-administration/roles/WorkspaceRolesTab';
 import { NameWorkspaceAction } from 'modules/workspace/components/workspace-administration/NameWorkspaceAction';
 import { WarehousesTab } from 'modules/workspace/components/workspace-administration/warehouses/WarehousesTab';
 import { useWorkspaceAdministrationContext } from 'modules/workspace/hooks/projections/useWorkspaceAdministrationContext';
+import type { ReactElement } from 'react';
+import { useState } from 'react';
+import type { Key } from 'react-aria-components';
+import { useTranslation } from 'react-i18next';
 import { Conditional } from 'shared/components/Conditional';
 import { useWorkspacePermittedItems } from 'shared/hooks/projections/useWorkspacePermittedItems';
-
-import type { ReactElement } from 'react';
-import type { Key } from 'react-aria-components';
 
 type AdministrationTab = {
   id: string;

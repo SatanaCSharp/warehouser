@@ -1,10 +1,11 @@
 import type { CustomerOrder } from '@warehouser/contracts/customer-orders';
+import { isNull } from '@warehouser/utils/predicates';
 import type {
   CustomerOrderProjection,
   IdentifiedCustomerOrder,
   RedactedCustomerOrder,
 } from 'customer-orders/domain/mappers/customer-order-projection.mapper';
-import { identifiesCustomer } from 'customer-orders/domain/mappers/customer-order-projection.mapper';
+import { identifiesCustomer } from 'customer-orders/domain/predicates/customer-order-projection.predicates';
 
 // openapi.yaml `CustomerOrder` — the transport form of the projection, in the two shapes the
 // contract models as `oneOf` (AC-09a, ADR 0001).
@@ -41,16 +42,15 @@ const toIdentifiedResponse = (order: IdentifiedCustomerOrder) => ({
   ...toRedactedResponse(order),
   customer: order.customer,
   customerName: order.customerName,
-  destination:
-    order.destination === null
-      ? null
-      : {
-          deliveryAddressId: order.destination.deliveryAddressId,
-          addressText: order.destination.addressText,
-          accessNotes: order.destination.accessNotes,
-          isMain: order.destination.isMain,
-          deactivatedAt: order.destination.deactivatedAt?.toISOString() ?? null,
-        },
+  destination: isNull(order.destination)
+    ? null
+    : {
+        deliveryAddressId: order.destination.deliveryAddressId,
+        addressText: order.destination.addressText,
+        accessNotes: order.destination.accessNotes,
+        isMain: order.destination.isMain,
+        deactivatedAt: order.destination.deactivatedAt?.toISOString() ?? null,
+      },
 });
 
 export const toCustomerOrderResponse = (

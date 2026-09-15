@@ -1,9 +1,7 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
-
-import { WarehouseEntryRefusal } from 'shared/components/WarehouseEntryRefusal';
-
 import type { WarehouseEntryRefusalProps } from 'shared/components/WarehouseEntryRefusal';
+import { WarehouseEntryRefusal } from 'shared/components/WarehouseEntryRefusal';
+import { describe, expect, it } from 'vitest';
 
 // CR-AC-07 / CR-AC-17 — the two refusal reasons `WarehouseEntryVerdict.reason`
 // (guards/warehouse-entry.guard.ts) can carry. This component is the state

@@ -1,21 +1,19 @@
 import { Button, Card, Disclosure } from '@heroui/react';
-import { useTranslation } from 'react-i18next';
-
-import { CoverageChips } from 'modules/customer-order/components/demand-directory/components/CoverageChips';
-import { CustomerOrderActionsMenu } from 'modules/customer-order/components/demand-directory/components/CustomerOrderActionsMenu';
-import { CustomerOrderIdentityCell } from 'modules/customer-order/components/demand-directory/components/CustomerOrderIdentityCell';
-import { DemandUrgencyChip } from 'modules/customer-order/components/demand-directory/components/DemandUrgencyChip';
-import { ROW_ENTER } from 'shared/constants/motion';
-import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
-
 import type {
   CustomerOrder,
   CustomerOrderState,
   DemandLine,
 } from '@warehouser/contracts/customer-orders';
+import { CoverageChips } from 'modules/customer-order/components/demand-directory/components/CoverageChips';
+import { CustomerOrderActionsMenu } from 'modules/customer-order/components/demand-directory/components/CustomerOrderActionsMenu';
+import { CustomerOrderIdentityCell } from 'modules/customer-order/components/demand-directory/components/CustomerOrderIdentityCell';
+import { DemandUrgencyChip } from 'modules/customer-order/components/demand-directory/components/DemandUrgencyChip';
 import type { CustomerOrderActionHandlers } from 'modules/customer-order/hooks/projections/useCustomerOrderActions';
 import type { DemandDisclosureLabel } from 'modules/customer-order/hooks/projections/useDemandDisclosureLabel';
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ROW_ENTER } from 'shared/constants/motion';
+import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
 
 export type DemandCardProps = CustomerOrderActionHandlers & {
   customerOrders: CustomerOrder[];

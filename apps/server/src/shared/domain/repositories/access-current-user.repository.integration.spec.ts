@@ -14,6 +14,7 @@ import {
   buildWorkspace,
 } from 'test/factories/entity-factories';
 import type { Logger } from 'typeorm';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 const now = new Date('2026-08-12T12:00:00.000Z');
 
@@ -298,5 +299,76 @@ describe('AccessCurrentUserRepository', () => {
 
     expect(fewLogger.count).toBeGreaterThan(0);
     expect(manyLogger.count).toBe(fewLogger.count);
+  });
+
+  // `resolveAnyRequiredPermission` answers a different question from the read above: not "does the
+  // actor hold this Permission in this Warehouse" but "does the actor hold *any* of these at all".
+  // It is the alternatives form a guard uses when several Permissions admit the same handler, and
+  // it had no coverage of any kind. Each of its four exits is a distinct answer a guard acts on, so
+  // each is pinned here.
+  describe('resolveAnyRequiredPermission', () => {
+    it('returns the first Permission of the requested list the actor actually holds', async () => {
+      const workspaceId = await persistWorkspace();
+      const userId = await persistUser(workspaceId);
+      const warehouse = await persistWarehouseWithRole(workspaceId, 2);
+      await persistWarehouseMembership(userId, workspaceId, warehouse);
+      const [firstHeld, secondHeld] = warehouse.permissionIds;
+
+      // Asked in the caller's order, with an ungranted candidate ahead of both held ones: the
+      // answer is the first *held* one, not the first asked and not the first granted in the row
+      // order the database happened to return.
+      const result = await repository.resolveAnyRequiredPermission(userId, [
+        syntheticPermissionId(),
+        secondHeld,
+        firstHeld,
+      ]);
+
+      expect(result).toMatchObject({
+        userId,
+        warehouseId: warehouse.warehouseId,
+        roleId: warehouse.roleId,
+        permissionId: secondHeld,
+        granted: true,
+      });
+    });
+
+    it('refuses when the actor holds none of the requested Permissions', async () => {
+      const workspaceId = await persistWorkspace();
+      const userId = await persistUser(workspaceId);
+      const warehouse = await persistWarehouseWithRole(workspaceId, 1);
+      await persistWarehouseMembership(userId, workspaceId, warehouse);
+
+      await expect(
+        repository.resolveAnyRequiredPermission(userId, [
+          syntheticPermissionId(),
+          syntheticPermissionId(),
+        ]),
+      ).resolves.toBeNull();
+    });
+
+    it('refuses an actor holding no Warehouse membership at all', async () => {
+      const workspaceId = await persistWorkspace();
+      const userId = await persistUser(workspaceId);
+
+      await expect(
+        repository.resolveAnyRequiredPermission(userId, [
+          syntheticPermissionId(),
+        ]),
+      ).resolves.toBeNull();
+    });
+
+    // An empty list of alternatives means no Permission admits the handler, which is a refusal
+    // rather than a free pass. The guard returns before it queries the grants, so this also keeps
+    // an empty `IN ()` from reaching the database.
+    it('refuses an empty list of alternatives without consulting the grants', async () => {
+      const workspaceId = await persistWorkspace();
+      const userId = await persistUser(workspaceId);
+      const warehouse = await persistWarehouseWithRole(workspaceId, 1);
+      await persistWarehouseMembership(userId, workspaceId, warehouse);
+
+      await expect(
+        repository.resolveAnyRequiredPermission(userId, []),
+      ).resolves.toBeNull();
+    });
   });
 });

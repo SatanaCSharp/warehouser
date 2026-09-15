@@ -12,6 +12,7 @@ import { DbTransactionContext } from 'shared/database/db-transaction-context.ser
 import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
 import type { EntityManager } from 'typeorm';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 // `AddWorkspaceRelations` (T4) made `users.workspace_id` non-null, so
 // `AuthRegistrationService.registerIdentity` can no longer insert a User

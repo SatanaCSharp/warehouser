@@ -1,22 +1,18 @@
 import { randomUUID } from 'node:crypto';
 
-import { Injectable, Optional } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { assert, assertDefined } from '@warehouser/utils/asserts';
+import { isNull } from '@warehouser/utils/predicates';
 import {
   invalidRoleError,
   roleNameConflictError,
   roleUnavailableError,
 } from 'access/domain/errors/access.errors';
+import { resolvedEverySubmittedPermission } from 'access/domain/predicates/workspace-authority.predicates';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { RoleLifecycleRepository } from 'shared/domain/repositories/role-lifecycle.repository';
 import { AccessName } from 'shared/domain/value-objects/access-name';
-
-export interface CreateRoleRuntime {
-  readonly roleId: () => string;
-}
-
-const defaultCreateRoleRuntime: CreateRoleRuntime = { roleId: randomUUID };
 
 export interface CreateRoleInput {
   readonly name: string;
@@ -32,8 +28,6 @@ export interface RoleWriteProjection {
 export class CreateRoleCommand {
   constructor(
     private readonly roleLifecycleRepository: RoleLifecycleRepository,
-    @Optional()
-    private readonly createRoleRuntime: CreateRoleRuntime = defaultCreateRoleRuntime,
   ) {}
 
   @Transactional()
@@ -41,7 +35,7 @@ export class CreateRoleCommand {
     currentUser: AccessCurrentUser,
     input: CreateRoleInput,
   ): Promise<RoleWriteProjection> {
-    const id = this.createRoleRuntime.roleId();
+    const id = randomUUID();
     const name = AccessName.create(input.name).value;
 
     const warehouse = await this.roleLifecycleRepository.lockWarehouse(
@@ -55,7 +49,7 @@ export class CreateRoleCommand {
       );
 
     assert(
-      permissions.length === new Set(input.permissionIds).size,
+      resolvedEverySubmittedPermission(permissions, input.permissionIds),
       invalidRoleError(),
     );
 
@@ -64,7 +58,7 @@ export class CreateRoleCommand {
       name,
     );
 
-    assert(matchingRole === null, roleNameConflictError());
+    assert(isNull(matchingRole), roleNameConflictError());
 
     await this.roleLifecycleRepository.createCustomRole(
       {

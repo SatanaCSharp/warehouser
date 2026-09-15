@@ -12,6 +12,7 @@ import { WorkspaceMembershipRepository } from 'shared/domain/repositories/worksp
 import { WorkspaceOwnerTransferRepository } from 'shared/domain/repositories/workspace-owner-transfer.repository';
 import { WorkspaceReadRepository } from 'shared/domain/repositories/workspace-read.repository';
 import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository';
+import { describe, expect, it } from 'vitest';
 import { ArchiveWarehouseCommand } from 'warehouses/usecases/commands/archive-warehouse.command';
 import { CreateWarehouseCommand } from 'warehouses/usecases/commands/create-warehouse.command';
 import { RenameWarehouseCommand } from 'warehouses/usecases/commands/rename-warehouse.command';
@@ -60,14 +61,14 @@ import { WarehousesUsecaseModule } from 'warehouses/usecases/usecase.module';
 class TestDomainDoubleModule {}
 
 // The `warehouses` counterpart of `workspaces/usecases/usecase.module.di.spec.ts`
-// (CH-S5, CR-AC-09). `CreateWarehouseCommand` is registered through an explicit
-// factory because its `ProvisionInitialAccessDelegate` parameter is a structural
-// type that erases to `Object`, which Nest cannot resolve from a plain class
-// registration and which `module-wiring.spec.ts` deliberately whitelists as an
-// `@Optional()` runtime seam. Static wiring checks and the command unit specs
-// construct these classes with `new` and so never exercise Nest's injector;
-// compiling the real module graph through the DI container is the only way to
-// observe that failure without a database.
+// (CH-S5, CR-AC-09). `CreateWarehouseCommand`'s `ProvisionInitialAccessDelegate`
+// parameter is a structural type that erases to `Object`, so the command names
+// its token with `@Inject(ProvisionInitialAccessCommand)`; whether that token
+// actually resolves is exactly what a plain class registration cannot prove on
+// its own. Static wiring checks and the command unit specs construct these
+// classes with `new` and so never exercise Nest's injector; compiling the real
+// module graph through the DI container is the only way to observe that failure
+// without a database.
 describe('WarehousesUsecaseModule Nest DI graph', () => {
   it('constructs every exported Warehouse use case through Nest injection', async () => {
     const moduleRef = await Test.createTestingModule({

@@ -1,6 +1,5 @@
-import { TriangleAlertIcon } from 'shared/icons';
-
 import type { ReactElement } from 'react';
+import { TriangleAlertIcon } from 'shared/icons';
 
 export type DriftSignalProps = {
   className?: string;

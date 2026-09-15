@@ -6,19 +6,17 @@ import {
   RouterProvider,
 } from '@tanstack/react-router';
 import { render, screen, waitFor } from '@testing-library/react';
+import type { AccessProjection } from '@warehouser/contracts/access';
 import { PermissionId } from '@warehouser/shared-types/enums';
 import { Provider } from 'react-redux';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { ROUTES } from 'shared/constants/routes';
 import { SidebarNavList } from 'shared/layouts/sidebar/components/SidebarNavList';
 import { WarehouseNavEntries } from 'shared/layouts/sidebar/components/WarehouseNavEntries';
+import type { AppStore } from 'store';
 import { makeStore } from 'store';
 import { accessIds } from 'test/access-fixtures';
 import { renderInEnteredWarehouse } from 'test/render';
-
-import type { AccessProjection } from '@warehouser/contracts/access';
-import type { AppStore } from 'store';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // The Warehouse view's entry set. `Sidebar` selects it from the entered
 // context; what this file owns is which entries that set contains, what admits

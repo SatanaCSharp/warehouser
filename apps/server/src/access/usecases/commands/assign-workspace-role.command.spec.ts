@@ -10,6 +10,7 @@ import { ApplicationError } from '@warehouser/shared-types/errors';
 // missing one, which a persistence failure cannot promise.
 import { AssignWorkspaceRoleCommand } from 'access/usecases/commands/assign-workspace-role.command';
 import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
+import { describe, expect, it, vi } from 'vitest';
 
 const workspaceId = '00000000-0000-4000-8000-000000000001';
 const otherWorkspaceId = '00000000-0000-4000-8000-000000000009';
@@ -42,7 +43,7 @@ const roles = [
 // a nonexistent Role and the protected Owner Role all resolve to `null` here
 // exactly as they do in the database.
 const roleLifecycleDouble = () => ({
-  findCustomRole: jest.fn((scopedWorkspaceId: string, roleId: string) =>
+  findCustomRole: vi.fn((scopedWorkspaceId: string, roleId: string) =>
     Promise.resolve(
       roles.find(
         (role) =>
@@ -55,18 +56,18 @@ const roleLifecycleDouble = () => ({
 });
 
 const membershipDouble = () => ({
-  lockMembership: jest.fn().mockResolvedValue({
+  lockMembership: vi.fn().mockResolvedValue({
     userId: targetId,
     workspaceId,
     workspaceRoleId: '00000000-0000-4000-8000-00000000000a',
     workspaceRoleKind: 'custom',
   }),
-  lockOwnerMembership: jest.fn().mockResolvedValue({
+  lockOwnerMembership: vi.fn().mockResolvedValue({
     userId: actorId,
     workspaceId,
     workspaceRoleId: ownerRoleId,
   }),
-  reassignMembership: jest.fn().mockResolvedValue(true),
+  reassignMembership: vi.fn().mockResolvedValue(true),
 });
 
 const build = (

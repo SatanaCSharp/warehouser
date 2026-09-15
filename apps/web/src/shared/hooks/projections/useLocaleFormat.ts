@@ -1,6 +1,5 @@
 import { useLocale } from '@react-aria/i18n';
 import { useMemo } from 'react';
-
 import {
   formatCalendarDate,
   formatShortCalendarDate,

@@ -1,13 +1,11 @@
-import { Controller, useForm } from 'react-hook-form';
-import { useTranslation } from 'react-i18next';
-
 import { useAddWorkspaceMemberMutation } from 'modules/access/api/workspace-members-api';
 import { useWorkspaceRoles } from 'modules/access/hooks/queries/useWorkspaceRoles';
 import { useWorkspaceUsers } from 'modules/access/hooks/queries/useWorkspaceUsers';
+import type { ReactElement } from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormSelectField } from 'shared/components/FormSelectField';
-
-import type { ReactElement } from 'react';
 
 type AddWorkspaceMemberForm = { userId: string; workspaceRoleId: string };
 

@@ -1,14 +1,12 @@
 import { Separator } from '@heroui/react';
+import type { Warehouse } from '@warehouser/contracts/workspaces';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import { useTranslation } from 'react-i18next';
-
 import { useGetWarehouseDeliveryAddressQuery } from 'modules/workspace/api/warehouse-api';
 import { WarehouseDeliveryAddressForm } from 'modules/workspace/components/workspace-administration/warehouses/WarehouseDeliveryAddressForm';
+import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { WorkspacePermissionGate } from 'shared/components/WorkspacePermissionGate';
 import { useHasWorkspacePermission } from 'shared/hooks/queries/useWorkspacePermissions';
-
-import type { Warehouse } from '@warehouser/contracts/workspaces';
-import type { ReactNode } from 'react';
 
 type WarehouseDeliveryAddressSectionProps = { warehouse: Warehouse };
 

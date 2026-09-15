@@ -1,14 +1,12 @@
 import { createRoute } from '@tanstack/react-router';
-
 import { requireAuth } from 'guards/auth.guard';
+import type { WarehouseEntryVerdict } from 'guards/warehouse-entry.guard';
 import { resolveWarehouseEntry } from 'guards/warehouse-entry.guard';
 import { rootRoute } from 'routes/__root.route';
 import { RouteErrorState } from 'shared/components/RouteErrorState';
 import { RoutePendingState } from 'shared/components/RoutePendingState';
 import { ROUTES } from 'shared/constants/routes';
 import { WarehouseLayout } from 'shared/layouts/WarehouseLayout';
-
-import type { WarehouseEntryVerdict } from 'guards/warehouse-entry.guard';
 import type { AppStore } from 'store';
 
 // T4 / ADR 0001 §Amendment — TanStack Router reruns every matched route's

@@ -1,8 +1,8 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
-import {
-  ApplicationError,
-  AssertionError,
-} from '@warehouser/shared-types/errors';
+import { ApplicationError } from '@warehouser/shared-types/errors';
+import { AccessName } from 'shared/domain/value-objects/access-name';
+import { WorkspaceName } from 'shared/domain/value-objects/workspace-name';
+import { isAssertionError } from 'shared/predicates/typed-error.predicates';
 
 // Warehouse, Workspace and Workspace Role names are one value object
 // (`shared/domain/value-objects/access-name.ts`), so the mapping from its
@@ -43,7 +43,7 @@ export const validatedName = <TValue extends string | null>(
   try {
     return create();
   } catch (error) {
-    if (error instanceof AssertionError) {
+    if (isAssertionError(error)) {
       throw workspaceInvalidNameError(
         NAME_RULE_BY_ASSERTION_MESSAGE[error.message] ?? 'invalid',
       );
@@ -51,3 +51,18 @@ export const validatedName = <TValue extends string | null>(
     throw error;
   }
 };
+
+/** A Warehouse or Workspace Role name, trimmed and validated, or the typed rejection naming the
+ * rule it broke (AC-08, AC-15a). Submitted Unicode is preserved without normalization (AC-09) —
+ * only whitespace is trimmed.
+ *
+ * It lives here rather than in each naming command for the same reason the table above does: the
+ * three commands that name something ask the identical question, and a copy per command is a copy
+ * that can drift from the rules the value object actually enforces. */
+export const validatedAccessName = (input: string): string =>
+  validatedName(() => AccessName.create(input).value);
+
+/** A Workspace name, which — unlike the two above — has an unset state the value object models as
+ * `null`; a rename always states one, so the result is narrowed back to `string` (AC-29a). */
+export const validatedWorkspaceName = (input: string): string =>
+  validatedName(() => WorkspaceName.create(input).value) as string;

@@ -19,6 +19,7 @@ import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 import { GlobalHttpExceptionFilter } from 'shared/errors/global-http-exception.filter';
 import { WriteRateLimitCounter } from 'shared/guards/write-rate-limit.counter';
 import { expectPinnedCounterOnEveryRouteGuard } from 'test/expects/write-rate-limit-wiring';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 // ADR 0003 / spec.md §6.1 "Draft and demand spam" — the per-member write rate limit as it behaves
 // over real HTTP, driven against the `items` write surface this guard shipped alongside.

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { isDefined } from '@warehouser/utils/predicates';
 import { getEntityManager } from 'shared/database/db-transaction-context.service';
 import { WorkspaceMembershipEntity } from 'shared/domain/entities/workspace-membership.entity';
 import { WorkspaceRolePermissionEntity } from 'shared/domain/entities/workspace-role-permission.entity';
@@ -25,7 +26,7 @@ export class WorkspaceCurrentUserRepository {
     const membership = await manager
       .getRepository(WorkspaceMembershipEntity)
       .findOneBy({ userId });
-    if (!membership) {
+    if (!isDefined(membership)) {
       return null;
     }
     const granted = await manager

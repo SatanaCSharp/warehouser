@@ -7,9 +7,12 @@
     "dev": "vite",
     "build": "tsc -p tsconfig.json && vite build",
     "preview": "vite preview",
-    "lint": "eslint src",
-    "lint:fix": "eslint src --fix",
+    "lint": "oxlint --type-aware --max-warnings=0 src",
+    "lint:fix": "oxlint --type-aware --fix src && oxlint --type-aware --max-warnings=0 src",
     "test": "vitest run --passWithNoTests",
+    "test:architectural": "vitest run --config vitest.architectural.config.ts",
+    "test:all": "pnpm test && pnpm test:architectural",
+    "crap": "vitest run --config vitest.crap.config.ts",
     "clean": "rm -rf dist"
   },
   "dependencies": {
@@ -39,20 +42,25 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@barney-media/crap-typescript-vitest": "catalog:",
     "@tailwindcss/vite": "^4.3.2",
     "@testing-library/dom": "catalog:",
-    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "@types/lodash": "^4.17.24",
+    "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
-    "@warehouser/eslint-config-ui": "workspace:*",
+    "@vitest/coverage-istanbul": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "@warehouser/oxlint-config": "workspace:*",
     "@warehouser/tsconfig": "workspace:*",
-    "eslint": "catalog:",
+    "dependency-cruiser": "^18.3.1",
     "jsdom": "^29.1.1",
     "tailwindcss": "^4.3.2",
+    "typescript": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:"
   }

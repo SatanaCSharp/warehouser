@@ -1,19 +1,17 @@
+import type { CustomerOrderCreate } from '@warehouser/contracts/customer-orders';
+import { CustomerOrderRefusalAlert } from 'modules/customer-order/components/demand-directory/components/CustomerOrderRefusalAlert';
+import { RecordCustomerOrderCustomerFields } from 'modules/customer-order/components/demand-directory/components/record-customer-order-customer-fields/RecordCustomerOrderCustomerFields';
+import type { RecordCustomerOrderForm } from 'modules/customer-order/utils/record-customer-order-form';
+import { ItemPicker } from 'modules/item/components/ItemPicker';
+import { useItems } from 'modules/item/hooks/queries/useItems';
+import type { ReactElement } from 'react';
 import { useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-
-import { CustomerOrderRefusalAlert } from 'modules/customer-order/components/demand-directory/components/CustomerOrderRefusalAlert';
-import { RecordCustomerOrderCustomerFields } from 'modules/customer-order/components/demand-directory/components/record-customer-order-customer-fields/RecordCustomerOrderCustomerFields';
-import { ItemPicker } from 'modules/item/components/ItemPicker';
-import { useItems } from 'modules/item/hooks/queries/useItems';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { FormDateField } from 'shared/components/FormDateField';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormTextField } from 'shared/components/FormTextField';
-
-import type { CustomerOrderCreate } from '@warehouser/contracts/customer-orders';
-import type { RecordCustomerOrderForm } from 'modules/customer-order/utils/record-customer-order-form';
-import type { ReactElement } from 'react';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 type RecordCustomerOrderDialogProps = {
   /** Pre-selects the Item when opened from a Demand Line's own action. */
@@ -65,6 +63,33 @@ const VALIDATION_SECTION: Record<keyof RecordCustomerOrderForm, string> = {
  * Reaches the Item picker through `modules/item`'s declared public surface
  * rather than promoting it to `shared/`.
  */
+/** The picker starts on the Item the surface opened the dialog for, or on nothing. */
+const initialItemId = (presetItemId: string | undefined): string =>
+  presetItemId ?? '';
+
+/** AC-11a — the typed-name field explains itself differently once a Customer is chosen, because the
+ * two are mutually exclusive and the typed name is then out of play. */
+const customerNameHelpKey = (namesACustomer: boolean): string =>
+  namesACustomer
+    ? 'dialogs.record.customerNameSupersededHelp'
+    : 'dialogs.record.customerNameHelp';
+
+const isCustomerNameDisabled = (
+  isSubmitting: boolean,
+  namesACustomer: boolean,
+): boolean => isSubmitting || namesACustomer;
+
+/** A refusal that already marked a field says everything it has to say there; the alert is for the
+ * refusals that name none. */
+const unexplainedRefusalCode = (
+  isFieldExplained: boolean,
+  refusalCode: string | undefined,
+): string | undefined => (isFieldExplained ? undefined : refusalCode);
+
+const fieldMessage = (
+  error: { message?: string } | undefined,
+): string | undefined => error?.message;
+
 export const RecordCustomerOrderDialog = ({
   presetItemId,
   onSave,
@@ -75,7 +100,7 @@ export const RecordCustomerOrderDialog = ({
   const [refusalCode, setRefusalCode] = useState<string>();
   const form = useForm<RecordCustomerOrderForm>({
     defaultValues: {
-      itemId: presetItemId ?? '',
+      itemId: initialItemId(presetItemId),
       customerId: '',
       customerDeliveryAddressId: '',
       customerName: '',
@@ -150,15 +175,11 @@ export const RecordCustomerOrderDialog = ({
       <FormTextField
         autoFocus
         validationBehavior="aria"
-        description={
-          namesACustomer
-            ? t('dialogs.record.customerNameSupersededHelp')
-            : t('dialogs.record.customerNameHelp')
-        }
+        description={t(customerNameHelpKey(namesACustomer))}
         isInvalid={Boolean(errors.customerName)}
-        errorMessage={errors.customerName?.message}
+        errorMessage={fieldMessage(errors.customerName)}
         label={t('dialogs.record.customerNameLabel')}
-        isDisabled={isSubmitting || namesACustomer}
+        isDisabled={isCustomerNameDisabled(isSubmitting, namesACustomer)}
         {...register('customerName', {
           validate: (value, values) =>
             values.customerId !== '' ||
@@ -193,7 +214,7 @@ export const RecordCustomerOrderDialog = ({
         defaultValue={String(DEFAULT_QUANTITY)}
         description={t('dialogs.record.quantityHelp')}
         isInvalid={Boolean(errors.quantity)}
-        errorMessage={errors.quantity?.message}
+        errorMessage={fieldMessage(errors.quantity)}
         label={t('dialogs.record.quantityLabel')}
         isDisabled={isSubmitting}
         {...register('quantity', {
@@ -211,7 +232,7 @@ export const RecordCustomerOrderDialog = ({
             validationBehavior="aria"
             description={t('dialogs.record.neededByHelp')}
             isInvalid={Boolean(errors.neededBy)}
-            errorMessage={errors.neededBy?.message}
+            errorMessage={fieldMessage(errors.neededBy)}
             label={t('dialogs.record.neededByLabel')}
             isDisabled={isSubmitting}
             value={field.value}
@@ -220,10 +241,8 @@ export const RecordCustomerOrderDialog = ({
           />
         )}
       />
-      {/* A refusal that already marked a field says everything it has to say
-          there; the alert is for the refusals that name none. */}
       <CustomerOrderRefusalAlert
-        code={isFieldExplained ? undefined : refusalCode}
+        code={unexplainedRefusalCode(isFieldExplained, refusalCode)}
         form="record"
       />
     </FormModalDialog>

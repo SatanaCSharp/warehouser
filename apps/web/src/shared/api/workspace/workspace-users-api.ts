@@ -1,9 +1,7 @@
-import { workspaceUserSchema } from '@warehouser/contracts/workspaces';
-import { z } from 'zod';
-
-import { api } from 'shared/api/client/api-client';
-
 import type { WorkspaceUser } from '@warehouser/contracts/workspaces';
+import { workspaceUserSchema } from '@warehouser/contracts/workspaces';
+import { api } from 'shared/api/client/api-client';
+import { z } from 'zod';
 
 const WORKSPACE_USERS_PATH = '/api/v1/workspace/users';
 

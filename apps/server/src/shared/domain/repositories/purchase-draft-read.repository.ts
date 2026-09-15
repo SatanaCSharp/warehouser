@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { isDefined, isUndefined } from '@warehouser/utils/predicates';
 import { getEntityManager } from 'shared/database/db-transaction-context.service';
 import { ArrivalAllocationEntity } from 'shared/domain/entities/arrival-allocation.entity';
 import { CustomerEntity } from 'shared/domain/entities/customer.entity';
@@ -11,6 +12,10 @@ import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-l
 import { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity';
 import { PurchaseDraftLineRejectionEntity } from 'shared/domain/entities/purchase-draft-line-rejection.entity';
 import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
+import {
+  projectsCustomerIdentity,
+  projectsRejectionCause,
+} from 'shared/predicates/purchase-draft-projection.predicates';
 import {
   DataSource,
   EntityManager,
@@ -236,6 +241,13 @@ export type PurchaseDraftLineEndingRead =
 // survives to be probed (spec.md §6.1, sad.md §4).
 export type RejectionCauseProjection = 'with_cause' | 'cause_withheld';
 
+// AC-09a — the identity half of the same choice. The public API spells it as two methods
+// (`readRedactedDraft` / `readIdentifiedDraft`), because which form a caller may have is decided by
+// the observed Permission and never by a flag they pass; the private builders below still need to
+// carry it, and they carry it as this rather than as a `boolean` so it cannot be swapped with the
+// cause selector it travels beside.
+export type CustomerIdentityProjection = 'identified' | 'redacted';
+
 // openapi.yaml `PurchaseDraftLineRedacted`.
 export interface PurchaseDraftLineRedactedRead {
   readonly id: string;
@@ -369,7 +381,7 @@ interface LineListEntryRawRow<TLine> {
 // `getRawMany`/`getRawOne`, which bypass the entity's `@Column('date')` mapping: the pg driver
 // hands back a JS `Date` built at midnight in the *server's* timezone, which serializes as the
 // previous calendar day anywhere east of UTC (`2026-09-25` leaves as `2026-09-24T22:00:00.000Z` at
-// UTC+2) and is refused by the contract's `z.string().date()`. Casting in SQL keeps the
+// UTC+2) and is refused by the contract's `z.iso.date()`. Casting in SQL keeps the
 // Warehouse-neutral calendar day the column actually holds, whatever the server's clock is set to
 // — the idiom `consolidated-demand.repository.ts` already uses for `MIN(demand.neededBy)::text`.
 // The parentheses are load-bearing: TypeORM only rewrites `alias.property` when it is terminated by
@@ -380,7 +392,7 @@ const EXPECTED_ARRIVAL_DATE_SELECT = '(draft.expectedArrivalDate)::text';
 // Every `timestamptz` this file embeds as text inside `json_build_object` has to be rendered here
 // rather than left to the pg driver: inside the JSON builder the value never reaches the driver's
 // Date decoding, and PostgreSQL renders it with the session's own UTC offset
-// (`2026-09-04T15:09:25.589+00:00`), which `z.string().datetime()` refuses — it accepts the `Z`
+// (`2026-09-04T15:09:25.589+00:00`), which `z.iso.datetime()` refuses — it accepts the `Z`
 // form alone. A timestamp that travels as a plain column is decoded and serialized by the driver
 // and needs none of this.
 //
@@ -513,21 +525,24 @@ const LINK_CUSTOMER_SELECT = `CASE WHEN linkCustomer.id IS NULL THEN NULL ELSE j
 // Timestamps go through `utcIsoText` because they are embedded as text inside `json_build_object`
 // — every other timestamp on this read travels as a plain column and is decoded (and later
 // serialized) by the driver.
-const linksSubquery = (manager: EntityManager, identified: boolean): string => {
-  const identity = identified
+const linksSubquery = (
+  manager: EntityManager,
+  identity: CustomerIdentityProjection,
+): string => {
+  const identityColumns = projectsCustomerIdentity(identity)
     ? `'customer', ${LINK_CUSTOMER_SELECT}, 'customerName', demand.customerName, `
     : '';
-  const capturedAddress = identified
+  const capturedAddress = projectsCustomerIdentity(identity)
     ? `, 'capturedDeliveryAddressId', snapshot.capturedCustomerDeliveryAddressId, 'capturedDeliveryAddressText', snapshot.capturedDeliveryAddressText`
     : '';
-  const currentAddress = identified
+  const currentAddress = projectsCustomerIdentity(identity)
     ? `, 'deliveryAddress', ${CURRENT_DELIVERY_ADDRESS_SELECT}`
     : '';
 
   const query = manager
     .createQueryBuilder()
     .select(
-      `COALESCE(json_agg(json_build_object('id', link.id, 'customerOrderId', link.customerOrderId, ${identity}'statedQuantity', link.statedQuantity, 'snapshot', CASE WHEN snapshot.purchaseDraftLineLinkId IS NULL THEN NULL ELSE json_build_object('capturedQuantity', snapshot.capturedQuantity, 'capturedNeededBy', snapshot.capturedNeededBy, 'capturedState', snapshot.capturedState${capturedAddress}) END, 'current', json_build_object('quantity', demand.quantity, 'neededBy', demand.neededBy, 'state', demand.state, 'outstandingQuantity', demand.outstandingQuantity, 'lastChangedAt', ${LAST_CHANGED_AT_SELECT}${currentAddress}), 'addressDrift', ${ADDRESS_DRIFT_SELECT}, 'allocation', CASE WHEN allocation.purchaseDraftLineLinkId IS NULL THEN NULL ELSE json_build_object('allocatedQuantity', allocation.allocatedQuantity, 'allocatedByUserId', allocation.allocatedByUserId, 'createdAt', ${utcIsoText('allocation.createdAt')}) END) ORDER BY link.createdAt, link.id), '[]'::json)`,
+      `COALESCE(json_agg(json_build_object('id', link.id, 'customerOrderId', link.customerOrderId, ${identityColumns}'statedQuantity', link.statedQuantity, 'snapshot', CASE WHEN snapshot.purchaseDraftLineLinkId IS NULL THEN NULL ELSE json_build_object('capturedQuantity', snapshot.capturedQuantity, 'capturedNeededBy', snapshot.capturedNeededBy, 'capturedState', snapshot.capturedState${capturedAddress}) END, 'current', json_build_object('quantity', demand.quantity, 'neededBy', demand.neededBy, 'state', demand.state, 'outstandingQuantity', demand.outstandingQuantity, 'lastChangedAt', ${LAST_CHANGED_AT_SELECT}${currentAddress}), 'addressDrift', ${ADDRESS_DRIFT_SELECT}, 'allocation', CASE WHEN allocation.purchaseDraftLineLinkId IS NULL THEN NULL ELSE json_build_object('allocatedQuantity', allocation.allocatedQuantity, 'allocatedByUserId', allocation.allocatedByUserId, 'createdAt', ${utcIsoText('allocation.createdAt')}) END) ORDER BY link.createdAt, link.id), '[]'::json)`,
     )
     .from(PurchaseDraftLineLinkEntity, 'link')
     .innerJoin(
@@ -549,7 +564,7 @@ const linksSubquery = (manager: EntityManager, identified: boolean): string => {
 
   // The two joins that reach customer identity are added **only** for the identified form, so the
   // redacted query does not even visit the rows it must not disclose.
-  return identified
+  return projectsCustomerIdentity(identity)
     ? query
         .leftJoin(
           CustomerDeliveryAddressEntity,
@@ -643,19 +658,19 @@ const CUSTOMER_DESTINATION_SELECT = `CASE WHEN line.deliveryMode <> 'direct_to_c
 // and drift, so the account and the links reach the caller in one round trip (sad.md §6.3).
 const lineJsonObject = (
   manager: EntityManager,
-  identified: boolean,
-  withCause: boolean,
+  identity: CustomerIdentityProjection,
+  cause: RejectionCauseProjection,
 ): string => {
-  const customerDestination = identified
+  const customerDestination = projectsCustomerIdentity(identity)
     ? `, 'customerDestination', ${CUSTOMER_DESTINATION_SELECT}`
     : '';
   const rejectedQuantity = `(${rejectedQuantitySubquery(manager)})`;
-  const rejections = withCause
+  const rejections = projectsRejectionCause(cause)
     ? `, 'rejections', (${rejectionsSubquery(manager)})`
     : '';
   const condition = `'acceptedQuantity', line.endingQuantity - ${rejectedQuantity}, 'rejectedQuantity', ${rejectedQuantity}, 'preReceiptConformance', ${PRE_RECEIPT_CONFORMANCE_SELECT}${rejections}`;
 
-  return `json_build_object('id', line.id, 'itemId', line.itemId, 'itemSku', item.sku, 'itemDescription', item.description, 'unitOfMeasure', item.unitOfMeasure, 'orderedQuantity', line.orderedQuantity, 'packagingTypeId', line.packagingTypeId, 'valueAddingNote', line.valueAddingNote, 'ending', CASE WHEN line.endingRecordedAt IS NULL THEN NULL ELSE json_build_object('kind', line.endingKind, 'quantity', line.endingQuantity, 'recordedByUserId', line.endingRecordedByUserId, 'recordedAt', ${utcIsoText('line.endingRecordedAt')}, ${condition}) END, 'deliveryMode', line.deliveryMode, 'warehouseDestination', ${WAREHOUSE_DESTINATION_SELECT}${customerDestination}, 'links', (${linksSubquery(manager, identified)}))`;
+  return `json_build_object('id', line.id, 'itemId', line.itemId, 'itemSku', item.sku, 'itemDescription', item.description, 'unitOfMeasure', item.unitOfMeasure, 'orderedQuantity', line.orderedQuantity, 'packagingTypeId', line.packagingTypeId, 'valueAddingNote', line.valueAddingNote, 'ending', CASE WHEN line.endingRecordedAt IS NULL THEN NULL ELSE json_build_object('kind', line.endingKind, 'quantity', line.endingQuantity, 'recordedByUserId', line.endingRecordedByUserId, 'recordedAt', ${utcIsoText('line.endingRecordedAt')}, ${condition}) END, 'deliveryMode', line.deliveryMode, 'warehouseDestination', ${WAREHOUSE_DESTINATION_SELECT}${customerDestination}, 'links', (${linksSubquery(manager, identity)}))`;
 };
 
 // The joins the two destination projections above dereference, added to whichever query builds a
@@ -668,7 +683,7 @@ const lineJsonObject = (
 // (creating-a-server-repository.md).
 const joinLineDestinations = <T extends SelectQueryBuilder<ObjectLiteral>>(
   query: T,
-  identified: boolean,
+  identity: CustomerIdentityProjection,
 ): T => {
   query.leftJoin(
     WarehouseEntity,
@@ -676,7 +691,7 @@ const joinLineDestinations = <T extends SelectQueryBuilder<ObjectLiteral>>(
     'lineWarehouse.id = line.warehouseId',
   );
 
-  if (identified) {
+  if (projectsCustomerIdentity(identity)) {
     query.leftJoin(
       CustomerDeliveryAddressEntity,
       'lineAddress',
@@ -728,8 +743,8 @@ const readDraftRow = async <TLine>(
   manager: EntityManager,
   purchaseDraftId: string,
   warehouseId: string,
-  identified: boolean,
-  withCause: boolean,
+  identity: CustomerIdentityProjection,
+  cause: RejectionCauseProjection,
 ): Promise<
   | (Omit<DraftDetailRawRow<TLine>, 'lines'> & {
       readonly lineCount: number;
@@ -741,11 +756,11 @@ const readDraftRow = async <TLine>(
     manager
       .createQueryBuilder()
       .select(
-        `COALESCE(json_agg(${lineJsonObject(manager, identified, withCause)} ORDER BY line.createdAt, line.id), '[]'::json)`,
+        `COALESCE(json_agg(${lineJsonObject(manager, identity, cause)} ORDER BY line.createdAt, line.id), '[]'::json)`,
       )
       .from(PurchaseDraftLineEntity, 'line')
       .innerJoin(ItemEntity, 'item', 'item.id = line.itemId'),
-    identified,
+    identity,
   )
     .where('line.purchaseDraftId = draft.id')
     .getQuery();
@@ -758,7 +773,7 @@ const readDraftRow = async <TLine>(
     .andWhere('draft.warehouseId = :warehouseId', { warehouseId })
     .getRawOne<DraftDetailRawRow<TLine>>();
 
-  if (row === undefined) {
+  if (isUndefined(row)) {
     return null;
   }
 
@@ -777,8 +792,8 @@ const listLineRows = <TLine>(
   manager: EntityManager,
   warehouseId: string,
   filters: PurchaseDraftLineFilters,
-  identified: boolean,
-  withCause: boolean,
+  identity: CustomerIdentityProjection,
+  cause: RejectionCauseProjection,
 ): Promise<LineListEntryRawRow<TLine>[]> => {
   let query = joinLineDestinations(
     manager
@@ -787,7 +802,7 @@ const listLineRows = <TLine>(
       .addSelect('draft.reference', 'purchaseDraftReference')
       .addSelect('draft.state', 'purchaseDraftState')
       .addSelect(EXPECTED_ARRIVAL_DATE_SELECT, 'expectedArrivalDate')
-      .addSelect(lineJsonObject(manager, identified, withCause), 'line')
+      .addSelect(lineJsonObject(manager, identity, cause), 'line')
       .from(PurchaseDraftLineEntity, 'line')
       .innerJoin(
         PurchaseDraftEntity,
@@ -795,7 +810,7 @@ const listLineRows = <TLine>(
         'draft.id = line.purchaseDraftId',
       )
       .innerJoin(ItemEntity, 'item', 'item.id = line.itemId'),
-    identified,
+    identity,
   )
     .where('draft.warehouseId = :warehouseId', { warehouseId })
     // openapi.yaml — Delivery Mode, then draft reference, then the line's own position. Every line
@@ -806,13 +821,13 @@ const listLineRows = <TLine>(
     .addOrderBy('line.createdAt', 'ASC')
     .addOrderBy('line.id', 'ASC');
 
-  if (filters.deliveryMode !== undefined) {
+  if (isDefined(filters.deliveryMode)) {
     query = query.andWhere('line.deliveryMode = :deliveryMode', {
       deliveryMode: filters.deliveryMode,
     });
   }
 
-  if (filters.state !== undefined) {
+  if (isDefined(filters.state)) {
     query = query.andWhere('draft.state = :state', { state: filters.state });
   }
 
@@ -877,7 +892,7 @@ export class PurchaseDraftReadRepository {
       .orderBy('draft.createdAt', 'DESC')
       .addOrderBy('draft.id', 'DESC');
 
-    if (state !== undefined) {
+    if (isDefined(state)) {
       query = query.andWhere('draft.state = :state', { state });
     }
 
@@ -918,8 +933,8 @@ export class PurchaseDraftReadRepository {
       getEntityManager(this.dataSource),
       purchaseDraftId,
       warehouseId,
-      false,
-      cause === 'with_cause',
+      'redacted',
+      cause,
     );
   }
 
@@ -935,8 +950,8 @@ export class PurchaseDraftReadRepository {
       getEntityManager(this.dataSource),
       purchaseDraftId,
       warehouseId,
-      true,
-      cause === 'with_cause',
+      'identified',
+      cause,
     );
   }
 
@@ -959,8 +974,8 @@ export class PurchaseDraftReadRepository {
       getEntityManager(this.dataSource),
       warehouseId,
       filters,
-      false,
-      cause === 'with_cause',
+      'redacted',
+      cause,
     );
   }
 
@@ -973,8 +988,8 @@ export class PurchaseDraftReadRepository {
       getEntityManager(this.dataSource),
       warehouseId,
       filters,
-      true,
-      cause === 'with_cause',
+      'identified',
+      cause,
     );
   }
 }

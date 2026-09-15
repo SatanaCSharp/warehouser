@@ -20,6 +20,7 @@ import {
   purchaseDraftLineUpdateSchema,
   purchaseDraftSummarySchema,
 } from 'purchase-drafts';
+import { describe, expect, it } from 'vitest';
 
 // T19 — the delivery half of the shared `purchase-drafts` contract subpath: openapi.yaml
 // `LineWarehouseDestination`, `LineCustomerDestination`, both forms of `PurchaseDraftLine` and

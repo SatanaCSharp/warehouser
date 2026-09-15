@@ -1,5 +1,4 @@
 import { createRoute, lazyRouteComponent } from '@tanstack/react-router';
-
 import { loadAccessSurface } from 'modules/access/loaders/access-surface.loader';
 import { warehouseRoute } from 'routes/warehouse.route';
 import { RouteErrorState } from 'shared/components/RouteErrorState';

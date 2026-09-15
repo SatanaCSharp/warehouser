@@ -1,13 +1,11 @@
-import mapValues from 'lodash/mapValues';
-import { useTranslation } from 'react-i18next';
-
-import { describeLinkDrift } from 'modules/purchase-draft/utils/link-drift';
-import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
-
 import type {
   DeliveryMode,
   PurchaseDraftLineLink,
 } from '@warehouser/contracts/purchase-drafts';
+import mapValues from 'lodash/mapValues';
+import { describeLinkDrift } from 'modules/purchase-draft/utils/link-drift';
+import { useTranslation } from 'react-i18next';
+import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
 
 /**
  * What each of a link's drift chips says — `Raised to 1 000 on 25 Aug`,

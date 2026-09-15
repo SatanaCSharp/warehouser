@@ -25,13 +25,17 @@ conventions, the migration naming convention.
 
 **Bug localization (dispatched by `fix`).** Here the prompt gives a reproduction statement
 («doing X, expected Y, got Z») instead of a map request. Trace the symptom to its code path:
-grep the domain nouns to the entry point, follow the call chain, and return the **root-cause
-candidates as `file:line`** (plus the existing test covering that path, if any). Same rules
-apply: locate and summarize — never propose or apply the fix.
+`pnpm graph query` the domain nouns to reach the entry point, follow the call chain with
+`pnpm graph node`/`callers`, and return the **root-cause candidates as `file:line`** (plus the
+existing test covering that path — `pnpm graph affected <file>` names it). Same rules apply:
+locate and summarize — never propose or apply the fix.
 
 ## How you work (LOW tier — speed)
 
-- Breadth first: `Glob`/`Grep` to locate, `Read` only the few files that answer the question.
+- Index first, per [`../skills/_shared/codebase-exploration.md`](../skills/_shared/codebase-exploration.md):
+  `pnpm graph query`/`node` to locate and to follow call trails, `pnpm snapshot <dir>` when the
+  layout of a whole area is the question, `Read` only the fragments that answer it. `Glob`/`Grep`
+  are the fallback for what the graph cannot answer — Markdown, strings, unindexed file types.
 - Cap exploration at ~5–8 files. If the question needs deep multi-subsystem analysis, say so and
   recommend the parent escalate — don't grind.
 - Prefer the shortest answer that's correct. No speculation, no design opinions.

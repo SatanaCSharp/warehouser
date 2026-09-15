@@ -1,17 +1,20 @@
-import { useState } from 'react';
-
+import type { WorkspaceRole } from '@warehouser/contracts/workspaces';
 import { WorkspaceRoleEditor } from 'modules/access/components/workspace-administration/roles/WorkspaceRoleEditor';
 import { WorkspaceRoleList } from 'modules/access/components/workspace-administration/roles/WorkspaceRoleList';
-
-import type { WorkspaceRole } from '@warehouser/contracts/workspaces';
 import type { ReactElement } from 'react';
+import { useState } from 'react';
 
 type WorkspaceRoleDirectoryProps = {
   roles: WorkspaceRole[];
 };
 
-const defaultRoleId = (roles: WorkspaceRole[]): string | undefined =>
-  roles.find((role) => role.kind === 'custom')?.id ?? roles[0]?.id;
+const isCustomRole = (role: WorkspaceRole): boolean => role.kind === 'custom';
+
+const defaultRoleId = (roles: WorkspaceRole[]): string | undefined => {
+  const custom = roles.find(isCustomRole);
+
+  return custom?.id ?? roles[0]?.id;
+};
 
 /**
  * The Workspace Role list beside the editor for the selected Role. The

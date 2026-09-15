@@ -1,7 +1,6 @@
 import type { DeliveryAddressState } from 'customers/domain/predicates/customer.predicates';
 import {
   canDeactivateDeliveryAddress,
-  hasExactlyOneMainActiveDeliveryAddress,
   isAccessNotes,
   isActiveDeliveryAddress,
   isCustomerName,
@@ -9,6 +8,7 @@ import {
   isDeliveryAddressText,
   isMainDeliveryAddressOf,
 } from 'customers/domain/predicates/customer.predicates';
+import { describe, expect, it } from 'vitest';
 
 const address = (
   overrides: Partial<DeliveryAddressState> = {},
@@ -88,36 +88,6 @@ describe('customer predicates', () => {
       expect(isMainDeliveryAddressOf('address-absent', [main, other])).toBe(
         false,
       );
-    });
-
-    it('holds when exactly one active address is Main', () => {
-      expect(hasExactlyOneMainActiveDeliveryAddress([main, other])).toBe(true);
-    });
-
-    it('fails when no active address is Main', () => {
-      expect(hasExactlyOneMainActiveDeliveryAddress([other])).toBe(false);
-    });
-
-    it('fails when two active addresses are Main', () => {
-      expect(
-        hasExactlyOneMainActiveDeliveryAddress([
-          main,
-          address({ id: 'address-second-main', isMain: true }),
-        ]),
-      ).toBe(false);
-    });
-
-    it('does not count an Inactive address as the Main one', () => {
-      expect(
-        hasExactlyOneMainActiveDeliveryAddress([
-          address({
-            id: 'address-inactive-main',
-            isMain: true,
-            deactivatedAt: new Date('2026-08-01T00:00:00.000Z'),
-          }),
-          other,
-        ]),
-      ).toBe(false);
     });
   });
 

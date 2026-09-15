@@ -9,6 +9,7 @@ import {
   customerSchema,
   customerUpdateSchema,
 } from 'customers';
+import { describe, expect, it } from 'vitest';
 
 // T10 — the shared `customers` contract subpath (contracts/openapi.yaml `Customer`,
 // `CustomerDeliveryAddress`, `CustomerDetail`, `CustomerAwaitingOrder`, `CustomerCreate`,

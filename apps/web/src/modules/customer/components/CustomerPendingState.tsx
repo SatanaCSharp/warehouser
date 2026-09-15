@@ -1,8 +1,6 @@
-import { useTranslation } from 'react-i18next';
-
-import { DatasetSkeleton } from 'shared/components/DatasetSkeleton';
-
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import { DatasetSkeleton } from 'shared/components/DatasetSkeleton';
 
 /**
  * The Customers destination's own waiting shape (`okRzd` tile `yX9ZT`,

@@ -6,6 +6,7 @@
 // `purchase-drafts/usecases/queries/list-rejection-reasons.query.ts` does not exist yet, so this
 // import fails to resolve (GOOD red).
 import { ListRejectionReasonsQuery } from 'purchase-drafts/usecases/queries/list-rejection-reasons.query';
+import { describe, expect, it, vi } from 'vitest';
 
 const aReasonRow = (overrides: Partial<Record<string, unknown>> = {}) => ({
   id: 'damaged_in_transit',
@@ -17,7 +18,7 @@ const aReasonRow = (overrides: Partial<Record<string, unknown>> = {}) => ({
 });
 
 const repositoryDouble = (rows: readonly unknown[]) => ({
-  listRejectionReasons: jest.fn().mockResolvedValue(rows),
+  listRejectionReasons: vi.fn().mockResolvedValue(rows),
 });
 
 describe('ListRejectionReasonsQuery', () => {

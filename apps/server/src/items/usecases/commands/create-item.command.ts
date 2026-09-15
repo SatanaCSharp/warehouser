@@ -1,17 +1,12 @@
 import { randomUUID } from 'node:crypto';
 
-import { Injectable, Optional } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
+import { isNull } from '@warehouser/utils/predicates';
 import { itemSkuTakenError } from 'items/domain/errors/item.errors';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
-
-export interface CreateItemRuntime {
-  readonly itemId: () => string;
-}
-
-const defaultCreateItemRuntime: CreateItemRuntime = { itemId: randomUUID };
 
 export interface CreateItemInput {
   readonly sku: string;
@@ -37,8 +32,6 @@ export interface ItemWriteProjection {
 export class CreateItemCommand {
   constructor(
     private readonly itemCatalogueRepository: ItemCatalogueRepository,
-    @Optional()
-    private readonly createItemRuntime: CreateItemRuntime = defaultCreateItemRuntime,
   ) {}
 
   @Transactional()
@@ -52,9 +45,9 @@ export class CreateItemCommand {
       warehouseId,
       input.sku,
     );
-    assert(existing === null, () => itemSkuTakenError(existing!.id, input.sku));
+    assert(isNull(existing), () => itemSkuTakenError(existing!.id, input.sku));
 
-    const id = this.createItemRuntime.itemId();
+    const id = randomUUID();
     await this.itemCatalogueRepository.createItem({
       id,
       warehouseId,

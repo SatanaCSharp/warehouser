@@ -1,15 +1,37 @@
 import { Button, Modal } from '@heroui/react';
-import { useRef } from 'react';
-
-import { mutationOutcome } from 'shared/api/client/mutation-outcome';
-import { useCloseDialog } from 'shared/hooks/effects/useCloseDialog';
-import { useFormFieldErrors } from 'shared/hooks/forms/useFormFieldErrors';
-
 import type { ComponentProps, ReactElement, ReactNode } from 'react';
+import { useRef } from 'react';
 import type { FieldValues, Path, UseFormReturn } from 'react-hook-form';
 import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import { mutationOutcome } from 'shared/api/client/mutation-outcome';
+import { useCloseDialog } from 'shared/hooks/effects/useCloseDialog';
 import type { FieldErrorCodes } from 'shared/hooks/forms/useFormFieldErrors';
+import { useFormFieldErrors } from 'shared/hooks/forms/useFormFieldErrors';
 import type { FormParse } from 'shared/utils/form-parse';
+
+/**
+ * The first field the refusal actually named, in the order the refusal listed them. A field whose
+ * entry carries no code was not refused, so it is not a candidate.
+ */
+const firstInvalidField = <TForm extends FieldValues>(
+  errors: FieldErrorCodes<TForm> | undefined,
+): Path<TForm> | undefined => {
+  const [firstInvalid] = (
+    Object.entries(errors ?? {}) as [Path<TForm>, string | undefined][]
+  )
+    .filter(([, code]) => Boolean(code))
+    .map(([field]) => field);
+
+  return firstInvalid;
+};
+
+/** Whether focus is currently inside the dialog's body — read off the document rather than
+ * predicted, because `setFocus` is silently a no-op for a field that registered no focusable ref. */
+const holdsFocus = (container: HTMLElement | null): boolean => {
+  const focused = document.activeElement;
+
+  return focused instanceof Node && Boolean(container?.contains(focused));
+};
 
 type FormModalDialogProps<TForm extends FieldValues, TInput> = Pick<
   ComponentProps<typeof Modal.Container>,
@@ -137,18 +159,12 @@ export const FormModalDialog = <TForm extends FieldValues, TInput = TForm>({
    * programmatically without joining the tab sequence.
    */
   const focusFirstInvalid = (errors?: FieldErrorCodes<TForm>): void => {
-    const [firstInvalid] = (
-      Object.entries(errors ?? {}) as [Path<TForm>, string | undefined][]
-    )
-      .filter(([, code]) => Boolean(code))
-      .map(([field]) => field);
-
+    const firstInvalid = firstInvalidField<TForm>(errors);
     if (firstInvalid) {
       form.setFocus(firstInvalid);
     }
 
-    const focused = document.activeElement;
-    if (focused instanceof Node && bodyRef.current?.contains(focused)) {
+    if (holdsFocus(bodyRef.current)) {
       return;
     }
     headingRef.current?.focus();

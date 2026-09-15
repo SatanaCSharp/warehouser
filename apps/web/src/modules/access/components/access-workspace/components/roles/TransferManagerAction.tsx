@@ -1,18 +1,16 @@
 import { Button, Modal } from '@heroui/react';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { useTranslation } from 'react-i18next';
-
 import { useTransferWarehouseManagerMutation } from 'modules/access/api/access-api';
 import { TransferManagerDialog } from 'modules/access/components/access-workspace/components/roles/TransferManagerDialog';
 import { useAccessScope } from 'modules/access/hooks/projections/useAccessScope';
 import { useAccessMembers } from 'modules/access/hooks/queries/useAccessMembers';
 import { useAccessRoles } from 'modules/access/hooks/queries/useAccessRoles';
+import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { TriggeredDialog } from 'shared/components/TriggeredDialog';
 import { WarehousePermissionGate } from 'shared/components/WarehousePermissionGate';
 import { useCurrentPermissions } from 'shared/hooks/queries/usePermissions';
-
-import type { ReactElement } from 'react';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 /**
  * The Transfer Warehouse Manager workflow, whole: its gate, the trigger, the

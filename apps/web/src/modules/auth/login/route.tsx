@@ -1,9 +1,8 @@
 import { createRoute, lazyRouteComponent } from '@tanstack/react-router';
-import { z } from 'zod';
-
 import { requireAnonymous } from 'guards/anonymous-user.guard';
 import { rootRoute } from 'routes/__root.route';
 import { ROUTES } from 'shared/constants/routes';
+import { z } from 'zod';
 
 export const loginRoute = createRoute({
   getParentRoute: () => rootRoute,

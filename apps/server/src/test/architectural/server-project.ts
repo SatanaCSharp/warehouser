@@ -1,13 +1,14 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, sep } from 'node:path';
 
-import { Project, type SourceFile } from 'ts-morph';
+import type { SourceFile } from 'ts-morph';
+import { Project } from 'ts-morph';
 
 /** The `apps/server` directory, found by walking up from this file until the package manifest that
- * names the server appears. Resolved rather than hard-coded relative to `__dirname` so the specs
- * keep working from `src/` under ts-jest and from `dist/` if they are ever compiled. */
+ * names the server appears. Resolved rather than hard-coded relative to `import.meta.dirname` so the specs
+ * keep working from `src/` under the test runner and from `dist/` if they are ever compiled. */
 const findServerRoot = (): string => {
-  let directory = __dirname;
+  let directory = import.meta.dirname;
 
   for (;;) {
     const manifest = join(directory, 'package.json');
@@ -23,7 +24,9 @@ const findServerRoot = (): string => {
     const parent = dirname(directory);
 
     if (parent === directory) {
-      throw new Error(`apps/server root not found above ${__dirname}`);
+      throw new Error(
+        `apps/server root not found above ${import.meta.dirname}`,
+      );
     }
 
     directory = parent;
@@ -34,7 +37,7 @@ export const serverRoot = findServerRoot();
 
 let project: Project | undefined;
 
-/** One ts-morph program over the server's own `tsconfig.json`, built once per Jest module registry
+/** One ts-morph program over the server's own `tsconfig.json`, built once per module registry
  * and shared by every architectural spec: parsing the source tree twice costs seconds for nothing. */
 export const serverProject = (): Project => {
   project ??= new Project({

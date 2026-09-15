@@ -17,7 +17,7 @@ export const customerOrderStateSchema = z.enum([
 // what makes correcting a Customer's name change every order that names it without rewriting a row
 // (AC-03b).
 export const customerRefSchema = z.strictObject({
-  id: z.string().uuid(),
+  id: z.uuid(),
   name: z.string().min(1),
 });
 
@@ -25,19 +25,19 @@ export const customerRefSchema = z.strictObject({
 // `CUSTOMER_ORDERS:WATCH` alone entitles a member to (AC-09a). Stated once and spread into both
 // forms below, so the two can never drift in a field that is not the redaction itself.
 const customerOrderCommonShape = {
-  id: z.string().uuid(),
-  itemId: z.string().uuid(),
+  id: z.uuid(),
+  itemId: z.uuid(),
   quantity: z.number().int().min(1),
   outstandingQuantity: z.number().int().nonnegative(),
   // `customer_orders.needed_by DATE` — a calendar date, never an instant.
-  neededBy: z.string().date(),
+  neededBy: z.iso.date(),
   state: customerOrderStateSchema,
   cancellationReason: z.string().nullable(),
-  recordedByUserId: z.string().uuid(),
-  cancelledByUserId: z.string().uuid().nullable(),
-  cancelledAt: z.string().datetime().nullable(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
+  recordedByUserId: z.uuid(),
+  cancelledByUserId: z.uuid().nullable(),
+  cancelledAt: z.iso.datetime().nullable(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
 };
 
 // openapi.yaml `CustomerOrderIdentified` — a named end customer waiting for a stated quantity of one
@@ -113,13 +113,13 @@ export const customerOrderSchema = z.union([
 // draft. Only open draft states appear: a Closed or Discarded draft presents as Coverage no longer
 // (AC-21a, AC-24).
 export const demandCoverageSchema = z.strictObject({
-  purchaseDraftId: z.string().uuid(),
+  purchaseDraftId: z.uuid(),
   // AC-20 — "which Purchase Drafts link to it and for what quantity": the `COVERED BY` chip reads
   // `PD-0142 · 800`, so the human reference the member knows the draft by travels with the stated
   // quantity. An id alone answers "for what quantity" but not "which drafts" (design frame
   // `G6jhw.png`).
   purchaseDraftReference: z.string().min(1),
-  purchaseDraftLineId: z.string().uuid(),
+  purchaseDraftLineId: z.uuid(),
   purchaseDraftState: z.enum(['draft', 'ready_for_ordering']),
   statedQuantity: z.number().int().min(1),
 });
@@ -129,12 +129,12 @@ export const demandCoverageSchema = z.strictObject({
 // An Item with no Unfulfilled demand produces no Demand Line at all, which is why both the total
 // and the count are positive rather than merely non-negative (AC-04, AC-17a).
 export const demandLineSchema = z.strictObject({
-  itemId: z.string().uuid(),
+  itemId: z.uuid(),
   sku: z.string().min(1),
   description: z.string().min(1),
   unitOfMeasure: unitOfMeasureSchema,
   totalOutstandingQuantity: z.number().int().min(1),
-  earliestNeededBy: z.string().date(),
+  earliestNeededBy: z.iso.date(),
   onHandQuantity: z.number().int().nonnegative(),
   unfulfilledCustomerOrderCount: z.number().int().min(1),
   coverage: z.array(demandCoverageSchema),

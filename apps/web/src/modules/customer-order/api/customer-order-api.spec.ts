@@ -1,11 +1,10 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { customerApi } from 'modules/customer/api/customer-api';
 import { customerOrderApi } from 'modules/customer-order/api/customer-order-api';
 import { itemApi } from 'modules/item/api/item-api';
 import { purchaseDraftApi } from 'modules/purchase-draft/api/purchase-draft-api';
 import { makeStore } from 'store';
 import { accessIds } from 'test/access-fixtures';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // T19 — DoD: "A test proves recording, amending and cancelling each
 // invalidate the demand, drafts and Items tags so every affected view

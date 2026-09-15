@@ -1,8 +1,7 @@
 import { Chip } from '@heroui/react';
-import { useTranslation } from 'react-i18next';
-
 import type { Item } from '@warehouser/contracts/items';
 import type { ComponentProps, ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export type ItemStatusChipProps = {
   item: Item;

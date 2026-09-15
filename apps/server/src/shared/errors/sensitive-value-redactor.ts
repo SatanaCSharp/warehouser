@@ -1,3 +1,8 @@
+import {
+  isObjectLike,
+  isString,
+} from 'shared/predicates/value-shape.predicates';
+
 const redacted = '[REDACTED]';
 const sensitiveKeyPattern =
   /authorization|cookie|credential|password|secret|token|hash|digest/iu;
@@ -12,7 +17,7 @@ const redactString = (value: string): string =>
     .replace(embeddedSecretPattern, '$<label> [REDACTED]');
 
 export const redactSensitiveValues = (value: unknown): unknown => {
-  if (typeof value === 'string') {
+  if (isString(value)) {
     return redactString(value);
   }
 
@@ -20,7 +25,7 @@ export const redactSensitiveValues = (value: unknown): unknown => {
     return value.map(redactSensitiveValues);
   }
 
-  if (value === null || typeof value !== 'object') {
+  if (!isObjectLike(value)) {
     return value;
   }
 

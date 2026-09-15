@@ -1,18 +1,16 @@
 import { Alert } from '@heroui/react';
-import { useTranslation } from 'react-i18next';
-
-import { PurchaseDraftLineConditionSummary } from 'modules/purchase-draft/components/closed-purchase-draft-line/components/PurchaseDraftLineConditionSummary';
-import { PurchaseDraftLineRefusalRow } from 'modules/purchase-draft/components/closed-purchase-draft-line/components/PurchaseDraftLineRefusalRow';
-import { Conditional } from 'shared/components/Conditional';
-import { CircleCheckIcon, CircleXIcon, ClipboardCheckIcon } from 'shared/icons';
-
 import type {
   EndingKind,
   LineCondition,
   PreReceiptConformanceVerdict,
   PurchaseDraftLineRejection,
 } from '@warehouser/contracts/purchase-drafts';
+import { PurchaseDraftLineConditionSummary } from 'modules/purchase-draft/components/closed-purchase-draft-line/components/PurchaseDraftLineConditionSummary';
+import { PurchaseDraftLineRefusalRow } from 'modules/purchase-draft/components/closed-purchase-draft-line/components/PurchaseDraftLineRefusalRow';
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Conditional } from 'shared/components/Conditional';
+import { CircleCheckIcon, CircleXIcon, ClipboardCheckIcon } from 'shared/icons';
 
 /** Which figure the summary's second cell reads — "PRESENTED" for what
  * arrived at the dock, "DELIVERED" for what the customer received. */

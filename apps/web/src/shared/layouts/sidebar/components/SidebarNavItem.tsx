@@ -1,5 +1,4 @@
 import { Link as RouterLink } from '@tanstack/react-router';
-
 import type { ReactElement, ReactNode } from 'react';
 
 export type SidebarNavItemProps = {

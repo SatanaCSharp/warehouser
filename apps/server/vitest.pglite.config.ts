@@ -1,0 +1,90 @@
+import { fileURLToPath } from 'node:url';
+
+import { defineConfig, mergeConfig } from 'vitest/config';
+
+import shared from './vitest.shared';
+
+const pglite = (module: string): string =>
+  fileURLToPath(new URL(`./src/test/pglite/${module}`, import.meta.url));
+
+/**
+ * The integration tier: the whole suite, each test file running against its
+ * own in-process PGlite database.
+ *
+ * `resolve.alias` is the replacement for Jest's `moduleNameMapper`: it swaps
+ * the production DataSource and the production Nest TypeORM options for
+ * PGlite-backed ones, so no production file knows this tier exists. Vite's
+ * alias resolver runs ahead of every plugin `resolveId` hook, so these two
+ * entries win over `vite-tsconfig-paths`' path resolution.
+ *
+ * The `find` patterns accept the specifier with or without its `.js`
+ * extension. Production code writes the extension — the server is an ES module
+ * — but an anchored pattern that silently stops matching is this tier's one
+ * quiet failure: the real DataSource loads and the suite runs against a
+ * developer's own database, green. `setupFiles` therefore asserts the swap
+ * took, rather than trusting these two regexes to keep matching.
+ *
+ * Note PGlite runs Postgres in single-user mode — one backend, one query at a
+ * time. A spec that needs two backends racing each other cannot be expressed
+ * here: it would either self-deadlock or let both writers win. The repository
+ * deliberately holds no such specs.
+ */
+export default mergeConfig(
+  shared,
+  defineConfig({
+    resolve: {
+      alias: [
+        {
+          find: /^shared\/database\/data-source(?:\.js)?$/,
+          replacement: pglite('pglite-data-source.ts'),
+        },
+        {
+          find: /^shared\/database\/typeorm\.options(?:\.js)?$/,
+          replacement: pglite('pglite-typeorm.options.ts'),
+        },
+      ],
+    },
+    test: {
+      name: 'integration',
+      // Only the integration specs: the unit tier already runs everything
+      // else, and a command named for one tier should not quietly run the
+      // other.
+      include: ['src/**/*.integration.spec.ts'],
+      exclude: ['**/node_modules/**', '**/dist/**'],
+      // Refuses to run the tier at all when the `resolve.alias` swap above is
+      // not in effect; see the file's own comment.
+      setupFiles: ['./src/test/pglite/alias-guard.setup.ts'],
+      // One file exporting both `setup` and `teardown`; it hands the migrated
+      // template dump to the workers through `provide`/`inject`.
+      globalSetup: ['./src/test/pglite/global-setup.ts'],
+      // A fresh module registry per test file is what gives each file its own
+      // database — `pglite-data-source.ts` and `pglite-driver.ts` are both
+      // module-level singletons. Turning isolation off collapses the whole
+      // tier onto one database and the specs still pass, wrongly.
+      isolate: true,
+      // Each test file leaves a PGlite WebAssembly heap behind that nothing
+      // releases: `typeorm-pglite` holds its instance in a module-level
+      // singleton and the module registry is reset without closing it. The
+      // forks pool reuses a child process across files, so the heaps still
+      // accumulate per worker exactly as they did under Jest, and with one
+      // worker per core they occasionally kill a worker mid-run (SIGTRAP),
+      // which surfaces as a failed suite reporting no failed tests. Halving
+      // the workers removes it at no cost in wall time — these specs are bound
+      // by PGlite's single-threaded WebAssembly, not by core count.
+      maxWorkers: '50%',
+      // Only `vitest.crap.config.ts` reads this, and it must: Vitest refuses to
+      // run two projects that share a `groupOrder` but disagree on
+      // `maxWorkers`, and it refuses by erroring *out of the run* rather than
+      // out of the process — the reporters still fire, so the CRAP adapter
+      // analyses an empty coverage report and prints a score for a suite that
+      // never executed. Ordering this tier after the default-0 unit tier both
+      // satisfies the constraint and is what we want anyway: the halved worker
+      // count above is this tier's alone and should not throttle the other.
+      sequence: { groupOrder: 1 },
+      // Booting `AppModule` in `beforeAll` has exceeded a 5s hook timeout on a
+      // loaded machine before.
+      testTimeout: 30_000,
+      hookTimeout: 30_000,
+    },
+  }),
+);

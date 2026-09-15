@@ -1,8 +1,7 @@
-import { describe, expect, it } from 'vitest';
-
 import i18n from 'i18n';
 import { MUTATION_FEEDBACK } from 'shared/alerts/mutation-actions';
 import { QUANTITY_GROUP_SEPARATOR } from 'shared/utils/number-format';
+import { describe, expect, it } from 'vitest';
 
 // F12 — `hWFRW`'s "Success · what actually committed" tile requires the success
 // copy to state the outcome in the vocabulary of the page: `On-hand set to 60 ·

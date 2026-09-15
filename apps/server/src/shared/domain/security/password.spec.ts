@@ -1,5 +1,6 @@
 import { AssertionError } from '@warehouser/shared-types/errors';
 import { Password } from 'shared/domain/security/password';
+import { describe, expect, it } from 'vitest';
 
 describe('Password', () => {
   it('measures password length in Unicode code points and preserves whitespace', () => {

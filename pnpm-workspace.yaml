@@ -15,6 +15,31 @@ packageExtensions:
     peerDependencies:
       "@internationalized/date": "^3.12.3"
 
+# `nestjs-zod@5.5.0` was published a month before NestJS 12 shipped, so its peer range still stops at
+# `@nestjs/common ^11` even though nothing it uses changed in v12: it imports only stable public
+# `@nestjs/common` API, never `@nestjs/core` (it reaches the reflector through the
+# `Inject('Reflector')` string token, which `@nestjs/core@12` still registers), does not extend Nest's
+# `ValidationPipe`, and reads `ArgumentMetadata` structurally rather than by name. Accepting v12 for
+# this one edge records that judgement instead of leaving a standing install warning; drop the rule
+# once upstream widens the range, or once the dependency is replaced by Nest 12's own
+# `@Body({ schema })` + `StandardSchemaValidationPipe`.
+#
+# This is deliberately a `peerDependencyRules` entry and not a `packageExtensions` one: pnpm merges an
+# extension as `{ ...extension[field], ...manifest[field] }`, so a package's own declaration always
+# wins and an extension can only add a peer the package never declared (which is what the
+# `@heroui/react` entry above does). It cannot widen a range the package already states.
+peerDependencyRules:
+  allowedVersions:
+    "nestjs-zod>@nestjs/common": "^12.0.0"
+  # `eslint-plugin-simple-import-sort` and `eslint-plugin-no-relative-import-paths` peer-depend on
+  # `eslint`, and `eslint` is no longer installed: oxlint loads both through its `jsPlugins` bridge,
+  # which implements the ESLint v9 rule API itself and passes each rule the context object it
+  # expects. Neither plugin imports anything from `eslint` at runtime — they are pure AST visitors —
+  # so the peer is genuinely unused rather than merely unsatisfied. Recording that here keeps the
+  # install quiet without pulling the whole linter back in to satisfy a declaration.
+  ignoreMissing:
+    - eslint
+
 overrides:
   "@types/node": "catalog:"
   "brace-expansion@1.1.15": "1.1.16"
@@ -24,34 +49,63 @@ overrides:
 
 catalog:
   # TypeScript & build
-  tsc-alias: ^1.9.0
+  # 1.9.4 or newer: earlier releases drop a bare `"*"` `paths` key on the floor
+  # (`buildAliasTrie` skipped any alias whose prefix was empty), so `apps/server`'s emitted
+  # `shared/...` specifiers were left unrewritten and the built output did not load.
+  tsc-alias: ^1.9.4
   turbo: ^2.10.4
   typescript: ^5.9.3
+  # `apps/server` is ESM and builds with `tsc` + `tsc-alias`, so there is no bundler-backed watch
+  # mode to lean on. `tsx` runs the TypeScript entrypoint directly and restarts it on change — the
+  # maintained replacement for `nest start --watch`, whose tsconfig-paths hook cannot emit loadable
+  # ESM.
+  tsx: ^4.23.13
 
   # Testing
-  "@types/jest": ^29.5.14
   "@types/node": ^24.13.3
   "@testing-library/dom": ^10.4.1
-  jest: ^29.7.0
-  ts-jest: ^29.4.11
-  ts-node: ^10.9.2
-  vitest: ^3.2.7
+  vitest: ^5.0.0
+  "@vitest/coverage-v8": ^5.0.0
+  # `apps/web` only, and only for its CRAP tier. v8 coverage is derived by mapping runtime byte
+  # ranges back through source maps, and in TSX that loses function identity: the resulting Istanbul
+  # `fnMap` carries spans the CRAP analyser cannot match a function to, so it scores the function
+  # `skipped` rather than failing it — 71 of 1019 web functions on the last v8 run, including the two
+  # most complex in the app. This provider instruments the source before it runs, so the names and
+  # spans are the real ones: 63 skips instead of 71, and no slower (51.0s vs 53.7s, measured).
+  "@vitest/coverage-istanbul": ^5.0.0
+  # The CRAP gate's Vitest adapter, plus the standalone CLI the root `crap` script runs. Both are
+  # referenced as `catalog:` (by every package's devDependencies and by the root manifest
+  # respectively), so both need an entry here or `pnpm install` fails outright.
+  "@barney-media/crap-typescript": ^0.5.2
+  "@barney-media/crap-typescript-vitest": ^0.5.2
+  # NestJS DI needs `emitDecoratorMetadata`, which esbuild (Vite's default
+  # transform) cannot emit. The server test tiers compile with SWC instead.
+  "@swc/core": ^1.16.2
+  unplugin-swc: ^1.6.0
+  # Replaces Jest's `moduleDirectories`: resolves the bare `shared/...`
+  # specifiers against the server's tsconfig.
+  vite-tsconfig-paths: ^6.1.1
 
-  # NestJS
-  "@nestjs/cli": ^11.0.24
-  "@nestjs/common": ^11.1.28
-  "@nestjs/bullmq": ^11.0.4
-  "@nestjs/config": ^4.0.4
-  "@nestjs/core": ^11.1.28
-  "@nestjs/jwt": ^11.0.2
-  "@nestjs/typeorm": ^11.0.0
-  "@nestjs/passport": ^11.0.5
-  "@nestjs/platform-express": ^11.1.28
-  "@nestjs/testing": ^11.1.28
+  # NestJS. Every v12 package publishes as ESM (`"type": "module"`), and so does `apps/server`, so
+  # they are reached by a plain `import`. The Nest CLI is deliberately absent: its tsconfig-paths
+  # transformer strips the extension off every alias it rewrites, producing specifiers Node's ESM
+  # resolver cannot load (nest-cli#3545), and the repo has no `nest-cli.json`, so the CLI
+  # contributed nothing else. `apps/server` builds with `tsc` + `tsc-alias` instead.
+  "@nestjs/common": ^12.0.1
+  "@nestjs/bullmq": ^12.0.0
+  "@nestjs/config": ^12.0.0
+  "@nestjs/core": ^12.0.1
+  "@nestjs/jwt": ^12.0.1
+  "@nestjs/typeorm": ^12.0.1
+  "@nestjs/passport": ^12.0.0
+  "@nestjs/platform-express": ^12.0.1
+  "@nestjs/testing": ^12.0.1
 
   # Server runtime
   bullmq: ^5.81.1
-  nestjs-pino: ^4.6.1
+  # v5 is the first release whose `@nestjs/{common,core}` peers accept ^12; its `pino`/`pino-http`
+  # peers (^10 / ^11) are already satisfied by the two entries below, so this bump cascades nowhere.
+  nestjs-pino: ^5.1.0
   pg: ^8.16.3
   pino: ^10.3.1
   pino-http: ^11.0.0
@@ -64,7 +118,7 @@ catalog:
   typeorm: ^0.3.27
 
   # Contracts / validation
-  nestjs-zod: ^5.4.0
+  nestjs-zod: ^5.5.0
   zod: ^4.4.3
 
   # Server types
@@ -86,24 +140,19 @@ catalog:
   "@vitejs/plugin-react": ^4.7.0
   vite: ^6.4.3
 
-  # ESLint core
-  "@eslint/js": ^9.39.5
-  "@typescript-eslint/eslint-plugin": ^8.63.0
-  "@typescript-eslint/parser": ^8.63.0
-  eslint: ^9.39.5
-  typescript-eslint: ^8.63.0
+  # Linting. oxlint replaces ESLint entirely; Prettier remains the formatter and runs separately.
+  # Pinned exactly rather than caret-ranged: the `jsPlugins` bridge the two surviving ESLint plugins
+  # below run through is documented as alpha and explicitly outside semver, so a patch bump can move
+  # it. `oxlint-tsgolint` is the separate Go binary that runs the type-aware rules; it is versioned
+  # against TypeScript's own line (7.x) rather than oxlint's, and embeds its own typescript-go
+  # engine — it needs no `typescript` package of its own, which is why this repo stays on 5.9.3.
+  oxlint: 1.82.0
+  oxlint-tsgolint: ^7.0.2001
 
-  # ESLint plugins
-  eslint-config-prettier: ^10.1.8
-  eslint-import-resolver-typescript: ^3.10.1
-  eslint-plugin-import: ^2.32.0
-  eslint-plugin-jsx-a11y: ^6.10.2
+  # The two ESLint plugins that survive as oxlint `jsPlugins`, because oxlint implements no
+  # equivalent: `no-relative-import-paths` is what makes the ~4000 bare `shared/...` specifiers the
+  # convention (oxlint's `import/no-relative-parent-imports` bans only `../`, has no `rootDir` and
+  # no fixer), and `simple-import-sort` is the only import orderer either app has now that
+  # `import/order` — which oxlint also lacks — is retired.
   eslint-plugin-no-relative-import-paths: ^1.6.1
-  eslint-plugin-prettier: ^5.5.6
-  eslint-plugin-react: ^7.37.5
-  eslint-plugin-react-hooks: ^7.1.1
   eslint-plugin-simple-import-sort: ^12.1.1
-  eslint-plugin-unused-imports: ^4.4.1
-
-  # ESLint types
-  "@types/eslint-plugin-jsx-a11y": ^6.10.1

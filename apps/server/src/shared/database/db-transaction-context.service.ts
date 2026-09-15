@@ -1,6 +1,7 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 
 import { Injectable } from '@nestjs/common';
+import { isDefined } from '@warehouser/utils/predicates';
 import { DataSource, EntityManager } from 'typeorm';
 
 const transactionStorageByDataSource = new WeakMap<
@@ -29,6 +30,6 @@ export class DbTransactionContext {
   }
 
   hasActiveTransaction(): boolean {
-    return this.storage.getStore() !== undefined;
+    return isDefined(this.storage.getStore());
   }
 }

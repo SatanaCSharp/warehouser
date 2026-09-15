@@ -1,4 +1,6 @@
-import uniq from 'lodash/uniq';
+import { isDefined, isNull, isUndefined } from '@warehouser/utils/predicates';
+import { uniq } from 'lodash-es';
+import { readDisclosesRejectionCause } from 'purchase-drafts/domain/predicates/rejection-cause-access.predicates';
 import type {
   PurchaseDraftLineEndingRead,
   PurchaseDraftLineRejectionRead,
@@ -81,13 +83,13 @@ export interface PurchaseDraftLineEndingWithCondition {
 // once per line. Endings withholding the cause, and endings with no Condition Split at all, name
 // no Rejection and contribute nothing.
 export const rejectionReasonIdsOf = (
-  endings: ReadonlyArray<PurchaseDraftLineEndingRead | null>,
+  endings: ReadonlyArray<PurchaseDraftLineEndingRead | null | undefined>,
 ): string[] =>
   uniq(
     endings.flatMap((ending) =>
       // Several read-side fixtures/callers omit `ending` entirely rather than stating `null`, and
       // both mean the same thing here — nothing to resolve a Reason for.
-      ending !== null && ending !== undefined && 'rejections' in ending
+      isDefined(ending) && readDisclosesRejectionCause(ending)
         ? ending.rejections.map((rejection) => rejection.rejectionReasonId)
         : [],
     ),
@@ -134,7 +136,7 @@ export const conditionOf = (
   ending: PurchaseDraftLineEndingRead,
   rejectionReasonLabels: ReadonlyMap<string, string>,
 ): LineConditionAccount | null => {
-  if (ending.preReceiptConformance === null) {
+  if (isNull(ending.preReceiptConformance)) {
     return null;
   }
 
@@ -147,7 +149,7 @@ export const conditionOf = (
     },
   };
 
-  if (!('rejections' in ending)) {
+  if (!readDisclosesRejectionCause(ending)) {
     return withheld;
   }
 
@@ -163,10 +165,10 @@ export const conditionOf = (
 // nested. `null` passes straight through: a line with no ending at all has no condition to build
 // either.
 export const withCondition = (
-  ending: PurchaseDraftLineEndingRead | null,
+  ending: PurchaseDraftLineEndingRead | null | undefined,
   rejectionReasonLabels: ReadonlyMap<string, string>,
 ): PurchaseDraftLineEndingWithCondition | null =>
-  ending === null || ending === undefined
+  isNull(ending) || isUndefined(ending)
     ? null
     : {
         kind: ending.kind,

@@ -1,9 +1,7 @@
+import type { CustomerOrder } from '@warehouser/contracts/customer-orders';
+import { customerOrderIdentity } from 'modules/customer-order/utils/customer-order-identity';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-
-import { customerOrderIdentity } from 'modules/customer-order/utils/customer-order-identity';
-
-import type { CustomerOrder } from '@warehouser/contracts/customer-orders';
 
 export type CustomerOrderNaming = (order: CustomerOrder) => string;
 

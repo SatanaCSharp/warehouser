@@ -14,6 +14,7 @@ import { PermissionId } from '@warehouser/shared-types/enums';
 import { RejectionReasonLabelService } from 'purchase-drafts/domain/services/rejection-reason-label.service';
 import { ListPurchaseDraftLinesQuery } from 'purchase-drafts/usecases/queries/list-purchase-draft-lines.query';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { describe, expect, it, vi } from 'vitest';
 
 const warehouseId = '00000000-0000-4000-8000-000000000001';
 const addressA = '00000000-0000-4000-8000-000000000501';
@@ -157,8 +158,8 @@ const repositoryDouble = (
   entries: readonly unknown[],
   redactedEntries: readonly unknown[] = entries,
 ) => ({
-  listIdentifiedLines: jest.fn().mockResolvedValue(entries),
-  listRedactedLines: jest.fn().mockResolvedValue(redactedEntries),
+  listIdentifiedLines: vi.fn().mockResolvedValue(entries),
+  listRedactedLines: vi.fn().mockResolvedValue(redactedEntries),
 });
 
 const firstLinkOf = (entries: { line: { links: unknown[] } }[]) =>
@@ -168,7 +169,7 @@ const firstLinkOf = (entries: { line: { links: unknown[] } }[]) =>
 // parameter — none of these cases assert on a Rejection's resolved label, so it never needs to
 // resolve anything.
 const catalogueDouble = () => ({
-  resolveRejectionReasons: jest.fn().mockResolvedValue([]),
+  resolveRejectionReasons: vi.fn().mockResolvedValue([]),
 });
 
 describe('ListPurchaseDraftLinesQuery', () => {

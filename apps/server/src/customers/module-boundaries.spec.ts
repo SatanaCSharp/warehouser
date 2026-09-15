@@ -1,6 +1,8 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { describe, expect, it } from 'vitest';
+
 // T6 — the executable form of the DoD's purity rule: "`customers/domain` imports no NestJS, HTTP or
 // TypeORM symbol", and of sad.md §10's hard rule that `customers` never imports `purchase-drafts`.
 //
@@ -9,14 +11,14 @@ import { join } from 'node:path';
 // reads the *specifier* each production file imports, which is the rule as stated: a domain mapper
 // may name a shared TypeORM persistence entity by type — `customer-orders`' mapper already does —
 // while the domain itself imports no framework symbol of its own.
-const moduleDirectory = __dirname;
+const moduleDirectory = import.meta.dirname;
 const domainDirectory = join(moduleDirectory, 'domain');
 const usecaseModulePath = join(
   moduleDirectory,
   'usecases',
   'usecase.module.ts',
 );
-const sourceRoot = join(__dirname, '..');
+const sourceRoot = join(import.meta.dirname, '..');
 
 // The module list is exactly the directories directly under `src/`
 // (adr/14-08-2026-domain-owned-flat-modules.md §Flatness), read from disk so a module added later
@@ -85,8 +87,19 @@ const FEATURE_MODULES = readdirSync(sourceRoot, { withFileTypes: true })
 const isModulePrivate = (target: string): boolean =>
   /\/domain\/errors\//u.test(target) ||
   /\/domain\/predicates\//u.test(target) ||
-  /\.predicates$/u.test(target) ||
+  target.endsWith('.predicates') ||
   /\/rest\/dtos\//u.test(target);
+
+/**
+ * A specifier reduced to the module path the rules below are about. An intra-application import
+ * may or may not carry a `.js` extension: source is written extensionless under
+ * `moduleResolution: "Bundler"` and `tsc-alias` appends the extension at build time, and a file
+ * written before that switch still spells it out. Either way the extension is a spelling of the
+ * resolver's rules, not of the boundary, so it is dropped before a target is classified — a
+ * classifier that recognised only one spelling would stop seeing half the import graph without
+ * failing anything. Failure messages still quote the specifier as written.
+ */
+const moduleTarget = (target: string): string => target.replace(/\.js$/u, '');
 
 // The module a specifier reaches into, when that is a sibling of this one. Mirrors
 // `warehouses/module-boundaries.spec.ts`'s `foreignModuleTarget`.
@@ -95,7 +108,7 @@ const foreignModuleTarget = (specifier: string): string | undefined => {
     return undefined;
   }
 
-  const target = specifier.replace(/^(?:\.\.\/)+/u, '');
+  const target = moduleTarget(specifier.replace(/^(?:\.\.\/)+/u, ''));
   const [head] = target.split('/');
 
   return FEATURE_MODULES.includes(head) && head !== MODULE_NAME
@@ -243,10 +256,20 @@ const importedSpecifiers = (source: string): string[] =>
     source.matchAll(/(?:from|require\()\s*['"](?<specifier>[^'"]+)['"]/gu),
   ).map((match) => match.groups?.specifier ?? '');
 
-// Catches both spellings of the dependency: a bare specifier (intra-application imports resolve
-// through `baseUrl: ./src`) and a relative traversal out of `customers/` into the sibling.
+// Catches every spelling of the dependency: a bare specifier (intra-application imports resolve
+// through the tsconfig `paths` mapping over `./src`) and a relative traversal out of `customers/`
+// into the sibling — each of them with or without the `.js` the build appends, since the extension
+// sits past the `/` this pattern keys on.
+//
+// The `['"]` terminator is what makes the barrel countable. Under `moduleResolution: "Bundler"` a
+// barrel import is the bare directory name — `from 'purchase-drafts'`, where it used to be
+// `from 'purchase-drafts/index.js'` — so a pattern demanding a trailing `/` would let the single
+// most likely form of this violation through while still reporting green on every other. An
+// anchored pattern that quietly stops matching is a guard that has become a no-op, which is why
+// `vitest.pglite.config.ts` accepts both spellings in its `resolve.alias` entries rather than
+// flipping to the newer one.
 const forbiddenSiblingImportPattern = new RegExp(
-  `from\\s+['"](?:\\.\\.\\/)*${FORBIDDEN_SIBLING}\\/`,
+  `from\\s+['"](?:\\.\\.\\/)*${FORBIDDEN_SIBLING}(?:\\/|['"])`,
   'u',
 );
 
@@ -360,46 +383,86 @@ describe('customers module boundaries', () => {
 
   // The public-surface clause discriminates, so the empty result above is a fact rather than a
   // filter that matches nothing.
-  it('rejects a fixture reaching past a sibling surface, and admits the legal spellings', () => {
-    expect(
-      findPublicSurfaceViolations([
-        {
-          path: 'customers/domain/mappers/customer-awaiting-order.mapper.ts',
-          source:
-            "import { DemandAllocationService } from 'customer-orders/domain/services/demand-allocation.service';",
-        },
-      ]),
-    ).toHaveLength(1);
+  it.each([
+    'customer-orders/domain/services/demand-allocation.service',
+    'customer-orders/domain/services/demand-allocation.service.js',
+  ])(
+    'rejects a fixture reaching past a sibling surface via %s',
+    (specifier: string) => {
+      expect(
+        findPublicSurfaceViolations([
+          {
+            path: 'customers/domain/mappers/customer-awaiting-order.mapper.ts',
+            source: `import { DemandAllocationService } from '${specifier}';`,
+          },
+        ]),
+      ).toHaveLength(1);
+    },
+  );
 
-    // A barrel, an exported NestJS module, and a provider the sibling's usecase.module.ts exports
-    // are the three legal spellings.
+  // A barrel and an exported NestJS module are legal, and each is legal in every spelling the tree
+  // admits: `moduleResolution: "Bundler"` writes them bare, the build appends `.js`, and a barrel
+  // may also be named through `/index`. Listing them one by one is what stops `isPublicSurface`
+  // from quietly ceasing to recognise a form nobody re-checked.
+  it.each([
+    'customer-orders',
+    'customer-orders/index',
+    'customer-orders/index.js',
+  ])('admits the sibling barrel spelled %s', (specifier: string) => {
     expect(
       findPublicSurfaceViolations([
         {
           path: 'customers/rest/rest.module.ts',
-          source: [
-            "import { AuthModule } from 'auth/auth.module';",
-            "import { CustomerOrdersModule } from 'customer-orders';",
-          ].join('\n'),
+          source: `import { CustomerOrdersModule } from '${specifier}';`,
         },
       ]),
     ).toEqual([]);
   });
 
+  it.each(['auth/auth.module', 'auth/auth.module.js'])(
+    'admits an exported NestJS module spelled %s',
+    (specifier: string) => {
+      expect(
+        findPublicSurfaceViolations([
+          {
+            path: 'customers/rest/rest.module.ts',
+            source: `import { AuthModule } from '${specifier}';`,
+          },
+        ]),
+      ).toEqual([]);
+    },
+  );
+
   // The scan can distinguish a module-private reach from a legal one — otherwise the empty result
   // above would prove nothing.
   it("rejects a fixture reaching into another module's internals", () => {
-    expect(
-      foreignModuleTarget(
+    // Both spellings normalize to the same target, which is the whole point of `moduleTarget`:
+    // the classifier must not care whether the offender wrote the extension.
+    for (const specifier of [
+      'customer-orders/domain/errors/customer-order.errors',
+      'customer-orders/domain/errors/customer-order.errors.js',
+    ]) {
+      expect(foreignModuleTarget(specifier)).toBe(
         'customer-orders/domain/errors/customer-order.errors',
-      ),
-    ).toBe('customer-orders/domain/errors/customer-order.errors');
-    expect(
-      isModulePrivate('customer-orders/domain/errors/customer-order.errors'),
-    ).toBe(true);
-    expect(isModulePrivate('customer-orders')).toBe(false);
+      );
+      expect(isModulePrivate(specifier)).toBe(true);
+    }
+
+    // The bare barrel and its explicit forms are a sibling target, and none of them is private.
+    for (const specifier of [
+      'customer-orders',
+      'customer-orders/index',
+      'customer-orders/index.js',
+    ]) {
+      expect(foreignModuleTarget(specifier)).toBeDefined();
+      expect(isModulePrivate(specifier)).toBe(false);
+    }
+
     expect(
       foreignModuleTarget('@warehouser/contracts/customers'),
+    ).toBeUndefined();
+    expect(
+      foreignModuleTarget('shared/domain/entities/customer.entity.js'),
     ).toBeUndefined();
     expect(
       foreignModuleTarget('shared/domain/entities/customer.entity'),
@@ -424,16 +487,36 @@ describe('customers module boundaries', () => {
     );
   });
 
-  it('rejects a fixture that does import from purchase-drafts', () => {
+  it.each([
+    'purchase-drafts/domain/entities/purchase-draft',
+    'purchase-drafts/domain/entities/purchase-draft.js',
+    '../../purchase-drafts/domain/entities/purchase-draft',
+    '../../purchase-drafts/domain/entities/purchase-draft.js',
+    // The barrel, in each of its three spellings. The bare one is the form the
+    // extensionless convention made likely and the old pattern could not see.
+    'purchase-drafts',
+    'purchase-drafts/index',
+    'purchase-drafts/index.js',
+    '../../purchase-drafts',
+  ])('rejects a fixture that imports %s', (specifier: string) => {
     expect(
       forbiddenSiblingImportPattern.test(
-        "import { PurchaseDraftEntity } from 'purchase-drafts/domain/entities/purchase-draft';",
+        `import { PurchaseDraftEntity } from '${specifier}';`,
       ),
     ).toBe(true);
+  });
+
+  // …and rejects only that. Widening the terminator would be worthless if it
+  // also swallowed a name that merely starts with the sibling's.
+  it.each([
+    '@warehouser/contracts/purchase-drafts',
+    'shared/domain/entities/purchase-draft.entity',
+    'purchase-drafts-archive/domain/entities/thing',
+  ])('admits %s, which is not the sibling module', (specifier: string) => {
     expect(
       forbiddenSiblingImportPattern.test(
-        "import { PurchaseDraftEntity } from '../../purchase-drafts/domain/entities/purchase-draft';",
+        `import { Thing } from '${specifier}';`,
       ),
-    ).toBe(true);
+    ).toBe(false);
   });
 });

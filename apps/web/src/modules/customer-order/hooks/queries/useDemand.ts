@@ -1,7 +1,6 @@
+import type { DemandLine } from '@warehouser/contracts/customer-orders';
 import { useReadDemandQuery } from 'modules/customer-order/api/customer-order-api';
 import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
-
-import type { DemandLine } from '@warehouser/contracts/customer-orders';
 
 export type DemandReading = {
   /** True when the read was refused or failed, as opposed to returning none. */

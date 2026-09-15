@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { isDefined } from '@warehouser/utils/predicates';
 import { getEntityManager } from 'shared/database/db-transaction-context.service';
 import { UserEntity } from 'shared/domain/entities/user.entity';
 import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
@@ -47,7 +48,7 @@ export class ActiveWarehouseSelectionRepository {
       .andWhere('membership.warehouseId = :warehouseId', { warehouseId })
       .setLock('pessimistic_write')
       .getOne();
-    if (!membership) {
+    if (!isDefined(membership)) {
       return null;
     }
 

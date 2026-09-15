@@ -1,11 +1,9 @@
-import { useTranslation } from 'react-i18next';
-
-import { CustomerOrderDestinationLine } from 'modules/customer-order/components/demand-directory/components/CustomerOrderDestinationLine';
-import { customerOrderIdentity } from 'modules/customer-order/utils/customer-order-identity';
-
 import type { CustomerOrder } from '@warehouser/contracts/customer-orders';
+import { CustomerOrderDestinationLine } from 'modules/customer-order/components/demand-directory/components/CustomerOrderDestinationLine';
 import type { CustomerOrderIdentityKind } from 'modules/customer-order/utils/customer-order-identity';
+import { customerOrderIdentity } from 'modules/customer-order/utils/customer-order-identity';
 import type { ReactElement, ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export type CustomerOrderIdentityCellProps = {
   order: CustomerOrder;

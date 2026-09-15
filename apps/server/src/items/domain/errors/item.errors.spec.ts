@@ -11,6 +11,7 @@ import {
   itemSkuTakenError,
   itemTargetUnavailableError,
 } from 'items/domain/errors/item.errors';
+import { describe, expect, it } from 'vitest';
 
 describe('item domain error factories', () => {
   // AC-07 — creation is blocked and the response names the Item that already holds the SKU.

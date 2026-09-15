@@ -30,6 +30,7 @@ import {
   buildWarehouseMembership,
   buildWorkspace,
 } from 'test/factories/entity-factories';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 // `SetActiveWarehouseCommand` does not exist yet — this is the RED step for
 // T23. This route is session-authenticated and declares no Workspace or
 // Warehouse Permission (sad.md §6.8): the command itself proves a live,

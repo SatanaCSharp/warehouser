@@ -1,19 +1,18 @@
+import type { CustomerOrder } from '@warehouser/contracts/customer-orders';
+import type { PurchaseDraftLineLinkCreate } from '@warehouser/contracts/purchase-drafts';
 import { ErrorCode } from '@warehouser/shared-types/enums';
-import { useState } from 'react';
-import { Controller, useForm, useWatch } from 'react-hook-form';
-import { useTranslation } from 'react-i18next';
-
 import { CustomerOrderPicker } from 'modules/customer-order/components/CustomerOrderPicker';
 import { AddressDisagreementAlert } from 'modules/purchase-draft/components/purchase-draft-line-links/components/AddressDisagreementAlert';
 import { PurchaseDraftRefusalAlert } from 'modules/purchase-draft/components/PurchaseDraftRefusalAlert';
+import type { ReactElement } from 'react';
+import { useState } from 'react';
+import type { FieldError } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { Conditional } from 'shared/components/Conditional';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormTextField } from 'shared/components/FormTextField';
-
-import type { CustomerOrder } from '@warehouser/contracts/customer-orders';
-import type { PurchaseDraftLineLinkCreate } from '@warehouser/contracts/purchase-drafts';
-import type { ReactElement } from 'react';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 export type LinkCustomerOrderDialogProps = {
   /** The Unfulfilled Customer Orders of this line's Item, and only those (AC-04, AC-11). */
@@ -70,6 +69,41 @@ const ORDER_REFUSAL_CODES: Record<string, string | null> = {
 };
 
 /**
+ * Where a Customer Order's goods go, when the read is entitled to say. An order
+ * read without `CUSTOMERS:WATCH` declares no `destination` property at all,
+ * which is what proves the redaction (AC-09a).
+ */
+type CustomerOrderDestination = Extract<
+  CustomerOrder,
+  { destination: unknown }
+>['destination'];
+
+/**
+ * AC-15 — the address the picked Customer Order is bound for, which
+ * `AddressDisagreementAlert` names beside the line's own. `null` for an order
+ * recorded by a typed customer name, which goes to no Delivery Address at all
+ * (AC-24).
+ */
+const destinationAddressTextOf = (
+  destination: CustomerOrderDestination,
+): string | null => destination?.addressText ?? null;
+
+/**
+ * The destination of the order the member picked — `null` while none is picked,
+ * and `null` for a read that declares none.
+ */
+const destinationOf = (
+  selectedOrder: CustomerOrder | undefined,
+): CustomerOrderDestination =>
+  selectedOrder !== undefined && 'destination' in selectedOrder
+    ? selectedOrder.destination
+    : null;
+
+/** The refusal the form holds for one field, when it was given one. */
+const fieldMessage = (error: FieldError | undefined): string | undefined =>
+  error?.message;
+
+/**
  * Links one Purchase Draft Line to a Customer Order, stating how much of the
  * line is intended for that customer (AC-10, AC-10a, AC-11a) — the step that
  * turns "what we are ordering" into "who each line is for", and therefore the
@@ -113,10 +147,9 @@ export const LinkCustomerOrderDialog = ({
   const selectedOrder = customerOrders.find(
     (order) => order.id === selectedOrderId,
   );
-  const orderDeliveryAddressText =
-    selectedOrder !== undefined && 'destination' in selectedOrder
-      ? (selectedOrder.destination?.addressText ?? null)
-      : null;
+  const orderDeliveryAddressText = destinationAddressTextOf(
+    destinationOf(selectedOrder),
+  );
 
   const translateValidation = (
     code: string,
@@ -164,7 +197,7 @@ export const LinkCustomerOrderDialog = ({
           unit: unitOfMeasure,
         })}
         isInvalid={Boolean(errors.statedQuantity)}
-        errorMessage={errors.statedQuantity?.message}
+        errorMessage={fieldMessage(errors.statedQuantity)}
         label={t('dialogs.addLink.quantityLabel')}
         isDisabled={isSubmitting}
         {...register('statedQuantity', {

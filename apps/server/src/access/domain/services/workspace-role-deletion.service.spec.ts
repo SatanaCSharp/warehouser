@@ -17,6 +17,7 @@ import { ErrorCode } from '@warehouser/shared-types/enums';
 import { WorkspaceRoleDeletionService } from 'access/domain/services/workspace-role-deletion.service';
 import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository';
 import { repositoryDouble } from 'test/doubles/repository-double';
+import { describe, expect, it, vi } from 'vitest';
 
 const workspaceId = '00000000-0000-4000-8000-000000000001';
 const sourceRoleId = '00000000-0000-4000-8000-000000000002';
@@ -28,12 +29,12 @@ const replacementRoleId = '00000000-0000-4000-8000-000000000003';
 // required to satisfy this contract.
 const workspaceRoleLifecycleRepositoryDouble = () =>
   repositoryDouble<WorkspaceRoleLifecycleRepository>()({
-    findCustomRole: jest.fn().mockResolvedValue({
+    findCustomRole: vi.fn().mockResolvedValue({
       id: replacementRoleId,
       workspaceId,
       kind: 'custom',
     }),
-    replaceRoleAssignments: jest.fn().mockResolvedValue(undefined),
+    replaceRoleAssignments: vi.fn().mockResolvedValue(undefined),
   });
 
 describe('WorkspaceRoleDeletionService', () => {

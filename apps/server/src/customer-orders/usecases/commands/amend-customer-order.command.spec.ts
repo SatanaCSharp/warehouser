@@ -9,6 +9,8 @@ import { CustomerOrderLifecycleService } from 'customer-orders/domain/services/c
 import { AmendCustomerOrderCommand } from 'customer-orders/usecases/commands/amend-customer-order.command';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import type { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
+import { freezeClockAt } from 'test/doubles/frozen-clock';
+import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>
   `00000000-0000-4000-8000-${suffix.padStart(12, '0')}`;
@@ -58,8 +60,8 @@ const lifecycleRepositoryDouble = (
     allocatedQuantity: 0,
   },
 ) => ({
-  lockOrderWithAllocatedTotal: jest.fn().mockResolvedValue(locked),
-  amendCustomerOrder: jest.fn().mockResolvedValue(storedOrder()),
+  lockOrderWithAllocatedTotal: vi.fn().mockResolvedValue(locked),
+  amendCustomerOrder: vi.fn().mockResolvedValue(storedOrder()),
 });
 
 // Built over a real `CustomerOrderLifecycleService`, not a double of it: the service holds only the
@@ -71,8 +73,9 @@ const commandWith = (
   new AmendCustomerOrderCommand(
     lifecycleRepository as never,
     new CustomerOrderLifecycleService(lifecycleRepository as never),
-    { now: () => now },
   );
+
+freezeClockAt(now);
 
 describe('AmendCustomerOrderCommand (AC-19, AC-19b)', () => {
   // AC-19 — the Outstanding Quantity is recalculated on every amendment: what the customer is still

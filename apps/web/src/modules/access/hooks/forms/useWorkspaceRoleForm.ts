@@ -1,21 +1,19 @@
-import { useForm } from 'react-hook-form';
-import { useTranslation } from 'react-i18next';
-
-import { workspaceRoleFormSchema } from 'modules/access/schemas/workspace-role-form.schema';
-import { mutationOutcome } from 'shared/api/client/mutation-outcome';
-import { useFormFieldErrors } from 'shared/hooks/forms/useFormFieldErrors';
-import { parseWithSchema } from 'shared/utils/form-parse';
-
 import type { WorkspaceRoleWrite } from '@warehouser/contracts/workspaces';
 import type { WorkspaceRoleFormValues } from 'modules/access/schemas/workspace-role-form.schema';
-import type { FormEvent } from 'react';
+import { workspaceRoleFormSchema } from 'modules/access/schemas/workspace-role-form.schema';
+import type { SubmitEvent } from 'react';
 import type {
   Control,
   FieldErrors,
   UseFormRegister,
   UseFormReset,
 } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import { mutationOutcome } from 'shared/api/client/mutation-outcome';
+import { useFormFieldErrors } from 'shared/hooks/forms/useFormFieldErrors';
+import { parseWithSchema } from 'shared/utils/form-parse';
 
 type WorkspaceRoleFormOptions = {
   defaultValues: WorkspaceRoleFormValues;
@@ -29,7 +27,7 @@ type WorkspaceRoleFormSession = {
   register: UseFormRegister<WorkspaceRoleFormValues>;
   /** Returns the fields to the Role they were seeded from, discarding edits. */
   reset: UseFormReset<WorkspaceRoleFormValues>;
-  submit: (event: FormEvent<HTMLFormElement>) => Promise<void>;
+  submit: (event: SubmitEvent<HTMLFormElement>) => Promise<void>;
 };
 
 /** AC-15a — the browser pre-check that runs before the request leaves. */

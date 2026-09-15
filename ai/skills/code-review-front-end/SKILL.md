@@ -30,6 +30,11 @@ Shared discipline: [`../_shared/system-conformance.md`](../_shared/system-confor
 resolution, manifest building, rule precedence, finding format, resolution, record, verdict. Read it;
 this file only states what is specific to the web app.
 
+This is the after-the-fact half of a pair. [`../writing-app-code`](../writing-app-code/SKILL.md) asks
+the same question of the same documents **before** the edit; when it ran, this gate should find
+nothing. A finding here that `writing-app-code` would have prevented is worth reporting as such —
+the miss is in the write-time gate, not only in the code.
+
 ## Owner
 
 A frontend reviewer who did **not** write the change. Clean context is the point — the reviewer

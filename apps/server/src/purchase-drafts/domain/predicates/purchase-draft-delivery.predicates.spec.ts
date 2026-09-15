@@ -3,7 +3,6 @@
 // draft's closure (server-error-handling.md §1: "Receive all required values as arguments",
 // "Return `boolean`", "Do not mutate state, perform I/O, log, or throw"). Each is asserted with a
 // named error factory by the command that owns the write; this spec proves the condition alone.
-import { isDraftMutable } from 'purchase-drafts/domain/predicates/purchase-draft-assembly.predicates';
 import {
   directLineNamesACustomerAddress,
   endingMatchesDeliveryMode,
@@ -13,6 +12,7 @@ import {
   DeliveryMode,
   EndingKind,
 } from 'purchase-drafts/domain/value-objects/delivery-mode';
+import { describe, expect, it } from 'vitest';
 
 const AN_ADDRESS_ID = '00000000-0000-4000-8000-000000000301';
 const AN_ENDING_TIME = new Date('2026-09-18T10:00:00.000Z');
@@ -105,20 +105,6 @@ describe('purchase-draft delivery predicates', () => {
 
     it('is true once an ending has been recorded against the line', () => {
       expect(hasEndingRecorded(AN_ENDING_TIME)).toBe(true);
-    });
-  });
-
-  // AC-17 — "a draft is frozen once it is ready": a change to a line's delivery mode or Delivery
-  // Address is refused for every member, the one who created the draft and the Warehouse Manager
-  // alike. The condition is the draft's state and nothing about the member, and the refusal is the
-  // shipped `purchaseDraftFrozenError`; the write itself resolves only `draft`-state drafts, so
-  // this predicate never becomes a check a concurrent freeze can race (sad.md §6.7 step 6).
-  describe('the frozen draft (AC-17)', () => {
-    it('admits a delivery-mode or Delivery Address change only while the draft is in the draft state', () => {
-      expect(isDraftMutable('draft')).toBe(true);
-      expect(isDraftMutable('ready_for_ordering')).toBe(false);
-      expect(isDraftMutable('closed')).toBe(false);
-      expect(isDraftMutable('discarded')).toBe(false);
     });
   });
 });

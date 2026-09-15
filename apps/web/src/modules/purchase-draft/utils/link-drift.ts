@@ -1,10 +1,9 @@
-import { linkAddressComparison } from 'modules/purchase-draft/utils/link-identity';
-
 import type {
   DeliveryMode,
   DriftSignalKind,
   PurchaseDraftLineLink,
 } from '@warehouser/contracts/purchase-drafts';
+import { linkAddressComparison } from 'modules/purchase-draft/utils/link-identity';
 
 /**
  * The comparisons a link can report. `quantity_changed` resolves to two of

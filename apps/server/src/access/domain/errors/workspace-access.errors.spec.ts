@@ -9,6 +9,7 @@ import {
   workspaceSelfActionDeniedError,
   workspaceSystemManagedPermissionError,
 } from 'access/domain/errors/workspace-access.errors';
+import { describe, expect, it } from 'vitest';
 
 // T4 — neither this error-factory module nor the `ErrorCode.WORKSPACE_*` entries
 // it depends on exist yet (the latter land with T5, `packages/shared-types`,

@@ -1,21 +1,19 @@
 import { Button, Modal } from '@heroui/react';
+import type {
+  Customer,
+  CustomerDeliveryAddressCreate,
+} from '@warehouser/contracts/customers';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { useTranslation } from 'react-i18next';
-
 import { useAddCustomerDeliveryAddressMutation } from 'modules/customer/api/customer-api';
 import { AddDeliveryAddressDialog } from 'modules/customer/components/customer-directory/components/addresses/AddDeliveryAddressDialog';
+import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { TriggeredDialog } from 'shared/components/TriggeredDialog';
 import { WarehousePermissionGate } from 'shared/components/WarehousePermissionGate';
 import { useArchivedWarehouse } from 'shared/hooks/projections/useArchivedWarehouse';
 import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
 import { PlusIcon } from 'shared/icons';
-
-import type {
-  Customer,
-  CustomerDeliveryAddressCreate,
-} from '@warehouser/contracts/customers';
-import type { ReactElement } from 'react';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 export type AddDeliveryAddressActionProps = {
   customer: Customer;

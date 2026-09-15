@@ -1,6 +1,7 @@
 import { UnauthorizedException } from '@nestjs/common';
 import { CurrentSessionQuery } from 'auth/usecases/queries/current-session.query';
 import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
+import { describe, expect, it, vi } from 'vitest';
 
 const request = (cookie?: string) => ({
   headers: cookie === undefined ? {} : { cookie },
@@ -9,7 +10,7 @@ const request = (cookie?: string) => ({
 describe('SessionAuthGuard', () => {
   it('attaches only the authenticated user identifier', async () => {
     const sessions = {
-      execute: jest
+      execute: vi
         .fn()
         .mockResolvedValue({ userId: '00000000-0000-4000-8000-000000000001' }),
     };
@@ -27,7 +28,7 @@ describe('SessionAuthGuard', () => {
 
   it('rejects absent or invalid sessions without attaching a current user', async () => {
     const guard = new SessionAuthGuard({
-      execute: jest.fn().mockResolvedValue(null),
+      execute: vi.fn().mockResolvedValue(null),
     } as unknown as CurrentSessionQuery);
     const httpRequest = request();
 

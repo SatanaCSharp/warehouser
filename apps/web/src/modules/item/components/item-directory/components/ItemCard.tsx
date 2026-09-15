@@ -1,15 +1,13 @@
 import { Card } from '@heroui/react';
-import { useTranslation } from 'react-i18next';
-
+import type { Item } from '@warehouser/contracts/items';
 import { ItemActionsMenu } from 'modules/item/components/item-directory/components/ItemActionsMenu';
 import { ItemCardMeta } from 'modules/item/components/item-directory/components/ItemCardMeta';
 import { ItemOnHand } from 'modules/item/components/item-directory/components/ItemOnHand';
 import { ItemStatusChip } from 'modules/item/components/item-directory/components/ItemStatusChip';
-import { ROW_ENTER } from 'shared/constants/motion';
-
-import type { Item } from '@warehouser/contracts/items';
 import type { ItemActionHandlers } from 'modules/item/hooks/projections/useItemActions';
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ROW_ENTER } from 'shared/constants/motion';
 
 export type ItemCardProps = ItemActionHandlers & {
   item: Item;

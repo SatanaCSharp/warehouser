@@ -1,11 +1,12 @@
 import { maxProseLength } from '@warehouser/contracts/purchase-drafts';
-import { countBy, intersection, keys, pickBy, sum, uniq } from 'lodash';
-import { type DeliveryMode } from 'purchase-drafts/domain/value-objects/delivery-mode';
+import { isDefined } from '@warehouser/utils/predicates';
+import { countBy, intersection, keys, pickBy, sum } from 'lodash-es';
+import type { DeliveryMode } from 'purchase-drafts/domain/value-objects/delivery-mode';
+import type { RejectionSource } from 'purchase-drafts/domain/value-objects/line-condition';
 import {
   PreReceiptConformanceVerdict,
   REJECTION_DISPOSITIONS,
   RejectionDisposition,
-  type RejectionSource,
   requiredSourceFor,
 } from 'purchase-drafts/domain/value-objects/line-condition';
 
@@ -80,12 +81,6 @@ export const refusalsStateVerdict = (
   verdictStated: boolean,
 ): boolean => !refusesAnything || verdictStated;
 
-// AC-09 — one line carries one refusal per Reason
-// (`uq_purchase_draft_line_rejections_line_reason`).
-export const hasOneRefusalPerReason = (
-  rejectionReasonIds: readonly string[],
-): boolean => uniq(rejectionReasonIds).length === rejectionReasonIds.length;
-
 // AC-09 — the Reasons the line repeats, each named once however many times it repeats, so the
 // refusal points at the duplicate rather than merely reporting that one exists.
 export const duplicatedRejectionReasonIds = (
@@ -151,27 +146,36 @@ export const conditionOnlyWhereSomethingReceived = (
 export const lineCarriesFrozenInstruction = (
   frozenPackagingTypeId: string | null,
   frozenValueAddingNote: string | null,
-): boolean => frozenPackagingTypeId !== null || frozenValueAddingNote !== null;
+): boolean =>
+  isDefined(frozenPackagingTypeId) || isDefined(frozenValueAddingNote);
 
+// Both rules below take the line's two frozen instruction fields and ask
+// `lineCarriesFrozenInstruction` themselves, rather than being handed its answer. A `boolean`
+// parameter would make the caller compute the condition and pass it along — the answer travelling
+// instead of the question — and two callers could then disagree about what "carries an instruction"
+// means while both looking correct.
+//
 // AC-17a — a line frozen carrying an instruction must be judged as honoured or not honoured, so
 // "the judgement does not apply" belongs only to a line that was given none. It states this one
 // thing: it never refuses a verdict it is not about.
 export const notApplicableOnlyOnUninstructedLine = (
   verdict: PreReceiptConformanceVerdict,
-  carriesFrozenInstruction: boolean,
+  frozenPackagingTypeId: string | null,
+  frozenValueAddingNote: string | null,
 ): boolean =>
   verdict !== PreReceiptConformanceVerdict.NotApplicable ||
-  !carriesFrozenInstruction;
+  !lineCarriesFrozenInstruction(frozenPackagingTypeId, frozenValueAddingNote);
 
 // AC-17 — the mirror: a line frozen carrying no instruction can only record that the judgement does
 // not apply. Two predicates rather than one because openapi.yaml names the two violations
 // separately, and each refusal tells the member a different thing to change.
 export const judgementOnlyOnInstructedLine = (
   verdict: PreReceiptConformanceVerdict,
-  carriesFrozenInstruction: boolean,
+  frozenPackagingTypeId: string | null,
+  frozenValueAddingNote: string | null,
 ): boolean =>
   verdict === PreReceiptConformanceVerdict.NotApplicable ||
-  carriesFrozenInstruction;
+  lineCarriesFrozenInstruction(frozenPackagingTypeId, frozenValueAddingNote);
 
 // AC-16 — the refusals on the line that contradict a Met verdict, in the order the line carries
 // them, so the refusal names which of the two statements to change.
@@ -198,13 +202,19 @@ export const isOfferedDisposition = (
 ): disposition is RejectionDisposition =>
   (REJECTION_DISPOSITIONS as readonly string[]).includes(disposition);
 
-// AC-18a — a Disposition once decided may be corrected to another decision but never returned to
-// Undecided. The same statement as sad.md §6.4's conditional update
-// `(disposition = 'undecided' OR :disposition <> 'undecided')`, so the rule exists once and can be
-// read: Undecided against a still-undecided Rejection changes nothing and is admitted by both.
-export const dispositionMayBeRecorded = (
-  currentDisposition: RejectionDisposition,
-  submittedDisposition: RejectionDisposition,
-): boolean =>
-  currentDisposition === RejectionDisposition.Undecided ||
-  submittedDisposition !== RejectionDisposition.Undecided;
+// AC-17/`PreReceiptConformanceWithoutNoteCreate` — a note is admitted only beside Not met. Asked as
+// the verdict's own question rather than compared at each site, because two of them ask it: the
+// payload-shape check that refuses a note beside Met or Not applicable, and the submission mapper
+// that discriminates the contract's two conformance forms.
+export const admitsConformanceNote = (
+  verdict: PreReceiptConformanceVerdict,
+): boolean => verdict === PreReceiptConformanceVerdict.NotMet;
+
+// The contract's two conformance forms, discriminated the way the schemas are: only
+// `PreReceiptConformanceNotMetCreate` carries a `note` property at all, so its presence — not the
+// verdict — is what the request mapper reads. The verdict half is `admitsConformanceNote` above;
+// keeping both means the mapper never has to decide which of the two is authoritative.
+export const statesConformanceNote = <T extends object>(
+  preReceiptConformance: T,
+): preReceiptConformance is T & { readonly note: string } =>
+  'note' in preReceiptConformance;

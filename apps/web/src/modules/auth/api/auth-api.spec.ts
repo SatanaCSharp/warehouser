@@ -1,7 +1,6 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { authApi } from 'modules/auth/api/auth-api';
 import { makeStore } from 'store';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const user = { user: { id: '00000000-0000-4000-8000-000000000001' } };
 

@@ -12,6 +12,8 @@ import type { ChangeMemberEmailCommand } from 'users/usecases/commands/change-me
 import type { ChangeMemberPasswordCommand } from 'users/usecases/commands/change-member-password.command';
 import type { CreateMemberCommand } from 'users/usecases/commands/create-member.command';
 import type { DeleteMemberCommand } from 'users/usecases/commands/delete-member.command';
+import type { Mock } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // This spec is the authorization-coverage architecture scan for `users`,
 // extending `access.controller.spec.ts`'s per-handler
@@ -41,14 +43,14 @@ const method = (name: keyof UsersController): object =>
     ?.value as object;
 
 describe('UsersController', () => {
-  const createMember = { execute: jest.fn() } as unknown as CreateMemberCommand;
+  const createMember = { execute: vi.fn() } as unknown as CreateMemberCommand;
   const changeMemberEmail = {
-    execute: jest.fn(),
+    execute: vi.fn(),
   } as unknown as ChangeMemberEmailCommand;
   const changeMemberPassword = {
-    execute: jest.fn(),
+    execute: vi.fn(),
   } as unknown as ChangeMemberPasswordCommand;
-  const deleteMember = { execute: jest.fn() } as unknown as DeleteMemberCommand;
+  const deleteMember = { execute: vi.fn() } as unknown as DeleteMemberCommand;
 
   const controller = new UsersController(
     createMember,
@@ -57,7 +59,7 @@ describe('UsersController', () => {
     deleteMember,
   );
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => vi.clearAllMocks());
 
   it.each([
     ['createMember', createMember, PermissionId.USERS_CREATE],
@@ -90,7 +92,7 @@ describe('UsersController', () => {
   });
 
   it('delegates member creation to CreateMemberCommand scoped to the guard-derived Warehouse', async () => {
-    jest.mocked(createMember.execute).mockResolvedValue({
+    vi.mocked(createMember.execute).mockResolvedValue({
       id: id(10),
       email: 'test.member@example.test',
       roleId: id(3),
@@ -119,7 +121,7 @@ describe('UsersController', () => {
   });
 
   it('delegates email change to ChangeMemberEmailCommand with the path userId as target', async () => {
-    jest.mocked(changeMemberEmail.execute).mockResolvedValue({
+    vi.mocked(changeMemberEmail.execute).mockResolvedValue({
       userId: id(10),
       email: 'corrected.member@example.test',
     });
@@ -145,7 +147,7 @@ describe('UsersController', () => {
   });
 
   it('delegates password change to ChangeMemberPasswordCommand with the path userId as target', async () => {
-    jest.mocked(changeMemberPassword.execute).mockResolvedValue(undefined);
+    vi.mocked(changeMemberPassword.execute).mockResolvedValue(undefined);
 
     await expect(
       controller.changeMemberPassword(
@@ -165,7 +167,7 @@ describe('UsersController', () => {
   });
 
   it('delegates deletion to DeleteMemberCommand with the path userId as target', async () => {
-    jest.mocked(deleteMember.execute).mockResolvedValue({ id: id(10) });
+    vi.mocked(deleteMember.execute).mockResolvedValue({ id: id(10) });
 
     await expect(
       controller.deleteMember(id(10), request(PermissionId.USERS_DELETE)),
@@ -186,12 +188,12 @@ describe('UsersController', () => {
     async (_label) => {
       // Looked up by label rather than carried in the table: the three commands
       // are distinct classes, so a column holding them types `execute` as a
-      // union of unrelated signatures that `jest.mocked` cannot resolve.
+      // union of unrelated signatures that `vi.mocked` cannot resolve.
       const execute = {
         changeMemberEmail: changeMemberEmail.execute,
         changeMemberPassword: changeMemberPassword.execute,
         deleteMember: deleteMember.execute,
-      }[_label] as unknown as jest.Mock;
+      }[_label] as unknown as Mock;
       execute.mockRejectedValue(
         new ApplicationError(ErrorCode.ACCESS_TARGET_UNAVAILABLE),
       );

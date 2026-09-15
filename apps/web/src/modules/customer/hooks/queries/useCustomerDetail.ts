@@ -1,7 +1,6 @@
+import type { CustomerDetail } from '@warehouser/contracts/customers';
 import { useReadCustomerQuery } from 'modules/customer/api/customer-api';
 import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
-
-import type { CustomerDetail } from '@warehouser/contracts/customers';
 
 export type CustomerDetailReading = {
   detail: CustomerDetail | undefined;

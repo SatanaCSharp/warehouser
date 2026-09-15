@@ -1,12 +1,10 @@
-import { useTranslation } from 'react-i18next';
-
+import type { Item } from '@warehouser/contracts/items';
 import { selectCurrentUser } from 'modules/auth/store/auth.selectors';
+import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Conditional } from 'shared/components/Conditional';
 import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
 import { useAppSelector } from 'store/hooks';
-
-import type { Item } from '@warehouser/contracts/items';
-import type { ReactElement } from 'react';
 
 export type ItemOnHandProps = {
   item: Item;

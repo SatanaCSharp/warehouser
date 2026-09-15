@@ -15,6 +15,7 @@ import { WorkspaceOwnerTransferRepository } from 'shared/domain/repositories/wor
 import { WorkspaceProvisioningRepository } from 'shared/domain/repositories/workspace-provisioning.repository';
 import { WorkspaceReadRepository } from 'shared/domain/repositories/workspace-read.repository';
 import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository';
+import { describe, expect, it } from 'vitest';
 import { WorkspaceProvisioningService } from 'workspaces/domain/services/workspace-provisioning.service';
 import { RenameWorkspaceCommand } from 'workspaces/usecases/commands/rename-workspace.command';
 import { SetActiveWarehouseCommand } from 'workspaces/usecases/commands/set-active-warehouse.command';
@@ -77,8 +78,8 @@ class TestDomainDoubleModule {}
 // `ProvisionInitialAccessCommand`. Static wiring checks and command unit specs
 // that construct these classes with `new` never exercise Nest's actual
 // injector, so a boot-time resolution failure went undetected
-// (module-wiring.spec.ts explicitly whitelists interface-typed,
-// `Object`-erased parameters as `@Optional()` runtime seams). This spec
+// (module-wiring.spec.ts skips interface-typed, `Object`-erased parameters,
+// which name their own token with `@Inject`). This spec
 // compiles the real `WorkspacesUsecaseModule` graph through Nest's DI
 // container — the only way to observe that failure without a database.
 describe('WorkspacesUsecaseModule Nest DI graph', () => {

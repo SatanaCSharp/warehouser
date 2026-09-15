@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { assert, assertFail } from '@warehouser/utils/asserts';
+import { isDefined, isNull } from '@warehouser/utils/predicates';
 import {
   customerInvalidDeliveryAddressError,
   customerLastActiveDeliveryAddressError,
@@ -16,11 +17,13 @@ import {
   isDeliveryAddressOfCustomer,
   isMainDeliveryAddressOf,
 } from 'customers/domain/predicates/customer.predicates';
-import { compact, filter, find, orderBy } from 'lodash';
+import { compact, filter, find, orderBy } from 'lodash-es';
 import type { CustomerEntity } from 'shared/domain/entities/customer.entity';
 import type { DeliveryAddressWriteOutcome } from 'shared/domain/repositories/customer-address-book.repository';
 import type { CustomerWriteOutcome } from 'shared/domain/repositories/customer-directory.repository';
 import { CustomerDirectoryRepository } from 'shared/domain/repositories/customer-directory.repository';
+import { isWriteApplied } from 'shared/predicates/persistence-write.predicates';
+import { scopedToWarehouse } from 'shared/predicates/tenancy.predicates';
 
 // The Customer identity and Delivery Address book rules that more than one command needs
 // (sad.md §5, `customers/domain/services`), in two layers.
@@ -97,7 +100,7 @@ export const assertCustomerOfWarehouse: AssertCustomerOfWarehouse = (
   warehouseId,
 ) => {
   assert(
-    customer !== null && customer.warehouseId === warehouseId,
+    isDefined(customer) && scopedToWarehouse(customer.warehouseId, warehouseId),
     customerTargetUnavailableError(),
   );
 };
@@ -119,7 +122,7 @@ export const assertCustomerNameAvailable = (
     correctedCustomerId,
   );
 
-  if (holder === null) {
+  if (isNull(holder)) {
     return;
   }
 
@@ -140,7 +143,7 @@ export const assertDeliveryAddressUsable: AssertDeliveryAddressUsable = (
   customerId,
 ) => {
   assert(
-    address !== null && isDeliveryAddressOfCustomer(address, customerId),
+    isDefined(address) && isDeliveryAddressOfCustomer(address, customerId),
     customerTargetUnavailableError(),
   );
   assert(
@@ -200,7 +203,7 @@ export const nextMainDeliveryAddress = (
 export const assertCustomerWriteApplied = (
   outcome: CustomerWriteOutcome | DeliveryAddressWriteOutcome,
 ): void => {
-  assert(outcome === 'applied', customerTargetUnavailableError());
+  assert(isWriteApplied(outcome), customerTargetUnavailableError());
 };
 
 // The same rule where the row is one this transaction **already holds** under
@@ -211,7 +214,7 @@ export const assertLockedDeliveryAddressWriteApplied = (
   outcome: DeliveryAddressWriteOutcome,
 ): void => {
   assert(
-    outcome === 'applied',
+    isWriteApplied(outcome),
     'A Delivery Address write affected no row the address book had locked',
   );
 };
@@ -266,3 +269,16 @@ export class CustomerAddressBookService {
     assertCustomerNameAvailable(name, compact([holder]), correctedCustomerId);
   }
 }
+
+// The address the member named, among the rows this transaction locked, or nothing — an address of
+// another Customer resolves to nothing and is refused exactly as a missing one is.
+export const lockedDeliveryAddress = (
+  locked: readonly DeliveryAddressState[],
+  deliveryAddressId: string,
+): DeliveryAddressState | null =>
+  find(locked, (candidate) => candidate.id === deliveryAddressId) ?? null;
+
+// Which address was promoted, if any. A deactivation of a non-Main address promotes nothing.
+export const promotedDeliveryAddressIdOf = (
+  successor: DeliveryAddressState | null,
+): string | null => successor?.id ?? null;

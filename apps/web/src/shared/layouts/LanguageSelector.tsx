@@ -1,21 +1,15 @@
 import { Button, Dropdown, Label } from '@heroui/react';
+import type { Key, ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-
 import { Conditional } from 'shared/components/Conditional';
 import { CheckIcon, ChevronDownIcon, GlobeIcon } from 'shared/icons';
-
-import type { Key, ReactElement } from 'react';
-
-type SupportedLanguage = 'en' | 'uk';
+import type { SupportedLanguage } from 'shared/layouts/resolve-base-language';
+import { resolveBaseLanguage } from 'shared/layouts/resolve-base-language';
 
 const LANGUAGE_LABELS: Record<SupportedLanguage, string> = {
   en: 'English',
   uk: 'Українська',
 };
-
-export const resolveBaseLanguage = (
-  language: string | undefined,
-): SupportedLanguage => (language?.split('-')[0] === 'uk' ? 'uk' : 'en');
 
 export const LanguageSelector = (): ReactElement => {
   const { t, i18n } = useTranslation('common');

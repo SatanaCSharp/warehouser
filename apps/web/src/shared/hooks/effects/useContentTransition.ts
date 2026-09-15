@@ -1,6 +1,5 @@
-import { useEffect, useRef } from 'react';
-
 import type { RefObject } from 'react';
+import { useEffect, useRef } from 'react';
 
 /**
  * The shell's one motion duration and curve, matching the transitions the

@@ -2,6 +2,7 @@ import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
 import dataSource from 'shared/database/data-source';
 import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
 import { setupWarehouseHttpContractHarness } from 'test/harnesses/warehouse-http-contract.harness';
+import { describe, expect, it } from 'vitest';
 
 // T11/AC-10 — the Warehouse's own Delivery Address at
 // `/api/v1/workspace/warehouses/{warehouseId}/delivery-address`. This is the

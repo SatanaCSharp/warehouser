@@ -1,13 +1,3 @@
-import {
-  PermissionId,
-  WorkspacePermissionId,
-} from '@warehouser/shared-types/enums';
-import { vi } from 'vitest';
-
-import { authBecameAuthenticated } from 'modules/auth/store/auth.slice';
-import { warehousePath } from 'shared/api/warehouse/warehouse-path';
-import { makeStore } from 'store';
-
 import type {
   AssignableWarehouseRole,
   Warehouse,
@@ -18,7 +8,15 @@ import type {
   WorkspaceRole,
   WorkspaceUser,
 } from '@warehouser/contracts/workspaces';
+import {
+  PermissionId,
+  WorkspacePermissionId,
+} from '@warehouser/shared-types/enums';
+import { authBecameAuthenticated } from 'modules/auth/store/auth.slice';
+import { warehousePath } from 'shared/api/warehouse/warehouse-path';
 import type { AppStore } from 'store';
+import { makeStore } from 'store';
+import { vi } from 'vitest';
 
 export const workspaceIds = {
   actingUser: '00000000-0000-4000-8000-000000000101',

@@ -1,19 +1,20 @@
 import { RouterProvider } from '@tanstack/react-router';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { WorkspaceContext } from '@warehouser/contracts/workspaces';
 import {
   PermissionId,
   WorkspacePermissionId,
 } from '@warehouser/shared-types/enums';
-import { Provider } from 'react-redux';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { accessRoute } from 'modules/access/route';
+import { Provider } from 'react-redux';
+import type { AppRouter } from 'router';
 import { createAppRouter } from 'router';
 import { warehouseRoute } from 'routes/warehouse.route';
 import { api } from 'shared/api/client/api-client';
 import { workspaceContextApi } from 'shared/api/workspace/workspace-context-api';
 import { ROUTES } from 'shared/constants/routes';
+import type { AppStore } from 'store';
 import { makeStore } from 'store';
 import {
   accessIds,
@@ -27,10 +28,7 @@ import {
   stubWorkspaceServer,
   workspaceIds,
 } from 'test/workspace-fixtures';
-
-import type { WorkspaceContext } from '@warehouser/contracts/workspaces';
-import type { AppRouter } from 'router';
-import type { AppStore } from 'store';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 /**
  * What the document looked like at each commit of `WarehouseLayout`.

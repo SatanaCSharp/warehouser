@@ -7,21 +7,19 @@ import {
   RouterProvider,
 } from '@tanstack/react-router';
 import { act, render, screen, waitFor } from '@testing-library/react';
+import type { WorkspaceContext } from '@warehouser/contracts/workspaces';
+import type { WorkspacePermissionId as WorkspacePermissionIdType } from '@warehouser/shared-types/enums';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
+import type { WarehouseEntryVerdict } from 'guards/warehouse-entry.guard';
+import type { ReactElement } from 'react';
 import { Provider } from 'react-redux';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { workspaceContextApi } from 'shared/api/workspace/workspace-context-api';
 import { RetainedContextMessage } from 'shared/components/RetainedContextMessage';
 import { ROUTES } from 'shared/constants/routes';
 import { useCurrentWorkspaceContext } from 'shared/hooks/queries/useWorkspacePermissions';
-import { makeStore } from 'store';
-
-import type { WorkspaceContext } from '@warehouser/contracts/workspaces';
-import type { WorkspacePermissionId as WorkspacePermissionIdType } from '@warehouser/shared-types/enums';
-import type { WarehouseEntryVerdict } from 'guards/warehouse-entry.guard';
-import type { ReactElement } from 'react';
 import type { AppStore } from 'store';
+import { makeStore } from 'store';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // T19 / change-request:workspace-warehouse — the three retained messages of
 // CR-RG-03, moved out of the switcher's fixed-height header slot into the main

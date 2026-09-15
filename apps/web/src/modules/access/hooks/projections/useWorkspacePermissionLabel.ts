@@ -1,8 +1,6 @@
-import { useTranslation } from 'react-i18next';
-
-import { permissionTranslationKey } from 'shared/utils/translation-key';
-
 import type { WorkspacePermission } from '@warehouser/contracts/workspaces';
+import { useTranslation } from 'react-i18next';
+import { permissionTranslationKey } from 'shared/utils/translation-key';
 
 /**
  * Names a Workspace Permission in the actor's language, falling back to the

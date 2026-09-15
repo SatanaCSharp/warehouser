@@ -1,7 +1,6 @@
-import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
-
 import type { CustomerAwaitingOrder } from '@warehouser/contracts/customers';
 import type { ReactElement } from 'react';
+import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
 
 export type CustomerAwaitingQuantityProps = {
   order: CustomerAwaitingOrder;

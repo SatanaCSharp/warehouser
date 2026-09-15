@@ -1,6 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-
 import { mutationFeedbackMiddleware } from 'store/middleware/mutation-feedback.middleware';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const toast = vi.hoisted(() => {
   const fn = vi.fn(() => 'pending-key');
@@ -35,7 +34,7 @@ vi.mock('i18n', () => ({
 const lifecycleAction = (
   status: 'pending' | 'fulfilled' | 'rejected',
   endpointName: string,
-  originalArgs: unknown = undefined,
+  originalArgs?: unknown,
   requestId = 'request-id',
 ): object => ({
   meta: {

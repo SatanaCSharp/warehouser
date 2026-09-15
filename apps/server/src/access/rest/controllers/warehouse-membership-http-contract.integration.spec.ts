@@ -23,6 +23,7 @@ import {
   now,
   setupWarehouseHttpContractHarness,
 } from 'test/harnesses/warehouse-http-contract.harness';
+import { afterEach, describe, expect, it } from 'vitest';
 
 // T25 DoD — the membership-edge half of the `/api/v1/workspace/warehouses*`
 // HTTP contract: `GET /:warehouseId/assignable-roles`,

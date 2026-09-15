@@ -1,14 +1,12 @@
 import { screen } from '@testing-library/react';
+import type { AccessProjection } from '@warehouser/contracts/access';
+import type { WorkspacePermissionId } from '@warehouser/shared-types/enums';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
+import type { WarehousePermissionGateProps } from 'shared/components/WarehousePermissionGate';
 import { WarehousePermissionGate } from 'shared/components/WarehousePermissionGate';
 import { makeStore } from 'store';
 import { renderInEnteredWarehouse } from 'test/render';
-
-import type { AccessProjection } from '@warehouser/contracts/access';
-import type { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import type { WarehousePermissionGateProps } from 'shared/components/WarehousePermissionGate';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const access: AccessProjection = {
   warehouseId: '00000000-0000-4000-8000-000000000010',

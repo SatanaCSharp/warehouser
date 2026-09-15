@@ -1,9 +1,7 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
+import type { WorkspaceContext } from '@warehouser/contracts/workspaces';
 import { workspaceContextApi } from 'shared/api/workspace/workspace-context-api';
 import { makeStore } from 'store';
-
-import type { WorkspaceContext } from '@warehouser/contracts/workspaces';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // AC-30 (docs/features/workspaces/spec.md §5): a User who is no Workspace Member —
 // including a Warehouse Member who is no Workspace Member at all — must derive no Workspace

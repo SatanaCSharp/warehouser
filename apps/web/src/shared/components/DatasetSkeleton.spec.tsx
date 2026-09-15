@@ -1,7 +1,6 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
-
 import { DatasetSkeleton } from 'shared/components/DatasetSkeleton';
+import { describe, expect, it } from 'vitest';
 
 describe('DatasetSkeleton', () => {
   it('announces the dataset that is arriving, not the application', () => {

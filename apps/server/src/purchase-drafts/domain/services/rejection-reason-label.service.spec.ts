@@ -2,19 +2,21 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { RejectionReasonLabelService } from 'purchase-drafts/domain/services/rejection-reason-label.service';
+import type { Mock } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 // The extraction this suite exists for: `read-purchase-draft.query.ts` and
 // `list-purchase-draft-lines.query.ts` each carried a byte-identical private
 // `rejectionReasonLabelsOf`, and each injected the catalogue repository to run it
 // (code-review-back-end-2026-09-09.md, blocking finding 3).
-const queryDirectory = join(__dirname, '../../usecases/queries');
+const queryDirectory = join(import.meta.dirname, '../../usecases/queries');
 
 const catalogueDouble = (
   reasons: readonly { id: string; label: string }[] = [
     { id: 'damaged_in_transit', label: 'Damaged in transit' },
   ],
-): { resolveRejectionReasons: jest.Mock } => ({
-  resolveRejectionReasons: jest.fn().mockResolvedValue([...reasons]),
+): { resolveRejectionReasons: Mock } => ({
+  resolveRejectionReasons: vi.fn().mockResolvedValue([...reasons]),
 });
 
 const endingNaming = (

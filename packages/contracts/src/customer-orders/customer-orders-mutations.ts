@@ -22,21 +22,21 @@ import { z } from 'zod';
 // technique `customerOrderAmendSchema` below already uses for `minProperties: 1`.
 export const customerOrderCreateSchema = z
   .strictObject({
-    itemId: z.string().uuid(),
+    itemId: z.uuid(),
     // An **active** Customer of this Warehouse. One of another Warehouse is refused identically to
     // one that does not exist, and the refusal discloses nothing about what exists elsewhere
     // (AC-12) — a rule the server decides, never this schema.
-    customerId: z.string().uuid().optional(),
+    customerId: z.uuid().optional(),
     // An **active** Delivery Address **of the Customer named above**; omitted takes the Customer's
     // current Main one, resolved and stored as a reference at record time (AC-11).
-    customerDeliveryAddressId: z.string().uuid().optional(),
+    customerDeliveryAddressId: z.uuid().optional(),
     // The name typed onto an order that names no Customer. **No Customer is created and none is
     // matched** for it, then or ever, and it carries no Delivery Address (AC-11a, AC-24).
     customerName: z.string().min(1).optional(),
     quantity: z.number().int().min(1),
     // Must not have already passed — the rule itself is decided by the server against its own clock
     // (AC-02a), so the schema fixes only the calendar-date shape.
-    neededBy: z.string().date(),
+    neededBy: z.iso.date(),
   })
   .refine(
     (value) =>
@@ -60,7 +60,7 @@ export const customerOrderCreateSchema = z
 // this outstanding order is now going to. The Customer is not an input and never changes: serving a
 // different customer means recording a new Customer Order (AC-11c).
 export const customerOrderRedirectSchema = z.strictObject({
-  customerDeliveryAddressId: z.string().uuid(),
+  customerDeliveryAddressId: z.uuid(),
 });
 
 // openapi.yaml `CustomerOrderAmend` — `minProperties: 1` with both properties optional. The
@@ -69,7 +69,7 @@ export const customerOrderRedirectSchema = z.strictObject({
 export const customerOrderAmendSchema = z
   .strictObject({
     quantity: z.number().int().min(1).optional(),
-    neededBy: z.string().date().optional(),
+    neededBy: z.iso.date().optional(),
   })
   .refine((value) => Object.keys(value).length > 0, {
     message: 'At least one Customer Order field must be present',
@@ -85,7 +85,7 @@ export const customerOrderCancellationSchema = z.strictObject({
 // narrows to the orders behind one Demand Line and `state` to one lifecycle state; omitting both
 // returns every state. Neither is coerced: both arrive as strings already.
 export const customerOrderListQuerySchema = z.strictObject({
-  itemId: z.string().uuid().optional(),
+  itemId: z.uuid().optional(),
   state: customerOrderStateSchema.optional(),
 });
 

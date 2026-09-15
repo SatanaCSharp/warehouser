@@ -1,5 +1,6 @@
-import { Injectable, Optional } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { assert, assertFail } from '@warehouser/utils/asserts';
+import { isDefined, isEmpty } from '@warehouser/utils/predicates';
 import type { DisagreeingDeliveryLink } from 'purchase-drafts/domain/errors/purchase-draft.errors';
 import {
   purchaseDraftConcurrentChangeError,
@@ -13,40 +14,22 @@ import {
   isDiscardableDraft,
   isEmptyDraft,
 } from 'purchase-drafts/domain/predicates/purchase-draft-freeze.predicates';
+import { warehouseAddressCoversEveryViaWarehouseLine } from 'purchase-drafts/domain/predicates/purchase-draft-freeze-precondition.predicates';
 import { PurchaseDraftAssemblyService } from 'purchase-drafts/domain/services/purchase-draft-assembly.service';
 import { DeliveryMode } from 'purchase-drafts/domain/value-objects/delivery-mode';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { PurchaseDraftAssemblyRepository } from 'shared/domain/repositories/purchase-draft-assembly.repository';
 import { PurchaseDraftFreezeRepository } from 'shared/domain/repositories/purchase-draft-freeze.repository';
+import { appliedGuardedWrite } from 'shared/predicates/persistence-write.predicates';
+import { scopedToWarehouse } from 'shared/predicates/tenancy.predicates';
 
 /** Where one line's goods travel, as the freeze reads it off the line. */
-interface FreezableLine {
+export interface FreezableLine {
   readonly id: string;
   readonly deliveryMode: DeliveryMode;
   readonly customerDeliveryAddressId: string | null;
 }
-
-// AC-16a — the freeze precondition, stated as a pure condition over the two things it is about: how
-// this draft's lines travel, and whether the Warehouse has an address at all. Kept beside its one
-// implementation rather than promoted to `domain/predicates/` (server-error-handling.md §1) — the
-// freeze is the only moment it applies, which is exactly what makes it a **freeze precondition and
-// not a line-level one**: a line coming to the dock is composed, revised and linked perfectly well
-// while the Warehouse has no address, and only the statement made to the supplier requires one.
-const warehouseAddressCoversEveryViaWarehouseLine = (
-  lines: readonly FreezableLine[],
-  warehouseDeliveryAddressText: string | null,
-): boolean =>
-  warehouseDeliveryAddressText !== null ||
-  !lines.some((line) => line.deliveryMode === DeliveryMode.ViaWarehouse);
-
-export interface ReadyPurchaseDraftRuntime {
-  readonly now: () => Date;
-}
-
-const defaultReadyPurchaseDraftRuntime: ReadyPurchaseDraftRuntime = {
-  now: () => new Date(),
-};
 
 export interface FrozenPurchaseDraft {
   readonly id: string;
@@ -71,8 +54,6 @@ export class ReadyPurchaseDraftCommand {
     private readonly freezeRepository: PurchaseDraftFreezeRepository,
     private readonly assemblyRepository: PurchaseDraftAssemblyRepository,
     private readonly assemblyService: PurchaseDraftAssemblyService,
-    @Optional()
-    private readonly runtime: ReadyPurchaseDraftRuntime = defaultReadyPurchaseDraftRuntime,
   ) {}
 
   @Transactional()
@@ -85,7 +66,8 @@ export class ReadyPurchaseDraftCommand {
     // check-then-write window.
     const header = await this.freezeRepository.findDraftHeader(purchaseDraftId);
     assert(
-      header !== null && header.warehouseId === currentUser.warehouseId,
+      isDefined(header) &&
+        scopedToWarehouse(header.warehouseId, currentUser.warehouseId),
       purchaseDraftTargetUnavailableError(),
     );
 
@@ -119,20 +101,20 @@ export class ReadyPurchaseDraftCommand {
         })),
       );
     }
-    if (disagreeingLinks.length > 0) {
+    if (!isEmpty(disagreeingLinks)) {
       assertFail(
         purchaseDraftDeliveryAddressDisagreementError(disagreeingLinks),
       );
     }
 
-    const readiedAt = this.runtime.now();
+    const readiedAt = new Date();
     const frozen = await this.freezeRepository.freeze({
       purchaseDraftId,
       warehouseId: currentUser.warehouseId,
       readiedByUserId: currentUser.userId,
       readiedAt,
     });
-    assert(frozen, purchaseDraftConcurrentChangeError());
+    assert(appliedGuardedWrite(frozen), purchaseDraftConcurrentChangeError());
 
     return {
       id: purchaseDraftId,

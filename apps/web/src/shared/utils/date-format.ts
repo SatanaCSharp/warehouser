@@ -35,8 +35,11 @@ const renderParts = (
     ...(withYear ? DATE_PART_OPTIONS : SHORT_DATE_PART_OPTIONS),
     timeZone,
   }).formatToParts(instant);
-  const valueOf = (type: Intl.DateTimeFormatPartTypes): string =>
-    parts.find((part) => part.type === type)?.value ?? '';
+  const valueOf = (type: Intl.DateTimeFormatPartTypes): string => {
+    const part = parts.find((candidate) => candidate.type === type);
+
+    return part?.value ?? '';
+  };
 
   const dayAndMonth = `${valueOf('day')} ${valueOf('month')}`;
 

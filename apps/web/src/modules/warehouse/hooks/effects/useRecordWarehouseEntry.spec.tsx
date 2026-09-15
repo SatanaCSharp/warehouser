@@ -1,14 +1,12 @@
 import { act, screen, waitFor } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { useRecordWarehouseEntry } from 'modules/warehouse/hooks/effects/useRecordWarehouseEntry';
+import type { ReactElement } from 'react';
 import { toast } from 'shared/alerts/toast';
 import { workspaceContextApi } from 'shared/api/workspace/workspace-context-api';
 import { makeStore } from 'store';
 import { accessIds } from 'test/access-fixtures';
 import { renderInEnteredWarehouse } from 'test/render';
-
-import type { ReactElement } from 'react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // T8 / CR-AC-09 — `useRecordWarehouseEntry` writes the entered Warehouse as
 // the actor's stored selection through the existing `setActiveWarehouse`

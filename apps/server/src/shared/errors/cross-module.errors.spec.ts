@@ -1,5 +1,6 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { workspaceTargetUnavailableError } from 'shared/errors/cross-module.errors';
+import { describe, expect, it } from 'vitest';
 
 describe('cross-module domain error factories', () => {
   // Cross-Workspace targeting: a target outside `principal.workspaceId` must be

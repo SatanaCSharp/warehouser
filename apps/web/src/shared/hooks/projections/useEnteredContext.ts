@@ -1,5 +1,4 @@
 import { useRouterState } from '@tanstack/react-router';
-
 import { ROUTES } from 'shared/constants/routes';
 import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
 

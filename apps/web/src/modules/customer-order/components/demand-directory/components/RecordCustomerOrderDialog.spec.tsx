@@ -1,11 +1,12 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { CustomerOrderCreate } from '@warehouser/contracts/customer-orders';
+import type { Customer } from '@warehouser/contracts/customers';
 import { ErrorCode, PermissionId } from '@warehouser/shared-types/enums';
-import { describe, expect, it, vi } from 'vitest';
-
 import { customerApi } from 'modules/customer/api/customer-api';
 import { RecordCustomerOrderDialog } from 'modules/customer-order/components/demand-directory/components/RecordCustomerOrderDialog';
 import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { DialogHost } from 'shared/components/DialogHost';
 import {
   accessIds,
@@ -14,10 +15,7 @@ import {
 } from 'test/access-fixtures';
 import { selectHeroOption } from 'test/hero-select';
 import { renderInEnteredWarehouse } from 'test/render';
-
-import type { CustomerOrderCreate } from '@warehouser/contracts/customer-orders';
-import type { Customer } from '@warehouser/contracts/customers';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import { describe, expect, it, vi } from 'vitest';
 
 // AC-01 / AC-02 / AC-02a and BRIEF §A. What this suite pins is that a refusal
 // names the value it will not accept **on the field it is about**:

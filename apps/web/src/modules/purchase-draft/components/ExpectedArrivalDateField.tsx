@@ -1,13 +1,13 @@
 import { Button } from '@heroui/react';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { useTranslation } from 'react-i18next';
-
 import { useRevisePurchaseDraftMutation } from 'modules/purchase-draft/api/purchase-draft-api';
 import {
   disablingReasonKey,
   EXPECTED_ARRIVAL_REFUSAL_REASON_ID,
   refusesWrites,
 } from 'modules/purchase-draft/utils/write-refusal';
+import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Conditional } from 'shared/components/Conditional';
 import { FormDateField } from 'shared/components/FormDateField';
 import { WarehousePermissionGate } from 'shared/components/WarehousePermissionGate';
@@ -16,8 +16,6 @@ import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehous
 import { useHasPermission } from 'shared/hooks/queries/usePermissions';
 import { LockIcon } from 'shared/icons';
 
-import type { ReactElement } from 'react';
-
 export type ExpectedArrivalDateFieldProps = {
   /** Whether the draft has been frozen, which is what stops this being writable (AC-15). */
   isFrozen: boolean;
@@ -25,6 +23,31 @@ export type ExpectedArrivalDateFieldProps = {
   /** The day the goods are expected, or `null` while nobody has said (AC-10). */
   value: string | null;
 };
+
+/** The Warehouse the write names. Outside one there is nothing to write to, and the empty string is
+ * what the mutation refuses on rather than a request aimed at nothing. */
+const enteredWarehouseId = (warehouseId: string | undefined): string =>
+  warehouseId ?? '';
+
+/** The one reason writes are refused, translated — or nothing, when they are not. */
+const refusalReasonOf = (
+  reasonKey: string | undefined,
+  translate: (key: string) => string,
+): string | undefined =>
+  reasonKey === undefined ? undefined : translate(reasonKey);
+
+/** The lock strip is described only when there is a strip to describe. */
+const refusalReasonIdOf = (reason: string | undefined): string | undefined =>
+  reason === undefined ? undefined : EXPECTED_ARRIVAL_REFUSAL_REASON_ID;
+
+/** The field explains why it is locked when it is, and what it is for when it is not. */
+const fieldDescription = (
+  reason: string | undefined,
+  description: string,
+): string => reason ?? description;
+
+/** A day nobody has stated is the empty value the picker takes, not `null`. */
+const fieldValue = (value: string | null): string => value ?? '';
 
 /**
  * The draft's Expected Arrival Date (AC-10, frame `yGhkK`): the member's own
@@ -66,7 +89,7 @@ export const ExpectedArrivalDateField = ({
   value,
 }: ExpectedArrivalDateFieldProps): ReactElement => {
   const { t } = useTranslation('purchase-draft');
-  const warehouseId = useEnteredWarehouse() ?? '';
+  const warehouseId = enteredWarehouseId(useEnteredWarehouse());
   const { isArchived } = useArchivedWarehouse();
   const isPermitted = useHasPermission(PermissionId.PURCHASE_DRAFTS_UPDATE);
   const [revisePurchaseDraft] = useRevisePurchaseDraftMutation();
@@ -83,17 +106,19 @@ export const ExpectedArrivalDateField = ({
   const refusal = { isArchived, isFrozen, isPermitted };
   const isDisabled = refusesWrites(refusal);
   const reasonKey = disablingReasonKey(refusal);
-  const reason = reasonKey === undefined ? undefined : t(reasonKey);
-  const reasonId =
-    reason === undefined ? undefined : EXPECTED_ARRIVAL_REFUSAL_REASON_ID;
+  const reason = refusalReasonOf(reasonKey, t);
+  const reasonId = refusalReasonIdOf(reason);
 
   return (
     <div className="md:w-80">
       <FormDateField
-        description={reason ?? t('detail.expectedArrival.description')}
+        description={fieldDescription(
+          reason,
+          t('detail.expectedArrival.description'),
+        )}
         isDisabled={isDisabled}
         label={t('detail.expectedArrival.label')}
-        value={value ?? ''}
+        value={fieldValue(value)}
         onChange={onChange}
       />
 

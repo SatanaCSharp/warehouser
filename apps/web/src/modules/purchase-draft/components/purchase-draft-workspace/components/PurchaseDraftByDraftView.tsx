@@ -1,16 +1,14 @@
 import { Button } from '@heroui/react';
-import { useTranslation } from 'react-i18next';
-
-import { PurchaseDraftDetailColumn } from 'modules/purchase-draft/components/purchase-draft-workspace/components/PurchaseDraftDetailColumn';
-import { PurchaseDraftList } from 'modules/purchase-draft/components/PurchaseDraftList';
-import { Conditional } from 'shared/components/Conditional';
-import { ChevronLeftIcon } from 'shared/icons';
-
 import type {
   PurchaseDraftState,
   PurchaseDraftSummary,
 } from '@warehouser/contracts/purchase-drafts';
+import { PurchaseDraftDetailColumn } from 'modules/purchase-draft/components/purchase-draft-workspace/components/PurchaseDraftDetailColumn';
+import { PurchaseDraftList } from 'modules/purchase-draft/components/PurchaseDraftList';
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Conditional } from 'shared/components/Conditional';
+import { ChevronLeftIcon } from 'shared/icons';
 
 type PurchaseDraftByDraftViewProps = {
   drafts: PurchaseDraftSummary[];

@@ -1,12 +1,10 @@
 import { Button, Modal } from '@heroui/react';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-
 import { AddWarehouseDialog } from 'modules/workspace/components/workspace-administration/warehouses/AddWarehouseDialog';
+import type { ReactElement } from 'react';
 import { TriggeredDialog } from 'shared/components/TriggeredDialog';
 import { WorkspacePermissionGate } from 'shared/components/WorkspacePermissionGate';
 import { PlusIcon } from 'shared/icons';
-
-import type { ReactElement } from 'react';
 
 type AddWarehouseActionProps = {
   className?: string;

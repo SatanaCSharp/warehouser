@@ -3,6 +3,7 @@ import {
   EmailChangeDto,
   PasswordChangeDto,
 } from 'users/rest/dtos/users-mutation.dto';
+import { describe, expect, it } from 'vitest';
 
 // DoD (T13): "each endpoint validates the shared Zod schema and returns `400`
 // on a malformed body" — these DTOs wrap the T7 contracts

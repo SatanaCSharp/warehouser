@@ -17,16 +17,14 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
 import { REJECTION_DISPOSITIONS } from 'purchase-drafts/domain/value-objects/line-condition';
-import {
-  AmendPurchaseDraftRejectionCommand,
-  type AmendRejectionCommandInput,
-} from 'purchase-drafts/usecases/commands/amend-purchase-draft-rejection.command';
+import type { AmendRejectionCommandInput } from 'purchase-drafts/usecases/commands/amend-purchase-draft-rejection.command';
+import { AmendPurchaseDraftRejectionCommand } from 'purchase-drafts/usecases/commands/amend-purchase-draft-rejection.command';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
-import {
-  TRANSACTIONAL_KEY,
-  type TransactionalMetadata,
-} from 'shared/decorators/transactional.decorator';
+import type { TransactionalMetadata } from 'shared/decorators/transactional.decorator';
+import { TRANSACTIONAL_KEY } from 'shared/decorators/transactional.decorator';
 import type { LockedPurchaseDraftLineRejection } from 'shared/domain/repositories/purchase-draft-rejection.repository';
+import { freezeClockAt } from 'test/doubles/frozen-clock';
+import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>
   `00000000-0000-4000-8000-${suffix.padStart(12, '0')}`;
@@ -69,12 +67,11 @@ const commandWith = ({
   // guard — is a `TypeError`, which is how "the precondition is the Rejection, not the draft's
   // state" is enforced rather than merely asserted.
   const rejectionRepository = {
-    lockRejectionForAmendment: jest.fn().mockResolvedValue(locked),
-    amendRejection: jest.fn().mockResolvedValue({ affected }),
+    lockRejectionForAmendment: vi.fn().mockResolvedValue(locked),
+    amendRejection: vi.fn().mockResolvedValue({ affected }),
   };
   const command = new AmendPurchaseDraftRejectionCommand(
     rejectionRepository as never,
-    { now: () => now },
   );
   return { command, rejectionRepository };
 };
@@ -102,6 +99,8 @@ const WRITABLE_AMENDMENT_KEYS = [
   'rejectionId',
   'warehouseId',
 ];
+
+freezeClockAt(now);
 
 describe('AmendPurchaseDraftRejectionCommand', () => {
   // AC-18 — the decision, the acting member and the time, in one write carrying the acting

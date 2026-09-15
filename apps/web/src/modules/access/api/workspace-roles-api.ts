@@ -1,22 +1,20 @@
-import {
-  workspacePermissionSchema,
-  workspaceRoleSchema,
-} from '@warehouser/contracts/workspaces';
-import { z } from 'zod';
-
-import {
-  workspaceRoleFieldErrors,
-  workspaceRoleNameValidationKey,
-} from 'modules/access/utils/workspace-role-name-validation';
-import { api } from 'shared/api/client/api-client';
-
 import type {
   WorkspacePermission,
   WorkspaceRole,
   WorkspaceRoleDeletion,
   WorkspaceRoleWrite,
 } from '@warehouser/contracts/workspaces';
+import {
+  workspacePermissionSchema,
+  workspaceRoleSchema,
+} from '@warehouser/contracts/workspaces';
+import {
+  workspaceRoleFieldErrors,
+  workspaceRoleNameValidationKey,
+} from 'modules/access/utils/workspace-role-name-validation';
 import type { ApiFailure } from 'shared/api/client/api-client';
+import { api } from 'shared/api/client/api-client';
+import { z } from 'zod';
 
 const WORKSPACE_ROLES_PATH = '/api/v1/workspace/roles';
 const WORKSPACE_PERMISSIONS_PATH = '/api/v1/workspace/permissions';

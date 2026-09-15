@@ -1,15 +1,14 @@
-import {
-  type CanActivate,
-  type ExecutionContext,
-  Injectable,
-} from '@nestjs/common';
+import type { CanActivate, ExecutionContext } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
+import { isDefined } from '@warehouser/utils/predicates';
 import { accessDeniedError } from 'shared/access/access-denial.errors';
 import type { WarehouseAccessRequest } from 'shared/access/access-request';
 import { WriteRateLimitCounter } from 'shared/guards/write-rate-limit.counter';
 import { WRITE_RATE_LIMITED_KEY } from 'shared/guards/write-rate-limited.decorator';
+import { isWriteRateLimited } from 'shared/predicates/write-rate-limit.predicates';
 
 /** Raised when a member's recorded changes exceed the window's allowance. Carries no details: the
  * non-disclosure requirement (`spec.md` §6.1) means the refusal must reveal nothing member-,
@@ -35,17 +34,17 @@ export class WriteRateLimitGuard implements CanActivate {
   ) {}
 
   canActivate(context: ExecutionContext): Promise<boolean> {
-    const limited = this.reflector.getAllAndOverride<boolean>(
+    const limited = this.reflector.getAllAndOverride<boolean | undefined>(
       WRITE_RATE_LIMITED_KEY,
       [context.getHandler(), context.getClass()],
     );
-    if (!limited) {
+    if (!isWriteRateLimited(limited)) {
       return Promise.resolve(true);
     }
 
     const request = context.switchToHttp().getRequest<WarehouseAccessRequest>();
     const userId = request.access?.userId;
-    if (!userId) {
+    if (!isDefined(userId)) {
       return Promise.reject(accessDeniedError());
     }
 

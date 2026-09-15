@@ -1,14 +1,12 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { Customer, CustomerUpdate } from '@warehouser/contracts/customers';
 import { ErrorCode } from '@warehouser/shared-types/enums';
-import { describe, expect, it, vi } from 'vitest';
-
 import { CorrectCustomerDialog } from 'modules/customer/components/customer-directory/components/customers/CorrectCustomerDialog';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { DialogHost } from 'shared/components/DialogHost';
 import { renderWithProviders } from 'test/render';
-
-import type { Customer, CustomerUpdate } from '@warehouser/contracts/customers';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import { describe, expect, it, vi } from 'vitest';
 
 // delivery-addresses R8 — AC-03b and AC-03c. Never opened by any prior spec.
 // `customer-api.spec.ts`:317 only proves the endpoint binds

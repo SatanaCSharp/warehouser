@@ -1,14 +1,12 @@
-import { useForm } from 'react-hook-form';
-import { useTranslation } from 'react-i18next';
-
-import { parsePasswordChangeForm } from 'modules/access/schemas/password-change-form';
-import { FormModalDialog } from 'shared/components/FormModalDialog';
-import { PasswordInput } from 'shared/components/PasswordInput';
-
 import type { PasswordChangeInput } from '@warehouser/contracts/users';
+import { parsePasswordChangeForm } from 'modules/access/schemas/password-change-form';
 import type { AccessMember } from 'modules/access/types/access.types';
 import type { ReactElement } from 'react';
+import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import { FormModalDialog } from 'shared/components/FormModalDialog';
+import { PasswordInput } from 'shared/components/PasswordInput';
 import type { FormParseResult } from 'shared/utils/form-parse';
 
 type ResetPasswordDialogProps = {

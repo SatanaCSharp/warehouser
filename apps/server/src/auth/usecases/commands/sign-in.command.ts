@@ -1,5 +1,7 @@
-import { assert } from '@warehouser/utils/asserts';
-import { type AuthRuntime, authRuntime } from 'auth/domain/auth-runtime';
+import { randomUUID } from 'node:crypto';
+
+import { assert, assertDefined } from '@warehouser/utils/asserts';
+import { isDefined } from '@warehouser/utils/predicates';
 import { Session } from 'auth/domain/entities/session';
 import {
   AuthInvalidCredentialsError,
@@ -7,21 +9,21 @@ import {
 } from 'auth/domain/errors/auth.errors';
 import { toAccount } from 'auth/domain/mappers/account.mapper';
 import { toSessionEntity } from 'auth/domain/mappers/session.mapper';
-import {
-  type GeneratedSessionSecret,
-  generateSessionSecret,
-} from 'auth/domain/security/session-secret';
+import { generateSessionSecret } from 'auth/domain/security/session-secret';
 import { SessionId } from 'auth/domain/value-objects/identity-id';
 import { SessionDigest } from 'auth/domain/value-objects/session-digest';
 import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
 import { EmailAddress } from 'shared/domain/security/email-address';
-import { isSupportedEmail } from 'shared/domain/security/is-supported-email';
-import { isSupportedPassword } from 'shared/domain/security/is-supported-password';
 import { Password } from 'shared/domain/security/password';
 import {
   dummyVerifyPassword,
   verifyPassword,
 } from 'shared/domain/security/password-hashing';
+import {
+  isSupportedEmail,
+  isSupportedPassword,
+  matchesStoredCredential,
+} from 'shared/predicates/credential.predicates';
 
 export interface SignedInSession {
   readonly userId: string;
@@ -30,13 +32,7 @@ export interface SignedInSession {
 }
 
 export class SignInCommand {
-  constructor(
-    private readonly authentication: AuthenticationRepository,
-    private readonly verify: typeof verifyPassword = verifyPassword,
-    private readonly dummyVerify: typeof dummyVerifyPassword = dummyVerifyPassword,
-    private readonly generateSecret: () => GeneratedSessionSecret = generateSessionSecret,
-    private readonly runtime: AuthRuntime = authRuntime,
-  ) {}
+  constructor(private readonly authentication: AuthenticationRepository) {}
 
   async execute(input: {
     email: string;
@@ -51,23 +47,25 @@ export class SignInCommand {
 
     const accountEntity =
       await this.authentication.findAccountByNormalizedEmail(email.value);
-    if (!accountEntity) {
-      await this.dummyVerify(password.value);
+    if (!isDefined(accountEntity)) {
+      await dummyVerifyPassword(password.value);
     }
-    assert(accountEntity !== null, AuthInvalidCredentialsError());
+    assertDefined(accountEntity, AuthInvalidCredentialsError());
     const account = toAccount(accountEntity);
 
     assert(
-      await this.verify(password.value, account.credential),
+      matchesStoredCredential(
+        await verifyPassword(password.value, account.credential),
+      ),
       AuthInvalidCredentialsError(),
     );
 
-    const generated = this.generateSecret();
+    const generated = generateSessionSecret();
     const session = Session.establish({
-      id: SessionId.create(this.runtime.sessionId()),
+      id: SessionId.create(randomUUID()),
       accountId: account.id,
       digest: SessionDigest.create(generated.digest),
-      establishedAt: this.runtime.now(),
+      establishedAt: new Date(),
     });
     await this.authentication.createSession(toSessionEntity(session));
 

@@ -1,11 +1,9 @@
 import { Button } from '@heroui/react';
-import { useRouter } from '@tanstack/react-router';
-import { useTranslation } from 'react-i18next';
-
-import { TriangleAlertIcon } from 'shared/icons';
-
 import type { ErrorComponentProps } from '@tanstack/react-router';
+import { useRouter } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import { TriangleAlertIcon } from 'shared/icons';
 
 /**
  * The application's standard route error state. Matches TanStack Router's

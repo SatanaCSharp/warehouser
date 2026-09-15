@@ -1,5 +1,6 @@
 import { ApplicationError } from '@warehouser/shared-types/errors';
 import { CustomerName } from 'customers/domain/value-objects/customer-name';
+import { describe, expect, it } from 'vitest';
 
 describe('CustomerName', () => {
   // AC-02 — the member is told which value will not be accepted, as an expected business

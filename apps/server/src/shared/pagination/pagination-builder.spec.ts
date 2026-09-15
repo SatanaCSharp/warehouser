@@ -1,10 +1,11 @@
 import { paginationBuilder } from 'shared/pagination/pagination-builder';
 import type { ObjectLiteral, SelectQueryBuilder } from 'typeorm';
+import { describe, expect, it, vi } from 'vitest';
 
 describe('paginationBuilder', () => {
   it('adds both cursor bounds to the supplied query builder', () => {
     const builder = {
-      andWhere: jest.fn().mockReturnThis(),
+      andWhere: vi.fn().mockReturnThis(),
     } as unknown as SelectQueryBuilder<ObjectLiteral>;
 
     const result = paginationBuilder(

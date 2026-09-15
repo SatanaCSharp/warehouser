@@ -1,7 +1,6 @@
+import type { PurchaseDraftDetail } from '@warehouser/contracts/purchase-drafts';
 import { useGetPurchaseDraftQuery } from 'modules/purchase-draft/api/purchase-draft-api';
 import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
-
-import type { PurchaseDraftDetail } from '@warehouser/contracts/purchase-drafts';
 
 /** What the detail pane needs to know about the read behind it. */
 export type PurchaseDraftReading = {

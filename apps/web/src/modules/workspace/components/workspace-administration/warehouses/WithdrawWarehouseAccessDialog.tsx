@@ -1,14 +1,12 @@
-import { useTranslation } from 'react-i18next';
-
-import { useRevokeWarehouseMembershipMutation } from 'modules/workspace/api/warehouse-api';
-import { ConfirmAlertDialog } from 'shared/components/ConfirmAlertDialog';
-
 import type {
   Warehouse,
   WorkspaceUser,
 } from '@warehouser/contracts/workspaces';
+import { useRevokeWarehouseMembershipMutation } from 'modules/workspace/api/warehouse-api';
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import { ConfirmAlertDialog } from 'shared/components/ConfirmAlertDialog';
 
 type WithdrawWarehouseAccessDialogProps = {
   person: Pick<WorkspaceUser, 'userId'>;

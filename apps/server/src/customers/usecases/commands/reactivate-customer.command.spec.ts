@@ -5,10 +5,12 @@ import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
 import { CustomerAddressBookService } from 'customers/domain/services/customer-address-book.service';
 import { ReactivateCustomerCommand } from 'customers/usecases/commands/reactivate-customer.command';
-import { find, map } from 'lodash';
+import { find, map } from 'lodash-es';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import type { CustomerEntity } from 'shared/domain/entities/customer.entity';
 import type { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
+import { freezeClockAt } from 'test/doubles/frozen-clock';
+import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>
   `00000000-0000-4000-8000-${suffix.padStart(12, '0')}`;
@@ -74,14 +76,14 @@ const storedAddresses = (): CustomerDeliveryAddressEntity[] => [
 const directoryRepositoryDouble = (
   rows: CustomerEntity[] = [storedCustomer()],
 ) => ({
-  findCustomer: jest.fn((id: string, inWarehouseId: string) =>
+  findCustomer: vi.fn((id: string, inWarehouseId: string) =>
     Promise.resolve(
       find(rows, (row) => row.id === id && row.warehouseId === inWarehouseId) ??
         null,
     ),
   ),
-  findCustomerByName: jest.fn().mockResolvedValue(null),
-  setCustomerDeactivation: jest.fn(
+  findCustomerByName: vi.fn().mockResolvedValue(null),
+  setCustomerDeactivation: vi.fn(
     (id: string, inWarehouseId: string, nextDeactivatedAt: Date | null) => {
       const row = find(
         rows,
@@ -103,13 +105,13 @@ const directoryRepositoryDouble = (
 const addressBookRepositoryDouble = (
   addresses: CustomerDeliveryAddressEntity[] = storedAddresses(),
 ) => ({
-  listDeliveryAddresses: jest.fn().mockResolvedValue(addresses),
-  lockDeliveryAddresses: jest.fn().mockResolvedValue(addresses),
-  addDeliveryAddress: jest.fn(),
-  reviseDeliveryAddress: jest.fn(),
-  setMainDeliveryAddress: jest.fn(),
-  deactivateDeliveryAddress: jest.fn(),
-  reactivateDeliveryAddress: jest.fn(),
+  listDeliveryAddresses: vi.fn().mockResolvedValue(addresses),
+  lockDeliveryAddresses: vi.fn().mockResolvedValue(addresses),
+  addDeliveryAddress: vi.fn(),
+  reviseDeliveryAddress: vi.fn(),
+  setMainDeliveryAddress: vi.fn(),
+  deactivateDeliveryAddress: vi.fn(),
+  reactivateDeliveryAddress: vi.fn(),
 });
 
 const commandWith = (
@@ -120,7 +122,6 @@ const commandWith = (
     directoryRepository as never,
     addressBookRepository as never,
     new CustomerAddressBookService(directoryRepository as never),
-    { now: () => now },
   );
 
 const refusal = async (
@@ -132,6 +133,8 @@ const refusal = async (
     },
     (error: unknown) => error as ApplicationError,
   );
+
+freezeClockAt(now);
 
 describe('ReactivateCustomerCommand (AC-06, AC-12)', () => {
   // AC-06 — "lets the member make it active again", the same operation inverted: the write clears
@@ -155,7 +158,7 @@ describe('ReactivateCustomerCommand (AC-06, AC-12)', () => {
     );
     expect(reactivated.deactivatedAt).toBeNull();
     expect(reactivated.name).toBe('Test Customer North');
-    expect(reactivated.updatedAt).toBe(now);
+    expect(reactivated.updatedAt).toEqual(now);
     expect(addresses).toEqual(before);
     expect(addressBookRepository.addDeliveryAddress).not.toHaveBeenCalled();
     expect(addressBookRepository.setMainDeliveryAddress).not.toHaveBeenCalled();

@@ -13,22 +13,20 @@ import {
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import { Provider } from 'react-redux';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { WorkspaceAdministration } from 'modules/workspace/components/WorkspaceAdministration';
 import { loadWorkspaceAdministration } from 'modules/workspace/loaders/workspace-administration.loader';
+import type { ReactElement } from 'react';
+import { Provider } from 'react-redux';
 import { workspaceContextApi } from 'shared/api/workspace/workspace-context-api';
 import { ROUTES } from 'shared/constants/routes';
+import type { AppStore } from 'store';
 import {
   authenticatedWorkspaceStore,
   namedWorkspaceContext,
   stubWorkspaceServer,
   unnamedWorkspaceContext,
 } from 'test/workspace-fixtures';
-
-import type { ReactElement } from 'react';
-import type { AppStore } from 'store';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const ADMINISTRATION_SOURCE = posix.join(
   posix.dirname(fileURLToPath(import.meta.url)),

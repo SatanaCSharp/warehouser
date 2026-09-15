@@ -1,29 +1,23 @@
-import { Injectable, Optional } from '@nestjs/common';
-import { assert } from '@warehouser/utils/asserts';
+import { Injectable } from '@nestjs/common';
+import { assert, assertDefined } from '@warehouser/utils/asserts';
+import { isDefined } from '@warehouser/utils/predicates';
 import {
   purchaseDraftDispositionNotReversibleError,
   purchaseDraftTargetUnavailableError,
   purchaseDraftUnknownDispositionError,
 } from 'purchase-drafts/domain/errors/purchase-draft.errors';
-import { isOfferedDisposition } from 'purchase-drafts/domain/predicates/purchase-draft-condition.predicates';
+import { dispositionOfferedOrUnstated } from 'purchase-drafts/domain/predicates/rejection-amendment.predicates';
 import {
-  REJECTION_DISPOSITIONS,
-  type RejectionDisposition,
-} from 'purchase-drafts/domain/value-objects/line-condition';
+  amendedDescription,
+  amendedDisposition,
+} from 'purchase-drafts/domain/services/arrival-inspection.service';
+import type { RejectionDisposition } from 'purchase-drafts/domain/value-objects/line-condition';
+import { REJECTION_DISPOSITIONS } from 'purchase-drafts/domain/value-objects/line-condition';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
-import {
-  type AmendRejectionInput,
-  PurchaseDraftRejectionRepository,
-} from 'shared/domain/repositories/purchase-draft-rejection.repository';
-
-export interface AmendRejectionCommandRuntime {
-  readonly now: () => Date;
-}
-
-const defaultAmendRejectionCommandRuntime: AmendRejectionCommandRuntime = {
-  now: () => new Date(),
-};
+import type { AmendRejectionInput } from 'shared/domain/repositories/purchase-draft-rejection.repository';
+import { PurchaseDraftRejectionRepository } from 'shared/domain/repositories/purchase-draft-rejection.repository';
+import { affectedAnyRow } from 'shared/predicates/persistence-write.predicates';
 
 // The wire's input is not yet the domain vocabulary: `disposition` arrives as whatever string the
 // request carried, and AC-19's refusal is exactly this command judging it against the offered set
@@ -51,8 +45,6 @@ export interface AmendedRejection {
 export class AmendPurchaseDraftRejectionCommand {
   constructor(
     private readonly rejectionRepository: PurchaseDraftRejectionRepository,
-    @Optional()
-    private readonly runtime: AmendRejectionCommandRuntime = defaultAmendRejectionCommandRuntime,
   ) {}
 
   @Transactional()
@@ -68,17 +60,16 @@ export class AmendPurchaseDraftRejectionCommand {
       rejectionId,
       currentUser.warehouseId,
     );
-    assert(locked !== null, purchaseDraftTargetUnavailableError());
+    assertDefined(locked, purchaseDraftTargetUnavailableError());
 
     // AC-19 — judged against the offered set before anything is written, naming those the system
     // offers.
     assert(
-      input.disposition === undefined ||
-        isOfferedDisposition(input.disposition),
+      dispositionOfferedOrUnstated(input.disposition),
       purchaseDraftUnknownDispositionError(REJECTION_DISPOSITIONS),
     );
 
-    const amendedAt = this.runtime.now();
+    const amendedAt = new Date();
     const amendment: AmendRejectionInput = {
       rejectionId,
       warehouseId: currentUser.warehouseId,
@@ -87,10 +78,10 @@ export class AmendPurchaseDraftRejectionCommand {
       // spec.md §6 "Condition immutability" — a column the input does not state is left off the
       // write entirely rather than defaulted from the locked row, so a description-only amendment
       // never pushes the Rejection's current Disposition back through the predicate below.
-      ...(input.description !== undefined && {
+      ...(isDefined(input.description) && {
         description: input.description,
       }),
-      ...(input.disposition !== undefined && {
+      ...(isDefined(input.disposition) && {
         disposition: input.disposition,
       }),
     };
@@ -100,7 +91,7 @@ export class AmendPurchaseDraftRejectionCommand {
     // Disposition; its zero-row result **is** that refusal, named against the decision already
     // resolved under the same lock so it carries no second read.
     assert(
-      result.affected > 0,
+      affectedAnyRow(result),
       purchaseDraftDispositionNotReversibleError(locked.disposition),
     );
 
@@ -119,11 +110,8 @@ export class AmendPurchaseDraftRejectionCommand {
     // it — and only it — a disclosure.
     return {
       id: rejectionId,
-      description: input.description ?? null,
-      disposition:
-        input.disposition !== undefined
-          ? input.disposition
-          : locked.disposition,
+      description: amendedDescription(input.description),
+      disposition: amendedDisposition(input.disposition, locked.disposition),
       amendedByUserId: currentUser.userId,
       amendedAt,
     };

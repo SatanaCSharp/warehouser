@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { assert, assertDefined } from '@warehouser/utils/asserts';
 import { workspaceOwnerTransferRequiredError } from 'access/domain/errors/workspace-access.errors';
+import { isProtectedWorkspaceOwnerRoleKind } from 'access/domain/predicates/workspace-authority.predicates';
 import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { WorkspaceMembershipRepository } from 'shared/domain/repositories/workspace-membership.repository';
 import { workspaceTargetUnavailableError } from 'shared/errors/cross-module.errors';
+import { scopedToWorkspace } from 'shared/predicates/tenancy.predicates';
 
 export interface RemoveWorkspaceMemberInput {
   readonly targetUserId: string;
@@ -32,12 +34,12 @@ export class RemoveWorkspaceMemberCommand {
     // indistinguishably.
     assertDefined(membership, workspaceTargetUnavailableError());
     assert(
-      membership.workspaceId === currentUser.workspaceId,
+      scopedToWorkspace(membership.workspaceId, currentUser.workspaceId),
       workspaceTargetUnavailableError(),
     );
     // AC-21a — the current Owner is never removable through this command.
     assert(
-      membership.workspaceRoleKind !== 'workspace_owner',
+      !isProtectedWorkspaceOwnerRoleKind(membership.workspaceRoleKind),
       workspaceOwnerTransferRequiredError(),
     );
 

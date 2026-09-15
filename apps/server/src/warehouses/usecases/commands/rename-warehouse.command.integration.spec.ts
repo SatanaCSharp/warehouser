@@ -9,6 +9,7 @@ import { DbTransactionContext } from 'shared/database/db-transaction-context.ser
 import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
 import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 // This command does not exist yet — this is the RED step for T20. Expected
 // to accept the caller's `WorkspaceCurrentUser` plus
 // `{ warehouseId, name }`, prove the target Warehouse belongs to

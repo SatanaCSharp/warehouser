@@ -1,9 +1,7 @@
-import { useTranslation } from 'react-i18next';
-
-import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
-
 import type { PurchaseDraftLineListEntry } from '@warehouser/contracts/purchase-drafts';
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
 
 export type DockLineExpectedCellProps = {
   entry: PurchaseDraftLineListEntry;

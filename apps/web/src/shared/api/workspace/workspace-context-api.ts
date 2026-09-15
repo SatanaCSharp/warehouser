@@ -1,13 +1,3 @@
-import {
-  activeWarehouseSelectionSchema,
-  workspaceContextSchema,
-  workspaceSchema,
-} from '@warehouser/contracts/workspaces';
-
-import { api } from 'shared/api/client/api-client';
-import { fieldErrorsForCode } from 'shared/utils/field-errors';
-import { nameValidationKeyMapper } from 'shared/utils/name-validation';
-
 import type {
   ActiveWarehouseSelection,
   ActiveWarehouseWrite,
@@ -15,7 +5,15 @@ import type {
   WorkspaceContext,
   WorkspaceRename,
 } from '@warehouser/contracts/workspaces';
+import {
+  activeWarehouseSelectionSchema,
+  workspaceContextSchema,
+  workspaceSchema,
+} from '@warehouser/contracts/workspaces';
 import type { ApiFailure } from 'shared/api/client/api-client';
+import { api } from 'shared/api/client/api-client';
+import { fieldErrorsForCode } from 'shared/utils/field-errors';
+import { nameValidationKeyMapper } from 'shared/utils/name-validation';
 
 const WORKSPACE_PATH = '/api/v1/workspace';
 

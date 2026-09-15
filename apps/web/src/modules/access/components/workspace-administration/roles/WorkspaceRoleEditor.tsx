@@ -1,23 +1,21 @@
 import { Button } from '@heroui/react';
+import type {
+  WorkspaceRole,
+  WorkspaceRoleWrite,
+} from '@warehouser/contracts/workspaces';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import { Controller } from 'react-hook-form';
-import { useTranslation } from 'react-i18next';
-
 import { useUpdateWorkspaceRoleMutation } from 'modules/access/api/workspace-roles-api';
 import { DeleteWorkspaceRoleAction } from 'modules/access/components/workspace-administration/roles/DeleteWorkspaceRoleAction';
 import { WorkspacePermissionFieldset } from 'modules/access/components/workspace-administration/roles/WorkspacePermissionFieldset';
 import { useWorkspaceRoleForm } from 'modules/access/hooks/forms/useWorkspaceRoleForm';
 import { useWorkspacePermissionCatalogue } from 'modules/access/hooks/queries/useWorkspacePermissionCatalogue';
+import type { ReactElement } from 'react';
+import { Controller } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { Conditional } from 'shared/components/Conditional';
 import { FormTextField } from 'shared/components/FormTextField';
 import { useHasWorkspacePermission } from 'shared/hooks/queries/useWorkspacePermissions';
-
-import type {
-  WorkspaceRole,
-  WorkspaceRoleWrite,
-} from '@warehouser/contracts/workspaces';
-import type { ReactElement } from 'react';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 type WorkspaceRoleEditorProps = {
   replacements: WorkspaceRole[];

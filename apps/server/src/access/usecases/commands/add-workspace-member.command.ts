@@ -1,16 +1,21 @@
 import { Injectable } from '@nestjs/common';
 import { assert, assertDefined } from '@warehouser/utils/asserts';
+import { isNull } from '@warehouser/utils/predicates';
 import {
   workspaceMemberExistsError,
   workspaceOwnerTransferRequiredError,
   workspaceWarehouseMembershipRequiredError,
 } from 'access/domain/errors/workspace-access.errors';
+import {
+  assignsTheOwnerRole,
+  holdsWarehouseMembership,
+} from 'access/domain/predicates/workspace-authority.predicates';
 import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { WorkspaceMembershipRepository } from 'shared/domain/repositories/workspace-membership.repository';
 import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository';
 import { workspaceTargetUnavailableError } from 'shared/errors/cross-module.errors';
-
+import { scopedToWorkspace } from 'shared/predicates/tenancy.predicates';
 export interface AddWorkspaceMemberInput {
   readonly candidateUserId: string;
   readonly workspaceRoleId: string;
@@ -40,7 +45,7 @@ export class AddWorkspaceMemberCommand {
         input.candidateUserId,
       );
     assert(
-      candidateWorkspaceId === currentUser.workspaceId,
+      scopedToWorkspace(candidateWorkspaceId, currentUser.workspaceId),
       workspaceTargetUnavailableError(),
     );
 
@@ -50,7 +55,7 @@ export class AddWorkspaceMemberCommand {
       await this.workspaceMembershipRepository.lockMembership(
         input.candidateUserId,
       );
-    assert(existingMembership === null, workspaceMemberExistsError());
+    assert(isNull(existingMembership), workspaceMemberExistsError());
 
     // AC-22 — the protected Owner Role is never assigned through ordinary
     // addition; identified by comparison with the current Owner's own Role,
@@ -60,7 +65,10 @@ export class AddWorkspaceMemberCommand {
         currentUser.workspaceId,
       );
     assert(
-      input.workspaceRoleId !== ownerMembership?.workspaceRoleId,
+      !assignsTheOwnerRole(
+        input.workspaceRoleId,
+        ownerMembership?.workspaceRoleId,
+      ),
       workspaceOwnerTransferRequiredError(),
     );
 
@@ -90,7 +98,10 @@ export class AddWorkspaceMemberCommand {
         input.candidateUserId,
         currentUser.workspaceId,
       );
-    assert(hasWarehouseMembership, workspaceWarehouseMembershipRequiredError());
+    assert(
+      holdsWarehouseMembership(hasWarehouseMembership),
+      workspaceWarehouseMembershipRequiredError(),
+    );
 
     await this.workspaceMembershipRepository.addMembership({
       userId: input.candidateUserId,

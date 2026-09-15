@@ -1,20 +1,18 @@
 import { Tabs } from '@heroui/react';
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-
+import type { PurchaseDraftState } from '@warehouser/contracts/purchase-drafts';
 import { CreatePurchaseDraftAction } from 'modules/purchase-draft/components/CreatePurchaseDraftAction';
 import { PurchaseDraftLineDirectory } from 'modules/purchase-draft/components/purchase-draft-line-directory/PurchaseDraftLineDirectory';
 import { PurchaseDraftByDraftView } from 'modules/purchase-draft/components/purchase-draft-workspace/components/PurchaseDraftByDraftView';
 import { PurchaseDraftLineSearchField } from 'modules/purchase-draft/components/purchase-draft-workspace/components/PurchaseDraftLineSearchField';
+import type { PurchaseDraftView } from 'modules/purchase-draft/components/purchase-draft-workspace/components/PurchaseDraftViewToggle';
 import { PurchaseDraftViewToggle } from 'modules/purchase-draft/components/purchase-draft-workspace/components/PurchaseDraftViewToggle';
 import { usePurchaseDrafts } from 'modules/purchase-draft/hooks/queries/usePurchaseDrafts';
+import type { ReactElement } from 'react';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ArchivedWarehouseChip } from 'shared/components/ArchivedWarehouseChip';
 import { ArchivedWarehouseNotice } from 'shared/components/ArchivedWarehouseNotice';
 import { Conditional } from 'shared/components/Conditional';
-
-import type { PurchaseDraftState } from '@warehouser/contracts/purchase-drafts';
-import type { PurchaseDraftView } from 'modules/purchase-draft/components/purchase-draft-workspace/components/PurchaseDraftViewToggle';
-import type { ReactElement } from 'react';
 
 /** The three tabs (design-handoff.md `Hh6Al`): order and count never change. */
 const TAB_STATES = [

@@ -1,15 +1,13 @@
 import { Button } from '@heroui/react';
 import { useNavigate } from '@tanstack/react-router';
-import { useTranslation } from 'react-i18next';
-
 import { useSignOutMutation } from 'modules/auth/api/auth-api';
 import { authBecameAnonymous } from 'modules/auth/store/auth.slice';
+import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Conditional } from 'shared/components/Conditional';
 import { ROUTES } from 'shared/constants/routes';
 import { LogOutIcon } from 'shared/icons';
 import { useAppDispatch } from 'store/hooks';
-
-import type { ReactElement } from 'react';
 
 export const SignOutButton = (): ReactElement => {
   const { t } = useTranslation('common');

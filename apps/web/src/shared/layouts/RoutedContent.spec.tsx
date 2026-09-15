@@ -1,3 +1,4 @@
+import type { RouterHistory } from '@tanstack/react-router';
 import {
   createMemoryHistory,
   createRootRoute,
@@ -6,14 +7,11 @@ import {
   RouterProvider,
 } from '@tanstack/react-router';
 import { act, render, screen } from '@testing-library/react';
+import type { ReactElement } from 'react';
 import { Provider } from 'react-redux';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { RoutedContent } from 'shared/layouts/RoutedContent';
 import { makeStore } from 'store';
-
-import type { RouterHistory } from '@tanstack/react-router';
-import type { ReactElement } from 'react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 /**
  * jsdom implements no Web Animations API (`src/test/setup.ts` says so where it

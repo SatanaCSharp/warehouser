@@ -3,6 +3,7 @@ import type {
   PermissionPage,
   PermissionPagination,
 } from '@warehouser/contracts/access';
+import { isDefined } from '@warehouser/utils/predicates';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { AccessReadRepository } from 'shared/domain/repositories/access-read.repository';
 import { paginatablePage } from 'shared/pagination/paginatable-page';
@@ -24,7 +25,7 @@ export class ListAccessPermissionsQuery {
     return paginatablePage(
       rows,
       pagination.limit,
-      pagination.before !== undefined,
+      isDefined(pagination.before),
     );
   }
 }

@@ -1,24 +1,35 @@
 import { Button } from '@heroui/react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link as RouterLink } from '@tanstack/react-router';
+import type { SignUpFormValues } from 'modules/auth/sign-up/schemas/sign-up-form.schema';
+import { signUpFormSchema } from 'modules/auth/sign-up/schemas/sign-up-form.schema';
+import type { ReactElement, SubmitEvent } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-
-import {
-  signUpFormSchema,
-  type SignUpFormValues,
-} from 'modules/auth/sign-up/schemas/sign-up-form.schema';
 import { Conditional } from 'shared/components/Conditional';
 import { FormTextField } from 'shared/components/FormTextField';
 import { PasswordInput } from 'shared/components/PasswordInput';
 import { ROUTES } from 'shared/constants/routes';
 
-import type { FormEvent, ReactElement } from 'react';
-
 type Props = {
   emailError?: string;
   onSubmit: (values: SignUpFormValues) => void | Promise<void>;
 };
+
+/** The message a refused field shows: its rule translated, or — for the email — the refusal the
+ * server named, which has no rule of its own. `undefined` where the field was not refused at all. */
+const fieldMessage = (
+  error: { message?: string } | undefined,
+  translateValidation: (key: string) => string,
+  fallback?: string,
+): string | undefined =>
+  error?.message ? translateValidation(error.message) : fallback;
+
+/** One label for the button and its accessible name, so the two can never disagree. */
+const submitLabelOf = (
+  isSubmitting: boolean,
+  t: (key: string) => string,
+): string => (isSubmitting ? t('form.submitting') : t('form.submit'));
 
 export const SignUpForm = ({ emailError, onSubmit }: Props): ReactElement => {
   const { t } = useTranslation('sign-up');
@@ -31,13 +42,16 @@ export const SignUpForm = ({ emailError, onSubmit }: Props): ReactElement => {
     resolver: zodResolver(signUpFormSchema),
     shouldFocusError: true,
   });
-  const emailMessage = errors.email?.message
-    ? translateValidation(errors.email.message)
-    : emailError;
+  const emailMessage = fieldMessage(
+    errors.email,
+    translateValidation,
+    emailError,
+  );
+  const submitLabel = submitLabelOf(isSubmitting, t);
 
   // `handleSubmit` returns a promise the DOM handler must not; discarding it
   // here keeps the rejection with React Hook Form, which already owns it.
-  const onSubmitForm = (event: FormEvent<HTMLFormElement>): void =>
+  const onSubmitForm = (event: SubmitEvent<HTMLFormElement>): void =>
     void handleSubmit(onSubmit)(event);
 
   return (
@@ -65,11 +79,7 @@ export const SignUpForm = ({ emailError, onSubmit }: Props): ReactElement => {
         autoComplete="new-password"
         isDisabled={isSubmitting}
         isInvalid={Boolean(errors.password)}
-        errorMessage={
-          errors.password?.message
-            ? translateValidation(errors.password.message)
-            : undefined
-        }
+        errorMessage={fieldMessage(errors.password, translateValidation)}
         hideLabel={t('form.password.hide')}
         showLabel={t('form.password.show')}
         hideText={t('form.password.hideShort')}
@@ -83,22 +93,18 @@ export const SignUpForm = ({ emailError, onSubmit }: Props): ReactElement => {
         autoComplete="organization"
         isDisabled={isSubmitting}
         isInvalid={Boolean(errors.warehouseName)}
-        errorMessage={
-          errors.warehouseName?.message
-            ? translateValidation(errors.warehouseName.message)
-            : undefined
-        }
+        errorMessage={fieldMessage(errors.warehouseName, translateValidation)}
         {...register('warehouseName')}
       />
       <Button
         type="submit"
-        aria-label={isSubmitting ? t('form.submitting') : t('form.submit')}
+        aria-label={submitLabel}
         variant="primary"
         className="min-h-11 w-full font-semibold"
         isPending={isSubmitting}
         isDisabled={isSubmitting}
       >
-        {isSubmitting ? t('form.submitting') : t('form.submit')}
+        {submitLabel}
       </Button>
     </form>
   );

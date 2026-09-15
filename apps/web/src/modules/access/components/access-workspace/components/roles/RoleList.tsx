@@ -1,13 +1,11 @@
 import { Chip, InputGroup } from '@heroui/react';
+import type { AccessRole } from 'modules/access/types/access.types';
+import type { ChangeEvent, ReactElement } from 'react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-
 import { Conditional } from 'shared/components/Conditional';
 import { ROW_ENTER } from 'shared/constants/motion';
 import { SearchIcon } from 'shared/icons';
-
-import type { AccessRole } from 'modules/access/types/access.types';
-import type { ChangeEvent, ReactElement } from 'react';
 
 type RoleListProps = {
   roles: AccessRole[];

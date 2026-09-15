@@ -1,13 +1,11 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
+import type { WorkspaceContext } from '@warehouser/contracts/workspaces';
 import {
   admitsReads,
   resolveWarehouseEntry,
 } from 'guards/warehouse-entry.guard';
-import { makeStore } from 'store';
-
-import type { WorkspaceContext } from '@warehouser/contracts/workspaces';
 import type { AppStore } from 'store';
+import { makeStore } from 'store';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // CR-AC-07 / ADR 0001 §Neutral — `warehouseId` is never shape-validated ahead
 // of the membership lookup, so a malformed value must be indistinguishable

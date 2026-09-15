@@ -1,19 +1,17 @@
 import { Modal } from '@heroui/react';
+import type { RoleWrite } from '@warehouser/contracts/access';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { useTranslation } from 'react-i18next';
-
 import { useCreateAccessRoleMutation } from 'modules/access/api/access-api';
 import { CreateActionButton } from 'modules/access/components/access-workspace/components/CreateActionButton';
 import { CreateRoleDialog } from 'modules/access/components/access-workspace/components/roles/CreateRoleDialog';
 import { useAccessScope } from 'modules/access/hooks/projections/useAccessScope';
 import { useAccessPermissions } from 'modules/access/hooks/queries/useAccessPermissions';
+import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { Conditional } from 'shared/components/Conditional';
 import { TriggeredDialog } from 'shared/components/TriggeredDialog';
 import { WarehousePermissionGate } from 'shared/components/WarehousePermissionGate';
-
-import type { RoleWrite } from '@warehouser/contracts/access';
-import type { ReactElement } from 'react';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 /**
  * The Create Role workflow, whole: its gate, the trigger, the dialog it opens,

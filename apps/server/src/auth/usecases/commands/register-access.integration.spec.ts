@@ -7,6 +7,15 @@ import { DbTransactionContext } from 'shared/database/db-transaction-context.ser
 import { AccessProvisioningRepository } from 'shared/domain/repositories/access-provisioning.repository';
 import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
 import { WorkspaceProvisioningRepository } from 'shared/domain/repositories/workspace-provisioning.repository';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 // `WorkspaceProvisioningService` does not exist yet (T14): this import is the
 // RED for AC-01/AC-02. sad.md §6.1/§4: `RegisterCommand` stops calling
 // `ProvisionInitialAccessCommand` directly and instead calls this
@@ -17,9 +26,6 @@ import { WorkspaceProvisioningRepository } from 'shared/domain/repositories/work
 // Role and membership to `access`'s `ProvisionInitialAccessCommand` by
 // passing only a `warehouseId` and a `userId` (never a Workspace concept).
 import { WorkspaceProvisioningService } from 'workspaces/domain/services/workspace-provisioning.service';
-
-const identityId = '00000000-0000-4000-8000-000000000001';
-const sessionId = '00000000-0000-4000-8000-000000000002';
 
 // spec.md §1: the full initial Workspace Owner Workspace Permission set
 // (sixteen entries), mirrored by `openapi.yaml`'s `RegistrationResult`
@@ -77,6 +83,24 @@ const zeroCounts = Object.fromEntries(
   REGISTRATION_TABLES.map((table) => [table, '0']),
 );
 
+vi.mock('shared/domain/security/password-hashing', async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import('shared/domain/security/password-hashing')
+    >();
+
+  return {
+    ...actual,
+    hashPassword: vi.fn(() =>
+      Promise.resolve({
+        algorithm: 'scrypt' as const,
+        hash: 'synthetic-hash',
+        parameters: { cost: 1_024 },
+      }),
+    ),
+  };
+});
+
 describe('RegisterCommand workspace provisioning transaction', () => {
   const context = new DbTransactionContext(dataSource);
   const transactions = new DbTransactionService(dataSource, context);
@@ -92,23 +116,7 @@ describe('RegisterCommand workspace provisioning transaction', () => {
   const createCommand = (
     provisioning: WorkspaceProvisioningService = workspaceProvisioning,
   ): RegisterCommand =>
-    new RegisterCommand(
-      authentication,
-      registrations,
-      provisioning,
-      () =>
-        Promise.resolve({
-          algorithm: 'scrypt',
-          hash: 'synthetic-hash',
-          parameters: { cost: 1_024 },
-        }),
-      () => ({ secret: 'opaque-secret', digest: Buffer.alloc(32, 1) }),
-      {
-        now: () => new Date('2026-08-04T12:00:00.000Z'),
-        identityId: () => identityId,
-        sessionId: () => sessionId,
-      },
-    );
+    new RegisterCommand(authentication, registrations, provisioning);
 
   const register = () =>
     transactions.executeInTransaction({}, () =>
@@ -215,7 +223,7 @@ describe('RegisterCommand workspace provisioning transaction', () => {
 
   it('rolls identity and session back when Workspace provisioning fails', async () => {
     const unavailableProvisioning = {
-      provisionRegistration: jest
+      provisionRegistration: vi
         .fn()
         .mockRejectedValue(new Error('workspace provisioning unavailable')),
     } as unknown as WorkspaceProvisioningService;

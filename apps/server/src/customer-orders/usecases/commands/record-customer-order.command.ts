@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 
-import { Injectable, Optional } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
+import { isDefined } from '@warehouser/utils/predicates';
 import {
   customerOrderCustomerIdentityError,
   customerOrderCustomerUnavailableError,
@@ -13,11 +14,19 @@ import type { CustomerOrder } from 'customer-orders/domain/mappers/customer-orde
 import { toCustomerOrder } from 'customer-orders/domain/mappers/customer-order.mapper';
 import {
   isAvailableDestinationRecord,
-  isCustomerName,
   isDemandQuantity,
   isRecordOfWarehouse,
   namesExactlyOneCustomerIdentity,
 } from 'customer-orders/domain/predicates/customer-order.predicates';
+import {
+  customerNameStatedWellOrNotAtAll,
+  deliveryAddressHasCustomer,
+} from 'customer-orders/domain/predicates/customer-order-identity.predicates';
+import {
+  customerIdentityRefusal,
+  statedDeliveryAddressId,
+  typedCustomerName,
+} from 'customer-orders/domain/services/customer-order-composition.service';
 import { CustomerOrderDestinationService } from 'customer-orders/domain/services/customer-order-destination.service';
 import { assertNeededByStillAhead } from 'customer-orders/domain/services/customer-order-lifecycle.service';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
@@ -26,16 +35,6 @@ import { CustomerDirectoryRepository } from 'shared/domain/repositories/customer
 import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository';
 import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
 import { isSelectableItem } from 'shared/predicates/item-availability.predicates';
-
-export interface RecordCustomerOrderRuntime {
-  readonly customerOrderId: () => string;
-  readonly now: () => Date;
-}
-
-const defaultRecordCustomerOrderRuntime: RecordCustomerOrderRuntime = {
-  customerOrderId: randomUUID,
-  now: () => new Date(),
-};
 
 // `chk_customer_orders_customer_identity` at the application boundary: a Customer, optionally with
 // one of its Delivery Addresses, **or** a typed customer name — never both and never neither
@@ -57,6 +56,9 @@ interface CustomerOrderDestination {
   readonly customerName: string | null;
 }
 
+// The four conditions and two readings below are used by this command alone, so each stays next to
+// it rather than in `customer-orders/domain/predicates/` (server-error-handling.md §1).
+
 // AC-01/AC-02/AC-02a/AC-03 — recording demand (sad.md §6.4). The REST surface invokes this use
 // case, never a repository (server-architecture.md §Dependency direction), and the use case owns
 // the rules itself: every bound is checked here and refusals propagate untouched to the global
@@ -68,8 +70,6 @@ export class RecordCustomerOrderCommand {
     private readonly itemCatalogueRepository: ItemCatalogueRepository,
     private readonly customerDirectoryRepository: CustomerDirectoryRepository,
     private readonly customerOrderDestinationService: CustomerOrderDestinationService,
-    @Optional()
-    private readonly recordCustomerOrderRuntime: RecordCustomerOrderRuntime = defaultRecordCustomerOrderRuntime,
   ) {}
 
   @Transactional()
@@ -77,7 +77,7 @@ export class RecordCustomerOrderCommand {
     currentUser: AccessCurrentUser,
     input: RecordCustomerOrderInput,
   ): Promise<CustomerOrder> {
-    const recordedAt = this.recordCustomerOrderRuntime.now();
+    const recordedAt = new Date();
 
     // `chk_customer_orders_customer_identity` as a payload refusal — an order names a Customer, or
     // a typed customer name, never both and never neither (openapi.yaml
@@ -86,14 +86,14 @@ export class RecordCustomerOrderCommand {
     assert(
       namesExactlyOneCustomerIdentity(input.customerId, input.customerName),
       customerOrderCustomerIdentityError(
-        input.customerId === undefined
-          ? 'customer_identity_required'
-          : 'customer_identity_exclusive',
+        customerIdentityRefusal(input.customerId),
       ),
     );
     assert(
-      input.customerDeliveryAddressId === undefined ||
-        input.customerId !== undefined,
+      deliveryAddressHasCustomer(
+        input.customerDeliveryAddressId,
+        input.customerId,
+      ),
       customerOrderCustomerIdentityError('delivery_address_requires_customer'),
     );
 
@@ -101,7 +101,7 @@ export class RecordCustomerOrderCommand {
     // before any persistence is consulted, so "changes nothing" is a property of the flow rather
     // than of a rollback.
     assert(
-      input.customerName === undefined || isCustomerName(input.customerName),
+      customerNameStatedWellOrNotAtAll(input.customerName),
       customerOrderInvalidInputError('customerName', 'trimmed_non_empty'),
     );
     assert(
@@ -130,10 +130,10 @@ export class RecordCustomerOrderCommand {
     let destination: CustomerOrderDestination = {
       customerId: null,
       customerDeliveryAddressId: null,
-      customerName: input.customerName?.trim() ?? null,
+      customerName: typedCustomerName(input.customerName),
     };
 
-    if (input.customerId !== undefined) {
+    if (isDefined(input.customerId)) {
       // AC-12 — the Customer is resolved **within the acting Warehouse**, so one that exists only in
       // another Warehouse resolves to nothing and is refused exactly as a missing one is, disclosing
       // nothing about what exists elsewhere. An Inactive Customer does resolve, and is the different
@@ -159,7 +159,7 @@ export class RecordCustomerOrderCommand {
         customerDeliveryAddressId:
           await this.customerOrderDestinationService.resolveDestination(
             input.customerId,
-            input.customerDeliveryAddressId ?? null,
+            statedDeliveryAddressId(input.customerDeliveryAddressId),
           ),
         customerName: null,
       };
@@ -168,7 +168,7 @@ export class RecordCustomerOrderCommand {
     // AC-01 — Unfulfilled, waiting for everything it asked for.
     const recorded =
       await this.customerOrderLifecycleRepository.createCustomerOrder({
-        id: this.recordCustomerOrderRuntime.customerOrderId(),
+        id: randomUUID(),
         warehouseId: currentUser.warehouseId,
         itemId: input.itemId,
         customerId: destination.customerId,

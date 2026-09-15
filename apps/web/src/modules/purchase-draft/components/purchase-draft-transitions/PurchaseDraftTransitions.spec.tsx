@@ -1,23 +1,21 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type {
+  PurchaseDraftDetail,
+  PurchaseDraftState,
+} from '@warehouser/contracts/purchase-drafts';
 import { PermissionId } from '@warehouser/shared-types/enums';
 import i18n from 'i18next';
-import { afterEach, beforeAll, describe, expect, it } from 'vitest';
-
 import { PurchaseDraftTransitions } from 'modules/purchase-draft/components/purchase-draft-transitions/PurchaseDraftTransitions';
 import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
+import type { AppStore } from 'store';
 import {
   accessIds,
   authenticatedStore,
   stubAccessServer,
 } from 'test/access-fixtures';
 import { renderInEnteredWarehouse } from 'test/render';
-
-import type {
-  PurchaseDraftDetail,
-  PurchaseDraftState,
-} from '@warehouser/contracts/purchase-drafts';
-import type { AppStore } from 'store';
+import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 // T21 — the owner of the four irreversible acts: which of them a draft state
 // admits, each behind the Permission that offers it (AC-22,

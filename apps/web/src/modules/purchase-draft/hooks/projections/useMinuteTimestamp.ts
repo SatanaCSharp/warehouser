@@ -1,7 +1,6 @@
 import { useLocale } from '@react-aria/i18n';
-import { useCallback } from 'react';
-
 import { formatTimestampMinutes } from 'modules/purchase-draft/utils/timestamp-format';
+import { useCallback } from 'react';
 
 /**
  * Renders an ISO-8601 instant as `22 Aug 2026, 14:20` — the shape the frames

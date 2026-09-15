@@ -1,11 +1,10 @@
 import { screen, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
-
 import { ROUTES } from 'shared/constants/routes';
 import { DashboardIcon } from 'shared/icons';
 import { SidebarNavItem } from 'shared/layouts/sidebar/components/SidebarNavItem';
 import { accessIds } from 'test/access-fixtures';
 import { renderInEnteredWarehouse } from 'test/render';
+import { describe, expect, it } from 'vitest';
 
 // One entry, at either width. An entry carries an icon and a label and nothing
 // after them — the `trailing` slot that once held the `Purchase drafts` drift

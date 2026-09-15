@@ -5,7 +5,9 @@ import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user'
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
 import { workspaceTargetUnavailableError } from 'shared/errors/cross-module.errors';
+import { scopedToWorkspace } from 'shared/predicates/tenancy.predicates';
 import { warehouseDeliveryAddressBlankError } from 'warehouses/domain/errors/warehouse.errors';
+import { recordableNotes } from 'warehouses/domain/services/warehouse-delivery-address.service';
 
 export interface SetWarehouseDeliveryAddressInput {
   readonly warehouseId: string;
@@ -18,13 +20,6 @@ export interface WarehouseDeliveryAddressProjection {
   readonly addressText: string;
   readonly accessNotes: string | null;
 }
-
-/** Access notes are never stored as an empty string: what a driver needs to
- * get in was either written down or it was not (openapi.yaml `AccessNotes`). */
-const recordableNotes = (accessNotes?: string | null): string | null => {
-  const trimmed = accessNotes?.trim() ?? '';
-  return isEmpty(trimmed) ? null : trimmed;
-};
 
 // `WAREHOUSES:ADDRESS_UPDATE`-guarded, and the one flow of this feature that
 // does not resolve through the Warehouse-scoped authorization spine: the
@@ -57,7 +52,7 @@ export class SetWarehouseDeliveryAddressCommand {
     );
     assertDefined(warehouse, workspaceTargetUnavailableError());
     assert(
-      warehouse.workspaceId === currentUser.workspaceId,
+      scopedToWorkspace(warehouse.workspaceId, currentUser.workspaceId),
       workspaceTargetUnavailableError(),
     );
 

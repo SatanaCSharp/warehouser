@@ -1,4 +1,8 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
+import {
+  exceedsWindowAllowance,
+  hasWindowRolledOver,
+} from 'shared/predicates/write-rate-limit.predicates';
 
 /** Injection token for the counter's clock, so the fixed window can be pinned in a test without
  * making the production wiring aware of testing. */
@@ -38,13 +42,13 @@ export class WriteRateLimitCounter {
    * the current window; the caller turns that into the refusal. */
   tryRecord(userId: string): boolean {
     const window = Math.floor(this.now() / windowMs);
-    if (window !== this.currentWindow) {
+    if (hasWindowRolledOver(window, this.currentWindow)) {
       this.countsByMember = new Map<string, number>();
       this.currentWindow = window;
     }
 
     const count = this.countsByMember.get(userId) ?? 0;
-    if (count >= maxRecordedChangesPerWindow) {
+    if (exceedsWindowAllowance(count, maxRecordedChangesPerWindow)) {
       return false;
     }
 

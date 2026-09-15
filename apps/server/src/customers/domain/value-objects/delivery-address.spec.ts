@@ -1,6 +1,7 @@
 import { ApplicationError } from '@warehouser/shared-types/errors';
 import { AccessNotes } from 'customers/domain/value-objects/access-notes';
 import { DeliveryAddressText } from 'customers/domain/value-objects/delivery-address-text';
+import { describe, expect, it } from 'vitest';
 
 const detailsOf = (create: () => unknown): unknown => {
   try {

@@ -1,12 +1,14 @@
-import { ErrorCode } from '@warehouser/shared-types/enums';
-import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
 import {
-  TRANSACTIONAL_KEY,
-  type TransactionalMetadata,
-} from 'shared/decorators/transactional.decorator';
+  ErrorCode,
+  WorkspacePermissionId,
+} from '@warehouser/shared-types/enums';
+import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
+import type { TransactionalMetadata } from 'shared/decorators/transactional.decorator';
+import { TRANSACTIONAL_KEY } from 'shared/decorators/transactional.decorator';
 import { WarehouseLifecycleRepository } from 'shared/domain/repositories/warehouse-lifecycle.repository';
+import { pinGeneratedUuids } from 'test/doubles/generated-uuid';
 import { repositoryDouble } from 'test/doubles/repository-double';
+import { describe, expect, it, vi } from 'vitest';
 // RED for T20 — neither command exists yet. This unit spec covers AC-08 only
 // (spec.md §5): name validation must reject before any persistence is
 // attempted, matching the established `AccessName`-first idiom already used
@@ -33,22 +35,30 @@ const currentUser = (): WorkspaceCurrentUser => ({
 
 const warehouseLifecycleRepositoryDouble = () =>
   repositoryDouble<WarehouseLifecycleRepository>()({
-    createWarehouse: jest.fn().mockResolvedValue(undefined),
-    renameWarehouse: jest.fn().mockResolvedValue(undefined),
-    setArchivedAt: jest.fn().mockResolvedValue(undefined),
-    lockWorkspaceAndCountNonArchivedWarehouses: jest.fn().mockResolvedValue(1),
+    createWarehouse: vi.fn().mockResolvedValue(undefined),
+    renameWarehouse: vi.fn().mockResolvedValue(undefined),
+    setArchivedAt: vi.fn().mockResolvedValue(undefined),
+    lockWorkspaceAndCountNonArchivedWarehouses: vi.fn().mockResolvedValue(1),
   });
 
 // The provisioning delegate is `access`'s exported command (T12); this
 // double never runs because name validation must fail first.
 const provisionInitialAccessDouble = () => ({
-  execute: jest.fn().mockResolvedValue({
+  execute: vi.fn().mockResolvedValue({
     warehouseId,
     roleId: '00000000-0000-4000-8000-000000000005',
     roleKind: 'warehouse_manager',
     permissionIds: [],
   }),
 });
+
+vi.mock('node:crypto', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:crypto')>();
+
+  return { ...actual, randomUUID: vi.fn(actual.randomUUID) };
+});
+
+pinGeneratedUuids(warehouseId);
 
 describe('CreateWarehouseCommand', () => {
   it.each([
@@ -72,7 +82,6 @@ describe('CreateWarehouseCommand', () => {
       const command = new CreateWarehouseCommand(
         warehouseLifecycleRepository,
         provisionInitialAccess,
-        { warehouseId: () => warehouseId },
       );
 
       await expect(
@@ -95,7 +104,6 @@ describe('CreateWarehouseCommand', () => {
     const command = new CreateWarehouseCommand(
       warehouseLifecycleRepository,
       provisionInitialAccess,
-      { warehouseId: () => warehouseId },
     );
 
     await expect(
@@ -137,7 +145,6 @@ describe('CreateWarehouseCommand', () => {
     const command = new CreateWarehouseCommand(
       warehouseLifecycleRepository,
       provisionInitialAccess,
-      { warehouseId: () => warehouseId },
     );
 
     await expect(
@@ -154,7 +161,6 @@ describe('CreateWarehouseCommand', () => {
     const command = new CreateWarehouseCommand(
       warehouseLifecycleRepository,
       provisionInitialAccess,
-      { warehouseId: () => warehouseId },
     );
 
     await expect(

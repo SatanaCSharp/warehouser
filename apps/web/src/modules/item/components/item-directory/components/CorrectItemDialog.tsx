@@ -1,16 +1,14 @@
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { useTranslation } from 'react-i18next';
-
+import type { Item, ItemUpdate } from '@warehouser/contracts/items';
 import { ItemRefusalAlert } from 'modules/item/components/item-directory/components/ItemRefusalAlert';
 import { useItemNaming } from 'modules/item/hooks/projections/useItemNaming';
+import type { ReactElement } from 'react';
+import { useState } from 'react';
+import type { Path } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormTextField } from 'shared/components/FormTextField';
-
-import type { Item, ItemUpdate } from '@warehouser/contracts/items';
-import type { ReactElement } from 'react';
-import type { Path } from 'react-hook-form';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import type { FormParseResult } from 'shared/utils/form-parse';
 
 type CorrectItemDialogProps = {

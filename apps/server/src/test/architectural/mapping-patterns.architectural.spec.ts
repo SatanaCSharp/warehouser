@@ -1,9 +1,10 @@
+import type { MappingPattern } from 'test/architectural/mapping-patterns';
 import {
   findMappingDeclarations,
-  type MappingPattern,
   serverMappingDeclarations,
 } from 'test/architectural/mapping-patterns';
 import { Project } from 'ts-morph';
+import { describe, expect, it } from 'vitest';
 
 /** The control on `mapper-placement.architectural.spec.ts`.
  *
@@ -61,7 +62,7 @@ describe('mapping detection', () => {
     expect(
       patternsOf(
         `
-        import { map } from 'lodash';
+        import { map } from 'lodash-es';
         interface LineRead { id: string; }
         export const toLines = (lines: readonly LineRead[]) =>
           map(lines, (line) => ({ id: line.id }));

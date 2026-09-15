@@ -1,6 +1,7 @@
 import { DynamicModule, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { LoggerModule } from 'nestjs-pino';
+import { isDeclaredTrue } from 'shared/predicates/environment-flag.predicates';
 
 @Module({})
 export class AppLoggerModule {
@@ -15,8 +16,6 @@ export class AppLoggerModule {
           useFactory: (config: ConfigService) => {
             const logPretty = config.get<string>('LOG_PRETTY', 'false');
             const logLevel = config.getOrThrow<string>('LOG_LEVEL');
-
-            const isPretty = logPretty === 'true';
 
             const transportOptions = {
               target: 'pino-pretty',
@@ -33,7 +32,9 @@ export class AppLoggerModule {
                 level: logLevel,
                 autoLogging: false,
                 quietReqLogger: true,
-                transport: !isPretty ? undefined : transportOptions,
+                transport: isDeclaredTrue(logPretty)
+                  ? transportOptions
+                  : undefined,
               },
             };
           },

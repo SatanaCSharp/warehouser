@@ -1,11 +1,12 @@
 import 'reflect-metadata';
 
+import type { TransactionalMetadata } from 'shared/decorators/transactional.decorator';
 import {
   Transactional,
   TRANSACTIONAL_KEY,
-  type TransactionalMetadata,
 } from 'shared/decorators/transactional.decorator';
-import type { IsolationLevel } from 'typeorm/driver/types/IsolationLevel';
+import type { IsolationLevel } from 'typeorm/driver/types/IsolationLevel.js';
+import { describe, expect, it } from 'vitest';
 
 const getTransactionalMetadata = (
   target: object,

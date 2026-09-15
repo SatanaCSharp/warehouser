@@ -1,6 +1,7 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ReadCurrentAccessQuery } from 'access/usecases/queries/read-current-access.query';
 import { AccessCurrentUserRepository } from 'shared/domain/repositories/access-current-user.repository';
+import { describe, expect, it, vi } from 'vitest';
 
 const userId = '00000000-0000-4000-8000-000000000001';
 const warehouseId = '00000000-0000-4000-8000-000000000002';
@@ -8,7 +9,7 @@ const roleId = '00000000-0000-4000-8000-000000000003';
 const archivedAt = new Date('2026-08-06T12:00:00.000Z');
 
 const repositoryDouble = () => ({
-  resolveCurrentAccess: jest.fn().mockResolvedValue({
+  resolveCurrentAccess: vi.fn().mockResolvedValue({
     warehouseId,
     roleId,
     roleKind: 'custom' as const,

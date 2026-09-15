@@ -1,77 +1,15 @@
 import { randomUUID } from 'node:crypto';
 
-import { Injectable, Optional } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
-import {
-  workspaceRoleNameConflictError,
-  workspaceSystemManagedPermissionError,
-} from 'access/domain/errors/workspace-access.errors';
-import {
-  isKnownWorkspacePermission,
-  isReservedWorkspaceOwnerReassignPermission,
-  isReservedWorkspacePermissionKind,
-} from 'access/domain/predicates/workspace-authority.predicates';
+import { isNull } from '@warehouser/utils/predicates';
+import { workspaceRoleNameConflictError } from 'access/domain/errors/workspace-access.errors';
+import { assertAssignableWorkspacePermissions } from 'access/domain/services/workspace-role-permissions.service';
 import type { WorkspaceCurrentUser } from 'shared/access/workspace-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { WorkspaceReadRepository } from 'shared/domain/repositories/workspace-read.repository';
-import type { WorkspacePermissionGrant } from 'shared/domain/repositories/workspace-role-lifecycle.repository';
 import { WorkspaceRoleLifecycleRepository } from 'shared/domain/repositories/workspace-role-lifecycle.repository';
-import { AccessName } from 'shared/domain/value-objects/access-name';
-import { validatedName } from 'shared/errors/invalid-name.error';
-
-// Trims, validates and returns a storable Workspace Role name via the shared
-// `AccessName` value object (AC-15a). Preserves submitted Unicode without
-// normalization (AC-14a) — only whitespace trimming is applied. Exported for
-// `update-workspace-role.command.ts` to reuse, mirroring
-// `rename-warehouse.command.ts` reusing `create-warehouse.command.ts`'s
-// `validateWarehouseName`.
-export const validateWorkspaceRoleName = (input: string): string =>
-  validatedName(() => AccessName.create(input).value);
-
-// AC-18 — every submitted Workspace Permission id must exist in the system
-// catalogue, be `assignable` (never `reserved`), and never be the reserved
-// `WORKSPACE_OWNER_ROLE:REASSIGN` Permission regardless of its catalogue
-// `kind`. Returns the matching catalogue rows (deduplicated) for the caller
-// to hand to `WorkspaceRoleLifecycleRepository`. Exported for
-// `update-workspace-role.command.ts` to reuse.
-export const assertAssignableWorkspacePermissions = async (
-  workspaceReadRepository: WorkspaceReadRepository,
-  permissionIds: readonly string[],
-): Promise<readonly WorkspacePermissionGrant[]> => {
-  const catalogue =
-    await workspaceReadRepository.listWorkspacePermissionCatalogue();
-  const catalogueIds = catalogue.map((permission) => permission.id);
-  const catalogueById = new Map(
-    catalogue.map((permission) => [permission.id, permission] as const),
-  );
-
-  const uniqueIds = [...new Set(permissionIds)];
-  for (const permissionId of uniqueIds) {
-    assert(
-      isKnownWorkspacePermission(catalogueIds, permissionId),
-      workspaceSystemManagedPermissionError(),
-    );
-    assert(
-      !isReservedWorkspaceOwnerReassignPermission(permissionId),
-      workspaceSystemManagedPermissionError(),
-    );
-    const catalogueEntry = catalogueById.get(permissionId);
-    assert(
-      catalogueEntry !== undefined &&
-        !isReservedWorkspacePermissionKind(catalogueEntry.kind),
-      workspaceSystemManagedPermissionError(),
-    );
-  }
-
-  return uniqueIds.map((permissionId) => {
-    const catalogueEntry = catalogueById.get(permissionId);
-    assert(
-      catalogueEntry !== undefined,
-      workspaceSystemManagedPermissionError(),
-    );
-    return { id: catalogueEntry.id, kind: catalogueEntry.kind };
-  });
-};
+import { validatedAccessName } from 'shared/errors/invalid-name.error';
 
 export interface CreateWorkspaceRoleInput {
   readonly name: string;
@@ -85,14 +23,6 @@ export interface WorkspaceRoleWriteProjection {
   readonly assignedMemberCount: number;
 }
 
-export interface CreateWorkspaceRoleRuntime {
-  readonly roleId: () => string;
-}
-
-const defaultCreateWorkspaceRoleRuntime: CreateWorkspaceRoleRuntime = {
-  roleId: randomUUID,
-};
-
 // `WORKSPACE_ROLES:CREATE`-guarded: creates a custom Workspace Role scoped to
 // `principal.workspaceId` (never a caller-supplied target), with a
 // per-Workspace exactly-unique name (AC-15) and zero or more `assignable`
@@ -104,8 +34,6 @@ export class CreateWorkspaceRoleCommand {
   constructor(
     private readonly workspaceRoleLifecycleRepository: WorkspaceRoleLifecycleRepository,
     private readonly workspaceReadRepository: WorkspaceReadRepository,
-    @Optional()
-    private readonly createWorkspaceRoleRuntime: CreateWorkspaceRoleRuntime = defaultCreateWorkspaceRoleRuntime,
   ) {}
 
   @Transactional()
@@ -113,8 +41,8 @@ export class CreateWorkspaceRoleCommand {
     currentUser: WorkspaceCurrentUser,
     input: CreateWorkspaceRoleInput,
   ): Promise<WorkspaceRoleWriteProjection> {
-    const name = validateWorkspaceRoleName(input.name);
-    const id = this.createWorkspaceRoleRuntime.roleId();
+    const name = validatedAccessName(input.name);
+    const id = randomUUID();
 
     const permissions = await assertAssignableWorkspacePermissions(
       this.workspaceReadRepository,
@@ -126,7 +54,7 @@ export class CreateWorkspaceRoleCommand {
         currentUser.workspaceId,
         name,
       );
-    assert(matchingRole === null, workspaceRoleNameConflictError());
+    assert(isNull(matchingRole), workspaceRoleNameConflictError());
 
     await this.workspaceRoleLifecycleRepository.createCustomRole(
       { id, workspaceId: currentUser.workspaceId, name },

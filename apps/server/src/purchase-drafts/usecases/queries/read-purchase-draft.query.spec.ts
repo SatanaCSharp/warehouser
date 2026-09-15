@@ -20,6 +20,7 @@ import { PermissionId } from '@warehouser/shared-types/enums';
 import { RejectionReasonLabelService } from 'purchase-drafts/domain/services/rejection-reason-label.service';
 import { ReadPurchaseDraftQuery } from 'purchase-drafts/usecases/queries/read-purchase-draft.query';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { describe, expect, it, vi } from 'vitest';
 
 const warehouseId = '00000000-0000-4000-8000-000000000001';
 const actorId = '00000000-0000-4000-8000-000000000002';
@@ -179,8 +180,8 @@ const purchaseDraftReadRepositoryDouble = (
   detail: unknown,
   redactedDetail: unknown = detail,
 ) => ({
-  readIdentifiedDraft: jest.fn().mockResolvedValue(detail),
-  readRedactedDraft: jest.fn().mockResolvedValue(redactedDetail),
+  readIdentifiedDraft: vi.fn().mockResolvedValue(detail),
+  readRedactedDraft: vi.fn().mockResolvedValue(redactedDetail),
 });
 
 // The principal `WarehouseAccessGuard` attaches to a request whose handler declared
@@ -199,7 +200,7 @@ const firstLinkOf = (detail: { lines: { links: unknown[] }[] }) =>
 // parameter — none of these cases assert on a Rejection's resolved label, so it never needs to
 // resolve anything.
 const catalogueDouble = () => ({
-  resolveRejectionReasons: jest.fn().mockResolvedValue([]),
+  resolveRejectionReasons: vi.fn().mockResolvedValue([]),
 });
 
 // One suite covering AC-16/AC-18/AC-09a's drift, redaction and ownership cases; splitting it

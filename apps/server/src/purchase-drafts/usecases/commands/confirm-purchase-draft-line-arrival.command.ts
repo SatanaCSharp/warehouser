@@ -1,4 +1,4 @@
-import { Injectable, Optional } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
 import { DemandAllocationService } from 'customer-orders/domain/services/demand-allocation.service';
 import { purchaseDraftConcurrentChangeError } from 'purchase-drafts/domain/errors/purchase-draft.errors';
@@ -7,6 +7,10 @@ import {
   buildEndingConditionInput,
   toEndingConditionSubmission,
 } from 'purchase-drafts/domain/mappers/purchase-draft-line-ending.mapper';
+import {
+  closedTheDraft,
+  recordedTheEnding,
+} from 'purchase-drafts/domain/predicates/purchase-draft-assembly.predicates';
 import {
   ArrivalInspectionService,
   deriveAcceptedQuantity,
@@ -18,7 +22,6 @@ import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import type { RecordLineEndingRejectionInput } from 'shared/domain/repositories/arrival-confirmation.repository';
 import { ArrivalConfirmationRepository } from 'shared/domain/repositories/arrival-confirmation.repository';
-
 export interface EndingAllocationInput {
   readonly purchaseDraftLineLinkId: string;
   readonly allocatedQuantity: number;
@@ -44,14 +47,6 @@ export interface PurchaseDraftLineEnded {
   readonly endingRecordedByUserId: string;
   readonly endingRecordedAt: Date;
 }
-
-export interface PurchaseDraftLineEndingRuntime {
-  readonly now: () => Date;
-}
-
-const defaultPurchaseDraftLineEndingRuntime: PurchaseDraftLineEndingRuntime = {
-  now: () => new Date(),
-};
 
 // AC-19/AC-20/AC-20a/AC-21 — the **Via Warehouse** half of the per-line ending (ADR 0002). What
 // arrived at the dock on one line, assigned across that line's linked Customer Orders.
@@ -82,8 +77,6 @@ export class ConfirmPurchaseDraftLineArrivalCommand {
     private readonly arrivalConfirmationRepository: ArrivalConfirmationRepository,
     private readonly demandAllocationService: DemandAllocationService,
     private readonly arrivalInspectionService: ArrivalInspectionService,
-    @Optional()
-    private readonly runtime: PurchaseDraftLineEndingRuntime = defaultPurchaseDraftLineEndingRuntime,
   ) {}
 
   @Transactional()
@@ -115,7 +108,7 @@ export class ConfirmPurchaseDraftLineArrivalCommand {
     );
 
     const acceptedQuantity = deriveAcceptedQuantity(submission);
-    const endingRecordedAt = this.runtime.now();
+    const endingRecordedAt = new Date();
 
     const written = await this.arrivalConfirmationRepository.recordLineEnding({
       purchaseDraftId,
@@ -129,7 +122,7 @@ export class ConfirmPurchaseDraftLineArrivalCommand {
     });
     // A pre-read that resolved legally but whose guarded write still affected zero rows is the
     // concurrency answer, distinct from the AC-20a refusal above (server-error-handling.md §3).
-    assert(written.recorded, purchaseDraftConcurrentChangeError());
+    assert(recordedTheEnding(written), purchaseDraftConcurrentChangeError());
 
     // Delegated only after the ending is written, so the bounds AC-18 re-checks are evaluated
     // against rows this same transaction already holds. Bounded by the derived Accepted Quantity
@@ -149,7 +142,7 @@ export class ConfirmPurchaseDraftLineArrivalCommand {
 
     return {
       id: purchaseDraftId,
-      state: written.closed ? 'closed' : 'ready_for_ordering',
+      state: closedTheDraft(written) ? 'closed' : 'ready_for_ordering',
       purchaseDraftLineId,
       endingRecordedByUserId: currentUser.userId,
       endingRecordedAt,

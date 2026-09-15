@@ -1,10 +1,9 @@
-import { readFileSync, readdirSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { describe, expect, it } from 'vitest';
-
 import baseline from 'test/baselines/warehouses-tab-cases.json';
+import { describe, expect, it } from 'vitest';
 
 /**
  * The case-inventory gate for the CH-W5 spec split
@@ -162,6 +161,19 @@ const ADDED_CASES: Record<string, string[]> = {
     'AC-10: offers the recorded address and its access notes to a holder of WAREHOUSES:ADDRESS_UPDATE',
     'AC-10: is absent, not disabled, for a member without WAREHOUSES:ADDRESS_UPDATE, and reads nothing',
     'AC-10: records a corrected address in place, sending the address and its access notes',
+    // CRAP Phase 1 — the two branches of the section's `submit` that the three cases above never
+    // reach: cleared access notes recorded as nothing, and a refusal explained on the field.
+    'AC-10: records cleared access notes as nothing rather than as an empty note',
+    'AC-10: explains a refused address on the address field',
+  ],
+  // CRAP Phase 1 — `WarehouseNameForm` was rendered only through `WarehouseDetailPane`, which has
+  // no spec, so neither of its refusal paths had ever run. The spec colocates beside its subject
+  // (placing-web-tests.md §1) and is enumerated here for the same reason every entry above is: the
+  // baseline is compared, never regenerated, and an addition nobody named fails as `unexpected`.
+  'WarehouseNameForm.spec.tsx': [
+    'AC-09: sends the corrected Name, trimmed',
+    'AC-08: refuses an empty Name on the field without sending it',
+    'AC-09: explains a server refusal on the Name field',
   ],
 };
 
@@ -251,6 +263,7 @@ const EXPECTED_DISTRIBUTION: Record<string, number> = {
   'WarehouseDeliveryAddressSection.spec.tsx': addedIn(
     'WarehouseDeliveryAddressSection.spec.tsx',
   ).length,
+  'WarehouseNameForm.spec.tsx': addedIn('WarehouseNameForm.spec.tsx').length,
 };
 
 const occurrences = (names: string[]): Map<string, number> =>

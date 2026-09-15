@@ -1,11 +1,9 @@
-import { useTranslation } from 'react-i18next';
-
+import type { WorkspaceMember } from '@warehouser/contracts/workspaces';
 import { WorkspaceMemberRow } from 'modules/access/components/workspace-administration/members/WorkspaceMemberRow';
 import { useWorkspaceRoles } from 'modules/access/hooks/queries/useWorkspaceRoles';
-import { Conditional } from 'shared/components/Conditional';
-
-import type { WorkspaceMember } from '@warehouser/contracts/workspaces';
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Conditional } from 'shared/components/Conditional';
 
 type WorkspaceMemberListProps = { members: WorkspaceMember[] };
 

@@ -3,14 +3,12 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
 import { Provider } from 'react-redux';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
+import type { AppRouter } from 'router';
 import { createAppRouter } from 'router';
 import { ROUTES } from 'shared/constants/routes';
-import { makeStore } from 'store';
-
-import type { AppRouter } from 'router';
 import type { AppStore } from 'store';
+import { makeStore } from 'store';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // T7 — `/` is the application's one landing resolver (CR-AC-08) and the
 // destination every unmatched address falls back to (CR-AC-16). These cases

@@ -1,11 +1,15 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type {
+  CustomerOrder,
+  CustomerOrderRedirect,
+} from '@warehouser/contracts/customer-orders';
+import type { Customer } from '@warehouser/contracts/customers';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { describe, expect, it, vi } from 'vitest';
-
 import { customerApi } from 'modules/customer/api/customer-api';
 import { RedirectCustomerOrderDialog } from 'modules/customer-order/components/demand-directory/components/RedirectCustomerOrderDialog';
 import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { DialogHost } from 'shared/components/DialogHost';
 import {
   accessIds,
@@ -13,13 +17,7 @@ import {
   stubAccessServer,
 } from 'test/access-fixtures';
 import { renderInEnteredWarehouse } from 'test/render';
-
-import type {
-  CustomerOrder,
-  CustomerOrderRedirect,
-} from '@warehouser/contracts/customer-orders';
-import type { Customer } from '@warehouser/contracts/customers';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import { describe, expect, it, vi } from 'vitest';
 
 // The dialog suppresses its refusal alert whenever the form carries a field
 // error, on the stated assumption that "the field explains it". This suite

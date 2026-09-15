@@ -27,6 +27,7 @@ import {
 import { ListPurchaseDraftLinesQuery } from 'purchase-drafts/usecases/queries/list-purchase-draft-lines.query';
 import { ReadPurchaseDraftQuery } from 'purchase-drafts/usecases/queries/read-purchase-draft.query';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { describe, expect, it, vi } from 'vitest';
 
 const warehouseId = '00000000-0000-4000-8000-000000000001';
 const actorId = '00000000-0000-4000-8000-000000000002';
@@ -148,7 +149,7 @@ const lineListEntryWith = (ending: unknown) => ({
 // `readIdentifiedDraft`/`readRedactedDraft` both selected the same columns for the same `cause`, so
 // one double serves both.
 const repositoryDouble = () => ({
-  readIdentifiedDraft: jest
+  readIdentifiedDraft: vi
     .fn()
     .mockImplementation((_id: string, _warehouseId: string, cause?: string) =>
       Promise.resolve(
@@ -157,7 +158,7 @@ const repositoryDouble = () => ({
         ),
       ),
     ),
-  readRedactedDraft: jest
+  readRedactedDraft: vi
     .fn()
     .mockImplementation((_id: string, _warehouseId: string, cause?: string) =>
       Promise.resolve(
@@ -166,7 +167,7 @@ const repositoryDouble = () => ({
         ),
       ),
     ),
-  listIdentifiedLines: jest
+  listIdentifiedLines: vi
     .fn()
     .mockImplementation(
       (_warehouseId: string, _filters?: unknown, cause?: string) =>
@@ -176,7 +177,7 @@ const repositoryDouble = () => ({
           ),
         ]),
     ),
-  listRedactedLines: jest
+  listRedactedLines: vi
     .fn()
     .mockImplementation(
       (_warehouseId: string, _filters?: unknown, cause?: string) =>
@@ -189,7 +190,7 @@ const repositoryDouble = () => ({
 });
 
 const catalogueDouble = () => ({
-  resolveRejectionReasons: jest.fn().mockResolvedValue([
+  resolveRejectionReasons: vi.fn().mockResolvedValue([
     {
       id: 'damaged_in_transit',
       label: 'Damaged in transit',

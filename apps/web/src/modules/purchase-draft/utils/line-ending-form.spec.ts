@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-
+import type { PurchaseDraftLine } from '@warehouser/contracts/purchase-drafts';
+import type { LineEndingForm } from 'modules/purchase-draft/utils/line-ending-form';
 import {
   conditionSplitViolationSchema,
   conformanceViolationSchema,
@@ -9,9 +9,7 @@ import {
   parseLineArrivalForm,
   parseLineDirectDeliveryForm,
 } from 'modules/purchase-draft/utils/line-ending-form';
-
-import type { PurchaseDraftLine } from '@warehouser/contracts/purchase-drafts';
-import type { LineEndingForm } from 'modules/purchase-draft/utils/line-ending-form';
+import { describe, expect, it } from 'vitest';
 
 // T15 — the seam `ConditionBlock`'s own spec deliberately does not cover: the
 // Condition Split as the two ending endpoints actually take it, built from the

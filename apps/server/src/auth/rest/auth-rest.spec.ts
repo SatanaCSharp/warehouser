@@ -5,6 +5,7 @@ import { RegisterCommand } from 'auth/usecases/commands/register.command';
 import { SignInCommand } from 'auth/usecases/commands/sign-in.command';
 import { SignOutCommand } from 'auth/usecases/commands/sign-out.command';
 import { CurrentSessionQuery } from 'auth/usecases/queries/current-session.query';
+import { describe, expect, it, vi } from 'vitest';
 
 const userId = '00000000-0000-4000-8000-000000000001';
 const expiresAt = new Date('2026-08-24T10:00:00.000Z');
@@ -20,13 +21,13 @@ const workspace = { id: '00000000-0000-4000-8000-000000000004', name: null };
 const workspacePermissionIds = ['WORKSPACE:RENAME', 'WAREHOUSES:CREATE'];
 
 const response = () => ({
-  cookie: jest.fn(),
-  status: jest.fn().mockReturnThis(),
+  cookie: vi.fn(),
+  status: vi.fn().mockReturnThis(),
 });
 
 const setup = () => {
   const register = {
-    execute: jest.fn().mockResolvedValue({
+    execute: vi.fn().mockResolvedValue({
       userId,
       sessionSecret: 'registration-secret',
       expiresAt,
@@ -36,16 +37,16 @@ const setup = () => {
     }),
   };
   const signIn = {
-    execute: jest.fn().mockResolvedValue({
+    execute: vi.fn().mockResolvedValue({
       userId,
       sessionSecret: 'sign-in-secret',
       expiresAt,
     }),
   };
   const currentSession = {
-    execute: jest.fn().mockResolvedValue({ userId }),
+    execute: vi.fn().mockResolvedValue({ userId }),
   };
-  const signOut = { execute: jest.fn().mockResolvedValue(undefined) };
+  const signOut = { execute: vi.fn().mockResolvedValue(undefined) };
   const cookie = new AuthCookie(true);
   const controller = new AuthController(
     register as unknown as RegisterCommand,

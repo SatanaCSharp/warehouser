@@ -1,15 +1,13 @@
 import { Alert } from '@heroui/react';
+import type { PurchaseDraftClosure } from '@warehouser/contracts/purchase-drafts';
+import type { ReactElement } from 'react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { Conditional } from 'shared/components/Conditional';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormTextField } from 'shared/components/FormTextField';
-
-import type { PurchaseDraftClosure } from '@warehouser/contracts/purchase-drafts';
-import type { ReactElement } from 'react';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 export type ClosePurchaseDraftDialogProps = {
   /** The draft's human reference, which the title names it by (`s5EPi`). */

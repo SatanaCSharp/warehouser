@@ -1,11 +1,10 @@
 import { Chip } from '@heroui/react';
-import { useTranslation } from 'react-i18next';
-
 import type {
   CustomerOrder,
   CustomerOrderState,
 } from '@warehouser/contracts/customer-orders';
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export type CustomerOrderStateChipProps = { order: CustomerOrder };
 

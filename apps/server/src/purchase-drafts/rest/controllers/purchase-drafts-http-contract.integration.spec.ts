@@ -28,6 +28,7 @@ import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
 import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
 import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 import { GlobalHttpExceptionFilter } from 'shared/errors/global-http-exception.filter';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 // Fixed clock for every seeded row, mirroring `customer-orders-http-contract.integration.spec.ts`:
 // `chk_warehouses_archival_order` and `chk_purchase_drafts_readiness_attribution` both compare
@@ -683,7 +684,7 @@ describe('purchase-drafts HTTP contract', () => {
 
       // AC-16 — `lastChangedAt` is what dates a drift statement (`Cancelled on 24 Aug`,
       // design frame `F0SpRx.png`). Parsing it through `purchaseDraftDetailSchema` above is the
-      // assertion that matters: `z.string().datetime()` refuses a timestamp carrying the session's
+      // assertion that matters: `z.iso.datetime()` refuses a timestamp carrying the session's
       // own UTC offset instead of a `Z`, which is what an uncast `timestamptz` inside
       // `json_build_object` would produce. An order still standing as it was recorded reports no
       // moment rather than its creation time.

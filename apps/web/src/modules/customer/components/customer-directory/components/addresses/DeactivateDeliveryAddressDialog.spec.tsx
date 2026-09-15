@@ -1,14 +1,12 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { CustomerDeliveryAddress } from '@warehouser/contracts/customers';
 import { ErrorCode } from '@warehouser/shared-types/enums';
-import { describe, expect, it, vi } from 'vitest';
-
 import { DeactivateDeliveryAddressDialog } from 'modules/customer/components/customer-directory/components/addresses/DeactivateDeliveryAddressDialog';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { DialogHost } from 'shared/components/DialogHost';
 import { renderWithProviders } from 'test/render';
-
-import type { CustomerDeliveryAddress } from '@warehouser/contracts/customers';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import { describe, expect, it, vi } from 'vitest';
 
 // delivery-addresses R8 — AC-06's address half (AC-06a/AC-06b) and AC-07's
 // refusal. `CustomerDirectory.spec.tsx` opens this dialog only to assert it

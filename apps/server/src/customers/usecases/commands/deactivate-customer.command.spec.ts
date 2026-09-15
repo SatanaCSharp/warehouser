@@ -6,10 +6,12 @@ import { ErrorCode } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
 import { CustomerAddressBookService } from 'customers/domain/services/customer-address-book.service';
 import { DeactivateCustomerCommand } from 'customers/usecases/commands/deactivate-customer.command';
-import { find, map } from 'lodash';
+import { find, map } from 'lodash-es';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import type { CustomerEntity } from 'shared/domain/entities/customer.entity';
 import type { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
+import { freezeClockAt } from 'test/doubles/frozen-clock';
+import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>
   `00000000-0000-4000-8000-${suffix.padStart(12, '0')}`;
@@ -78,13 +80,13 @@ const directoryRepositoryDouble = (
   rows: CustomerEntity[] = [storedCustomer()],
 ) => ({
   rows,
-  findCustomer: jest.fn((id: string, inWarehouseId: string) =>
+  findCustomer: vi.fn((id: string, inWarehouseId: string) =>
     Promise.resolve(
       find(rows, (row) => row.id === id && row.warehouseId === inWarehouseId) ??
         null,
     ),
   ),
-  findCustomerByName: jest.fn((inWarehouseId: string, name: string) =>
+  findCustomerByName: vi.fn((inWarehouseId: string, name: string) =>
     Promise.resolve(
       find(
         rows,
@@ -92,8 +94,8 @@ const directoryRepositoryDouble = (
       ) ?? null,
     ),
   ),
-  correctCustomerName: jest.fn(),
-  setCustomerDeactivation: jest.fn(
+  correctCustomerName: vi.fn(),
+  setCustomerDeactivation: vi.fn(
     (
       id: string,
       inWarehouseId: string,
@@ -125,13 +127,13 @@ const directoryRepositoryDouble = (
 const addressBookRepositoryDouble = (
   addresses: CustomerDeliveryAddressEntity[] = storedAddresses(),
 ) => ({
-  listDeliveryAddresses: jest.fn().mockResolvedValue(addresses),
-  lockDeliveryAddresses: jest.fn().mockResolvedValue(addresses),
-  addDeliveryAddress: jest.fn(),
-  reviseDeliveryAddress: jest.fn(),
-  setMainDeliveryAddress: jest.fn(),
-  deactivateDeliveryAddress: jest.fn(),
-  reactivateDeliveryAddress: jest.fn(),
+  listDeliveryAddresses: vi.fn().mockResolvedValue(addresses),
+  lockDeliveryAddresses: vi.fn().mockResolvedValue(addresses),
+  addDeliveryAddress: vi.fn(),
+  reviseDeliveryAddress: vi.fn(),
+  setMainDeliveryAddress: vi.fn(),
+  deactivateDeliveryAddress: vi.fn(),
+  reactivateDeliveryAddress: vi.fn(),
 });
 
 const commandWith = (
@@ -142,7 +144,6 @@ const commandWith = (
     directoryRepository as never,
     addressBookRepository as never,
     new CustomerAddressBookService(directoryRepository as never),
-    { now: () => now },
   );
 
 const refusal = async (
@@ -154,6 +155,8 @@ const refusal = async (
     },
     (error: unknown) => error as ApplicationError,
   );
+
+freezeClockAt(now);
 
 describe('DeactivateCustomerCommand (AC-06, AC-12)', () => {
   // AC-06 — "records it as Inactive … and keeps its name taken so no new Customer may reuse it".
@@ -177,7 +180,7 @@ describe('DeactivateCustomerCommand (AC-06, AC-12)', () => {
       now,
       now,
     );
-    expect(deactivated.deactivatedAt).toBe(now);
+    expect(deactivated.deactivatedAt).toEqual(now);
     // The name is untouched by the transition and still identifies this Customer.
     expect(deactivated.name).toBe('Test Customer North');
     expect(directoryRepository.correctCustomerName).not.toHaveBeenCalled();

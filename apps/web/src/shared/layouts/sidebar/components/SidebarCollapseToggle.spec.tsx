@@ -1,8 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
-
 import { SidebarCollapseToggle } from 'shared/layouts/sidebar/components/SidebarCollapseToggle';
+import { describe, expect, it, vi } from 'vitest';
 
 // The control that moves the list between its two widths. It owns neither the
 // preference nor the transition — `Sidebar` holds both through

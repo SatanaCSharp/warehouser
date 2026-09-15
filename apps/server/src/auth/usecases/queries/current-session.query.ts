@@ -1,4 +1,4 @@
-import { type AuthRuntime, authRuntime } from 'auth/domain/auth-runtime';
+import { isDefined } from '@warehouser/utils/predicates';
 import { toAuthenticatedCurrentUser } from 'auth/domain/mappers/authenticated-current-user.mapper';
 import { toSession } from 'auth/domain/mappers/session.mapper';
 import { digestSessionSecret } from 'auth/domain/security/session-secret';
@@ -6,24 +6,18 @@ import { UserId } from 'auth/domain/value-objects/identity-id';
 import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
 
 export class CurrentSessionQuery {
-  constructor(
-    private readonly authentication: AuthenticationRepository,
-    private readonly digestSecret: (
-      secret: string,
-    ) => Buffer = digestSessionSecret,
-    private readonly runtime: AuthRuntime = authRuntime,
-  ) {}
+  constructor(private readonly authentication: AuthenticationRepository) {}
 
   async execute(secret?: string): Promise<{ userId: string } | null> {
-    if (!secret) {
+    if (!isDefined(secret)) {
       return null;
     }
 
     const sessionEntity = await this.authentication.findValidSessionByDigest(
-      this.digestSecret(secret),
-      this.runtime.now(),
+      digestSessionSecret(secret),
+      new Date(),
     );
-    if (!sessionEntity) {
+    if (!isDefined(sessionEntity)) {
       return null;
     }
     const session = toSession(sessionEntity);

@@ -1,11 +1,5 @@
-import {
-  type MigrationInterface,
-  type QueryRunner,
-  Table,
-  TableCheck,
-  TableForeignKey,
-  TableUnique,
-} from 'typeorm';
+import type { MigrationInterface, QueryRunner } from 'typeorm';
+import { Table, TableCheck, TableForeignKey, TableUnique } from 'typeorm';
 
 // `CONTEXT.md` §Glossary "Rejection Reason": the catalogue is system-managed, extended only through
 // application migrations, and **never reworded or retired** — which is what makes AC-23a hold

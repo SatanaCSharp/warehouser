@@ -11,7 +11,9 @@ import { ApplicationError } from '@warehouser/shared-types/errors';
 import { DeactivateItemCommand } from 'items/usecases/commands/deactivate-item.command';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { ItemCatalogueRepository } from 'shared/domain/repositories/item-catalogue.repository';
+import { freezeClockAt } from 'test/doubles/frozen-clock';
 import { repositoryDouble } from 'test/doubles/repository-double';
+import { describe, expect, it, vi } from 'vitest';
 
 const warehouseId = '00000000-0000-4000-8000-000000000001';
 const actorId = '00000000-0000-4000-8000-000000000002';
@@ -33,9 +35,11 @@ const itemCatalogueRepositoryDouble = (
   item: { id: string; warehouseId: string; deactivatedAt: Date | null } | null,
 ) =>
   repositoryDouble<ItemCatalogueRepository>()({
-    findById: jest.fn().mockResolvedValue(item),
-    setDeactivatedAt: jest.fn().mockResolvedValue(undefined),
+    findById: vi.fn().mockResolvedValue(item),
+    setDeactivatedAt: vi.fn().mockResolvedValue(undefined),
   });
+
+freezeClockAt(deactivatedAt);
 
 describe('DeactivateItemCommand', () => {
   // AC-06d — deactivating an active Item records it as inactive; its SKU stays taken because
@@ -47,9 +51,7 @@ describe('DeactivateItemCommand', () => {
       warehouseId,
       deactivatedAt: null,
     });
-    const command = new DeactivateItemCommand(itemCatalogueRepository, {
-      now: () => deactivatedAt,
-    });
+    const command = new DeactivateItemCommand(itemCatalogueRepository);
 
     await command.execute(currentUser, activeItemId);
 
@@ -67,9 +69,7 @@ describe('DeactivateItemCommand', () => {
       warehouseId,
       deactivatedAt,
     });
-    const command = new DeactivateItemCommand(itemCatalogueRepository, {
-      now: () => deactivatedAt,
-    });
+    const command = new DeactivateItemCommand(itemCatalogueRepository);
 
     await expect(
       command.execute(currentUser, alreadyDeactivatedItemId),
@@ -85,9 +85,7 @@ describe('DeactivateItemCommand', () => {
       warehouseId: 'a-different-warehouse',
       deactivatedAt: null,
     });
-    const command = new DeactivateItemCommand(itemCatalogueRepository, {
-      now: () => deactivatedAt,
-    });
+    const command = new DeactivateItemCommand(itemCatalogueRepository);
 
     await expect(
       command.execute(currentUser, activeItemId),

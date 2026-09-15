@@ -1,11 +1,10 @@
 import { useListAccessRolesQuery } from 'modules/access/api/access-api';
 import { useAccessScope } from 'modules/access/hooks/projections/useAccessScope';
+import type { AccessRole } from 'modules/access/types/access.types';
+import type { AccessDataset } from 'modules/access/utils/access-dataset';
 import { toAccessDataset } from 'modules/access/utils/access-dataset';
 import { rolesReadPermissions } from 'modules/access/utils/access-permission-sets';
 import { useHasPermission } from 'shared/hooks/queries/usePermissions';
-
-import type { AccessRole } from 'modules/access/types/access.types';
-import type { AccessDataset } from 'modules/access/utils/access-dataset';
 
 /**
  * Roles, loaded once for whoever asks. Members (read-only Role-name lookup) and

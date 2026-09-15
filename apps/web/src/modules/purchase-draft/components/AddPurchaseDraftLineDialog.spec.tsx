@@ -1,18 +1,16 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { Item } from '@warehouser/contracts/items';
+import type { PurchaseDraftLineCreate } from '@warehouser/contracts/purchase-drafts';
 import { ErrorCode } from '@warehouser/shared-types/enums';
-import { describe, expect, it, vi } from 'vitest';
-
 import { itemApi } from 'modules/item/api/item-api';
 import { AddPurchaseDraftLineDialog } from 'modules/purchase-draft/components/AddPurchaseDraftLineDialog';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { DialogHost } from 'shared/components/DialogHost';
 import { accessIds, authenticatedStore } from 'test/access-fixtures';
 import { selectHeroOption } from 'test/hero-select';
 import { renderInEnteredWarehouse } from 'test/render';
-
-import type { Item } from '@warehouser/contracts/items';
-import type { PurchaseDraftLineCreate } from '@warehouser/contracts/purchase-drafts';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import { describe, expect, it, vi } from 'vitest';
 
 // AC-10 — the dialog that says what a draft is ordering. It is also the one
 // ordering dialog that passed no `onRefusal`: `FormModalDialog` applies field

@@ -1,6 +1,8 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { describe, expect, it } from 'vitest';
+
 // T9 — the executable form of the DoD's last bullet: "an architecture check proves the service is
 // reachable only through the module's declared public surface, and that customer-orders does not
 // import purchase-drafts". `customer-orders/usecases/usecase.module.ts` does not exist yet, so this
@@ -11,8 +13,8 @@ import { join } from 'node:path';
 // `readFileSync` + regex), narrowed to the two rules this task's DoD actually names rather than
 // reproducing that spec's full generality — `on-hand-write-boundary.spec.ts` sets the precedent for
 // a narrower, task-scoped boundary spec of this shape.
-const moduleDirectory = __dirname;
-const sourceRoot = join(__dirname, '..');
+const moduleDirectory = import.meta.dirname;
+const sourceRoot = join(import.meta.dirname, '..');
 const usecaseModulePath = join(
   moduleDirectory,
   'usecases',

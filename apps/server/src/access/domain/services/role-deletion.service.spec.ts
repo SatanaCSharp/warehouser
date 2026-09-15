@@ -1,14 +1,15 @@
 import { ErrorCode } from '@warehouser/shared-types/enums';
 import { RoleDeletionService } from 'access/domain/services/role-deletion.service';
 import { RoleLifecycleRepository } from 'shared/domain/repositories/role-lifecycle.repository';
+import { describe, expect, it, vi } from 'vitest';
 
 const warehouseId = '00000000-0000-4000-8000-000000000001';
 const sourceRoleId = '00000000-0000-4000-8000-000000000002';
 const replacementRoleId = '00000000-0000-4000-8000-000000000003';
 
 const repositoryDouble = () => ({
-  lockCustomRole: jest.fn().mockResolvedValue({ id: replacementRoleId }),
-  replaceRoleAssignments: jest.fn().mockResolvedValue(undefined),
+  lockCustomRole: vi.fn().mockResolvedValue({ id: replacementRoleId }),
+  replaceRoleAssignments: vi.fn().mockResolvedValue(undefined),
 });
 
 describe('RoleDeletionService', () => {

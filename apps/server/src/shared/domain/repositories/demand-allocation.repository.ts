@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { isEmpty, isUndefined } from '@warehouser/utils/predicates';
 import { getEntityManager } from 'shared/database/db-transaction-context.service';
 import { ArrivalAllocationEntity } from 'shared/domain/entities/arrival-allocation.entity';
 import type { CustomerOrderState } from 'shared/domain/entities/customer-order.entity';
@@ -50,7 +51,7 @@ export class DemandAllocationRepository {
     purchaseDraftLineLinkIds: readonly string[],
     warehouseId: string,
   ): Promise<LockedCustomerOrderForLink[]> {
-    if (purchaseDraftLineLinkIds.length === 0) {
+    if (isEmpty(purchaseDraftLineLinkIds)) {
       return [];
     }
 
@@ -90,7 +91,7 @@ export class DemandAllocationRepository {
 
     return rawRows.flatMap((row) => {
       const order = orderById.get(row.demand_id);
-      return order === undefined
+      return isUndefined(order)
         ? []
         : [{ purchaseDraftLineLinkId: row.link_id, order }];
     });
@@ -104,7 +105,7 @@ export class DemandAllocationRepository {
   ): Promise<CustomerOrderEntity[]> {
     const manager = getEntityManager(this.dataSource);
 
-    if (input.allocations.length > 0) {
+    if (!isEmpty(input.allocations)) {
       await manager.getRepository(ArrivalAllocationEntity).insert(
         input.allocations.map((allocation) => ({
           purchaseDraftLineLinkId: allocation.purchaseDraftLineLinkId,
@@ -117,7 +118,7 @@ export class DemandAllocationRepository {
       );
     }
 
-    if (input.orderUpdates.length === 0) {
+    if (isEmpty(input.orderUpdates)) {
       return [];
     }
 

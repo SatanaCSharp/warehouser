@@ -8,6 +8,15 @@ import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-memb
 import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 import { AuthenticationRepository } from 'shared/domain/repositories/authentication.repository';
 import type { DeepPartial } from 'typeorm';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from 'vitest';
 
 const now = new Date('2026-08-06T12:00:00.000Z');
 

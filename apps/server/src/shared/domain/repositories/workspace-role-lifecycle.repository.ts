@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { isEmpty } from '@warehouser/utils/predicates';
 import { getEntityManager } from 'shared/database/db-transaction-context.service';
 import { WorkspaceMembershipEntity } from 'shared/domain/entities/workspace-membership.entity';
 import { WorkspaceRoleEntity } from 'shared/domain/entities/workspace-role.entity';
@@ -47,7 +48,7 @@ export class WorkspaceRoleLifecycleRepository {
       kind: 'custom',
     });
     const grants = permissionRows(input.id, permissions);
-    if (grants.length > 0) {
+    if (!isEmpty(grants)) {
       await manager.getRepository(WorkspaceRolePermissionEntity).insert(grants);
     }
   }
@@ -108,7 +109,7 @@ export class WorkspaceRoleLifecycleRepository {
       .delete({ workspaceRoleId: roleId });
     const grants = permissionRows(roleId, permissions);
 
-    if (grants.length) {
+    if (!isEmpty(grants)) {
       await manager.getRepository(WorkspaceRolePermissionEntity).insert(grants);
     }
   }

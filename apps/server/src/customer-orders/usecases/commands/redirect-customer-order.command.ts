@@ -1,5 +1,5 @@
-import { Injectable, Optional } from '@nestjs/common';
-import { assert } from '@warehouser/utils/asserts';
+import { Injectable } from '@nestjs/common';
+import { assertDefined } from '@warehouser/utils/asserts';
 import { customerOrderInvalidDeliveryAddressError } from 'customer-orders/domain/errors/customer-order.errors';
 import type { CustomerOrder } from 'customer-orders/domain/mappers/customer-order.mapper';
 import { toCustomerOrder } from 'customer-orders/domain/mappers/customer-order.mapper';
@@ -9,14 +9,6 @@ import { CustomerOrderLifecycleService } from 'customer-orders/domain/services/c
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { CustomerOrderLifecycleRepository } from 'shared/domain/repositories/customer-order-lifecycle.repository';
-
-export interface RedirectCustomerOrderRuntime {
-  readonly now: () => Date;
-}
-
-const defaultRedirectCustomerOrderRuntime: RedirectCustomerOrderRuntime = {
-  now: () => new Date(),
-};
 
 export interface RedirectCustomerOrderInput {
   readonly customerDeliveryAddressId: string;
@@ -39,8 +31,6 @@ export class RedirectCustomerOrderCommand {
     private readonly customerOrderLifecycleRepository: CustomerOrderLifecycleRepository,
     private readonly customerOrderLifecycleService: CustomerOrderLifecycleService,
     private readonly customerOrderDestinationService: CustomerOrderDestinationService,
-    @Optional()
-    private readonly redirectCustomerOrderRuntime: RedirectCustomerOrderRuntime = defaultRedirectCustomerOrderRuntime,
   ) {}
 
   @Transactional()
@@ -49,7 +39,7 @@ export class RedirectCustomerOrderCommand {
     customerOrderId: string,
     input: RedirectCustomerOrderInput,
   ): Promise<CustomerOrder> {
-    const redirectedAt = this.redirectCustomerOrderRuntime.now();
+    const redirectedAt = new Date();
 
     // AC-11c/AC-12 — the locking read is scoped to the acting Warehouse, so an order of another
     // Warehouse and one that does not exist are one non-enumerating refusal; a Fulfilled or
@@ -65,7 +55,7 @@ export class RedirectCustomerOrderCommand {
     // book it could be redirected within. It surfaces as the one refusal the redirection has for a
     // destination it cannot accept (openapi.yaml `CustomerOrderRedirectConflict`).
     const { customerId } = locked.order;
-    assert(customerId !== null, customerOrderInvalidDeliveryAddressError());
+    assertDefined(customerId, customerOrderInvalidDeliveryAddressError());
 
     // AC-11c — the address is one of that same Customer's, and active. The read is scoped to the
     // Customer the order already names, so an address of another Customer is refused exactly as a

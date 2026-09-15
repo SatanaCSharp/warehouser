@@ -25,13 +25,14 @@ Your default effort is medium; on escalation the orchestrator may re-dispatch yo
 The task brief (`id`, `title`, `acs`, `dod`, `files_hint`) and the red handover from test-author (test path, run command, the quoted failing line). Read the real upstream yourself:
 
 - The applicable documents under `docs/system/` — they are the repository-wide architecture and
-  implementation source of truth. Select them by the files in the task:
-  - for `apps/server/**`, read `docs/system/server-architecture.md`, the applicable server guides,
-    and the accepted system ADRs; do not apply frontend-only instructions;
-  - for `apps/web/**`, read `docs/system/frontend-architecture.md`, the applicable web guides, and
-    the approved `design-handoff.md` for user-facing changes; do not apply server-only instructions;
-  - for shared packages or cross-application work, read only the system documents governing the
-    affected boundary.
+  implementation source of truth. **Do not select them by hand: invoke the `writing-app-code` skill
+  (`ai/skills/writing-app-code/SKILL.md`) before your first production edit** and follow it. It is
+  the repository's write-time architecture gate (`AGENTS.md` §Writing application code) and it owns
+  the changed-path → document selection for `apps/web/src` and `apps/server/src`, both indexes when
+  the task crosses the boundary. Read every document it selects in full — the prohibitions sit
+  beside the procedures, and a skim reaches the procedure and misses the ban. For user-facing web
+  changes also read the approved `design-handoff.md`. Do not apply one app's instructions to the
+  other's files.
 - `docs/features/<slug>/data-model.md` + the migration files — the schema your code targets.
 - `docs/features/<slug>/contracts/openapi.yaml` — the contract handlers must satisfy.
 - Accepted `adr/` and `sad.md` — the locked decisions and module boundaries. Stay inside this task's `files_hint`; do not edit other modules.
@@ -41,7 +42,7 @@ When a feature artifact, sibling convention, or `files_hint` conflicts with `doc
 server policy below, do not copy the conflict. Follow the durable guidance when the correction stays
 inside the task; otherwise escalate with the exact conflicting paths.
 
-Before editing, list the supplied system-document manifest and open every file in it. Extract the rules that constrain the task's changed files and keep that checklist through GREEN and REFACTOR. Do not generate production code until this read is complete. If the orchestrator omitted the manifest, derive it from `files_hint` and report the omission; do not treat absence as permission to skip `docs/system`.
+Before editing, list the supplied system-document manifest and open every file in it. Extract the rules that constrain the task's changed files and keep that checklist through GREEN and REFACTOR. Do not generate production code until this read is complete. If the orchestrator omitted the manifest, derive it by running `writing-app-code` yourself and report the omission; do not treat absence as permission to skip `docs/system`. Your own narrow brief is exactly the case that skill exists for — an orchestrator having read the architecture is not you having read it.
 
 ## Server implementation policy
 
@@ -186,7 +187,7 @@ the file:line and the reason instead of shipping it over budget.
 
 1. **GREEN** — write the **least** production code that turns the quoted failing assertion green. No speculative generality, no unrelated edits, nothing outside `files_hint`. Re-run the unit command; confirm the quoted failure is now green and nothing else broke.
 2. **REFACTOR** — tidy names, extract helpers, remove duplication, re-running tests after each change. If a refactor goes red and isn't trivially fixable, **revert it** — the GREEN is the goal, not the polish.
-3. **GATE** — run, per the commands you were given / detect: **unit** (must be green), **integration** (green if available; NON-red if Docker is absent under the auto policy), **lint** (if configured), **vet/typecheck** (if configured). Report each result.
+3. **GATE** — run, per the commands you were given / detect: **unit** (must be green), **integration** (green if available; NON-red if Docker is absent under the auto policy), **lint** (if configured), **vet/typecheck** (if configured). Report each result. In this repository that means each touched app's **`test:all`**, not `test`: `test` runs the unit tier only, and the architectural tier (`apps/web` and `apps/server`) plus the server integration tier are reachable only from `test:all`.
 4. **ARCHITECTURE CONFORMANCE** — inspect the final diff against every rule extracted from the system-document manifest, and against the complexity budget above. Fix violations inside scope. Otherwise escalate with the document path + section and changed file:line. Passing tests do not waive this gate.
 
 ## Rules

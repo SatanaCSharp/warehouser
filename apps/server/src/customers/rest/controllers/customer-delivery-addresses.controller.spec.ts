@@ -14,6 +14,7 @@ import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
 import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
 import { WriteRateLimitGuard } from 'shared/guards/write-rate-limit.guard';
 import { WRITE_RATE_LIMITED_KEY } from 'shared/guards/write-rate-limited.decorator';
+import { describe, expect, it } from 'vitest';
 
 // T10 — the address book's own transport metadata. A second controller rather than five more
 // handlers on `CustomersController`: the URL prefix is the Customer's address collection, and

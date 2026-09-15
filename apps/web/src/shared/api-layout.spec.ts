@@ -1,10 +1,9 @@
-import { existsSync, globSync, readFileSync, readdirSync } from 'node:fs';
+import type { Dirent } from 'node:fs';
+import { existsSync, globSync, readdirSync, readFileSync } from 'node:fs';
 import { posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
-
-import type { Dirent } from 'node:fs';
 
 // The static layout guard over `shared/api` (refactor-warehouse-components
 // CR-AC-05). It encodes the tree fixed by that request's `sad.md` §5.5: seven

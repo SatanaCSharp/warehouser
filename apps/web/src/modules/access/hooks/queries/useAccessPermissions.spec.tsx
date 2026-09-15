@@ -1,7 +1,5 @@
 import { waitFor } from '@testing-library/react';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { useAccessPermissions } from 'modules/access/hooks/queries/useAccessPermissions';
 import {
   accessIds,
@@ -10,6 +8,7 @@ import {
   stubAccessServer,
 } from 'test/access-fixtures';
 import { renderInEnteredWarehouse } from 'test/render';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // RED for T2 / CR-RG-02 — the one intended widening. `useAccessPermissions`'
 // skip set becomes `rolesTabPermissions` itself, so every actor the Roles tab

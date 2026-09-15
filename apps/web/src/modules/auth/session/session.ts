@@ -1,12 +1,11 @@
+import type { AuthenticatedUser } from '@warehouser/contracts/auth';
 import { authApi } from 'modules/auth/api/auth-api';
 import { selectAuthStatus } from 'modules/auth/store/auth.selectors';
+import type { AuthStatus } from 'modules/auth/store/auth.slice';
 import {
   authBecameAnonymous,
   authBecameAuthenticated,
 } from 'modules/auth/store/auth.slice';
-
-import type { AuthenticatedUser } from '@warehouser/contracts/auth';
-import type { AuthStatus } from 'modules/auth/store/auth.slice';
 import type { AppStore } from 'store';
 
 type RestoreSession = (store: AppStore) => Promise<AuthenticatedUser | null>;

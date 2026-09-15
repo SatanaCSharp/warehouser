@@ -1,17 +1,15 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
-import { customerApi } from 'modules/customer/api/customer-api';
-import { customerOrderApi } from 'modules/customer-order/api/customer-order-api';
-import { itemApi } from 'modules/item/api/item-api';
-import { purchaseDraftApi } from 'modules/purchase-draft/api/purchase-draft-api';
-import { makeStore } from 'store';
-import { accessIds } from 'test/access-fixtures';
-
 import type {
   PurchaseDraftDetail,
   PurchaseDraftSummary,
 } from '@warehouser/contracts/purchase-drafts';
+import { customerApi } from 'modules/customer/api/customer-api';
+import { customerOrderApi } from 'modules/customer-order/api/customer-order-api';
+import { itemApi } from 'modules/item/api/item-api';
+import { purchaseDraftApi } from 'modules/purchase-draft/api/purchase-draft-api';
 import type { AppStore } from 'store';
+import { makeStore } from 'store';
+import { accessIds } from 'test/access-fixtures';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // Every one of these twelve writes invalidated `PurchaseDrafts` and nothing
 // else, so three surfaces went stale behind a member's back: the Demand

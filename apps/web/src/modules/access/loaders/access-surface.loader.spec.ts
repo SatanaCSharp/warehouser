@@ -3,11 +3,11 @@ import { posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { accessApi } from 'modules/access/api/access-api';
+import type { AccessSurfaceContext } from 'modules/access/loaders/access-surface.loader';
 import { loadAccessSurface } from 'modules/access/loaders/access-surface.loader';
 import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
+import type { AppStore } from 'store';
 import {
   accessIds,
   accessMembers,
@@ -17,9 +17,7 @@ import {
   authenticatedStore,
   stubAccessServer,
 } from 'test/access-fixtures';
-
-import type { AccessSurfaceContext } from 'modules/access/loaders/access-surface.loader';
-import type { AppStore } from 'store';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const LOADER_SOURCE = posix.join(
   posix.dirname(fileURLToPath(import.meta.url)),

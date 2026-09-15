@@ -1,6 +1,6 @@
 /* eslint-disable no-relative-import-paths/no-relative-import-paths --
- * The modules in this directory are reached through `moduleNameMapper`, which
- * resolves the mapped path itself; keeping their own imports relative avoids
+ * The modules in this directory are reached through `resolve.alias`, which
+ * resolves the aliased path itself; keeping their own imports relative avoids
  * depending on that resolution twice.
  */
 /**
@@ -18,22 +18,23 @@
  * module, which is what makes the application and the test it is running
  * inside talk to the same rows.
  *
- * Jest gives every test file its own module registry, so "once" means once per
- * test file: each file gets a private database restored from the template
- * `global-setup` migrated.
+ * Vitest gives every test file its own module registry (`isolate: true`), so
+ * "once" means once per test file: each file gets a private database restored
+ * from the template `global-setup` migrated.
  */
 import { readFileSync } from 'node:fs';
 
 import { types } from '@electric-sql/pglite';
 import { PGliteDriver } from 'typeorm-pglite';
+import { inject } from 'vitest';
 
-import { PGLITE_TEMPLATE_ENV } from './runtime';
+import { PGLITE_TEMPLATE_KEY } from './runtime';
 
-const templatePath = process.env[PGLITE_TEMPLATE_ENV];
+const templatePath = inject(PGLITE_TEMPLATE_KEY);
 
 if (!templatePath) {
   throw new Error(
-    `${PGLITE_TEMPLATE_ENV} is not set — run this tier through jest.pglite.config.cjs`,
+    `${PGLITE_TEMPLATE_KEY} was not provided — run this tier through vitest.pglite.config.ts`,
   );
 }
 

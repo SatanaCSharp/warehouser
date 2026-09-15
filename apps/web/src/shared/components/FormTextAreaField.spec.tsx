@@ -1,11 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { useForm } from 'react-hook-form';
-import { describe, expect, it, vi } from 'vitest';
-
-import { FormTextAreaField } from 'shared/components/FormTextAreaField';
-
 import type { ReactElement } from 'react';
+import { useForm } from 'react-hook-form';
+import { FormTextAreaField } from 'shared/components/FormTextAreaField';
+import { describe, expect, it, vi } from 'vitest';
 
 // The multi-line counterpart of `FormTextField`: the same slots and the same
 // `register()` wiring, over a `<textarea>` so a value that is long by nature —

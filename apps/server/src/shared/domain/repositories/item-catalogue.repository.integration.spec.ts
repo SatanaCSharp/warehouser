@@ -21,12 +21,11 @@ import {
   buildWarehouse,
   buildWorkspace,
 } from 'test/factories/entity-factories';
-// `PostgresQueryRunner.prototype.query` is the one method every TypeORM access path — raw
-// `manager.query`, `repository.find`, and `QueryBuilder` alike — ultimately calls to reach
-// PostgreSQL. Spying on it, rather than on any higher-level TypeORM API, counts actual round trips
-// to the database regardless of which of those APIs the implementer chooses, which is what proves
-// "one query" rather than merely "one repository method call".
-import { PostgresQueryRunner } from 'typeorm/driver/postgres/PostgresQueryRunner';
+// Counts actual round trips to the database rather than calls to any higher-level TypeORM API,
+// regardless of which of those APIs the implementer chooses — which is what proves "one query"
+// rather than merely "one repository method call".
+import { withQueryCount } from 'test/pglite/query-recorder';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 const now = new Date('2026-08-25T12:00:00.000Z');
 
@@ -215,16 +214,6 @@ const registerIsNamedByDemandOrDraftTests = (): void => {
     // The single method under test, spied at the PostgreSQL round-trip level so an implementation
     // that reads customer_orders and purchase_draft_lines as two separate queries fails this test
     // even though it would return the same boolean.
-    const withQueryCount = async <T>(
-      run: () => Promise<T>,
-    ): Promise<{ result: T; queryCount: number }> => {
-      const spy = jest.spyOn(PostgresQueryRunner.prototype, 'query');
-      const before = spy.mock.calls.length;
-      const result = await run();
-      const queryCount = spy.mock.calls.length - before;
-      spy.mockRestore();
-      return { result, queryCount };
-    };
 
     it('is false in exactly one query when nothing names the Item', async () => {
       const workspaceId = await seedWorkspace();
@@ -648,16 +637,6 @@ const registerItemsWithOnHandAndLatestReasonTests = (): void => {
     // this test even though it would return the same rows —
     // creating-a-server-repository.md forbids "retrieving records separately and joining or
     // filtering them in application memory".
-    const withQueryCount = async <T>(
-      run: () => Promise<T>,
-    ): Promise<{ result: T; queryCount: number }> => {
-      const spy = jest.spyOn(PostgresQueryRunner.prototype, 'query');
-      const before = spy.mock.calls.length;
-      const result = await run();
-      const queryCount = spy.mock.calls.length - before;
-      spy.mockRestore();
-      return { result, queryCount };
-    };
 
     it('reports an Item with no adjustment yet with its on-hand figure and no reason', async () => {
       const workspaceId = await seedWorkspace();

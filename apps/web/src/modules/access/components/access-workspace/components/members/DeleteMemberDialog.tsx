@@ -1,10 +1,8 @@
-import { useTranslation } from 'react-i18next';
-
-import { ConfirmAlertDialog } from 'shared/components/ConfirmAlertDialog';
-
 import type { AccessMember } from 'modules/access/types/access.types';
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import { ConfirmAlertDialog } from 'shared/components/ConfirmAlertDialog';
 
 type DeleteMemberDialogProps = {
   member: Pick<AccessMember, 'email' | 'userId'>;

@@ -1,9 +1,12 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
+import type { MemberListProps } from 'modules/access/components/access-workspace/components/members/MemberList';
 import { MemberList } from 'modules/access/components/access-workspace/components/members/MemberList';
+import type {
+  AccessMember,
+  AccessRole,
+} from 'modules/access/types/access.types';
 import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
 import {
   accessIds,
@@ -11,12 +14,7 @@ import {
   stubAccessServer,
 } from 'test/access-fixtures';
 import { renderInEnteredWarehouse } from 'test/render';
-
-import type { MemberListProps } from 'modules/access/components/access-workspace/components/members/MemberList';
-import type {
-  AccessMember,
-  AccessRole,
-} from 'modules/access/types/access.types';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 /**
  * Each row decides for itself which of its three actions the actor may run, from

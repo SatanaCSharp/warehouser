@@ -13,18 +13,18 @@ import { ItemEntity } from 'shared/domain/entities/item.entity';
 import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
 import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity';
 import { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity';
-import {
-  type PurchaseDraftLineRejectionDisposition,
-  PurchaseDraftLineRejectionEntity,
-} from 'shared/domain/entities/purchase-draft-line-rejection.entity';
+import type { PurchaseDraftLineRejectionDisposition } from 'shared/domain/entities/purchase-draft-line-rejection.entity';
+import { PurchaseDraftLineRejectionEntity } from 'shared/domain/entities/purchase-draft-line-rejection.entity';
 import { UserEntity } from 'shared/domain/entities/user.entity';
 import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
 import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 import { PurchaseDraftRejectionRepository } from 'shared/domain/repositories/purchase-draft-rejection.repository';
+import { freezeClockAt } from 'test/doubles/frozen-clock';
 import {
   buildWarehouse,
   buildWorkspace,
 } from 'test/factories/entity-factories';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 // T11/AC-18 — **the first write this product aims at a Closed draft** (sad.md §6.4, and the notes of
 // `tasks/amend-rejection-command.md`). The command's state precondition is the Rejection and never
@@ -50,7 +50,6 @@ const transactions = new DbTransactionService(dataSource, context);
 
 const command = new AmendPurchaseDraftRejectionCommand(
   new PurchaseDraftRejectionRepository(dataSource),
-  { now: () => amendedAt },
 );
 
 /** `accounts.user_id` / `users.account_id` are a deferred circular FK pair, so both land together. */
@@ -335,6 +334,8 @@ const readRejection = (
   dataSource.manager
     .getRepository(PurchaseDraftLineRejectionEntity)
     .findOneBy({ id });
+
+freezeClockAt(amendedAt);
 
 describe('AmendPurchaseDraftRejectionCommand over a Closed draft', () => {
   beforeAll(async () => {

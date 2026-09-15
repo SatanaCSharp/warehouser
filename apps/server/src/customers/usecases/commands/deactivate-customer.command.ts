@@ -1,4 +1,4 @@
-import { Injectable, Optional } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import type { Customer } from 'customers/domain/mappers/customer.mapper';
 import { toCustomer } from 'customers/domain/mappers/customer.mapper';
 import {
@@ -10,14 +10,6 @@ import { Transactional } from 'shared/decorators/transactional.decorator';
 import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository';
 import { CustomerDirectoryRepository } from 'shared/domain/repositories/customer-directory.repository';
 
-export interface DeactivateCustomerRuntime {
-  readonly now: () => Date;
-}
-
-const defaultDeactivateCustomerRuntime: DeactivateCustomerRuntime = {
-  now: () => new Date(),
-};
-
 // AC-06/AC-12 — records a Customer Inactive (sad.md §6.3 steps 1 and 2). The write is the customer
 // row alone: its name stays taken so no new Customer may reuse it, every Customer Order already
 // naming it keeps reading and counting exactly as before, and **every one of its Delivery
@@ -28,8 +20,6 @@ export class DeactivateCustomerCommand {
     private readonly customerDirectoryRepository: CustomerDirectoryRepository,
     private readonly customerAddressBookRepository: CustomerAddressBookRepository,
     private readonly customerAddressBookService: CustomerAddressBookService,
-    @Optional()
-    private readonly deactivateCustomerRuntime: DeactivateCustomerRuntime = defaultDeactivateCustomerRuntime,
   ) {}
 
   @Transactional()
@@ -43,7 +33,7 @@ export class DeactivateCustomerCommand {
       currentUser.warehouseId,
     );
 
-    const deactivatedAt = this.deactivateCustomerRuntime.now();
+    const deactivatedAt = new Date();
     const outcome =
       await this.customerDirectoryRepository.setCustomerDeactivation(
         customerId,

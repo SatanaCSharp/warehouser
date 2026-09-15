@@ -6,6 +6,7 @@ import {
   itemSchema,
   onHandAdjustmentSchema,
 } from 'items';
+import { describe, expect, it } from 'vitest';
 
 // The shared `items` contract subpath (contracts/openapi.yaml `Item`, `ItemLatestAdjustment`,
 // `OnHandAdjustment`). Mirrors `customer-orders-contracts.spec.ts`: schemas are imported through
@@ -45,7 +46,10 @@ describe('items contracts', () => {
     // no root export, so an unexposed module is unreachable from both applications.
     it('declares ./items in the contract package exports', () => {
       const packageJson = JSON.parse(
-        readFileSync(join(__dirname, '..', '..', 'package.json'), 'utf8'),
+        readFileSync(
+          join(import.meta.dirname, '..', '..', 'package.json'),
+          'utf8',
+        ),
       ) as { exports: Record<string, unknown> };
 
       expect(packageJson.exports['./items']).toEqual({

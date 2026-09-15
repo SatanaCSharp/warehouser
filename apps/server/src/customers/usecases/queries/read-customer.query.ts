@@ -3,7 +3,7 @@ import { toCustomer } from 'customers/domain/mappers/customer.mapper';
 import type { CustomerDetail } from 'customers/domain/mappers/customer-awaiting-order.mapper';
 import { toCustomerAwaitingOrder } from 'customers/domain/mappers/customer-awaiting-order.mapper';
 import { CustomerAddressBookService } from 'customers/domain/services/customer-address-book.service';
-import { map } from 'lodash';
+import { map } from 'lodash-es';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository';
 import { CustomerAwaitingDemandRepository } from 'shared/domain/repositories/customer-awaiting-demand.repository';

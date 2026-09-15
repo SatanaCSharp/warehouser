@@ -1,3 +1,4 @@
+import { isDefined, isNull } from '@warehouser/utils/predicates';
 import { AccessName } from 'shared/domain/value-objects/access-name';
 
 /**
@@ -26,13 +27,13 @@ export class WorkspaceName {
    * domain unchecked.
    */
   static fromStored(stored: string | null): WorkspaceName {
-    return stored === null
+    return isNull(stored)
       ? WorkspaceName.unset()
       : WorkspaceName.create(stored);
   }
 
   get isSet(): boolean {
-    return this.name !== null;
+    return isDefined(this.name);
   }
 
   get value(): string | null {

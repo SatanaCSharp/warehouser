@@ -1,4 +1,5 @@
-import { filter, some } from 'lodash';
+import { isNull } from '@warehouser/utils/predicates';
+import { some } from 'lodash-es';
 
 // Pure predicates for Customer identity and the Delivery Address book (server-error-handling.md
 // §1). No NestJS, HTTP or TypeORM import here — `customers/domain/errors/customer.errors.ts` holds
@@ -40,7 +41,7 @@ export const isAccessNotes = (accessNotes: string): boolean =>
 // and `items.deactivated_at`. An Inactive address is not offered where an address is chosen.
 export const isActiveDeliveryAddress = (
   address: DeliveryAddressState,
-): boolean => address.deactivatedAt === null;
+): boolean => isNull(address.deactivatedAt);
 
 // AC-12/AC-23 — an address belongs to exactly one Customer, and one of another Customer is refused.
 export const isDeliveryAddressOfCustomer = (
@@ -55,16 +56,6 @@ export const isMainDeliveryAddressOf = (
 ): boolean =>
   some(addresses, (address) => address.id === addressId && address.isMain);
 
-// AC-05 / `chk_customer_delivery_addresses_main_is_active` — exactly one **active** address of a
-// Customer is its Main one at any moment. The rule the address-book commands assert at rest.
-export const hasExactlyOneMainActiveDeliveryAddress = (
-  addresses: readonly DeliveryAddressState[],
-): boolean =>
-  filter(
-    addresses,
-    (address) => address.isMain && isActiveDeliveryAddress(address),
-  ).length === 1;
-
 // AC-07 — a Customer always keeps at least one active Delivery Address, whether or not it has
 // Unfulfilled Customer Orders. Evaluated against the address rows read under lock at the moment of
 // the change (sad.md §6.3), which is why the whole set is the argument.
@@ -76,3 +67,10 @@ export const canDeactivateDeliveryAddress = (
     addresses,
     (address) => address.id !== addressId && isActiveDeliveryAddress(address),
   );
+
+// Which row of an address book a write is addressing. Named because the set is walked to rebuild it
+// with one row changed, and "the one being corrected" is the rule that walk turns on.
+export const isAddressedDeliveryAddress = (
+  candidate: { readonly id: string },
+  deliveryAddressId: string,
+): boolean => candidate.id === deliveryAddressId;

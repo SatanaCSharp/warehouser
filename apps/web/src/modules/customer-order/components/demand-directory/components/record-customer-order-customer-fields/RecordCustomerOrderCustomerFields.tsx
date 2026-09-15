@@ -1,10 +1,8 @@
 import { PermissionId } from '@warehouser/shared-types/enums';
-
-import { RecordCustomerOrderCustomerPickers } from 'modules/customer-order/components/demand-directory/components/record-customer-order-customer-fields/components/RecordCustomerOrderCustomerPickers';
-import { WarehousePermissionGate } from 'shared/components/WarehousePermissionGate';
-
 import type { RecordCustomerOrderCustomerPickersProps } from 'modules/customer-order/components/demand-directory/components/record-customer-order-customer-fields/components/RecordCustomerOrderCustomerPickers';
+import { RecordCustomerOrderCustomerPickers } from 'modules/customer-order/components/demand-directory/components/record-customer-order-customer-fields/components/RecordCustomerOrderCustomerPickers';
 import type { ReactNode } from 'react';
+import { WarehousePermissionGate } from 'shared/components/WarehousePermissionGate';
 
 /**
  * The gate around `RecordCustomerOrderCustomerPickers`.

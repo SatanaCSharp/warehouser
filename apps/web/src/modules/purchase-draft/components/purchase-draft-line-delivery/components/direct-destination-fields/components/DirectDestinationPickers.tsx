@@ -1,11 +1,9 @@
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-
 import { CustomerDeliveryAddressPicker } from 'modules/customer/components/CustomerDeliveryAddressPicker';
 import { CustomerPicker } from 'modules/customer/components/CustomerPicker';
 import { useCustomers } from 'modules/customer/hooks/queries/useCustomers';
-
 import type { ReactElement } from 'react';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export type DirectDestinationPickersProps = {
   isDisabled: boolean;

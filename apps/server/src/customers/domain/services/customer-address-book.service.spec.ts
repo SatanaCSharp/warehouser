@@ -15,6 +15,7 @@ import {
   nextMainDeliveryAddress,
 } from 'customers/domain/services/customer-address-book.service';
 import type { CustomerEntity } from 'shared/domain/entities/customer.entity';
+import { describe, expect, it, vi } from 'vitest';
 
 const holder = (
   overrides: Partial<CustomerNameHolder> = {},
@@ -298,8 +299,8 @@ const directoryDouble = (
   customer: CustomerEntity | null,
   holder: CustomerEntity | null = null,
 ) => ({
-  findCustomer: jest.fn().mockResolvedValue(customer),
-  findCustomerByName: jest.fn().mockResolvedValue(holder),
+  findCustomer: vi.fn().mockResolvedValue(customer),
+  findCustomerByName: vi.fn().mockResolvedValue(holder),
 });
 
 // One repository, because the service reaches one: the address-book writes and the lock they run

@@ -1,8 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { Item } from '@warehouser/contracts/items';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { itemApi } from 'modules/item/api/item-api';
 import { AddPurchaseDraftLineAction } from 'modules/purchase-draft/components/AddPurchaseDraftLineAction';
 import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
@@ -13,8 +12,7 @@ import {
 } from 'test/access-fixtures';
 import { selectHeroOption } from 'test/hero-select';
 import { renderInEnteredWarehouse } from 'test/render';
-
-import type { Item } from '@warehouser/contracts/items';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // AC-10 / AC-22 — adding a line is the step that turns an empty draft into one
 // that says what is being ordered, and the whole workflow had no test anywhere

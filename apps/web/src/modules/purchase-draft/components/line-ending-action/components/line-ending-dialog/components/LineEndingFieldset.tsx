@@ -1,0 +1,229 @@
+import type { PurchaseDraftLine } from '@warehouser/contracts/purchase-drafts';
+import sumBy from 'lodash/sumBy';
+import { ConditionBlock } from 'modules/purchase-draft/components/line-ending-action/components/line-ending-dialog/components/ConditionBlock';
+import { ConformanceBlock } from 'modules/purchase-draft/components/line-ending-action/components/line-ending-dialog/components/ConformanceBlock';
+import { EndingAssignmentRow } from 'modules/purchase-draft/components/line-ending-action/components/line-ending-dialog/components/EndingAssignmentRow';
+import { useLinkNaming } from 'modules/purchase-draft/hooks/projections/useLinkNaming';
+import type { LineEndingForm } from 'modules/purchase-draft/utils/line-ending-form';
+import {
+  isAssignableLink,
+  quantityOf,
+} from 'modules/purchase-draft/utils/line-ending-form';
+import type { ReactElement } from 'react';
+import type { FieldErrors, UseFormReturn } from 'react-hook-form';
+import { useWatch } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
+import { Conditional } from 'shared/components/Conditional';
+import { FormTextField } from 'shared/components/FormTextField';
+import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
+
+/**
+ * The live reading of the form session. Every field is optional because
+ * `useWatch` reports a form the member may not have touched yet — the narrowest
+ * shape the running total below is decided from, not the form itself.
+ */
+type LineEndingValues = {
+  allocations?: { allocatedQuantity?: string }[];
+  quantity?: string;
+};
+
+/** What the member has stated ended the line — `0` until a figure is typed. */
+const statedQuantityOf = (values: LineEndingValues | undefined): number =>
+  quantityOf(values?.quantity);
+
+/** One assignment as a whole number; a row nothing has been typed into is
+ * genuinely "assign nothing" rather than a refusal. */
+const allocatedQuantityOf = (
+  allocation: { allocatedQuantity?: string } | undefined,
+): number => quantityOf(allocation?.allocatedQuantity);
+
+/** Everything assigned so far. The positional array is totalled through Lodash
+ * rather than an empty-array fallback of its own: a form session that has not
+ * reported its rows yet totals nothing, which is the same answer without a
+ * defensive branch no caller can reach. */
+const assignedQuantityOf = (values: LineEndingValues | undefined): number =>
+  sumBy(values?.allocations, allocatedQuantityOf);
+
+/** Why the stated quantity was refused, when React Hook Form has refused it. */
+const quantityErrorOf = (
+  errors: FieldErrors<LineEndingForm>,
+): string | undefined => errors.quantity?.message;
+
+export type LineEndingFieldsetProps = {
+  form: UseFormReturn<LineEndingForm>;
+  /** Which of the two acts is being recorded — the copy, never the payload. */
+  kind: 'arrival' | 'directDelivery';
+  line: PurchaseDraftLine;
+};
+
+/**
+ * One line's ending (design-handoff.md `s5EPi`, ADR 0002): what arrived at the
+ * dock or what the customer received, and how much of it each linked Customer
+ * Order is assigned (AC-19).
+ *
+ * The running total below the assignments is a **live region**, so the figures
+ * are announced as they change rather than only on submit — the accessibility
+ * contract the approved design states for this modal. It reports what the
+ * member has entered and nothing more: it never refuses a figure, because the
+ * AC-18 bounds are re-checked by the server at the moment the confirmation is
+ * recorded, not when the member composed it. Its second sentence names each
+ * customer an assignment would fulfil, which is the one consequence of the
+ * confirmation that is not visible on the draft itself (AC-17a).
+ *
+ * Every figure it renders is group-separated (`1 180`, not `1180`): i18next
+ * interpolates `{{count}}` as a raw numeral, so the pluralizing count and the
+ * `{{formatted}}` string that actually renders are passed side by side, exactly
+ * as `modules/item` does (design-handoff.md § Numbers).
+ */
+export const LineEndingFieldset = ({
+  form,
+  kind,
+  line,
+}: LineEndingFieldsetProps): ReactElement => {
+  const { t } = useTranslation('purchase-draft');
+  const linkNaming = useLinkNaming();
+  const { quantity } = useLocaleFormat();
+  const {
+    formState: { errors, isSubmitting },
+    register,
+    setValue,
+  } = form;
+  const values = useWatch({ control: form.control });
+
+  const allocationOf = (allocationIndex: number): number =>
+    allocatedQuantityOf(values?.allocations?.[allocationIndex]);
+
+  const stated = statedQuantityOf(values);
+  const assigned = assignedQuantityOf(values);
+
+  // AC-17a — a Customer Order assigned the whole of what it is still waiting
+  // for leaves the consolidated demand, which the frame's running total says in
+  // its own sentence. Stated only for a link that can still be assigned to, and
+  // only once something has actually been assigned.
+  const fulfilling = line.links.flatMap((link, allocationIndex) =>
+    isAssignableLink(link) &&
+    link.current.outstandingQuantity > 0 &&
+    allocationOf(allocationIndex) >= link.current.outstandingQuantity
+      ? [
+          t('transitions.lineEnding.summaryFulfilled', {
+            customer: linkNaming(link),
+          }),
+        ]
+      : [],
+  );
+
+  const summary = [
+    t(`transitions.lineEnding.${kind}.summary`, {
+      assigned: quantity(assigned),
+      stated: quantity(stated),
+      unassigned: quantity(stated - assigned),
+    }),
+    ...fulfilling,
+  ].join(' ');
+
+  const onCommitAllocation =
+    (allocationIndex: number) =>
+    (allocatedQuantity: number): void =>
+      setValue(
+        `allocations.${allocationIndex}.allocatedQuantity`,
+        String(allocatedQuantity),
+      );
+
+  return (
+    <div className="rounded-xl border border-border-secondary bg-surface p-4">
+      <p className="font-semibold">
+        {t('transitions.lineEnding.lineHeading', {
+          description: line.itemDescription,
+          sku: line.itemSku,
+        })}
+      </p>
+      <p className="text-sm text-muted">
+        {t('transitions.lineEnding.ordered', {
+          count: line.orderedQuantity,
+          formatted: quantity(line.orderedQuantity),
+        })}
+      </p>
+
+      <FormTextField
+        className="mt-3 md:w-48"
+        isRequired
+        validationBehavior="aria"
+        type="number"
+        isDisabled={isSubmitting}
+        isInvalid={Boolean(errors.quantity)}
+        description={t(`transitions.lineEnding.${kind}.quantityDescription`)}
+        errorMessage={quantityErrorOf(errors)}
+        label={t(`transitions.lineEnding.${kind}.quantityLabel`, {
+          sku: line.itemSku,
+        })}
+        {...register('quantity')}
+      />
+
+      {/*
+        T15/design-handoff.md `W6TARi` cell `H0jcSr` — condition is stated
+        **before** assignment (spec §8), and never at all on a line where
+        nothing was received (AC-04a): a `0` presented has nothing to refuse
+        and nothing to accept.
+      */}
+      <Conditional when={stated > 0}>
+        <ConditionBlock
+          className="mt-4"
+          form={form}
+          itemSku={line.itemSku}
+          kind={kind}
+          ordered={line.orderedQuantity}
+          presented={stated}
+        />
+        {/*
+          T16/AC-04a — the conformance block is the condition block's sibling
+          in this same `Conditional`: nothing was received, so there is
+          nothing to judge either. Order is hard-ruled: presented → condition
+          → conformance → assign (design-handoff.md § States and interactions,
+          spec §8's third question).
+        */}
+        <ConformanceBlock
+          className="mt-4"
+          form={form}
+          packagingTypeId={line.packagingTypeId}
+          valueAddingNote={line.valueAddingNote}
+        />
+      </Conditional>
+
+      <h4 className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted">
+        {t('transitions.lineEnding.assignHeading')}
+      </h4>
+
+      <Conditional
+        when={line.links.length > 0}
+        otherwise={
+          <p className="mt-3 text-sm text-muted">
+            {t('transitions.lineEnding.noLinks')}
+          </p>
+        }
+      >
+        <ul className="mt-3 flex flex-col gap-2">
+          {line.links.map((link, allocationIndex) => (
+            <EndingAssignmentRow
+              key={link.id}
+              deliveryMode={line.deliveryMode}
+              isSubmitting={isSubmitting}
+              link={link}
+              onCommit={onCommitAllocation(allocationIndex)}
+            />
+          ))}
+        </ul>
+      </Conditional>
+
+      <p
+        aria-label={t('transitions.lineEnding.summaryLabel', {
+          sku: line.itemSku,
+        })}
+        aria-live="polite"
+        className="mt-3 text-sm text-muted"
+        role="status"
+      >
+        {summary}
+      </p>
+    </div>
+  );
+};

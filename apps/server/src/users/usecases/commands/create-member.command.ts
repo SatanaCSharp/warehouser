@@ -1,9 +1,8 @@
 import { randomUUID } from 'node:crypto';
 
 import { Injectable } from '@nestjs/common';
-import { ErrorCode } from '@warehouser/shared-types/enums';
-import { ApplicationError } from '@warehouser/shared-types/errors';
 import { assert, assertDefined } from '@warehouser/utils/asserts';
+import { isDefined } from '@warehouser/utils/predicates';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { AccessCurrentUserRepository } from 'shared/domain/repositories/access-current-user.repository';
@@ -11,15 +10,19 @@ import { AuthenticationRepository } from 'shared/domain/repositories/authenticat
 import { MemberLifecycleRepository } from 'shared/domain/repositories/member-lifecycle.repository';
 import { RoleLifecycleRepository } from 'shared/domain/repositories/role-lifecycle.repository';
 import { EmailAddress } from 'shared/domain/security/email-address';
-import { isSupportedEmail } from 'shared/domain/security/is-supported-email';
-import { isSupportedPassword } from 'shared/domain/security/is-supported-password';
 import { Password } from 'shared/domain/security/password';
 import { hashPassword } from 'shared/domain/security/password-hashing';
+import {
+  isSupportedEmail,
+  isSupportedPassword,
+} from 'shared/predicates/credential.predicates';
 import {
   emailAlreadyRegisteredError,
   invalidInputError,
   permissionExceededError,
   reservedRoleSelectionError,
+  roleUnavailableError,
+  targetUnavailableError,
 } from 'users/domain/errors/users.errors';
 import {
   exceedsActorPermissions,
@@ -38,31 +41,6 @@ export interface CreatedMember {
   readonly roleId: string;
 }
 
-export interface CreateMemberRuntime {
-  readonly identityId: () => string;
-  readonly now: () => Date;
-}
-
-// AC-09/AC-16's cross-Warehouse-hiding and Permission-exceeded denials are the
-// identical authorization-boundary conditions `access` already produces for
-// its own administration actions (sad.md §4) — this feature reuses the same
-// stable ErrorCode rather than redefining it, without importing `access`'s
-// feature-owned error factories (`users` never imports `access/*`/`auth/*`).
-const targetUnavailableError = (): ApplicationError =>
-  new ApplicationError(ErrorCode.ACCESS_TARGET_UNAVAILABLE);
-
-// A missing/cross-Warehouse Role is the Role-not-found case specifically —
-// distinct from the actor's own membership resolution above — and reuses
-// `access`'s stable `ACCESS_ROLE_UNAVAILABLE` code for the same reason
-// `targetUnavailableError` reuses `ACCESS_TARGET_UNAVAILABLE`.
-const roleUnavailableError = (): ApplicationError =>
-  new ApplicationError(ErrorCode.ACCESS_ROLE_UNAVAILABLE);
-
-const defaultRuntime: CreateMemberRuntime = {
-  identityId: () => randomUUID(),
-  now: () => new Date(),
-};
-
 @Injectable()
 export class CreateMemberCommand {
   constructor(
@@ -70,8 +48,6 @@ export class CreateMemberCommand {
     private readonly roleLifecycleRepository: RoleLifecycleRepository,
     private readonly memberLifecycleRepository: MemberLifecycleRepository,
     private readonly authenticationRepository: AuthenticationRepository,
-    private readonly hash: typeof hashPassword = hashPassword,
-    private readonly runtime: CreateMemberRuntime = defaultRuntime,
   ) {}
 
   @Transactional()
@@ -124,13 +100,13 @@ export class CreateMemberCommand {
       permissionExceededError(),
     );
 
-    const emailSupported = isSupportedEmail(input.email);
-    const passwordSupported = isSupportedPassword(input.password);
     assert(
-      emailSupported && passwordSupported,
+      isSupportedEmail(input.email) && isSupportedPassword(input.password),
       invalidInputError({
-        ...(!emailSupported && { email: 'unsupported' }),
-        ...(!passwordSupported && { password: 'unsupported' }),
+        ...(isSupportedEmail(input.email) ? {} : { email: 'unsupported' }),
+        ...(isSupportedPassword(input.password)
+          ? {}
+          : { password: 'unsupported' }),
       }),
     );
 
@@ -138,15 +114,17 @@ export class CreateMemberCommand {
     const password = Password.create(input.password);
 
     assert(
-      !(await this.authenticationRepository.findAccountByNormalizedEmail(
-        email.value,
-      )),
+      !isDefined(
+        await this.authenticationRepository.findAccountByNormalizedEmail(
+          email.value,
+        ),
+      ),
       emailAlreadyRegisteredError(),
     );
 
-    const credential = await this.hash(password.value);
-    const identityId = this.runtime.identityId();
-    const now = this.runtime.now();
+    const credential = await hashPassword(password.value);
+    const identityId = randomUUID();
+    const now = new Date();
 
     // Creation issues no Session (unlike registration) — the new member
     // signs in later through the existing, unmodified sign-in command

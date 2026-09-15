@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { Customer } from 'customers/domain/mappers/customer.mapper';
 import { toCustomer } from 'customers/domain/mappers/customer.mapper';
-import { groupBy, map } from 'lodash';
+import { groupBy, map } from 'lodash-es';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository';
 import type { ListCustomersFilter } from 'shared/domain/repositories/customer-directory.repository';

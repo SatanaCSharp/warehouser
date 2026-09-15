@@ -2,6 +2,7 @@ import { PermissionId } from '@warehouser/shared-types/enums';
 import { AssertionError } from '@warehouser/shared-types/errors';
 import { ReadCustomerOrderQuery } from 'customer-orders/usecases/queries/read-customer-order.query';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { describe, expect, it, vi } from 'vitest';
 
 // T13 — the read-back projection every Customer Order **mutation** answers with (openapi.yaml
 // `recordCustomerOrder`, `amendCustomerOrder`, `redirectCustomerOrder`, `cancelCustomerOrder`).
@@ -76,8 +77,8 @@ const redactedRow = {
 };
 
 const repositoryDouble = () => ({
-  listIdentifiedCustomerOrders: jest.fn().mockResolvedValue([identifiedRow]),
-  listRedactedCustomerOrders: jest.fn().mockResolvedValue([redactedRow]),
+  listIdentifiedCustomerOrders: vi.fn().mockResolvedValue([identifiedRow]),
+  listRedactedCustomerOrders: vi.fn().mockResolvedValue([redactedRow]),
 });
 
 const queryOver = (repository: ReturnType<typeof repositoryDouble>) =>

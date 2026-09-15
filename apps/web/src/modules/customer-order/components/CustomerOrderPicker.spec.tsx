@@ -1,11 +1,9 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
-
+import type { CustomerOrder } from '@warehouser/contracts/customer-orders';
 import { CustomerOrderPicker } from 'modules/customer-order/components/CustomerOrderPicker';
 import { renderWithProviders } from 'test/render';
-
-import type { CustomerOrder } from '@warehouser/contracts/customer-orders';
+import { describe, expect, it, vi } from 'vitest';
 
 // T19 — the Customer Order picker `modules/purchase-draft` reaches through
 // this module's declared public surface (AC-10, AC-11a). Colocated with the

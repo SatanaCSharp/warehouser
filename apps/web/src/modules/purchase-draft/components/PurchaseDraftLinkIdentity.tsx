@@ -1,10 +1,8 @@
-import { useTranslation } from 'react-i18next';
-
-import { purchaseDraftLinkIdentity } from 'modules/purchase-draft/utils/link-identity';
-
 import type { PurchaseDraftLineLink } from '@warehouser/contracts/purchase-drafts';
 import type { PurchaseDraftLinkIdentityKind } from 'modules/purchase-draft/utils/link-identity';
+import { purchaseDraftLinkIdentity } from 'modules/purchase-draft/utils/link-identity';
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export type PurchaseDraftLinkIdentityProps = {
   link: PurchaseDraftLineLink;

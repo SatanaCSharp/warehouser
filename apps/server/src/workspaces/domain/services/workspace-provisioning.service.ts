@@ -1,9 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
-import {
-  type InitialAccessProjection,
-  ProvisionInitialAccessCommand,
-} from 'access/usecases/commands/provision-initial-access.command';
+import type { InitialAccessProjection } from 'access/usecases/commands/provision-initial-access.command';
+import { ProvisionInitialAccessCommand } from 'access/usecases/commands/provision-initial-access.command';
 import { WorkspaceProvisioningRepository } from 'shared/domain/repositories/workspace-provisioning.repository';
 import { AccessName } from 'shared/domain/value-objects/access-name';
 

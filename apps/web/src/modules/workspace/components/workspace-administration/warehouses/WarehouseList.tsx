@@ -1,12 +1,10 @@
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-
+import type { Warehouse } from '@warehouser/contracts/workspaces';
 import { WarehouseRow } from 'modules/workspace/components/workspace-administration/warehouses/WarehouseRow';
 import { WarehouseSearchField } from 'modules/workspace/components/workspace-administration/warehouses/WarehouseSearchField';
-import { ROW_ENTER } from 'shared/constants/motion';
-
-import type { Warehouse } from '@warehouser/contracts/workspaces';
 import type { ReactElement } from 'react';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ROW_ENTER } from 'shared/constants/motion';
 
 type WarehouseListProps = {
   className?: string;
@@ -55,8 +53,13 @@ const displacingStates: readonly {
 ];
 
 /** The first state that holds, or `ready` when the rows are what to render. */
-const resolveListState = (reading: WarehouseListReading): WarehouseListState =>
-  displacingStates.find(({ holds }) => holds(reading))?.state ?? 'ready';
+const resolveListState = (
+  reading: WarehouseListReading,
+): WarehouseListState => {
+  const displacing = displacingStates.find(({ holds }) => holds(reading));
+
+  return displacing?.state ?? 'ready';
+};
 
 /** Case-insensitive substring match on a Warehouse's name. */
 const nameContains =

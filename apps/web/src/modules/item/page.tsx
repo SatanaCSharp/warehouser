@@ -1,12 +1,10 @@
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { useTranslation } from 'react-i18next';
-
 import { ItemDirectory } from 'modules/item/components/item-directory/ItemDirectory';
+import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ArchivedWarehouseChip } from 'shared/components/ArchivedWarehouseChip';
 import { ArchivedWarehouseNotice } from 'shared/components/ArchivedWarehouseNotice';
 import { useCurrentPermissions } from 'shared/hooks/queries/usePermissions';
-
-import type { ReactElement } from 'react';
 
 /**
  * The Items destination (T18, design-handoff.md `XIvAZ`/`VHU6r`). The route

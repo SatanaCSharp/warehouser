@@ -14,6 +14,7 @@ import { ListCustomersQuery } from 'customers/usecases/queries/list-customers.qu
 import { ReadCustomerQuery } from 'customers/usecases/queries/read-customer.query';
 import { CustomersUsecaseModule } from 'customers/usecases/usecase.module';
 import { DataSource } from 'typeorm';
+import { describe, expect, it } from 'vitest';
 
 // `CustomersUsecaseModule` declares its own repositories as local providers rather than reaching
 // them from the `@Global()` `DomainModule`, exactly as `customer-orders` and `purchase-drafts` do.
@@ -86,8 +87,7 @@ describe('CustomersUsecaseModule Nest DI graph', () => {
 
   // sad.md §5 — the Customer lifecycle and address-book commands **are** the module's public
   // surface, and each one constructs from the providers this module declares. Compiling the graph
-  // is what catches a constructor parameter Nest cannot resolve — including the `@Optional()`
-  // runtime each command falls back to a default for.
+  // is what catches a constructor parameter Nest cannot resolve.
   it('resolves every Customer use case for a module outside customers', async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [TestDataSourceDoubleModule, OutsideCommandModule],

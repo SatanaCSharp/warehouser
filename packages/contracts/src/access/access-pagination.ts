@@ -10,8 +10,8 @@ const paginationLimitSchema = z.coerce
 
 export const uuidPaginationSchema = z
   .strictObject({
-    after: z.string().uuid().optional(),
-    before: z.string().uuid().optional(),
+    after: z.uuid().optional(),
+    before: z.uuid().optional(),
     limit: paginationLimitSchema,
   })
   .refine(({ after, before }) => after === undefined || before === undefined, {

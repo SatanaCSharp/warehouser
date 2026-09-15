@@ -1,4 +1,5 @@
 import { assert } from '@warehouser/utils/asserts';
+import { isNull } from '@warehouser/utils/predicates';
 import { customerInvalidInputError } from 'customers/domain/errors/customer.errors';
 import { isAccessNotes } from 'customers/domain/predicates/customer.predicates';
 
@@ -18,7 +19,7 @@ export class AccessNotes {
   private constructor(readonly value: string | null) {}
 
   static create(input: string | null): AccessNotes {
-    if (input === null) {
+    if (isNull(input)) {
       return new AccessNotes(null);
     }
 

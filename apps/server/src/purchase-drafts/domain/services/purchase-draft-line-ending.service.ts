@@ -1,4 +1,4 @@
-import { assert } from '@warehouser/utils/asserts';
+import { assert, assertDefined } from '@warehouser/utils/asserts';
 import {
   purchaseDraftEndingAlreadyRecordedError,
   purchaseDraftEndingModeMismatchError,
@@ -54,10 +54,8 @@ export function assertAdmitsEnding(
 } {
   // One refusal for a draft that is not this Warehouse's, a line that is not this draft's, and a
   // line that does not exist — spec.md §6.1, so no refusal enumerates what exists elsewhere.
-  assert(
-    locked.draft !== null && locked.line !== null,
-    purchaseDraftTargetUnavailableError(),
-  );
+  assertDefined(locked.draft, purchaseDraftTargetUnavailableError());
+  assertDefined(locked.line, purchaseDraftTargetUnavailableError());
 
   // sad.md §6.10 step 2 — a draft already Closed, closed with a reason or discarded never reaches
   // the guarded write. A concurrent last ending that closes it between this read and the write is

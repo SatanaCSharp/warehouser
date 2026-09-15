@@ -1,4 +1,9 @@
 import { Injectable } from '@nestjs/common';
+import { isDefined, isEmpty } from '@warehouser/utils/predicates';
+import {
+  namesCookie,
+  statesCookieValue,
+} from 'auth/domain/predicates/session-cookie.predicates';
 
 export const AUTH_SESSION_COOKIE = 'warehouser_session';
 
@@ -21,17 +26,17 @@ const decodeCookieValue = (value: string): string | undefined => {
 export const readSessionCookie = (
   cookieHeader: string | undefined,
 ): string | undefined => {
-  if (!cookieHeader) {
+  if (!isDefined(cookieHeader) || isEmpty(cookieHeader)) {
     return undefined;
   }
 
   for (const part of cookieHeader.split(';')) {
     const separator = part.indexOf('=');
-    if (separator < 0) {
+    if (!statesCookieValue(separator)) {
       continue;
     }
     const name = part.slice(0, separator).trim();
-    if (name === AUTH_SESSION_COOKIE) {
+    if (namesCookie(name, AUTH_SESSION_COOKIE)) {
       return decodeCookieValue(part.slice(separator + 1).trim());
     }
   }

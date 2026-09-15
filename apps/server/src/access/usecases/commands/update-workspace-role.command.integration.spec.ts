@@ -28,6 +28,7 @@ import {
   buildWorkspaceRole,
   persistWorkspaceGraph,
 } from 'test/factories/entity-factories';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 // Same grapheme composed (U+00E9) vs. decomposed (e + U+0301) — storing must
 // not fold one into the other (AC-14a).

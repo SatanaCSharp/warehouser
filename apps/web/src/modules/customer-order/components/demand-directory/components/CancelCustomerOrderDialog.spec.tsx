@@ -1,18 +1,16 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ErrorCode } from '@warehouser/shared-types/enums';
-import { describe, expect, it, vi } from 'vitest';
-
-import { CancelCustomerOrderDialog } from 'modules/customer-order/components/demand-directory/components/CancelCustomerOrderDialog';
-import { DialogHost } from 'shared/components/DialogHost';
-import { accessIds } from 'test/access-fixtures';
-import { renderWithProviders } from 'test/render';
-
 import type {
   CustomerOrder,
   CustomerOrderCancellation,
 } from '@warehouser/contracts/customer-orders';
+import { ErrorCode } from '@warehouser/shared-types/enums';
+import { CancelCustomerOrderDialog } from 'modules/customer-order/components/demand-directory/components/CancelCustomerOrderDialog';
 import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import { DialogHost } from 'shared/components/DialogHost';
+import { accessIds } from 'test/access-fixtures';
+import { renderWithProviders } from 'test/render';
+import { describe, expect, it, vi } from 'vitest';
 
 // AC-19a and BRIEF §A. Every refusal this dialog can receive names the reason
 // field: an empty reason arrives as the Zod code `tooSmall` the server lifted

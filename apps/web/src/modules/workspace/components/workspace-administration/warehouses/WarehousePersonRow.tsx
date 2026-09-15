@@ -1,20 +1,18 @@
 import { AlertDialog, Button } from '@heroui/react';
+import type {
+  Warehouse,
+  WorkspaceUser,
+} from '@warehouser/contracts/workspaces';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import { useTranslation } from 'react-i18next';
-
 import { selectCurrentUser } from 'modules/auth/store/auth.selectors';
 import { WithdrawWarehouseAccessDialog } from 'modules/workspace/components/workspace-administration/warehouses/WithdrawWarehouseAccessDialog';
+import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Conditional } from 'shared/components/Conditional';
 import { TriggeredDialog } from 'shared/components/TriggeredDialog';
 import { WorkspacePermissionGate } from 'shared/components/WorkspacePermissionGate';
 import { ROW_ENTER } from 'shared/constants/motion';
 import { useAppSelector } from 'store/hooks';
-
-import type {
-  Warehouse,
-  WorkspaceUser,
-} from '@warehouser/contracts/workspaces';
-import type { ReactElement } from 'react';
 
 type WarehousePersonRowProps = {
   person: WorkspaceUser;

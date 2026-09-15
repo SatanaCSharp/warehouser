@@ -1,9 +1,7 @@
-import { useTranslation } from 'react-i18next';
-
-import { useItemNaming } from 'modules/item/hooks/projections/useItemNaming';
-
 import type { Item } from '@warehouser/contracts/items';
+import { useItemNaming } from 'modules/item/hooks/projections/useItemNaming';
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export type ItemCardMetaProps = {
   item: Item;

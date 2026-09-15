@@ -1,11 +1,12 @@
 import { ForbiddenException } from '@nestjs/common';
 import { OriginPolicy } from 'shared/config/origin-policy';
+import { describe, expect, it, vi } from 'vitest';
 
 describe('OriginPolicy', () => {
   const policy = new OriginPolicy(['https://app.example.test']);
 
   it('allows credentialed CORS only for a configured application origin', () => {
-    const callback = jest.fn();
+    const callback = vi.fn();
 
     policy.verifyCorsOrigin('https://app.example.test', callback);
     policy.verifyCorsOrigin('https://attacker.example.test', callback);

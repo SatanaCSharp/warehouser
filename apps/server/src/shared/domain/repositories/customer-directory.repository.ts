@@ -1,8 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { zipWith } from 'lodash';
+import { isNull } from '@warehouser/utils/predicates';
+import { zipWith } from 'lodash-es';
 import { getEntityManager } from 'shared/database/db-transaction-context.service';
 import { CustomerEntity } from 'shared/domain/entities/customer.entity';
 import { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
+import { listsActiveOnly } from 'shared/predicates/persistence-read.predicates';
+import { reportsExactlyOneRow } from 'shared/predicates/persistence-write.predicates';
 import { DataSource, IsNull, Not } from 'typeorm';
 
 // openapi.yaml `Customer` — one directory row: the Customer as it stands, which of its addresses is
@@ -35,7 +38,7 @@ export type CustomerWriteOutcome = 'applied' | 'customer-unavailable';
 const toCustomerWriteOutcome = (
   affected: number | null | undefined,
 ): CustomerWriteOutcome =>
-  affected === 1 ? 'applied' : 'customer-unavailable';
+  reportsExactlyOneRow(affected) ? 'applied' : 'customer-unavailable';
 
 interface CustomerDirectoryRawRow {
   readonly mainDeliveryAddressId: string | null;
@@ -116,7 +119,7 @@ export class CustomerDirectoryRepository {
       .where('customer.warehouseId = :warehouseId', { warehouseId })
       .orderBy('customer.name', 'ASC');
 
-    if (filter.activeOnly === true) {
+    if (listsActiveOnly(filter)) {
       query.andWhere('customer.deactivatedAt IS NULL');
     }
 
@@ -185,7 +188,7 @@ export class CustomerDirectoryRepository {
         {
           id: customerId,
           warehouseId,
-          deactivatedAt: deactivatedAt === null ? Not(IsNull()) : IsNull(),
+          deactivatedAt: isNull(deactivatedAt) ? Not(IsNull()) : IsNull(),
         },
         { deactivatedAt, updatedAt },
       );

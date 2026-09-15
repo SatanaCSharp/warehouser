@@ -1,6 +1,8 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { describe, expect, it } from 'vitest';
+
 // T13 — the executable form of the coordinator's ruling: "purchase-drafts currently has no
 // usecases/ at all, so T16's REST surface would have nothing to call" — the declared public
 // surface must be asserted rather than assumed, following
@@ -11,7 +13,11 @@ import { join } from 'node:path';
 //
 // Scoped narrowly to what T13 introduces — the three transition commands — not a full
 // import-graph scan of the module, which is a different task's concern.
-const usecaseModulePath = join(__dirname, 'usecases', 'usecase.module.ts');
+const usecaseModulePath = join(
+  import.meta.dirname,
+  'usecases',
+  'usecase.module.ts',
+);
 
 const readUsecaseModuleSource = (): string =>
   readFileSync(usecaseModulePath, 'utf8');
@@ -195,11 +201,11 @@ describe('purchase-drafts domain independence (T7)', () => {
 
   const domainSourceFiles = (): readonly string[] =>
     PURE_DOMAIN_DIRECTORIES.flatMap((directory) =>
-      walk(join(__dirname, 'domain', directory)),
+      walk(join(import.meta.dirname, 'domain', directory)),
     );
 
   const mapperSourceFiles = (): readonly string[] =>
-    walk(join(__dirname, 'domain', 'mappers'));
+    walk(join(import.meta.dirname, 'domain', 'mappers'));
 
   /** The module specifiers a file actually imports, rather than every substring in it. Scanning raw
    * text made a *comment* naming a forbidden path fail the check — and, worse, would have let a
@@ -228,7 +234,7 @@ describe('purchase-drafts domain independence (T7)', () => {
   ])('reaches %s under domain/', (relativePath) => {
     expect(
       domainSourceFiles().map((path) =>
-        path.slice(join(__dirname, 'domain').length + 1),
+        path.slice(join(import.meta.dirname, 'domain').length + 1),
       ),
     ).toContain(relativePath);
   });
@@ -245,7 +251,7 @@ describe('purchase-drafts domain independence (T7)', () => {
   it('scans the mappers, which is the layer the response-shape regression hid in', () => {
     expect(
       mapperSourceFiles().map((path) =>
-        path.slice(join(__dirname, 'domain', 'mappers').length + 1),
+        path.slice(join(import.meta.dirname, 'domain', 'mappers').length + 1),
       ),
     ).toEqual(expect.arrayContaining(['line-condition.mapper.ts']));
   });
@@ -258,7 +264,7 @@ describe('purchase-drafts domain independence (T7)', () => {
   it('builds the condition account without reaching for a contract response shape', () => {
     expect(
       importedSpecifiers(
-        join(__dirname, 'domain/mappers/line-condition.mapper.ts'),
+        join(import.meta.dirname, 'domain/mappers/line-condition.mapper.ts'),
       ),
     ).not.toContain('@warehouser/contracts/purchase-drafts');
   });
@@ -286,7 +292,7 @@ describe('purchase-drafts domain independence (T7)', () => {
 // the mappings a *use case* calls. The rule is stated over the whole directory rather than over a
 // named file so a new controller inherits it.
 describe('purchase-drafts controller layer (review 2026-09-09)', () => {
-  const controllersDirectory = join(__dirname, 'rest', 'controllers');
+  const controllersDirectory = join(import.meta.dirname, 'rest', 'controllers');
 
   const controllerSourceFiles = (): readonly string[] =>
     readdirSync(controllersDirectory, { withFileTypes: true })

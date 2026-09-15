@@ -10,6 +10,7 @@
 // never excludes an order for already carrying a link.
 import { ListLinkableCustomerOrdersForItemQuery } from 'customer-orders/usecases/queries/list-linkable-customer-orders-for-item.query';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { describe, expect, it, vi } from 'vitest';
 
 const uuid = (suffix: string): string =>
   `00000000-0000-4000-8000-${suffix.padStart(12, '0')}`;
@@ -47,7 +48,7 @@ const linkableOrderEntity = {
 };
 
 const customerOrderLifecycleRepositoryDouble = () => ({
-  listCustomerOrders: jest.fn().mockResolvedValue([linkableOrderEntity]),
+  listCustomerOrders: vi.fn().mockResolvedValue([linkableOrderEntity]),
 });
 
 describe('ListLinkableCustomerOrdersForItemQuery', () => {

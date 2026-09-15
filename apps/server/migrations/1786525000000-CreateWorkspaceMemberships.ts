@@ -1,10 +1,5 @@
-import {
-  type MigrationInterface,
-  type QueryRunner,
-  Table,
-  TableForeignKey,
-  TableIndex,
-} from 'typeorm';
+import type { MigrationInterface, QueryRunner } from 'typeorm';
+import { Table, TableForeignKey, TableIndex } from 'typeorm';
 
 export class CreateWorkspaceMemberships1786525000000 implements MigrationInterface {
   async up(queryRunner: QueryRunner): Promise<void> {

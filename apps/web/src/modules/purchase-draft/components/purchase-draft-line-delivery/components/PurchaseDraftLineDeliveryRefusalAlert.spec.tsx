@@ -1,10 +1,8 @@
 import { screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
-
+import type { PurchaseDraftLineIdentified } from '@warehouser/contracts/purchase-drafts';
 import { PurchaseDraftLineDeliveryRefusalAlert } from 'modules/purchase-draft/components/purchase-draft-line-delivery/components/PurchaseDraftLineDeliveryRefusalAlert';
 import { renderWithProviders } from 'test/render';
-
-import type { PurchaseDraftLineIdentified } from '@warehouser/contracts/purchase-drafts';
+import { describe, expect, it } from 'vitest';
 
 // AC-15a / sad.md §6.7 step 5 — revising a line's Delivery Mode or Delivery
 // Address while any of its links disagrees with the new destination is

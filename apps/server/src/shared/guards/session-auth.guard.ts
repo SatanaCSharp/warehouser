@@ -1,11 +1,9 @@
-import {
-  type CanActivate,
-  type ExecutionContext,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import type { CanActivate, ExecutionContext } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { isDefined } from '@warehouser/utils/predicates';
 import { readSessionCookie } from 'auth/rest/auth-cookie';
 import { CurrentSessionQuery } from 'auth/usecases/queries/current-session.query';
+import { isExecutionContext } from 'shared/predicates/access-admission.predicates';
 
 export interface AuthenticatedRequest {
   readonly headers: Readonly<{ cookie?: string }>;
@@ -19,14 +17,13 @@ export class SessionAuthGuard implements CanActivate {
   async canActivate(
     context: ExecutionContext | AuthenticatedRequest,
   ): Promise<boolean> {
-    const request =
-      'switchToHttp' in context
-        ? context.switchToHttp().getRequest<AuthenticatedRequest>()
-        : context;
+    const request = isExecutionContext(context)
+      ? context.switchToHttp().getRequest<AuthenticatedRequest>()
+      : context;
     const currentUser = await this.currentSession.execute(
       readSessionCookie(request.headers.cookie),
     );
-    if (!currentUser) {
+    if (!isDefined(currentUser)) {
       throw new UnauthorizedException();
     }
 

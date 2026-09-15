@@ -16,8 +16,8 @@ export const accessNotesSchema = z.string().min(1).nullable();
 // openapi.yaml `CustomerDeliveryAddress` — a place one Customer's goods can be sent to. It carries
 // no `warehouseId`: the Warehouse is the request's, never a field the caller reads back.
 export const customerDeliveryAddressSchema = z.strictObject({
-  id: z.string().uuid(),
-  customerId: z.string().uuid(),
+  id: z.uuid(),
+  customerId: z.uuid(),
   addressText: addressTextSchema,
   accessNotes: accessNotesSchema,
   // At most one address per Customer carries `true`, and an Inactive one never does
@@ -25,9 +25,9 @@ export const customerDeliveryAddressSchema = z.strictObject({
   isMain: z.boolean(),
   // `null` = active. Set means the address is not offered where one is chosen, while every record
   // already naming it keeps reading and counting exactly as before (AC-06a).
-  deactivatedAt: z.string().datetime().nullable(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
+  deactivatedAt: z.iso.datetime().nullable(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
 });
 
 // openapi.yaml `Customer` — one named end customer within one Warehouse with the Delivery Addresses
@@ -38,21 +38,21 @@ export const customerDeliveryAddressSchema = z.strictObject({
 // `CUSTOMERS:*` Permission, so an actor who reaches it holds the Permission the identity is gated
 // on (AC-09).
 export const customerSchema = z.strictObject({
-  id: z.string().uuid(),
+  id: z.uuid(),
   // Unique within the Warehouse across active and Inactive Customers alike, never across
   // Warehouses, and not released by deactivation (AC-03, AC-03a, AC-06).
   name: z.string().min(1),
   // `null` = active; a timestamp records the reversible withdrawal and when it happened (AC-06).
-  deactivatedAt: z.string().datetime().nullable(),
+  deactivatedAt: z.iso.datetime().nullable(),
   // The one **active** address a Customer Order takes when the member states none (AC-11). `null`
   // only for a Customer with no active address at all — a state no member action can reach, because
   // AC-07 refuses the deactivation that would produce it.
-  mainDeliveryAddressId: z.string().uuid().nullable(),
+  mainDeliveryAddressId: z.uuid().nullable(),
   // Every address of this Customer, active and Inactive alike, ordered by creation time (AC-06a).
   deliveryAddresses: z.array(customerDeliveryAddressSchema),
-  recordedByUserId: z.string().uuid(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
+  recordedByUserId: z.uuid(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
 });
 
 // openapi.yaml `CustomerOrderDestination` — where one Customer Order's goods are going, joined in
@@ -62,18 +62,18 @@ export const customerSchema = z.strictObject({
 // keeps counting exactly as before (AC-06a). Both are read live, never as they stood when the order
 // was recorded.
 export const customerOrderDestinationSchema = z.strictObject({
-  deliveryAddressId: z.string().uuid(),
+  deliveryAddressId: z.uuid(),
   addressText: addressTextSchema,
   accessNotes: accessNotesSchema,
   isMain: z.boolean(),
-  deactivatedAt: z.string().datetime().nullable(),
+  deactivatedAt: z.iso.datetime().nullable(),
 });
 
 // openapi.yaml `CustomerAwaitingOrder` — one Unfulfilled Customer Order of this Customer, with its
 // Item, what is still owed, when it is needed and where it is going (AC-08).
 export const customerAwaitingOrderSchema = z.strictObject({
-  customerOrderId: z.string().uuid(),
-  itemId: z.string().uuid(),
+  customerOrderId: z.uuid(),
+  itemId: z.uuid(),
   itemSku: z.string().min(1),
   itemDescription: z.string().min(1),
   unitOfMeasure: unitOfMeasureSchema,
@@ -81,7 +81,7 @@ export const customerAwaitingOrderSchema = z.strictObject({
   // non-negative: a Fulfilled order is waiting for nothing and never appears (AC-08).
   outstandingQuantity: z.number().int().min(1),
   // `customer_orders.needed_by DATE` — a calendar date, never an instant.
-  neededBy: z.string().date(),
+  neededBy: z.iso.date(),
   destination: customerOrderDestinationSchema,
 });
 

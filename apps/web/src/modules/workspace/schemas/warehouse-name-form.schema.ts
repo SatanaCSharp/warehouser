@@ -1,7 +1,6 @@
 import { warehouseWriteSchema } from '@warehouser/contracts/workspaces';
-import { z } from 'zod';
-
 import { refineName, trimName } from 'shared/utils/name-form';
+import { z } from 'zod';
 
 /** AC-08 — the browser pre-check of the one Warehouse Name value object. */
 export const warehouseNameFormSchema = z

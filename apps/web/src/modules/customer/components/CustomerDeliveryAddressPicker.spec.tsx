@@ -1,11 +1,9 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
-
+import type { CustomerDeliveryAddress } from '@warehouser/contracts/customers';
 import { CustomerDeliveryAddressPicker } from 'modules/customer/components/CustomerDeliveryAddressPicker';
 import { renderWithProviders } from 'test/render';
-
-import type { CustomerDeliveryAddress } from '@warehouser/contracts/customers';
+import { describe, expect, it, vi } from 'vitest';
 
 // delivery-addresses T21 — the Delivery Address picker on `modules/customer`'s
 // declared public surface. Colocated with its subject

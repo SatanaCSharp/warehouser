@@ -1,16 +1,14 @@
-import { useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
-import { useTranslation } from 'react-i18next';
-
+import type { WorkspaceMember } from '@warehouser/contracts/workspaces';
 import { useAssignWorkspaceRoleMutation } from 'modules/access/api/workspace-members-api';
 import { WorkspaceRefusalAlert } from 'modules/access/components/workspace-administration/members/WorkspaceRefusalAlert';
 import { useWorkspaceRoles } from 'modules/access/hooks/queries/useWorkspaceRoles';
+import type { ReactElement } from 'react';
+import { useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormSelectField } from 'shared/components/FormSelectField';
-
-import type { WorkspaceMember } from '@warehouser/contracts/workspaces';
-import type { ReactElement } from 'react';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 type ChangeWorkspaceRoleDialogProps = {
   member: WorkspaceMember;

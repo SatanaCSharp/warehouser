@@ -3,9 +3,8 @@ import { posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
-
 import { DatasetCard } from 'shared/components/DatasetCard';
+import { describe, expect, it } from 'vitest';
 
 // CR-AC-07 is a *structural* criterion — "when the file is read after this
 // change" — so the contract is asserted against the source of the file this

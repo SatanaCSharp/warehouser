@@ -1,6 +1,5 @@
-import { createMemberInputSchema } from '@warehouser/contracts/users';
-
 import type { CreateMemberInput } from '@warehouser/contracts/users';
+import { createMemberInputSchema } from '@warehouser/contracts/users';
 
 export type CreateMemberValidationError = {
   email?: 'invalid';

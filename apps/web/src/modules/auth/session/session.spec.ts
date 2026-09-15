@@ -1,7 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
-
 import { createSessionBootstrap } from 'modules/auth/session/session';
 import { makeStore } from 'store';
+import { describe, expect, it, vi } from 'vitest';
 
 const authenticated = {
   user: { id: '00000000-0000-4000-8000-000000000001' },

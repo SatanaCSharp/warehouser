@@ -1,18 +1,16 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ErrorCode } from '@warehouser/shared-types/enums';
-import { describe, expect, it, vi } from 'vitest';
-
-import { AmendCustomerOrderDialog } from 'modules/customer-order/components/demand-directory/components/AmendCustomerOrderDialog';
-import { DialogHost } from 'shared/components/DialogHost';
-import { accessIds } from 'test/access-fixtures';
-import { renderWithProviders } from 'test/render';
-
 import type {
   CustomerOrder,
   CustomerOrderAmend,
 } from '@warehouser/contracts/customer-orders';
+import { ErrorCode } from '@warehouser/shared-types/enums';
+import { AmendCustomerOrderDialog } from 'modules/customer-order/components/demand-directory/components/AmendCustomerOrderDialog';
 import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import { DialogHost } from 'shared/components/DialogHost';
+import { accessIds } from 'test/access-fixtures';
+import { renderWithProviders } from 'test/render';
+import { describe, expect, it, vi } from 'vitest';
 
 // Covers the needed-by field now that it is a `FormDateField` rather than a
 // native `<input type="date">`: the picker is a React Hook Form `Controller`

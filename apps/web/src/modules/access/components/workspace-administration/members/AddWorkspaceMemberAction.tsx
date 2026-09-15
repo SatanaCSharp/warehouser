@@ -1,13 +1,11 @@
 import { Button, Modal } from '@heroui/react';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import { useTranslation } from 'react-i18next';
-
 import { AddWorkspaceMemberDialog } from 'modules/access/components/workspace-administration/members/AddWorkspaceMemberDialog';
+import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 import { TriggeredDialog } from 'shared/components/TriggeredDialog';
 import { WorkspacePermissionGate } from 'shared/components/WorkspacePermissionGate';
 import { UserPlusIcon } from 'shared/icons';
-
-import type { ReactElement } from 'react';
 
 /**
  * The add-Workspace-Member workflow, whole: its gate, its trigger and the

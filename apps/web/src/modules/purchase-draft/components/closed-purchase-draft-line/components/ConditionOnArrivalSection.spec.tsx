@@ -1,10 +1,8 @@
 import { screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
-
+import type { LineCondition } from '@warehouser/contracts/purchase-drafts';
 import { ConditionOnArrivalSection } from 'modules/purchase-draft/components/closed-purchase-draft-line/components/ConditionOnArrivalSection';
 import { renderWithProviders } from 'test/render';
-
-import type { LineCondition } from '@warehouser/contracts/purchase-drafts';
+import { describe, expect, it } from 'vitest';
 
 // Extracted from `ClosedPurchaseDraftLine` in the 2026-09-08 frontend review: it
 // declared a named props type, called its own hook and built its own lookups, so

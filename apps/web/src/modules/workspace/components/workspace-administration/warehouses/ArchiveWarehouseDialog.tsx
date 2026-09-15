@@ -1,11 +1,9 @@
-import { useTranslation } from 'react-i18next';
-
-import { useSetWarehouseArchivalMutation } from 'modules/workspace/api/warehouse-api';
-import { ConfirmAlertDialog } from 'shared/components/ConfirmAlertDialog';
-
 import type { Warehouse } from '@warehouser/contracts/workspaces';
+import { useSetWarehouseArchivalMutation } from 'modules/workspace/api/warehouse-api';
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import { ConfirmAlertDialog } from 'shared/components/ConfirmAlertDialog';
 
 type ArchiveWarehouseDialogProps = {
   warehouse: Warehouse;

@@ -1,23 +1,21 @@
-import { useTranslation } from 'react-i18next';
-
+import type {
+  PurchaseDraftDetail,
+  PurchaseDraftLineUpdate,
+} from '@warehouser/contracts/purchase-drafts';
 import {
   useRemovePurchaseDraftLineMutation,
   useRevisePurchaseDraftLineMutation,
 } from 'modules/purchase-draft/api/purchase-draft-api';
 import { AddPurchaseDraftLineAction } from 'modules/purchase-draft/components/AddPurchaseDraftLineAction';
 import { ClosedPurchaseDraftLine } from 'modules/purchase-draft/components/closed-purchase-draft-line/ClosedPurchaseDraftLine';
-import { LineEndingAction } from 'modules/purchase-draft/components/purchase-draft-transitions/components/LineEndingAction';
+import { LineEndingAction } from 'modules/purchase-draft/components/line-ending-action/LineEndingAction';
 import { PurchaseDraftLineEditor } from 'modules/purchase-draft/components/PurchaseDraftLineEditor';
 import { usePackagingTypes } from 'modules/purchase-draft/hooks/queries/usePackagingTypes';
+import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { Conditional } from 'shared/components/Conditional';
 import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
-
-import type {
-  PurchaseDraftDetail,
-  PurchaseDraftLineUpdate,
-} from '@warehouser/contracts/purchase-drafts';
-import type { ReactElement } from 'react';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 export type PurchaseDraftLineListProps = {
   draft: PurchaseDraftDetail;

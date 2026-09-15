@@ -6,6 +6,8 @@ import { REQUIRED_WORKSPACE_PERMISSION_KEY } from 'shared/decorators/required-wo
 import { WorkspaceCurrentUserRepository } from 'shared/domain/repositories/workspace-current-user.repository';
 import { WorkspaceAccessGuard } from 'shared/guards/workspace-access.guard';
 import { repositoryDouble } from 'test/doubles/repository-double';
+import type { Mock } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 // ADR 0001 / sad §6.2: a User belongs to exactly one Workspace and never selects it, so a
 // Workspace-scoped route carries no Workspace identifier and this guard derives it entirely from the
@@ -32,7 +34,7 @@ const contextFor = (request: Record<string, unknown>): ExecutionContext =>
 
 const reflectorReturning = (key: string, value: unknown): Reflector =>
   ({
-    getAllAndOverride: jest.fn((requestedKey: string) =>
+    getAllAndOverride: vi.fn((requestedKey: string) =>
       requestedKey === key ? value : undefined,
     ),
   }) as unknown as Reflector;
@@ -60,7 +62,7 @@ const requestWithGuardedSelection = (
 
 const guardWith = (
   reflector: Reflector,
-  resolveRequiredWorkspacePermission: jest.Mock,
+  resolveRequiredWorkspacePermission: Mock,
 ): WorkspaceAccessGuard =>
   new WorkspaceAccessGuard(
     reflector,
@@ -81,7 +83,7 @@ describe('WorkspaceAccessGuard', () => {
 
   describe('session composition, own metadata key and a safe principal', () => {
     it('resolves the actor’s Workspace authority from the session alone and attaches a frozen principal with no client-supplied value', async () => {
-      const resolveRequiredWorkspacePermission = jest
+      const resolveRequiredWorkspacePermission = vi
         .fn()
         .mockResolvedValue(grantedResult);
       const reflector = reflectorReturning(REQUIRED_WORKSPACE_PERMISSION_KEY, [
@@ -117,7 +119,7 @@ describe('WorkspaceAccessGuard', () => {
     });
 
     it('reads only its own required-workspace-permission metadata key, never the Warehouse guard key', async () => {
-      const resolveRequiredWorkspacePermission = jest
+      const resolveRequiredWorkspacePermission = vi
         .fn()
         .mockResolvedValue(grantedResult);
       const reflector = reflectorReturning(REQUIRED_PERMISSION_KEY, [
@@ -138,7 +140,7 @@ describe('WorkspaceAccessGuard', () => {
 
   describe('missing Workspace membership or Permission denies', () => {
     it('denies when the actor holds no Workspace membership', async () => {
-      const resolveRequiredWorkspacePermission = jest
+      const resolveRequiredWorkspacePermission = vi
         .fn()
         .mockResolvedValue(null);
       const reflector = reflectorReturning(REQUIRED_WORKSPACE_PERMISSION_KEY, [
@@ -156,7 +158,7 @@ describe('WorkspaceAccessGuard', () => {
     });
 
     it('denies when the Workspace Role does not carry the declared Workspace Permission', async () => {
-      const resolveRequiredWorkspacePermission = jest
+      const resolveRequiredWorkspacePermission = vi
         .fn()
         .mockResolvedValue({ ...grantedResult, granted: false });
       const reflector = reflectorReturning(REQUIRED_WORKSPACE_PERMISSION_KEY, [
@@ -176,7 +178,7 @@ describe('WorkspaceAccessGuard', () => {
 
   describe('AC-31 (runtime half) — a Warehouse Permission declared here resolves nothing', () => {
     it('denies and never calls the repository when no Workspace Permission is declared on the handler', async () => {
-      const resolveRequiredWorkspacePermission = jest
+      const resolveRequiredWorkspacePermission = vi
         .fn()
         .mockResolvedValue(grantedResult);
       const reflector = reflectorReturning(
@@ -203,7 +205,7 @@ describe('WorkspaceAccessGuard', () => {
 
       const guardForNoMembership = guardWith(
         reflector,
-        jest.fn().mockResolvedValue(null),
+        vi.fn().mockResolvedValue(null),
       );
       let noMembershipError: ApplicationError | undefined;
       try {
@@ -216,7 +218,7 @@ describe('WorkspaceAccessGuard', () => {
 
       const guardForInsufficientPermission = guardWith(
         reflector,
-        jest.fn().mockResolvedValue({ ...grantedResult, granted: false }),
+        vi.fn().mockResolvedValue({ ...grantedResult, granted: false }),
       );
       let insufficientPermissionError: ApplicationError | undefined;
       try {
@@ -238,7 +240,7 @@ describe('WorkspaceAccessGuard', () => {
 
   describe('decides no target ownership', () => {
     it('never reads or requires any route- or body-supplied target identifier', async () => {
-      const resolveRequiredWorkspacePermission = jest
+      const resolveRequiredWorkspacePermission = vi
         .fn()
         .mockResolvedValue(grantedResult);
       const reflector = reflectorReturning(REQUIRED_WORKSPACE_PERMISSION_KEY, [

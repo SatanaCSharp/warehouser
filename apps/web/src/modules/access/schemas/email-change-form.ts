@@ -1,6 +1,5 @@
-import { emailChangeInputSchema } from '@warehouser/contracts/users';
-
 import type { EmailChangeInput } from '@warehouser/contracts/users';
+import { emailChangeInputSchema } from '@warehouser/contracts/users';
 
 export type EmailChangeValidationError = { email?: 'invalid' };
 

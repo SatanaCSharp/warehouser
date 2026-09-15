@@ -8,20 +8,18 @@ import {
 } from '@tanstack/react-router';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { Item } from '@warehouser/contracts/items';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { Provider } from 'react-redux';
-import { describe, expect, it } from 'vitest';
-
+import type { WarehouseEntryVerdict } from 'guards/warehouse-entry.guard';
 import { itemApi } from 'modules/item/api/item-api';
 import { ItemPage } from 'modules/item/page';
+import { Provider } from 'react-redux';
 import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
 import { ROUTES } from 'shared/constants/routes';
+import type { AppStore } from 'store';
 import { accessIds, authenticatedStore } from 'test/access-fixtures';
 import { renderInEnteredWarehouse } from 'test/render';
-
-import type { Item } from '@warehouser/contracts/items';
-import type { WarehouseEntryVerdict } from 'guards/warehouse-entry.guard';
-import type { AppStore } from 'store';
+import { describe, expect, it } from 'vitest';
 
 // T18 — the Items destination's masthead and its denial (frames `XIvAZ`,
 // `VHU6r`, and `hWFRW` tiles `eHcB7` / `TPZTI`). DoD: the destination states

@@ -16,6 +16,7 @@ import {
   isRedirectableCustomerOrder,
   namesExactlyOneCustomerIdentity,
 } from 'customer-orders/domain/predicates/customer-order.predicates';
+import { describe, expect, it } from 'vitest';
 
 describe('customer order predicates', () => {
   // AC-02 / data-model.md `customer_orders.quantity` INTEGER NOT NULL `> 0` — a customer waits for

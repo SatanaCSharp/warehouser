@@ -4,9 +4,12 @@ import { fileURLToPath } from 'node:url';
 
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type {
+  PackagingType,
+  PurchaseDraftLine,
+  PurchaseDraftLineRejection,
+} from '@warehouser/contracts/purchase-drafts';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { describe, expect, it } from 'vitest';
-
 import { ClosedPurchaseDraftLine } from 'modules/purchase-draft/components/closed-purchase-draft-line/ClosedPurchaseDraftLine';
 import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
 import {
@@ -15,12 +18,7 @@ import {
   stubAccessServer,
 } from 'test/access-fixtures';
 import { renderInEnteredWarehouse } from 'test/render';
-
-import type {
-  PackagingType,
-  PurchaseDraftLine,
-  PurchaseDraftLineRejection,
-} from '@warehouser/contracts/purchase-drafts';
+import { describe, expect, it } from 'vitest';
 
 // T17 — `Inspection/Closed Line` (`FYfEa`, design-handoff.md § Component
 // mapping), derived from the shipped `Delivery/Draft Line` (`jnl1h`,
@@ -457,6 +455,18 @@ describe('ClosedPurchaseDraftLine — AC-23 the frozen Packaging Type', () => {
 
     expect(await screen.findByText('Cartons')).toBeInTheDocument();
     expect(screen.queryByText('Shrink wrap')).not.toBeInTheDocument();
+  });
+
+  // `packagingTypeId` is nullable on the wire, so a line can be frozen naming
+  // no Packaging Type at all. That reading was never pinned: every fixture
+  // above names one the catalogue carries, so nothing proved the closed line
+  // says "None" rather than rendering an empty cell or the id it failed to
+  // resolve — the same distinction AC-23 draws for the type it *does* carry.
+  it('reads None for a line frozen naming no packaging type', async () => {
+    renderLine(closedLine({ packagingTypeId: null }));
+
+    expect(await screen.findByText('None')).toBeInTheDocument();
+    expect(screen.queryByText('Cartons')).not.toBeInTheDocument();
   });
 });
 

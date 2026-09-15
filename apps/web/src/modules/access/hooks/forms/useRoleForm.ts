@@ -1,20 +1,18 @@
-import { useForm } from 'react-hook-form';
-import { useTranslation } from 'react-i18next';
-
-import { parseRoleFormValues } from 'modules/access/schemas/role-form';
-import { mutationOutcome } from 'shared/api/client/mutation-outcome';
-import { useFormFieldErrors } from 'shared/hooks/forms/useFormFieldErrors';
-
 import type { RoleWrite } from '@warehouser/contracts/access';
 import type { RoleFormValues } from 'modules/access/schemas/role-form';
-import type { FormEvent } from 'react';
+import { parseRoleFormValues } from 'modules/access/schemas/role-form';
+import type { SubmitEvent } from 'react';
 import type {
   Control,
   FieldErrors,
   UseFormRegister,
   UseFormReset,
 } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import { mutationOutcome } from 'shared/api/client/mutation-outcome';
+import { useFormFieldErrors } from 'shared/hooks/forms/useFormFieldErrors';
 
 type RoleFormOptions = {
   defaultValues: RoleFormValues;
@@ -28,7 +26,7 @@ type RoleFormSession = {
   register: UseFormRegister<RoleFormValues>;
   /** Returns the fields to the Role they were seeded from, discarding edits. */
   reset: UseFormReset<RoleFormValues>;
-  submit: (event: FormEvent<HTMLFormElement>) => Promise<void>;
+  submit: (event: SubmitEvent<HTMLFormElement>) => Promise<void>;
 };
 
 /**

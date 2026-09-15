@@ -5,15 +5,13 @@ import {
   TextArea,
   TextField,
 } from '@heroui/react';
-import { forwardRef } from 'react';
-
-import { Conditional } from 'shared/components/Conditional';
-
 import type {
   ComponentProps,
   ComponentPropsWithoutRef,
   ReactNode,
 } from 'react';
+import { forwardRef } from 'react';
+import { Conditional } from 'shared/components/Conditional';
 
 /**
  * The multi-line half of the field contract `FormTextField` states for one

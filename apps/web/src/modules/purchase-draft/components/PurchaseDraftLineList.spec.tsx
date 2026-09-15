@@ -1,8 +1,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { PurchaseDraftDetail } from '@warehouser/contracts/purchase-drafts';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { purchaseDraftApi } from 'modules/purchase-draft/api/purchase-draft-api';
 import { PurchaseDraftLineList } from 'modules/purchase-draft/components/PurchaseDraftLineList';
 import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
@@ -12,8 +11,7 @@ import {
   stubAccessServer,
 } from 'test/access-fixtures';
 import { renderInEnteredWarehouse } from 'test/render';
-
-import type { PurchaseDraftDetail } from '@warehouser/contracts/purchase-drafts';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // T20 — the `LINES` section owns two of the twelve writes: restating a line and
 // removing one. Neither had a test asserting a request was issued; the line

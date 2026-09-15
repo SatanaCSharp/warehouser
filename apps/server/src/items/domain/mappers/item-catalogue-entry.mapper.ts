@@ -1,3 +1,4 @@
+import { isDefined } from '@warehouser/utils/predicates';
 import type { ItemWithOnHandAndLatestReasonRead } from 'shared/domain/repositories/item-catalogue.repository';
 
 export interface ItemLatestAdjustmentRead {
@@ -42,10 +43,10 @@ export const toItemCatalogueEntry = (
   namingCustomerOrderCount: row.namingCustomerOrderCount,
   namingPurchaseDraftLineCount: row.namingPurchaseDraftLineCount,
   latestAdjustment:
-    row.latestAdjustmentReason !== null &&
-    row.latestAdjustmentQuantity !== null &&
-    row.latestAdjustedByUserId !== null &&
-    row.latestAdjustedAt !== null
+    isDefined(row.latestAdjustmentReason) &&
+    isDefined(row.latestAdjustmentQuantity) &&
+    isDefined(row.latestAdjustedByUserId) &&
+    isDefined(row.latestAdjustedAt)
       ? {
           countedQuantity: row.latestAdjustmentQuantity,
           reason: row.latestAdjustmentReason,

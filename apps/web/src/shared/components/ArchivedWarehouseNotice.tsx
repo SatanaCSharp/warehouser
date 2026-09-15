@@ -1,13 +1,11 @@
 import { Alert } from '@heroui/react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-
 import { Conditional } from 'shared/components/Conditional';
 import {
   ARCHIVED_WAREHOUSE_REASON_ID,
   useArchivedWarehouse,
 } from 'shared/hooks/projections/useArchivedWarehouse';
-
-import type { ReactNode } from 'react';
 
 /**
  * States, once per destination, why an archived Warehouse's mutating controls

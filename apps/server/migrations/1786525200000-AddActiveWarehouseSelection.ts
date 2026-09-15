@@ -1,8 +1,5 @@
-import {
-  type MigrationInterface,
-  type QueryRunner,
-  TableColumn,
-} from 'typeorm';
+import type { MigrationInterface, QueryRunner } from 'typeorm';
+import { TableColumn } from 'typeorm';
 
 // Migrations 02 and 04 of this release already refuse to apply over existing `users` and
 // `warehouse_memberships` rows, so by the time the selection column is added the table is empty by

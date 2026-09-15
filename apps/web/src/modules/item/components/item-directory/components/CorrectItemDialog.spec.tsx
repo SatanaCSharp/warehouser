@@ -1,13 +1,11 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
-
+import type { Item, ItemUpdate } from '@warehouser/contracts/items';
 import { CorrectItemDialog } from 'modules/item/components/item-directory/components/CorrectItemDialog';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { DialogHost } from 'shared/components/DialogHost';
 import { renderWithProviders } from 'test/render';
-
-import type { Item, ItemUpdate } from '@warehouser/contracts/items';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import { describe, expect, it, vi } from 'vitest';
 
 // T18 — corrects an Item's SKU, description or unit of measure independently
 // (AC-06b, AC-06c). DoD: BOTH halves of AC-06c are reachable — an Item nothing
@@ -179,5 +177,31 @@ describe('CorrectItemDialog', () => {
     expect(dialog()).toHaveTextContent(
       /an item that nothing yet names may still have its SKU corrected/iu,
     );
+  });
+
+  // The fallback of the refusal table, which the two SKU cases above never reach: a rule the
+  // dialog's own `keysByCode` does not name. `itemSku.skuFixed` and `itemSku.skuTaken` are the two
+  // it knows; anything else has to resolve through the field's own validation section rather than
+  // render the server's raw rule string at the member, which is what a missing fallback would do.
+  it("explains a refusal rule it does not know through the field's own copy", async () => {
+    const user = userEvent.setup();
+    const onSave = vi
+      .fn<(input: ItemUpdate) => Promise<MutationResult>>()
+      .mockResolvedValue({
+        error: {
+          code: 'items.invalid_input',
+          fieldErrors: { description: 'tooBig' },
+        },
+      });
+    renderDialog(anItem(), onSave);
+
+    await retype(user, /description/iu, 'A much longer description');
+    await save(user);
+
+    expect(
+      await within(dialog()).findByText(
+        'This description is longer than this warehouse accepts.',
+      ),
+    ).toBeVisible();
   });
 });

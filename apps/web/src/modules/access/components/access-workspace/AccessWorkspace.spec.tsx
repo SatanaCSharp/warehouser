@@ -1,8 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { AccessWorkspace } from 'modules/access/components/access-workspace/AccessWorkspace';
 import { makeStore } from 'store';
 import {
@@ -12,6 +10,7 @@ import {
   stubAccessServer,
 } from 'test/access-fixtures';
 import { renderInEnteredWarehouse } from 'test/render';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const memberPermissions = [
   PermissionId.USERS_WATCH,

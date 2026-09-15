@@ -1,10 +1,8 @@
-import { useTranslation } from 'react-i18next';
-
-import { Conditional } from 'shared/components/Conditional';
-import { ArchiveIcon, ShieldXIcon } from 'shared/icons';
-
 import type { WarehouseEntryVerdict } from 'guards/warehouse-entry.guard';
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Conditional } from 'shared/components/Conditional';
+import { ArchiveIcon, ShieldXIcon } from 'shared/icons';
 
 export type WarehouseEntryRefusalReason = NonNullable<
   WarehouseEntryVerdict['reason']

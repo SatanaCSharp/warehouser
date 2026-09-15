@@ -1,5 +1,4 @@
 import { createSlice } from '@reduxjs/toolkit';
-
 import { authActions } from 'modules/auth/store/auth.actions';
 
 export type AuthStatus = 'anonymous' | 'authenticated' | 'unknown';

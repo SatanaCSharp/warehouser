@@ -1,8 +1,6 @@
-import { describe, expect, it } from 'vitest';
-
-import { matchesDemandQuery } from 'modules/customer-order/utils/demand-search';
-
 import type { DemandLine } from '@warehouser/contracts/customer-orders';
+import { matchesDemandQuery } from 'modules/customer-order/utils/demand-search';
+import { describe, expect, it } from 'vitest';
 
 // The Demand destination's search field (design frame `G6jhw`, placeholder
 // `Search items or SKUs`) filters the demand the route already loaded, so what

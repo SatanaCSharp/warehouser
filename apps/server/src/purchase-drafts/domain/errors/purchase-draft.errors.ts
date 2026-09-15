@@ -4,16 +4,17 @@ import {
   WorkspacePermissionId,
 } from '@warehouser/shared-types/enums';
 import { ApplicationError } from '@warehouser/shared-types/errors';
+import { isDefined } from '@warehouser/utils/predicates';
 import { MAX_PROSE_LENGTH } from 'purchase-drafts/domain/predicates/purchase-draft-condition.predicates';
 import type {
   DeliveryMode,
   EndingKind,
 } from 'purchase-drafts/domain/value-objects/delivery-mode';
-import {
-  PreReceiptConformanceVerdict,
-  type RejectionDisposition,
-  type RejectionSource,
+import type {
+  RejectionDisposition,
+  RejectionSource,
 } from 'purchase-drafts/domain/value-objects/line-condition';
+import { PreReceiptConformanceVerdict } from 'purchase-drafts/domain/value-objects/line-condition';
 
 // AC-11 — one non-enumerating outcome for an Item or a Customer Order of another Warehouse and for
 // one that does not exist, naming the same-Warehouse rule. openapi.yaml
@@ -366,7 +367,7 @@ export const notApplicableOnInstructedLineViolation = (
   rule: 'not_applicable_on_instructed_line',
   verdict: PreReceiptConformanceVerdict.NotApplicable,
   frozenPackagingTypeId,
-  frozenValueAddingNote: frozenValueAddingNote !== null,
+  frozenValueAddingNote: isDefined(frozenValueAddingNote),
 });
 
 // AC-17 — the mirror: a verdict on a line frozen carrying neither, which the entry says outright

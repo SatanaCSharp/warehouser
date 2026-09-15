@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { assert } from '@warehouser/utils/asserts';
-import { isEmpty, keyBy, map } from 'lodash';
+import { isDefined, isNull } from '@warehouser/utils/predicates';
+import { isEmpty, keyBy, map } from 'lodash-es';
 import type {
   ConditionSplitViolation,
   EndingConditionInputViolation,
@@ -32,6 +33,7 @@ import {
 } from 'purchase-drafts/domain/errors/purchase-draft.errors';
 import type { RejectionReasonCatalogueEntry } from 'purchase-drafts/domain/predicates/purchase-draft-condition.predicates';
 import {
+  admitsConformanceNote,
   conditionOnlyWhereSomethingReceived,
   duplicatedRejectionReasonIds,
   instructionRefusalReasonIdsAmong,
@@ -41,7 +43,6 @@ import {
   isWholeRefusedQuantity,
   isWithinProseBound,
   judgementOnlyOnInstructedLine,
-  lineCarriesFrozenInstruction,
   metAgreesWithRefusals,
   notApplicableOnlyOnUninstructedLine,
   refusalsStateVerdict,
@@ -51,6 +52,7 @@ import {
   totalRefusedQuantity,
 } from 'purchase-drafts/domain/predicates/purchase-draft-condition.predicates';
 import { raisesRejections } from 'purchase-drafts/domain/predicates/rejection-cause-access.predicates';
+import type { RejectionDisposition } from 'purchase-drafts/domain/value-objects/line-condition';
 import {
   PreReceiptConformanceVerdict,
   requiredSourceFor,
@@ -164,11 +166,6 @@ const conformanceViolationsOf = (
   verdict: PreReceiptConformanceVerdict,
   rejectionReasonIds: readonly string[],
 ): readonly PreReceiptConformanceViolation[] => {
-  const carriesFrozenInstruction = lineCarriesFrozenInstruction(
-    line.packagingTypeId,
-    line.valueAddingNote,
-  );
-
   const contradictedByRefusals = metAgreesWithRefusals(
     verdict,
     rejectionReasonIds,
@@ -178,7 +175,11 @@ const conformanceViolationsOf = (
 
   return [
     ...contradictedByRefusals.map(metContradictsRejectionViolation),
-    ...(notApplicableOnlyOnUninstructedLine(verdict, carriesFrozenInstruction)
+    ...(notApplicableOnlyOnUninstructedLine(
+      verdict,
+      line.packagingTypeId,
+      line.valueAddingNote,
+    )
       ? []
       : [
           notApplicableOnInstructedLineViolation(
@@ -186,7 +187,11 @@ const conformanceViolationsOf = (
             line.valueAddingNote,
           ),
         ]),
-    ...(judgementOnlyOnInstructedLine(verdict, carriesFrozenInstruction)
+    ...(judgementOnlyOnInstructedLine(
+      verdict,
+      line.packagingTypeId,
+      line.valueAddingNote,
+    )
       ? []
       : [verdictOnUninstructedLineViolation(verdict)]),
   ];
@@ -206,7 +211,7 @@ const proseShapeViolationsOf = (
     readonly tooLong: (path: string) => EndingConditionInputViolation;
   },
 ): readonly EndingConditionInputViolation[] => {
-  if (prose === null) {
+  if (isNull(prose)) {
     return [];
   }
 
@@ -290,7 +295,7 @@ export const assertConditionSplit = (
     ...sourceMismatchViolationsOf(line, submission),
     ...(refusalsStateVerdict(
       !isEmpty(submission.rejections),
-      submission.preReceiptConformance !== null,
+      isDefined(submission.preReceiptConformance),
     )
       ? []
       : [verdictRequiredWithRejectionsViolation(rejectedQuantity)]),
@@ -306,6 +311,61 @@ export const assertConditionSplit = (
   );
 };
 
+// AC-04a — a condition stated against an ending that received nothing. Refused under
+// `purchase_drafts.invalid_input` rather than the conformance code
+// (contracts/api-sync-report.md §4).
+const nothingReceivedViolations = (
+  submission: EndingConditionSubmission,
+  verdict: EndingConditionSubmission['preReceiptConformance'],
+): readonly EndingConditionInputViolation[] =>
+  conditionOnlyWhereSomethingReceived(
+    submission.receivedQuantity,
+    isDefined(verdict) || !isEmpty(submission.rejections),
+  )
+    ? []
+    : [conditionOnNothingReceivedViolation('preReceiptConformance')];
+
+// AC-15b — the note's shape (non-empty, trimmed, within bound) is measured only when it would
+// actually reach persistence beside a verdict: `buildEndingConditionInput` drops an orphaned note
+// rather than refusing it, so a note stated without a verdict is never this rule's failure mode.
+const conformanceNoteShapeViolations = (
+  verdict: EndingConditionSubmission['preReceiptConformance'],
+  note: string | null,
+): readonly EndingConditionInputViolation[] =>
+  isNull(verdict)
+    ? []
+    : proseShapeViolationsOf(note, 'preReceiptConformance.note', {
+        empty: noteEmptyViolation,
+        notTrimmed: noteNotTrimmedViolation,
+        tooLong: noteTooLongViolation,
+      });
+
+// `PreReceiptConformanceWithoutNoteCreate` (`@warehouser/contracts`) admits a note only beside
+// Not met, so a note beside Met or Not applicable is refused here rather than persisted silently.
+const noteAdmittedByVerdictViolations = (
+  verdict: EndingConditionSubmission['preReceiptConformance'],
+  note: string | null,
+): readonly EndingConditionInputViolation[] =>
+  isDefined(verdict) && !admitsConformanceNote(verdict) && isDefined(note)
+    ? [noteNotAdmittedByVerdictViolation(verdict)]
+    : [];
+
+// AC-04a and AC-15b collected together: every payload-shape bound refused under
+// `purchase_drafts.invalid_input` rather than the conformance code, all of them decidable before
+// the conformance rules run.
+const endingConditionInputViolations = (
+  submission: EndingConditionSubmission,
+): readonly EndingConditionInputViolation[] => {
+  const verdict = submission.preReceiptConformance;
+  const note = submission.preReceiptConformanceNote;
+
+  return [
+    ...nothingReceivedViolations(submission, verdict),
+    ...conformanceNoteShapeViolations(verdict, note),
+    ...noteAdmittedByVerdictViolations(verdict, note),
+  ];
+};
+
 // AC-16, AC-17, AC-17a and AC-04a. The nothing-received refusal comes first and alone because it is
 // a different branch of the contract: it refuses under `purchase_drafts.invalid_input` rather than
 // the conformance code, as contracts/api-sync-report.md §4 maps it, and reaching
@@ -316,44 +376,14 @@ export const assertPreReceiptConformance = (
   submission: EndingConditionSubmission,
 ): void => {
   const verdict = submission.preReceiptConformance;
-  const note = submission.preReceiptConformanceNote;
 
-  // AC-04a and AC-15b collected together: both are payload-shape bounds refused under
-  // `purchase_drafts.invalid_input` rather than the conformance code (contracts/api-sync-report.md
-  // §4), and both are decidable before the conformance rules below ever run. The note's shape
-  // (non-empty, trimmed, within bound) is measured only when it would actually reach persistence
-  // beside a verdict — `buildEndingConditionInput` drops an orphaned note rather than refusing it,
-  // so a note stated without one is never this rule's failure mode. `note_not_admitted_by_verdict`
-  // is the fourth: `PreReceiptConformanceWithoutNoteCreate` (`@warehouser/contracts`) admits a note
-  // only beside Not met, so a note beside Met or Not applicable is refused here rather than
-  // persisted silently.
-  const inputViolations: EndingConditionInputViolation[] = [
-    ...(conditionOnlyWhereSomethingReceived(
-      submission.receivedQuantity,
-      verdict !== null || !isEmpty(submission.rejections),
-    )
-      ? []
-      : [conditionOnNothingReceivedViolation('preReceiptConformance')]),
-    ...(verdict === null
-      ? []
-      : proseShapeViolationsOf(note, 'preReceiptConformance.note', {
-          empty: noteEmptyViolation,
-          notTrimmed: noteNotTrimmedViolation,
-          tooLong: noteTooLongViolation,
-        })),
-    ...(verdict !== null &&
-    verdict !== PreReceiptConformanceVerdict.NotMet &&
-    note !== null
-      ? [noteNotAdmittedByVerdictViolation(verdict)]
-      : []),
-  ];
-
+  const inputViolations = endingConditionInputViolations(submission);
   assert(
     isEmpty(inputViolations),
     purchaseDraftEndingConditionInputError(inputViolations),
   );
 
-  if (verdict === null) {
+  if (isNull(verdict)) {
     return;
   }
 
@@ -436,3 +466,16 @@ export class ArrivalInspectionService {
     assertPreReceiptConformance(line, submission);
   }
 }
+
+// What **this amendment wrote**, never what the Rejection already held: `null` means "this amendment
+// wrote no description", not "the Rejection has none".
+export const amendedDescription = (
+  description: string | undefined,
+): string | null => description ?? null;
+
+// The Disposition is still echoed when unstated, and that is deliberate rather than an oversight —
+// see the note at the return below.
+export const amendedDisposition = (
+  stated: RejectionDisposition | undefined,
+  held: RejectionDisposition,
+): RejectionDisposition => stated ?? held;

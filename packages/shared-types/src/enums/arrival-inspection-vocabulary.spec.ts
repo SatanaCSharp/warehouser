@@ -8,6 +8,7 @@
 // translated copy respectively — never enum members — so this file asserts their absence too.
 import { ErrorCode } from 'enums/error-code';
 import { PermissionId } from 'enums/permission-id';
+import { describe, expect, it } from 'vitest';
 
 // Copied verbatim from the seed rows of
 // `docs/features/arrival-inspection/migrations/02-grant-arrival-inspection-permissions.ts`, which

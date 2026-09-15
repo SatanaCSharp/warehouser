@@ -1,14 +1,12 @@
 import { Drawer } from '@heroui/react';
+import type { ComponentType, ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-
 import { useEnteredContext } from 'shared/hooks/projections/useEnteredContext';
 import { useCollapsedSidebar } from 'shared/hooks/state/useCollapsedSidebar';
 import { SidebarCollapseToggle } from 'shared/layouts/sidebar/components/SidebarCollapseToggle';
 import { SidebarNavList } from 'shared/layouts/sidebar/components/SidebarNavList';
 import { WarehouseNavEntries } from 'shared/layouts/sidebar/components/WarehouseNavEntries';
 import { WorkspaceNavEntries } from 'shared/layouts/sidebar/components/WorkspaceNavEntries';
-
-import type { ComponentType, ReactElement } from 'react';
 
 export type SidebarProps = {
   isOpen?: boolean;

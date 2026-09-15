@@ -28,6 +28,7 @@ import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
 import { WarehouseMembershipEntity } from 'shared/domain/entities/warehouse-membership.entity';
 import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 import { GlobalHttpExceptionFilter } from 'shared/errors/global-http-exception.filter';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
 // Fixed clock for every seeded row, mirroring `items-http-contract.integration.spec.ts`:

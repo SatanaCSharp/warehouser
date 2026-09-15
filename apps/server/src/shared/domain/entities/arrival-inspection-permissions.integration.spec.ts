@@ -1,5 +1,6 @@
 import { PermissionId } from '@warehouser/shared-types/enums';
 import dataSource from 'shared/database/data-source';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 /**
  * The RED for T2 —

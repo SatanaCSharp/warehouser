@@ -1,8 +1,7 @@
 import { Alert } from '@heroui/react';
 import { ErrorCode } from '@warehouser/shared-types/enums';
-import { useTranslation } from 'react-i18next';
-
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export type AddressDisagreementAlertProps = {
   /** The stable refusal code the dialog was handed, or nothing yet. */

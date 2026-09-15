@@ -1,0 +1,71 @@
+// Repomix packs the repository into one AI-readable snapshot. It is the *structure* half of the
+// agent exploration workflow documented in
+// `docs/system/guides/exploring-the-codebase-with-codegraph-and-repomix.md`; CodeGraph is the
+// *symbol* half. The defaults below are tuned for that workflow — a snapshot is meant to be read
+// instead of dozens of files, so it is compressed and line-numbered rather than complete.
+//
+// Parsed with JSON5, so comments are allowed here.
+{
+  "output": {
+    // Markdown rather than the XML default: it is what every agent in this repository reads best,
+    // and it diffs legibly when a snapshot is pasted into a review.
+    "style": "markdown",
+    "filePath": "repomix-output.md",
+
+    // Tree-sitter keeps signatures, classes, interfaces and types and drops function bodies. This
+    // is the whole point of a snapshot: on `apps/server/src` it turns 897,841 tokens into 166,940
+    // (-81%). Pass `--no-compress` when a full body is genuinely needed — but prefer reading the
+    // file itself at that point.
+    "compress": true,
+
+    // Line numbers make the snapshot actionable: the agent locates a construct here, then reads
+    // only that line range from the real file.
+    "showLineNumbers": true,
+
+    // Comments in this repository carry the rationale for decisions (see `pnpm-workspace.yaml`),
+    // so they are load-bearing content, not noise. Strip them per-run with `--remove-comments`
+    // when a snapshot is purely structural.
+    "removeComments": false,
+
+    "topFilesLength": 20,
+
+    "git": {
+      // Most-changed files last, so the code under active work sits closest to the agent's
+      // attention at the end of the snapshot.
+      "sortByChanges": true
+    }
+  },
+
+  "ignore": {
+    "useGitignore": true,
+    "useDefaultPatterns": true,
+
+    // These repeat protections that `.gitignore` already provides. That repetition is deliberate:
+    // `--no-gitignore` is one flag away, and none of these may ever enter a snapshot.
+    "customPatterns": [
+      // Local credentials policy (AGENTS.md). Every environment-value file is excluded before the
+      // packer opens it — `.env.example` included, because repomix does not honour a re-including
+      // `!` pattern here, and because the example is read directly when it is needed rather than
+      // through a snapshot.
+      "**/.env",
+      "**/.env.*",
+
+      // `.pen` design sources are encrypted and reachable only through the Pencil MCP server.
+      "**/*.pen",
+
+      // Generated, machine-local, or already-indexed elsewhere.
+      "**/repomix-output.*",
+      ".codegraph/**",
+      "pnpm-lock.yaml",
+      "**/dist/**",
+      "**/coverage/**",
+      "**/.turbo/**"
+    ]
+  },
+
+  "security": {
+    // Secretlint runs over every packed file and refuses to emit a snapshot containing a
+    // credential. Never turn this off, and never pass `--no-security-check`.
+    "enableSecurityCheck": true
+  }
+}

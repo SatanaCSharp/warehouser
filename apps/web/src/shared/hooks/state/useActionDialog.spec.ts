@@ -1,8 +1,6 @@
-import { describe, expect, it } from 'vitest';
-
-import { actionDialogReducer } from 'shared/hooks/state/useActionDialog';
-
 import type { ActionDialog } from 'shared/hooks/state/useActionDialog';
+import { actionDialogReducer } from 'shared/hooks/state/useActionDialog';
+import { describe, expect, it } from 'vitest';
 
 type Kind = 'amend' | 'cancel';
 type Subject = { id: string };

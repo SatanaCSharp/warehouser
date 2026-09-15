@@ -1,13 +1,11 @@
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-
+import type { WorkspaceMember } from '@warehouser/contracts/workspaces';
 import { useRemoveWorkspaceMemberMutation } from 'modules/access/api/workspace-members-api';
 import { WorkspaceRefusalAlert } from 'modules/access/components/workspace-administration/members/WorkspaceRefusalAlert';
-import { ConfirmAlertDialog } from 'shared/components/ConfirmAlertDialog';
-
-import type { WorkspaceMember } from '@warehouser/contracts/workspaces';
 import type { ReactElement } from 'react';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import { ConfirmAlertDialog } from 'shared/components/ConfirmAlertDialog';
 
 type RemoveWorkspaceMemberDialogProps = {
   member: WorkspaceMember;

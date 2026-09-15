@@ -5,6 +5,7 @@ import {
   validatedName,
   workspaceInvalidNameError,
 } from 'shared/errors/invalid-name.error';
+import { describe, expect, it } from 'vitest';
 
 // AC-08 / AC-15a / AC-29a are one rule set: Warehouse, Workspace Role and
 // Workspace names share `AccessName`, so the assertion-to-rule mapping is

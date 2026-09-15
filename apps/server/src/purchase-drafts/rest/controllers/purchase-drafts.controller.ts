@@ -19,7 +19,7 @@ import type {
   RejectionAmendment,
 } from '@warehouser/contracts/purchase-drafts';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { assert } from '@warehouser/utils/asserts';
+import { assertDefined } from '@warehouser/utils/asserts';
 import {
   PurchaseDraftClosureDto,
   PurchaseDraftCreateDto,
@@ -131,8 +131,8 @@ export class PurchaseDraftsController {
       access!,
       purchaseDraftId,
     );
-    assert(
-      detail !== null,
+    assertDefined(
+      detail,
       'A Purchase Draft must resolve immediately after a successful write into the same Warehouse',
     );
 
@@ -149,8 +149,8 @@ export class PurchaseDraftsController {
       access!,
       purchaseDraftId,
     );
-    assert(
-      detail !== null,
+    assertDefined(
+      detail,
       'A Purchase Draft must resolve immediately after a successful write into the same Warehouse',
     );
 

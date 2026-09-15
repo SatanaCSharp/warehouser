@@ -1,4 +1,4 @@
-import { find, map } from 'lodash';
+import { find, map } from 'lodash-es';
 import type { CustomerEntity } from 'shared/domain/entities/customer.entity';
 import type { CustomerDeliveryAddressEntity } from 'shared/domain/entities/customer-delivery-address.entity';
 

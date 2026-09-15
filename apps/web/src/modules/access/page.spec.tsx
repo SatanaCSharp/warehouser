@@ -4,10 +4,9 @@ import { fileURLToPath } from 'node:url';
 
 import { RouterProvider } from '@tanstack/react-router';
 import { render, screen } from '@testing-library/react';
-import { Provider } from 'react-redux';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { AccessPage } from 'modules/access/page';
+import { Provider } from 'react-redux';
+import type { AppRouter } from 'router';
 import { createAppRouter } from 'router';
 import { makeStore } from 'store';
 import { stubAccessServer } from 'test/access-fixtures';
@@ -17,8 +16,7 @@ import {
   warehouseMemberships,
   warehouseSessionIds,
 } from 'test/workspace-fixtures';
-
-import type { AppRouter } from 'router';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // CR-AC-06 is a *structural* criterion — "when the file is read after this
 // change" — so it is asserted against the source of the file this spec is

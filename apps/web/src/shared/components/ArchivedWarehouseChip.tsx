@@ -1,10 +1,8 @@
 import { Chip } from '@heroui/react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-
 import { Conditional } from 'shared/components/Conditional';
 import { useArchivedWarehouse } from 'shared/hooks/projections/useArchivedWarehouse';
-
-import type { ReactNode } from 'react';
 
 /**
  * The `Archived warehouse` chip the approved frames place beside a

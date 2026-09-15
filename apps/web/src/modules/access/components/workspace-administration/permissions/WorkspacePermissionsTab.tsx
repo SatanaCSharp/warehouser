@@ -1,12 +1,10 @@
 import { Chip } from '@heroui/react';
-import { useTranslation } from 'react-i18next';
-
 import { useWorkspacePermissionLabel } from 'modules/access/hooks/projections/useWorkspacePermissionLabel';
 import { useWorkspacePermissionCatalogue } from 'modules/access/hooks/queries/useWorkspacePermissionCatalogue';
 import { groupWorkspacePermissions } from 'modules/access/utils/workspace-permission-groups';
-import { Conditional } from 'shared/components/Conditional';
-
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Conditional } from 'shared/components/Conditional';
 
 /**
  * The read-only Workspace Permission catalogue with its assignable/reserved

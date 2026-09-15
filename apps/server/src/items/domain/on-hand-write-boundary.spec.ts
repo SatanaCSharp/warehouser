@@ -9,7 +9,9 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
-const sourceRoot = join(__dirname, '../..');
+import { describe, expect, it } from 'vitest';
+
+const sourceRoot = join(import.meta.dirname, '../..');
 const repositoryDirectory = join(sourceRoot, 'shared/domain/repositories');
 
 const collectProductionSources = (

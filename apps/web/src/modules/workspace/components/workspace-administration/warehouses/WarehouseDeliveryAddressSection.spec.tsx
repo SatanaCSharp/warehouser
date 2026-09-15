@@ -1,10 +1,11 @@
 import { QueryStatus } from '@reduxjs/toolkit/query';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { Warehouse } from '@warehouser/contracts/workspaces';
+import type { WorkspacePermissionId as WorkspacePermissionIdType } from '@warehouser/shared-types/enums';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { WarehouseDeliveryAddressSection } from 'modules/workspace/components/workspace-administration/warehouses/WarehouseDeliveryAddressSection';
+import type { AppStore } from 'store';
 import { renderWithProviders } from 'test/render';
 import {
   authenticatedWorkspaceStore,
@@ -13,10 +14,7 @@ import {
   warehouseIds,
   workspaceWarehouses,
 } from 'test/workspace-fixtures';
-
-import type { Warehouse } from '@warehouser/contracts/workspaces';
-import type { WorkspacePermissionId as WorkspacePermissionIdType } from '@warehouser/shared-types/enums';
-import type { AppStore } from 'store';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 /**
  * T11/AC-10 — the Warehouse's own Delivery Address section of the Workspace
@@ -134,5 +132,76 @@ describe('WarehouseDeliveryAddressSection', () => {
         accessNotes: 'Yard entrance on Kaistrasse; deliveries 06:00-18:00',
       }),
     );
+  });
+
+  // Access notes are never recorded as an empty string: what a driver needs to get in was either
+  // written down or it was not. A member clearing the notes has to send `null`, or the record keeps
+  // an empty string that reads as "notes exist and say nothing".
+  it('AC-10: records cleared access notes as nothing rather than as an empty note', async () => {
+    const onSetWarehouseDeliveryAddress = vi.fn();
+    await renderSection(
+      [
+        WorkspacePermissionId.WAREHOUSES_WATCH,
+        WorkspacePermissionId.WAREHOUSES_ADDRESS_UPDATE,
+      ],
+      { onSetWarehouseDeliveryAddress },
+    );
+
+    await waitFor(() =>
+      expect(screen.getByRole('textbox', { name: /^address$/iu })).toHaveValue(
+        'Am Kai 7, 21079 Hamburg',
+      ),
+    );
+    const notes = screen.getByRole('textbox', { name: /access notes/iu });
+    await userEvent.clear(notes);
+    await userEvent.type(notes, '   ');
+    await userEvent.click(
+      screen.getByRole('button', { name: /save delivery address/iu }),
+    );
+
+    await waitFor(() =>
+      expect(onSetWarehouseDeliveryAddress).toHaveBeenCalledWith({
+        addressText: 'Am Kai 7, 21079 Hamburg',
+        accessNotes: null,
+      }),
+    );
+  });
+
+  // The form stays on the page rather than closing, so it normalizes the settled request itself and
+  // a refusal has to land on the address field — there is no dialog to close and no toast that
+  // would leave the member without somewhere to correct it.
+  it('AC-10: explains a refused address on the address field', async () => {
+    await renderSection(
+      [
+        WorkspacePermissionId.WAREHOUSES_WATCH,
+        WorkspacePermissionId.WAREHOUSES_ADDRESS_UPDATE,
+      ],
+      {
+        onSetWarehouseDeliveryAddress: () => ({
+          body: {
+            code: 'workspace.invalid_input',
+            message: 'Refused.',
+            details: { field: 'addressText', rule: 'trimmed_non_empty' },
+          },
+          status: 422,
+        }),
+      },
+    );
+
+    await waitFor(() =>
+      expect(screen.getByRole('textbox', { name: /^address$/iu })).toHaveValue(
+        'Am Kai 7, 21079 Hamburg',
+      ),
+    );
+    const address = screen.getByRole('textbox', { name: /^address$/iu });
+    await userEvent.clear(address);
+    await userEvent.type(address, 'Am Kai 9, 21079 Hamburg');
+    await userEvent.click(
+      screen.getByRole('button', { name: /save delivery address/iu }),
+    );
+
+    expect(
+      await screen.findByText('Enter the address a supplier delivers to.'),
+    ).toBeVisible();
   });
 });

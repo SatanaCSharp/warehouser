@@ -1,8 +1,6 @@
 import { Button, Tooltip } from '@heroui/react';
-
-import { PlusIcon } from 'shared/icons';
-
 import type { ReactElement } from 'react';
+import { PlusIcon } from 'shared/icons';
 
 type CreateActionButtonProps = {
   isDisabled?: boolean;

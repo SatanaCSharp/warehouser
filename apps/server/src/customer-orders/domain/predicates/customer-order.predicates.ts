@@ -1,3 +1,4 @@
+import { isNull, isUndefined } from '@warehouser/utils/predicates';
 import type { CustomerOrderState } from 'shared/domain/entities/customer-order.entity';
 
 // Pure predicates for the Customer Order lifecycle (server-error-handling.md §1). No NestJS, HTTP
@@ -82,7 +83,7 @@ export interface WarehouseOwnedRecord {
 export const isAvailableDestinationRecord = (
   record: DeactivatableRecord | null | undefined,
 ): boolean =>
-  record !== null && record !== undefined && record.deactivatedAt === null;
+  !isNull(record) && !isUndefined(record) && isNull(record.deactivatedAt);
 
 // AC-12 — the record resolves in the acting Warehouse or it does not resolve at all, so one of
 // another Warehouse and one that does not exist are indistinguishable (spec.md §6.1).
@@ -90,7 +91,7 @@ export const isRecordOfWarehouse = (
   record: WarehouseOwnedRecord | null | undefined,
   warehouseId: string,
 ): boolean =>
-  record !== null && record !== undefined && record.warehouseId === warehouseId;
+  !isNull(record) && !isUndefined(record) && record.warehouseId === warehouseId;
 
 // `chk_customer_orders_customer_identity` — an order names a Customer, or a typed customer name;
 // never both and never neither. Absence is `undefined` at the application boundary and `null` in
@@ -99,8 +100,8 @@ export const namesExactlyOneCustomerIdentity = (
   customerId: string | null | undefined,
   customerName: string | null | undefined,
 ): boolean =>
-  (customerId === null || customerId === undefined) !==
-  (customerName === null || customerName === undefined);
+  (isNull(customerId) || isUndefined(customerId)) !==
+  (isNull(customerName) || isUndefined(customerName));
 
 // AC-11c / openapi.yaml `CustomerOrderRedirectConflict` `orderNotOutstanding` — "Only an
 // outstanding Customer Order is redirected". Narrower than `canAmendCustomerOrder`: a Fulfilled

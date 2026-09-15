@@ -6,15 +6,13 @@ import {
   Label,
   TextField,
 } from '@heroui/react';
-import { forwardRef, useState } from 'react';
-
-import { Conditional } from 'shared/components/Conditional';
-
 import type {
   ComponentProps,
   ComponentPropsWithoutRef,
   ReactNode,
 } from 'react';
+import { forwardRef, useState } from 'react';
+import { Conditional } from 'shared/components/Conditional';
 
 /**
  * `FormTextField`'s password sibling: HeroUI v3 renders an in-field affordance

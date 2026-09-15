@@ -1,8 +1,6 @@
 import { EmptyState } from '@heroui/react';
-
-import { Conditional } from 'shared/components/Conditional';
-
 import type { ReactElement, ReactNode } from 'react';
+import { Conditional } from 'shared/components/Conditional';
 
 export type DatasetEmptyStateProps = {
   /**

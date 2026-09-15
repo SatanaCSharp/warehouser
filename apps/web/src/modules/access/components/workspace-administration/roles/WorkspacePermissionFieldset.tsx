@@ -1,12 +1,10 @@
-import union from 'lodash/union';
-import without from 'lodash/without';
-import { useTranslation } from 'react-i18next';
-
-import { WorkspacePermissionCheckbox } from 'modules/access/components/workspace-administration/roles/WorkspacePermissionCheckbox';
-
 import type { WorkspacePermission } from '@warehouser/contracts/workspaces';
 import type { WorkspacePermissionId } from '@warehouser/shared-types/enums';
+import union from 'lodash/union';
+import without from 'lodash/without';
+import { WorkspacePermissionCheckbox } from 'modules/access/components/workspace-administration/roles/WorkspacePermissionCheckbox';
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 
 type WorkspacePermissionFieldsetProps = {
   isDisabled: boolean;

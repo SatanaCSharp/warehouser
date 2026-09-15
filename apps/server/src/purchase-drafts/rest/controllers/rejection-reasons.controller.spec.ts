@@ -13,6 +13,7 @@ import { REQUIRED_PERMISSION_KEY } from 'shared/decorators/required-permission.d
 import { SessionAuthGuard } from 'shared/guards/session-auth.guard';
 import { WarehouseAccessGuard } from 'shared/guards/warehouse-access.guard';
 import { WRITE_RATE_LIMITED_KEY } from 'shared/guards/write-rate-limited.decorator';
+import { describe, expect, it } from 'vitest';
 
 // T13 §What/sad.md §7 — the Rejection Reason catalogue, served at its own top-level segment so no
 // literal segment competes with a `{purchaseDraftId}` parameter, mirroring `PackagingTypesController`

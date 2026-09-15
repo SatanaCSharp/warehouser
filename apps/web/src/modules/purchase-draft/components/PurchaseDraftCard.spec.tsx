@@ -1,12 +1,10 @@
 import { screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
-
+import type { PurchaseDraftSummary } from '@warehouser/contracts/purchase-drafts';
 import { PurchaseDraftCard } from 'modules/purchase-draft/components/PurchaseDraftCard';
+import type { ReactElement } from 'react';
 import { authenticatedStore } from 'test/access-fixtures';
 import { renderWithProviders } from 'test/render';
-
-import type { PurchaseDraftSummary } from '@warehouser/contracts/purchase-drafts';
-import type { ReactElement } from 'react';
+import { describe, expect, it, vi } from 'vitest';
 
 // T20 DoD: "A test proves the Drift Signal is icon plus text and never
 // colour alone, and that a card without drift is visibly distinguished from

@@ -1,9 +1,7 @@
+import type { PurchaseDraftLineLink } from '@warehouser/contracts/purchase-drafts';
+import { purchaseDraftLinkIdentity } from 'modules/purchase-draft/utils/link-identity';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-
-import { purchaseDraftLinkIdentity } from 'modules/purchase-draft/utils/link-identity';
-
-import type { PurchaseDraftLineLink } from '@warehouser/contracts/purchase-drafts';
 
 export type PurchaseDraftLinkNaming = (link: PurchaseDraftLineLink) => string;
 

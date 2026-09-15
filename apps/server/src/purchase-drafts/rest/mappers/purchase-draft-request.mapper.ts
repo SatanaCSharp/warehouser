@@ -2,7 +2,9 @@ import type {
   PurchaseDraftLineArrival,
   PurchaseDraftLineUpdate,
 } from '@warehouser/contracts/purchase-drafts';
+import { isUndefined } from '@warehouser/utils/predicates';
 import type { EndingPreReceiptConformanceInput } from 'purchase-drafts/domain/mappers/purchase-draft-line-ending.mapper';
+import { statesConformanceNote } from 'purchase-drafts/domain/predicates/purchase-draft-condition.predicates';
 import type { ReviseLineInput } from 'purchase-drafts/usecases/commands/revise-purchase-draft-line.command';
 import type { RecordLineEndingRejectionInput } from 'shared/domain/repositories/arrival-confirmation.repository';
 
@@ -22,25 +24,30 @@ import type { RecordLineEndingRejectionInput } from 'shared/domain/repositories/
 //
 // `description ?? null` is the one gap between the wire shape — `proseSchema` optional — and
 // `RecordLineEndingRejectionInput`'s own `string | null`; every other field passes through unchanged.
+const toEndingRejectionInput = (
+  rejection: NonNullable<PurchaseDraftLineArrival['rejections']>[number],
+): RecordLineEndingRejectionInput => ({
+  rejectionReasonId: rejection.rejectionReasonId,
+  quantity: rejection.quantity,
+  source: rejection.source,
+  description: rejection.description ?? null,
+});
+
 export const toEndingRejectionInputs = (
   rejections: PurchaseDraftLineArrival['rejections'],
 ): readonly RecordLineEndingRejectionInput[] | undefined =>
-  rejections?.map((rejection) => ({
-    rejectionReasonId: rejection.rejectionReasonId,
-    quantity: rejection.quantity,
-    source: rejection.source,
-    description: rejection.description ?? null,
-  }));
+  rejections?.map(toEndingRejectionInput);
 
 export const toEndingPreReceiptConformanceInput = (
   preReceiptConformance: PurchaseDraftLineArrival['preReceiptConformance'],
 ): EndingPreReceiptConformanceInput | null | undefined =>
-  preReceiptConformance === undefined
+  isUndefined(preReceiptConformance)
     ? undefined
     : {
         verdict: preReceiptConformance.verdict,
-        note:
-          'note' in preReceiptConformance ? preReceiptConformance.note : null,
+        note: statesConformanceNote(preReceiptConformance)
+          ? preReceiptConformance.note
+          : null,
       };
 
 // openapi.yaml `PurchaseDraftLineUpdate` -> `ReviseLineInput` — the payload's two flat destination
@@ -61,11 +68,10 @@ export const toReviseLineInput = (
   orderedQuantity: input.orderedQuantity,
   packagingTypeId: input.packagingTypeId,
   valueAddingNote: input.valueAddingNote,
-  destination:
-    input.deliveryMode === undefined
-      ? undefined
-      : {
-          deliveryMode: input.deliveryMode,
-          customerDeliveryAddressId: input.customerDeliveryAddressId ?? null,
-        },
+  destination: isUndefined(input.deliveryMode)
+    ? undefined
+    : {
+        deliveryMode: input.deliveryMode,
+        customerDeliveryAddressId: input.customerDeliveryAddressId ?? null,
+      },
 });

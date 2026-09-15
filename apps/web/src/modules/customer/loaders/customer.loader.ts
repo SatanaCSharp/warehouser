@@ -1,12 +1,10 @@
 import { PermissionId } from '@warehouser/shared-types/enums';
-
+import type { WarehouseEntryVerdict } from 'guards/warehouse-entry.guard';
 import { admitsReads } from 'guards/warehouse-entry.guard';
 import { customerApi } from 'modules/customer/api/customer-api';
+import type { RouterContext } from 'routes/__root.route';
 import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
 import { hasPermission } from 'shared/hooks/queries/usePermissions';
-
-import type { WarehouseEntryVerdict } from 'guards/warehouse-entry.guard';
-import type { RouterContext } from 'routes/__root.route';
 
 /**
  * The router context inside `customerRoute`: the application context every

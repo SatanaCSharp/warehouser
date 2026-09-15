@@ -16,6 +16,7 @@ import {
   PermissionId as PermissionIdConst,
   WorkspacePermissionId as WorkspacePermissionIdConst,
 } from '@warehouser/shared-types/enums';
+import { describe, expect, it } from 'vitest';
 import type {
   WorkspaceContext,
   WorkspaceRole,

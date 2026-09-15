@@ -1,17 +1,15 @@
 import { Button, Card, Separator } from '@heroui/react';
-import { useTranslation } from 'react-i18next';
-
+import type { Customer } from '@warehouser/contracts/customers';
 import { CustomerAddressBook } from 'modules/customer/components/customer-directory/components/addresses/CustomerAddressBook';
 import { CustomerAwaitingList } from 'modules/customer/components/customer-directory/components/awaiting/CustomerAwaitingList';
 import { CustomerDetailHeader } from 'modules/customer/components/customer-directory/components/customers/CustomerDetailHeader';
 import { useCustomerDetail } from 'modules/customer/hooks/queries/useCustomerDetail';
+import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Conditional } from 'shared/components/Conditional';
 import { DatasetSkeleton } from 'shared/components/DatasetSkeleton';
 import { useContentTransition } from 'shared/hooks/effects/useContentTransition';
 import { ChevronLeftIcon } from 'shared/icons';
-
-import type { Customer } from '@warehouser/contracts/customers';
-import type { ReactElement } from 'react';
 
 export type CustomerDetailPaneProps = {
   /** The opened Customer, or nothing while the list is all that is on screen. */
@@ -47,6 +45,27 @@ const DISPLACING_DETAIL_STATES: readonly {
   { state: 'pending', holds: ({ hasDetail }) => !hasDetail },
 ];
 
+/** The first state that displaces the detail, or `ready` when the detail itself is what renders. */
+const resolveDetailState = (reading: DetailReading): DetailState => {
+  const displacing = DISPLACING_DETAIL_STATES.find(({ holds }) =>
+    holds(reading),
+  );
+
+  return displacing?.state ?? 'ready';
+};
+
+const openedCustomerId = (customer: Customer | undefined): string | undefined =>
+  customer?.id;
+
+/** The pane re-enters both when another Customer is opened and when what it is showing for that
+ * Customer changes — the skeleton arriving, then the Customer replacing it. Keying on the identity
+ * alone would animate the skeleton in and then swap the real content behind it without a frame of
+ * motion, which is the jump the transition exists to remove. */
+const transitionKeyOf = (
+  customerId: string | undefined,
+  detailState: DetailState,
+): string => `${customerId ?? 'none'}:${detailState}`;
+
 /** The pane's own skeleton: an identity line, the addresses, the awaiting rows. */
 const DETAIL_BARS = ['30%', '60%', '45%'] as const;
 
@@ -79,24 +98,17 @@ export const CustomerDetailPane = ({
   onBack,
 }: CustomerDetailPaneProps): ReactElement => {
   const { t } = useTranslation('customer');
-  const { detail, isError } = useCustomerDetail(customer?.id);
+  const customerId = openedCustomerId(customer);
+  const { detail, isError } = useCustomerDetail(customerId);
 
-  const detailState =
-    DISPLACING_DETAIL_STATES.find(({ holds }) =>
-      holds({
-        hasDetail: detail !== undefined,
-        hasSelection: customer !== undefined,
-        isError,
-      }),
-    )?.state ?? 'ready';
+  const detailState = resolveDetailState({
+    hasDetail: detail !== undefined,
+    hasSelection: customer !== undefined,
+    isError,
+  });
 
-  // The pane re-enters both when another Customer is opened and when what it
-  // is showing for that Customer changes — the skeleton arriving, then the
-  // Customer replacing it. Keying on the identity alone would animate the
-  // skeleton in and then swap the real content behind it without a frame of
-  // motion, which is the jump the transition exists to remove.
   const paneRef = useContentTransition<HTMLDivElement>(
-    `${customer?.id ?? 'none'}:${detailState}`,
+    transitionKeyOf(customerId, detailState),
   );
 
   // The three blocks read the Customer they were opened for, so the element is

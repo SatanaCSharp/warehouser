@@ -1,6 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { ErrorCode } from '@warehouser/shared-types/enums';
-import { ApplicationError } from '@warehouser/shared-types/errors';
 import { assert, assertDefined } from '@warehouser/utils/asserts';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
@@ -9,6 +7,7 @@ import { MemberLifecycleRepository } from 'shared/domain/repositories/member-lif
 import {
   managerRoleProtectedError,
   selfActionDeniedError,
+  targetUnavailableError,
 } from 'users/domain/errors/users.errors';
 import {
   isProtectedManagerTarget,
@@ -22,14 +21,6 @@ export interface DeleteMemberInput {
 export interface DeletedMember {
   readonly id: string;
 }
-
-// AC-09's cross-Warehouse-hiding denial is the identical authorization-
-// boundary condition `access` already produces for its own administration
-// actions (sad.md §4) — this feature reuses the same stable ErrorCode rather
-// than redefining it, without importing `access`'s feature-owned error
-// factories (`users` never imports `access/*`/`auth/*`).
-const targetUnavailableError = (): ApplicationError =>
-  new ApplicationError(ErrorCode.ACCESS_TARGET_UNAVAILABLE);
 
 @Injectable()
 export class DeleteMemberCommand {

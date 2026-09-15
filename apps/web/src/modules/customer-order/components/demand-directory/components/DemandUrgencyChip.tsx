@@ -1,13 +1,11 @@
 import { Chip } from '@heroui/react';
-import { useTranslation } from 'react-i18next';
-
+import type { DemandUrgencyState } from 'modules/customer-order/utils/demand-urgency';
 import {
   currentCalendarDate,
   resolveDemandUrgency,
 } from 'modules/customer-order/utils/demand-urgency';
-
-import type { DemandUrgencyState } from 'modules/customer-order/utils/demand-urgency';
 import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export type DemandUrgencyChipProps = {
   /** The Demand Line's earliest needed-by date, as `YYYY-MM-DD`. */

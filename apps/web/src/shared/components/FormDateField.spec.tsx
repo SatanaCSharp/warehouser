@@ -1,8 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
-
 import { FormDateField } from 'shared/components/FormDateField';
+import { describe, expect, it, vi } from 'vitest';
 
 const segmentText = (): string =>
   screen

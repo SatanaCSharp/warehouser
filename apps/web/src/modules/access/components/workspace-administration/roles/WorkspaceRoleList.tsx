@@ -1,13 +1,11 @@
 import { Chip, InputGroup } from '@heroui/react';
+import type { WorkspaceRole } from '@warehouser/contracts/workspaces';
+import type { ChangeEvent, ReactElement } from 'react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-
 import { Conditional } from 'shared/components/Conditional';
 import { ROW_ENTER } from 'shared/constants/motion';
 import { SearchIcon } from 'shared/icons';
-
-import type { WorkspaceRole } from '@warehouser/contracts/workspaces';
-import type { ChangeEvent, ReactElement } from 'react';
 
 type WorkspaceRoleListProps = {
   roles: WorkspaceRole[];

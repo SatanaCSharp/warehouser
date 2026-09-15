@@ -4,6 +4,7 @@
 // one feature exercises it (server-error-handling.md §1); it was previously written out twice, once
 // in each feature.
 import { isSelectableItem } from 'shared/predicates/item-availability.predicates';
+import { describe, expect, it } from 'vitest';
 
 describe('isSelectableItem — AC-03/AC-06d/AC-11, the Item a new reference may name', () => {
   const warehouseId = 'warehouse-north';

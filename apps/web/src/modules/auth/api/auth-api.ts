@@ -1,16 +1,14 @@
-import {
-  authenticatedUserSchema,
-  registrationResultSchema,
-} from '@warehouser/contracts/auth';
-
-import { api } from 'shared/api/client/api-client';
-
 import type {
   AuthCredentials,
   AuthenticatedUser,
   RegistrationInput,
   RegistrationResult,
 } from '@warehouser/contracts/auth';
+import {
+  authenticatedUserSchema,
+  registrationResultSchema,
+} from '@warehouser/contracts/auth';
+import { api } from 'shared/api/client/api-client';
 
 const AUTH_PATH = '/api/v1/auth';
 

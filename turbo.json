@@ -1,15 +1,41 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
+  // Every package's `oxlint.config.ts` calls into `@warehouser/oxlint-config`, and a package's own
+  // file list — which is what turbo hashes by default — cannot see it. The shared package has no
+  // `build` task either, so `lint`'s `dependsOn: ["^build"]` does not reach it. Without these two
+  // entries, editing the shared lint baseline would leave every `lint` task reporting a cache hit
+  // against the old rules.
+  "globalDependencies": ["oxlint.config.ts", "packages/oxlint-config/src/**"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**"]
     },
+    // `^build` is still required: the type-aware pass reads dependencies' emitted `.d.ts` files.
+    // `inputs` is deliberately left at turbo's default (everything git-tracked in the package), so
+    // a change to a package's own `oxlint.config.ts`, `tsconfig.json` or `package.json` invalidates
+    // its lint cache without anyone having to remember to list it.
     "lint": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
+      "outputs": []
     },
+    // No `outputs`: every package's `test` script is a plain `vitest run` with no coverage
+    // instrumentation, so the task writes nothing to restore. Declaring `coverage/**` here — which
+    // only the `crap` task below ever produces — made a cached `test` hit claim to have restored a
+    // directory it never wrote.
     "test": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    // The opt-in CRAP gate: each package's `crap` script is its own `vitest run` with `CRAP=1`,
+    // which is what makes its config wrap itself in the `crap-typescript` Vitest adapter. It is a
+    // task of its own rather than a flag on `test` so that the two cache independently — a plain
+    // `test` result stays valid when only the threshold moved, and a `crap` result is never served
+    // from a run that had no coverage instrumentation. `CRAP=1` is written into the script rather
+    // than read from the environment, so it is already covered by the package.json hash and needs
+    // no `env` entry here.
+    "crap": {
       "dependsOn": ["^build"],
       "outputs": ["coverage/**"]
     },

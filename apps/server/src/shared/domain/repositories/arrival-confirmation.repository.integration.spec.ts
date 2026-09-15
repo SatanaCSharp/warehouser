@@ -22,18 +22,19 @@ import { PurchaseDraftLineRejectionEntity } from 'shared/domain/entities/purchas
 import { UserEntity } from 'shared/domain/entities/user.entity';
 import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
 import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
-import {
-  ArrivalConfirmationRepository,
-  type LockPurchaseDraftLineForEndingResult,
-  type RecordLineEndingConditionInput,
-  type RecordLineEndingInput,
-  type RecordLineEndingResult,
+import type {
+  LockPurchaseDraftLineForEndingResult,
+  RecordLineEndingConditionInput,
+  RecordLineEndingInput,
+  RecordLineEndingResult,
 } from 'shared/domain/repositories/arrival-confirmation.repository';
+import { ArrivalConfirmationRepository } from 'shared/domain/repositories/arrival-confirmation.repository';
 import {
   buildWarehouse,
   buildWorkspace,
 } from 'test/factories/entity-factories';
-import { PostgresQueryRunner } from 'typeorm/driver/postgres/PostgresQueryRunner';
+import { captureStatements } from 'test/pglite/query-recorder';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 const now = new Date('2026-08-26T10:00:00.000Z');
 const later = new Date('2026-08-26T12:00:00.000Z');
@@ -198,26 +199,8 @@ const recordEndingInTransaction = (
 // Captures the SQL PostgreSQL was actually asked to run, the same idiom
 // `CustomerAddressBookRepository`'s integration spec uses for `lockDeliveryAddresses`. PGlite has a
 // single backend, so a genuine two-connection race either self-deadlocks or lets both writers win
-// (jest.pglite.config.cjs, data-model.md § "Concurrency, locks and transactions": "PGlite cannot
+// (vitest.pglite.config.ts, data-model.md § "Concurrency, locks and transactions": "PGlite cannot
 // prove any of this … the lock order and the conditional-update races are asserted by *shape*").
-const captureStatements = async <T>(
-  operation: () => Promise<T>,
-): Promise<{ result: T; statements: string[] }> => {
-  const spy = jest.spyOn(PostgresQueryRunner.prototype, 'query');
-  const before = spy.mock.calls.length;
-  const result = await operation();
-  const statements = spy.mock.calls
-    .slice(before)
-    .map((call) => String(call[0]))
-    .filter(
-      (sql) =>
-        !/^(?:START TRANSACTION|SET TRANSACTION|COMMIT|ROLLBACK|BEGIN)/u.test(
-          sql,
-        ),
-    );
-  spy.mockRestore();
-  return { result, statements };
-};
 
 // The columns a statement actually asks PostgreSQL for, read from its select list alone. Cutting at
 // `FROM` is what keeps a column named only in the `WHERE` clause — `purchase_draft_id`,

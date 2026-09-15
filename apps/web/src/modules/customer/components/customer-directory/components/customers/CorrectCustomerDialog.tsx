@@ -1,14 +1,12 @@
+import type { Customer, CustomerUpdate } from '@warehouser/contracts/customers';
+import { CustomerRefusalAlert } from 'modules/customer/components/customer-directory/components/CustomerRefusalAlert';
+import type { ReactElement } from 'react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-
-import { CustomerRefusalAlert } from 'modules/customer/components/customer-directory/components/CustomerRefusalAlert';
+import type { MutationResult } from 'shared/api/client/mutation-outcome';
 import { FormModalDialog } from 'shared/components/FormModalDialog';
 import { FormTextField } from 'shared/components/FormTextField';
-
-import type { Customer, CustomerUpdate } from '@warehouser/contracts/customers';
-import type { ReactElement } from 'react';
-import type { MutationResult } from 'shared/api/client/mutation-outcome';
 
 type CorrectCustomerForm = { name: string };
 

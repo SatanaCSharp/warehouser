@@ -1,11 +1,10 @@
-import { afterEach, describe, expect, it } from 'vitest';
-
 import {
   formatCalendarDate,
   formatShortCalendarDate,
   formatShortTimestampDate,
   formatTimestampDate,
 } from 'shared/utils/date-format';
+import { afterEach, describe, expect, it } from 'vitest';
 
 const ORIGINAL_TIME_ZONE = process.env.TZ;
 

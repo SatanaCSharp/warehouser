@@ -1,7 +1,5 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { SignOutButton } from 'modules/auth/sign-out/components/SignOutButton';
 import {
   selectAuthStatus,
@@ -9,6 +7,7 @@ import {
 } from 'modules/auth/store/auth.selectors';
 import { authenticatedStore } from 'test/access-fixtures';
 import { renderWithProviders } from 'test/render';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const navigate = vi.hoisted(() => vi.fn());
 const signOut = vi.hoisted(() => vi.fn());

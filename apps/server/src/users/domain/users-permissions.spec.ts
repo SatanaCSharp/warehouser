@@ -1,4 +1,5 @@
 import { ErrorCode, PermissionId } from '@warehouser/shared-types/enums';
+import { describe, expect, it } from 'vitest';
 
 describe('users-management Permission and Error catalogue parity', () => {
   // T1's migration (apps/server/migrations/1786025100000-GrantUsersManagementPermissions.ts)

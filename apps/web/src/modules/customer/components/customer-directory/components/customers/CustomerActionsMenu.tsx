@@ -1,14 +1,12 @@
 import { Button, Dropdown, Label } from '@heroui/react';
-import { useTranslation } from 'react-i18next';
-
+import type { Customer } from '@warehouser/contracts/customers';
 import { useReactivateCustomerMutation } from 'modules/customer/api/customer-api';
+import type { CustomerActionHandlers } from 'modules/customer/hooks/projections/useCustomerActions';
 import { useCustomerActions } from 'modules/customer/hooks/projections/useCustomerActions';
+import type { Key, ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
 import { KebabIcon } from 'shared/icons';
-
-import type { Customer } from '@warehouser/contracts/customers';
-import type { CustomerActionHandlers } from 'modules/customer/hooks/projections/useCustomerActions';
-import type { Key, ReactNode } from 'react';
 
 export type CustomerActionsMenuProps = CustomerActionHandlers & {
   customer: Customer;

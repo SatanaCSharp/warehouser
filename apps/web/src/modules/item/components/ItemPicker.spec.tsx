@@ -1,11 +1,9 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
-
+import type { Item } from '@warehouser/contracts/items';
 import { ItemPicker } from 'modules/item/components/ItemPicker';
 import { renderWithProviders } from 'test/render';
-
-import type { Item } from '@warehouser/contracts/items';
+import { describe, expect, it, vi } from 'vitest';
 
 // T18 — the Item picker `modules/customer-order` and `modules/purchase-draft`
 // reach through this module's declared public surface (AC-06a). DoD: "A test

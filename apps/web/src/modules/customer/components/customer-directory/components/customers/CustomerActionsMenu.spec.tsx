@@ -1,8 +1,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { Customer } from '@warehouser/contracts/customers';
 import { PermissionId } from '@warehouser/shared-types/enums';
-import { describe, expect, it, vi } from 'vitest';
-
 import { CustomerActionsMenu } from 'modules/customer/components/customer-directory/components/customers/CustomerActionsMenu';
 import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
 import {
@@ -11,8 +10,7 @@ import {
   stubAccessServer,
 } from 'test/access-fixtures';
 import { renderInEnteredWarehouse } from 'test/render';
-
-import type { Customer } from '@warehouser/contracts/customers';
+import { describe, expect, it, vi } from 'vitest';
 
 // delivery-addresses R8 — the reactivation half of AC-06. This is not one of
 // the seven dialogs the review named, but reactivation asks nothing

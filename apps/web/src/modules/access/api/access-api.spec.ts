@@ -1,9 +1,8 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { accessApi } from 'modules/access/api/access-api';
 import { accessPermissionsApi } from 'shared/api/access/access-permissions-api';
 import { makeStore } from 'store';
 import { accessIds, accessPath, usersPath } from 'test/access-fixtures';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const warehouseId = accessIds.warehouse;
 const otherWarehouseId = accessIds.otherWarehouse;

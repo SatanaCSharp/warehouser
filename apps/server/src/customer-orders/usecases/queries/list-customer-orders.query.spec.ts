@@ -1,6 +1,7 @@
 import { PermissionId } from '@warehouser/shared-types/enums';
 import { ListCustomerOrdersQuery } from 'customer-orders/usecases/queries/list-customer-orders.query';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
+import { describe, expect, it, vi } from 'vitest';
 
 // T13 — the redaction of the Customer Order projection, on both sides of the observed
 // `CUSTOMERS:WATCH` (AC-09a, AC-11, AC-11a, AC-24, ADR 0001).
@@ -114,8 +115,8 @@ const redactedRows = identifiedRows.map((row) => ({
 }));
 
 const repositoryDouble = () => ({
-  listIdentifiedCustomerOrders: jest.fn().mockResolvedValue(identifiedRows),
-  listRedactedCustomerOrders: jest.fn().mockResolvedValue(redactedRows),
+  listIdentifiedCustomerOrders: vi.fn().mockResolvedValue(identifiedRows),
+  listRedactedCustomerOrders: vi.fn().mockResolvedValue(redactedRows),
 });
 
 const queryOver = (repository: ReturnType<typeof repositoryDouble>) =>

@@ -7,10 +7,8 @@ import { AccountEntity } from 'shared/domain/entities/account.entity';
 import { ItemEntity } from 'shared/domain/entities/item.entity';
 import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
 import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity';
-import {
-  type PurchaseDraftLineRejectionDisposition,
-  PurchaseDraftLineRejectionEntity,
-} from 'shared/domain/entities/purchase-draft-line-rejection.entity';
+import type { PurchaseDraftLineRejectionDisposition } from 'shared/domain/entities/purchase-draft-line-rejection.entity';
+import { PurchaseDraftLineRejectionEntity } from 'shared/domain/entities/purchase-draft-line-rejection.entity';
 import { UserEntity } from 'shared/domain/entities/user.entity';
 import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
 import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
@@ -24,11 +22,11 @@ import {
   buildWarehouse,
   buildWorkspace,
 } from 'test/factories/entity-factories';
-// Spied at the PostgreSQL round-trip level, as `arrival-confirmation.repository.integration.spec.ts`
-// does: it is the one method every TypeORM access path reaches the database through, so the count
-// and the text below describe the statements actually issued rather than the API chosen to issue
-// them.
-import { PostgresQueryRunner } from 'typeorm/driver/postgres/PostgresQueryRunner';
+// Recorded at the PostgreSQL round-trip level, as
+// `arrival-confirmation.repository.integration.spec.ts` does, so the count and the text below
+// describe the statements actually issued rather than the API chosen to issue them.
+import { captureStatements, recordQueries } from 'test/pglite/query-recorder';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 const now = new Date('2026-09-07T09:00:00.000Z');
 const raisedAt = new Date('2026-09-07T10:00:00.000Z');
@@ -242,24 +240,6 @@ const amendInTransaction = (
   transactions.executeInTransaction({}, () => repository.amendRejection(input));
 
 /** The SQL each call actually issued, with the transaction control statements dropped. */
-const captureStatements = async <T>(
-  operation: () => Promise<T>,
-): Promise<{ result: T; statements: string[] }> => {
-  const spy = jest.spyOn(PostgresQueryRunner.prototype, 'query');
-  const before = spy.mock.calls.length;
-  const result = await operation();
-  const statements = spy.mock.calls
-    .slice(before)
-    .map((call) => String(call[0]))
-    .filter(
-      (sql) =>
-        !/^(?:START TRANSACTION|SET TRANSACTION|COMMIT|ROLLBACK|BEGIN)/u.test(
-          sql,
-        ),
-    );
-  spy.mockRestore();
-  return { result, statements };
-};
 
 /**
  * The plan of the exact statement the lock issued — captured rather than hand-reconstructed, then
@@ -269,23 +249,22 @@ const explainLockStatement = async (
   rejectionId: string,
   warehouseId: string,
 ): Promise<string> => {
-  const spy = jest.spyOn(PostgresQueryRunner.prototype, 'query');
-  const before = spy.mock.calls.length;
-  await lockInTransaction(rejectionId, warehouseId);
-  const call = spy.mock.calls
-    .slice(before)
-    .find((candidate) => /FOR UPDATE/u.test(String(candidate[0])));
-  spy.mockRestore();
+  const { statements } = await recordQueries(() =>
+    lockInTransaction(rejectionId, warehouseId),
+  );
+  const locking = statements.find((statement) =>
+    /FOR UPDATE/u.test(statement.sql),
+  );
 
-  if (call === undefined) {
+  if (locking === undefined) {
     throw new Error('the resolve issued no locking statement');
   }
 
   const rows = await dataSource.transaction(async (manager) => {
     await manager.query('SET LOCAL enable_seqscan = off');
     return manager.query<Array<Record<string, string>>>(
-      `EXPLAIN ${String(call[0])}`,
-      call[1] as unknown[] | undefined,
+      `EXPLAIN ${locking.sql}`,
+      [...locking.parameters],
     );
   });
 

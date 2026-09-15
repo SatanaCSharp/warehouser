@@ -1,4 +1,5 @@
 import { sleep } from 'async';
+import { describe, expect, it } from 'vitest';
 
 describe('sleep', () => {
   it('resolves after approximately specified milliseconds', async () => {

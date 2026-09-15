@@ -1,5 +1,6 @@
 import { AssertionError } from '@warehouser/shared-types/errors';
 import { EmailAddress } from 'shared/domain/security/email-address';
+import { describe, expect, it } from 'vitest';
 
 describe('EmailAddress', () => {
   it('normalizes a supported email while preserving its validated shape', () => {

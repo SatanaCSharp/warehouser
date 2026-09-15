@@ -15,6 +15,7 @@ import type { PermissionId } from 'enums/permission-id';
 import { PermissionId as PermissionIdConst } from 'enums/permission-id';
 import type { WorkspacePermissionId } from 'enums/workspace-permission-id';
 import { WorkspacePermissionId as WorkspacePermissionIdConst } from 'enums/workspace-permission-id';
+import { describe, expect, it } from 'vitest';
 
 // Every catalogue identifier the migrations seed, in the order they appear there: the sixteen
 // from migration `01` (workspace authority schema), then each one a later migration adds.

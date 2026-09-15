@@ -1,18 +1,18 @@
 import { randomUUID } from 'node:crypto';
 
 import { Injectable } from '@nestjs/common';
+import { isEmpty, isNull } from '@warehouser/utils/predicates';
 import { getEntityManager } from 'shared/database/db-transaction-context.service';
 import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
-import {
-  type PurchaseDraftLineDeliveryMode,
-  type PurchaseDraftLineEndingKind,
-  PurchaseDraftLineEntity,
-  type PurchaseDraftLinePreReceiptConformance,
+import type {
+  PurchaseDraftLineDeliveryMode,
+  PurchaseDraftLineEndingKind,
+  PurchaseDraftLinePreReceiptConformance,
 } from 'shared/domain/entities/purchase-draft-line.entity';
-import {
-  PurchaseDraftLineRejectionEntity,
-  type PurchaseDraftLineRejectionSource,
-} from 'shared/domain/entities/purchase-draft-line-rejection.entity';
+import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity';
+import type { PurchaseDraftLineRejectionSource } from 'shared/domain/entities/purchase-draft-line-rejection.entity';
+import { PurchaseDraftLineRejectionEntity } from 'shared/domain/entities/purchase-draft-line-rejection.entity';
+import { affectedExactlyOneRow } from 'shared/predicates/persistence-write.predicates';
 import { DataSource, IsNull } from 'typeorm';
 
 export interface LockedPurchaseDraftForArrival {
@@ -92,6 +92,23 @@ export interface RecordLineEndingInput {
   readonly condition: RecordLineEndingConditionInput | null;
 }
 
+// The three ways a condition reaches the columns it is stored in. `null` — a nothing-received ending
+// (AC-04a), or a caller carrying no condition at all — reads exactly as a condition that judged
+// nothing and refused nothing, so each of these is read once, by name, rather than defaulted three
+// times inside the statement below.
+const statedConformance = (
+  condition: RecordLineEndingConditionInput | null,
+): PurchaseDraftLinePreReceiptConformance | null =>
+  condition?.preReceiptConformance ?? null;
+
+const statedConformanceNote = (
+  condition: RecordLineEndingConditionInput | null,
+): string | null => condition?.preReceiptConformanceNote ?? null;
+
+const statedRejections = (
+  condition: RecordLineEndingConditionInput | null,
+): readonly RecordLineEndingRejectionInput[] => condition?.rejections ?? [];
+
 // A Rejection carries the Delivery Mode of the line it refuses, so
 // `fk_purchase_draft_line_rejections_line` proves the line, its Warehouse and its Mode through one
 // reference (AC-25, AC-26). The Mode is derived rather than stated: the ending's kind already fixes
@@ -151,7 +168,7 @@ export class ArrivalConfirmationRepository {
       .setLock('pessimistic_write')
       .getOne();
 
-    if (draft === null) {
+    if (isNull(draft)) {
       return { draft: null, line: null };
     }
 
@@ -174,18 +191,17 @@ export class ArrivalConfirmationRepository {
         warehouseId: draft.warehouseId,
         state: draft.state,
       },
-      line:
-        line === null
-          ? null
-          : {
-              id: line.id,
-              deliveryMode: line.deliveryMode,
-              packagingTypeId: line.packagingTypeId,
-              valueAddingNote: line.valueAddingNote,
-              endingKind: line.endingKind,
-              endingRecordedByUserId: line.endingRecordedByUserId,
-              endingRecordedAt: line.endingRecordedAt,
-            },
+      line: isNull(line)
+        ? null
+        : {
+            id: line.id,
+            deliveryMode: line.deliveryMode,
+            packagingTypeId: line.packagingTypeId,
+            valueAddingNote: line.valueAddingNote,
+            endingKind: line.endingKind,
+            endingRecordedByUserId: line.endingRecordedByUserId,
+            endingRecordedAt: line.endingRecordedAt,
+          },
     };
   }
 
@@ -228,14 +244,13 @@ export class ArrivalConfirmationRepository {
         endingKind: input.endingKind,
         endingRecordedByUserId: input.endingRecordedByUserId,
         endingRecordedAt: input.endingRecordedAt,
-        preReceiptConformance: input.condition?.preReceiptConformance ?? null,
-        preReceiptConformanceNote:
-          input.condition?.preReceiptConformanceNote ?? null,
+        preReceiptConformance: statedConformance(input.condition),
+        preReceiptConformanceNote: statedConformanceNote(input.condition),
         updatedAt: input.endingRecordedAt,
       },
     );
 
-    if (ending.affected !== 1) {
+    if (!affectedExactlyOneRow(ending)) {
       return { recorded: false, closed: false };
     }
 
@@ -243,9 +258,9 @@ export class ArrivalConfirmationRepository {
     // than to a second one of their own. Reaching them only through the guarded update above is what
     // makes "no further refusal against a recorded ending" unreachable, instead of a rule an insert
     // ordered ahead of the ending could walk around.
-    const rejections = input.condition?.rejections ?? [];
+    const rejections = statedRejections(input.condition);
 
-    if (rejections.length > 0) {
+    if (!isEmpty(rejections)) {
       await manager.insert(
         PurchaseDraftLineRejectionEntity,
         rejections.map((rejection) => ({

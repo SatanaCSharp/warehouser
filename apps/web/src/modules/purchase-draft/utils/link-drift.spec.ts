@@ -1,11 +1,9 @@
-import { describe, expect, it } from 'vitest';
-
-import { describeLinkDrift } from 'modules/purchase-draft/utils/link-drift';
-
 import type {
   PurchaseDraftLineLinkIdentified,
   PurchaseDraftLineLinkRedacted,
 } from '@warehouser/contracts/purchase-drafts';
+import { describeLinkDrift } from 'modules/purchase-draft/utils/link-drift';
+import { describe, expect, it } from 'vitest';
 
 // AC-16 — "shows a Drift Signal against the draft naming the Customer Order
 // **and what changed**, compared against the demand captured when the draft was

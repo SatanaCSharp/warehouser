@@ -1,4 +1,4 @@
-import { Injectable, Optional } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import type { Customer } from 'customers/domain/mappers/customer.mapper';
 import { toCustomer } from 'customers/domain/mappers/customer.mapper';
 import {
@@ -6,19 +6,10 @@ import {
   assertDeliveryAddressUsable,
   CustomerAddressBookService,
 } from 'customers/domain/services/customer-address-book.service';
-import { find } from 'lodash';
+import { find } from 'lodash-es';
 import type { AccessCurrentUser } from 'shared/access/access-current-user';
 import { Transactional } from 'shared/decorators/transactional.decorator';
 import { CustomerAddressBookRepository } from 'shared/domain/repositories/customer-address-book.repository';
-
-export interface SetMainCustomerDeliveryAddressRuntime {
-  readonly now: () => Date;
-}
-
-const defaultSetMainCustomerDeliveryAddressRuntime: SetMainCustomerDeliveryAddressRuntime =
-  {
-    now: () => new Date(),
-  };
 
 // AC-04/AC-05/AC-12 — "a member changes which by marking another as Main". One repository operation
 // clears the previous flag and sets this one, because
@@ -35,8 +26,6 @@ export class SetMainCustomerDeliveryAddressCommand {
   constructor(
     private readonly customerAddressBookRepository: CustomerAddressBookRepository,
     private readonly customerAddressBookService: CustomerAddressBookService,
-    @Optional()
-    private readonly setMainCustomerDeliveryAddressRuntime: SetMainCustomerDeliveryAddressRuntime = defaultSetMainCustomerDeliveryAddressRuntime,
   ) {}
 
   @Transactional()
@@ -68,7 +57,7 @@ export class SetMainCustomerDeliveryAddressCommand {
       customerId,
     );
 
-    const changedAt = this.setMainCustomerDeliveryAddressRuntime.now();
+    const changedAt = new Date();
     const outcome =
       await this.customerAddressBookRepository.setMainDeliveryAddress(
         deliveryAddressId,

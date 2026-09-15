@@ -1,5 +1,4 @@
-import { useState } from 'react';
-
+import type { RoleWrite } from '@warehouser/contracts/access';
 import {
   useDeleteAccessRoleMutation,
   useUpdateAccessRoleMutation,
@@ -8,13 +7,12 @@ import { DeleteRoleDialog } from 'modules/access/components/access-workspace/com
 import { RoleEditor } from 'modules/access/components/access-workspace/components/roles/RoleEditor';
 import { RoleList } from 'modules/access/components/access-workspace/components/roles/RoleList';
 import { useAccessScope } from 'modules/access/hooks/projections/useAccessScope';
-import { ActionDialogHost } from 'shared/components/ActionDialogHost';
-import { useActionDialog } from 'shared/hooks/state/useActionDialog';
-
-import type { RoleWrite } from '@warehouser/contracts/access';
 import type { AccessRole } from 'modules/access/types/access.types';
 import type { ReactElement } from 'react';
+import { useState } from 'react';
 import type { MutationResult } from 'shared/api/client/mutation-outcome';
+import { ActionDialogHost } from 'shared/components/ActionDialogHost';
+import { useActionDialog } from 'shared/hooks/state/useActionDialog';
 
 type RoleDirectoryProps = {
   roles: AccessRole[];
@@ -23,8 +21,13 @@ type RoleDirectoryProps = {
 /** The one dialog a Role row opens. */
 type RoleDialogKind = 'deleteRole';
 
-const defaultRoleId = (roles: AccessRole[]): string | undefined =>
-  roles.find((role) => role.kind === 'custom')?.id ?? roles[0]?.id;
+const isCustomRole = (role: AccessRole): boolean => role.kind === 'custom';
+
+const defaultRoleId = (roles: AccessRole[]): string | undefined => {
+  const custom = roles.find(isCustomRole);
+
+  return custom?.id ?? roles[0]?.id;
+};
 
 /**
  * The Role list beside the editor for the selected Role. The selection is local
@@ -91,13 +94,15 @@ export const RoleDirectory = ({ roles }: RoleDirectoryProps): ReactElement => {
       <ActionDialogHost
         controller={dialog}
         renderDialogs={{
-          deleteRole: (role) => (
-            <DeleteRoleDialog
-              role={role}
-              roles={roles.filter((candidate) => candidate.kind === 'custom')}
-              onDelete={onConfirmDeletion(role)}
-            />
-          ),
+          deleteRole: (role) => {
+            return (
+              <DeleteRoleDialog
+                role={role}
+                roles={roles.filter(isCustomRole)}
+                onDelete={onConfirmDeletion(role)}
+              />
+            );
+          },
         }}
       />
     </div>

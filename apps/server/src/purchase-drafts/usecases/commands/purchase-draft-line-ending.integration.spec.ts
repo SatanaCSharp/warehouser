@@ -49,10 +49,20 @@ import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 import { ArrivalConfirmationRepository } from 'shared/domain/repositories/arrival-confirmation.repository';
 import { DemandAllocationRepository } from 'shared/domain/repositories/demand-allocation.repository';
 import { RejectionReasonCatalogueRepository } from 'shared/domain/repositories/rejection-reason-catalogue.repository';
+import { freezeClockAt } from 'test/doubles/frozen-clock';
 import {
   buildWarehouse,
   buildWorkspace,
 } from 'test/factories/entity-factories';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 
 const now = new Date('2026-08-26T10:00:00.000Z');
 const later = new Date('2026-08-26T12:00:00.000Z');
@@ -67,7 +77,6 @@ const arrivalConfirmationRepository = new ArrivalConfirmationRepository(
 const demandAllocationRepository = new DemandAllocationRepository(dataSource);
 const demandAllocationService = new DemandAllocationService(
   demandAllocationRepository,
-  { now: () => later },
 );
 // T10 (post-review) — `ArrivalInspectionService` is a required constructor collaborator of both
 // ending commands (server-architecture.md §118); this integration suite gives it the **real**
@@ -86,7 +95,6 @@ const buildArrivalCommand = (
     arrivalConfirmationRepository,
     demand as DemandAllocationService,
     arrivalInspectionService,
-    { now: () => later },
   );
 
 const buildDeliveryCommand = (
@@ -96,7 +104,6 @@ const buildDeliveryCommand = (
     arrivalConfirmationRepository,
     demand as DemandAllocationService,
     arrivalInspectionService,
-    { now: () => later },
   );
 
 const seedUser = async (workspaceId: string): Promise<string> => {
@@ -335,6 +342,8 @@ const readRejectionsForLine = (
   dataSource.manager
     .getRepository(PurchaseDraftLineRejectionEntity)
     .find({ where: { purchaseDraftLineId }, order: { createdAt: 'ASC' } });
+
+freezeClockAt(later);
 
 // eslint-disable-next-line max-lines-per-function -- integration suite setup is inherently long
 describe('per-line endings (T17, ADR 0002)', () => {
@@ -581,7 +590,7 @@ describe('per-line endings (T17, ADR 0002)', () => {
 
     const injectedFailure = new Error('injected mid-way failure');
     const failingDemand = {
-      allocate: jest.fn().mockRejectedValue(injectedFailure),
+      allocate: vi.fn().mockRejectedValue(injectedFailure),
     };
 
     const rejection = transactions.executeInTransaction({}, () =>
@@ -924,7 +933,7 @@ describe('per-line endings (T17, ADR 0002)', () => {
 
     const injectedFailure = new Error('injected mid-way failure');
     const failingDemand = {
-      allocate: jest.fn().mockRejectedValue(injectedFailure),
+      allocate: vi.fn().mockRejectedValue(injectedFailure),
     };
 
     const rejection = transactions.executeInTransaction({}, () =>
