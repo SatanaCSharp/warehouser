@@ -9,6 +9,7 @@ files_hint:
   - 'apps/web/src/test/loader-permission-parity/'
   - 'apps/web/src/test/module-boundaries/'
   - 'apps/web/src/test/route-readiness/'
+  - 'apps/web/src/test/readiness-removal/'
 owner: 'Tech Lead'
 estimate: 'M'
 status: 'todo'

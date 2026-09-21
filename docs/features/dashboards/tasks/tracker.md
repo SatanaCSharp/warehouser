@@ -20,7 +20,7 @@
 | T13 | [Four Workspace Panel queries](./workspace-panel-queries.md)                                                    | `app`       | Backend Lead  | M        | T3, T8, T9, T10    | done   |
 | T14 | [Workspace Dashboard REST surface](./workspace-dashboard-rest-surface.md)                                       | `ports`     | Backend Lead  | S        | T2, T13            | done   |
 | T15 | [Chart primitives, tokens, scales and locales](./chart-primitives-and-tokens.md)                                | `ui`        | Frontend Lead | L        | —                  | done   |
-| T16 | [Warehouse Dashboard shell — loader, grid, reflow, denial](./warehouse-dashboard-shell-ui.md)                   | `ui`        | Frontend Lead | L        | T3, T12, T15       | todo   |
+| T16 | [Warehouse Dashboard shell — loader, grid, reflow, denial](./warehouse-dashboard-shell-ui.md)                   | `ui`        | Frontend Lead | L        | T3, T12, T15       | done   |
 | T17 | [Coverage Gap + Reason Concentration Panels](./coverage-gap-and-reason-concentration-panels-ui.md)              | `ui`        | Frontend Lead | M        | T16                | todo   |
 | T18 | [Arrival Timing + Purchasing Pipeline Panels](./arrival-timing-and-purchasing-pipeline-panels-ui.md)            | `ui`        | Frontend Lead | M        | T16                | todo   |
 | T19 | [workspace-dashboard module, route and gated rail entry](./workspace-dashboard-module-ui.md)                    | `ui`        | Frontend Lead | M        | T3, T14, T15       | todo   |

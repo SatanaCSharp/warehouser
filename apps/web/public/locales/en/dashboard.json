@@ -1,1 +1,51 @@
-{}
+{
+  "warehouse": {
+    "heading": "Warehouse dashboard",
+    "denial": {
+      "heading": "You cannot read this warehouse’s figures",
+      "description": "Your role in this warehouse does not admit them. Ask a warehouse administrator if you need them."
+    }
+  },
+  "panels": {
+    "coverageGap": {
+      "title": "Coverage Gap",
+      "meta": "Top 10 Items by uncovered quantity",
+      "remainder": "{{count}} more Items",
+      "series": {
+        "onHand": "On hand",
+        "onOrder": "On order",
+        "uncovered": "Uncovered"
+      }
+    },
+    "reasonConcentration": {
+      "title": "Reason Concentration",
+      "meta": "Rejected quantity by Reason",
+      "cumulative": "{{share}}%"
+    },
+    "arrivalTiming": {
+      "title": "Arrival Timing",
+      "meta": "Quantity owed vs expected at the dock, by week",
+      "overdue": "Overdue",
+      "footnote": "Beyond the last week: {{beyondQuantity}} owed, {{beyondOrders}} orders, in no week · Not placed in a week: {{undatedDrafts}} undated drafts, {{datedStillInDraft}} still in Draft, {{sinceClosedOrDiscarded}} since Closed or Discarded",
+      "series": {
+        "owed": "Owed",
+        "expectedAtDock": "Expected at dock"
+      }
+    },
+    "purchasingPipeline": {
+      "title": "Purchasing Pipeline",
+      "meta": "Open drafts by state and age",
+      "footnote": "Counts drafts, not quantities · Closed and Discarded drafts are not counted",
+      "bands": {
+        "upTo7Days": "≤ 7 days",
+        "from8To14Days": "8–14 days",
+        "from15To30Days": "15–30 days",
+        "over30Days": "> 30 days"
+      },
+      "states": {
+        "draft": "Draft",
+        "readyForOrdering": "Ready for ordering"
+      }
+    }
+  }
+}

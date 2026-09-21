@@ -210,10 +210,14 @@ export const WORKSPACE_MODULE_MANIFEST = [
  * can tell "the administration slice left" from "the module was dissolved".
  */
 export const WAREHOUSE_MODULE_MANIFEST = [
-  'components/DesignSystemExample.spec.tsx',
-  'components/DesignSystemExample.tsx',
+  'api/warehouse-dashboard-api.ts',
+  'components/dashboard/WarehouseDashboardGrid.spec.tsx',
+  'components/dashboard/WarehouseDashboardGrid.tsx',
   'hooks/effects/useRecordWarehouseEntry.spec.tsx',
   'hooks/effects/useRecordWarehouseEntry.ts',
+  'loaders/warehouse-dashboard.loader.spec.ts',
+  'loaders/warehouse-dashboard.loader.ts',
+  'page.spec.tsx',
   'page.tsx',
   'route.tsx',
 ] as const;

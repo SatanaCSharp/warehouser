@@ -39,7 +39,11 @@ const SOUTH = warehouseSessionIds.south;
 
 const NON_DISCLOSING_REFUSAL = "This address isn't available to you";
 const ARCHIVED_REFUSAL = 'This warehouse is archived';
-const WAREHOUSE_CONTENT = 'Design System Preview';
+// T16 — `dashboard.json` `warehouse.heading`, the Warehouse Dashboard
+// destination's own accessible name. It replaced the placeholder page's
+// `Design System Preview` copy when `DesignSystemExample` was deleted; what
+// these cases read from it is unchanged — that the destination painted.
+const WAREHOUSE_CONTENT = 'Warehouse dashboard';
 const NO_CONTEXT_HEADING = 'Nothing is entered yet';
 const ERROR_HEADING = 'Something went wrong';
 const RETRY_LABEL = 'Try again';

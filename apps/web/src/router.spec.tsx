@@ -1015,6 +1015,28 @@ describe('Warehouse layout route (T4)', () => {
           }),
         );
       }
+      // T16 — the Warehouse Dashboard's loader awaits the acting member's
+      // Permission projection before its destination paints, so entering a
+      // Warehouse now issues this read. The cases below probe *routing*, not
+      // figures: a projection carrying no Permission admits no Panel, so the
+      // loader dispatches nothing further and the destination paints its
+      // denial. That is enough for every assertion here, and it spares this
+      // stub from having to answer the four Panel reads as well.
+      if (url.includes('/access/current')) {
+        const warehouseId =
+          /\/warehouses\/(?<warehouseId>[^/]+)\//u.exec(url)?.groups
+            ?.warehouseId ?? '';
+
+        return Promise.resolve(
+          Response.json({
+            warehouseId,
+            roleId: '00000000-0000-4000-8000-000000000030',
+            roleKind: 'custom',
+            permissionIds: [],
+            archivedAt: null,
+          }),
+        );
+      }
       throw new Error(`Unexpected request: ${url}`);
     });
 
@@ -1022,8 +1044,9 @@ describe('Warehouse layout route (T4)', () => {
   // the match context. `WarehouseLayout` renders `<Outlet />` only when it
   // reads `status: 'entered'` from that context, so the dashboard rendering
   // at all is proof the verdict `warehouseRoute.beforeLoad` returned reached
-  // its component. `DesignSystemExample` moved unchanged from
-  // `modules/home/components/` renders here.
+  // its component. T16 — what renders here is the Warehouse Dashboard, whose
+  // visually-hidden `h1` carries `dashboard.json` `warehouse.heading`; it
+  // replaced the `DesignSystemExample` placeholder these cases used to read.
   it("publishes the parent beforeLoad's verdict into the match context and enters for a live membership", async () => {
     vi.stubGlobal(
       'fetch',
@@ -1034,9 +1057,7 @@ describe('Warehouse layout route (T4)', () => {
 
     const { router } = renderRoute(`/warehouses/${MEMBER_WAREHOUSE_ID}`);
 
-    expect(
-      await screen.findByText('Design System Preview'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('Warehouse dashboard')).toBeInTheDocument();
     expect(router.state.location.pathname).toBe(
       `/warehouses/${MEMBER_WAREHOUSE_ID}`,
     );
@@ -1059,9 +1080,7 @@ describe('Warehouse layout route (T4)', () => {
     );
 
     const { router } = renderRoute(`/warehouses/${MEMBER_WAREHOUSE_ID}`);
-    expect(
-      await screen.findByText('Design System Preview'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('Warehouse dashboard')).toBeInTheDocument();
 
     await act(async () => {
       await router.navigate({
@@ -1073,7 +1092,7 @@ describe('Warehouse layout route (T4)', () => {
     expect(
       await screen.findByText("This address isn't available to you"),
     ).toBeInTheDocument();
-    expect(screen.queryByText('Design System Preview')).not.toBeInTheDocument();
+    expect(screen.queryByText('Warehouse dashboard')).not.toBeInTheDocument();
     expect(router.state.location.pathname).toBe(
       `/warehouses/${NON_MEMBER_WAREHOUSE_ID}`,
     );
@@ -1096,7 +1115,7 @@ describe('Warehouse layout route (T4)', () => {
     // shell's own `Sidebar` still renders its unconditional Dashboard link
     // to `/` regardless of context. What T4 owns is that no Warehouse
     // content renders around the refusal.
-    expect(screen.queryByText('Design System Preview')).not.toBeInTheDocument();
+    expect(screen.queryByText('Warehouse dashboard')).not.toBeInTheDocument();
   });
 
   // Pins TanStack behavior #3: the `$` splat ranks below the layout's
@@ -1138,9 +1157,7 @@ describe('Warehouse layout route (T4)', () => {
 
     const { router } = renderRoute(`/warehouses/${ARCHIVED_WAREHOUSE_ID}`);
 
-    expect(
-      await screen.findByText('Design System Preview'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('Warehouse dashboard')).toBeInTheDocument();
     expect(
       screen.queryByText('This warehouse is archived'),
     ).not.toBeInTheDocument();
@@ -1200,9 +1217,7 @@ describe('Warehouse layout route (T4)', () => {
     );
 
     const { router, store } = renderRoute(`/warehouses/${MEMBER_WAREHOUSE_ID}`);
-    expect(
-      await screen.findByText('Design System Preview'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('Warehouse dashboard')).toBeInTheDocument();
 
     await act(async () => {
       await router.navigate({ to: ROUTES.HOME });
@@ -1253,9 +1268,7 @@ describe('Warehouse layout route (T4)', () => {
     );
 
     const { router, store } = renderRoute(`/warehouses/${MEMBER_WAREHOUSE_ID}`);
-    expect(
-      await screen.findByText('Design System Preview'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('Warehouse dashboard')).toBeInTheDocument();
 
     store.dispatch(
       workspaceContextApi.util.updateQueryData(
