@@ -226,7 +226,18 @@ row count, which is the defect this rule exists to prevent and the headline inte
 | **Coverage Gap**         | `customer_orders` ⧸ `purchase_draft_lines`+`purchase_drafts` ⧸ `items` | `state = 'unfulfilled'` ⧸ draft `state IN ('draft','ready_for_ordering')`, **both** Delivery Modes ⧸ no filter — `deactivated_at` is read, never applied                              | `outstanding_quantity`, `item_id` ⧸ `ordered_quantity`, `item_id` ⧸ `on_hand_quantity`, `sku` |
 | **Arrival Timing**       | `customer_orders` ⧸ `purchase_draft_lines`+`purchase_drafts`           | `state = 'unfulfilled'`, bucketed by `needed_by` ⧸ draft `state = 'ready_for_ordering'` **at read time**, `expected_arrival_date IS NOT NULL`, line `delivery_mode = 'via_warehouse'` | `outstanding_quantity`, `needed_by`, `id` ⧸ `ordered_quantity`, `expected_arrival_date`       |
 | **Purchasing Pipeline**  | `purchase_drafts`                                                      | `state IN ('draft','ready_for_ordering')`                                                                                                                                             | `state`, `created_at`, `readied_at` — counts of drafts, never quantities                      |
-| **Reason Concentration** | `purchase_draft_line_rejections`                                       | none beyond the Warehouse — **both** Rejection Sources, every Disposition                                                                                                             | `rejection_reason_id`, `quantity`, `disposition`, `delivery_mode`                             |
+| **Reason Concentration** | `purchase_draft_line_rejections` ⧸ `rejection_reasons`                 | none beyond the Warehouse — **both** Rejection Sources, every Disposition ⧸ joined on `rejection_reason_id`                                                                           | `rejection_reason_id`, `quantity`, `disposition`, `delivery_mode` ⧸ `label`                   |
+
+Reason Concentration's join to `rejection_reasons` is the one the contract needed and this table did
+not record. `openapi.yaml`'s `ReasonConcentrationRow.label` carried an `# unresolved` note saying so
+and directing the source to be fixed first, and
+[`contracts/api-sync-report.md`](./contracts/api-sync-report.md) § Finding 1 filed it. The label is
+read **live** from the catalogue rather than copied onto the Rejection, exactly as
+`arrival-inspection` reads it, so the current wording follows a catalogue edit; `rejection_reasons`
+is extend-only and the foreign key is `ON DELETE RESTRICT`, so the join can never drop a row that
+has Rejections. § Indexes measured the plan before this join was recorded — the join is a primary-key
+lookup against a ten-row catalogue, so it does not change the access path
+`idx_purchase_draft_line_rejections_warehouse_reason` provides.
 
 Three exclusions are columns of the same statement rather than second reads, because `spec.md` §6
 sets exclusion accounting at 100% and a client that subtracts cannot hold it: Arrival Timing's four
