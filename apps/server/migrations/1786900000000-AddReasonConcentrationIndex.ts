@@ -1,4 +1,5 @@
-import { type MigrationInterface, type QueryRunner, TableIndex } from 'typeorm';
+import type { MigrationInterface, QueryRunner } from 'typeorm';
+import { TableIndex } from 'typeorm';
 
 // One index, no data change, and the only schema change this feature makes outside the Permission
 // catalogue.
