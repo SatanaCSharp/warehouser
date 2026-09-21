@@ -9,7 +9,7 @@
 | T2  | [Promote the Permission grant migration + catalogue enum](./dashboard-permission-catalogue-migration.md)        | `migration` | Backend Lead  | M        | T1                 | done   |
 | T3  | [Add the contracts/dashboards subpath and both Vite aliases](./dashboards-contracts-subpath.md)                 | `ports`     | Tech Lead     | M        | —                  | done   |
 | T4  | [Introduce APP_TIMEZONE as one bound parameter](./app-timezone-configuration.md)                                | `wiring`    | Backend Lead  | S        | —                  | done   |
-| T5  | [Coverage Gap statement — four CTEs joined on item_id](./coverage-gap-repository.md)                            | `infra`     | Backend Lead  | L        | T4                 | todo   |
+| T5  | [Coverage Gap statement — four CTEs joined on item_id](./coverage-gap-repository.md)                            | `infra`     | Backend Lead  | L        | T4                 | done   |
 | T6  | [Arrival Timing statement — two series, four exclusions](./arrival-timing-repository.md)                        | `infra`     | Backend Lead  | L        | T4, T5             | todo   |
 | T7  | [Purchasing Pipeline + Reason Concentration repositories](./warehouse-purchasing-and-rejection-repositories.md) | `infra`     | Backend Lead  | M        | T1, T4             | todo   |
 | T8  | [Workspace scope + Demand Pressure + Purchasing Spread](./workspace-performance-repository-foundation.md)       | `infra`     | Backend Lead  | M        | T4                 | todo   |

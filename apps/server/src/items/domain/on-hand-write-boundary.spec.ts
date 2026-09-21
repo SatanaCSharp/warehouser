@@ -60,6 +60,10 @@ const collectProductionSources = (
 //   Quantity"). It names the field only to forward what `consolidated-demand.repository.ts` already
 //   read: it is a read, there is no on-hand input to this endpoint, and no write path passes
 //   through it.
+// - `warehouse-demand-coverage.repository.ts` (`dashboards` T5) reads the figure directly from the
+//   Item as the Coverage Gap's `on_hand` CTE (AC-25, sad.md §6.3, data-model.md "The read model") —
+//   `deactivated_at` is read and never applied as a filter, so a deactivated Item's on-hand figure
+//   is read exactly as an active one's. It is a read; no write path passes through it.
 //
 // This list is the tripwire, not the rule: a new entry is a deliberate decision about AC-18a, and a
 // reader adding one has to say whether the new file reads the figure or moves it. Only the second
@@ -75,6 +79,7 @@ const ALLOWED_TO_NAME_THE_FIGURE = [
   'shared/domain/repositories/consolidated-demand.repository.ts',
   'shared/domain/repositories/item-catalogue.repository.ts',
   'shared/domain/repositories/item-stock-adjustment.repository.ts',
+  'shared/domain/repositories/warehouse-demand-coverage.repository.ts',
 ];
 
 // The one repository allowed to move the figure of an Item that already exists (AC-08, AC-18a).
