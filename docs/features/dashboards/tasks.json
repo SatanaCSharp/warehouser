@@ -137,7 +137,7 @@
     },
     {
       "id": "T10",
-      "title": "Add the Receipt Reliability read: two rates with different denominators, five exclusions, and no rate where no line is admissible",
+      "title": "Add the Receipt Reliability read: two rates with different denominators, six exclusions, and no rate where no line is admissible",
       "layer": "infra",
       "deps": ["T8"],
       "acs": ["AC-19", "AC-20", "AC-20a", "AC-20b"],

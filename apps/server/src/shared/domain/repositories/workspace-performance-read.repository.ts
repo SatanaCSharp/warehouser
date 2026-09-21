@@ -3,6 +3,7 @@ import { getEntityManager } from 'shared/database/db-transaction-context.service
 import { ArrivalAllocationEntity } from 'shared/domain/entities/arrival-allocation.entity';
 import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
 import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
+import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity';
 import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
 import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
 import {
@@ -67,6 +68,34 @@ export interface OrderFlowPanelRead {
   readonly timezone: string;
   readonly archivedWarehouseCount: number;
   readonly weeks: readonly OrderFlowWeekRead[];
+}
+
+// openapi.yaml `ReceiptReliabilityExclusions` — six independent, non-disjoint counts (its own
+// description: "not a partition, and nothing here should be summed").
+export interface ReceiptReliabilityExclusionsRead {
+  readonly undatedLineCount: number;
+  readonly noEndingRecordedLineCount: number;
+  readonly nothingReceivedLineCount: number;
+  readonly directToCustomerLineCount: number;
+  readonly unrecordedConformanceLineCount: number;
+  readonly notApplicableConformanceLineCount: number;
+}
+
+// openapi.yaml `ReceiptReliabilityWarehouse` — both rates `null`, never `0`, where no line
+// qualifies (AC-20a).
+export interface ReceiptReliabilityWarehouseRead {
+  readonly warehouseId: string;
+  readonly warehouseName: string;
+  readonly onTimeArrivalRatePercent: number | null;
+  readonly conformanceRatePercent: number | null;
+  readonly receivedQuantity: number;
+  readonly exclusions: ReceiptReliabilityExclusionsRead;
+}
+
+// openapi.yaml `ReceiptReliabilityPanel`.
+export interface ReceiptReliabilityPanelRead {
+  readonly archivedWarehouseCount: number;
+  readonly warehouses: readonly ReceiptReliabilityWarehouseRead[];
 }
 
 interface PanelRow<TWarehouse> {
@@ -213,6 +242,28 @@ const stillAwaitedExpression =
 // `stillAwaitedQuantity` is carried as its own field so the client subtracts nothing
 // (`openapi.yaml` `OrderFlowWeek`).
 const orderFlowWeeksJsonExpression = `COALESCE(json_agg(json_build_object('weekStart', weekseries.week_start, 'recordedQuantity', COALESCE(weekaggregates.recorded_quantity, 0), 'assignedQuantity', COALESCE(weekaggregates.assigned_quantity, 0), 'cancelledQuantity', COALESCE(weekaggregates.cancelled_quantity, 0), 'stillAwaitedQuantity', ${stillAwaitedExpression}) ORDER BY weekseries.week_start), '[]'::json)`;
+
+// data-model.md "Workspace surface" § Receipt Reliability — a Purchase Draft Line correlated on
+// `line.warehouseId = warehouse.id` exactly as Demand Pressure's and Purchasing Spread's own
+// scalar subqueries correlate, joined to its own Purchase Draft for `expected_arrival_date`. A
+// module-level function rather than a private method, for the same reason
+// `archivedWarehouseCountSubquery` is one (`creating-a-server-repository.md` forbids private
+// methods on a repository class). The withdrawn `purchase_draft_lines (warehouse_id,
+// purchase_draft_id)` index (`data-model.md` "Indexes deliberately not added") means no join-order
+// lever applies here, unlike Order Flow's `= ANY(...)` binding.
+const receiptLineAggregate = (
+  manager: EntityManager,
+  select: string,
+  condition: string,
+): string =>
+  manager
+    .createQueryBuilder()
+    .select(select)
+    .from(PurchaseDraftLineEntity, 'line')
+    .innerJoin(PurchaseDraftEntity, 'draft', 'draft.id = line.purchaseDraftId')
+    .where('line.warehouseId = warehouse.id')
+    .andWhere(condition)
+    .getQuery();
 
 // data-model.md "Workspace surface" — every Workspace read resolves this scope first:
 // `warehouses WHERE workspace_id = $1 AND archived_at IS NULL`, and reports the archived count as
@@ -412,6 +463,128 @@ export class WorkspacePerformanceReadRepository {
       timezone,
       archivedWarehouseCount: raw?.archivedWarehouseCount ?? 0,
       weeks: raw?.weeks ?? [],
+    };
+  }
+
+  // AC-19/AC-20/AC-20a/AC-20b — the heaviest read on either surface and the only one with no
+  // period bound (`data-model.md` "Workspace surface"). The two rates keep genuinely different
+  // denominators and different Delivery Mode rules (`data-model.md` "The read model"): the
+  // On-time Arrival Rate is Via Warehouse lines only, dated, whose ending recorded something
+  // (AC-20b); the Conformance Rate is not restricted by Delivery Mode at all. Each rate is its own
+  // `CASE WHEN denominator = 0 THEN NULL …` expression rather than a `?? 0` in application code, so
+  // "no admissible line" stays `null` all the way from the database (AC-20a). `:timezone` is a
+  // bound query parameter reused inside the on-time verdict's `AT TIME ZONE` expression exactly as
+  // Demand Pressure's and Order Flow's own bound zone is (`data-model.md` "Time, timezone and the
+  // week": "not the session's TimeZone setting").
+  async readReceiptReliability(
+    workspaceId: string,
+    timezone: string,
+  ): Promise<ReceiptReliabilityPanelRead> {
+    const manager = getEntityManager(this.dataSource);
+
+    // The On-time Arrival Rate's own population (AC-20b): Via Warehouse, dated, an ending that
+    // recorded something. `noEndingRecordedLineCount` and `nothingReceivedLineCount` below name the
+    // two ways a line falls out of it short of the verdict itself.
+    const onTimeEligible =
+      "line.deliveryMode = 'via_warehouse' AND line.endingRecordedAt IS NOT NULL AND line.endingQuantity > 0 AND draft.expectedArrivalDate IS NOT NULL";
+    const onTimeDenominator = receiptLineAggregate(
+      manager,
+      'COUNT(*)::int',
+      onTimeEligible,
+    );
+    const onTimeNumerator = receiptLineAggregate(
+      manager,
+      'COUNT(*)::int',
+      `${onTimeEligible} AND (line.endingRecordedAt AT TIME ZONE :timezone)::date <= draft.expectedArrivalDate`,
+    );
+    const onTimeArrivalRatePercent = `CASE WHEN (${onTimeDenominator}) = 0 THEN NULL ELSE ROUND((${onTimeNumerator})::numeric * 100 / (${onTimeDenominator}), 2) END`;
+
+    // The Conformance Rate's own population — every Delivery Mode, unlike the rate above. Both
+    // exclusions are schema-decidable (`chk_purchase_draft_lines_conformance_requires_ending`,
+    // `chk_purchase_draft_lines_pre_receipt_conformance_instruction`), so the predicate needs no
+    // rule beyond the verdict column itself.
+    const conformanceEligible =
+      "line.preReceiptConformance IN ('met', 'not_met')";
+    const conformanceDenominator = receiptLineAggregate(
+      manager,
+      'COUNT(*)::int',
+      conformanceEligible,
+    );
+    const conformanceNumerator = receiptLineAggregate(
+      manager,
+      'COUNT(*)::int',
+      `${conformanceEligible} AND line.preReceiptConformance = 'met'`,
+    );
+    const conformanceRatePercent = `CASE WHEN (${conformanceDenominator}) = 0 THEN NULL ELSE ROUND((${conformanceNumerator})::numeric * 100 / (${conformanceDenominator}), 2) END`;
+
+    // `receivedQuantity` — Via Warehouse lines whose ending recorded something, including a `0`
+    // ending (AC-20b), summed as the server-supplied absolute the client scales marks by.
+    const receivedQuantity = receiptLineAggregate(
+      manager,
+      'COALESCE(SUM(line.endingQuantity), 0)::int',
+      "line.deliveryMode = 'via_warehouse' AND line.endingRecordedAt IS NOT NULL",
+    );
+
+    const undatedLineCount = receiptLineAggregate(
+      manager,
+      'COUNT(*)::int',
+      'draft.expectedArrivalDate IS NULL',
+    );
+    const noEndingRecordedLineCount = receiptLineAggregate(
+      manager,
+      'COUNT(*)::int',
+      "line.deliveryMode = 'via_warehouse' AND line.endingRecordedAt IS NULL",
+    );
+    const nothingReceivedLineCount = receiptLineAggregate(
+      manager,
+      'COUNT(*)::int',
+      "line.deliveryMode = 'via_warehouse' AND line.endingRecordedAt IS NOT NULL AND line.endingQuantity = 0",
+    );
+    const directToCustomerLineCount = receiptLineAggregate(
+      manager,
+      'COUNT(*)::int',
+      "line.deliveryMode = 'direct_to_customer'",
+    );
+    const unrecordedConformanceLineCount = receiptLineAggregate(
+      manager,
+      'COUNT(*)::int',
+      'line.preReceiptConformance IS NULL',
+    );
+    const notApplicableConformanceLineCount = receiptLineAggregate(
+      manager,
+      'COUNT(*)::int',
+      "line.preReceiptConformance = 'not_applicable'",
+    );
+
+    const exclusionsJsonExpression = `json_build_object('undatedLineCount', (${undatedLineCount}), 'noEndingRecordedLineCount', (${noEndingRecordedLineCount}), 'nothingReceivedLineCount', (${nothingReceivedLineCount}), 'directToCustomerLineCount', (${directToCustomerLineCount}), 'unrecordedConformanceLineCount', (${unrecordedConformanceLineCount}), 'notApplicableConformanceLineCount', (${notApplicableConformanceLineCount}))`;
+
+    const warehouses = manager
+      .createQueryBuilder()
+      .select(
+        `COALESCE(json_agg(json_build_object('warehouseId', warehouse.id, 'warehouseName', warehouse.name, 'onTimeArrivalRatePercent', (${onTimeArrivalRatePercent}), 'conformanceRatePercent', (${conformanceRatePercent}), 'receivedQuantity', (${receivedQuantity}), 'exclusions', (${exclusionsJsonExpression})) ORDER BY warehouse.name, warehouse.id), '[]'::json)`,
+      )
+      .from(WarehouseEntity, 'warehouse')
+      .where('warehouse.workspaceId = :workspaceId')
+      .andWhere('warehouse.archivedAt IS NULL')
+      .getQuery();
+
+    const archivedWarehouseCount = archivedWarehouseCountSubquery(
+      manager,
+      workspaceId,
+    );
+
+    const row = await manager
+      .getRepository(WorkspaceEntity)
+      .createQueryBuilder('workspace')
+      .select(`(${archivedWarehouseCount})`, 'archivedWarehouseCount')
+      .addSelect(`(${warehouses})`, 'warehouses')
+      .where('workspace.id = :workspaceId', { workspaceId })
+      .setParameters({ timezone })
+      .getRawOne<PanelRow<ReceiptReliabilityWarehouseRead>>();
+
+    return {
+      archivedWarehouseCount: row?.archivedWarehouseCount ?? 0,
+      warehouses: row?.warehouses ?? [],
     };
   }
 }

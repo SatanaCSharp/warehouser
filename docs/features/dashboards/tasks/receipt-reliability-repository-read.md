@@ -1,6 +1,6 @@
 ---
 id: T10
-title: 'Add the Receipt Reliability read: two rates with different denominators, five exclusions, and no rate where no line is admissible'
+title: 'Add the Receipt Reliability read: two rates with different denominators, six exclusions, and no rate where no line is admissible'
 layer: 'infra'
 deps: [T8]
 acs: ['AC-19', 'AC-20', 'AC-20a', 'AC-20b']
@@ -12,7 +12,7 @@ estimate: 'L'
 status: 'todo'
 ---
 
-# T10 — Add the Receipt Reliability read: two rates with different denominators, five exclusions, and no rate where no line is admissible
+# T10 — Add the Receipt Reliability read: two rates with different denominators, six exclusions, and no rate where no line is admissible
 
 > **Blocked by:** [T8](./workspace-performance-repository-foundation.md)
 > **Satisfies:** AC-19, AC-20, AC-20a, AC-20b — see [spec.md §5](../spec.md)
@@ -35,7 +35,7 @@ Warehouse, over the **whole retained record**:
 - **Conformance Rate** — instructed lines, **not** restricted by Delivery Mode;
 - **quantity received** — `SUM(ending_quantity)` over Via Warehouse lines whose ending recorded
   something, returned as a server-supplied absolute;
-- **five exclusion counts** as columns of the same result.
+- **six exclusion counts** as columns of the same result.
 
 ## Definition of Done
 
@@ -48,7 +48,7 @@ Warehouse, over the **whole retained record**:
       Conformance Rate when it carries a verdict (AC-20b, `data-model.md`)
 - [ ] An **unrecorded** and a **Not applicable** verdict are excluded from both parts of the
       Conformance Rate rather than counted as having failed (AC-20)
-- [ ] Each of the five exclusion counts equals the rows it excludes
+- [ ] Each of the six exclusion counts equals the rows it excludes
 - [ ] A Warehouse admitting no line into either rate reports **no rate** — not zero and not one
       hundred (AC-20a)
 - [ ] `oxlint --type-aware --max-warnings=0` clean over every staged file, and the
