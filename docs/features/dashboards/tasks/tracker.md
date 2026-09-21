@@ -5,8 +5,8 @@
 
 | #   | Task                                                                                                            | Layer       | Owner         | Estimate | Blocked by         | Status |
 | --- | --------------------------------------------------------------------------------------------------------------- | ----------- | ------------- | -------- | ------------------ | ------ |
-| T1  | [Promote the Reason Concentration index migration](./reason-concentration-index-migration.md)                   | `migration` | Backend Lead  | S        | —                  | todo   |
-| T2  | [Promote the Permission grant migration + catalogue enum](./dashboard-permission-catalogue-migration.md)        | `migration` | Backend Lead  | M        | T1                 | todo   |
+| T1  | [Promote the Reason Concentration index migration](./reason-concentration-index-migration.md)                   | `migration` | Backend Lead  | S        | —                  | done   |
+| T2  | [Promote the Permission grant migration + catalogue enum](./dashboard-permission-catalogue-migration.md)        | `migration` | Backend Lead  | M        | T1                 | done   |
 | T3  | [Add the contracts/dashboards subpath and both Vite aliases](./dashboards-contracts-subpath.md)                 | `ports`     | Tech Lead     | M        | —                  | todo   |
 | T4  | [Introduce APP_TIMEZONE as one bound parameter](./app-timezone-configuration.md)                                | `wiring`    | Backend Lead  | S        | —                  | todo   |
 | T5  | [Coverage Gap statement — four CTEs joined on item_id](./coverage-gap-repository.md)                            | `infra`     | Backend Lead  | L        | T4                 | todo   |
@@ -27,7 +27,7 @@
 | T20 | [Demand Pressure + Purchasing Spread Panels](./demand-pressure-and-purchasing-spread-panels-ui.md)              | `ui`        | Frontend Lead | M        | T19                | todo   |
 | T21 | [Order Flow + Receipt Reliability Panels](./order-flow-and-receipt-reliability-panels-ui.md)                    | `ui`        | Frontend Lead | L        | T19                | todo   |
 | T22 | [Extend the four hand-enumerated structural gates](./hand-enumerated-gate-extensions.md)                        | `tests`     | Tech Lead     | M        | T12, T14, T16, T19 | todo   |
-| T23 | [Amend the four upstream rules this feature rests on](./cross-feature-invariant-amendments.md)                  | `docs`      | Tech Lead     | M        | —                  | todo   |
+| T23 | [Amend the four upstream rules this feature rests on](./cross-feature-invariant-amendments.md)                  | `docs`      | Tech Lead     | M        | —                  | done   |
 
 **Total:** 23 tasks, ~21.5 person-days.
 
