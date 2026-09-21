@@ -177,14 +177,25 @@ adds no asynchronous work and BullMQ remains uninstalled.
 
 ## 5. Building blocks and ownership
 
+> **Amended during `implement` — 2026-09-21.** This tree originally also listed
+> `domain/predicates/dashboard-week.predicates.ts` (`isWithinHorizon`, `isDatedReadyDraft`, …). It is
+> not built, because it has no behaviour to hold:
+> [`data-model.md`](./data-model.md) § Repository boundaries rules that "no repository returns a row
+> set the use case then buckets in memory", so every bucket boundary, Age Band, Urgency Band and
+> exclusion is computed in SQL by the repositories T5–T10 build, and no branch survives in the query
+> layer for a week predicate to gate.
+> [`docs/system/guides/adding-a-server-module.md`](../../system/guides/adding-a-server-module.md)
+> says to create only the structure that has behavior, so creating it would be a violation rather
+> than an omission. This is the second ruling of this section `data-model.md` supersedes — the first
+> being the Permission's working name (`WAREHOUSE_PERFORMANCE:OBSERVE` → `:WATCH`).
+
 ### Server
 
 ```text
 apps/server/src/dashboards/
 ├── domain/
 │   └── predicates/
-│       ├── panel-access.predicates.ts        # readsCoverageGap, readsArrivalTiming (over observedPermissionIds)
-│       └── dashboard-week.predicates.ts      # isWithinHorizon, isDatedReadyDraft, …
+│       └── panel-access.predicates.ts        # readsCoverageGap, readsArrivalTiming (over observedPermissionIds)
 ├── usecases/
 │   ├── queries/
 │   │   ├── read-coverage-gap.query.ts
