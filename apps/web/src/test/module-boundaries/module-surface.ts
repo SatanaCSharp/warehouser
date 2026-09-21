@@ -118,6 +118,18 @@ export const MODULE_SURFACE = {
     // router.ts
     'modules/workspace/route',
   ],
+  // dashboards T19 — the Workspace Dashboard is a flat top-level sibling of
+  // `modules/workspace`, not a slice inside it: a module has exactly one
+  // `route.tsx` and one `page.tsx`, and `/workspace` is already occupied by
+  // administration, so the promotion rule in
+  // `docs/system/adr/18-08-2026-scope-of-exercise-placement-tiebreak.md`
+  // ("future in-Warehouse entities become flat top-level sibling modules")
+  // applies at the Workspace scope on identical terms. Its surface today is
+  // the route `router.ts` composes and nothing else.
+  'workspace-dashboard': [
+    // router.ts
+    'modules/workspace-dashboard/route',
+  ],
 } as const satisfies Record<string, readonly string[]>;
 
 /**

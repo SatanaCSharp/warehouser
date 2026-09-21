@@ -621,14 +621,17 @@ describe('Sidebar in the Workspace view (CR-AC-12)', () => {
     ['WORKSPACE_ROLES:WATCH', WorkspacePermissionId.WORKSPACE_ROLES_WATCH],
     ['WORKSPACE_MEMBERS:WATCH', WorkspacePermissionId.WORKSPACE_MEMBERS_WATCH],
     ['WORKSPACE:RENAME', WorkspacePermissionId.WORKSPACE_RENAME],
-  ])('shows Workspace when the actor holds %s', async (_label, permission) => {
-    stubAccessAndWorkspace(namedWorkspaceContext([permission]));
-    renderSidebar({ entry: ROUTES.WORKSPACE });
+  ])(
+    'shows Administration when the actor holds %s',
+    async (_label, permission) => {
+      stubAccessAndWorkspace(namedWorkspaceContext([permission]));
+      renderSidebar({ entry: ROUTES.WORKSPACE });
 
-    expect(
-      await screen.findByRole('link', { name: 'Workspace' }),
-    ).toHaveAttribute('href', ROUTES.WORKSPACE);
-  });
+      expect(
+        await screen.findByRole('link', { name: 'Administration' }),
+      ).toHaveAttribute('href', ROUTES.WORKSPACE);
+    },
+  );
 
   // CR-AC-12 — "no Warehouse-scoped destination appears in it".
   it('shows no Warehouse-scoped destination', async () => {
@@ -637,7 +640,7 @@ describe('Sidebar in the Workspace view (CR-AC-12)', () => {
     );
     renderSidebar({ entry: ROUTES.WORKSPACE });
 
-    await screen.findByRole('link', { name: 'Workspace' });
+    await screen.findByRole('link', { name: 'Administration' });
     expect(
       screen.queryByRole('link', { name: 'Dashboard' }),
     ).not.toBeInTheDocument();
@@ -656,13 +659,13 @@ describe('Sidebar in the Workspace view (CR-AC-12)', () => {
 
     await waitFor(() =>
       expect(
-        screen.queryByRole('link', { name: 'Workspace' }),
+        screen.queryByRole('link', { name: 'Administration' }),
       ).not.toBeInTheDocument(),
     );
     expect(
-      screen.queryByRole('button', { name: 'Workspace' }),
+      screen.queryByRole('button', { name: 'Administration' }),
     ).not.toBeInTheDocument();
-    expect(screen.queryByText('Workspace')).not.toBeInTheDocument();
+    expect(screen.queryByText('Administration')).not.toBeInTheDocument();
   });
 
   it('hides Workspace during the loading window without rendering a skeleton', async () => {
@@ -671,7 +674,7 @@ describe('Sidebar in the Workspace view (CR-AC-12)', () => {
 
     await waitFor(() =>
       expect(
-        screen.queryByRole('link', { name: 'Workspace' }),
+        screen.queryByRole('link', { name: 'Administration' }),
       ).not.toBeInTheDocument(),
     );
     expect(screen.queryByLabelText(/loading/iu)).not.toBeInTheDocument();
@@ -709,7 +712,7 @@ describe('Sidebar with no entered context (CR-AC-18)', () => {
         screen.queryByRole('link', { name: 'Dashboard' }),
       ).not.toBeInTheDocument();
       expect(
-        screen.queryByRole('link', { name: 'Workspace' }),
+        screen.queryByRole('link', { name: 'Administration' }),
       ).not.toBeInTheDocument();
     },
   );
@@ -931,9 +934,13 @@ describe('Sidebar collapse', () => {
       await screen.findByRole('button', { name: 'Collapse navigation' }),
     );
 
-    const workspace = await screen.findByRole('link', { name: 'Workspace' });
+    const workspace = await screen.findByRole('link', {
+      name: 'Administration',
+    });
     expect(workspace).toHaveAttribute('href', ROUTES.WORKSPACE);
-    expect(within(workspace).getByText('Workspace')).toHaveClass('sr-only');
+    expect(within(workspace).getByText('Administration')).toHaveClass(
+      'sr-only',
+    );
   });
 
   it('remembers the collapsed width for the next visit rather than re-expanding', async () => {

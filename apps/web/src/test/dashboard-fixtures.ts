@@ -2,10 +2,19 @@ import type {
   ArrivalTimingBucket,
   ArrivalTimingPanel,
   CoverageGapPanel,
+  DemandPressurePanel,
+  OrderFlowPanel,
+  OrderFlowWeek,
   PurchasingPipelinePanel,
+  PurchasingSpreadCell,
+  PurchasingSpreadPanel,
   ReasonConcentrationPanel,
+  ReceiptReliabilityPanel,
 } from '@warehouser/contracts/dashboards';
-import { PermissionId } from '@warehouser/shared-types/enums';
+import {
+  PermissionId,
+  WorkspacePermissionId,
+} from '@warehouser/shared-types/enums';
 import { accessIds } from 'test/access-fixtures';
 import { vi } from 'vitest';
 
@@ -242,6 +251,237 @@ export const stubDashboardServer = ({
     [ARRIVAL_TIMING_URL, arrivalTimingPanel],
     [PURCHASING_PIPELINE_URL, purchasingPipelinePanel],
     [REASON_CONCENTRATION_URL, reasonConcentrationPanel],
+  ];
+
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((input: Request | string | URL) => {
+      const url = String(input instanceof Request ? input.url : input);
+      requestedUrls.push(url);
+      const route = routes.find(([path]) => url === path);
+      return Promise.resolve(
+        route ? Response.json(route[1]) : Response.json({}, { status: 404 }),
+      );
+    }),
+  );
+
+  return requestedUrls;
+};
+
+// ---------------------------------------------------------------------------
+// The Workspace surface (T19)
+// ---------------------------------------------------------------------------
+
+// T19 — the same cross-cutting role for the Workspace Dashboard's specs that
+// the Warehouse fixtures above play for its sibling: the loader's, the page's
+// and the route's. Kept in this one file rather than a second root fixture so
+// "the Dashboards' in-memory backend" stays one thing
+// (`placing-web-tests.md` §4).
+
+/**
+ * The four Workspace Panel addresses `contracts/openapi.yaml` publishes and
+ * `WorkspaceDashboardController` serves, written out in full for the reason
+ * the Warehouse block above gives.
+ *
+ * **No address names a Workspace**, in a path, a query or a body position:
+ * `WorkspaceAccessGuard` derives the actor's Workspace entirely from the
+ * session, so there is no identifier for a request to offer (AC-22).
+ */
+export const workspaceDashboardPath = (panel: string): string =>
+  `/api/v1/workspace/dashboard/${panel}`;
+
+export const DEMAND_PRESSURE_URL = workspaceDashboardPath('demand-pressure');
+export const ORDER_FLOW_URL = workspaceDashboardPath('order-flow');
+export const PURCHASING_SPREAD_URL =
+  workspaceDashboardPath('purchasing-spread');
+export const RECEIPT_RELIABILITY_URL = workspaceDashboardPath(
+  'receipt-reliability',
+);
+
+/** The projection the Workspace Permission that admits this surface is read from. */
+export const WORKSPACE_CONTEXT_URL = '/api/v1/workspace/context';
+
+/**
+ * One marker per Warehouse-listing Panel: a Warehouse name each of the three
+ * is required to print — one bar per Warehouse on Demand Pressure, one row per
+ * Warehouse on Purchasing Spread, and every Receipt Reliability mark
+ * direct-labelled with its Warehouse name (`design-handoff.md` § Panel
+ * specifications, § Accessibility).
+ *
+ * The three names differ **per Panel**, which the Workspace's real population
+ * would not: these are three independent stub responses, and a name that
+ * appeared in two of them could not tell the reader which Panel drew it. The
+ * distinctness is what makes the fixed Panel order assertable without matching
+ * a single translated string, exactly as `panelMarkers` above does for the
+ * Warehouse surface. Order Flow carries no marker because it **names no
+ * Warehouse at all** (AC-16) and its column plot prints bucket labels rather
+ * than values — its position is asserted by the exclusion of the other three.
+ */
+export const workspacePanelMarkers = {
+  demandPressure: 'Demand Pressure Depot',
+  purchasingSpread: 'Purchasing Spread Depot',
+  receiptReliability: 'Receipt Reliability Depot',
+} as const;
+
+export const demandPressurePanel: DemandPressurePanel = {
+  archivedWarehouseCount: 0,
+  warehouses: [
+    {
+      warehouseId: '00000000-0000-4000-8000-000000000401',
+      warehouseName: workspacePanelMarkers.demandPressure,
+      overdueQuantity: 120,
+      dueSoonQuantity: 80,
+      laterQuantity: 40,
+      // Distinctive on purpose: AC-26's spec proves this figure is *gone*
+      // after a second entry, so no other seeded number may contain it.
+      totalOutstandingQuantity: 240,
+    },
+  ],
+};
+
+const orderFlowWeek = (weekStart: string): OrderFlowWeek => ({
+  weekStart,
+  recordedQuantity: 0,
+  assignedQuantity: 0,
+  cancelledQuantity: 0,
+  stillAwaitedQuantity: 0,
+});
+
+/** Exactly twelve weeks, oldest first — the contract admits no other length. */
+export const orderFlowPanel: OrderFlowPanel = {
+  timezone: 'UTC',
+  archivedWarehouseCount: 0,
+  weeks: [
+    '2026-07-06',
+    '2026-07-13',
+    '2026-07-20',
+    '2026-07-27',
+    '2026-08-03',
+    '2026-08-10',
+    '2026-08-17',
+    '2026-08-24',
+    '2026-08-31',
+    '2026-09-07',
+    '2026-09-14',
+    '2026-09-21',
+  ].map(orderFlowWeek),
+};
+
+const spreadCounts = (draftCount: number): PurchasingSpreadCell[] => [
+  { state: 'draft', draftCount },
+  { state: 'ready_for_ordering', draftCount: 0 },
+  { state: 'closed', draftCount: 0 },
+  { state: 'discarded', draftCount: 0 },
+];
+
+export const purchasingSpreadPanel: PurchasingSpreadPanel = {
+  archivedWarehouseCount: 0,
+  warehouses: [
+    {
+      warehouseId: '00000000-0000-4000-8000-000000000402',
+      warehouseName: workspacePanelMarkers.purchasingSpread,
+      counts: spreadCounts(3),
+    },
+  ],
+};
+
+export const receiptReliabilityPanel: ReceiptReliabilityPanel = {
+  archivedWarehouseCount: 0,
+  warehouses: [
+    {
+      warehouseId: '00000000-0000-4000-8000-000000000403',
+      warehouseName: workspacePanelMarkers.receiptReliability,
+      onTimeArrivalRatePercent: 75,
+      conformanceRatePercent: 50,
+      receivedQuantity: 12,
+      exclusions: {
+        undatedLineCount: 0,
+        noEndingRecordedLineCount: 0,
+        nothingReceivedLineCount: 0,
+        directToCustomerLineCount: 0,
+        unrecordedConformanceLineCount: 0,
+        notApplicableConformanceLineCount: 0,
+      },
+    },
+  ],
+};
+
+/**
+ * A second Demand Pressure body, identical in shape and different in figure,
+ * for AC-26: entering again must show what the Workspace's Warehouses hold
+ * **now**, so a spec needs a superseded figure to prove was not carried over.
+ */
+export const amendedDemandPressurePanel: DemandPressurePanel = {
+  archivedWarehouseCount: 0,
+  warehouses: [
+    {
+      ...demandPressurePanel.warehouses[0],
+      overdueQuantity: 351,
+      totalOutstandingQuantity: 471,
+    },
+  ],
+};
+
+type WorkspaceDashboardServerOptions = {
+  /** What `demand-pressure` answers with, so a spec can change it between entries. */
+  demandPressure?: DemandPressurePanel;
+  /**
+   * The **Warehouse-level** watch Permissions the actor holds in the Warehouse
+   * the context names. AC-22's second actor holds every one of them and no
+   * Workspace Role at all, which must still deny: authority in one Warehouse
+   * says nothing about the Workspace above it.
+   */
+  permissionIds?: readonly PermissionId[];
+  workspacePermissionIds?: readonly WorkspacePermissionId[];
+};
+
+/**
+ * Answers the Workspace context, the four Workspace Panel reads and the
+ * Warehouse-level access projection from the fixtures above, and returns the
+ * URLs requested — which is how a spec proves a refused actor costs **zero**
+ * Panel requests, and how the surface proves it issues nothing after it paints.
+ *
+ * Every route is matched by its exact URL, so a read that invents an address
+ * 404s here just as it would against the server.
+ */
+export const stubWorkspaceDashboardServer = ({
+  demandPressure = demandPressurePanel,
+  permissionIds = allWatchPermissions,
+  workspacePermissionIds = [WorkspacePermissionId.WAREHOUSE_PERFORMANCE_WATCH],
+}: WorkspaceDashboardServerOptions = {}): string[] => {
+  const requestedUrls: string[] = [];
+  const routes: [string, unknown][] = [
+    [
+      WORKSPACE_CONTEXT_URL,
+      {
+        workspace: { id: accessIds.workspace, name: 'Acme Logistics' },
+        workspacePermissionIds,
+        warehouses: [
+          {
+            warehouseId: accessIds.warehouse,
+            name: 'Main Warehouse',
+            archivedAt: null,
+            roleId: accessIds.managerRole,
+            roleKind: 'warehouse_manager',
+          },
+        ],
+        effectiveWarehouseId: accessIds.warehouse,
+      },
+    ],
+    [
+      CURRENT_ACCESS_URL,
+      {
+        warehouseId: accessIds.warehouse,
+        roleId: accessIds.managerRole,
+        roleKind: 'warehouse_manager',
+        permissionIds,
+        archivedAt: null,
+      },
+    ],
+    [DEMAND_PRESSURE_URL, demandPressure],
+    [ORDER_FLOW_URL, orderFlowPanel],
+    [PURCHASING_SPREAD_URL, purchasingSpreadPanel],
+    [RECEIPT_RELIABILITY_URL, receiptReliabilityPanel],
   ];
 
   vi.stubGlobal(

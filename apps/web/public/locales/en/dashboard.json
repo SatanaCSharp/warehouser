@@ -6,6 +6,13 @@
       "description": "Your role in this warehouse does not admit them. Ask a warehouse administrator if you need them."
     }
   },
+  "workspace": {
+    "heading": "Workspace dashboard",
+    "denial": {
+      "heading": "You cannot read this workspace’s figures",
+      "description": "Your role in this workspace does not admit them. Ask a workspace administrator if you need them."
+    }
+  },
   "panels": {
     "coverageGap": {
       "title": "Coverage Gap",
@@ -62,6 +69,38 @@
         "draft": "Draft",
         "readyForOrdering": "Ready for ordering"
       }
+    },
+    "demandPressure": {
+      "title": "Demand Pressure",
+      "meta": "Outstanding quantity by Warehouse and urgency",
+      "bands": {
+        "overdue": "Overdue",
+        "dueSoon": "Due soon",
+        "later": "Later"
+      }
+    },
+    "orderFlow": {
+      "title": "Order Flow",
+      "meta": "Recorded quantity by week, pooled across the workspace",
+      "series": {
+        "assigned": "Assigned to arrived goods",
+        "stillAwaited": "Still awaited",
+        "cancelled": "Cancelled"
+      }
+    },
+    "purchasingSpread": {
+      "title": "Purchasing Spread",
+      "meta": "Purchase drafts by Warehouse and state · Ready = Ready for ordering",
+      "states": {
+        "draft": "Draft",
+        "readyForOrdering": "Ready",
+        "closed": "Closed",
+        "discarded": "Discarded"
+      }
+    },
+    "receiptReliability": {
+      "title": "Receipt Reliability",
+      "meta": "On-time arrival against conformance, by Warehouse"
     }
   }
 }

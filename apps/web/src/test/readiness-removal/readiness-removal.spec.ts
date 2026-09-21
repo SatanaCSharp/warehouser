@@ -775,9 +775,10 @@ describe('readiness removal — declarative permission gating is unchanged (CR-R
     // gates its own entries carry, and the shell that selects between the two
     // sets carries none. The Warehouse count is delivery-addresses T21's six
     // gated entries (five gates, opened and closed, plus the import) and the
-    // Workspace count is AC-30's single one.
+    // Workspace count is AC-30's administration entry plus `dashboards` T19's
+    // gated Dashboard entry (two gates, opened and closed, plus the import).
     'shared/layouts/sidebar/components/WarehouseNavEntries.tsx': 12,
-    'shared/layouts/sidebar/components/WorkspaceNavEntries.tsx': 4,
+    'shared/layouts/sidebar/components/WorkspaceNavEntries.tsx': 6,
   };
 
   it('keeps every gate and descriptor call site', () => {

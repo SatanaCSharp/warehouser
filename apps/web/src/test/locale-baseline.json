@@ -380,7 +380,8 @@
       "shell.landing.pendingLabel": "Preparing your workspace…",
       "shell.landing.errorHeading": "Something went wrong",
       "shell.landing.errorDescription": "We couldn't check your access. Try again.",
-      "shell.landing.retry": "Try again"
+      "shell.landing.retry": "Try again",
+      "nav.administration": "Administration"
     },
     "customer-order": {
       "head.title": "Demand",
@@ -1449,7 +1450,28 @@
       "panels.purchasingPipeline.bands.from15To30Days": "15–30 days",
       "panels.purchasingPipeline.bands.over30Days": "> 30 days",
       "panels.purchasingPipeline.states.draft": "Draft",
-      "panels.purchasingPipeline.states.readyForOrdering": "Ready for ordering"
+      "panels.purchasingPipeline.states.readyForOrdering": "Ready for ordering",
+      "workspace.heading": "Workspace dashboard",
+      "workspace.denial.heading": "You cannot read this workspace’s figures",
+      "workspace.denial.description": "Your role in this workspace does not admit them. Ask a workspace administrator if you need them.",
+      "panels.demandPressure.title": "Demand Pressure",
+      "panels.demandPressure.meta": "Outstanding quantity by Warehouse and urgency",
+      "panels.demandPressure.bands.overdue": "Overdue",
+      "panels.demandPressure.bands.dueSoon": "Due soon",
+      "panels.demandPressure.bands.later": "Later",
+      "panels.orderFlow.title": "Order Flow",
+      "panels.orderFlow.meta": "Recorded quantity by week, pooled across the workspace",
+      "panels.orderFlow.series.assigned": "Assigned to arrived goods",
+      "panels.orderFlow.series.stillAwaited": "Still awaited",
+      "panels.orderFlow.series.cancelled": "Cancelled",
+      "panels.purchasingSpread.title": "Purchasing Spread",
+      "panels.purchasingSpread.meta": "Purchase drafts by Warehouse and state · Ready = Ready for ordering",
+      "panels.purchasingSpread.states.draft": "Draft",
+      "panels.purchasingSpread.states.readyForOrdering": "Ready",
+      "panels.purchasingSpread.states.closed": "Closed",
+      "panels.purchasingSpread.states.discarded": "Discarded",
+      "panels.receiptReliability.title": "Receipt Reliability",
+      "panels.receiptReliability.meta": "On-time arrival against conformance, by Warehouse"
     }
   },
   "uk": {
@@ -1841,7 +1863,8 @@
       "shell.landing.pendingLabel": "Готуємо ваш робочий простір…",
       "shell.landing.errorHeading": "Щось пішло не так",
       "shell.landing.errorDescription": "Не вдалося перевірити ваш доступ. Спробуйте ще раз.",
-      "shell.landing.retry": "Спробувати знову"
+      "shell.landing.retry": "Спробувати знову",
+      "nav.administration": "Адміністрування"
     },
     "customer-order": {
       "head.title": "Попит",
@@ -2940,7 +2963,28 @@
       "panels.purchasingPipeline.bands.from15To30Days": "15–30 днів",
       "panels.purchasingPipeline.bands.over30Days": "> 30 днів",
       "panels.purchasingPipeline.states.draft": "Чернетка",
-      "panels.purchasingPipeline.states.readyForOrdering": "Готово до замовлення"
+      "panels.purchasingPipeline.states.readyForOrdering": "Готово до замовлення",
+      "workspace.heading": "Панель робочого простору",
+      "workspace.denial.heading": "Ви не можете переглядати показники цього робочого простору",
+      "workspace.denial.description": "Ваша роль у цьому робочому просторі їх не допускає. Зверніться до адміністратора робочого простору, якщо вони вам потрібні.",
+      "panels.demandPressure.title": "Напруженість попиту",
+      "panels.demandPressure.meta": "Незакрита кількість за складом і терміновістю",
+      "panels.demandPressure.bands.overdue": "Прострочено",
+      "panels.demandPressure.bands.dueSoon": "Скоро термін",
+      "panels.demandPressure.bands.later": "Пізніше",
+      "panels.orderFlow.title": "Потік замовлень",
+      "panels.orderFlow.meta": "Записана кількість за тижнями, сукупно по робочому простору",
+      "panels.orderFlow.series.assigned": "Розподілено на прибулий товар",
+      "panels.orderFlow.series.stillAwaited": "Ще очікується",
+      "panels.orderFlow.series.cancelled": "Скасовано",
+      "panels.purchasingSpread.title": "Розподіл закупівель",
+      "panels.purchasingSpread.meta": "Чернетки закупівель за складом і станом · Готово = Готово до замовлення",
+      "panels.purchasingSpread.states.draft": "Чернетка",
+      "panels.purchasingSpread.states.readyForOrdering": "Готово",
+      "panels.purchasingSpread.states.closed": "Закрито",
+      "panels.purchasingSpread.states.discarded": "Відкинуто",
+      "panels.receiptReliability.title": "Надійність приймання",
+      "panels.receiptReliability.meta": "Своєчасне прибуття проти відповідності, за складом"
     }
   }
 }

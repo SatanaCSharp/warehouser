@@ -890,7 +890,7 @@ describe('router', () => {
     await screen.findByText('Nothing is entered yet');
     expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
     expect(
-      screen.queryByRole('link', { name: 'Workspace' }),
+      screen.queryByRole('link', { name: 'Administration' }),
     ).not.toBeInTheDocument();
     // T9 / CR-AC-03 — the Workspace NAME is no longer evidence of anything
     // here: the grouped switcher deliberately shows this actor an inert
@@ -948,7 +948,7 @@ describe('router', () => {
     renderRoute(ROUTES.HOME);
 
     expect(
-      await screen.findByRole('link', { name: 'Workspace' }),
+      await screen.findByRole('link', { name: 'Administration' }),
     ).toHaveAttribute('href', ROUTES.WORKSPACE);
   });
 });
