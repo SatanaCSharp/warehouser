@@ -7,7 +7,7 @@
 | --- | --------------------------------------------------------------------------------------------------------------- | ----------- | ------------- | -------- | ------------------ | ------ |
 | T1  | [Promote the Reason Concentration index migration](./reason-concentration-index-migration.md)                   | `migration` | Backend Lead  | S        | —                  | done   |
 | T2  | [Promote the Permission grant migration + catalogue enum](./dashboard-permission-catalogue-migration.md)        | `migration` | Backend Lead  | M        | T1                 | done   |
-| T3  | [Add the contracts/dashboards subpath and both Vite aliases](./dashboards-contracts-subpath.md)                 | `ports`     | Tech Lead     | M        | —                  | todo   |
+| T3  | [Add the contracts/dashboards subpath and both Vite aliases](./dashboards-contracts-subpath.md)                 | `ports`     | Tech Lead     | M        | —                  | done   |
 | T4  | [Introduce APP_TIMEZONE as one bound parameter](./app-timezone-configuration.md)                                | `wiring`    | Backend Lead  | S        | —                  | todo   |
 | T5  | [Coverage Gap statement — four CTEs joined on item_id](./coverage-gap-repository.md)                            | `infra`     | Backend Lead  | L        | T4                 | todo   |
 | T6  | [Arrival Timing statement — two series, four exclusions](./arrival-timing-repository.md)                        | `infra`     | Backend Lead  | L        | T4, T5             | todo   |

@@ -23,6 +23,10 @@ const config = defineConfig({
         import.meta.dirname,
         '../../packages/contracts/src/customers/index.ts',
       ),
+      '@warehouser/contracts/dashboards': path.resolve(
+        import.meta.dirname,
+        '../../packages/contracts/src/dashboards/index.ts',
+      ),
       '@warehouser/contracts/items': path.resolve(
         import.meta.dirname,
         '../../packages/contracts/src/items/index.ts',
@@ -59,6 +63,10 @@ const config = defineConfig({
       customers: path.resolve(
         import.meta.dirname,
         '../../packages/contracts/src/customers',
+      ),
+      dashboards: path.resolve(
+        import.meta.dirname,
+        '../../packages/contracts/src/dashboards',
       ),
       items: path.resolve(
         import.meta.dirname,
