@@ -77,11 +77,69 @@ interface CoverageGapRead {
   readonly remainder: CoverageGapRemainderRead | null;
 }
 
+// openapi.yaml `ArrivalTimingBucket` — required: [kind, weekStart, owedQuantity,
+// expectedQuantity], additionalProperties: false. `weekStart` is `null` only on the `overdue`
+// bucket (`ArrivalTimingBucketKind`).
+interface ArrivalTimingBucketRead {
+  readonly kind: 'overdue' | 'week';
+  readonly weekStart: string | null;
+  readonly owedQuantity: number;
+  readonly expectedQuantity: number;
+}
+
+// openapi.yaml `ArrivalTimingExclusions.beyondHorizon` — required: [owedQuantity,
+// customerOrderCount].
+interface ArrivalTimingBeyondHorizonRead {
+  readonly owedQuantity: number;
+  readonly customerOrderCount: number;
+}
+
+// openapi.yaml `ArrivalTimingExclusions.undatedReadyDrafts` /
+// `.datedDraftsStillInDraft` — both required: [draftCount, orderedQuantity].
+interface ArrivalTimingDraftExclusionRead {
+  readonly draftCount: number;
+  readonly orderedQuantity: number;
+}
+
+// openapi.yaml `ArrivalTimingExclusions.draftsSinceClosedOrDiscarded` — required: [draftCount]
+// only; no criterion asks for its quantity (see `api-sync-report.md` § Finding 3).
+interface ArrivalTimingClosedOrDiscardedExclusionRead {
+  readonly draftCount: number;
+}
+
+// openapi.yaml `ArrivalTimingExclusions` — required: [beyondHorizon, undatedReadyDrafts,
+// datedDraftsStillInDraft, draftsSinceClosedOrDiscarded], additionalProperties: false.
+interface ArrivalTimingExclusionsRead {
+  readonly beyondHorizon: ArrivalTimingBeyondHorizonRead;
+  readonly undatedReadyDrafts: ArrivalTimingDraftExclusionRead;
+  readonly datedDraftsStillInDraft: ArrivalTimingDraftExclusionRead;
+  readonly draftsSinceClosedOrDiscarded: ArrivalTimingClosedOrDiscardedExclusionRead;
+}
+
+// openapi.yaml `ArrivalTimingPanel` — the repository's own shape carries `buckets` and
+// `exclusions` only; `timezone` is composed by the query from the same bound parameter it passed
+// in, not read back from the repository (sad.md §6.4: "R-->>PQ: the two series and the four
+// exclusions").
+interface ArrivalTimingRead {
+  readonly buckets: readonly ArrivalTimingBucketRead[];
+  readonly exclusions: ArrivalTimingExclusionsRead;
+}
+
 // The shape this RED step expects the implementer to expose (data-model.md "The read model",
-// tasks/coverage-gap-repository.md, sad.md §6.3). Cast through this interface because
-// `WarehouseDemandCoverageRepository` is `error`-typed while the module does not exist yet.
+// tasks/coverage-gap-repository.md, tasks/arrival-timing-repository.md, sad.md §6.3/§6.4). Cast
+// through this interface because `WarehouseDemandCoverageRepository` is `error`-typed while
+// `readArrivalTiming` does not exist yet. `timezone` is a **method parameter**, not a constructor
+// `@Inject(APP_TIMEZONE)` — data-model.md § "Time, timezone and the week" requires it be a bound
+// query parameter rather than the connection's implicit `TimeZone`, and a method parameter is what
+// lets one repository instance be driven with two different zones in the same test
+// (`warehouse-purchasing-read.repository.ts`'s `readPurchasingPipeline(warehouseId, timezone)`
+// establishes the same shape for the sibling Age Band read).
 interface WarehouseDemandCoverageRepositoryContract {
   readCoverageGap(warehouseId: string): Promise<CoverageGapRead>;
+  readArrivalTiming(
+    warehouseId: string,
+    timezone: string,
+  ): Promise<ArrivalTimingRead>;
 }
 
 const repository = new WarehouseDemandCoverageRepository(
@@ -167,6 +225,7 @@ const seedCustomerOrder = async (
     cancellationReason?: string | null;
     cancelledByUserId?: string | null;
     cancelledAt?: Date | null;
+    neededBy?: string;
   } = {},
 ): Promise<string> => {
   const id = randomUUID();
@@ -178,7 +237,7 @@ const seedCustomerOrder = async (
     customerName: 'Buyer One',
     quantity,
     outstandingQuantity: overrides.outstandingQuantity ?? quantity,
-    neededBy: '2026-09-30',
+    neededBy: overrides.neededBy ?? '2026-09-30',
     state: overrides.state ?? 'unfulfilled',
     cancellationReason: overrides.cancellationReason ?? null,
     recordedByUserId,
@@ -197,6 +256,7 @@ const seedPurchaseDraft = async (
   warehouseId: string,
   createdByUserId: string,
   state: PurchaseDraftState,
+  expectedArrivalDate: string | null = null,
 ): Promise<string> => {
   const id = randomUUID();
   const isClosedByReason = state === 'closed';
@@ -207,7 +267,7 @@ const seedPurchaseDraft = async (
     id,
     warehouseId,
     state,
-    expectedArrivalDate: null,
+    expectedArrivalDate,
     createdByUserId,
     readiedByUserId: isReadied ? createdByUserId : null,
     readiedAt: isReadied ? now : null,
@@ -314,6 +374,38 @@ const seedLink = async (
 
 const findRow = (rows: readonly CoverageGapRowRead[], itemId: string) =>
   rows.find((row) => row.itemId === itemId);
+
+// Reads the week-in-progress boundary straight from PostgreSQL rather than computing it in JS,
+// so a test's expectation is derived the same way `date_trunc('week', now() AT TIME ZONE $tz)`
+// derives it in the statement under test (data-model.md § "Time, timezone and the week").
+const fetchWeekStart = async (timezone: string): Promise<string> => {
+  const [row] = (await dataSource.query(
+    `SELECT date_trunc('week', now() AT TIME ZONE $1)::date::text AS week_start`,
+    [timezone],
+  )) as { week_start: string }[];
+  return row.week_start;
+};
+
+const fetchTodayDate = async (timezone: string): Promise<string> => {
+  const [row] = (await dataSource.query(
+    `SELECT (now() AT TIME ZONE $1)::date::text AS today`,
+    [timezone],
+  )) as { today: string }[];
+  return row.today;
+};
+
+// Pure calendar-date arithmetic over a `YYYY-MM-DD` string — safe because every date this spec
+// carries (`needed_by`, `expected_arrival_date`) is a plain SQL `date`, never a zoned instant.
+const addDays = (dateText: string, days: number): string => {
+  const date = new Date(`${dateText}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+};
+
+const sumBucketField = (
+  buckets: readonly ArrivalTimingBucketRead[],
+  field: 'owedQuantity' | 'expectedQuantity',
+): number => buckets.reduce((total, bucket) => total + bucket[field], 0);
 
 // The suites below are extracted to named top-level functions, each registering its own
 // `describe`/`it`, so the outer `describe` callback stays a short table of contents
@@ -734,6 +826,331 @@ const registerSortOrderTest = (): void => {
   });
 };
 
+// `WarehouseDemandCoverageRepository.readArrivalTiming` does not exist yet — this is the RED for
+// T6, tasks/arrival-timing-repository.md, sad.md §6.4 (AC-07, AC-08, AC-08a, AC-11). The response
+// shape is `openapi.yaml` `ArrivalTimingPanel`/`ArrivalTimingBucket`/`ArrivalTimingExclusions`.
+const registerNineBucketsNeverNettedTest = (): void => {
+  // AC-07 — exactly nine buckets, always: the `overdue` bucket then eight weeks beginning with the
+  // week in progress, each present even where nothing falls in it. The demand and supply series
+  // are never netted against one another — a bug that nets them would report bucket 1's
+  // `owedQuantity` as `30 - 5 = 25` and its `expectedQuantity` as `0`, both wrong.
+  it('reports exactly nine buckets, including empty ones, with the demand and supply series held independently rather than netted against one another', async () => {
+    const workspaceId = await seedWorkspace();
+    const warehouseId = await seedWarehouse(workspaceId);
+    const userId = await seedUser(workspaceId);
+    const itemOne = await seedItem(warehouseId, { onHandQuantity: 0 });
+    const itemTwo = await seedItem(warehouseId, { onHandQuantity: 0 });
+
+    const weekStart = await fetchWeekStart('UTC');
+    const weekTwoStart = addDays(weekStart, 7);
+
+    // Week in progress: demand 30, supply 5 — never netted into a single figure.
+    await seedCustomerOrder(warehouseId, itemOne.id, userId, {
+      quantity: 30,
+      outstandingQuantity: 30,
+      neededBy: weekStart,
+    });
+    const draft = await seedPurchaseDraft(
+      warehouseId,
+      userId,
+      'ready_for_ordering',
+      weekStart,
+    );
+    await seedPurchaseDraftLine(draft, warehouseId, itemOne.id, {
+      orderedQuantity: 5,
+      deliveryMode: 'via_warehouse',
+    });
+
+    // The following week: demand only, no supply.
+    await seedCustomerOrder(warehouseId, itemTwo.id, userId, {
+      quantity: 20,
+      outstandingQuantity: 20,
+      neededBy: weekTwoStart,
+    });
+
+    const result = await repository.readArrivalTiming(warehouseId, 'UTC');
+
+    expect(result.buckets).toHaveLength(9);
+    expect(result.buckets[0].kind).toBe('overdue');
+    expect(result.buckets[0].weekStart).toBeNull();
+    for (let index = 1; index <= 8; index += 1) {
+      expect(result.buckets[index].kind).toBe('week');
+    }
+    expect(result.buckets[1].weekStart).toBe(weekStart);
+    expect(result.buckets[2].weekStart).toBe(weekTwoStart);
+
+    expect(result.buckets[1].owedQuantity).toBe(30);
+    expect(result.buckets[1].expectedQuantity).toBe(5);
+    expect(result.buckets[2].owedQuantity).toBe(20);
+    expect(result.buckets[2].expectedQuantity).toBe(0);
+
+    // A bucket with nothing in it is still present and reports zero, never absent — indexes 0 and
+    // 3 through 8 hold nothing here.
+    for (const index of [0, 3, 4, 5, 6, 7, 8]) {
+      expect(result.buckets[index].owedQuantity).toBe(0);
+      expect(result.buckets[index].expectedQuantity).toBe(0);
+    }
+  });
+};
+
+const registerDirectToCustomerExclusionTest = (): void => {
+  // AC-08 — a Direct to Customer line reaches no bucket here, while the sibling Via Warehouse line
+  // on the same open draft counts toward this bucket, and both continue to count toward the
+  // Coverage Gap's Inbound Quantity beside it.
+  it('excludes a Direct to Customer line from every bucket while its sibling Via Warehouse line counts, though both still count toward the Coverage Gap Inbound Quantity', async () => {
+    const workspaceId = await seedWorkspace();
+    const warehouseId = await seedWarehouse(workspaceId);
+    const userId = await seedUser(workspaceId);
+    const item = await seedItem(warehouseId, { onHandQuantity: 0 });
+    const weekStart = await fetchWeekStart('UTC');
+    // Coverage Gap's `outstanding` CTE only reports Items some Unfulfilled Customer Order still
+    // asks for — seeded here purely so `readCoverageGap`'s side of this test has a row to find.
+    await seedCustomerOrder(warehouseId, item.id, userId, {
+      quantity: 100,
+      outstandingQuantity: 100,
+    });
+
+    const addressId = await seedCustomerDeliveryAddress(warehouseId, userId);
+    const draft = await seedPurchaseDraft(
+      warehouseId,
+      userId,
+      'ready_for_ordering',
+      weekStart,
+    );
+    await seedPurchaseDraftLine(draft, warehouseId, item.id, {
+      orderedQuantity: 9,
+      deliveryMode: 'via_warehouse',
+    });
+    await seedPurchaseDraftLine(draft, warehouseId, item.id, {
+      orderedQuantity: 40,
+      deliveryMode: 'direct_to_customer',
+      customerDeliveryAddressId: addressId,
+    });
+
+    const result = await repository.readArrivalTiming(warehouseId, 'UTC');
+
+    expect(result.buckets[1].expectedQuantity).toBe(9);
+    expect(sumBucketField(result.buckets, 'expectedQuantity')).toBe(9);
+
+    const coverage = await repository.readCoverageGap(warehouseId);
+    const row = findRow(coverage.rows, item.id);
+    expect(row?.inboundQuantity).toBe(49);
+  });
+};
+
+const registerLateReadyDraftInOverdueBucketTest = (): void => {
+  // DoD — a Ready draft whose Expected Arrival Date has already passed lands in the first bucket,
+  // beside the Overdue demand (the `tasks`-gate ruling of 2026-09-21, sad.md §6.4).
+  it("places a Ready draft's already-passed Expected Arrival Date in the Overdue bucket, beside the Overdue demand", async () => {
+    const workspaceId = await seedWorkspace();
+    const warehouseId = await seedWarehouse(workspaceId);
+    const userId = await seedUser(workspaceId);
+    const item = await seedItem(warehouseId, { onHandQuantity: 0 });
+
+    const today = await fetchTodayDate('UTC');
+    const pastArrivalDate = addDays(today, -10);
+    const pastNeededBy = addDays(today, -3);
+
+    const draft = await seedPurchaseDraft(
+      warehouseId,
+      userId,
+      'ready_for_ordering',
+      pastArrivalDate,
+    );
+    await seedPurchaseDraftLine(draft, warehouseId, item.id, {
+      orderedQuantity: 17,
+      deliveryMode: 'via_warehouse',
+    });
+    await seedCustomerOrder(warehouseId, item.id, userId, {
+      quantity: 6,
+      outstandingQuantity: 6,
+      neededBy: pastNeededBy,
+    });
+
+    const result = await repository.readArrivalTiming(warehouseId, 'UTC');
+
+    expect(result.buckets[0].kind).toBe('overdue');
+    expect(result.buckets[0].owedQuantity).toBe(6);
+    expect(result.buckets[0].expectedQuantity).toBe(17);
+  });
+};
+
+const registerClosedOrDiscardedExclusionTest = (): void => {
+  // AC-07 — a draft since Closed or Discarded counts toward no week, at read time, and is stated
+  // only as its own exclusion count (`ArrivalTimingExclusions.draftsSinceClosedOrDiscarded`
+  // carries no quantity — `openapi.yaml` required: [draftCount] only).
+  it('counts a draft since Closed or Discarded toward no week and states only its own exclusion count', async () => {
+    const workspaceId = await seedWorkspace();
+    const warehouseId = await seedWarehouse(workspaceId);
+    const userId = await seedUser(workspaceId);
+    const item = await seedItem(warehouseId, { onHandQuantity: 0 });
+    const weekStart = await fetchWeekStart('UTC');
+
+    const closedDraft = await seedPurchaseDraft(
+      warehouseId,
+      userId,
+      'closed',
+      weekStart,
+    );
+    await seedPurchaseDraftLine(closedDraft, warehouseId, item.id, {
+      orderedQuantity: 11,
+      deliveryMode: 'via_warehouse',
+    });
+    const discardedDraft = await seedPurchaseDraft(
+      warehouseId,
+      userId,
+      'discarded',
+      weekStart,
+    );
+    await seedPurchaseDraftLine(discardedDraft, warehouseId, item.id, {
+      orderedQuantity: 22,
+      deliveryMode: 'via_warehouse',
+    });
+
+    const result = await repository.readArrivalTiming(warehouseId, 'UTC');
+
+    expect(sumBucketField(result.buckets, 'expectedQuantity')).toBe(0);
+    expect(result.exclusions.draftsSinceClosedOrDiscarded.draftCount).toBe(2);
+  });
+};
+
+const registerUndatedReadyDraftExclusionTest = (): void => {
+  // AC-08a — a Ready draft carrying no Expected Arrival Date appears in no week and is stated as
+  // its own exclusion, with both the draft count and the ordered quantity it covers.
+  it('excludes an undated Ready draft from every week and states its own draft count and ordered quantity', async () => {
+    const workspaceId = await seedWorkspace();
+    const warehouseId = await seedWarehouse(workspaceId);
+    const userId = await seedUser(workspaceId);
+    const item = await seedItem(warehouseId, { onHandQuantity: 0 });
+
+    const draft = await seedPurchaseDraft(
+      warehouseId,
+      userId,
+      'ready_for_ordering',
+      null,
+    );
+    await seedPurchaseDraftLine(draft, warehouseId, item.id, {
+      orderedQuantity: 14,
+      deliveryMode: 'via_warehouse',
+    });
+
+    const result = await repository.readArrivalTiming(warehouseId, 'UTC');
+
+    expect(sumBucketField(result.buckets, 'expectedQuantity')).toBe(0);
+    expect(result.exclusions.undatedReadyDrafts.draftCount).toBe(1);
+    expect(result.exclusions.undatedReadyDrafts.orderedQuantity).toBe(14);
+  });
+};
+
+const registerDatedDraftStillInDraftExclusionTest = (): void => {
+  // AC-08a — a Draft that already carries an Expected Arrival Date appears in no week — the date
+  // is a working note rather than the commitment freezing makes of it — and is stated as its own
+  // exclusion, with both the draft count and the ordered quantity it covers.
+  it('excludes a dated draft still in Draft from every week and states its own draft count and ordered quantity', async () => {
+    const workspaceId = await seedWorkspace();
+    const warehouseId = await seedWarehouse(workspaceId);
+    const userId = await seedUser(workspaceId);
+    const item = await seedItem(warehouseId, { onHandQuantity: 0 });
+    const weekStart = await fetchWeekStart('UTC');
+
+    const draft = await seedPurchaseDraft(
+      warehouseId,
+      userId,
+      'draft',
+      weekStart,
+    );
+    await seedPurchaseDraftLine(draft, warehouseId, item.id, {
+      orderedQuantity: 33,
+      deliveryMode: 'via_warehouse',
+    });
+
+    const result = await repository.readArrivalTiming(warehouseId, 'UTC');
+
+    expect(sumBucketField(result.buckets, 'expectedQuantity')).toBe(0);
+    expect(result.exclusions.datedDraftsStillInDraft.draftCount).toBe(1);
+    expect(result.exclusions.datedDraftsStillInDraft.orderedQuantity).toBe(33);
+  });
+};
+
+const registerBeyondHorizonExclusionTest = (): void => {
+  // AC-07 — demand owed beyond the eighth week is placed in no bucket and stated as its own
+  // exclusion: the owed quantity and how many Unfulfilled Customer Orders it covers.
+  it('places demand beyond the eighth week in no bucket and states its own owed quantity and Customer Order count', async () => {
+    const workspaceId = await seedWorkspace();
+    const warehouseId = await seedWarehouse(workspaceId);
+    const userId = await seedUser(workspaceId);
+    const item = await seedItem(warehouseId, { onHandQuantity: 0 });
+    const weekStart = await fetchWeekStart('UTC');
+    // Bucket 8 (the eighth week) covers `weekStart + 49` through `weekStart + 55`; one day beyond
+    // that is beyond the horizon this Panel buckets at all.
+    const beyondHorizonDate = addDays(weekStart, 56);
+
+    await seedCustomerOrder(warehouseId, item.id, userId, {
+      quantity: 12,
+      outstandingQuantity: 12,
+      neededBy: beyondHorizonDate,
+    });
+    await seedCustomerOrder(warehouseId, item.id, userId, {
+      quantity: 9,
+      outstandingQuantity: 9,
+      neededBy: addDays(beyondHorizonDate, 30),
+    });
+
+    const result = await repository.readArrivalTiming(warehouseId, 'UTC');
+
+    expect(sumBucketField(result.buckets, 'owedQuantity')).toBe(0);
+    expect(result.exclusions.beyondHorizon.owedQuantity).toBe(21);
+    expect(result.exclusions.beyondHorizon.customerOrderCount).toBe(2);
+  });
+};
+
+const registerTimezoneBoundParameterTest = (): void => {
+  // data-model.md § "Time, timezone and the week" — `APP_TIMEZONE` reaches this read as a **bound
+  // query parameter**, never the connection's implicit `TimeZone` setting. Proven by driving one
+  // repository instance with two zones guaranteed to disagree on "today" by exactly one calendar
+  // day at any real instant the suite runs: `Pacific/Kiritimati` (UTC+14) and `Etc/GMT+12`
+  // (POSIX sign-inverted, UTC-12) are 26 hours apart — wider than the 24-hour span a date boundary
+  // spans — so the two readings can never agree, and the assertion needs no particular moment to
+  // hold.
+  it('reads the timezone as a bound parameter: the same needed-by date is not yet Overdue under one zone and already Overdue under another, 26 hours apart', async () => {
+    const workspaceId = await seedWorkspace();
+    const warehouseId = await seedWarehouse(workspaceId);
+    const userId = await seedUser(workspaceId);
+    const item = await seedItem(warehouseId, { onHandQuantity: 0 });
+
+    const earlierTimezone = 'Etc/GMT+12';
+    const laterTimezone = 'Pacific/Kiritimati';
+    const todayInEarlierZone = await fetchTodayDate(earlierTimezone);
+    const todayInLaterZone = await fetchTodayDate(laterTimezone);
+    expect(todayInLaterZone).toBe(addDays(todayInEarlierZone, 1));
+
+    // Needed exactly "today" as the earlier zone reads it — not yet Overdue there, but already a
+    // day in the past as the later zone reads it.
+    await seedCustomerOrder(warehouseId, item.id, userId, {
+      quantity: 40,
+      outstandingQuantity: 40,
+      neededBy: todayInEarlierZone,
+    });
+
+    const underEarlierZone = await repository.readArrivalTiming(
+      warehouseId,
+      earlierTimezone,
+    );
+    const underLaterZone = await repository.readArrivalTiming(
+      warehouseId,
+      laterTimezone,
+    );
+
+    expect(underEarlierZone.buckets[0].owedQuantity).toBe(0);
+    expect(underEarlierZone.buckets[1].owedQuantity).toBe(40);
+
+    // Same connection, same repository instance — only the bound parameter changed — and the same
+    // row now reads as Overdue.
+    expect(underLaterZone.buckets[0].owedQuantity).toBe(40);
+    expect(underLaterZone.buckets[1].owedQuantity).toBe(0);
+  });
+};
+
 describe('WarehouseDemandCoverageRepository — readCoverageGap', () => {
   beforeAll(async () => {
     await dataSource.initialize();
@@ -758,4 +1175,29 @@ describe('WarehouseDemandCoverageRepository — readCoverageGap', () => {
   registerFullyCoveredTest();
   registerRowBoundingAndRemainderTest();
   registerSortOrderTest();
+});
+
+describe('WarehouseDemandCoverageRepository — readArrivalTiming', () => {
+  beforeAll(async () => {
+    await dataSource.initialize();
+  });
+
+  afterEach(async () => {
+    await dataSource.query(
+      'TRUNCATE arrival_allocations, purchase_draft_demand_snapshots, purchase_draft_line_links, purchase_draft_lines, purchase_drafts, item_stock_adjustments, customer_orders, items, warehouse_memberships, roles, warehouses, workspaces, sessions, users, accounts CASCADE',
+    );
+  });
+
+  afterAll(async () => {
+    await dataSource.destroy();
+  });
+
+  registerNineBucketsNeverNettedTest();
+  registerDirectToCustomerExclusionTest();
+  registerLateReadyDraftInOverdueBucketTest();
+  registerClosedOrDiscardedExclusionTest();
+  registerUndatedReadyDraftExclusionTest();
+  registerDatedDraftStillInDraftExclusionTest();
+  registerBeyondHorizonExclusionTest();
+  registerTimezoneBoundParameterTest();
 });
