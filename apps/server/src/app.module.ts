@@ -6,6 +6,7 @@ import { AccessRestModule } from 'access';
 import { AuthModule } from 'auth/auth.module';
 import { CustomerOrdersModule } from 'customer-orders';
 import { CustomersModule } from 'customers';
+import { DashboardsRestModule } from 'dashboards';
 import { ItemsModule } from 'items';
 import { PurchaseDraftsModule } from 'purchase-drafts';
 import { AppTimezoneModule } from 'shared/config/app-timezone.module';
@@ -36,6 +37,7 @@ import { WorkspacesRestModule } from 'workspaces';
     CustomerOrdersModule,
     CustomersModule,
     PurchaseDraftsModule,
+    DashboardsRestModule,
     WarehousesRestModule,
     WorkspacesRestModule,
     BullModule.forRootAsync({
