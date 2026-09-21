@@ -347,6 +347,17 @@ An ending that refuses any quantity states a Pre-receipt Conformance judgement, 
 
 - **Abuse cases:**
   - Cross-Warehouse reach: deny any attempt to read or amend a Rejection belonging to a Warehouse the actor is not acting in, even where they hold a membership and the matching Permission there, and do not disclose that the Rejection exists (AC-26).
+
+    > **Amended by [`dashboards`](../dashboards/spec.md#1-context) — 2026-09-21.** The same
+    > exception applies here as in `workspaces` and `ordering`: a read of aggregates over several
+    > Warehouses' Rejections, authorized by the Workspace-level Permission that admits observing
+    > Warehouse performance rather than by any Warehouse membership, names no individual Rejection
+    > and changes nothing. Reading or amending one Warehouse's individual Rejections from another
+    > Warehouse — with or without a membership and the matching Permission there — stays denied
+    > exactly as AC-26 states; this exception is reviewed together with the matching exceptions in
+    > `workspaces` and `ordering` because the three amend one authority boundary and move together
+    > as a single change requiring the Security Lead's review.
+
   - Supplier and customer disclosure through a refusal: a Rejection read by a member holding `PURCHASE_DRAFTS:WATCH` without `REJECTIONS:WATCH` shows the ordered, presented and accepted quantities and one total refused quantity, and withholds every reason, description and disposition together with how many separate refusals the line carries, doing so without indicating that anything was withheld — so neither why goods were refused nor how many distinct things went wrong can be inferred by probing. That a refusal happened at all stays visible to such a reader, since the presented and accepted quantities differ; the protection is over the cause of a refusal and never over the fact of one (AC-22).
   - Scope leaking into free text: the Rejection description and the Pre-receipt Conformance note are presented as statements about goods; personal data, supplier contacts, prices or payment terms recorded there exist outside every handling this specification assumes, and text submitted into either is rendered as text and never as markup or a link.
   - Condition as unaudited fiction: a Rejection's quantity, reason, source and line cannot be changed after recording, and every amendment of a description or disposition records the acting member and the time, so a refusal that is later disputed can at least be attributed.

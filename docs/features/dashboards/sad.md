@@ -920,18 +920,31 @@ as evidence for them.
 
 Carried forward from `spec.md` §8, still open and now due:
 
-- [ ] The three invariant amendments the Workspace surface rests on — `ordering`'s per-Warehouse
+- [x] The three invariant amendments the Workspace surface rests on — `ordering`'s per-Warehouse
       authorization rule and its §3 cross-Workspace exclusion, `workspaces`' rule that a Workspace
       Permission never authorizes an operation inside a Warehouse, and `arrival-inspection`'s rule
       that nothing it reads crosses that boundary. **All three must move together**; the design
-      assumes them and cannot proceed to `ship` without them. — owner: `workspaces` owner (Tech
-      Lead) + Security Lead, due: before `implement`
-- [ ] The `ordering` amendment permitting a per-Item derived read to state the arithmetic between
-      promised, held and ordered quantity. — owner: `ordering` owner (Tech Lead), due: before
-      `implement`
-- [ ] The `ordering`/`delivery-addresses` amendment recording that the Expected Arrival Date speaks
-      for Via Warehouse lines only. — owner: `delivery-addresses` owner (Tech Lead), due: before
-      `implement`
+      assumes them and cannot proceed to `ship` without them. **Amended by
+      [T23](./tasks/cross-feature-invariant-amendments.md) on 2026-09-21**: the §3 exclusion is
+      amended in [`ordering/spec.md` §3](../ordering/spec.md#3-non-goals), the Workspace-level rule
+      in [`workspaces/spec.md` §6.1](../workspaces/spec.md#61-security--privacy), and the
+      Warehouse-boundary rule in
+      [`arrival-inspection/spec.md` §6.1](../arrival-inspection/spec.md#61-security--privacy), each
+      carve-out naming the Workspace-level Permission as its authority and none composed from a
+      Warehouse membership. Still due before `implement`: the Security Lead's review of the three as
+      one change. — owner: `workspaces` owner (Tech Lead) + Security Lead, due: before `implement`
+- [x] The `ordering` amendment permitting a per-Item derived read to state the arithmetic between
+      promised, held and ordered quantity. **Amended by
+      [T23](./tasks/cross-feature-invariant-amendments.md) on 2026-09-21** in
+      [`ordering/spec.md` §1](../ordering/spec.md#1-context), narrowing the fourth boundary rather
+      than replacing it. — owner: `ordering` owner (Tech Lead), due: before `implement`
+- [x] The `ordering`/`delivery-addresses` amendment recording that the Expected Arrival Date speaks
+      for Via Warehouse lines only. **Amended by
+      [T23](./tasks/cross-feature-invariant-amendments.md) on 2026-09-21** in
+      [`ordering/spec.md` AC-10](../ordering/spec.md#ac-10-us-05--happy) and
+      [`delivery-addresses/spec.md` AC-19](../delivery-addresses/spec.md#ac-19-us-11--happy), which
+      also records that a Via Warehouse line's recorded ending is taken as the moment the goods
+      arrived. — owner: `delivery-addresses` owner (Tech Lead), due: before `implement`
 - [ ] Deployment timezone and week start. Every bucketing statement needs it. _Default:_ one
       deployment timezone, weeks from Monday, which matches PostgreSQL's `date_trunc`. — owner: Tech
       Lead, due: before `data-model`

@@ -490,6 +490,16 @@ Five boundaries this feature depends on are stated here so they are not re-deriv
 - **Abuse cases:**
   - Cross-Workspace reach: deny any action when actor and target Workspace ownership differ, even when the actor holds the matching Workspace Permission, and do not disclose that the target exists.
   - Level confusion: a Workspace Permission never authorizes an operation inside a Warehouse and a Warehouse Permission never authorizes a Workspace capability.
+
+    > **Amended by [`dashboards`](../dashboards/spec.md#1-context) — 2026-09-21.** A Workspace
+    > Permission may additionally authorize a **read of aggregates** over records several Warehouses
+    > own — quantities and counts set beside one another, naming no individual record and changing
+    > nothing — while continuing to authorize no operation inside any Warehouse and no read of one
+    > Warehouse's individual records. The rule above still holds for every write and for every read
+    > of an individual record; this is its one exception, reviewed together with the matching
+    > exceptions in `ordering` and `arrival-inspection` because the three amend one authority
+    > boundary and move together as a single change requiring the Security Lead's review.
+
   - Warehouse confusion: a request that does not unambiguously identify the Warehouse it applies to is refused rather than resolved to the actor's current selection or any other default, so authority is never borrowed from another membership. The selected Warehouse is presentation state and is never an input to an authorization decision.
   - Self-escalation through membership assignment: membership assignment into an existing Warehouse never targets the acting member, never grants the protected Warehouse Manager Role, and never creates a second Role for the same User in one Warehouse, so authority over a Warehouse that already has members is always granted by someone else. Adding a Warehouse is the one place a member takes Warehouse authority directly, because a Warehouse at the moment of its creation has no other member who could grant it; that path is bounded by requiring `WAREHOUSES:CREATE` and by the new Warehouse holding nothing.
   - Ownerless Workspace: removing a Workspace membership never removes the current Workspace Owner, who must be transferred first.
