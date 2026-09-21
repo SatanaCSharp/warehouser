@@ -1,6 +1,6 @@
 ---
 status: Living
-updated_at: '2026-09-07'
+updated_at: '2026-09-20'
 ---
 
 # Roadmap
@@ -44,6 +44,18 @@ links to the feature folder where the solution is specified. Horizons are **Now*
   honoured.
   → [`docs/features/arrival-inspection`](features/arrival-inspection/spec.md) · size L · route full · status: spec drafted
 
+- **A warehouse can be read at a glance, and an organization can tell which of its warehouses needs
+  attention.** Today every operational question — is anything promised that we cannot supply, is
+  anything arriving after it is owed, which purchasing decisions never went anywhere, which two
+  things keep coming in broken — is a question across the customer orders, the items, the purchase
+  drafts and the refusals, answered by opening three lists and reconciling them by hand; and above
+  the warehouse there is no surface at all, so an owner running four sites learns one is falling
+  behind by entering it. Gives each warehouse four fixed charts in place of the placeholder its own
+  address has shown since the ordering shell shipped, and gives the workspace four more that set its
+  warehouses beside one another — introducing the first authority under which anyone may see how the
+  warehouses are doing rather than administer them.
+  → [`docs/features/dashboards`](features/dashboards/spec.md) · size L · route full · status: spec drafted
+
 ## Next
 
 - **A warehouse can see which items and packaging keep failing, and the demand a refusal restored
@@ -53,7 +65,10 @@ links to the feature folder where the solution is specified. Horizons are **Now*
   the dock. Carries the reason onto the consolidated demand, and adds one warehouse-scoped,
   period-bounded register of refusals grouped by item, reason and packaging type. Deliberately
   deferred out of `arrival-inspection` rather than descoped: it is the visibility half of a feature
-  whose judgement half ships first.
+  whose judgement half ships first. `dashboards` narrows it without replacing it: the warehouse
+  dashboard now answers which two reasons account for most of what was refused, so what remains here
+  is the period-bounded register grouped by item, reason and packaging type, and the marker that
+  carries a refusal's reason onto the demand it restored — neither of which a chart provides.
   → committed follow-up to [`docs/features/arrival-inspection`](features/arrival-inspection/spec.md) · not yet specified
 
 ## Later
