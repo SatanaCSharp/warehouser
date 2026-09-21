@@ -1,10 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { getEntityManager } from 'shared/database/db-transaction-context.service';
+import { ArrivalAllocationEntity } from 'shared/domain/entities/arrival-allocation.entity';
 import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
 import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
 import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
 import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
-import { DataSource, EntityManager } from 'typeorm';
+import {
+  DataSource,
+  EntityManager,
+  ObjectLiteral,
+  SelectQueryBuilder,
+} from 'typeorm';
 
 // openapi.yaml `DemandPressureWarehouse`.
 export interface DemandPressureWarehouseRead {
@@ -46,9 +52,31 @@ export interface PurchasingSpreadPanelRead {
   readonly warehouses: readonly PurchasingSpreadWarehouseRead[];
 }
 
+// openapi.yaml `OrderFlowWeek`.
+export interface OrderFlowWeekRead {
+  readonly weekStart: string;
+  readonly recordedQuantity: number;
+  readonly assignedQuantity: number;
+  readonly cancelledQuantity: number;
+  readonly stillAwaitedQuantity: number;
+}
+
+// openapi.yaml `OrderFlowPanel` — no `warehouseId`/`warehouseName` anywhere: the one Panel that
+// pools across the Workspace and names no Warehouse (AC-16).
+export interface OrderFlowPanelRead {
+  readonly timezone: string;
+  readonly archivedWarehouseCount: number;
+  readonly weeks: readonly OrderFlowWeekRead[];
+}
+
 interface PanelRow<TWarehouse> {
   readonly archivedWarehouseCount: number;
   readonly warehouses: TWarehouse[] | null;
+}
+
+interface OrderFlowRawRow {
+  readonly archivedWarehouseCount: number;
+  readonly weeks: OrderFlowWeekRead[] | null;
 }
 
 // data-model.md "Workspace surface" — the archived half of the shared scope, shared verbatim by
@@ -67,6 +95,124 @@ const archivedWarehouseCountSubquery = (
     .where('archivedWarehouse.workspaceId = :workspaceId', { workspaceId })
     .andWhere('archivedWarehouse.archivedAt IS NOT NULL')
     .getQuery();
+
+// Order Flow pools twelve weeks, oldest first, ending with the week in progress.
+const orderFlowWeekCount = 12;
+const currentWeekStartExpression =
+  "date_trunc('week', (now() AT TIME ZONE :timezone))";
+// The Monday twelve weeks ago, converted back to a `timestamptz` so it can bound
+// `customer_orders.created_at` directly (`data-model.md` "The read model": "created_at >= twelve
+// weeks ago"). Shared by the week-series CTE and the orders CTE so the two windows can never drift
+// apart.
+const windowLowerBoundExpression = `(${currentWeekStartExpression} - interval '${orderFlowWeekCount - 1} weeks') AT TIME ZONE :timezone`;
+
+// data-model.md "One thing `implement` must get right" — the Workspace scope resolved as an
+// explicit array, bound into the window CTE's join as `= ANY(...)` rather than left as a
+// correlated `IN (SELECT id FROM warehouses WHERE …)`, which the audit measured forcing a Seq Scan
+// on `customer_orders` even at moderate selectivity. `array_agg` over zero active Warehouses
+// yields `NULL`, and `= ANY(NULL)` matches nothing, which is the correct empty result rather than a
+// special case.
+const buildActiveWarehousesCte = (
+  manager: EntityManager,
+  workspaceId: string,
+): SelectQueryBuilder<WarehouseEntity> =>
+  manager
+    .createQueryBuilder()
+    .select('array_agg(activeWarehouse.id)', 'ids')
+    .from(WarehouseEntity, 'activeWarehouse')
+    .where('activeWarehouse.workspaceId = :workspaceId', { workspaceId })
+    .andWhere('activeWarehouse.archivedAt IS NULL');
+
+// `date_trunc('week', …)` is Monday-start ISO-8601 with no configuration needed
+// (`data-model.md` "Time, timezone and the week"). Twelve rows, oldest first, so a week with
+// nothing recorded in it is still present and reports zero rather than being absent (AC-16).
+// `generate_series` is a set-returning function with no table behind it, so this CTE is written as
+// raw SQL text (`addCommonTableExpression` accepts either form) rather than through
+// `SelectQueryBuilder`, which requires a `.from()` target it has none to give. `:timezone` stays a
+// bound parameter — the caller registers it on the outer query, exactly as every scalar subquery
+// embedded by `.getQuery()` elsewhere in this file already does.
+const buildWeekSeriesCteSql = (): string =>
+  `SELECT generate_series(${currentWeekStartExpression} - interval '${orderFlowWeekCount - 1} weeks', ${currentWeekStartExpression}, interval '1 week')::date AS week_start`;
+
+// data-model.md "The read model" — **every** Customer Order state including cancelled, the one
+// read that does (AC-04, AC-16), keyed on `created_at`'s own week, never `needed_by`'s
+// (AC-17: mutation-proven — keying on `needed_by` instead breaks 8 of the 9 Order Flow cases).
+// `quantity` and `outstanding_quantity` are read as they stand now, never as they stood (AC-17a).
+const buildOrdersCte = (
+  manager: EntityManager,
+  timezone: string,
+): SelectQueryBuilder<CustomerOrderEntity> =>
+  manager
+    .createQueryBuilder()
+    .select('customerOrder.id', 'id')
+    .addSelect('customerOrder.quantity', 'quantity')
+    .addSelect('customerOrder.outstandingQuantity', 'outstanding_quantity')
+    .addSelect('customerOrder.state', 'state')
+    .addSelect(
+      "(date_trunc('week', customerOrder.createdAt AT TIME ZONE :timezone))::date",
+      'week_start',
+    )
+    .from(CustomerOrderEntity, 'customerOrder')
+    .innerJoin(
+      'activewarehouses',
+      'activewarehouses',
+      'customerOrder.warehouseId = ANY(activewarehouses.ids)',
+    )
+    .where(`customerOrder.createdAt >= ${windowLowerBoundExpression}`)
+    .setParameter('timezone', timezone);
+
+// data-model.md "The read model" — the allocation aggregate stays in its own CTE, grouped by
+// `customer_order_id`, and is joined back rather than fanned out through a direct join to
+// `arrival_allocations` (AC-06a: mutation-proven — removing this grouping fails exactly the
+// aggregation-integrity case, `expected 400 to be 200`, and nothing else). Scoped to the orders
+// already windowed above via the inner join, so an Allocation on an out-of-window or archived-
+// Warehouse order never reaches this aggregate.
+const buildAllocationsCte = (
+  manager: EntityManager,
+): SelectQueryBuilder<ArrivalAllocationEntity> =>
+  manager
+    .createQueryBuilder()
+    .select('allocation.customerOrderId', 'customer_order_id')
+    .addSelect('SUM(allocation.allocatedQuantity)::int', 'allocated_quantity')
+    .from(ArrivalAllocationEntity, 'allocation')
+    .innerJoin('orders', 'orders', 'orders.id = allocation.customerOrderId')
+    .groupBy('allocation.customerOrderId');
+
+// The week's whole (`recordedQuantity`), the assigned part added against the order's own
+// recording week regardless of when the Allocation itself was made (AC-17), and the withdrawn
+// part read from the cancelled order's retained `outstanding_quantity` rather than its whole
+// `quantity` — stating the whole would double-count the part already allocated
+// (`data-model.md` "The read model", AC-04). `allocations` already grouped one row per Customer
+// Order, so this `LEFT JOIN` cannot fan out `orders.quantity`.
+const buildWeekAggregatesCte = (
+  manager: EntityManager,
+): SelectQueryBuilder<ObjectLiteral> =>
+  manager
+    .createQueryBuilder()
+    .select('orders.week_start', 'week_start')
+    .addSelect('SUM(orders.quantity)::int', 'recorded_quantity')
+    .addSelect(
+      'COALESCE(SUM(allocations.allocated_quantity), 0)::int',
+      'assigned_quantity',
+    )
+    .addSelect(
+      "COALESCE(SUM(CASE WHEN orders.state = 'cancelled' THEN orders.outstanding_quantity ELSE 0 END), 0)::int",
+      'cancelled_quantity',
+    )
+    .from('orders', 'orders')
+    .leftJoin(
+      'allocations',
+      'allocations',
+      'allocations.customer_order_id = orders.id',
+    )
+    .groupBy('orders.week_start');
+
+const stillAwaitedExpression =
+  'COALESCE(weekaggregates.recorded_quantity, 0) - COALESCE(weekaggregates.assigned_quantity, 0) - COALESCE(weekaggregates.cancelled_quantity, 0)';
+
+// `stillAwaitedQuantity` is carried as its own field so the client subtracts nothing
+// (`openapi.yaml` `OrderFlowWeek`).
+const orderFlowWeeksJsonExpression = `COALESCE(json_agg(json_build_object('weekStart', weekseries.week_start, 'recordedQuantity', COALESCE(weekaggregates.recorded_quantity, 0), 'assignedQuantity', COALESCE(weekaggregates.assigned_quantity, 0), 'cancelledQuantity', COALESCE(weekaggregates.cancelled_quantity, 0), 'stillAwaitedQuantity', ${stillAwaitedExpression}) ORDER BY weekseries.week_start), '[]'::json)`;
 
 // data-model.md "Workspace surface" — every Workspace read resolves this scope first:
 // `warehouses WHERE workspace_id = $1 AND archived_at IS NULL`, and reports the archived count as
@@ -215,6 +361,57 @@ export class WorkspacePerformanceReadRepository {
     return {
       archivedWarehouseCount: row?.archivedWarehouseCount ?? 0,
       warehouses: row?.warehouses ?? [],
+    };
+  }
+
+  // AC-16/AC-17/AC-17a/AC-06a/AC-04 — twelve weeks pooled across the Workspace's active
+  // Warehouses, naming none of them. `activewarehouses` resolves the scope once as an explicit
+  // array bound into the window CTE's join (`data-model.md` "One thing `implement` must get
+  // right"); `weekseries` generates the twelve week starts independently of whether any order
+  // falls in them; `orders` windows and keys every Customer Order state on its own recording week;
+  // `allocations` aggregates per Customer Order in its own CTE before being joined back, so several
+  // Allocations against one order can never multiply that order's own `quantity` (AC-06a); the
+  // final select reports each week's whole, its assigned and cancelled parts, and leaves
+  // `stillAwaitedQuantity` for the client to read rather than subtract.
+  async readOrderFlow(
+    workspaceId: string,
+    timezone: string,
+  ): Promise<OrderFlowPanelRead> {
+    const manager = getEntityManager(this.dataSource);
+
+    const archivedWarehouseCount = archivedWarehouseCountSubquery(
+      manager,
+      workspaceId,
+    );
+
+    const raw = await manager
+      .createQueryBuilder()
+      .select(`(${archivedWarehouseCount})`, 'archivedWarehouseCount')
+      .addSelect(orderFlowWeeksJsonExpression, 'weeks')
+      .from('weekseries', 'weekseries')
+      .leftJoin(
+        'weekaggregates',
+        'weekaggregates',
+        'weekaggregates.week_start = weekseries.week_start',
+      )
+      .addCommonTableExpression(
+        buildActiveWarehousesCte(manager, workspaceId),
+        'activewarehouses',
+      )
+      .addCommonTableExpression(buildWeekSeriesCteSql(), 'weekseries')
+      .addCommonTableExpression(buildOrdersCte(manager, timezone), 'orders')
+      .addCommonTableExpression(buildAllocationsCte(manager), 'allocations')
+      .addCommonTableExpression(
+        buildWeekAggregatesCte(manager),
+        'weekaggregates',
+      )
+      .setParameters({ workspaceId, timezone })
+      .getRawOne<OrderFlowRawRow>();
+
+    return {
+      timezone,
+      archivedWarehouseCount: raw?.archivedWarehouseCount ?? 0,
+      weeks: raw?.weeks ?? [],
     };
   }
 }

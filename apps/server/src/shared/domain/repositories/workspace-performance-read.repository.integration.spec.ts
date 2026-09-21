@@ -2,9 +2,12 @@ import { randomUUID } from 'node:crypto';
 
 import dataSource from 'shared/database/data-source';
 import { AccountEntity } from 'shared/domain/entities/account.entity';
+import { ArrivalAllocationEntity } from 'shared/domain/entities/arrival-allocation.entity';
 import { CustomerOrderEntity } from 'shared/domain/entities/customer-order.entity';
 import { ItemEntity } from 'shared/domain/entities/item.entity';
 import { PurchaseDraftEntity } from 'shared/domain/entities/purchase-draft.entity';
+import { PurchaseDraftLineEntity } from 'shared/domain/entities/purchase-draft-line.entity';
+import { PurchaseDraftLineLinkEntity } from 'shared/domain/entities/purchase-draft-line-link.entity';
 import { UserEntity } from 'shared/domain/entities/user.entity';
 import { WarehouseEntity } from 'shared/domain/entities/warehouse.entity';
 import { WorkspaceEntity } from 'shared/domain/entities/workspace.entity';
@@ -74,6 +77,26 @@ interface PurchasingSpreadPanelRead {
   readonly warehouses: readonly PurchasingSpreadWarehouseRead[];
 }
 
+// openapi.yaml `OrderFlowWeek` — required: [weekStart, recordedQuantity, assignedQuantity,
+// cancelledQuantity, stillAwaitedQuantity]. This is the T9 RED: `readOrderFlow` does not exist yet
+// on `WorkspacePerformanceReadRepository` (T8 added only `readDemandPressure` and
+// `readPurchasingSpread`). No `warehouseId`/`warehouseName` — Order Flow is the one Panel that
+// pools across the Workspace and names no Warehouse (AC-16).
+interface OrderFlowWeekRead {
+  readonly weekStart: string;
+  readonly recordedQuantity: number;
+  readonly assignedQuantity: number;
+  readonly cancelledQuantity: number;
+  readonly stillAwaitedQuantity: number;
+}
+
+// openapi.yaml `OrderFlowPanel` — required: [timezone, archivedWarehouseCount, weeks].
+interface OrderFlowPanelRead {
+  readonly timezone: string;
+  readonly archivedWarehouseCount: number;
+  readonly weeks: readonly OrderFlowWeekRead[];
+}
+
 // The shape this RED step expects the implementer to expose (task DoD, data-model.md "Workspace
 // surface", sad.md §6.6). Cast through this interface because `WorkspacePerformanceReadRepository`
 // is `error`-typed while the module does not exist yet.
@@ -83,6 +106,10 @@ interface WorkspacePerformanceReadRepositoryContract {
     timezone: string,
   ): Promise<DemandPressurePanelRead>;
   readPurchasingSpread(workspaceId: string): Promise<PurchasingSpreadPanelRead>;
+  readOrderFlow(
+    workspaceId: string,
+    timezone: string,
+  ): Promise<OrderFlowPanelRead>;
 }
 
 const repository = new WorkspacePerformanceReadRepository(
@@ -206,6 +233,164 @@ const seedPurchaseDraft = async (
   });
   return id;
 };
+
+// Order Flow buckets on `customer_orders.created_at`, which the query windows against the real
+// `now()` PostgreSQL reads at query time (data-model.md "The read model": "created_at >= twelve
+// weeks ago") — not this file's fixed `now`, which every other fixture uses. So every Order Flow
+// fixture is anchored to the *real* current instant instead.
+const realNow = new Date();
+
+// The UTC Monday (00:00) of the ISO week that is `weeksAgo` weeks before the real current week —
+// `date_trunc('week', …)` is Monday-start (data-model.md "Time, timezone and the week"), so this is
+// the same boundary the query computes, reproduced here in plain arithmetic rather than SQL.
+const mondayOfWeek = (weeksAgo: number): Date => {
+  const date = new Date(
+    Date.UTC(
+      realNow.getUTCFullYear(),
+      realNow.getUTCMonth(),
+      realNow.getUTCDate(),
+    ),
+  );
+  const daysSinceMonday = (date.getUTCDay() + 6) % 7;
+  date.setUTCDate(date.getUTCDate() - daysSinceMonday - weeksAgo * 7);
+  return date;
+};
+
+const isoDate = (date: Date): string => date.toISOString().slice(0, 10);
+
+// A `created_at` safely inside the interior of the week `weeksAgo` weeks ago — Wednesday noon UTC,
+// far from either boundary, so reading it back under the `UTC` timezone this suite binds for its
+// non-boundary cases always lands in that same week.
+const createdAtInWeek = (weeksAgo: number): Date => {
+  const at = mondayOfWeek(weeksAgo);
+  at.setUTCDate(at.getUTCDate() + 2);
+  at.setUTCHours(12, 0, 0, 0);
+  return at;
+};
+
+interface CustomerOrderOverrides {
+  readonly id?: string;
+  readonly quantity?: number;
+  readonly outstandingQuantity?: number;
+  readonly neededBy?: string;
+  readonly state?: 'unfulfilled' | 'fulfilled' | 'cancelled';
+  readonly createdAt?: Date;
+  readonly cancellationReason?: string | null;
+  readonly cancelledByUserId?: string | null;
+  readonly cancelledAt?: Date | null;
+}
+
+// Order Flow's own seeding function — unlike `seedUnfulfilledCustomerOrder`, it admits every state
+// (AC-04, AC-16) and takes `createdAt` explicitly, because the week a Customer Order lands in is the
+// one property under test.
+const seedCustomerOrder = async (
+  warehouseId: string,
+  itemId: string,
+  recordedByUserId: string,
+  overrides: CustomerOrderOverrides,
+): Promise<string> => {
+  const id = overrides.id ?? randomUUID();
+  const quantity = overrides.quantity ?? 100;
+  await dataSource.manager.getRepository(CustomerOrderEntity).insert({
+    id,
+    warehouseId,
+    itemId,
+    customerName: 'Buyer One',
+    quantity,
+    outstandingQuantity: overrides.outstandingQuantity ?? quantity,
+    neededBy: overrides.neededBy ?? '2099-01-01',
+    state: overrides.state ?? 'unfulfilled',
+    cancellationReason: overrides.cancellationReason ?? null,
+    recordedByUserId,
+    cancelledByUserId: overrides.cancelledByUserId ?? null,
+    cancelledAt: overrides.cancelledAt ?? null,
+    createdAt: overrides.createdAt ?? now,
+    updatedAt: overrides.createdAt ?? now,
+  });
+  return id;
+};
+
+// The FK chain `arrival_allocations` needs: a Purchase Draft, one Line on it, and the Link the
+// Allocation addresses (`arrival_allocations` composite-FKs onto
+// `purchase_draft_line_links(id, purchase_draft_line_id, customer_order_id)` —
+// `demand-allocation.repository.integration.spec.ts` establishes the same chain). One throwaway
+// Purchase Draft per Allocation keeps each call independent of any other seeded in the same test.
+const seedAllocation = async (
+  warehouseId: string,
+  itemId: string,
+  userId: string,
+  customerOrderId: string,
+  allocatedQuantity: number,
+  createdAt: Date,
+): Promise<void> => {
+  const purchaseDraftId = randomUUID();
+  const purchaseDraftLineId = randomUUID();
+  const linkId = randomUUID();
+  await dataSource.manager.getRepository(PurchaseDraftEntity).insert({
+    id: purchaseDraftId,
+    warehouseId,
+    state: 'ready_for_ordering',
+    expectedArrivalDate: null,
+    createdByUserId: userId,
+    readiedByUserId: userId,
+    readiedAt: now,
+    arrivalConfirmedByUserId: null,
+    arrivalConfirmedAt: null,
+    closedByUserId: null,
+    closedAt: null,
+    closureReason: null,
+    discardedByUserId: null,
+    discardedAt: null,
+    createdAt: now,
+    updatedAt: now,
+  });
+  await dataSource.manager.getRepository(PurchaseDraftLineEntity).insert({
+    id: purchaseDraftLineId,
+    purchaseDraftId,
+    warehouseId,
+    itemId,
+    orderedQuantity: allocatedQuantity,
+    packagingTypeId: null,
+    valueAddingNote: null,
+    deliveryMode: 'via_warehouse',
+    customerDeliveryAddressId: null,
+    frozenDeliveryAddressText: null,
+    frozenAccessNotes: null,
+    frozenCustomerName: null,
+    endingQuantity: null,
+    endingKind: null,
+    endingRecordedByUserId: null,
+    endingRecordedAt: null,
+    preReceiptConformance: null,
+    preReceiptConformanceNote: null,
+    createdAt: now,
+    updatedAt: now,
+  });
+  await dataSource.manager.getRepository(PurchaseDraftLineLinkEntity).insert({
+    id: linkId,
+    purchaseDraftLineId,
+    purchaseDraftId,
+    warehouseId,
+    customerOrderId,
+    statedQuantity: allocatedQuantity,
+    createdAt: now,
+    updatedAt: now,
+  });
+  await dataSource.manager.getRepository(ArrivalAllocationEntity).insert({
+    purchaseDraftLineLinkId: linkId,
+    purchaseDraftLineId,
+    customerOrderId,
+    allocatedQuantity,
+    allocatedByUserId: userId,
+    createdAt,
+  });
+};
+
+const findWeek = (
+  weeks: readonly OrderFlowWeekRead[],
+  weekStart: string,
+): OrderFlowWeekRead | undefined =>
+  weeks.find((week) => week.weekStart === weekStart);
 
 const findWarehouse = <T extends { warehouseId: string }>(
   rows: readonly T[],
@@ -556,6 +741,350 @@ const registerPurchasingSpreadTests = (): void => {
   });
 };
 
+// Split from `registerOrderFlowWithdrawalTests` below (max-lines-per-function) — this half covers
+// the window shape and the two additive-aggregation ACs (AC-17, AC-06a); the other half covers the
+// amendment, cancellation and scope rules.
+const registerOrderFlowWindowTests = (): void => {
+  describe('Order Flow — window and aggregation (AC-06a, AC-17)', () => {
+    it('reports exactly twelve pooled weeks, oldest first ending with the week in progress, a week with nothing recorded still reporting zero, in one statement', async () => {
+      const workspaceId = await seedWorkspace();
+      await seedWarehouse(workspaceId);
+
+      const { result: panel, queryCount } = await withQueryCount(() =>
+        repository.readOrderFlow(workspaceId, 'UTC'),
+      );
+
+      expect(queryCount).toBe(1);
+      expect(panel.timezone).toBe('UTC');
+      expect(panel.weeks).toHaveLength(12);
+      expect(panel.weeks[0]?.weekStart).toBe(isoDate(mondayOfWeek(11)));
+      expect(panel.weeks[11]?.weekStart).toBe(isoDate(mondayOfWeek(0)));
+      for (const week of panel.weeks) {
+        expect(week).toMatchObject({
+          recordedQuantity: 0,
+          assignedQuantity: 0,
+          cancelledQuantity: 0,
+          stillAwaitedQuantity: 0,
+        });
+      }
+    });
+
+    it('keys a week on when the Customer Order was recorded, never on its Needed By date', async () => {
+      const workspaceId = await seedWorkspace();
+      const warehouseId = await seedWarehouse(workspaceId);
+      const userId = await seedUser(workspaceId);
+      const itemId = await seedItem(warehouseId);
+
+      // Needed By is set far outside the twelve-week window entirely — an implementation that
+      // buckets (or windows) on `needed_by` instead of `created_at` either drops this order from
+      // every week or places it nowhere inside the twelve returned, rather than in the week it was
+      // actually recorded.
+      await seedCustomerOrder(warehouseId, itemId, userId, {
+        quantity: 42,
+        createdAt: createdAtInWeek(3),
+        neededBy: '2099-01-01',
+      });
+
+      const panel = await repository.readOrderFlow(workspaceId, 'UTC');
+
+      const recordingWeek = findWeek(panel.weeks, isoDate(mondayOfWeek(3)));
+      expect(recordingWeek?.recordedQuantity).toBe(42);
+      const total = panel.weeks.reduce(
+        (sum, week) => sum + week.recordedQuantity,
+        0,
+      );
+      expect(total).toBe(42);
+    });
+
+    it('adds three later Allocations together against the week the Customer Order was recorded, placing nothing in the three arrival weeks (AC-17)', async () => {
+      const workspaceId = await seedWorkspace();
+      const warehouseId = await seedWarehouse(workspaceId);
+      const userId = await seedUser(workspaceId);
+      const itemId = await seedItem(warehouseId);
+
+      const recordingWeek = 9;
+      const orderId = await seedCustomerOrder(warehouseId, itemId, userId, {
+        quantity: 100,
+        outstandingQuantity: 0,
+        state: 'fulfilled',
+        createdAt: createdAtInWeek(recordingWeek),
+      });
+      const arrivalWeeks = [6, 4, 2];
+      for (const arrivalWeek of arrivalWeeks) {
+        await seedAllocation(
+          warehouseId,
+          itemId,
+          userId,
+          orderId,
+          20,
+          createdAtInWeek(arrivalWeek),
+        );
+      }
+
+      const panel = await repository.readOrderFlow(workspaceId, 'UTC');
+
+      const recordingWeekRow = findWeek(
+        panel.weeks,
+        isoDate(mondayOfWeek(recordingWeek)),
+      );
+      expect(recordingWeekRow?.assignedQuantity).toBe(60);
+      for (const arrivalWeek of arrivalWeeks) {
+        const arrivalWeekRow = findWeek(
+          panel.weeks,
+          isoDate(mondayOfWeek(arrivalWeek)),
+        );
+        expect(arrivalWeekRow?.assignedQuantity).toBe(0);
+      }
+      const totalAssigned = panel.weeks.reduce(
+        (sum, week) => sum + week.assignedQuantity,
+        0,
+      );
+      expect(totalAssigned).toBe(60);
+    });
+
+    it('reports the same recorded quantity for a Customer Order with three Allocations as one with none, unaffected by a row gained on the unrelated relation (AC-06a, aggregation integrity)', async () => {
+      const workspaceId = await seedWorkspace();
+      const warehouseId = await seedWarehouse(workspaceId);
+      const userId = await seedUser(workspaceId);
+      const itemId = await seedItem(warehouseId);
+
+      const week = 5;
+      // Two Customer Orders of equal quantity, recorded in the same week: one that will gain three
+      // Allocations and one that never does. `recordedQuantity` sums `quantity` **per order**, so
+      // it must read the same for both regardless of how many Allocations either one carries — a
+      // fan-out join to `arrival_allocations` would instead multiply the allocated order's own
+      // `quantity` by its Allocation count and inflate the week's whole above 200.
+      await seedCustomerOrder(warehouseId, itemId, userId, {
+        quantity: 100,
+        createdAt: createdAtInWeek(week),
+      });
+      const allocatedOrderId = await seedCustomerOrder(
+        warehouseId,
+        itemId,
+        userId,
+        {
+          quantity: 100,
+          outstandingQuantity: 50,
+          createdAt: createdAtInWeek(week),
+        },
+      );
+
+      const before = await repository.readOrderFlow(workspaceId, 'UTC');
+      const beforeWeek = findWeek(before.weeks, isoDate(mondayOfWeek(week)));
+      expect(beforeWeek?.recordedQuantity).toBe(200);
+      expect(beforeWeek?.assignedQuantity).toBe(0);
+
+      // A row on the unrelated relation — three Allocations against the allocated order — must
+      // never change this week's whole (`recordedQuantity`), only its `assignedQuantity`.
+      await seedAllocation(
+        warehouseId,
+        itemId,
+        userId,
+        allocatedOrderId,
+        20,
+        createdAtInWeek(week),
+      );
+      await seedAllocation(
+        warehouseId,
+        itemId,
+        userId,
+        allocatedOrderId,
+        15,
+        createdAtInWeek(week),
+      );
+      await seedAllocation(
+        warehouseId,
+        itemId,
+        userId,
+        allocatedOrderId,
+        15,
+        createdAtInWeek(week),
+      );
+
+      const after = await repository.readOrderFlow(workspaceId, 'UTC');
+      const afterWeek = findWeek(after.weeks, isoDate(mondayOfWeek(week)));
+      expect(afterWeek?.recordedQuantity).toBe(200);
+      expect(afterWeek?.assignedQuantity).toBe(50);
+    });
+  });
+};
+
+const registerOrderFlowWithdrawalTests = (): void => {
+  describe('Order Flow — amendment, cancellation and scope (AC-04, AC-16, AC-17a)', () => {
+    it('reports the current quantity of a Customer Order amended upward eight weeks ago, in its old recording week (AC-17a)', async () => {
+      const workspaceId = await seedWorkspace();
+      const warehouseId = await seedWarehouse(workspaceId);
+      const userId = await seedUser(workspaceId);
+      const itemId = await seedItem(warehouseId);
+
+      const orderId = await seedCustomerOrder(warehouseId, itemId, userId, {
+        quantity: 10,
+        createdAt: createdAtInWeek(8),
+      });
+      // The amendment: nothing records what the order asked for before, only what it asks for now
+      // (data-model.md "The read model").
+      await dataSource.manager
+        .getRepository(CustomerOrderEntity)
+        .update({ id: orderId }, { quantity: 50, outstandingQuantity: 50 });
+
+      const panel = await repository.readOrderFlow(workspaceId, 'UTC');
+
+      const week = findWeek(panel.weeks, isoDate(mondayOfWeek(8)));
+      expect(week?.recordedQuantity).toBe(50);
+    });
+
+    it('keeps a cancelled Customer Order in its recording week, presented as withdrawn rather than owed, reading the withdrawn part from outstanding_quantity and not the whole quantity (AC-04, AC-16)', async () => {
+      const workspaceId = await seedWorkspace();
+      const warehouseId = await seedWarehouse(workspaceId);
+      const userId = await seedUser(workspaceId);
+      const itemId = await seedItem(warehouseId);
+
+      const week = 4;
+      // Cancelled after 60 of its 100 had already been assigned — `outstanding_quantity` (40) is
+      // what the cancellation left uncovered; stating the whole `quantity` (100) as withdrawn would
+      // double-count the 60 already assigned.
+      const orderId = await seedCustomerOrder(warehouseId, itemId, userId, {
+        quantity: 100,
+        outstandingQuantity: 40,
+        state: 'cancelled',
+        createdAt: createdAtInWeek(week),
+        cancellationReason: 'Customer no longer needs the goods',
+        cancelledByUserId: userId,
+        cancelledAt: createdAtInWeek(week),
+      });
+      await seedAllocation(
+        warehouseId,
+        itemId,
+        userId,
+        orderId,
+        60,
+        createdAtInWeek(week),
+      );
+
+      const panel = await repository.readOrderFlow(workspaceId, 'UTC');
+      const weekRow = findWeek(panel.weeks, isoDate(mondayOfWeek(week)));
+
+      expect(weekRow).toMatchObject({
+        recordedQuantity: 100,
+        assignedQuantity: 60,
+        cancelledQuantity: 40,
+        stillAwaitedQuantity: 0,
+      });
+
+      // The other half of AC-04: this cancelled order's retained quantity contributes to no owed
+      // figure anywhere else on either surface — Demand Pressure's own `unfulfilled` predicate
+      // already excludes it, asserted here directly rather than assumed.
+      const demandPressure = await repository.readDemandPressure(
+        workspaceId,
+        'UTC',
+      );
+      const demandRow = findWarehouse(demandPressure.warehouses, warehouseId);
+      expect(demandRow?.totalOutstandingQuantity).toBe(0);
+    });
+
+    it('excludes an archived Warehouse’s Customer Orders from every week and reports it only in the archived count', async () => {
+      const workspaceId = await seedWorkspace();
+      const activeWarehouseId = await seedWarehouse(workspaceId);
+      const archivedWarehouseId = await seedWarehouse(
+        workspaceId,
+        archivedAtClock,
+      );
+      const userId = await seedUser(workspaceId);
+      const activeItem = await seedItem(activeWarehouseId);
+      const archivedItem = await seedItem(archivedWarehouseId);
+
+      const week = 2;
+      await seedCustomerOrder(activeWarehouseId, activeItem, userId, {
+        quantity: 30,
+        createdAt: createdAtInWeek(week),
+      });
+      await seedCustomerOrder(archivedWarehouseId, archivedItem, userId, {
+        quantity: 999,
+        createdAt: createdAtInWeek(week),
+      });
+
+      const panel = await repository.readOrderFlow(workspaceId, 'UTC');
+
+      expect(panel.archivedWarehouseCount).toBe(1);
+      const weekRow = findWeek(panel.weeks, isoDate(mondayOfWeek(week)));
+      expect(weekRow?.recordedQuantity).toBe(30);
+    });
+
+    it('names no Warehouse anywhere in the response', async () => {
+      const workspaceId = await seedWorkspace();
+      const warehouseId = await seedWarehouse(workspaceId);
+      const userId = await seedUser(workspaceId);
+      const itemId = await seedItem(warehouseId);
+      await seedCustomerOrder(warehouseId, itemId, userId, {
+        quantity: 5,
+        createdAt: createdAtInWeek(1),
+      });
+
+      const panel = await repository.readOrderFlow(workspaceId, 'UTC');
+
+      for (const week of panel.weeks) {
+        expect(week).not.toHaveProperty('warehouseId');
+        expect(week).not.toHaveProperty('warehouseName');
+      }
+    });
+
+    // `APP_TIMEZONE` is a bound query parameter (data-model.md "Time, timezone and the week"), never
+    // instance state. Offsets 26 hours apart, exactly as `readDemandPressure`'s own boundary test
+    // uses, but placed near a *week* boundary rather than a day boundary: a single `created_at`
+    // instant that reads as the tail of one ISO week from the earlier zone and as the head of the
+    // next ISO week from the later zone, a full seven days apart — the one shift a 2–3 hour offset
+    // could never produce.
+    it('places the week boundary where the bound timezone puts it, asserted from both sides of it', async () => {
+      const workspaceId = await seedWorkspace();
+      const warehouseId = await seedWarehouse(workspaceId);
+      const userId = await seedUser(workspaceId);
+      const itemId = await seedItem(warehouseId);
+
+      const kiribatiZone = 'Pacific/Kiritimati';
+      const dateLineWestZone = 'Etc/GMT+12';
+      // Six hours before the UTC Monday of week 5-ago: `Etc/GMT+12` (UTC-12) reads this as Sunday
+      // 06:00, still inside week 6-ago; `Pacific/Kiritimati` (UTC+14) reads it as Monday 08:00,
+      // already inside week 5-ago.
+      const boundaryInstant = mondayOfWeek(5);
+      boundaryInstant.setUTCHours(-6);
+      await seedCustomerOrder(warehouseId, itemId, userId, {
+        quantity: 17,
+        createdAt: boundaryInstant,
+      });
+
+      const fromEarlierZone = await repository.readOrderFlow(
+        workspaceId,
+        dateLineWestZone,
+      );
+      const fromLaterZone = await repository.readOrderFlow(
+        workspaceId,
+        kiribatiZone,
+      );
+
+      const earlierZoneWeek = findWeek(
+        fromEarlierZone.weeks,
+        isoDate(mondayOfWeek(6)),
+      );
+      const laterZoneWeek = findWeek(
+        fromLaterZone.weeks,
+        isoDate(mondayOfWeek(5)),
+      );
+      expect(earlierZoneWeek?.recordedQuantity).toBe(17);
+      expect(laterZoneWeek?.recordedQuantity).toBe(17);
+      // The same instant must not also land in the *other* zone's reading of that same week —
+      // proof the boundary actually moved rather than both readings agreeing by coincidence.
+      expect(
+        findWeek(fromEarlierZone.weeks, isoDate(mondayOfWeek(5)))
+          ?.recordedQuantity,
+      ).toBe(0);
+      expect(
+        findWeek(fromLaterZone.weeks, isoDate(mondayOfWeek(6)))
+          ?.recordedQuantity,
+      ).toBe(0);
+    });
+  });
+};
+
 describe('WorkspacePerformanceReadRepository', () => {
   beforeAll(async () => {
     await dataSource.initialize();
@@ -573,4 +1102,6 @@ describe('WorkspacePerformanceReadRepository', () => {
 
   registerDemandPressureTests();
   registerPurchasingSpreadTests();
+  registerOrderFlowWindowTests();
+  registerOrderFlowWithdrawalTests();
 });
