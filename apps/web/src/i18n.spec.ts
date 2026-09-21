@@ -7,6 +7,7 @@ import enAccess from '../public/locales/en/access.json';
 import enCommon from '../public/locales/en/common.json';
 import enCustomer from '../public/locales/en/customer.json';
 import enCustomerOrder from '../public/locales/en/customer-order.json';
+import enDashboard from '../public/locales/en/dashboard.json';
 import enErrors from '../public/locales/en/errors.json';
 import enHome from '../public/locales/en/home.json';
 import enItem from '../public/locales/en/item.json';
@@ -22,6 +23,7 @@ import ukAccess from '../public/locales/uk/access.json';
 import ukCommon from '../public/locales/uk/common.json';
 import ukCustomer from '../public/locales/uk/customer.json';
 import ukCustomerOrder from '../public/locales/uk/customer-order.json';
+import ukDashboard from '../public/locales/uk/dashboard.json';
 import ukErrors from '../public/locales/uk/errors.json';
 import ukHome from '../public/locales/uk/home.json';
 import ukItem from '../public/locales/uk/item.json';
@@ -40,6 +42,7 @@ const resources = {
     common: enCommon,
     customer: enCustomer,
     'customer-order': enCustomerOrder,
+    dashboard: enDashboard,
     errors: enErrors,
     home: enHome,
     item: enItem,
@@ -57,6 +60,7 @@ const resources = {
     common: ukCommon,
     customer: ukCustomer,
     'customer-order': ukCustomerOrder,
+    dashboard: ukDashboard,
     errors: ukErrors,
     home: ukHome,
     item: ukItem,

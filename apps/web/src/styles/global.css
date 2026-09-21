@@ -146,3 +146,53 @@ body {
 .toast-region {
   z-index: 60;
 }
+
+/*
+ * Chart series tokens — design-handoff.md § Tokens.
+ *
+ * `dashboards` is the repository's first charting surface and HeroUI supplies
+ * no series palette, so these ten variables are new names derived from
+ * `--accent` and validated with the `dataviz` skill's `validate_palette.js`
+ * (ΔE checks recorded in design-handoff.md § Tokens). They are declared in
+ * the same two scopes HeroUI uses for its own theme variables
+ * (`@heroui/styles/dist/themes/default/variables.css`), so the theme toggle
+ * and the OS setting keep working unchanged.
+ *
+ * `--chart-track` and `--chart-grid` alias the HeroUI tokens the design
+ * reuses (`$surface/secondary`, `$separator`) rather than restating their
+ * hex values, so they stay in step with those tokens automatically.
+ *
+ * No status colour appears here. `--chart-supply` sits ΔE 14.5 from
+ * `--warning`; the two never appear in the same component (ADR 0002,
+ * design-handoff.md § Tokens).
+ */
+:root,
+.light,
+.default,
+[data-theme='light'],
+[data-theme='default'] {
+  --chart-ramp-3a: #0058b6;
+  --chart-ramp-3b: #1181ec;
+  --chart-ramp-3c: #7aaeee;
+  --chart-ramp-4a: #0058b6;
+  --chart-ramp-4b: #0072e2;
+  --chart-ramp-4c: #4391eb;
+  --chart-ramp-4d: #7cafec;
+  --chart-supply: #eb6834;
+  --chart-track: var(--surface-secondary);
+  --chart-grid: var(--separator);
+}
+
+.dark,
+[data-theme='dark'] {
+  --chart-ramp-3a: #0064bc;
+  --chart-ramp-3b: #1181ec;
+  --chart-ramp-3c: #6da3e4;
+  --chart-ramp-4a: #0064bc;
+  --chart-ramp-4b: #0076e4;
+  --chart-ramp-4c: #3f8ee7;
+  --chart-ramp-4d: #6fa4e4;
+  --chart-supply: #d95926;
+  --chart-track: var(--surface-secondary);
+  --chart-grid: var(--separator);
+}
