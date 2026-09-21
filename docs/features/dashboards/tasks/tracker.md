@@ -16,9 +16,9 @@
 | T9  | [Order Flow read — twelve weeks on the recording week](./order-flow-repository-read.md)                         | `infra`     | Backend Lead  | M        | T8                 | done   |
 | T10 | [Receipt Reliability read — two rates, six exclusions](./receipt-reliability-repository-read.md)                | `infra`     | Backend Lead  | L        | T8                 | done   |
 | T11 | [Panel-access predicates + four Warehouse queries](./warehouse-panel-queries.md)                                | `app`       | Backend Lead  | L        | T3, T5, T6, T7     | done   |
-| T12 | [Warehouse Dashboard REST surface](./warehouse-dashboard-rest-surface.md)                                       | `ports`     | Backend Lead  | M        | T11                | todo   |
-| T13 | [Four Workspace Panel queries](./workspace-panel-queries.md)                                                    | `app`       | Backend Lead  | M        | T3, T8, T9, T10    | todo   |
-| T14 | [Workspace Dashboard REST surface](./workspace-dashboard-rest-surface.md)                                       | `ports`     | Backend Lead  | S        | T2, T13            | todo   |
+| T12 | [Warehouse Dashboard REST surface](./warehouse-dashboard-rest-surface.md)                                       | `ports`     | Backend Lead  | M        | T11                | done   |
+| T13 | [Four Workspace Panel queries](./workspace-panel-queries.md)                                                    | `app`       | Backend Lead  | M        | T3, T8, T9, T10    | done   |
+| T14 | [Workspace Dashboard REST surface](./workspace-dashboard-rest-surface.md)                                       | `ports`     | Backend Lead  | S        | T2, T13            | done   |
 | T15 | [Chart primitives, tokens, scales and locales](./chart-primitives-and-tokens.md)                                | `ui`        | Frontend Lead | L        | —                  | done   |
 | T16 | [Warehouse Dashboard shell — loader, grid, reflow, denial](./warehouse-dashboard-shell-ui.md)                   | `ui`        | Frontend Lead | L        | T3, T12, T15       | todo   |
 | T17 | [Coverage Gap + Reason Concentration Panels](./coverage-gap-and-reason-concentration-panels-ui.md)              | `ui`        | Frontend Lead | M        | T16                | todo   |
