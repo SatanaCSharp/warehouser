@@ -15,12 +15,28 @@
         "onHand": "On hand",
         "onOrder": "On order",
         "uncovered": "Uncovered"
+      },
+      "columns": {
+        "item": "Item",
+        "coverage": "Coverage",
+        "onHand": "On hand",
+        "onOrder": "On order",
+        "uncovered": "Uncovered",
+        "total": "Total"
       }
     },
     "reasonConcentration": {
       "title": "Reason Concentration",
       "meta": "Rejected quantity by Reason",
-      "cumulative": "{{share}}%"
+      "cumulative": "{{share}}%",
+      "remainder": "{{count}} more Reasons",
+      "columns": {
+        "reason": "Reason",
+        "refused": "Refused",
+        "undecided": "Undecided",
+        "byCustomer": "By customer",
+        "cumulative": "Cum."
+      }
     },
     "arrivalTiming": {
       "title": "Arrival Timing",

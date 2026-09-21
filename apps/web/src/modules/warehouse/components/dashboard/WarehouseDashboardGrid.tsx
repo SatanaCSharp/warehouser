@@ -1,12 +1,14 @@
 import type {
   ArrivalTimingPanel,
-  CoverageGapPanel,
+  CoverageGapPanel as CoverageGapPanelBody,
   OpenPurchaseDraftState,
   PurchasingPipelinePanel,
-  ReasonConcentrationPanel,
+  ReasonConcentrationPanel as ReasonConcentrationPanelBody,
 } from '@warehouser/contracts/dashboards';
 import compact from 'lodash/compact';
 import { warehouseDashboardApi } from 'modules/warehouse/api/warehouse-dashboard-api';
+import { CoverageGapPanel } from 'modules/warehouse/components/dashboard/CoverageGapPanel';
+import { ReasonConcentrationPanel } from 'modules/warehouse/components/dashboard/ReasonConcentrationPanel';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArchivedWarehouseChip } from 'shared/components/ArchivedWarehouseChip';
@@ -16,7 +18,6 @@ import type { ColumnPlotBucket } from 'shared/components/charts/ColumnPlot';
 import { ColumnPlot } from 'shared/components/charts/ColumnPlot';
 import { PanelCard } from 'shared/components/charts/PanelCard';
 import { PanelFootnote } from 'shared/components/charts/PanelFootnote';
-import type { StackedBarSegment } from 'shared/components/charts/StackedBarRow';
 import { StackedBarRow } from 'shared/components/charts/StackedBarRow';
 import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
 import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
@@ -41,11 +42,12 @@ import { useAppSelector } from 'store/hooks';
  * placeholder or gap; the remaining Panels occupy the surface as though it had
  * never been part of it (`design-handoff.md` § Implementation constraints).
  *
- * The four Panel cards below are private render helpers of this file
+ * Coverage Gap and Reason Concentration are drawn by their own components in
+ * this directory (T17), each an accessible table over the shared chart scale.
+ * The two Panel cards left below are private render helpers of this file
  * (`docs/system/guides/writing-web-components.md` §1) and are deliberately
- * provisional: T17 and T18 draw each Panel in full — as an accessible table
- * with stacked bars, and with every exclusion count in its footnote — in its
- * own file under this directory.
+ * provisional: T18 draws each of them in full — with every exclusion count in
+ * its footnote — in its own file beside the other two.
  */
 
 // ---------------------------------------------------------------------------
@@ -54,9 +56,9 @@ import { useAppSelector } from 'store/hooks';
 
 type PanelBodies = {
   arrivalTiming: ArrivalTimingPanel | undefined;
-  coverageGap: CoverageGapPanel | undefined;
+  coverageGap: CoverageGapPanelBody | undefined;
   purchasingPipeline: PurchasingPipelinePanel | undefined;
-  reasonConcentration: ReasonConcentrationPanel | undefined;
+  reasonConcentration: ReasonConcentrationPanelBody | undefined;
 };
 
 /**
@@ -93,145 +95,6 @@ const usePanelBodies = (warehouseId: string): PanelBodies => {
 };
 
 // ---------------------------------------------------------------------------
-// Coverage Gap
-// ---------------------------------------------------------------------------
-
-/** The quantities a named row and the Remainder Row both carry (AC-03). */
-type CoverageGapQuantities = {
-  inboundQuantity: number;
-  onHandQuantity: number;
-  uncoveredQuantity: number;
-};
-
-const coverageGapSegments = (
-  row: CoverageGapQuantities,
-  legend: ChartLegendItem[],
-): StackedBarSegment[] => [
-  { ...legend[0], value: row.onHandQuantity },
-  { ...legend[1], value: row.inboundQuantity },
-  { ...legend[2], value: row.uncoveredQuantity },
-];
-
-const CoverageGapPanelCard = ({
-  panel,
-}: {
-  panel: CoverageGapPanel;
-}): ReactElement => {
-  const { t } = useTranslation('dashboard');
-
-  // Ordinal steps 1-3, dark to light: On hand, On order, Uncovered. Every
-  // series is named in the legend and every figure is printed beside its bar,
-  // so removing colour entirely loses nothing (`design-handoff.md`
-  // § Accessibility, "Never colour alone").
-  const legend: ChartLegendItem[] = [
-    {
-      id: 'onHand',
-      label: t('panels.coverageGap.series.onHand'),
-      colorVar: '--chart-3a',
-    },
-    {
-      id: 'onOrder',
-      label: t('panels.coverageGap.series.onOrder'),
-      colorVar: '--chart-3b',
-    },
-    {
-      id: 'uncovered',
-      label: t('panels.coverageGap.series.uncovered'),
-      colorVar: '--chart-3c',
-    },
-  ];
-
-  const { remainder } = panel;
-
-  // The Remainder Row's figures exist only when there is one, so it is
-  // resolved to a named element here rather than gated inside the tree
-  // (`docs/system/guides/writing-web-conditional-components.md` §2).
-  const remainderRow =
-    remainder === null ? null : (
-      <StackedBarRow
-        label={t('panels.coverageGap.remainder', {
-          count: remainder.itemCount,
-        })}
-        segments={coverageGapSegments(remainder, legend)}
-        total={remainder.totalOutstandingQuantity}
-      />
-    );
-
-  return (
-    <PanelCard
-      title={t('panels.coverageGap.title')}
-      meta={t('panels.coverageGap.meta')}
-    >
-      <ChartLegend items={legend} />
-      <div className="mt-2 flex flex-col gap-0.5">
-        {panel.rows.map((row) => (
-          <StackedBarRow
-            key={row.itemId}
-            label={row.sku}
-            segments={coverageGapSegments(row, legend)}
-            total={row.totalOutstandingQuantity}
-          />
-        ))}
-        {remainderRow}
-      </div>
-    </PanelCard>
-  );
-};
-
-// ---------------------------------------------------------------------------
-// Reason Concentration
-// ---------------------------------------------------------------------------
-
-/**
- * Undecided and By-customer are **columns, not sub-segments**: a Rejection can
- * be both undecided and customer-reported, so stacking them inside one bar
- * would double-count it (`design-handoff.md` § Panel specifications). The
- * running share is a numeric column for the same reason the Panel is not a
- * Pareto chart — a cumulative-% line against a quantity bar invents a
- * correlation the data does not contain.
- */
-const ReasonConcentrationPanelCard = ({
-  panel,
-}: {
-  panel: ReasonConcentrationPanel;
-}): ReactElement => {
-  const { t } = useTranslation('dashboard');
-  const { quantity } = useLocaleFormat();
-
-  return (
-    <PanelCard
-      title={t('panels.reasonConcentration.title')}
-      meta={t('panels.reasonConcentration.meta')}
-    >
-      <ul className="flex flex-col gap-0.5 text-xs">
-        {panel.rows.map((row) => (
-          <li
-            key={row.rejectionReasonId}
-            className="flex items-center gap-2 text-foreground"
-          >
-            <span className="flex-1 truncate">{row.label}</span>
-            <span className="w-12 flex-none text-right tabular-nums">
-              {quantity(row.refusedQuantity)}
-            </span>
-            <span className="w-12 flex-none text-right tabular-nums">
-              {quantity(row.undecidedQuantity)}
-            </span>
-            <span className="w-12 flex-none text-right tabular-nums">
-              {quantity(row.customerReportedQuantity)}
-            </span>
-            <span className="w-12 flex-none text-right tabular-nums text-muted">
-              {t('panels.reasonConcentration.cumulative', {
-                share: Math.round(row.cumulativeSharePercent),
-              })}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </PanelCard>
-  );
-};
-
-// ---------------------------------------------------------------------------
 // Arrival Timing
 // ---------------------------------------------------------------------------
 
@@ -264,7 +127,7 @@ const ArrivalTimingPanelCard = ({
     {
       id: 'owed',
       label: t('panels.arrivalTiming.series.owed'),
-      colorVar: '--chart-3b',
+      colorVar: '--chart-ramp-3b',
     },
     {
       id: 'expectedAtDock',
@@ -335,22 +198,22 @@ const PurchasingPipelinePanelCard = ({
     {
       id: 'upTo7Days',
       label: t('panels.purchasingPipeline.bands.upTo7Days'),
-      colorVar: '--chart-4a',
+      colorVar: '--chart-ramp-4a',
     },
     {
       id: 'from8To14Days',
       label: t('panels.purchasingPipeline.bands.from8To14Days'),
-      colorVar: '--chart-4b',
+      colorVar: '--chart-ramp-4b',
     },
     {
       id: 'from15To30Days',
       label: t('panels.purchasingPipeline.bands.from15To30Days'),
-      colorVar: '--chart-4c',
+      colorVar: '--chart-ramp-4c',
     },
     {
       id: 'over30Days',
       label: t('panels.purchasingPipeline.bands.over30Days'),
-      colorVar: '--chart-4d',
+      colorVar: '--chart-ramp-4d',
     },
   ];
 
@@ -461,10 +324,10 @@ export const WarehouseDashboardGrid = (): ReactElement => {
   // never filled rather than leaving a gap where it would have been.
   const cells = compact([
     cellFor('coverageGap', bodies.coverageGap, (panel) => (
-      <CoverageGapPanelCard panel={panel} />
+      <CoverageGapPanel panel={panel} />
     )),
     cellFor('reasonConcentration', bodies.reasonConcentration, (panel) => (
-      <ReasonConcentrationPanelCard panel={panel} />
+      <ReasonConcentrationPanel panel={panel} />
     )),
     cellFor('arrivalTiming', bodies.arrivalTiming, (panel) => (
       <ArrivalTimingPanelCard panel={panel} />

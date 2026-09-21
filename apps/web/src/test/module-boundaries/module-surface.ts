@@ -211,6 +211,21 @@ export const WORKSPACE_MODULE_MANIFEST = [
  */
 export const WAREHOUSE_MODULE_MANIFEST = [
   'api/warehouse-dashboard-api.ts',
+  // T17 — the two row-oriented Panels, extracted from the grid's provisional
+  // private render helpers into their own files, each drawn at the approved
+  // handoff's fidelity (AC-03, AC-05, AC-12, AC-25). They stay inside the
+  // `components/dashboard/` grouping rather than nesting under the grid: the
+  // grouping is named for the domain its views address, not for the component
+  // that renders them
+  // (`docs/system/adr/18-08-2026-scope-of-exercise-placement-tiebreak.md`
+  // § "A name states the domain addressed", and
+  // `docs/system/guides/placing-web-components.md` § "Grouping owned
+  // components by domain" — four Panels plus the grid is under the half-dozen
+  // at which a further level starts paying for itself).
+  'components/dashboard/CoverageGapPanel.spec.tsx',
+  'components/dashboard/CoverageGapPanel.tsx',
+  'components/dashboard/ReasonConcentrationPanel.spec.tsx',
+  'components/dashboard/ReasonConcentrationPanel.tsx',
   'components/dashboard/WarehouseDashboardGrid.spec.tsx',
   'components/dashboard/WarehouseDashboardGrid.tsx',
   'hooks/effects/useRecordWarehouseEntry.spec.tsx',

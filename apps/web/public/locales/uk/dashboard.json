@@ -15,12 +15,28 @@
         "onHand": "У наявності",
         "onOrder": "У замовленні",
         "uncovered": "Непокрито"
+      },
+      "columns": {
+        "item": "Позиція",
+        "coverage": "Покриття",
+        "onHand": "У наявності",
+        "onOrder": "У замовленні",
+        "uncovered": "Непокрито",
+        "total": "Усього"
       }
     },
     "reasonConcentration": {
       "title": "Концентрація причин",
       "meta": "Відхилена кількість за причиною",
-      "cumulative": "{{share}}%"
+      "cumulative": "{{share}}%",
+      "remainder": "Ще {{count}} причин",
+      "columns": {
+        "reason": "Причина",
+        "refused": "Відхилено",
+        "undecided": "Не вирішено",
+        "byCustomer": "Від клієнта",
+        "cumulative": "Сукупно"
+      }
     },
     "arrivalTiming": {
       "title": "Терміни прибуття",
