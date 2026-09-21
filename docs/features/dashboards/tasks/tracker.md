@@ -12,7 +12,7 @@
 | T5  | [Coverage Gap statement — four CTEs joined on item_id](./coverage-gap-repository.md)                            | `infra`     | Backend Lead  | L        | T4                 | done   |
 | T6  | [Arrival Timing statement — two series, four exclusions](./arrival-timing-repository.md)                        | `infra`     | Backend Lead  | L        | T4, T5             | todo   |
 | T7  | [Purchasing Pipeline + Reason Concentration repositories](./warehouse-purchasing-and-rejection-repositories.md) | `infra`     | Backend Lead  | M        | T1, T4             | done   |
-| T8  | [Workspace scope + Demand Pressure + Purchasing Spread](./workspace-performance-repository-foundation.md)       | `infra`     | Backend Lead  | M        | T4                 | todo   |
+| T8  | [Workspace scope + Demand Pressure + Purchasing Spread](./workspace-performance-repository-foundation.md)       | `infra`     | Backend Lead  | M        | T4                 | done   |
 | T9  | [Order Flow read — twelve weeks on the recording week](./order-flow-repository-read.md)                         | `infra`     | Backend Lead  | M        | T8                 | todo   |
 | T10 | [Receipt Reliability read — two rates, five exclusions](./receipt-reliability-repository-read.md)               | `infra`     | Backend Lead  | L        | T8                 | todo   |
 | T11 | [Panel-access predicates + four Warehouse queries](./warehouse-panel-queries.md)                                | `app`       | Backend Lead  | L        | T3, T5, T6, T7     | todo   |
