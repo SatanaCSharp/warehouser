@@ -6,6 +6,7 @@ import {
   ADMINISTRATION_SLICE_FILES,
   MODULE_SURFACE,
   WAREHOUSE_MODULE_MANIFEST,
+  WORKSPACE_DASHBOARD_MODULE_MANIFEST,
   WORKSPACE_MODULE_MANIFEST,
 } from 'test/module-boundaries/module-surface';
 import { describe, expect, it } from 'vitest';
@@ -324,6 +325,18 @@ describe('web module boundaries', () => {
       expect(resolvesIn('warehouse')).toStrictEqual([]);
       expect(resolvesIn('workspace')).toStrictEqual([
         ...ADMINISTRATION_SLICE_FILES,
+      ]);
+    });
+  });
+
+  describe('modules/workspace-dashboard file manifest', () => {
+    // dashboards T22 (sad.md §10) — `MODULE_SURFACE` has named this module
+    // since T19, but nothing enumerated its files: a module without a file
+    // manifest here has no inventory check at all, and T20/T21's four Panel
+    // components landed with none.
+    it('holds exactly the files T19, T20 and T21 left in the module', () => {
+      expect(moduleFiles('workspace-dashboard')).toStrictEqual([
+        ...WORKSPACE_DASHBOARD_MODULE_MANIFEST,
       ]);
     });
   });

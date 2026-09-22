@@ -162,6 +162,12 @@ const WORKSPACE_LOADER =
 const WORKSPACE_ACCESS_DATASETS_LOADER =
   'modules/access/loaders/workspace-administration-datasets.loader.ts';
 const ACCESS_LOADER = 'modules/access/loaders/access-surface.loader.ts';
+// dashboards T22 (sad.md §10) — the two Panel-table loaders neither
+// `gatedDatasets`-shaped: see "Two more loader shapes" below.
+const WAREHOUSE_DASHBOARD_LOADER =
+  'modules/warehouse/loaders/warehouse-dashboard.loader.ts';
+const WORKSPACE_DASHBOARD_LOADER =
+  'modules/workspace-dashboard/loaders/workspace-dashboard.loader.ts';
 
 /**
  * `workspaceRoute`'s await window is two files, because `modules/access`
@@ -172,6 +178,8 @@ const ACCESS_LOADER = 'modules/access/loaders/access-surface.loader.ts';
 const LOADER_FILES: Record<string, readonly string[]> = {
   accessRoute: [ACCESS_LOADER],
   workspaceRoute: [WORKSPACE_LOADER, WORKSPACE_ACCESS_DATASETS_LOADER],
+  warehouseDashboardRoute: [WAREHOUSE_DASHBOARD_LOADER],
+  workspaceDashboardRoute: [WORKSPACE_DASHBOARD_LOADER],
 };
 
 /** The `gatedDatasets` array literal — every conditional dispatch lives here. */
@@ -231,8 +239,88 @@ const dispatchesIn = (file: string): LoaderDispatch[] => {
   return [...gated, ...ungated];
 };
 
+// ---------------------------------------------------------------------------
+// Two more loader shapes (dashboards T22, sad.md §10)
+// ---------------------------------------------------------------------------
+//
+// Neither `warehouseDashboardRoute`'s nor `workspaceDashboardRoute`'s loader
+// declares a `gatedDatasets` array — CR-RG-02's own shape, keyed by a
+// `dispatch:` field first. `warehouseDashboardRoute`'s loader pairs each
+// dispatch with its own `permissions` field inside a `PanelRead` table
+// (`permissions` *before* `dispatch`, the reverse field order `dispatchesIn`
+// assumes), and `workspaceDashboardRoute`'s loader gates all four dispatches
+// behind one shared early-return boolean read once, above the table. Forcing
+// either through `dispatchesIn`'s `dispatch:`-first chunk split would either
+// mispair a `permissions` field with the wrong dispatch or find no gate at
+// all — silently reporting a real Permission gate as "ungated", which is
+// worse than not extending this file at all. Two narrowly-scoped extractors
+// read each shape directly instead.
+
+/** One `{ permissions: [...], dispatch: ... endpoints.X.initiate(arg` entry
+ * per `PanelRead`, in `warehouseDashboardRoute`'s loader. */
+const PANEL_READ_ENTRY =
+  /permissions:\s*(?<gate>\[[^\]]*\]),\s*dispatch:[\s\S]*?endpoints\.(?<endpoint>[A-Za-z0-9_]+)\.initiate\(\s*(?<argument>[A-Za-z0-9_]+)/gu;
+
+const dispatchesInPanelTable = (file: string): LoaderDispatch[] =>
+  Array.from(sourceOf(file).matchAll(PANEL_READ_ENTRY), (match) => ({
+    argument: match.groups?.argument ?? '',
+    endpoint: match.groups?.endpoint ?? '',
+    file,
+    gateExpression: match.groups?.gate ?? null,
+  }));
+
+const PANEL_READS_REGION = /PANEL_READS:[\s\S]*?\n\];/u;
+
+/**
+ * Every `endpoints.X.initiate(arg` dispatch inside the `PANEL_READS` array,
+ * all sharing the one gate expression `gatePattern` finds elsewhere in the
+ * file. Scoped to that array deliberately:
+ * `workspaceDashboardRoute`'s loader also dispatches `getWorkspaceContext`
+ * unconditionally, *before* `PANEL_READS` is even declared, to learn the very
+ * Permission the gate reads — scanning the whole file would attribute that
+ * unconditional read to the Panel gate too, and the gate check textually
+ * follows `PANEL_READS`'s declaration even though it runs before every read
+ * in it, so scoping to *after* the gate match would miss the reads entirely.
+ */
+const dispatchesInSharedGate = (
+  file: string,
+  gatePattern: RegExp,
+): LoaderDispatch[] => {
+  const source = sourceOf(file);
+  const gateExpression = gatePattern.exec(source)?.groups?.gate ?? null;
+  const panelReadsRegion = PANEL_READS_REGION.exec(source)?.[0] ?? '';
+
+  return Array.from(
+    panelReadsRegion.matchAll(EVERY_ENDPOINT_DISPATCH),
+    (found) => ({
+      argument: found.groups?.argument ?? '',
+      endpoint: found.groups?.endpoint ?? '',
+      file,
+      gateExpression,
+    }),
+  );
+};
+
+const WORKSPACE_DASHBOARD_GATE =
+  /hasWorkspacePermission\(\s*workspacePermissionIds,\s*(?<gate>[A-Za-z0-9_.]+),?\s*\)/u;
+
+/** The extractor each dashboards loader file needs instead of `dispatchesIn`,
+ * keyed by file so `dispatchesOf` stays a single lookup for every loader. */
+const SHAPED_EXTRACTORS: Partial<Record<string, () => LoaderDispatch[]>> = {
+  [WAREHOUSE_DASHBOARD_LOADER]: () =>
+    dispatchesInPanelTable(WAREHOUSE_DASHBOARD_LOADER),
+  [WORKSPACE_DASHBOARD_LOADER]: () =>
+    dispatchesInSharedGate(
+      WORKSPACE_DASHBOARD_LOADER,
+      WORKSPACE_DASHBOARD_GATE,
+    ),
+};
+
+const dispatchesInFile = (file: string): LoaderDispatch[] =>
+  (SHAPED_EXTRACTORS[file] ?? (() => dispatchesIn(file)))();
+
 const dispatchesOf = (loader: string): LoaderDispatch[] =>
-  (LOADER_FILES[loader] ?? []).flatMap(dispatchesIn);
+  (LOADER_FILES[loader] ?? []).flatMap(dispatchesInFile);
 
 const dispatchOf = (loader: string, endpoint: string): LoaderDispatch[] =>
   dispatchesOf(loader).filter((dispatch) => dispatch.endpoint === endpoint);
@@ -297,7 +385,14 @@ type ParityRow = {
   /** Every production file that reads this dataset's query hook. */
   consumers: readonly string[];
   dataset: string;
-  gateKind: 'hook skip' | 'tab descriptor' | 'unconditional' | 'verdict';
+  gateKind:
+    | 'hook skip'
+    | 'tab descriptor'
+    | 'unconditional'
+    | 'verdict'
+    // dashboards T22 — gated by the loader alone, with no second declaration
+    // to reconcile it against (see "the loader-only Panel reads" below).
+    | 'loader-only';
   /** The declarations the loader's own gate must reproduce. */
   gateSources: readonly GateSource[];
   loader: string;
@@ -432,6 +527,69 @@ const PARITY_ROWS: readonly ParityRow[] = [
     ],
     loader: 'accessRoute',
   },
+  // dashboards T22 — the eight Panel reads of the two loader-only rows below.
+  // Neither grid reads a Permission of its own (ADR
+  // 19-08-2026-declarative-permission-gates.md §Decision 3, "the loader
+  // decides which reads are issued at all"), so `consumers` is `[]` for every
+  // one of them: nothing calls the generated query hook, and the render file
+  // reads the loader-filled cache entry through the endpoint's own selector
+  // instead ("the loader-only Panel reads" below proves that directly).
+  {
+    consumers: [],
+    dataset: 'readCoverageGap',
+    gateKind: 'loader-only',
+    gateSources: [],
+    loader: 'warehouseDashboardRoute',
+  },
+  {
+    consumers: [],
+    dataset: 'readReasonConcentration',
+    gateKind: 'loader-only',
+    gateSources: [],
+    loader: 'warehouseDashboardRoute',
+  },
+  {
+    consumers: [],
+    dataset: 'readArrivalTiming',
+    gateKind: 'loader-only',
+    gateSources: [],
+    loader: 'warehouseDashboardRoute',
+  },
+  {
+    consumers: [],
+    dataset: 'readPurchasingPipeline',
+    gateKind: 'loader-only',
+    gateSources: [],
+    loader: 'warehouseDashboardRoute',
+  },
+  {
+    consumers: [],
+    dataset: 'readDemandPressure',
+    gateKind: 'loader-only',
+    gateSources: [],
+    loader: 'workspaceDashboardRoute',
+  },
+  {
+    consumers: [],
+    dataset: 'readOrderFlow',
+    gateKind: 'loader-only',
+    gateSources: [],
+    loader: 'workspaceDashboardRoute',
+  },
+  {
+    consumers: [],
+    dataset: 'readPurchasingSpread',
+    gateKind: 'loader-only',
+    gateSources: [],
+    loader: 'workspaceDashboardRoute',
+  },
+  {
+    consumers: [],
+    dataset: 'readReceiptReliability',
+    gateKind: 'loader-only',
+    gateSources: [],
+    loader: 'workspaceDashboardRoute',
+  },
 ];
 
 const rowFor = (dataset: string): ParityRow => {
@@ -545,7 +703,7 @@ it('resolves a gate expression to one level, because no member name is shared (C
   expect(resolveGate('somethingElse').level).toBe('unresolved(somethingElse)');
 });
 
-it('carries CR-RG-02 whole: ten rows, three gate kinds, two loaders', () => {
+it('carries CR-RG-02 whole plus dashboards T22: eighteen rows, four gate kinds, four loaders', () => {
   expect(PARITY_ROWS.map(({ dataset }) => dataset)).toStrictEqual([
     'getWorkspaceContext',
     'listWorkspaceWarehouses',
@@ -557,6 +715,15 @@ it('carries CR-RG-02 whole: ten rows, three gate kinds, two loaders', () => {
     'listAccessRoles',
     'listAccessMembers',
     'listAccessPermissions',
+    // dashboards T22 — the loader-only rows added below.
+    'readCoverageGap',
+    'readReasonConcentration',
+    'readArrivalTiming',
+    'readPurchasingPipeline',
+    'readDemandPressure',
+    'readOrderFlow',
+    'readPurchasingSpread',
+    'readReceiptReliability',
   ]);
   expect(
     PARITY_ROWS.filter(({ gateKind }) => gateKind === 'hook skip'),
@@ -570,13 +737,17 @@ it('carries CR-RG-02 whole: ten rows, three gate kinds, two loaders', () => {
   expect(
     PARITY_ROWS.filter(({ gateKind }) => gateKind === 'verdict'),
   ).toHaveLength(1);
+  expect(
+    PARITY_ROWS.filter(({ gateKind }) => gateKind === 'loader-only'),
+  ).toHaveLength(8);
 });
 
 describe('the loader fetches nothing an admitted surface would not (CR-RG-02)', () => {
-  it('dispatches exactly the ten enumerated datasets and no eleventh', () => {
+  it('dispatches exactly the eighteen enumerated datasets and no nineteenth', () => {
     // Both directions in one comparison: an endpoint the loaders dispatch
-    // that CR-RG-02 does not enumerate is reported as `unexpected`, and a row
-    // whose loader stopped dispatching it is reported as missing.
+    // that CR-RG-02 (or dashboards T22) does not enumerate is reported as
+    // `unexpected`, and a row whose loader stopped dispatching it is reported
+    // as missing.
     expect(dispatchedEndpointsByLoader()).toStrictEqual({
       accessRoute: [
         'getCurrentAccess',
@@ -591,6 +762,19 @@ describe('the loader fetches nothing an admitted surface would not (CR-RG-02)', 
         'listWorkspaceRoles',
         'listWorkspaceUsers',
         'listWorkspaceWarehouses',
+      ],
+      // dashboards T22
+      warehouseDashboardRoute: [
+        'readArrivalTiming',
+        'readCoverageGap',
+        'readPurchasingPipeline',
+        'readReasonConcentration',
+      ],
+      workspaceDashboardRoute: [
+        'readDemandPressure',
+        'readOrderFlow',
+        'readPurchasingSpread',
+        'readReceiptReliability',
       ],
     });
   });
@@ -607,6 +791,17 @@ describe('the loader fetches nothing an admitted surface would not (CR-RG-02)', 
       listWorkspaceRoles: 'gated',
       listWorkspaceUsers: 'gated',
       listWorkspaceWarehouses: 'gated',
+      // dashboards T22 — every Panel read is Permission-gated, either
+      // per-entry (warehouseDashboardRoute) or by one shared boolean
+      // (workspaceDashboardRoute); neither loader dispatches unconditionally.
+      readArrivalTiming: 'gated',
+      readCoverageGap: 'gated',
+      readPurchasingPipeline: 'gated',
+      readReasonConcentration: 'gated',
+      readDemandPressure: 'gated',
+      readOrderFlow: 'gated',
+      readPurchasingSpread: 'gated',
+      readReceiptReliability: 'gated',
     });
   });
 });
@@ -633,9 +828,22 @@ describe('an admitted surface fetches nothing the loader would not (CR-RG-02)', 
 });
 
 describe('every gated row reproduces its surface gate exactly (CR-RG-02)', () => {
+  // dashboards T22's rows are excluded here for the reason they exist:
+  // `gateKind: 'loader-only'` means there is no second, surface-side
+  // declaration to reconcile the loader's gate against (see "the loader-only
+  // Panel reads" below, which asserts that directly) — so `surfaceGates`
+  // would always be empty and this generic loop's `toBeGreaterThan(0)` would
+  // fail for every one of them, for a reason unrelated to the loader's own
+  // gate being correct.
+  const NO_SURFACE_COUNTERPART: readonly ParityRow['gateKind'][] = [
+    'unconditional',
+    'verdict',
+    'loader-only',
+  ];
+
   it.each(
-    PARITY_ROWS.filter(({ gateKind }) => gateKind !== 'unconditional').filter(
-      ({ gateKind }) => gateKind !== 'verdict',
+    PARITY_ROWS.filter(
+      ({ gateKind }) => !NO_SURFACE_COUNTERPART.includes(gateKind),
     ),
   )('$dataset is gated by its $gateKind, in both directions', (row) => {
     const loaderGates = loaderGatesOf(row);
@@ -656,6 +864,72 @@ describe('every gated row reproduces its surface gate exactly (CR-RG-02)', () =>
       `${row.dataset}: ${[...loaderGates, ...surfaceGates].join(' | ')}`,
     ).toHaveLength(1);
     expect(permissions[0]).not.toContain('unresolved');
+  });
+});
+
+describe('the loader-only Panel reads (dashboards T22)', () => {
+  // `docs/system/adr/19-08-2026-declarative-permission-gates.md` §Decision 3
+  // — both Panel grids derive a Panel's presence purely from whether their
+  // loader filled its cache entry and read no Permission of their own, so
+  // there is no second declaration for the loader's gate to drift from. What
+  // can still drift silently is the loader's own gate — a Panel table entry
+  // losing a Permission, or the wrong Permission being read — and a second
+  // gate quietly appearing in a grid that is supposed to have none. Both are
+  // pinned here, each dataset resolved to the figure `spec.md` §6.1's Panel
+  // table names.
+  const WAREHOUSE_DASHBOARD_GRID =
+    'modules/warehouse/components/dashboard/WarehouseDashboardGrid.tsx';
+  const WORKSPACE_DASHBOARD_GRID =
+    'modules/workspace-dashboard/components/WorkspaceDashboardGrid.tsx';
+
+  it.each([
+    [
+      'readCoverageGap',
+      [
+        PermissionId.CUSTOMER_ORDERS_WATCH,
+        PermissionId.ITEMS_WATCH,
+        PermissionId.PURCHASE_DRAFTS_WATCH,
+      ],
+    ],
+    ['readReasonConcentration', [PermissionId.REJECTIONS_WATCH]],
+    [
+      'readArrivalTiming',
+      [PermissionId.CUSTOMER_ORDERS_WATCH, PermissionId.PURCHASE_DRAFTS_WATCH],
+    ],
+    ['readPurchasingPipeline', [PermissionId.PURCHASE_DRAFTS_WATCH]],
+  ] as const)(
+    '%s is dispatched under exactly its spec.md §6.1 Permission set',
+    (dataset, permissions) => {
+      expect(loaderGatesOf(rowFor(dataset))).toStrictEqual([
+        `${WAREHOUSE_DASHBOARD_LOADER}: ${gateFingerprint({
+          level: 'PermissionId',
+          permissionIds: permissions,
+        })}`,
+      ]);
+    },
+  );
+
+  it('dispatches every Workspace Panel read under one shared Workspace Permission', () => {
+    const expected = [
+      `${WORKSPACE_DASHBOARD_LOADER}: ${gateFingerprint({
+        level: 'WorkspacePermissionId',
+        permissionIds: [WorkspacePermissionId.WAREHOUSE_PERFORMANCE_WATCH],
+      })}`,
+    ];
+
+    expect(loaderGatesOf(rowFor('readDemandPressure'))).toStrictEqual(expected);
+    expect(loaderGatesOf(rowFor('readOrderFlow'))).toStrictEqual(expected);
+    expect(loaderGatesOf(rowFor('readPurchasingSpread'))).toStrictEqual(
+      expected,
+    );
+    expect(loaderGatesOf(rowFor('readReceiptReliability'))).toStrictEqual(
+      expected,
+    );
+  });
+
+  it('reads no Permission in either grid, because the loader is the sole gate', () => {
+    expect(gateExpressionsIn(WAREHOUSE_DASHBOARD_GRID)).toStrictEqual([]);
+    expect(gateExpressionsIn(WORKSPACE_DASHBOARD_GRID)).toStrictEqual([]);
   });
 });
 

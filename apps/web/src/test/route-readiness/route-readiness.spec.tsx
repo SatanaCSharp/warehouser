@@ -24,6 +24,16 @@ import {
   accessRoles,
 } from 'test/access-fixtures';
 import {
+  DEMAND_PRESSURE_URL,
+  demandPressurePanel,
+  ORDER_FLOW_URL,
+  orderFlowPanel,
+  PURCHASING_SPREAD_URL,
+  purchasingSpreadPanel,
+  RECEIPT_RELIABILITY_URL,
+  receiptReliabilityPanel,
+} from 'test/dashboard-fixtures';
+import {
   namedWorkspaceContext,
   stubWorkspaceServer,
   workspaceIds,
@@ -120,6 +130,12 @@ const WORKSPACE_HEADING = 'Acme Logistics';
 // `Design System Preview` copy when `DesignSystemExample` was deleted; what
 // these cases read from it is unchanged — that the destination painted.
 const WAREHOUSE_CONTENT = 'Warehouse dashboard';
+// dashboards T22 (sad.md §10) — `dashboard.json` `workspace.heading`, the
+// Workspace Dashboard destination's own accessible name. A flat root sibling
+// of `workspaceRoute` rather than nested under `/warehouses`, so it needs its
+// own row in "the routes paint their own await window" below (T7's set of
+// three previously unpainted routes predates this module).
+const WORKSPACE_DASHBOARD_CONTENT = 'Workspace dashboard';
 const ACCESS_HEADING = 'Access';
 const NON_DISCLOSING_REFUSAL = "This address isn't available to you";
 const ARCHIVED_REFUSAL = 'This warehouse is archived';
@@ -262,6 +278,17 @@ const stubRouteSession = ({
   });
   const answerWorkspaceRead = globalThis.fetch;
   const accessRoutes = new Map(accessRoutesFor(WAREHOUSE, permissionIds));
+  // dashboards T22 — `workspaceDashboardRoute`'s four Panel reads. The actor
+  // this session answers for holds `ALL_WORKSPACE_PERMISSIONS`, so
+  // `WAREHOUSE_PERFORMANCE:WATCH` is already held and every Panel is
+  // admitted; the bodies are the shared fixtures `workspace-dashboard.loader
+  // .spec.ts` uses for the same four addresses.
+  const dashboardRoutes = new Map<string, unknown>([
+    [DEMAND_PRESSURE_URL, demandPressurePanel],
+    [ORDER_FLOW_URL, orderFlowPanel],
+    [PURCHASING_SPREAD_URL, purchasingSpreadPanel],
+    [RECEIPT_RELIABILITY_URL, receiptReliabilityPanel],
+  ]);
   const requests: SessionRequest[] = [];
 
   vi.stubGlobal(
@@ -284,6 +311,10 @@ const stubRouteSession = ({
         const accessBody = accessRoutes.get(url);
         if (accessBody !== undefined) {
           return Promise.resolve(Response.json(accessBody));
+        }
+        const dashboardBody = dashboardRoutes.get(url);
+        if (dashboardBody !== undefined) {
+          return Promise.resolve(Response.json(dashboardBody));
         }
         return answerWorkspaceRead(input, init);
       };
@@ -439,6 +470,15 @@ describe('the routes paint their own await window (T7)', () => {
       accessAddress(WAREHOUSE),
       (): Promise<HTMLElement> =>
         screen.findByRole('heading', { name: ACCESS_HEADING }),
+    ],
+    // dashboards T22 — `workspaceDashboardRoute` is a fourth previously-
+    // unmeasured route: a flat root sibling with the same `pendingComponent`
+    // contract as the three above (sad.md §5, `route-readiness.spec.tsx`
+    // header note).
+    [
+      ROUTES.WORKSPACE_DASHBOARD,
+      (): Promise<HTMLElement> =>
+        screen.findByText(WORKSPACE_DASHBOARD_CONTENT),
     ],
   ])(
     'paints the pending state before %s settles and the destination after (CR-AC-02, CR-RG-08)',

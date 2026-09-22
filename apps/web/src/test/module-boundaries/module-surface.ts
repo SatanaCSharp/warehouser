@@ -261,6 +261,33 @@ export const WAREHOUSE_MODULE_MANIFEST = [
 ] as const;
 
 /**
+ * The exact file manifest of `modules/workspace-dashboard`, per T22
+ * (`dashboards` sad.md §10 "Hand-enumerated gates"). T19 added the module and
+ * its route to `MODULE_SURFACE` above, but no manifest test named its files —
+ * so the four Panel components T20/T21 drew, and the grid that composes them,
+ * had no file-inventory check of their own. This enumerates what T19-T21
+ * actually left in the module.
+ */
+export const WORKSPACE_DASHBOARD_MODULE_MANIFEST = [
+  'api/workspace-dashboard-api.ts',
+  'components/DemandPressurePanel.spec.tsx',
+  'components/DemandPressurePanel.tsx',
+  'components/OrderFlowPanel.spec.tsx',
+  'components/OrderFlowPanel.tsx',
+  'components/PurchasingSpreadPanel.spec.tsx',
+  'components/PurchasingSpreadPanel.tsx',
+  'components/ReceiptReliabilityPanel.spec.tsx',
+  'components/ReceiptReliabilityPanel.tsx',
+  'components/WorkspaceDashboardGrid.tsx',
+  'loaders/workspace-dashboard.loader.spec.ts',
+  'loaders/workspace-dashboard.loader.ts',
+  'page.spec.tsx',
+  'page.tsx',
+  'route.spec.tsx',
+  'route.tsx',
+] as const;
+
+/**
  * The 17 files of the Warehouse administration slice, relative to their module
  * root.
  *
