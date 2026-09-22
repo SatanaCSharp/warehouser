@@ -21,15 +21,16 @@ import { linearScale } from 'shared/utils/chart-scale';
  * (`docs/system/guides/placing-web-components.md` § "Grouping owned
  * components by domain").
  *
- * **Why this is not `shared/components/charts/StackedBarRow`.** That
- * primitive prints every segment's value in its own column to the right of
- * the bar; `design-handoff.md` § Panel specifications states plainly "every
+ * **Why this bar is drawn here rather than taken from a shared primitive.**
+ * A row primitive prints every segment's value in its own column to the right
+ * of the bar; `design-handoff.md` § Panel specifications states plainly "every
  * segment prints its count" *inside* the fill, "chosen by fill luminance" —
- * the same ink rule `shared/components/charts/HeatGrid.tsx`'s
- * `CELL_INK_CLASS` already applies to its own cells. `StackedBarRow` also
- * scales each row's segments to fill its own track with `flexGrow`, which
- * would make every row's total look the same width regardless of how many
- * drafts it actually holds; this Panel draws on **one shared linear scale**
+ * so the ink is picked per segment from the fill beneath it, as this file's own
+ * `CELL_INK_CLASS` does. Such a primitive also scales each row's segments to
+ * fill its own
+ * track with `flexGrow`, which would make every row's total look the same
+ * width regardless of how many drafts it actually holds; this Panel draws on
+ * **one shared linear scale**
  * instead, so a row's bar length reflects its total against the other row's
  * (`design-handoff.md`: "a shared scale with headroom to 50 drafts") — the
  * same failure mode `CoverageGapPanel.tsx`'s own `domainMax` comment names

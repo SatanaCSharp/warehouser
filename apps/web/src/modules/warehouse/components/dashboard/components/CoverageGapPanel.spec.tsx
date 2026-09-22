@@ -24,7 +24,7 @@ import { describe, expect, it } from 'vitest';
 // Nothing here is rendered through the router: the Panel is a presentational
 // leaf taking its projection as a prop
 // (`docs/system/guides/writing-web-components.md` §3), so a plain `render` is
-// the whole tree it needs — as `shared/components/charts/StackedBarRow.spec.tsx`
+// the whole tree it needs — as a shared chart primitive's own spec
 // already does for the primitive beneath it.
 
 /** Testing Library collapses U+00A0 to a plain space before comparing, so the

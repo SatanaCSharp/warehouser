@@ -35,10 +35,11 @@ import { linearScale } from 'shared/utils/chart-scale';
  * `design-handoff.md` § States gives the Panel no empty state at all — with no
  * rows it draws its frame, its legend and its header row with no marks.
  *
- * `shared/components/charts/StackedBarRow` is deliberately not reused: it lays
- * a whole row out as one flex box, so its label, figures and total cannot
- * become the `<td>`s the column semantics above require. The scale beneath the
- * marks is still the shared one (`shared/utils/chart-scale.ts`, ADR 0002).
+ * The row lays its own segments out rather than taking a shared row
+ * primitive: a primitive that owns the whole row as one flex box cannot let
+ * the label, the figures and the total be the separate cells the column
+ * semantics above require. The scale beneath the marks is still the shared one
+ * (`shared/utils/chart-scale.ts`, ADR 0002).
  */
 
 /**

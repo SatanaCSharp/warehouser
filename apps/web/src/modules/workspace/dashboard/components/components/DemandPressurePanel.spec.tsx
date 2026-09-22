@@ -17,8 +17,8 @@ import { describe, expect, it } from 'vitest';
 // Accepted, § Consequences), so these cases query `table`, `columnheader` and
 // `cell`, never `treegrid`.
 //
-// **Why this cannot reuse `shared/components/charts/StackedBarRow` as T19's
-// provisional grid did.** `StackedBarRow` lays its segments out with
+// **Why this cannot take a shared stacked-row primitive, as T19's
+// provisional grid did.** Such a primitive lays its segments out with
 // `flexGrow: segment.value` inside a *fixed-width* track — every row's
 // segments always sum to that one width, so every Warehouse's bar fills the
 // same length regardless of how much it actually has outstanding. That is

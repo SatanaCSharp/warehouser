@@ -7,16 +7,17 @@ import { describe, expect, it } from 'vitest';
 // § Panel specifications, frame `fbew6`). Colocated with the component it
 // covers (`docs/system/guides/placing-web-tests.md` §1).
 //
-// **Why this is not `shared/components/charts/StackedBarRow`.** That
+// **Why this bar is drawn in the Panel, not taken from a shared row
+// primitive.** Such a primitive
 // primitive prints every segment's value in its own column to the right of
-// the bar (`StackedBarRow.spec.tsx`), which is right for Coverage Gap but
+// the bar, which is right for Coverage Gap but
 // wrong here: `design-handoff.md` § Panel specifications states plainly
 // "every segment prints its count" *inside* the fill, "chosen by fill
 // luminance" — `$accent/foreground` on `ramp-4a`/`4b`, `$foreground/foreground`
 // on `4c`/`4d`. That is exactly the ink rule `shared/components/charts/
 // HeatGrid.tsx` already applies to its own cells (`CELL_INK_CLASS`), so this
 // Panel draws that same in-fill, luminance-chosen count rather than
-// StackedBarRow's outside-the-bar column.
+// such a primitive's outside-the-bar column.
 //
 // `design-handoff.md` § Structure — "Charts expose an accessible summary
 // naming what they plot and the counts they exclude — the same text the

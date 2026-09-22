@@ -108,7 +108,7 @@ const weekElement = (weekStart: string): HTMLElement =>
   screen.getByTestId(`order-flow-week-${weekStart}`);
 
 /** The three stacked segments of one week, in DOM order — which this test
- * suite treats as the bottom-up drawing order, exactly as `StackedBarRow`
+ * suite treats as the bottom-up drawing order, exactly as a stacked row
  * treats DOM order as its own left-to-right drawing order. */
 const segmentsOf = (weekStart: string): HTMLElement[] =>
   Array.from(weekElement(weekStart).querySelectorAll('[data-quantity]'));

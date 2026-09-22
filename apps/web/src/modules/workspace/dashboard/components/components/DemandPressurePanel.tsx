@@ -20,8 +20,8 @@ import { linearScale } from 'shared/utils/chart-scale';
  * Accepted, § Consequences), the same reasoning that already keeps
  * `CoverageGapPanel` and `ReasonConcentrationPanel` off `Table`.
  *
- * **Why this cannot reuse `shared/components/charts/StackedBarRow` as T19's
- * provisional grid did.** `StackedBarRow` lays its segments out with
+ * **Why this cannot take a shared stacked-row primitive, as T19's provisional
+ * grid did.** Such a primitive lays its segments out with
  * `flexGrow: segment.value` inside a *fixed-width* track — every row's
  * segments always sum to that same width, so every Warehouse's bar fills the
  * same length regardless of how much it actually has outstanding. That is
