@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import type { ReasonConcentrationPanel as ReasonConcentrationPanelBody } from '@warehouser/contracts/dashboards';
-import { ReasonConcentrationPanel } from 'modules/warehouse/components/dashboard/components/ReasonConcentrationPanel';
+import { ReasonConcentrationPanel } from 'modules/warehouse/components/dashboard/components/reason-concentration-panel/ReasonConcentrationPanel';
 import { QUANTITY_GROUP_SEPARATOR } from 'shared/utils/number-format';
 import { describe, expect, it } from 'vitest';
 
@@ -17,11 +17,12 @@ import { describe, expect, it } from 'vitest';
 // double-count it. Two cases below assert that arithmetic never reaches the
 // screen.
 //
-// A real `<table>` rather than HeroUI's `Table`, for the reason recorded in
-// `CoverageGapPanel.spec.tsx`: this is the accessible substrate of a chart, not
-// a data table, and
-// `docs/features/dashboards/adr/0002-charting-without-a-charting-dependency.md`
-// (Accepted) decided it for exactly these Panels.
+// Drawn with HeroUI's `Table`, for the reason recorded in
+// `CoverageGapPanel.spec.tsx`: a feature file assembles no `<table>` markup of
+// its own
+// (`docs/system/adr/27-08-2026-heroui-table-for-web-data-tables.md`
+// §Decision). These cases therefore query what React Aria exposes — `grid`,
+// `columnheader`, `rowheader` and `gridcell`.
 
 /** Testing Library collapses U+00A0 to a plain space before comparing, so the
  * space-grouped thousands `design-handoff.md` § Type and mark specs requires
@@ -141,7 +142,7 @@ const fullPanel: ReasonConcentrationPanelBody = {
 const drawPanel = (panel: ReasonConcentrationPanelBody): HTMLElement => {
   render(<ReasonConcentrationPanel panel={panel} />);
 
-  return screen.getByRole('table');
+  return screen.getByRole('grid');
 };
 
 const rowsOf = (table: HTMLElement): HTMLElement[] =>
@@ -185,7 +186,7 @@ describe('ReasonConcentrationPanel', () => {
     expect(
       within(header).getAllByRole('columnheader').length,
     ).toBeGreaterThanOrEqual(4);
-    expect(within(header).queryAllByRole('cell')).toStrictEqual([]);
+    expect(within(header).queryAllByRole('gridcell')).toStrictEqual([]);
   });
 
   // AC-12 — "shows the Rejection Reasons ordered by refused quantity from
@@ -340,14 +341,30 @@ describe('ReasonConcentrationPanel', () => {
   // `design-handoff.md` § Accessibility — nothing on the surface is
   // interactive, and no status colour appears, because nothing here judges the
   // Warehouse.
-  it('offers nothing to focus and wears no status colour', () => {
+  // The tabindex count this case asserted was zero until the rows were handed
+  // to HeroUI's `Table`, whose React Aria collection gives them roving grid
+  // navigation — a cost
+  // `docs/system/adr/27-08-2026-heroui-table-for-web-data-tables.md`
+  // § Consequences records and a system ADR that outranks
+  // `design-handoff.md` § Accessibility's "takes no focus". What the case
+  // guards is restated rather than dropped: the Panel offers no control to
+  // activate, and nothing focusable sits outside the grid.
+  it('offers no control to activate and wears no status colour', () => {
     const { container } = render(
       <ReasonConcentrationPanel panel={fullPanel} />,
     );
 
     expect(screen.queryAllByRole('button')).toStrictEqual([]);
     expect(screen.queryAllByRole('link')).toStrictEqual([]);
-    expect(container.querySelectorAll('[tabindex]')).toHaveLength(0);
+    expect(container.querySelectorAll('input, select, textarea')).toHaveLength(
+      0,
+    );
+
+    const focusable = Array.from(container.querySelectorAll('[tabindex]'));
+    expect(focusable).not.toHaveLength(0);
+    expect(
+      focusable.filter((element) => element.closest('[role="grid"]') === null),
+    ).toStrictEqual([]);
     expect(container.innerHTML).not.toMatch(/--danger|--warning|--success/u);
   });
 });

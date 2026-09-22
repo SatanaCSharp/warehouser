@@ -9,7 +9,7 @@ import { warehouseDashboardApi } from 'modules/warehouse/api/warehouse-dashboard
 import { ArrivalTimingPanel } from 'modules/warehouse/components/dashboard/components/arrival-timing-panel/ArrivalTimingPanel';
 import { CoverageGapPanel } from 'modules/warehouse/components/dashboard/components/coverage-gap-panel/CoverageGapPanel';
 import { PurchasingPipelinePanel } from 'modules/warehouse/components/dashboard/components/PurchasingPipelinePanel';
-import { ReasonConcentrationPanel } from 'modules/warehouse/components/dashboard/components/ReasonConcentrationPanel';
+import { ReasonConcentrationPanel } from 'modules/warehouse/components/dashboard/components/reason-concentration-panel/ReasonConcentrationPanel';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArchivedWarehouseChip } from 'shared/components/ArchivedWarehouseChip';

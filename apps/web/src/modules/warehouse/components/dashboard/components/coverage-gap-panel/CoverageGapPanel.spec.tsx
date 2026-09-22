@@ -10,16 +10,12 @@ import { describe, expect, it } from 'vitest';
 // (`docs/system/guides/placing-web-tests.md` §1: a spec's default home is the
 // directory of the file it tests, named after that file).
 //
-// The Panel is a real `<table>` rather than HeroUI's `Table`, which
-// `docs/system/adr/27-08-2026-heroui-table-for-web-data-tables.md` requires of
-// a **data table** — a collection of records the member browses, expands and
-// sorts. This is not one: it has no disclosure, no nesting, no expansion and
-// nothing interactive at all. Its table is the accessible substrate of a chart,
-// which `docs/features/dashboards/adr/0002-charting-without-a-charting-dependency.md`
-// (Accepted, § Consequences) decided for exactly these Panels — "a row-oriented
-// Panel can be a real `<table>` because nothing else owns its DOM, which is what
-// `design-handoff.md` § Accessibility requires." So these cases query `table`,
-// `columnheader` and `cell`, never `treegrid`.
+// The Panel presents a collection of records, so it is drawn with HeroUI's
+// `Table` (`docs/system/adr/27-08-2026-heroui-table-for-web-data-tables.md`
+// §Decision). React Aria therefore owns the semantics, and these cases query
+// what it exposes — `grid`, `columnheader`, `rowheader` and `gridcell` — not
+// the `table`/`cell` roles the hand-assembled markup used to produce. The ADR
+// records that role change under § Consequences as an accepted cost.
 //
 // Nothing here is rendered through the router: the Panel is a presentational
 // leaf taking its projection as a prop
@@ -180,7 +176,7 @@ describe('CoverageGapPanel', () => {
   // `design-handoff.md` § Accessibility — "Row-oriented Panels are tables with
   // a header row, not stacks of divs, so a screen reader announces the Item
   // with each figure", and each Panel carries a visible `h2`.
-  it('draws a real table with a header row beneath its own h2', () => {
+  it('draws a header row beneath its own h2', () => {
     const table = drawPanel(fullPanel);
 
     expect(screen.getByRole('heading', { level: 2 })).toBeInTheDocument();
