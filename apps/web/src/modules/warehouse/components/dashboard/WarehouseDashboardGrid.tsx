@@ -7,7 +7,7 @@ import type {
 import compact from 'lodash/compact';
 import { warehouseDashboardApi } from 'modules/warehouse/api/warehouse-dashboard-api';
 import { ArrivalTimingPanel } from 'modules/warehouse/components/dashboard/components/arrival-timing-panel/ArrivalTimingPanel';
-import { CoverageGapPanel } from 'modules/warehouse/components/dashboard/components/CoverageGapPanel';
+import { CoverageGapPanel } from 'modules/warehouse/components/dashboard/components/coverage-gap-panel/CoverageGapPanel';
 import { PurchasingPipelinePanel } from 'modules/warehouse/components/dashboard/components/PurchasingPipelinePanel';
 import { ReasonConcentrationPanel } from 'modules/warehouse/components/dashboard/components/ReasonConcentrationPanel';
 import type { ReactElement } from 'react';

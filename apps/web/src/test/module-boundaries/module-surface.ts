@@ -264,12 +264,6 @@ export const WAREHOUSE_MODULE_MANIFEST = [
   // AC-08a, AC-10, AC-11).
   'components/dashboard/WarehouseDashboardGrid.spec.tsx',
   'components/dashboard/WarehouseDashboardGrid.tsx',
-  // dashboards remediation — the grid is the sole renderer of all four
-  // Panels, so they nest one level down in its own `components/`
-  // directory rather than sitting beside it
-  // (`docs/system/guides/placing-web-components.md` § "The nesting rule").
-  'components/dashboard/components/CoverageGapPanel.spec.tsx',
-  'components/dashboard/components/CoverageGapPanel.tsx',
   'components/dashboard/components/PurchasingPipelinePanel.spec.tsx',
   'components/dashboard/components/PurchasingPipelinePanel.tsx',
   'components/dashboard/components/ReasonConcentrationPanel.spec.tsx',
@@ -278,6 +272,21 @@ export const WAREHOUSE_MODULE_MANIFEST = [
   'components/dashboard/components/arrival-timing-panel/ArrivalTimingPanel.tsx',
   'components/dashboard/components/arrival-timing-panel/components/ColumnPlot.spec.tsx',
   'components/dashboard/components/arrival-timing-panel/components/ColumnPlot.tsx',
+  // dashboards remediation — the grid is the sole renderer of all four
+  // Panels, so they nest one level down in its own `components/`
+  // directory rather than sitting beside it
+  // (`docs/system/guides/placing-web-components.md` § "The nesting rule").
+  // dashboards remediation — the Panel presents a collection of records, so it
+  // is drawn with HeroUI's `Table`
+  // (`docs/system/adr/27-08-2026-heroui-table-for-web-data-tables.md`
+  // §Decision). The collection model caches a row's elements per record, so
+  // each cell renders a component that reads its own translations and locale
+  // formatting rather than an expression closing over them (§Decision 2).
+  'components/dashboard/components/coverage-gap-panel/CoverageGapPanel.spec.tsx',
+  'components/dashboard/components/coverage-gap-panel/CoverageGapPanel.tsx',
+  'components/dashboard/components/coverage-gap-panel/components/CoverageGapBar.tsx',
+  'components/dashboard/components/coverage-gap-panel/components/CoverageGapItemLabel.tsx',
+  'components/dashboard/components/coverage-gap-panel/components/CoverageGapQuantity.tsx',
   'hooks/effects/useRecordWarehouseEntry.spec.tsx',
   'hooks/effects/useRecordWarehouseEntry.ts',
   'loaders/warehouse-dashboard.loader.spec.ts',
@@ -285,10 +294,11 @@ export const WAREHOUSE_MODULE_MANIFEST = [
   'page.spec.tsx',
   'page.tsx',
   'route.tsx',
-  // T18 — the pure ISO-week-number helper `ArrivalTimingPanel.tsx` draws its
-  // mobile bare week numbers from; one consumer today, so it stays in this
-  // module's own `utils/` rather than `shared/utils/`
-  // (`docs/system/guides/placing-web-hooks.md` §3).
+  // dashboards remediation — the Coverage Gap series ids and token names. A
+  // component file exports components and nothing else
+  // (`react/only-export-components`), and a file that declares no hook
+  // belongs in `utils/` (`docs/system/guides/placing-web-hooks.md` §3).
+  'utils/coverage-gap-series.ts',
 ] as const;
 
 /**

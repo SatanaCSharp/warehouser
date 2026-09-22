@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import type { CoverageGapPanel as CoverageGapPanelBody } from '@warehouser/contracts/dashboards';
-import { CoverageGapPanel } from 'modules/warehouse/components/dashboard/components/CoverageGapPanel';
+import { CoverageGapPanel } from 'modules/warehouse/components/dashboard/components/coverage-gap-panel/CoverageGapPanel';
 import { QUANTITY_GROUP_SEPARATOR } from 'shared/utils/number-format';
 import { describe, expect, it } from 'vitest';
 
@@ -139,7 +139,7 @@ const fullPanel: CoverageGapPanelBody = { rows, remainder };
 const drawPanel = (panel: CoverageGapPanelBody): HTMLElement => {
   render(<CoverageGapPanel panel={panel} />);
 
-  return screen.getByRole('table');
+  return screen.getByRole('grid');
 };
 
 const rowsOf = (table: HTMLElement): HTMLElement[] =>
@@ -189,7 +189,7 @@ describe('CoverageGapPanel', () => {
     expect(
       within(header).getAllByRole('columnheader').length,
     ).toBeGreaterThanOrEqual(3);
-    expect(within(header).queryAllByRole('cell')).toStrictEqual([]);
+    expect(within(header).queryAllByRole('gridcell')).toStrictEqual([]);
   });
 
   // AC-03 — at most ten Items, in the order the projection fixed, so two
@@ -319,7 +319,7 @@ describe('CoverageGapPanel', () => {
     const { container } = render(
       <CoverageGapPanel panel={{ rows: [], remainder: null }} />,
     );
-    const table = screen.getByRole('table');
+    const table = screen.getByRole('grid');
 
     expect(screen.getByRole('heading', { level: 2 })).toBeInTheDocument();
 
@@ -376,14 +376,39 @@ describe('CoverageGapPanel', () => {
   });
 
   // `design-handoff.md` § Accessibility — "Nothing on either surface is
-  // interactive, so neither takes focus beyond the shell's own navigation",
-  // and no status colour appears, because nothing here judges the Warehouse.
-  it('offers nothing to focus and wears no status colour', () => {
+  // interactive", and no status colour appears, because nothing here judges
+  // the Warehouse.
+  //
+  // That section also said the Panel "takes no focus beyond the shell's own
+  // navigation", and this case asserted zero `[tabindex]` for it. Presenting
+  // the rows with HeroUI's `Table`
+  // (`docs/system/adr/27-08-2026-heroui-table-for-web-data-tables.md`
+  // §Decision) hands the collection to React Aria, which gives its rows and
+  // cells roving grid navigation — the same "roving focus" that ADR records
+  // under § Consequences as an accepted cost of the decision. A system ADR
+  // outranks a feature design artifact, so the focus arrives and
+  // § Accessibility is what needs revising.
+  //
+  // What the case guards is therefore restated rather than dropped, because
+  // the thing worth protecting was never the tabindex count: this Panel
+  // offers **no control to activate**, and nothing focusable exists outside
+  // the grid's own navigation. Both still fail the moment a button, a link, a
+  // field, or a stray focusable element appears.
+  it('offers no control to activate and wears no status colour', () => {
     const { container } = render(<CoverageGapPanel panel={fullPanel} />);
 
     expect(screen.queryAllByRole('button')).toStrictEqual([]);
     expect(screen.queryAllByRole('link')).toStrictEqual([]);
-    expect(container.querySelectorAll('[tabindex]')).toHaveLength(0);
+    expect(container.querySelectorAll('input, select, textarea')).toHaveLength(
+      0,
+    );
+
+    const focusable = Array.from(container.querySelectorAll('[tabindex]'));
+    expect(focusable).not.toHaveLength(0);
+    expect(
+      focusable.filter((element) => element.closest('[role="grid"]') === null),
+    ).toStrictEqual([]);
+
     expect(container.innerHTML).not.toMatch(/--danger|--warning|--success/u);
   });
 });
