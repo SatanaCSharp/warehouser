@@ -2,15 +2,15 @@ import type {
   PurchasingSpreadCell,
   PurchasingSpreadPanel as PurchasingSpreadPanelBody,
 } from '@warehouser/contracts/dashboards';
+import type {
+  HeatGridBin,
+  HeatGridRow,
+} from 'modules/workspace/dashboard/components/components/purchasing-spread-panel/components/HeatGrid';
+import { HeatGrid } from 'modules/workspace/dashboard/components/components/purchasing-spread-panel/components/HeatGrid';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ChartLegendItem } from 'shared/components/charts/ChartLegend';
 import { ChartLegend } from 'shared/components/charts/ChartLegend';
-import type {
-  HeatGridBin,
-  HeatGridRow,
-} from 'shared/components/charts/HeatGrid';
-import { HeatGrid } from 'shared/components/charts/HeatGrid';
 import { PanelCard } from 'shared/components/charts/PanelCard';
 import { PanelFootnote } from 'shared/components/charts/PanelFootnote';
 
@@ -18,7 +18,7 @@ import { PanelFootnote } from 'shared/components/charts/PanelFootnote';
  * T20 — the Purchasing Spread Panel (AC-18; `design-handoff.md` § Panel
  * specifications, frame `G3tB1`).
  *
- * `shared/components/charts/HeatGrid` already draws the real `<table>` this
+ * `modules/workspace/dashboard/components/components/purchasing-spread-panel/components/HeatGrid` already draws the real `<table>` this
  * Panel needs — a header row, sequential one-hue bins, the count printed in
  * every cell — for the same reason `docs/system/adr/27-08-2026-heroui-table-for-web-data-tables.md`
  * keeps it off HeroUI's `Table`: nothing here is browsed, expanded or sorted.

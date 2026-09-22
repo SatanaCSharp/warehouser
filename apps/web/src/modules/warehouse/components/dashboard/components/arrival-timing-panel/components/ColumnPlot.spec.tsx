@@ -1,5 +1,5 @@
 import { render } from '@testing-library/react';
-import { ColumnPlot } from 'shared/components/charts/ColumnPlot';
+import { ColumnPlot } from 'modules/warehouse/components/dashboard/components/arrival-timing-panel/components/ColumnPlot';
 import { describe, expect, it } from 'vitest';
 
 // design-handoff.md § Panel specifications (Arrival Timing) — "three

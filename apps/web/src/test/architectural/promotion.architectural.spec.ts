@@ -23,6 +23,27 @@ import { describe, expect, it } from 'vitest';
  * counting it would make "is this used?" answerable by writing a test for it.
  */
 
+/**
+ * The two files that fail the cross-module test below and are **not** fixed
+ * here.
+ *
+ * Every consumer of each lives in `modules/access` — `DatasetCard` has three,
+ * `translation-key` has two — so by the rule below both are that module's code.
+ * Both predate the `dashboards` remediation this spec arrived with, and
+ * `docs/system/adr/14-08-2026-domain-owned-flat-modules.md` §'Consequences'
+ * says such code is 'corrected by a deliberate change, not opportunistically
+ * inside unrelated work'. Moving them is that deliberate change, and it is not
+ * this one.
+ *
+ * They are named rather than excluded by a path pattern so the list can only
+ * shrink: moving either makes this spec fail until its entry goes, and a third
+ * file cannot quietly join them.
+ */
+const PRE_EXISTING_SINGLE_MODULE_SHARED_FILES = [
+  'src/shared/components/DatasetCard.tsx',
+  'src/shared/utils/translation-key.ts',
+] as const;
+
 const SPEC = /\.spec\.tsx?$/u;
 
 const isSpec = (path: string): boolean => SPEC.test(path);
@@ -88,5 +109,34 @@ describe('what shared/ is allowed to hold', () => {
     );
 
     expect(unconsumed.map((file) => file.path)).toEqual([]);
+  });
+
+  /**
+   * Reuse has to be *cross-module*. '`shared/components/ # reused by at least
+   * two modules`' (`docs/system/frontend-architecture.md` §'Source structure'),
+   * and 'Moving single-feature code to `shared/` before it has another
+   * consumer' is the anti-pattern
+   * (`docs/system/guides/adding-a-web-module.md` §'Common failures').
+   *
+   * A file every one of whose consumers sits in **one** module is that module's
+   * code kept somewhere every module can reach. The test is deliberately "all
+   * consumers in one module" rather than "fewer than two modules": a shared
+   * file consumed by the composition layer (`main.tsx`, `shared/layouts/`) or
+   * by another `shared/` file has no module consumer at all, which is an
+   * ordinary shared-platform file rather than a misplaced feature one —
+   * `LocaleProvider`, `DialogHost` and `WarehouseEntryRefusal` are that case
+   * and are not what this asks about.
+   */
+  it('leaves nothing in shared/ whose every consumer is one module', async () => {
+    const singleModule = (await sharedFilesUnder('src/shared/')).filter(
+      (file) =>
+        file.consumingModules.length === 1 &&
+        file.consumers.length > 0 &&
+        file.consumers.every((consumer) => owningModule(consumer) !== null),
+    );
+
+    expect(singleModule.map((file) => file.path)).toEqual([
+      ...PRE_EXISTING_SINGLE_MODULE_SHARED_FILES,
+    ]);
   });
 });

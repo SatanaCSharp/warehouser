@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { BubblePlot } from 'shared/components/charts/BubblePlot';
+import { BubblePlot } from 'modules/workspace/dashboard/components/components/receipt-reliability-panel/components/BubblePlot';
 import { describe, expect, it } from 'vitest';
 
 // design-handoff.md § Panel specifications (Receipt Reliability) — "Each mark

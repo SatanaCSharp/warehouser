@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import type { ArrivalTimingPanel as ArrivalTimingPanelBody } from '@warehouser/contracts/dashboards';
-import { ArrivalTimingPanel } from 'modules/warehouse/components/dashboard/components/ArrivalTimingPanel';
+import { ArrivalTimingPanel } from 'modules/warehouse/components/dashboard/components/arrival-timing-panel/ArrivalTimingPanel';
 import { linearScale } from 'shared/utils/chart-scale';
 import { describe, expect, it } from 'vitest';
 
@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 // specifications, frame `z8UrQP`). Colocated with the component it covers
 // (`docs/system/guides/placing-web-tests.md` §1).
 //
-// This Panel is drawn from `shared/components/charts/ColumnPlot`, already
+// This Panel is drawn from `modules/warehouse/components/dashboard/components/arrival-timing-panel/components/ColumnPlot`, already
 // covered by its own spec for the gridlines, the no-tooltip/no-focus
 // guarantee and the absence of any status colour — none of that is repeated
 // here. What this spec pins is the Panel's *own* behaviour over a fixed
@@ -24,7 +24,7 @@ import { describe, expect, it } from 'vitest';
 // Coverage Gap and Reason Concentration are row-oriented (T17's tables), so
 // they need no summary; this Panel is a chart, so it does. The task's own DoD
 // lists the summary as a requirement separate from the `h2`. Neither
-// `shared/components/charts/ColumnPlot` nor `BubblePlot` carries a `role` or
+// `modules/warehouse/components/dashboard/components/arrival-timing-panel/components/ColumnPlot` nor `BubblePlot` carries a `role` or
 // accepts a summary prop, and that directory is shared with two other
 // in-flight lanes, so this Panel wraps its own plot region in an element
 // carrying `role="img"` and an `aria-label` — driven from the same

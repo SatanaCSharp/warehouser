@@ -2,10 +2,10 @@ import type {
   ReceiptReliabilityPanel as ReceiptReliabilityPanelBody,
   ReceiptReliabilityWarehouse,
 } from '@warehouser/contracts/dashboards';
+import type { BubblePlotMark } from 'modules/workspace/dashboard/components/components/receipt-reliability-panel/components/BubblePlot';
+import { BubblePlot } from 'modules/workspace/dashboard/components/components/receipt-reliability-panel/components/BubblePlot';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { BubblePlotMark } from 'shared/components/charts/BubblePlot';
-import { BubblePlot } from 'shared/components/charts/BubblePlot';
 import { PanelCard } from 'shared/components/charts/PanelCard';
 import { PanelFootnote } from 'shared/components/charts/PanelFootnote';
 
@@ -13,7 +13,7 @@ import { PanelFootnote } from 'shared/components/charts/PanelFootnote';
  * T21 — the Receipt Reliability Panel (AC-19, AC-20, AC-20a; `design-handoff.md`
  * § Panel specifications, frame `ScGrF`).
  *
- * A bubble scatter built on `shared/components/charts/BubblePlot`, which
+ * A bubble scatter built on `modules/workspace/dashboard/components/components/receipt-reliability-panel/components/BubblePlot`, which
  * draws a mark's position, size and direct label but knows nothing about
  * label collision. This file computes the marks' positions and radii, and
  * where two marks would collide, moves the later one's label aside itself

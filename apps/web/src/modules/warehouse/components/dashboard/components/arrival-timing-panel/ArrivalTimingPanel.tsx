@@ -2,13 +2,13 @@ import type {
   ArrivalTimingBucket,
   ArrivalTimingPanel as ArrivalTimingPanelBody,
 } from '@warehouser/contracts/dashboards';
+import type { ColumnPlotBucket } from 'modules/warehouse/components/dashboard/components/arrival-timing-panel/components/ColumnPlot';
+import { ColumnPlot } from 'modules/warehouse/components/dashboard/components/arrival-timing-panel/components/ColumnPlot';
 import { isoWeekNumber } from 'modules/warehouse/utils/iso-week-number';
 import type { ReactElement, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ChartLegendItem } from 'shared/components/charts/ChartLegend';
 import { ChartLegend } from 'shared/components/charts/ChartLegend';
-import type { ColumnPlotBucket } from 'shared/components/charts/ColumnPlot';
-import { ColumnPlot } from 'shared/components/charts/ColumnPlot';
 import { PanelCard } from 'shared/components/charts/PanelCard';
 import { PanelFootnote } from 'shared/components/charts/PanelFootnote';
 import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';

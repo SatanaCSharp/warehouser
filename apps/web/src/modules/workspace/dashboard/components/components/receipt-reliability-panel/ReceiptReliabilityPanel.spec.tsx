@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import type { ReceiptReliabilityPanel as ReceiptReliabilityPanelBody } from '@warehouser/contracts/dashboards';
-import { ReceiptReliabilityPanel } from 'modules/workspace/dashboard/components/components/ReceiptReliabilityPanel';
+import { ReceiptReliabilityPanel } from 'modules/workspace/dashboard/components/components/receipt-reliability-panel/ReceiptReliabilityPanel';
 import { describe, expect, it } from 'vitest';
 
 // T21 — the Receipt Reliability Panel drawn at the approved handoff's
@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 // specifications, frame `ScGrF`). Colocated with the component it covers
 // (`docs/system/guides/placing-web-tests.md` §1).
 //
-// Built on `shared/components/charts/BubblePlot`, which draws a mark's
+// Built on `modules/workspace/dashboard/components/components/receipt-reliability-panel/components/BubblePlot`, which draws a mark's
 // position, size and direct label but knows nothing about collision — the
 // design's "moved to the side where that would collide" rule
 // (AC-19) is this Panel's own arithmetic over the marks it hands `BubblePlot`,

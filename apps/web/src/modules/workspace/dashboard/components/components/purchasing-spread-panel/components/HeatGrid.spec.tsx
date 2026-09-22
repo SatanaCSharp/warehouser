@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { HeatGrid } from 'shared/components/charts/HeatGrid';
+import { HeatGrid } from 'modules/workspace/dashboard/components/components/purchasing-spread-panel/components/HeatGrid';
 import { describe, expect, it } from 'vitest';
 
 // design-handoff.md § Panel specifications (Purchasing Spread) — "the count

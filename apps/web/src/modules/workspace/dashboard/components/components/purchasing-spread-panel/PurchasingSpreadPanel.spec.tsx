@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import type { PurchasingSpreadPanel as PurchasingSpreadPanelBody } from '@warehouser/contracts/dashboards';
-import { PurchasingSpreadPanel } from 'modules/workspace/dashboard/components/components/PurchasingSpreadPanel';
+import { PurchasingSpreadPanel } from 'modules/workspace/dashboard/components/components/purchasing-spread-panel/PurchasingSpreadPanel';
 import { describe, expect, it } from 'vitest';
 
 // T20 — the Purchasing Spread Panel drawn at the approved handoff's fidelity
@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 // Colocated with the component it covers
 // (`docs/system/guides/placing-web-tests.md` §1).
 //
-// `shared/components/charts/HeatGrid` already draws a real `<table>` with a
+// `modules/workspace/dashboard/components/components/purchasing-spread-panel/components/HeatGrid` already draws a real `<table>` with a
 // header row for exactly this shape (`docs/system/adr/27-08-2026-heroui-table-for-web-data-tables.md`
 // — HeroUI's `Table` is for a data table a member browses, expands and sorts;
 // this Panel has none of that, so it stays the plain `table`/`columnheader`/
@@ -142,7 +142,7 @@ describe('PurchasingSpreadPanel', () => {
   // bins `1–19 / 20–49 / 50–99 / 100 +` plus a `$chart/track` zero cell", so a
   // Warehouse that discards most of what it starts is distinguishable from
   // one that cannot get goods. Every boundary is checked against the fill
-  // `HeatGrid` already keys by bin (`shared/components/charts/HeatGrid.tsx`),
+  // `HeatGrid` already keys by bin (`modules/workspace/dashboard/components/components/purchasing-spread-panel/components/HeatGrid.tsx`),
   // and the zero cell is required to be visibly distinct from the lowest
   // non-zero bin rather than sharing its fill.
   it('bins each non-zero count sequentially and keeps the zero cell a distinct fill', () => {
