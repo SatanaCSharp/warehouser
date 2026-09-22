@@ -186,6 +186,7 @@ export const WORKSPACE_MODULE_MANIFEST = [
   // down in its own `components/` directory
   // (`docs/system/guides/placing-web-components.md` § "The nesting rule").
   'dashboard/api/workspace-dashboard-api.ts',
+  'dashboard/components/WorkspaceDashboardGrid.spec.tsx',
   'dashboard/components/WorkspaceDashboardGrid.tsx',
   'dashboard/components/components/OrderFlowPanel.spec.tsx',
   'dashboard/components/components/OrderFlowPanel.tsx',

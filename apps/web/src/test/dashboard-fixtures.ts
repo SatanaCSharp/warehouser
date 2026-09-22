@@ -443,6 +443,11 @@ type WorkspaceDashboardServerOptions = {
    * says nothing about the Workspace above it.
    */
   permissionIds?: readonly PermissionId[];
+  /**
+   * Panel URLs the stub answers with a 500, so a spec can exercise the arm a
+   * Panel renders when the member is admitted to it and its own read failed.
+   */
+  failing?: readonly string[];
   workspacePermissionIds?: readonly WorkspacePermissionId[];
 };
 
@@ -457,6 +462,7 @@ type WorkspaceDashboardServerOptions = {
  */
 export const stubWorkspaceDashboardServer = ({
   demandPressure = demandPressurePanel,
+  failing = [],
   permissionIds = allWatchPermissions,
   workspacePermissionIds = [WorkspacePermissionId.WAREHOUSE_PERFORMANCE_WATCH],
 }: WorkspaceDashboardServerOptions = {}): string[] => {
@@ -500,6 +506,10 @@ export const stubWorkspaceDashboardServer = ({
     vi.fn((input: Request | string | URL) => {
       const url = String(input instanceof Request ? input.url : input);
       requestedUrls.push(url);
+      if (failing.includes(url)) {
+        return Promise.resolve(Response.json({}, { status: 500 }));
+      }
+
       const route = routes.find(([path]) => url === path);
       return Promise.resolve(
         route ? Response.json(route[1]) : Response.json({}, { status: 404 }),
