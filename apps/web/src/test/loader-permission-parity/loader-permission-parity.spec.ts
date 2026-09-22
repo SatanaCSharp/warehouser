@@ -167,7 +167,7 @@ const ACCESS_LOADER = 'modules/access/loaders/access-surface.loader.ts';
 const WAREHOUSE_DASHBOARD_LOADER =
   'modules/warehouse/loaders/warehouse-dashboard.loader.ts';
 const WORKSPACE_DASHBOARD_LOADER =
-  'modules/workspace-dashboard/loaders/workspace-dashboard.loader.ts';
+  'modules/workspace/dashboard/loaders/workspace-dashboard.loader.ts';
 
 /**
  * `workspaceRoute`'s await window is two files, because `modules/access`
@@ -880,7 +880,7 @@ describe('the loader-only Panel reads (dashboards T22)', () => {
   const WAREHOUSE_DASHBOARD_GRID =
     'modules/warehouse/components/dashboard/WarehouseDashboardGrid.tsx';
   const WORKSPACE_DASHBOARD_GRID =
-    'modules/workspace-dashboard/components/WorkspaceDashboardGrid.tsx';
+    'modules/workspace/dashboard/components/WorkspaceDashboardGrid.tsx';
 
   it.each([
     [

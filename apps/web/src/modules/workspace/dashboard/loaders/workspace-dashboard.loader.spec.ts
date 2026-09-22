@@ -3,8 +3,8 @@ import { posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { QueryStatus } from '@reduxjs/toolkit/query';
-import { workspaceDashboardApi } from 'modules/workspace-dashboard/api/workspace-dashboard-api';
-import { loadWorkspaceDashboard } from 'modules/workspace-dashboard/loaders/workspace-dashboard.loader';
+import { workspaceDashboardApi } from 'modules/workspace/dashboard/api/workspace-dashboard-api';
+import { loadWorkspaceDashboard } from 'modules/workspace/dashboard/loaders/workspace-dashboard.loader';
 import type { AppStore } from 'store';
 import { authenticatedStore } from 'test/access-fixtures';
 import {

@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import type { OrderFlowPanel as OrderFlowPanelBody } from '@warehouser/contracts/dashboards';
-import { OrderFlowPanel } from 'modules/workspace-dashboard/components/OrderFlowPanel';
+import { OrderFlowPanel } from 'modules/workspace/dashboard/components/components/OrderFlowPanel';
 import { describe, expect, it } from 'vitest';
 
 // T21 — the Order Flow Panel drawn at the approved handoff's fidelity

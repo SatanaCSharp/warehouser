@@ -5,11 +5,11 @@ import type {
   ReceiptReliabilityPanel,
 } from '@warehouser/contracts/dashboards';
 import compact from 'lodash/compact';
-import { workspaceDashboardApi } from 'modules/workspace-dashboard/api/workspace-dashboard-api';
-import { DemandPressurePanel as DemandPressurePanelView } from 'modules/workspace-dashboard/components/DemandPressurePanel';
-import { OrderFlowPanel as OrderFlowPanelView } from 'modules/workspace-dashboard/components/OrderFlowPanel';
-import { PurchasingSpreadPanel as PurchasingSpreadPanelView } from 'modules/workspace-dashboard/components/PurchasingSpreadPanel';
-import { ReceiptReliabilityPanel as ReceiptReliabilityPanelView } from 'modules/workspace-dashboard/components/ReceiptReliabilityPanel';
+import { workspaceDashboardApi } from 'modules/workspace/dashboard/api/workspace-dashboard-api';
+import { DemandPressurePanel as DemandPressurePanelView } from 'modules/workspace/dashboard/components/components/DemandPressurePanel';
+import { OrderFlowPanel as OrderFlowPanelView } from 'modules/workspace/dashboard/components/components/OrderFlowPanel';
+import { PurchasingSpreadPanel as PurchasingSpreadPanelView } from 'modules/workspace/dashboard/components/components/PurchasingSpreadPanel';
+import { ReceiptReliabilityPanel as ReceiptReliabilityPanelView } from 'modules/workspace/dashboard/components/components/ReceiptReliabilityPanel';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ShieldXIcon } from 'shared/icons';

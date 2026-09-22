@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import type { DemandPressurePanel as DemandPressurePanelBody } from '@warehouser/contracts/dashboards';
-import { DemandPressurePanel } from 'modules/workspace-dashboard/components/DemandPressurePanel';
+import { DemandPressurePanel } from 'modules/workspace/dashboard/components/components/DemandPressurePanel';
 import { QUANTITY_GROUP_SEPARATOR } from 'shared/utils/number-format';
 import { describe, expect, it } from 'vitest';
 

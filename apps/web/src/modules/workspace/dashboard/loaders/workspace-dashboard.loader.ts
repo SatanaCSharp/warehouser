@@ -1,5 +1,5 @@
 import { WorkspacePermissionId as WorkspacePermissionIdValue } from '@warehouser/shared-types/enums';
-import { workspaceDashboardApi } from 'modules/workspace-dashboard/api/workspace-dashboard-api';
+import { workspaceDashboardApi } from 'modules/workspace/dashboard/api/workspace-dashboard-api';
 import type { RouterContext } from 'routes/__root.route';
 import { workspaceContextApi } from 'shared/api/workspace/workspace-context-api';
 import { hasWorkspacePermission } from 'shared/hooks/queries/useWorkspacePermissions';

@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import type { PurchasingSpreadPanel as PurchasingSpreadPanelBody } from '@warehouser/contracts/dashboards';
-import { PurchasingSpreadPanel } from 'modules/workspace-dashboard/components/PurchasingSpreadPanel';
+import { PurchasingSpreadPanel } from 'modules/workspace/dashboard/components/components/PurchasingSpreadPanel';
 import { describe, expect, it } from 'vitest';
 
 // T20 — the Purchasing Spread Panel drawn at the approved handoff's fidelity

@@ -1,4 +1,4 @@
-import { WorkspaceDashboardGrid } from 'modules/workspace-dashboard/components/WorkspaceDashboardGrid';
+import { WorkspaceDashboardGrid } from 'modules/workspace/dashboard/components/WorkspaceDashboardGrid';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 

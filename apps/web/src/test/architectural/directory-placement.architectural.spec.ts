@@ -37,6 +37,35 @@ const ALL_FILES = walk(srcRoot);
 const isSpec = (path: string): boolean => /\.spec\.tsx?$/u.test(path);
 
 /**
+ * The layer directories `docs/system/frontend-architecture.md` §'Source
+ * structure' names inside a module. A directory under a module that is *not*
+ * one of these is a module sub-tree rather than a layer, which is what lets
+ * the loader case below admit `modules/<module>/<sub-tree>/loaders/` without
+ * admitting `modules/<module>/api/loaders/`.
+ */
+const MODULE_LAYER_DIRECTORIES = [
+  'alerts',
+  'api',
+  'components',
+  'context',
+  'hooks',
+  'loaders',
+  'schemas',
+  'store',
+  'utils',
+] as const;
+
+/**
+ * A module's own `loaders/` directory, or that of one of its sub-trees. The
+ * negative lookahead is what keeps the optional segment a sub-tree rather than
+ * any directory at all.
+ */
+const LOADER_DIRECTORY = new RegExp(
+  `^modules/[^/]+/(?:(?!(?:${MODULE_LAYER_DIRECTORIES.join('|')})/)[^/]+/)?loaders/`,
+  'u',
+);
+
+/**
  * The corpus guard every spec in this file leans on.
  *
  * A placement rule is a statement about a set of paths, and an empty set
@@ -135,15 +164,59 @@ describe('loaders and routes are placed where the router expects them', () => {
    * route loader in `guards/`, `utils/` or `api/` instead of the module's
    * `loaders/`' is named as an anti-pattern
    * (`docs/system/guides/adding-a-web-module.md` §6, §'Anti-patterns').
+   *
+   * The optional second segment is a **module sub-tree**, which the sibling
+   * case below already recognizes: a module may organize material for its own
+   * entity into sub-trees that each carry their own `route.tsx`, `page.tsx` and
+   * layer directories — `modules/auth/{login,sign-up}/`,
+   * `modules/workspace/dashboard/` — and is still one module
+   * (`docs/system/guides/adding-a-web-module.md` §1,
+   * `docs/system/adr/18-08-2026-scope-of-exercise-placement-tiebreak.md`
+   * §'Home versus grouping'). A destination that lives in a sub-tree owns its
+   * loader there, beside the route that wires it.
+   *
+   * The segment may not itself be one of the layer names below, so the
+   * anti-pattern this case exists for is untouched: `api/loaders/`,
+   * `utils/loaders/` and `components/loaders/` still fail.
    */
   it('files every loader in its module’s loaders directory', () => {
     const misfiled = ALL_FILES.filter(
-      (path) =>
-        path.endsWith('.loader.ts') &&
-        !/^modules\/[^/]+\/loaders\//u.test(path),
+      (path) => path.endsWith('.loader.ts') && !LOADER_DIRECTORY.test(path),
     );
 
     expect(misfiled).toEqual([]);
+  });
+
+  /**
+   * The control on the case above. Widening the pattern to admit a sub-tree's
+   * own `loaders/` must not admit a loader filed under a **layer** directory,
+   * which is the anti-pattern
+   * (`docs/system/guides/adding-a-web-module.md` §'Anti-patterns') the case
+   * exists to catch. Asserted against the pattern directly, because no such
+   * file exists in the tree to be caught — without this, the widening would be
+   * indistinguishable from removing the check.
+   */
+  it('still refuses a loader filed under a module layer directory', () => {
+    expect(
+      LOADER_DIRECTORY.test('modules/workspace/dashboard/loaders/a.loader.ts'),
+    ).toBe(true);
+    expect(LOADER_DIRECTORY.test('modules/workspace/loaders/a.loader.ts')).toBe(
+      true,
+    );
+
+    expect(
+      LOADER_DIRECTORY.test('modules/workspace/api/loaders/a.loader.ts'),
+    ).toBe(false);
+    expect(
+      LOADER_DIRECTORY.test('modules/workspace/utils/loaders/a.loader.ts'),
+    ).toBe(false);
+    expect(
+      LOADER_DIRECTORY.test('modules/workspace/components/loaders/a.loader.ts'),
+    ).toBe(false);
+    expect(LOADER_DIRECTORY.test('guards/a.loader.ts')).toBe(false);
+    expect(
+      LOADER_DIRECTORY.test('modules/w/dashboard/deep/loaders/a.loader.ts'),
+    ).toBe(false);
   });
 
   /**

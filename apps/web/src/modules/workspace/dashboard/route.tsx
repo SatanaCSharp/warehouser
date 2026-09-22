@@ -1,6 +1,6 @@
 import { createRoute, lazyRouteComponent } from '@tanstack/react-router';
 import { requireAuth } from 'guards/auth.guard';
-import { loadWorkspaceDashboard } from 'modules/workspace-dashboard/loaders/workspace-dashboard.loader';
+import { loadWorkspaceDashboard } from 'modules/workspace/dashboard/loaders/workspace-dashboard.loader';
 import { rootRoute } from 'routes/__root.route';
 import { RouteErrorState } from 'shared/components/RouteErrorState';
 import { RoutePendingState } from 'shared/components/RoutePendingState';

@@ -1,7 +1,7 @@
 import { within } from '@testing-library/react';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import { loadWorkspaceDashboard } from 'modules/workspace-dashboard/loaders/workspace-dashboard.loader';
-import { WorkspaceDashboardPage } from 'modules/workspace-dashboard/page';
+import { loadWorkspaceDashboard } from 'modules/workspace/dashboard/loaders/workspace-dashboard.loader';
+import { WorkspaceDashboardPage } from 'modules/workspace/dashboard/page';
 import type { AppStore } from 'store';
 import { authenticatedStore } from 'test/access-fixtures';
 import {

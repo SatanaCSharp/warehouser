@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import type { ReceiptReliabilityPanel as ReceiptReliabilityPanelBody } from '@warehouser/contracts/dashboards';
-import { ReceiptReliabilityPanel } from 'modules/workspace-dashboard/components/ReceiptReliabilityPanel';
+import { ReceiptReliabilityPanel } from 'modules/workspace/dashboard/components/components/ReceiptReliabilityPanel';
 import { describe, expect, it } from 'vitest';
 
 // T21 — the Receipt Reliability Panel drawn at the approved handoff's

@@ -5,8 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { RouterProvider } from '@tanstack/react-router';
 import { render, screen, waitFor } from '@testing-library/react';
 import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
-import { loadWorkspaceDashboard } from 'modules/workspace-dashboard/loaders/workspace-dashboard.loader';
-import { workspaceDashboardRoute } from 'modules/workspace-dashboard/route';
+import { loadWorkspaceDashboard } from 'modules/workspace/dashboard/loaders/workspace-dashboard.loader';
+import { workspaceDashboardRoute } from 'modules/workspace/dashboard/route';
 import { Provider } from 'react-redux';
 import type { AppRouter } from 'router';
 import { createAppRouter } from 'router';
@@ -22,7 +22,7 @@ import {
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // T19 — the Workspace Dashboard's route declaration and the address it serves
-// (AC-15). Colocated with `modules/workspace-dashboard/route.tsx`, the
+// (AC-15). Colocated with `modules/workspace/dashboard/route.tsx`, the
 // declaration these cases pin (`placing-web-tests.md` §1).
 //
 // **The criterion this file exists for.** AC-15 and frame `ujNPP` tile 1

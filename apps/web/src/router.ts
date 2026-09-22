@@ -9,8 +9,8 @@ import { homeRoute } from 'modules/home/route';
 import { itemRoute } from 'modules/item/route';
 import { purchaseDraftRoute } from 'modules/purchase-draft/route';
 import { warehouseDashboardRoute } from 'modules/warehouse/route';
+import { workspaceDashboardRoute } from 'modules/workspace/dashboard/route';
 import { workspaceRoute } from 'modules/workspace/route';
-import { workspaceDashboardRoute } from 'modules/workspace-dashboard/route';
 import { rootRoute } from 'routes/__root.route';
 import {
   rootCatchAllRoute,
@@ -30,9 +30,11 @@ const routeTree = rootRoute.addChildren([
   signUpRoute,
   workspaceRoute,
   // dashboards T19 — a flat root sibling of the administration destination,
-  // not its child: the Workspace Dashboard is its own module, so `/workspace`
-  // keeps its shipped address and neither route inherits the other's guard
-  // (that feature's design-handoff.md §Addresses and navigation, AC-15).
+  // not its child, so `/workspace` keeps its shipped address and neither route
+  // inherits the other's guard (that feature's design-handoff.md §Addresses and
+  // navigation, AC-15). Sibling *routes* owned by one module: the Dashboard is
+  // a sub-tree of `modules/workspace`, on the `modules/auth/login` pattern
+  // (`docs/system/guides/adding-a-web-module.md` §1).
   workspaceDashboardRoute,
   warehouseRoute.addChildren([
     warehouseDashboardRoute,

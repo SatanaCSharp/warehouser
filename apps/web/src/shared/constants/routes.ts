@@ -40,8 +40,9 @@ export const ROUTES = {
   WAREHOUSE_CUSTOMERS: `${WAREHOUSE_PATH}/${ROUTE_SEGMENTS.CUSTOMERS}`,
   WORKSPACE: WORKSPACE_PATH,
   // dashboards T19 — a flat sibling of the administration destination rather
-  // than its child: the Workspace Dashboard is its own module with its own
-  // `route.tsx`, so `/workspace` inherits nothing to it and it inherits
-  // nothing — in particular not that route's capability guard (AC-15).
+  // than its child: the Workspace Dashboard declares its own `route.tsx`, in
+  // its own sub-tree of `modules/workspace`, so `/workspace` inherits nothing
+  // to it and it inherits nothing — in particular not that route's capability
+  // guard (AC-15).
   WORKSPACE_DASHBOARD: `${WORKSPACE_PATH}/${ROUTE_SEGMENTS.DASHBOARD}`,
 } as const;

@@ -117,18 +117,13 @@ export const MODULE_SURFACE = {
   workspace: [
     // router.ts
     'modules/workspace/route',
-  ],
-  // dashboards T19 — the Workspace Dashboard is a flat top-level sibling of
-  // `modules/workspace`, not a slice inside it: a module has exactly one
-  // `route.tsx` and one `page.tsx`, and `/workspace` is already occupied by
-  // administration, so the promotion rule in
-  // `docs/system/adr/18-08-2026-scope-of-exercise-placement-tiebreak.md`
-  // ("future in-Warehouse entities become flat top-level sibling modules")
-  // applies at the Workspace scope on identical terms. Its surface today is
-  // the route `router.ts` composes and nothing else.
-  'workspace-dashboard': [
-    // router.ts
-    'modules/workspace-dashboard/route',
+    // router.ts — the Workspace Dashboard's own route. The Dashboard is a
+    // sub-tree of this module rather than a module of its own: a Workspace
+    // capability exercised at the Workspace scope lives in the Workspace's
+    // module, and a module may carry several `route.tsx`/`page.tsx` pairs —
+    // `modules/auth/` holds `login/` and `sign-up/` and is still one module
+    // (`docs/system/guides/adding-a-web-module.md` §1).
+    'modules/workspace/dashboard/route',
   ],
 } as const satisfies Record<string, readonly string[]>;
 
@@ -179,6 +174,33 @@ export const WORKSPACE_MODULE_MANIFEST = [
   'components/workspace-administration/warehouses/WarehousesTab.spec.tsx',
   'components/workspace-administration/warehouses/WarehousesTab.tsx',
   'components/workspace-administration/warehouses/WithdrawWarehouseAccessDialog.tsx',
+  // dashboards remediation — the Workspace Dashboard, folded in from the
+  // short-lived `modules/workspace-dashboard`. It enforces Workspace
+  // invariants and is exercised at the Workspace scope, so the default in
+  // `docs/system/guides/adding-a-web-module.md` §1 places it in this module
+  // and the scope-of-exercise tiebreak has nothing to break. It is a sub-tree
+  // on the `modules/auth/login` pattern, carrying its own `route.tsx`,
+  // `page.tsx`, `api/`, `loaders/` and `components/`.
+  //
+  // The grid is the sole renderer of all four Panels, so they nest one level
+  // down in its own `components/` directory
+  // (`docs/system/guides/placing-web-components.md` § "The nesting rule").
+  'dashboard/api/workspace-dashboard-api.ts',
+  'dashboard/components/WorkspaceDashboardGrid.tsx',
+  'dashboard/components/components/DemandPressurePanel.spec.tsx',
+  'dashboard/components/components/DemandPressurePanel.tsx',
+  'dashboard/components/components/OrderFlowPanel.spec.tsx',
+  'dashboard/components/components/OrderFlowPanel.tsx',
+  'dashboard/components/components/PurchasingSpreadPanel.spec.tsx',
+  'dashboard/components/components/PurchasingSpreadPanel.tsx',
+  'dashboard/components/components/ReceiptReliabilityPanel.spec.tsx',
+  'dashboard/components/components/ReceiptReliabilityPanel.tsx',
+  'dashboard/loaders/workspace-dashboard.loader.spec.ts',
+  'dashboard/loaders/workspace-dashboard.loader.ts',
+  'dashboard/page.spec.tsx',
+  'dashboard/page.tsx',
+  'dashboard/route.spec.tsx',
+  'dashboard/route.tsx',
   // T12 / global-loader CH-05, CH-13 — the route-scoped projection that turns
   // the Workspace context guaranteed by `workspaceRoute.beforeLoad` into a
   // non-optional value, and its colocated spec. It derives from state already
@@ -258,33 +280,6 @@ export const WAREHOUSE_MODULE_MANIFEST = [
   // module's own `utils/` rather than `shared/utils/`
   // (`docs/system/guides/placing-web-hooks.md` §3).
   'utils/iso-week-number.ts',
-] as const;
-
-/**
- * The exact file manifest of `modules/workspace-dashboard`, per T22
- * (`dashboards` sad.md §10 "Hand-enumerated gates"). T19 added the module and
- * its route to `MODULE_SURFACE` above, but no manifest test named its files —
- * so the four Panel components T20/T21 drew, and the grid that composes them,
- * had no file-inventory check of their own. This enumerates what T19-T21
- * actually left in the module.
- */
-export const WORKSPACE_DASHBOARD_MODULE_MANIFEST = [
-  'api/workspace-dashboard-api.ts',
-  'components/DemandPressurePanel.spec.tsx',
-  'components/DemandPressurePanel.tsx',
-  'components/OrderFlowPanel.spec.tsx',
-  'components/OrderFlowPanel.tsx',
-  'components/PurchasingSpreadPanel.spec.tsx',
-  'components/PurchasingSpreadPanel.tsx',
-  'components/ReceiptReliabilityPanel.spec.tsx',
-  'components/ReceiptReliabilityPanel.tsx',
-  'components/WorkspaceDashboardGrid.tsx',
-  'loaders/workspace-dashboard.loader.spec.ts',
-  'loaders/workspace-dashboard.loader.ts',
-  'page.spec.tsx',
-  'page.tsx',
-  'route.spec.tsx',
-  'route.tsx',
 ] as const;
 
 /**
