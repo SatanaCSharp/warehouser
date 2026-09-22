@@ -29,37 +29,33 @@ const panelPath = (warehouseId: string, panel: string): string =>
  * figure from before the change the member just made, which `spec.md` §7 names
  * the most expensive failure this feature can have (sad.md §8 "Freshness").
  *
- * Declaring it on the endpoint rather than on the dispatch is what makes it
- * unconditional: every initiation of a Panel read re-reads, so a caller cannot
- * enter the Dashboard and be served a superseded body by forgetting an option.
- * The only initiator is `loaders/warehouse-dashboard.loader.ts`, so "on every
- * initiation" **is** "on entry" — the destination itself subscribes to none of
- * these endpoints and reads the bodies the loader already awaited, which is
- * also what keeps the read count after paint at zero (`spec.md` §6 read shape).
+ * That refetch is declared on the **loader's dispatch**
+ * (`loaders/warehouse-dashboard.loader.ts`), not here. An endpoint-level
+ * `forceRefetch` fires on every initiation of the endpoint, which includes the
+ * destination's own subscription — and the destination must subscribe, or RTK
+ * Query collects the loader-filled entry 60 s later. Declared on the endpoint
+ * it issued two reads per Panel on entry, against `spec.md` §6's "≤ 1 round
+ * trip per chart". The loader is the only initiator that means "the member is
+ * entering", so that is where entering is expressed.
  */
-const reReadOnEveryEntry = (): boolean => true;
 
 export const warehouseDashboardApi = api.injectEndpoints({
   endpoints: (build) => ({
     readCoverageGap: build.query<CoverageGapPanel, string>({
       query: (warehouseId) => panelPath(warehouseId, 'coverage-gap'),
       extraOptions: { schema: coverageGapPanelSchema },
-      forceRefetch: reReadOnEveryEntry,
     }),
     readReasonConcentration: build.query<ReasonConcentrationPanel, string>({
       query: (warehouseId) => panelPath(warehouseId, 'reason-concentration'),
       extraOptions: { schema: reasonConcentrationPanelSchema },
-      forceRefetch: reReadOnEveryEntry,
     }),
     readArrivalTiming: build.query<ArrivalTimingPanel, string>({
       query: (warehouseId) => panelPath(warehouseId, 'arrival-timing'),
       extraOptions: { schema: arrivalTimingPanelSchema },
-      forceRefetch: reReadOnEveryEntry,
     }),
     readPurchasingPipeline: build.query<PurchasingPipelinePanel, string>({
       query: (warehouseId) => panelPath(warehouseId, 'purchasing-pipeline'),
       extraOptions: { schema: purchasingPipelinePanelSchema },
-      forceRefetch: reReadOnEveryEntry,
     }),
   }),
   overrideExisting: false,

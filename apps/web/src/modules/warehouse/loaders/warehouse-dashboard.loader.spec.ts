@@ -175,7 +175,13 @@ describe('loadWarehouseDashboard', () => {
     expect(panelsRequested(requestedUrls)).toStrictEqual(PANEL_URLS);
   });
 
-  it('dispatches every read with subscribe: false (sad.md §4.4)', async () => {
+  // Both options, not just the subscription. `forceRefetch` moved here from the
+  // endpoint during the `dashboards` conformance remediation: declared on the
+  // endpoint it fired on every initiation, including the destination's own
+  // subscription, and issued a second read per Panel against `spec.md` §6's
+  // read shape. Asserting it at the dispatch is what keeps AC-26's
+  // refetch-on-entering mechanical now that the endpoint no longer states it.
+  it('dispatches every read with forceRefetch and subscribe: false (sad.md §4.4, AC-26)', async () => {
     stubDashboardServer();
     const store = authenticatedStore();
     const initiate = vi.spyOn(
@@ -187,6 +193,7 @@ describe('loadWarehouseDashboard', () => {
 
     expect(initiate).toHaveBeenCalledTimes(1);
     expect(initiate).toHaveBeenCalledWith(accessIds.warehouse, {
+      forceRefetch: true,
       subscribe: false,
     });
   });

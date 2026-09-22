@@ -26,6 +26,16 @@ const panelPath = (panel: string): string =>
   `${WORKSPACE_DASHBOARD_PATH}/${panel}`;
 
 /**
+ * AC-26 (freshness is refetch on entering) is declared on the loader's
+ * dispatch — `loaders/workspace-dashboard.loader.ts` — rather than here. An
+ * endpoint-level `forceRefetch` fires on every initiation of the endpoint,
+ * including the destination's own subscription, and the destination must
+ * subscribe or RTK Query collects the loader-filled entry 60 s later. Declared
+ * here it issued two reads per Panel on entry, against `spec.md` §6.
+ *
+ * The superseded note follows, kept for its reasoning about why a cache tag is
+ * not the mechanism:
+ *
  * AC-26 — **freshness is refetch on entering, and nothing else.** No mutation
  * across `customer-orders`, `purchase-drafts` or `arrival-inspection` knows
  * these reads exist, so a cache tag would have to be remembered at every one
@@ -41,29 +51,24 @@ const panelPath = (panel: string): string =>
  * these endpoints and reads the bodies the loader already awaited, which is
  * also what keeps the read count after paint at zero (`spec.md` §6 read shape).
  */
-const reReadOnEveryEntry = (): boolean => true;
 
 export const workspaceDashboardApi = api.injectEndpoints({
   endpoints: (build) => ({
     readDemandPressure: build.query<DemandPressurePanel, void>({
       query: () => panelPath('demand-pressure'),
       extraOptions: { schema: demandPressurePanelSchema },
-      forceRefetch: reReadOnEveryEntry,
     }),
     readOrderFlow: build.query<OrderFlowPanel, void>({
       query: () => panelPath('order-flow'),
       extraOptions: { schema: orderFlowPanelSchema },
-      forceRefetch: reReadOnEveryEntry,
     }),
     readPurchasingSpread: build.query<PurchasingSpreadPanel, void>({
       query: () => panelPath('purchasing-spread'),
       extraOptions: { schema: purchasingSpreadPanelSchema },
-      forceRefetch: reReadOnEveryEntry,
     }),
     readReceiptReliability: build.query<ReceiptReliabilityPanel, void>({
       query: () => panelPath('receipt-reliability'),
       extraOptions: { schema: receiptReliabilityPanelSchema },
-      forceRefetch: reReadOnEveryEntry,
     }),
   }),
   overrideExisting: false,

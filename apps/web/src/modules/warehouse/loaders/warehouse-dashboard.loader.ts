@@ -20,10 +20,20 @@ export type WarehouseDashboardLoaderInput = {
 };
 
 /**
- * A loader-filled entry holds no subscriber of its own; the destination reads
- * the body it filled rather than re-requesting it (sad.md §4.4).
+ * A loader-filled entry holds no subscriber of *this dispatch's* own; the
+ * destination's Panel hooks subscribe to it a moment later and retain it
+ * (sad.md §4.4, `hooks/queries/usePanelBodies.ts`).
+ *
+ * `forceRefetch` is AC-26 — freshness is refetch on entering, and nothing
+ * else. It is declared here, on the one dispatch that means "the member is
+ * entering", rather than on the endpoint: an endpoint-level `forceRefetch`
+ * fires on *every* initiation, including the destination's own subscription a
+ * moment after this one, which issued a second read per Panel and broke
+ * `spec.md` §6's read shape. The parity spec asserts every Panel read is
+ * dispatched with both options, so the guarantee stays mechanical rather than
+ * relying on a caller to remember it.
  */
-const LOADER_QUERY_OPTIONS = { subscribe: false } as const;
+const LOADER_QUERY_OPTIONS = { forceRefetch: true, subscribe: false } as const;
 
 /**
  * One Panel read, with the **whole** Permission set its figures are drawn from

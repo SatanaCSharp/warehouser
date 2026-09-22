@@ -1,19 +1,17 @@
-import type {
-  DemandPressurePanel,
-  OrderFlowPanel,
-  PurchasingSpreadPanel,
-  ReceiptReliabilityPanel,
-} from '@warehouser/contracts/dashboards';
 import compact from 'lodash/compact';
-import { workspaceDashboardApi } from 'modules/workspace/dashboard/api/workspace-dashboard-api';
 import { DemandPressurePanel as DemandPressurePanelView } from 'modules/workspace/dashboard/components/components/demand-pressure-panel/DemandPressurePanel';
 import { OrderFlowPanel as OrderFlowPanelView } from 'modules/workspace/dashboard/components/components/OrderFlowPanel';
 import { PurchasingSpreadPanel as PurchasingSpreadPanelView } from 'modules/workspace/dashboard/components/components/purchasing-spread-panel/PurchasingSpreadPanel';
 import { ReceiptReliabilityPanel as ReceiptReliabilityPanelView } from 'modules/workspace/dashboard/components/components/receipt-reliability-panel/ReceiptReliabilityPanel';
+import { useDemandPressurePanel } from 'modules/workspace/dashboard/hooks/queries/useDemandPressurePanel';
+import { useOrderFlowPanel } from 'modules/workspace/dashboard/hooks/queries/useOrderFlowPanel';
+import { usePurchasingSpreadPanel } from 'modules/workspace/dashboard/hooks/queries/usePurchasingSpreadPanel';
+import { useReceiptReliabilityPanel } from 'modules/workspace/dashboard/hooks/queries/useReceiptReliabilityPanel';
+import type { WorkspacePanelReading } from 'modules/workspace/dashboard/utils/workspace-panel-reading';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
+import { PanelReadFailure } from 'shared/components/charts/PanelReadFailure';
 import { ShieldXIcon } from 'shared/icons';
-import { useAppSelector } from 'store/hooks';
 
 /**
  * T19 — the Workspace Dashboard's surface: the two-column grid, the fixed
@@ -38,48 +36,6 @@ import { useAppSelector } from 'store/hooks';
  * file wires all four bodies to those components and owns nothing about how
  * any of them is drawn.
  */
-
-// ---------------------------------------------------------------------------
-// Reading what the loader filled
-// ---------------------------------------------------------------------------
-
-type PanelBodies = {
-  demandPressure: DemandPressurePanel | undefined;
-  orderFlow: OrderFlowPanel | undefined;
-  purchasingSpread: PurchasingSpreadPanel | undefined;
-  receiptReliability: ReceiptReliabilityPanel | undefined;
-};
-
-/**
- * The Panel bodies this entry's loader awaited, or `undefined` for a Panel
- * whose read it never issued.
- *
- * Read through each endpoint's own cache selector rather than through a
- * generated query hook, deliberately: a hook mounts a subscriber, and a
- * subscriber on an endpoint that re-reads on every initiation would issue a
- * request at first paint — which `spec.md` §6's read shape puts at zero, and
- * which `frontend-architecture.md` §Page gives the route rather than a
- * component. Each selector yields the cached body itself, so its reference is
- * stable between store updates and an unrelated dispatch re-renders nothing.
- */
-const usePanelBodies = (): PanelBodies => {
-  const { endpoints } = workspaceDashboardApi;
-
-  return {
-    demandPressure: useAppSelector(
-      (state) => endpoints.readDemandPressure.select(undefined)(state).data,
-    ),
-    orderFlow: useAppSelector(
-      (state) => endpoints.readOrderFlow.select(undefined)(state).data,
-    ),
-    purchasingSpread: useAppSelector(
-      (state) => endpoints.readPurchasingSpread.select(undefined)(state).data,
-    ),
-    receiptReliability: useAppSelector(
-      (state) => endpoints.readReceiptReliability.select(undefined)(state).data,
-    ),
-  };
-};
 
 // ---------------------------------------------------------------------------
 // The denial
@@ -126,12 +82,29 @@ type PanelCell = { element: ReactElement; id: string };
  * A cell for a Panel the loader filled, and nothing for one it did not — which
  * is what makes an absence leave no trace in the sequence.
  */
+/**
+ * The cell a Panel occupies, from the Panel's own standing.
+ *
+ * A Panel whose read **failed** renders its own error arm rather than being
+ * absent, because `docs/system/frontend-architecture.md` §Page gives error,
+ * empty and success to the narrowest component that can coordinate them and
+ * says a permitted actor whose read failed "still reaches that component's own
+ * error arm rather than an empty surface". Absence is reserved for a Panel
+ * that was never issued.
+ */
 const cellFor = <TBody,>(
   id: string,
-  body: TBody | undefined,
+  reading: WorkspacePanelReading<TBody>,
   draw: (body: TBody) => ReactElement,
-): PanelCell | null =>
-  body === undefined ? null : { id, element: draw(body) };
+): PanelCell | null => {
+  if (reading.failed) {
+    return { id, element: <PanelReadFailure /> };
+  }
+
+  return reading.body === undefined
+    ? null
+    : { id, element: draw(reading.body) };
+};
 
 /**
  * The cell a Panel occupies. Panels fill the two-column grid row-major in the
@@ -144,28 +117,39 @@ const cellClassName = (index: number, count: number): string | undefined =>
   index === count - 1 && count % 2 === 1 ? 'xl:col-span-2' : undefined;
 
 export const WorkspaceDashboardGrid = (): ReactElement => {
-  const bodies = usePanelBodies();
+  const demandPressure = useDemandPressurePanel();
+  const orderFlow = useOrderFlowPanel();
+  const purchasingSpread = usePurchasingSpreadPanel();
+  const receiptReliability = useReceiptReliabilityPanel();
 
   // One fixed order governs the grid and every reflow: Demand Pressure, Order
   // Flow, Purchasing Spread, Receipt Reliability (`design-handoff.md` § Panel
   // order). `compact` closes the sequence over a Panel the loader never filled
   // rather than leaving a gap where it would have been.
   const cells = compact([
-    cellFor('demandPressure', bodies.demandPressure, (panel) => (
+    cellFor('demandPressure', demandPressure, (panel) => (
       <DemandPressurePanelView panel={panel} />
     )),
-    cellFor('orderFlow', bodies.orderFlow, (panel) => (
+    cellFor('orderFlow', orderFlow, (panel) => (
       <OrderFlowPanelView panel={panel} />
     )),
-    cellFor('purchasingSpread', bodies.purchasingSpread, (panel) => (
+    cellFor('purchasingSpread', purchasingSpread, (panel) => (
       <PurchasingSpreadPanelView panel={panel} />
     )),
-    cellFor('receiptReliability', bodies.receiptReliability, (panel) => (
+    cellFor('receiptReliability', receiptReliability, (panel) => (
       <ReceiptReliabilityPanelView panel={panel} />
     )),
   ]);
 
-  if (cells.length === 0) {
+  // AC-15/AC-22 — the denial answers "does this member's Workspace Role admit
+  // the Dashboard at all", so it is read from that Permission rather than
+  // inferred from the grid being empty. All four Panels share one admitting
+  // Permission, so this is the choice between two whole surfaces that
+  // `docs/system/adr/19-08-2026-declarative-permission-gates.md` §Decision 3
+  // keeps as an early return. Inferred from the cache it also answered "every
+  // read failed" and "the entries were collected", and said the member's Role
+  // does not admit them — which in those two cases was untrue.
+  if (!demandPressure.permitted) {
     return <WorkspaceDashboardDenial />;
   }
 

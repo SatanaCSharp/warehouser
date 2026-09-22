@@ -219,6 +219,12 @@ type DashboardServerOptions = {
   /** What `coverage-gap` answers with, so a spec can change it between entries. */
   coverageGap?: CoverageGapPanel;
   permissionIds?: readonly PermissionId[];
+  /**
+   * Panel URLs the stub answers with a 500 instead of a body, so a spec can
+   * exercise the arm a Panel renders when the member is admitted to it and its
+   * own read failed.
+   */
+  failing?: readonly string[];
 };
 
 /**
@@ -233,6 +239,7 @@ type DashboardServerOptions = {
 export const stubDashboardServer = ({
   archivedAt = null,
   coverageGap = coverageGapPanel,
+  failing = [],
   permissionIds = allWatchPermissions,
 }: DashboardServerOptions = {}): string[] => {
   const requestedUrls: string[] = [];
@@ -258,6 +265,10 @@ export const stubDashboardServer = ({
     vi.fn((input: Request | string | URL) => {
       const url = String(input instanceof Request ? input.url : input);
       requestedUrls.push(url);
+      if (failing.includes(url)) {
+        return Promise.resolve(Response.json({}, { status: 500 }));
+      }
+
       const route = routes.find(([path]) => url === path);
       return Promise.resolve(
         route ? Response.json(route[1]) : Response.json({}, { status: 404 }),

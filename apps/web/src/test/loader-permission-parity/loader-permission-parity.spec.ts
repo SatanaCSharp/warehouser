@@ -346,12 +346,54 @@ const GATE_ARGUMENT_INDEX: Record<string, number> = {
 const PERMISSION_READ =
   /\b(?<callee>useHasPermission|useHasWorkspacePermission|hasPermission|hasWorkspacePermission)\(\s*(?<args>[^)]*)\)/gu;
 
+/**
+ * Splits a call's arguments on its **top-level** commas only, so an inline
+ * Permission array stays one argument.
+ *
+ * A plain `split(',')` cut `[PermissionId.A, PermissionId.B]` into two
+ * arguments and handed the first of them, `[PermissionId.A`, to the resolver —
+ * which reported it unresolved. That made an inline array unusable as a gate
+ * and pushed every conjunction into a named, exported constant. The gates that
+ * need one are conjunctions
+ * (`docs/features/dashboards/adr/0001-conjunction-gated-panel-reads.md`), and
+ * `docs/system/adr/19-08-2026-declarative-permission-gates.md` §Decision 5
+ * wants such a list named in the surface's own file and "exported to nobody",
+ * so the extractor is what had to give.
+ */
+const topLevelArguments = (args: string): string[] => {
+  const parts: string[] = [];
+  let depth = 0;
+  let current = '';
+
+  for (const character of args) {
+    if (character === '[' || character === '{' || character === '(') {
+      depth += 1;
+    }
+
+    if (character === ']' || character === '}' || character === ')') {
+      depth -= 1;
+    }
+
+    if (character === ',' && depth === 0) {
+      parts.push(current);
+      current = '';
+      continue;
+    }
+
+    current += character;
+  }
+
+  parts.push(current);
+
+  return parts;
+};
+
 /** Every gate expression a file reads to decide a `skip`, in source order. */
 const gateExpressionsIn = (file: string): string[] =>
   Array.from(sourceOf(file).matchAll(PERMISSION_READ), ({ groups }) => {
     const index = GATE_ARGUMENT_INDEX[groups?.callee ?? ''] ?? 0;
 
-    return (groups?.args ?? '').split(',')[index]?.trim() ?? '';
+    return topLevelArguments(groups?.args ?? '')[index]?.trim() ?? '';
   }).filter((expression) => expression.length > 0);
 
 const DESCRIPTOR = /\{\s*id:\s*'(?<id>[^']+)',(?<body>[^{}]*)\}/gu;
@@ -527,67 +569,121 @@ const PARITY_ROWS: readonly ParityRow[] = [
     ],
     loader: 'accessRoute',
   },
-  // dashboards T22 — the eight Panel reads of the two loader-only rows below.
-  // Neither grid reads a Permission of its own (ADR
-  // 19-08-2026-declarative-permission-gates.md §Decision 3, "the loader
-  // decides which reads are issued at all"), so `consumers` is `[]` for every
-  // one of them: nothing calls the generated query hook, and the render file
-  // reads the loader-filled cache entry through the endpoint's own selector
-  // instead ("the loader-only Panel reads" below proves that directly).
+  // dashboards remediation — the eight Panel reads.
+  //
+  // These were `loader-only` with no consumers: the grids read the
+  // loader-filled cache entry through the endpoint's own selector and never
+  // mounted the generated hook, so nothing subscribed and RTK Query collected
+  // every entry 60 s after it settled. The destinations now mount the hooks,
+  // which means each read has a **second** Permission declaration — the
+  // `skip` in the module's own `hooks/queries/` file — and that is exactly what
+  // this gate exists to reconcile against the loader's.
   {
-    consumers: [],
+    consumers: ['modules/warehouse/hooks/queries/useCoverageGapPanel.ts'],
     dataset: 'readCoverageGap',
-    gateKind: 'loader-only',
-    gateSources: [],
+    gateKind: 'hook skip',
+    gateSources: [
+      {
+        file: 'modules/warehouse/hooks/queries/useCoverageGapPanel.ts',
+        kind: 'hook',
+      },
+    ],
     loader: 'warehouseDashboardRoute',
   },
   {
-    consumers: [],
+    consumers: [
+      'modules/warehouse/hooks/queries/useReasonConcentrationPanel.ts',
+    ],
     dataset: 'readReasonConcentration',
-    gateKind: 'loader-only',
-    gateSources: [],
+    gateKind: 'hook skip',
+    gateSources: [
+      {
+        file: 'modules/warehouse/hooks/queries/useReasonConcentrationPanel.ts',
+        kind: 'hook',
+      },
+    ],
     loader: 'warehouseDashboardRoute',
   },
   {
-    consumers: [],
+    consumers: ['modules/warehouse/hooks/queries/useArrivalTimingPanel.ts'],
     dataset: 'readArrivalTiming',
-    gateKind: 'loader-only',
-    gateSources: [],
+    gateKind: 'hook skip',
+    gateSources: [
+      {
+        file: 'modules/warehouse/hooks/queries/useArrivalTimingPanel.ts',
+        kind: 'hook',
+      },
+    ],
     loader: 'warehouseDashboardRoute',
   },
   {
-    consumers: [],
+    consumers: [
+      'modules/warehouse/hooks/queries/usePurchasingPipelinePanel.ts',
+    ],
     dataset: 'readPurchasingPipeline',
-    gateKind: 'loader-only',
-    gateSources: [],
+    gateKind: 'hook skip',
+    gateSources: [
+      {
+        file: 'modules/warehouse/hooks/queries/usePurchasingPipelinePanel.ts',
+        kind: 'hook',
+      },
+    ],
     loader: 'warehouseDashboardRoute',
   },
   {
-    consumers: [],
+    consumers: [
+      'modules/workspace/dashboard/hooks/queries/useDemandPressurePanel.ts',
+    ],
     dataset: 'readDemandPressure',
-    gateKind: 'loader-only',
-    gateSources: [],
+    gateKind: 'hook skip',
+    gateSources: [
+      {
+        file: 'modules/workspace/dashboard/hooks/queries/useDemandPressurePanel.ts',
+        kind: 'hook',
+      },
+    ],
     loader: 'workspaceDashboardRoute',
   },
   {
-    consumers: [],
+    consumers: [
+      'modules/workspace/dashboard/hooks/queries/useOrderFlowPanel.ts',
+    ],
     dataset: 'readOrderFlow',
-    gateKind: 'loader-only',
-    gateSources: [],
+    gateKind: 'hook skip',
+    gateSources: [
+      {
+        file: 'modules/workspace/dashboard/hooks/queries/useOrderFlowPanel.ts',
+        kind: 'hook',
+      },
+    ],
     loader: 'workspaceDashboardRoute',
   },
   {
-    consumers: [],
+    consumers: [
+      'modules/workspace/dashboard/hooks/queries/usePurchasingSpreadPanel.ts',
+    ],
     dataset: 'readPurchasingSpread',
-    gateKind: 'loader-only',
-    gateSources: [],
+    gateKind: 'hook skip',
+    gateSources: [
+      {
+        file: 'modules/workspace/dashboard/hooks/queries/usePurchasingSpreadPanel.ts',
+        kind: 'hook',
+      },
+    ],
     loader: 'workspaceDashboardRoute',
   },
   {
-    consumers: [],
+    consumers: [
+      'modules/workspace/dashboard/hooks/queries/useReceiptReliabilityPanel.ts',
+    ],
     dataset: 'readReceiptReliability',
-    gateKind: 'loader-only',
-    gateSources: [],
+    gateKind: 'hook skip',
+    gateSources: [
+      {
+        file: 'modules/workspace/dashboard/hooks/queries/useReceiptReliabilityPanel.ts',
+        kind: 'hook',
+      },
+    ],
     loader: 'workspaceDashboardRoute',
   },
 ];
@@ -703,6 +799,18 @@ it('resolves a gate expression to one level, because no member name is shared (C
   expect(resolveGate('somethingElse').level).toBe('unresolved(somethingElse)');
 });
 
+// The control on `topLevelArguments`. Without it an inline array was cut at its
+// first comma and resolved as unresolved, which is indistinguishable from a
+// genuinely unreadable gate — so a conjunction written inline would have been
+// reported as broken rather than compared.
+it('keeps an inline Permission array as one argument', () => {
+  expect(topLevelArguments("[PermissionId.A, PermissionId.B], 'all'")).toEqual([
+    '[PermissionId.A, PermissionId.B]',
+    " 'all'",
+  ]);
+  expect(topLevelArguments('single')).toEqual(['single']);
+});
+
 it('carries CR-RG-02 whole plus dashboards T22: eighteen rows, four gate kinds, four loaders', () => {
   expect(PARITY_ROWS.map(({ dataset }) => dataset)).toStrictEqual([
     'getWorkspaceContext',
@@ -715,7 +823,9 @@ it('carries CR-RG-02 whole plus dashboards T22: eighteen rows, four gate kinds, 
     'listAccessRoles',
     'listAccessMembers',
     'listAccessPermissions',
-    // dashboards T22 — the loader-only rows added below.
+    // dashboards — the eight Panel reads. `loader-only` until the conformance
+    // remediation gave each destination its own subscribing hook; each now
+    // states a `skip` this gate reconciles against its loader.
     'readCoverageGap',
     'readReasonConcentration',
     'readArrivalTiming',
@@ -727,7 +837,7 @@ it('carries CR-RG-02 whole plus dashboards T22: eighteen rows, four gate kinds, 
   ]);
   expect(
     PARITY_ROWS.filter(({ gateKind }) => gateKind === 'hook skip'),
-  ).toHaveLength(7);
+  ).toHaveLength(15);
   expect(
     PARITY_ROWS.filter(({ gateKind }) => gateKind === 'tab descriptor'),
   ).toHaveLength(1);
@@ -737,9 +847,13 @@ it('carries CR-RG-02 whole plus dashboards T22: eighteen rows, four gate kinds, 
   expect(
     PARITY_ROWS.filter(({ gateKind }) => gateKind === 'verdict'),
   ).toHaveLength(1);
+  // No row is loader-only any more: every dataset this gate lists has a second
+  // declaration for it to reconcile. The kind is kept in the union so a future
+  // loader-fed read that genuinely has no surface gate can still be declared
+  // as one rather than silently counted among the reconciled.
   expect(
     PARITY_ROWS.filter(({ gateKind }) => gateKind === 'loader-only'),
-  ).toHaveLength(8);
+  ).toHaveLength(0);
 });
 
 describe('the loader fetches nothing an admitted surface would not (CR-RG-02)', () => {

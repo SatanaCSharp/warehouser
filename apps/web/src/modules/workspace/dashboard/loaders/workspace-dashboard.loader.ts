@@ -13,7 +13,16 @@ export type WorkspaceDashboardLoaderInput = { context: RouterContext };
  * that keeps a figure current is declared on the endpoint, not here, so this
  * option object stays the dispatch's only one (AC-26).
  */
-const LOADER_QUERY_OPTIONS = { subscribe: false } as const;
+/**
+ * `forceRefetch` is AC-26 — freshness is refetch on entering, and nothing
+ * else — declared on the one dispatch that means "the member is entering"
+ * rather than on the endpoint. An endpoint-level `forceRefetch` fires on every
+ * initiation, including the destination's own subscription a moment later,
+ * which issued a second read per Panel against `spec.md` §6's read shape. The
+ * destination must subscribe, or RTK Query collects the loader-filled entry
+ * 60 s after it settles (`hooks/queries/useWorkspacePanelBodies.ts`).
+ */
+const LOADER_QUERY_OPTIONS = { forceRefetch: true, subscribe: false } as const;
 
 /**
  * The four Panels in the fixed order one rule governs — Demand Pressure, Order

@@ -1,17 +1,8 @@
 {
-  "warehouse": {
-    "heading": "Warehouse dashboard",
-    "denial": {
-      "heading": "You cannot read this warehouse’s figures",
-      "description": "Your role in this warehouse does not admit them. Ask a warehouse administrator if you need them."
-    }
-  },
-  "workspace": {
-    "heading": "Workspace dashboard",
-    "denial": {
-      "heading": "You cannot read this workspace’s figures",
-      "description": "Your role in this workspace does not admit them. Ask a workspace administrator if you need them."
-    }
+  "panelError": {
+    "title": "Figures unavailable",
+    "meta": "This panel could not be read",
+    "body": "Something went wrong reading this panel. Reloading the page usually resolves it."
   },
   "panels": {
     "coverageGap": {
@@ -120,6 +111,20 @@
         "archivedExcluded": "{{count}} archived Warehouses excluded.",
         "noRateWarehouse": "{{name}} has no rate to report ({{undated}} undated · {{noEnding}} no ending recorded · {{nothingReceived}} nothing received · {{directToCustomer}} sent direct to customer · {{unrecordedConformance}} conformance not recorded · {{notApplicable}} not applicable)."
       }
+    }
+  },
+  "warehouse": {
+    "heading": "Warehouse dashboard",
+    "denial": {
+      "heading": "You cannot read this warehouse’s figures",
+      "description": "Your role in this warehouse does not admit them. Ask a warehouse administrator if you need them."
+    }
+  },
+  "workspace": {
+    "heading": "Workspace dashboard",
+    "denial": {
+      "heading": "You cannot read this workspace’s figures",
+      "description": "Your role in this workspace does not admit them. Ask a workspace administrator if you need them."
     }
   }
 }

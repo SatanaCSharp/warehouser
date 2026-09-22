@@ -169,7 +169,11 @@ describe('loadWorkspaceDashboard', () => {
     await entering;
   });
 
-  it('dispatches every read with subscribe: false (sad.md §4.4)', async () => {
+  // Both options: `forceRefetch` moved here from the endpoint during the
+  // `dashboards` conformance remediation, because an endpoint-level one also
+  // fired on the destination's own subscription and issued a second read per
+  // Panel (`spec.md` §6). Asserting it at the dispatch keeps AC-26 mechanical.
+  it('dispatches every read with forceRefetch and subscribe: false (sad.md §4.4, AC-26)', async () => {
     stubWorkspaceDashboardServer();
     const store = authenticatedStore();
     const initiate = vi.spyOn(
@@ -180,7 +184,10 @@ describe('loadWorkspaceDashboard', () => {
     await enter(store);
 
     expect(initiate).toHaveBeenCalledTimes(1);
-    expect(initiate).toHaveBeenCalledWith(undefined, { subscribe: false });
+    expect(initiate).toHaveBeenCalledWith(undefined, {
+      forceRefetch: true,
+      subscribe: false,
+    });
   });
 
   // AC-26 — freshness is refetch-on-entry. Nothing anywhere invalidates these

@@ -342,6 +342,58 @@ describe('localization resources', () => {
   });
 });
 
+// The copy the `dashboards` conformance remediation added: the arm a Panel
+// renders when the member is admitted to it and its own read failed. Resolved
+// through the real resource assembly in **both** languages, because a key
+// present in only one of them is the commonest localization failure this
+// repository has (`adding-and-maintaining-web-localization.md`
+// §"Common failures").
+describe('dashboards panel read-failure copy', () => {
+  const ADDED_KEYS = ['panelError.title', 'panelError.meta', 'panelError.body'];
+
+  it.each(supportedLanguages)(
+    'resolves every added key in %s',
+    async (language) => {
+      const instance = createInstance();
+      await instance.init({
+        fallbackLng: 'en',
+        lng: language,
+        ns: namespaces,
+        resources,
+      });
+
+      for (const key of ADDED_KEYS) {
+        const value = instance.t(key, { ns: 'dashboard' });
+        expect(value, `${language}:dashboard:${key}`).not.toBe(key);
+        expect(value.length, `${language}:dashboard:${key}`).toBeGreaterThan(0);
+      }
+    },
+  );
+
+  // It names no Panel and no Permission: the arm must not disclose which read
+  // failed, for the same reason the whole-surface denial names nothing (AC-02).
+  it('names no Panel and no Permission in either language', async () => {
+    for (const language of supportedLanguages) {
+      const instance = createInstance();
+      await instance.init({
+        fallbackLng: 'en',
+        lng: language,
+        ns: namespaces,
+        resources,
+      });
+
+      const body = [
+        instance.t('panelError.title', { ns: 'dashboard' }),
+        instance.t('panelError.meta', { ns: 'dashboard' }),
+        instance.t('panelError.body', { ns: 'dashboard' }),
+      ].join(' ');
+
+      expect(body).not.toMatch(/coverage|rejection|arrival|purchasing/iu);
+      expect(body).not.toMatch(/permission|роль|дозвіл/iu);
+    }
+  });
+});
+
 describe('locale identity baseline (modules-level-refactor CR-RG-04)', () => {
   it('keeps every key and value identical to the baseline capture', () => {
     expect(inBaselineCoordinates(currentSnapshot())).toEqual(localeBaseline);

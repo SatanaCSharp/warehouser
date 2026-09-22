@@ -201,6 +201,12 @@ export const WORKSPACE_MODULE_MANIFEST = [
   'dashboard/components/components/receipt-reliability-panel/ReceiptReliabilityPanel.tsx',
   'dashboard/components/components/receipt-reliability-panel/components/BubblePlot.spec.tsx',
   'dashboard/components/components/receipt-reliability-panel/components/BubblePlot.tsx',
+  // dashboards remediation — as above, for the Workspace surface's four reads
+  // and the single Permission that admits all of them.
+  'dashboard/hooks/queries/useDemandPressurePanel.ts',
+  'dashboard/hooks/queries/useOrderFlowPanel.ts',
+  'dashboard/hooks/queries/usePurchasingSpreadPanel.ts',
+  'dashboard/hooks/queries/useReceiptReliabilityPanel.ts',
   'dashboard/loaders/workspace-dashboard.loader.spec.ts',
   'dashboard/loaders/workspace-dashboard.loader.ts',
   'dashboard/page.spec.tsx',
@@ -212,6 +218,7 @@ export const WORKSPACE_MODULE_MANIFEST = [
   // no hook belongs in `utils/`
   // (`docs/system/guides/placing-web-hooks.md` §3).
   'dashboard/utils/demand-pressure-series.ts',
+  'dashboard/utils/workspace-panel-reading.ts',
   // T12 / global-loader CH-05, CH-13 — the route-scoped projection that turns
   // the Workspace context guaranteed by `workspaceRoute.beforeLoad` into a
   // non-optional value, and its colocated spec. It derives from state already
@@ -299,6 +306,14 @@ export const WAREHOUSE_MODULE_MANIFEST = [
   'components/dashboard/components/reason-concentration-panel/components/ReasonConcentrationRefused.tsx',
   'hooks/effects/useRecordWarehouseEntry.spec.tsx',
   'hooks/effects/useRecordWarehouseEntry.ts',
+  // dashboards remediation — the four Panel reads and the Permission sets that
+  // admit them. A server-state read is filed in `hooks/queries/`, and the gate
+  // belongs to the read it gates
+  // (`docs/system/guides/placing-web-hooks.md` §1–§2).
+  'hooks/queries/useArrivalTimingPanel.ts',
+  'hooks/queries/useCoverageGapPanel.ts',
+  'hooks/queries/usePurchasingPipelinePanel.ts',
+  'hooks/queries/useReasonConcentrationPanel.ts',
   'loaders/warehouse-dashboard.loader.spec.ts',
   'loaders/warehouse-dashboard.loader.ts',
   'page.spec.tsx',
@@ -309,6 +324,10 @@ export const WAREHOUSE_MODULE_MANIFEST = [
   // (`react/only-export-components`), and a file that declares no hook
   // belongs in `utils/` (`docs/system/guides/placing-web-hooks.md` §3).
   'utils/coverage-gap-series.ts',
+  // dashboards remediation — the Panel-standing type four query hooks return.
+  // A type and no hook, so `utils/` rather than `hooks/`
+  // (`docs/system/guides/placing-web-hooks.md` §3).
+  'utils/panel-reading.ts',
 ] as const;
 
 /**

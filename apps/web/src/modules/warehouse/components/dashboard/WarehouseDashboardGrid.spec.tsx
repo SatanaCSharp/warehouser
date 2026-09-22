@@ -7,6 +7,7 @@ import type { AppStore } from 'store';
 import { accessIds, authenticatedStore } from 'test/access-fixtures';
 import {
   allWatchPermissions,
+  COVERAGE_GAP_URL,
   panelMarkers,
   panelPermissions,
   stubDashboardServer,
@@ -57,10 +58,11 @@ const painted = async (container: HTMLElement): Promise<HTMLElement> => {
 const enterDashboard = async (
   permissionIds: readonly PermissionId[],
   verdict: Verdict = ENTERED,
+  failing: readonly string[] = [],
 ): Promise<HTMLElement> => {
   const archivedAt =
     verdict.status === 'entered-read-only' ? '2026-09-01T00:00:00.000Z' : null;
-  stubDashboardServer({ archivedAt, permissionIds });
+  stubDashboardServer({ archivedAt, failing, permissionIds });
 
   const store: AppStore = authenticatedStore();
   await loadWarehouseDashboard({
@@ -104,6 +106,9 @@ const markerPositions = (
  */
 const spanningCell = (heading: HTMLElement): Element | null =>
   heading.closest('[class*="col-span-2"], [class*="col-span-full"]');
+
+/** RTK Query's default `keepUnusedDataFor`, in milliseconds. */
+const KEEP_UNUSED_DATA_FOR_MS = 60_000;
 
 describe('WarehouseDashboardGrid', () => {
   afterEach(() => {
@@ -240,5 +245,64 @@ describe('WarehouseDashboardGrid', () => {
 
     expect(within(container).queryAllByRole('button')).toStrictEqual([]);
     expect(within(container).queryAllByRole('menuitem')).toStrictEqual([]);
+  });
+
+  // The defect the `dashboards` conformance review found, asserted directly.
+  //
+  // The loaders dispatch with `subscribe: false`, so a loader-filled entry
+  // holds no subscriber of its own and RTK Query starts its 60-second
+  // `keepUnusedDataFor` timer the moment the read settles. While the grid read
+  // the cache through `endpoints.X.select()` it never added one, so a member
+  // who simply looked at the Dashboard for a minute watched every Panel vanish
+  // and be replaced by the authorization denial. Mounting the generated query
+  // hooks is what subscribes; this is the case that proves it.
+  //
+  // The clock is faked before the loader runs, because the removal timeout is
+  // scheduled the moment a subscriber-less read settles — a clock installed
+  // afterwards would never see it.
+  it('keeps every Panel past keepUnusedDataFor, so dwelling does not turn into a denial', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+
+    try {
+      const container = await enterDashboard(allWatchPermissions);
+      expect(panelHeadings(container)).toHaveLength(4);
+
+      await vi.advanceTimersByTimeAsync(KEEP_UNUSED_DATA_FOR_MS + 5_000);
+
+      expect(panelHeadings(container)).toHaveLength(4);
+      expect(container.textContent).toContain(panelMarkers.coverageGap);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // `docs/system/frontend-architecture.md` §Page — "a permitted actor whose
+  // read failed still reaches that component's own error arm rather than an
+  // empty surface". Before this, `cellFor` treated a missing body as "not
+  // permitted", so a member holding every Permission whose Coverage Gap read
+  // 500'd saw no trace of that Panel at all, and a member every one of whose
+  // reads failed was told their role does not admit them — a false statement
+  // about their authority.
+  it('gives a permitted Panel whose read failed its own arm, not an absence', async () => {
+    const container = await enterDashboard(allWatchPermissions, ENTERED, [
+      COVERAGE_GAP_URL,
+    ]);
+
+    // The refusal resolves a beat after the loader settles, so the arm is
+    // awaited rather than asserted synchronously — `painted` only waits for
+    // the grid's first paint, which happens before the failed read reports.
+    await waitFor(() => {
+      expect(within(container).getByRole('status')).toBeInTheDocument();
+    });
+
+    // The failed Panel still occupies its cell, so the grid's reflow is
+    // unchanged and the absence still means "not permitted" and nothing else.
+    expect(panelHeadings(container)).toHaveLength(4);
+    expect(container.textContent).not.toContain(panelMarkers.coverageGap);
+
+    // The three that succeeded are untouched, and no denial is presented.
+    expect(container.textContent).toContain(panelMarkers.arrivalTiming);
+    expect(container.textContent).toContain(panelMarkers.reasonConcentration);
+    expect(container.textContent).toContain(panelMarkers.purchasingPipeline);
   });
 });

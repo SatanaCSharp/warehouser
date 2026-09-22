@@ -1,21 +1,19 @@
-import type {
-  ArrivalTimingPanel as ArrivalTimingPanelBody,
-  CoverageGapPanel as CoverageGapPanelBody,
-  PurchasingPipelinePanel as PurchasingPipelinePanelBody,
-  ReasonConcentrationPanel as ReasonConcentrationPanelBody,
-} from '@warehouser/contracts/dashboards';
 import compact from 'lodash/compact';
-import { warehouseDashboardApi } from 'modules/warehouse/api/warehouse-dashboard-api';
 import { ArrivalTimingPanel } from 'modules/warehouse/components/dashboard/components/arrival-timing-panel/ArrivalTimingPanel';
 import { CoverageGapPanel } from 'modules/warehouse/components/dashboard/components/coverage-gap-panel/CoverageGapPanel';
 import { PurchasingPipelinePanel } from 'modules/warehouse/components/dashboard/components/PurchasingPipelinePanel';
 import { ReasonConcentrationPanel } from 'modules/warehouse/components/dashboard/components/reason-concentration-panel/ReasonConcentrationPanel';
+import { useArrivalTimingPanel } from 'modules/warehouse/hooks/queries/useArrivalTimingPanel';
+import { useCoverageGapPanel } from 'modules/warehouse/hooks/queries/useCoverageGapPanel';
+import { usePurchasingPipelinePanel } from 'modules/warehouse/hooks/queries/usePurchasingPipelinePanel';
+import { useReasonConcentrationPanel } from 'modules/warehouse/hooks/queries/useReasonConcentrationPanel';
+import type { PanelReading } from 'modules/warehouse/utils/panel-reading';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArchivedWarehouseChip } from 'shared/components/ArchivedWarehouseChip';
+import { PanelReadFailure } from 'shared/components/charts/PanelReadFailure';
 import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
 import { ShieldXIcon } from 'shared/icons';
-import { useAppSelector } from 'store/hooks';
 
 /**
  * T16 — the Warehouse Dashboard's surface: the two-column grid, the fixed
@@ -42,50 +40,6 @@ import { useAppSelector } from 'store/hooks';
  * (`ArrivalTimingPanel.tsx`, `PurchasingPipelinePanel.tsx`). This file wires
  * all four into the grid and owns nothing about how any one of them draws.
  */
-
-// ---------------------------------------------------------------------------
-// Reading what the loader filled
-// ---------------------------------------------------------------------------
-
-type PanelBodies = {
-  arrivalTiming: ArrivalTimingPanelBody | undefined;
-  coverageGap: CoverageGapPanelBody | undefined;
-  purchasingPipeline: PurchasingPipelinePanelBody | undefined;
-  reasonConcentration: ReasonConcentrationPanelBody | undefined;
-};
-
-/**
- * The Panel bodies this entry's loader awaited, or `undefined` for a Panel
- * whose read it never issued.
- *
- * Read through each endpoint's own cache selector rather than through a
- * generated query hook, deliberately: a hook mounts a subscriber, and a
- * subscriber on an endpoint that re-reads on every initiation would issue a
- * request at first paint — which `spec.md` §6's read shape puts at zero, and
- * which `frontend-architecture.md` §Page gives the route rather than a
- * component. Each selector yields the cached body itself, so its reference is
- * stable between store updates and an unrelated dispatch re-renders nothing.
- */
-const usePanelBodies = (warehouseId: string): PanelBodies => {
-  const { endpoints } = warehouseDashboardApi;
-
-  return {
-    coverageGap: useAppSelector(
-      (state) => endpoints.readCoverageGap.select(warehouseId)(state).data,
-    ),
-    reasonConcentration: useAppSelector(
-      (state) =>
-        endpoints.readReasonConcentration.select(warehouseId)(state).data,
-    ),
-    arrivalTiming: useAppSelector(
-      (state) => endpoints.readArrivalTiming.select(warehouseId)(state).data,
-    ),
-    purchasingPipeline: useAppSelector(
-      (state) =>
-        endpoints.readPurchasingPipeline.select(warehouseId)(state).data,
-    ),
-  };
-};
 
 // ---------------------------------------------------------------------------
 // The denial
@@ -126,15 +80,38 @@ const WarehouseDashboardDenial = (): ReactElement => {
 type PanelCell = { element: ReactElement; id: string };
 
 /**
- * A cell for a Panel the loader filled, and nothing for one it did not — which
- * is what makes an absence leave no trace in the sequence.
+ * The cell a Panel occupies, from the Panel's own standing.
+ *
+ * Three states, kept apart deliberately. A Panel the actor is **not admitted
+ * to** is absent, and its absence leaves no trace in the sequence (AC-02). A
+ * Panel they *are* admitted to whose read **failed** renders its own error
+ * arm, because `docs/system/frontend-architecture.md` §Page gives error, empty
+ * and success to the narrowest component that can coordinate them and says a
+ * permitted actor whose read failed "still reaches that component's own error
+ * arm rather than an empty surface". A Panel still in flight renders nothing
+ * yet — the route awaited it, so that window is the route's
+ * `pendingComponent`, not a branch here.
+ *
+ * Before this, all three collapsed into "the body is `undefined`", so a failed
+ * read was presented as an authorization refusal.
  */
 const cellFor = <TBody,>(
   id: string,
-  body: TBody | undefined,
+  reading: PanelReading<TBody>,
   draw: (body: TBody) => ReactElement,
-): PanelCell | null =>
-  body === undefined ? null : { id, element: draw(body) };
+): PanelCell | null => {
+  if (!reading.permitted) {
+    return null;
+  }
+
+  if (reading.failed) {
+    return { id, element: <PanelReadFailure /> };
+  }
+
+  return reading.body === undefined
+    ? null
+    : { id, element: draw(reading.body) };
+};
 
 /**
  * The cell a Panel occupies. Panels fill the two-column grid row-major in the
@@ -149,28 +126,47 @@ const cellClassName = (index: number, count: number): string | undefined =>
 
 export const WarehouseDashboardGrid = (): ReactElement => {
   const warehouseId = useEnteredWarehouse() ?? '';
-  const bodies = usePanelBodies(warehouseId);
+  const coverageGap = useCoverageGapPanel(warehouseId);
+  const reasonConcentration = useReasonConcentrationPanel(warehouseId);
+  const arrivalTiming = useArrivalTimingPanel(warehouseId);
+  const purchasingPipeline = usePurchasingPipelinePanel(warehouseId);
 
   // One fixed order governs the grid and every reflow: Coverage Gap, Reason
   // Concentration, Arrival Timing, Purchasing Pipeline (`design-handoff.md`
   // § Panel order). `compact` closes the sequence over a Panel the loader
   // never filled rather than leaving a gap where it would have been.
   const cells = compact([
-    cellFor('coverageGap', bodies.coverageGap, (panel) => (
+    cellFor('coverageGap', coverageGap, (panel) => (
       <CoverageGapPanel panel={panel} />
     )),
-    cellFor('reasonConcentration', bodies.reasonConcentration, (panel) => (
+    cellFor('reasonConcentration', reasonConcentration, (panel) => (
       <ReasonConcentrationPanel panel={panel} />
     )),
-    cellFor('arrivalTiming', bodies.arrivalTiming, (panel) => (
+    cellFor('arrivalTiming', arrivalTiming, (panel) => (
       <ArrivalTimingPanel panel={panel} />
     )),
-    cellFor('purchasingPipeline', bodies.purchasingPipeline, (panel) => (
+    cellFor('purchasingPipeline', purchasingPipeline, (panel) => (
       <PurchasingPipelinePanel panel={panel} />
     )),
   ]);
 
-  if (cells.length === 0) {
+  // AC-02 — the denial is the answer to "may this member read any of the
+  // Warehouse's figures at all", so it is read from the Permissions
+  // themselves. It used to be inferred from the grid being empty, which made
+  // it the answer to three different questions at once: an unadmitted member,
+  // a member every one of whose reads failed, and a member whose cache
+  // entries had been collected all saw "your role does not admit them" — a
+  // false statement about authority in two of those three cases
+  // (`docs/system/adr/19-08-2026-declarative-permission-gates.md` §Decision 3
+  // admits the boolean for exactly this choice between two whole surfaces).
+  const admittedToNothing = !(
+    coverageGap.permitted ||
+    reasonConcentration.permitted ||
+    arrivalTiming.permitted ||
+    purchasingPipeline.permitted
+  );
+
+  if (admittedToNothing) {
     return <WarehouseDashboardDenial />;
   }
 
