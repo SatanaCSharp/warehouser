@@ -1160,11 +1160,14 @@ const registerBeyondHorizonExclusionTest = (): void => {
 const registerTimezoneBoundParameterTest = (): void => {
   // data-model.md § "Time, timezone and the week" — `APP_TIMEZONE` reaches this read as a **bound
   // query parameter**, never the connection's implicit `TimeZone` setting. Proven by driving one
-  // repository instance with two zones guaranteed to disagree on "today" by exactly one calendar
-  // day at any real instant the suite runs: `Pacific/Kiritimati` (UTC+14) and `Etc/GMT+12`
-  // (POSIX sign-inverted, UTC-12) are 26 hours apart — wider than the 24-hour span a date boundary
-  // spans — so the two readings can never agree, and the assertion needs no particular moment to
-  // hold.
+  // repository instance with two zones guaranteed to disagree on "today" at any real instant the
+  // suite runs: `Pacific/Kiritimati` (UTC+14) and `Etc/GMT+12` (POSIX sign-inverted, UTC-12) are
+  // 26 hours apart — wider than the 24-hour span a date boundary spans — so the two readings can
+  // never agree. They are not always exactly one calendar day apart, though: between 10:00 and
+  // 12:00 UTC the later zone has already turned over while the earlier one has not yet caught up,
+  // and the gap is two days. The guard below therefore pins the invariant that actually holds at
+  // every instant — the later zone reads strictly ahead — which is what keeps this test from
+  // passing vacuously should the two zones ever read alike.
   it('reads the timezone as a bound parameter: the same needed-by date is not yet Overdue under one zone and already Overdue under another, 26 hours apart', async () => {
     const workspaceId = await seedWorkspace();
     const warehouseId = await seedWarehouse(workspaceId);
@@ -1175,7 +1178,7 @@ const registerTimezoneBoundParameterTest = (): void => {
     const laterTimezone = 'Pacific/Kiritimati';
     const todayInEarlierZone = await fetchTodayDate(earlierTimezone);
     const todayInLaterZone = await fetchTodayDate(laterTimezone);
-    expect(todayInLaterZone).toBe(addDays(todayInEarlierZone, 1));
+    expect(todayInLaterZone > todayInEarlierZone).toBe(true);
 
     // Needed exactly "today" as the earlier zone reads it — not yet Overdue there, but already a
     // day in the past as the later zone reads it.
