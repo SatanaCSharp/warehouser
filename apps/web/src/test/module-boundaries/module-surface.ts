@@ -289,7 +289,6 @@ export const WAREHOUSE_MODULE_MANIFEST = [
   // mobile bare week numbers from; one consumer today, so it stays in this
   // module's own `utils/` rather than `shared/utils/`
   // (`docs/system/guides/placing-web-hooks.md` §3).
-  'utils/iso-week-number.ts',
 ] as const;
 
 /**

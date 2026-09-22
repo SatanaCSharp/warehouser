@@ -7,6 +7,7 @@ import { PanelCard } from 'shared/components/charts/PanelCard';
 import { PanelFootnote } from 'shared/components/charts/PanelFootnote';
 import { Conditional } from 'shared/components/Conditional';
 import { linearScale } from 'shared/utils/chart-scale';
+import { isoWeekNumber } from 'shared/utils/iso-week-number';
 
 /**
  * T21 — the Order Flow Panel (AC-16, AC-17a; `design-handoff.md` § Panel
@@ -45,30 +46,6 @@ const isWeekLabelled = (index: number, variant: OrderFlowVariant): boolean =>
 /** The plot's own fixed height in pixels, the track every week's whole is
  * scaled onto. */
 const WEEK_PLOT_HEIGHT_PX = 96;
-
-const MILLISECONDS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
-
-/**
- * The ISO-8601 week number of a plain `YYYY-MM-DD` date — week 1 is the week
- * holding the year's first Thursday, per the standard — for the `W##` labels
- * `design-handoff.md` § Responsive behavior names.
- */
-const isoWeekNumber = (isoDate: string): number => {
-  const date = new Date(`${isoDate}T00:00:00Z`);
-  const isoDayNumber = (date.getUTCDay() + 6) % 7;
-  date.setUTCDate(date.getUTCDate() - isoDayNumber + 3);
-
-  const firstThursday = new Date(Date.UTC(date.getUTCFullYear(), 0, 4));
-  const firstIsoDayNumber = (firstThursday.getUTCDay() + 6) % 7;
-  firstThursday.setUTCDate(firstThursday.getUTCDate() - firstIsoDayNumber + 3);
-
-  return (
-    1 +
-    Math.round(
-      (date.getTime() - firstThursday.getTime()) / MILLISECONDS_PER_WEEK,
-    )
-  );
-};
 
 type OrderFlowSegment = {
   series: ChartLegendItem;
