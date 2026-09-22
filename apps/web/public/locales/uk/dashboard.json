@@ -77,7 +77,13 @@
         "overdue": "Прострочено",
         "dueSoon": "Скоро термін",
         "later": "Пізніше"
-      }
+      },
+      "columns": {
+        "warehouse": "Склад",
+        "pressure": "Незакрита кількість за терміновістю",
+        "outstanding": "Незакрито"
+      },
+      "footnote": "Виключено {{count}} архівованих складів"
     },
     "orderFlow": {
       "title": "Потік замовлень",
@@ -96,7 +102,15 @@
         "readyForOrdering": "Готово",
         "closed": "Закрито",
         "discarded": "Відкинуто"
-      }
+      },
+      "legend": {
+        "zero": "0",
+        "lowBand": "1–19",
+        "midBand": "20–49",
+        "highBand": "50–99",
+        "topBand": "100+"
+      },
+      "footnote": "Виключено {{count}} архівованих складів"
     },
     "receiptReliability": {
       "title": "Надійність приймання",

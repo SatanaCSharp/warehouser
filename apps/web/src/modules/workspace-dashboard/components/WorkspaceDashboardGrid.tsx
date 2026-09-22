@@ -1,13 +1,14 @@
 import type {
   DemandPressurePanel,
   OrderFlowPanel,
-  PurchasingSpreadCell,
   PurchasingSpreadPanel,
   ReceiptReliabilityPanel,
   ReceiptReliabilityWarehouse,
 } from '@warehouser/contracts/dashboards';
 import compact from 'lodash/compact';
 import { workspaceDashboardApi } from 'modules/workspace-dashboard/api/workspace-dashboard-api';
+import { DemandPressurePanel as DemandPressurePanelView } from 'modules/workspace-dashboard/components/DemandPressurePanel';
+import { PurchasingSpreadPanel as PurchasingSpreadPanelView } from 'modules/workspace-dashboard/components/PurchasingSpreadPanel';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BubblePlot } from 'shared/components/charts/BubblePlot';
@@ -15,14 +16,7 @@ import type { ChartLegendItem } from 'shared/components/charts/ChartLegend';
 import { ChartLegend } from 'shared/components/charts/ChartLegend';
 import type { ColumnPlotBucket } from 'shared/components/charts/ColumnPlot';
 import { ColumnPlot } from 'shared/components/charts/ColumnPlot';
-import type {
-  HeatGridBin,
-  HeatGridRow,
-} from 'shared/components/charts/HeatGrid';
-import { HeatGrid } from 'shared/components/charts/HeatGrid';
 import { PanelCard } from 'shared/components/charts/PanelCard';
-import type { StackedBarSegment } from 'shared/components/charts/StackedBarRow';
-import { StackedBarRow } from 'shared/components/charts/StackedBarRow';
 import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
 import { ShieldXIcon } from 'shared/icons';
 import { useAppSelector } from 'store/hooks';
@@ -43,12 +37,15 @@ import { useAppSelector } from 'store/hooks';
  * count, placeholder or gap (`design-handoff.md` § Implementation
  * constraints).
  *
- * The four Panel cards below are private render helpers of this file
- * (`docs/system/guides/writing-web-components.md` §1) and are deliberately
- * provisional, exactly as `modules/warehouse`'s grid was at T16: T20 and T21
- * draw each Panel in full — Demand Pressure and Purchasing Spread, then Order
- * Flow and Receipt Reliability with their disclosure and exclusion footnotes —
- * in its own file under this directory.
+ * T20 drew Demand Pressure and Purchasing Spread in full, each in its own
+ * file under this directory (`DemandPressurePanel.tsx`,
+ * `PurchasingSpreadPanel.tsx`); this file wires their bodies to those
+ * components. `OrderFlowPanelCard` and `ReceiptReliabilityPanelCard` below are
+ * still private render helpers of this file
+ * (`docs/system/guides/writing-web-components.md` §1) and remain deliberately
+ * provisional, exactly as `modules/warehouse`'s grid was at T16: T21 draws
+ * each of them in full, with their disclosure and exclusion footnotes, in its
+ * own file under this directory.
  */
 
 // ---------------------------------------------------------------------------
@@ -91,75 +88,6 @@ const usePanelBodies = (): PanelBodies => {
       (state) => endpoints.readReceiptReliability.select(undefined)(state).data,
     ),
   };
-};
-
-// ---------------------------------------------------------------------------
-// Demand Pressure
-// ---------------------------------------------------------------------------
-
-/**
- * One horizontal bar per active Warehouse, three ordinal Urgency Band
- * segments, on a scale of quantities so a small Warehouse in trouble is not
- * flattened (AC-14, `design-handoff.md` § Workspace — Demand Pressure).
- */
-const DemandPressurePanelCard = ({
-  panel,
-}: {
-  panel: DemandPressurePanel;
-}): ReactElement => {
-  const { t } = useTranslation('dashboard');
-
-  // Ordinal steps 1-3, dark to light: Overdue, Due soon, Later. Every band is
-  // named in the legend and every figure is printed beside its bar, so
-  // removing colour entirely loses nothing (`design-handoff.md`
-  // § Accessibility, "Never colour alone"). Nothing here judges a Warehouse,
-  // so no status colour is used.
-  const legend: ChartLegendItem[] = [
-    {
-      id: 'overdue',
-      label: t('panels.demandPressure.bands.overdue'),
-      colorVar: '--chart-ramp-3a',
-    },
-    {
-      id: 'dueSoon',
-      label: t('panels.demandPressure.bands.dueSoon'),
-      colorVar: '--chart-ramp-3b',
-    },
-    {
-      id: 'later',
-      label: t('panels.demandPressure.bands.later'),
-      colorVar: '--chart-ramp-3c',
-    },
-  ];
-
-  const segmentsFor = (warehouse: {
-    overdueQuantity: number;
-    dueSoonQuantity: number;
-    laterQuantity: number;
-  }): StackedBarSegment[] => [
-    { ...legend[0], value: warehouse.overdueQuantity },
-    { ...legend[1], value: warehouse.dueSoonQuantity },
-    { ...legend[2], value: warehouse.laterQuantity },
-  ];
-
-  return (
-    <PanelCard
-      title={t('panels.demandPressure.title')}
-      meta={t('panels.demandPressure.meta')}
-    >
-      <ChartLegend items={legend} />
-      <div className="mt-2 flex flex-col gap-0.5">
-        {panel.warehouses.map((warehouse) => (
-          <StackedBarRow
-            key={warehouse.warehouseId}
-            label={warehouse.warehouseName}
-            segments={segmentsFor(warehouse)}
-            total={warehouse.totalOutstandingQuantity}
-          />
-        ))}
-      </div>
-    </PanelCard>
-  );
 };
 
 // ---------------------------------------------------------------------------
@@ -223,71 +151,6 @@ const OrderFlowPanelCard = ({
         gridlineValues={ORDER_FLOW_GRIDLINES}
         maxValue={Math.max(...panel.weeks.map((week) => week.recordedQuantity))}
       />
-    </PanelCard>
-  );
-};
-
-// ---------------------------------------------------------------------------
-// Purchasing Spread
-// ---------------------------------------------------------------------------
-
-type PurchasingSpreadState = PurchasingSpreadCell['state'];
-
-/**
- * The sequential one-hue bins `1-19 / 20-49 / 50-99 / 100 +` over a
- * `$chart/track` zero cell (AC-18, `design-handoff.md` § Workspace —
- * Purchasing Spread). An ordered table rather than a chain of comparisons:
- * the precedence is a value that can be read, reordered deliberately and
- * asserted (`docs/system/guides/writing-web-components.md` §6).
- */
-const SPREAD_BINS: readonly {
-  bin: HeatGridBin;
-  holds: (n: number) => boolean;
-}[] = [
-  { bin: 'zero', holds: (count) => count === 0 },
-  { bin: 'ramp-4a', holds: (count) => count < 20 },
-  { bin: 'ramp-4b', holds: (count) => count < 50 },
-  { bin: 'ramp-4c', holds: (count) => count < 100 },
-];
-
-const binFor = (count: number): HeatGridBin =>
-  SPREAD_BINS.find(({ holds }) => holds(count))?.bin ?? 'ramp-4d';
-
-const PurchasingSpreadPanelCard = ({
-  panel,
-}: {
-  panel: PurchasingSpreadPanel;
-}): ReactElement => {
-  const { t } = useTranslation('dashboard');
-
-  /**
-   * A total lookup over the four states the Panel counts, so a state added to
-   * the contract fails to compile until it is given a name here rather than
-   * rendering a raw key (`docs/system/guides/writing-web-components.md` §6).
-   */
-  const columnLabels: Record<PurchasingSpreadState, string> = {
-    draft: t('panels.purchasingSpread.states.draft'),
-    ready_for_ordering: t('panels.purchasingSpread.states.readyForOrdering'),
-    closed: t('panels.purchasingSpread.states.closed'),
-    discarded: t('panels.purchasingSpread.states.discarded'),
-  };
-
-  const rows: HeatGridRow[] = panel.warehouses.map((warehouse) => ({
-    label: warehouse.warehouseName,
-    cells: warehouse.counts.map((cell) => ({
-      id: `${warehouse.warehouseId}-${cell.state}`,
-      columnLabel: columnLabels[cell.state],
-      count: cell.draftCount,
-      bin: binFor(cell.draftCount),
-    })),
-  }));
-
-  return (
-    <PanelCard
-      title={t('panels.purchasingSpread.title')}
-      meta={t('panels.purchasingSpread.meta')}
-    >
-      <HeatGrid columns={Object.values(columnLabels)} rows={rows} />
     </PanelCard>
   );
 };
@@ -424,13 +287,13 @@ export const WorkspaceDashboardGrid = (): ReactElement => {
   // rather than leaving a gap where it would have been.
   const cells = compact([
     cellFor('demandPressure', bodies.demandPressure, (panel) => (
-      <DemandPressurePanelCard panel={panel} />
+      <DemandPressurePanelView panel={panel} />
     )),
     cellFor('orderFlow', bodies.orderFlow, (panel) => (
       <OrderFlowPanelCard panel={panel} />
     )),
     cellFor('purchasingSpread', bodies.purchasingSpread, (panel) => (
-      <PurchasingSpreadPanelCard panel={panel} />
+      <PurchasingSpreadPanelView panel={panel} />
     )),
     cellFor('receiptReliability', bodies.receiptReliability, (panel) => (
       <ReceiptReliabilityPanelCard panel={panel} />
