@@ -3,17 +3,16 @@ import { ArrivalTimingPanel } from 'modules/warehouse/components/dashboard/compo
 import { CoverageGapPanel } from 'modules/warehouse/components/dashboard/components/coverage-gap-panel/CoverageGapPanel';
 import { PurchasingPipelinePanel } from 'modules/warehouse/components/dashboard/components/PurchasingPipelinePanel';
 import { ReasonConcentrationPanel } from 'modules/warehouse/components/dashboard/components/reason-concentration-panel/ReasonConcentrationPanel';
+import { WarehouseDashboardDenial } from 'modules/warehouse/components/dashboard/components/WarehouseDashboardDenial';
 import { useArrivalTimingPanel } from 'modules/warehouse/hooks/queries/useArrivalTimingPanel';
 import { useCoverageGapPanel } from 'modules/warehouse/hooks/queries/useCoverageGapPanel';
 import { usePurchasingPipelinePanel } from 'modules/warehouse/hooks/queries/usePurchasingPipelinePanel';
 import { useReasonConcentrationPanel } from 'modules/warehouse/hooks/queries/useReasonConcentrationPanel';
 import type { PanelReading } from 'modules/warehouse/utils/panel-reading';
 import type { ReactElement } from 'react';
-import { useTranslation } from 'react-i18next';
 import { ArchivedWarehouseChip } from 'shared/components/ArchivedWarehouseChip';
 import { PanelReadFailure } from 'shared/components/charts/PanelReadFailure';
 import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
-import { ShieldXIcon } from 'shared/icons';
 
 /**
  * T16 — the Warehouse Dashboard's surface: the two-column grid, the fixed
@@ -40,38 +39,6 @@ import { ShieldXIcon } from 'shared/icons';
  * (`ArrivalTimingPanel.tsx`, `PurchasingPipelinePanel.tsx`). This file wires
  * all four into the grid and owns nothing about how any one of them draws.
  */
-
-// ---------------------------------------------------------------------------
-// The denial
-// ---------------------------------------------------------------------------
-
-/**
- * AC-02 — the statement a member carrying no Panel's whole Permission set
- * reaches. It names no Panel, no Permission and nothing the Warehouse holds,
- * and draws no frame, axis or total (`design-handoff.md` § Implementation
- * constraints; frame `G4JNMV` tile 3).
- *
- * The shipped denial pattern states its heading as an `h1`; this one does not,
- * because the destination's `h1` is the page's own visually-hidden heading and
- * the surface's heading order is `h1 -> h2 x n` (`design-handoff.md`
- * § Accessibility). Everything else — the icon, the muted body, the
- * `max-w-3xl` column — is that pattern unchanged.
- */
-const WarehouseDashboardDenial = (): ReactElement => {
-  const { t } = useTranslation('dashboard');
-
-  return (
-    <div className="mx-auto max-w-3xl px-6 py-12 text-left">
-      <div className="text-muted">
-        <ShieldXIcon />
-      </div>
-      <p className="mt-4 text-lg font-semibold text-foreground">
-        {t('warehouse.denial.heading')}
-      </p>
-      <p className="mt-3 text-muted">{t('warehouse.denial.description')}</p>
-    </div>
-  );
-};
 
 // ---------------------------------------------------------------------------
 // The grid

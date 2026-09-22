@@ -10,7 +10,6 @@ export type ColumnPlotSeries = {
 
 export type ColumnPlotBucket = {
   id: string;
-  label: string;
   /** One entry per series id present in this bucket; a series absent from a
    * bucket draws no column for it rather than a zero-height one standing in
    * for absence. */
@@ -78,13 +77,6 @@ export const ColumnPlot = ({
           </div>
         ))}
       </div>
-    </div>
-    <div className="mt-1 flex justify-center gap-2 text-[10px] text-muted">
-      {buckets.map((bucket) => (
-        <span key={bucket.id} className="flex-1 text-center">
-          {bucket.label}
-        </span>
-      ))}
     </div>
   </div>
 );

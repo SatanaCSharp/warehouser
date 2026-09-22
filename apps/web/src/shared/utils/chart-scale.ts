@@ -1,5 +1,4 @@
 import clamp from 'lodash/clamp';
-import sum from 'lodash/sum';
 
 /**
  * The one scale every Panel needs: a value mapped proportionally onto a pixel
@@ -26,16 +25,3 @@ export const linearScale = (
 
   return (clamp(value, 0, domainMax) / domainMax) * trackWidth;
 };
-
-/**
- * The pixel offset of the bucket at `index`: the sum of every preceding
- * bucket's width, plus one `gap` per boundary already crossed. Arrival
- * Timing's one 56px Overdue bucket followed by eight 44.75px weeks
- * (design-handoff.md § Panel specifications) is the worked example — bucket
- * widths may differ from each other, so this cannot be `index * width`.
- */
-export const bucketOffset = (
-  index: number,
-  widths: number[],
-  gap: number,
-): number => sum(widths.slice(0, index)) + gap * index;

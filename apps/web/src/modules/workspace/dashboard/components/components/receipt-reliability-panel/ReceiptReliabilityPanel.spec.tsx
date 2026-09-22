@@ -253,18 +253,16 @@ describe('ReceiptReliabilityPanel', () => {
     expect(screen.getByText(/other unrated dock/iu)).toBeInTheDocument();
   });
 
-  // `design-handoff.md` § Responsive behavior — "marks scaled to r ≤ 12" on
-  // mobile, against the desktop `16` ceiling (component API decision, see
-  // file header).
-  it('caps every radius at 12 when a mobile maxRadius is supplied', () => {
-    const { container } = render(
-      <ReceiptReliabilityPanel panel={fullPanel} maxRadius={12} />,
-    );
-
-    expect(
-      Number(circleFor(container, 'East Dock').getAttribute('r')),
-    ).toBeCloseTo(12, 5);
-  });
+  // `design-handoff.md` § Responsive behavior asks for "marks scaled to r ≤ 12"
+  // below the breakpoint, against the desktop ceiling of 16. **That is not
+  // implemented.** It was expressed as a `maxRadius` prop no production caller
+  // ever passed, so the ceiling existed only in this spec — which asserted a
+  // rendering the application could not produce
+  // (`docs/system/guides/writing-web-components.md` §9). The prop and its case
+  // are removed rather than left as evidence of a behaviour that ships: an SVG
+  // radius is not expressible as a CSS breakpoint the way Order Flow's column
+  // width is, so wiring it up is real work and is recorded as outstanding
+  // rather than pretended.
 
   // `design-handoff.md` § Accessibility — nothing on either surface is
   // interactive, and no status colour appears.

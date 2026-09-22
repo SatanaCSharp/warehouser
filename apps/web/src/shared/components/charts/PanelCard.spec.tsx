@@ -48,19 +48,12 @@ describe('PanelCard', () => {
 
   // design-handoff.md § Responsive behavior — "list rows flex between 20px
   // and 26px; below 20px the Panel scrolls internally while the surface does
-  // not" (ruled at the tasks gate 2026-09-21). A Panel that must scroll
-  // internally carries the overflow itself; it does not let the whole grid
-  // scroll on its behalf.
-  it('scrolls its own content internally when told it is cramped, rather than growing past its row', () => {
-    const { container } = render(
-      <PanelCard title="Demand Pressure" meta="8 Warehouses" scrollable>
-        <p>rows</p>
-      </PanelCard>,
-    );
-
-    const scrollRegion = container.querySelector('.overflow-y-auto');
-    expect(scrollRegion).not.toBeNull();
-  });
+  // not" (ruled at the tasks gate 2026-09-21). **That is not implemented.**
+  // It was a `scrollable` prop no production caller ever passed, so the
+  // scrolling Panel existed only in this spec — a permanently untested path
+  // (`docs/system/guides/writing-web-components.md` §9). The prop and its case
+  // are removed rather than left standing as evidence of a behaviour that
+  // ships; the case below keeps the half that is true today.
 
   it('does not scroll internally when it is not cramped', () => {
     const { container } = render(

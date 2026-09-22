@@ -201,41 +201,51 @@ describe('OrderFlowPanel', () => {
   });
 
   // `design-handoff.md` § Responsive behavior — "Plot 270 wide, columns
-  // 14 px" on mobile against "Order Flow 18" in the desktop component
-  // mapping table. The `variant` prop is this spec's own API decision
-  // (see file header).
-  it('narrows every column to 14px in the mobile variant, 18px on desktop', () => {
-    const { rerender } = render(
-      <OrderFlowPanel panel={fullPanel} variant="mobile" />,
-    );
-    const mobileSegment = segmentsOf('2026-06-29')[0];
-    expect(mobileSegment.className).toMatch(/w-\[14px\]/u);
+  // 14 px" on mobile against "Order Flow 18" in the desktop component mapping
+  // table.
+  //
+  // Both widths are asserted on the one rendering, because the Panel no longer
+  // takes a `variant` prop to choose between them: it carries the breakpoint
+  // pair and CSS decides, the way the sibling `ArrivalTimingPanel` already
+  // did. The prop it replaced had no production caller and defaulted to
+  // `'desktop'`, so the mobile rendering existed only inside this spec —
+  // the permanently untested path
+  // `docs/system/guides/writing-web-components.md` §9 names.
+  it('carries 14px columns below the breakpoint and 18px above it', () => {
+    render(<OrderFlowPanel panel={fullPanel} />);
 
-    rerender(<OrderFlowPanel panel={fullPanel} variant="desktop" />);
-    const desktopSegment = segmentsOf('2026-06-29')[0];
-    expect(desktopSegment.className).toMatch(/w-\[18px\]/u);
+    const segment = segmentsOf('2026-06-29')[0];
+    expect(segment.className).toMatch(/w-\[14px\]/u);
+    expect(segment.className).toMatch(/sm:w-\[18px\]/u);
   });
 
   // `design-handoff.md` § Responsive behavior — "every third week labelled
   // (`W28`, `W31`, `W34`, `W37`, `W39`)" on mobile, against every week
   // labelled on desktop.
-  it('labels only every third week on mobile, and every week on desktop', () => {
-    const { rerender } = render(
-      <OrderFlowPanel panel={fullPanel} variant="mobile" />,
+  //
+  // Every week's label is in the document and the non-third ones are hidden
+  // below the breakpoint, so the rule is asserted on the classes rather than
+  // on presence — jsdom applies no media query, so a presence assertion could
+  // only ever see one of the two treatments.
+  it('hides all but every third week label below the breakpoint', () => {
+    render(<OrderFlowPanel panel={fullPanel} />);
+
+    const labels = WEEK_STARTS.map((weekStart) =>
+      within(weekElement(weekStart)).getByText(/w\d+/iu),
     );
 
-    const mobileLabelled = WEEK_STARTS.filter(
-      (weekStart) =>
-        within(weekElement(weekStart)).queryByText(/w\d+/iu) !== null,
-    );
-    expect(mobileLabelled).toHaveLength(4);
+    expect(labels).toHaveLength(12);
 
-    rerender(<OrderFlowPanel panel={fullPanel} variant="desktop" />);
-    const desktopLabelled = WEEK_STARTS.filter(
-      (weekStart) =>
-        within(weekElement(weekStart)).queryByText(/w\d+/iu) !== null,
+    const alwaysShown = labels.filter(
+      (label) => !label.className.includes('hidden'),
     );
-    expect(desktopLabelled).toHaveLength(12);
+    const shownAboveBreakpoint = labels.filter((label) =>
+      label.className.includes('sm:inline'),
+    );
+
+    // Weeks 0, 3, 6 and 9 of the twelve.
+    expect(alwaysShown).toHaveLength(4);
+    expect(shownAboveBreakpoint).toHaveLength(8);
   });
 
   // `design-handoff.md` § Accessibility — "Never colour alone": the legend

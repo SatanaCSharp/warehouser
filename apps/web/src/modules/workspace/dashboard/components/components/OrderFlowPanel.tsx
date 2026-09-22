@@ -5,7 +5,6 @@ import type { ChartLegendItem } from 'shared/components/charts/ChartLegend';
 import { ChartLegend } from 'shared/components/charts/ChartLegend';
 import { PanelCard } from 'shared/components/charts/PanelCard';
 import { PanelFootnote } from 'shared/components/charts/PanelFootnote';
-import { Conditional } from 'shared/components/Conditional';
 import { linearScale } from 'shared/utils/chart-scale';
 import { isoWeekNumber } from 'shared/utils/iso-week-number';
 
@@ -14,14 +13,13 @@ import { isoWeekNumber } from 'shared/utils/iso-week-number';
  * specifications, frame `z5olfa`).
  *
  * Twelve stacked columns, pooled across the Workspace and **naming no
- * Warehouse anywhere on the Panel** (AC-16). `shared/components/charts/
- * ColumnPlot` draws *grouped* columns and carries no per-segment
- * `data-quantity`, so it cannot express this Panel's bottom-up stack —
+ * Warehouse anywhere on the Panel** (AC-16). A grouped-column primitive
+ * carries no per-segment `data-quantity`, so it cannot express this Panel's
+ * bottom-up stack —
  * Assigned to arrived goods → Still awaited → Cancelled, the cancelled part
  * reading as withdrawn from the week rather than as demand outstanding — and
  * this file draws its own columns directly over `shared/utils/chart-scale`'s
- * `linearScale` instead of composing it (a parallel task is live against
- * `ColumnPlot.tsx`, which this file leaves untouched).
+ * `linearScale` instead of composing one.
  *
  * The `role="img"` wrapper around the plot carries AC-17a's disclosure as its
  * accessible summary, read from the exact same translated string the
@@ -29,19 +27,24 @@ import { isoWeekNumber } from 'shared/utils/iso-week-number';
  * (`design-handoff.md` § Accessibility, "Structure").
  */
 
-type OrderFlowVariant = 'desktop' | 'mobile';
+/** Order Flow's own column width: 14px below the breakpoint, 18px above it
+ * (`design-handoff.md` § Type and mark specs, § Responsive behavior).
+ *
+ * A breakpoint pair rather than a `variant` prop. The prop existed, defaulted
+ * to `'desktop'`, and no production caller ever passed the other value — so
+ * the mobile rendering was unreachable outside its own spec, which
+ * `docs/system/guides/writing-web-components.md` §9 calls a permanently
+ * untested path. The sibling `ArrivalTimingPanel` already expressed the same
+ * requirement this way. */
+const SEGMENT_WIDTH_CLASS = 'w-[14px] sm:w-[18px]';
 
-/** Order Flow's own column width: 18px desktop, 14px mobile
- * (`design-handoff.md` § Type and mark specs, § Responsive behavior). */
-const SEGMENT_WIDTH_CLASS: Record<OrderFlowVariant, string> = {
-  desktop: 'w-[18px]',
-  mobile: 'w-[14px]',
-};
-
-/** Every week is labelled on desktop; only every third on mobile
- * (`design-handoff.md` § Responsive behavior — `W28`, `W31`, `W34`…). */
-const isWeekLabelled = (index: number, variant: OrderFlowVariant): boolean =>
-  variant === 'desktop' || index % 3 === 0;
+/** Every third week is labelled below the breakpoint and every week above it
+ * (`design-handoff.md` § Responsive behavior — `W28`, `W31`, `W34`…). Both
+ * labels are rendered and CSS decides which is shown, for the reason above. */
+const weekLabelClass = (index: number): string =>
+  index % 3 === 0
+    ? 'text-[10px] text-muted'
+    : 'hidden text-[10px] text-muted sm:inline';
 
 /** The plot's own fixed height in pixels, the track every week's whole is
  * scaled onto. */
@@ -65,12 +68,10 @@ const segmentsOfWeek = (
 
 type OrderFlowPanelProps = {
   panel: OrderFlowPanelBody;
-  variant?: OrderFlowVariant;
 };
 
 export const OrderFlowPanel = ({
   panel,
-  variant = 'desktop',
 }: OrderFlowPanelProps): ReactElement => {
   const { t } = useTranslation('dashboard');
 
@@ -131,7 +132,7 @@ export const OrderFlowPanel = ({
                 <div
                   key={segment.series.id}
                   data-quantity={segment.value}
-                  className={`${SEGMENT_WIDTH_CLASS[variant]} last:rounded-t-[3px]`}
+                  className={`${SEGMENT_WIDTH_CLASS} last:rounded-t-[3px]`}
                   style={{
                     height: linearScale(
                       segment.value,
@@ -143,11 +144,9 @@ export const OrderFlowPanel = ({
                 />
               ))}
             </div>
-            <Conditional when={isWeekLabelled(index, variant)}>
-              <span className="text-[10px] text-muted">
-                W{isoWeekNumber(week.weekStart)}
-              </span>
-            </Conditional>
+            <span className={weekLabelClass(index)}>
+              W{isoWeekNumber(week.weekStart)}
+            </span>
           </div>
         ))}
       </div>

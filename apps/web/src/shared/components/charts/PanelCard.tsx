@@ -13,7 +13,6 @@ type PanelCardProps = {
    * floor, so this Panel scrolls internally while the surface does not
    * (design-handoff.md § Responsive behavior, ruled at the tasks gate
    * 2026-09-21). */
-  scrollable?: boolean;
   children: ReactNode;
 };
 
@@ -30,7 +29,6 @@ type PanelCardProps = {
 export const PanelCard = ({
   title,
   meta,
-  scrollable = false,
   children,
 }: PanelCardProps): ReactElement => (
   <Card>
@@ -45,8 +43,6 @@ export const PanelCard = ({
       </Card.Title>
       <Card.Description className="text-xs text-muted">{meta}</Card.Description>
     </Card.Header>
-    <Card.Content className={scrollable ? 'overflow-y-auto' : undefined}>
-      {children}
-    </Card.Content>
+    <Card.Content>{children}</Card.Content>
   </Card>
 );

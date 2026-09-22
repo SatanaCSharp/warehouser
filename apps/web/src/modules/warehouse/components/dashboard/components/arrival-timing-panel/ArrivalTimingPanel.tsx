@@ -99,7 +99,6 @@ export const ArrivalTimingPanel = ({
   // reader would see twice.
   const buckets: ColumnPlotBucket[] = panel.buckets.map((bucket) => ({
     id: bucket.weekStart ?? bucket.kind,
-    label: '',
     values: {
       owed: bucket.owedQuantity,
       expectedAtDock: bucket.expectedQuantity,

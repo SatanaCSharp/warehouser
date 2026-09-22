@@ -92,12 +92,10 @@ type ReceiptReliabilityPanelProps = {
   /** The largest radius a mark takes, in the plot's own 0-100 viewBox units.
    * A mobile caller passes `12` (`design-handoff.md` § Responsive
    * behavior). */
-  maxRadius?: number;
 };
 
 export const ReceiptReliabilityPanel = ({
   panel,
-  maxRadius = DEFAULT_MAX_RADIUS,
 }: ReceiptReliabilityPanelProps): ReactElement => {
   const { t } = useTranslation('dashboard');
 
@@ -121,7 +119,7 @@ export const ReceiptReliabilityPanel = ({
       x: warehouse.onTimeArrivalRatePercent,
       y: warehouse.conformanceRatePercent,
       r:
-        maxRadius *
+        DEFAULT_MAX_RADIUS *
         Math.sqrt(warehouse.receivedQuantity / largestReceivedQuantity),
     })),
   );

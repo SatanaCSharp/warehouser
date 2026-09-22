@@ -3,15 +3,14 @@ import { DemandPressurePanel as DemandPressurePanelView } from 'modules/workspac
 import { OrderFlowPanel as OrderFlowPanelView } from 'modules/workspace/dashboard/components/components/OrderFlowPanel';
 import { PurchasingSpreadPanel as PurchasingSpreadPanelView } from 'modules/workspace/dashboard/components/components/purchasing-spread-panel/PurchasingSpreadPanel';
 import { ReceiptReliabilityPanel as ReceiptReliabilityPanelView } from 'modules/workspace/dashboard/components/components/receipt-reliability-panel/ReceiptReliabilityPanel';
+import { WorkspaceDashboardDenial } from 'modules/workspace/dashboard/components/components/WorkspaceDashboardDenial';
 import { useDemandPressurePanel } from 'modules/workspace/dashboard/hooks/queries/useDemandPressurePanel';
 import { useOrderFlowPanel } from 'modules/workspace/dashboard/hooks/queries/useOrderFlowPanel';
 import { usePurchasingSpreadPanel } from 'modules/workspace/dashboard/hooks/queries/usePurchasingSpreadPanel';
 import { useReceiptReliabilityPanel } from 'modules/workspace/dashboard/hooks/queries/useReceiptReliabilityPanel';
 import type { WorkspacePanelReading } from 'modules/workspace/dashboard/utils/workspace-panel-reading';
 import type { ReactElement } from 'react';
-import { useTranslation } from 'react-i18next';
 import { PanelReadFailure } from 'shared/components/charts/PanelReadFailure';
-import { ShieldXIcon } from 'shared/icons';
 
 /**
  * T19 — the Workspace Dashboard's surface: the two-column grid, the fixed
@@ -36,41 +35,6 @@ import { ShieldXIcon } from 'shared/icons';
  * file wires all four bodies to those components and owns nothing about how
  * any of them is drawn.
  */
-
-// ---------------------------------------------------------------------------
-// The denial
-// ---------------------------------------------------------------------------
-
-/**
- * AC-15 — the statement a Workspace Member whose Workspace Role does not carry
- * the observation Permission reaches, **at the address** rather than after a
- * redirect away from it. It names no Warehouse, no Permission and no figure,
- * and discloses neither how many Warehouses the Workspace holds nor whether
- * any of them has anything outstanding (frame `ujNPP` tile 1).
- *
- * AC-22 — a Warehouse Member holding every watch Permission in their own
- * Warehouse and no Workspace Role reaches this same statement, unchanged.
- *
- * It is the shipped denial pattern, and states its heading as a `p` rather
- * than an `h1` for the reason `modules/warehouse`'s does: the destination's
- * `h1` is the page's own visually-hidden heading and the surface's heading
- * order is `h1 -> h2 x n` (`design-handoff.md` § Accessibility).
- */
-const WorkspaceDashboardDenial = (): ReactElement => {
-  const { t } = useTranslation('dashboard');
-
-  return (
-    <div className="mx-auto max-w-3xl px-6 py-12 text-left">
-      <div className="text-muted">
-        <ShieldXIcon />
-      </div>
-      <p className="mt-4 text-lg font-semibold text-foreground">
-        {t('workspace.denial.heading')}
-      </p>
-      <p className="mt-3 text-muted">{t('workspace.denial.description')}</p>
-    </div>
-  );
-};
 
 // ---------------------------------------------------------------------------
 // The grid
