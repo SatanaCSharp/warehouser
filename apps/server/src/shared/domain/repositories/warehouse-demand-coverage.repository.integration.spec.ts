@@ -843,18 +843,22 @@ const registerNineBucketsNeverNettedTest = (): void => {
 
     const weekStart = await fetchWeekStart('UTC');
     const weekTwoStart = addDays(weekStart, 7);
+    // The week-in-progress bucket must be seeded from today, not from the Monday it begins on —
+    // any weekday but Monday, `weekStart` is already in the past and would land in the Overdue
+    // bucket instead (AC-07: Overdue is relative to today, never to the week's own start).
+    const today = await fetchTodayDate('UTC');
 
     // Week in progress: demand 30, supply 5 — never netted into a single figure.
     await seedCustomerOrder(warehouseId, itemOne.id, userId, {
       quantity: 30,
       outstandingQuantity: 30,
-      neededBy: weekStart,
+      neededBy: today,
     });
     const draft = await seedPurchaseDraft(
       warehouseId,
       userId,
       'ready_for_ordering',
-      weekStart,
+      today,
     );
     await seedPurchaseDraftLine(draft, warehouseId, itemOne.id, {
       orderedQuantity: 5,
@@ -902,7 +906,10 @@ const registerDirectToCustomerExclusionTest = (): void => {
     const warehouseId = await seedWarehouse(workspaceId);
     const userId = await seedUser(workspaceId);
     const item = await seedItem(warehouseId, { onHandQuantity: 0 });
-    const weekStart = await fetchWeekStart('UTC');
+    // The week-in-progress bucket must be seeded from today, not from the Monday it begins on —
+    // any weekday but Monday, `fetchWeekStart` is already in the past and would land in the
+    // Overdue bucket instead (AC-07: Overdue is relative to today, never to the week's own start).
+    const today = await fetchTodayDate('UTC');
     // Coverage Gap's `outstanding` CTE only reports Items some Unfulfilled Customer Order still
     // asks for — seeded here purely so `readCoverageGap`'s side of this test has a row to find.
     await seedCustomerOrder(warehouseId, item.id, userId, {
@@ -915,7 +922,7 @@ const registerDirectToCustomerExclusionTest = (): void => {
       warehouseId,
       userId,
       'ready_for_ordering',
-      weekStart,
+      today,
     );
     await seedPurchaseDraftLine(draft, warehouseId, item.id, {
       orderedQuantity: 9,
@@ -972,6 +979,52 @@ const registerLateReadyDraftInOverdueBucketTest = (): void => {
     expect(result.buckets[0].kind).toBe('overdue');
     expect(result.buckets[0].owedQuantity).toBe(6);
     expect(result.buckets[0].expectedQuantity).toBe(17);
+  });
+};
+
+const registerOverdueBoundaryIsTodayNotWeekStartTest = (): void => {
+  // Regression for the defect this fix corrects: two sibling tests above seeded the week-in-
+  // progress fixtures from `fetchWeekStart` (the week's Monday) rather than from today, which is
+  // only correct on a Monday — any other weekday, `weekStart` is already in the past and the SQL
+  // (`bucketIndexExpression`: `dateColumn < today → bucket 0`) correctly reports it as Overdue,
+  // making the "week in progress" assertion fail. That rule — the boundary is *today*, never the
+  // week's own start — was itself never pinned by a direct test, so the miscoded fixtures went
+  // unnoticed. `addDays(fetchTodayDate(...), -1)` is unconditionally yesterday: strictly earlier
+  // than today on every weekday, including Monday, where it falls into the *previous* week rather
+  // than the one in progress — so unlike a fixture spelled from `fetchWeekStart`, this assertion
+  // cannot pass vacuously on any day the suite happens to run.
+  it('reports a Customer Order needed yesterday, and a Ready draft expected yesterday, in the Overdue bucket rather than the week in progress', async () => {
+    const workspaceId = await seedWorkspace();
+    const warehouseId = await seedWarehouse(workspaceId);
+    const userId = await seedUser(workspaceId);
+    const item = await seedItem(warehouseId, { onHandQuantity: 0 });
+
+    const today = await fetchTodayDate('UTC');
+    const yesterday = addDays(today, -1);
+
+    await seedCustomerOrder(warehouseId, item.id, userId, {
+      quantity: 8,
+      outstandingQuantity: 8,
+      neededBy: yesterday,
+    });
+    const draft = await seedPurchaseDraft(
+      warehouseId,
+      userId,
+      'ready_for_ordering',
+      yesterday,
+    );
+    await seedPurchaseDraftLine(draft, warehouseId, item.id, {
+      orderedQuantity: 15,
+      deliveryMode: 'via_warehouse',
+    });
+
+    const result = await repository.readArrivalTiming(warehouseId, 'UTC');
+
+    expect(result.buckets[0].kind).toBe('overdue');
+    expect(result.buckets[0].owedQuantity).toBe(8);
+    expect(result.buckets[0].expectedQuantity).toBe(15);
+    expect(result.buckets[1].owedQuantity).toBe(0);
+    expect(result.buckets[1].expectedQuantity).toBe(0);
   });
 };
 
@@ -1195,6 +1248,7 @@ describe('WarehouseDemandCoverageRepository — readArrivalTiming', () => {
   registerNineBucketsNeverNettedTest();
   registerDirectToCustomerExclusionTest();
   registerLateReadyDraftInOverdueBucketTest();
+  registerOverdueBoundaryIsTodayNotWeekStartTest();
   registerClosedOrDiscardedExclusionTest();
   registerUndatedReadyDraftExclusionTest();
   registerDatedDraftStillInDraftExclusionTest();
