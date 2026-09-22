@@ -6,10 +6,10 @@ import type {
 } from '@warehouser/contracts/dashboards';
 import compact from 'lodash/compact';
 import { warehouseDashboardApi } from 'modules/warehouse/api/warehouse-dashboard-api';
-import { ArrivalTimingPanel } from 'modules/warehouse/components/dashboard/ArrivalTimingPanel';
-import { CoverageGapPanel } from 'modules/warehouse/components/dashboard/CoverageGapPanel';
-import { PurchasingPipelinePanel } from 'modules/warehouse/components/dashboard/PurchasingPipelinePanel';
-import { ReasonConcentrationPanel } from 'modules/warehouse/components/dashboard/ReasonConcentrationPanel';
+import { ArrivalTimingPanel } from 'modules/warehouse/components/dashboard/components/ArrivalTimingPanel';
+import { CoverageGapPanel } from 'modules/warehouse/components/dashboard/components/CoverageGapPanel';
+import { PurchasingPipelinePanel } from 'modules/warehouse/components/dashboard/components/PurchasingPipelinePanel';
+import { ReasonConcentrationPanel } from 'modules/warehouse/components/dashboard/components/ReasonConcentrationPanel';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArchivedWarehouseChip } from 'shared/components/ArchivedWarehouseChip';

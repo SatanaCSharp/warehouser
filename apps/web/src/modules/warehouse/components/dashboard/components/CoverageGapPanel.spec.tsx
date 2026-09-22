@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import type { CoverageGapPanel as CoverageGapPanelBody } from '@warehouser/contracts/dashboards';
-import { CoverageGapPanel } from 'modules/warehouse/components/dashboard/CoverageGapPanel';
+import { CoverageGapPanel } from 'modules/warehouse/components/dashboard/components/CoverageGapPanel';
 import { QUANTITY_GROUP_SEPARATOR } from 'shared/utils/number-format';
 import { describe, expect, it } from 'vitest';
 

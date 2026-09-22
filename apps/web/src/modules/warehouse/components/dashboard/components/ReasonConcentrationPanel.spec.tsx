@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import type { ReasonConcentrationPanel as ReasonConcentrationPanelBody } from '@warehouser/contracts/dashboards';
-import { ReasonConcentrationPanel } from 'modules/warehouse/components/dashboard/ReasonConcentrationPanel';
+import { ReasonConcentrationPanel } from 'modules/warehouse/components/dashboard/components/ReasonConcentrationPanel';
 import { QUANTITY_GROUP_SEPARATOR } from 'shared/utils/number-format';
 import { describe, expect, it } from 'vitest';
 

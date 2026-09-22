@@ -256,18 +256,22 @@ export const WAREHOUSE_MODULE_MANIFEST = [
   // `docs/system/guides/placing-web-components.md` § "Grouping owned
   // components by domain" — four Panels plus the grid is under the half-dozen
   // at which a further level starts paying for itself).
-  'components/dashboard/ArrivalTimingPanel.spec.tsx',
   // T18 — the two remaining chart Panels, completed the same way (AC-07,
   // AC-08a, AC-10, AC-11).
-  'components/dashboard/ArrivalTimingPanel.tsx',
-  'components/dashboard/CoverageGapPanel.spec.tsx',
-  'components/dashboard/CoverageGapPanel.tsx',
-  'components/dashboard/PurchasingPipelinePanel.spec.tsx',
-  'components/dashboard/PurchasingPipelinePanel.tsx',
-  'components/dashboard/ReasonConcentrationPanel.spec.tsx',
-  'components/dashboard/ReasonConcentrationPanel.tsx',
   'components/dashboard/WarehouseDashboardGrid.spec.tsx',
   'components/dashboard/WarehouseDashboardGrid.tsx',
+  // dashboards remediation — the grid is the sole renderer of all four
+  // Panels, so they nest one level down in its own `components/`
+  // directory rather than sitting beside it
+  // (`docs/system/guides/placing-web-components.md` § "The nesting rule").
+  'components/dashboard/components/ArrivalTimingPanel.spec.tsx',
+  'components/dashboard/components/ArrivalTimingPanel.tsx',
+  'components/dashboard/components/CoverageGapPanel.spec.tsx',
+  'components/dashboard/components/CoverageGapPanel.tsx',
+  'components/dashboard/components/PurchasingPipelinePanel.spec.tsx',
+  'components/dashboard/components/PurchasingPipelinePanel.tsx',
+  'components/dashboard/components/ReasonConcentrationPanel.spec.tsx',
+  'components/dashboard/components/ReasonConcentrationPanel.tsx',
   'hooks/effects/useRecordWarehouseEntry.spec.tsx',
   'hooks/effects/useRecordWarehouseEntry.ts',
   'loaders/warehouse-dashboard.loader.spec.ts',

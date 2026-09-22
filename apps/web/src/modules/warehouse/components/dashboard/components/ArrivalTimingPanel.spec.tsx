@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import type { ArrivalTimingPanel as ArrivalTimingPanelBody } from '@warehouser/contracts/dashboards';
-import { ArrivalTimingPanel } from 'modules/warehouse/components/dashboard/ArrivalTimingPanel';
+import { ArrivalTimingPanel } from 'modules/warehouse/components/dashboard/components/ArrivalTimingPanel';
 import { linearScale } from 'shared/utils/chart-scale';
 import { describe, expect, it } from 'vitest';
 

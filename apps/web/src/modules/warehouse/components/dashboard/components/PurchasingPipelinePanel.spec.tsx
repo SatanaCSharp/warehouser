@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import type { PurchasingPipelinePanel as PurchasingPipelinePanelBody } from '@warehouser/contracts/dashboards';
-import { PurchasingPipelinePanel } from 'modules/warehouse/components/dashboard/PurchasingPipelinePanel';
+import { PurchasingPipelinePanel } from 'modules/warehouse/components/dashboard/components/PurchasingPipelinePanel';
 import { describe, expect, it } from 'vitest';
 
 // T18 — the Purchasing Pipeline Panel (AC-10, AC-11; `design-handoff.md`
