@@ -8,12 +8,11 @@ import { describe, expect, it } from 'vitest';
 // Colocated with the component it covers
 // (`docs/system/guides/placing-web-tests.md` §1).
 //
-// `modules/workspace/dashboard/components/components/purchasing-spread-panel/components/HeatGrid` already draws a real `<table>` with a
-// header row for exactly this shape (`docs/system/adr/27-08-2026-heroui-table-for-web-data-tables.md`
-// — HeroUI's `Table` is for a data table a member browses, expands and sorts;
-// this Panel has none of that, so it stays the plain `table`/`columnheader`/
-// `cell` semantics ADR 0002 gives every row-oriented Panel). This spec covers
-// the Panel wrapping it: the `h2`, the four-state coverage and its bin
+// `HeatGrid` presents the grid with HeroUI's `Table`
+// (`docs/system/adr/27-08-2026-heroui-table-for-web-data-tables.md`
+// §Decision), so these cases query the roles React Aria exposes — `grid`,
+// `columnheader`, `rowheader` and `gridcell`. This spec covers the Panel
+// wrapping it: the `h2`, the four-state coverage and its bin
 // boundaries (AC-18), the scale legend below the grid, the "Ready" column
 // head and its Panel-meta expansion, and the archived-Warehouse footnote —
 // none of which `HeatGrid` itself owns.
@@ -65,7 +64,7 @@ const fullPanel: PurchasingSpreadPanelBody = {
 const drawPanel = (panel: PurchasingSpreadPanelBody): HTMLElement => {
   render(<PurchasingSpreadPanel panel={panel} />);
 
-  return screen.getByRole('table');
+  return screen.getByRole('grid');
 };
 
 const rowsOf = (table: HTMLElement): HTMLElement[] =>
@@ -101,7 +100,7 @@ describe('PurchasingSpreadPanel', () => {
     expect(
       within(header).getAllByRole('columnheader').length,
     ).toBeGreaterThanOrEqual(4);
-    expect(within(header).queryAllByRole('cell')).toStrictEqual([]);
+    expect(within(header).queryAllByRole('gridcell')).toStrictEqual([]);
   });
 
   // AC-18 — "the system shows every Warehouse against every Purchase Draft
@@ -226,12 +225,24 @@ describe('PurchasingSpreadPanel', () => {
 
   // `design-handoff.md` § Accessibility — nothing here is interactive and no
   // status colour appears, because nothing on this Panel judges a Warehouse.
-  it('offers nothing to focus and wears no status colour', () => {
+  // Restated for the grid's roving focus, as on every other Panel: the
+  // tabindex count is React Aria's
+  // (`docs/system/adr/27-08-2026-heroui-table-for-web-data-tables.md`
+  // § Consequences), and what still holds is that no control is offered.
+  it('offers no control to activate and wears no status colour', () => {
     const { container } = render(<PurchasingSpreadPanel panel={fullPanel} />);
 
     expect(screen.queryAllByRole('button')).toStrictEqual([]);
     expect(screen.queryAllByRole('link')).toStrictEqual([]);
-    expect(container.querySelectorAll('[tabindex]')).toHaveLength(0);
+    expect(container.querySelectorAll('input, select, textarea')).toHaveLength(
+      0,
+    );
+
+    const focusable = Array.from(container.querySelectorAll('[tabindex]'));
+    expect(focusable).not.toHaveLength(0);
+    expect(
+      focusable.filter((element) => element.closest('[role="grid"]') === null),
+    ).toStrictEqual([]);
     expect(container.innerHTML).not.toMatch(/--danger|--warning|--success/u);
   });
 });

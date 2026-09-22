@@ -1,18 +1,18 @@
+import { Table } from '@heroui/react';
 import type { ReactElement } from 'react';
 
 export type HeatGridBin =
   'ramp-4a' | 'ramp-4b' | 'ramp-4c' | 'ramp-4d' | 'zero';
 
 export type HeatGridCell = {
-  id: string;
-  columnLabel: string;
-  count: number;
   bin: HeatGridBin;
+  count: number;
+  id: string;
 };
 
 export type HeatGridRow = {
-  label: string;
   cells: HeatGridCell[];
+  label: string;
 };
 
 type HeatGridProps = {
@@ -48,39 +48,61 @@ const CELL_INK_CLASS: Record<HeatGridBin, string> = {
  * the fill is a scanning aid and never the only encoding
  * (design-handoff.md § Panel specifications — Purchasing Spread).
  *
- * A real `<table>` with a header row, so a screen reader announces the
- * Warehouse with each figure (design-handoff.md § Accessibility); nothing in
- * it takes focus.
+ * The grid is a collection of records, so it is presented with HeroUI's
+ * `Table` rather than markup this file assembles
+ * (`docs/system/adr/27-08-2026-heroui-table-for-web-data-tables.md`
+ * §Decision). It assembled its own `<table>` until the `dashboards`
+ * conformance review; moving that markup out of a Panel and into a shared
+ * component never made it exempt.
+ *
+ * Every value a cell prints comes from the record its row is keyed by, and no
+ * cell reads a hook, a translation or a locale formatter — which is the one
+ * thing the ADR's §Decision 2 cache warning is about, and why the cells here
+ * stay literals rather than becoming components of their own.
+ *
+ * The first column carries each Warehouse's name as the row header, so a
+ * screen reader announces the Warehouse with each figure
+ * (design-handoff.md § Accessibility). Its own column heading is the grid's
+ * empty corner.
  */
 export const HeatGrid = ({ columns, rows }: HeatGridProps): ReactElement => (
-  <table className="w-full border-separate border-spacing-1 text-xs">
-    <thead>
-      <tr>
-        <th scope="col" aria-hidden="true" />
-        {columns.map((column) => (
-          <th key={column} scope="col" className="font-medium text-muted">
-            {column}
-          </th>
-        ))}
-      </tr>
-    </thead>
-    <tbody>
-      {rows.map((row) => (
-        <tr key={row.label}>
-          <th scope="row" className="text-left font-normal text-foreground">
-            {row.label}
-          </th>
-          {row.cells.map((cell) => (
-            <td
-              key={cell.id}
-              className={`rounded-[6px] text-center tabular-nums ${CELL_INK_CLASS[cell.bin]}`}
-              style={{ backgroundColor: `var(${CELL_COLOR_VAR[cell.bin]})` }}
-            >
-              {cell.count}
-            </td>
+  <Table variant="secondary">
+    <Table.ScrollContainer>
+      <Table.Content className="w-full text-xs">
+        <Table.Header>
+          <Table.Column isRowHeader>
+            <span className="sr-only">{columns.join(', ')}</span>
+          </Table.Column>
+          {columns.map((column) => (
+            <Table.Column className="font-medium text-muted" key={column}>
+              {column}
+            </Table.Column>
           ))}
-        </tr>
-      ))}
-    </tbody>
-  </table>
+        </Table.Header>
+        <Table.Body>
+          {rows.map((row) => (
+            <Table.Row id={row.label} key={row.label}>
+              <Table.Cell>
+                <span className="text-left font-normal text-foreground">
+                  {row.label}
+                </span>
+              </Table.Cell>
+              {row.cells.map((cell) => (
+                <Table.Cell key={cell.id}>
+                  <span
+                    className={`block rounded-[6px] text-center tabular-nums ${CELL_INK_CLASS[cell.bin]}`}
+                    style={{
+                      backgroundColor: `var(${CELL_COLOR_VAR[cell.bin]})`,
+                    }}
+                  >
+                    {cell.count}
+                  </span>
+                </Table.Cell>
+              ))}
+            </Table.Row>
+          ))}
+        </Table.Body>
+      </Table.Content>
+    </Table.ScrollContainer>
+  </Table>
 );

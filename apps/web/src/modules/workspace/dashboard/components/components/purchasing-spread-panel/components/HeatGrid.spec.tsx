@@ -54,12 +54,23 @@ describe('HeatGrid', () => {
     expect(screen.getByText('Warehouse B')).toBeInTheDocument();
   });
 
-  it('takes no focus on any cell', () => {
+  // The grid took no focus at all until it was presented with HeroUI's
+  // `Table`, whose React Aria collection gives rows and cells roving
+  // navigation — the cost
+  // `docs/system/adr/27-08-2026-heroui-table-for-web-data-tables.md`
+  // § Consequences records. What is still true, and still asserted, is that
+  // no cell is a control: everything focusable is the grid itself.
+  it('offers no control to focus on any cell', () => {
     const { container } = render(
       <HeatGrid columns={['Draft', 'Ready']} rows={rows} />,
     );
 
-    expect(container.querySelectorAll('[tabindex]')).toHaveLength(0);
+    expect(container.querySelectorAll('button, a, input')).toHaveLength(0);
+
+    const focusable = Array.from(container.querySelectorAll('[tabindex]'));
+    expect(
+      focusable.filter((element) => element.closest('[role="grid"]') === null),
+    ).toStrictEqual([]);
     expect(container.querySelectorAll('button, a')).toHaveLength(0);
   });
 

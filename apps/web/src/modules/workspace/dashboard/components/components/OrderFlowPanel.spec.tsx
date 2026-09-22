@@ -8,11 +8,11 @@ import { describe, expect, it } from 'vitest';
 // Colocated with the component it covers
 // (`docs/system/guides/placing-web-tests.md` §1).
 //
-// Unlike the row-oriented Panels T17 shipped, Order Flow is a chart keyed by
-// week rather than by a record a member browses, so its accessible substrate
-// is not a `<table>` (ADR `27-08-2026-heroui-table-for-web-data-tables.md`
-// governs a *collection of records the member browses, expands and sorts* —
-// this has none of those). It is the chart shape ADR
+// Unlike the row-oriented Panels, Order Flow plots weekly buckets rather than
+// presenting a collection of records, so ADR
+// `27-08-2026-heroui-table-for-web-data-tables.md` — which governs how a
+// collection of records is presented — does not reach it, and its accessible
+// substrate is not a table at all. It is the chart shape ADR
 // `0002-charting-without-a-charting-dependency.md` reserves layout primitives
 // for, so its accessibility is carried the way `design-handoff.md`
 // § Accessibility states for charts: "Charts expose an accessible summary

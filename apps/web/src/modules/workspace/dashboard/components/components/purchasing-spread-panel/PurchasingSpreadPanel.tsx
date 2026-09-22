@@ -18,10 +18,9 @@ import { PanelFootnote } from 'shared/components/charts/PanelFootnote';
  * T20 — the Purchasing Spread Panel (AC-18; `design-handoff.md` § Panel
  * specifications, frame `G3tB1`).
  *
- * `modules/workspace/dashboard/components/components/purchasing-spread-panel/components/HeatGrid` already draws the real `<table>` this
- * Panel needs — a header row, sequential one-hue bins, the count printed in
- * every cell — for the same reason `docs/system/adr/27-08-2026-heroui-table-for-web-data-tables.md`
- * keeps it off HeroUI's `Table`: nothing here is browsed, expanded or sorted.
+ * `HeatGrid` presents the grid itself — a header row, sequential one-hue
+ * bins, the count printed in every cell — with HeroUI's `Table`, per
+ * `docs/system/adr/27-08-2026-heroui-table-for-web-data-tables.md` §Decision.
  * This file owns what `HeatGrid` does not: the four-state coverage and its
  * bin boundaries (AC-18), the scale legend below the grid, the "Ready" column
  * head and its Panel-meta expansion, and the archived-Warehouse footnote.
@@ -78,7 +77,6 @@ export const PurchasingSpreadPanel = ({
     label: warehouse.warehouseName,
     cells: warehouse.counts.map((cell) => ({
       id: `${warehouse.warehouseId}-${cell.state}`,
-      columnLabel: columnLabels[cell.state],
       count: cell.draftCount,
       bin: binFor(cell.draftCount),
     })),
