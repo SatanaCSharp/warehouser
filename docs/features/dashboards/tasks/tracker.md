@@ -25,7 +25,7 @@
 | T18 | [Arrival Timing + Purchasing Pipeline Panels](./arrival-timing-and-purchasing-pipeline-panels-ui.md)            | `ui`        | Frontend Lead | M        | T16                | done   |
 | T19 | [workspace-dashboard module, route and gated rail entry](./workspace-dashboard-module-ui.md)                    | `ui`        | Frontend Lead | M        | T3, T14, T15       | done   |
 | T20 | [Demand Pressure + Purchasing Spread Panels](./demand-pressure-and-purchasing-spread-panels-ui.md)              | `ui`        | Frontend Lead | M        | T19                | done   |
-| T21 | [Order Flow + Receipt Reliability Panels](./order-flow-and-receipt-reliability-panels-ui.md)                    | `ui`        | Frontend Lead | L        | T19                | todo   |
+| T21 | [Order Flow + Receipt Reliability Panels](./order-flow-and-receipt-reliability-panels-ui.md)                    | `ui`        | Frontend Lead | L        | T19                | done   |
 | T22 | [Extend the four hand-enumerated structural gates](./hand-enumerated-gate-extensions.md)                        | `tests`     | Tech Lead     | M        | T12, T14, T16, T19 | todo   |
 | T23 | [Amend the four upstream rules this feature rests on](./cross-feature-invariant-amendments.md)                  | `docs`      | Tech Lead     | M        | —                  | done   |
 

@@ -3,21 +3,15 @@ import type {
   OrderFlowPanel,
   PurchasingSpreadPanel,
   ReceiptReliabilityPanel,
-  ReceiptReliabilityWarehouse,
 } from '@warehouser/contracts/dashboards';
 import compact from 'lodash/compact';
 import { workspaceDashboardApi } from 'modules/workspace-dashboard/api/workspace-dashboard-api';
 import { DemandPressurePanel as DemandPressurePanelView } from 'modules/workspace-dashboard/components/DemandPressurePanel';
+import { OrderFlowPanel as OrderFlowPanelView } from 'modules/workspace-dashboard/components/OrderFlowPanel';
 import { PurchasingSpreadPanel as PurchasingSpreadPanelView } from 'modules/workspace-dashboard/components/PurchasingSpreadPanel';
+import { ReceiptReliabilityPanel as ReceiptReliabilityPanelView } from 'modules/workspace-dashboard/components/ReceiptReliabilityPanel';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { BubblePlot } from 'shared/components/charts/BubblePlot';
-import type { ChartLegendItem } from 'shared/components/charts/ChartLegend';
-import { ChartLegend } from 'shared/components/charts/ChartLegend';
-import type { ColumnPlotBucket } from 'shared/components/charts/ColumnPlot';
-import { ColumnPlot } from 'shared/components/charts/ColumnPlot';
-import { PanelCard } from 'shared/components/charts/PanelCard';
-import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
 import { ShieldXIcon } from 'shared/icons';
 import { useAppSelector } from 'store/hooks';
 
@@ -39,13 +33,10 @@ import { useAppSelector } from 'store/hooks';
  *
  * T20 drew Demand Pressure and Purchasing Spread in full, each in its own
  * file under this directory (`DemandPressurePanel.tsx`,
- * `PurchasingSpreadPanel.tsx`); this file wires their bodies to those
- * components. `OrderFlowPanelCard` and `ReceiptReliabilityPanelCard` below are
- * still private render helpers of this file
- * (`docs/system/guides/writing-web-components.md` §1) and remain deliberately
- * provisional, exactly as `modules/warehouse`'s grid was at T16: T21 draws
- * each of them in full, with their disclosure and exclusion footnotes, in its
- * own file under this directory.
+ * `PurchasingSpreadPanel.tsx`); T21 did the same for Order Flow and Receipt
+ * Reliability (`OrderFlowPanel.tsx`, `ReceiptReliabilityPanel.tsx`). This
+ * file wires all four bodies to those components and owns nothing about how
+ * any of them is drawn.
  */
 
 // ---------------------------------------------------------------------------
@@ -88,132 +79,6 @@ const usePanelBodies = (): PanelBodies => {
       (state) => endpoints.readReceiptReliability.select(undefined)(state).data,
     ),
   };
-};
-
-// ---------------------------------------------------------------------------
-// Order Flow
-// ---------------------------------------------------------------------------
-
-/** The Panel's own fixed gridlines (`design-handoff.md` § Panel specs). */
-const ORDER_FLOW_GRIDLINES = [0];
-
-/**
- * Twelve weeks, pooled across the Workspace and **naming no Warehouse**
- * (AC-16). The three parts of a week's whole are drawn grouped here and
- * stacked bottom-up by T21, which also carries AC-17a's retroactive-figure
- * disclosure in the footnote.
- */
-const OrderFlowPanelCard = ({
-  panel,
-}: {
-  panel: OrderFlowPanel;
-}): ReactElement => {
-  const { t } = useTranslation('dashboard');
-  const { shortCalendarDate } = useLocaleFormat();
-
-  const legend: ChartLegendItem[] = [
-    {
-      id: 'assigned',
-      label: t('panels.orderFlow.series.assigned'),
-      colorVar: '--chart-ramp-4a',
-    },
-    {
-      id: 'stillAwaited',
-      label: t('panels.orderFlow.series.stillAwaited'),
-      colorVar: '--chart-ramp-4b',
-    },
-    {
-      id: 'cancelled',
-      label: t('panels.orderFlow.series.cancelled'),
-      colorVar: '--chart-ramp-4c',
-    },
-  ];
-
-  const buckets: ColumnPlotBucket[] = panel.weeks.map((week) => ({
-    id: week.weekStart,
-    label: shortCalendarDate(week.weekStart),
-    values: {
-      assigned: week.assignedQuantity,
-      stillAwaited: week.stillAwaitedQuantity,
-      cancelled: week.cancelledQuantity,
-    },
-  }));
-
-  return (
-    <PanelCard
-      title={t('panels.orderFlow.title')}
-      meta={t('panels.orderFlow.meta')}
-    >
-      <ChartLegend items={legend} />
-      <ColumnPlot
-        series={legend}
-        buckets={buckets}
-        gridlineValues={ORDER_FLOW_GRIDLINES}
-        maxValue={Math.max(...panel.weeks.map((week) => week.recordedQuantity))}
-      />
-    </PanelCard>
-  );
-};
-
-// ---------------------------------------------------------------------------
-// Receipt Reliability
-// ---------------------------------------------------------------------------
-
-/** The Panel's own fixed gridlines, 0 / 50 / 100 % (`design-handoff.md`). */
-const RECEIPT_RELIABILITY_GRIDLINES = [0, 50, 100];
-
-/** The largest radius a mark takes, in the plot's own 0-100 viewBox units. */
-const RECEIPT_RELIABILITY_MAX_RADIUS = 6;
-
-/**
- * A Warehouse with no rate to report is **not plotted** (AC-20a) — it is
- * never read as the worst or the best performer. T21 names it in the
- * footnote alongside every exclusion count.
- */
-const isPlottable = (
-  warehouse: ReceiptReliabilityWarehouse,
-): warehouse is ReceiptReliabilityWarehouse & {
-  onTimeArrivalRatePercent: number;
-  conformanceRatePercent: number;
-} =>
-  warehouse.onTimeArrivalRatePercent !== null &&
-  warehouse.conformanceRatePercent !== null;
-
-const ReceiptReliabilityPanelCard = ({
-  panel,
-}: {
-  panel: ReceiptReliabilityPanel;
-}): ReactElement => {
-  const { t } = useTranslation('dashboard');
-
-  const plotted = panel.warehouses.filter(isPlottable);
-  // Area proportional to quantity received, so the radius follows its square
-  // root rather than the quantity itself (`design-handoff.md` § Workspace —
-  // Receipt Reliability).
-  const largestQuantity = Math.max(
-    1,
-    ...plotted.map((warehouse) => warehouse.receivedQuantity),
-  );
-
-  return (
-    <PanelCard
-      title={t('panels.receiptReliability.title')}
-      meta={t('panels.receiptReliability.meta')}
-    >
-      <BubblePlot
-        gridlineValues={RECEIPT_RELIABILITY_GRIDLINES}
-        marks={plotted.map((warehouse) => ({
-          id: warehouse.warehouseId,
-          label: warehouse.warehouseName,
-          x: warehouse.onTimeArrivalRatePercent,
-          y: warehouse.conformanceRatePercent,
-          r:
-            RECEIPT_RELIABILITY_MAX_RADIUS *
-            Math.sqrt(warehouse.receivedQuantity / largestQuantity),
-        }))}
-      />
-    </PanelCard>
-  );
 };
 
 // ---------------------------------------------------------------------------
@@ -290,13 +155,13 @@ export const WorkspaceDashboardGrid = (): ReactElement => {
       <DemandPressurePanelView panel={panel} />
     )),
     cellFor('orderFlow', bodies.orderFlow, (panel) => (
-      <OrderFlowPanelCard panel={panel} />
+      <OrderFlowPanelView panel={panel} />
     )),
     cellFor('purchasingSpread', bodies.purchasingSpread, (panel) => (
       <PurchasingSpreadPanelView panel={panel} />
     )),
     cellFor('receiptReliability', bodies.receiptReliability, (panel) => (
-      <ReceiptReliabilityPanelCard panel={panel} />
+      <ReceiptReliabilityPanelView panel={panel} />
     )),
   ]);
 

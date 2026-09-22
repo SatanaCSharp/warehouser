@@ -48,4 +48,32 @@ describe('BubblePlot', () => {
     expect(html).not.toMatch(/--warning/u);
     expect(html).not.toMatch(/--success/u);
   });
+
+  // T21 — a caller may move one mark's label aside rather than centred below
+  // it, for its own collision arithmetic (design-handoff.md § Panel
+  // specifications — Receipt Reliability, "moved to the side where that
+  // would collide"). This primitive stays ignorant of collision itself: it
+  // only places the label where a caller's `labelOffsetX`/`labelAnchor` say.
+  it('centres a label on its mark by default, with no offset supplied', () => {
+    render(<BubblePlot marks={[marks[0]]} gridlineValues={[0, 50, 100]} />);
+
+    const label = screen.getByText('Warehouse A');
+    expect(label.getAttribute('x')).toBe(String(marks[0].x));
+    expect(label.getAttribute('text-anchor')).toBe('middle');
+  });
+
+  it("places a mark's label at its own offset and anchor when supplied", () => {
+    const asideMark = {
+      ...marks[0],
+      labelOffsetX: 12,
+      labelAnchor: 'start' as const,
+    };
+    render(<BubblePlot marks={[asideMark]} gridlineValues={[0, 50, 100]} />);
+
+    const label = screen.getByText('Warehouse A');
+    expect(label.getAttribute('x')).toBe(
+      String(asideMark.x + asideMark.labelOffsetX),
+    );
+    expect(label.getAttribute('text-anchor')).toBe('start');
+  });
 });

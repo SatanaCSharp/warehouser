@@ -92,7 +92,8 @@
         "assigned": "Assigned to arrived goods",
         "stillAwaited": "Still awaited",
         "cancelled": "Cancelled"
-      }
+      },
+      "footnote": "Weeks report what the Customer Orders recorded in them currently ask for, not what they asked for when they were recorded."
     },
     "purchasingSpread": {
       "title": "Purchasing Spread",
@@ -114,7 +115,11 @@
     },
     "receiptReliability": {
       "title": "Receipt Reliability",
-      "meta": "On-time arrival against conformance, by Warehouse"
+      "meta": "On-time arrival against conformance, by Warehouse",
+      "footnote": {
+        "archivedExcluded": "{{count}} archived Warehouses excluded.",
+        "noRateWarehouse": "{{name}} has no rate to report ({{undated}} undated · {{noEnding}} no ending recorded · {{nothingReceived}} nothing received · {{directToCustomer}} sent direct to customer · {{unrecordedConformance}} conformance not recorded · {{notApplicable}} not applicable)."
+      }
     }
   }
 }

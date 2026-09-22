@@ -1468,6 +1468,7 @@
       "panels.orderFlow.series.assigned": "Assigned to arrived goods",
       "panels.orderFlow.series.stillAwaited": "Still awaited",
       "panels.orderFlow.series.cancelled": "Cancelled",
+      "panels.orderFlow.footnote": "Weeks report what the Customer Orders recorded in them currently ask for, not what they asked for when they were recorded.",
       "panels.purchasingSpread.title": "Purchasing Spread",
       "panels.purchasingSpread.meta": "Purchase drafts by Warehouse and state · Ready = Ready for ordering",
       "panels.purchasingSpread.states.draft": "Draft",
@@ -1481,7 +1482,9 @@
       "panels.purchasingSpread.legend.topBand": "100+",
       "panels.purchasingSpread.footnote": "{{count}} archived Warehouses excluded",
       "panels.receiptReliability.title": "Receipt Reliability",
-      "panels.receiptReliability.meta": "On-time arrival against conformance, by Warehouse"
+      "panels.receiptReliability.meta": "On-time arrival against conformance, by Warehouse",
+      "panels.receiptReliability.footnote.archivedExcluded": "{{count}} archived Warehouses excluded.",
+      "panels.receiptReliability.footnote.noRateWarehouse": "{{name}} has no rate to report ({{undated}} undated · {{noEnding}} no ending recorded · {{nothingReceived}} nothing received · {{directToCustomer}} sent direct to customer · {{unrecordedConformance}} conformance not recorded · {{notApplicable}} not applicable)."
     }
   },
   "uk": {
@@ -2991,6 +2994,7 @@
       "panels.orderFlow.series.assigned": "Розподілено на прибулий товар",
       "panels.orderFlow.series.stillAwaited": "Ще очікується",
       "panels.orderFlow.series.cancelled": "Скасовано",
+      "panels.orderFlow.footnote": "Тижні відображають те, чого клієнтські замовлення, записані в них, поточно потребують, а не те, чого вони потребували на момент запису.",
       "panels.purchasingSpread.title": "Розподіл закупівель",
       "panels.purchasingSpread.meta": "Чернетки закупівель за складом і станом · Готово = Готово до замовлення",
       "panels.purchasingSpread.states.draft": "Чернетка",
@@ -3004,7 +3008,9 @@
       "panels.purchasingSpread.legend.topBand": "100+",
       "panels.purchasingSpread.footnote": "Виключено {{count}} архівованих складів",
       "panels.receiptReliability.title": "Надійність приймання",
-      "panels.receiptReliability.meta": "Своєчасне прибуття проти відповідності, за складом"
+      "panels.receiptReliability.meta": "Своєчасне прибуття проти відповідності, за складом",
+      "panels.receiptReliability.footnote.archivedExcluded": "Виключено {{count}} архівованих складів.",
+      "panels.receiptReliability.footnote.noRateWarehouse": "{{name}} не має показника для звітування ({{undated}} без дати · {{noEnding}} без зафіксованого завершення · {{nothingReceived}} нічого не отримано · {{directToCustomer}} відправлено напряму клієнту · {{unrecordedConformance}} відповідність не зафіксована · {{notApplicable}} не застосовується)."
     }
   }
 }

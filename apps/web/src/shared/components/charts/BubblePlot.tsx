@@ -11,6 +11,16 @@ export type BubblePlotMark = {
   /** Conformance Rate, 0-100. */
   y: number;
   r: number;
+  /** Horizontal offset added to `x` when placing this mark's own label —
+   * the caller's own collision arithmetic moves a label aside with this
+   * rather than teaching this primitive a layout policy (design-handoff.md
+   * § Panel specifications — Receipt Reliability, "moved to the side where
+   * that would collide"). Defaults to `0` — centred on the mark. */
+  labelOffsetX?: number;
+  /** The label's own text-anchor. A label moved aside with `labelOffsetX`
+   * reads from its new anchor point rather than still centring on the mark.
+   * Defaults to `'middle'`. */
+  labelAnchor?: 'start' | 'middle' | 'end';
 };
 
 type BubblePlotProps = {
@@ -60,9 +70,9 @@ export const BubblePlot = ({
           strokeWidth={2}
         />
         <text
-          x={mark.x}
+          x={mark.x + (mark.labelOffsetX ?? 0)}
           y={VIEWBOX_SIZE - mark.y + mark.r + LABEL_GAP}
-          textAnchor="middle"
+          textAnchor={mark.labelAnchor ?? 'middle'}
           className="fill-foreground"
           style={{ fontSize: 6 }}
         >
