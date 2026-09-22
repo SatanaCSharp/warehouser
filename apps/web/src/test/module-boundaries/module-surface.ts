@@ -234,8 +234,14 @@ export const WAREHOUSE_MODULE_MANIFEST = [
   // `docs/system/guides/placing-web-components.md` § "Grouping owned
   // components by domain" — four Panels plus the grid is under the half-dozen
   // at which a further level starts paying for itself).
+  'components/dashboard/ArrivalTimingPanel.spec.tsx',
+  // T18 — the two remaining chart Panels, completed the same way (AC-07,
+  // AC-08a, AC-10, AC-11).
+  'components/dashboard/ArrivalTimingPanel.tsx',
   'components/dashboard/CoverageGapPanel.spec.tsx',
   'components/dashboard/CoverageGapPanel.tsx',
+  'components/dashboard/PurchasingPipelinePanel.spec.tsx',
+  'components/dashboard/PurchasingPipelinePanel.tsx',
   'components/dashboard/ReasonConcentrationPanel.spec.tsx',
   'components/dashboard/ReasonConcentrationPanel.tsx',
   'components/dashboard/WarehouseDashboardGrid.spec.tsx',
@@ -247,6 +253,11 @@ export const WAREHOUSE_MODULE_MANIFEST = [
   'page.spec.tsx',
   'page.tsx',
   'route.tsx',
+  // T18 — the pure ISO-week-number helper `ArrivalTimingPanel.tsx` draws its
+  // mobile bare week numbers from; one consumer today, so it stays in this
+  // module's own `utils/` rather than `shared/utils/`
+  // (`docs/system/guides/placing-web-hooks.md` §3).
+  'utils/iso-week-number.ts',
 ] as const;
 
 /**

@@ -1,26 +1,19 @@
 import type {
-  ArrivalTimingPanel,
+  ArrivalTimingPanel as ArrivalTimingPanelBody,
   CoverageGapPanel as CoverageGapPanelBody,
-  OpenPurchaseDraftState,
-  PurchasingPipelinePanel,
+  PurchasingPipelinePanel as PurchasingPipelinePanelBody,
   ReasonConcentrationPanel as ReasonConcentrationPanelBody,
 } from '@warehouser/contracts/dashboards';
 import compact from 'lodash/compact';
 import { warehouseDashboardApi } from 'modules/warehouse/api/warehouse-dashboard-api';
+import { ArrivalTimingPanel } from 'modules/warehouse/components/dashboard/ArrivalTimingPanel';
 import { CoverageGapPanel } from 'modules/warehouse/components/dashboard/CoverageGapPanel';
+import { PurchasingPipelinePanel } from 'modules/warehouse/components/dashboard/PurchasingPipelinePanel';
 import { ReasonConcentrationPanel } from 'modules/warehouse/components/dashboard/ReasonConcentrationPanel';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArchivedWarehouseChip } from 'shared/components/ArchivedWarehouseChip';
-import type { ChartLegendItem } from 'shared/components/charts/ChartLegend';
-import { ChartLegend } from 'shared/components/charts/ChartLegend';
-import type { ColumnPlotBucket } from 'shared/components/charts/ColumnPlot';
-import { ColumnPlot } from 'shared/components/charts/ColumnPlot';
-import { PanelCard } from 'shared/components/charts/PanelCard';
-import { PanelFootnote } from 'shared/components/charts/PanelFootnote';
-import { StackedBarRow } from 'shared/components/charts/StackedBarRow';
 import { useEnteredWarehouse } from 'shared/hooks/projections/useEnteredWarehouse';
-import { useLocaleFormat } from 'shared/hooks/projections/useLocaleFormat';
 import { ShieldXIcon } from 'shared/icons';
 import { useAppSelector } from 'store/hooks';
 
@@ -42,12 +35,12 @@ import { useAppSelector } from 'store/hooks';
  * placeholder or gap; the remaining Panels occupy the surface as though it had
  * never been part of it (`design-handoff.md` § Implementation constraints).
  *
- * Coverage Gap and Reason Concentration are drawn by their own components in
- * this directory (T17), each an accessible table over the shared chart scale.
- * The two Panel cards left below are private render helpers of this file
- * (`docs/system/guides/writing-web-components.md` §1) and are deliberately
- * provisional: T18 draws each of them in full — with every exclusion count in
- * its footnote — in its own file beside the other two.
+ * All four Panels are drawn by their own components in this directory: T17
+ * shipped Coverage Gap and Reason Concentration, each an accessible table
+ * over the shared chart scale; T18 completes Arrival Timing and Purchasing
+ * Pipeline, each a chart carrying its own accessible summary
+ * (`ArrivalTimingPanel.tsx`, `PurchasingPipelinePanel.tsx`). This file wires
+ * all four into the grid and owns nothing about how any one of them draws.
  */
 
 // ---------------------------------------------------------------------------
@@ -55,9 +48,9 @@ import { useAppSelector } from 'store/hooks';
 // ---------------------------------------------------------------------------
 
 type PanelBodies = {
-  arrivalTiming: ArrivalTimingPanel | undefined;
+  arrivalTiming: ArrivalTimingPanelBody | undefined;
   coverageGap: CoverageGapPanelBody | undefined;
-  purchasingPipeline: PurchasingPipelinePanel | undefined;
+  purchasingPipeline: PurchasingPipelinePanelBody | undefined;
   reasonConcentration: ReasonConcentrationPanelBody | undefined;
 };
 
@@ -92,166 +85,6 @@ const usePanelBodies = (warehouseId: string): PanelBodies => {
         endpoints.readPurchasingPipeline.select(warehouseId)(state).data,
     ),
   };
-};
-
-// ---------------------------------------------------------------------------
-// Arrival Timing
-// ---------------------------------------------------------------------------
-
-/** The Panel's own fixed gridlines (`design-handoff.md` § Panel specs). */
-const ARRIVAL_TIMING_GRIDLINES = [0, 1250, 2500];
-
-/**
- * The scale's top: the Panel's stated headroom, raised only if a bucket would
- * otherwise overflow its track. The two series are **never netted** against
- * each other — no record links a week's arrivals to that week's demand — so
- * each is measured against the same domain rather than subtracted (AC-07).
- */
-const arrivalTimingMax = (panel: ArrivalTimingPanel): number =>
-  Math.max(
-    ARRIVAL_TIMING_GRIDLINES.at(-1)!,
-    ...panel.buckets.map((bucket) =>
-      Math.max(bucket.owedQuantity, bucket.expectedQuantity),
-    ),
-  );
-
-const ArrivalTimingPanelCard = ({
-  panel,
-}: {
-  panel: ArrivalTimingPanel;
-}): ReactElement => {
-  const { t } = useTranslation('dashboard');
-  const { quantity, shortCalendarDate } = useLocaleFormat();
-
-  const legend: ChartLegendItem[] = [
-    {
-      id: 'owed',
-      label: t('panels.arrivalTiming.series.owed'),
-      colorVar: '--chart-ramp-3b',
-    },
-    {
-      id: 'expectedAtDock',
-      label: t('panels.arrivalTiming.series.expectedAtDock'),
-      colorVar: '--chart-supply',
-    },
-  ];
-
-  const buckets: ColumnPlotBucket[] = panel.buckets.map((bucket) => ({
-    id: bucket.weekStart ?? bucket.kind,
-    label:
-      bucket.weekStart === null
-        ? t('panels.arrivalTiming.overdue')
-        : shortCalendarDate(bucket.weekStart),
-    values: {
-      owed: bucket.owedQuantity,
-      expectedAtDock: bucket.expectedQuantity,
-    },
-  }));
-
-  const { exclusions } = panel;
-
-  return (
-    <PanelCard
-      title={t('panels.arrivalTiming.title')}
-      meta={t('panels.arrivalTiming.meta')}
-    >
-      <ChartLegend items={legend} />
-      <ColumnPlot
-        series={legend}
-        buckets={buckets}
-        gridlineValues={ARRIVAL_TIMING_GRIDLINES}
-        maxValue={arrivalTimingMax(panel)}
-      />
-      {/* AC-07 / AC-08a — all four exclusion counts on one line, because a
-          Panel that leaves demand out without saying so states a figure
-          nobody can reconcile (`spec.md` §6 "Exclusion accounting"). */}
-      <PanelFootnote>
-        {t('panels.arrivalTiming.footnote', {
-          beyondOrders: quantity(exclusions.beyondHorizon.customerOrderCount),
-          beyondQuantity: quantity(exclusions.beyondHorizon.owedQuantity),
-          datedStillInDraft: quantity(
-            exclusions.datedDraftsStillInDraft.draftCount,
-          ),
-          sinceClosedOrDiscarded: quantity(
-            exclusions.draftsSinceClosedOrDiscarded.draftCount,
-          ),
-          undatedDrafts: quantity(exclusions.undatedReadyDrafts.draftCount),
-        })}
-      </PanelFootnote>
-    </PanelCard>
-  );
-};
-
-// ---------------------------------------------------------------------------
-// Purchasing Pipeline
-// ---------------------------------------------------------------------------
-
-const PurchasingPipelinePanelCard = ({
-  panel,
-}: {
-  panel: PurchasingPipelinePanel;
-}): ReactElement => {
-  const { t } = useTranslation('dashboard');
-
-  /** The four Age Bands, youngest first, on one shared scale (AC-10). */
-  const legend: ChartLegendItem[] = [
-    {
-      id: 'upTo7Days',
-      label: t('panels.purchasingPipeline.bands.upTo7Days'),
-      colorVar: '--chart-ramp-4a',
-    },
-    {
-      id: 'from8To14Days',
-      label: t('panels.purchasingPipeline.bands.from8To14Days'),
-      colorVar: '--chart-ramp-4b',
-    },
-    {
-      id: 'from15To30Days',
-      label: t('panels.purchasingPipeline.bands.from15To30Days'),
-      colorVar: '--chart-ramp-4c',
-    },
-    {
-      id: 'over30Days',
-      label: t('panels.purchasingPipeline.bands.over30Days'),
-      colorVar: '--chart-ramp-4d',
-    },
-  ];
-
-  /**
-   * A total lookup over the two open states the Panel counts, so a state added
-   * to the contract fails to compile until it is given a name here rather than
-   * rendering a raw key
-   * (`docs/system/guides/writing-web-components.md` §6).
-   */
-  const stateLabels: Record<OpenPurchaseDraftState, string> = {
-    draft: t('panels.purchasingPipeline.states.draft'),
-    ready_for_ordering: t('panels.purchasingPipeline.states.readyForOrdering'),
-  };
-
-  return (
-    <PanelCard
-      title={t('panels.purchasingPipeline.title')}
-      meta={t('panels.purchasingPipeline.meta')}
-    >
-      <ChartLegend items={legend} />
-      <div className="mt-2 flex flex-col gap-1">
-        {panel.states.map((state) => (
-          <StackedBarRow
-            key={state.state}
-            label={stateLabels[state.state]}
-            segments={state.bands.map((band, index) => ({
-              ...legend[index],
-              value: band.draftCount,
-            }))}
-            total={state.bands.reduce((sum, band) => sum + band.draftCount, 0)}
-          />
-        ))}
-      </div>
-      {/* AC-11 — the Panel counts drafts rather than quantities, and counts
-          only the two open states. */}
-      <PanelFootnote>{t('panels.purchasingPipeline.footnote')}</PanelFootnote>
-    </PanelCard>
-  );
 };
 
 // ---------------------------------------------------------------------------
@@ -330,10 +163,10 @@ export const WarehouseDashboardGrid = (): ReactElement => {
       <ReasonConcentrationPanel panel={panel} />
     )),
     cellFor('arrivalTiming', bodies.arrivalTiming, (panel) => (
-      <ArrivalTimingPanelCard panel={panel} />
+      <ArrivalTimingPanel panel={panel} />
     )),
     cellFor('purchasingPipeline', bodies.purchasingPipeline, (panel) => (
-      <PurchasingPipelinePanelCard panel={panel} />
+      <PurchasingPipelinePanel panel={panel} />
     )),
   ]);
 
