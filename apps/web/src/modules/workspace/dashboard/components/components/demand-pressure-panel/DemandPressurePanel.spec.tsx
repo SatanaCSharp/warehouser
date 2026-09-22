@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import type { DemandPressurePanel as DemandPressurePanelBody } from '@warehouser/contracts/dashboards';
-import { DemandPressurePanel } from 'modules/workspace/dashboard/components/components/DemandPressurePanel';
+import { DemandPressurePanel } from 'modules/workspace/dashboard/components/components/demand-pressure-panel/DemandPressurePanel';
 import { QUANTITY_GROUP_SEPARATOR } from 'shared/utils/number-format';
 import { describe, expect, it } from 'vitest';
 
@@ -9,13 +9,11 @@ import { describe, expect, it } from 'vitest';
 // Colocated with the component it covers
 // (`docs/system/guides/placing-web-tests.md` §1).
 //
-// A real `<table>` rather than HeroUI's `Table`, for the same reason
-// `CoverageGapPanel` is one: `docs/system/adr/27-08-2026-heroui-table-for-web-data-tables.md`
-// requires HeroUI's `Table` of a **data table** a member browses, expands and
-// sorts; this Panel has none of that. It is the accessible substrate of a
-// chart (`docs/features/dashboards/adr/0002-charting-without-a-charting-dependency.md`,
-// Accepted, § Consequences), so these cases query `table`, `columnheader` and
-// `cell`, never `treegrid`.
+// Drawn with HeroUI's `Table`, for the same reason `CoverageGapPanel` is:
+// a feature file assembles no `<table>` markup of its own
+// (`docs/system/adr/27-08-2026-heroui-table-for-web-data-tables.md`
+// §Decision). These cases therefore query what React Aria exposes — `grid`,
+// `columnheader`, `rowheader` and `gridcell`.
 //
 // **Why this cannot take a shared stacked-row primitive, as T19's
 // provisional grid did.** Such a primitive lays its segments out with
@@ -92,7 +90,7 @@ const fullPanel: DemandPressurePanelBody = {
 const drawPanel = (panel: DemandPressurePanelBody): HTMLElement => {
   render(<DemandPressurePanel panel={panel} />);
 
-  return screen.getByRole('table');
+  return screen.getByRole('grid');
 };
 
 const rowsOf = (table: HTMLElement): HTMLElement[] =>
@@ -151,7 +149,7 @@ describe('DemandPressurePanel', () => {
     expect(
       within(header).getAllByRole('columnheader').length,
     ).toBeGreaterThanOrEqual(3);
-    expect(within(header).queryAllByRole('cell')).toStrictEqual([]);
+    expect(within(header).queryAllByRole('gridcell')).toStrictEqual([]);
   });
 
   // AC-14 — "on a scale of quantities rather than of shares, so a small
@@ -238,12 +236,27 @@ describe('DemandPressurePanel', () => {
 
   // `design-handoff.md` § Accessibility — nothing here is interactive and no
   // status colour appears, because nothing on this Panel judges a Warehouse.
-  it('offers nothing to focus and wears no status colour', () => {
+  // The tabindex count was zero until the rows were handed to HeroUI's
+  // `Table`, whose React Aria collection gives them roving grid navigation —
+  // a cost
+  // `docs/system/adr/27-08-2026-heroui-table-for-web-data-tables.md`
+  // § Consequences records, and a system ADR outranks `design-handoff.md`
+  // § Accessibility's "takes no focus". Restated rather than dropped: no
+  // control to activate, and nothing focusable outside the grid.
+  it('offers no control to activate and wears no status colour', () => {
     const { container } = render(<DemandPressurePanel panel={fullPanel} />);
 
     expect(screen.queryAllByRole('button')).toStrictEqual([]);
     expect(screen.queryAllByRole('link')).toStrictEqual([]);
-    expect(container.querySelectorAll('[tabindex]')).toHaveLength(0);
+    expect(container.querySelectorAll('input, select, textarea')).toHaveLength(
+      0,
+    );
+
+    const focusable = Array.from(container.querySelectorAll('[tabindex]'));
+    expect(focusable).not.toHaveLength(0);
+    expect(
+      focusable.filter((element) => element.closest('[role="grid"]') === null),
+    ).toStrictEqual([]);
     expect(container.innerHTML).not.toMatch(/--danger|--warning|--success/u);
   });
 });

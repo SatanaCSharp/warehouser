@@ -6,7 +6,7 @@ import type {
 } from '@warehouser/contracts/dashboards';
 import compact from 'lodash/compact';
 import { workspaceDashboardApi } from 'modules/workspace/dashboard/api/workspace-dashboard-api';
-import { DemandPressurePanel as DemandPressurePanelView } from 'modules/workspace/dashboard/components/components/DemandPressurePanel';
+import { DemandPressurePanel as DemandPressurePanelView } from 'modules/workspace/dashboard/components/components/demand-pressure-panel/DemandPressurePanel';
 import { OrderFlowPanel as OrderFlowPanelView } from 'modules/workspace/dashboard/components/components/OrderFlowPanel';
 import { PurchasingSpreadPanel as PurchasingSpreadPanelView } from 'modules/workspace/dashboard/components/components/purchasing-spread-panel/PurchasingSpreadPanel';
 import { ReceiptReliabilityPanel as ReceiptReliabilityPanelView } from 'modules/workspace/dashboard/components/components/receipt-reliability-panel/ReceiptReliabilityPanel';

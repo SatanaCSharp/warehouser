@@ -187,10 +187,12 @@ export const WORKSPACE_MODULE_MANIFEST = [
   // (`docs/system/guides/placing-web-components.md` § "The nesting rule").
   'dashboard/api/workspace-dashboard-api.ts',
   'dashboard/components/WorkspaceDashboardGrid.tsx',
-  'dashboard/components/components/DemandPressurePanel.spec.tsx',
-  'dashboard/components/components/DemandPressurePanel.tsx',
   'dashboard/components/components/OrderFlowPanel.spec.tsx',
   'dashboard/components/components/OrderFlowPanel.tsx',
+  'dashboard/components/components/demand-pressure-panel/DemandPressurePanel.spec.tsx',
+  'dashboard/components/components/demand-pressure-panel/DemandPressurePanel.tsx',
+  'dashboard/components/components/demand-pressure-panel/components/DemandPressureBar.tsx',
+  'dashboard/components/components/demand-pressure-panel/components/DemandPressureOutstanding.tsx',
   'dashboard/components/components/purchasing-spread-panel/PurchasingSpreadPanel.spec.tsx',
   'dashboard/components/components/purchasing-spread-panel/PurchasingSpreadPanel.tsx',
   'dashboard/components/components/purchasing-spread-panel/components/HeatGrid.spec.tsx',
@@ -205,6 +207,11 @@ export const WORKSPACE_MODULE_MANIFEST = [
   'dashboard/page.tsx',
   'dashboard/route.spec.tsx',
   'dashboard/route.tsx',
+  // dashboards remediation — the Demand Pressure band ids and tokens. A
+  // component file exports components and nothing else, and a file declaring
+  // no hook belongs in `utils/`
+  // (`docs/system/guides/placing-web-hooks.md` §3).
+  'dashboard/utils/demand-pressure-series.ts',
   // T12 / global-loader CH-05, CH-13 — the route-scoped projection that turns
   // the Workspace context guaranteed by `workspaceRoute.beforeLoad` into a
   // non-optional value, and its colocated spec. It derives from state already
