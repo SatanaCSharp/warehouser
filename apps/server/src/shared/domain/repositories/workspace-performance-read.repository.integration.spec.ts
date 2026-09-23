@@ -403,26 +403,34 @@ const findCell = (
 ): PurchasingSpreadCellRead | undefined =>
   counts.find((cell) => cell.state === state);
 
-// UTC-anchored day arithmetic, matching the timezone this suite binds for its non-boundary cases —
-// `data-model.md § Time, timezone and the week` states `(now() AT TIME ZONE $tz)::date` as the
-// "today" expression, and UTC is the one zone whose calendar date equals this test process's own
-// `Date` arithmetic without conversion.
-const isoDateOffsetFromToday = (days: number): string => {
-  const date = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
-  );
+// The zoned "today" for a given IANA zone, computed off the *real* current instant, because the
+// repository's own `(now() AT TIME ZONE $tz)::date` reads PostgreSQL's real clock at query time and
+// only the real clock is guaranteed to agree with it. Used to pick a `needed_by` that provably
+// straddles the Urgency Band boundary for two zones whose UTC offsets are far enough apart (see
+// below), and as the anchor every relative `needed_by` in this file is offset from.
+const zonedToday = (timezone: string): string =>
+  new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(new Date());
+
+// Pure calendar-date arithmetic over a `YYYY-MM-DD` string — safe because every date this spec
+// carries (`needed_by`) is a plain SQL `date`, never a zoned instant. The same helper
+// `warehouse-demand-coverage.repository.integration.spec.ts` keeps beside its own clock reads.
+const addDays = (dateText: string, days: number): string => {
+  const date = new Date(`${dateText}T00:00:00.000Z`);
   date.setUTCDate(date.getUTCDate() + days);
   return date.toISOString().slice(0, 10);
 };
 
-// The zoned "today" for a given IANA zone, computed off the *real* current instant — deliberately
-// not the fixed `now` every other fixture in this file uses, because the repository's own
-// `(now() AT TIME ZONE $tz)::date` reads PostgreSQL's real clock at query time, and only the real
-// clock is guaranteed to agree with it. Used only to pick a `needed_by` that provably straddles the
-// Urgency Band boundary for two zones whose UTC offsets are far enough apart (see below), never to
-// assert a boundary against a fixed instant.
-const zonedToday = (timezone: string): string =>
-  new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(new Date());
+// A `needed_by` the given number of days either side of today, anchored to the **real** clock and
+// never to a fixed instant. `readDemandPressure` sorts a row into Overdue / Due soon / Later by
+// comparing `needed_by` against `(now() AT TIME ZONE $tz)::date` evaluated by PostgreSQL at query
+// time (`data-model.md § Time, timezone and the week`), so a fixture anchored to a frozen date
+// drifts across a Band boundary as the calendar advances: the suite would then pass or fail on the
+// day it happens to run rather than on what it asserts. `mondayOfWeek` above is anchored to
+// `realNow` for exactly this reason, and `fetchTodayDate` in
+// `warehouse-demand-coverage.repository.integration.spec.ts` reads the same boundary from the
+// database for it.
+const isoDateOffsetFromToday = (days: number): string =>
+  addDays(zonedToday('UTC'), days);
 
 // Extracted to named top-level functions, each registering its own `describe`/`it`, so the outer
 // `describe` callback stays a short table of contents (max-lines-per-function) — the pattern
