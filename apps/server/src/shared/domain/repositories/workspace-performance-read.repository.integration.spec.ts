@@ -90,9 +90,14 @@ interface OrderFlowWeekRead {
   readonly stillAwaitedQuantity: number;
 }
 
-// openapi.yaml `OrderFlowPanel` — required: [timezone, archivedWarehouseCount, weeks].
+// The repository's own shape for openapi.yaml `OrderFlowPanel`. It carries
+// `archivedWarehouseCount` and `weeks` only: `timezone` is a bound query *parameter*, composed onto
+// the response by `ReadOrderFlowQuery` from the same value it passed in and never read back from
+// the repository — so echoing it out of the read would be a field the database never produced
+// (`creating-a-server-repository.md` § "Keep repositories isolated and operation-oriented").
+// `ArrivalTimingRead` in `warehouse-demand-coverage.repository.ts` has the same shape for the same
+// reason.
 interface OrderFlowPanelRead {
-  readonly timezone: string;
   readonly archivedWarehouseCount: number;
   readonly weeks: readonly OrderFlowWeekRead[];
 }
@@ -763,7 +768,7 @@ const registerOrderFlowWindowTests = (): void => {
       );
 
       expect(queryCount).toBe(1);
-      expect(panel.timezone).toBe('UTC');
+      expect(panel).not.toHaveProperty('timezone');
       expect(panel.weeks).toHaveLength(12);
       expect(panel.weeks[0]?.weekStart).toBe(isoDate(mondayOfWeek(11)));
       expect(panel.weeks[11]?.weekStart).toBe(isoDate(mondayOfWeek(0)));

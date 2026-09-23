@@ -63,9 +63,11 @@ export interface OrderFlowWeekRead {
 }
 
 // openapi.yaml `OrderFlowPanel` — no `warehouseId`/`warehouseName` anywhere: the one Panel that
-// pools across the Workspace and names no Warehouse (AC-16).
+// pools across the Workspace and names no Warehouse (AC-16). `timezone` is a bound query parameter
+// rather than a column, so it is not echoed back here; `ReadOrderFlowQuery` composes it onto the
+// response from the same value it passed in, exactly as `ArrivalTimingRead` above leaves it to
+// `ReadArrivalTimingQuery`.
 export interface OrderFlowPanelRead {
-  readonly timezone: string;
   readonly archivedWarehouseCount: number;
   readonly weeks: readonly OrderFlowWeekRead[];
 }
@@ -460,7 +462,6 @@ export class WorkspacePerformanceReadRepository {
       .getRawOne<OrderFlowRawRow>();
 
     return {
-      timezone,
       archivedWarehouseCount: raw?.archivedWarehouseCount ?? 0,
       weeks: raw?.weeks ?? [],
     };

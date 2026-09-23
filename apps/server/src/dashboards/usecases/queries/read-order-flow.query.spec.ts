@@ -74,8 +74,11 @@ const weeks: readonly OrderFlowWeek[] = weekStarts.map((weekStart, index) => ({
   ...(index === 10 ? activeWeek : emptyWeek),
 }));
 
+// The repository read carries no `timezone`: it is a bound query parameter, not a column, and the
+// query composes it onto the response itself. Asserting the panel against `{ timezone, ...panelRead }`
+// below is therefore a real check that the query supplies it, not a pass-through of a field the
+// double already returned.
 const panelRead: OrderFlowPanelRead = {
-  timezone,
   archivedWarehouseCount: 3,
   weeks,
 };
@@ -92,7 +95,10 @@ describe('ReadOrderFlowQuery', () => {
 
     const result = await query.execute(buildCurrentUser(workspaceId));
 
-    expect(orderFlowPanelSchema.parse(result)).toEqual(panelRead);
+    expect(orderFlowPanelSchema.parse(result)).toEqual({
+      timezone,
+      ...panelRead,
+    });
   });
 
   // `archivedWarehouseCount` is the one permitted mention, and it names no Warehouse: it is a
