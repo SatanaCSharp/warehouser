@@ -5,8 +5,11 @@ import { DataSource } from 'typeorm';
 
 // openapi.yaml `PurchasingPipelineStateRow`/`PurchasingPipelineBand`, flattened to one row per
 // (state, Age Band) pair because a repository returns persistence-oriented rows, never the nested
-// contract shape (`creating-a-server-repository.md`). The REST mapper folds these eight rows back
-// into the two-state/four-band nesting the contract declares.
+// contract shape (`creating-a-server-repository.md`). `ReadPurchasingPipelineQuery` folds these
+// eight rows into the two-state/four-band nesting the contract declares, composing that result
+// inline in its own `execute` — which is the query, not a mapper. There is deliberately no named
+// conversion and no `dashboards/rest/mappers/`: a named mapper beside its one caller is what
+// `server-architecture.md` § "Running the architectural tier" refuses.
 export interface WarehousePurchasingPipelineBandRead {
   readonly state: 'draft' | 'ready_for_ordering';
   readonly ageBand:
